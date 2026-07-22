@@ -79,6 +79,8 @@ export {
 export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
   BlokConfig,
+  BlokMountOptions,
+  BlokState,
   ReadOnlyModeConfig,
   SanitizerConfig,
   SanitizerRule,
@@ -366,6 +368,7 @@ export class Blok {
   public saver: Saver;
   public selection: Selection;
   public styles: Styles;
+  public tools: Tools;
   public toolbar: Toolbar;
   public inlineToolbar: InlineToolbar;
   public tooltip: Tooltip;

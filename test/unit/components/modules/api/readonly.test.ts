@@ -97,7 +97,7 @@ describe('ReadOnlyAPI', () => {
       const setSpy = vi.spyOn(readOnlyApi, 'set').mockResolvedValue(true);
 
       await expect(readOnlyApi.methods.set(true)).resolves.toBe(true);
-      expect(setSpy).toHaveBeenCalledWith(true);
+      expect(setSpy).toHaveBeenCalledWith(true, undefined);
     });
 
     it('delegates set calls to the Blok module', async () => {
@@ -106,7 +106,7 @@ describe('ReadOnlyAPI', () => {
       blok.ReadOnly.set.mockResolvedValueOnce(true);
 
       await expect(readOnlyApi.set(true)).resolves.toBe(true);
-      expect(blok.ReadOnly.set).toHaveBeenCalledWith(true);
+      expect(blok.ReadOnly.set).toHaveBeenCalledWith(true, undefined);
     });
 
     it('delegates set calls to the Blok module for false', async () => {
@@ -115,7 +115,7 @@ describe('ReadOnlyAPI', () => {
       blok.ReadOnly.set.mockResolvedValueOnce(false);
 
       await expect(readOnlyApi.set(false)).resolves.toBe(false);
-      expect(blok.ReadOnly.set).toHaveBeenCalledWith(false);
+      expect(blok.ReadOnly.set).toHaveBeenCalledWith(false, undefined);
     });
   });
 });

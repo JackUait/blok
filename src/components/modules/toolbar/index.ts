@@ -441,6 +441,29 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * Runtime setter for `config.hideToolbar` (reactive contract).
+   *
+   * The open guards (moveAndOpen / moveAndOpenForMultipleBlocks) read the
+   * config live, but the editor wrapper's `DATA_ATTR.toolbarHidden` attribute
+   * — the CSS hook that collapses the gutter — is snapshotted once at
+   * construction (ui.ts). A complete runtime toggle must write both.
+   * @param hidden - true to hide the hover toolbar and collapse the gutter
+   */
+  public setHidden(hidden: boolean): void {
+    this.config.hideToolbar = hidden;
+
+    const editorWrapper = this.Blok.UI.nodes.wrapper;
+
+    if (editorWrapper instanceof HTMLElement) {
+      editorWrapper.toggleAttribute(DATA_ATTR.toolbarHidden, hidden);
+    }
+
+    if (hidden && this.opened) {
+      this.close();
+    }
+  }
+
+  /**
    * Move Toolbar to the passed (or current) Block
    * @param block - block to move Toolbar near it
    * @param target - optional target element that was hovered (for content offset calculation)

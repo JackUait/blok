@@ -33,6 +33,12 @@ export class ToolsAPI extends Module {
       update: (name, config) => {
         this.Blok.Tools.updateToolConfig(name, config);
       },
+      setInlineToolbar: (inlineToolbar) => {
+        this.Blok.Tools.setInlineToolbar(inlineToolbar);
+      },
+      isInstalled: (name) => {
+        return this.Blok.Tools.available.has(name);
+      },
     };
   }
 }

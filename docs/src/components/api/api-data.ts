@@ -217,7 +217,8 @@ composer.focus();
   {
     id: "config",
     title: "Configuration",
-    description: "The configuration object passed to the Blok constructor.",
+    description:
+      "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, callbacks, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, and `inlineToolbar`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
     example: `import { Blok, type BlokConfig } from '@bloklabs/core';
 import { Paragraph, Header } from '@bloklabs/core/tools';
 
@@ -288,7 +289,7 @@ const editor = new Blok(config);`,
         type: "boolean | { hideControls: boolean }",
         default: "false",
         description:
-          "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar.",
+          "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar. Live: change at runtime via `readOnly.set(state, { hideControls })` — the same instance flips modes in place, preserving caret, undo history and scroll.",
       },
       {
         option: "onChange",
@@ -330,7 +331,14 @@ const editor = new Blok(config);`,
         type: "string[] | boolean",
         default: "true",
         description:
-          "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it",
+          "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it. Live: reconfigure at runtime via `tools.setInlineToolbar(config)`.",
+      },
+      {
+        option: "hideToolbar",
+        type: "boolean",
+        default: "false",
+        description:
+          "Hide the hover block toolbar (plus button / drag handle) and collapse the editor gutter reserved for it; the keyboard \"/\" menu keeps working. Live: flip at runtime via `toolbar.setHidden(hidden)`.",
       },
       {
         option: "i18n",
@@ -1458,6 +1466,25 @@ editor.toolbar.toggleToolbox();
 // Force open
 editor.toolbar.toggleToolbox(true);`,
       },
+      {
+        name: "toolbar.setHidden(hidden)",
+        returnType: "void",
+        description:
+          "Runtime setter for `config.hideToolbar`: hide or show the hover toolbar (plus button / drag handle) AND collapse or restore the editor gutter reserved for it — the wrapper's `data-blok-toolbar-hidden` attribute is kept in sync, so no dead space is left behind. The keyboard \"/\" menu keeps working while hidden.",
+        params: [
+          {
+            name: "hidden",
+            type: "boolean",
+            required: true,
+            description: "true to hide the hover toolbar and collapse the gutter; false to restore both.",
+          },
+        ],
+        example: `// Hide the hover toolbar and collapse its gutter
+editor.toolbar.setHidden(true);
+
+// Restore it
+editor.toolbar.setHidden(false);`,
+      },
     ],
   },
   {
@@ -1663,20 +1690,51 @@ editor.tooltip.onHover(button, 'Click me', {
     id: "readonly-api",
     badge: "ReadOnly",
     title: "ReadOnly API",
-    description: "Control the read-only state of the editor.",
+    description:
+      "Control the read-only state of the editor. Toggling is in-place: the same editor instance flips modes, preserving caret position, undo history and scroll — so an edit/view toggle is `readOnly.set(!isEditing)` on ONE instance instead of destroying one editor and constructing another.",
+    example: `// The edit/view toggle: one instance, one call.
+// Caret, undo history and scroll survive the switch —
+// no destroy-and-recreate.
+async function setEditing(isEditing: boolean) {
+  await editor.readOnly.set(!isEditing);
+}
+
+// Framework adapters do this for you: change the readOnly
+// prop (React/Vue) or input (Angular) and the adapter calls
+// readOnly.set on the existing instance — same editor identity.`,
     methods: [
       {
-        name: "readOnly.set(state)",
+        name: "readOnly.set(state, options?)",
         returnType: "Promise<boolean>",
-        description: "Set read-only mode to the specified boolean state. Returns the new state.",
-        example: `// Enable read-only
-await editor.readOnly.set(true);
+        description:
+          "Set read-only mode to the specified boolean state. The toggle happens in place — no destroy/recreate: block instances, caret position, undo history and scroll are preserved. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings and inline toolbar while read-only is active — the option writes the object form of `config.readOnly`, so the live state reflects it. Returns the new state.",
+        params: [
+          {
+            name: "state",
+            type: "boolean",
+            required: true,
+            description: "Read-only state to set.",
+          },
+          {
+            name: "options.hideControls",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Hide all editor controls (hover toolbar, block settings popover, inline toolbar) while read-only is active.",
+          },
+        ],
+        example: `// The edit/view toggle: ONE instance, flipped in place —
+// caret, undo history and scroll survive the switch
+await editor.readOnly.set(!isEditing);
 
-// Disable read-only
-await editor.readOnly.set(false);
+// Enable read-only and hide all controls
+// (hover toolbar, block settings, inline toolbar)
+await editor.readOnly.set(true, { hideControls: true });
 
 // Check state
-console.log(editor.readOnly.isEnabled); // true or false`,
+console.log(editor.readOnly.isEnabled); // true or false
+console.log(editor.readOnly.togglesInPlace); // true`,
       },
       {
         name: "readOnly.toggle(state?)",
@@ -1699,6 +1757,12 @@ await editor.readOnly.toggle(false);`,
         name: "isEnabled",
         type: "boolean",
         description: "Current read-only state",
+      },
+      {
+        name: "togglesInPlace",
+        type: "true",
+        description:
+          "Observability constant: always true — `readOnly.set()` flips the mode in place, preserving block instances, caret, undo history and scroll, instead of recreating the editor. Assert on it before relying on in-place toggle semantics.",
       },
     ],
   },
@@ -1832,6 +1896,46 @@ editor.tools.update('goodsList', { toolbox: false });
 
 // Re-enable it later
 editor.tools.update('goodsList', { toolbox: { title: 'Goods List' } });`,
+      },
+      {
+        name: "tools.setInlineToolbar(config)",
+        returnType: "void",
+        description:
+          "Runtime setter for the global `inlineToolbar` config. Re-assigns inline tools for every block tool and recomposes the memoized sanitize configs — so paste-time sanitization follows the new set immediately, and the inline toolbar reflects it on the next selection. Tool-scoped `inlineToolbar` settings (arrays and opt-outs) stay authoritative. Pass `true` for all inline tools, `false` for none, or an ordered list of inline tool names.",
+        params: [
+          {
+            name: "config",
+            type: "boolean | string[]",
+            required: true,
+            description:
+              "`true` enables every registered inline tool, `false` disables the inline toolbar, an array restricts it to the listed inline tools in that order.",
+          },
+        ],
+        example: `// Restrict inline formatting to bold and italic at runtime
+editor.tools.setInlineToolbar(['bold', 'italic']);
+
+// Disable the inline toolbar entirely
+editor.tools.setInlineToolbar(false);
+
+// Back to every registered inline tool
+editor.tools.setInlineToolbar(true);`,
+      },
+      {
+        name: "tools.isInstalled(name)",
+        returnType: "boolean",
+        description:
+          "Returns true when a tool with the given name is installed and available on this editor instance — block, inline or tune. Public introspection over the installed tool set, e.g. as a guard before `tools.update(name, config)`, which throws for unknown names.",
+        params: [
+          {
+            name: "name",
+            type: "string",
+            required: true,
+            description: "Registered tool name to look up.",
+          },
+        ],
+        example: `if (editor.tools.isInstalled('image')) {
+  editor.tools.update('image', { uploader: { uploadByFile } });
+}`,
       },
     ],
   },

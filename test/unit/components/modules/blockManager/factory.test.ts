@@ -76,6 +76,8 @@ const createMockAPIMethods = (): APIInterface => ({
     getBlockTools: vi.fn(() => []),
     getToolsConfig: vi.fn(() => ({ tools: undefined })),
     update: vi.fn(),
+    setInlineToolbar: vi.fn(),
+    isInstalled: vi.fn(() => false),
   },
   events: {
     on: vi.fn(),
@@ -122,6 +124,7 @@ const createMockAPIMethods = (): APIInterface => ({
     open: vi.fn(),
     toggleBlockSettings: vi.fn(),
     toggleToolbox: vi.fn(),
+    setHidden: vi.fn(),
   },
   inlineToolbar: {
     close: vi.fn(),
@@ -142,6 +145,7 @@ const createMockAPIMethods = (): APIInterface => ({
     toggle: vi.fn().mockResolvedValue(false),
     set: vi.fn().mockResolvedValue(false),
     isEnabled: false,
+    togglesInPlace: true as const,
   },
   history: {
     undo: vi.fn(),

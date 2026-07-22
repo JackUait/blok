@@ -83,8 +83,15 @@ describe('useBlok reactive theme/width', () => {
     expect(instances[0].theme.set).toHaveBeenLastCalledWith('dark');
   });
 
-  it('normalizes object readOnly config to a boolean for readOnly.set', async () => {
+  it('passes the object readOnly form through readOnly.set with hideControls options', async () => {
     render(<Harness config={{ readOnly: { hideControls: true } }} />);
+    await act(async () => { await Promise.resolve(); });
+
+    expect(instances[0].readOnly.set).toHaveBeenLastCalledWith(true, { hideControls: true });
+  });
+
+  it('keeps the plain-boolean readOnly call shape (no options object)', async () => {
+    render(<Harness config={{ readOnly: true }} />);
     await act(async () => { await Promise.resolve(); });
 
     expect(instances[0].readOnly.set).toHaveBeenLastCalledWith(true);

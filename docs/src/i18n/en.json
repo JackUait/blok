@@ -193,7 +193,7 @@
     },
     "configuration": {
       "title": "Configuration",
-      "description": "The configuration object passed to the Blok constructor.",
+      "description": "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, callbacks, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, and `inlineToolbar`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
       "table": {
         "holder": {
           "option": "holder",
@@ -233,9 +233,9 @@
         },
         "readOnly": {
           "option": "readOnly",
-          "type": "boolean",
+          "type": "boolean | { hideControls: boolean }",
           "default": "false",
-          "description": "Enable read-only mode"
+          "description": "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar. Live: change at runtime via `readOnly.set(state, { hideControls })` — the same instance flips modes in place, preserving caret, undo history and scroll."
         },
         "onChange": {
           "option": "onChange",
@@ -271,7 +271,13 @@
           "option": "inlineToolbar",
           "type": "string[] | boolean",
           "default": "true",
-          "description": "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it"
+          "description": "Default inline toolbar for all tools; an array restricts it to the listed inline tools, false disables it. Live: reconfigure at runtime via `tools.setInlineToolbar(config)`."
+        },
+        "hideToolbar": {
+          "option": "hideToolbar",
+          "type": "boolean",
+          "default": "false",
+          "description": "Hide the hover block toolbar (plus button / drag handle) and collapse the editor gutter reserved for it; the keyboard \"/\" menu keeps working. Live: flip at runtime via `toolbar.setHidden(hidden)`."
         },
         "i18n": {
           "option": "i18n",
@@ -576,6 +582,9 @@
           },
           "toggleToolbox": {
             "note": "Open/close the + insert (slash) menu programmatically; pass a boolean to force a state."
+          },
+          "setHidden": {
+            "note": "The runtime half of the `hideToolbar` config option — flips both the toolbar behaviour and the reserved gutter, so no dead space is left behind."
           }
         }
       }
@@ -662,11 +671,11 @@
     "readOnlyApi": {
       "title": "ReadOnly API",
       "badge": "ReadOnly",
-      "description": "Control the read-only state of the editor.",
+      "description": "Control the read-only state of the editor. Toggling is in-place: the same editor instance flips modes, preserving caret position, undo history and scroll — so an edit/view toggle is `readOnly.set(!isEditing)` on ONE instance instead of destroying one editor and constructing another.",
       "methods": {
         "readOnly": {
           "set": {
-            "note": "The preferred way to enter/leave read-only mode. Returns a promise resolving to the new state once applied."
+            "note": "The preferred way to enter/leave read-only mode — it toggles in place, preserving caret, undo history and scroll. Returns a promise resolving to the new state once applied."
           },
           "toggle": {
             "note": "Kept for compatibility; without a parameter it flips the current state."
@@ -726,6 +735,12 @@
         "tools": {
           "getBlockTools": {
             "note": "Enumerate the registered block tools at runtime — handy for a custom block picker or debugging tool config."
+          },
+          "setInlineToolbar": {
+            "note": "Takes effect on the next selection; paste-time sanitization is recomposed immediately, so pasted content follows the new inline-tool set right away."
+          },
+          "isInstalled": {
+            "note": "Guard runtime tool calls — `tools.update()` throws for names that are not installed."
           }
         }
       }

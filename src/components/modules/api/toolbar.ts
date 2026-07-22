@@ -17,7 +17,17 @@ export class ToolbarAPI extends Module {
       open: (): void => this.open(),
       toggleBlockSettings: (openingState?: boolean, trigger?: HTMLElement, options?: ToolbarBlockSettingsOptions): void => this.toggleBlockSettings(openingState, trigger, options),
       toggleToolbox: (openingState?: boolean): void => this.toggleToolbox(openingState),
+      setHidden: (hidden: boolean): void => this.setHidden(hidden),
     };
+  }
+
+  /**
+   * Runtime setter for `config.hideToolbar`: hides/shows the hover toolbar
+   * and collapses/restores the editor gutter reserved for it.
+   * @param hidden - true to hide the hover toolbar
+   */
+  public setHidden(hidden: boolean): void {
+    this.Blok.Toolbar.setHidden(hidden);
   }
 
   /**

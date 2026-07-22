@@ -15,10 +15,11 @@ export class ReadOnlyAPI extends Module {
 
     return {
       toggle: (state): Promise<boolean> => this.toggle(state),
-      set: (state): Promise<boolean> => this.set(state),
+      set: (state, options): Promise<boolean> => this.set(state, options),
       get isEnabled(): boolean {
         return getIsEnabled();
       },
+      togglesInPlace: true,
     };
   }
 
@@ -34,10 +35,12 @@ export class ReadOnlyAPI extends Module {
   /**
    * Set read-only mode to the specified boolean state
    * @param {boolean} state - read-only state to set
+   * @param options - optional read-only mode options
+   * @param options.hideControls - hide all editor controls while read-only is active
    * @returns {Promise<boolean>} the new read-only state
    */
-  public set(state: boolean): Promise<boolean> {
-    return this.Blok.ReadOnly.set(state);
+  public set(state: boolean, options?: { hideControls?: boolean }): Promise<boolean> {
+    return this.Blok.ReadOnly.set(state, options);
   }
 
   /**

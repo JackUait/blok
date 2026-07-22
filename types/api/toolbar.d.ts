@@ -48,4 +48,15 @@ export interface Toolbar {
    * @param {boolean} openingState —  opening state of the toolbox
    */
   toggleToolbox(openingState?: boolean): void;
+
+  /**
+   * Runtime setter for `config.hideToolbar` (reactive contract).
+   *
+   * When hidden, the hover toolbar (plus button / drag handle) never opens and
+   * the editor gutter reserved for it collapses (the wrapper's
+   * `data-blok-toolbar-hidden` attribute is kept in sync). The keyboard "/"
+   * menu keeps working.
+   * @param hidden - true to hide the hover toolbar and collapse the gutter
+   */
+  setHidden(hidden: boolean): void;
 }

@@ -78,13 +78,60 @@ export interface ReadOnlyModeConfig {
    * When true, all editor controls are hidden while read-only is active:
    * the hover toolbar (settings toggler), the block settings popover and the
    * inline toolbar. Text selection and content-level UI keep working.
-   * Config-time only — not mutable at runtime.
+   * Mutable at runtime via `readOnly.set(state, { hideControls })`.
    * @default false
    */
   hideControls?: boolean;
 }
 
-export interface BlokConfig {
+/**
+ * LIVE editor state (the reactive contract).
+ *
+ * Every field declared here is mutable at runtime through a documented public
+ * setter — no editor recreation needed. Fields that are fixed for the
+ * instance's life live in {@link BlokMountOptions} instead.
+ * `BlokConfig = BlokMountOptions & BlokState`, so existing consumers are
+ * unaffected by the split.
+ */
+export interface BlokState {
+  /**
+   * If true, the hover toolbar (plus button / drag handle) never opens and the
+   * editor gutter reserved for it collapses (the wrapper is stamped with
+   * `data-blok-toolbar-hidden`). The keyboard "/" menu keeps working.
+   *
+   * Runtime setter: `toolbar.setHidden(hidden)`.
+   */
+  hideToolbar?: boolean;
+
+  /**
+   * Enable read-only mode.
+   *
+   * Pass `true` for the default Notion-style read-only (block settings toggler
+   * and read-only-capable inline tools stay available), or an object to enable
+   * read-only with additional options ({@link ReadOnlyModeConfig.hideControls}).
+   * Passing an object always enables read-only mode.
+   *
+   * Runtime setter: `readOnly.set(state, { hideControls })` — toggles in
+   * place (see `readOnly.togglesInPlace`), preserving caret, undo history
+   * and scroll.
+   */
+  readOnly?: boolean | ReadOnlyModeConfig;
+
+  /**
+   * Defines default toolbar for all tools.
+   *
+   * Runtime setter: `tools.setInlineToolbar(config)` — re-assigns inline
+   * tools for every block tool and recomposes paste-time sanitization.
+   */
+  inlineToolbar?: string[]|boolean;
+}
+
+/**
+ * Editor options that are fixed for the instance's life (mount-time only).
+ * Changing any of these requires recreating the editor. The live counterpart
+ * is {@link BlokState}; `BlokConfig = BlokMountOptions & BlokState`.
+ */
+export interface BlokMountOptions {
   /**
    * Element where Blok will be appended
    */
@@ -140,13 +187,6 @@ export interface BlokConfig {
   onBeforePaste?: (html: string) => string | null;
 
   /**
-   * If true, the hover toolbar (plus button / drag handle) never opens and the
-   * editor gutter reserved for it collapses (the wrapper is stamped with
-   * `data-blok-toolbar-hidden`). The keyboard "/" menu keeps working.
-   */
-  hideToolbar?: boolean;
-
-  /**
    * Maximum number of history entries for undo/redo
    * @default 30
    */
@@ -200,16 +240,6 @@ export interface BlokConfig {
    * Blok's log level (how many logs you want to see)
    */
   logLevel?: LogLevels;
-
-  /**
-   * Enable read-only mode.
-   *
-   * Pass `true` for the default Notion-style read-only (block settings toggler
-   * and read-only-capable inline tools stay available), or an object to enable
-   * read-only with additional options. Passing an object always enables
-   * read-only mode.
-   */
-  readOnly?: boolean | ReadOnlyModeConfig;
 
   /**
    * Internalization config
@@ -375,11 +405,6 @@ export interface BlokConfig {
   onAfterRender?(api: API): void;
 
   /**
-   * Defines default toolbar for all tools.
-   */
-  inlineToolbar?: string[]|boolean;
-
-  /**
    * Common Block Tunes list. Will be added to all the blocks which do not specify their own 'tunes' set
    */
   tunes?: string[];
@@ -522,3 +547,10 @@ export interface BlokConfig {
    */
   notifier?: (options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void;
 }
+
+/**
+ * Full Blok configuration: the mount-fixed options ({@link BlokMountOptions})
+ * plus the live, runtime-mutable state ({@link BlokState}). Structurally
+ * identical to the pre-split BlokConfig — existing consumers compile unchanged.
+ */
+export interface BlokConfig extends BlokMountOptions, BlokState {}

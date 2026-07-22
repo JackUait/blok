@@ -45,7 +45,9 @@ export const BlokEditor = defineComponent({
     data: { type: Object as PropType<OutputData>, default: undefined },
     minHeight: { type: Number, default: undefined },
     logLevel: { type: String as PropType<BlokConfig['logLevel']>, default: undefined },
-    readOnly: { type: Boolean as PropType<boolean | undefined>, default: undefined },
+    // [Boolean, Object]: the object form ({ hideControls }) must not be dropped
+    // or dev-warned — it always means read-only enabled (reactive contract).
+    readOnly: { type: [Boolean, Object] as PropType<BlokConfig['readOnly']>, default: undefined },
     i18n: { type: Object as PropType<BlokConfig['i18n']>, default: undefined },
     link: { type: Object as PropType<BlokConfig['link']>, default: undefined },
     linkPaste: { type: Object as PropType<BlokConfig['linkPaste']>, default: undefined },

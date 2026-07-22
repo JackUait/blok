@@ -360,4 +360,15 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
 
     return baseConfig;
   }
+
+  /**
+   * Drops the memoized sanitize configs so the next access recomposes them
+   * from the current inline tools / tunes. Internal — called by the Tools
+   * module when the enabled inline-tool set changes at runtime
+   * (tools.setInlineToolbar); not part of the published adapter interface.
+   */
+  public invalidateSanitizeCache(): void {
+    this._sanitizeConfig = undefined;
+    this._baseSanitizeConfig = undefined;
+  }
 }

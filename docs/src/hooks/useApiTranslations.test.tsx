@@ -127,7 +127,9 @@ describe('useApiTranslations', () => {
     expect(toolsRow?.description).toBe('Доступные блочные и строчные инструменты');
 
     const readOnlyRow = configSection?.table?.find(r => r.option === 'readOnly');
-    expect(readOnlyRow?.description).toBe('Включить режим только для чтения');
+    // The row now also documents the reactive-config contract (hideControls +
+    // the readOnly.set runtime setter), so assert on the stable lead-in only.
+    expect(readOnlyRow?.description).toContain('Включить режим только для чтения');
   });
 
   it('should attach a translated "when to use" note to methods', () => {

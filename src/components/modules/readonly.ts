@@ -193,10 +193,20 @@ export class ReadOnly extends Module {
    * Set read-only mode to the specified boolean state
    * Unlike toggle(), this method requires a parameter and does not have default toggle behavior
    * Call all Modules `toggleReadOnly` method and re-render Blok
+   *
+   * When `options.hideControls` is provided, the normalized object form is
+   * written into `config.readOnly` so the live `isControlsHidden` getter
+   * (recomputed from config on every access) picks it up at runtime.
    * @param state - read-only state to set (required)
+   * @param options - optional read-only mode options
+   * @param options.hideControls - hide all editor controls while read-only is active
    * @returns the new read-only state
    */
-  public async set(state: boolean): Promise<boolean> {
+  public async set(state: boolean, options?: { hideControls?: boolean }): Promise<boolean> {
+    if (options !== undefined && typeof options.hideControls === 'boolean') {
+      this.config.readOnly = { hideControls: options.hideControls };
+    }
+
     return this.toggle(state);
   }
 

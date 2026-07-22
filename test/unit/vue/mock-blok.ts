@@ -22,10 +22,12 @@ export interface MockBlokInstance {
   focus: ReturnType<typeof vi.fn>;
   save: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
-  readOnly: { set: ReturnType<typeof vi.fn> };
+  readOnly: { set: ReturnType<typeof vi.fn>; togglesInPlace: true };
   theme: { set: ReturnType<typeof vi.fn> };
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
+  toolbar: { setHidden: ReturnType<typeof vi.fn> };
+  tools: { setInlineToolbar: ReturnType<typeof vi.fn> };
   tokens: { set: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
   on: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
@@ -40,10 +42,12 @@ class MockBlok implements MockBlokInstance {
   public focus = vi.fn().mockReturnValue(true);
   public save = vi.fn().mockResolvedValue({ time: 0, blocks: [], version: '0' });
   public render = vi.fn().mockResolvedValue(undefined);
-  public readOnly = { set: vi.fn().mockResolvedValue(false) };
+  public readOnly = { set: vi.fn().mockResolvedValue(false), togglesInPlace: true as const };
   public theme = { set: vi.fn() };
   public width = { set: vi.fn() };
   public placeholder = { set: vi.fn() };
+  public toolbar = { setHidden: vi.fn() };
+  public tools = { setInlineToolbar: vi.fn() };
 
   public tokens = { set: vi.fn(), get: vi.fn().mockReturnValue({}) };
   public on = vi.fn();

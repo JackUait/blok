@@ -6,7 +6,12 @@ import type { BlokConfig, Blok, EditorWidth } from '@/types';
  * reactive `width` prop.
  *
  * Reactive props (sync after mount without recreation):
- * - `readOnly` — calls `editor.readOnly.set(value)`
+ * - `readOnly` — calls `editor.readOnly.set(enabled, { hideControls })`; the
+ *   object form's `hideControls` is live too (toggles in place — see
+ *   `editor.readOnly.togglesInPlace`)
+ * - `hideToolbar` — calls `editor.toolbar.setHidden(value)` (undefined → false)
+ * - `inlineToolbar` — calls `editor.tools.setInlineToolbar(value)`
+ *   (content-compared, so a fresh array with the same names is a no-op)
  * - `autofocus` — calls `editor.focus()` when changed to true
  * - `theme` — calls `editor.theme.set(value)`
  * - `width` — calls `editor.width.set(value)`

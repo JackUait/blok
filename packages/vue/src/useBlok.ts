@@ -199,11 +199,31 @@ export function useBlok(
   // once the instance appears (the Vue analog of React's `editor` effect-dep).
   // `theme`/`width`/`placeholder` guard on `=== undefined` (NOT falsiness) so a
   // real `placeholder: false` (clear) still propagates.
+  // readOnly syncs the full normalized pair: `enabled` always, `hideControls`
+  // only for the object form (`readOnly.set` toggles IN PLACE — see
+  // `readOnly.togglesInPlace` — so no recreation is ever needed).
   watch(
-    [editor, () => normalizeReadOnlyConfig(mergedConfig().readOnly).enabled],
-    ([ed, readOnlyEnabled]) => {
+    [
+      editor,
+      () => normalizeReadOnlyConfig(mergedConfig().readOnly).enabled,
+      () => normalizeReadOnlyConfig(mergedConfig().readOnly).hideControls,
+      () => typeof mergedConfig().readOnly === 'object',
+    ],
+    ([ed, readOnlyEnabled, hideControls, isObjectForm]) => {
       if (ed) {
-        void ed.readOnly.set(readOnlyEnabled);
+        void (isObjectForm ? ed.readOnly.set(readOnlyEnabled, { hideControls }) : ed.readOnly.set(readOnlyEnabled));
+      }
+    },
+    { immediate: true }
+  );
+
+  // hideToolbar toggles the hover toolbar and its gutter in place. Coerces
+  // undefined to false (like readOnly) so clearing the option propagates.
+  watch(
+    [editor, () => mergedConfig().hideToolbar],
+    ([ed, hideToolbar]) => {
+      if (ed) {
+        ed.toolbar.setHidden(Boolean(hideToolbar));
       }
     },
     { immediate: true }
@@ -254,6 +274,37 @@ export function useBlok(
 
       appliedTokens.value = { ...tokens };
       ed.tokens.set(tokens);
+    },
+    { immediate: true, deep: true }
+  );
+
+  // inlineToolbar re-assigns inline tools in place. Content-compared (not
+  // identity-compared) because `boolean | string[]` configs are typically fresh
+  // array literals; the baseline is tracked per editor instance so a recreated
+  // editor gets the current value applied again. `deep: true` so mutating the
+  // same array still propagates (mirrors the tokens watch).
+  const appliedInlineToolbar: { editor: Blok | null; value: boolean | string[] | undefined } = {
+    editor: null,
+    value: undefined,
+  };
+
+  watch(
+    [editor, () => mergedConfig().inlineToolbar],
+    ([ed, inlineToolbar]) => {
+      if (!ed || inlineToolbar === undefined) {
+        return;
+      }
+
+      if (appliedInlineToolbar.editor === ed && deepEqual(inlineToolbar, appliedInlineToolbar.value)) {
+        return;
+      }
+
+      // De-proxy: copy an array so no Vue reactive proxy reaches core.
+      const plain = Array.isArray(inlineToolbar) ? [...inlineToolbar] : inlineToolbar;
+
+      appliedInlineToolbar.editor = ed;
+      appliedInlineToolbar.value = plain;
+      ed.tools.setInlineToolbar(plain);
     },
     { immediate: true, deep: true }
   );

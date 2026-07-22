@@ -79,6 +79,70 @@ describe('BlokEditorComponent reactive inputs', () => {
     void fixture;
   });
 
+  it('syncs the readOnly object form as set(enabled, { hideControls }) without recreating', async () => {
+    const fixture = await mountAndReady({ readOnly: false });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('readOnly', { hideControls: true });
+    fixture.detectChanges();
+
+    expect(editor.readOnly.set).toHaveBeenLastCalledWith(true, { hideControls: true });
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
+  it('exposes the in-place toggle capability on the live instance', async () => {
+    const fixture = await mountAndReady();
+
+    expect(fixture.componentInstance.instance()?.readOnly.togglesInPlace).toBe(true);
+  });
+
+  it('syncs hideToolbar changes to editor.toolbar.setHidden without recreating', async () => {
+    const fixture = await mountAndReady({ hideToolbar: false });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('hideToolbar', true);
+    fixture.detectChanges();
+
+    expect(editor.toolbar.setHidden).toHaveBeenLastCalledWith(true);
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
+  it('does not call toolbar.setHidden while hideToolbar is undefined', async () => {
+    await mountAndReady();
+
+    expect(blokRegistry.last.toolbar.setHidden).not.toHaveBeenCalled();
+  });
+
+  it('seeds hideToolbar and inlineToolbar into the construction config', async () => {
+    await mountAndReady({ hideToolbar: true, inlineToolbar: ['bold'] });
+
+    expect(blokRegistry.last.config.hideToolbar).toBe(true);
+    expect(blokRegistry.last.config.inlineToolbar).toEqual(['bold']);
+  });
+
+  it('syncs inlineToolbar changes to editor.tools.setInlineToolbar without recreating', async () => {
+    const fixture = await mountAndReady({ inlineToolbar: true });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('inlineToolbar', ['bold', 'italic']);
+    fixture.detectChanges();
+
+    expect(editor.tools.setInlineToolbar).toHaveBeenLastCalledWith(['bold', 'italic']);
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
+  it('dedupes inlineToolbar arrays by content (a new same-content array is a no-op)', async () => {
+    const fixture = await mountAndReady({ inlineToolbar: ['bold', 'italic'] });
+    const editor = blokRegistry.last;
+    const callsAfterMount = editor.tools.setInlineToolbar.mock.calls.length;
+
+    fixture.componentRef.setInput('inlineToolbar', ['bold', 'italic']);
+    fixture.detectChanges();
+
+    expect(editor.tools.setInlineToolbar.mock.calls.length).toBe(callsAfterMount);
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
   it('re-applies reactive props once the instance appears (input set before ready)', async () => {
     const fixture = TestBed.createComponent(BlokEditorComponent);
 

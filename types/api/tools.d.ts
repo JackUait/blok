@@ -48,4 +48,23 @@ export interface Tools {
    * @throws if `name` is not a registered tool
    */
   update(name: string, config: Partial<ToolConfig> & { toolbox?: ToolboxConfig | false }): void;
+
+  /**
+   * Runtime setter for the global `inlineToolbar` config (reactive contract).
+   *
+   * Re-runs inline-tool assignment for every block tool and invalidates the
+   * memoized sanitize configs, so both the inline toolbar (on next selection)
+   * and paste-time sanitization follow the new set. Tool-scoped
+   * `inlineToolbar` settings (arrays and opt-outs) stay authoritative.
+   * @param inlineToolbar - `true` for all inline tools, `false` for none,
+   * or an explicit ordered list of inline tool names
+   */
+  setInlineToolbar(inlineToolbar: boolean | string[]): void;
+
+  /**
+   * Returns true when a tool with the given name is installed and available
+   * on this editor instance (block, inline or tune).
+   * @param name - registered tool name
+   */
+  isInstalled(name: string): boolean;
 }

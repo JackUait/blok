@@ -39,8 +39,11 @@ import type { BlokAngularConfig } from './types';
  * `BlokEditor`). Delegates instance lifecycle to an internal `BlokContentDirective`
  * and layers the typed reactive input/output API on top.
  *
- * Reactive inputs (`readOnly`, `theme`, `width`, `placeholder`, `autofocus`,
- * `styleTokens`, `data`) are synced in place after mount via effects —
+ * Reactive inputs (`readOnly`, `hideToolbar`, `inlineToolbar`, `theme`,
+ * `width`, `placeholder`, `autofocus`, `styleTokens`, `data`) are synced in
+ * place after mount via effects — `hideToolbar` through
+ * `editor.toolbar.setHidden()`, `inlineToolbar` through
+ * `editor.tools.setInlineToolbar()` (content-compared),
  * `styleTokens` through `editor.tokens.set()` (replace semantics) and `data`
  * through `editor.render()` (deep-equal–deduped); everything else seeds
  * construction.
@@ -121,9 +124,22 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   // ---- Reactive inputs (signal-backed setters; synced in place, never recreate) ----
   // Default undefined (not false) so an unset input falls back to a provideBlok
   // default; the readOnly effect / buildConfig coerce undefined to false.
-  private readonly readOnly$ = signal<boolean | undefined>(undefined);
-  @Input() set readOnly(value: boolean | undefined) {
+  // Accepts the object form (`{ hideControls }`) too — it flows through
+  // buildConfig unchanged and the effect expands it to
+  // `readOnly.set(enabled, { hideControls })`.
+  private readonly readOnly$ = signal<BlokConfig['readOnly'] | undefined>(undefined);
+  @Input() set readOnly(value: BlokConfig['readOnly'] | undefined) {
     this.readOnly$.set(value);
+  }
+
+  private readonly hideToolbar$ = signal<boolean | undefined>(undefined);
+  @Input() set hideToolbar(value: boolean | undefined) {
+    this.hideToolbar$.set(value);
+  }
+
+  private readonly inlineToolbar$ = signal<boolean | string[] | undefined>(undefined);
+  @Input() set inlineToolbar(value: boolean | string[] | undefined) {
+    this.inlineToolbar$.set(value);
   }
 
   private readonly theme$ = signal<ThemeMode | undefined>(undefined);
@@ -167,7 +183,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   /**
    * Escape hatch: a full config object for keys without a dedicated input
-   * (i18n, sanitizer, minHeight, inlineToolbar, …). Layered between provideBlok
+   * (i18n, sanitizer, minHeight, …). Layered between provideBlok
    * defaults and the discrete inputs.
    */
   @Input() config?: Partial<BlokAngularConfig>;
@@ -184,6 +200,8 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   /** Last token set pushed through `tokens.set`, for deep-equal deduping. */
   private appliedTokens?: Record<string, string>;
+  /** Last value pushed through `tools.setInlineToolbar`, for content-compare deduping. */
+  private appliedInlineToolbar?: boolean | string[];
   private seededEditor: Blok | null = null;
   private renderChain: Promise<void> = Promise.resolve();
 
@@ -223,7 +241,21 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     // Precedence: provideBlok defaults < [config] escape hatch < discrete inputs.
     const cfg: Partial<BlokAngularConfig> = { ...this.defaults, ...this.config };
 
+    // The object form ({ hideControls }) is preserved as-is; the readOnly
+    // effect expands it into `readOnly.set(enabled, { hideControls })`.
     cfg.readOnly = this.readOnly$() ?? this.config?.readOnly ?? this.defaults.readOnly ?? false;
+
+    const hideToolbar = this.hideToolbar$();
+
+    if (hideToolbar !== undefined) {
+      cfg.hideToolbar = hideToolbar;
+    }
+
+    const inlineToolbar = this.inlineToolbar$();
+
+    if (inlineToolbar !== undefined) {
+      cfg.inlineToolbar = inlineToolbar;
+    }
 
     // tools registries are MERGED (not replaced) across all three layers so a
     // shared registry composes with per-instance additions.
@@ -323,11 +355,46 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     // (the Angular analog of React's `editor` effect-dependency).
     effect(() => {
       const editor = this.instance();
-      const readOnly = this.readOnly$();
+      const readOnly = this.readOnly$() ?? this.config?.readOnly;
 
       if (editor) {
-        void editor.readOnly.set(readOnly ?? normalizeReadOnlyConfig(this.config?.readOnly).enabled);
+        const { enabled, hideControls } = normalizeReadOnlyConfig(readOnly);
+
+        // Only the object form carries options; the boolean form keeps the
+        // one-argument call so it never clobbers a config-seeded hideControls.
+        if (typeof readOnly === 'object' && readOnly !== null) {
+          void editor.readOnly.set(enabled, { hideControls });
+        } else {
+          void editor.readOnly.set(enabled);
+        }
       }
+    });
+
+    effect(() => {
+      const editor = this.instance();
+      const hideToolbar = this.hideToolbar$();
+
+      if (editor && hideToolbar !== undefined) {
+        editor.toolbar.setHidden(hideToolbar);
+      }
+    });
+
+    // Content-compared (not identity): a new array with the same tool names is
+    // a no-op, so template-inline array literals don't thrash the assignment.
+    effect(() => {
+      const editor = this.instance();
+      const inlineToolbar = this.inlineToolbar$();
+
+      if (
+        !editor ||
+        inlineToolbar === undefined ||
+        deepEqual(inlineToolbar, this.appliedInlineToolbar)
+      ) {
+        return;
+      }
+
+      this.appliedInlineToolbar = Array.isArray(inlineToolbar) ? [...inlineToolbar] : inlineToolbar;
+      editor.tools.setInlineToolbar(inlineToolbar);
     });
 
     effect(() => {

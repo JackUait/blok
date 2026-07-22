@@ -417,14 +417,51 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     }
   });
 
-  // Reactive: readOnly (object form normalized so the effect dep is a stable boolean)
-  const readOnlyEnabled = normalizeReadOnlyConfig(config.readOnly).enabled;
+  // Reactive: readOnly (object form normalized so the effect deps are stable booleans).
+  // The object form additionally syncs `hideControls` through the options
+  // parameter of `readOnly.set` — a plain boolean prop keeps the historical
+  // boolean-only call so it never overwrites a construction-time object form.
+  const readOnlyIsObjectForm = typeof config.readOnly === 'object' && config.readOnly !== null;
+  const { enabled: readOnlyEnabled, hideControls: readOnlyHideControls } = normalizeReadOnlyConfig(config.readOnly);
   useEffect(() => {
     if (editor === null) {
       return;
     }
-    void editor.readOnly.set(readOnlyEnabled);
-  }, [editor, readOnlyEnabled]);
+
+    if (readOnlyIsObjectForm) {
+      void editor.readOnly.set(readOnlyEnabled, { hideControls: readOnlyHideControls });
+    } else {
+      void editor.readOnly.set(readOnlyEnabled);
+    }
+  }, [editor, readOnlyEnabled, readOnlyHideControls, readOnlyIsObjectForm]);
+
+  // Reactive: hideToolbar. `toolbar.setHidden` writes `config.hideToolbar`
+  // (read live by the toolbar's open guards) AND toggles the wrapper's
+  // toolbar-hidden attribute (the CSS hook that collapses the gutter), so a
+  // prop flip takes effect in place. Guarded on `undefined` so a consumer who
+  // never sets the prop gets no call at all (mirrors theme/width).
+  const { hideToolbar } = config;
+  useEffect(() => {
+    if (editor === null || hideToolbar === undefined) {
+      return;
+    }
+    editor.toolbar.setHidden(hideToolbar);
+  }, [editor, hideToolbar]);
+
+  // Reactive: inlineToolbar. `tools.setInlineToolbar` re-assigns every block
+  // tool's inline set and invalidates sanitize caches, so the change lands on
+  // the next selection without a re-render. The dep is a content serialization
+  // (boolean | string[]) so a re-created array literal with the same entries
+  // does not re-fire the setter.
+  const { inlineToolbar } = config;
+  const inlineToolbarKey = inlineToolbar === undefined ? undefined : JSON.stringify(inlineToolbar);
+  useEffect(() => {
+    if (editor === null || inlineToolbar === undefined) {
+      return;
+    }
+    editor.tools.setInlineToolbar(inlineToolbar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- inlineToolbar is deliberately depped by CONTENT (inlineToolbarKey) so a re-created array literal with the same entries does not thrash the setter
+  }, [editor, inlineToolbarKey]);
 
   // Reactive: autofocus
   const { autofocus } = config;

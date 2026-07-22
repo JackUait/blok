@@ -245,6 +245,28 @@ export class Tools extends Module {
   }
 
   /**
+   * Runtime setter for the global `inlineToolbar` config (reactive contract).
+   *
+   * Writes the new value into the shared config, re-runs inline-tool
+   * assignment for every block tool (safe because assignment is idempotent)
+   * and invalidates each adapter's memoized sanitize configs so the paste
+   * path never composes against the old inline-tool set. Tool-scoped
+   * `inlineToolbar` settings (arrays and opt-outs) stay authoritative.
+   *
+   * Takes effect on the next selection — the inline toolbar resolves its
+   * tools lazily from `blockTool.inlineTools` at selection time.
+   * @param inlineToolbar - new global inline toolbar config
+   */
+  public setInlineToolbar(inlineToolbar: boolean | string[]): void {
+    this.config.inlineToolbar = inlineToolbar;
+
+    Array.from(this.blockTools.values()).forEach((tool) => {
+      this.assignInlineToolsToBlockTool(tool);
+      tool.invalidateSanitizeCache();
+    });
+  }
+
+  /**
    * Return general Sanitizer config for all inline tools
    */
   public getAllInlineToolsSanitizeConfig(): SanitizerConfig {
@@ -502,6 +524,14 @@ export class Tools extends Module {
    */
   private assignInlineToolsToBlockTool(tool: BlockToolAdapter): void {
     const blockTool = tool;
+
+    /**
+     * Reset the collection first so this method is idempotent: every branch
+     * below (global `false` early return, tool opt-out, `true`, array) leaves
+     * a correct — possibly empty — collection even when re-run against a
+     * previously-assigned tool (see setInlineToolbar).
+     */
+    blockTool.inlineTools = new ToolsCollection<InlineToolAdapter>();
 
     /**
      * If common inlineToolbar property is false no Inline Tools should be assigned

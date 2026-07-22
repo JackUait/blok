@@ -730,7 +730,7 @@
     .dark-mode #settings-close:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
     .dark-mode #settings-close:active { background: rgba(255,255,255,0.11); }
 
-    #select-notifier-position {
+    .settings-select {
       font-size: 12px;
       padding: 5px 26px 5px 10px;
       border: 1px solid var(--pg-line-strong);
@@ -745,15 +745,16 @@
       font-family: inherit;
       letter-spacing: -0.005em;
     }
-    #select-notifier-position:hover { border-color: #222222; }
-    #select-notifier-position:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
-    .dark-mode #select-notifier-position {
+    .settings-select:hover { border-color: #222222; }
+    .settings-select:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
+    #select-locale { max-width: 130px; }
+    .dark-mode .settings-select {
       background-color: #1f1f1f;
       border-color: #3d3d3d;
       color: #e0e0e0;
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='none'><path d='M3 4.5L6 7.5L9 4.5' stroke='%23a8a8a8' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
     }
-    .dark-mode #select-notifier-position:hover { border-color: #ffffff; }
+    .dark-mode .settings-select:hover { border-color: #ffffff; }
 
     #reset-content {
       width: 100%;
@@ -908,9 +909,14 @@
           <span class="pill-toggle"></span>
         </label>
         <div class="settings-row" style="cursor: default;">
+          <span class="settings-row-label">Language</span>
+          <kbd class="settings-kbd">⌥L</kbd>
+          <select id="select-locale" class="settings-select" aria-label="Editor language"></select>
+        </div>
+        <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Notification position</span>
           <kbd class="settings-kbd">⌥N</kbd>
-          <select id="select-notifier-position">
+          <select id="select-notifier-position" class="settings-select">
             <option value="bottom-left">Bottom left</option>
             <option value="bottom-right">Bottom right</option>
             <option value="bottom-center" selected>Bottom center</option>
@@ -944,6 +950,7 @@
     import { Blok } from './src/blok.ts';
     import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
+    import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -960,6 +967,7 @@
       readOnly: false,
       darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       autofocus: true,
+      locale: 'en',
       rtl: false,
       notifierPosition: 'bottom-center',
       tools: {
@@ -1935,7 +1943,7 @@
         tools,
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
-        i18n: { direction: state.rtl ? 'rtl' : 'ltr' },
+        i18n: { locale: state.locale, direction: state.rtl ? 'rtl' : 'ltr' },
         style: { contentAlign: 'center' },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
@@ -2099,6 +2107,10 @@
         KeyD: () => document.getElementById('toggle-dark').click(),
         KeyF: () => document.getElementById('toggle-autofocus').click(),
         KeyT: () => document.getElementById('toggle-rtl').click(),
+        KeyL: () => {
+          openSettingsPanel();
+          document.getElementById('select-locale').focus();
+        },
         KeyN: () => {
           const sel = document.getElementById('select-notifier-position');
           const next = (sel.selectedIndex + 1) % sel.options.length;
@@ -2210,6 +2222,36 @@
       state.rtl = toggleRtl.checked;
       // Live update — no reinit needed, config.i18n.direction is reactive
       await blok.i18n.update({ direction: state.rtl ? 'rtl' : 'ltr' });
+    });
+
+    /**
+     * Language picker — every supported locale, labelled in its own language.
+     */
+    const selectLocale = document.getElementById('select-locale');
+
+    for (const code of ALL_LOCALE_CODES) {
+      const option = document.createElement('option');
+      let nativeName = code;
+      try {
+        nativeName = new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code;
+      } catch {
+        // Locale unknown to Intl — fall back to the raw code
+      }
+      option.value = code;
+      option.textContent = `${nativeName} (${code})`;
+      option.selected = code === state.locale;
+      selectLocale.appendChild(option);
+    }
+
+    selectLocale.addEventListener('change', async () => {
+      state.locale = selectLocale.value;
+      // Locale implies direction; keep the RTL toggle in sync with it
+      state.rtl = getDirection(state.locale) === 'rtl';
+      toggleRtl.checked = state.rtl;
+      await blok.i18n.update({
+        locale: state.locale,
+        direction: state.rtl ? 'rtl' : 'ltr',
+      });
     });
 
     const selectNotifierPosition = document.getElementById('select-notifier-position');

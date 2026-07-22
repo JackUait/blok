@@ -7,6 +7,7 @@ import {
   applyMark,
   removeMark,
   toggleMark,
+  toggleMarkAtCaret,
   markSanitizerConfig,
 } from '../../../../src/components/marks/mark-engine';
 import type { MarkSpec } from '../../../../types/api/marks';
@@ -598,6 +599,156 @@ describe('mark-engine', () => {
       el.setAttribute('data-id', 'x1');
 
       expect(rule(el)).toEqual({ 'data-id': true });
+    });
+  });
+
+  describe('aliasTags', () => {
+    /** Bold expressed as a spec: <b> is the same mark as <strong>. */
+    const boldSpec: MarkSpec = {
+      tag: 'strong',
+      aliasTags: ['b'],
+    };
+
+    it('matches alias-tagged elements as the same mark', () => {
+      const b = document.createElement('b');
+      const strong = document.createElement('strong');
+      const em = document.createElement('em');
+
+      expect(matchesMarkSpec(boldSpec, strong)).toBe(true);
+      expect(matchesMarkSpec(boldSpec, b)).toBe(true);
+      expect(matchesMarkSpec(boldSpec, em)).toBe(false);
+    });
+
+    it('reports hasMark across a mix of canonical and alias wrappers', () => {
+      setContent('<strong>one</strong> <b>two</b>');
+
+      expect(hasMark(boldSpec, rangeOverContents(container))).toBe(true);
+    });
+
+    it('creates the canonical tag and strips nested alias wrappers on apply', () => {
+      setContent('plain <b>bolded</b> tail');
+
+      const range = rangeOverContents(container);
+
+      selectRange(range);
+      applyMark(boldSpec, undefined, range);
+
+      expect(container.querySelectorAll('b').length).toBe(0);
+      expect(container.querySelectorAll('strong').length).toBe(1);
+      expect(container.querySelector('strong')?.textContent).toBe('plain bolded tail');
+    });
+
+    it('unwraps alias wrappers on remove', () => {
+      setContent('<b>bolded</b>');
+
+      const range = rangeOverContents(container);
+
+      selectRange(range);
+      removeMark(boldSpec, range);
+
+      expect(container.querySelectorAll('b, strong').length).toBe(0);
+      expect(container.textContent).toBe('bolded');
+    });
+
+    it('splits a partially-selected alias wrapper at the boundary', () => {
+      setContent('<b>bolded</b>');
+
+      const textNode = container.querySelector('b')?.firstChild;
+
+      if (!textNode) {
+        throw new Error('fixture text node missing');
+      }
+
+      const range = rangeOver(textNode, 0, 4);
+
+      selectRange(range);
+      removeMark(boldSpec, range);
+
+      expect(container.textContent).toBe('bolded');
+      expect(container.querySelector('b, strong')?.textContent).toBe('ed');
+    });
+
+    it('extends removal over browser-excluded trailing whitespace, symmetric with apply', () => {
+      setContent('<strong>hello world </strong>');
+
+      const textNode = container.querySelector('strong')?.firstChild;
+
+      if (!textNode) {
+        throw new Error('fixture text node missing');
+      }
+
+      /** Triple-click/Ctrl+A style selection stopping before the trailing space */
+      const range = rangeOver(textNode, 0, 11);
+
+      selectRange(range);
+      removeMark(boldSpec, range);
+
+      expect(container.querySelector('strong')).toBeNull();
+      expect(container.textContent).toBe('hello world ');
+    });
+
+    it('emits sanitizer rules for the canonical tag and every alias', () => {
+      const config = markSanitizerConfig(boldSpec);
+
+      expect(Object.keys(config).sort()).toEqual(['b', 'strong']);
+    });
+  });
+
+  describe('toggleMarkAtCaret', () => {
+    it('inserts a pending-format wrapper holding a zero-width space at the caret', () => {
+      setContent('hello');
+
+      const textNode = container.firstChild;
+
+      if (!textNode) {
+        throw new Error('fixture text node missing');
+      }
+
+      const caret = rangeOver(textNode, 2, 2);
+
+      selectRange(caret);
+
+      const nowApplied = toggleMarkAtCaret(classSpec, undefined, caret);
+
+      expect(nowApplied).toBe(true);
+
+      const wrapper = container.querySelector('span.hl-description');
+
+      expect(wrapper?.textContent).toBe('​');
+
+      const selection = window.getSelection();
+
+      expect(selection?.anchorNode).toBe(wrapper?.firstChild);
+      expect(selection?.anchorOffset).toBe(1);
+      expect(selection?.isCollapsed).toBe(true);
+    });
+
+    it('splits the wrapper around the caret when toggling off, leaving surrounding text formatted', () => {
+      setContent('<span class="hl-description">hello</span>');
+
+      const textNode = container.querySelector('span')?.firstChild;
+
+      if (!textNode) {
+        throw new Error('fixture text node missing');
+      }
+
+      const caret = rangeOver(textNode, 2, 2);
+
+      selectRange(caret);
+
+      const nowApplied = toggleMarkAtCaret(classSpec, undefined, caret);
+
+      expect(nowApplied).toBe(false);
+
+      const wrappers = Array.from(container.querySelectorAll('span.hl-description'));
+
+      expect(wrappers.map((w) => w.textContent)).toEqual(['he', 'llo']);
+      expect(container.textContent).toBe('he​llo');
+
+      const selection = window.getSelection();
+
+      expect(selection?.isCollapsed).toBe(true);
+      expect(selection?.anchorNode?.parentElement?.closest('.hl-description')).toBeNull();
     });
   });
 });

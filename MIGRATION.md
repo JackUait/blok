@@ -535,11 +535,17 @@ After (`api.marks`):
 
 - Partially covered wrappers are split at the selection boundaries; text
   outside the selection keeps its formatting.
-- `apply` extends the range over browser-excluded trailing whitespace, so the
-  visible selection and the formatted run agree.
+- `apply` and `remove` extend the range over browser-excluded trailing
+  whitespace, so the visible selection and the formatted run agree (and
+  toggling off never strands a whitespace-only wrapper).
 - Two specs sharing a wrapper family (same tag/classes, different declared
   style property — e.g. text colour and background) compose on ONE element
   instead of nesting or cancelling each other.
+- Legacy tag variants can be declared as the SAME mark via `aliasTags`
+  (e.g. `{ tag: 'strong', aliasTags: ['b'] }`): alias-tagged wrappers are
+  recognized, split and stripped like canonical ones, while newly created
+  wrappers always use `tag`. Blok's own Bold (`strong`+`b`) and Italic
+  (`i`+`em`) run on exactly this.
 
 ---
 

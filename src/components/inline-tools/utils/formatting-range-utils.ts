@@ -73,14 +73,11 @@ export const findFormattingAncestor = (
 };
 
 /**
- * Check if any ancestor matches the predicate
+ * Check if a node or any of its ancestors matches the predicate
  * @param node - The node to check
  * @param predicate - Function to test elements
  */
-export const hasFormattingAncestor = (
-  node: Node | null,
-  predicate: (element: Element) => boolean
-): boolean => {
+const hasFormattingAncestor = (node: Node | null, predicate: (element: Element) => boolean): boolean => {
   return findFormattingAncestor(node, predicate) !== null;
 };
 

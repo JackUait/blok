@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   createRangeTextWalker,
   findFormattingAncestor,
-  hasFormattingAncestor,
   isRangeFormatted,
   collectFormattingAncestors,
 } from '../../../../../src/components/inline-tools/utils/formatting-range-utils';
@@ -161,43 +160,6 @@ describe('formatting-range-utils', () => {
     });
   });
 
-  describe('hasFormattingAncestor', () => {
-    it('returns true when ancestor matches predicate', () => {
-      const container = document.createElement('div');
-      container.innerHTML = '<em>italic text</em>';
-      document.body.appendChild(container);
-
-      const em = container.querySelector('em');
-      if (!em?.firstChild) {
-        throw new Error('em element or its firstChild not found');
-      }
-      const textNode = em.firstChild;
-      const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
-
-      expect(hasFormattingAncestor(textNode, isItalic)).toBe(true);
-    });
-
-    it('returns false when no ancestor matches', () => {
-      const container = document.createElement('div');
-      container.innerHTML = '<span>plain</span>';
-      document.body.appendChild(container);
-
-      const span = container.querySelector('span');
-      if (!span?.firstChild) {
-        throw new Error('span element or its firstChild not found');
-      }
-      const textNode = span.firstChild;
-      const isItalic = (el: Element) => el.tagName === 'EM' || el.tagName === 'I';
-
-      expect(hasFormattingAncestor(textNode, isItalic)).toBe(false);
-    });
-
-    it('returns false for null input', () => {
-      const isItalic = (el: Element) => el.tagName === 'EM';
-
-      expect(hasFormattingAncestor(null, isItalic)).toBe(false);
-    });
-  });
 
   describe('isRangeFormatted', () => {
     const isBold = (el: Element) => el.tagName === 'STRONG' || el.tagName === 'B';

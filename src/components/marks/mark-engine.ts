@@ -33,6 +33,15 @@ const isStyleValueSet = (value: string): boolean => {
 };
 
 /**
+ * All tag names an element may carry to count as this mark: the canonical
+ * tag plus any aliases (e.g. `strong` + `b`), uppercased for tagName compare
+ * @param spec - mark description
+ */
+const specTagNames = <State>(spec: MarkSpec<State>): string[] => {
+  return [spec.tag, ...(spec.aliasTags ?? [])].map((tag) => tag.toUpperCase());
+};
+
+/**
  * Normalize the spec's className field to an array
  * @param spec - mark description
  */
@@ -86,7 +95,7 @@ export const matchesMarkSpec = <State>(spec: MarkSpec<State>, element: Element):
  * @param element - element to test
  */
 const matchesMarkFamily = <State>(spec: MarkSpec<State>, element: Element): boolean => {
-  if (element.tagName !== spec.tag.toUpperCase()) {
+  if (!specTagNames(spec).includes(element.tagName)) {
     return false;
   }
 
@@ -522,7 +531,7 @@ export const applyMark = <State>(spec: MarkSpec<State>, state: State | undefined
    * no live range boundary can be re-seated by the unwrapping), and unwrap
    * the ones left bare
    */
-  const nestedFamily = Array.from(wrapper.querySelectorAll(spec.tag)).filter(
+  const nestedFamily = Array.from(wrapper.querySelectorAll(specTagNames(spec).join(','))).filter(
     (nested): nested is HTMLElement => nested instanceof HTMLElement && matchesMarkFamily(spec, nested)
   );
 
@@ -644,6 +653,12 @@ export const removeMark = <State>(spec: MarkSpec<State>, range: Range): HTMLElem
    * a zero-width range would slice the wrapper's contents into siblings
    */
   if (!range.collapsed) {
+    /**
+     * Symmetric with apply: browsers exclude trailing whitespace from
+     * triple-click/Ctrl+A selections, and leaving it formatted would strand
+     * a whitespace-only wrapper after the split
+     */
+    extendRangeToTrailingWhitespace(range);
     splitFamilyAtBoundaries(spec, range);
   }
 
@@ -725,6 +740,62 @@ export const toggleMark = <State>(spec: MarkSpec<State>, state: State | undefine
 };
 
 /**
+ * Collapse the live selection to a caret right after a node's content
+ * @param node - text node to place the caret in
+ * @param offset - character offset for the caret
+ */
+const placeCaretAt = (node: Node, offset: number): void => {
+  const selection = window.getSelection();
+
+  if (!selection) {
+    return;
+  }
+
+  const caret = document.createRange();
+
+  caret.setStart(node, offset);
+  caret.setEnd(node, offset);
+  selection.removeAllRanges();
+  selection.addRange(caret);
+};
+
+/**
+ * Toggle the mark at a collapsed caret using the zero-width-space
+ * pending-format protocol: toggling ON inserts a wrapper holding a ZWSP and
+ * places the caret inside it, so the next typed characters inherit the mark;
+ * toggling OFF splits the enclosing wrapper around a ZWSP so typing continues
+ * unformatted while the surrounding text keeps its formatting.
+ * Returns true when the mark is now applied at the caret.
+ * @param spec - mark description
+ * @param state - state for function-form values
+ * @param range - collapsed range marking the caret position
+ */
+export const toggleMarkAtCaret = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): boolean => {
+  const zwsp = document.createTextNode('\u200B');
+
+  if (hasMark(spec, range)) {
+    range.insertNode(zwsp);
+
+    const zwspRange = document.createRange();
+
+    zwspRange.selectNode(zwsp);
+    removeMark(spec, zwspRange);
+    placeCaretAt(zwsp, 1);
+
+    return false;
+  }
+
+  const wrapper = document.createElement(spec.tag);
+
+  writeSpecOnto(wrapper, spec, state);
+  wrapper.appendChild(zwsp);
+  range.insertNode(wrapper);
+  placeCaretAt(zwsp, 1);
+
+  return true;
+};
+
+/**
  * Derive the sanitizer rule a mark produces: allowlist the spec's tag, strip
  * style properties and classes the spec does not declare, keep declared
  * attributes. Function-form values are handled by property NAME (names are
@@ -737,52 +808,54 @@ export const markSanitizerConfig = <State>(spec: MarkSpec<State>): SanitizerConf
   const declaredClasses = specClassNames(spec);
   const declaredAttributes = Object.entries(spec.attributes ?? {});
 
-  return {
-    [spec.tag.toLowerCase()]: (node: Element): { [attr: string]: boolean | string } => {
-      const element = node as HTMLElement;
-      const allowed: { [attr: string]: boolean | string } = {};
+  const rule = (node: Element): { [attr: string]: boolean | string } => {
+    const element = node as HTMLElement;
+    const allowed: { [attr: string]: boolean | string } = {};
 
-      const styleProps = Array.from({ length: element.style.length }, (_, i) => element.style.item(i));
+    const styleProps = Array.from({ length: element.style.length }, (_, i) => element.style.item(i));
 
-      for (const prop of styleProps) {
-        if (!declaredStyles.includes(prop)) {
-          element.style.removeProperty(prop);
-        }
+    for (const prop of styleProps) {
+      if (!declaredStyles.includes(prop)) {
+        element.style.removeProperty(prop);
+      }
+    }
+
+    if (element.style.length > 0) {
+      allowed.style = true;
+    }
+
+    for (const className of Array.from(element.classList)) {
+      if (!declaredClasses.includes(className)) {
+        element.classList.remove(className);
+      }
+    }
+
+    if (element.classList.length > 0) {
+      allowed.class = true;
+    }
+
+    for (const [name, value] of declaredAttributes) {
+      const current = element.getAttribute(name);
+
+      if (current === null) {
+        continue;
       }
 
-      if (element.style.length > 0) {
-        allowed.style = true;
+      /**
+       * Static attribute values are identity: strip mismatches instead of
+       * letting arbitrary payloads ride a declared attribute name
+       */
+      if (typeof value === 'string' && current !== value) {
+        continue;
       }
 
-      for (const className of Array.from(element.classList)) {
-        if (!declaredClasses.includes(className)) {
-          element.classList.remove(className);
-        }
-      }
+      allowed[name] = true;
+    }
 
-      if (element.classList.length > 0) {
-        allowed.class = true;
-      }
-
-      for (const [name, value] of declaredAttributes) {
-        const current = element.getAttribute(name);
-
-        if (current === null) {
-          continue;
-        }
-
-        /**
-         * Static attribute values are identity: strip mismatches instead of
-         * letting arbitrary payloads ride a declared attribute name
-         */
-        if (typeof value === 'string' && current !== value) {
-          continue;
-        }
-
-        allowed[name] = true;
-      }
-
-      return allowed;
-    },
+    return allowed;
   };
+
+  return Object.fromEntries(
+    specTagNames(spec).map((tagName) => [tagName.toLowerCase(), rule])
+  );
 };

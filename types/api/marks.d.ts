@@ -30,6 +30,14 @@ export interface MarkSpec<State = void> {
   tag: string;
 
   /**
+   * Additional tag names that count as the SAME mark when matching existing
+   * elements (e.g. `strong` with alias `b`, `i` with alias `em`). Newly
+   * created wrappers always use `tag`; alias-tagged wrappers are recognized,
+   * stripped and split exactly like canonical ones.
+   */
+  aliasTags?: string[];
+
+  /**
    * Class name(s) the wrapper must carry. All of them are required for a
    * match; extra classes on the element are tolerated.
    */

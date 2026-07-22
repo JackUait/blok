@@ -573,6 +573,91 @@ const LAO_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.quote.placeholder': 'ຄຳອ້າງອີງ',
 };
 
+const LITHUANIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Valyti formatavimą',
+  'tools.marker.textColor': 'Teksto spalva',
+  'tools.toggle.bodyPlaceholder':
+    'Tuščias sutraukiamas blokas. Spustelėkite, kad pridėtumėte bloką, arba nuvilkite blokus į vidų.',
+  'toolbox.addBelow': 'Spustelėkite, kad pridėtumėte žemiau',
+  'toolbox.optionAddAbove':
+    'Spustelėkite laikydami nuspaudę klavišą Option, kad pridėtumėte aukščiau',
+  'toolbox.ctrlAddAbove':
+    'Spustelėkite laikydami nuspaudę klavišą Ctrl, kad pridėtumėte aukščiau',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.table.insertRowAbove': 'Įterpti eilutę aukščiau',
+  'tools.table.insertRowBelow': 'Įterpti eilutę žemiau',
+  'tools.table.clearSelection': 'Išvalyti turinį',
+  'tools.table.placement': 'Lygiuotė',
+  'a11y.dragStartedMultiple': 'Velkamų blokų: {count}',
+  'a11y.blocksMoved':
+    'Perkelta blokų: {count}. Nauja pozicija: {position}.',
+  'a11y.blocksDuplicated':
+    'Dubliuota blokų: {count}. Kopijų pradinė pozicija: {position}.',
+  'a11y.searchResults': 'Paieškos rezultatų: {count}',
+  'a11y.allBlocksSelected': 'Pasirinkti visi blokai. Iš viso: {count}',
+  'a11y.navigationModeEntered':
+    'Naršymo režimas. Rodyklių klavišais judėkite tarp blokų. Norėdami redaguoti, paspauskite Enter, o norėdami išeiti – Escape.',
+  'toolNames.divider': 'Skyriklis',
+  'searchTerms.divider': 'skiriamoji linija',
+  'searchTerms.delimiter': 'atskyrimo ženklas',
+  'searchTerms.unordered': 'nenumeruotas',
+  'searchTerms.blockquote': 'blokinė citata',
+  'searchTerms.citation': 'citavimas',
+  'tools.callout.addEmoji': 'Pridėti piktogramą',
+  'tools.callout.filterEmojis': 'Ieškoti jaustukų…',
+  'tools.callout.pickRandom': 'Pasirinkti atsitiktinį jaustuką',
+  'tools.callout.colorTeal': 'Žalsvai mėlyna',
+  'tools.quote.defaultSize': 'Numatytasis',
+  'tools.code.searchLanguage': 'Ieškoti kalbų…',
+  'blockSettings.copyLinkSuccess': 'Nuoroda nukopijuota į iškarpinę',
+  'blockSettings.copyLinkError':
+    'Nepavyko nukopijuoti nuorodos į bloką',
+  'tools.link.linkTitle': 'Nuorodos tekstas',
+  'tools.image.viewFullscreen': 'Peržiūrėti visame ekrane',
+  'tools.image.moreOptions': 'Daugiau parinkčių',
+  'tools.image.altEdit': 'Redaguoti alternatyvųjį tekstą',
+  'tools.image.altDescription':
+    'Aprašykite šį paveikslą žmonėms, kurie jo nemato.',
+  'tools.image.altPlaceholder': 'Alternatyvusis tekstas',
+  'tools.image.previewControls': 'Paveikslo peržiūros valdikliai',
+  'tools.image.resetZoom': 'Atkurti mastelį',
+  'tools.image.errorDefaultMessage':
+    'Nepavyko įkelti paveikslo iš šio URL. Pabandykite kitą šaltinį arba įkelkite failą iš naujo.',
+  'tools.image.cropRatioFree': 'Laisva',
+  'tools.image.cropReset': 'Nustatyti iš naujo',
+  'tools.file.previewRaw': 'Šaltinis',
+  'tools.video.alignmentLeft': 'Lygiuoti kairėn',
+  'tools.video.alignmentCenter': 'Lygiuoti per vidurį',
+  'tools.video.alignmentRight': 'Lygiuoti dešinėn',
+  'tools.video.moreOptions': 'Daugiau parinkčių',
+  'tools.audio.alignmentLeft': 'Lygiuoti kairėn',
+  'tools.audio.alignmentCenter': 'Lygiuoti per vidurį',
+  'tools.audio.alignmentRight': 'Lygiuoti dešinėn',
+  'tools.audio.replace': 'Pakeisti garso įrašą',
+  'tools.audio.emptyAddAudio': 'Pridėkite garso įrašą',
+  'tools.audio.emptyOrDropHere': 'arba vilkite garso failą čia',
+  'tools.audio.emptyUrlPlaceholder': 'Įklijuokite garso įrašo URL…',
+  'tools.audio.emptyUrlAria': 'Garso įrašo URL',
+  'tools.audio.emptySourceAria': 'Garso įrašo šaltinis',
+  'tools.audio.coverSourceAria': 'Viršelio šaltinis',
+  'tools.database.viewTypeListDescription':
+    'Rodyti elementus paprastame sąraše',
+  'tools.database.listView': 'Sąrašo rodinys',
+  'tools.database.cardDetails': 'Kortelės informacija',
+  'tools.bookmark.loading': 'Įkeliama nuorodos peržiūra…',
+  'tools.bookmark.error': 'Nepavyko įkelti nuorodos peržiūros',
+  'tools.embed.empty': 'Nėra įterpiamos nuorodos',
+  'tools.embed.urlPlaceholder':
+    'Įklijuokite norimą įterpti nuorodą…',
+  'notifier.dismiss': 'Uždaryti pranešimą',
+  'tools.video.seek': 'Atkūrimo vieta',
+  'tools.video.toggleTimeDisplay':
+    'Perjungti praėjusio ir likusio laiko rodymą',
+  'tools.video.ctxStats': 'Atkūrimo statistika',
+  'tools.callout.emojiSearchResults': 'Atitinkančių jaustukų: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1308,6 +1393,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(LAO_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Lithuanian correction oracle', () => {
+    const messages = readLocale('lt').messages;
+    const actual = Object.fromEntries(
+      Object.keys(LITHUANIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(LITHUANIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -327,7 +327,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ko` | Korean | Hangul | ltr | neutral contemporary Korean product UI; concise noun/state labels and direct imperatives; polite complete instructions and accessibility announcements; standard Korean spacing and ellipsis; pronunciation-sensitive particles around runtime tokens; established Korean product and media terminology; conventional unchanged shortcuts, ratios, and the `URL` acronym | `root-kn_final_retry_a` | `root-kn_final_retry_b` | pass | pass | pass | `F-ko-001`–`F-ko-045` | second-pass-complete |
 | `ku` | Sorani (Central Kurdish) | Arabic | rtl | neutral contemporary Sorani/Central Kurdish in Arabic script and RTL; concise direct imperatives and noun/state labels; complete accessibility announcements; Sorani punctuation and orthographic spacing; count-neutral runtime templates; isolated Latin shortcuts and established technical tokens | `root-ku_546_first_audit` | `root-ku_546_first_audit-sorani_language_cleanroom` | pass | pass | pass | `F-ku-001`–`F-ku-033`, `F-ku-035`–`F-ku-065` | second-pass-complete |
 | `lo` | Lao | Lao | ltr | neutral contemporary Lao product UI; concise direct actions and noun/state labels; complete accessibility announcements and recovery guidance; Lao script and standard orthography; native punctuation and ellipsis; established Lao product/media terminology; count-neutral runtime templates; conventional unchanged shortcuts, ratios, and acronyms | `root-lo_final_cleanroom_a` | `root-lo_final_cleanroom_b` | pass | pass | pass | `F-lo-001`–`F-lo-039` | second-pass-complete |
-| `lt` | Lithuanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lt-001`–`F-lt-003` | pending |
+| `lt` | Lithuanian | Latin | ltr | neutral contemporary Lithuanian product UI; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or direct action labels for compact controls; sentence-case UI; established Lithuanian product, accessibility, and media terminology; count-neutral label-before-number templates; conventional unchanged shortcut, ratio, and acronym notation | `root-lt_546_first_audit-final_cleanroom_e` | `root-lt_546_first_audit-final_cleanroom_f` | pass | pass | pass | `F-lt-001`–`F-lt-070` | second-pass-complete |
 | `lv` | Latvian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-lv-001`–`F-lv-004` | pending |
 | `mk` | Macedonian | Cyrillic | ltr | to-audit | — | — | pending | pending | pending | `F-mk-001`–`F-mk-002` | pending |
 | `ml` | Malayalam | Malayalam | ltr | to-audit | — | — | pending | pending | pending | `F-ml-001`–`F-ml-003` | pending |
@@ -465,6 +465,7 @@ locale returns to `pending`.
 | `ko` | `root-kn_final_retry_a` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` | `root-kn_final_retry_b` | `sha256:b7a946396d0ef9c0550df9891567c54ba28768757a46591138807625de6a886a` |
 | `ku` | `root-ku_546_first_audit` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` | `root-ku_546_first_audit-sorani_language_cleanroom` | `sha256:61ac2c424591554459a241ad7bac03664383b173560d416a0422c60776a83dae` |
 | `lo` | `root-lo_final_cleanroom_a` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` | `root-lo_final_cleanroom_b` | `sha256:af8f5ba52fec006d8502fc32806e408e38016ae1bca06e2eb522573ed2ed7d4b` |
+| `lt` | `root-lt_546_first_audit-final_cleanroom_e` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` | `root-lt_546_first_audit-final_cleanroom_f` | `sha256:3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -4609,41 +4610,68 @@ completeness and integrity at 546/546, and the checker suite passes 89/89 on
 the final bytes. The seven directly affected media/upload caller files pass
 330/330. Lao is `second-pass-complete`.
 
-### Lithuanian (`lt`) — pending after current-byte residuals
+### Lithuanian (`lt`) — second-pass complete
 
-Reviewer `root` started at English entry 1 and read the clean current
-English/Lithuanian pairs in insertion order without consulting prior
-Lithuanian evidence. The attempted first pass stopped on the first genuine
-residual at entry 28. English changed from `Text` to `Text color`, but
-Lithuanian retained the former-source `Tekstas`. The shared picker renders
-this value directly as its text-color section title beside the background
-axis and composes it into every swatch label. `F-lt-002` restores the
-established Lithuanian product label `Teksto spalva`.
+The exhaustive current-byte Lithuanian audit began at raw SHA-256
+`788e397254fc716edf05abbdc5db9bd1937dd0aa6538a961ad22a37b1cd3f5ed`
+after the pre-existing `F-lt-001`–`F-lt-003` corrections. Three independent
+546-entry reads converged on 67 additional meaning, changed-English,
+accessibility, caller-scope, terminology, grammar, count-neutrality, and
+copied-media defects. The frozen 70-value Lithuanian oracle matched the first
+three corrected values and failed red on all 67 old current-byte values before
+`F-lt-004`–`F-lt-070` were applied.
 
-The attempted pass binds to pre-correction raw Lithuanian SHA-256
-`2eca89c45fcd6c76aa9278999fa698a48086fdea95180317d92d181bc20e4022`.
-The focused expectation failed on exactly `Tekstas` before remediation and
-passes afterward. The corrected raw Lithuanian SHA-256 is
-`dcb7b24cb9af4aa8d34b18ebb7abec726e862bc2276eb4b254734b212be4ee39`.
-The attempted review earns no pass credit; both complete passes must start
-from entry 1 on the corrected bytes.
+The first corrected candidate reached raw SHA-256
+`9ff98a700d237ef1f4754ed9f47569b767a236cbc8f8faee1efa7f25e3b80254`,
+and the focused oracle passed. The complete i18n suite then caught a genuine
+cross-key defect that a value-only oracle could not: `searchTerms.separator`
+and the proposed `searchTerms.delimiter` both resolved to `skyriklis` inside
+the divider tool’s duplicate-sensitive search group. The oracle was updated
+to the distinct, semantically accurate `atskyrimo ženklas`, failed red on
+exactly that delimiter value, and passed after remediation. The finding
+history records the original `skyrybos ženklas` directly against the final
+wording rather than treating the uncommitted intermediate candidate as a
+separate defect.
 
-Reviewer `root-hindi_546_current_second` then restarted at English entry 1
-on the corrected English/Lithuanian bytes without consulting prior
-Lithuanian evidence. The attempted first pass stopped on its first confirmed
-residual at entry 61. Both toggle providers render
-`tools.toggle.bodyPlaceholder` as a clickable empty-body prompt whose click
-inserts and focuses a child block, but the old Lithuanian wording omits the
-source result “to add a block.” `F-lt-003` restores that result with the
-established imperative-purpose construction `kad pridėtumėte bloką`.
+The final raw Lithuanian SHA-256 is
+`3761c1b2755388b8ab2996ec7e213828b4b0d8bc37c8c7fa81c61d1ae80f5244`.
+Reviewers `root-lt_546_first_audit-final_cleanroom_e` and
+`root-lt_546_first_audit-final_cleanroom_f` each restarted at English entry 1
+and independently reread all 546 final pairs. Both rehashed before and after,
+made no edits, remained isolated from prior reports and other dictionaries,
+and accepted the same final digest with zero residual semantic, grammatical,
+terminology, register, punctuation, accessibility, placeholder, or
+source-synchronization defects. Two earlier replacement attempts that exposed
+themselves to out-of-scope locale material were discarded and earn no review
+credit. The only catalog-only ambiguity, the concise empty-title placeholder
+`Sutraukiamas`, was independently checked at its caller and accepted as a
+masculine adjective with the implied noun `blokas`.
 
-The stopped review binds to pre-correction raw Lithuanian SHA-256
-`dcb7b24cb9af4aa8d34b18ebb7abec726e862bc2276eb4b254734b212be4ee39`.
-The focused expectation failed on exactly the incomplete prompt before
-remediation and passes afterward. The corrected raw Lithuanian SHA-256 is
-`788e397254fc716edf05abbdc5db9bd1937dd0aa6538a961ad22a37b1cd3f5ed`.
-The attempted review earns no pass credit; both complete passes must restart
-from entry 1 on the corrected bytes.
+The final dictionary retains exact 546/546 key parity, no duplicate keys or
+empty values, all 38 placeholder-bearing rows and 54 placeholder occurrences
+with exact English multisets, valid NFC normalization, and no forbidden
+control or bidi-control characters. Its only seven English-identical values
+are the documented `R-lt-001`–`R-lt-007` shortcuts, `Alt` token, aspect
+ratios, and `URL`. The mechanically reproducible lifecycle remains 397
+executable literals, 122 finite-dynamic keys, 25
+registered-namespace-compatible keys, and two exact catalog-only keys, with
+all 117 provider compositions accounted for.
+
+Caller inspection leaves `F-global-014` and `F-global-020` open for one
+coordinated 546-to-552 all-dictionary migration. The former covers five raw
+English playback-statistics labels and the latter the raw database
+tab-overflow count label. Neither bypass misclassifies a Lithuanian catalog
+value, but both continue to block terminal repository verification.
+
+English remains
+`770a838a71800634947642476e3e045092addaaa2a7acd27761ad49bcdb22e17`,
+and the guideline remains
+`ca320c2e91b0eef4a40337f31bf9dd002f49bae917d9592c772399ffacdef38c`.
+The full catalog checker, checker regression suite, guideline/index gate,
+complete i18n unit suite, and directly affected caller suites all pass on the
+final bytes. The completed history contains exactly 70 unique locale/key
+findings in `F-lt-001`–`F-lt-070`. Lithuanian is
+`second-pass-complete`.
 
 ### Latvian (`lv`) — pending after current-byte residuals
 
@@ -9118,6 +9146,73 @@ follows the global transition rule above.
 | `F-lt-001` | `lt` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Valyti formatavimą"` | Microsoft’s Lithuanian editor UI uses the exact concise command [Valyti formatavimą](https://support.microsoft.com/lt-LT/PowerPoint/clear-all-text-formatting). | verified |
 | `F-lt-002` | `lt` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"Tekstas"` | `"Teksto spalva"` | English changed from “Text” to “Text color,” while Lithuanian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Microsoft’s Lithuanian editor documentation uses the exact label [`Teksto spalva`](https://support.microsoft.com/lt-lt/office/teksto-spalvos-keitimas-99b47f41-4e14-4551-a09d-820a004d1cde). | verified |
 | `F-lt-003` | `lt` | `tools.toggle.bodyPlaceholder` | source completeness / omitted click result | `"Tuščias sutraukiamas blokas. Spustelėkite arba nuvilkite blokus į vidų."` | `"Tuščias sutraukiamas blokas. Spustelėkite, kad pridėtumėte bloką, arba nuvilkite blokus į vidų."` | Both toggle providers expose this as a clickable empty-body prompt whose click inserts and focuses a child block. The old wording omits what clicking does; the replacement restores “to add a block” with the same imperative-purpose construction used in [Microsoft’s Lithuanian UI prose](https://support.microsoft.com/lt-lt/office/skaidr%C4%97s-%C5%BEymel%C4%97-ir-saitas-su-ja-i%C5%A1-kitur-pateiktyje-f4d4b309-90ef-4df0-bd1c-f75e47bbd71a). | verified |
+| `F-lt-004` | `lt` | `toolbox.addBelow` | grammar / spatial terminology | `"Spustelėkite norėdami pridėti apačioje"` | `"Spustelėkite, kad pridėtumėte žemiau"` | The replacement uses a grammatical purpose clause and the relative insertion direction “below,” rather than describing an absolute bottom position. | verified |
+| `F-lt-005` | `lt` | `toolbox.optionAddAbove` | instruction clarity / modifier-key action | `"Spustelėkite su Option norėdami pridėti viršuje"` | `"Spustelėkite laikydami nuspaudę klavišą Option, kad pridėtumėte aukščiau"` | The source requires holding Option while clicking; the old instrumental phrase did not express that action and used absolute “at the top” instead of “above.” | verified |
+| `F-lt-006` | `lt` | `toolbox.ctrlAddAbove` | instruction clarity / modifier-key action | `"Spustelėkite su Ctrl norėdami pridėti viršuje"` | `"Spustelėkite laikydami nuspaudę klavišą Ctrl, kad pridėtumėte aukščiau"` | The replacement explicitly instructs the user to hold Ctrl while clicking and preserves the relative insertion direction. | verified |
+| `F-lt-007` | `lt` | `tools.colorPicker.defaultSwatchLabel` | accessibility / runtime-token boundary | `"{mode} {default}"` | `"{mode}: {default}"` | The picker substitutes two independently localized labels. A colon gives their screen-reader composition an unambiguous boundary without changing either placeholder. | verified |
+| `F-lt-008` | `lt` | `tools.colorPicker.colorSwatchLabel` | accessibility / runtime-token boundary | `"{mode} {color}"` | `"{mode}: {color}"` | The colon separates the color axis from the runtime color name and prevents the ARIA label from reading as an accidental noun phrase. | verified |
+| `F-lt-009` | `lt` | `a11y.dragStartedMultiple` | accessibility / count-neutral grammar | `"Velkama {count} blokų"` | `"Velkamų blokų: {count}"` | The old finite verb cannot agree with every runtime count. The label-before-number construction is grammatical for arbitrary values. | verified |
+| `F-lt-010` | `lt` | `a11y.blocksMoved` | accessibility / count-neutral grammar | `"{count} blokų perkelta į poziciją {position}"` | `"Perkelta blokų: {count}. Nauja pozicija: {position}."` | Two count-neutral clauses preserve both runtime values and make the moved-count and resulting position explicit to assistive technology. | verified |
+| `F-lt-011` | `lt` | `a11y.blocksDuplicated` | accessibility / source semantics | `"{count} blokų dublikuota nuo pozicijos {position}"` | `"Dubliuota blokų: {count}. Kopijų pradinė pozicija: {position}."` | The source announces the new copies’ starting position, not a source position from which duplication occurred. The replacement is count-neutral and restores that distinction. | verified |
+| `F-lt-012` | `lt` | `a11y.searchResults` | accessibility / count-neutral grammar | `"{count} rezultatai"` | `"Paieškos rezultatų: {count}"` | The former fixed nominative plural fails for many counts. The noun-first announcement remains grammatical for every runtime value. | verified |
+| `F-lt-013` | `lt` | `a11y.allBlocksSelected` | accessibility / announcement boundary | `"Pasirinkti visi blokai, blokų: {count}"` | `"Pasirinkti visi blokai. Iš viso: {count}"` | A complete sentence followed by an explicit total is clearer to screen readers and avoids repeating the block noun awkwardly. | verified |
+| `F-lt-014` | `lt` | `a11y.navigationModeEntered` | accessibility / instruction grammar | `"Naršymo režimas. Naudokite rodyklių klavišus judėti tarp blokų, Enter – redaguoti, Escape – išeiti."` | `"Naršymo režimas. Rodyklių klavišais judėkite tarp blokų. Norėdami redaguoti, paspauskite Enter, o norėdami išeiti – Escape."` | The replacement supplies natural Lithuanian instrumental syntax and explicit key actions instead of the calqued infinitive sequence. | verified |
+| `F-lt-015` | `lt` | `tools.table.clearSelection` | action scope / destructive clarity | `"Išvalyti"` | `"Išvalyti turinį"` | This command clears selected cells’ contents; naming the object distinguishes it from clearing the selection or formatting. LibreOffice’s Lithuanian table UI uses the same clear-contents scope. | verified |
+| `F-lt-016` | `lt` | `tools.table.insertRowAbove` | spatial terminology | `"Įterpti eilutę viršuje"` | `"Įterpti eilutę aukščiau"` | The row is inserted relative to the current row, so “above” is required rather than the absolute location “at the top.” | verified |
+| `F-lt-017` | `lt` | `tools.table.insertRowBelow` | spatial terminology | `"Įterpti eilutę apačioje"` | `"Įterpti eilutę žemiau"` | The row is inserted relative to the current row, so “below” is required rather than the absolute location “at the bottom.” | verified |
+| `F-lt-018` | `lt` | `toolNames.divider` | terminology / false friend | `"Skirtukas"` | `"Skyriklis"` | `Skirtukas` conventionally denotes a tab or tab character. Official Lithuanian office terminology uses `Skyriklis` for a visual divider or separator. | verified |
+| `F-lt-019` | `lt` | `searchTerms.divider` | search terminology / alias accuracy | `"skirtukas"` | `"skiriamoji linija"` | The old alias searches for a tab. The replacement means “dividing line,” accurately describing the rendered horizontal divider. | verified |
+| `F-lt-020` | `lt` | `searchTerms.delimiter` | search terminology / distinct alias | `"skyrybos ženklas"` | `"atskyrimo ženklas"` | `Skyrybos ženklas` means punctuation mark. The replacement means a separation mark and stays distinct from the existing `separator` alias; the search-term duplicate regression enforces that distinction. | verified |
+| `F-lt-021` | `lt` | `searchTerms.unordered` | search terminology / list semantics | `"nežymėtas"` | `"nenumeruotas"` | An unordered list is unnumbered, not unmarked; its items still carry bullet markers. | verified |
+| `F-lt-022` | `lt` | `searchTerms.blockquote` | search terminology / compound form | `"bloko citata"` | `"blokinė citata"` | The established Lithuanian computing adjective `blokinė` names a block quotation naturally, whereas the old genitive phrase suggests a quotation belonging to a block. | verified |
+| `F-lt-023` | `lt` | `searchTerms.citation` | search terminology / meaning | `"nuoroda"` | `"citavimas"` | `Nuoroda` means a reference or link and collides semantically with link tools. `Citavimas` names citation as required by the quote-tool alias. | verified |
+| `F-lt-024` | `lt` | `tools.callout.addEmoji` | caller semantics / icon scope | `"Pridėti jaustuką"` | `"Pridėti piktogramą"` | The callout control adds an icon, whose picker may use emoji; the replacement preserves the source’s broader visible action. | verified |
+| `F-lt-025` | `lt` | `tools.callout.filterEmojis` | placeholder specificity | `"Ieškoti…"` | `"Ieškoti jaustukų…"` | The input filters emoji results, so naming the searched objects restores the source scope and improves standalone accessibility. | verified |
+| `F-lt-026` | `lt` | `tools.callout.pickRandom` | action completeness | `"Atsitiktinai"` | `"Pasirinkti atsitiktinį jaustuką"` | The former adverb does not name an action. The replacement explicitly says to select a random emoji. | verified |
+| `F-lt-027` | `lt` | `tools.callout.colorTeal` | color terminology | `"Žalsva"` | `"Žalsvai mėlyna"` | The old value means merely greenish and does not identify teal’s blue-green hue. The replacement supplies the standard descriptive color name. | verified |
+| `F-lt-028` | `lt` | `tools.quote.defaultSize` | grammatical gender | `"Numatytoji"` | `"Numatytasis"` | The implicit noun for the selected quote size or style is masculine in this control, so the feminine adjective was an agreement error. | verified |
+| `F-lt-029` | `lt` | `tools.table.placement` | established UI terminology | `"Padėtis"` | `"Lygiuotė"` | This menu chooses one of nine content-alignment positions. Official Lithuanian office UI uses `Lygiuotė` for that control, rather than generic physical position. | verified |
+| `F-lt-030` | `lt` | `tools.code.searchLanguage` | plurality / typography | `"Ieškoti kalbos..."` | `"Ieškoti kalbų…"` | The picker searches among multiple programming languages. The replacement uses the plural object and the catalog’s typographic ellipsis. | verified |
+| `F-lt-031` | `lt` | `blockSettings.copyLinkSuccess` | feedback scope | `"Nuoroda nukopijuota"` | `"Nuoroda nukopijuota į iškarpinę"` | The success toast now states the destination, matching the clipboard operation performed by the caller. | verified |
+| `F-lt-032` | `lt` | `blockSettings.copyLinkError` | error scope | `"Nepavyko nukopijuoti nuorodos"` | `"Nepavyko nukopijuoti nuorodos į bloką"` | This action copies a deep link to the current block; the replacement distinguishes it from generic URL-copy failures elsewhere. | verified |
+| `F-lt-033` | `lt` | `tools.link.linkTitle` | form-field semantics | `"Nuorodos pavadinimas"` | `"Nuorodos tekstas"` | The field edits the visible anchor text, not a link title attribute or name. Microsoft’s Lithuanian link UI uses the corresponding “text” terminology. | verified |
+| `F-lt-034` | `lt` | `tools.image.viewFullscreen` | action completeness | `"Visas ekranas"` | `"Peržiūrėti visame ekrane"` | The button initiates viewing rather than naming a display mode. Microsoft’s Lithuanian UI uses the exact action `Peržiūrėti visame ekrane`. | verified |
+| `F-lt-035` | `lt` | `tools.image.moreOptions` | control specificity | `"Daugiau"` | `"Daugiau parinkčių"` | The ellipsis button opens an options menu; official Lithuanian product UI uses the complete label `Daugiau parinkčių`. | verified |
+| `F-lt-036` | `lt` | `tools.image.altEdit` | accessibility terminology | `"Redaguoti alt tekstą"` | `"Redaguoti alternatyvųjį tekstą"` | The replacement uses the established full Lithuanian accessibility term for alternative text instead of an English abbreviation hybrid. | verified |
+| `F-lt-037` | `lt` | `tools.image.altDescription` | source synchronization / audience | `"Pridėkite paveikslo aprašą. Taip puslapis tampa pasiekiamesnis regos negalią turintiems žmonėms."` | `"Aprašykite šį paveikslą žmonėms, kurie jo nemato."` | The source now asks for a description for people who cannot see the image. The replacement follows that concise audience-focused instruction. | verified |
+| `F-lt-038` | `lt` | `tools.image.altPlaceholder` | accessibility terminology | `"Alt tekstas"` | `"Alternatyvusis tekstas"` | The placeholder now uses the standard unabbreviated Lithuanian term documented in Microsoft accessibility guidance. | verified |
+| `F-lt-039` | `lt` | `tools.image.previewControls` | accessibility / group-name specificity | `"Peržiūros valdikliai"` | `"Paveikslo peržiūros valdikliai"` | This ARIA group controls an image preview; naming the image prevents the generic label from losing its object out of context. | verified |
+| `F-lt-040` | `lt` | `tools.image.resetZoom` | established UI terminology | `"Atstatyti mastelį"` | `"Atkurti mastelį"` | Official Lithuanian Microsoft UI uses the exact reset-zoom command `Atkurti mastelį`; `atstatyti` is less idiomatic in this interface context. | verified |
+| `F-lt-041` | `lt` | `tools.image.errorDefaultMessage` | source synchronization / error accuracy | `"Serveris grąžino klaidą. Pabandykite kitą šaltinį arba įkelkite failą iš naujo."` | `"Nepavyko įkelti paveikslo iš šio URL. Pabandykite kitą šaltinį arba įkelkite failą iš naujo."` | The current source identifies failure to load an image from the supplied URL; the old text invented a server response that the caller cannot establish. | verified |
+| `F-lt-042` | `lt` | `tools.image.cropRatioFree` | grammatical agreement | `"Laisvas"` | `"Laisva"` | The implicit crop proportion or form in this preset is feminine, requiring `Laisva`; the old masculine form disagreed. | verified |
+| `F-lt-043` | `lt` | `tools.image.cropReset` | action naturalness | `"Atstatyti"` | `"Nustatyti iš naujo"` | The replacement is the established Lithuanian reset action and clearly describes restoring the crop settings. | verified |
+| `F-lt-044` | `lt` | `tools.database.viewTypeListDescription` | source completeness | `"Paprastas linijinis rodinys"` | `"Rodyti elementus paprastame sąraše"` | The source describes displaying items in a simple list. The old noun phrase says only “simple linear view” and omits the items and list semantics. | verified |
+| `F-lt-045` | `lt` | `tools.database.listView` | established UI terminology | `"Sąrašas"` | `"Sąrašo rodinys"` | This label names a view mode, not the list object itself. Microsoft’s Lithuanian UI uses `Sąrašo rodinys` for list view. | verified |
+| `F-lt-046` | `lt` | `tools.database.cardDetails` | panel scope | `"Kortelė"` | `"Kortelės informacija"` | The panel exposes a card’s details rather than merely naming the card; the replacement restores the source scope. | verified |
+| `F-lt-047` | `lt` | `tools.bookmark.loading` | source scope / loading state | `"Įkeliama peržiūra"` | `"Įkeliama nuorodos peržiūra…"` | The caller loads a link preview. Naming the link and adding the progress ellipsis makes the transient state explicit. | verified |
+| `F-lt-048` | `lt` | `tools.bookmark.error` | error scope | `"Nepavyko įkelti peržiūros"` | `"Nepavyko įkelti nuorodos peržiūros"` | The failure concerns a link preview; the old generic “preview” can be confused with image or file preview failures. | verified |
+| `F-lt-049` | `lt` | `tools.embed.empty` | empty-state semantics | `"Įklijuokite nuorodą įterpti"` | `"Nėra įterpiamos nuorodos"` | This row reports that no embeddable link is present; the old instruction duplicated the separate URL-input placeholder and was grammatically incomplete. | verified |
+| `F-lt-050` | `lt` | `tools.embed.urlPlaceholder` | grammar / embedding scope | `"Įklijuokite nuorodą įterpti…"` | `"Įklijuokite norimą įterpti nuorodą…"` | The relative-participle construction naturally means “paste the link you want to embed,” fixing the old calqued infinitive sequence. | verified |
+| `F-lt-051` | `lt` | `tools.file.previewRaw` | file-preview semantics | `"Kodas"` | `"Šaltinis"` | The tab displays the raw file source, which need not be program code. The replacement preserves that broader source meaning. | verified |
+| `F-lt-052` | `lt` | `tools.video.alignmentLeft` | action-label consistency | `"Kairėje"` | `"Lygiuoti kairėn"` | The menu item performs an alignment action; the replacement uses an imperative and matches the image and audio alignment controls. | verified |
+| `F-lt-053` | `lt` | `tools.video.alignmentCenter` | action-label consistency | `"Centre"` | `"Lygiuoti per vidurį"` | The replacement names the align-center action instead of merely describing a current location. | verified |
+| `F-lt-054` | `lt` | `tools.video.alignmentRight` | action-label consistency | `"Dešinėje"` | `"Lygiuoti dešinėn"` | The replacement names the align-right action instead of merely describing a current location. | verified |
+| `F-lt-055` | `lt` | `tools.video.moreOptions` | control specificity | `"Daugiau"` | `"Daugiau parinkčių"` | The video overflow control opens options; the full established label avoids an underspecified “More.” | verified |
+| `F-lt-056` | `lt` | `tools.audio.alignmentLeft` | action-label consistency | `"Kairėje"` | `"Lygiuoti kairėn"` | The audio menu item performs an align-left action, so an imperative is required instead of a static location. | verified |
+| `F-lt-057` | `lt` | `tools.audio.alignmentCenter` | action-label consistency | `"Centre"` | `"Lygiuoti per vidurį"` | The replacement names the align-center action and matches the corresponding video control. | verified |
+| `F-lt-058` | `lt` | `tools.audio.alignmentRight` | action-label consistency | `"Dešinėje"` | `"Lygiuoti dešinėn"` | The replacement names the align-right action and matches the corresponding video control. | verified |
+| `F-lt-059` | `lt` | `tools.audio.replace` | copied-media defect | `"Pakeisti vaizdo įrašą"` | `"Pakeisti garso įrašą"` | This action belongs to the audio tool. The old value incorrectly told users they were replacing a video. | verified |
+| `F-lt-060` | `lt` | `tools.audio.emptyAddAudio` | copied-media defect | `"Pridėkite vaizdo įrašą"` | `"Pridėkite garso įrašą"` | The audio empty state must prompt for an audio recording rather than a video. | verified |
+| `F-lt-061` | `lt` | `tools.audio.emptyOrDropHere` | copied-media defect / file object | `"arba vilkite vaizdo įrašą čia"` | `"arba vilkite garso failą čia"` | The drop target accepts an audio file; the former value incorrectly names a video. | verified |
+| `F-lt-062` | `lt` | `tools.audio.emptyUrlPlaceholder` | copied-media defect | `"Įklijuokite vaizdo įrašo URL…"` | `"Įklijuokite garso įrašo URL…"` | The audio URL field must request an audio URL rather than a video URL. | verified |
+| `F-lt-063` | `lt` | `tools.audio.emptyUrlAria` | copied-media defect / accessibility | `"Vaizdo įrašo URL"` | `"Garso įrašo URL"` | The accessible name now identifies the audio URL input correctly. | verified |
+| `F-lt-064` | `lt` | `tools.audio.emptySourceAria` | copied-media defect / accessibility | `"Vaizdo įrašo šaltinis"` | `"Garso įrašo šaltinis"` | The source-selector group belongs to the audio tool, not the video tool. | verified |
+| `F-lt-065` | `lt` | `tools.audio.coverSourceAria` | accessibility / object scope | `"Paveikslo šaltinis"` | `"Viršelio šaltinis"` | This group selects the audio cover source. Generic “image source” loses the specific cover-art role announced by the source. | verified |
+| `F-lt-066` | `lt` | `notifier.dismiss` | accessibility / action specificity | `"Atmesti"` | `"Uždaryti pranešimą"` | The button closes a notification; `Atmesti` can mean reject or discard. The replacement names the visible action and object. | verified |
+| `F-lt-067` | `lt` | `tools.video.seek` | media-control semantics | `"Perkelti"` | `"Atkūrimo vieta"` | This accessible label names the playback-position slider; the old generic verb “move” does not identify seeking or playback. | verified |
+| `F-lt-068` | `lt` | `tools.video.toggleTimeDisplay` | source completeness | `"Perjungti laiko rodymą"` | `"Perjungti praėjusio ir likusio laiko rodymą"` | The control switches specifically between elapsed and remaining time, a distinction omitted by the old generic label. | verified |
+| `F-lt-069` | `lt` | `tools.video.ctxStats` | terminology / professional register | `"Statistika smalsuoliams"` | `"Atkūrimo statistika"` | The source now uses the neutral label “Playback statistics”; the old colloquial “stats for curious people” retained obsolete wording. | verified |
+| `F-lt-070` | `lt` | `tools.callout.emojiSearchResults` | accessibility / count-neutral grammar | `"Rasta {count} jaustukų"` | `"Atitinkančių jaustukų: {count}"` | The result announcement must remain grammatical for every count. A noun-first total also preserves the source meaning “matching emoji.” | verified |
 | `F-lv-001` | `lv` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"Notīrīt formatējumu"` | Microsoft’s Latvian editor UI uses the exact concise command [Notīrīt formatējumu](https://support.microsoft.com/lv-LV/PowerPoint/clear-all-text-formatting). | verified |
 | `F-lv-002` | `lv` | `tools.marker.textColor` | changed-English synchronization / color-axis distinction | `"Teksts"` | `"Teksta krāsa"` | English changed from “Text” to “Text color,” while Latvian retained the former source meaning. The shared picker renders this directly as its text-color section title beside the background axis and composes it into every swatch label; Microsoft’s Latvian editor documentation uses the exact label [`Teksta krāsa`](https://support.microsoft.com/lv-lv/office/teksta-kr%C4%81sas-main%C4%AB%C5%A1ana-powerpoint-slaid%C4%81-26773c77-daad-4ef2-bed9-bf7ab3eed348). | verified |
 | `F-lv-003` | `lv` | `tools.colorPicker.defaultSwatchLabel` | caller composition / Latvian word order | `"{mode} {default}"` | `"{default} {mode}"` | The shared picker substitutes the default label and lowercased color axis into this template. The old order produces `Teksta krāsa Noklusējuma` and `Fons Noklusējuma`; Microsoft’s Latvian UI terminology uses the natural modifier-first forms [`noklusējuma teksta krāsa` and `noklusējuma fona krāsa`](https://learn.microsoft.com/lv-lv/power-apps/maker/canvas-apps/controls/control-data-table). | verified |
@@ -10947,6 +11042,13 @@ locale and UI context.
 | `R-lo-005` | `lo` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-lo-006` | `lo` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-lo-007` | `lo` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label used alongside the otherwise Lao property labels. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
+| `R-lt-001` | `lt` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is the literal app-defined macOS key chord rather than English prose; translating or spelling it out would alter the executable shortcut. | [Apple — Mac keyboard shortcuts](https://support.apple.com/102650); [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lt-002` | `lt` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is the literal app-defined Windows key chord; Lithuanian product guidance conventionally preserves `Ctrl` in shortcut notation. | [`settings-toggler.ts` runtime composition](../../src/components/modules/toolbar/settings-toggler.ts) |
+| `R-lt-003` | `lt` | `tools.image.altButton` | acronym | `Alt` is the conventional compact alternative-text token on this constrained button; the adjacent dialog supplies the full Lithuanian `Alternatyvusis tekstas` wording. | [Microsoft — effective alternative text](https://support.microsoft.com/lt-lt/office/viskas-k%C4%85-turite-%C5%BEinoti-apie-efektyvaus-alternatyviojo-teksto-ra%C5%A1ym%C4%85-df98f884-ca3d-456c-807b-1a1fa82f5dc2); [`ui.ts` image-tool button](../../src/tools/image/ui.ts) |
+| `R-lt-004` | `lt` | `tools.image.cropRatio1to1` | universal notation | `1:1` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lt-005` | `lt` | `tools.image.cropRatio4to3` | universal notation | `4:3` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lt-006` | `lt` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
+| `R-lt-007` | `lt` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label used alongside the otherwise Lithuanian property labels. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-lv-001` | `lv` | `tools.colorPicker.defaultSwatchLabel` | universal notation | `{default} {mode}` contains only invariant runtime interpolation tokens; Latvian modifier-before-noun order independently requires this sequence and renders `Noklusējuma teksta krāsa` and `Noklusējuma fons`. | [Microsoft Learn — Data table control in Power Apps](https://learn.microsoft.com/lv-lv/power-apps/maker/canvas-apps/controls/control-data-table) |
 | `R-nl-001` | `nl` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Dutch Apple guidance retains the `⌘` platform symbol. | [Apple — Mac-toetscombinaties](https://support.apple.com/nl-nl/102650) |
 | `R-nl-002` | `nl` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Dutch Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Sneltoetsen in Windows](https://support.microsoft.com/nl-nl/windows/sneltoetsen-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |

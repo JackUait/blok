@@ -58,6 +58,13 @@ const externalDistPlugin = (): Plugin => {
       if (id === "@bloklabs/core/adapters") {
         return { id: resolve(parentDistDir, "adapters.mjs") };
       }
+      // Unaliased, this falls through to the root exports map and the bundler
+      // picks its `types` condition — pulling types/view.d.ts into the runtime
+      // graph, where its one value re-export cannot resolve. See
+      // test/unit/architecture/react-fixture-import-map-law.test.ts.
+      if (id === "@bloklabs/core/view") {
+        return { id: resolve(parentDistDir, "view.mjs") };
+      }
       if (id.startsWith("/dist/")) {
         return { id: resolve(parentDistDir, id.slice("/dist/".length)) };
       }

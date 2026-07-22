@@ -17,8 +17,20 @@
  * This test mechanically keeps the two sides in sync: every bare specifier the
  * built adapter imports must have an entry in EVERY react fixture's import map.
  *
+ * The docs bundle is the SAME hazard with a different resolver. docs/vite.config.ts
+ * resolves the adapter's `@bloklabs/core*` specifiers to the built dist by hand, so
+ * the site shares one core with tools.mjs. A specifier it does not alias falls
+ * through to Node resolution, which reads the root `exports` map and can pick the
+ * `types` condition — dragging a `.d.ts` into the RUNTIME graph. That is what broke
+ * deploy run 29904098834: the adapter gained `@bloklabs/core/view` (bca6d04e), the
+ * docs config aliased only `@bloklabs/core` and `/adapters`, and the build died on
+ * `Could not resolve './index' in ../types/view.d.ts`. It could not reproduce
+ * locally, because a stale packages/react/dist has no view import at all — only a
+ * fresh `yarn build` exposes it, which is exactly what CI does and a dev usually
+ * does not.
+ *
  * If this test fails on your change: add the specifier to each fixture's
- * import map, and (for react-dom/* specifiers) make sure
+ * import map AND to the docs alias, and (for react-dom/* specifiers) make sure
  * scripts/build-react-vendor.mjs emits a vendor wrapper for it so the mapped
  * file actually exists in CI.
  */
@@ -93,4 +105,26 @@ describe('React fixture import-map law', () => {
       }
     },
   );
+
+  it('every core specifier of the built react adapter is aliased in the docs build', () => {
+    // Only the `@bloklabs/core*` family matters here: react/react-dom are real
+    // dependencies the docs app resolves from its own node_modules, while the
+    // core specifiers have no package to resolve to except the root exports map
+    // — whose `types` condition is a live foot-gun for a bundler.
+    const coreImports = extractBareImports(readFileSync(adapterBundle, 'utf8'))
+      .filter((specifier) => specifier === '@bloklabs/core' || specifier.startsWith('@bloklabs/core/'));
+
+    expect(coreImports.length, 'the adapter no longer imports the core at all — that cannot be right').toBeGreaterThan(0);
+
+    const docsConfig = readFileSync(resolve(root, 'docs/vite.config.ts'), 'utf8');
+    const unaliased = coreImports.filter((specifier) => !docsConfig.includes(`"${specifier}"`));
+
+    expect(
+      unaliased,
+      'docs/vite.config.ts does not resolve these bare specifiers imported by packages/react/dist/index.mjs: ' +
+      `${unaliased.join(', ')}. They fall through to the root exports map, where a bundler can pick the ` +
+      '`types` condition and pull a .d.ts into the runtime graph — the docs build then fails with ' +
+      'UNRESOLVED_IMPORT and nothing deploys.',
+    ).toEqual([]);
+  });
 });

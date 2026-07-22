@@ -1024,6 +1024,155 @@ const MALAYALAM_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.database.checkboxUnchecked': 'പരിശോധിക്കാത്തത്',
 };
 
+const MONGOLIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickToOpenMenu': 'Цэсийг нээхийн тулд дарна уу',
+  'blockSettings.clickAction': 'Цэсийг нээхийн тулд дарна уу',
+  'blockSettings.orConjunction': ' эсвэл ',
+  'blockSettings.openMenuAction': ' товчийг дарна уу',
+  'toolbox.optionAddAbove':
+    'Дээр нэмэхийн тулд Option товчийг дарж байгаад товшино уу',
+  'toolbox.ctrlAddAbove':
+    'Дээр нэмэхийн тулд Ctrl товчийг дарж байгаад товшино уу',
+  'tools.marker.textColor': 'Текстийн өнгө',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder':
+    'Ямар нэг зүйл бичнэ үү эсвэл хэрэгсэл сонгохын тулд / товчийг дарна уу',
+  'tools.toggle.bodyPlaceholder':
+    'Хоосон эвхмэл хэсэг. Блок нэмэхийн тулд дарна уу эсвэл блокуудыг энд чирнэ үү.',
+  'tools.toggle.ariaLabelCollapse': 'Эвхэх',
+  'tools.toggle.ariaLabelExpand': 'Дэлгэх',
+  'tools.table.clearSelection': 'Агуулгыг арилгах',
+  'tools.table.insertColumnLeft': 'Зүүн талд багана оруулах',
+  'tools.table.insertColumnRight': 'Баруун талд багана оруулах',
+  'tools.table.insertRowAbove': 'Дээр нь мөр оруулах',
+  'tools.table.insertRowBelow': 'Доор нь мөр оруулах',
+  'tools.table.comfortableText': 'Ердийн хэмжээтэй текст',
+  'tools.table.placement': 'Зэрэгцүүлэлт',
+  'tools.table.placementTopLeft': 'Зүүн дээд',
+  'tools.table.placementTopCenter': 'Дээд төв',
+  'tools.table.placementTopRight': 'Баруун дээд',
+  'tools.table.placementMiddleLeft': 'Зүүн дунд',
+  'tools.table.placementMiddleCenter': 'Төв',
+  'tools.table.placementMiddleRight': 'Баруун дунд',
+  'tools.table.placementBottomLeft': 'Зүүн доод',
+  'tools.table.placementBottomCenter': 'Доод төв',
+  'tools.table.placementBottomRight': 'Баруун доод',
+  'a11y.dropPosition':
+    'Тавих байрлал: {position}. Нийт: {total}.',
+  'a11y.blockMoved':
+    'Блок зөөгдлөө. Байрлал: {position}. Нийт: {total}.',
+  'a11y.blocksMoved':
+    '{count} блок зөөгдлөө. Шинэ байрлал: {position}.',
+  'a11y.blockDuplicated':
+    'Блок хувилагдлаа. Байрлал: {position}. Нийт: {total}.',
+  'a11y.blocksDuplicated':
+    '{count} блок хувилагдлаа. Эхлэх байрлал: {position}.',
+  'a11y.searchResults': 'Хайлтын үр дүн: {count}.',
+  'a11y.textFormatting': 'Текстийн хэлбэржүүлэлт',
+  'a11y.allBlocksSelected':
+    'Бүх блок сонгогдлоо. Нийт: {count}.',
+  'a11y.navigationPosition':
+    '{tool}. Байрлал: {position}. Нийт: {total}.',
+  'toolNames.clearFormat': 'Шууд форматыг арилгах',
+  'toolNames.callout': 'Тодруулга',
+  'toolNames.quote': 'Эшлэл',
+  'tools.columns.turnInto': 'Баганууд болгон хөрвүүлэх',
+  'searchTerms.collapsible': 'эвхэгддэг',
+  'searchTerms.bullet': 'тэмдэгт',
+  'searchTerms.ordered': 'дугаарласан',
+  'searchTerms.collapse': 'эвхэх',
+  'searchTerms.expand': 'дэлгэх',
+  'searchTerms.spreadsheet': 'цахим хүснэгт',
+  'searchTerms.callout': 'тодруулга',
+  'searchTerms.blockquote': 'ишлэлийн блок',
+  'tools.callout.placeholder': 'Тодруулга',
+  'tools.callout.addEmoji': 'Дүрс нэмэх',
+  'tools.callout.filterEmojis': 'Эможи хайх…',
+  'tools.callout.calloutEmojiCategory': 'Тодруулга',
+  'tools.callout.pickRandom': 'Санамсаргүй эможи сонгох',
+  'tools.database.renameColumn': 'Баганын нэрийг өөрчлөх',
+  'tools.quote.size': 'Эшлэлийн хэмжээ',
+  'tools.quote.placeholder': 'Эшлэл',
+  'tools.code.wrapLines': 'Мөр шилжүүлэх',
+  'tools.code.searchLanguage': 'Хэл хайх…',
+  'tools.code.sideBySide': 'Зэрэгцээ',
+  'tools.code.lineNumbers': 'Мөрийн дугаарууд',
+  'searchTerms.snippet': 'кодын хэсэг',
+  'searchTerms.pre': 'кодын блок',
+  'blockSettings.blocksSelected': '{count} блок',
+  'blockSettings.copyLinkError':
+    'Блокийн холбоосыг хуулж чадсангүй',
+  'tools.link.emailAddress': 'Имэйл хаяг',
+  'tools.link.jumpToSection': 'Хэсэг рүү очих',
+  'tools.link.urlCopied': 'Холбоосыг түр санах ой руу хуулав',
+  'tools.link.linkTitle': 'Холбоосын текст',
+  'tools.image.toggleCaption':
+    'Тайлбарыг харуулах эсвэл нуух',
+  'tools.image.crop': 'Тайрах',
+  'tools.image.altEdit': 'Өөр текстийг засах',
+  'tools.image.altDescription':
+    'Энэ зургийг харах боломжгүй хүмүүст зориулан тайлбарлана уу.',
+  'tools.image.altPlaceholder': 'Өөр текст',
+  'tools.image.previewControls':
+    'Зургийн урьдчилсан харагдацын удирдлага',
+  'tools.image.errorUnavailable': 'Зураг ашиглах боломжгүй',
+  'tools.image.errorDefaultMessage':
+    'Энэ URL-аас зургийг ачаалж чадсангүй. Өөр эх сурвалж ашиглаж үзнэ үү эсвэл файлыг дахин байршуулна уу.',
+  'tools.image.cropAspectRatio': 'Тайралтын хэлбэр',
+  'tools.image.cropDialogLabel': 'Зураг тайрах',
+  'tools.file.toggleCaption':
+    'Тайлбарыг харуулах эсвэл нуух',
+  'tools.file.previewRaw': 'Эх текст',
+  'tools.file.previewRender': 'Урьдчилан харах',
+  'tools.file.previewOpenInNewTab': 'Шинэ таб дээр нээх',
+  'tools.video.alignmentLeft': 'Зүүн зэрэгцүүлэх',
+  'tools.video.alignmentCenter': 'Төвд зэрэгцүүлэх',
+  'tools.video.alignmentRight': 'Баруун зэрэгцүүлэх',
+  'tools.video.toggleCaption':
+    'Тайлбарыг харуулах эсвэл нуух',
+  'tools.video.autoplay': 'Автоматаар тоглуулах',
+  'tools.audio.alignmentLeft': 'Зүүн зэрэгцүүлэх',
+  'tools.audio.alignmentCenter': 'Төвд зэрэгцүүлэх',
+  'tools.audio.alignmentRight': 'Баруун зэрэгцүүлэх',
+  'tools.audio.emptyOrDropHere':
+    'эсвэл аудио файлыг энд чирж оруулна уу',
+  'tools.audio.coverSourceAria': 'Хавтасны эх сурвалж',
+  'tools.database.duplicateView': 'Хувилах',
+  'tools.database.viewTypeListDescription':
+    'Зүйлсийг энгийн жагсаалтаар харуулах',
+  'tools.database.propertyTypeSelect': 'Сонголт',
+  'tools.bookmark.loading':
+    'Холбоосын урьдчилсан харагдацыг ачаалж байна…',
+  'tools.embed.empty': 'Шигтгэх холбоос алга',
+  'tools.embed.openOriginal': 'Эх хувийг нээх',
+  'tools.linkPaste.embedVideo': '{provider}: видео шигтгэх',
+  'tools.linkPaste.embedAudio': '{provider}: аудио шигтгэх',
+  'tools.linkPaste.embedImage': '{provider}: зураг шигтгэх',
+  'tools.linkPaste.embedSocial': '{provider}: нийтлэл шигтгэх',
+  'tools.linkPaste.embedDocument': '{provider}: баримт шигтгэх',
+  'tools.linkPaste.embedTable': '{provider}: хүснэгт шигтгэх',
+  'tools.linkPaste.embedForm': '{provider}: маягт шигтгэх',
+  'tools.linkPaste.embedCode': '{provider}: код шигтгэх',
+  'tools.linkPaste.embedDesign': '{provider}: дизайн шигтгэх',
+  'tools.linkPaste.embedChart': '{provider}: график шигтгэх',
+  'tools.linkPaste.embedMap': '{provider}: газрын зураг шигтгэх',
+  'tools.linkPaste.embedCalendar': '{provider}: хуанли шигтгэх',
+  'tools.video.seek': 'Тоглуулах байрлал',
+  'tools.video.seekValueText':
+    'Өнгөрсөн хугацаа: {current}. Нийт үргэлжлэх хугацаа: {total}.',
+  'tools.video.toggleTimeDisplay':
+    'Өнгөрсөн болон үлдсэн хугацааг ээлжлэн харуулах',
+  'tools.video.speedPresets': 'Хурдны бэлэн тохиргоо',
+  'tools.video.theater': 'Театрын горим',
+  'tools.video.theaterExit': 'Театрын горимоос гарах',
+  'tools.video.pip': 'Дэлгэц доторх дэлгэц',
+  'tools.video.ctxCopyUrlAtTime':
+    'Видеоны URL-ийг одоогийн тоглуулах хугацаатай нь хуулах',
+  'tools.video.ctxStats': 'Тоглуулалтын статистик',
+  'tools.callout.emojiSearchResults': 'Тохирох эможи: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -1811,6 +1960,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(MALAYALAM_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Mongolian correction oracle', () => {
+    const messages = readLocale('mn').messages;
+    const actual = Object.fromEntries(
+      Object.keys(MONGOLIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(MONGOLIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -341,7 +341,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `pa` | Punjabi (Gurmukhi) | Gurmukhi | ltr | neutral contemporary Punjabi in Gurmukhi; concise polite imperatives for actions and complete instructions; sentence-case noun and state labels; native or established Punjabi product, accessibility, media, table, and database terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, placeholder-only, `Alt`, and `URL` notation | `root-pa_final_linguistic` | `root-pa_final_callers` | pass | pass | pass | `F-pa-001`–`F-pa-079` | second-pass-complete |
 | `pl` | Polish | Latin | ltr | neutral contemporary Polish; concise imperatives for actions; implicit singular addressee in instructions; sentence-case UI; established Polish product and accessibility terminology; count-neutral variable templates | `root-pl_current_linguistic` | `root-pl_current_callers` | pass | pass | pass | `F-pl-001`–`F-pl-129` | second-pass-complete |
 | `ps` | Pashto | Arabic | rtl | neutral contemporary Pashto in Arabic script and RTL; concise polite imperatives for actions and complete instructions; sentence-case noun and state labels; standard Pashto orthography and natural genitive constructions; established Pashto product, accessibility, media, table, and database terminology; count-neutral label-before-value templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation | `root-ps_final_linguistic` | `root-ps_final_callers` | pass | pass | pass | `F-ps-001`–`F-ps-202` | second-pass-complete |
-| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | — | — | pending | pending | pending | `F-pt-001`–`F-pt-085` | pending |
+| `pt` | Portuguese (current Brazilian wording) | Latin | ltr | neutral contemporary Brazilian Portuguese; implicit `você` in direct imperatives and full instructions; concise infinitive action labels; sentence case; established Brazilian product and accessibility terminology | `root-pt_final_linguistic` | `root-pt_final_callers` | pass | pass | pass | `F-pt-001`–`F-pt-085` | second-pass-complete |
 | `ro` | Romanian | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-ro-001`–`F-ro-002` | pending |
 | `ru` | Russian | Cyrillic | ltr | neutral-polite standard Russian; sentence-case labels; infinitive menu commands; polite plural imperatives for hints; normative `ё`; established Russian product and accessibility terms; no slang or needless transliteration | — | — | pending | pending | pending | `F-ru-001`–`F-ru-127` | pending |
 | `sd` | Sindhi | Arabic | rtl | to-audit | — | — | pending | pending | pending | `F-sd-001`–`F-sd-002` | pending |
@@ -479,6 +479,7 @@ locale returns to `pending`.
 | `pa` | `root-pa_final_linguistic` | `sha256:012818e76cfb1fa5021d1821f6934790290c5b23d853b5b3dcbe77528326bce4` | `root-pa_final_callers` | `sha256:012818e76cfb1fa5021d1821f6934790290c5b23d853b5b3dcbe77528326bce4` |
 | `pl` | `root-pl_current_linguistic` | `sha256:e091ee300cf80cb8ebd662405496469803b876743e5edc8d1df49f70ad391f71` | `root-pl_current_callers` | `sha256:e091ee300cf80cb8ebd662405496469803b876743e5edc8d1df49f70ad391f71` |
 | `ps` | `root-ps_final_linguistic` | `sha256:f8532d9ff3a4530c20a4e0027a1b007a6aa0dfaee82682060cfad4c460e1de71` | `root-ps_final_callers` | `sha256:f8532d9ff3a4530c20a4e0027a1b007a6aa0dfaee82682060cfad4c460e1de71` |
+| `pt` | `root-pt_final_linguistic` | `sha256:6f281eea9bd964b4480987210124542cd2eb6f4b694338e7e244f6fd5c588320` | `root-pt_final_callers` | `sha256:6f281eea9bd964b4480987210124542cd2eb6f4b694338e7e244f6fd5c588320` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -8026,6 +8027,55 @@ exactly the seven catalogued Pashto identical-value warnings. Scoped ESLint
 also passes. Global `F-global-014` and `F-global-020` remain coordinated
 follow-up work and do not invalidate this locale-level second-pass transition.
 
+### Portuguese (`pt`) — current 546-key second pass complete
+
+Fresh linguistic and caller-structure reviews restarted at entry 1 on raw
+Brazilian Portuguese dictionary SHA-256
+`74b24484dfa79e7e3cc8a33f81a2e3936dd2844302e2824bfeef7057cfe09732`.
+Their exhaustive 546-pair artifacts are bound at SHA-256
+`8f19b77cf8b205c7a2a0b29ba3cf50bd30ef50b90cb6a63a236bdb440a2bd4cb`
+and
+`acc89d5443f3dbbd0bb784871ce61fd6d7f7813f13719aacc1c9ed2559a96a20`.
+Both independently upheld all 85 historical findings and found exactly one
+current residual: the list-view subtitle used `Exibir itens em uma lista
+simples` beside the board sibling `Mostrar itens em colunas`, although the
+English siblings and their shared caller use the same `Show items` predicate.
+
+An independent proposal challenge, bound at SHA-256
+`7a0fd7303ec84581a2cd9911bf4e6fe5708dc35511dab597f4b0fd505a5fbaf9`,
+accepted the correction to `Mostrar itens em uma lista simples` without any
+coupled change. Because `F-pt-066` already tracks that exact key, its expected
+value was amended to the final sibling-synchronized wording instead of adding
+a duplicate locale/key finding. The 85-key executable oracle and reopened
+finding failed red on exactly the one old value, then both passed after the
+single catalog correction. The corrected raw dictionary is bound at SHA-256
+`6f281eea9bd964b4480987210124542cd2eb6f4b694338e7e244f6fd5c588320`.
+
+Distinct final reviewers `root-pt_final_linguistic` and
+`root-pt_final_callers` then restarted at entry 1 on those corrected bytes.
+Their sealed artifacts are bound at SHA-256
+`c87a3bb742f931caf93387743cf09da27f558666dd8888cd99e896ceeecaf185`
+and
+`a5f5edd9f97ef199d18d7dd5512b5a188cc2bb824310502241078aecc0b214a4`.
+Both accepted all 546 pairs, verified `F-pt-001` through `F-pt-085`, supported
+the exhaustive `R-pt-001` through `R-pt-020` inventory, and reported zero
+residuals or blockers. They revalidated all 38 placeholder-bearing keys and
+54 placeholder occurrences, 14 alias groups and 44 unique search aliases,
+unique non-empty key parity, UTF-8 and NFC integrity, boundary whitespace,
+database sibling rendering, and the complete 397 literal + 122 finite-dynamic
++ 25 registered-namespace-compatible + two source-only caller lifecycle.
+
+The executable Portuguese oracle is in `translation-guidelines.test.ts`, whose
+bytes are bound at SHA-256
+`abe7c04cea7f24fbce5e5e7bb1455d7a3622ee148fbf025d04ec82c5eef2802a`.
+The full guideline file passes 5,205/5,205, the three-file final language gate
+passes 5,518/5,518, the caller gate passes 412/412, the checker regressions pass
+89/89, and the live translation completeness, integrity, source-coverage, and
+encoding command passes with exactly the 20 catalogued Portuguese
+identical-value warnings. Scoped ESLint also passes. Global `F-global-014` and
+`F-global-020` remain coordinated follow-up work and do not invalidate this
+locale-level second-pass transition.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
@@ -10337,7 +10387,7 @@ follows the global transition rule above.
 | `F-pt-063` | `pt` | `tools.audio.coverErrorTooLarge` | untranslated source text | `"Image is too large"` | `"A imagem é muito grande"` | The oversized-cover error is rendered to Portuguese users but currently remains in English. | verified |
 | `F-pt-064` | `pt` | `tools.audio.coverAdd` | untranslated source text | `"Add a cover"` | `"Adicionar uma capa"` | The empty audio-cover control currently exposes an English action label. | verified |
 | `F-pt-065` | `pt` | `tools.audio.coverSourceAria` | accessibility / object clarity | `"Origem da imagem"` | `"Origem da capa"` | This accessible label belongs specifically to the audio cover-source control, not to a generic image-source picker. | verified |
-| `F-pt-066` | `pt` | `tools.database.viewTypeListDescription` | context / source synchronization | `"Uma visão linear simples"` | `"Exibir itens em uma lista simples"` | The database view picker needs an action-oriented description that preserves the familiar list concept; Notion’s Brazilian Portuguese database guidance uses [itens and lista](https://www.notion.com/pt/help/database-properties). | verified |
+| `F-pt-066` | `pt` | `tools.database.viewTypeListDescription` | context / source synchronization / sibling consistency | `"Uma visão linear simples"` | `"Mostrar itens em uma lista simples"` | The original noun fragment required an action-oriented list description. Fresh linguistic, caller, and proposal-challenge passes found that the intermediate `Exibir` wording became inconsistent when adjacent `F-pt-081` synchronized the board subtitle to `Mostrar itens em colunas`; both options share one caller and the same English `Show items` predicate. Microsoft’s Brazilian Portuguese list UI likewise uses [Mostrar itens](https://support.microsoft.com/pt-BR/SharePoint/lists/data-and-lists/create-change-or-delete-a-view-of-a-list-or-library). | verified |
 | `F-pt-067` | `pt` | `tools.database.propertyTypeSelect` | property-type terminology | `"Seleção"` | `"Selecionar"` | This value names the Select property type in the database property menu; Notion’s Brazilian Portuguese UI uses [Selecionar](https://www.notion.com/pt/help/database-properties). | verified |
 | `F-pt-068` | `pt` | `tools.database.defaultStatusProperty` | established product terminology | `"Estado"` | `"Status"` | This is the default database status-property name; Notion’s Brazilian Portuguese documentation uses [Status](https://www.notion.com/pt/help/database-properties). | verified |
 | `F-pt-069` | `pt` | `tools.bookmark.loading` | progress punctuation / source synchronization | `"Carregando pré-visualização do link"` | `"Carregando pré-visualização do link…"` | The rendered in-progress bookmark state needs the corpus-standard ellipsis. | verified |
@@ -13252,6 +13302,7 @@ locale and UI context.
 | `R-ps-006` | `ps` | `tools.image.cropRatio16to9` | universal notation | `16:9` is language-independent aspect-ratio notation and names the exact widescreen crop preset. | [`crop-editor.ts` crop preset](../../src/tools/image/crop-editor.ts) |
 | `R-ps-007` | `ps` | `tools.database.propertyTypeUrl` | acronym | `URL` is the conventional international technical acronym and the exact compact database property-type label. | [`database-property-type-popover.ts`](../../src/tools/database/database-property-type-popover.ts) |
 | `R-pt-019` | `pt` | `tools.link.webLink` | established loanword | `Link` is the standard unchanged Brazilian Portuguese product term and is generic across the caller's destination types. | [Notion — Imagens, arquivos e mídia](https://www.notion.com/pt/help/images-files-and-media) |
+| `R-pt-020` | `pt` | `notifier.ok` | established loanword | `OK` is the conventional unchanged Brazilian Portuguese confirmation-button label and the natural compact acknowledgement in the built-in prompt dialog. | [Apple Brasil — `Toque em OK`](https://support.apple.com/pt-br/guide/iphone/iph75f461ff0/26/ios/26) |
 | `R-ro-001` | `ro` | `tools.link.webLink` | established loanword | `Link` is an established Romanian IT/UI noun used for web, email, FTP, document, and internal-page destinations. | [Microsoft — Crearea sau editarea unui hyperlink](https://support.microsoft.com/ro-RO/Word/create-or-edit-a-hyperlink) |
 | `R-et-002` | `et` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is platform shortcut notation, not English prose; the Command symbol remains unchanged in Estonian macOS guidance. | [Apple — Maci klaviatuuri otseteed](https://support.apple.com/en-us/102650) |
 | `R-et-003` | `et` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is platform shortcut notation, not English prose; Estonian Windows usage retains the `Ctrl` key label. | [Microsoft — Windowsi kiirklahvid](https://support.microsoft.com/en-us/windows/keyboard-shortcuts-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |

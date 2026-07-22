@@ -2307,6 +2307,94 @@ const PASHTO_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'د ورته ایموجیو شمېر: {count}',
 };
 
+const PORTUGUESE_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.convertWithChildrenWarning': 'Blocos aninhados: {count}. Converter este bloco moverá o conteúdo aninhado para o nível superior. Deseja continuar?',
+  'toolbox.optionAddAbove': '⌥ + clique para adicionar acima',
+  'toolbox.ctrlAddAbove': 'Ctrl + clique para adicionar acima',
+  'tools.marker.textColor': 'Cor do texto',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'Escreva algo ou pressione / para selecionar uma ferramenta',
+  'tools.toggle.placeholder': 'Lista recolhível',
+  'tools.toggle.bodyPlaceholder': 'Bloco recolhível vazio. Clique para adicionar um bloco ou arraste blocos para cá.',
+  'tools.table.clearSelection': 'Limpar conteúdo',
+  'tools.table.placement': 'Alinhamento',
+  'tools.table.placementTopLeft': 'Canto superior esquerdo',
+  'tools.table.placementTopCenter': 'Centro superior',
+  'tools.table.placementTopRight': 'Canto superior direito',
+  'tools.table.placementMiddleLeft': 'Centro esquerdo',
+  'tools.table.placementMiddleRight': 'Centro direito',
+  'tools.table.placementBottomLeft': 'Canto inferior esquerdo',
+  'tools.table.placementBottomCenter': 'Centro inferior',
+  'tools.table.placementBottomRight': 'Canto inferior direito',
+  'a11y.dragHandle': 'Arraste para mover o bloco ou clique para abrir o menu',
+  'a11y.dragHandleRole': 'alça de arrasto',
+  'a11y.dropPosition': 'Posição de destino: {position} de {total}',
+  'a11y.movedUp': 'Movimento para cima concluído: posição {position} de {total}.',
+  'a11y.movedDown': 'Movimento para baixo concluído: posição {position} de {total}.',
+  'a11y.atTop': 'Não é possível mover para cima. Já no topo.',
+  'a11y.atBottom': 'Não é possível mover para baixo. Já no fim.',
+  'a11y.searchResults': 'Resultados da pesquisa: {count}',
+  'a11y.allBlocksSelected': 'Todos os blocos selecionados. Total: {count}',
+  'a11y.navigationModeEntered': 'Modo de navegação. Use as teclas de seta para navegar entre os blocos. Pressione Enter para editar e Esc para sair.',
+  'a11y.navigatedToBlock': 'Navegou até o bloco',
+  'toolNames.clearFormat': 'Limpar formatação',
+  'tools.callout.addEmoji': 'Adicionar ícone',
+  'tools.callout.filterEmojis': 'Pesquisar emojis…',
+  'tools.callout.pickRandom': 'Escolher um emoji aleatório',
+  'tools.callout.emojiCategoryActivity': 'Atividades',
+  'tools.callout.emojiCategoryTravel': 'Viagens e lugares',
+  'toolNames.equation': 'Equação',
+  'tools.equation.placeholder': 'Insira uma fórmula LaTeX…',
+  'tools.code.searchLanguage': 'Pesquisar linguagens…',
+  'tools.link.linkTitle': 'Texto do link',
+  'tools.image.converting': 'Convertendo…',
+  'tools.image.altDescription': 'Descreva esta imagem para quem não consegue vê-la.',
+  'tools.image.previewControls': 'Controles da pré-visualização da imagem',
+  'tools.image.errorFileTooLarge': 'A imagem é muito grande. {size} excede o limite de {max}.',
+  'tools.image.errorDefaultMessage': 'Não foi possível carregar a imagem a partir desta URL. Tente outra origem ou envie o arquivo novamente.',
+  'tools.file.errorFileTooLarge': 'O arquivo é muito grande. {size} excede o limite de {max}.',
+  'tools.file.previewRaw': 'Código-fonte',
+  'tools.file.previewRender': 'Pré-visualização',
+  'tools.video.alignmentLeft': 'Alinhar à esquerda',
+  'tools.video.alignmentCenter': 'Alinhar ao centro',
+  'tools.video.alignmentRight': 'Alinhar à direita',
+  'tools.video.errorFileTooLarge': 'O vídeo é muito grande. {size} excede o limite de {max}.',
+  'tools.audio.alignmentLeft': 'Alinhar à esquerda',
+  'tools.audio.alignmentCenter': 'Alinhar ao centro',
+  'tools.audio.alignmentRight': 'Alinhar à direita',
+  'tools.audio.errorFileTooLarge': 'O arquivo de áudio é muito grande. {size} excede o limite de {max}.',
+  'tools.audio.titlePlaceholder': 'Título da faixa',
+  'tools.audio.artistPlaceholder': 'Artista',
+  'tools.audio.emptyOrDropHere': 'ou solte um arquivo de áudio aqui',
+  'tools.audio.coverChange': 'Alterar capa',
+  'tools.audio.coverSet': 'Definir imagem de capa',
+  'tools.audio.coverRemove': 'Remover capa',
+  'tools.audio.coverErrorType': 'Escolha um arquivo de imagem',
+  'tools.audio.coverErrorTooLarge': 'A imagem é muito grande',
+  'tools.audio.coverAdd': 'Adicionar uma capa',
+  'tools.audio.coverSourceAria': 'Origem da capa',
+  'tools.database.viewTypeBoardDescription': 'Mostrar itens em colunas',
+  'tools.database.viewTypeListDescription': 'Mostrar itens em uma lista simples',
+  'tools.database.propertyTypeSelect': 'Selecionar',
+  'tools.database.defaultStatusProperty': 'Status',
+  'tools.bookmark.loading': 'Carregando pré-visualização do link…',
+  'tools.embed.empty': 'Nenhum link incorporado',
+  'tools.linkPaste.embed': 'Criar integração',
+  'tools.linkPaste.mention': 'Mencionar',
+  'notifier.dismiss': 'Fechar',
+  'tools.video.seek': 'Posição da reprodução',
+  'tools.video.toggleTimeDisplay': 'Alternar entre o tempo decorrido e o tempo restante',
+  'tools.video.theater': 'Modo teatro',
+  'tools.video.theaterExit': 'Sair do modo teatro',
+  'tools.video.pip': 'Picture-in-picture',
+  'tools.video.ctxCopyUrlAtTime': 'Copiar URL do vídeo na posição de reprodução atual',
+  'tools.video.ctxStats': 'Estatísticas de reprodução',
+  'tools.callout.emojiSearchResults': 'Resultados da pesquisa de emojis: {count}',
+  'tools.database.checkboxChecked': 'Marcada',
+  'tools.database.checkboxUnchecked': 'Desmarcada',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -3214,6 +3302,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(PASHTO_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Portuguese correction oracle', () => {
+    const messages = readLocale('pt').messages;
+    const actual = Object.fromEntries(
+      Object.keys(PORTUGUESE_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(PORTUGUESE_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

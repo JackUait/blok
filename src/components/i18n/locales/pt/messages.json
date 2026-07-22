@@ -342,7 +342,7 @@
   "tools.database.viewTypeBoard": "Quadro",
   "tools.database.viewTypeList": "Lista",
   "tools.database.viewTypeBoardDescription": "Mostrar itens em colunas",
-  "tools.database.viewTypeListDescription": "Exibir itens em uma lista simples",
+  "tools.database.viewTypeListDescription": "Mostrar itens em uma lista simples",
   "tools.database.propertyTypeHeading": "Tipo de propriedade",
   "tools.database.propertyTypeText": "Texto",
   "tools.database.propertyTypeNumber": "Número",

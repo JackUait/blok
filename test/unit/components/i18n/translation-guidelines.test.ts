@@ -3001,6 +3001,93 @@ const ALBANIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'Përputhje për emoji: {count}',
 };
 
+const SERBIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Уклони форматирање',
+  'tools.toggle.bodyPlaceholder':
+    'Празан склопиви блок. Кликните за додавање блока или превуците блокове овде.',
+  'toolbox.optionAddAbove': 'Држите тастер Option и кликните за додавање изнад',
+  'toolbox.ctrlAddAbove': 'Држите тастер Ctrl и кликните за додавање изнад',
+  'toolbox.typeToSearch': 'Унесите текст за претрагу',
+  'tools.marker.textColor': 'Боја текста',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.colorPicker.color.gray': 'Сива',
+  'tools.colorPicker.color.brown': 'Смеђа',
+  'tools.colorPicker.color.orange': 'Наранџаста',
+  'tools.colorPicker.color.yellow': 'Жута',
+  'tools.colorPicker.color.green': 'Зелена',
+  'tools.colorPicker.color.blue': 'Плава',
+  'tools.colorPicker.color.purple': 'Љубичаста',
+  'tools.colorPicker.color.pink': 'Ружичаста',
+  'tools.colorPicker.color.red': 'Црвена',
+  'tools.paragraph.placeholder': 'Напишите нешто или притисните / да бисте изабрали алатку',
+  'tools.toggle.placeholder': 'Склопива листа',
+  'tools.table.clearSelection': 'Очисти садржај',
+  'a11y.dragHandle': 'Превуците за премештање блока или кликните да отворите мени',
+  'a11y.dragStartedMultiple': 'Блокови који се превлаче: {count}',
+  'a11y.dropPosition': 'Позиција испуштања: {position} од {total}',
+  'a11y.blocksMoved': 'Премештени блокови: {count}. Нова позиција: {position}.',
+  'a11y.blockDuplicated': 'Блок је дуплиран на позицији {position} од {total}',
+  'a11y.blocksDuplicated': 'Дуплирани блокови: {count}. Почетна позиција: {position}.',
+  'a11y.searchResults': 'Резултати претраге: {count}',
+  'searchTerms.blockquote': 'цитатни блок',
+  'tools.callout.addEmoji': 'Додај икону',
+  'tools.callout.filterEmojis': 'Претражи емоџије…',
+  'tools.callout.pickRandom': 'Изабери насумични емоџи',
+  'tools.callout.colorGray': 'Сива',
+  'tools.callout.colorBrown': 'Смеђа',
+  'tools.callout.colorOrange': 'Наранџаста',
+  'tools.callout.colorYellow': 'Жута',
+  'tools.callout.colorGreen': 'Зелена',
+  'tools.callout.colorBlue': 'Плава',
+  'tools.callout.colorPurple': 'Љубичаста',
+  'tools.callout.colorPink': 'Ружичаста',
+  'tools.callout.colorRed': 'Црвена',
+  'tools.table.placement': 'Поравнање',
+  'blockSettings.blocksSelected': 'Изабрани блокови: {count}',
+  'blockSettings.copyLinkSuccess': 'Веза је копирана у оставу',
+  'blockSettings.copyLinkError': 'Није могуће копирати везу ка блоку',
+  'tools.link.linkTitle': 'Текст везе',
+  'tools.code.autoDetected': 'аутоматски',
+  'tools.code.searchLanguage': 'Претражи језике…',
+  'tools.image.toggleCaption': 'Прикажи или сакриј натпис',
+  'tools.image.moreOptions': 'Још опција',
+  'tools.image.previewControls': 'Контроле прегледа слике',
+  'tools.image.navigationControls': 'Навигација између слика',
+  'tools.image.errorDefaultMessage':
+    'Слику није могуће учитати са овог URL-а. Покушајте са другим извором или поново отпремите датотеку.',
+  'tools.image.cropReset': 'Врати исецање на почетно стање',
+  'tools.database.viewTypeListDescription': 'Прикажи ставке у једноставној листи',
+  'tools.database.listView': 'Приказ листе',
+  'tools.database.cardDetails': 'Детаљи картице',
+  'tools.bookmark.loading': 'Учитавање прегледа везе…',
+  'tools.embed.empty': 'Нема везе за уграђивање',
+  'tools.linkPaste.mention': 'Помени',
+  'tools.file.toggleCaption': 'Прикажи или сакриј натпис',
+  'tools.file.previewRender': 'Преглед',
+  'tools.video.toggleCaption': 'Прикажи или сакриј натпис',
+  'tools.video.moreOptions': 'Још опција',
+  'tools.audio.emptyOrDropHere': 'или превуците аудио-датотеку овде',
+  'tools.audio.emptyUrlPlaceholder': 'Налепите URL аудио-записа…',
+  'tools.audio.emptyUrlAria': 'URL аудио-записа',
+  'tools.audio.emptySourceAria': 'Извор аудио-записа',
+  'tools.audio.coverSourceAria': 'Извор омота',
+  'a11y.allBlocksSelected': 'Изабрани су сви блокови. Укупно: {count}.',
+  'a11y.blocksSelected': 'Изабрани блокови: {count}',
+  'a11y.navigationModeEntered':
+    'Режим навигације. Користите тастере са стрелицама за кретање између блокова, Enter за уређивање, Escape за излаз.',
+  'a11y.navigationModeExited': 'Изашли сте из режима навигације',
+  'a11y.navigatedToBlock': 'Прешли сте на блок',
+  'a11y.dropCreateColumnLeft': 'Биће додата колона са леве стране',
+  'a11y.dropCreateColumnRight': 'Биће додата колона са десне стране',
+  'tools.video.seek': 'Позиција репродукције',
+  'tools.video.toggleTimeDisplay': 'Пребаци између протеклог и преосталог времена',
+  'tools.video.ctxCopyUrl': 'Копирај URL видеа',
+  'tools.video.ctxCopyUrlAtTime': 'Копирај URL видеа са тренутном временском ознаком',
+  'tools.video.ctxStats': 'Статистика репродукције',
+  'tools.callout.emojiSearchResults': 'Број подударних емоџија: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4004,6 +4091,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(ALBANIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Serbian correction oracle', () => {
+    const messages = readLocale('sr').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SERBIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SERBIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

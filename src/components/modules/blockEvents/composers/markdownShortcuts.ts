@@ -215,13 +215,14 @@ export class MarkdownShortcuts extends BlockEventComposer {
       return false;
     }
 
-    // Notion (m-8): list markdown triggers convert any editable text block —
-    // paragraph, heading or quote — into the list type, preserving its text.
-    // They must NOT fire inside a code block or an already-list block, so the
-    // gate stays an explicit allowlist rather than "anything non-default".
+    // List markdown triggers convert a paragraph or a quote into the list type,
+    // preserving its text. A HEADING is intentionally excluded: it's a distinct
+    // structural block, so typing "- " inside a heading keeps the marker as
+    // literal text instead of collapsing the heading into a plain list item.
+    // They must also NOT fire inside a code block or an already-list block, so
+    // the gate stays an explicit allowlist rather than "anything non-default".
     const toolName = currentBlock.tool.name;
-    const isListTriggerEligible =
-      currentBlock.tool.isDefault || toolName === HEADER_TOOL_NAME || toolName === QUOTE_TOOL_NAME;
+    const isListTriggerEligible = currentBlock.tool.isDefault || toolName === QUOTE_TOOL_NAME;
 
     if (!isListTriggerEligible) {
       return false;

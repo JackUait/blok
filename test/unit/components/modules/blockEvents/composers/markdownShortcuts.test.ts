@@ -2207,9 +2207,11 @@ describe('MarkdownShortcuts', () => {
     });
   });
 
-  // m-8: list markdown triggers should fire in non-paragraph editable text blocks
-  // (heading, quote), converting the block to the list type and preserving text —
-  // matching Notion. They must still NOT fire in code blocks or already-list blocks.
+  // m-8: list markdown triggers should fire in a QUOTE (converting it to the list
+  // type and preserving text), but must LEAVE A HEADING as a heading — a heading is
+  // a distinct structural block, so typing "- " inside one keeps the marker as
+  // literal text rather than collapsing the heading into a plain list item. They
+  // must still NOT fire in code blocks or already-list blocks either.
   describe('list triggers in non-default text blocks (m-8)', () => {
     const createTextBlock = (toolName: string, text: string): Block => {
       const block = createBlock({
@@ -2227,7 +2229,7 @@ describe('MarkdownShortcuts', () => {
       return block;
     };
 
-    it('converts "- " inside a HEADING into an unordered list, preserving text', () => {
+    it('does NOT convert "- " inside a HEADING (heading stays a heading)', () => {
       const mockBlock = createTextBlock('header', '- My heading text');
       const replace = vi.fn(() => mockBlock);
       const blok = createBlokModules({
@@ -2240,14 +2242,8 @@ describe('MarkdownShortcuts', () => {
 
       const result = markdownShortcuts.handleInput(createInputEvent());
 
-      expect(result).toBe(true);
-      expect(replace).toHaveBeenCalledWith(
-        mockBlock,
-        'list',
-        expect.objectContaining({ style: 'unordered' })
-      );
-      const replaceCall = replace.mock.calls[0] as unknown as [Block, string, { text: string }];
-      expect(replaceCall[2].text).toBe('My heading text');
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
     });
 
     it('converts "1. " inside a QUOTE into an ordered list, preserving text', () => {
@@ -2273,7 +2269,7 @@ describe('MarkdownShortcuts', () => {
       expect(replaceCall[2].text).toBe('Quoted item');
     });
 
-    it('converts "[] " inside a HEADING into an unchecked checklist', () => {
+    it('does NOT convert "[] " inside a HEADING (heading stays a heading)', () => {
       const mockBlock = createTextBlock('header', '[] Todo heading');
       const replace = vi.fn(() => mockBlock);
       const blok = createBlokModules({
@@ -2286,12 +2282,8 @@ describe('MarkdownShortcuts', () => {
 
       const result = markdownShortcuts.handleInput(createInputEvent());
 
-      expect(result).toBe(true);
-      expect(replace).toHaveBeenCalledWith(
-        mockBlock,
-        'list',
-        expect.objectContaining({ style: 'checklist', checked: false })
-      );
+      expect(result).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
     });
 
     it('does NOT convert "- " inside a CODE block', () => {

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.2](https://github.com/JackUait/blok/compare/v1.4.1...v1.4.2) (2026-07-23)
+
+### Bug Fixes
+
+- **Markdown** — Typing a list marker (`- `, `1. `) inside a heading no longer converts the heading into a list; it stays a heading.
+
 ## [1.4.1](https://github.com/JackUait/blok/compare/v1.4.0...v1.4.1) (2026-07-23)
 
 ### Bug Fixes

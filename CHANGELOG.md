@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0](https://github.com/JackUait/blok/compare/v1.3.0...v1.4.0) (2026-07-23)
+
+### Features
+
+- **Marks** — New range-aware `api.marks` inline-formatting engine, with the built-in bold/italic/underline/strikethrough tools migrated onto it. Exposes `MarkSpec` identity/family/transparent semantics for authoring custom inline tools.
+- **View renderer** — New synchronous, DOM-free view renderer published at `@bloklabs/core/view` (`defineBlokSchema` + a central dispatcher, plus a React `BlokView`), for rendering stored block content without booting a full editor.
+- **i18n** — New runtime `editor.i18n.update()` API that makes `config.i18n` live and repaints already-rendered block DOM, wired reactively through all three adapters.
+- **Config** — Reactive contract for `readOnly`, `hideToolbar` and `inlineToolbar`: setting them after construction now takes effect live across the React, Vue and Angular adapters (with sanitize-cache invalidation on `inlineToolbar`).
+- **Readiness** — Scoped, reactive editor readiness: `whenAllReady({ within, settleOn })`, `readyState`/`subscribeReady`, and a `useBlokReady` hook in all three adapters.
+- **Docs** — The documentation site is now crawlable (prerendered metadata, sitemap, AI mirrors) and carries Google Analytics coverage across pages.
+- **Playground** — Dev settings panel gains a language picker and an RTL toggle.
+
+### Bug Fixes
+
+- **Marks** — Fixed the trailing-whitespace extension eating later content when a mark ended on a boundary.
+- **Styles** — Surface background tokens (`--blok-bg-light/-secondary/-tertiary`) are now a test-enforced public contract; the gutter stays put in plain read-only so `readOnly` flips no longer shift layout.
+- **Types** — `MarkSpec` is now imported into the main declaration entry so it resolves for consumers.
+- **Docs** — Russian pages are headed by their localized H1; `@bloklabs/core/view` resolves in the docs build and React fixtures.
+- **Release** — The Angular README is now staged into the directory npm packs.
+- **i18n** — Locale audits completed across Slovak, Sinhala, Sindhi, Russian, Romanian, Portuguese, Pashto, Polish, Punjabi, Norwegian, Dutch, Nepali, Burmese, Malay, Marathi, Mongolian, Malayalam, Macedonian, Latvian, Lithuanian, Lao, Sorani, Korean and Kannada.
+
+### Maintenance
+
+- Migrated the docs site to React Router framework mode.
+- Renamed the default branch from `master` to `main`.
+- Completed npm metadata across the package family and hardened the view/reactive-contract law tests.
+
 ## [1.3.0](https://github.com/JackUait/blok/compare/v1.2.6...v1.3.0) (2026-07-21)
 
 ### Features

@@ -269,12 +269,36 @@ export class VideoTool implements BlockTool {
   }
 
   private applyError(err?: unknown): void {
+    // A rejected URL is not an upload failure — the generic "Upload failed" copy
+    // would hide the one thing the author needs to know: the link is not a file.
+    if (err instanceof VideoUploadError && err.code === 'NOT_MEDIA_URL') {
+      this.errorMessage = tr(
+        this.api.i18n,
+        'tools.video.errorNotMediaUrl',
+        'Link a video file (.mp4, .webm, .mov), or use an embed block',
+      );
+      this.state = 'ERROR';
+      this.renderState();
+      return;
+    }
+
     this.errorMessage = err instanceof VideoUploadError
       ? uploadErrorMessage(err, (key) => this.api.i18n.t(key), {
         tooLarge: 'tools.video.errorFileTooLarge',
         generic: 'tools.video.errorUploadFailed',
       })
       : null;
+    this.state = 'ERROR';
+    this.renderState();
+  }
+
+  /**
+   * The media element rejected `data.url`. The url is deliberately kept — the
+   * failure may be transient (offline, expired signed URL) and the block must
+   * stay recoverable rather than silently losing its content.
+   */
+  private applyMediaError(): void {
+    this.errorMessage = tr(this.api.i18n, 'tools.video.errorUnplayable', 'This video can\'t be played');
     this.state = 'ERROR';
     this.renderState();
   }
@@ -354,14 +378,18 @@ export class VideoTool implements BlockTool {
     const message = document.createElement('span');
     message.textContent = this.errorMessage ?? tr(this.api.i18n, 'tools.video.errorUploadFailed', 'Upload failed');
 
-    const retry = document.createElement('button');
-    retry.type = 'button';
-    retry.className = 'blok-video-retry';
-    retry.setAttribute('data-action', 'replace');
-    retry.textContent = tr(this.api.i18n, 'tools.video.errorReplace', 'Replace');
-    retry.addEventListener('click', () => this.transitionToEmpty());
+    wrap.appendChild(message);
 
-    wrap.append(message, retry);
+    // Viewers cannot replace the source — offering the button would only dead-end.
+    if (!this.readOnly) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'blok-video-retry';
+      retry.setAttribute('data-action', 'replace');
+      retry.textContent = tr(this.api.i18n, 'tools.video.errorReplace', 'Replace');
+      retry.addEventListener('click', () => this.transitionToEmpty());
+      wrap.appendChild(retry);
+    }
     this.root.appendChild(wrap);
   }
 
@@ -374,6 +402,11 @@ export class VideoTool implements BlockTool {
     // viewers too, so they attach regardless of read-only.
     const video = media.querySelector('video');
     if (video) {
+      // A source the browser cannot decode (a provider watch page, a dead link,
+      // a 404) otherwise leaves the block in RENDERED forever — a black 16:9 box
+      // with 0:00/0:00 chrome and no explanation. Route it to the ERROR state.
+      video.addEventListener('error', () => this.applyMediaError(), { once: true });
+
       // Loop is content — honour it in both modes. Autoplay is a read-only viewer
       // affordance: muted + autoplay + loop turns the block into a gif. Browsers
       // only honour autoplay when muted, so we mute here; editing never autoplays.

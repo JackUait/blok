@@ -1123,7 +1123,7 @@ const editor = new Blok({
         type: 'VideoUploader',
         default: 'undefined',
         description:
-          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the pasted URL.',
+          'Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the entered URL — which then has to be a direct media file (`.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`), since it becomes the `<video src>` verbatim. Provide `uploadByUrl` to accept any URL and resolve it yourself.',
       },
       {
         option: 'types',

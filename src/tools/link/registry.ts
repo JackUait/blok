@@ -197,7 +197,10 @@ export const EMBED_SERVICES: Record<string, EmbedService> = {
     // NOTE: VK normally also needs a `hash` param that is not derivable from the
     // pasted URL (it IS kept when a video_ext.php iframe src is pasted directly).
     // Public videos usually render without it.
-    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)*(?:vk\.(?:com|ru)|vkvideo\.ru)\/(?:(?:video|clip)(-?\d+)_(\d+)\S*|video_ext\.php\?(\S+)|\S*?[?&]z=(?:video|clip)(-?\d+)_(\d+)\S*)/,
+    // The optional `playlist/<id>/` prefix is non-capturing on purpose: VK's UI
+    // copies that form while you watch from a playlist, and it must resolve to
+    // the same oid/id groups as the bare watch URL.
+    regex: /^(?:https?:\/\/)?(?:[\w-]+\.)*(?:vk\.(?:com|ru)|vkvideo\.ru)\/(?:(?:playlist\/[\w-]+\/)?(?:video|clip)(-?\d+)_(\d+)\S*|video_ext\.php\?(\S+)|\S*?[?&]z=(?:video|clip)(-?\d+)_(\d+)\S*)/,
     embedUrl: 'https://vk.com/video_ext.php?oid=<%= remote_id %>',
     id: (groups) => {
       if (groups[2] !== undefined) {

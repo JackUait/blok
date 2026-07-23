@@ -286,6 +286,17 @@ describe('link registry', () => {
       expect(result?.embedUrl).toBe('https://vk.com/video_ext.php?oid=-77521&id=162222515');
     });
 
+    it('matches a playlist-scoped watch URL (what VK copies while watching from a playlist)', () => {
+      const result = matchEmbedService('https://vkvideo.ru/playlist/-226723792_5/video-226723792_456239233?t=11m38s');
+
+      expect(result?.service).toBe('vkvideo');
+      expect(result?.embedUrl).toBe('https://vk.com/video_ext.php?oid=-226723792&id=456239233');
+    });
+
+    it('does not match a playlist listing page with no video segment', () => {
+      expect(matchEmbedService('https://vkvideo.ru/playlist/-226723792_5')).toBeNull();
+    });
+
     it('does not match a lookalike host', () => {
       expect(matchEmbedService('https://notvk.com/video-1_2')).toBeNull();
     });

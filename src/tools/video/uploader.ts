@@ -1,7 +1,7 @@
 import type { VideoConfig } from '../../../types/tools/video';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
-import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
+import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
 
 export interface UploadResult {
   url: string;
@@ -59,6 +59,14 @@ export class Uploader {
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw new VideoUploadError('INVALID_URL', parsed.protocol);
+    }
+    // Without `uploadByUrl` the raw string becomes the `<video src>` verbatim, so
+    // it has to be a file the browser can decode. A provider watch page (VK,
+    // YouTube, …) would otherwise render a permanently black player — those
+    // belong in an embed block. The paste path already enforces this pattern;
+    // the URL field used to accept anything http(s).
+    if (!this.config.uploader?.uploadByUrl && !URL_PATTERN.test(raw)) {
+      throw new VideoUploadError('NOT_MEDIA_URL', raw);
     }
   }
 

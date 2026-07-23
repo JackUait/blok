@@ -596,3 +596,114 @@ describe('VideoTool — blob lifecycle', () => {
     expect(revoke).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Regression: a saved `data.url` pointing at something the browser cannot decode
+ * (a provider watch page, a dead link, a 404) used to stay in RENDERED forever —
+ * the block painted a black 16:9 box with 0:00/0:00 controls and never said why.
+ * The <video> element's own `error` event was never listened to.
+ */
+describe('VideoTool — media playback failure', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('surfaces the ERROR state when the media element fails to load its source', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://vkvideo.ru/video-1_2' }));
+    const root = tool.render();
+    const video = root.querySelector('video');
+    if (!video) throw new Error('video missing');
+
+    video.dispatchEvent(new Event('error'));
+
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+      .toBe("This video can't be played");
+  });
+
+  it('offers Replace after a playback failure while editing', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/broken.mp4' }));
+    const root = tool.render();
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+
+    expect(root.querySelector('[data-role="video-error"] [data-action="replace"]')).not.toBeNull();
+  });
+
+  it('does not offer Replace to read-only viewers', () => {
+    const tool = new VideoTool({ ...createOptions({ url: 'https://x/broken.mp4' }), readOnly: true });
+    const root = tool.render();
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="video-error"] [data-action="replace"]')).toBeNull();
+  });
+
+  it('keeps the saved url so the failure is recoverable, not destructive', () => {
+    const tool = new VideoTool(createOptions({ url: 'https://x/broken.mp4' }));
+    const root = tool.render();
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+
+    expect(tool.save().url).toBe('https://x/broken.mp4');
+  });
+});
+
+/**
+ * Regression: the URL field accepted ANY http(s) URL and dropped it straight into
+ * `<video src>`, while the paste path required a direct media URL. A provider watch
+ * page (VK, YouTube, …) therefore produced a permanently black player.
+ */
+describe('VideoTool — URL field validation', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  const submitUrl = async (tool: VideoTool, root: HTMLElement, url: string): Promise<void> => {
+    root.querySelector<HTMLButtonElement>('[data-tab="embed"]')?.click();
+    const input = root.querySelector<HTMLInputElement>('input[type="url"]');
+    if (!input) throw new Error('url input missing');
+    input.value = url;
+    root.querySelector<HTMLButtonElement>('[data-action="submit-url"]')?.click();
+    await new Promise((r) => setTimeout(r, 0));
+  };
+
+  it('rejects a provider watch page instead of dropping it into <video src>', async () => {
+    const tool = new VideoTool(createOptions());
+    const root = tool.render();
+
+    await submitUrl(tool, root, 'https://vkvideo.ru/playlist/-226723792_5/video-226723792_456239233?t=11m38s');
+
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+      .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
+    expect(root.querySelector('video')).toBeNull();
+  });
+
+  it('rejects an unrecognised page URL that is not a media file', async () => {
+    const tool = new VideoTool(createOptions());
+    const root = tool.render();
+
+    await submitUrl(tool, root, 'https://example.com/watch/some-video');
+
+    expect(root.getAttribute('data-state')).toBe('error');
+    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+      .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
+  });
+
+  it('accepts a direct media URL', async () => {
+    const tool = new VideoTool(createOptions());
+    const root = tool.render();
+
+    await submitUrl(tool, root, 'https://cdn.example.com/clip.webm?token=abc');
+
+    expect(root.querySelector('video')?.getAttribute('src')).toBe('https://cdn.example.com/clip.webm?token=abc');
+  });
+
+  it('leaves the decision to the host when uploadByUrl is configured', async () => {
+    const uploadByUrl = vi.fn().mockResolvedValue({ url: 'https://cdn.example.com/hosted.mp4' });
+    const tool = new VideoTool(createOptions({}, { uploader: { uploadByUrl } }));
+    const root = tool.render();
+
+    await submitUrl(tool, root, 'https://vkvideo.ru/video-1_2');
+
+    expect(uploadByUrl).toHaveBeenCalledWith('https://vkvideo.ru/video-1_2', expect.anything());
+    expect(root.querySelector('video')?.getAttribute('src')).toBe('https://cdn.example.com/hosted.mp4');
+  });
+});

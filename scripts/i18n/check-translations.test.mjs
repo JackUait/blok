@@ -439,7 +439,7 @@ describe('extractKeysFromSource', () => {
 
   it('does not treat a vendor i18n import as the shared tool helper', () => {
     const source = `
-      import { tr } from '@vendor/i18n';
+      import { tr } from './vendor-i18n';
       tr(data, 'tools.fake.vendor');
     `;
     const keys = extractKeysFromSource(source);

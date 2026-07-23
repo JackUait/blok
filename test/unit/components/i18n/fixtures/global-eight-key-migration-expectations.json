@@ -570,13 +570,13 @@
     "tools.video.errorUnplayable": "Det går inte att spela upp den här videon"
   },
   "sw": {
-    "tools.video.statsResolution": "Azimio: {value}",
+    "tools.video.statsResolution": "Ubora: {value}",
     "tools.video.statsDroppedFrames": "Fremu zilizopotea: {value}",
-    "tools.video.statsBufferHealth": "Hali ya akiba: {seconds} sekunde",
+    "tools.video.statsBufferHealth": "Hali ya bafa: {seconds} sekunde",
     "tools.video.statsViewport": "Eneo la kutazama: {value}",
     "tools.video.statsUnavailable": "Haipatikani",
     "tools.database.moreViews": "Zaidi: {count}…",
-    "tools.video.errorNotMediaUrl": "Weka kiungo cha faili ya video (.mp4, .webm, .mov), au tumia bloku ya kupachika",
+    "tools.video.errorNotMediaUrl": "Weka kiungo cha faili ya video (.mp4, .webm, .mov), au tumia kizuizi cha kupachika",
     "tools.video.errorUnplayable": "Video hii haiwezi kuchezwa"
   },
   "ta": {

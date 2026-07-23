@@ -8262,6 +8262,68 @@ Sinhala identical-value warnings. Global `F-global-014` and
 `F-global-020` remain coordinated follow-up work and do not invalidate this
 locale-level second-pass transition.
 
+### Slovak (`sk`) — current 546-key second pass complete
+
+Fresh linguistic and caller-structure reviews restarted at entry 1 on raw
+Slovak dictionary SHA-256
+`888dfef7d3ccf2e63d0e230756e9999414e2cd69ee4b67031ada608b6e60fe3b`.
+Their exhaustive raw-review artifacts are bound at SHA-256
+`541a23c29552723a77c44fa3cd17058cde2faf398be78105895fbde5e08a45ed`
+and
+`92d03d19b950440b1d2b3de3f84d0f97fa2ed5fca5012814ea8c90d9bb4ca60d`.
+The independent maps proposed 73 linguistic and 72 caller corrections, with
+44 exact wording agreements and 13 conflicts across an 88-key union.
+
+A separate proposal challenge, bound at SHA-256
+`c51823d19567d427ca28f61a3d5ad40db0dea0b2b2a3ca81febb40aa437f11fa`,
+reviewed every union key, initially accepted 69 mandatory corrections, and
+rejected 19 optional or nonmandatory rewrites. It upheld both historical
+findings, resolved all 13 conflicts, and exhaustively classified 12
+exact-English identities. The initial corrected dictionary was bound at
+SHA-256
+`0ff4ca0c60b8804147f88db44c7a7dcd1836a15daa69d0af0a7a936070fde132`.
+
+The initial 70-key executable oracle covered the two historical findings and
+the 69-key correction map, with `F-sk-002` intentionally present in both sets.
+It failed on all 69 changed values against the untouched catalog and passed
+after applying the adjudicated map. Corrected-byte linguistic and caller
+challenges, sealed at SHA-256
+`527d5d551ae862a45dd9087f2af08fd983a0755dc8ccc3fc91bb909fb3b6110f`
+and
+`20e86372193c26c88b95e457d4e96b9b98f6e992922b2e777cb893236519fd6e`,
+then independently rejected two punctuation decisions as blockers: the sole
+ASCII three-dot ellipsis in `tools.code.searchLanguage` and the missing
+ongoing-state ellipsis in `tools.bookmark.loading`.
+
+The challenged corrections expanded the final map to 71 values and the
+executable oracle to 72 unique keys. That expanded case failed on exactly the
+two residuals and passed after remediation. The final 27,849-byte dictionary
+is bound at SHA-256
+`0a7da8daa6558cd825d699c3cce973f3a981817e6fcd88163b2b5979db634e0b`.
+Fresh final-review tasks `/root/sk_final_linguistic` and
+`/root/sk_final_callers`
+restarted again at entry 1 on those exact bytes. Their clean sealed artifacts
+are bound at SHA-256
+`7ee439436ecd991481dfb999419a4d4339747e6da5b05bc1dc580ea1fb949a5d`
+and
+`4026d774be0464dd0eb04165523381e193d65595a2e7359f4078dd30f641cb38`.
+Both accepted all 546 pairs, verified `F-sk-001` through `F-sk-072`, upheld
+the exhaustive `R-sk-001` through `R-sk-012` inventory, and reported zero
+residuals or blockers.
+
+The final passes revalidated all 38 placeholder-bearing keys and 54
+placeholder occurrences, 14 search groups and 44 unique aliases across 48
+references, unique key parity, UTF-8 and NFC integrity, boundary whitespace,
+117 provider compositions, 20 color compositions, and the complete 397
+literal + 122 finite-dynamic + 25 registered-namespace-compatible + two
+source-only caller lifecycle. The complete guideline corpus passes
+5,527/5,527, the nine-file i18n gate passes 6,247/6,247, the focused caller
+and block-color gates pass 413/413, and the checker regressions pass 89/89.
+The live completeness, integrity, source-coverage, and encoding command and
+scoped ESLint gate pass with exactly the 12 catalogued Slovak identical-value
+warnings. Global `F-global-014` and `F-global-020` remain coordinated
+follow-up work and do not invalidate this locale-level second-pass transition.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,

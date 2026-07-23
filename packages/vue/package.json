@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/vue",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Vue block editor — official Vue 3 bindings for Blok, the headless Notion-like rich text editor. Composables and components that render blocks and save to JSON.",
   "license": "Apache-2.0",
   "author": "JackUait",
@@ -54,7 +54,7 @@
     "build": "yarn run -T vite build --mode production"
   },
   "peerDependencies": {
-    "@bloklabs/core": "^1.4.0",
+    "@bloklabs/core": "^1.4.1",
     "vue": "^3.5.0"
   }
 }

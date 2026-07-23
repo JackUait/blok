@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Padidinti atkūrimo greitį",
   "tools.callout.emojiSearchResults": "Atitinkančių jaustukų: {count}",
   "tools.database.checkboxChecked": "Pažymėta",
-  "tools.database.checkboxUnchecked": "Nepažymėta"
+  "tools.database.checkboxUnchecked": "Nepažymėta",
+  "tools.video.statsResolution": "Skiriamoji geba: {value}",
+  "tools.video.statsDroppedFrames": "Praleisti kadrai: {value}",
+  "tools.video.statsBufferHealth": "Buferio būsena: {seconds} sek.",
+  "tools.video.statsViewport": "Peržiūros sritis: {value}",
+  "tools.video.statsUnavailable": "Nepasiekiama",
+  "tools.database.moreViews": "Dar {count}…",
+  "tools.video.errorNotMediaUrl": "Pateikite vaizdo failo nuorodą (.mp4, .webm, .mov) arba naudokite įterpinio bloką",
+  "tools.video.errorUnplayable": "Šio vaizdo įrašo paleisti negalima"
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ਪਲੇਬੈਕ ਸਪੀਡ ਵਧਾਓ",
   "tools.callout.emojiSearchResults": "ਮਿਲਦੇ ਇਮੋਜੀ: {count}",
   "tools.database.checkboxChecked": "ਨਿਸ਼ਾਨਬੱਧ ਕੀਤਾ ਗਿਆ",
-  "tools.database.checkboxUnchecked": "ਨਿਸ਼ਾਨਬੱਧ ਨਹੀਂ ਕੀਤਾ ਗਿਆ"
+  "tools.database.checkboxUnchecked": "ਨਿਸ਼ਾਨਬੱਧ ਨਹੀਂ ਕੀਤਾ ਗਿਆ",
+  "tools.video.statsResolution": "ਰੈਜ਼ੋਲਿਊਸ਼ਨ: {value}",
+  "tools.video.statsDroppedFrames": "ਛੱਡੇ ਗਏ ਫ਼ਰੇਮ: {value}",
+  "tools.video.statsBufferHealth": "ਬਫ਼ਰ ਦੀ ਸਥਿਤੀ: {seconds} ਸਕਿੰਟ",
+  "tools.video.statsViewport": "ਦ੍ਰਿਸ਼ ਖੇਤਰ: {value}",
+  "tools.video.statsUnavailable": "ਉਪਲਬਧ ਨਹੀਂ",
+  "tools.database.moreViews": "{count} ਹੋਰ…",
+  "tools.video.errorNotMediaUrl": "ਵੀਡੀਓ ਫ਼ਾਈਲ ਦਾ ਲਿੰਕ (.mp4, .webm, .mov) ਦਿਓ ਜਾਂ ਇੰਬੈੱਡ ਬਲਾਕ ਵਰਤੋ",
+  "tools.video.errorUnplayable": "ਇਹ ਵੀਡੀਓ ਚਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ"
 }

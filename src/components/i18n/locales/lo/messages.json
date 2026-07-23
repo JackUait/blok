@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ເພີ່ມຄວາມໄວການຫຼິ້ນ",
   "tools.callout.emojiSearchResults": "ພົບ {count} ອີໂມຈິ",
   "tools.database.checkboxChecked": "ໝາຍແລ້ວ",
-  "tools.database.checkboxUnchecked": "ຍັງບໍ່ໝາຍ"
+  "tools.database.checkboxUnchecked": "ຍັງບໍ່ໝາຍ",
+  "tools.video.statsResolution": "ຄວາມລະອຽດ: {value}",
+  "tools.video.statsDroppedFrames": "ເຟຣມທີ່ຫຼຸດ: {value}",
+  "tools.video.statsBufferHealth": "ສະຖານະບັບເຟີ: {seconds} ວິນາທີ",
+  "tools.video.statsViewport": "ພື້ນທີ່ສະແດງຜົນ: {value}",
+  "tools.video.statsUnavailable": "ບໍ່ພ້ອມໃຊ້ງານ",
+  "tools.database.moreViews": "ອີກ {count}…",
+  "tools.video.errorNotMediaUrl": "ໃສ່ລິ້ງຫາໄຟລ໌ວິດີໂອ (.mp4, .webm, .mov) ຫຼືໃຊ້ບລັອກຝັງ",
+  "tools.video.errorUnplayable": "ບໍ່ສາມາດຫຼິ້ນວິດີໂອນີ້ໄດ້"
 }

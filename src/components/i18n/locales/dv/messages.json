@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ޖެއްސުމުގެ ސްޕީޑް މަތިކުރޭ",
   "tools.callout.emojiSearchResults": "{count} އިމޯޖީ ފެނިއްޖެ",
   "tools.database.checkboxChecked": "ފާހަގަކޮށްފައި",
-  "tools.database.checkboxUnchecked": "ފާހަގަނުކޮށް"
+  "tools.database.checkboxUnchecked": "ފާހަގަނުކޮށް",
+  "tools.video.statsResolution": "ރެޒޮލިއުޝަން: {value}",
+  "tools.video.statsDroppedFrames": "ދޫކޮށްލެވުނު ފްރޭމްތައް: {value}",
+  "tools.video.statsBufferHealth": "ބަފަރުގެ ހާލަތު: {seconds} ސެކަންޑު",
+  "tools.video.statsViewport": "ދެއްކުމުގެ ސަރަހައްދު: {value}",
+  "tools.video.statsUnavailable": "ލިބެން ނެތް",
+  "tools.database.moreViews": "އިތުރު {count}…",
+  "tools.video.errorNotMediaUrl": "ވީޑިއޯ ފައިލަކަށް (.mp4, .webm, .mov) ލިންކްކުރޭ، ނުވަތަ އެމްބެޑް ބްލޮކެއް ބޭނުންކުރޭ.",
+  "tools.video.errorUnplayable": "މި ވީޑިއޯ ޕްލޭއެއް ނުކުރެވޭނެ."
 }

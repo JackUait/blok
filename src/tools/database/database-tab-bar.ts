@@ -344,10 +344,12 @@ export class DatabaseTabBar {
       tab.style.display = 'none';
     }
 
-    // Add "N more..." button before the + button
+    // Add the localized overflow-count button before the + button.
     const moreBtn = document.createElement('div');
     moreBtn.setAttribute('data-blok-database-tab-more', '');
-    moreBtn.textContent = `${hiddenCount} more...`;
+    moreBtn.textContent = this.options.api?.i18n.has('tools.database.moreViews')
+      ? this.options.api.i18n.t('tools.database.moreViews', { count: hiddenCount })
+      : `${hiddenCount} more…`;
     moreBtn.style.cursor = 'pointer';
     moreBtn.addEventListener('click', () => {
       this.openOverflowDropdown(moreBtn);

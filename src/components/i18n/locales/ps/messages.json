@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "د پلې کولو سرعت زیات کړئ",
   "tools.callout.emojiSearchResults": "د ورته ایموجیو شمېر: {count}",
   "tools.database.checkboxChecked": "نښه شوی",
-  "tools.database.checkboxUnchecked": "نه نښه شوی"
+  "tools.database.checkboxUnchecked": "نه نښه شوی",
+  "tools.video.statsResolution": "ریزولوشن: {value}",
+  "tools.video.statsDroppedFrames": "له لاسه وتلي چوکاټونه: {value}",
+  "tools.video.statsBufferHealth": "د بفر حالت: {seconds} ثانیې",
+  "tools.video.statsViewport": "د ښودلو ساحه: {value}",
+  "tools.video.statsUnavailable": "شتون نه لري",
+  "tools.database.moreViews": "{count} نور…",
+  "tools.video.errorNotMediaUrl": "د ویډیو فایل لینک (.mp4، .webm، .mov) ورکړئ، یا د ځای پر ځای کولو بلاک وکاروئ",
+  "tools.video.errorUnplayable": "دا ویډیو نه شي پلې کېدای"
 }

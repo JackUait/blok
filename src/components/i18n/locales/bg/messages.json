@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Увеличи скоростта на възпроизвеждане",
   "tools.callout.emojiSearchResults": "Съвпадения за емоджи: {count}",
   "tools.database.checkboxChecked": "Отметнато",
-  "tools.database.checkboxUnchecked": "Без отметка"
+  "tools.database.checkboxUnchecked": "Без отметка",
+  "tools.video.statsResolution": "Разделителна способност: {value}",
+  "tools.video.statsDroppedFrames": "Пропуснати кадри: {value}",
+  "tools.video.statsBufferHealth": "Състояние на буфера: {seconds} сек",
+  "tools.video.statsViewport": "Област на изгледа: {value}",
+  "tools.video.statsUnavailable": "Не е налично",
+  "tools.database.moreViews": "Още {count}…",
+  "tools.video.errorNotMediaUrl": "Добавете връзка към видеофайл (.mp4, .webm, .mov) или използвайте блок за вграждане.",
+  "tools.video.errorUnplayable": "Това видео не може да се възпроизведе."
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Lejátszási sebesség növelése",
   "tools.callout.emojiSearchResults": "{count} emoji található",
   "tools.database.checkboxChecked": "Bejelölve",
-  "tools.database.checkboxUnchecked": "Nincs bejelölve"
+  "tools.database.checkboxUnchecked": "Nincs bejelölve",
+  "tools.video.statsResolution": "Felbontás: {value}",
+  "tools.video.statsDroppedFrames": "Eldobott képkockák: {value}",
+  "tools.video.statsBufferHealth": "Puffer állapota: {seconds} mp",
+  "tools.video.statsViewport": "Megjelenítési terület: {value}",
+  "tools.video.statsUnavailable": "Nem érhető el",
+  "tools.database.moreViews": "További {count}…",
+  "tools.video.errorNotMediaUrl": "Hivatkozzon egy videófájlra (.mp4, .webm, .mov), vagy használjon beágyazási blokkot.",
+  "tools.video.errorUnplayable": "Ez a videó nem játszható le."
 }

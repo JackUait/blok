@@ -123,6 +123,7 @@ vi.mock('../../../../src/tools/database/database-view-popover', () => {
 
 import { DatabaseTabBar } from '../../../../src/tools/database/database-tab-bar';
 import type { DatabaseViewConfig, ViewType } from '../../../../src/tools/database/types';
+import type { API } from '../../../../types';
 
 const rect = (overrides: Partial<DOMRect>): DOMRect => ({
   x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0,
@@ -167,7 +168,11 @@ describe('DatabaseTabBar', () => {
     document.querySelectorAll('[data-blok-database-tab-overflow-dropdown]').forEach((el) => el.remove());
   });
 
-  const createTabBar = (views: DatabaseViewConfig[], activeViewId: string): DatabaseTabBar => {
+  const createTabBar = (
+    views: DatabaseViewConfig[],
+    activeViewId: string,
+    api?: ConstructorParameters<typeof DatabaseTabBar>[0]['api']
+  ): DatabaseTabBar => {
     return new DatabaseTabBar({
       views,
       activeViewId,
@@ -177,6 +182,7 @@ describe('DatabaseTabBar', () => {
       onDuplicate,
       onDelete,
       onReorder,
+      api,
     });
   };
 
@@ -435,7 +441,7 @@ describe('DatabaseTabBar', () => {
   });
 
   describe('tab overflow', () => {
-    it('shows "N more..." button when tabs overflow', () => {
+    it('shows the canonical "N more…" fallback when tabs overflow', () => {
       const views = Array.from({ length: 6 }, (_, i) =>
         makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
       );
@@ -449,13 +455,41 @@ describe('DatabaseTabBar', () => {
 
       const moreBtn = el.querySelector('[data-blok-database-tab-more]') as HTMLElement;
       expect(moreBtn).not.toBeNull();
-      expect(moreBtn.textContent).toContain('3 more');
+      expect(moreBtn.textContent).toBe('3 more…');
 
       bar.destroy();
       el.remove();
     });
 
-    it('opens dropdown listing all views when "N more..." is clicked', () => {
+    it('localizes the overflow count as one interpolated message', () => {
+      const views = Array.from({ length: 6 }, (_, i) =>
+        makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
+      );
+      const t = vi.fn((key: string, vars?: Record<string, string | number>) =>
+        key === 'tools.database.moreViews'
+          ? `${String(vars?.count)} weitere…`
+          : key
+      );
+      const bar = createTabBar(views, 'v0', {
+        i18n: {
+          t,
+          has: (key: string) => key === 'tools.database.moreViews',
+        },
+      } as unknown as API);
+      const el = bar.render();
+      document.body.appendChild(el);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (bar as any).handleOverflow(3);
+
+      expect(el.querySelector('[data-blok-database-tab-more]')?.textContent).toBe('3 weitere…');
+      expect(t).toHaveBeenCalledWith('tools.database.moreViews', { count: 3 });
+
+      bar.destroy();
+      el.remove();
+    });
+
+    it('opens dropdown listing all views when "N more…" is clicked', () => {
       const views = Array.from({ length: 6 }, (_, i) =>
         makeView({ id: `v${i}`, position: `a${i}`, name: `Board ${i}` })
       );

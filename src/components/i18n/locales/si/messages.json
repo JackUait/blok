@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ධාවන වේගය වැඩි කරන්න",
   "tools.callout.emojiSearchResults": "ඉමෝජි {count} ක් හමු විය",
   "tools.database.checkboxChecked": "සලකුණු කර ඇත",
-  "tools.database.checkboxUnchecked": "සලකුණු කර නැත"
+  "tools.database.checkboxUnchecked": "සලකුණු කර නැත",
+  "tools.video.statsResolution": "විභේදනය: {value}",
+  "tools.video.statsDroppedFrames": "මඟහැරුණු රාමු: {value}",
+  "tools.video.statsBufferHealth": "බෆරයේ තත්ත්වය: {seconds} තත්පර",
+  "tools.video.statsViewport": "දර්ශන ප්‍රදේශය: {value}",
+  "tools.video.statsUnavailable": "ලබා ගත නොහැක",
+  "tools.database.moreViews": "තවත්: {count}…",
+  "tools.video.errorNotMediaUrl": "වීඩියෝ ගොනුවක (.mp4, .webm, .mov) සබැඳියක් යොදන්න, නැතහොත් කාවැද්දීමේ බ්ලොක් එකක් භාවිත කරන්න",
+  "tools.video.errorUnplayable": "මෙම වීඩියෝව ධාවනය කළ නොහැක"
 }

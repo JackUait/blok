@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "प्लेबैक गति बढ़ाएं",
   "tools.callout.emojiSearchResults": "मिलते-जुलते इमोजी: {count}",
   "tools.database.checkboxChecked": "चेक किया गया",
-  "tools.database.checkboxUnchecked": "चेक नहीं किया गया"
+  "tools.database.checkboxUnchecked": "चेक नहीं किया गया",
+  "tools.video.statsResolution": "रिज़ॉल्यूशन: {value}",
+  "tools.video.statsDroppedFrames": "छूटे हुए फ़्रेम: {value}",
+  "tools.video.statsBufferHealth": "बफ़र की स्थिति: {seconds} सेकंड",
+  "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+  "tools.video.statsUnavailable": "उपलब्ध नहीं",
+  "tools.database.moreViews": "{count} और…",
+  "tools.video.errorNotMediaUrl": "वीडियो फ़ाइल (.mp4, .webm, .mov) का लिंक जोड़ें या एम्बेड ब्लॉक का उपयोग करें।",
+  "tools.video.errorUnplayable": "यह वीडियो चलाया नहीं जा सकता।"
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "재생 속도 높이기",
   "tools.callout.emojiSearchResults": "이모지 {count}개 찾음",
   "tools.database.checkboxChecked": "선택됨",
-  "tools.database.checkboxUnchecked": "선택 안 됨"
+  "tools.database.checkboxUnchecked": "선택 안 됨",
+  "tools.video.statsResolution": "해상도: {value}",
+  "tools.video.statsDroppedFrames": "손실된 프레임: {value}",
+  "tools.video.statsBufferHealth": "버퍼 상태: {seconds}초",
+  "tools.video.statsViewport": "표시 영역: {value}",
+  "tools.video.statsUnavailable": "사용할 수 없음",
+  "tools.database.moreViews": "외 {count}개…",
+  "tools.video.errorNotMediaUrl": "동영상 파일 링크(.mp4, .webm, .mov)를 입력하거나 임베드 블록을 사용하세요",
+  "tools.video.errorUnplayable": "이 동영상은 재생할 수 없습니다"
 }

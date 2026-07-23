@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Rrit shpejtësinë e luajtjes",
   "tools.callout.emojiSearchResults": "Përputhje për emoji: {count}",
   "tools.database.checkboxChecked": "E zgjedhur",
-  "tools.database.checkboxUnchecked": "E pazgjedhur"
+  "tools.database.checkboxUnchecked": "E pazgjedhur",
+  "tools.video.statsResolution": "Rezolucioni: {value}",
+  "tools.video.statsDroppedFrames": "Kuadrot e humbura: {value}",
+  "tools.video.statsBufferHealth": "Gjendja e buferit: {seconds} s",
+  "tools.video.statsViewport": "Zona e shfaqjes: {value}",
+  "tools.video.statsUnavailable": "Nuk disponohet",
+  "tools.database.moreViews": "Të tjera: {count}…",
+  "tools.video.errorNotMediaUrl": "Vendosni lidhjen e një skedari video (.mp4, .webm, .mov) ose përdorni një bllok ngulitjeje",
+  "tools.video.errorUnplayable": "Kjo video nuk mund të luhet"
 }

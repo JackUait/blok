@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "പ്ലേബാക്ക് വേഗത കൂട്ടുക",
   "tools.callout.emojiSearchResults": "ഇമോജി പൊരുത്തങ്ങൾ: {count}",
   "tools.database.checkboxChecked": "പരിശോധിച്ചത്",
-  "tools.database.checkboxUnchecked": "പരിശോധിക്കാത്തത്"
+  "tools.database.checkboxUnchecked": "പരിശോധിക്കാത്തത്",
+  "tools.video.statsResolution": "റെസല്യൂഷൻ: {value}",
+  "tools.video.statsDroppedFrames": "നഷ്ടപ്പെട്ട ഫ്രെയിമുകൾ: {value}",
+  "tools.video.statsBufferHealth": "ബഫർ നില: {seconds} സെക്കൻഡ്",
+  "tools.video.statsViewport": "പ്രദർശന മേഖല: {value}",
+  "tools.video.statsUnavailable": "ലഭ്യമല്ല",
+  "tools.database.moreViews": "{count} എണ്ണം കൂടി…",
+  "tools.video.errorNotMediaUrl": "ഒരു വീഡിയോ ഫയലിലേക്കുള്ള ലിങ്ക് (.mp4, .webm, .mov) നൽകുക, അല്ലെങ്കിൽ ഒരു എംബെഡ് ബ്ലോക്ക് ഉപയോഗിക്കുക",
+  "tools.video.errorUnplayable": "ഈ വീഡിയോ പ്ലേ ചെയ്യാനാകില്ല"
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Suurenda esituskiirust",
   "tools.callout.emojiSearchResults": "Emojivasteid: {count}",
   "tools.database.checkboxChecked": "Märgitud",
-  "tools.database.checkboxUnchecked": "Märkimata"
+  "tools.database.checkboxUnchecked": "Märkimata",
+  "tools.video.statsResolution": "Eraldusvõime: {value}",
+  "tools.video.statsDroppedFrames": "Vahele jäetud kaadrid: {value}",
+  "tools.video.statsBufferHealth": "Puhvri olek: {seconds} s",
+  "tools.video.statsViewport": "Vaateala: {value}",
+  "tools.video.statsUnavailable": "Pole saadaval",
+  "tools.database.moreViews": "Veel {count}…",
+  "tools.video.errorNotMediaUrl": "Lisa link videofailile (.mp4, .webm, .mov) või kasuta manusplokki.",
+  "tools.video.errorUnplayable": "Seda videot ei saa esitada."
 }

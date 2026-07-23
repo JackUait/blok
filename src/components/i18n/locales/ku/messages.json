@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "زیادکردنی خێرایی لێدان",
   "tools.callout.emojiSearchResults": "{count} ئیمۆجی دۆزرایەوە",
   "tools.database.checkboxChecked": "هەڵبژێردراو",
-  "tools.database.checkboxUnchecked": "هەڵنەبژێردراو"
+  "tools.database.checkboxUnchecked": "هەڵنەبژێردراو",
+  "tools.video.statsResolution": "ڕێزۆلووشن: {value}",
+  "tools.video.statsDroppedFrames": "فریمە لەدەستچووەکان: {value}",
+  "tools.video.statsBufferHealth": "دۆخی بافەر: {seconds} چرکە",
+  "tools.video.statsViewport": "ناوچەی پیشاندان: {value}",
+  "tools.video.statsUnavailable": "بەردەست نییە",
+  "tools.database.moreViews": "{count}ی تر…",
+  "tools.video.errorNotMediaUrl": "بەستەری فایلێکی ڤیدیۆ (.mp4، .webm، .mov) دابنێ، یان بلۆکی جێگیرکردن بەکاربهێنە",
+  "tools.video.errorUnplayable": "ئەم ڤیدیۆیە ناتوانرێت لێ بدرێت"
 }

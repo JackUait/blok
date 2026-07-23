@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Increase playback speed",
   "tools.callout.emojiSearchResults": "Emoji matches: {count}",
   "tools.database.checkboxChecked": "Checked",
-  "tools.database.checkboxUnchecked": "Unchecked"
+  "tools.database.checkboxUnchecked": "Unchecked",
+  "tools.video.statsResolution": "Resolution: {value}",
+  "tools.video.statsDroppedFrames": "Dropped frames: {value}",
+  "tools.video.statsBufferHealth": "Buffer health: {seconds} s",
+  "tools.video.statsViewport": "Viewport: {value}",
+  "tools.video.statsUnavailable": "Not available",
+  "tools.database.moreViews": "{count} more…",
+  "tools.video.errorNotMediaUrl": "Link a video file (.mp4, .webm, .mov), or use an embed block",
+  "tools.video.errorUnplayable": "This video can't be played"
 }

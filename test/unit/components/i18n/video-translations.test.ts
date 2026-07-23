@@ -21,6 +21,8 @@ const VIDEO_KEYS = [
   'tools.video.moreOptions',
   'tools.video.uploading',
   'tools.video.errorUploadFailed',
+  'tools.video.errorNotMediaUrl',
+  'tools.video.errorUnplayable',
   'tools.video.errorReplace',
   'tools.video.emptyAddVideo',
   'tools.video.emptyUpload',
@@ -33,6 +35,11 @@ const VIDEO_KEYS = [
   'tools.video.emptyUrlPlaceholder',
   'tools.video.emptyUrlAria',
   'tools.video.emptySourceAria',
+  'tools.video.statsResolution',
+  'tools.video.statsDroppedFrames',
+  'tools.video.statsBufferHealth',
+  'tools.video.statsViewport',
+  'tools.video.statsUnavailable',
 ] as const;
 
 function getLocaleDirs(): string[] {
@@ -64,13 +71,17 @@ describe('Video tool translations', () => {
     }
   });
 
-  describe('Video keys have non-empty values and preserve {size}', () => {
+  describe('Video keys have non-empty values and preserve placeholders', () => {
     for (const locale of locales) {
       test(`${locale} has non-empty Video values`, () => {
         const messages = loadMessages(locale);
         const empty = VIDEO_KEYS.filter((key) => key in messages && messages[key].trim() === '');
         expect(empty, `${locale}: empty Video values:\n  ${empty.join('\n  ')}`).toHaveLength(0);
         expect(messages['tools.video.emptyMaxSize'], `${locale}: emptyMaxSize must keep {size}`).toContain('{size}');
+        expect(messages['tools.video.statsResolution'], `${locale}: statsResolution must keep {value}`).toContain('{value}');
+        expect(messages['tools.video.statsDroppedFrames'], `${locale}: statsDroppedFrames must keep {value}`).toContain('{value}');
+        expect(messages['tools.video.statsBufferHealth'], `${locale}: statsBufferHealth must keep {seconds}`).toContain('{seconds}');
+        expect(messages['tools.video.statsViewport'], `${locale}: statsViewport must keep {value}`).toContain('{value}');
       });
     }
   });

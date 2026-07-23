@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Збільшити швидкість відтворення",
   "tools.callout.emojiSearchResults": "Знайдено емодзі: {count}",
   "tools.database.checkboxChecked": "Позначено",
-  "tools.database.checkboxUnchecked": "Не позначено"
+  "tools.database.checkboxUnchecked": "Не позначено",
+  "tools.video.statsResolution": "Роздільна здатність: {value}",
+  "tools.video.statsDroppedFrames": "Пропущені кадри: {value}",
+  "tools.video.statsBufferHealth": "Стан буфера: {seconds} с",
+  "tools.video.statsViewport": "Область перегляду: {value}",
+  "tools.video.statsUnavailable": "Недоступно",
+  "tools.database.moreViews": "Ще: {count}…",
+  "tools.video.errorNotMediaUrl": "Вкажіть посилання на відеофайл (.mp4, .webm, .mov) або скористайтеся блоком вбудовування",
+  "tools.video.errorUnplayable": "Не вдається відтворити це відео"
 }

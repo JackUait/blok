@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Тоглуулах хурдыг нэмэгдүүлэх",
   "tools.callout.emojiSearchResults": "Тохирох эможи: {count}",
   "tools.database.checkboxChecked": "Тэмдэглэсэн",
-  "tools.database.checkboxUnchecked": "Тэмдэглээгүй"
+  "tools.database.checkboxUnchecked": "Тэмдэглээгүй",
+  "tools.video.statsResolution": "Нягтаршил: {value}",
+  "tools.video.statsDroppedFrames": "Алдагдсан кадр: {value}",
+  "tools.video.statsBufferHealth": "Буферийн төлөв: {seconds} сек",
+  "tools.video.statsViewport": "Харагдах талбар: {value}",
+  "tools.video.statsUnavailable": "Ашиглах боломжгүй",
+  "tools.database.moreViews": "Бусад: {count}…",
+  "tools.video.errorNotMediaUrl": "Видео файлын холбоосыг (.mp4, .webm, .mov) оруулна уу, эсвэл шигтгээ блок ашиглана уу",
+  "tools.video.errorUnplayable": "Энэ видеог тоглуулах боломжгүй"
 }

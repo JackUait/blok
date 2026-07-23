@@ -1269,15 +1269,34 @@ export function attachControls({ video, figure, storage, glow = 'minimal', loop 
   const clipboardWrite = (text: string): void => { void navigator.clipboard?.writeText?.(text); };
   const renderStats = (): void => {
     const quality = video.getVideoPlaybackQuality?.();
-    const dropped = quality ? `${quality.droppedVideoFrames} / ${quality.totalVideoFrames}` : 'n/a';
-    const res = video.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : 'n/a';
+    const unavailable = tr(
+      i18n,
+      'tools.video.statsUnavailable',
+      'Not available'
+    );
+    const dropped = quality
+      ? `${quality.droppedVideoFrames} / ${quality.totalVideoFrames}`
+      : unavailable;
+    const resolution = video.videoWidth
+      ? `${video.videoWidth}×${video.videoHeight}`
+      : unavailable;
     const bufferedEnd = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
     const health = Math.max(0, bufferedEnd - video.currentTime).toFixed(1);
-    statsOverlay.innerHTML =
-      `<div>Resolution: ${res}</div>`
-      + `<div>Dropped frames: ${dropped}</div>`
-      + `<div>Buffer health: ${health}s</div>`
-      + `<div>Viewport: ${root.offsetWidth}×${root.offsetHeight}</div>`;
+    const viewport = `${root.offsetWidth}×${root.offsetHeight}`;
+    const lines = [
+      tr(i18n, 'tools.video.statsResolution', 'Resolution: {value}', { value: resolution }),
+      tr(i18n, 'tools.video.statsDroppedFrames', 'Dropped frames: {value}', { value: dropped }),
+      tr(i18n, 'tools.video.statsBufferHealth', 'Buffer health: {seconds} s', { seconds: health }),
+      tr(i18n, 'tools.video.statsViewport', 'Viewport: {value}', { value: viewport }),
+    ];
+
+    statsOverlay.replaceChildren(...lines.map((line) => {
+      const row = document.createElement('div');
+
+      row.textContent = line;
+
+      return row;
+    }));
   };
   const toggleStats = (): void => {
     statsOverlay.hidden = !statsOverlay.hidden;

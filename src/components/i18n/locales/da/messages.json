@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Øg afspilningshastigheden",
   "tools.callout.emojiSearchResults": "Matchende emojis: {count}",
   "tools.database.checkboxChecked": "Markeret",
-  "tools.database.checkboxUnchecked": "Ikke markeret"
+  "tools.database.checkboxUnchecked": "Ikke markeret",
+  "tools.video.statsResolution": "Opløsning: {value}",
+  "tools.video.statsDroppedFrames": "Tabte billeder: {value}",
+  "tools.video.statsBufferHealth": "Bufferstatus: {seconds} sek.",
+  "tools.video.statsViewport": "Visningsområde: {value}",
+  "tools.video.statsUnavailable": "Ikke tilgængelig",
+  "tools.database.moreViews": "{count} mere…",
+  "tools.video.errorNotMediaUrl": "Link til en videofil (.mp4, .webm, .mov), eller brug en indlejringsblok.",
+  "tools.video.errorUnplayable": "Denne video kan ikke afspilles."
 }

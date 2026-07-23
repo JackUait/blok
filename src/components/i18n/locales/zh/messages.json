@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "提高播放速度",
   "tools.callout.emojiSearchResults": "找到 {count} 个表情符号",
   "tools.database.checkboxChecked": "已选中",
-  "tools.database.checkboxUnchecked": "未选中"
+  "tools.database.checkboxUnchecked": "未选中",
+  "tools.video.statsResolution": "分辨率：{value}",
+  "tools.video.statsDroppedFrames": "丢帧：{value}",
+  "tools.video.statsBufferHealth": "缓冲状态：{seconds} 秒",
+  "tools.video.statsViewport": "视口：{value}",
+  "tools.video.statsUnavailable": "不可用",
+  "tools.database.moreViews": "更多：{count}…",
+  "tools.video.errorNotMediaUrl": "输入视频文件（.mp4、.webm、.mov）链接，或使用嵌入块",
+  "tools.video.errorUnplayable": "无法播放此视频"
 }

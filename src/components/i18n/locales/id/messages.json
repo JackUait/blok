@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Tingkatkan kecepatan pemutaran",
   "tools.callout.emojiSearchResults": "{count} emoji ditemukan",
   "tools.database.checkboxChecked": "Dicentang",
-  "tools.database.checkboxUnchecked": "Tidak dicentang"
+  "tools.database.checkboxUnchecked": "Tidak dicentang",
+  "tools.video.statsResolution": "Resolusi: {value}",
+  "tools.video.statsDroppedFrames": "Frame terlewat: {value}",
+  "tools.video.statsBufferHealth": "Kondisi buffer: {seconds} detik",
+  "tools.video.statsViewport": "Area tampilan: {value}",
+  "tools.video.statsUnavailable": "Tidak tersedia",
+  "tools.database.moreViews": "{count} lainnya…",
+  "tools.video.errorNotMediaUrl": "Tautkan berkas video (.mp4, .webm, .mov), atau gunakan blok sematan",
+  "tools.video.errorUnplayable": "Video ini tidak dapat diputar"
 }

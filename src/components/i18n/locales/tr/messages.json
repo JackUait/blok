@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Oynatma hızını artır",
   "tools.callout.emojiSearchResults": "{count} emoji bulundu",
   "tools.database.checkboxChecked": "İşaretli",
-  "tools.database.checkboxUnchecked": "İşaretsiz"
+  "tools.database.checkboxUnchecked": "İşaretsiz",
+  "tools.video.statsResolution": "Çözünürlük: {value}",
+  "tools.video.statsDroppedFrames": "Atlanan kareler: {value}",
+  "tools.video.statsBufferHealth": "Arabellek durumu: {seconds} sn",
+  "tools.video.statsViewport": "Görünüm alanı: {value}",
+  "tools.video.statsUnavailable": "Kullanılamıyor",
+  "tools.database.moreViews": "Diğerleri: {count}…",
+  "tools.video.errorNotMediaUrl": "Bir video dosyasının (.mp4, .webm, .mov) bağlantısını girin veya yerleştirme bloğu kullanın",
+  "tools.video.errorUnplayable": "Bu video oynatılamıyor"
 }

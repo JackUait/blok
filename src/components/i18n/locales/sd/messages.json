@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "پلي بيڪ رفتار وڌايو",
   "tools.callout.emojiSearchResults": "ملندڙ ايموجي: {count}",
   "tools.database.checkboxChecked": "نشان لڳل",
-  "tools.database.checkboxUnchecked": "نشان نه لڳل"
+  "tools.database.checkboxUnchecked": "نشان نه لڳل",
+  "tools.video.statsResolution": "وڊيو ريزوليوشن: {value}",
+  "tools.video.statsDroppedFrames": "ضايع ٿيل فريم: {value}",
+  "tools.video.statsBufferHealth": "بفر جي حالت: {seconds} سيڪنڊ",
+  "tools.video.statsViewport": "ڏيک جو علائقو: {value}",
+  "tools.video.statsUnavailable": "دستياب ناهي",
+  "tools.database.moreViews": "وڌيڪ: {count}…",
+  "tools.video.errorNotMediaUrl": "وڊيو فائل (.mp4, .webm, .mov) جي لنڪ ڏيو، يا ايمبيڊ بلاڪ استعمال ڪريو",
+  "tools.video.errorUnplayable": "هي وڊيو هلائي نٿي سگهجي"
 }

@@ -620,6 +620,19 @@ describe('VideoTool — media playback failure', () => {
       .toBe("This video can't be played");
   });
 
+  it('localizes an unplayable-media failure', () => {
+    const tool = new VideoTool({
+      ...createOptions({ url: 'https://x/broken.mp4' }),
+      api: createMockApi({ 'tools.video.errorUnplayable': 'Dieses Video kann nicht abgespielt werden' }),
+    });
+    const root = tool.render();
+
+    root.querySelector('video')?.dispatchEvent(new Event('error'));
+
+    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+      .toBe('Dieses Video kann nicht abgespielt werden');
+  });
+
   it('offers Replace after a playback failure while editing', () => {
     const tool = new VideoTool(createOptions({ url: 'https://x/broken.mp4' }));
     const root = tool.render();
@@ -674,6 +687,21 @@ describe('VideoTool — URL field validation', () => {
     expect(root.querySelector('[data-role="video-error"] span')?.textContent)
       .toBe('Link a video file (.mp4, .webm, .mov), or use an embed block');
     expect(root.querySelector('video')).toBeNull();
+  });
+
+  it('localizes the non-media URL guidance', async () => {
+    const tool = new VideoTool({
+      ...createOptions(),
+      api: createMockApi({
+        'tools.video.errorNotMediaUrl': 'Verknüpfe eine Videodatei oder verwende einen Einbettungsblock',
+      }),
+    });
+    const root = tool.render();
+
+    await submitUrl(tool, root, 'https://example.com/watch/not-a-file');
+
+    expect(root.querySelector('[data-role="video-error"] span')?.textContent)
+      .toBe('Verknüpfe eine Videodatei oder verwende einen Einbettungsblock');
   });
 
   it('rejects an unrecognised page URL that is not a media file', async () => {

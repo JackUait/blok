@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "قويۇش سۈرئىتىنى ئاشۇرۇش",
   "tools.callout.emojiSearchResults": "{count} ئېموجى تېپىلدى",
   "tools.database.checkboxChecked": "بەلگە قويۇلدى",
-  "tools.database.checkboxUnchecked": "بەلگە قويۇلمىدى"
+  "tools.database.checkboxUnchecked": "بەلگە قويۇلمىدى",
+  "tools.video.statsResolution": "ئېنىقلىق دەرىجىسى: {value}",
+  "tools.video.statsDroppedFrames": "چۈشۈپ قالغان كاندۇكلار: {value}",
+  "tools.video.statsBufferHealth": "بۇففېر ھالىتى: {seconds} سېكۇنت",
+  "tools.video.statsViewport": "كۆرۈنۈش رايونى: {value}",
+  "tools.video.statsUnavailable": "ئىشلەتكىلى بولمايدۇ",
+  "tools.database.moreViews": "يەنە: {count}…",
+  "tools.video.errorNotMediaUrl": "سىن ھۆججىتىنىڭ (.mp4, .webm, .mov) ئۇلانمىسىنى كىرگۈزۈڭ ياكى سىڭدۈرۈش بۆلىكىنى ئىشلىتىڭ",
+  "tools.video.errorUnplayable": "بۇ سىننى قويغىلى بولمايدۇ"
 }

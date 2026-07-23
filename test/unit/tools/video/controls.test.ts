@@ -54,6 +54,17 @@ const q = <T extends HTMLElement>(root: HTMLElement, sel: string): T => {
   return el;
 };
 
+const fakeI18n = (map: Record<string, string>) => ({
+  has: (key: string): boolean => key in map,
+  t: (key: string, vars?: Record<string, string | number>): string => {
+    const raw = map[key] ?? key;
+
+    return vars
+      ? raw.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ''))
+      : raw;
+  },
+});
+
 describe('video controls — formatTime', () => {
   it('formats seconds into m:ss', () => {
     expect(formatTime(0)).toBe('0:00');
@@ -145,14 +156,6 @@ describe('video controls — M12 slider a11y + i18n', () => {
   let h: Harness;
   beforeEach(() => { vi.clearAllMocks(); h = mount(); });
   afterEach(() => { h.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); });
-
-  const fakeI18n = (map: Record<string, string>) => ({
-    has: (k: string): boolean => k in map,
-    t: (k: string, vars?: Record<string, string | number>): string => {
-      const raw = map[k] ?? k;
-      return vars ? raw.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? '')) : raw;
-    },
-  });
 
   it('announces the seek slider as a human-readable "M:SS of M:SS" via aria-valuetext', () => {
     setProp(h.video, 'duration', 125);
@@ -1791,6 +1794,70 @@ describe('video controls — context menu + stats', () => {
     expect(stats.hidden).toBe(false);
     expect(stats.textContent).toContain('1920×1080');
     expect(stats.textContent).toContain('3 / 300');
+  });
+
+  it('localizes every playback-statistics line with interpolation', () => {
+    h.destroy();
+    h = mount({
+      i18n: fakeI18n({
+        'tools.video.ctxStats': 'Statistiques de lecture',
+        'tools.video.statsResolution': 'Définition : {value}',
+        'tools.video.statsDroppedFrames': 'Images perdues : {value}',
+        'tools.video.statsBufferHealth': 'Tampon : {seconds} s',
+        'tools.video.statsViewport': 'Zone d’affichage : {value}',
+        'tools.video.statsUnavailable': 'Indisponible',
+      }),
+    });
+    setProp(h.video, 'videoWidth', 0);
+    setProp(h.video, 'getVideoPlaybackQuality', undefined);
+    setProp(h.video, 'buffered', fakeRanges([[0, 12.5]]));
+    setProp(h.video, 'currentTime', 10);
+
+    openCtx();
+    q(h.controls, '[data-action="stats"]').click();
+
+    const lines = Array.from(q(h.controls, '[data-role="video-stats"]').children)
+      .map((line) => line.textContent);
+
+    expect(lines).toEqual([
+      'Définition : Indisponible',
+      'Images perdues : Indisponible',
+      'Tampon : 2.5 s',
+      'Zone d’affichage : 0×0',
+    ]);
+  });
+
+  it('uses canonical English fallbacks for every playback-statistics line', () => {
+    openCtx();
+    q(h.controls, '[data-action="stats"]').click();
+
+    const lines = Array.from(q(h.controls, '[data-role="video-stats"]').children)
+      .map((line) => line.textContent);
+
+    expect(lines).toEqual([
+      'Resolution: Not available',
+      'Dropped frames: Not available',
+      'Buffer health: 0.0 s',
+      'Viewport: 0×0',
+    ]);
+  });
+
+  it('renders translated playback-statistics templates as text, never HTML', () => {
+    h.destroy();
+    h = mount({
+      i18n: fakeI18n({
+        'tools.video.statsResolution': '<img src=x onerror=alert(1)> {value}',
+      }),
+    });
+
+    openCtx();
+    q(h.controls, '[data-action="stats"]').click();
+
+    const stats = q(h.controls, '[data-role="video-stats"]');
+
+    expect(stats.querySelector('img')).toBeNull();
+    expect(stats.firstElementChild?.textContent)
+      .toBe('<img src=x onerror=alert(1)> Not available');
   });
 
   it('uses the canonical English fallback for the playback statistics item', () => {

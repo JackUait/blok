@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Augmenter la vitesse de lecture",
   "tools.callout.emojiSearchResults": "Nombre d’emojis correspondants : {count}",
   "tools.database.checkboxChecked": "Cochée",
-  "tools.database.checkboxUnchecked": "Décochée"
+  "tools.database.checkboxUnchecked": "Décochée",
+  "tools.video.statsResolution": "Résolution : {value}",
+  "tools.video.statsDroppedFrames": "Images perdues : {value}",
+  "tools.video.statsBufferHealth": "État de la mémoire tampon : {seconds} s",
+  "tools.video.statsViewport": "Zone d’affichage : {value}",
+  "tools.video.statsUnavailable": "Indisponible",
+  "tools.database.moreViews": "{count} de plus…",
+  "tools.video.errorNotMediaUrl": "Ajoutez un lien vers un fichier vidéo (.mp4, .webm, .mov) ou utilisez un bloc d’intégration.",
+  "tools.video.errorUnplayable": "Impossible de lire cette vidéo."
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "የማጫወቻ ፍጥነት ጨምር",
   "tools.callout.emojiSearchResults": "የተዛመዱ ኢሞጂዎች፦ {count}",
   "tools.database.checkboxChecked": "የተመረጠ",
-  "tools.database.checkboxUnchecked": "ያልተመረጠ"
+  "tools.database.checkboxUnchecked": "ያልተመረጠ",
+  "tools.video.statsResolution": "ጥራት፦ {value}",
+  "tools.video.statsDroppedFrames": "የተጣሉ ፍሬሞች፦ {value}",
+  "tools.video.statsBufferHealth": "የቋት ሁኔታ፦ {seconds} ሰከንድ",
+  "tools.video.statsViewport": "የማሳያ ክልል፦ {value}",
+  "tools.video.statsUnavailable": "አይገኝም",
+  "tools.database.moreViews": "ተጨማሪ {count}…",
+  "tools.video.errorNotMediaUrl": "የቪዲዮ ፋይል (.mp4, .webm, .mov) አገናኝ ያክሉ ወይም የማስገቢያ ብሎክ ይጠቀሙ።",
+  "tools.video.errorUnplayable": "ይህን ቪዲዮ ማጫወት አይቻልም።"
 }

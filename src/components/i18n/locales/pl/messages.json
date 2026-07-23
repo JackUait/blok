@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Zwiększ szybkość odtwarzania",
   "tools.callout.emojiSearchResults": "Znaleziono {count} emoji",
   "tools.database.checkboxChecked": "Zaznaczone",
-  "tools.database.checkboxUnchecked": "Niezaznaczone"
+  "tools.database.checkboxUnchecked": "Niezaznaczone",
+  "tools.video.statsResolution": "Rozdzielczość: {value}",
+  "tools.video.statsDroppedFrames": "Utracone klatki: {value}",
+  "tools.video.statsBufferHealth": "Stan bufora: {seconds} sek.",
+  "tools.video.statsViewport": "Obszar wyświetlania: {value}",
+  "tools.video.statsUnavailable": "Niedostępne",
+  "tools.database.moreViews": "Więcej: {count}…",
+  "tools.video.errorNotMediaUrl": "Podaj link do pliku wideo (.mp4, .webm, .mov) albo użyj bloku osadzania",
+  "tools.video.errorUnplayable": "Nie można odtworzyć tego wideo"
 }

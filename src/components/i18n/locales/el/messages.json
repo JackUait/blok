@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Αύξηση ταχύτητας αναπαραγωγής",
   "tools.callout.emojiSearchResults": "Αποτελέσματα αναζήτησης emoji: {count}",
   "tools.database.checkboxChecked": "Επιλεγμένο",
-  "tools.database.checkboxUnchecked": "Μη επιλεγμένο"
+  "tools.database.checkboxUnchecked": "Μη επιλεγμένο",
+  "tools.video.statsResolution": "Ανάλυση: {value}",
+  "tools.video.statsDroppedFrames": "Απορριφθέντα καρέ: {value}",
+  "tools.video.statsBufferHealth": "Κατάσταση προσωρινής μνήμης: {seconds} δευτ.",
+  "tools.video.statsViewport": "Περιοχή προβολής: {value}",
+  "tools.video.statsUnavailable": "Μη διαθέσιμο",
+  "tools.database.moreViews": "Ακόμη {count}…",
+  "tools.video.errorNotMediaUrl": "Προσθέστε σύνδεσμο σε ένα αρχείο βίντεο (.mp4, .webm, .mov) ή χρησιμοποιήστε ένα μπλοκ ενσωμάτωσης.",
+  "tools.video.errorUnplayable": "Δεν είναι δυνατή η αναπαραγωγή αυτού του βίντεο."
 }

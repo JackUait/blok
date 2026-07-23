@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "הגבר את מהירות ההפעלה",
   "tools.callout.emojiSearchResults": "התאמות אימוג׳י: {count}",
   "tools.database.checkboxChecked": "מסומן",
-  "tools.database.checkboxUnchecked": "לא מסומן"
+  "tools.database.checkboxUnchecked": "לא מסומן",
+  "tools.video.statsResolution": "רזולוציה: {value}",
+  "tools.video.statsDroppedFrames": "פריימים שהושמטו: {value}",
+  "tools.video.statsBufferHealth": "מצב המאגר: {seconds} שנ׳",
+  "tools.video.statsViewport": "אזור התצוגה: {value}",
+  "tools.video.statsUnavailable": "לא זמין",
+  "tools.database.moreViews": "עוד {count}…",
+  "tools.video.errorNotMediaUrl": "הוסף קישור לקובץ וידאו (.mp4, .webm, .mov) או השתמש בבלוק הטמעה.",
+  "tools.video.errorUnplayable": "לא ניתן להפעיל את הסרטון הזה."
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Øk avspillingshastigheten",
   "tools.callout.emojiSearchResults": "Emojitreff: {count}",
   "tools.database.checkboxChecked": "Avmerket",
-  "tools.database.checkboxUnchecked": "Ikke avmerket"
+  "tools.database.checkboxUnchecked": "Ikke avmerket",
+  "tools.video.statsResolution": "Oppløsning: {value}",
+  "tools.video.statsDroppedFrames": "Tapte bilder: {value}",
+  "tools.video.statsBufferHealth": "Bufferstatus: {seconds} sekunder",
+  "tools.video.statsViewport": "Visningsområde: {value}",
+  "tools.video.statsUnavailable": "Ikke tilgjengelig",
+  "tools.database.moreViews": "Flere: {count}…",
+  "tools.video.errorNotMediaUrl": "Legg inn en lenke til en videofil (.mp4, .webm, .mov), eller bruk en innbyggingsblokk",
+  "tools.video.errorUnplayable": "Denne videoen kan ikke spilles av"
 }

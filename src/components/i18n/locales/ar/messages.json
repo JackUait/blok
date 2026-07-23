@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "زيادة سرعة التشغيل",
   "tools.callout.emojiSearchResults": "الرموز التعبيرية المطابقة: {count}",
   "tools.database.checkboxChecked": "محدد",
-  "tools.database.checkboxUnchecked": "غير محدد"
+  "tools.database.checkboxUnchecked": "غير محدد",
+  "tools.video.statsResolution": "الدقة: {value}",
+  "tools.video.statsDroppedFrames": "الإطارات المُسقطة: {value}",
+  "tools.video.statsBufferHealth": "حالة المخزن المؤقت: {seconds} ث",
+  "tools.video.statsViewport": "منطقة العرض: {value}",
+  "tools.video.statsUnavailable": "غير متاح",
+  "tools.database.moreViews": "المزيد: {count}…",
+  "tools.video.errorNotMediaUrl": "أضف رابطًا إلى ملف فيديو (.mp4, .webm, .mov)، أو استخدم كتلة تضمين.",
+  "tools.video.errorUnplayable": "لا يمكن تشغيل هذا الفيديو."
 }

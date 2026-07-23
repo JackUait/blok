@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Suurenna toistonopeutta",
   "tools.callout.emojiSearchResults": "Emojihaun tuloksia: {count}",
   "tools.database.checkboxChecked": "Valittu",
-  "tools.database.checkboxUnchecked": "Ei valittu"
+  "tools.database.checkboxUnchecked": "Ei valittu",
+  "tools.video.statsResolution": "Tarkkuus: {value}",
+  "tools.video.statsDroppedFrames": "Pudotetut ruudut: {value}",
+  "tools.video.statsBufferHealth": "Puskurin tila: {seconds} s",
+  "tools.video.statsViewport": "Näyttöalue: {value}",
+  "tools.video.statsUnavailable": "Ei saatavilla",
+  "tools.database.moreViews": "{count} lisää…",
+  "tools.video.errorNotMediaUrl": "Linkitä videotiedosto (.mp4, .webm, .mov) tai käytä upotuslohkoa.",
+  "tools.video.errorUnplayable": "Tätä videota ei voi toistaa."
 }

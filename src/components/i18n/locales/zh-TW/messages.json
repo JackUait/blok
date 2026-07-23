@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "提高播放速度",
   "tools.callout.emojiSearchResults": "找到 {count} 個表情符號",
   "tools.database.checkboxChecked": "已勾選",
-  "tools.database.checkboxUnchecked": "未勾選"
+  "tools.database.checkboxUnchecked": "未勾選",
+  "tools.video.statsResolution": "解析度：{value}",
+  "tools.video.statsDroppedFrames": "捨棄的影格：{value}",
+  "tools.video.statsBufferHealth": "緩衝狀態：{seconds} 秒",
+  "tools.video.statsViewport": "檢視區：{value}",
+  "tools.video.statsUnavailable": "無法使用",
+  "tools.database.moreViews": "更多：{count}…",
+  "tools.video.errorNotMediaUrl": "輸入影片檔（.mp4、.webm、.mov）連結，或使用嵌入區塊",
+  "tools.video.errorUnplayable": "無法播放這部影片"
 }

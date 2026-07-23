@@ -41,6 +41,10 @@ const LOCALIZED_LINK_TYPE_EXPECTATIONS_PATH = resolve(
   __dirname,
   'fixtures/localized-link-type-expectations.json'
 );
+const GLOBAL_EIGHT_KEY_MIGRATION_EXPECTATIONS_PATH = resolve(
+  __dirname,
+  'fixtures/global-eight-key-migration-expectations.json'
+);
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
   .filter(entry => entry.isDirectory())
@@ -90,6 +94,19 @@ const localizedPopoverSearchExpectations = JSON.parse(
 const localizedLinkTypeExpectations = JSON.parse(
   readFileSync(LOCALIZED_LINK_TYPE_EXPECTATIONS_PATH, 'utf-8')
 ) as Record<string, string>;
+const globalEightKeyMigrationExpectations = JSON.parse(
+  readFileSync(GLOBAL_EIGHT_KEY_MIGRATION_EXPECTATIONS_PATH, 'utf-8')
+) as Record<string, Record<string, string>>;
+const GLOBAL_EIGHT_KEY_MIGRATION_KEYS = [
+  'tools.video.statsResolution',
+  'tools.video.statsDroppedFrames',
+  'tools.video.statsBufferHealth',
+  'tools.video.statsViewport',
+  'tools.video.statsUnavailable',
+  'tools.database.moreViews',
+  'tools.video.errorNotMediaUrl',
+  'tools.video.errorUnplayable',
+] as const;
 const RESULT_STATES = new Set(['pending', 'open', 'pass']);
 const FINAL_STATUSES = new Set([
   'pending',
@@ -121,6 +138,7 @@ const GLOBAL_FINDING_KEYS = new Set([
   'tools.video.ctxStats',
   'tools.video playback-statistics detail templates',
   'tools.database tab-overflow count template',
+  'tools.video playback-error fallback catalog contract',
   'mobile popover back-button localization contract',
   'read-only settings tooltip whole-message contract',
   'segmented tooltip shortcut direction contract',
@@ -189,6 +207,15 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.toggleTimeDisplay':
     'Switch between elapsed and remaining time',
   'tools.video.ctxStats': 'Playback statistics',
+  'tools.video.statsResolution': 'Resolution: {value}',
+  'tools.video.statsDroppedFrames': 'Dropped frames: {value}',
+  'tools.video.statsBufferHealth': 'Buffer health: {seconds} s',
+  'tools.video.statsViewport': 'Viewport: {value}',
+  'tools.video.statsUnavailable': 'Not available',
+  'tools.database.moreViews': '{count} more…',
+  'tools.video.errorNotMediaUrl':
+    'Link a video file (.mp4, .webm, .mov), or use an embed block',
+  'tools.video.errorUnplayable': "This video can't be played",
   'tools.video.fullscreen': 'Full screen',
   'tools.video.fullscreenExit': 'Exit full screen',
   'tools.video.captionPlaceholder': 'Write a caption…',
@@ -5156,6 +5183,26 @@ describe('translation guideline corpus integrity', () => {
       expect(readLocale(locale).messages['tools.link.webLink']).toBe(expected);
     }
   );
+
+  it('locks the complete 69-locale eight-key migration matrix', () => {
+    expect(Object.keys(globalEightKeyMigrationExpectations).sort()).toEqual(
+      localeCodes
+    );
+
+    for (const locale of localeCodes) {
+      const expected = globalEightKeyMigrationExpectations[locale];
+      const messages = readLocale(locale).messages;
+      const actual = Object.fromEntries(
+        GLOBAL_EIGHT_KEY_MIGRATION_KEYS.map(key => [key, messages[key]])
+      );
+
+      expect(
+        Object.keys(expected ?? {}),
+        `${locale}: migration fixture must have the exact key order`
+      ).toEqual(GLOBAL_EIGHT_KEY_MIGRATION_KEYS);
+      expect(actual, `${locale}: eight-key migration drift`).toEqual(expected);
+    }
+  });
 
   it.each(Object.entries(localizedGroupMoveExpectations))(
     '$0 uses count-neutral group-move announcements',

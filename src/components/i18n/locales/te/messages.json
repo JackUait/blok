@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ప్లేబ్యాక్ వేగాన్ని పెంచు",
   "tools.callout.emojiSearchResults": "సరిపోలే ఎమోజీల సంఖ్య: {count}",
   "tools.database.checkboxChecked": "ఎంపిక చేయబడింది",
-  "tools.database.checkboxUnchecked": "ఎంపిక చేయబడలేదు"
+  "tools.database.checkboxUnchecked": "ఎంపిక చేయబడలేదు",
+  "tools.video.statsResolution": "రిజల్యూషన్: {value}",
+  "tools.video.statsDroppedFrames": "తప్పిపోయిన ఫ్రేమ్‌లు: {value}",
+  "tools.video.statsBufferHealth": "బఫర్ స్థితి: {seconds} సెకన్లు",
+  "tools.video.statsViewport": "వీక్షణ ప్రాంతం: {value}",
+  "tools.video.statsUnavailable": "అందుబాటులో లేదు",
+  "tools.database.moreViews": "మరిన్ని: {count}…",
+  "tools.video.errorNotMediaUrl": "వీడియో ఫైల్ (.mp4, .webm, .mov) లింక్‌ను నమోదు చేయండి లేదా పొందుపరిచే బ్లాక్‌ను ఉపయోగించండి",
+  "tools.video.errorUnplayable": "ఈ వీడియోను ప్లే చేయడం సాధ్యం కాదు"
 }

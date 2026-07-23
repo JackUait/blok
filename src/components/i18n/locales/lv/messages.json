@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Palielināt atskaņošanas ātrumu",
   "tools.callout.emojiSearchResults": "Atbilstošo emocijzīmju skaits: {count}",
   "tools.database.checkboxChecked": "Atzīmēta",
-  "tools.database.checkboxUnchecked": "Neatzīmēta"
+  "tools.database.checkboxUnchecked": "Neatzīmēta",
+  "tools.video.statsResolution": "Izšķirtspēja: {value}",
+  "tools.video.statsDroppedFrames": "Izlaistie kadri: {value}",
+  "tools.video.statsBufferHealth": "Bufera stāvoklis: {seconds} sek.",
+  "tools.video.statsViewport": "Skata apgabals: {value}",
+  "tools.video.statsUnavailable": "Nav pieejams",
+  "tools.database.moreViews": "Vēl {count}…",
+  "tools.video.errorNotMediaUrl": "Norādiet saiti uz video failu (.mp4, .webm, .mov) vai izmantojiet iegulšanas bloku",
+  "tools.video.errorUnplayable": "Šo video nevar atskaņot"
 }

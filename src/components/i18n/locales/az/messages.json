@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Oxutma sürətini artır",
   "tools.callout.emojiSearchResults": "{count} emoji tapıldı",
   "tools.database.checkboxChecked": "İşarələnib",
-  "tools.database.checkboxUnchecked": "İşarələnməyib"
+  "tools.database.checkboxUnchecked": "İşarələnməyib",
+  "tools.video.statsResolution": "Çözümlülük: {value}",
+  "tools.video.statsDroppedFrames": "Buraxılmış kadrlar: {value}",
+  "tools.video.statsBufferHealth": "Bufer ehtiyatı: {seconds} san",
+  "tools.video.statsViewport": "Göstərmə sahəsi: {value}",
+  "tools.video.statsUnavailable": "Əlçatan deyil",
+  "tools.database.moreViews": "Daha {count}…",
+  "tools.video.errorNotMediaUrl": "Video faylına (.mp4, .webm, .mov) keçid əlavə edin və ya yerləşdirmə blokundan istifadə edin.",
+  "tools.video.errorUnplayable": "Bu videonu oxutmaq mümkün deyil."
 }

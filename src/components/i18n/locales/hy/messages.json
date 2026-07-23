@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Ավելացնել նվագարկման արագությունը",
   "tools.callout.emojiSearchResults": "Գտնվեց {count} էմոջի",
   "tools.database.checkboxChecked": "Նշված",
-  "tools.database.checkboxUnchecked": "Չնշված"
+  "tools.database.checkboxUnchecked": "Չնշված",
+  "tools.video.statsResolution": "Լուծաչափ՝ {value}",
+  "tools.video.statsDroppedFrames": "Բաց թողնված կադրեր՝ {value}",
+  "tools.video.statsBufferHealth": "Բուֆերի վիճակ՝ {seconds} վ",
+  "tools.video.statsViewport": "Ցուցադրման տիրույթ՝ {value}",
+  "tools.video.statsUnavailable": "Հասանելի չէ",
+  "tools.database.moreViews": "Եվս {count}…",
+  "tools.video.errorNotMediaUrl": "Տեսանյութի ֆայլի (.mp4, .webm, .mov) հղում ավելացրեք կամ օգտագործեք ներդրման բլոկ։",
+  "tools.video.errorUnplayable": "Այս տեսանյութը հնարավոր չէ նվագարկել։"
 }

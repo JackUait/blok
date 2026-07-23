@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "प्लेब्याक गति बढाउनुहोस्",
   "tools.callout.emojiSearchResults": "मिल्ने इमोजीहरूको सङ्ख्या: {count}",
   "tools.database.checkboxChecked": "जाँच गरिएको",
-  "tools.database.checkboxUnchecked": "जाँच गरिएको छैन"
+  "tools.database.checkboxUnchecked": "जाँच गरिएको छैन",
+  "tools.video.statsResolution": "रिजोल्युसन: {value}",
+  "tools.video.statsDroppedFrames": "छुटेका फ्रेम: {value}",
+  "tools.video.statsBufferHealth": "बफरको अवस्था: {seconds} सेकेन्ड",
+  "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+  "tools.video.statsUnavailable": "उपलब्ध छैन",
+  "tools.database.moreViews": "थप {count}…",
+  "tools.video.errorNotMediaUrl": "भिडियो फाइलको लिङ्क (.mp4, .webm, .mov) दिनुहोस् वा इम्बेड ब्लक प्रयोग गर्नुहोस्",
+  "tools.video.errorUnplayable": "यो भिडियो प्ले गर्न सकिँदैन"
 }

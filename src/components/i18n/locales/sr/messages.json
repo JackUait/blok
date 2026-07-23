@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Повећај брзину репродукције",
   "tools.callout.emojiSearchResults": "Број подударних емоџија: {count}",
   "tools.database.checkboxChecked": "Означено",
-  "tools.database.checkboxUnchecked": "Није означено"
+  "tools.database.checkboxUnchecked": "Није означено",
+  "tools.video.statsResolution": "Резолуција: {value}",
+  "tools.video.statsDroppedFrames": "Испуштени кадрови: {value}",
+  "tools.video.statsBufferHealth": "Стање бафера: {seconds} сек.",
+  "tools.video.statsViewport": "Област приказа: {value}",
+  "tools.video.statsUnavailable": "Није доступно",
+  "tools.database.moreViews": "Још: {count}…",
+  "tools.video.errorNotMediaUrl": "Унесите везу до видео-датотеке (.mp4, .webm, .mov) или користите блок за уградњу",
+  "tools.video.errorUnplayable": "Овај видео не може да се репродукује"
 }

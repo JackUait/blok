@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "再生速度を上げる",
   "tools.callout.emojiSearchResults": "絵文字の検索結果：{count}件",
   "tools.database.checkboxChecked": "チェック済み",
-  "tools.database.checkboxUnchecked": "未チェック"
+  "tools.database.checkboxUnchecked": "未チェック",
+  "tools.video.statsResolution": "解像度：{value}",
+  "tools.video.statsDroppedFrames": "ドロップフレーム数：{value}",
+  "tools.video.statsBufferHealth": "バッファの状態：{seconds} 秒",
+  "tools.video.statsViewport": "表示領域：{value}",
+  "tools.video.statsUnavailable": "利用できません",
+  "tools.database.moreViews": "ほか {count} 件…",
+  "tools.video.errorNotMediaUrl": "動画ファイル（.mp4、.webm、.mov）へのリンクを指定するか、埋め込みブロックを使用してください",
+  "tools.video.errorUnplayable": "この動画は再生できません"
 }

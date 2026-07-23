@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "បង្កើនល្បឿនចាក់",
   "tools.callout.emojiSearchResults": "រូបអារម្មណ៍ដែលត្រូវគ្នា៖ {count}",
   "tools.database.checkboxChecked": "បានធីក",
-  "tools.database.checkboxUnchecked": "មិនបានធីក"
+  "tools.database.checkboxUnchecked": "មិនបានធីក",
+  "tools.video.statsResolution": "គុណភាពបង្ហាញ៖ {value}",
+  "tools.video.statsDroppedFrames": "ហ្វ្រេមដែលបានបោះបង់៖ {value}",
+  "tools.video.statsBufferHealth": "ស្ថានភាពប៊ូហ្វឺ៖ {seconds} វិនាទី",
+  "tools.video.statsViewport": "ផ្ទៃបង្ហាញ៖ {value}",
+  "tools.video.statsUnavailable": "មិនអាចប្រើបាន",
+  "tools.database.moreViews": "{count} ទៀត…",
+  "tools.video.errorNotMediaUrl": "សូមភ្ជាប់តំណទៅឯកសារវីដេអូ (.mp4, .webm, .mov) ឬប្រើប្លុកបង្កប់",
+  "tools.video.errorUnplayable": "មិនអាចចាក់វីដេអូនេះបានទេ"
 }

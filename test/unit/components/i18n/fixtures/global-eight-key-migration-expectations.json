@@ -1,0 +1,692 @@
+{
+  "am": {
+    "tools.video.statsResolution": "ጥራት፦ {value}",
+    "tools.video.statsDroppedFrames": "የተጣሉ ፍሬሞች፦ {value}",
+    "tools.video.statsBufferHealth": "የቋት ሁኔታ፦ {seconds} ሰከንድ",
+    "tools.video.statsViewport": "የማሳያ ክልል፦ {value}",
+    "tools.video.statsUnavailable": "አይገኝም",
+    "tools.database.moreViews": "ተጨማሪ {count}…",
+    "tools.video.errorNotMediaUrl": "የቪዲዮ ፋይል (.mp4, .webm, .mov) አገናኝ ያክሉ ወይም የማስገቢያ ብሎክ ይጠቀሙ።",
+    "tools.video.errorUnplayable": "ይህን ቪዲዮ ማጫወት አይቻልም።"
+  },
+  "ar": {
+    "tools.video.statsResolution": "الدقة: {value}",
+    "tools.video.statsDroppedFrames": "الإطارات المُسقطة: {value}",
+    "tools.video.statsBufferHealth": "حالة المخزن المؤقت: {seconds} ث",
+    "tools.video.statsViewport": "منطقة العرض: {value}",
+    "tools.video.statsUnavailable": "غير متاح",
+    "tools.database.moreViews": "المزيد: {count}…",
+    "tools.video.errorNotMediaUrl": "أضف رابطًا إلى ملف فيديو (.mp4, .webm, .mov)، أو استخدم كتلة تضمين.",
+    "tools.video.errorUnplayable": "لا يمكن تشغيل هذا الفيديو."
+  },
+  "az": {
+    "tools.video.statsResolution": "Çözümlülük: {value}",
+    "tools.video.statsDroppedFrames": "Buraxılmış kadrlar: {value}",
+    "tools.video.statsBufferHealth": "Bufer ehtiyatı: {seconds} san",
+    "tools.video.statsViewport": "Göstərmə sahəsi: {value}",
+    "tools.video.statsUnavailable": "Əlçatan deyil",
+    "tools.database.moreViews": "Daha {count}…",
+    "tools.video.errorNotMediaUrl": "Video faylına (.mp4, .webm, .mov) keçid əlavə edin və ya yerləşdirmə blokundan istifadə edin.",
+    "tools.video.errorUnplayable": "Bu videonu oxutmaq mümkün deyil."
+  },
+  "bg": {
+    "tools.video.statsResolution": "Разделителна способност: {value}",
+    "tools.video.statsDroppedFrames": "Пропуснати кадри: {value}",
+    "tools.video.statsBufferHealth": "Състояние на буфера: {seconds} сек",
+    "tools.video.statsViewport": "Област на изгледа: {value}",
+    "tools.video.statsUnavailable": "Не е налично",
+    "tools.database.moreViews": "Още {count}…",
+    "tools.video.errorNotMediaUrl": "Добавете връзка към видеофайл (.mp4, .webm, .mov) или използвайте блок за вграждане.",
+    "tools.video.errorUnplayable": "Това видео не може да се възпроизведе."
+  },
+  "bn": {
+    "tools.video.statsResolution": "রেজোলিউশন: {value}",
+    "tools.video.statsDroppedFrames": "বাদ পড়া ফ্রেম: {value}",
+    "tools.video.statsBufferHealth": "বাফারের অবস্থা: {seconds} সেকেন্ড",
+    "tools.video.statsViewport": "প্রদর্শন ক্ষেত্র: {value}",
+    "tools.video.statsUnavailable": "উপলভ্য নয়",
+    "tools.database.moreViews": "আরও {count}টি…",
+    "tools.video.errorNotMediaUrl": "একটি ভিডিও ফাইল (.mp4, .webm, .mov) লিঙ্ক করুন অথবা একটি এম্বেড ব্লক ব্যবহার করুন।",
+    "tools.video.errorUnplayable": "এই ভিডিওটি চালানো যাচ্ছে না।"
+  },
+  "bs": {
+    "tools.video.statsResolution": "Rezolucija: {value}",
+    "tools.video.statsDroppedFrames": "Ispušteni kadrovi: {value}",
+    "tools.video.statsBufferHealth": "Stanje međuspremnika: {seconds} s",
+    "tools.video.statsViewport": "Područje prikaza: {value}",
+    "tools.video.statsUnavailable": "Nije dostupno",
+    "tools.database.moreViews": "Još {count}…",
+    "tools.video.errorNotMediaUrl": "Dodajte vezu na videodatoteku (.mp4, .webm, .mov) ili koristite blok za ugradnju.",
+    "tools.video.errorUnplayable": "Ovaj video nije moguće reproducirati."
+  },
+  "cs": {
+    "tools.video.statsResolution": "Rozlišení: {value}",
+    "tools.video.statsDroppedFrames": "Zahozené snímky: {value}",
+    "tools.video.statsBufferHealth": "Stav vyrovnávací paměti: {seconds} s",
+    "tools.video.statsViewport": "Zobrazovací oblast: {value}",
+    "tools.video.statsUnavailable": "Není k dispozici",
+    "tools.database.moreViews": "Ještě {count}…",
+    "tools.video.errorNotMediaUrl": "Vložte odkaz na videosoubor (.mp4, .webm, .mov) nebo použijte blok pro vložení.",
+    "tools.video.errorUnplayable": "Toto video nelze přehrát."
+  },
+  "da": {
+    "tools.video.statsResolution": "Opløsning: {value}",
+    "tools.video.statsDroppedFrames": "Tabte billeder: {value}",
+    "tools.video.statsBufferHealth": "Bufferstatus: {seconds} sek.",
+    "tools.video.statsViewport": "Visningsområde: {value}",
+    "tools.video.statsUnavailable": "Ikke tilgængelig",
+    "tools.database.moreViews": "{count} mere…",
+    "tools.video.errorNotMediaUrl": "Link til en videofil (.mp4, .webm, .mov), eller brug en indlejringsblok.",
+    "tools.video.errorUnplayable": "Denne video kan ikke afspilles."
+  },
+  "de": {
+    "tools.video.statsResolution": "Auflösung: {value}",
+    "tools.video.statsDroppedFrames": "Verworfene Frames: {value}",
+    "tools.video.statsBufferHealth": "Pufferzustand: {seconds} Sek.",
+    "tools.video.statsViewport": "Anzeigebereich: {value}",
+    "tools.video.statsUnavailable": "Nicht verfügbar",
+    "tools.database.moreViews": "{count} weitere…",
+    "tools.video.errorNotMediaUrl": "Verlinken Sie eine Videodatei (.mp4, .webm, .mov) oder verwenden Sie einen Einbettungsblock.",
+    "tools.video.errorUnplayable": "Dieses Video kann nicht abgespielt werden."
+  },
+  "dv": {
+    "tools.video.statsResolution": "ރެޒޮލިއުޝަން: {value}",
+    "tools.video.statsDroppedFrames": "ދޫކޮށްލެވުނު ފްރޭމްތައް: {value}",
+    "tools.video.statsBufferHealth": "ބަފަރުގެ ހާލަތު: {seconds} ސެކަންޑު",
+    "tools.video.statsViewport": "ދެއްކުމުގެ ސަރަހައްދު: {value}",
+    "tools.video.statsUnavailable": "ލިބެން ނެތް",
+    "tools.database.moreViews": "އިތުރު {count}…",
+    "tools.video.errorNotMediaUrl": "ވީޑިއޯ ފައިލަކަށް (.mp4, .webm, .mov) ލިންކްކުރޭ، ނުވަތަ އެމްބެޑް ބްލޮކެއް ބޭނުންކުރޭ.",
+    "tools.video.errorUnplayable": "މި ވީޑިއޯ ޕްލޭއެއް ނުކުރެވޭނެ."
+  },
+  "el": {
+    "tools.video.statsResolution": "Ανάλυση: {value}",
+    "tools.video.statsDroppedFrames": "Απορριφθέντα καρέ: {value}",
+    "tools.video.statsBufferHealth": "Κατάσταση προσωρινής μνήμης: {seconds} δευτ.",
+    "tools.video.statsViewport": "Περιοχή προβολής: {value}",
+    "tools.video.statsUnavailable": "Μη διαθέσιμο",
+    "tools.database.moreViews": "Ακόμη {count}…",
+    "tools.video.errorNotMediaUrl": "Προσθέστε σύνδεσμο σε ένα αρχείο βίντεο (.mp4, .webm, .mov) ή χρησιμοποιήστε ένα μπλοκ ενσωμάτωσης.",
+    "tools.video.errorUnplayable": "Δεν είναι δυνατή η αναπαραγωγή αυτού του βίντεο."
+  },
+  "en": {
+    "tools.video.statsResolution": "Resolution: {value}",
+    "tools.video.statsDroppedFrames": "Dropped frames: {value}",
+    "tools.video.statsBufferHealth": "Buffer health: {seconds} s",
+    "tools.video.statsViewport": "Viewport: {value}",
+    "tools.video.statsUnavailable": "Not available",
+    "tools.database.moreViews": "{count} more…",
+    "tools.video.errorNotMediaUrl": "Link a video file (.mp4, .webm, .mov), or use an embed block",
+    "tools.video.errorUnplayable": "This video can't be played"
+  },
+  "es": {
+    "tools.video.statsResolution": "Resolución: {value}",
+    "tools.video.statsDroppedFrames": "Fotogramas descartados: {value}",
+    "tools.video.statsBufferHealth": "Estado del búfer: {seconds} s",
+    "tools.video.statsViewport": "Área de visualización: {value}",
+    "tools.video.statsUnavailable": "No disponible",
+    "tools.database.moreViews": "{count} más…",
+    "tools.video.errorNotMediaUrl": "Enlaza un archivo de vídeo (.mp4, .webm, .mov) o usa un bloque de inserción.",
+    "tools.video.errorUnplayable": "Este vídeo no se puede reproducir."
+  },
+  "et": {
+    "tools.video.statsResolution": "Eraldusvõime: {value}",
+    "tools.video.statsDroppedFrames": "Vahele jäetud kaadrid: {value}",
+    "tools.video.statsBufferHealth": "Puhvri olek: {seconds} s",
+    "tools.video.statsViewport": "Vaateala: {value}",
+    "tools.video.statsUnavailable": "Pole saadaval",
+    "tools.database.moreViews": "Veel {count}…",
+    "tools.video.errorNotMediaUrl": "Lisa link videofailile (.mp4, .webm, .mov) või kasuta manusplokki.",
+    "tools.video.errorUnplayable": "Seda videot ei saa esitada."
+  },
+  "fa": {
+    "tools.video.statsResolution": "وضوح تصویر: {value}",
+    "tools.video.statsDroppedFrames": "فریم‌های ازدست‌رفته: {value}",
+    "tools.video.statsBufferHealth": "سلامت بافر: {seconds} ثانیه",
+    "tools.video.statsViewport": "محدودهٔ نمایش: {value}",
+    "tools.video.statsUnavailable": "در دسترس نیست",
+    "tools.database.moreViews": "{count} مورد دیگر…",
+    "tools.video.errorNotMediaUrl": "به یک فایل ویدیویی (.mp4, .webm, .mov) پیوند بدهید یا از بلوک جاسازی استفاده کنید.",
+    "tools.video.errorUnplayable": "این ویدیو قابل پخش نیست."
+  },
+  "fi": {
+    "tools.video.statsResolution": "Tarkkuus: {value}",
+    "tools.video.statsDroppedFrames": "Pudotetut ruudut: {value}",
+    "tools.video.statsBufferHealth": "Puskurin tila: {seconds} s",
+    "tools.video.statsViewport": "Näyttöalue: {value}",
+    "tools.video.statsUnavailable": "Ei saatavilla",
+    "tools.database.moreViews": "{count} lisää…",
+    "tools.video.errorNotMediaUrl": "Linkitä videotiedosto (.mp4, .webm, .mov) tai käytä upotuslohkoa.",
+    "tools.video.errorUnplayable": "Tätä videota ei voi toistaa."
+  },
+  "fil": {
+    "tools.video.statsResolution": "Resolusyon: {value}",
+    "tools.video.statsDroppedFrames": "Mga nalaktawang frame: {value}",
+    "tools.video.statsBufferHealth": "Kalagayan ng buffer: {seconds} seg",
+    "tools.video.statsViewport": "Bahagi ng display: {value}",
+    "tools.video.statsUnavailable": "Hindi magagamit",
+    "tools.database.moreViews": "{count} pa…",
+    "tools.video.errorNotMediaUrl": "Mag-link ng video file (.mp4, .webm, .mov) o gumamit ng embed block.",
+    "tools.video.errorUnplayable": "Hindi ma-play ang video na ito."
+  },
+  "fr": {
+    "tools.video.statsResolution": "Résolution : {value}",
+    "tools.video.statsDroppedFrames": "Images perdues : {value}",
+    "tools.video.statsBufferHealth": "État de la mémoire tampon : {seconds} s",
+    "tools.video.statsViewport": "Zone d’affichage : {value}",
+    "tools.video.statsUnavailable": "Indisponible",
+    "tools.database.moreViews": "{count} de plus…",
+    "tools.video.errorNotMediaUrl": "Ajoutez un lien vers un fichier vidéo (.mp4, .webm, .mov) ou utilisez un bloc d’intégration.",
+    "tools.video.errorUnplayable": "Impossible de lire cette vidéo."
+  },
+  "gu": {
+    "tools.video.statsResolution": "રિઝોલ્યુશન: {value}",
+    "tools.video.statsDroppedFrames": "છૂટી ગયેલી ફ્રેમ્સ: {value}",
+    "tools.video.statsBufferHealth": "બફરની સ્થિતિ: {seconds} સેકંડ",
+    "tools.video.statsViewport": "દૃશ્ય ક્ષેત્ર: {value}",
+    "tools.video.statsUnavailable": "ઉપલબ્ધ નથી",
+    "tools.database.moreViews": "{count} વધુ…",
+    "tools.video.errorNotMediaUrl": "વિડિઓ ફાઇલ (.mp4, .webm, .mov) લિંક કરો અથવા એમ્બેડ બ્લોકનો ઉપયોગ કરો.",
+    "tools.video.errorUnplayable": "આ વિડિઓ ચલાવી શકાતો નથી."
+  },
+  "he": {
+    "tools.video.statsResolution": "רזולוציה: {value}",
+    "tools.video.statsDroppedFrames": "פריימים שהושמטו: {value}",
+    "tools.video.statsBufferHealth": "מצב המאגר: {seconds} שנ׳",
+    "tools.video.statsViewport": "אזור התצוגה: {value}",
+    "tools.video.statsUnavailable": "לא זמין",
+    "tools.database.moreViews": "עוד {count}…",
+    "tools.video.errorNotMediaUrl": "הוסף קישור לקובץ וידאו (.mp4, .webm, .mov) או השתמש בבלוק הטמעה.",
+    "tools.video.errorUnplayable": "לא ניתן להפעיל את הסרטון הזה."
+  },
+  "hi": {
+    "tools.video.statsResolution": "रिज़ॉल्यूशन: {value}",
+    "tools.video.statsDroppedFrames": "छूटे हुए फ़्रेम: {value}",
+    "tools.video.statsBufferHealth": "बफ़र की स्थिति: {seconds} सेकंड",
+    "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+    "tools.video.statsUnavailable": "उपलब्ध नहीं",
+    "tools.database.moreViews": "{count} और…",
+    "tools.video.errorNotMediaUrl": "वीडियो फ़ाइल (.mp4, .webm, .mov) का लिंक जोड़ें या एम्बेड ब्लॉक का उपयोग करें।",
+    "tools.video.errorUnplayable": "यह वीडियो चलाया नहीं जा सकता।"
+  },
+  "hr": {
+    "tools.video.statsResolution": "Razlučivost: {value}",
+    "tools.video.statsDroppedFrames": "Ispušteni kadrovi: {value}",
+    "tools.video.statsBufferHealth": "Stanje međuspremnika: {seconds} s",
+    "tools.video.statsViewport": "Područje prikaza: {value}",
+    "tools.video.statsUnavailable": "Nije dostupno",
+    "tools.database.moreViews": "Još {count}…",
+    "tools.video.errorNotMediaUrl": "Dodaj poveznicu na videodatoteku (.mp4, .webm, .mov) ili upotrijebi blok za ugradnju.",
+    "tools.video.errorUnplayable": "Ovaj se videozapis ne može reproducirati."
+  },
+  "hu": {
+    "tools.video.statsResolution": "Felbontás: {value}",
+    "tools.video.statsDroppedFrames": "Eldobott képkockák: {value}",
+    "tools.video.statsBufferHealth": "Puffer állapota: {seconds} mp",
+    "tools.video.statsViewport": "Megjelenítési terület: {value}",
+    "tools.video.statsUnavailable": "Nem érhető el",
+    "tools.database.moreViews": "További {count}…",
+    "tools.video.errorNotMediaUrl": "Hivatkozzon egy videófájlra (.mp4, .webm, .mov), vagy használjon beágyazási blokkot.",
+    "tools.video.errorUnplayable": "Ez a videó nem játszható le."
+  },
+  "hy": {
+    "tools.video.statsResolution": "Լուծաչափ՝ {value}",
+    "tools.video.statsDroppedFrames": "Բաց թողնված կադրեր՝ {value}",
+    "tools.video.statsBufferHealth": "Բուֆերի վիճակ՝ {seconds} վ",
+    "tools.video.statsViewport": "Ցուցադրման տիրույթ՝ {value}",
+    "tools.video.statsUnavailable": "Հասանելի չէ",
+    "tools.database.moreViews": "Եվս {count}…",
+    "tools.video.errorNotMediaUrl": "Տեսանյութի ֆայլի (.mp4, .webm, .mov) հղում ավելացրեք կամ օգտագործեք ներդրման բլոկ։",
+    "tools.video.errorUnplayable": "Այս տեսանյութը հնարավոր չէ նվագարկել։"
+  },
+  "id": {
+    "tools.video.statsResolution": "Resolusi: {value}",
+    "tools.video.statsDroppedFrames": "Frame terlewat: {value}",
+    "tools.video.statsBufferHealth": "Kondisi buffer: {seconds} detik",
+    "tools.video.statsViewport": "Area tampilan: {value}",
+    "tools.video.statsUnavailable": "Tidak tersedia",
+    "tools.database.moreViews": "{count} lainnya…",
+    "tools.video.errorNotMediaUrl": "Tautkan berkas video (.mp4, .webm, .mov), atau gunakan blok sematan",
+    "tools.video.errorUnplayable": "Video ini tidak dapat diputar"
+  },
+  "it": {
+    "tools.video.statsResolution": "Risoluzione: {value}",
+    "tools.video.statsDroppedFrames": "Fotogrammi persi: {value}",
+    "tools.video.statsBufferHealth": "Stato del buffer: {seconds} secondi",
+    "tools.video.statsViewport": "Area di visualizzazione: {value}",
+    "tools.video.statsUnavailable": "Non disponibile",
+    "tools.database.moreViews": "Altre: {count}…",
+    "tools.video.errorNotMediaUrl": "Inserisci il link a un file video (.mp4, .webm, .mov) oppure usa un blocco di incorporamento",
+    "tools.video.errorUnplayable": "Questo video non può essere riprodotto"
+  },
+  "ja": {
+    "tools.video.statsResolution": "解像度：{value}",
+    "tools.video.statsDroppedFrames": "ドロップフレーム数：{value}",
+    "tools.video.statsBufferHealth": "バッファの状態：{seconds} 秒",
+    "tools.video.statsViewport": "表示領域：{value}",
+    "tools.video.statsUnavailable": "利用できません",
+    "tools.database.moreViews": "ほか {count} 件…",
+    "tools.video.errorNotMediaUrl": "動画ファイル（.mp4、.webm、.mov）へのリンクを指定するか、埋め込みブロックを使用してください",
+    "tools.video.errorUnplayable": "この動画は再生できません"
+  },
+  "ka": {
+    "tools.video.statsResolution": "გარჩევადობა: {value}",
+    "tools.video.statsDroppedFrames": "გამოტოვებული კადრები: {value}",
+    "tools.video.statsBufferHealth": "ბუფერის მდგომარეობა: {seconds} წმ",
+    "tools.video.statsViewport": "ჩვენების არე: {value}",
+    "tools.video.statsUnavailable": "მიუწვდომელია",
+    "tools.database.moreViews": "კიდევ {count}…",
+    "tools.video.errorNotMediaUrl": "მიუთითეთ ვიდეოფაილის ბმული (.mp4, .webm, .mov), ან გამოიყენეთ ჩაშენების ბლოკი",
+    "tools.video.errorUnplayable": "ამ ვიდეოს დაკვრა შეუძლებელია"
+  },
+  "km": {
+    "tools.video.statsResolution": "គុណភាពបង្ហាញ៖ {value}",
+    "tools.video.statsDroppedFrames": "ហ្វ្រេមដែលបានបោះបង់៖ {value}",
+    "tools.video.statsBufferHealth": "ស្ថានភាពប៊ូហ្វឺ៖ {seconds} វិនាទី",
+    "tools.video.statsViewport": "ផ្ទៃបង្ហាញ៖ {value}",
+    "tools.video.statsUnavailable": "មិនអាចប្រើបាន",
+    "tools.database.moreViews": "{count} ទៀត…",
+    "tools.video.errorNotMediaUrl": "សូមភ្ជាប់តំណទៅឯកសារវីដេអូ (.mp4, .webm, .mov) ឬប្រើប្លុកបង្កប់",
+    "tools.video.errorUnplayable": "មិនអាចចាក់វីដេអូនេះបានទេ"
+  },
+  "kn": {
+    "tools.video.statsResolution": "ರೆಸಲ್ಯೂಶನ್: {value}",
+    "tools.video.statsDroppedFrames": "ಡ್ರಾಪ್ ಆದ ಫ್ರೇಮ್‌ಗಳು: {value}",
+    "tools.video.statsBufferHealth": "ಬಫರ್ ಸ್ಥಿತಿ: {seconds} ಸೆಕೆಂಡುಗಳು",
+    "tools.video.statsViewport": "ವೀಕ್ಷಣಾ ಪ್ರದೇಶ: {value}",
+    "tools.video.statsUnavailable": "ಲಭ್ಯವಿಲ್ಲ",
+    "tools.database.moreViews": "ಇನ್ನಷ್ಟು: {count}…",
+    "tools.video.errorNotMediaUrl": "ವೀಡಿಯೊ ಫೈಲ್‌ಗೆ (.mp4, .webm, .mov) ಲಿಂಕ್ ನೀಡಿ ಅಥವಾ ಎಂಬೆಡ್ ಬ್ಲಾಕ್ ಬಳಸಿ",
+    "tools.video.errorUnplayable": "ಈ ವೀಡಿಯೊವನ್ನು ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ"
+  },
+  "ko": {
+    "tools.video.statsResolution": "해상도: {value}",
+    "tools.video.statsDroppedFrames": "손실된 프레임: {value}",
+    "tools.video.statsBufferHealth": "버퍼 상태: {seconds}초",
+    "tools.video.statsViewport": "표시 영역: {value}",
+    "tools.video.statsUnavailable": "사용할 수 없음",
+    "tools.database.moreViews": "외 {count}개…",
+    "tools.video.errorNotMediaUrl": "동영상 파일 링크(.mp4, .webm, .mov)를 입력하거나 임베드 블록을 사용하세요",
+    "tools.video.errorUnplayable": "이 동영상은 재생할 수 없습니다"
+  },
+  "ku": {
+    "tools.video.statsResolution": "ڕێزۆلووشن: {value}",
+    "tools.video.statsDroppedFrames": "فریمە لەدەستچووەکان: {value}",
+    "tools.video.statsBufferHealth": "دۆخی بافەر: {seconds} چرکە",
+    "tools.video.statsViewport": "ناوچەی پیشاندان: {value}",
+    "tools.video.statsUnavailable": "بەردەست نییە",
+    "tools.database.moreViews": "{count}ی تر…",
+    "tools.video.errorNotMediaUrl": "بەستەری فایلێکی ڤیدیۆ (.mp4، .webm، .mov) دابنێ، یان بلۆکی جێگیرکردن بەکاربهێنە",
+    "tools.video.errorUnplayable": "ئەم ڤیدیۆیە ناتوانرێت لێ بدرێت"
+  },
+  "lo": {
+    "tools.video.statsResolution": "ຄວາມລະອຽດ: {value}",
+    "tools.video.statsDroppedFrames": "ເຟຣມທີ່ຫຼຸດ: {value}",
+    "tools.video.statsBufferHealth": "ສະຖານະບັບເຟີ: {seconds} ວິນາທີ",
+    "tools.video.statsViewport": "ພື້ນທີ່ສະແດງຜົນ: {value}",
+    "tools.video.statsUnavailable": "ບໍ່ພ້ອມໃຊ້ງານ",
+    "tools.database.moreViews": "ອີກ {count}…",
+    "tools.video.errorNotMediaUrl": "ໃສ່ລິ້ງຫາໄຟລ໌ວິດີໂອ (.mp4, .webm, .mov) ຫຼືໃຊ້ບລັອກຝັງ",
+    "tools.video.errorUnplayable": "ບໍ່ສາມາດຫຼິ້ນວິດີໂອນີ້ໄດ້"
+  },
+  "lt": {
+    "tools.video.statsResolution": "Skiriamoji geba: {value}",
+    "tools.video.statsDroppedFrames": "Praleisti kadrai: {value}",
+    "tools.video.statsBufferHealth": "Buferio būsena: {seconds} sek.",
+    "tools.video.statsViewport": "Peržiūros sritis: {value}",
+    "tools.video.statsUnavailable": "Nepasiekiama",
+    "tools.database.moreViews": "Dar {count}…",
+    "tools.video.errorNotMediaUrl": "Pateikite vaizdo failo nuorodą (.mp4, .webm, .mov) arba naudokite įterpinio bloką",
+    "tools.video.errorUnplayable": "Šio vaizdo įrašo paleisti negalima"
+  },
+  "lv": {
+    "tools.video.statsResolution": "Izšķirtspēja: {value}",
+    "tools.video.statsDroppedFrames": "Izlaistie kadri: {value}",
+    "tools.video.statsBufferHealth": "Bufera stāvoklis: {seconds} sek.",
+    "tools.video.statsViewport": "Skata apgabals: {value}",
+    "tools.video.statsUnavailable": "Nav pieejams",
+    "tools.database.moreViews": "Vēl {count}…",
+    "tools.video.errorNotMediaUrl": "Norādiet saiti uz video failu (.mp4, .webm, .mov) vai izmantojiet iegulšanas bloku",
+    "tools.video.errorUnplayable": "Šo video nevar atskaņot"
+  },
+  "mk": {
+    "tools.video.statsResolution": "Резолуција: {value}",
+    "tools.video.statsDroppedFrames": "Испуштени кадри: {value}",
+    "tools.video.statsBufferHealth": "Состојба на баферот: {seconds} сек.",
+    "tools.video.statsViewport": "Област за приказ: {value}",
+    "tools.video.statsUnavailable": "Недостапно",
+    "tools.database.moreViews": "Уште {count}…",
+    "tools.video.errorNotMediaUrl": "Наведете врска до видеодатотека (.mp4, .webm, .mov) или користете блок за вградување",
+    "tools.video.errorUnplayable": "Ова видео не може да се репродуцира"
+  },
+  "ml": {
+    "tools.video.statsResolution": "റെസല്യൂഷൻ: {value}",
+    "tools.video.statsDroppedFrames": "നഷ്ടപ്പെട്ട ഫ്രെയിമുകൾ: {value}",
+    "tools.video.statsBufferHealth": "ബഫർ നില: {seconds} സെക്കൻഡ്",
+    "tools.video.statsViewport": "പ്രദർശന മേഖല: {value}",
+    "tools.video.statsUnavailable": "ലഭ്യമല്ല",
+    "tools.database.moreViews": "{count} എണ്ണം കൂടി…",
+    "tools.video.errorNotMediaUrl": "ഒരു വീഡിയോ ഫയലിലേക്കുള്ള ലിങ്ക് (.mp4, .webm, .mov) നൽകുക, അല്ലെങ്കിൽ ഒരു എംബെഡ് ബ്ലോക്ക് ഉപയോഗിക്കുക",
+    "tools.video.errorUnplayable": "ഈ വീഡിയോ പ്ലേ ചെയ്യാനാകില്ല"
+  },
+  "mn": {
+    "tools.video.statsResolution": "Нягтаршил: {value}",
+    "tools.video.statsDroppedFrames": "Алдагдсан кадр: {value}",
+    "tools.video.statsBufferHealth": "Буферийн төлөв: {seconds} сек",
+    "tools.video.statsViewport": "Харагдах талбар: {value}",
+    "tools.video.statsUnavailable": "Ашиглах боломжгүй",
+    "tools.database.moreViews": "Бусад: {count}…",
+    "tools.video.errorNotMediaUrl": "Видео файлын холбоосыг (.mp4, .webm, .mov) оруулна уу, эсвэл шигтгээ блок ашиглана уу",
+    "tools.video.errorUnplayable": "Энэ видеог тоглуулах боломжгүй"
+  },
+  "mr": {
+    "tools.video.statsResolution": "रिझोल्यूशन: {value}",
+    "tools.video.statsDroppedFrames": "वगळलेल्या फ्रेम: {value}",
+    "tools.video.statsBufferHealth": "बफर स्थिती: {seconds} सेकंद",
+    "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+    "tools.video.statsUnavailable": "उपलब्ध नाही",
+    "tools.database.moreViews": "आणखी: {count}…",
+    "tools.video.errorNotMediaUrl": "व्हिडिओ फाइलची लिंक (.mp4, .webm, .mov) द्या किंवा एम्बेड ब्लॉक वापरा",
+    "tools.video.errorUnplayable": "हा व्हिडिओ प्ले करता येत नाही"
+  },
+  "ms": {
+    "tools.video.statsResolution": "Resolusi: {value}",
+    "tools.video.statsDroppedFrames": "Bingkai terlepas: {value}",
+    "tools.video.statsBufferHealth": "Keadaan penimbal: {seconds} saat",
+    "tools.video.statsViewport": "Ruang paparan: {value}",
+    "tools.video.statsUnavailable": "Tidak tersedia",
+    "tools.database.moreViews": "{count} lagi…",
+    "tools.video.errorNotMediaUrl": "Pautkan fail video (.mp4, .webm, .mov), atau gunakan blok benaman",
+    "tools.video.errorUnplayable": "Video ini tidak boleh dimainkan"
+  },
+  "my": {
+    "tools.video.statsResolution": "ရုပ်ထွက်ကြည်လင်ပြတ်သားမှု: {value}",
+    "tools.video.statsDroppedFrames": "လွတ်သွားသော ဖရိမ်များ: {value}",
+    "tools.video.statsBufferHealth": "ဘတ်ဖာအခြေအနေ: {seconds} စက္ကန့်",
+    "tools.video.statsViewport": "မြင်ကွင်းဧရိယာ: {value}",
+    "tools.video.statsUnavailable": "မရရှိနိုင်ပါ",
+    "tools.database.moreViews": "နောက်ထပ် {count} ခု…",
+    "tools.video.errorNotMediaUrl": "ဗီဒီယိုဖိုင်လင့်ခ် (.mp4, .webm, .mov) ကို ထည့်ပါ၊ သို့မဟုတ် မြှုပ်သွင်းမှုဘလောက်ကို အသုံးပြုပါ",
+    "tools.video.errorUnplayable": "ဤဗီဒီယိုကို ဖွင့်၍မရပါ"
+  },
+  "ne": {
+    "tools.video.statsResolution": "रिजोल्युसन: {value}",
+    "tools.video.statsDroppedFrames": "छुटेका फ्रेम: {value}",
+    "tools.video.statsBufferHealth": "बफरको अवस्था: {seconds} सेकेन्ड",
+    "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+    "tools.video.statsUnavailable": "उपलब्ध छैन",
+    "tools.database.moreViews": "थप {count}…",
+    "tools.video.errorNotMediaUrl": "भिडियो फाइलको लिङ्क (.mp4, .webm, .mov) दिनुहोस् वा इम्बेड ब्लक प्रयोग गर्नुहोस्",
+    "tools.video.errorUnplayable": "यो भिडियो प्ले गर्न सकिँदैन"
+  },
+  "nl": {
+    "tools.video.statsResolution": "Resolutie: {value}",
+    "tools.video.statsDroppedFrames": "Overgeslagen frames: {value}",
+    "tools.video.statsBufferHealth": "Bufferstatus: {seconds} seconden",
+    "tools.video.statsViewport": "Weergavegebied: {value}",
+    "tools.video.statsUnavailable": "Niet beschikbaar",
+    "tools.database.moreViews": "Nog {count}…",
+    "tools.video.errorNotMediaUrl": "Voeg een link naar een videobestand (.mp4, .webm, .mov) toe of gebruik een insluitblok",
+    "tools.video.errorUnplayable": "Deze video kan niet worden afgespeeld"
+  },
+  "no": {
+    "tools.video.statsResolution": "Oppløsning: {value}",
+    "tools.video.statsDroppedFrames": "Tapte bilder: {value}",
+    "tools.video.statsBufferHealth": "Bufferstatus: {seconds} sekunder",
+    "tools.video.statsViewport": "Visningsområde: {value}",
+    "tools.video.statsUnavailable": "Ikke tilgjengelig",
+    "tools.database.moreViews": "Flere: {count}…",
+    "tools.video.errorNotMediaUrl": "Legg inn en lenke til en videofil (.mp4, .webm, .mov), eller bruk en innbyggingsblokk",
+    "tools.video.errorUnplayable": "Denne videoen kan ikke spilles av"
+  },
+  "pa": {
+    "tools.video.statsResolution": "ਰੈਜ਼ੋਲਿਊਸ਼ਨ: {value}",
+    "tools.video.statsDroppedFrames": "ਛੱਡੇ ਗਏ ਫ਼ਰੇਮ: {value}",
+    "tools.video.statsBufferHealth": "ਬਫ਼ਰ ਦੀ ਸਥਿਤੀ: {seconds} ਸਕਿੰਟ",
+    "tools.video.statsViewport": "ਦ੍ਰਿਸ਼ ਖੇਤਰ: {value}",
+    "tools.video.statsUnavailable": "ਉਪਲਬਧ ਨਹੀਂ",
+    "tools.database.moreViews": "{count} ਹੋਰ…",
+    "tools.video.errorNotMediaUrl": "ਵੀਡੀਓ ਫ਼ਾਈਲ ਦਾ ਲਿੰਕ (.mp4, .webm, .mov) ਦਿਓ ਜਾਂ ਇੰਬੈੱਡ ਬਲਾਕ ਵਰਤੋ",
+    "tools.video.errorUnplayable": "ਇਹ ਵੀਡੀਓ ਚਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ"
+  },
+  "pl": {
+    "tools.video.statsResolution": "Rozdzielczość: {value}",
+    "tools.video.statsDroppedFrames": "Utracone klatki: {value}",
+    "tools.video.statsBufferHealth": "Stan bufora: {seconds} sek.",
+    "tools.video.statsViewport": "Obszar wyświetlania: {value}",
+    "tools.video.statsUnavailable": "Niedostępne",
+    "tools.database.moreViews": "Więcej: {count}…",
+    "tools.video.errorNotMediaUrl": "Podaj link do pliku wideo (.mp4, .webm, .mov) albo użyj bloku osadzania",
+    "tools.video.errorUnplayable": "Nie można odtworzyć tego wideo"
+  },
+  "ps": {
+    "tools.video.statsResolution": "ریزولوشن: {value}",
+    "tools.video.statsDroppedFrames": "له لاسه وتلي چوکاټونه: {value}",
+    "tools.video.statsBufferHealth": "د بفر حالت: {seconds} ثانیې",
+    "tools.video.statsViewport": "د ښودلو ساحه: {value}",
+    "tools.video.statsUnavailable": "شتون نه لري",
+    "tools.database.moreViews": "{count} نور…",
+    "tools.video.errorNotMediaUrl": "د ویډیو فایل لینک (.mp4، .webm، .mov) ورکړئ، یا د ځای پر ځای کولو بلاک وکاروئ",
+    "tools.video.errorUnplayable": "دا ویډیو نه شي پلې کېدای"
+  },
+  "pt": {
+    "tools.video.statsResolution": "Resolução: {value}",
+    "tools.video.statsDroppedFrames": "Quadros perdidos: {value}",
+    "tools.video.statsBufferHealth": "Integridade do buffer: {seconds} s",
+    "tools.video.statsViewport": "Janela de visualização: {value}",
+    "tools.video.statsUnavailable": "Indisponível",
+    "tools.database.moreViews": "{count} a mais…",
+    "tools.video.errorNotMediaUrl": "Insira o link de um arquivo de vídeo (.mp4, .webm, .mov) ou use um bloco de incorporação",
+    "tools.video.errorUnplayable": "Não é possível reproduzir este vídeo"
+  },
+  "ro": {
+    "tools.video.statsResolution": "Rezoluție: {value}",
+    "tools.video.statsDroppedFrames": "Cadre pierdute: {value}",
+    "tools.video.statsBufferHealth": "Starea memoriei tampon: {seconds} s",
+    "tools.video.statsViewport": "Zona de afișare: {value}",
+    "tools.video.statsUnavailable": "Indisponibil",
+    "tools.database.moreViews": "Încă: {count}…",
+    "tools.video.errorNotMediaUrl": "Introduceți linkul unui fișier video (.mp4, .webm, .mov) sau folosiți un bloc de încorporare",
+    "tools.video.errorUnplayable": "Acest videoclip nu poate fi redat"
+  },
+  "ru": {
+    "tools.video.statsResolution": "Разрешение: {value}",
+    "tools.video.statsDroppedFrames": "Пропущенные кадры: {value}",
+    "tools.video.statsBufferHealth": "Состояние буфера: {seconds} с",
+    "tools.video.statsViewport": "Область просмотра: {value}",
+    "tools.video.statsUnavailable": "Недоступно",
+    "tools.database.moreViews": "Ещё: {count}…",
+    "tools.video.errorNotMediaUrl": "Укажите ссылку на видеофайл (.mp4, .webm, .mov) или используйте блок встраивания",
+    "tools.video.errorUnplayable": "Не удаётся воспроизвести это видео"
+  },
+  "sd": {
+    "tools.video.statsResolution": "وڊيو ريزوليوشن: {value}",
+    "tools.video.statsDroppedFrames": "ضايع ٿيل فريم: {value}",
+    "tools.video.statsBufferHealth": "بفر جي حالت: {seconds} سيڪنڊ",
+    "tools.video.statsViewport": "ڏيک جو علائقو: {value}",
+    "tools.video.statsUnavailable": "دستياب ناهي",
+    "tools.database.moreViews": "وڌيڪ: {count}…",
+    "tools.video.errorNotMediaUrl": "وڊيو فائل (.mp4, .webm, .mov) جي لنڪ ڏيو، يا ايمبيڊ بلاڪ استعمال ڪريو",
+    "tools.video.errorUnplayable": "هي وڊيو هلائي نٿي سگهجي"
+  },
+  "si": {
+    "tools.video.statsResolution": "විභේදනය: {value}",
+    "tools.video.statsDroppedFrames": "මඟහැරුණු රාමු: {value}",
+    "tools.video.statsBufferHealth": "බෆරයේ තත්ත්වය: {seconds} තත්පර",
+    "tools.video.statsViewport": "දර්ශන ප්‍රදේශය: {value}",
+    "tools.video.statsUnavailable": "ලබා ගත නොහැක",
+    "tools.database.moreViews": "තවත්: {count}…",
+    "tools.video.errorNotMediaUrl": "වීඩියෝ ගොනුවක (.mp4, .webm, .mov) සබැඳියක් යොදන්න, නැතහොත් කාවැද්දීමේ බ්ලොක් එකක් භාවිත කරන්න",
+    "tools.video.errorUnplayable": "මෙම වීඩියෝව ධාවනය කළ නොහැක"
+  },
+  "sk": {
+    "tools.video.statsResolution": "Rozlíšenie: {value}",
+    "tools.video.statsDroppedFrames": "Vynechané snímky: {value}",
+    "tools.video.statsBufferHealth": "Stav vyrovnávacej pamäte: {seconds} s",
+    "tools.video.statsViewport": "Zobrazená oblasť: {value}",
+    "tools.video.statsUnavailable": "Nie je k dispozícii",
+    "tools.database.moreViews": "Ďalšie: {count}…",
+    "tools.video.errorNotMediaUrl": "Zadajte odkaz na videosúbor (.mp4, .webm, .mov) alebo použite blok na vloženie",
+    "tools.video.errorUnplayable": "Toto video sa nedá prehrať"
+  },
+  "sl": {
+    "tools.video.statsResolution": "Ločljivost: {value}",
+    "tools.video.statsDroppedFrames": "Izpuščene sličice: {value}",
+    "tools.video.statsBufferHealth": "Stanje medpomnilnika: {seconds} s",
+    "tools.video.statsViewport": "Območje prikaza: {value}",
+    "tools.video.statsUnavailable": "Ni na voljo",
+    "tools.database.moreViews": "Še: {count}…",
+    "tools.video.errorNotMediaUrl": "Vnesite povezavo do videodatoteke (.mp4, .webm, .mov) ali uporabite blok za vdelavo",
+    "tools.video.errorUnplayable": "Tega videa ni mogoče predvajati"
+  },
+  "sq": {
+    "tools.video.statsResolution": "Rezolucioni: {value}",
+    "tools.video.statsDroppedFrames": "Kuadrot e humbura: {value}",
+    "tools.video.statsBufferHealth": "Gjendja e buferit: {seconds} s",
+    "tools.video.statsViewport": "Zona e shfaqjes: {value}",
+    "tools.video.statsUnavailable": "Nuk disponohet",
+    "tools.database.moreViews": "Të tjera: {count}…",
+    "tools.video.errorNotMediaUrl": "Vendosni lidhjen e një skedari video (.mp4, .webm, .mov) ose përdorni një bllok ngulitjeje",
+    "tools.video.errorUnplayable": "Kjo video nuk mund të luhet"
+  },
+  "sr": {
+    "tools.video.statsResolution": "Резолуција: {value}",
+    "tools.video.statsDroppedFrames": "Испуштени кадрови: {value}",
+    "tools.video.statsBufferHealth": "Стање бафера: {seconds} сек.",
+    "tools.video.statsViewport": "Област приказа: {value}",
+    "tools.video.statsUnavailable": "Није доступно",
+    "tools.database.moreViews": "Још: {count}…",
+    "tools.video.errorNotMediaUrl": "Унесите везу до видео-датотеке (.mp4, .webm, .mov) или користите блок за уградњу",
+    "tools.video.errorUnplayable": "Овај видео не може да се репродукује"
+  },
+  "sv": {
+    "tools.video.statsResolution": "Upplösning: {value}",
+    "tools.video.statsDroppedFrames": "Tappade bildrutor: {value}",
+    "tools.video.statsBufferHealth": "Buffertstatus: {seconds} s",
+    "tools.video.statsViewport": "Visningsområde: {value}",
+    "tools.video.statsUnavailable": "Inte tillgängligt",
+    "tools.database.moreViews": "{count} till…",
+    "tools.video.errorNotMediaUrl": "Ange en länk till en videofil (.mp4, .webm, .mov) eller använd ett inbäddningsblock",
+    "tools.video.errorUnplayable": "Det går inte att spela upp den här videon"
+  },
+  "sw": {
+    "tools.video.statsResolution": "Azimio: {value}",
+    "tools.video.statsDroppedFrames": "Fremu zilizopotea: {value}",
+    "tools.video.statsBufferHealth": "Hali ya akiba: {seconds} sekunde",
+    "tools.video.statsViewport": "Eneo la kutazama: {value}",
+    "tools.video.statsUnavailable": "Haipatikani",
+    "tools.database.moreViews": "Zaidi: {count}…",
+    "tools.video.errorNotMediaUrl": "Weka kiungo cha faili ya video (.mp4, .webm, .mov), au tumia bloku ya kupachika",
+    "tools.video.errorUnplayable": "Video hii haiwezi kuchezwa"
+  },
+  "ta": {
+    "tools.video.statsResolution": "தெளிவுத்திறன்: {value}",
+    "tools.video.statsDroppedFrames": "தவறிய சட்டகங்கள்: {value}",
+    "tools.video.statsBufferHealth": "இடையக நிலை: {seconds} விநாடிகள்",
+    "tools.video.statsViewport": "காட்சிப் பகுதி: {value}",
+    "tools.video.statsUnavailable": "கிடைக்கவில்லை",
+    "tools.database.moreViews": "மேலும்: {count}…",
+    "tools.video.errorNotMediaUrl": "வீடியோ கோப்பிற்கான (.mp4, .webm, .mov) இணைப்பை உள்ளிடவும் அல்லது உட்பொதிவுத் தொகுதியைப் பயன்படுத்தவும்",
+    "tools.video.errorUnplayable": "இந்த வீடியோவை இயக்க முடியவில்லை"
+  },
+  "te": {
+    "tools.video.statsResolution": "రిజల్యూషన్: {value}",
+    "tools.video.statsDroppedFrames": "తప్పిపోయిన ఫ్రేమ్‌లు: {value}",
+    "tools.video.statsBufferHealth": "బఫర్ స్థితి: {seconds} సెకన్లు",
+    "tools.video.statsViewport": "వీక్షణ ప్రాంతం: {value}",
+    "tools.video.statsUnavailable": "అందుబాటులో లేదు",
+    "tools.database.moreViews": "మరిన్ని: {count}…",
+    "tools.video.errorNotMediaUrl": "వీడియో ఫైల్ (.mp4, .webm, .mov) లింక్‌ను నమోదు చేయండి లేదా పొందుపరిచే బ్లాక్‌ను ఉపయోగించండి",
+    "tools.video.errorUnplayable": "ఈ వీడియోను ప్లే చేయడం సాధ్యం కాదు"
+  },
+  "th": {
+    "tools.video.statsResolution": "ความละเอียด: {value}",
+    "tools.video.statsDroppedFrames": "เฟรมที่ตกหล่น: {value}",
+    "tools.video.statsBufferHealth": "สถานะบัฟเฟอร์: {seconds} วินาที",
+    "tools.video.statsViewport": "พื้นที่แสดงผล: {value}",
+    "tools.video.statsUnavailable": "ไม่พร้อมใช้งาน",
+    "tools.database.moreViews": "เพิ่มเติม: {count}…",
+    "tools.video.errorNotMediaUrl": "ใส่ลิงก์ไฟล์วิดีโอ (.mp4, .webm, .mov) หรือใช้บล็อกฝัง",
+    "tools.video.errorUnplayable": "ไม่สามารถเล่นวิดีโอนี้ได้"
+  },
+  "tr": {
+    "tools.video.statsResolution": "Çözünürlük: {value}",
+    "tools.video.statsDroppedFrames": "Atlanan kareler: {value}",
+    "tools.video.statsBufferHealth": "Arabellek durumu: {seconds} sn",
+    "tools.video.statsViewport": "Görünüm alanı: {value}",
+    "tools.video.statsUnavailable": "Kullanılamıyor",
+    "tools.database.moreViews": "Diğerleri: {count}…",
+    "tools.video.errorNotMediaUrl": "Bir video dosyasının (.mp4, .webm, .mov) bağlantısını girin veya yerleştirme bloğu kullanın",
+    "tools.video.errorUnplayable": "Bu video oynatılamıyor"
+  },
+  "ug": {
+    "tools.video.statsResolution": "ئېنىقلىق دەرىجىسى: {value}",
+    "tools.video.statsDroppedFrames": "چۈشۈپ قالغان كاندۇكلار: {value}",
+    "tools.video.statsBufferHealth": "بۇففېر ھالىتى: {seconds} سېكۇنت",
+    "tools.video.statsViewport": "كۆرۈنۈش رايونى: {value}",
+    "tools.video.statsUnavailable": "ئىشلەتكىلى بولمايدۇ",
+    "tools.database.moreViews": "يەنە: {count}…",
+    "tools.video.errorNotMediaUrl": "سىن ھۆججىتىنىڭ (.mp4, .webm, .mov) ئۇلانمىسىنى كىرگۈزۈڭ ياكى سىڭدۈرۈش بۆلىكىنى ئىشلىتىڭ",
+    "tools.video.errorUnplayable": "بۇ سىننى قويغىلى بولمايدۇ"
+  },
+  "uk": {
+    "tools.video.statsResolution": "Роздільна здатність: {value}",
+    "tools.video.statsDroppedFrames": "Пропущені кадри: {value}",
+    "tools.video.statsBufferHealth": "Стан буфера: {seconds} с",
+    "tools.video.statsViewport": "Область перегляду: {value}",
+    "tools.video.statsUnavailable": "Недоступно",
+    "tools.database.moreViews": "Ще: {count}…",
+    "tools.video.errorNotMediaUrl": "Вкажіть посилання на відеофайл (.mp4, .webm, .mov) або скористайтеся блоком вбудовування",
+    "tools.video.errorUnplayable": "Не вдається відтворити це відео"
+  },
+  "ur": {
+    "tools.video.statsResolution": "ریزولوشن: {value}",
+    "tools.video.statsDroppedFrames": "ضائع شدہ فریم: {value}",
+    "tools.video.statsBufferHealth": "بفر کی حالت: {seconds} سیکنڈ",
+    "tools.video.statsViewport": "منظر کا رقبہ: {value}",
+    "tools.video.statsUnavailable": "دستیاب نہیں",
+    "tools.database.moreViews": "مزید: {count}…",
+    "tools.video.errorNotMediaUrl": "ویڈیو فائل (.mp4, .webm, .mov) کا لنک درج کریں، یا ایمبیڈ بلاک استعمال کریں",
+    "tools.video.errorUnplayable": "یہ ویڈیو چلائی نہیں جا سکتی"
+  },
+  "vi": {
+    "tools.video.statsResolution": "Độ phân giải: {value}",
+    "tools.video.statsDroppedFrames": "Khung hình bị bỏ qua: {value}",
+    "tools.video.statsBufferHealth": "Tình trạng bộ đệm: {seconds} giây",
+    "tools.video.statsViewport": "Vùng hiển thị: {value}",
+    "tools.video.statsUnavailable": "Không khả dụng",
+    "tools.database.moreViews": "Còn lại: {count}…",
+    "tools.video.errorNotMediaUrl": "Nhập liên kết đến tệp video (.mp4, .webm, .mov) hoặc dùng khối nhúng",
+    "tools.video.errorUnplayable": "Không thể phát video này"
+  },
+  "yi": {
+    "tools.video.statsResolution": "רעזאָלוציע: {value}",
+    "tools.video.statsDroppedFrames": "אויסגעלאָזטע ראַמען: {value}",
+    "tools.video.statsBufferHealth": "באַפֿער־צושטאַנד: {seconds} סעקונדעס",
+    "tools.video.statsViewport": "קוקפֿעלד: {value}",
+    "tools.video.statsUnavailable": "נישט פֿאַראַן",
+    "tools.database.moreViews": "נאָך: {count}…",
+    "tools.video.errorNotMediaUrl": "גיב אַרײַן אַ לינק צו אַ ווידעא־טעקע (.mp4, .webm, .mov), אָדער ניצ אַן עמבעד־בלאָק",
+    "tools.video.errorUnplayable": "מע קען נישט שפּילן דעם ווידעא"
+  },
+  "zh": {
+    "tools.video.statsResolution": "分辨率：{value}",
+    "tools.video.statsDroppedFrames": "丢帧：{value}",
+    "tools.video.statsBufferHealth": "缓冲状态：{seconds} 秒",
+    "tools.video.statsViewport": "视口：{value}",
+    "tools.video.statsUnavailable": "不可用",
+    "tools.database.moreViews": "更多：{count}…",
+    "tools.video.errorNotMediaUrl": "输入视频文件（.mp4、.webm、.mov）链接，或使用嵌入块",
+    "tools.video.errorUnplayable": "无法播放此视频"
+  },
+  "zh-TW": {
+    "tools.video.statsResolution": "解析度：{value}",
+    "tools.video.statsDroppedFrames": "捨棄的影格：{value}",
+    "tools.video.statsBufferHealth": "緩衝狀態：{seconds} 秒",
+    "tools.video.statsViewport": "檢視區：{value}",
+    "tools.video.statsUnavailable": "無法使用",
+    "tools.database.moreViews": "更多：{count}…",
+    "tools.video.errorNotMediaUrl": "輸入影片檔（.mp4、.webm、.mov）連結，或使用嵌入區塊",
+    "tools.video.errorUnplayable": "無法播放這部影片"
+  }
+}

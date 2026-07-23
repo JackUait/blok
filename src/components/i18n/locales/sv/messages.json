@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Öka uppspelningshastigheten",
   "tools.callout.emojiSearchResults": "Emojiträffar: {count}",
   "tools.database.checkboxChecked": "Markerad",
-  "tools.database.checkboxUnchecked": "Omarkerad"
+  "tools.database.checkboxUnchecked": "Omarkerad",
+  "tools.video.statsResolution": "Upplösning: {value}",
+  "tools.video.statsDroppedFrames": "Tappade bildrutor: {value}",
+  "tools.video.statsBufferHealth": "Buffertstatus: {seconds} s",
+  "tools.video.statsViewport": "Visningsområde: {value}",
+  "tools.video.statsUnavailable": "Inte tillgängligt",
+  "tools.database.moreViews": "{count} till…",
+  "tools.video.errorNotMediaUrl": "Ange en länk till en videofil (.mp4, .webm, .mov) eller använd ett inbäddningsblock",
+  "tools.video.errorUnplayable": "Det går inte att spela upp den här videon"
 }

@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "প্লেব্যাক গতি বাড়ান",
   "tools.callout.emojiSearchResults": "{count}টি ইমোজি পাওয়া গেছে",
   "tools.database.checkboxChecked": "টিক দেওয়া আছে",
-  "tools.database.checkboxUnchecked": "টিক দেওয়া নেই"
+  "tools.database.checkboxUnchecked": "টিক দেওয়া নেই",
+  "tools.video.statsResolution": "রেজোলিউশন: {value}",
+  "tools.video.statsDroppedFrames": "বাদ পড়া ফ্রেম: {value}",
+  "tools.video.statsBufferHealth": "বাফারের অবস্থা: {seconds} সেকেন্ড",
+  "tools.video.statsViewport": "প্রদর্শন ক্ষেত্র: {value}",
+  "tools.video.statsUnavailable": "উপলভ্য নয়",
+  "tools.database.moreViews": "আরও {count}টি…",
+  "tools.video.errorNotMediaUrl": "একটি ভিডিও ফাইল (.mp4, .webm, .mov) লিঙ্ক করুন অথবা একটি এম্বেড ব্লক ব্যবহার করুন।",
+  "tools.video.errorUnplayable": "এই ভিডিওটি চালানো যাচ্ছে না।"
 }

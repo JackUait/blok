@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "פֿאַרגרעסערן שפּיל־גיכקייט",
   "tools.callout.emojiSearchResults": "פּאַסיקע עמאָדזשיס: {count}",
   "tools.database.checkboxChecked": "אָפּגעצייכנט",
-  "tools.database.checkboxUnchecked": "ניט אָפּגעצייכנט"
+  "tools.database.checkboxUnchecked": "ניט אָפּגעצייכנט",
+  "tools.video.statsResolution": "רעזאָלוציע: {value}",
+  "tools.video.statsDroppedFrames": "אויסגעלאָזטע ראַמען: {value}",
+  "tools.video.statsBufferHealth": "באַפֿער־צושטאַנד: {seconds} סעקונדעס",
+  "tools.video.statsViewport": "קוקפֿעלד: {value}",
+  "tools.video.statsUnavailable": "נישט פֿאַראַן",
+  "tools.database.moreViews": "נאָך: {count}…",
+  "tools.video.errorNotMediaUrl": "גיב אַרײַן אַ לינק צו אַ ווידעא־טעקע (.mp4, .webm, .mov), אָדער ניצ אַן עמבעד־בלאָק",
+  "tools.video.errorUnplayable": "מע קען נישט שפּילן דעם ווידעא"
 }

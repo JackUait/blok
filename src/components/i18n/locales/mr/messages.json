@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "प्लेबॅक गती वाढवा",
   "tools.callout.emojiSearchResults": "जुळणारे इमोजी: {count}",
   "tools.database.checkboxChecked": "तपासले",
-  "tools.database.checkboxUnchecked": "तपासले नाही"
+  "tools.database.checkboxUnchecked": "तपासले नाही",
+  "tools.video.statsResolution": "रिझोल्यूशन: {value}",
+  "tools.video.statsDroppedFrames": "वगळलेल्या फ्रेम: {value}",
+  "tools.video.statsBufferHealth": "बफर स्थिती: {seconds} सेकंद",
+  "tools.video.statsViewport": "दृश्य क्षेत्र: {value}",
+  "tools.video.statsUnavailable": "उपलब्ध नाही",
+  "tools.database.moreViews": "आणखी: {count}…",
+  "tools.video.errorNotMediaUrl": "व्हिडिओ फाइलची लिंक (.mp4, .webm, .mov) द्या किंवा एम्बेड ब्लॉक वापरा",
+  "tools.video.errorUnplayable": "हा व्हिडिओ प्ले करता येत नाही"
 }

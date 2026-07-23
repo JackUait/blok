@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ಪ್ಲೇಬ್ಯಾಕ್ ವೇಗ ಹೆಚ್ಚಿಸಿ",
   "tools.callout.emojiSearchResults": "ಹೊಂದಾಣಿಕೆಯ ಎಮೋಜಿಗಳ ಸಂಖ್ಯೆ: {count}",
   "tools.database.checkboxChecked": "ಗುರುತಿಸಲಾಗಿದೆ",
-  "tools.database.checkboxUnchecked": "ಗುರುತಿಸಲಾಗಿಲ್ಲ"
+  "tools.database.checkboxUnchecked": "ಗುರುತಿಸಲಾಗಿಲ್ಲ",
+  "tools.video.statsResolution": "ರೆಸಲ್ಯೂಶನ್: {value}",
+  "tools.video.statsDroppedFrames": "ಡ್ರಾಪ್ ಆದ ಫ್ರೇಮ್‌ಗಳು: {value}",
+  "tools.video.statsBufferHealth": "ಬಫರ್ ಸ್ಥಿತಿ: {seconds} ಸೆಕೆಂಡುಗಳು",
+  "tools.video.statsViewport": "ವೀಕ್ಷಣಾ ಪ್ರದೇಶ: {value}",
+  "tools.video.statsUnavailable": "ಲಭ್ಯವಿಲ್ಲ",
+  "tools.database.moreViews": "ಇನ್ನಷ್ಟು: {count}…",
+  "tools.video.errorNotMediaUrl": "ವೀಡಿಯೊ ಫೈಲ್‌ಗೆ (.mp4, .webm, .mov) ಲಿಂಕ್ ನೀಡಿ ಅಥವಾ ಎಂಬೆಡ್ ಬ್ಲಾಕ್ ಬಳಸಿ",
+  "tools.video.errorUnplayable": "ಈ ವೀಡಿಯೊವನ್ನು ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ"
 }

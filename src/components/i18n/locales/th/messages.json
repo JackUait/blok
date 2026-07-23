@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "เพิ่มความเร็วในการเล่น",
   "tools.callout.emojiSearchResults": "อีโมจิที่ตรงกัน: {count} รายการ",
   "tools.database.checkboxChecked": "เลือกแล้ว",
-  "tools.database.checkboxUnchecked": "ยังไม่ได้เลือก"
+  "tools.database.checkboxUnchecked": "ยังไม่ได้เลือก",
+  "tools.video.statsResolution": "ความละเอียด: {value}",
+  "tools.video.statsDroppedFrames": "เฟรมที่ตกหล่น: {value}",
+  "tools.video.statsBufferHealth": "สถานะบัฟเฟอร์: {seconds} วินาที",
+  "tools.video.statsViewport": "พื้นที่แสดงผล: {value}",
+  "tools.video.statsUnavailable": "ไม่พร้อมใช้งาน",
+  "tools.database.moreViews": "เพิ่มเติม: {count}…",
+  "tools.video.errorNotMediaUrl": "ใส่ลิงก์ไฟล์วิดีโอ (.mp4, .webm, .mov) หรือใช้บล็อกฝัง",
+  "tools.video.errorUnplayable": "ไม่สามารถเล่นวิดีโอนี้ได้"
 }

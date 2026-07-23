@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Aumentar velocidad de reproducción",
   "tools.callout.emojiSearchResults": "Coincidencias de emojis: {count}",
   "tools.database.checkboxChecked": "Marcado",
-  "tools.database.checkboxUnchecked": "Sin marcar"
+  "tools.database.checkboxUnchecked": "Sin marcar",
+  "tools.video.statsResolution": "Resolución: {value}",
+  "tools.video.statsDroppedFrames": "Fotogramas descartados: {value}",
+  "tools.video.statsBufferHealth": "Estado del búfer: {seconds} s",
+  "tools.video.statsViewport": "Área de visualización: {value}",
+  "tools.video.statsUnavailable": "No disponible",
+  "tools.database.moreViews": "{count} más…",
+  "tools.video.errorNotMediaUrl": "Enlaza un archivo de vídeo (.mp4, .webm, .mov) o usa un bloque de inserción.",
+  "tools.video.errorUnplayable": "Este vídeo no se puede reproducir."
 }

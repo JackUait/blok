@@ -315,8 +315,9 @@ export function findUntranslatedKeys(sourceTranslation, translation) {
 
 /**
  * Extracts all statically-known i18n keys from a TypeScript source string.
- * Matches .t('key'), .t("key"), local string constants passed to .t(), and
- * literal tool titleKey assignments. Short titleKeys resolve through the
+ * Matches .t('key'), .t("key"), shared tool-helper calls such as
+ * tr(i18n, 'key', 'fallback'), local string constants passed to either form,
+ * and literal tool titleKey assignments. Short titleKeys resolve through the
  * toolNames namespace. Other dynamic arguments and template literals are
  * skipped.
  *
@@ -399,14 +400,41 @@ export function extractKeysFromSource(source) {
     compilerHost
   );
   const checker = program.getTypeChecker();
+  const toolHelperSymbols = new Set();
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== './i18n' ||
+      statement.importClause?.namedBindings === undefined ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      continue;
+    }
+
+    for (const specifier of statement.importClause.namedBindings.elements) {
+      if ((specifier.propertyName ?? specifier.name).text === 'tr') {
+        const symbol = checker.getSymbolAtLocation(specifier.name);
+
+        if (symbol !== undefined) toolHelperSymbols.add(symbol);
+      }
+    }
+  }
 
   const visitTranslationCalls = (node) => {
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === 't'
-    ) {
-      const argument = node.arguments[0];
+    if (ts.isCallExpression(node)) {
+      const isMethodCall =
+        ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === 't';
+      const isToolHelperCall =
+        ts.isIdentifier(node.expression) &&
+        toolHelperSymbols.has(checker.getSymbolAtLocation(node.expression));
+      const argument = isMethodCall
+        ? node.arguments[0]
+        : isToolHelperCall
+          ? node.arguments[1]
+          : undefined;
       const key =
         argument !== undefined && ts.isStringLiteral(argument)
           ? argument.text

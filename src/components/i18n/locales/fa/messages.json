@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "افزایش سرعت پخش",
   "tools.callout.emojiSearchResults": "{count} ایموجی پیدا شد",
   "tools.database.checkboxChecked": "علامت‌خورده",
-  "tools.database.checkboxUnchecked": "بدون علامت"
+  "tools.database.checkboxUnchecked": "بدون علامت",
+  "tools.video.statsResolution": "وضوح تصویر: {value}",
+  "tools.video.statsDroppedFrames": "فریم‌های ازدست‌رفته: {value}",
+  "tools.video.statsBufferHealth": "سلامت بافر: {seconds} ثانیه",
+  "tools.video.statsViewport": "محدودهٔ نمایش: {value}",
+  "tools.video.statsUnavailable": "در دسترس نیست",
+  "tools.database.moreViews": "{count} مورد دیگر…",
+  "tools.video.errorNotMediaUrl": "به یک فایل ویدیویی (.mp4, .webm, .mov) پیوند بدهید یا از بلوک جاسازی استفاده کنید.",
+  "tools.video.errorUnplayable": "این ویدیو قابل پخش نیست."
 }

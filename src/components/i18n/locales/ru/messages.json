@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Увеличить скорость воспроизведения",
   "tools.callout.emojiSearchResults": "Найдено эмодзи: {count}",
   "tools.database.checkboxChecked": "Отмечено",
-  "tools.database.checkboxUnchecked": "Не отмечено"
+  "tools.database.checkboxUnchecked": "Не отмечено",
+  "tools.video.statsResolution": "Разрешение: {value}",
+  "tools.video.statsDroppedFrames": "Пропущенные кадры: {value}",
+  "tools.video.statsBufferHealth": "Состояние буфера: {seconds} с",
+  "tools.video.statsViewport": "Область просмотра: {value}",
+  "tools.video.statsUnavailable": "Недоступно",
+  "tools.database.moreViews": "Ещё: {count}…",
+  "tools.video.errorNotMediaUrl": "Укажите ссылку на видеофайл (.mp4, .webm, .mov) или используйте блок встраивания",
+  "tools.video.errorUnplayable": "Не удаётся воспроизвести это видео"
 }

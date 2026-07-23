@@ -395,6 +395,68 @@ describe('extractKeysFromSource', () => {
     assert.deepEqual([...keys], ['tools.stub.error']);
   });
 
+  it('extracts static keys passed to the shared tool translation helper', () => {
+    const source = `
+      import { tr } from './i18n';
+      tr(i18n, 'tools.video.errorUnplayable', "This video can't be played");
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.video.errorUnplayable']);
+  });
+
+  it('does not treat an unrelated function named tr as the tool i18n helper', () => {
+    const source = `
+      function tr(row, key) { return row[key]; }
+      tr(data, 'tools.fake.key');
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.equal(keys.size, 0);
+  });
+
+  it('extracts the tool translation helper through an import alias', () => {
+    const source = `
+      import { tr as translate } from './i18n';
+      translate(i18n, 'tools.video.statsViewport', 'Viewport: {value}');
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.deepEqual([...keys], ['tools.video.statsViewport']);
+  });
+
+  it('does not confuse a shadowed helper import with the imported symbol', () => {
+    const source = `
+      import { tr } from './i18n';
+      function read(tr) {
+        return tr(data, 'tools.fake.shadowed');
+      }
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.equal(keys.size, 0);
+  });
+
+  it('does not treat a vendor i18n import as the shared tool helper', () => {
+    const source = `
+      import { tr } from '@vendor/i18n';
+      tr(data, 'tools.fake.vendor');
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.equal(keys.size, 0);
+  });
+
+  it('skips dynamic keys passed to the shared tool translation helper', () => {
+    const source = `
+      import { tr } from './i18n';
+      tr(i18n, key, 'Fallback');
+    `;
+    const keys = extractKeysFromSource(source);
+
+    assert.equal(keys.size, 0);
+  });
+
   it('skips dynamic keys (variable arguments)', () => {
     const source = `i18n.t(someVariable)`;
     const keys = extractKeysFromSource(source);

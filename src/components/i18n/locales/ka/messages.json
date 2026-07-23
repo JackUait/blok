@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "დაკვრის სიჩქარის გაზრდა",
   "tools.callout.emojiSearchResults": "ნაპოვნია {count} ემოჯი",
   "tools.database.checkboxChecked": "მონიშნული",
-  "tools.database.checkboxUnchecked": "მოუნიშნავი"
+  "tools.database.checkboxUnchecked": "მოუნიშნავი",
+  "tools.video.statsResolution": "გარჩევადობა: {value}",
+  "tools.video.statsDroppedFrames": "გამოტოვებული კადრები: {value}",
+  "tools.video.statsBufferHealth": "ბუფერის მდგომარეობა: {seconds} წმ",
+  "tools.video.statsViewport": "ჩვენების არე: {value}",
+  "tools.video.statsUnavailable": "მიუწვდომელია",
+  "tools.database.moreViews": "კიდევ {count}…",
+  "tools.video.errorNotMediaUrl": "მიუთითეთ ვიდეოფაილის ბმული (.mp4, .webm, .mov), ან გამოიყენეთ ჩაშენების ბლოკი",
+  "tools.video.errorUnplayable": "ამ ვიდეოს დაკვრა შეუძლებელია"
 }

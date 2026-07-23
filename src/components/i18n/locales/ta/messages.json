@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "இயக்க வேகத்தை அதிகரி",
   "tools.callout.emojiSearchResults": "பொருந்தும் எமோஜிகள்: {count}",
   "tools.database.checkboxChecked": "தேர்ந்தெடுக்கப்பட்டது",
-  "tools.database.checkboxUnchecked": "தேர்ந்தெடுக்கப்படவில்லை"
+  "tools.database.checkboxUnchecked": "தேர்ந்தெடுக்கப்படவில்லை",
+  "tools.video.statsResolution": "தெளிவுத்திறன்: {value}",
+  "tools.video.statsDroppedFrames": "தவறிய சட்டகங்கள்: {value}",
+  "tools.video.statsBufferHealth": "இடையக நிலை: {seconds} விநாடிகள்",
+  "tools.video.statsViewport": "காட்சிப் பகுதி: {value}",
+  "tools.video.statsUnavailable": "கிடைக்கவில்லை",
+  "tools.database.moreViews": "மேலும்: {count}…",
+  "tools.video.errorNotMediaUrl": "வீடியோ கோப்பிற்கான (.mp4, .webm, .mov) இணைப்பை உள்ளிடவும் அல்லது உட்பொதிவுத் தொகுதியைப் பயன்படுத்தவும்",
+  "tools.video.errorUnplayable": "இந்த வீடியோவை இயக்க முடியவில்லை"
 }

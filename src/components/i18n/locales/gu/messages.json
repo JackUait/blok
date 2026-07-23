@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "પ્લેબૅક ઝડપ વધારો",
   "tools.callout.emojiSearchResults": "{count} ઇમોજી મળ્યાં",
   "tools.database.checkboxChecked": "ચેક કરેલું",
-  "tools.database.checkboxUnchecked": "ચેક ન કરેલું"
+  "tools.database.checkboxUnchecked": "ચેક ન કરેલું",
+  "tools.video.statsResolution": "રિઝોલ્યુશન: {value}",
+  "tools.video.statsDroppedFrames": "છૂટી ગયેલી ફ્રેમ્સ: {value}",
+  "tools.video.statsBufferHealth": "બફરની સ્થિતિ: {seconds} સેકંડ",
+  "tools.video.statsViewport": "દૃશ્ય ક્ષેત્ર: {value}",
+  "tools.video.statsUnavailable": "ઉપલબ્ધ નથી",
+  "tools.database.moreViews": "{count} વધુ…",
+  "tools.video.errorNotMediaUrl": "વિડિઓ ફાઇલ (.mp4, .webm, .mov) લિંક કરો અથવા એમ્બેડ બ્લોકનો ઉપયોગ કરો.",
+  "tools.video.errorUnplayable": "આ વિડિઓ ચલાવી શકાતો નથી."
 }

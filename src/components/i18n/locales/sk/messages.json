@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Zvýšiť rýchlosť prehrávania",
   "tools.callout.emojiSearchResults": "Zhody emoji: {count}",
   "tools.database.checkboxChecked": "Začiarknuté",
-  "tools.database.checkboxUnchecked": "Nezačiarknuté"
+  "tools.database.checkboxUnchecked": "Nezačiarknuté",
+  "tools.video.statsResolution": "Rozlíšenie: {value}",
+  "tools.video.statsDroppedFrames": "Vynechané snímky: {value}",
+  "tools.video.statsBufferHealth": "Stav vyrovnávacej pamäte: {seconds} s",
+  "tools.video.statsViewport": "Zobrazená oblasť: {value}",
+  "tools.video.statsUnavailable": "Nie je k dispozícii",
+  "tools.database.moreViews": "Ďalšie: {count}…",
+  "tools.video.errorNotMediaUrl": "Zadajte odkaz na videosúbor (.mp4, .webm, .mov) alebo použite blok na vloženie",
+  "tools.video.errorUnplayable": "Toto video sa nedá prehrať"
 }

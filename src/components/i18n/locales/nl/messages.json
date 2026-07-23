@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Afspeelsnelheid verhogen",
   "tools.callout.emojiSearchResults": "Emojiresultaten: {count}",
   "tools.database.checkboxChecked": "Aangevinkt",
-  "tools.database.checkboxUnchecked": "Niet aangevinkt"
+  "tools.database.checkboxUnchecked": "Niet aangevinkt",
+  "tools.video.statsResolution": "Resolutie: {value}",
+  "tools.video.statsDroppedFrames": "Overgeslagen frames: {value}",
+  "tools.video.statsBufferHealth": "Bufferstatus: {seconds} seconden",
+  "tools.video.statsViewport": "Weergavegebied: {value}",
+  "tools.video.statsUnavailable": "Niet beschikbaar",
+  "tools.database.moreViews": "Nog {count}…",
+  "tools.video.errorNotMediaUrl": "Voeg een link naar een videobestand (.mp4, .webm, .mov) toe of gebruik een insluitblok",
+  "tools.video.errorUnplayable": "Deze video kan niet worden afgespeeld"
 }

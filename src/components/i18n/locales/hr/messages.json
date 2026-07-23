@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Povećaj brzinu reprodukcije",
   "tools.callout.emojiSearchResults": "Broj podudarnih emojija: {count}",
   "tools.database.checkboxChecked": "Označeno",
-  "tools.database.checkboxUnchecked": "Nije označeno"
+  "tools.database.checkboxUnchecked": "Nije označeno",
+  "tools.video.statsResolution": "Razlučivost: {value}",
+  "tools.video.statsDroppedFrames": "Ispušteni kadrovi: {value}",
+  "tools.video.statsBufferHealth": "Stanje međuspremnika: {seconds} s",
+  "tools.video.statsViewport": "Područje prikaza: {value}",
+  "tools.video.statsUnavailable": "Nije dostupno",
+  "tools.database.moreViews": "Još {count}…",
+  "tools.video.errorNotMediaUrl": "Dodaj poveznicu na videodatoteku (.mp4, .webm, .mov) ili upotrijebi blok za ugradnju.",
+  "tools.video.errorUnplayable": "Ovaj se videozapis ne može reproducirati."
 }

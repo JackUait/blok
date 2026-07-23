@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "ဖွင့်ခြင်းအမြန်နှုန်း တိုးရန်",
   "tools.callout.emojiSearchResults": "အီမိုဂျီ {count} ခု တွေ့ရှိသည်",
   "tools.database.checkboxChecked": "အမှန်ခြစ်ထားသည်",
-  "tools.database.checkboxUnchecked": "အမှန်ခြစ်မထားပါ"
+  "tools.database.checkboxUnchecked": "အမှန်ခြစ်မထားပါ",
+  "tools.video.statsResolution": "ရုပ်ထွက်ကြည်လင်ပြတ်သားမှု: {value}",
+  "tools.video.statsDroppedFrames": "လွတ်သွားသော ဖရိမ်များ: {value}",
+  "tools.video.statsBufferHealth": "ဘတ်ဖာအခြေအနေ: {seconds} စက္ကန့်",
+  "tools.video.statsViewport": "မြင်ကွင်းဧရိယာ: {value}",
+  "tools.video.statsUnavailable": "မရရှိနိုင်ပါ",
+  "tools.database.moreViews": "နောက်ထပ် {count} ခု…",
+  "tools.video.errorNotMediaUrl": "ဗီဒီယိုဖိုင်လင့်ခ် (.mp4, .webm, .mov) ကို ထည့်ပါ၊ သို့မဟုတ် မြှုပ်သွင်းမှုဘလောက်ကို အသုံးပြုပါ",
+  "tools.video.errorUnplayable": "ဤဗီဒီယိုကို ဖွင့်၍မရပါ"
 }

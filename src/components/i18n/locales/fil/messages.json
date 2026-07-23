@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Dagdagan ang bilis ng playback",
   "tools.callout.emojiSearchResults": "{count} emoji ang nahanap",
   "tools.database.checkboxChecked": "Naka-check",
-  "tools.database.checkboxUnchecked": "Hindi naka-check"
+  "tools.database.checkboxUnchecked": "Hindi naka-check",
+  "tools.video.statsResolution": "Resolusyon: {value}",
+  "tools.video.statsDroppedFrames": "Mga nalaktawang frame: {value}",
+  "tools.video.statsBufferHealth": "Kalagayan ng buffer: {seconds} seg",
+  "tools.video.statsViewport": "Bahagi ng display: {value}",
+  "tools.video.statsUnavailable": "Hindi magagamit",
+  "tools.database.moreViews": "{count} pa…",
+  "tools.video.errorNotMediaUrl": "Mag-link ng video file (.mp4, .webm, .mov) o gumamit ng embed block.",
+  "tools.video.errorUnplayable": "Hindi ma-play ang video na ito."
 }

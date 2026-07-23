@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Mărește viteza de redare",
   "tools.callout.emojiSearchResults": "Potriviri pentru emoji: {count}",
   "tools.database.checkboxChecked": "Bifat",
-  "tools.database.checkboxUnchecked": "Nebifat"
+  "tools.database.checkboxUnchecked": "Nebifat",
+  "tools.video.statsResolution": "Rezoluție: {value}",
+  "tools.video.statsDroppedFrames": "Cadre pierdute: {value}",
+  "tools.video.statsBufferHealth": "Starea memoriei tampon: {seconds} s",
+  "tools.video.statsViewport": "Zona de afișare: {value}",
+  "tools.video.statsUnavailable": "Indisponibil",
+  "tools.database.moreViews": "Încă: {count}…",
+  "tools.video.errorNotMediaUrl": "Introduceți linkul unui fișier video (.mp4, .webm, .mov) sau folosiți un bloc de încorporare",
+  "tools.video.errorUnplayable": "Acest videoclip nu poate fi redat"
 }

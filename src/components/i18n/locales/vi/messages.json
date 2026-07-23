@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Tăng tốc độ phát",
   "tools.callout.emojiSearchResults": "Tìm thấy {count} biểu tượng cảm xúc",
   "tools.database.checkboxChecked": "Đã chọn",
-  "tools.database.checkboxUnchecked": "Chưa chọn"
+  "tools.database.checkboxUnchecked": "Chưa chọn",
+  "tools.video.statsResolution": "Độ phân giải: {value}",
+  "tools.video.statsDroppedFrames": "Khung hình bị bỏ qua: {value}",
+  "tools.video.statsBufferHealth": "Tình trạng bộ đệm: {seconds} giây",
+  "tools.video.statsViewport": "Vùng hiển thị: {value}",
+  "tools.video.statsUnavailable": "Không khả dụng",
+  "tools.database.moreViews": "Còn lại: {count}…",
+  "tools.video.errorNotMediaUrl": "Nhập liên kết đến tệp video (.mp4, .webm, .mov) hoặc dùng khối nhúng",
+  "tools.video.errorUnplayable": "Không thể phát video này"
 }

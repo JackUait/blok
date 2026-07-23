@@ -544,5 +544,13 @@
   "tools.audio.speedIncrease": "Zvýšit rychlost přehrávání",
   "tools.callout.emojiSearchResults": "Počet odpovídajících emoji: {count}",
   "tools.database.checkboxChecked": "Zaškrtnuto",
-  "tools.database.checkboxUnchecked": "Nezaškrtnuto"
+  "tools.database.checkboxUnchecked": "Nezaškrtnuto",
+  "tools.video.statsResolution": "Rozlišení: {value}",
+  "tools.video.statsDroppedFrames": "Zahozené snímky: {value}",
+  "tools.video.statsBufferHealth": "Stav vyrovnávací paměti: {seconds} s",
+  "tools.video.statsViewport": "Zobrazovací oblast: {value}",
+  "tools.video.statsUnavailable": "Není k dispozici",
+  "tools.database.moreViews": "Ještě {count}…",
+  "tools.video.errorNotMediaUrl": "Vložte odkaz na videosoubor (.mp4, .webm, .mov) nebo použijte blok pro vložení.",
+  "tools.video.errorUnplayable": "Toto video nelze přehrát."
 }

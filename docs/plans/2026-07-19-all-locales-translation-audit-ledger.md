@@ -362,7 +362,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `vi` | Vietnamese | Latin | ltr | neutral contemporary Vietnamese; concise direct imperatives for complete instructions and compact actions; sentence-case noun and state labels; established Vietnamese product, accessibility, media, table, and database terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, `URL`, `Video`, `Audio`, and `OK` notation | `root-uk_staged_review` | `root-sv_closeout_readiness-yi_terms_challenge` | pass | pass | pass | `F-vi-001`–`F-vi-035` | second-pass-complete |
 | `yi` | Yiddish | Hebrew | rtl | neutral contemporary Yiddish in Hebrew script and RTL; concise direct imperatives for compact actions and complete grammatical instructions; sentence-case noun and state labels; standard Yiddish orthography with pointed letters where lexical distinctions require them; established Yiddish product, accessibility, media, table, and database terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation without injected bidi controls | `root-yi_reconciliation` | `root-vi_staged_diff_review` | pass | pass | pass | `F-yi-001`–`F-yi-112` | second-pass-complete |
 | `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | `root-zh_final_linguistic` | `root-zh_final_callers` | pass | pass | pass | `F-zh-001`–`F-zh-072` | second-pass-complete |
-| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
+| `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | `root-zh_final_linguistic` | `root-zh_final_callers` | pass | pass | pass | `F-zh-TW-001`–`F-zh-TW-033` | second-pass-complete |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
 | `R-sv-002` | `sv` | `blockSettings.menuShortcutWin` | universal notation | `Ctrl+/` is Windows shortcut notation rather than English prose; Swedish Microsoft guidance retains `Ctrl` in key combinations. | [Microsoft — Kortkommandon i Windows](https://support.microsoft.com/sv-se/windows/kortkommandon-i-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec) |
@@ -500,6 +500,7 @@ locale returns to `pending`.
 | `vi` | `root-uk_staged_review` | `sha256:e1eec2c42de1e63768d62d9bfd9043bd04deb65785f77b9a31d719eb4ba92086` | `root-sv_closeout_readiness-yi_terms_challenge` | `sha256:e1eec2c42de1e63768d62d9bfd9043bd04deb65785f77b9a31d719eb4ba92086` |
 | `yi` | `root-yi_reconciliation` | `sha256:bde44d8e73c54fbb7794c86b4050a2738d1ae3db2a2e96a6eac487b45510678d` | `root-vi_staged_diff_review` | `sha256:bde44d8e73c54fbb7794c86b4050a2738d1ae3db2a2e96a6eac487b45510678d` |
 | `zh` | `root-zh_final_linguistic` | `sha256:60634f8ea158ccd146da45581b532230138de8c4c29e4fe6354bd12b35ce3089` | `root-zh_final_callers` | `sha256:60634f8ea158ccd146da45581b532230138de8c4c29e4fe6354bd12b35ce3089` |
+| `zh-TW` | `root-zh_final_linguistic` | `sha256:221aa98d8ca444b915d78a82de2ac5116b9391fdc3bf85a7c80881f381044f1a` | `root-zh_final_callers` | `sha256:221aa98d8ca444b915d78a82de2ac5116b9391fdc3bf85a7c80881f381044f1a` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -9206,6 +9207,69 @@ the six catalogued Simplified Chinese identical-value warnings. Global
 `F-global-014` and `F-global-020` remain coordinated follow-up work and do not
 invalidate this locale-level second-pass transition.
 
+### Taiwan Traditional Chinese (`zh-TW`) — current 546-key second pass complete
+
+Independent linguistic and caller-structure reviews restarted at entry 1 on
+the raw 26,133-byte Taiwan Traditional Chinese dictionary, bound at SHA-256
+`73a37f6491621985e5b034aeecc90cfc768ad27fee5a8f2db338ddab3079e56e`.
+Their one-proposal artifacts are bound at SHA-256
+`74b85f65261ac41cca0c995f54b15d54985da36178a15d8b4597edd6aa6e0375`
+and
+`a1b5b7bd4d785446e131592cf6a0278136f4cc77d9ef1e3157ac4150cedce4dd`;
+their canonical payloads are bound at
+`821e39bba8be7b6b0a5d922c7f6e27c45dac0c9cae1a0294dc4e2345882690cb`
+and
+`36efd4a3d00c0a02dec437c4fb35796daf8a3625cd2ca56235e81135b12e4a31`.
+
+Independent proposal reconciliation, bound at SHA-256
+`82da24848aa16d87bbbd5288e536a12ce0dbd5ead0121297dc4db58ab1e7665a`
+with canonical payload
+`79cfddfc5ea74b3c7e526de32af33cae3daea7a238d22039bb20e894dfe74661`,
+found exact agreement on the complete one-key proposal union and accepted the
+`a11y.searchResults` correction without conflict or independent amendment. It
+upheld all 32 historical findings, six intentional identities, eight rejected
+optional proposals, and 12 retained challenges, with each set disjoint from
+the correction. The resulting 33-value oracle failed against the raw catalog
+on exactly that one newly adjudicated value and passed after its exact
+application.
+
+The final 26,142-byte dictionary is bound at SHA-256
+`221aa98d8ca444b915d78a82de2ac5116b9391fdc3bf85a7c80881f381044f1a`.
+Fresh final linguistic and caller-structure reviews are bound at SHA-256
+`6a559dd5eb12a28359977102d0f54171d902f158e9dbda28cf80253dc25feb6e`
+and
+`8339e74d71f271edc9c022050b4e19e1482cebe9e47f36b90e08bc8bff6e83b4`;
+their canonical payloads are bound at
+`9046b8337ee49c0136f814f4a35c810965a914aea10c6c47a683c7ca951cbade`
+and
+`d1d5091b6ecd7c10d9d88ef4144f4f4b93f7d7b73ff939ca28d05156feece32b`.
+Both provide one unique disposition for every English/Taiwan Traditional
+Chinese pair, uphold all 33 verified findings `F-zh-TW-001` through
+`F-zh-TW-033`, confirm exactly the six intentional identities `R-zh-TW-001`
+through `R-zh-TW-006`, uphold all eight rejected proposals and 12 retained
+challenges, and report no final or unexplained residual and no blocker.
+
+The final passes bind current source revision
+`5ae94c9e75c49570b3f1523130f2ddcf6522104c` and the canonical 534-file
+production manifest at SHA-256
+`76bba0a10ec47d8359ee6f1cf5dcad8e7227af19505e50b28a9730b6b0db0d55`.
+They revalidate all 38 placeholder-bearing keys and 54 placeholder
+occurrences, 14 search groups and 44 unique aliases across 48 references,
+unique key parity, UTF-8 and NFC integrity, boundary whitespace, 117 provider
+compositions, 20 color compositions, and the complete 397 literal + 122
+finite-dynamic + 25 registered-namespace-compatible + two catalog-only
+lifecycle with 487 exact caller coordinates across 73 paths. The current AST
+scan supersedes five line-only coordinate shifts in the older raw caller seed
+and explicitly inventories the two catalog-absent video fallback calls for the
+coordinated global migration. The complete guideline corpus passes
+6,453/6,453, the nine-file i18n gate passes 7,173/7,173, the focused caller
+and block-color gates pass 549/549, the video fallback suite passes 55/55, and
+the checker regressions pass 89/89. The live completeness, integrity,
+source-coverage, and encoding command and scoped ESLint gate pass with exactly
+the six catalogued Taiwan Traditional Chinese identical-value warnings. Global
+`F-global-014` and `F-global-020` remain coordinated follow-up work and do not
+invalidate this locale-level second-pass transition.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
@@ -11882,6 +11946,7 @@ follows the global transition rule above.
 | `F-zh-TW-030` | `zh-TW` | `tools.colorPicker.defaultSwatchLabel` | accessibility / label-value punctuation | `"{mode} {default}"` | `"{mode}：{default}"` | The color-picker caller inserts localized mode and default labels into one spoken tooltip; W3C’s [Chinese Layout Requirements](https://www.w3.org/TR/clreq/#punctuation_marks) identifies the native colon as U+FF1A `：`. Both placeholders remain intact. | verified |
 | `F-zh-TW-031` | `zh-TW` | `tools.colorPicker.colorSwatchLabel` | accessibility / label-value punctuation | `"{mode} {color}"` | `"{mode}：{color}"` | The swatch caller composes values such as “文字顏色：灰色”; a bare space leaves the adjacent nouns ambiguous, while W3C documents `：` as the native Chinese colon. Both placeholders remain intact. | verified |
 | `F-zh-TW-032` | `zh-TW` | `a11y.dragHandleRole` | accessibility / role terminology | `"拖曳控制項"` | `"拖曳控點"` | The value is the handle’s `aria-roledescription`, not a generic control name; Microsoft’s Taiwan Fluent UI guidance uses the handle-specific term [拖曳控點](https://learn.microsoft.com/zh-tw/power-apps/teams/use-the-fluent-ui-controls). | verified |
+| `F-zh-TW-033` | `zh-TW` | `a11y.searchResults` | accessibility / source synchronization / count neutrality | `"{count} 個結果"` | `"搜尋結果：{count} 個"` | Both sealed raw audits independently require the search-result context for the three live-region callers. The native full-width colon supplies a spoken label boundary, `{count}` remains exact, and the classifier follows the arbitrary count. | verified |
 | `F-et-003` | `et` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Tühi avatav plokk. Klõpsa või lohista plokke sisse."` | `"Tühi avatav plokk. Klõpsa ploki lisamiseks või lohista plokid siia."` | Both toggle providers create a child on click and accept existing blocks by drag. The replacement names both outcomes; Microsoft Estonian uses the same [drag-here construction](https://support.microsoft.com/et-ee/sharepoint/documents-and-library/top-questions-about-check-out-check-in-and-versions). | verified |
 | `F-hr-004` | `hr` | `tools.toggle.bodyPlaceholder` | changed-English synchronization / action clarity | `"Prazan preklopnik. Klikni ili ispusti blokove unutra."` | `"Prazan preklopnik. Klikni za dodavanje bloka ili povuci blokove ovdje."` | `ispusti` describes only dropping and the old copy never states what clicking creates. The replacement preserves the locale's informal imperative and established [drag terminology](https://support.google.com/chrome/answer/2391819?co=GENIE.Platform%3DDesktop&hl=hr). | verified |
 | `F-hr-005` | `hr` | `tools.colorPicker.defaultSwatchLabel` | accessibility / composed-label grammar | `"{mode} {default}"` | `"{mode}: {default}"` | The caller composes an accessible swatch label and lowercases the mode first. The colon lets the neuter standalone value “Zadano” follow the mode label without a false agreement relation. | verified |

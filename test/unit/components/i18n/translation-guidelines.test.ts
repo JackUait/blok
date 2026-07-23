@@ -3902,6 +3902,42 @@ const SIMPLIFIED_CHINESE_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>>
   'tools.video.toggleCaption': '显示或隐藏说明',
 };
 
+const TAIWAN_TRADITIONAL_CHINESE_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': '清除格式',
+  'blockSettings.orConjunction': ' 或按下 ',
+  'blockSettings.openMenuAction': ' 以開啟選單',
+  'tools.marker.textColor': '文字顏色',
+  'tools.toggle.bodyPlaceholder': '空白收合區塊。按一下以新增區塊，或將區塊拖曳至此。',
+  'tools.table.clearSelection': '清除內容',
+  'tools.table.placement': '對齊方式',
+  'a11y.dragHandle': '拖曳以移動區塊，或按一下以開啟選單',
+  'a11y.navigationModeEntered': '導覽模式。使用方向鍵在區塊間移動，按 Enter 編輯，按 Esc 離開。',
+  'tools.callout.addEmoji': '新增圖示',
+  'tools.callout.filterEmojis': '搜尋表情符號…',
+  'tools.callout.pickRandom': '隨機選取表情符號',
+  'tools.link.linkTitle': '連結文字',
+  'tools.image.altDescription': '為看不到這張圖片的使用者描述圖片。',
+  'tools.image.errorFileTooLarge': '圖片太大。{size} 超過 {max} 上限。',
+  'tools.image.errorSourceOffline': '來源檔案可能已移動或處於離線狀態。',
+  'tools.image.errorDefaultMessage': '無法從此網址載入圖片。請嘗試其他來源或重新上傳檔案。',
+  'tools.file.errorFileTooLarge': '檔案太大。{size} 超過 {max} 上限。',
+  'tools.video.errorFileTooLarge': '影片太大。{size} 超過 {max} 上限。',
+  'tools.audio.errorFileTooLarge': '音訊檔案太大。{size} 超過 {max} 上限。',
+  'tools.database.viewTypeListDescription': '在簡單清單中顯示項目',
+  'tools.bookmark.loading': '正在載入連結預覽…',
+  'tools.embed.empty': '沒有嵌入連結',
+  'tools.video.seek': '播放位置',
+  'tools.video.seekValueText': '目前位置 {current}，總長度 {total}',
+  'tools.video.toggleTimeDisplay': '在已播放時間與剩餘時間之間切換',
+  'tools.video.ctxCopyUrlAtTime': '複製目前播放位置的影片網址',
+  'tools.video.ctxStats': '播放統計資料',
+  'a11y.dropPosition': '將放置於第 {position} 個位置，共 {total} 個',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}：{default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}：{color}',
+  'a11y.dragHandleRole': '拖曳控點',
+  'a11y.searchResults': '搜尋結果：{count} 個',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -5054,6 +5090,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SIMPLIFIED_CHINESE_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Taiwan Traditional Chinese correction oracle', () => {
+    const messages = readLocale('zh-TW').messages;
+    const actual = Object.fromEntries(
+      Object.keys(TAIWAN_TRADITIONAL_CHINESE_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(TAIWAN_TRADITIONAL_CHINESE_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

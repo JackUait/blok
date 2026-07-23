@@ -117,7 +117,7 @@
   "a11y.movedDown": "已下移至第 {position} 個位置，共 {total} 個位置。",
   "a11y.atTop": "無法上移。已在頂端。",
   "a11y.atBottom": "無法下移。已在底端。",
-  "a11y.searchResults": "{count} 個結果",
+  "a11y.searchResults": "搜尋結果：{count} 個",
   "a11y.allBlocksSelected": "已選取全部 {count} 個區塊",
   "a11y.blocksSelected": "已選取 {count} 個區塊",
   "a11y.navigationModeEntered": "導覽模式。使用方向鍵在區塊間移動，按 Enter 編輯，按 Esc 離開。",

@@ -6,6 +6,9 @@
 import { BlockToolConstructable } from './tools/block-tool';
 import { InlineToolConstructable } from './tools/inline-tool';
 
+// Tool-authoring helpers: bind a tool class to a type-checked settings object.
+export { defineTool, ExtractToolConfig } from './tools/define-tool';
+
 // Block tools published as declare-classes: each name is both the runtime
 // value and the instance type, with a single construct signature so
 // `class Custom extends Tool {}` compiles (no TS2510).
@@ -59,6 +62,92 @@ export { BookmarkData, BookmarkConfig, BookmarkMeta } from './tools/bookmark';
 export { MediaSource } from './tools/media-source';
 export { ColumnListData } from './tools/column-list';
 export { ColumnData } from './tools/column';
+
+// ---------------------------------------------------------------------------
+// Block type → data registry (#10)
+// ---------------------------------------------------------------------------
+
+import { OutputBlockData } from './data-formats/output-data';
+import { ParagraphData as _ParagraphData } from './tools/paragraph';
+import { HeaderData as _HeaderData } from './tools/header';
+import { ListData as _ListData } from './tools/list';
+import { TableData as _TableData } from './tools/table';
+import { ToggleData as _ToggleData } from './tools/toggle';
+import { CalloutData as _CalloutData } from './tools/callout';
+import { QuoteData as _QuoteData } from './tools/quote';
+import { DividerData as _DividerData } from './tools/divider';
+import { SpacerData as _SpacerData } from './tools/spacer';
+import { CodeData as _CodeData } from './tools/code';
+import { DatabaseData as _DatabaseData, DatabaseRowData as _DatabaseRowData } from './tools/database';
+import { ImageData as _ImageData } from './tools/image';
+import { FileData as _FileData } from './tools/file';
+import { AudioData as _AudioData } from './tools/audio';
+import { VideoData as _VideoData } from './tools/video';
+import { ColumnListData as _ColumnListData } from './tools/column-list';
+import { ColumnData as _ColumnData } from './tools/column';
+import { EmbedData as _EmbedData } from './tools/embed';
+import { BookmarkData as _BookmarkData } from './tools/bookmark';
+
+/**
+ * Registry mapping a block's saved `type` string to the shape of its `data`.
+ *
+ * This is the type→data link the saved-data surface otherwise lacks: without
+ * it, `OutputBlockData['data']` is `Record<string, unknown>` and every read
+ * site re-implements a `block.type === 'x'` check plus a `data as XData` cast.
+ * {@link isBlockType} narrows off this map so those casts disappear.
+ *
+ * The interface is **augmentable** — register a custom tool's data shape via
+ * declaration merging and {@link isBlockType} will narrow to it:
+ *
+ * @example
+ * declare module '@bloklabs/core/tools' {
+ *   interface BlokBlockDataMap {
+ *     'my-widget': { widgetId: string };
+ *   }
+ * }
+ */
+export interface BlokBlockDataMap {
+  paragraph: _ParagraphData;
+  header: _HeaderData;
+  list: _ListData;
+  table: _TableData;
+  toggle: _ToggleData;
+  callout: _CalloutData;
+  quote: _QuoteData;
+  divider: _DividerData;
+  spacer: _SpacerData;
+  code: _CodeData;
+  database: _DatabaseData;
+  'database-row': _DatabaseRowData;
+  image: _ImageData;
+  file: _FileData;
+  audio: _AudioData;
+  video: _VideoData;
+  column_list: _ColumnListData;
+  column: _ColumnData;
+  embed: _EmbedData;
+  bookmark: _BookmarkData;
+}
+
+/**
+ * Type guard narrowing a saved block to a known block type, so its `data` is
+ * typed via {@link BlokBlockDataMap} instead of `Record<string, unknown>`.
+ *
+ * @example
+ * for (const block of editor.save().then(d => d.blocks)) {
+ *   if (isBlockType(block, 'header')) {
+ *     block.data.level; // number — no cast
+ *   }
+ * }
+ *
+ * @param block - a saved block (e.g. from `editor.save()`).
+ * @param type - a registered block type (a {@link BlokBlockDataMap} key).
+ * @returns `true` when `block.type === type`, narrowing `block.data`.
+ */
+export function isBlockType<K extends keyof BlokBlockDataMap>(
+  block: OutputBlockData,
+  type: K,
+): block is OutputBlockData<K, BlokBlockDataMap[K]>;
 
 // Inline tools
 export const Bold: InlineToolConstructable;

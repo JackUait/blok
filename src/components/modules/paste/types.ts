@@ -18,6 +18,8 @@ export interface PatternSubstitute {
   key: string;
   pattern: RegExp;
   tool: BlockToolAdapter;
+  /** Resolution priority; higher wins. Defaults to 0. See PasteConfig.patternPriority. */
+  priority: number;
 }
 
 /**

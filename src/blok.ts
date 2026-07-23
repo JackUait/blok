@@ -779,6 +779,13 @@ export { BlockRendered, BlocksRendered } from './components/events';
 export { equalsOutputData, isEmptyOutputData } from './shared/output-data';
 
 /**
+ * Pure hierarchical-spec flattener: turn `children`-nested block specs into the
+ * flat `parent`/`content` `OutputBlockData[]` Blok stores, so nested seed data
+ * (columns, tables, whole documents) needs no hand-wired id arrays.
+ */
+export { flattenTree } from './shared/flatten-tree';
+
+/**
  * Single source of truth for the sanitize-allowlist composition. Editors and
  * the view renderer both consume `defineBlokSchema`, so a document can never
  * be displayed under a different allowlist than the one that produced it.

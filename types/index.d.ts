@@ -100,6 +100,7 @@ export {
 export * from './utils/popover';
 
 export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData} from './data-formats/output-data';
+export { flattenTree, BlockTreeSpec, FlattenTreeOptions } from './data-formats/block-tree';
 export {
   PropertyType,
   SelectOption,

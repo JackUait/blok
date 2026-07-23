@@ -42,6 +42,10 @@ export { Columns } from './columns';
 export { Embed } from './link/embed';
 export { Bookmark } from './link/bookmark';
 
+// Tool-authoring helpers
+export { defineTool } from './define-tool';
+export { isBlockType } from './is-block-type';
+
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';
 export { ItalicInlineTool as Italic } from '../components/inline-tools/inline-tool-italic';

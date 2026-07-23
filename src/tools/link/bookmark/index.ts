@@ -57,7 +57,13 @@ export class Bookmark implements BlockTool {
   }
 
   public static get pasteConfig(): PasteConfig {
-    return { patterns: { bookmark: URL_PATTERN } };
+    // URL_PATTERN is a catch-all: it matches ANY http(s) link. Give it a low
+    // priority so specific patterns (embed's per-service regexes) always resolve
+    // first — correctness no longer depends on bookmark being registered last.
+    return {
+      patterns: { bookmark: URL_PATTERN },
+      patternPriority: { bookmark: -100 },
+    };
   }
 
   public onPaste(event: PasteEvent): void {

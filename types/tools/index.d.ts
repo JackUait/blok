@@ -8,6 +8,7 @@ export * from './inline-tool';
 export * from './tool';
 export * from './tool-config';
 export * from './tool-settings';
+export * from './define-tool';
 export * from './paste-events';
 export * from './hook-events';
 export * from './menu-config';

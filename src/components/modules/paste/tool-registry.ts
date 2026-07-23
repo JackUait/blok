@@ -31,6 +31,18 @@ export class ToolRegistry {
     await Array
       .from(tools.values())
       .forEach(this.processTool);
+
+    this.sortPatternsByPriority();
+  }
+
+  /**
+   * Order patterns by descending priority so specific patterns are tried before
+   * catch-all/fallback patterns, independent of tool registration order.
+   * `Array.prototype.sort` is stable, so patterns of equal priority keep their
+   * registration order (the historical tiebreak).
+   */
+  private sortPatternsByPriority(): void {
+    this.toolsPatterns.sort((a, b) => b.priority - a.priority);
   }
 
   /**
@@ -171,6 +183,8 @@ export class ToolRegistry {
       return;
     }
 
+    const patternPriority = tool.pasteConfig.patternPriority ?? {};
+
     Object.entries(patterns).forEach(([key, pattern]: [string, RegExp]) => {
       if (!(pattern instanceof RegExp)) {
         log(
@@ -183,6 +197,7 @@ export class ToolRegistry {
         key,
         pattern,
         tool,
+        priority: patternPriority[key] ?? 0,
       });
     });
   }

@@ -6,7 +6,7 @@ import type { OutputBlockData, OutputData } from '../../../types/data-formats/ou
 import type { MarkdownImportConfig } from '../../markdown/types';
 import { ToolNotFoundError } from '../errors/tool-not-found';
 
-import { generateBlockId } from './id-generator';
+import { flattenTree } from '../../shared/flatten-tree';
 import {
   snapshotNodes,
   resolveInsertIndex,
@@ -868,61 +868,44 @@ export const createBlocksApiForEditor = (
       }
     }
 
-    // Every node needs a stable id BEFORE flattening so parent/content links
-    // can reference siblings/children. Respect an explicit node id; generate
-    // one (core's nanoid scheme) otherwise.
-    const flat: OutputBlockData[] = [];
-
-    // Collision guard: an explicit id that already exists in the tree (or is
-    // reused within this same spec) would create a duplicate-id block,
-    // corrupting every id-keyed lookup (getById, parent/content links). A tree
-    // insert always creates fresh blocks (it is NOT insert-if-absent), so a
-    // collision is rejected up front — nothing is inserted and null is
-    // returned, mirroring insert's null contract. Generated ids never collide.
-    // Mutable property on a const holder (no `let`): flipped from inside the
-    // recursive visit when a colliding explicit id is seen.
-    const usedIds = new Set<string>();
-    const collision = { hit: false };
-
-    // Pre-order DFS: push self FIRST, then recurse each child, so the flat
-    // array is DFS-contiguous (the invariant core's insertMany + the hook's
-    // getChildren depend on). `content` is the live child-id array, filled as
-    // each child is visited and returns its id. The root's `parent` is the
-    // resolved placement parent (undefined for root level); children's `parent`
-    // is their enclosing node's id.
-    const visit = (node: TreeInsertSpec, parent: string | undefined): string => {
-      if (node.id !== undefined && (usedIds.has(node.id) || getById(node.id) !== null)) {
-        collision.hit = true;
+    // Flatten the nested spec to a DFS pre-order array with wired
+    // `parent`/`content` links — the same transform used to seed nested data,
+    // shared as the pure `flattenTree` helper. `parentId` becomes the root's
+    // `parent`. flattenTree throws on an id reused WITHIN the spec (a duplicate
+    // would corrupt every id-keyed lookup); a tree insert always creates fresh
+    // blocks (NOT insert-if-absent), so that is rejected up front — null,
+    // mirroring insert's null contract.
+    const flat = (() => {
+      try {
+        return flattenTree(spec, { parentId: parentId ?? undefined });
+      } catch {
+        return null;
       }
-      const id = node.id ?? generateBlockId();
+    })();
 
-      usedIds.add(id);
-      const content: string[] = [];
-      const flatNode = {
-        id,
-        // `type` is OMITTED (not present-with-undefined) when absent so core's
-        // `type || defaultBlock` fallback resolves the default block cleanly.
-        ...(node.type !== undefined ? { type: node.type } : {}),
-        data: node.data ?? {},
-        content,
-        ...(node.tunes !== undefined ? { tunes: node.tunes } : {}),
-        ...(parent !== undefined ? { parent } : {}),
-      } as OutputBlockData;
-
-      flat.push(flatNode);
-
-      for (const child of node.children ?? []) {
-        content.push(visit(child, id));
-      }
-
-      return id;
-    };
-
-    const rootId = visit(spec, parentId ?? undefined);
-
-    // A colliding explicit id is rejected before any insert (see usedIds doc).
-    if (collision.hit) {
+    if (flat === null) {
       return null;
+    }
+
+    // External collision: an explicit id already present in the live tree would
+    // also create a duplicate-id block. Snapshot the existing ids once and
+    // reject if any flat node reuses one. Generated ids never collide.
+    const existingIds = new Set(snapshotNodes(reader).map((n) => n.id));
+
+    if (flat.some((node) => existingIds.has(node.id))) {
+      return null;
+    }
+
+    const rootId = flat[0].id;
+
+    // flattenTree omits `content` on leaves (clean seed-data shape). insertMany
+    // wants every node to carry an explicit child-id array — a leaf's
+    // `contentIds: []` states "no children" rather than leaving it undefined —
+    // so stamp the empty array back on before handing the batch to core.
+    for (const node of flat) {
+      if (node.content === undefined) {
+        node.content = [];
+      }
     }
 
     const flatIndex = resolveInsertIndex(reader, parentId, position);

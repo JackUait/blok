@@ -27,6 +27,22 @@ interface PasteConfigSpecified {
   patterns?: {[key: string]: RegExp};
 
   /**
+   * Optional per-pattern resolution priority, keyed by the same keys as
+   * {@link patterns}. Higher runs first; the default is `0`.
+   *
+   * Paste resolution picks the FIRST pattern that fully matches. Without
+   * priorities that order is the order tools are registered, so a catch-all
+   * pattern (e.g. a generic URL) only yields to a more specific one if it
+   * happens to be registered last. Give a catch-all a negative priority to sink
+   * it below specific patterns regardless of registration order.
+   *
+   * @example
+   * // A generic-URL fallback that must lose to every specific embed pattern:
+   * { patterns: { bookmark: /https?:\/\/\S+/ }, patternPriority: { bookmark: -100 } }
+   */
+  patternPriority?: {[key: string]: number};
+
+  /**
    * Object with arrays of extensions and MIME types Tool can substitute
    */
   files?: {extensions?: string[], mimeTypes?: string[]};

@@ -3395,6 +3395,72 @@ const TELUGU_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'సరిపోలే ఎమోజీల సంఖ్య: {count}',
 };
 
+const THAI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'ล้างการจัดรูปแบบ',
+  'tools.toggle.bodyPlaceholder': 'ส่วนที่พับได้นี้ว่างเปล่า คลิกเพื่อเพิ่มบล็อก หรือลากบล็อกมาที่นี่',
+  'tools.marker.textColor': 'สีข้อความ',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.table.clearSelection': 'ล้างเนื้อหา',
+  'tools.table.fitToPageWidth': 'ปรับให้พอดีกับความกว้างของหน้า',
+  'tools.table.fullWidth': 'เต็มความกว้าง',
+  'tools.table.placement': 'การจัดแนว',
+  'tools.table.placementTopLeft': 'ซ้ายบน',
+  'tools.table.placementTopCenter': 'กึ่งกลางด้านบน',
+  'tools.table.placementTopRight': 'ขวาบน',
+  'tools.table.placementMiddleLeft': 'กึ่งกลางด้านซ้าย',
+  'tools.table.placementMiddleCenter': 'กึ่งกลาง',
+  'tools.table.placementMiddleRight': 'กึ่งกลางด้านขวา',
+  'tools.table.placementBottomLeft': 'ซ้ายล่าง',
+  'tools.table.placementBottomCenter': 'กึ่งกลางด้านล่าง',
+  'tools.table.placementBottomRight': 'ขวาล่าง',
+  'a11y.blockMoved': 'ย้ายบล็อกไปยังตำแหน่ง {position} จากทั้งหมด {total} แล้ว',
+  'a11y.blocksMoved': 'ย้ายบล็อก {count} บล็อกไปยังตำแหน่ง {position} แล้ว',
+  'a11y.blockDuplicated': 'ทำสำเนาบล็อกไว้ที่ตำแหน่ง {position} จากทั้งหมด {total} แล้ว',
+  'a11y.blocksDuplicated': 'ทำสำเนาบล็อก {count} บล็อกโดยเริ่มที่ตำแหน่ง {position} แล้ว',
+  'a11y.searchResults': 'ผลการค้นหา: {count} รายการ',
+  'a11y.allBlocksSelected': 'เลือกบล็อกทั้งหมดแล้ว จำนวนรวม: {count}',
+  'a11y.navigationModeEntered': 'โหมดนำทาง ใช้ปุ่มลูกศรเพื่อย้ายระหว่างบล็อก กด Enter เพื่อแก้ไข และกด Escape เพื่อออก',
+  'toolNames.quote': 'ข้อความอ้างอิง',
+  'searchTerms.quote': 'ข้อความอ้างอิง',
+  'searchTerms.blockquote': 'บล็อกข้อความอ้างอิง',
+  'tools.callout.addEmoji': 'เพิ่มไอคอน',
+  'tools.callout.filterEmojis': 'ค้นหาอีโมจิ…',
+  'tools.callout.noEmojisFound': 'ไม่พบอีโมจิ',
+  'tools.callout.pickRandom': 'สุ่มเลือกอีโมจิ',
+  'tools.quote.size': 'ขนาดข้อความอ้างอิง',
+  'tools.quote.placeholder': 'ข้อความอ้างอิง',
+  'tools.code.searchLanguage': 'ค้นหาภาษา…',
+  'searchTerms.pre': 'ข้อความจัดรูปแบบล่วงหน้า',
+  'tools.link.linkTitle': 'ข้อความลิงก์',
+  'tools.image.alignment': 'การจัดแนว',
+  'tools.image.altDescription': 'อธิบายรูปภาพนี้สำหรับผู้ที่มองไม่เห็น',
+  'tools.image.preview': 'ตัวอย่างรูปภาพ',
+  'tools.image.previewControls': 'ตัวควบคุมตัวอย่างรูปภาพ',
+  'tools.image.errorUnavailable': 'รูปภาพไม่พร้อมใช้งาน',
+  'tools.image.errorDefaultMessage': 'ไม่สามารถโหลดรูปภาพจาก URL นี้ได้ ลองใช้แหล่งที่มาอื่นหรืออัปโหลดไฟล์อีกครั้ง',
+  'tools.video.alignment': 'การจัดแนว',
+  'tools.video.alignmentLeft': 'จัดชิดซ้าย',
+  'tools.video.alignmentCenter': 'จัดกึ่งกลาง',
+  'tools.video.alignmentRight': 'จัดชิดขวา',
+  'tools.audio.alignment': 'การจัดแนว',
+  'tools.audio.alignmentLeft': 'จัดชิดซ้าย',
+  'tools.audio.alignmentCenter': 'จัดกึ่งกลาง',
+  'tools.audio.alignmentRight': 'จัดชิดขวา',
+  'tools.audio.errorFileTooLarge': 'ไฟล์เสียงมีขนาดใหญ่เกินไป {size} เกินขีดจำกัด {max}',
+  'tools.audio.titlePlaceholder': 'ชื่อแทร็ก',
+  'tools.audio.emptyOrDropHere': 'หรือวางไฟล์เสียงที่นี่',
+  'tools.audio.coverSourceAria': 'แหล่งที่มาของภาพปก',
+  'tools.database.viewTypeListDescription': 'แสดงข้อมูลเป็นรายการแบบเรียบง่าย',
+  'tools.bookmark.loading': 'กำลังโหลดตัวอย่างลิงก์…',
+  'tools.embed.empty': 'ไม่มีลิงก์สำหรับฝัง',
+  'tools.video.seek': 'ตำแหน่งการเล่น',
+  'tools.video.toggleTimeDisplay': 'สลับระหว่างเวลาที่ผ่านไปและเวลาที่เหลือ',
+  'tools.video.ctxCopyUrlAtTime': 'คัดลอก URL ของวิดีโอ ณ ตำแหน่งการเล่นปัจจุบัน',
+  'tools.video.ctxStats': 'สถิติการเล่น',
+  'tools.callout.emojiSearchResults': 'อีโมจิที่ตรงกัน: {count} รายการ',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4451,6 +4517,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(TELUGU_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Thai correction oracle', () => {
+    const messages = readLocale('th').messages;
+    const actual = Object.fromEntries(
+      Object.keys(THAI_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(THAI_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sanitizeHtmlFragment } from '../../../src/view/sanitize';
 import { sanitizeBlocks } from '../../../src/components/utils/sanitizer';
 import { INLINE_TEXT_SANITIZE } from '../../../src/components/shared/inline-content-sanitize';
+import { markSanitizerConfig } from '../../../src/components/marks/mark-engine';
+import type { MarkSpec } from '../../../types/api/marks';
 import type { SanitizerConfig } from '../../../types';
 
 /**
@@ -130,5 +132,24 @@ describe('view sanitizeHtmlFragment parity with the DOM sanitizer pipeline', () 
 
   it('matches on script/style content removal', () => {
     expectParity('a<script>alert(1)</script><style>.x{}</style>b', { p: true });
+  });
+
+  it('matches on a class-based MarkSpec rule (BlokView inline mark path)', () => {
+    const classSpec: MarkSpec = { tag: 'span', className: 'hl-description' };
+    const config = markSanitizerConfig(classSpec);
+
+    expectParity('<span class="hl-description sneaky">x</span>', config);
+    expectParity('<span class="sneaky">y</span>', config);
+  });
+
+  it('matches on a tag-only / style-only MarkSpec rule (no declared classes)', () => {
+    const colorSpec: MarkSpec<string> = {
+      tag: 'mark',
+      style: { color: (value: string): string => value },
+    };
+    const config = markSanitizerConfig(colorSpec);
+
+    expectParity('<mark style="color: red; font-size: 2em">x</mark>', config);
+    expectParity('<mark class="stray">y</mark>', config);
   });
 });

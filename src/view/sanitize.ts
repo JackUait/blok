@@ -254,8 +254,83 @@ const createStyleFacade = (node: P5Element): Pick<CSSStyleDeclaration, 'length' 
 };
 
 /**
+ * Minimal DOMTokenList facade over a parse5 element's `class` attribute.
+ * Supports what `markSanitizerConfig`'s rule uses (`length`, iteration,
+ * `remove()`) plus `contains`/`add`/`toggle` for host-authored rules.
+ * Mutations are written back to the `class` attribute (space-joined); an
+ * emptied list drops the attribute, matching the DOM path. Untouched `class`
+ * attributes stay byte-identical.
+ * @param node - parse5 element backing the facade
+ */
+const createClassListFacade = (node: P5Element): DOMTokenList => {
+  const tokens = (getAttr(node, 'class') ?? '').split(/\s+/).filter(Boolean);
+
+  const writeBack = (): void => {
+    if (tokens.length === 0) {
+      removeAttr(node, 'class');
+
+      return;
+    }
+
+    setAttr(node, 'class', tokens.join(' '));
+  };
+
+  const facade = {
+    get length(): number {
+      return tokens.length;
+    },
+    get value(): string {
+      return tokens.join(' ');
+    },
+    item(index: number): string | null {
+      return tokens[index] ?? null;
+    },
+    contains(token: string): boolean {
+      return tokens.includes(token);
+    },
+    add(...values: string[]): void {
+      for (const value of values) {
+        if (!tokens.includes(value)) {
+          tokens.push(value);
+        }
+      }
+      writeBack();
+    },
+    remove(...values: string[]): void {
+      for (const value of values) {
+        const index = tokens.indexOf(value);
+
+        if (index !== -1) {
+          tokens.splice(index, 1);
+        }
+      }
+      writeBack();
+    },
+    toggle(token: string, force?: boolean): boolean {
+      const present = tokens.includes(token);
+      const shouldHave = force ?? !present;
+
+      if (shouldHave && !present) {
+        tokens.push(token);
+      } else if (!shouldHave && present) {
+        tokens.splice(tokens.indexOf(token), 1);
+      }
+
+      writeBack();
+
+      return shouldHave;
+    },
+    [Symbol.iterator](): IterableIterator<string> {
+      return tokens[Symbol.iterator]();
+    },
+  };
+
+  return facade as unknown as DOMTokenList;
+};
+
+/**
  * Minimal Element facade handed to function rules. Supports the surface the
- * repo's real rules use (`getAttribute`, `style`) plus tagName /
+ * repo's real rules use (`getAttribute`, `style`, `classList`) plus tagName /
  * hasAttribute / attributes / textContent for host-authored rules.
  * @param node - parse5 element backing the facade
  */
@@ -277,6 +352,7 @@ const createElementFacade = (node: P5Element): Element => {
       return collectText(node);
     },
     style: createStyleFacade(node),
+    classList: createClassListFacade(node),
   };
 
   return facade as unknown as Element;

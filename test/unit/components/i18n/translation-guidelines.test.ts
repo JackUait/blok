@@ -3615,6 +3615,65 @@ const UKRAINIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.ctxStats': 'Статистика відтворення',
 };
 
+const URDU_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickAction': 'مینو کھولنے کے لیے کلک کریں',
+  'blockSettings.orConjunction': ' یا کی بورڈ پر ',
+  'blockSettings.openMenuAction': ' دبائیں',
+  'toolbox.optionAddAbove': 'اوپر شامل کرنے کے لیے Option دبا کر کلک کریں',
+  'toolbox.ctrlAddAbove': 'اوپر شامل کرنے کے لیے Ctrl دبا کر کلک کریں',
+  'toolNames.bold': 'بولڈ',
+  'toolNames.bulletedList': 'بلیٹ والی فہرست',
+  'toolNames.numberedList': 'نمبر والی فہرست',
+  'tools.marker.textColor': 'متن کا رنگ',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'کچھ لکھیں یا کوئی ٹول منتخب کرنے کے لیے / دبائیں',
+  'tools.table.clearSelection': 'مواد صاف کریں',
+  'tools.table.placement': 'سیدھ',
+  'a11y.dropPosition': 'کل {total} میں سے پوزیشن {position} پر رکھا جائے گا',
+  'a11y.blockMoved': 'بلاک کو کل {total} میں سے پوزیشن {position} پر منتقل کر دیا گیا',
+  'a11y.blockDuplicated': 'بلاک کی نقل کل {total} میں سے پوزیشن {position} پر بنائی گئی',
+  'a11y.searchResults': 'تلاش کے نتائج: {count}',
+  'a11y.allBlocksSelected': 'تمام بلاکس منتخب ہو گئے۔ کل: {count}',
+  'toolNames.strikethrough': 'بیچ سے خط کشیدہ',
+  'tools.callout.addEmoji': 'آئیکن شامل کریں',
+  'tools.callout.editIcon': 'آئیکن میں ترمیم کریں',
+  'tools.callout.filterEmojis': 'ایموجی تلاش کریں…',
+  'tools.callout.noEmojisFound': 'کوئی ایموجی نہیں ملا',
+  'tools.callout.pickRandom': 'ایک بے ترتیب ایموجی منتخب کریں',
+  'tools.database.editCardTitle': 'عنوان میں ترمیم کریں',
+  'tools.code.wrapLines': 'سطریں لپیٹیں',
+  'searchTerms.pre': 'پہلے سے فارمیٹ شدہ',
+  'tools.link.linkTitle': 'لنک کا متن',
+  'tools.image.alignment': 'سیدھ',
+  'tools.image.alignmentLeftAria': 'بائیں سیدھ کریں',
+  'tools.image.alignmentCenterAria': 'درمیان میں سیدھ کریں',
+  'tools.image.alignmentRightAria': 'دائیں سیدھ کریں',
+  'tools.image.previewControls': 'تصویر کے پیش نظارے کے کنٹرولز',
+  'tools.image.errorDefaultMessage': 'اس URL سے تصویر لوڈ نہیں ہو سکی۔ کوئی دوسرا ذریعہ آزمائیں یا فائل دوبارہ اپ لوڈ کریں۔',
+  'tools.file.previewRaw': 'ماخذ',
+  'tools.file.previewRender': 'پیش نظارہ',
+  'tools.video.alignment': 'سیدھ',
+  'tools.video.alignmentLeft': 'بائیں سیدھ کریں',
+  'tools.video.alignmentCenter': 'درمیان میں سیدھ کریں',
+  'tools.video.alignmentRight': 'دائیں سیدھ کریں',
+  'tools.audio.alignment': 'سیدھ',
+  'tools.audio.alignmentLeft': 'بائیں سیدھ کریں',
+  'tools.audio.alignmentCenter': 'درمیان میں سیدھ کریں',
+  'tools.audio.alignmentRight': 'دائیں سیدھ کریں',
+  'tools.audio.coverSourceAria': 'کور کا ذریعہ',
+  'tools.database.viewTypeListDescription': 'اشیا کو ایک سادہ فہرست میں دکھائیں',
+  'tools.database.propertyTypeSelect': 'انتخاب',
+  'tools.bookmark.loading': 'لنک کا پیش نظارہ لوڈ ہو رہا ہے…',
+  'tools.bookmark.error': 'لنک کا پیش نظارہ لوڈ نہیں ہو سکا',
+  'tools.embed.empty': 'کوئی ایمبیڈ لنک نہیں',
+  'tools.video.toggleTimeDisplay': 'گزرے ہوئے اور باقی وقت کے درمیان سوئچ کریں',
+  'tools.video.ctxStats': 'پلے بیک کے اعداد و شمار',
+  'tools.callout.emojiSearchResults': 'مماثل ایموجیز: {count}',
+  'toolNames.clearFormat': 'فارمیٹ ہٹائیں',
+  'tools.toggle.bodyPlaceholder': 'خالی ٹوگل۔ ایک بلاک شامل کرنے کے لیے کلک کریں یا بلاکس کو یہاں گھسیٹیں۔',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4719,6 +4778,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(UKRAINIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Urdu correction oracle', () => {
+    const messages = readLocale('ur').messages;
+    const actual = Object.fromEntries(
+      Object.keys(URDU_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(URDU_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

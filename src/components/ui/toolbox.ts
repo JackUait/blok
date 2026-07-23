@@ -561,6 +561,18 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   };
 
   /**
+   * Replaces the snapshotted label set.
+   *
+   * `i18nLabels` is resolved by the Toolbar and handed over as strings, so it
+   * survives a runtime locale change unchanged. Pair it with
+   * {@link refreshItems} to rebuild the popover against the new labels.
+   * @param labels - freshly translated labels
+   */
+  public setI18nLabels(labels: Record<ToolboxTextLabelsKeys, string>): void {
+    this.i18nLabels = labels;
+  }
+
+  /**
    * Drops the cached tool/item lists and rebuilds the popover so runtime
    * changes to a tool's `toolbox` setting (via `tools.update`) become visible
    * without recreating the editor.

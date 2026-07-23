@@ -367,7 +367,7 @@ const editor = new Blok(config);`,
         type: "I18nConfig",
         default: "undefined",
         description:
-          "Internationalization config (locale + message dictionary). Custom tool titles are localizable by registration name — e.g. a `fileLink` tool via `messages: { 'toolNames.fileLink': '…' }` — or via a `titleKey` in the tool's toolbox entry.",
+          "Internationalization config (locale + message dictionary). Live: switch language at runtime via `i18n.update({ locale, messages })` \u2014 the editor relabels in place, so caret and undo history survive a language switch (`defaultLocale` is the exception and stays mount-only). Custom tool titles are localizable by registration name — e.g. a `fileLink` tool via `messages: { 'toolNames.fileLink': '…' }` — or via a `titleKey` in the tool's toolbox entry.",
       },
       {
         option: "theme",
@@ -1997,7 +1997,8 @@ await editor.readOnly.toggle(false);`,
     id: "i18n-api",
     badge: "I18n",
     title: "I18n API",
-    description: "Internationalization support for translating UI strings.",
+    description:
+      "Internationalization support for translating UI strings, plus the runtime `i18n.update()` mutator that switches language in place.",
     methods: [
       {
         name: "i18n.t(dictKey, vars?)",
@@ -2032,6 +2033,36 @@ console.log(english); // 'Heading'`,
         description: "Get the active locale code (e.g. 'en').",
         example: `const locale = editor.i18n.getLocale();
 console.log(locale); // 'en'`,
+      },
+      {
+        name: "i18n.getDirection()",
+        returnType: "'ltr' | 'rtl'",
+        description:
+          "Get the text direction currently in effect \u2014 derived from the active locale unless an explicit `direction` override was set.",
+        example: `if (editor.i18n.getDirection() === 'rtl') {
+  // mirror your own chrome next to the editor
+}`,
+      },
+      {
+        name: "i18n.update({ locale?, messages?, direction? })",
+        returnType: "Promise<void>",
+        description:
+          "Switch language at runtime. `config.i18n` is otherwise read once during boot, so a host with a language switcher had to recreate the editor to relabel it \u2014 losing caret, focus, selection and undo history. `update()` relabels in place instead: no recreation, nothing lost. `locale` accepts any supported code or `'auto'` to re-run browser detection; `messages` merges host overrides over the locale dictionary and is re-applied automatically after every later locale change (a bare locale flip never silently drops your custom strings); `direction` overrides the direction implied by the locale, which you normally do not need. Calls are serialized internally, so lazily-loaded locale chunks cannot land out of order \u2014 the last call wins. Scope: everything. Chrome built on demand (block settings, the convert menu, notifications, screen-reader announcements) picks up the new locale the next time it opens; the eagerly-stamped chrome (toolbar and plus-button labels, tooltips, the toolbox list) is relabelled immediately; and block content \u2014 placeholders, media-toolbar labels, cell controls, anything a tool resolved while rendering \u2014 is repainted from your data, including tools that know nothing about locale changes. The repaint is invisible to you: `onChange` does not fire, scroll is kept, and the caret returns to the block that had it. Fires the `i18n:changed` event with `{ locale, direction }`. Available synchronously after construction \u2014 a call made before `isReady` is applied once the editor has booted. `update()` is exposed on the editor instance only, not on the `api.i18n` handed to tools, so a third-party tool cannot flip the host's locale. The React/Vue/Angular adapters drive it reactively: change the `i18n` prop/input and the editor follows in place. Note `defaultLocale` is not accepted \u2014 it only decides the fallback while resolving the initial locale.",
+        example: `// Host language switcher \u2014 no remount, caret and undo survive.
+await editor.i18n.update({ locale: 'ru' });
+
+// Locale plus your own overrides on top of it.
+await editor.i18n.update({
+  locale: 'fr',
+  messages: { 'toolNames.text': 'Paragraphe' },
+});
+
+// Follow the browser again.
+await editor.i18n.update({ locale: 'auto' });
+
+editor.events.on('i18n:changed', ({ locale, direction }) => {
+  document.documentElement.dir = direction;
+});`,
       },
     ],
   },
@@ -2445,6 +2476,13 @@ export function Editor() {
         default: "—",
         description:
           "Styling config. `style.tokens` is reactive: changed `--blok-*` overrides sync in place after mount via editor.tokens.set() (deep-equal deduped), so a host light/dark toggle needs no remount. Replace semantics — pass the whole palette; tokens dropped from it stop applying. Angular exposes this as the separate [styleTokens] input.",
+      },
+      {
+        option: "i18n",
+        type: "BlokConfig['i18n']",
+        default: "—",
+        description:
+          "Internationalization config (reactive). A changed `locale`, `messages` or `direction` syncs in place after mount via editor.i18n.update() (deep-equal deduped), so a language switcher relabels the editor without remounting it \u2014 caret, focus, selection and undo history survive. `defaultLocale` is the exception and is read only at construction. Angular exposes this as the [i18n] input.",
       },
       {
         option: "autofocus",

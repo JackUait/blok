@@ -259,6 +259,41 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.toolboxInstance?.refreshItems();
   }
 
+  /**
+   * Re-stamps every translated string the toolbar wrote eagerly, so a runtime
+   * locale change (`blok.i18n.update()`) lands on the already-built chrome.
+   *
+   * Only the eager writes need this: the block-settings menu, the convert
+   * menu and the toolbox items are all resolved when they open, so they pick
+   * up the new locale on their own.
+   */
+  public refreshI18n(): void {
+    this.nodes.wrapper?.setAttribute('aria-label', this.Blok.I18n.t('a11y.blockToolbar'));
+
+    this.plusButtonHandler.refreshI18n(this.nodes.plusButton);
+
+    this.settingsTogglerHandler.refreshAriaLabel();
+    this.settingsTogglerHandler.refreshTooltip();
+
+    /*
+     * The toolbox holds a snapshot of its labels and caches the built popover,
+     * so it needs both the new strings and an explicit rebuild.
+     */
+    this.toolboxInstance?.setI18nLabels(this.toolboxI18nLabels());
+    this.toolboxInstance?.refreshItems();
+  }
+
+  /**
+   * Resolves the toolbox's text labels against the active locale.
+   */
+  private toolboxI18nLabels(): { filter: string; nothingFound: string; slashSearchPlaceholder: string } {
+    return {
+      filter: this.Blok.I18n.t('popover.search'),
+      nothingFound: this.Blok.I18n.t('popover.nothingFound'),
+      slashSearchPlaceholder: this.Blok.I18n.t('toolbox.typeToSearch'),
+    };
+  }
+
   public get toolbox(): {
     opened: boolean | undefined; // undefined is for the case when Toolbox is not initialized yet
     close: () => void;
@@ -1309,11 +1344,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.toolboxInstance = new Toolbox({
       api: this.Blok.API.methods,
       tools: this.Blok.Tools.blockTools,
-      i18nLabels: {
-        filter: this.Blok.I18n.t('popover.search'),
-        nothingFound: this.Blok.I18n.t('popover.nothingFound'),
-        slashSearchPlaceholder: this.Blok.I18n.t('toolbox.typeToSearch'),
-      },
+      i18nLabels: this.toolboxI18nLabels(),
       i18n: this.Blok.I18n,
       triggerElement: this.nodes.plusButton,
       listboxId: TOOLBOX_POPOVER_ID,

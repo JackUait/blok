@@ -40,11 +40,13 @@ import type { BlokAngularConfig } from './types';
  * and layers the typed reactive input/output API on top.
  *
  * Reactive inputs (`readOnly`, `hideToolbar`, `inlineToolbar`, `theme`,
- * `width`, `placeholder`, `autofocus`, `styleTokens`, `data`) are synced in
- * place after mount via effects — `hideToolbar` through
+ * `width`, `placeholder`, `autofocus`, `styleTokens`, `i18n`, `data`) are
+ * synced in place after mount via effects — `hideToolbar` through
  * `editor.toolbar.setHidden()`, `inlineToolbar` through
  * `editor.tools.setInlineToolbar()` (content-compared),
- * `styleTokens` through `editor.tokens.set()` (replace semantics) and `data`
+ * `styleTokens` through `editor.tokens.set()` (replace semantics),
+ * `i18n` through `editor.i18n.update()` (deep-equal–deduped; seeded at
+ * construction so the locale resolves during boot) and `data`
  * through `editor.render()` (deep-equal–deduped); everything else seeds
  * construction.
  *
@@ -167,6 +169,18 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     this.styleTokens$.set(value);
   }
 
+  /**
+   * Locale, host message overrides and text direction. `config.i18n` was
+   * consumed once at boot, so a host driving a language switcher had to
+   * recreate the editor (losing caret, focus and undo stack) to relabel the
+   * UI; this drives the runtime `i18n.update` API instead. `defaultLocale` is
+   * not forwarded — it only affects the INITIAL locale resolution.
+   */
+  private readonly i18n$ = signal<BlokConfig['i18n'] | undefined>(undefined);
+  @Input() set i18n(value: BlokConfig['i18n'] | undefined) {
+    this.i18n$.set(value);
+  }
+
   private readonly autofocus$ = signal<boolean | undefined>(false);
   @Input() set autofocus(value: boolean | undefined) {
     this.autofocus$.set(value);
@@ -183,7 +197,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   /**
    * Escape hatch: a full config object for keys without a dedicated input
-   * (i18n, sanitizer, minHeight, …). Layered between provideBlok
+   * (sanitizer, minHeight, …). Layered between provideBlok
    * defaults and the discrete inputs.
    */
   @Input() config?: Partial<BlokAngularConfig>;
@@ -200,6 +214,10 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   /** Last token set pushed through `tokens.set`, for deep-equal deduping. */
   private appliedTokens?: Record<string, string>;
+  /** Last i18n config pushed through `i18n.update`, for deep-equal deduping. */
+  private appliedI18n?: BlokConfig['i18n'];
+  /** Editor instance the i18n baseline above belongs to. */
+  private i18nAppliedFor: Blok | null = null;
   /** Last value pushed through `tools.setInlineToolbar`, for content-compare deduping. */
   private appliedInlineToolbar?: boolean | string[];
   private seededEditor: Blok | null = null;
@@ -289,6 +307,14 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
     if (placeholder !== undefined) {
       cfg.placeholder = placeholder;
+    }
+
+    // Seeded at construction (not applied by the i18n effect) so the locale is
+    // resolved during boot instead of flashing the default language first.
+    const i18n = this.i18n$();
+
+    if (i18n !== undefined) {
+      cfg.i18n = i18n;
     }
 
     // Opt-in: only attach each core callback when the consumer actually consumes
@@ -434,6 +460,42 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
       this.appliedTokens = { ...tokens };
       editor.tokens.set(tokens);
+    });
+
+    effect(() => {
+      const editor = this.instance();
+      const i18n = this.i18n$() ?? this.config?.i18n;
+
+      if (!editor) {
+        return;
+      }
+
+      /*
+       * A freshly constructed editor already resolved this config during its
+       * own boot (buildConfig seeds it), so record the baseline and push
+       * nothing — re-applying it here would reload the locale after mount and
+       * flash the default language.
+       */
+      if (this.i18nAppliedFor !== editor) {
+        this.i18nAppliedFor = editor;
+        this.appliedI18n = i18n === undefined ? undefined : { ...i18n };
+
+        return;
+      }
+
+      if (i18n === undefined || deepEqual(i18n, this.appliedI18n)) {
+        return;
+      }
+
+      this.appliedI18n = { ...i18n };
+
+      const { locale, messages, direction } = i18n;
+
+      void editor.i18n.update({
+        ...(locale === undefined ? {} : { locale }),
+        ...(messages === undefined ? {} : { messages }),
+        ...(direction === undefined ? {} : { direction }),
+      });
     });
 
     effect(() => {

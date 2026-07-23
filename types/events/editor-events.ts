@@ -30,6 +30,21 @@ export interface BlocksRenderedPayload {
 }
 
 /**
+ * Payload for the `i18n:changed` event.
+ */
+export interface I18nChangedPayload {
+  /**
+   * Locale in effect after the update.
+   */
+  locale: string;
+
+  /**
+   * Text direction of that locale, after any explicit override.
+   */
+  direction: 'ltr' | 'rtl';
+}
+
+/**
  * Map of editor lifecycle event name -> payload.
  *
  * Subscribers get fully typed payloads for these well-known events while the
@@ -38,4 +53,5 @@ export interface BlocksRenderedPayload {
 export interface BlokEditorEventMap {
   'block:rendered': BlockRenderedPayload;
   'blocks:rendered': BlocksRenderedPayload;
+  'i18n:changed': I18nChangedPayload;
 }

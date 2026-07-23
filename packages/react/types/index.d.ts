@@ -24,6 +24,10 @@ import type React from 'react';
  * - `placeholder` — calls `editor.placeholder.set(value)`
  * - `style.tokens` — calls `editor.tokens.set(value)` (deep-equal–deduped;
  *   replace semantics, so pass the complete token set on each change)
+ * - `i18n` — calls `editor.i18n.update({ locale, messages, direction })`
+ *   (deep-equal–deduped; relabels the editor chrome in place, so caret, focus
+ *   and undo history survive a language switch). `defaultLocale` is not
+ *   forwarded — it only affects the initial locale resolution.
  * - `data` — re-renders via `editor.render(value)` when the content changes
  *   (deep-equal–deduped and serialized; seeds the initial content at creation)
  *

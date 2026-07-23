@@ -42,12 +42,19 @@ export const loadI18next = async (
   const initOptions: InitOptions = {
     lng: initialLocale,
     fallbackLng: 'en',
+    /*
+     * Copied, never referenced: `setDictionary` deep-merges the host's custom
+     * messages into the live resource bundle, and these two dictionaries are
+     * module-level singletons (the static English import and the loader's
+     * locale cache). Handing them over directly let one editor's overrides
+     * mutate the shared object and leak into every other editor on the page.
+     */
     resources: {
       en: {
-        translation: englishDictionary,
+        translation: { ...englishDictionary },
       },
       [initialLocale]: {
-        translation: localeConfig.dictionary,
+        translation: { ...localeConfig.dictionary },
       },
     },
     interpolation: {

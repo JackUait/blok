@@ -87,8 +87,13 @@ export class Renderer extends Module {
   /**
    * Renders passed blocks as one batch
    * @param blocksData - blocks to render
+   * @param options - render behaviour
+   * @param options.skipYjsSync - rebuild the view only, leaving the Yjs
+   *   document (and with it the undo history) exactly as it is. Used when the
+   *   blocks being rendered are the ones already in the document and only
+   *   their DOM has to be produced again — see `repaintBlocks`.
    */
-  public render(blocksData: OutputBlockData[]): Promise<void> {
+  public render(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): Promise<void> {
     const { wrapper } = this.Blok.UI.nodes;
 
     /**
@@ -98,7 +103,7 @@ export class Renderer extends Module {
     wrapper.removeAttribute(DATA_ATTR.rendered);
 
     return new Promise((resolve) => {
-      const renderedCount = this.insertRenderedBlocks(blocksData);
+      const renderedCount = this.insertRenderedBlocks(blocksData, options);
 
       /**
        * Wait till browser will render inserted Blocks and resolve a promise
@@ -116,8 +121,10 @@ export class Renderer extends Module {
    * Inserts the given blocks (or a single default block when the input is
    * empty) and returns the number of top-level blocks rendered in this batch.
    * @param blocksData - blocks to render
+   * @param options - render behaviour
+   * @param options.skipYjsSync - see `render`
    */
-  private insertRenderedBlocks(blocksData: OutputBlockData[]): number {
+  private insertRenderedBlocks(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): number {
     const { Tools, BlockManager } = this.Blok;
 
     // Give consumers a chance to transform the blocks array before anything is
@@ -274,7 +281,7 @@ export class Renderer extends Module {
     /**
      * Insert batch of Blocks
      */
-    BlockManager.insertMany(blocks);
+    BlockManager.insertMany(blocks, 0, { skipYjsSync: options.skipYjsSync === true });
     migrateMarkColors(this.Blok.UI.nodes.redactor);
 
     // Apply the editor's `link` config (target / rel / transformHref) to every

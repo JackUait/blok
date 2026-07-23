@@ -15,6 +15,8 @@ import type { FakeCursorAboutToBeToggledPayload } from './FakeCursorAboutToBeTog
 import { FakeCursorAboutToBeToggled } from './FakeCursorAboutToBeToggled';
 import type { FakeCursorHaveBeenSetPayload } from './FakeCursorHaveBeenSet';
 import { FakeCursorHaveBeenSet } from './FakeCursorHaveBeenSet';
+import type { I18nChangedPayload } from './I18nChanged';
+import { I18nChanged } from './I18nChanged';
 import { RedactorDomChanged } from './RedactorDomChanged';
 import type { RedactorDomChangedPayload } from './RedactorDomChanged';
 
@@ -31,6 +33,7 @@ export {
   BlokMobileLayoutToggled,
   BlockSettingsOpened,
   BlockSettingsClosed,
+  I18nChanged,
 };
 
 /**
@@ -47,4 +50,5 @@ export interface BlokEventMap {
   [BlokMobileLayoutToggled]: BlokMobileLayoutToggledPayload;
   [BlockSettingsOpened]: BlockSettingsOpenedPayload;
   [BlockSettingsClosed]: BlockSettingsClosedPayload;
+  [I18nChanged]: I18nChangedPayload;
 }

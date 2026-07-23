@@ -244,7 +244,13 @@ export interface BlokMountOptions {
   logLevel?: LogLevels;
 
   /**
-   * Internalization config
+   * Internalization config.
+   *
+   * Runtime setter: `i18n.update({ locale, messages, direction })` — switches
+   * language in place, so caret, focus, selection and undo history survive a
+   * language switch (the framework adapters push prop changes through it
+   * automatically). `defaultLocale` is the exception: it only decides the
+   * fallback while resolving the initial locale, so it is mount-only.
    */
   i18n?: I18nConfig;
 

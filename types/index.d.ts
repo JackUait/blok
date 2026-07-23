@@ -38,6 +38,7 @@ import {
   Width,
   Placeholder,
   Tokens,
+  EditorI18n,
 } from './api';
 
 import { LooseOutputData, OutputData } from './data-formats';
@@ -46,7 +47,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, I18nChangedPayload } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -137,6 +138,8 @@ export {
   Toolbar,
   Tooltip,
   I18n,
+  EditorI18n,
+  I18nUpdateOptions,
   Ui,
   Tools,
   Theme,
@@ -162,6 +165,7 @@ export {
   BlokEditorEventMap,
   BlockRenderedPayload,
   BlocksRenderedPayload,
+  I18nChangedPayload,
 }
 
 /**
@@ -350,6 +354,8 @@ export interface PendingBlok {
   placeholder: Placeholder;
   /** Runtime theme-tokens API, exposed immediately after construction. */
   tokens: Tokens;
+  /** Runtime i18n API (read + `update`), exposed immediately after construction. */
+  i18n: EditorI18n;
 }
 
 /** How deep a readiness query looks: boot completion, or content in the DOM. */
@@ -445,6 +451,13 @@ export class Blok {
   public width: Width;
   public placeholder: Placeholder;
   public tokens: Tokens;
+  /**
+   * Runtime i18n API. Everything tools get through `api.i18n` plus
+   * `update({ locale, messages, direction })`, which relabels the editor in
+   * place instead of forcing a recreation. Exposed immediately after
+   * construction; updates issued before `isReady` are replayed once modules exist.
+   */
+  public i18n: EditorI18n;
   constructor(configuration?: BlokConfig|string);
 
   /**

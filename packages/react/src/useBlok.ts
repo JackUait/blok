@@ -517,6 +517,45 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     editor.tokens.set(styleTokens);
   }, [editor, styleTokens]);
 
+  // Reactive: i18n
+  //
+  // `config.i18n` was read once during the editor's boot and never again, so a
+  // host driving a language switcher from React state had no correct option:
+  // accept a permanently stale UI, or bump `deps` and destroy the editor
+  // mid-typing. Push genuine changes through the runtime `i18n.update` API
+  // instead, deep-equal–deduped because `i18n` is almost always a fresh object
+  // literal each render (a `useMemo`d message map re-created on locale change
+  // is the whole point of the prop).
+  //
+  // `defaultLocale` is deliberately not forwarded: it only decides the
+  // fallback while resolving the INITIAL locale, so it is inert after mount.
+  const { i18n } = config;
+  /*
+   * Seeded with the mount-time value: construction already applied it, so the
+   * first effect run is a no-op and only genuine changes push.
+   */
+  const appliedI18nRef = useRef<UseBlokConfig['i18n']>(config.i18n);
+
+  useEffect(() => {
+    if (editor === null || i18n === undefined) {
+      return;
+    }
+
+    if (deepEqual(i18n, appliedI18nRef.current)) {
+      return;
+    }
+
+    appliedI18nRef.current = i18n;
+
+    const { locale, messages, direction } = i18n;
+
+    void editor.i18n.update({
+      ...(locale === undefined ? {} : { locale }),
+      ...(messages === undefined ? {} : { messages }),
+      ...(direction === undefined ? {} : { direction }),
+    });
+  }, [editor, i18n]);
+
   // Reactive: placeholder
   const { placeholder } = config;
   useEffect(() => {

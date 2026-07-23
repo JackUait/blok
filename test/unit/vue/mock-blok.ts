@@ -29,6 +29,7 @@ export interface MockBlokInstance {
   toolbar: { setHidden: ReturnType<typeof vi.fn> };
   tools: { setInlineToolbar: ReturnType<typeof vi.fn> };
   tokens: { set: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
+  i18n: { update: ReturnType<typeof vi.fn> };
   on: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
 }
@@ -50,6 +51,7 @@ class MockBlok implements MockBlokInstance {
   public tools = { setInlineToolbar: vi.fn() };
 
   public tokens = { set: vi.fn(), get: vi.fn().mockReturnValue({}) };
+  public i18n = { update: vi.fn().mockResolvedValue(undefined) };
   public on = vi.fn();
   public off = vi.fn();
 

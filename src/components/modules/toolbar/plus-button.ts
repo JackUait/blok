@@ -110,7 +110,6 @@ export class PlusButtonHandler {
    * @returns The created plus button element
    */
   public make(nodes: ToolbarNodes): HTMLElement {
-    const blok = this.getBlok();
     const plusButton = $.make('div', [
       twJoin(
         // Base toolbox-button styles
@@ -145,7 +144,6 @@ export class PlusButtonHandler {
      */
     plusButton.setAttribute('role', 'button');
     plusButton.setAttribute('tabindex', '-1');
-    plusButton.setAttribute('aria-label', blok.I18n.t('a11y.insertBlock'));
     plusButton.setAttribute('aria-haspopup', 'listbox');
     plusButton.setAttribute('aria-expanded', 'false');
     plusButton.setAttribute('aria-controls', TOOLBOX_POPOVER_ID);
@@ -166,26 +164,38 @@ export class PlusButtonHandler {
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.plusButton = plusButton;
 
-    /**
-     * Add events to show/hide tooltip for plus button
-     */
-    const userOS = getUserOS();
+    this.refreshI18n(plusButton);
+
+    return plusButton;
+  }
+
+  /**
+   * Stamps the translated label and tooltip onto the plus button.
+   * Called on creation and again whenever the locale changes at runtime —
+   * both are eager writes that would otherwise stay in the old language.
+   * @param element - the plus button, defaults to the one already built
+   */
+  public refreshI18n(element: HTMLElement | undefined): void {
+    if (element === undefined) {
+      return;
+    }
+
+    const blok = this.getBlok();
+
+    element.setAttribute('aria-label', blok.I18n.t('a11y.insertBlock'));
+
     const modifierClickText = blok.I18n.t(
-      userOS.win
+      getUserOS().win
         ? 'toolbox.ctrlAddAbove'
         : 'toolbox.optionAddAbove'
     );
 
-    const tooltipContent = createTooltipContent([
+    onHover(element, createTooltipContent([
       blok.I18n.t('toolbox.addBelow'),
       modifierClickText,
-    ]);
-
-    onHover(plusButton, tooltipContent, {
+    ]), {
       delay: 500,
     });
-
-    return plusButton;
   }
 
   /**

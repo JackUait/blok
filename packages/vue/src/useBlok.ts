@@ -19,7 +19,7 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
-import type { Blok, LooseOutputData, OutputData } from '@/types';
+import type { Blok, BlokConfig, LooseOutputData, OutputData } from '@/types';
 import type { UseBlokConfig } from './types';
 
 /**
@@ -274,6 +274,38 @@ export function useBlok(
 
       appliedTokens.value = { ...tokens };
       ed.tokens.set(tokens);
+    },
+    { immediate: true, deep: true }
+  );
+
+  // `config.i18n` was consumed once during boot, so a host driving a language
+  // switcher had to recreate the editor (losing caret, focus and undo stack)
+  // to relabel the UI. This drives the runtime `i18n.update` API instead.
+  // Deep-equal-deduped and `deep: true` for the same reasons as tokens.
+  // `defaultLocale` is not forwarded: it only affects the INITIAL locale
+  // resolution, so it is inert after mount.
+  /*
+   * Seeded with the mount-time value: construction already applied it, so the
+   * immediate run is a no-op and only genuine changes push.
+   */
+  const appliedI18n: { value: BlokConfig['i18n'] | undefined } = { value: mergedConfig().i18n };
+
+  watch(
+    [editor, () => mergedConfig().i18n],
+    ([ed, i18n]) => {
+      if (!ed || i18n === undefined || deepEqual(i18n, appliedI18n.value)) {
+        return;
+      }
+
+      appliedI18n.value = { ...i18n };
+
+      const { locale, messages, direction } = i18n;
+
+      void ed.i18n.update({
+        ...(locale === undefined ? {} : { locale }),
+        ...(messages === undefined ? {} : { messages }),
+        ...(direction === undefined ? {} : { direction }),
+      });
     },
     { immediate: true, deep: true }
   );

@@ -204,6 +204,21 @@ export class BlockManager extends Module {
   }
 
   /**
+   * Runs a view rebuild — a clear + render of blocks that are already in the
+   * document — with document writes suppressed for its whole (async) duration.
+   *
+   * `clear`/`render` take `skipYjsSync` for their own explicit writes, but the
+   * `rendered()` hooks they fire also write: tools re-create nested children
+   * and re-sync parent references, each landing as a fresh undo entry that
+   * buries the user's real edits. Holding `isSyncingFromYjs` across the whole
+   * cycle is what makes the rebuild invisible to the document.
+   * @param rebuild - the clear + render cycle to run
+   */
+  public async withViewRebuild(rebuild: () => Promise<void>): Promise<void> {
+    await this.yjsSync.withAtomicOperationAsync(rebuild, { extendThroughRAF: true });
+  }
+
+  /**
    * Returns true when a Yjs sync operation (undo/redo) is in progress.
    * Used by the Blocks API to expose sync state to tools.
    */
@@ -560,7 +575,11 @@ export class BlockManager extends Module {
    *   document without firing a change mutation. The public api.blocks.insertMany
    *   wrapper passes true so a programmatic bulk insert mirrors single insert().
    */
-  public insertMany(blocks: Block[], index = 0, { notify = false }: { notify?: boolean } = {}): void {
+  public insertMany(
+    blocks: Block[],
+    index = 0,
+    { notify = false, skipYjsSync = false }: { notify?: boolean; skipYjsSync?: boolean } = {}
+  ): void {
     const blockById = new Map<string, Block>();
 
     for (const block of blocks) {
@@ -590,7 +609,15 @@ export class BlockManager extends Module {
       };
     });
 
-    this.Blok.YjsManager.fromJSON(blockDataArray);
+    /*
+     * `fromJSON` replaces the whole Yjs array and clears the undo history —
+     * right when a document is being loaded, wrong when the view is merely
+     * being rebuilt from blocks that are already in the document. The blocks
+     * keep their ids, so the existing Yjs state already describes them.
+     */
+    if (!skipYjsSync) {
+      this.Blok.YjsManager.fromJSON(blockDataArray);
+    }
 
     // Wrap in atomic operation so that RENDERED lifecycle hooks (which may
     // create nested blocks, e.g. table cell paragraphs, or call setBlockParent)
@@ -1388,8 +1415,16 @@ export class BlockManager extends Module {
 
   /**
    * Clears Blok
+   * @param needToAddDefaultBlock - insert an empty default block afterwards
+   * @param options - clear behaviour
+   * @param options.skipYjsSync - tear down the rendered blocks only, leaving
+   *   the Yjs document (and the undo history) untouched. For view rebuilds
+   *   that render the very same blocks again — see `repaintBlocks`.
    */
-  public async clear(needToAddDefaultBlock = false): Promise<void> {
+  public async clear(
+    needToAddDefaultBlock = false,
+    { skipYjsSync = false }: { skipYjsSync?: boolean } = {}
+  ): Promise<void> {
     // Create a copy of the blocks array to avoid issues with array modification during iteration
     const blocksToRemove = [...this.blocks];
     const blockIds = blocksToRemove.map(block => block.id);
@@ -1399,7 +1434,7 @@ export class BlockManager extends Module {
     const defaultToolName = this.config.defaultBlock;
 
     // Single Yjs transaction for all removals + default block add (single undo entry)
-    this.Blok.YjsManager.transact(() => {
+    const syncRemovalsToYjs = (): void => this.Blok.YjsManager.transact(() => {
       for (const id of blockIds) {
         this.Blok.YjsManager.removeBlock(id);
       }
@@ -1413,6 +1448,10 @@ export class BlockManager extends Module {
         }, 0);
       }
     });
+
+    if (!skipYjsSync) {
+      syncRemovalsToYjs();
+    }
 
     // DOM cleanup (skip Yjs sync — already done above)
     for (const block of blocksToRemove) {

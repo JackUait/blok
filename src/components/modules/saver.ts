@@ -58,18 +58,34 @@ export class Saver extends Module {
   /**
    * Composes new chain of Promises to fire them alternatelly.
    * Deduplicates concurrent calls — if a save is already in-flight, returns the same promise.
+   * @param options - save behaviour
+   * @param options.dialect - `'host'` (default) produces what the host asked
+   *   for, including the legacy collapse when the document was loaded in that
+   *   format. `'internal'` produces the editor's own model instead: the
+   *   legacy dialect can only express nesting as nested `items[]`, so feeding
+   *   its output back into `render()` drops every flat `data.depth` carrier —
+   *   fine for an export the host stores, wrong for a round-trip the editor
+   *   performs on itself (see `repaintBlocks`).
    * @returns {OutputData | undefined}
    */
-  public async save(): Promise<OutputData | undefined> {
+  public async save({ dialect = 'host' }: { dialect?: 'host' | 'internal' } = {}): Promise<OutputData | undefined> {
     if (this.isDestroyed) {
       return undefined;
+    }
+
+    /*
+     * The two dialects produce different shapes, so an internal save can
+     * neither be served by nor handed to a host-facing one.
+     */
+    if (dialect === 'internal') {
+      return this.doSave({ dialect });
     }
 
     if (this.pendingSave !== null) {
       return this.pendingSave;
     }
 
-    this.pendingSave = this.doSave();
+    this.pendingSave = this.doSave({ dialect });
 
     try {
       return await this.pendingSave;
@@ -81,9 +97,11 @@ export class Saver extends Module {
   /**
    * Internal save implementation.
    * Waits for any pending render to complete before reading blocks.
+   * @param options - save behaviour, see {@link Saver.save}
+   * @param options.dialect - output dialect
    * @returns {OutputData | undefined}
    */
-  private async doSave(): Promise<OutputData | undefined> {
+  private async doSave({ dialect }: { dialect: 'host' | 'internal' }): Promise<OutputData | undefined> {
     // Wait for any in-progress render to complete before reading blocks
     const pendingRender = this.Blok.Renderer?.pendingRender;
 
@@ -225,7 +243,7 @@ export class Saver extends Module {
         return undefined;
       }
 
-      return this.makeOutput(orderGuardedData);
+      return this.makeOutput(orderGuardedData, dialect);
     } catch (error: unknown) {
       this.lastSaveError = error;
 
@@ -751,9 +769,10 @@ export class Saver extends Module {
   /**
    * Creates output object with saved data, time and version of blok
    * @param {ValidatedData} allExtractedData - data extracted from Blocks
+   * @param dialect - output dialect, see {@link Saver.save}
    * @returns {OutputData}
    */
-  private makeOutput(allExtractedData: SaverValidatedData[]): OutputData {
+  private makeOutput(allExtractedData: SaverValidatedData[], dialect: 'host' | 'internal'): OutputData {
     const extractedBlocks: OutputData['blocks'] = [];
 
     allExtractedData.forEach(({ id, tool, data, tunes, isValid, parentId, contentIds, lastEditedAt, lastEditedBy }) => {
@@ -817,7 +836,7 @@ export class Saver extends Module {
     const dataModelConfig = this.config.dataModel || 'auto';
     const detectedInputFormat = this.Blok.Renderer?.getDetectedInputFormat?.() ?? 'flat';
 
-    const finalBlocks = shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
+    const finalBlocks = dialect === 'host' && shouldCollapseToLegacy(dataModelConfig, detectedInputFormat)
       ? collapseToLegacy(extractedBlocks)
       : extractedBlocks;
 

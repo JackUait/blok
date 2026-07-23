@@ -226,13 +226,17 @@ describe('Renderer module', () => {
       data: blockData.data,
       tunes: blockData.tunes,
     });
-    expect(blockManager.insertMany).toHaveBeenCalledWith([
-      expect.objectContaining({
-        id: 'block-1',
-        tool: 'paragraph',
-        marker: 'block-instance',
-      }),
-    ]);
+    expect(blockManager.insertMany).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: 'block-1',
+          tool: 'paragraph',
+          marker: 'block-instance',
+        }),
+      ],
+      0,
+      { skipYjsSync: false }
+    );
     expect(blockManager.insert).not.toHaveBeenCalled();
   });
 

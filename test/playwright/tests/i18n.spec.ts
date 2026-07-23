@@ -1369,5 +1369,70 @@ test.describe('blok i18n', () => {
       await expect(todoListItem).toBeVisible();
     });
   });
+
+  /**
+   * `i18n.update()` repaints every block, and a repaint has to be invisible to
+   * the reader: the page must not move and the host's own controls must keep
+   * the focus they hold. jsdom can express neither — it has no layout and
+   * drops the selection when focus moves — so these live in the browser.
+   */
+  test.describe('runtime locale change', () => {
+    /**
+     * Fills the page with enough blocks to scroll.
+     * @param page - The Playwright page object
+     */
+    const createScrollableEditor = async (page: Page): Promise<void> => {
+      await createBlokWithI18n(page, {
+        data: {
+          blocks: Array.from({ length: 60 }, (_, index) => ({
+            type: 'paragraph',
+            data: { text: `Paragraph number ${index + 1}` },
+          })),
+        },
+      });
+      await expect(page.locator(BLOCK_SELECTOR)).toHaveCount(60);
+    };
+
+    test('keeps the scroll position when the locale changes', async ({ page }) => {
+      await createScrollableEditor(page);
+
+      /*
+       * Caret in an early block, reader scrolled far past it: restoring the
+       * caret drags the viewport back up to it unless the scroll is re-applied
+       * afterwards.
+       */
+      await page.locator(BLOCK_SELECTOR).nth(1).click();
+      await page.evaluate(() => window.scrollTo(0, 800));
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(800);
+
+      await page.evaluate(async () => {
+        await window.blokInstance?.i18n.update({ locale: 'ru' });
+      });
+
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(800);
+    });
+
+    test('leaves focus with the control that triggered the change', async ({ page }) => {
+      await createScrollableEditor(page);
+
+      // a caret left in a block is not the same as the editor holding focus
+      await page.locator(BLOCK_SELECTOR).nth(20).click();
+
+      await page.evaluate(() => {
+        const switcher = document.createElement('button');
+
+        switcher.id = 'host-language-switcher';
+        switcher.textContent = 'Language';
+        document.body.appendChild(switcher);
+        switcher.focus();
+      });
+
+      await page.evaluate(async () => {
+        await window.blokInstance?.i18n.update({ locale: 'ru' });
+      });
+
+      await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('host-language-switcher');
+    });
+  });
 });
 

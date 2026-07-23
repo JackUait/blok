@@ -159,9 +159,14 @@ export class ReadOnly extends Module {
     this.Blok.ModificationsObserver.disable();
 
     /**
-     * Save current Blok Blocks and render again
+     * Save current Blok Blocks and render again.
+     *
+     * In the editor's own dialect: the reload is a round-trip on itself, and
+     * the host-facing legacy collapse can only express nesting as nested
+     * `items[]`, so it would drop every list item nested by the flat
+     * `data.depth` carrier — a read-only toggle would flatten the document.
      */
-    const savedBlocks = await this.Blok.Saver.save();
+    const savedBlocks = await this.Blok.Saver.save({ dialect: 'internal' });
 
     if (savedBlocks === undefined) {
       this.Blok.ModificationsObserver.enable();
@@ -174,12 +179,25 @@ export class ReadOnly extends Module {
     this.Blok.Renderer.markRenderStart();
 
     try {
-      await this.Blok.BlockManager.clear();
-      await this.Blok.Renderer.render(savedBlocks.blocks);
+      /*
+       * View-only: the blocks keep their ids and their data is unchanged, so
+       * the Yjs document already describes exactly what is being rendered.
+       * Writing to it would clear the undo history — looking at a document in
+       * read-only mode must not cost the user their undo steps.
+       */
+      await this.Blok.BlockManager.withViewRebuild(async () => {
+        await this.Blok.BlockManager.clear(false, { skipYjsSync: true });
+        await this.Blok.Renderer.render(savedBlocks.blocks, { skipYjsSync: true });
+      });
     } finally {
       this.Blok.Renderer.markRenderEnd();
     }
 
+    /*
+     * After the render, which can move the viewport on its own: a browser
+     * follows focus as the old DOM goes away. Nothing here restores a caret,
+     * so this is the last thing that can move the reader.
+     */
     if (window.scrollY !== savedScrollY) {
       window.scrollTo(0, savedScrollY);
     }

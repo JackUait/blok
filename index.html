@@ -747,7 +747,128 @@
     }
     .settings-select:hover { border-color: #222222; }
     .settings-select:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
-    #select-locale { max-width: 130px; }
+    /*
+     * Language picker. A native <select> renders ~70 locales as one unbounded
+     * OS list that spills across the whole window and cannot be searched, so
+     * this is a listbox: fixed-positioned to escape the scrolling panel,
+     * bounded, filterable.
+     */
+    .lang-trigger {
+      max-width: 140px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 10px;
+      text-align: left;
+      line-height: 1.6;
+    }
+    .lang-trigger > span {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lang-trigger[aria-expanded="true"] { border-color: #222222; }
+    .dark-mode .lang-trigger[aria-expanded="true"] { border-color: #ffffff; }
+
+    #locale-menu {
+      position: fixed;
+      z-index: 60;
+      width: 248px;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border: 1px solid var(--pg-line);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.06);
+      overflow: hidden;
+      font-family: var(--pg-font);
+    }
+    #locale-menu[hidden] { display: none; }
+    .dark-mode #locale-menu {
+      background: #1f1f1f;
+      border-color: #3d3d3d;
+      box-shadow: 0 12px 32px -8px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .lang-search-wrap {
+      padding: 8px;
+      border-bottom: 1px solid var(--pg-line);
+    }
+    .dark-mode .lang-search-wrap { border-color: #2f2f2f; }
+    #locale-search {
+      width: 100%;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid var(--pg-line-strong);
+      border-radius: 8px;
+      color: var(--pg-ink);
+      background: transparent;
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    #locale-search::placeholder { color: var(--pg-muted); }
+    #locale-search:focus { border-color: #222222; box-shadow: 0 0 0 3px rgba(34,34,34,0.08); }
+    .dark-mode #locale-search { border-color: #3d3d3d; color: #e0e0e0; }
+    .dark-mode #locale-search:focus { border-color: #ffffff; box-shadow: 0 0 0 3px rgba(255,255,255,0.1); }
+
+    #locale-list {
+      max-height: 280px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 6px;
+      margin: 0;
+      list-style: none;
+      scrollbar-width: thin;
+      scrollbar-color: var(--pg-line-strong) transparent;
+    }
+    .dark-mode #locale-list { scrollbar-color: #3d3d3d transparent; }
+
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 8px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--pg-ink);
+      text-align: left;
+      cursor: pointer;
+      letter-spacing: -0.005em;
+    }
+    .dark-mode .lang-option { color: #e0e0e0; }
+    .lang-option__name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lang-option__code {
+      font-family: 'PT Mono', monospace;
+      font-size: 10px;
+      color: var(--pg-muted);
+      letter-spacing: 0.02em;
+    }
+    .lang-option__check { width: 12px; color: var(--pg-ink); opacity: 0; }
+    .dark-mode .lang-option__check { color: #ffffff; }
+    .lang-option[aria-selected="true"] { font-weight: 600; }
+    .lang-option[aria-selected="true"] .lang-option__check { opacity: 1; }
+    /* Highlight follows the keyboard, so hover has to write to the same state */
+    .lang-option[data-active="true"] { background: var(--pg-hover); }
+    .dark-mode .lang-option[data-active="true"] { background: rgba(255,255,255,0.07); }
+
+    .lang-empty {
+      padding: 14px 10px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--pg-muted);
+    }
+    .lang-empty[hidden] { display: none; }
     .dark-mode .settings-select {
       background-color: #1f1f1f;
       border-color: #3d3d3d;
@@ -911,7 +1032,9 @@
         <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Language</span>
           <kbd class="settings-kbd">⌥L</kbd>
-          <select id="select-locale" class="settings-select" aria-label="Editor language"></select>
+          <button type="button" id="locale-trigger" class="settings-select lang-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Editor language">
+            <span id="locale-trigger-label">English</span>
+          </button>
         </div>
         <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Notification position</span>
@@ -2109,7 +2232,7 @@
         KeyT: () => document.getElementById('toggle-rtl').click(),
         KeyL: () => {
           openSettingsPanel();
-          document.getElementById('select-locale').focus();
+          document.getElementById('locale-trigger').click();
         },
         KeyN: () => {
           const sel = document.getElementById('select-notifier-position');
@@ -2226,33 +2349,249 @@
 
     /**
      * Language picker — every supported locale, labelled in its own language.
+     *
+     * A searchable listbox rather than a native <select>: ~70 locales is more
+     * than an OS dropdown can show without covering the window, and none of
+     * them can be typed at.
      */
-    const selectLocale = document.getElementById('select-locale');
+    const localeTrigger = document.getElementById('locale-trigger');
+    const localeTriggerLabel = document.getElementById('locale-trigger-label');
 
-    for (const code of ALL_LOCALE_CODES) {
-      const option = document.createElement('option');
+    const LOCALES = ALL_LOCALE_CODES.map((code) => {
       let nativeName = code;
       try {
         nativeName = new Intl.DisplayNames([code], { type: 'language' }).of(code) ?? code;
       } catch {
         // Locale unknown to Intl — fall back to the raw code
       }
-      option.value = code;
-      option.textContent = `${nativeName} (${code})`;
-      option.selected = code === state.locale;
-      selectLocale.appendChild(option);
+
+      return { code, name: nativeName };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    const localeMenu = document.createElement('div');
+    localeMenu.id = 'locale-menu';
+    localeMenu.hidden = true;
+    localeMenu.innerHTML = `
+      <div class="lang-search-wrap">
+        <input id="locale-search" type="text" placeholder="Search language" aria-label="Search language" autocomplete="off" spellcheck="false">
+      </div>
+      <ul id="locale-list" role="listbox" aria-label="Editor language"></ul>
+      <div class="lang-empty" id="locale-empty" hidden>No language matches</div>
+    `;
+    document.body.appendChild(localeMenu);
+
+    const localeSearch = localeMenu.querySelector('#locale-search');
+    const localeList = localeMenu.querySelector('#locale-list');
+    const localeEmpty = localeMenu.querySelector('#locale-empty');
+
+    const localeLabel = (code) => {
+      const entry = LOCALES.find((locale) => locale.code === code);
+
+      return entry ? `${entry.name} (${entry.code})` : code;
+    };
+
+    localeTriggerLabel.textContent = localeLabel(state.locale);
+
+    /* One button per locale; the list is rebuilt on every keystroke of the filter. */
+    const renderLocaleOptions = (query = '') => {
+      const needle = query.trim().toLowerCase();
+      const matches = LOCALES.filter(({ code, name }) =>
+        needle === '' || code.includes(needle) || name.toLowerCase().includes(needle));
+
+      localeList.replaceChildren(...matches.map(({ code, name }) => {
+        const item = document.createElement('li');
+        const option = document.createElement('button');
+
+        option.type = 'button';
+        option.className = 'lang-option';
+        option.role = 'option';
+        option.dataset.code = code;
+        option.setAttribute('aria-selected', String(code === state.locale));
+        option.innerHTML = `
+          <span class="lang-option__check" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 5"/></svg>
+          </span>
+          <span class="lang-option__name"></span>
+          <span class="lang-option__code">${code}</span>
+        `;
+        option.querySelector('.lang-option__name').textContent = name;
+        item.appendChild(option);
+
+        return item;
+      }));
+
+      localeEmpty.hidden = matches.length > 0;
+      localeList.hidden = matches.length === 0;
+
+      const selected = localeList.querySelector('[aria-selected="true"]');
+
+      setActiveLocaleOption(selected ?? localeList.querySelector('.lang-option'), { scroll: false });
+    };
+
+    function setActiveLocaleOption(option, { scroll = true } = {}) {
+      for (const other of localeList.querySelectorAll('[data-active="true"]')) {
+        delete other.dataset.active;
+      }
+
+      if (!option) {
+        localeList.removeAttribute('aria-activedescendant');
+
+        return;
+      }
+
+      option.dataset.active = 'true';
+
+      if (scroll) {
+        // 'nearest' keeps the scroll inside the list — the page must not move
+        option.scrollIntoView({ block: 'nearest' });
+      }
     }
 
-    selectLocale.addEventListener('change', async () => {
-      state.locale = selectLocale.value;
+    const LOCALE_MENU_GAP = 6;
+    const LOCALE_MENU_EDGE = 12;
+
+    const positionLocaleMenu = () => {
+      const rect = localeTrigger.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - LOCALE_MENU_GAP - LOCALE_MENU_EDGE;
+      const spaceAbove = rect.top - LOCALE_MENU_GAP - LOCALE_MENU_EDGE;
+      // Below unless that side is cramped and the other one is roomier
+      const above = spaceBelow < 220 && spaceAbove > spaceBelow;
+
+      /*
+       * The list scrolls, so the menu never has to overflow the viewport to
+       * show every locale: cap it at whatever room the chosen side has.
+       */
+      const chrome = localeMenu.offsetHeight - localeList.offsetHeight;
+      const room = (above ? spaceAbove : spaceBelow) - chrome;
+
+      localeList.style.maxHeight = `${Math.max(120, Math.min(280, room))}px`;
+
+      const width = localeMenu.offsetWidth;
+      const height = localeMenu.offsetHeight;
+      const top = above ? rect.top - height - LOCALE_MENU_GAP : rect.bottom + LOCALE_MENU_GAP;
+
+      localeMenu.style.left = `${Math.max(LOCALE_MENU_EDGE, Math.min(rect.right - width, window.innerWidth - width - LOCALE_MENU_EDGE))}px`;
+      // The cap is a best estimate; clamping is what actually keeps it on screen
+      localeMenu.style.top = `${Math.max(LOCALE_MENU_EDGE, Math.min(top, window.innerHeight - height - LOCALE_MENU_EDGE))}px`;
+    };
+
+    const isLocaleMenuOpen = () => !localeMenu.hidden;
+
+    const openLocaleMenu = () => {
+      if (isLocaleMenuOpen()) return;
+
+      localeSearch.value = '';
+      renderLocaleOptions();
+      localeMenu.hidden = false;
+      localeTrigger.setAttribute('aria-expanded', 'true');
+      positionLocaleMenu();
+      localeSearch.focus();
+
+      const selected = localeList.querySelector('[aria-selected="true"]');
+      if (selected) selected.scrollIntoView({ block: 'center' });
+    };
+
+    const closeLocaleMenu = ({ restoreFocus = false } = {}) => {
+      if (!isLocaleMenuOpen()) return;
+
+      localeMenu.hidden = true;
+      localeTrigger.setAttribute('aria-expanded', 'false');
+
+      if (restoreFocus) localeTrigger.focus();
+    };
+
+    const pickLocale = async (code) => {
+      closeLocaleMenu({ restoreFocus: true });
+
+      if (code === state.locale) return;
+
+      state.locale = code;
+      localeTriggerLabel.textContent = localeLabel(code);
       // Locale implies direction; keep the RTL toggle in sync with it
-      state.rtl = getDirection(state.locale) === 'rtl';
+      state.rtl = getDirection(code) === 'rtl';
       toggleRtl.checked = state.rtl;
+
       await blok.i18n.update({
-        locale: state.locale,
+        locale: code,
         direction: state.rtl ? 'rtl' : 'ltr',
       });
+    };
+
+    localeTrigger.addEventListener('click', () => {
+      if (isLocaleMenuOpen()) {
+        closeLocaleMenu();
+      } else {
+        openLocaleMenu();
+      }
     });
+
+    localeSearch.addEventListener('input', () => {
+      renderLocaleOptions(localeSearch.value);
+      // fewer matches means a shorter menu — re-anchor it to the trigger
+      positionLocaleMenu();
+    });
+
+    localeList.addEventListener('click', (e) => {
+      const option = e.target.closest('.lang-option');
+
+      if (option) void pickLocale(option.dataset.code);
+    });
+
+    localeList.addEventListener('pointermove', (e) => {
+      const option = e.target.closest('.lang-option');
+
+      if (option && option.dataset.active !== 'true') {
+        setActiveLocaleOption(option, { scroll: false });
+      }
+    });
+
+    localeMenu.addEventListener('keydown', (e) => {
+      const options = [...localeList.querySelectorAll('.lang-option')];
+      const activeIndex = options.findIndex((option) => option.dataset.active === 'true');
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (options.length === 0) return;
+        const delta = e.key === 'ArrowDown' ? 1 : -1;
+        const next = (activeIndex + delta + options.length) % options.length;
+        setActiveLocaleOption(options[next]);
+        return;
+      }
+      if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        setActiveLocaleOption(e.key === 'Home' ? options[0] : options[options.length - 1]);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (options[activeIndex]) void pickLocale(options[activeIndex].dataset.code);
+        return;
+      }
+      // Esc closes the picker only — the panel's own Esc must not also fire
+      if (e.key === 'Escape' || e.key === 'Tab') {
+        e.stopPropagation();
+        e.preventDefault();
+        closeLocaleMenu({ restoreFocus: true });
+      }
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+      if (!isLocaleMenuOpen()) return;
+      if (localeMenu.contains(e.target) || localeTrigger.contains(e.target)) return;
+
+      closeLocaleMenu();
+    });
+
+    /*
+     * Fixed positioning escapes the scrolling panel, so it has to be re-derived
+     * whenever anything the trigger sits in moves.
+     */
+    window.addEventListener('resize', () => {
+      if (isLocaleMenuOpen()) positionLocaleMenu();
+    });
+    window.addEventListener('scroll', () => {
+      if (isLocaleMenuOpen()) positionLocaleMenu();
+    }, true);
 
     const selectNotifierPosition = document.getElementById('select-notifier-position');
     selectNotifierPosition.addEventListener('change', () => {

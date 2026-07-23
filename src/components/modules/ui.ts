@@ -457,6 +457,28 @@ export class UI extends Module<UINodes> {
   }
 
   /**
+   * Re-stamps the wrapper's text direction.
+   *
+   * Direction was applied only while the wrapper was being built, so an
+   * already-mounted editor could not follow a locale change from an LTR to an
+   * RTL language. Both hooks are toggled here: the `[direction:rtl]` utility
+   * that drives layout and the `data-blok-rtl` attribute that scoped CSS and
+   * the keyboard-navigation composer read.
+   * @param direction - the direction to apply
+   */
+  public setDirection(direction: 'ltr' | 'rtl'): void {
+    const isRtl = direction === 'rtl';
+
+    this.nodes.wrapper.classList.toggle('[direction:rtl]', isRtl);
+
+    if (isRtl) {
+      this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
+    } else {
+      this.nodes.wrapper.removeAttribute(DATA_ATTR.rtl);
+    }
+  }
+
+  /**
    * Check if one of Toolbar is opened
    * Used to prevent global keydowns (for example, Enter) conflicts with Enter-on-toolbar
    * @returns {boolean}

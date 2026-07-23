@@ -1,6 +1,6 @@
 'use strict';
 
-import type { BlokConfig, API, EditorWidth, Tokens } from '../types';
+import type { BlokConfig, API, EditorWidth, Tokens, EditorI18n, I18nUpdateOptions } from '../types';
 
 import { DATA_ATTR } from './components/constants/data-attributes';
 import { Core } from './components/core';
@@ -65,6 +65,14 @@ class Blok {
    * (mirroring theme/width/placeholder), so declared here for the type.
    */
   declare public readonly tokens: Tokens;
+
+  /**
+   * Runtime i18n API. Assigned dynamically in the constructor as an OWN
+   * property so it shadows the read-only `i18n` reached through the API
+   * prototype — tools keep getting a view they cannot use to flip the host's
+   * locale.
+   */
+  declare public readonly i18n: EditorI18n;
 
   /**
    * Stores destroy method implementation.
@@ -339,6 +347,33 @@ class Blok {
       },
       set: (tokens: Record<string, string>): void => applyTokens(tokens),
     };
+
+    /**
+     * i18n API — the read half mirrors what tools get through `api.i18n`, the
+     * `update` half is the host-only mutator that makes `config.i18n` live.
+     *
+     * Every call is routed through `isReady`: the I18n module resolves the
+     * configured locale during `prepare()`, so an update issued earlier would
+     * otherwise be overwritten by the config a moment later. Post-ready calls
+     * cost one microtask.
+     */
+    const getI18nModule = (): BlokModules['I18n'] | undefined =>
+      (blok.moduleInstances as Partial<BlokModules>).I18n;
+
+    (this as Record<string, unknown>).i18n = {
+      t: (key: string, vars?: Record<string, string | number>): string =>
+        getI18nModule()?.t(key, vars) ?? key,
+      has: (key: string): boolean => getI18nModule()?.has(key) ?? false,
+      getEnglishTranslation: (key: string): string =>
+        getI18nModule()?.getEnglishTranslation(key) ?? '',
+      getLocale: (): string => getI18nModule()?.getLocale() ?? 'en',
+      getDirection: (): 'ltr' | 'rtl' => getI18nModule()?.getDirection() ?? 'ltr',
+      update: async (options: I18nUpdateOptions): Promise<void> => {
+        await blok.isReady;
+
+        await getI18nModule()?.update(options);
+      },
+    } satisfies EditorI18n;
 
     /**
      * We need to export isReady promise in the constructor

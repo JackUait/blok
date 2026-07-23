@@ -297,7 +297,7 @@
           "option": "i18n",
           "type": "I18nConfig",
           "default": "undefined",
-          "description": "Internationalization config (locale + message dictionary)"
+          "description": "Internationalization config (locale + message dictionary). Live: switch language at runtime via `i18n.update({ locale, messages })` — the editor relabels in place, so caret and undo history survive (`defaultLocale` stays mount-only)."
         },
         "theme": {
           "option": "theme",
@@ -727,7 +727,7 @@
     "i18nApi": {
       "title": "I18n API",
       "badge": "I18n",
-      "description": "Internationalization support for translating UI strings.",
+      "description": "Internationalization support for translating UI strings, plus the runtime `i18n.update()` mutator that switches language in place.",
       "methods": {
         "i18n": {
           "t": {
@@ -741,6 +741,12 @@
           },
           "getLocale": {
             "note": "Returns the active locale code (e.g. `'en'`) so a tool can branch on the editor's current language."
+          },
+          "getDirection": {
+            "note": "Returns `'ltr'` or `'rtl'` for the active locale, so host chrome around the editor can mirror itself alongside it."
+          },
+          "update": {
+            "note": "Switches locale and host message overrides at runtime, relabelling the editor in place — a language switcher no longer has to recreate the editor and throw away caret, focus and undo history."
           }
         }
       }

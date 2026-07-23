@@ -23,6 +23,7 @@ type ReadOnlyMocks = {
     blocks: Array<{ setReadOnly: MockInstance<(state: boolean) => void> }>;
     clear: MockInstance<() => Promise<void>>;
     toggleReadOnly: MockInstance<(state: boolean) => void>;
+    withViewRebuild: MockInstance<(rebuild: () => Promise<void>) => Promise<void>>;
   };
   renderer: {
     render: MockInstance<(blocks: unknown[]) => Promise<void>>;
@@ -69,6 +70,10 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     blocks: [],
     clear: vi.fn<() => Promise<void>>(async () => undefined),
     toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
+    // rebuilds the view without touching the document — runs its callback as-is
+    withViewRebuild: vi.fn<(rebuild: () => Promise<void>) => Promise<void>>(async (rebuild) => {
+      await rebuild();
+    }),
   };
 
   const renderer: ReadOnlyMocks['renderer'] = {
@@ -168,7 +173,8 @@ describe('ReadOnly module', () => {
     expect(mocks.modificationsObserver.disable).toHaveBeenCalledTimes(1);
     expect(mocks.saver.save).toHaveBeenCalledTimes(1);
     expect(mocks.blockManager.clear).toHaveBeenCalledTimes(1);
-    expect(mocks.renderer.render).toHaveBeenCalledWith(savedBlocks);
+    // rendered as a view rebuild: the document already holds these blocks
+    expect(mocks.renderer.render).toHaveBeenCalledWith(savedBlocks, { skipYjsSync: true });
     expect(mocks.modificationsObserver.enable).toHaveBeenCalledTimes(1);
   });
 

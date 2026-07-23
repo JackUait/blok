@@ -3827,6 +3827,81 @@ const YIDDISH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'פּאַסיקע עמאָדזשיס: {count}',
 };
 
+const SIMPLIFIED_CHINESE_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': '清除格式',
+  'toolbox.optionAddAbove': '按住 Option 键点击以在上方添加',
+  'toolbox.ctrlAddAbove': '按住 Ctrl 键点击以在上方添加',
+  'tools.marker.textColor': '文字颜色',
+  'tools.toggle.bodyPlaceholder': '空折叠块。点击添加内容块，或将内容块拖到此处。',
+  'blockSettings.lastEditedBy': '最后由 {name} 编辑',
+  'a11y.dragHandle': '拖动以移动内容块，或点击打开菜单',
+  'tools.table.clearSelection': '清除内容',
+  'tools.callout.addEmoji': '添加图标',
+  'tools.callout.filterEmojis': '搜索表情符号…',
+  'tools.callout.pickRandom': '随机选择表情符号',
+  'tools.table.placement': '对齐方式',
+  'tools.table.placementTopCenter': '顶部居中',
+  'tools.table.placementMiddleLeft': '左侧居中',
+  'tools.table.placementMiddleRight': '右侧居中',
+  'tools.table.placementBottomCenter': '底部居中',
+  'toolNames.equation': '公式',
+  'tools.equation.placeholder': '输入 LaTeX 公式…',
+  'tools.code.searchLanguage': '搜索语言…',
+  'tools.link.linkTitle': '链接文本',
+  'tools.image.converting': '正在转换…',
+  'tools.image.altDescription': '为看不到这张图片的用户描述图片。',
+  'tools.image.errorFileTooLarge': '图片过大。{size} 超过 {max} 上限。',
+  'tools.image.errorSourceOffline': '源文件可能已移动或处于离线状态。',
+  'tools.image.errorDefaultMessage': '无法从此 URL 加载图片。请尝试其他来源或重新上传文件。',
+  'tools.database.viewTypeListDescription': '在简单列表中显示项目',
+  'tools.bookmark.loading': '正在加载链接预览…',
+  'tools.embed.empty': '没有嵌入链接',
+  'tools.file.errorFileTooLarge': '文件过大。{size} 超过 {max} 上限。',
+  'tools.file.previewRaw': '源文本',
+  'tools.video.errorFileTooLarge': '视频过大。{size} 超过 {max} 上限。',
+  'tools.audio.errorFileTooLarge': '音频文件过大。{size} 超过 {max} 上限。',
+  'tools.audio.titlePlaceholder': '曲目标题',
+  'tools.audio.artistPlaceholder': '艺人',
+  'tools.audio.coverChange': '更换封面',
+  'tools.audio.coverSet': '设置封面图片',
+  'tools.audio.coverRemove': '移除封面',
+  'tools.audio.coverErrorType': '选择图片文件',
+  'tools.audio.coverErrorTooLarge': '图片过大',
+  'tools.audio.coverAdd': '添加封面',
+  'tools.audio.coverSourceAria': '封面来源',
+  'a11y.navigationModeEntered': '导航模式。使用方向键在内容块之间移动，按 Enter 编辑，按 Esc 退出。',
+  'tools.video.seek': '播放位置',
+  'tools.video.seekValueText': '当前位置 {current}，总时长 {total}',
+  'tools.video.toggleTimeDisplay': '在已播放时间和剩余时间之间切换',
+  'tools.video.ctxCopyUrlAtTime': '复制当前播放位置的视频网址',
+  'tools.video.ctxStats': '播放统计信息',
+  'blockSettings.orConjunction': ' 或按 ',
+  'blockSettings.openMenuAction': ' 以打开菜单',
+  'a11y.dropPosition': '将放置在第 {position} 位，共 {total} 个',
+  'blockSettings.convertWithChildrenWarning': '嵌套内容块：{count} 个。转换此内容块会将嵌套内容移至顶层。是否继续？',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}：{default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}：{color}',
+  'a11y.dragHandleRole': '拖动手柄',
+  'toolNames.todoList': '待办清单',
+  'tools.columns.turnInto': '转换为分栏',
+  'toolNames.inlineCode': '行内代码',
+  'a11y.blocksDuplicated': '已复制 {count} 个内容块，起始位置为第 {position} 位',
+  'a11y.searchResults': '搜索结果：{count} 个',
+  'a11y.dropCreateColumnLeft': '将在左侧创建一栏',
+  'a11y.dropCreateColumnRight': '将在右侧创建一栏',
+  'a11y.blockToolbar': '内容块工具栏',
+  'tools.columns.col2': '2 栏',
+  'tools.columns.col3': '3 栏',
+  'tools.columns.col4': '4 栏',
+  'tools.columns.col5': '5 栏',
+  'tools.columns.resizeAriaLabel': '调整栏宽',
+  'searchTerms.citation': '引文',
+  'blockSettings.blocksSelected': '{count} 个内容块',
+  'tools.image.toggleCaption': '显示或隐藏说明',
+  'tools.file.toggleCaption': '显示或隐藏说明',
+  'tools.video.toggleCaption': '显示或隐藏说明',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4967,6 +5042,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(YIDDISH_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Simplified Chinese correction oracle', () => {
+    const messages = readLocale('zh').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SIMPLIFIED_CHINESE_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SIMPLIFIED_CHINESE_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

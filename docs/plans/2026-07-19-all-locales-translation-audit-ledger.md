@@ -361,7 +361,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `ur` | Urdu | Arabic | rtl | neutral contemporary Pakistani Urdu in Arabic script and RTL; polite plural imperatives for complete instructions and concise action or noun labels for compact controls; natural Urdu word order and punctuation; established Urdu product, accessibility, media, table, and database terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, and `URL` notation without injected bidi controls | `root-uk_staged_review` | `root-uk_staged_review-ur_final_caller` | pass | pass | pass | `F-ur-001`–`F-ur-056` | second-pass-complete |
 | `vi` | Vietnamese | Latin | ltr | neutral contemporary Vietnamese; concise direct imperatives for complete instructions and compact actions; sentence-case noun and state labels; established Vietnamese product, accessibility, media, table, and database terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, `Alt`, `URL`, `Video`, `Audio`, and `OK` notation | `root-uk_staged_review` | `root-sv_closeout_readiness-yi_terms_challenge` | pass | pass | pass | `F-vi-001`–`F-vi-035` | second-pass-complete |
 | `yi` | Yiddish | Hebrew | rtl | neutral contemporary Yiddish in Hebrew script and RTL; concise direct imperatives for compact actions and complete grammatical instructions; sentence-case noun and state labels; standard Yiddish orthography with pointed letters where lexical distinctions require them; established Yiddish product, accessibility, media, table, and database terminology; count-neutral runtime templates; conventional unchanged shortcut, ratio, `Alt`, and `URL` notation without injected bidi controls | `root-yi_reconciliation` | `root-vi_staged_diff_review` | pass | pass | pass | `F-yi-001`–`F-yi-112` | second-pass-complete |
-| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-001`–`F-zh-058` | pending |
+| `zh` | Chinese (Simplified) | Simplified Han | ltr | neutral contemporary Mainland Simplified Chinese; concise verb-object actions; established Chinese product and accessibility terminology; Chinese sentence punctuation | `root-zh_final_linguistic` | `root-zh_final_callers` | pass | pass | pass | `F-zh-001`–`F-zh-072` | second-pass-complete |
 | `zh-TW` | Chinese (Taiwan, Traditional) | Traditional Han | ltr | neutral contemporary Taiwan Traditional Chinese; concise verb-object actions; established Taiwan product and accessibility terminology; Traditional Chinese sentence punctuation | — | — | pending | pending | pending | `F-zh-TW-001`–`F-zh-TW-032` | pending |
 
 | `R-sv-001` | `sv` | `blockSettings.menuShortcutMac` | universal notation | `⌘/` is macOS shortcut notation rather than English prose; Swedish Apple guidance retains the `⌘` platform symbol. | [Apple — Kortkommandon på Mac](https://support.apple.com/sv-se/102650) |
@@ -499,6 +499,7 @@ locale returns to `pending`.
 | `ur` | `root-uk_staged_review` | `sha256:e493ea33ae4e45979bf9d09993c04d99f685a8f55b2496697ead249385acb3da` | `root-uk_staged_review-ur_final_caller` | `sha256:e493ea33ae4e45979bf9d09993c04d99f685a8f55b2496697ead249385acb3da` |
 | `vi` | `root-uk_staged_review` | `sha256:e1eec2c42de1e63768d62d9bfd9043bd04deb65785f77b9a31d719eb4ba92086` | `root-sv_closeout_readiness-yi_terms_challenge` | `sha256:e1eec2c42de1e63768d62d9bfd9043bd04deb65785f77b9a31d719eb4ba92086` |
 | `yi` | `root-yi_reconciliation` | `sha256:bde44d8e73c54fbb7794c86b4050a2738d1ae3db2a2e96a6eac487b45510678d` | `root-vi_staged_diff_review` | `sha256:bde44d8e73c54fbb7794c86b4050a2738d1ae3db2a2e96a6eac487b45510678d` |
+| `zh` | `root-zh_final_linguistic` | `sha256:60634f8ea158ccd146da45581b532230138de8c4c29e4fe6354bd12b35ce3089` | `root-zh_final_callers` | `sha256:60634f8ea158ccd146da45581b532230138de8c4c29e4fe6354bd12b35ce3089` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -9143,6 +9144,68 @@ identical-value warnings. Global `F-global-014` and `F-global-020` remain
 coordinated follow-up work and do not invalidate this locale-level second-pass
 transition.
 
+### Simplified Chinese (`zh`) — current 546-key second pass complete
+
+Independent linguistic and caller-structure reviews restarted at entry 1 on
+the raw 25,706-byte Simplified Chinese dictionary, bound at SHA-256
+`7176ee9398538cedcbc970cba255044db59d98b01902a2119df4a3f09a4f09ce`.
+Their two 14-proposal artifacts are bound at SHA-256
+`4d7e7435f149041895544f6461080213f31b0c46ccaf6c00acc17edac5937465`
+and
+`1ae95ab367aeeed9dc48245aa98afccd9e31b1b8f617b2a704e79878ae89f040`;
+their canonical payloads are bound at
+`f38c10ccd9c6b24f1f9129b0faddf1c88974f151f9af6a699f52268ddf4779c7`
+and
+`818be4dce1c0d22342d583b3cbcfa1efbc4d752ef9714147b78142e23b3e4506`.
+
+Independent proposal reconciliation, bound at SHA-256
+`5f5bdb6654ea8ff336d4fd3e1de25a8a30bac1af70ede99cf41a4f1004ec010b`
+with canonical payload
+`45a4be20f7e84d258ccc8e8f2aa4c7b6dd8bd89bfe8175a7973029d3dc2ac868`,
+found exact agreement across the complete 14-key proposal union and accepted
+all 14 corrections without conflict or independent amendment. It upheld all
+58 historical findings, six intentional identities, eight rejected optional
+proposals, and 12 retained challenges, with no overlap among those sets and
+the final correction map. The resulting 72-value oracle failed against the
+raw catalog on exactly the 14 newly adjudicated values and passed after their
+exact application.
+
+The final 25,733-byte dictionary is bound at SHA-256
+`60634f8ea158ccd146da45581b532230138de8c4c29e4fe6354bd12b35ce3089`.
+Fresh final linguistic and caller-structure reviews are bound at SHA-256
+`3074da80c046ec91991b984757e7fd0cb654999c008bebde15248de42fa693d4`
+and
+`fb6f62bf6c0404fb617c3dd36617aae1e6d1f22140ad70da9fe12a802ec58277`;
+their canonical payloads are bound at
+`c58b86a515318988d5e39ace7025125438d40ed57ddaa986b190db9e6f9d60a2`
+and
+`0cc00e0ddddfd3de7c51fa27a5014e5f0ded10f10548c797a0db2bfc55840ca0`.
+Both provide one unique disposition for every English/Simplified Chinese pair,
+uphold all 72 verified findings `F-zh-001` through `F-zh-072`, confirm exactly
+the six intentional identities `R-zh-001` through `R-zh-006`, uphold all eight
+rejected proposals and 12 retained challenges, and report no final or
+unexplained residual and no blocker.
+
+The final passes bind current source revision
+`100d6f0cfc4278271b3ffbd245a82c270bc67f6d` and the canonical 534-file
+production manifest at SHA-256
+`76bba0a10ec47d8359ee6f1cf5dcad8e7227af19505e50b28a9730b6b0db0d55`.
+They revalidate all 38 placeholder-bearing keys and 54 placeholder
+occurrences, 14 search groups and 44 unique aliases across 48 references,
+unique key parity, UTF-8 and NFC integrity, boundary whitespace, 117 provider
+compositions, 20 color compositions, and the complete 397 literal + 122
+finite-dynamic + 25 registered-namespace-compatible + two catalog-only
+lifecycle with 487 exact caller coordinates. They explicitly inventory the
+two catalog-absent video fallback calls at `index.ts:277` and `index.ts:301`
+for the coordinated global migration. The complete guideline corpus passes
+6,451/6,451, the nine-file i18n gate passes 7,171/7,171, the focused caller
+and block-color gates pass 549/549, the video fallback suite passes 55/55, and
+the checker regressions pass 89/89. The live completeness, integrity,
+source-coverage, and encoding command and scoped ESLint gate pass with exactly
+the six catalogued Simplified Chinese identical-value warnings. Global
+`F-global-014` and `F-global-020` remain coordinated follow-up work and do not
+invalidate this locale-level second-pass transition.
+
 ## Findings
 
 Add one row for every structural, semantic, style, register, terminology,
@@ -11773,6 +11836,20 @@ follows the global transition rule above.
 | `F-zh-056` | `zh` | `tools.columns.turnInto` | source-only terminology consistency | `"转换为列"` | `"转换为分栏"` | The source-only label names the same side-by-side page-layout tool already localized as `分栏`; Microsoft likewise uses [分栏](https://support.microsoft.com/zh-cn/word/insert-a-column-break) for page columns, while `列` suggests a table column. | verified |
 | `F-zh-057` | `zh` | `toolNames.inlineCode` | tool distinction / terminology | `"代码"` | `"行内代码"` | The visible inline-toolbar title must distinguish this formatter from the code-block tool; MDN uses the explicit term [行内代码](https://developer.mozilla.org/zh-CN/docs/Web/HTML/Reference/Elements/code). | verified |
 | `F-zh-058` | `zh` | `a11y.blocksDuplicated` | grammar / accessibility | `"已复制 {count} 个内容块，起始位置第 {position} 位"` | `"已复制 {count} 个内容块，起始位置为第 {position} 位"` | The assertive spoken announcement needs `为` between the topic `起始位置` and its ordinal complement; both placeholders remain unchanged. | verified |
+| `F-zh-059` | `zh` | `a11y.searchResults` | accessibility-source-synchronization / caller synchronization | `"{count} 个结果"` | `"搜索结果：{count} 个"` | The English label explicitly identifies search results and three live-region callers interpolate arbitrary count; adding 搜索结果 and the classifier preserves both context and cardinality. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-060` | `zh` | `a11y.dropCreateColumnLeft` | page-layout-terminology / caller synchronization | `"将在左侧创建一列"` | `"将在左侧创建一栏"` | The drag announcement creates a side-by-side page-layout column; 栏 aligns with 分栏 and avoids the table/database 列 sense. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-061` | `zh` | `a11y.dropCreateColumnRight` | page-layout-terminology / caller synchronization | `"将在右侧创建一列"` | `"将在右侧创建一栏"` | The drag announcement creates a side-by-side page-layout column; 栏 aligns with 分栏 and avoids the table/database 列 sense. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-062` | `zh` | `a11y.blockToolbar` | accessibility-product-terminology / caller synchronization | `"块工具栏"` | `"内容块工具栏"` | The ARIA label identifies the editor content-block toolbar; 内容块 is the established unambiguous object name in adjacent accessibility strings. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-063` | `zh` | `tools.columns.col2` | page-layout-terminology / caller synchronization | `"2 列"` | `"2 栏"` | The finite option selects a two-column page layout, so 栏 is the coherent page-layout term. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-064` | `zh` | `tools.columns.col3` | page-layout-terminology / caller synchronization | `"3 列"` | `"3 栏"` | The finite option selects a three-column page layout, so 栏 is the coherent page-layout term. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-065` | `zh` | `tools.columns.col4` | page-layout-terminology / caller synchronization | `"4 列"` | `"4 栏"` | The finite option selects a four-column page layout, so 栏 is the coherent page-layout term. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-066` | `zh` | `tools.columns.col5` | page-layout-terminology / caller synchronization | `"5 列"` | `"5 栏"` | The finite option selects a five-column page layout, so 栏 is the coherent page-layout term. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-067` | `zh` | `tools.columns.resizeAriaLabel` | accessibility-page-layout-terminology / caller synchronization | `"调整列宽"` | `"调整栏宽"` | The accessible resize handle changes page-layout column width; 调整栏宽 names that operation precisely. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-068` | `zh` | `searchTerms.citation` | search-alias-semantics / caller synchronization | `"出处"` | `"引文"` | The quote-tool alias must retrieve citation semantics; 引文 denotes the cited passage while 出处 only denotes provenance. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-069` | `zh` | `blockSettings.blocksSelected` | product-terminology / caller synchronization | `"{count} 个块"` | `"{count} 个内容块"` | The settings label counts editor content blocks; 内容块 preserves the product object and the {count} classifier. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-070` | `zh` | `tools.image.toggleCaption` | stateful-action-accessibility / caller synchronization | `"显示/隐藏说明"` | `"显示或隐藏说明"` | This stateful accessible action can show or hide a caption; 或 expresses both outcomes without spoken slash punctuation. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-071` | `zh` | `tools.file.toggleCaption` | stateful-action-accessibility / caller synchronization | `"显示/隐藏说明"` | `"显示或隐藏说明"` | This stateful accessible action can show or hide a caption; 或 expresses both outcomes without spoken slash punctuation. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
+| `F-zh-072` | `zh` | `tools.video.toggleCaption` | stateful-action-accessibility / caller synchronization | `"显示/隐藏说明"` | `"显示或隐藏说明"` | This finite media-control action can show or hide a caption; 或 expresses both outcomes without spoken slash punctuation. Independent Simplified Chinese linguistic, caller, and reconciliation review requires this correction. | verified |
 | `F-zh-TW-001` | `zh-TW` | `toolNames.clearFormat` | missing key / source coverage | `missing` | `"清除格式"` | Microsoft’s Taiwan Traditional Chinese editor UI uses the exact concise command [清除格式](https://support.microsoft.com/zh-TW/PowerPoint/clear-all-text-formatting). | verified |
 | `F-zh-TW-002` | `zh-TW` | `blockSettings.orConjunction` | composed shortcut grammar / source synchronization | `" 或 "` | `" 或按下 "` | In the editable tooltip, this fragment precedes raw shortcut notation; Taiwan Chinese uses the explicit key-press verb so the composition reads naturally, and both boundary spaces remain exact. | verified |
 | `F-zh-TW-003` | `zh-TW` | `blockSettings.openMenuAction` | composed action grammar | `" 開啟選單"` | `" 以開啟選單"` | This fragment completes both the click-only and click-or-shortcut tooltip lines; the purpose marker `以` makes both compositions grammatical while preserving the required leading space. | verified |

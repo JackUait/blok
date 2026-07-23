@@ -79,3 +79,25 @@ describe('convertHtml', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe('convertHtml inline markup normalization', () => {
+  /**
+   * buildBlocks stores element innerHTML verbatim, so fragmented source markup
+   * would otherwise land in the emitted JSON exactly as written — the same
+   * defect the editor's paste path had.
+   */
+  it('collapses adjacent identical inline wrappers into one', () => {
+    const html = '<p><mark style="color: red;">a</mark><mark style="color: red;">b</mark></p>';
+    const { blocks } = JSON.parse(convertHtml(html)) as { blocks: Array<{ data: { text: string } }> };
+
+    expect((blocks[0].data.text.match(/<mark/g) ?? []).length).toBe(1);
+    expect(blocks[0].data.text).toContain('ab');
+  });
+
+  it('leaves genuinely distinct formatting alone', () => {
+    const html = '<p><mark style="color: red;">a</mark><mark style="color: blue;">b</mark></p>';
+    const { blocks } = JSON.parse(convertHtml(html)) as { blocks: Array<{ data: { text: string } }> };
+
+    expect((blocks[0].data.text.match(/<mark/g) ?? []).length).toBe(2);
+  });
+});

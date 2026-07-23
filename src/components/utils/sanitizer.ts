@@ -35,6 +35,7 @@ import type { SavedData } from '../../../types/data-formats';
 import { isSafeAttribute, PLAINTEXT } from '../../shared/sanitize-rules';
 import { hasUnsafeUrlProtocol } from '../../shared/url-policy';
 import { deepMerge, isBoolean, isEmpty, isFunction, isObject, isString } from '../utils';
+import { normalizeInlineMarkupHtml } from './inline-normalization';
 
 type DeepSanitizerRule = SanitizerConfig | SanitizerRule;
 
@@ -243,16 +244,16 @@ const cleanOneItem = (
   if (effectiveRule) {
     const cleaned = clean(taintString, effectiveRule);
 
-    return stripUnsafeUrls(applyAttributeOverrides(cleaned, effectiveRule));
+    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, effectiveRule)));
   }
 
   if (!isEmpty(globalRules)) {
     const cleaned = clean(taintString, globalRules);
 
-    return stripUnsafeUrls(applyAttributeOverrides(cleaned, globalRules));
+    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, globalRules)));
   }
 
-  return stripUnsafeUrls(taintString);
+  return normalizeInlineMarkupHtml(stripUnsafeUrls(taintString));
 };
 
 /**

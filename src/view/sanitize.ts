@@ -27,6 +27,15 @@ import type { DefaultTreeAdapterMap } from 'parse5';
 
 import type { SanitizerConfig, SanitizerRule } from '../../types';
 import type { PlaintextRule, TagConfig } from '../../types/configs/sanitizer-config';
+import {
+  areInterchangeable,
+  decoratesNothing,
+  duplicatesAncestor,
+  MAX_NORMALIZATION_SWEEPS,
+  MERGEABLE_TAGS,
+  VOID_CONTENT_TAGS,
+  type InlineElementView,
+} from '../shared/inline-normalization-policy';
 import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
@@ -557,6 +566,139 @@ const sanitizeChildren = (
 };
 
 /**
+ * Build the shared normalization policy's element view from a parse5 element.
+ * @param node - parse5 element to describe
+ */
+const inlineViewOf = (node: P5Element): InlineElementView => {
+  const hasVoidContentDescendant = (candidate: P5Element): boolean =>
+    candidate.childNodes.some(
+      (child) =>
+        isElementNode(child) &&
+        (VOID_CONTENT_TAGS.has(child.tagName.toUpperCase()) || hasVoidContentDescendant(child))
+    );
+
+  return {
+    tagName: node.tagName.toUpperCase(),
+    attributes: node.attrs.map((attr) => ({ name: attr.name, value: attr.value })),
+    styleDeclarations: parseStyleText(getAttr(node, 'style') ?? ''),
+    text: () => collectText(node),
+    hasVoidContentDescendant: () => hasVoidContentDescendant(node),
+  };
+};
+
+/**
+ * One normalization sweep over a parse5 subtree. Mirrors the DOM
+ * implementation in `src/components/utils/inline-normalization.ts` — the two
+ * share every decision via the policy module, and differ only in tree
+ * mechanics. Returns whether anything changed so the caller can run to a
+ * fixpoint.
+ *
+ * `<template>` content is deliberately left alone: the DOM twin normalizes via
+ * `querySelectorAll`, which does not descend into template content either.
+ * @param parent - subtree to normalize in place
+ * @param ancestors - views of the enclosing wrappers, innermost first
+ */
+const normalizeInlineSweep = (parent: P5ParentNode, ancestors: InlineElementView[]): boolean => {
+  /**
+   * Hoist a redundant wrapper's children into its place.
+   * @param node - wrapper to unwrap
+   * @param index - its position among the parent's children
+   */
+  const unwrapAt = (node: P5Element, index: number): void => {
+    for (const child of node.childNodes) {
+      child.parentNode = parent;
+    }
+    parent.childNodes.splice(index, 1, ...node.childNodes);
+  };
+
+  /**
+   * Walk the children once, unwrapping wrappers that decorate nothing or
+   * repeat an ancestor. Rescans from the same index after a mutation.
+   * @param index - child position to examine
+   * @returns whether anything was unwrapped from here on
+   */
+  const unwrapFrom = (index: number): boolean => {
+    if (index >= parent.childNodes.length) {
+      return false;
+    }
+
+    const node = parent.childNodes[index];
+
+    if (!isElementNode(node) || !MERGEABLE_TAGS.has(node.tagName.toUpperCase())) {
+      return unwrapFrom(index + 1);
+    }
+
+    const view = inlineViewOf(node);
+
+    if (decoratesNothing(view) || duplicatesAncestor(view, ancestors)) {
+      unwrapAt(node, index);
+      unwrapFrom(index);
+
+      return true;
+    }
+
+    return unwrapFrom(index + 1);
+  };
+
+  /**
+   * Merge each child with the following sibling while the two express the
+   * same formatting.
+   * @param index - child position to examine
+   * @returns whether anything was merged from here on
+   */
+  const mergeFrom = (index: number): boolean => {
+    if (index >= parent.childNodes.length - 1) {
+      return false;
+    }
+
+    const left = parent.childNodes[index];
+    const right = parent.childNodes[index + 1];
+    const mergeable =
+      isElementNode(left) && isElementNode(right) && areInterchangeable(inlineViewOf(left), inlineViewOf(right));
+
+    if (!mergeable) {
+      return mergeFrom(index + 1);
+    }
+
+    for (const child of right.childNodes) {
+      child.parentNode = left;
+      left.childNodes.push(child);
+    }
+    parent.childNodes.splice(index + 1, 1);
+    mergeFrom(index);
+
+    return true;
+  };
+
+  const unwrapped = unwrapFrom(0);
+  const descended = [...parent.childNodes]
+    .map((node) => isElementNode(node) && normalizeInlineSweep(node, [inlineViewOf(node), ...ancestors]))
+    .some(Boolean);
+  const merged = mergeFrom(0);
+
+  return unwrapped || descended || merged;
+};
+
+/**
+ * Collapse redundant inline markup in a parse5 fragment, in place.
+ * @param fragment - parsed fragment to normalize
+ */
+const normalizeInlineMarkupFragment = (fragment: P5ParentNode): void => {
+  /**
+   * @param remaining - sweeps left before the safety valve trips
+   */
+  const runSweeps = (remaining: number): void => {
+    if (remaining === 0 || !normalizeInlineSweep(fragment, [])) {
+      return;
+    }
+
+    runSweeps(remaining - 1);
+  };
+
+  runSweeps(MAX_NORMALIZATION_SWEEPS);
+};
+
+/**
  * Sanitize an HTML fragment string against a {@link SanitizerConfig},
  * DOM-free. When the config is the {@link PLAINTEXT} sentinel the input is
  * treated as literal text and returned entity-escaped.
@@ -577,6 +719,7 @@ export const sanitizeHtmlFragment = (html: string, config: SanitizerConfig | Pla
   const fragment = parseFragment(contextElement, html, {});
 
   sanitizeChildren(fragment, config, true, true);
+  normalizeInlineMarkupFragment(fragment);
 
   return serialize(fragment);
 };

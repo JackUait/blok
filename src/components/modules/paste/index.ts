@@ -2,6 +2,7 @@ import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config
 import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
 import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
+import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
@@ -312,7 +313,13 @@ export class Paste extends Module {
     );
 
     const preprocessed = recoverGfmToggles(preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData)));
-    const cleanData = clean(preprocessed, customConfig);
+    /**
+     * Clipboard sources describe formatting run by run, so pasted markup
+     * arrives fragmented no matter which app it came from. Collapse it here,
+     * after sanitization has settled which tags and attributes survive —
+     * two wrappers only become interchangeable once that is decided.
+     */
+    const cleanData = normalizeInlineMarkupHtml(clean(preprocessed, customConfig));
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 

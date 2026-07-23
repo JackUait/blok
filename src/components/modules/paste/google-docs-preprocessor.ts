@@ -1,4 +1,5 @@
 import { mapToNearestPresetColor } from '../../utils/color-mapping';
+import { normalizeInlineMarkupIn } from '../../utils/inline-normalization';
 import {
   isDefaultDarkBackground as isDefaultDarkBackgroundShared,
   isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
@@ -32,6 +33,16 @@ export function preprocessGoogleDocsHtml(html: string): string {
     convertTableCellParagraphs(wrapper);
     promoteImages(wrapper);
   }
+
+  /**
+   * The conversion above is per-`<span>`, because that is the only unit the
+   * source gives us — and Google Docs writes a separate span for every text
+   * run, including runs holding just a `<br>` or a single space. Collapse the
+   * resulting identical neighbours here, at the point that creates them, so
+   * every consumer of this function (paste and the CLI converter alike) gets
+   * the collapsed form.
+   */
+  normalizeInlineMarkupIn(wrapper);
 
   return wrapper.innerHTML;
 }

@@ -31,6 +31,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onReady',
   'onChange',
   'onSave',
+  'onError',
   'onEnter',
   'onBeforeRender',
   'onAfterRender',

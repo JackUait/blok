@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
 import { Saver } from '../../../../src/components/modules/saver';
+import { SaveFailed } from '../../../../src/components/events';
 import type { Block } from '../../../../src/components/block';
 import type { BlokConfig, SanitizerConfig } from '../../../../types';
 import type { SavedData } from '../../../../types/data-formats';
@@ -49,6 +50,7 @@ interface CreateSaverOptions {
   sanitizer?: SanitizerConfig;
   stubTool?: string;
   toolSanitizeConfigs?: Record<string, SanitizerConfig>;
+  onError?: BlokConfig['onError'];
 }
 
 const createBlockMock = (options: BlockMockOptions): BlockMock => {
@@ -85,9 +87,10 @@ const createBlockMock = (options: BlockMockOptions): BlockMock => {
   };
 };
 
-const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
+const createSaver = (options: CreateSaverOptions = {}): { saver: Saver; eventsDispatcher: Saver['eventsDispatcher'] } => {
   const config: BlokConfig = {
     sanitizer: options.sanitizer ?? ({}),
+    ...(options.onError ? { onError: options.onError } : {}),
   };
 
   const eventsDispatcher = {
@@ -126,13 +129,41 @@ const createSaver = (options: CreateSaverOptions = {}): { saver: Saver } => {
 
   (saver as unknown as { state: Saver['Blok'] }).state = blokState as unknown as Saver['Blok'];
 
-  return { saver };
+  return { saver, eventsDispatcher };
 };
 
 describe('Saver module', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+  });
+
+  it('reports a save failure via config.onError and the SaveFailed event, and still returns undefined', async () => {
+    const boom = new Error('serialization boom');
+    const failing = createBlockMock({ id: 'block-1', tool: 'paragraph', data: { text: 'x' } });
+
+    failing.saveMock.mockRejectedValue(boom);
+
+    const onError = vi.fn();
+    const { saver, eventsDispatcher } = createSaver({ blocks: [failing.block], onError });
+
+    const result = await saver.save();
+
+    expect(result).toBeUndefined();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(boom, { source: 'save' });
+    expect(eventsDispatcher.emit).toHaveBeenCalledWith(SaveFailed, { error: boom });
+  });
+
+  it('does not call config.onError or emit SaveFailed on a successful save', async () => {
+    const onError = vi.fn();
+    const block = createBlockMock({ id: 'block-1', tool: 'paragraph', data: { text: 'x' } });
+    const { saver, eventsDispatcher } = createSaver({ blocks: [block.block], onError });
+
+    await saver.save();
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(eventsDispatcher.emit).not.toHaveBeenCalledWith(SaveFailed, expect.anything());
   });
 
   it('saves valid blocks, sanitizes data, and preserves stub data', async () => {

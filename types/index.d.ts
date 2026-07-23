@@ -82,6 +82,7 @@ export {
 export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
   BlokConfig,
+  BlokErrorContext,
   BlokMountOptions,
   BlokState,
   ReadOnlyModeConfig,

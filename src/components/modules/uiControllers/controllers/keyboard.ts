@@ -1,5 +1,6 @@
 import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
+import { isIosDevice } from '../../../utils/browser';
 import { getCaretOffset } from '../../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
@@ -458,6 +459,15 @@ export class KeyboardController extends Controller {
   private handleEnter(event: KeyboardEvent): void {
     const { BlockManager, BlockSelection, BlockEvents } = this.Blok;
 
+    /**
+     * An Enter committing an IME composition belongs to the input method, not
+     * blok — mirrors the guard in KeyboardNavigation.handleEnter so neither
+     * dispatch path creates a block (or calls `onEnter`) mid-composition.
+     */
+    if (event.isComposing) {
+      return;
+    }
+
     if (this.someToolbarOpened()) {
       return;
     }
@@ -506,13 +516,20 @@ export class KeyboardController extends Controller {
     if (!this.someToolbarOpened() && hasPointerToBlock && (event.target as HTMLElement).tagName === 'BODY') {
       /**
        * Consumer-level Enter hook (`config.onEnter`) — same contract as the
-       * block-level Enter path in KeyboardNavigation.handleEnter. Never fires
-       * for Shift+Enter; returning true suppresses the default block insert
-       * while blok still prevents the browser's native newline.
+       * block-level Enter path in KeyboardNavigation.handleEnter: it fires
+       * whenever blok is about to create a block from Enter, and returning true
+       * suppresses that insert while blok still prevents the native newline.
+       *
+       * The soft-line-break escape must match that path exactly: Shift+Enter is
+       * a soft break on every platform EXCEPT iOS, where Safari reports a
+       * Shift+Enter for a sentence-ending ". " and blok creates a block instead.
+       * So `onEnter` does fire for Shift+Enter on iOS — an absolute "never fires
+       * for Shift+Enter" would be false there and disagree with handleEnter.
        */
       const onEnter = this.config.onEnter;
+      const isSoftLineBreak = event.shiftKey && !isIosDevice;
 
-      if (!event.shiftKey && typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
+      if (!isSoftLineBreak && typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
         event.preventDefault();
         this.Blok.BlockSelection.clearSelection(event);
 

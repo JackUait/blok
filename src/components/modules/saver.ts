@@ -9,6 +9,7 @@ import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { SavedData, ValidatedData } from '../../../types/data-formats';
 import { Module } from '../__module';
 import type { Block } from '../block';
+import { SaveFailed } from '../events';
 import { getBlokVersion, isEmpty, isObject, log, logLabeled } from '../utils';
 import { collapseToLegacy, shouldCollapseToLegacy } from '../utils/data-model-transform';
 import { resolveRuntimeEnv, validateHierarchy, validateHolderAttachment } from '../utils/hierarchy-invariant';
@@ -250,6 +251,15 @@ export class Saver extends Module {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
 
       logLabeled(`Saving failed due to the Error %o`, 'error', normalizedError);
+
+      /**
+       * Surface the failure instead of only logging it: this is the single
+       * choke point for every save (the debounced auto-save AND explicit
+       * `save()`), so both the `onError` config hook and the `SaveFailed`
+       * event fire here exactly once per failed attempt.
+       */
+      this.config.onError?.(normalizedError, { source: 'save' });
+      this.eventsDispatcher.emit(SaveFailed, { error: normalizedError });
 
       return undefined;
     }

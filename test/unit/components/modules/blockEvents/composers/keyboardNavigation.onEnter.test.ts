@@ -162,6 +162,23 @@ describe('KeyboardNavigation — config.onEnter hook', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it('never calls onEnter (and does not split) while an IME composition is active', () => {
+    const onEnter = vi.fn(() => true);
+    const { blok, split, insertDefaultBlockAtIndex } = createModules();
+    const keyboardNavigation = new KeyboardNavigation(blok, () => onEnter);
+    // Enter pressed to commit an IME candidate: the browser fires keydown with
+    // isComposing=true. Blok must not treat this as a block command.
+    const event = createKeyboardEvent({ key: 'Enter', isComposing: true });
+
+    keyboardNavigation.handleEnter(event);
+
+    expect(onEnter).not.toHaveBeenCalled();
+    expect(split).not.toHaveBeenCalled();
+    expect(insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+    // Blok must NOT preventDefault — the browser needs to commit the composition
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('never calls onEnter while a toolbar flipper owns Enter', () => {
     const onEnter = vi.fn(() => true);
     const { blok } = createModules({ someToolbarOpened: true, someFlipperButtonFocused: true });

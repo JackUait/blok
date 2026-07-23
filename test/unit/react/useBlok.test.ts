@@ -586,6 +586,30 @@ describe('useBlok', () => {
     expect(passedConfig.onSave).toBeUndefined();
   });
 
+  it('forwards the onError callback into the editor config', async () => {
+    const onError = vi.fn();
+
+    renderHook(() => useBlok({ onError }));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as {
+      onError?: NonNullable<UseBlokConfig['onError']>;
+    };
+
+    expect(passedConfig.onError).toBe(onError);
+  });
+
+  it('does not pass an onError callback to the editor config when the prop is omitted', async () => {
+    renderHook(() => useBlok({}));
+
+    await flushAll();
+
+    const passedConfig = MockBlokConstructor.mock.calls[0][0] as { onError?: unknown };
+
+    expect(passedConfig.onError).toBeUndefined();
+  });
+
   it('should use latest onBeforeRender callback ref without recreating editor', async () => {
     type OnBeforeRender = NonNullable<UseBlokConfig['onBeforeRender']>;
     const onBeforeRender1: OnBeforeRender = vi.fn((blocks: Parameters<OnBeforeRender>[0]) => blocks);

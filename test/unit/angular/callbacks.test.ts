@@ -18,17 +18,22 @@ import { BlokEditorComponent } from '../../../packages/angular/src/blok-editor.c
     (themeChange)="themeChanges.push($event)"
     [onBeforeRender]="beforeRender"
     [onBeforePaste]="beforePaste"
+    [onError]="error"
   ></blok-editor>`,
 })
 class WiredHost {
   changes: unknown[] = [];
   afters: unknown[] = [];
   themeChanges: ResolvedTheme[] = [];
+  errors: Error[] = [];
   beforeRender = (blocks: OutputBlockData[]): OutputBlockData[] => [
     ...blocks,
     { id: 'injected', type: 'paragraph', data: {} },
   ];
   beforePaste = (html: string): string => html.toUpperCase();
+  error = (err: Error): void => {
+    this.errors.push(err);
+  };
 }
 
 @Component({
@@ -111,6 +116,19 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(transform('<b>hi</b>')).toBe('<B>HI</B>');
   });
 
+  it('threads the onError callback into core config', async () => {
+    const fixture = await mountReady(WiredHost);
+    const report = blokRegistry.last.config.onError as (
+      error: Error,
+      context: { source: string }
+    ) => void;
+    const error = new Error('boom');
+
+    report(error, { source: 'save' });
+
+    expect(fixture.componentInstance.errors).toEqual([error]);
+  });
+
   it('does not wire callbacks the consumer did not provide', async () => {
     await mountReady(BareHost);
     const config = blokRegistry.last.config;
@@ -120,5 +138,6 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(config.onThemeChange).toBeUndefined();
     expect(config.onBeforeRender).toBeUndefined();
     expect(config.onBeforePaste).toBeUndefined();
+    expect(config.onError).toBeUndefined();
   });
 });

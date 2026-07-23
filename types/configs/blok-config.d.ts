@@ -16,6 +16,19 @@ import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptN
 export type DataModelFormat = 'legacy' | 'hierarchical' | 'auto';
 
 /**
+ * Context handed to {@link BlokConfig.onError} describing where a reported
+ * error originated. Modeled as an object (rather than a bare string) so new
+ * error sources can be added without a breaking signature change.
+ */
+export interface BlokErrorContext {
+  /**
+   * The editor operation that failed. Currently `'save'` is the only source:
+   * serialization of the document threw.
+   */
+  source: 'save';
+}
+
+/**
  * Context passed to {@link BlokConfig.link.transform} for a single anchor.
  */
 export interface LinkTransformContext {
@@ -369,6 +382,18 @@ export interface BlokMountOptions {
   onSave?(data: OutputData, api: API): void;
 
   /**
+   * Fires when an editor operation fails in a way blok would otherwise only
+   * log. Today the sole source is serialization: when the debounced auto-save
+   * (or an explicit `save()`) throws, blok reports the error here instead of
+   * silently dropping the output. Pair it with `onSave` to distinguish a
+   * successful serialization from a failed one.
+   *
+   * @param error - the error that was raised
+   * @param context - where the error originated (see {@link BlokErrorContext})
+   */
+  onError?(error: Error, context: BlokErrorContext): void;
+
+  /**
    * Fires when the user presses Enter inside a block, right before blok would
    * split the block or create a new one. Return `true` to mark the event as
    * handled — blok then suppresses its default block split/create (it still
@@ -377,8 +402,11 @@ export interface BlokMountOptions {
    *
    * Designed for chat-input-style consumers ("Enter sends the message") — pair
    * it with a single-block setup instead of subclassing Paragraph. It never
-   * fires for Shift+Enter (soft line break), for tools with `enableLineBreaks`
-   * (e.g. code), or while a popover/toolbar flipper owns the Enter key.
+   * fires for tools with `enableLineBreaks` (e.g. code) or while a
+   * popover/toolbar flipper owns the Enter key. It also does not fire for a
+   * soft-line-break Shift+Enter — except on iOS, where Safari reports a
+   * Shift+Enter for a sentence-ending ". " and blok creates a block instead,
+   * so the hook fires there just as it would for a plain Enter.
    *
    * @param event - the original keydown event
    * @param api - blok.js api

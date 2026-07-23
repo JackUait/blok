@@ -305,6 +305,16 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
+     * An Enter that commits an IME composition (CJK/accent input) fires keydown
+     * with `isComposing` true. It belongs to the input method, not to blok —
+     * splitting the block or invoking `onEnter` here would fire mid-word and
+     * swallow the browser's composition commit. Bail before any Enter handling.
+     */
+    if (event.isComposing) {
+      return;
+    }
+
+    /**
      * Don't handle Enter keydowns when Tool sets enableLineBreaks to true.
      * Uses for Tools like <code> where line breaks should be handled by default behaviour.
      */

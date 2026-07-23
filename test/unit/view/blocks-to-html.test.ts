@@ -527,4 +527,57 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<p>Parent</p><p>Child</p>');
     });
   });
+
+  describe('toolAttributes option (data-blok-tool styling hooks)', () => {
+    it('is off by default — output carries no data-blok-tool attributes', () => {
+      const html = blocksToHtml(doc([
+        { type: 'paragraph', data: { text: 'Hi' } },
+        { type: 'header', data: { text: 'Title', level: 2 } },
+      ]));
+
+      expect(html).not.toContain('data-blok-tool');
+      expect(html).toBe('<p>Hi</p><h2>Title</h2>');
+    });
+
+    it('stamps each block root with data-blok-tool when enabled', () => {
+      const html = blocksToHtml(
+        doc([
+          { type: 'paragraph', data: { text: 'Hi' } },
+          { type: 'header', data: { text: 'Title', level: 2 } },
+          { type: 'quote', data: { text: 'Q' } },
+        ]),
+        { toolAttributes: true }
+      );
+
+      expect(html).toBe(
+        '<p data-blok-tool="paragraph">Hi</p>'
+        + '<h2 data-blok-tool="header">Title</h2>'
+        + '<blockquote data-blok-tool="quote">Q</blockquote>'
+      );
+    });
+
+    it('stamps the list run container', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'list', data: { text: 'one', style: 'unordered' } }]),
+        { toolAttributes: true }
+      );
+
+      expect(html).toBe('<ul data-blok-tool="list"><li>one</li></ul>');
+    });
+
+    it('does not mis-stamp a bare container (database) onto its child block', () => {
+      const html = blocksToHtml(
+        doc([
+          { id: 'db', type: 'database', data: {} },
+          { id: 'p', type: 'paragraph', parent: 'db', data: { text: 'row' } },
+        ]),
+        { toolAttributes: true }
+      );
+
+      // database renders its children bare — the child paragraph must carry its
+      // OWN tool marker, never the parent's.
+      expect(html).toBe('<p data-blok-tool="paragraph">row</p>');
+      expect(html).not.toContain('data-blok-tool="database"');
+    });
+  });
 });

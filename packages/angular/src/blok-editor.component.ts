@@ -123,6 +123,12 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
    */
   @Input() onBeforePaste?: (html: string) => string | null;
 
+  /**
+   * Error channel (core `onError`). Fires with the raised error whenever an
+   * editor operation — currently serialization — fails instead of only logging.
+   */
+  @Input() onError?: BlokConfig['onError'];
+
   // ---- Reactive inputs (signal-backed setters; synced in place, never recreate) ----
   // Default undefined (not false) so an unset input falls back to a provideBlok
   // default; the readOnly effect / buildConfig coerce undefined to false.
@@ -350,6 +356,12 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
     if (beforePaste !== undefined) {
       cfg.onBeforePaste = (html: string): string | null => beforePaste(html);
+    }
+
+    const onError = this.onError;
+
+    if (onError !== undefined) {
+      cfg.onError = onError;
     }
 
     return cfg;

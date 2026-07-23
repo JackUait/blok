@@ -43,6 +43,14 @@ export interface BlocksToHtmlOptions {
   renderers?: Record<string, ViewBlockRenderer>;
   /** Unknown-tool policy (default 'skip'). */
   onUnknownBlock?: 'skip' | 'comment';
+  /**
+   * When true, each block Blok renders carries a `data-blok-tool="<type>"`
+   * attribute on its root element (list runs on their `<ul>`/`<ol>`), giving
+   * consumers a styling hook without a shipped stylesheet. Off by default;
+   * only Blok's own built-in markup is stamped (custom renderers and bare
+   * containers like `database` are left untouched).
+   */
+  toolAttributes?: boolean;
 }
 
 /**

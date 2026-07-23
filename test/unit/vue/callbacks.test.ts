@@ -124,4 +124,16 @@ describe('BlokEditor callbacks + gating', () => {
     expect(onEnter).toHaveBeenCalledWith(event, api);
     expect(result).toBe(true);
   });
+
+  it('threads the onError prop into core', async () => {
+    const onError = vi.fn();
+
+    await mountEditor({ props: { onError } });
+
+    const error = new Error('boom');
+
+    (coreConfig().onError as (error: Error, context: { source: string }) => void)(error, { source: 'save' });
+
+    expect(onError).toHaveBeenCalledWith(error, { source: 'save' });
+  });
 });

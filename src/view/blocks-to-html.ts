@@ -49,6 +49,16 @@ export interface BlocksToHtmlOptions {
   renderers?: Record<string, ViewBlockRenderer>;
   /** Unknown-tool policy (default 'skip'). */
   onUnknownBlock?: 'skip' | 'comment';
+  /**
+   * When true, each block Blok renders carries a `data-blok-tool="<type>"`
+   * attribute on its root element (`<p data-blok-tool="paragraph">`, list runs
+   * on their `<ul>`/`<ol>`), giving consumers a styling hook without a shipped
+   * stylesheet. Off by default — the clean-HTML output is unchanged unless you
+   * opt in. Only Blok's own built-in markup is stamped; custom renderers own
+   * their output, and bare containers (database) are never stamped since they
+   * emit no root of their own.
+   */
+  toolAttributes?: boolean;
 }
 
 /**
@@ -69,9 +79,32 @@ export interface HtmlRenderer {
  * @param model - document model for the run
  * @param options - render options
  */
+/**
+ * Tool types whose emitter renders children bare (no root element of their
+ * own — {@link builtinEmitters} maps them to `childrenOnly`). Stamping the
+ * `data-blok-tool` marker onto their output would land it on the first CHILD's
+ * element, mislabeling it, so they are skipped. A new bare emitter must be
+ * added here.
+ */
+const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
+
+/**
+ * Insert a `data-blok-tool="<type>"` marker onto the first opening tag of
+ * Blok-generated markup. Operates only on our own emitter output (which always
+ * opens with `<tag`), so the leading-tag match is exact; a value with special
+ * characters is entity-escaped, and a non-element string (empty / comment) is
+ * returned unchanged.
+ * @param html - Blok's rendered markup for one block or list run
+ * @param type - tool type to record
+ */
+const stampToolAttr = (html: string, type: string): string => {
+  return html.replace(/^\s*<[a-z][a-z0-9]*/i, (openTag) => `${openTag} data-blok-tool="${escapeHtml(type)}"`);
+};
+
 export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOptions): HtmlRenderer => {
   const renderers = options.renderers ?? {};
   const onUnknownBlock = options.onUnknownBlock ?? 'skip';
+  const toolAttributes = options.toolAttributes === true;
 
   /**
    * The composed inline allowlist: the schema's baseSanitize wins over the
@@ -134,7 +167,11 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     const emitter = builtinEmitters[block.type];
 
     if (emitter !== undefined) {
-      return emitter(block, env);
+      const html = emitter(block, env);
+
+      return toolAttributes && !BARE_CONTAINER_TOOLS.has(block.type)
+        ? stampToolAttr(html, block.type)
+        : html;
     }
 
     /** Unknown tool: the block is skipped/commented, its children still render. */
@@ -187,8 +224,9 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     if (block.type === 'list' && renderers.list === undefined) {
       const end = listRunEnd(blocks, from);
       const run = blocks.slice(from, end).filter((item) => item.id === undefined || !active.has(item.id));
+      const listHtml = renderListRun(run, env);
 
-      return renderListRun(run, env) + renderFrom(blocks, end);
+      return (toolAttributes ? stampToolAttr(listHtml, 'list') : listHtml) + renderFrom(blocks, end);
     }
 
     return renderGuarded(block) + renderFrom(blocks, from + 1);

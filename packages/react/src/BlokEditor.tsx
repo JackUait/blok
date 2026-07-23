@@ -38,7 +38,9 @@ import type { UseBlokConfig } from './types';
  */
 export interface BlokEditorProps
   extends Omit<UseBlokConfig, 'onReady'>,
-    Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'onChange'> {
+    // `onChange`/`onError` are Blok config callbacks here — drop the DOM
+    // element's same-named event handlers so the config signatures win.
+    Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'onChange' | 'onError'> {
   /**
    * When any value changes, the editor is destroyed and recreated. Keep each
    * value referentially stable (primitives or useMemo-stable objects) — a dep

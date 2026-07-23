@@ -19,6 +19,8 @@ import type { I18nChangedPayload } from './I18nChanged';
 import { I18nChanged } from './I18nChanged';
 import { RedactorDomChanged } from './RedactorDomChanged';
 import type { RedactorDomChangedPayload } from './RedactorDomChanged';
+import { SaveFailed } from './SaveFailed';
+import type { SaveFailedPayload } from './SaveFailed';
 
 /**
  * Events fired by Blok Event Dispatcher
@@ -34,6 +36,7 @@ export {
   BlockSettingsOpened,
   BlockSettingsClosed,
   I18nChanged,
+  SaveFailed,
 };
 
 /**
@@ -51,4 +54,5 @@ export interface BlokEventMap {
   [BlockSettingsOpened]: BlockSettingsOpenedPayload;
   [BlockSettingsClosed]: BlockSettingsClosedPayload;
   [I18nChanged]: I18nChangedPayload;
+  [SaveFailed]: SaveFailedPayload;
 }

@@ -66,6 +66,8 @@ export const BlokEditor = defineComponent({
     // Return-valued hook (the boolean is the "handled" signal), so it is a
     // declared prop copied into the config — not an emit-mapped callback.
     onEnter: { type: Function as PropType<BlokConfig['onEnter']>, default: undefined },
+    // Fire-and-forget error channel — a plain declared prop copied into config.
+    onError: { type: Function as PropType<BlokConfig['onError']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

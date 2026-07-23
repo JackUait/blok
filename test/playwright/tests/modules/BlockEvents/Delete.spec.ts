@@ -436,7 +436,7 @@ test.describe('delete keydown', () => {
     });
 
     test('should remove non-breaking space placed after empty tag', async ({ page }) => {
-      await createParagraphBlok(page, ['1<b></b>\u00A0', '2']);
+      await createParagraphBlok(page, ['1', '2']);
 
       const firstParagraph = getParagraphByIndex(page, 0);
       const paragraphContent = firstParagraph.locator('[contenteditable]');
@@ -446,6 +446,12 @@ test.describe('delete keydown', () => {
       await paragraphContent.evaluate((el) => {
         // eslint-disable-next-line no-param-reassign
         el.style.whiteSpace = 'pre-wrap';
+        // Reproduce a transient live-editing DOM: an empty inline tag left behind,
+        // followed by a non-breaking space. Injected directly because the sanitizer
+        // collapses empty inline wrappers out of persisted/loaded block data, so
+        // createParagraphBlok can no longer carry this structure into the DOM.
+        // eslint-disable-next-line no-param-reassign
+        el.innerHTML = '1<b></b>\u00A0';
       });
 
       // "1" (index 0), <b>, NBSP (index 1).

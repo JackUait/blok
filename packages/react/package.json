@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/react",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "React block editor — official React bindings for Blok, the headless Notion-like rich text editor. Hooks and components that render blocks and save to JSON.",
   "license": "Apache-2.0",
   "author": "JackUait",
@@ -54,7 +54,7 @@
     "test": "yarn run -T vitest run"
   },
   "peerDependencies": {
-    "@bloklabs/core": "^1.4.1",
+    "@bloklabs/core": "^1.4.2",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   }

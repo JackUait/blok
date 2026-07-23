@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/angular",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Angular block editor — official Angular bindings for Blok, the headless Notion-like rich text editor. Standalone components that render blocks and save to JSON (APF partial-Ivy bundle).",
   "license": "Apache-2.0",
   "author": "JackUait",

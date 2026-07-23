@@ -3560,6 +3560,61 @@ const UYGHUR_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.ctxStats': 'قويۇش ستاتىستىكىسى',
 };
 
+const UKRAINIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickToOpenMenu': 'Клацніть, щоб відкрити меню',
+  'blockSettings.clickAction': 'Щоб відкрити меню, клацніть',
+  'blockSettings.openMenuAction': ' на клавіатурі',
+  'toolbox.optionAddAbove': 'Клацніть, утримуючи Option, щоб додати вище',
+  'toolbox.ctrlAddAbove': 'Клацніть, утримуючи Ctrl, щоб додати вище',
+  'tools.marker.textColor': 'Колір тексту',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'Напишіть щось або натисніть /, щоб вибрати інструмент',
+  'tools.toggle.bodyPlaceholder': 'Порожній згортний блок. Натисніть, щоб додати блок, або перетягніть блоки сюди.',
+  'tools.table.clearSelection': 'Очистити вміст',
+  'tools.table.placement': 'Вирівнювання',
+  'a11y.dragHandle': 'Перетягніть, щоб перемістити блок, або клацніть, щоб відкрити меню',
+  'a11y.dragHandleRole': 'маркер перетягування',
+  'a11y.dragStartedMultiple': 'Перетягування блоків: {count}',
+  'a11y.blocksMoved': 'Блоки переміщено на позицію {position}. Кількість: {count}',
+  'a11y.blockDuplicated': 'Копію блока створено на позиції {position} із {total}',
+  'a11y.blocksDuplicated': 'Копії блоків створено, починаючи з позиції {position}. Кількість: {count}',
+  'a11y.searchResults': 'Результатів пошуку: {count}',
+  'a11y.allBlocksSelected': 'Вибрано всі блоки. Усього: {count}',
+  'a11y.blocksSelected': 'Вибрано блоків: {count}',
+  'a11y.navigationModeExited': 'Режим навігації завершено',
+  'toolNames.clearFormat': 'Очистити форматування',
+  'searchTerms.citation': 'цитування',
+  'tools.callout.addEmoji': 'Додати іконку',
+  'tools.callout.filterEmojis': 'Пошук емодзі…',
+  'tools.callout.pickRandom': 'Вибрати випадкове емодзі',
+  'tools.code.searchLanguage': 'Шукати мову…',
+  'searchTerms.pre': 'попередньо форматований',
+  'blockSettings.copyLinkError': 'Не вдалося скопіювати посилання на блок',
+  'tools.link.linkTitle': 'Текст посилання',
+  'tools.code.plainText': 'Звичайний текст',
+  'tools.image.toggleCaption': 'Показати або приховати підпис',
+  'tools.image.preview': 'Попередній перегляд зображення',
+  'tools.image.previewControls': 'Керування попереднім переглядом зображення',
+  'tools.image.errorDefaultMessage': 'Не вдалося завантажити зображення за цією URL-адресою. Спробуйте інше джерело або завантажте файл ще раз.',
+  'tools.image.emptyOrDropHere': 'або перетягніть зображення сюди',
+  'tools.file.toggleCaption': 'Показати або приховати підпис',
+  'tools.file.previewRaw': 'Вихідний текст',
+  'tools.file.previewRender': 'Попередній перегляд',
+  'tools.file.previewBackToContent': 'Повернутися до вмісту',
+  'tools.video.toggleCaption': 'Показати або приховати підпис',
+  'tools.audio.coverOrDropHere': 'або перетягніть зображення сюди',
+  'tools.database.addView': 'Додати подання',
+  'tools.database.viewTypeListDescription': 'Показати елементи у простому списку',
+  'tools.database.propertyTypeMultiSelect': 'Множинний вибір',
+  'tools.database.cardDetails': 'Відомості про картку',
+  'tools.embed.empty': 'Немає посилання для вбудовування',
+  'tools.video.seek': 'Позиція відтворення',
+  'tools.video.toggleTimeDisplay': 'Перемкнути між часом, що минув, і часом, що залишився',
+  'tools.video.ctxCopyUrlAtTime': 'Копіювати URL відео з поточної позиції',
+  'tools.video.ctxStats': 'Статистика відтворення',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4652,6 +4707,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(UYGHUR_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Ukrainian correction oracle', () => {
+    const messages = readLocale('uk').messages;
+    const actual = Object.fromEntries(
+      Object.keys(UKRAINIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(UKRAINIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

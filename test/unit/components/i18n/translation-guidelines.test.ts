@@ -2787,6 +2787,81 @@ const SINHALA_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.ctxStats': 'ධාවන සංඛ්‍යාලේඛන',
 };
 
+const SLOVAK_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Vymazať formátovanie',
+  'toolbox.optionAddAbove': 'Kliknutím so stlačeným klávesom Option pridáte blok vyššie',
+  'toolbox.ctrlAddAbove': 'Kliknutím so stlačeným klávesom Ctrl pridáte blok vyššie',
+  'toolNames.toggleList': 'Zbaliteľný zoznam',
+  'tools.marker.textColor': 'Farba textu',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.colorPicker.color.gray': 'Sivá',
+  'tools.header.toggleHeading': 'Zbaliteľný nadpis',
+  'tools.header.toggleHeading1': 'Zbaliteľný nadpis 1',
+  'tools.header.toggleHeading2': 'Zbaliteľný nadpis 2',
+  'tools.header.toggleHeading3': 'Zbaliteľný nadpis 3',
+  'tools.header.toggleHeading4': 'Zbaliteľný nadpis 4',
+  'tools.header.toggleHeading5': 'Zbaliteľný nadpis 5',
+  'tools.header.toggleHeading6': 'Zbaliteľný nadpis 6',
+  'blockSettings.lastEditedBy': 'Autor poslednej úpravy: {name}',
+  'a11y.dragStartedMultiple': 'Počet presúvaných blokov: {count}',
+  'a11y.blocksMoved': 'Počet presunutých blokov: {count}. Nová pozícia: {position}',
+  'a11y.blocksDuplicated': 'Počet duplikovaných blokov: {count}. Počiatočná pozícia: {position}',
+  'a11y.searchResults': 'Výsledky vyhľadávania: {count}',
+  'tools.paragraph.placeholder': 'Napíšte niečo alebo stlačte /, aby ste vybrali nástroj',
+  'tools.toggle.placeholder': 'Zbaliteľný zoznam',
+  'tools.toggle.bodyPlaceholder': 'Prázdny zbaliteľný blok. Kliknutím pridáte blok alebo sem presuňte bloky.',
+  'tools.table.clearSelection': 'Vymazať obsah',
+  'toolNames.quote': 'Citát',
+  'searchTerms.delimiter': 'oddeľovací znak',
+  'searchTerms.collapsible': 'zbaliteľný',
+  'searchTerms.quote': 'citát',
+  'searchTerms.citation': 'citácia',
+  'tools.callout.addEmoji': 'Pridať ikonu',
+  'tools.callout.filterEmojis': 'Hľadať emoji…',
+  'tools.callout.pickRandom': 'Vybrať náhodné emoji',
+  'tools.callout.colorGray': 'Sivá',
+  'tools.code.searchLanguage': 'Hľadať jazyk…',
+  'tools.quote.placeholder': 'Citát',
+  'tools.table.placement': 'Zarovnanie',
+  'blockSettings.copyLinkSuccess': 'Odkaz bol skopírovaný do schránky',
+  'blockSettings.copyLinkError': 'Odkaz na blok sa nepodarilo skopírovať',
+  'tools.link.linkTitle': 'Text odkazu',
+  'tools.image.toggleCaption': 'Zobraziť alebo skryť popis',
+  'tools.image.moreOptions': 'Ďalšie možnosti',
+  'tools.image.previewControls': 'Ovládacie prvky náhľadu obrázka',
+  'tools.image.errorDefaultMessage': 'Obrázok sa z tejto adresy URL nepodarilo načítať. Skúste iný zdroj alebo súbor nahrajte znova.',
+  'tools.database.viewTypeListDescription': 'Zobraziť položky v jednoduchom zozname',
+  'tools.database.listView': 'Zobrazenie zoznamu',
+  'tools.database.cardDetails': 'Podrobnosti karty',
+  'tools.embed.empty': 'Chýba odkaz na vložený obsah',
+  'tools.linkPaste.embed': 'Vložiť obsah',
+  'tools.linkPaste.mention': 'Spomenúť',
+  'tools.file.toggleCaption': 'Zobraziť alebo skryť popis',
+  'tools.file.previewRaw': 'Zdroj',
+  'tools.video.alignmentLeft': 'Zarovnať vľavo',
+  'tools.video.alignmentCenter': 'Zarovnať na stred',
+  'tools.video.alignmentRight': 'Zarovnať vpravo',
+  'tools.video.toggleCaption': 'Zobraziť alebo skryť popis',
+  'tools.video.moreOptions': 'Ďalšie možnosti',
+  'tools.audio.alignmentLeft': 'Zarovnať vľavo',
+  'tools.audio.alignmentCenter': 'Zarovnať na stred',
+  'tools.audio.alignmentRight': 'Zarovnať vpravo',
+  'tools.audio.emptyOrDropHere': 'alebo sem presuňte zvukový súbor',
+  'tools.audio.emptyUrlPlaceholder': 'Vložte URL zvukového súboru…',
+  'tools.audio.emptyUrlAria': 'URL zvukového súboru',
+  'tools.audio.emptySourceAria': 'Zdroj zvuku',
+  'tools.audio.coverSourceAria': 'Zdroj obalu',
+  'tools.bookmark.loading': 'Načítava sa náhľad odkazu…',
+  'a11y.allBlocksSelected': 'Všetky bloky boli vybrané. Celkový počet: {count}.',
+  'a11y.navigatedToBlock': 'Prešli ste na blok',
+  'notifier.dismiss': 'Zavrieť',
+  'tools.video.seek': 'Pozícia prehrávania',
+  'tools.video.toggleTimeDisplay': 'Prepnúť medzi uplynutým a zostávajúcim časom',
+  'tools.video.ctxStats': 'Štatistiky prehrávania',
+  'tools.callout.emojiSearchResults': 'Zhody emoji: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -3754,6 +3829,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SINHALA_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Slovak correction oracle', () => {
+    const messages = readLocale('sk').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SLOVAK_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SLOVAK_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

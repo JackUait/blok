@@ -2862,6 +2862,65 @@ const SLOVAK_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'Zhody emoji: {count}',
 };
 
+const SLOVENIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Počisti oblikovanje',
+  'tools.toggle.bodyPlaceholder': 'Prazen preklopni blok. Kliknite za dodajanje bloka ali povlecite bloke sem.',
+  'toolbox.optionAddAbove': 'Kliknite s pritisnjeno tipko Option, da zgoraj dodate blok',
+  'toolbox.ctrlAddAbove': 'Kliknite s pritisnjeno tipko Ctrl, da zgoraj dodate blok',
+  'tools.marker.textColor': 'Barva besedila',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'Napišite nekaj ali pritisnite / za izbiro orodja',
+  'tools.table.clearSelection': 'Počisti vsebino',
+  'tools.table.headerColumn': 'Stolpec z glavo',
+  'tools.table.headerRow': 'Vrstica z glavo',
+  'tools.table.placement': 'Poravnava',
+  'blockSettings.lastEditedBy': 'Nazadnje urejeno: {name}',
+  'a11y.dragHandle': 'Povlecite za premik bloka ali kliknite za odprtje menija',
+  'a11y.dragStartedMultiple': 'Vlečenje blokov: {count}',
+  'a11y.blocksMoved': 'Premaknjeni bloki: {count}. Nov položaj: {position}',
+  'a11y.blocksDuplicated': 'Podvojeni bloki: {count}. Začetni položaj: {position}',
+  'a11y.searchResults': 'Rezultati iskanja: {count}',
+  'a11y.allBlocksSelected': 'Izbrani so vsi bloki. Skupaj: {count}',
+  'a11y.navigatedToBlock': 'Pomaknili ste se na blok',
+  'a11y.dropCreateColumnLeft': 'Ustvarjen bo stolpec na levi',
+  'a11y.dropCreateColumnRight': 'Ustvarjen bo stolpec na desni',
+  'searchTerms.blockquote': 'citatni blok',
+  'tools.callout.addEmoji': 'Dodaj ikono',
+  'tools.callout.filterEmojis': 'Poišči emojije…',
+  'tools.callout.pickRandom': 'Izberi naključni emoji',
+  'tools.code.searchLanguage': 'Poišči jezike…',
+  'toolNames.audio': 'Zvok',
+  'blockSettings.copyLinkSuccess': 'Povezava je kopirana v odložišče',
+  'blockSettings.copyLinkError': 'Povezave do bloka ni bilo mogoče kopirati',
+  'tools.link.linkTitle': 'Besedilo povezave',
+  'tools.image.moreOptions': 'Več možnosti',
+  'tools.image.previewControls': 'Kontrolniki predogleda slike',
+  'tools.image.errorDefaultMessage': 'Slike s tega URL-ja ni bilo mogoče naložiti. Poskusite drug vir ali znova naložite datoteko.',
+  'tools.file.previewRaw': 'Izvor',
+  'tools.video.moreOptions': 'Več možnosti',
+  'tools.audio.replace': 'Zamenjaj zvočni posnetek',
+  'tools.audio.emptyAddAudio': 'Dodajte zvočni posnetek',
+  'tools.audio.emptyOrDropHere': 'ali spustite zvočno datoteko sem',
+  'tools.audio.emptyUrlPlaceholder': 'Prilepite URL zvočnega posnetka…',
+  'tools.audio.emptyUrlAria': 'URL zvočnega posnetka',
+  'tools.audio.emptySourceAria': 'Vir zvočnega posnetka',
+  'tools.bookmark.loading': 'Nalaganje predogleda povezave…',
+  'tools.database.viewTypeListDescription': 'Prikaži elemente na preprostem seznamu',
+  'tools.database.listView': 'Pogled seznama',
+  'tools.embed.empty': 'Ni povezave za vdelavo',
+  'tools.embed.urlPlaceholder': 'Prilepite povezavo za vdelavo…',
+  'tools.embed.urlSubmit': 'Vdelaj povezavo',
+  'tools.embed.invalidUrl': 'Te povezave ni mogoče vdelati',
+  'tools.linkPaste.embed': 'Ustvari vdelavo',
+  'tools.linkPaste.mention': 'Omeni',
+  'tools.video.seek': 'Položaj predvajanja',
+  'tools.video.toggleTimeDisplay': 'Preklopi med pretečenim in preostalim časom',
+  'tools.video.ctxCopyUrlAtTime': 'Kopiraj URL videa na trenutnem položaju predvajanja',
+  'tools.video.ctxStats': 'Statistika predvajanja',
+  'tools.callout.emojiSearchResults': 'Zadetki za emojije: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -3841,6 +3900,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SLOVAK_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Slovenian correction oracle', () => {
+    const messages = readLocale('sl').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SLOVENIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SLOVENIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

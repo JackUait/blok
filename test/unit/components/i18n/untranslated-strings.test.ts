@@ -448,7 +448,6 @@ const AUDIO_COGNATE_RETENTIONS: Record<string, string[]> = {
   pt: ['tools.audio.emptyLink', 'tools.audio.coverLink', 'tools.audio.volume'],
   ro: ['toolNames.audio', 'tools.audio.emptyLink', 'tools.audio.coverLink'],
   sk: ['toolNames.audio'],
-  sl: ['toolNames.audio'],
   sq: ['toolNames.audio'],
   vi: ['toolNames.audio'],
 };

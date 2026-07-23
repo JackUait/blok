@@ -3674,6 +3674,44 @@ const URDU_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.toggle.bodyPlaceholder': 'خالی ٹوگل۔ ایک بلاک شامل کرنے کے لیے کلک کریں یا بلاکس کو یہاں گھسیٹیں۔',
 };
 
+const VIETNAMESE_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.bulletedList': 'Danh sách dấu đầu dòng',
+  'tools.marker.textColor': 'Màu chữ',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.table.clearSelection': 'Xóa nội dung',
+  'tools.table.placement': 'Căn chỉnh',
+  'a11y.dropPosition': 'Sẽ thả vào vị trí {position} trên tổng số {total}',
+  'a11y.blockMoved': 'Khối đã được di chuyển đến vị trí {position} trên tổng số {total}',
+  'a11y.blockDuplicated': 'Khối đã được sao chép tại vị trí {position} trên tổng số {total}',
+  'a11y.searchResults': 'Kết quả tìm kiếm: {count}',
+  'a11y.navigationPosition': '{tool}, vị trí {position} trên tổng số {total}',
+  'tools.callout.filterEmojis': 'Tìm biểu tượng cảm xúc…',
+  'tools.callout.pickRandom': 'Chọn một biểu tượng cảm xúc ngẫu nhiên',
+  'searchTerms.pre': 'định dạng sẵn',
+  'blockSettings.copyLinkError': 'Không thể sao chép liên kết đến khối',
+  'tools.link.linkTitle': 'Văn bản liên kết',
+  'tools.image.altDescription': 'Mô tả hình ảnh này cho những người không thể xem được.',
+  'tools.image.previewControls': 'Các điều khiển xem trước hình ảnh',
+  'tools.image.errorUnavailable': 'Hình ảnh không khả dụng',
+  'tools.image.errorDefaultMessage': 'Không thể tải hình ảnh từ URL này. Hãy thử một nguồn khác hoặc tải tệp lên lại.',
+  'tools.file.previewRender': 'Xem trước',
+  'tools.video.alignmentLeft': 'Căn trái',
+  'tools.video.alignmentCenter': 'Căn giữa',
+  'tools.video.alignmentRight': 'Căn phải',
+  'tools.audio.alignmentLeft': 'Căn trái',
+  'tools.audio.alignmentCenter': 'Căn giữa',
+  'tools.audio.alignmentRight': 'Căn phải',
+  'tools.audio.emptyOrDropHere': 'hoặc thả tệp âm thanh vào đây',
+  'tools.audio.coverSourceAria': 'Nguồn ảnh bìa',
+  'tools.database.viewTypeListDescription': 'Hiển thị các mục trong một danh sách đơn giản',
+  'tools.embed.empty': 'Không có liên kết để nhúng',
+  'tools.linkPaste.embed': 'Nhúng nội dung',
+  'tools.video.toggleTimeDisplay': 'Chuyển đổi giữa thời gian đã trôi qua và thời gian còn lại',
+  'toolNames.clearFormat': 'Xóa định dạng',
+  'tools.toggle.bodyPlaceholder': 'Khối thu gọn trống. Nhấp để thêm một khối hoặc kéo các khối vào đây.',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4790,6 +4828,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(URDU_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Vietnamese correction oracle', () => {
+    const messages = readLocale('vi').messages;
+    const actual = Object.fromEntries(
+      Object.keys(VIETNAMESE_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(VIETNAMESE_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

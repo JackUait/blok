@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1](https://github.com/JackUait/blok/compare/v1.4.0...v1.4.1) (2026-07-23)
+
+### Bug Fixes
+
+- **Editor** — Enter now honours the IME composition and Shift contract; added an `onError` channel; `data-blok-tool` is opt-in.
+- **Sanitize** — Redundant inline markup is now collapsed on every path that stores HTML.
+- **Video** — Unplayable sources are surfaced to the user instead of rendering a black player.
+- **View** — Added a `classList` facade so `MarkSpec` inline tools render correctly in `BlokView`.
+- **i18n** — Localized video stats and database overflow, added `tr()` interpolation, and completed locale audits across Yiddish, Vietnamese, Traditional and Simplified Chinese, Urdu, Ukrainian, Uyghur, Turkish, Thai, Telugu, Tamil, Swahili, Serbian, Albanian and Slovenian.
+
 ## [1.4.0](https://github.com/JackUait/blok/compare/v1.3.0...v1.4.0) (2026-07-23)
 
 ### Features

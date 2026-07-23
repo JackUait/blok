@@ -2921,6 +2921,86 @@ const SLOVENIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'Zadetki za emojije: {count}',
 };
 
+const ALBANIAN_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'Largo formatimin',
+  'tools.toggle.bodyPlaceholder': 'Palosje bosh. Klikoni për të shtuar një bllok ose tërhiqni blloqe këtu.',
+  'tools.marker.textColor': 'Ngjyra e tekstit',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'Shkruaj diçka ose shtyp / për të zgjedhur një vegël',
+  'tools.table.clearSelection': 'Pastro përmbajtjen',
+  'tools.table.headerColumn': 'Kolona e kokës',
+  'tools.table.headerRow': 'Rreshti i kokës',
+  'a11y.dragHandle': 'Tërhiq për të lëvizur bllokun ose kliko për të hapur menynë',
+  'a11y.dropPosition': 'Pozicioni i vendosjes: {position} nga {total}',
+  'a11y.blockDuplicated': 'Blloku u dyfishua në pozicionin {position} nga {total}',
+  'a11y.blocksDuplicated': 'Blloqe të dyfishuara: {count}. Pozicioni fillestar: {position}',
+  'a11y.searchResults': 'Rezultatet e kërkimit: {count}',
+  'tools.callout.addEmoji': 'Shto ikonë',
+  'tools.callout.filterEmojis': 'Kërko emoji…',
+  'tools.callout.pickRandom': 'Zgjidh një emoji rastësisht',
+  'tools.table.placement': 'Rreshtimi',
+  'tools.code.searchLanguage': 'Kërko gjuhë…',
+  'tools.link.linkTitle': 'Teksti i lidhjes',
+  'tools.image.caption': 'Diçiturë',
+  'tools.image.toggleCaption': 'Shfaq ose fshih diçiturën',
+  'tools.image.captionPlaceholder': 'Shkruaj një diçiturë…',
+  'tools.image.previewControls': 'Kontrollet e parapamjes së imazhit',
+  'tools.image.errorSourceOffline': 'Skedari burimor mund të jetë zhvendosur ose jashtë linje.',
+  'tools.image.errorDefaultMessage':
+    'Imazhi nuk mund të ngarkohej nga kjo URL. Provo një burim tjetër ose ngarko skedarin përsëri.',
+  'tools.image.emptyOrDropHere': 'ose lësho një imazh këtu',
+  'tools.database.viewTypeListDescription': 'Shfaq elementet në një listë të thjeshtë',
+  'tools.bookmark.loading': 'Po ngarkohet pamja paraprake e lidhjes…',
+  'tools.embed.empty': 'Nuk ka lidhje për ngulitje',
+  'tools.embed.captionPlaceholder': 'Shkruaj një diçiturë…',
+  'tools.embed.urlPlaceholder': 'Ngjit një lidhje për ta ngulitur…',
+  'tools.embed.urlSubmit': 'Ngulit lidhjen',
+  'tools.embed.invalidUrl': 'Kjo lidhje nuk mund të ngulitet',
+  'tools.linkPaste.embedVideo': 'Ngulit video nga {provider}',
+  'tools.linkPaste.embedAudio': 'Ngulit audio nga {provider}',
+  'tools.linkPaste.embedImage': 'Ngulit imazh nga {provider}',
+  'tools.linkPaste.embedSocial': 'Ngulit postim nga {provider}',
+  'tools.linkPaste.embedDocument': 'Ngulit dokument nga {provider}',
+  'tools.linkPaste.embedTable': 'Ngulit tabelë nga {provider}',
+  'tools.linkPaste.embedForm': 'Ngulit formular nga {provider}',
+  'tools.linkPaste.embedCode': 'Ngulit kod nga {provider}',
+  'tools.linkPaste.embedDesign': 'Ngulit dizajn nga {provider}',
+  'tools.linkPaste.embedChart': 'Ngulit grafik nga {provider}',
+  'tools.linkPaste.embedMap': 'Ngulit hartë nga {provider}',
+  'tools.linkPaste.embedCalendar': 'Ngulit kalendar nga {provider}',
+  'tools.linkPaste.mention': 'Përmend',
+  'tools.file.emptyDropHint': 'ose lësho një skedar këtu',
+  'tools.file.toggleCaption': 'Shfaq ose fshih diçiturën',
+  'tools.file.captionPlaceholder': 'Shkruaj një diçiturë…',
+  'tools.file.previewRaw': 'Burimi',
+  'tools.file.previewRender': 'Pamje paraprake',
+  'tools.video.caption': 'Diçiturë',
+  'tools.video.captionPlaceholder': 'Shkruaj një diçiturë…',
+  'tools.video.toggleCaption': 'Shfaq ose fshih diçiturën',
+  'tools.video.emptyOrDropHere': 'ose lësho një video këtu',
+  'tools.audio.caption': 'Diçiturë',
+  'tools.audio.captionPlaceholder': 'Shkruaj një diçiturë…',
+  'tools.audio.titlePlaceholder': 'Titulli i pjesës audio',
+  'tools.audio.emptyOrDropHere': 'ose lësho një skedar audio këtu',
+  'tools.audio.coverOrDropHere': 'ose lësho një imazh këtu',
+  'a11y.allBlocksSelected': 'Të gjitha blloqet janë zgjedhur. Gjithsej: {count}',
+  'a11y.blocksSelected': 'Blloqe të zgjedhura: {count}',
+  'tools.video.pause': 'Pauzë',
+  'tools.video.seek': 'Kërko në video',
+  'tools.video.toggleTimeDisplay': 'Kalo midis kohës së kaluar dhe asaj të mbetur',
+  'tools.video.mute': 'Çaktivizo zërin',
+  'tools.video.unmute': 'Aktivizo zërin',
+  'tools.video.theater': 'Modaliteti i teatrit',
+  'tools.video.theaterExit': 'Dil nga modaliteti i teatrit',
+  'tools.video.ctxCopyUrlAtTime': 'Kopjo URL-në e videos në pozicionin aktual të luajtjes',
+  'tools.video.ctxStats': 'Statistikat e luajtjes',
+  'tools.audio.pause': 'Pauzë',
+  'tools.audio.mute': 'Çaktivizo zërin',
+  'tools.audio.unmute': 'Aktivizo zërin',
+  'tools.callout.emojiSearchResults': 'Përputhje për emoji: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -3912,6 +3992,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SLOVENIAN_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Albanian correction oracle', () => {
+    const messages = readLocale('sq').messages;
+    const actual = Object.fromEntries(
+      Object.keys(ALBANIAN_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(ALBANIAN_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

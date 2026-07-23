@@ -18,6 +18,7 @@ import type { BlokViewSchema } from '../../../src/shared/sanitize-schema';
 describe('BlokView renders MarkSpec inline tools end-to-end', () => {
   const schemaWith = (markRule: SanitizerConfig): BlokViewSchema => ({
     baseSanitize: composeBaseSanitizeConfig([INLINE_TEXT_SANITIZE, markRule]),
+    tools: {},
   });
 
   it('keeps a declared class-based mark and strips strays', () => {

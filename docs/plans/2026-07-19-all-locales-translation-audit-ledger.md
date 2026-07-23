@@ -350,7 +350,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 | `sl` | Slovenian | Latin | ltr | neutral contemporary Slovenian; polite plural imperatives for complete instructions and recovery guidance; concise noun, state, or action labels for compact controls; sentence-case UI; established Slovenian product, accessibility, media, and database terminology; count-neutral label-before-value runtime templates; conventional unchanged shortcut, ratio, acronym, and established-loanword notation | `root-sl_final_linguistic` | `root-sl_final_callers` | pass | pass | pass | `F-sl-001`–`F-sl-056` | second-pass-complete |
 | `sq` | Albanian | Latin | ltr | neutral contemporary Albanian; concise singular imperatives for compact controls and polite plural imperatives for complete instructions; sentence-case noun and state labels; established Albanian product, accessibility, media, and database terminology; count-safe label-before-value runtime templates; conventional unchanged shortcut, ratio, acronym, and established-loanword notation | `root-sq_ceca_final_linguistic` | `root-sq_ceca_final_callers` | pass | pass | pass | `F-sq-001`–`F-sq-076` | second-pass-complete |
 | `sr` | Serbian (Cyrillic) | Cyrillic | ltr | neutral contemporary Serbian in Cyrillic; concise singular imperatives for compact controls and polite plural imperatives for complete instructions and recovery guidance; sentence-case noun and state labels; established Serbian product, accessibility, media, and database terminology; count-safe label-before-value runtime templates; conventional unchanged shortcut, ratio, and acronym notation | `root-sr_faa17_final_linguistic` | `root-sr_faa17_final_callers` | pass | pass | pass | `F-sr-001`–`F-sr-081` | second-pass-complete |
-| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | — | — | pending | pending | pending | `F-sv-001`–`F-sv-097` | pending |
+| `sv` | Swedish | Latin | ltr | neutral contemporary Sweden Swedish; informal singular `du` only in full instructions; concise imperatives for actions; sentence case; lowercase search aliases; standard Swedish compounds | `root-sv_current_linguistic` | `root-sv_current_callers` | pass | pass | pass | `F-sv-001`–`F-sv-097` | second-pass-complete |
 | `sw` | Swahili | Latin | ltr | to-audit | — | — | pending | pending | pending | `F-sw-001`–`F-sw-002` | pending |
 | `ta` | Tamil | Tamil | ltr | to-audit | — | — | pending | pending | pending | `F-ta-001`–`F-ta-002` | pending |
 | `te` | Telugu | Telugu | ltr | to-audit | — | — | pending | pending | pending | `F-te-001`–`F-te-002` | pending |
@@ -488,6 +488,7 @@ locale returns to `pending`.
 | `sl` | `root-sl_final_linguistic` | `sha256:88809c9566591768448553b645f76085e5eed3e0dc6321cd01910541e3275265` | `root-sl_final_callers` | `sha256:88809c9566591768448553b645f76085e5eed3e0dc6321cd01910541e3275265` |
 | `sq` | `root-sq_ceca_final_linguistic` | `sha256:ceca53eb7e8224e97c3fe910f183d9d6b31a6a20f6a5a97850cbf3455aa81405` | `root-sq_ceca_final_callers` | `sha256:ceca53eb7e8224e97c3fe910f183d9d6b31a6a20f6a5a97850cbf3455aa81405` |
 | `sr` | `root-sr_faa17_final_linguistic` | `sha256:faa17ec7e7464d159c98559044d02b2f77fc1c11cd8a180bdb6acadcf38f397e` | `root-sr_faa17_final_callers` | `sha256:faa17ec7e7464d159c98559044d02b2f77fc1c11cd8a180bdb6acadcf38f397e` |
+| `sv` | `root-sv_current_linguistic` | `sha256:4effe29a040daedee29cce750583347784a6ce795f0e93f5b6f638d9b55a9048` | `root-sv_current_callers` | `sha256:4effe29a040daedee29cce750583347784a6ce795f0e93f5b6f638d9b55a9048` |
 
 ## 546-Key Recently-Used Label Migration
 
@@ -8509,6 +8510,38 @@ source-only caller lifecycle. The complete guideline corpus passes
 and block-color gates pass 413/413, and the checker regressions pass 89/89.
 The live completeness, integrity, source-coverage, and encoding command and
 scoped ESLint gate pass with exactly the seven catalogued Serbian
+identical-value warnings. Global `F-global-014` and `F-global-020` remain
+coordinated follow-up work and do not invalidate this locale-level second-pass
+transition.
+
+### Swedish (`sv`) — current 546-key second pass complete
+
+Fresh linguistic and caller-structure reviews restarted at entry 1 on the
+current 27,146-byte Swedish dictionary, bound at SHA-256
+`4effe29a040daedee29cce750583347784a6ce795f0e93f5b6f638d9b55a9048`.
+Their exhaustive clean artifacts are bound at SHA-256
+`63c98ea1f4cb9e363af058a4f22612c2448e7b77d3ac0c9c6be2d1a705fccfc4`
+and
+`424afd7a215c299d58416f8bde7353a23ceec0ef55e7148964a5f0304d43679f`;
+their canonical payloads are bound at
+`a5f5007dbf343289d22ad9e6308f3012d705e5c1087efaefd57b6a9208f8adfa`
+and
+`0afd062571afc0b6f541f82a62dcb603d8878cfcc2bc276e92c718a65c0832cb`.
+Both accepted all 546 English/Swedish pairs with 528 ordinary passes, upheld
+all 97 verified findings `F-sv-001` through `F-sv-097`, and independently
+confirmed exactly the 18 intentional identities `R-sv-001` through
+`R-sv-018`. No catalog change, residual, or blocker was required.
+
+The final passes revalidated all 38 placeholder-bearing keys and 54
+placeholder occurrences, 14 search groups and 44 unique aliases across 48
+references, unique key parity, UTF-8 and NFC integrity, boundary whitespace,
+117 provider compositions, 20 color compositions, and the complete 397
+literal + 122 finite-dynamic + 25 registered-namespace-compatible + two
+source-only caller lifecycle. The complete guideline corpus passes
+5,737/5,737, the nine-file i18n gate passes 6,457/6,457, the focused caller
+and block-color gates pass 413/413, and the checker regressions pass 89/89.
+The live completeness, integrity, source-coverage, and encoding command and
+scoped ESLint gate pass with exactly the 18 catalogued Swedish
 identical-value warnings. Global `F-global-014` and `F-global-020` remain
 coordinated follow-up work and do not invalidate this locale-level second-pass
 transition.

@@ -2747,6 +2747,46 @@ const SINDHI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.database.checkboxUnchecked': 'نشان نه لڳل',
 };
 
+const SINHALA_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'හැඩතල ගැන්වීම ඉවත් කරන්න',
+  'tools.toggle.bodyPlaceholder': 'හිස් හැකිලෙන කොටස. කොටසක් එක් කිරීමට ක්ලික් කරන්න හෝ කොටස් මෙතැනට ඇදගෙන දමන්න.',
+  'blockSettings.clickAction': 'මෙනුව විවෘත කිරීමට ක්ලික් කරන්න',
+  'blockSettings.orConjunction': ' හෝ ',
+  'blockSettings.openMenuAction': ' ඔබන්න',
+  'tools.marker.textColor': 'පෙළ වර්ණය',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'යමක් ලියන්න හෝ මෙවලමක් තෝරා ගැනීමට / ඔබන්න',
+  'tools.table.placement': 'පෙළ ගැස්ම',
+  'a11y.searchResults': 'සෙවුම් ප්‍රතිඵල: {count}',
+  'toolNames.strikethrough': 'කැපූ',
+  'tools.callout.addEmoji': 'නිරූපකයක් එක් කරන්න',
+  'tools.callout.filterEmojis': 'ඉමෝජි සොයන්න…',
+  'tools.callout.pickRandom': 'අහඹු ඉමෝජියක් තෝරන්න',
+  'tools.code.searchLanguage': 'භාෂා සොයන්න…',
+  'searchTerms.pre': 'පූර්ව හැඩතල ගැන්වූ පෙළ',
+  'tools.link.linkTitle': 'සබැඳි පෙළ',
+  'tools.image.previewControls': 'රූප පෙරදසුන් පාලන',
+  'tools.image.errorDefaultMessage': 'මෙම URL එකෙන් රූපය පූරණය කළ නොහැකි විය. වෙනත් මූලාශ්‍රයක් උත්සාහ කරන්න හෝ ගොනුව නැවත උඩුගත කරන්න.',
+  'tools.file.previewRaw': 'මූලාශ්‍රය',
+  'tools.file.previewRender': 'පෙරදසුන',
+  'tools.audio.replace': 'ශ්‍රව්‍යය ප්‍රතිස්ථාපනය',
+  'tools.audio.titlePlaceholder': 'ශ්‍රව්‍ය පථයේ මාතෘකාව',
+  'tools.audio.emptyAddAudio': 'ශ්‍රව්‍යයක් එක් කරන්න',
+  'tools.audio.emptyOrDropHere': 'හෝ ශ්‍රව්‍ය ගොනුවක් මෙහි දමන්න',
+  'tools.audio.emptySourceAria': 'ශ්‍රව්‍යයේ මූලාශ්‍රය',
+  'tools.database.viewTypeListDescription': 'අයිතම සරල ලැයිස්තුවක පෙන්වන්න',
+  'tools.database.propertyTypeHeading': 'ගුණාංග වර්ගය',
+  'tools.database.propertyTypeSelect': 'තේරීම',
+  'tools.database.defaultStatusInProgress': 'ක්‍රියාත්මක වෙමින්',
+  'tools.bookmark.loading': 'සබැඳි පෙරදසුන පූරණය වෙමින්…',
+  'tools.embed.empty': 'කාවැද්දීමේ සබැඳියක් නැත',
+  'tools.video.seek': 'ධාවන ස්ථානය',
+  'tools.video.toggleTimeDisplay': 'ගත වූ සහ ඉතිරි කාලය අතර මාරු වන්න',
+  'tools.video.ctxCopyUrlAtTime': 'වත්මන් ධාවන වේලාව සහිත වීඩියෝ URL එක පිටපත් කරන්න',
+  'tools.video.ctxStats': 'ධාවන සංඛ්‍යාලේඛන',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -3702,6 +3742,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(SINDHI_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Sinhala correction oracle', () => {
+    const messages = readLocale('si').messages;
+    const actual = Object.fromEntries(
+      Object.keys(SINHALA_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(SINHALA_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

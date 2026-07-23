@@ -3316,6 +3316,85 @@ const TAMIL_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.image.alignmentCenterAria': 'மையமாகச் சீரமை',
 };
 
+const TELUGU_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'ఫార్మాటింగ్‌ను తొలగించు',
+  'tools.toggle.bodyPlaceholder': 'ఖాళీ మడత. బ్లాక్‌ను జోడించడానికి నొక్కండి లేదా బ్లాక్‌లను ఇక్కడికి లాగండి.',
+  'blockSettings.orConjunction': ' లేదా ',
+  'blockSettings.openMenuAction': ' నొక్కి మెనూను తెరవండి',
+  'toolNames.bold': 'బోల్డ్',
+  'toolNames.italic': 'ఇటాలిక్',
+  'tools.marker.textColor': 'టెక్స్ట్ రంగు',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.stub.blockCannotBeDisplayed': 'ఈ బ్లాక్‌ను ప్రదర్శించలేము',
+  'tools.paragraph.placeholder': 'ఏదైనా రాయండి లేదా సాధనాన్ని ఎంచుకోవడానికి / నొక్కండి',
+  'tools.table.clearSelection': 'కంటెంట్‌ను క్లియర్ చేయి',
+  'tools.table.placement': 'సమలేఖనం',
+  'a11y.dragHandle': 'బ్లాక్‌ను తరలించడానికి లాగండి లేదా మెనూ కోసం నొక్కండి',
+  'a11y.dragStarted': 'బ్లాక్‌ను లాగుతున్నారు',
+  'a11y.dragStartedMultiple': '{count} బ్లాక్‌లను లాగుతున్నారు',
+  'a11y.dropPosition': 'వదలబడే స్థానం: {position}. మొత్తం: {total}.',
+  'a11y.blockMoved': 'బ్లాక్ తరలించబడింది. స్థానం: {position}. మొత్తం: {total}.',
+  'a11y.blocksMoved': '{count} బ్లాక్‌లు {position}వ స్థానానికి తరలించబడ్డాయి',
+  'a11y.blockDuplicated': 'బ్లాక్ నకలు చేయబడింది. స్థానం: {position}. మొత్తం: {total}.',
+  'a11y.blocksDuplicated': '{count} బ్లాక్‌లు {position}వ స్థానం నుంచి ప్రారంభమయ్యేలా నకలు చేయబడ్డాయి',
+  'a11y.searchResults': 'శోధన ఫలితాలు: {count}',
+  'a11y.allBlocksSelected': 'అన్ని బ్లాక్‌లు ఎంపికయ్యాయి. మొత్తం: {count}',
+  'a11y.blocksSelected': 'ఎంపికైన బ్లాక్‌ల సంఖ్య: {count}',
+  'a11y.navigationModeEntered': 'నావిగేషన్ మోడ్. బ్లాక్‌ల మధ్య కదలడానికి బాణం కీలను, సవరించడానికి Enterను, నిష్క్రమించడానికి Escapeను ఉపయోగించండి.',
+  'a11y.navigatedToBlock': 'బ్లాక్‌కు వెళ్లారు',
+  'searchTerms.delimiter': 'డెలీమీటర్',
+  'tools.callout.addEmoji': 'చిహ్నాన్ని జోడించండి',
+  'tools.callout.filterEmojis': 'ఎమోజీలను వెతకండి…',
+  'tools.callout.pickRandom': 'యాదృచ్ఛిక ఎమోజీని ఎంచుకోండి',
+  'tools.code.wrapLines': 'లైన్‌లను చుట్టు',
+  'tools.code.searchLanguage': 'భాషలను వెతకండి…',
+  'tools.code.previewTab': 'ప్రివ్యూ',
+  'tools.code.lineNumbers': 'లైన్ నంబర్‌లు',
+  'searchTerms.snippet': 'కోడ్ స్నిప్పెట్',
+  'searchTerms.pre': 'ముందే ఫార్మాట్ చేసిన వచనం',
+  'tools.link.linkTitle': 'లింక్ వచనం',
+  'tools.image.caption': 'క్యాప్షన్',
+  'tools.image.toggleCaption': 'క్యాప్షన్‌ను చూపు లేదా దాచు',
+  'tools.image.captionPlaceholder': 'క్యాప్షన్ రాయండి…',
+  'tools.image.altDescription': 'ఈ చిత్రాన్ని చూడలేని వ్యక్తుల కోసం వివరించండి.',
+  'tools.image.previewControls': 'చిత్ర ప్రివ్యూ నియంత్రణలు',
+  'tools.image.errorImageFailedToLoad': 'చిత్రం లోడ్ కాలేదు',
+  'tools.image.errorDefaultMessage': 'ఈ URL నుంచి చిత్రాన్ని లోడ్ చేయలేకపోయాము. వేరే మూలాన్ని ప్రయత్నించండి లేదా ఫైల్‌ను మళ్లీ అప్‌లోడ్ చేయండి.',
+  'tools.file.toggleCaption': 'క్యాప్షన్‌ను చూపు లేదా దాచు',
+  'tools.file.captionPlaceholder': 'క్యాప్షన్ రాయండి…',
+  'tools.file.preview': 'ప్రివ్యూ',
+  'tools.file.previewClose': 'ప్రివ్యూను మూసివేయి',
+  'tools.file.previewRaw': 'మూలం',
+  'tools.file.previewRender': 'ప్రివ్యూ',
+  'tools.file.previewLoading': 'ప్రివ్యూ లోడ్ అవుతోంది…',
+  'tools.file.previewError': 'ప్రివ్యూను లోడ్ చేయడం సాధ్యం కాలేదు',
+  'tools.file.previewBackToContent': 'కంటెంట్‌కు తిరిగి వెళ్లు',
+  'tools.video.alignmentLeft': 'ఎడమవైపు సమలేఖనం చేయి',
+  'tools.video.alignmentCenter': 'మధ్యలో సమలేఖనం చేయి',
+  'tools.video.alignmentRight': 'కుడివైపు సమలేఖనం చేయి',
+  'tools.video.caption': 'క్యాప్షన్',
+  'tools.video.captionPlaceholder': 'క్యాప్షన్ రాయండి…',
+  'tools.video.toggleCaption': 'క్యాప్షన్‌ను చూపు లేదా దాచు',
+  'tools.audio.alignmentLeft': 'ఎడమవైపు సమలేఖనం చేయి',
+  'tools.audio.alignmentCenter': 'మధ్యలో సమలేఖనం చేయి',
+  'tools.audio.alignmentRight': 'కుడివైపు సమలేఖనం చేయి',
+  'tools.audio.caption': 'క్యాప్షన్',
+  'tools.audio.captionPlaceholder': 'క్యాప్షన్ రాయండి…',
+  'tools.audio.emptyOrDropHere': 'లేదా ఇక్కడ ఆడియో ఫైల్‌ను వదలండి',
+  'tools.audio.coverSourceAria': 'కవర్ మూలం',
+  'tools.database.duplicateView': 'నకలు చేయి',
+  'tools.database.viewTypeListDescription': 'అంశాలను సరళమైన జాబితాలో చూపండి',
+  'tools.bookmark.loading': 'లింక్ ప్రివ్యూ లోడ్ అవుతోంది…',
+  'tools.embed.empty': 'పొందుపరచడానికి లింక్ లేదు',
+  'tools.embed.captionPlaceholder': 'క్యాప్షన్ రాయండి…',
+  'tools.video.seek': 'ప్లేబ్యాక్ స్థానం',
+  'tools.video.toggleTimeDisplay': 'గడిచిన సమయం మరియు మిగిలిన సమయం మధ్య మార్చు',
+  'tools.video.ctxCopyUrlAtTime': 'ప్రస్తుత ప్లేబ్యాక్ సమయానికి వీడియో URLని కాపీ చేయి',
+  'tools.video.ctxStats': 'ప్లేబ్యాక్ గణాంకాలు',
+  'tools.callout.emojiSearchResults': 'సరిపోలే ఎమోజీల సంఖ్య: {count}',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4360,6 +4439,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(TAMIL_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Telugu correction oracle', () => {
+    const messages = readLocale('te').messages;
+    const actual = Object.fromEntries(
+      Object.keys(TELUGU_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(TELUGU_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -18,6 +18,7 @@ import { BlokContentDirective } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import { deepEqual } from '@bloklabs/core/adapters';
 import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
+import { toRenderableData } from '@bloklabs/core/adapters';
 import type {
   API,
   Blok,
@@ -193,8 +194,8 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   }
 
   // ---- Reactive content (seeds construction, then re-renders on change) ----
-  private readonly data$ = signal<OutputData | LooseOutputData | undefined>(undefined);
-  @Input() set data(value: OutputData | LooseOutputData | undefined) {
+  private readonly data$ = signal<OutputData | LooseOutputData | null | undefined>(undefined);
+  @Input() set data(value: OutputData | LooseOutputData | null | undefined) {
     this.data$.set(value);
   }
 
@@ -216,7 +217,7 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
    * effect below). A controlled `data` echo that deep-equals this baseline is a
    * no-op, so it won't clobber the caret. Renders are serialized via `renderChain`.
    */
-  private lastRenderedData?: OutputData | LooseOutputData;
+  private lastRenderedData?: OutputData | LooseOutputData | null;
 
   /** Last token set pushed through `tokens.set`, for deep-equal deduping. */
   private appliedTokens?: Record<string, string>;
@@ -544,7 +545,9 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
       }
 
       this.lastRenderedData = data;
-      this.renderChain = this.renderChain.catch(() => undefined).then(() => editor.render(data));
+      // `data` may be null (a controlled "clear to empty"); render() throws on
+      // null, so normalize null → { blocks: [] } at the boundary.
+      this.renderChain = this.renderChain.catch(() => undefined).then(() => editor.render(toRenderableData(data)));
     });
 
     // Emit `ready` once per editor, after `instance()` is populated so a consumer

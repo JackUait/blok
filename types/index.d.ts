@@ -215,6 +215,23 @@ export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
 export const version: string;
 
 /**
+ * Options for {@link equalsOutputData}.
+ */
+export interface EqualsOutputDataOptions {
+  /**
+   * Ignore empty default blocks on both sides before comparing. A fresh editor
+   * always seeds one empty default paragraph, so a pristine document
+   * (`[{ type: 'paragraph', data: { text: '' } }]`) does not content-equal a
+   * saved-empty baseline (`[]`) by default. Turn this on for dirty-vs-baseline
+   * checks ("has the user actually typed anything?"): empty blocks of the
+   * default paragraph tool are dropped from both documents first, so pristine
+   * scaffolding and trailing empty lines don't register as a change. Empty
+   * NON-default blocks (a content-less divider, an empty image) are kept.
+   */
+  ignoreEmptyDefaultBlocks?: boolean;
+}
+
+/**
  * Structural equality for saved documents. Compares the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
  * document round-tripped through `save()` compares equal to its echo. Block
@@ -222,12 +239,17 @@ export const version: string;
  * for id-less content, so a legacy document still compares equal to its saved
  * echo. Nullish documents compare equal to `{ blocks: [] }`. Accepts the
  * loose wire shape ({@link LooseOutputData}) as-is.
+ *
+ * Pass `{ ignoreEmptyDefaultBlocks: true }` for dirty-vs-baseline checks so a
+ * pristine editor (one empty default paragraph) equals a saved-empty baseline.
  * @param a - first document to compare
  * @param b - second document to compare
+ * @param options - comparison options (see {@link EqualsOutputDataOptions})
  */
 export function equalsOutputData(
   a: OutputData | LooseOutputData | null | undefined,
   b: OutputData | LooseOutputData | null | undefined,
+  options?: EqualsOutputDataOptions,
 ): boolean;
 
 /**

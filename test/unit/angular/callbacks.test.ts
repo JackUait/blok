@@ -44,6 +44,21 @@ class WiredHost {
 })
 class BareHost {}
 
+@Component({
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: true,
+  imports: [BlokEditorComponent],
+  // onEnter/onSubmit are routed through the `config` escape hatch (no dedicated
+  // @Input), matching how onEnter is exposed on this adapter.
+  template: `<blok-editor [config]="{ onSubmit: submit }"></blok-editor>`,
+})
+class SubmitHost {
+  submitted: unknown[] = [];
+  submit = (data: unknown): void => {
+    this.submitted.push(data);
+  };
+}
+
 async function mountReady<T>(type: { new (): T }): Promise<ComponentFixture<T>> {
   const fixture = TestBed.createComponent(type);
 
@@ -139,5 +154,19 @@ describe('BlokEditorComponent opt-in callbacks', () => {
     expect(config.onBeforeRender).toBeUndefined();
     expect(config.onBeforePaste).toBeUndefined();
     expect(config.onError).toBeUndefined();
+    expect(config.onSubmit).toBeUndefined();
+  });
+
+  it('threads onSubmit into core config via the config escape hatch', async () => {
+    const fixture = await mountReady(SubmitHost);
+    const onSubmit = blokRegistry.last.config.onSubmit as (data: unknown, api: API) => void;
+
+    expect(typeof onSubmit).toBe('function');
+
+    const data = { blocks: [] };
+
+    onSubmit(data, {} as API);
+
+    expect(fixture.componentInstance.submitted).toEqual([data]);
   });
 });

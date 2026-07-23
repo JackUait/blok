@@ -34,6 +34,16 @@ class OneWayHost {
   data: OutputData = doc('init');
 }
 
+@Component({
+  changeDetection: ChangeDetectionStrategy.Default,
+  standalone: true,
+  imports: [BlokEditorComponent],
+  template: `<blok-editor [data]="data"></blok-editor>`,
+})
+class NullableHost {
+  data: OutputData | null = doc('init');
+}
+
 async function mountReady<T>(type: { new (): T }): Promise<ComponentFixture<T>> {
   const fixture = TestBed.createComponent(type);
 
@@ -90,5 +100,19 @@ describe('BlokEditorComponent two-way data', () => {
     await fixture.whenStable();
 
     expect(editor.render).not.toHaveBeenCalled();
+  });
+
+  it('normalizes a null data input to an empty document instead of crashing render()', async () => {
+    // A controlled consumer can bind `[data]` to null ("empty document"); it must
+    // reach render() as { blocks: [] }, never as null (render() throws on null).
+    const fixture = await mountReady(NullableHost);
+    const editor = blokRegistry.last;
+
+    fixture.componentInstance.data = null;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(editor.render).toHaveBeenCalledTimes(1);
+    expect(editor.render).toHaveBeenCalledWith({ blocks: [] });
   });
 });

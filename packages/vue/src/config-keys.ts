@@ -45,6 +45,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'onBeforeRender',
   'onBeforePaste',
   'onEnter',
+  'onSubmit',
   'onError',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 

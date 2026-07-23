@@ -16,9 +16,17 @@ type UniqueBlockMutationKey = `block:${BlockId}:event:${BlockMutationType}`;
  */
 export class ModificationsObserver extends Module {
   /**
-   * Flag shows onChange event is disabled
+   * Flag shows onChange event is disabled.
+   *
+   * Starts `true`: the observer is inert until the editor's boot sequence calls
+   * `enable()` (see core.ts, right after the initial render). The `BlockChanged`
+   * subscription below is live from construction, so any block mutation produced
+   * by the editor's own mount-time bookkeeping (nested-block inserts during the
+   * seed render, etc.) would otherwise be delivered as a spurious onChange/onSave
+   * on a pristine document — arming a consumer's unsaved-changes guard before the
+   * user has touched anything.
    */
-  private disabled = false;
+  private disabled = true;
 
   /**
    * Blocks wrapper mutation observer instance
@@ -109,7 +117,11 @@ export class ModificationsObserver extends Module {
    * @param event - some of our custom change events
    */
   private particularBlockChanged(event: BlockMutationEvent): void {
-    if (this.disabled || (!isFunction(this.config.onChange) && !isFunction(this.config.onSave))) {
+    if (
+      this.disabled ||
+      this.Blok.ReadOnly.isEnabled ||
+      (!isFunction(this.config.onChange) && !isFunction(this.config.onSave))
+    ) {
       return;
     }
 
@@ -123,6 +135,18 @@ export class ModificationsObserver extends Module {
       const queuedEvents = Array.from(this.batchingOnChangeQueue.values());
 
       if (queuedEvents.length === 0) {
+        return;
+      }
+
+      /**
+       * Read-only is honored at DELIVERY time, not just at enqueue: a change can
+       * be queued while editable and read-only toggled on before this batch
+       * fires. Consumers can therefore rely on onChange/onSave never firing in
+       * read-only mode without guarding on `api.readOnly.isEnabled` themselves.
+       */
+      if (this.Blok.ReadOnly.isEnabled) {
+        this.batchingOnChangeQueue.clear();
+
         return;
       }
 

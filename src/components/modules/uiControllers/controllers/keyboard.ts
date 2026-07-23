@@ -1,6 +1,7 @@
 import type { Block } from '../../../block';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { isIosDevice } from '../../../utils/browser';
+import { deliverOnSubmit } from '../../../utils/on-submit';
 import { getCaretOffset } from '../../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
@@ -532,6 +533,23 @@ export class KeyboardController extends Controller {
       if (!isSoftLineBreak && typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
         event.preventDefault();
         this.Blok.BlockSelection.clearSelection(event);
+
+        return;
+      }
+
+      /**
+       * Consumer-level submit hook (`config.onSubmit`) — the "Enter sends"
+       * gesture on the body-target path (caret not set on a block). Mirrors the
+       * block-level path in KeyboardNavigation.handleEnter: it runs after
+       * `onEnter`, honors the same soft-line-break escape, serializes the
+       * document and suppresses the default block create.
+       */
+      const onSubmit = this.config.onSubmit;
+
+      if (!isSoftLineBreak && typeof onSubmit === 'function') {
+        event.preventDefault();
+        this.Blok.BlockSelection.clearSelection(event);
+        deliverOnSubmit(() => this.Blok.Saver.save(), this.Blok.API.methods, onSubmit);
 
         return;
       }

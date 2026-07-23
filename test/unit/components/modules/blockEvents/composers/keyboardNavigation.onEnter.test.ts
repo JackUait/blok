@@ -69,13 +69,23 @@ const createModules = (options: {
   currentBlock?: Block | undefined;
   someToolbarOpened?: boolean;
   someFlipperButtonFocused?: boolean;
-} = {}): { blok: BlokModules; split: ReturnType<typeof vi.fn>; insertDefaultBlockAtIndex: ReturnType<typeof vi.fn> } => {
+  savedData?: unknown;
+} = {}): {
+  blok: BlokModules;
+  split: ReturnType<typeof vi.fn>;
+  insertDefaultBlockAtIndex: ReturnType<typeof vi.fn>;
+  save: ReturnType<typeof vi.fn>;
+} => {
   const mockBlock = 'currentBlock' in options ? options.currentBlock : createBlock();
   const insertedBlock = createBlock({ id: 'inserted-block' });
   const split = vi.fn(() => insertedBlock);
   const insertDefaultBlockAtIndex = vi.fn(() => insertedBlock);
+  const save = vi.fn().mockResolvedValue(options.savedData ?? { blocks: [] });
 
   const blok = {
+    Saver: {
+      save,
+    },
     BlockManager: {
       currentBlock: mockBlock,
       blocks: mockBlock === undefined ? [] : [mockBlock],
@@ -107,7 +117,7 @@ const createModules = (options: {
     },
   } as unknown as BlokModules;
 
-  return { blok, split, insertDefaultBlockAtIndex };
+  return { blok, split, insertDefaultBlockAtIndex, save };
 };
 
 beforeEach(() => {
@@ -206,5 +216,82 @@ describe('KeyboardNavigation — config.onEnter hook', () => {
     keyboardNavigation.handleEnter(event);
 
     expect(onEnter).not.toHaveBeenCalled();
+  });
+});
+
+describe('KeyboardNavigation — config.onSubmit hook', () => {
+  it('serializes the doc and calls onSubmit with (data, api), suppressing the default split', async () => {
+    const saved = { blocks: [{ id: 'b1', type: 'paragraph', data: { text: 'hi' } }] };
+    const onSubmit = vi.fn();
+    const { blok, split, insertDefaultBlockAtIndex, save } = createModules({ savedData: saved });
+    const keyboardNavigation = new KeyboardNavigation(blok, () => undefined, () => onSubmit);
+    const event = createKeyboardEvent({ key: 'Enter' });
+
+    keyboardNavigation.handleEnter(event);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith(saved, apiMethods);
+    // No block was created or split — Enter submits, it does not insert a line
+    expect(split).not.toHaveBeenCalled();
+    expect(insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('lets onEnter take precedence: a handled onEnter suppresses onSubmit', async () => {
+    const onEnter = vi.fn(() => true);
+    const onSubmit = vi.fn();
+    const { blok, save } = createModules();
+    const keyboardNavigation = new KeyboardNavigation(blok, () => onEnter, () => onSubmit);
+    const event = createKeyboardEvent({ key: 'Enter' });
+
+    keyboardNavigation.handleEnter(event);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    expect(save).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('never calls onSubmit for Shift+Enter (soft line break stays native)', async () => {
+    const onSubmit = vi.fn();
+    const { blok, save } = createModules();
+    const keyboardNavigation = new KeyboardNavigation(blok, () => undefined, () => onSubmit);
+    const event = createKeyboardEvent({ key: 'Enter', shiftKey: true });
+
+    keyboardNavigation.handleEnter(event);
+    await Promise.resolve();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('never calls onSubmit while an IME composition is active', async () => {
+    const onSubmit = vi.fn();
+    const { blok, save } = createModules();
+    const keyboardNavigation = new KeyboardNavigation(blok, () => undefined, () => onSubmit);
+    const event = createKeyboardEvent({ key: 'Enter', isComposing: true });
+
+    keyboardNavigation.handleEnter(event);
+    await Promise.resolve();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('runs the default split when neither onEnter nor onSubmit is configured', () => {
+    const { blok, split, insertDefaultBlockAtIndex } = createModules();
+    const keyboardNavigation = new KeyboardNavigation(blok);
+    const event = createKeyboardEvent({ key: 'Enter' });
+
+    keyboardNavigation.handleEnter(event);
+
+    const blockOperationCalled = split.mock.calls.length > 0 || insertDefaultBlockAtIndex.mock.calls.length > 0;
+    expect(blockOperationCalled).toBe(true);
   });
 });

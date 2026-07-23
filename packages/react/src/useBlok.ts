@@ -11,7 +11,7 @@ import {
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
 import { bindLiveToolConfigFunctions, buildLiveBlockConfig } from './live-tool-config';
-import { createEmittedEchoWindow, normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
+import { createEmittedEchoWindow, normalizeReadOnlyConfig, toRenderableData } from '@bloklabs/core/adapters';
 import type { Blok } from '@/types';
 import type { UseBlokConfig } from './types';
 
@@ -255,6 +255,16 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       onEnter: (...args: Parameters<NonNullable<UseBlokConfig['onEnter']>>): boolean | void =>
         configRef.current.onEnter?.(...args),
     };
+
+    // Only attach onSubmit when the consumer opted in: its mere presence makes
+    // Enter serialize-and-submit instead of splitting a block, so an absent prop
+    // must stay absent. The wrapper reads through the ref so the latest callback
+    // is always used without recreating the editor.
+    if (currentConfig.onSubmit) {
+      blokConfig.onSubmit = (...args: Parameters<NonNullable<UseBlokConfig['onSubmit']>>): void => {
+        configRef.current.onSubmit?.(...args);
+      };
+    }
 
     // Only attach onSave when the consumer opted in: its mere presence makes the
     // core serialize on every change batch, so an absent prop must stay absent.
@@ -639,7 +649,9 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     pendingDataRef.current = data;
     renderChainRef.current = renderChainRef.current
       .catch(() => undefined)
-      .then(() => editor.render(data))
+      // `data` may be null here (a controlled "clear to empty"); render() throws
+      // on null, so normalize null → { blocks: [] } at the boundary.
+      .then(() => editor.render(toRenderableData(data)))
       .then(
         () => {
           lastRenderedDataRef.current = data;

@@ -84,6 +84,41 @@ describe('equalsOutputData', () => {
 
     expect(equalsOutputData(a, b)).toBe(false);
   });
+
+  describe('with { ignoreEmptyDefaultBlocks: true }', () => {
+    const emptyPara = { id: 'p0', type: 'paragraph', data: { text: '' } };
+
+    it('equates a pristine single empty paragraph with a truly empty document', () => {
+      // A fresh editor always seeds one empty default paragraph; a saved baseline
+      // may hold no blocks. For dirty-checking these must count as unchanged.
+      expect(equalsOutputData(doc([emptyPara]), doc([]), { ignoreEmptyDefaultBlocks: true })).toBe(true);
+      expect(equalsOutputData(doc([]), doc([emptyPara]), { ignoreEmptyDefaultBlocks: true })).toBe(true);
+    });
+
+    it('ignores trailing empty default blocks around real content', () => {
+      const a = doc([{ id: 'b1', type: 'paragraph', data: { text: 'Hi' } }]);
+      const b = doc([{ id: 'b1', type: 'paragraph', data: { text: 'Hi' } }, emptyPara]);
+
+      expect(equalsOutputData(a, b, { ignoreEmptyDefaultBlocks: true })).toBe(true);
+    });
+
+    it('is opt-in: an empty default block still counts without the option', () => {
+      expect(equalsOutputData(doc([emptyPara]), doc([]))).toBe(false);
+    });
+
+    it('still detects real content differences', () => {
+      const a = doc([emptyPara, { id: 'b1', type: 'paragraph', data: { text: 'Hi' } }]);
+      const b = doc([{ id: 'b1', type: 'paragraph', data: { text: 'Bye' } }]);
+
+      expect(equalsOutputData(a, b, { ignoreEmptyDefaultBlocks: true })).toBe(false);
+    });
+
+    it('does not drop empty NON-default blocks (a content-less divider is content)', () => {
+      const withDivider = doc([{ id: 'd1', type: 'divider', data: {} }]);
+
+      expect(equalsOutputData(withDivider, doc([]), { ignoreEmptyDefaultBlocks: true })).toBe(false);
+    });
+  });
 });
 
 describe('normalizeOutputBlocks', () => {

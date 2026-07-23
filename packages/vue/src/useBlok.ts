@@ -11,7 +11,7 @@ import {
 } from 'vue';
 import { Blok as BlokRuntime } from '@bloklabs/core';
 import { setHolder, removeHolder } from './holder-map';
-import { deepEqual , normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
+import { deepEqual , normalizeReadOnlyConfig, toRenderableData } from '@bloklabs/core/adapters';
 import { BLOK_DEFAULT_CONFIG, mergeBlokDefaults } from './provide-blok';
 import {
   createBlockPortalRegistry,
@@ -101,7 +101,7 @@ export function useBlok(
   const state: {
     current: Blok | null;
     holder: HTMLDivElement | null;
-    lastRenderedData: OutputData | LooseOutputData | undefined;
+    lastRenderedData: OutputData | LooseOutputData | null | undefined;
     seededEditor: Blok | null;
     renderChain: Promise<void>;
   } = {
@@ -376,7 +376,12 @@ export function useBlok(
       }
 
       state.lastRenderedData = data;
-      state.renderChain = state.renderChain.catch(() => undefined).then(() => ed.render(toRaw(data)));
+      // `data` may be null (a controlled "clear to empty"); render() throws on
+      // null, so normalize null → { blocks: [] } at the boundary. toRaw(null)
+      // stays null, so the helper still sees it.
+      state.renderChain = state.renderChain
+        .catch(() => undefined)
+        .then(() => ed.render(toRenderableData(toRaw(data))));
     },
     { immediate: true }
   );

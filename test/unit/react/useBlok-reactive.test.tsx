@@ -178,6 +178,49 @@ describe('useBlok reactive data', () => {
     expect(instances[0].render).toHaveBeenCalledWith(second);
   });
 
+  it('does not wire a core onSubmit when the consumer provides none', async () => {
+    render(<Harness config={{}} />);
+    await act(async () => { await flush(); });
+
+    expect((instances[0].config as { onSubmit?: unknown }).onSubmit).toBeUndefined();
+  });
+
+  it('forwards onSubmit through a live wrapper that always calls the latest closure', async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+
+    const { rerender } = render(<Harness config={{ onSubmit: first }} />);
+    await act(async () => { await flush(); });
+    const coreOnSubmit = (instances[0].config as { onSubmit?: (...a: unknown[]) => void }).onSubmit;
+    expect(typeof coreOnSubmit).toBe('function');
+
+    // Changing the callback identity is picked up without recreating the editor.
+    rerender(<Harness config={{ onSubmit: second }} />);
+    await act(async () => { await flush(); });
+    expect(instances).toHaveLength(1);
+
+    coreOnSubmit?.({ blocks: [] }, {});
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('normalizes a null data prop to an empty document instead of crashing render()', async () => {
+    // Controlled consumers hold nullable state (`data={value}` where value can be
+    // null). null means "empty document"; it must reach render() as { blocks: [] },
+    // never as null (render() throws on null).
+    const first = { blocks: [{ id: '1', type: 'paragraph', data: { text: 'a' } }] };
+
+    const { rerender } = render(<Harness config={{ data: first }} />);
+    await act(async () => { await flush(); });
+
+    rerender(<Harness config={{ data: null }} />);
+    await act(async () => { await flush(); });
+
+    expect(instances).toHaveLength(1); // not recreated
+    expect(instances[0].render).toHaveBeenCalledTimes(1);
+    expect(instances[0].render).toHaveBeenCalledWith({ blocks: [] });
+  });
+
   it('does not render when a new data reference has identical content (deep-equal dedup)', async () => {
     const { rerender } = render(
       <Harness config={{ data: { blocks: [{ id: '1', type: 'paragraph', data: { text: 'x' } }] } }} />

@@ -125,6 +125,27 @@ describe('BlokEditor callbacks + gating', () => {
     expect(result).toBe(true);
   });
 
+  it('threads the onSubmit prop into core', async () => {
+    const onSubmit = vi.fn();
+
+    await mountEditor({ props: { onSubmit } });
+
+    expect(typeof coreConfig().onSubmit).toBe('function');
+
+    const data = { blocks: [] };
+    const api = { blocks: {} };
+
+    (coreConfig().onSubmit as (data: unknown, api: unknown) => void)(data, api);
+
+    expect(onSubmit).toHaveBeenCalledWith(data, api);
+  });
+
+  it('does NOT wire core onSubmit without an onSubmit prop', async () => {
+    await mountEditor();
+
+    expect(coreConfig().onSubmit).toBeUndefined();
+  });
+
   it('threads the onError prop into core', async () => {
     const onError = vi.fn();
 

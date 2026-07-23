@@ -243,8 +243,14 @@ export interface BlokMountOptions {
    * wire shape ({@link LooseOutputData}) where `data`/`id`/`time` may be
    * `null` — nulls are normalized at the boundary, so backend DTOs can be
    * passed as-is.
+   *
+   * A whole-document `null` is also accepted and means "empty document": a
+   * controlled consumer holding nullable state (`data={value}` where `value`
+   * can be `null`) can pass it straight through. It is normalized to
+   * `{ blocks: [] }` at construction and on the reactive re-render path, so it
+   * never needs a defensive `value ?? { blocks: [] }`.
    */
-  data?: OutputData | LooseOutputData;
+  data?: OutputData | LooseOutputData | null;
 
   /**
    * Height of Blok's bottom area that allows to set focus on the last Block
@@ -358,7 +364,13 @@ export interface BlokMountOptions {
   onReady?(blok?: Blok): void;
 
   /**
-   * Fires when something changed in DOM
+   * Fires when something changed in DOM.
+   *
+   * Never fires while the editor is in read-only mode — read-only is honored at
+   * delivery time, so a change queued just before read-only is toggled on is
+   * dropped too. You do not need to guard the handler with
+   * `api.readOnly.isEnabled`.
+   *
    * @param api - blok.js api
    * @param event - custom event describing mutation. If several mutations happened at once, they will be batched and you'll get an array of events here.
    */
@@ -375,6 +387,9 @@ export interface BlokMountOptions {
    * user-driven content changes trigger it — programmatic `render()` does not
    * (the change observer is disabled during render), so a controlled
    * `data → render → onSave → setData` round-trip won't recurse.
+   *
+   * Never fires while the editor is in read-only mode (honored at delivery
+   * time), so the handler needs no `api.readOnly.isEnabled` guard.
    *
    * @param data - the full serialized output of the editor
    * @param api - blok.js api
@@ -413,6 +428,25 @@ export interface BlokMountOptions {
    * @returns true when the event was handled and the default split/create should be suppressed
    */
   onEnter?(event: KeyboardEvent, api: API): boolean | void;
+
+  /**
+   * Fires with the full serialized {@link OutputData} when the user presses the
+   * Enter that would otherwise create or split a block — the "Enter sends"
+   * gesture for chat-input-style consumers. Blok serializes the document for you
+   * and suppresses its default block split/create, so you get the current
+   * content without wiring `saver.save()` into `onEnter` by hand.
+   *
+   * It fires on exactly the same Enter as {@link onEnter} (after all the built-in
+   * escapes: `enableLineBreaks` tools, an open toolbar flipper, and the
+   * soft-line-break Shift+Enter — which is normalized for iOS just like
+   * `onEnter`, so you never need a hand-written `event.shiftKey` guard). When
+   * both hooks are set, a handled `onEnter` (one returning `true`) takes
+   * precedence and suppresses `onSubmit`.
+   *
+   * @param data - the full serialized output of the editor
+   * @param api - blok.js api
+   */
+  onSubmit?(data: OutputData, api: API): void;
 
   /**
    * Transforms the blocks array just before it is rendered, on every render

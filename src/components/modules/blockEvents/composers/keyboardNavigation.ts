@@ -7,6 +7,7 @@ import { keyCodes, delay, isIosDevice } from '../../../utils';
 import { areBlocksMergeable } from '../../../utils/blocks';
 import { findNbspAfterEmptyInline, focus, isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../../utils/caret/index';
 import { EDITABLE_INPUT_SELECTOR, HEADER_TOOL_NAME, LIST_TOOL_NAME, QUOTE_TOOL_NAME } from '../constants';
+import { deliverOnSubmit } from '../../../utils/on-submit';
 import { keyCodeFromEvent } from '../utils/keyboard';
 
 import { BlockEventComposer } from './__base';
@@ -41,10 +42,13 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @param Blok - Blok modules
    * @param getOnEnter - resolves the consumer-level `config.onEnter` hook at
    * call time (a getter, so the composer never holds a stale reference)
+   * @param getOnSubmit - resolves the consumer-level `config.onSubmit` hook at
+   * call time (same reasoning as `getOnEnter`)
    */
   constructor(
     Blok: BlokModules,
-    private readonly getOnEnter: () => BlokConfig['onEnter'] = () => undefined
+    private readonly getOnEnter: () => BlokConfig['onEnter'] = () => undefined,
+    private readonly getOnSubmit: () => BlokConfig['onSubmit'] = () => undefined
   ) {
     super(Blok);
   }
@@ -351,6 +355,23 @@ export class KeyboardNavigation extends BlockEventComposer {
 
     if (typeof onEnter === 'function' && onEnter(event, this.Blok.API.methods) === true) {
       event.preventDefault();
+
+      return;
+    }
+
+    /**
+     * Consumer-level submit hook (`config.onSubmit`) — the "Enter sends"
+     * gesture. Runs after `onEnter` (a handled `onEnter` takes precedence) and
+     * inherits the same escapes above (enableLineBreaks, flipper, Shift+Enter,
+     * IME), so it only fires on the Enter that would otherwise create a block.
+     * It serializes the document and hands it to the consumer, and suppresses
+     * the default block split/create (Enter submits, it does not insert a line).
+     */
+    const onSubmit = this.getOnSubmit();
+
+    if (typeof onSubmit === 'function') {
+      event.preventDefault();
+      deliverOnSubmit(() => this.Blok.Saver.save(), this.Blok.API.methods, onSubmit);
 
       return;
     }

@@ -45,19 +45,79 @@ function equalsOutputBlock(
 }
 
 /**
+ * The tool a pristine editor seeds its first (empty) block with. An empty block
+ * of this type is UI scaffolding, not user content — see
+ * {@link EqualsOutputDataOptions.ignoreEmptyDefaultBlocks}.
+ */
+const DEFAULT_BLOCK_TYPE = 'paragraph';
+
+/**
+ * Options for {@link equalsOutputData}.
+ */
+export interface EqualsOutputDataOptions {
+  /**
+   * Ignore empty default blocks on both sides before comparing. A fresh editor
+   * always seeds one empty default paragraph, so a pristine document
+   * (`[{ type: 'paragraph', data: { text: '' } }]`) does not content-equal a
+   * saved-empty baseline (`[]`) by default. Turn this on for dirty-vs-baseline
+   * checks ("has the user actually typed anything?"): empty blocks of the
+   * default paragraph tool are dropped from both documents first, so pristine
+   * scaffolding and trailing empty lines don't register as a change. Empty
+   * NON-default blocks (a content-less divider, an empty image) are kept — they
+   * are meaningful content.
+   */
+  ignoreEmptyDefaultBlocks?: boolean;
+}
+
+/**
+ * True for an empty block of the default paragraph tool — the editor's own
+ * scaffolding, not user content.
+ * @param block - block to inspect
+ * @returns true when the block is an empty default paragraph
+ */
+function isEmptyDefaultBlock(block: OutputBlockData | LooseOutputBlockData): boolean {
+  return block.type === DEFAULT_BLOCK_TYPE && isEmptyValue(block.data);
+}
+
+/**
+ * Resolves the blocks to compare for a document, dropping empty default blocks
+ * when {@link EqualsOutputDataOptions.ignoreEmptyDefaultBlocks} is set.
+ * @param data - document whose blocks are collected
+ * @param options - comparison options
+ * @returns the blocks to compare
+ */
+function comparableBlocks(
+  data: AnyOutputData,
+  options?: EqualsOutputDataOptions
+): Array<OutputBlockData | LooseOutputBlockData> {
+  const blocks = data?.blocks ?? [];
+
+  if (options?.ignoreEmptyDefaultBlocks === true) {
+    return blocks.filter((block) => !isEmptyDefaultBlock(block));
+  }
+
+  return blocks;
+}
+
+/**
  * Structural equality for saved documents. Compares the `blocks` arrays
  * deeply; the volatile `time` and `version` envelope fields are ignored, so a
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids are compared only when both sides carry one — the editor mints fresh
  * ids for id-less content, so a legacy document still equals its saved echo.
  * Nullish documents compare equal to `{ blocks: [] }`.
+ *
+ * Pass `{ ignoreEmptyDefaultBlocks: true }` for dirty-vs-baseline checks so a
+ * pristine editor (one empty default paragraph) equals a saved-empty baseline —
+ * see {@link EqualsOutputDataOptions}.
  * @param a - first document to compare
  * @param b - second document to compare
+ * @param options - comparison options
  * @returns true when both documents hold structurally equal blocks
  */
-export function equalsOutputData(a: AnyOutputData, b: AnyOutputData): boolean {
-  const blocksA = a?.blocks ?? [];
-  const blocksB = b?.blocks ?? [];
+export function equalsOutputData(a: AnyOutputData, b: AnyOutputData, options?: EqualsOutputDataOptions): boolean {
+  const blocksA = comparableBlocks(a, options);
+  const blocksB = comparableBlocks(b, options);
 
   return blocksA.length === blocksB.length && blocksA.every((block, index) => equalsOutputBlock(block, blocksB[index]));
 }
@@ -98,6 +158,22 @@ export function createEmittedEchoWindow(capacity: number = 20): {
       emitted.length = 0;
     },
   };
+}
+
+/**
+ * Maps a controlled `data` value to something the editor's `render()` accepts.
+ * A whole-document `null` — a controlled "clear to empty" — becomes
+ * `{ blocks: [] }`; any real document passes through untouched.
+ *
+ * The framework adapters (React/Vue/Angular) route their reactive `data` path
+ * through this so a `null` never reaches `render()`, whose strict guard reads
+ * `data.blocks` and would throw on `null`. `undefined` (uncontrolled) is handled
+ * by the adapters before this point, so it is intentionally not an input here.
+ * @param data - a controlled document, or `null` for an empty document
+ * @returns a document `render()` can consume
+ */
+export function toRenderableData(data: OutputData | LooseOutputData | null): OutputData | LooseOutputData {
+  return data === null ? { blocks: [] } : data;
 }
 
 /**

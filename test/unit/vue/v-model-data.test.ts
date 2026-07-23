@@ -98,4 +98,17 @@ describe('useBlok v-model:data baseline (onSave dedup)', () => {
 
     expect((blokRegistry.last!.config as { onSave?: unknown }).onSave).toBeUndefined();
   });
+
+  it('normalizes a null data value to an empty document instead of crashing render()', async () => {
+    // A controlled consumer can set `data` to null ("empty document"); it must
+    // reach render() as { blocks: [] }, never as null (render() throws on null).
+    const { config } = await mountReady({ data: seed });
+    const instance = blokRegistry.last!;
+
+    config.data = null;
+    await flushPromises();
+
+    expect(instance.render).toHaveBeenCalledTimes(1);
+    expect(instance.render).toHaveBeenCalledWith({ blocks: [] });
+  });
 });

@@ -33,6 +33,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'onSave',
   'onError',
   'onEnter',
+  'onSubmit',
   'onBeforeRender',
   'onAfterRender',
   'inlineToolbar',

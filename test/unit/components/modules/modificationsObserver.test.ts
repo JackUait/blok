@@ -88,6 +88,7 @@ describe('ModificationsObserver', () => {
     apiMethods: Record<string, never>;
     onChange: ReturnType<typeof vi.fn>;
     saverSave: ReturnType<typeof vi.fn>;
+    readOnly: { isEnabled: boolean };
   } => {
     const eventsDispatcher = new EventsDispatcher<BlokEventMap>();
     const onChange = vi.fn();
@@ -104,6 +105,7 @@ describe('ModificationsObserver', () => {
     const redactor = document.createElement('div');
     const apiMethods = {} as Record<string, never>;
     const saverSave = vi.fn().mockResolvedValue(undefined);
+    const readOnly = { isEnabled: false };
 
     observer.state = {
       UI: {
@@ -117,6 +119,7 @@ describe('ModificationsObserver', () => {
       Saver: {
         save: saverSave,
       },
+      ReadOnly: readOnly,
     } as unknown as BlokModules;
 
     return {
@@ -127,6 +130,7 @@ describe('ModificationsObserver', () => {
       apiMethods,
       onChange,
       saverSave,
+      readOnly,
     };
   };
 
@@ -167,8 +171,65 @@ describe('ModificationsObserver', () => {
     expect(onChange).toHaveBeenCalledWith(apiMethods, blockEvent2);
   });
 
+  it('does not deliver onChange until enable() has run (mount-time bookkeeping is silent)', () => {
+    // A freshly constructed observer is inert: block mutations fired during the
+    // editor's own mount (before core calls enable() post-render) must NOT reach
+    // the consumer, otherwise a pristine document emits a spurious change.
+    const { eventsDispatcher, onChange } = createObserver();
+
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+    vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not serialize or emit onSave until enable() has run', async () => {
+    const onSave = vi.fn();
+    const { eventsDispatcher, saverSave } = createObserver({ onSave });
+
+    saverSave.mockResolvedValue({ time: 1, version: '1', blocks: [] });
+
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+    expect(saverSave).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('does not deliver onChange while read-only is enabled, even after enable()', () => {
+    // Read-only re-enables the observer after toggling (the disable() is only a
+    // mutex around the in-place setReadOnly loop). Delivery must still be gated on
+    // the live read-only state so a change in read-only mode never reaches onChange.
+    const { observer, eventsDispatcher, onChange, readOnly } = createObserver();
+
+    observer.enable();
+    readOnly.isEnabled = true;
+
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+    vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not serialize or emit onSave while read-only is enabled', async () => {
+    const onSave = vi.fn();
+    const { observer, eventsDispatcher, saverSave, readOnly } = createObserver({ onSave });
+
+    saverSave.mockResolvedValue({ time: 1, version: '1', blocks: [] });
+    observer.enable();
+    readOnly.isEnabled = true;
+
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+    expect(saverSave).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('emits onChange with the latest single event after batching time', () => {
-    const { eventsDispatcher, onChange, apiMethods } = createObserver();
+    const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
+
+    observer.enable();
 
     const firstEvent = createBlockMutationEvent('block-1');
     const latestEvent = createBlockMutationEvent('block-1');
@@ -183,7 +244,9 @@ describe('ModificationsObserver', () => {
   });
 
   it('emits an array when batching multiple distinct events', () => {
-    const { eventsDispatcher, onChange, apiMethods } = createObserver();
+    const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
+
+    observer.enable();
 
     const firstEvent = createBlockMutationEvent('block-1');
     const secondEvent = createBlockMutationEvent('block-2');
@@ -238,8 +301,9 @@ describe('ModificationsObserver', () => {
 
     it('serializes the editor and emits onSave with the full OutputData after batching', async () => {
       const onSave = vi.fn();
-      const { eventsDispatcher, apiMethods, saverSave } = createObserver({ onSave });
+      const { observer, eventsDispatcher, apiMethods, saverSave } = createObserver({ onSave });
 
+      observer.enable();
       saverSave.mockResolvedValue(sampleOutput);
 
       eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
@@ -252,11 +316,12 @@ describe('ModificationsObserver', () => {
 
     it('emits onSave even when no onChange callback is configured', async () => {
       const onSave = vi.fn();
-      const { eventsDispatcher, saverSave } = createObserver({
+      const { observer, eventsDispatcher, saverSave } = createObserver({
         onChange: undefined,
         onSave,
       });
 
+      observer.enable();
       saverSave.mockResolvedValue(sampleOutput);
 
       eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
@@ -268,8 +333,9 @@ describe('ModificationsObserver', () => {
 
     it('serializes only once per batch of multiple events (debounced)', async () => {
       const onSave = vi.fn();
-      const { eventsDispatcher, saverSave } = createObserver({ onSave });
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave });
 
+      observer.enable();
       saverSave.mockResolvedValue(sampleOutput);
 
       eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
@@ -299,6 +365,7 @@ describe('ModificationsObserver', () => {
       let resolveSave: (data: OutputData) => void = () => {};
       const { observer, eventsDispatcher, saverSave } = createObserver({ onSave });
 
+      observer.enable();
       saverSave.mockReturnValue(
         new Promise<OutputData>((resolve) => {
           resolveSave = resolve;
@@ -352,6 +419,8 @@ describe('ModificationsObserver', () => {
     it('cancels the pending batching timeout so onChange is not fired after destroy', () => {
       const { observer, eventsDispatcher, onChange } = createObserver();
 
+      observer.enable();
+
       // Queue a batched onChange event
       const blockEvent = createBlockMutationEvent('block-1');
 
@@ -370,6 +439,7 @@ describe('ModificationsObserver', () => {
     it('prevents further onChange emissions after destroy', () => {
       const { observer, eventsDispatcher, onChange } = createObserver();
 
+      observer.enable();
       observer.destroy();
 
       const blockEvent = createBlockMutationEvent('block-2');

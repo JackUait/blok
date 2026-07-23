@@ -374,6 +374,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
   ]),
   tr: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
+  // Placeholder-only swatch templates contain no English lexical material;
+  // Uyghur independently requires the same modifier-before-head token order.
+  ug: new Set([
+    'tools.colorPicker.defaultSwatchLabel',
+    'tools.colorPicker.colorSwatchLabel',
+  ]),
   // "OK" is the conventional compact confirmation label in Vietnamese UIs.
   vi: new Set(['notifier.ok']),
 };

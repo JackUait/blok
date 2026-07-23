@@ -3504,6 +3504,62 @@ const TURKISH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.video.ctxStats': 'Oynatma istatistikleri',
 };
 
+const UYGHUR_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'toolNames.clearFormat': 'پىچىمنى چىقىرىۋەت',
+  'toolbox.optionAddAbove': 'ئۈستىگە قوشۇش ئۈچۈن Option نى بېسىپ تۇرۇپ چېكىڭ',
+  'toolbox.ctrlAddAbove': 'ئۈستىگە قوشۇش ئۈچۈن Ctrl نى بېسىپ تۇرۇپ چېكىڭ',
+  'tools.marker.textColor': 'تېكىست رەڭگى',
+  'tools.colorPicker.defaultSwatchLabel': '{default} {mode}',
+  'tools.colorPicker.colorSwatchLabel': '{color} {mode}',
+  'tools.toggle.bodyPlaceholder': 'بوش يىغىلما. بىر بۆلەك قوشۇش ئۈچۈن چېكىڭ ياكى بۆلەكلەرنى بۇ يەرگە سۆرەڭ.',
+  'tools.table.clearSelection': 'مەزمۇننى تازىلاش',
+  'a11y.dropPosition': 'تاشلىنىدىغان ئورۇن: {position}. جەمئىي: {total}.',
+  'a11y.blockMoved': 'بۆلەك يۆتكەلدى. ئورۇن: {position}. جەمئىي: {total}.',
+  'a11y.blockDuplicated': 'بۆلەك كۆپەيتىلدى. ئورۇن: {position}. جەمئىي: {total}.',
+  'a11y.blocksDuplicated': '{count} بۆلەك كۆپەيتىلدى. باشلىنىش ئورنى: {position}.',
+  'a11y.searchResults': 'ئىزدەش نەتىجىسى: {count}',
+  'tools.callout.addEmoji': 'سىنبەلگە قوشۇش',
+  'tools.callout.filterEmojis': 'ئېموجى ئىزدەش…',
+  'tools.callout.pickRandom': 'ئىختىيارىي بىر ئېموجى تاللاش',
+  'tools.callout.skinTone': 'تېرە رەڭگى',
+  'tools.table.placement': 'توغرىلاش',
+  'searchTerms.pre': 'ئالدىن پىچىملانغان',
+  'tools.link.linkTitle': 'ئۇلانما تېكىستى',
+  'tools.code.plainText': 'ئاددىي تېكىست',
+  'tools.image.toggleCaption': 'ئىزاھاتنى كۆرسىتىش ياكى يوشۇرۇش',
+  'tools.image.converting': 'ئايلاندۇرۇلۇۋاتىدۇ…',
+  'tools.image.altEdit': 'Alt تېكىستىنى تەھرىرلەش',
+  'tools.image.altDescription': 'بۇ رەسىمنى كۆرەلمەيدىغان كىشىلەر ئۈچۈن تەسۋىرلەڭ.',
+  'tools.image.altPlaceholder': 'Alt تېكىستى',
+  'tools.image.preview': 'رەسىمنىڭ ئالدىن كۆرۈنۈشى',
+  'tools.image.previewControls': 'رەسىمنى ئالدىن كۆرۈش تىزگىنلىرى',
+  'tools.image.errorDefaultMessage': 'بۇ URL دىن رەسىمنى يۈكلىگىلى بولمىدى. باشقا مەنبە سىناڭ ياكى ھۆججەتنى قايتا يۈكلەڭ.',
+  'tools.database.titlePlaceholder': 'يېڭى ساندان',
+  'tools.database.viewTypeListDescription': 'تۈرلەرنى ئاددىي تىزىملىكتە كۆرسىتىش',
+  'tools.database.propertyTypeText': 'تېكىست',
+  'tools.embed.empty': 'سىڭدۈرۈش ئۇلانمىسى يوق',
+  'tools.file.toggleCaption': 'ئىزاھاتنى كۆرسىتىش ياكى يوشۇرۇش',
+  'tools.file.previewRender': 'ئالدىن كۆرۈش',
+  'tools.video.alignmentLeft': 'سولغا توغرىلاش',
+  'tools.video.alignmentCenter': 'ئوتتۇرىغا توغرىلاش',
+  'tools.video.alignmentRight': 'ئوڭغا توغرىلاش',
+  'tools.video.toggleCaption': 'ئىزاھاتنى كۆرسىتىش ياكى يوشۇرۇش',
+  'tools.audio.alignmentLeft': 'سولغا توغرىلاش',
+  'tools.audio.alignmentCenter': 'ئوتتۇرىغا توغرىلاش',
+  'tools.audio.alignmentRight': 'ئوڭغا توغرىلاش',
+  'tools.audio.errorFileTooLarge': 'ئاۋاز ھۆججىتى بەك چوڭ. {size} بولسا {max} چېكىدىن ئېشىپ كەتتى.',
+  'tools.audio.titlePlaceholder': 'ئاۋاز يولى نامى',
+  'tools.audio.emptyOrDropHere': 'ياكى بۇ يەرگە ئاۋاز ھۆججىتى تاشلاڭ',
+  'tools.audio.coverSet': 'مۇقاۋا رەسىمىنى بەلگىلەش',
+  'tools.audio.coverSourceAria': 'مۇقاۋا مەنبەسى',
+  'blockSettings.clickAction': 'تىزىملىكنى ئېچىش ئۈچۈن چېكىڭ',
+  'blockSettings.orConjunction': ' ياكى ',
+  'blockSettings.openMenuAction': ' نى بېسىڭ',
+  'tools.video.seek': 'قويۇش ئورنى',
+  'tools.video.toggleTimeDisplay': 'ئۆتكەن ۋاقىت بىلەن قالغان ۋاقىت ئارىسىدا ئالماشتۇرۇش',
+  'tools.video.ctxStats': 'قويۇش ستاتىستىكىسى',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4584,6 +4640,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(TURKISH_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Uyghur correction oracle', () => {
+    const messages = readLocale('ug').messages;
+    const actual = Object.fromEntries(
+      Object.keys(UYGHUR_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(UYGHUR_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

@@ -3461,6 +3461,49 @@ const THAI_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.callout.emojiSearchResults': 'อีโมจิที่ตรงกัน: {count} รายการ',
 };
 
+const TURKISH_REVIEWED_EXPECTATIONS: Readonly<Record<string, string>> = {
+  'blockSettings.clickAction': 'Menüyü açmak için tıkla',
+  'blockSettings.orConjunction': ' veya ',
+  'blockSettings.openMenuAction': ' kısayoluna bas',
+  'blockSettings.convertWithChildrenWarning': 'İç içe bloklar: {count}. Bu blok dönüştürüldüğünde içindeki bloklar en üst düzeye taşınacak. Devam edilsin mi?',
+  'toolbox.optionAddAbove': 'Üste eklemek için ⌥ tuşunu basılı tutup tıkla',
+  'toolbox.ctrlAddAbove': 'Üste eklemek için Ctrl tuşunu basılı tutup tıkla',
+  'tools.marker.textColor': 'Metin rengi',
+  'tools.colorPicker.defaultSwatchLabel': '{mode}: {default}',
+  'tools.colorPicker.colorSwatchLabel': '{mode}: {color}',
+  'tools.paragraph.placeholder': 'Bir şeyler yazın veya bir araç seçmek için / tuşuna basın',
+  'tools.toggle.bodyPlaceholder': 'Boş açılır blok. Blok eklemek için tıklayın veya blokları buraya sürükleyin.',
+  'tools.table.clearSelection': 'İçeriği temizle',
+  'tools.table.placement': 'Hizalama',
+  'blockSettings.copyLink': 'Blok bağlantısını kopyala',
+  'a11y.searchResults': 'Arama sonuçları: {count}',
+  'toolNames.clearFormat': 'Biçimlendirmeyi temizle',
+  'tools.callout.addEmoji': 'Simge ekle',
+  'tools.callout.filterEmojis': 'Emoji ara…',
+  'tools.callout.pickRandom': 'Rastgele bir emoji seç',
+  'tools.link.linkTitle': 'Bağlantı metni',
+  'tools.image.errorFileTooLarge': 'Görsel çok büyük. {size} boyutuyla {max} sınırını aşıyor.',
+  'tools.image.errorDefaultMessage': 'Görsel bu URL\'den yüklenemedi. Farklı bir kaynak deneyin veya dosyayı yeniden yükleyin.',
+  'tools.image.emptyMaxSize': 'en fazla {size}',
+  'tools.file.errorFileTooLarge': 'Dosya çok büyük. {size} boyutuyla {max} sınırını aşıyor.',
+  'tools.file.previewRender': 'Önizleme',
+  'tools.video.alignmentLeft': 'Sola hizala',
+  'tools.video.alignmentCenter': 'Ortaya hizala',
+  'tools.video.alignmentRight': 'Sağa hizala',
+  'tools.video.errorFileTooLarge': 'Video çok büyük. {size} boyutuyla {max} sınırını aşıyor.',
+  'tools.video.emptyMaxSize': 'en fazla {size}',
+  'tools.audio.alignmentLeft': 'Sola hizala',
+  'tools.audio.alignmentCenter': 'Ortaya hizala',
+  'tools.audio.alignmentRight': 'Sağa hizala',
+  'tools.audio.errorFileTooLarge': 'Ses dosyası çok büyük. {size} boyutuyla {max} sınırını aşıyor.',
+  'tools.audio.emptyMaxSize': 'en fazla {size}',
+  'tools.audio.coverSourceAria': 'Kapak kaynağı',
+  'tools.database.viewTypeListDescription': 'Öğeleri basit bir listede göster',
+  'tools.embed.empty': 'Yerleştirme bağlantısı yok',
+  'tools.video.toggleTimeDisplay': 'Geçen ve kalan süre arasında geçiş yap',
+  'tools.video.ctxStats': 'Oynatma istatistikleri',
+};
+
 const EMOJI_CATEGORY_SCOPE_KEYS = [
   'tools.callout.emojiCategoryPeople',
   'tools.callout.emojiCategoryNature',
@@ -4529,6 +4572,18 @@ describe('translation guideline corpus integrity', () => {
     );
 
     expect(actual).toEqual(THAI_REVIEWED_EXPECTATIONS);
+  });
+
+  it('uses the independently adjudicated Turkish correction oracle', () => {
+    const messages = readLocale('tr').messages;
+    const actual = Object.fromEntries(
+      Object.keys(TURKISH_REVIEWED_EXPECTATIONS).map(key => [
+        key,
+        messages[key],
+      ])
+    );
+
+    expect(actual).toEqual(TURKISH_REVIEWED_EXPECTATIONS);
   });
 
   it('covers every non-English locale in the emoji category scope matrix', () => {

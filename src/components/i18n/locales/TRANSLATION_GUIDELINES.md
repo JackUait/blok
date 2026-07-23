@@ -14,10 +14,10 @@ This document provides guidelines for creating and maintaining translations for 
 
 ### File Format
 
-- Each locale has a directory named with its ISO 639-1 code (e.g., `en/`, `fr/`, `de/`)
-- Translations are stored in `messages.json` as a flat key-value object
+- Each locale uses a JSON file named with its locale code (e.g., `en.json`, `fr.json`, `de.json`)
+- Translation dictionaries are flat key-value objects
 - Keys use dot notation for namespacing (e.g., `popover.search`)
-- All keys from `en/messages.json` must be present in every locale
+- All keys from `en.json` must be present in every locale
 
 ### Key Naming
 

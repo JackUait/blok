@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka.json';
 import { buildPasteMenuItems, type PasteMenuI18n } from '../../../../src/tools/link/paste-menu/items';
 import type { PasteMenuOption } from '../../../../src/tools/link/paste-menu/options';
 import type { PopoverItemParams } from '../../../../types/utils/popover/popover-item';

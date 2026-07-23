@@ -73,7 +73,7 @@ git commit -m "test(i18n): define Taiwan locale contract"
 - Modify: `types/configs/i18n-config.d.ts`
 - Modify: `src/components/i18n/locales/index.ts`
 - Modify: `src/components/modules/i18n.ts`
-- Create: `src/components/i18n/locales/zh-TW/messages.json`
+- Create: `src/components/i18n/locales/zh-TW.json`
 
 **Step 1: Add the canonical public locale**
 
@@ -81,7 +81,7 @@ Append `'zh-TW'` to `SupportedLocale`, `ALL_LOCALE_CODES`, and
 `localeImporters`:
 
 ```ts
-'zh-TW': () => import('./zh-TW/messages.json'),
+'zh-TW': () => import('./zh-TW.json'),
 ```
 
 Update nearby runtime and type comments to say 69 locales.
@@ -111,8 +111,8 @@ existing non-Chinese behavior and keeps Simplified Chinese tags on `zh`.
 
 **Step 3: Add the complete Taiwan dictionary**
 
-Create `src/components/i18n/locales/zh-TW/messages.json` with exactly the same
-537 keys and ordering as `en/messages.json`. Derive semantics from the existing
+Create `src/components/i18n/locales/zh-TW.json` with exactly the same
+537 keys and ordering as `en.json`. Derive semantics from the existing
 `zh` locale, convert every message to Traditional Chinese, then review it for
 Taiwan product terminology.
 
@@ -145,7 +145,7 @@ Expected: PASS.
 **Step 5: Commit the runtime implementation**
 
 ```bash
-git add types/configs/i18n-config.d.ts src/components/i18n/locales/index.ts src/components/modules/i18n.ts src/components/i18n/locales/zh-TW/messages.json
+git add types/configs/i18n-config.d.ts src/components/i18n/locales/index.ts src/components/modules/i18n.ts src/components/i18n/locales/zh-TW.json
 git commit -m "feat(i18n): add Taiwan Traditional Chinese"
 ```
 
@@ -198,7 +198,7 @@ identical-English, script, and Taiwan-terminology checks.
 **Step 6: Commit the quality gates and any translation corrections**
 
 ```bash
-git add test/unit/components/i18n/taiwan-traditional-chinese.test.ts test/unit/components/i18n/search-terms-quality.test.ts src/components/i18n/locales/zh-TW/messages.json
+git add test/unit/components/i18n/taiwan-traditional-chinese.test.ts test/unit/components/i18n/search-terms-quality.test.ts src/components/i18n/locales/zh-TW.json
 git commit -m "test(i18n): audit Taiwan translation quality"
 ```
 

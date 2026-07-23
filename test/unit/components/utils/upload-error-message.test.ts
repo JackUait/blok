@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka.json';
 import { uploadErrorMessage } from '../../../../src/components/utils/upload-error-message';
 
 const KEYS = { tooLarge: 'tools.image.errorFileTooLarge', generic: 'tools.image.errorUploadFailed' };

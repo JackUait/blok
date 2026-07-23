@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
 const LOCALES_DIR = resolve(__dirname, '../../../../src/components/i18n/locales');
@@ -42,24 +42,19 @@ const VIDEO_KEYS = [
   'tools.video.statsUnavailable',
 ] as const;
 
-function getLocaleDirs(): string[] {
+function getLocaleCodes(): string[] {
   return readdirSync(LOCALES_DIR)
-    .filter((f) => {
-      try {
-        return statSync(join(LOCALES_DIR, f)).isDirectory();
-      } catch {
-        return false;
-      }
-    })
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => name.slice(0, -'.json'.length))
     .sort();
 }
 
 function loadMessages(locale: string): Record<string, string> {
-  return JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8')) as Record<string, string>;
+  return JSON.parse(readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8')) as Record<string, string>;
 }
 
 describe('Video tool translations', () => {
-  const locales = getLocaleDirs();
+  const locales = getLocaleCodes();
 
   describe('all locales contain Video keys', () => {
     for (const locale of locales) {

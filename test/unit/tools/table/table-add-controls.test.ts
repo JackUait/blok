@@ -1,6 +1,6 @@
 import type { I18n } from '../../../../types/api';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import georgianDictionary from '../../../../src/components/i18n/locales/ka/messages.json';
+import georgianDictionary from '../../../../src/components/i18n/locales/ka.json';
 import { TableAddControls } from '../../../../src/tools/table/table-add-controls';
 import { simulateMousemove, simulateMouseleave } from '../../../helpers/simulate';
 

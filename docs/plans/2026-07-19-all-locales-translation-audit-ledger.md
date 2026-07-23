@@ -19,7 +19,7 @@ this audit.
 
 A locale may be marked `verified` only when all of the following are true:
 
-1. Every current entry in its `messages.json` has been inspected in its real UI
+1. Every current entry in its `{locale}.json` file has been inspected in its real UI
    context against the guideline's requirements for natural, concise,
    action-oriented, user-centered wording; appropriate tool-name,
    accessibility, and error-message length; avoidance of slang,
@@ -92,7 +92,7 @@ artifact reviewer `/root/danish_546_first_pass` is recorded here as
 The reviewed-dictionary digest table contains a row only for a locale whose
 final status has advanced beyond `pending`. Its first-pass reviewer must match
 the locale row, and its `sha256:<64 lowercase hex digits>` value must match the
-current raw `messages.json` bytes. A `first-pass-complete` row keeps both
+current raw locale JSON bytes. A `first-pass-complete` row keeps both
 second-pass cells at `—`. A `second-pass-complete` or `verified` row records the
 distinct second reviewer and the same current-file digest. Any dictionary
 content change removes the digest evidence and resets the locale as specified
@@ -217,8 +217,8 @@ No open finding of any kind may coexist with terminal `verified`.
 
 These rules prevent a machine or reviewer from retaining stale completion:
 
-1. **Localized dictionary content change:** any content change to a localized
-   `messages.json` after review resets that locale's three results and final
+1. **Localized dictionary content change:** any content change to a locale's
+   JSON file after review resets that locale's three results and final
    status to `pending`, clears both reviewer cells to `—`, and requires both
    complete passes again. Remove its reviewed-dictionary digest row. This
    includes keys added, removed, or renamed; value edits; structural changes;
@@ -271,7 +271,7 @@ These rules prevent a machine or reviewer from retaining stale completion:
 - Normative quality contract:
   [`src/components/i18n/locales/TRANSLATION_GUIDELINES.md`](../../src/components/i18n/locales/TRANSLATION_GUIDELINES.md)
 - Audited dictionaries and authoritative on-disk corpus:
-  `src/components/i18n/locales/<locale>/messages.json`
+  `src/components/i18n/locales/<locale>.json`
 - Runtime registry, `ALL_LOCALE_CODES`, lazy importers, and the single
   `RTL_LOCALES` direction set:
   [`src/components/i18n/locales/index.ts`](../../src/components/i18n/locales/index.ts)
@@ -844,7 +844,7 @@ authoritative locale row and final dictionary use sentence case. Historical
 English evidence below already resolves that same contradiction in favor of
 sentence case and records that criterion as the basis of the first pass.
 Changing the parenthetical to say that English uses sentence case therefore
-clarifies the existing contract; it changes neither `en/messages.json` bytes
+clarifies the existing contract; it changes neither `en.json` bytes
 nor the pass criterion and does not reset locale propagation.
 
 A focused guideline assertion failed against the contradictory wording before

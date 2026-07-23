@@ -3,7 +3,7 @@
  *
  * Three categories are covered:
  *
- *   1. Locale files missing keys that exist in `en/messages.json` — every
+ *   1. Locale files missing keys that exist in `en.json` — every
  *      supported locale must contain the full key set.
  *   2. Locale values that are byte-for-byte identical to the English source.
  *      Pinned per-locale counts enforce translators finish each entry.
@@ -26,18 +26,13 @@ type Messages = Record<string, string>;
 
 const loadLocaleMessages = (locale: string): Messages =>
   JSON.parse(
-    readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8')
+    readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8')
   ) as Messages;
 
 const listLocaleCodes = (): string[] =>
   readdirSync(LOCALES_DIR)
-    .filter(name => {
-      try {
-        return statSync(join(LOCALES_DIR, name)).isDirectory();
-      } catch {
-        return false;
-      }
-    })
+    .filter(name => name.endsWith('.json'))
+    .map(name => name.slice(0, -'.json'.length))
     .sort();
 
 // ---------------------------------------------------------------------------

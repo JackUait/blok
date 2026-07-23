@@ -47,8 +47,8 @@ const GLOBAL_EIGHT_KEY_MIGRATION_EXPECTATIONS_PATH = resolve(
 );
 
 const localeCodes = readdirSync(LOCALES_DIR, { withFileTypes: true })
-  .filter(entry => entry.isDirectory())
-  .map(entry => entry.name)
+  .filter(entry => entry.isFile() && entry.name.endsWith('.json'))
+  .map(entry => entry.name.slice(0, -'.json'.length))
   .sort();
 const localeCache = new Map<
   string,
@@ -64,7 +64,7 @@ const readLocale = (
     return cached;
   }
 
-  const raw = readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8');
+  const raw = readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8');
   const result = {
     raw,
     messages: JSON.parse(raw) as LocaleMessages,

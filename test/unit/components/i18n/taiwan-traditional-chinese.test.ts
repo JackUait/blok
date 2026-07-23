@@ -8,7 +8,7 @@ type Messages = Record<string, string>;
 const LOCALES_DIR = resolve(__dirname, '../../../../src/components/i18n/locales');
 
 const loadMessages = (locale: string): Messages =>
-  JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf8')) as Messages;
+  JSON.parse(readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf8')) as Messages;
 
 const extractPlaceholders = (value: string): string[] =>
   [...value.matchAll(/\{([^}]+)\}/g)]

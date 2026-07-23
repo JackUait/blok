@@ -31,7 +31,7 @@ browser matching is case-insensitive, as BCP 47 requires.
 
 ## Translation Data
 
-Create `src/components/i18n/locales/zh-TW/messages.json` with all 537 English
+Create `src/components/i18n/locales/zh-TW.json` with all 537 English
 source keys. Use the existing Simplified Chinese dictionary as a semantic
 starting point, convert it to Taiwan Traditional orthography, and review product
 terminology rather than shipping a character-only conversion.

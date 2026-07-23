@@ -54,7 +54,7 @@ const FILE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.html
  * These are applied after flattening to convert EditorJS keys to Blok equivalents.
  *
  * EditorJS keys reference: https://editorjs.io/i18n/
- * Blok keys reference: src/components/i18n/locales/en/messages.json
+ * Blok keys reference: src/components/i18n/locales/en.json
  */
 const I18N_KEY_MAPPINGS = {
   // UI keys that changed

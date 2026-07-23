@@ -10,7 +10,7 @@ import { I18nDictionary } from './i18n-dictionary';
  * 1. Add the code to this union type
  * 2. Add the code to ALL_LOCALE_CODES in src/components/i18n/locales/index.ts
  * 3. Add the importer to localeImporters in the same file
- * 4. Create the messages.json file in src/components/i18n/locales/{code}/
+ * 4. Create src/components/i18n/locales/{code}.json
  *
  * TypeScript will error if localeImporters is missing any code from this type.
  */

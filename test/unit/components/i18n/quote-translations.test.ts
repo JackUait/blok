@@ -12,7 +12,7 @@
  *   - searchTerms.citation      (toolbox search alias)
  */
 import { describe, test, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
 
 const LOCALES_DIR = resolve(__dirname, '../../../../src/components/i18n/locales');
@@ -28,24 +28,19 @@ const QUOTE_KEYS = [
   'searchTerms.citation',
 ] as const;
 
-function getLocaleDirs(): string[] {
+function getLocaleCodes(): string[] {
   return readdirSync(LOCALES_DIR)
-    .filter(f => {
-      try {
-        return statSync(join(LOCALES_DIR, f)).isDirectory();
-      } catch {
-        return false;
-      }
-    })
+    .filter(name => name.endsWith('.json'))
+    .map(name => name.slice(0, -'.json'.length))
     .sort();
 }
 
 function loadMessages(locale: string): Record<string, string> {
-  return JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8')) as Record<string, string>;
+  return JSON.parse(readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8')) as Record<string, string>;
 }
 
 describe('Quote tool translations', () => {
-  const locales = getLocaleDirs();
+  const locales = getLocaleCodes();
 
   describe('all locales contain Quote keys', () => {
     for (const locale of locales) {

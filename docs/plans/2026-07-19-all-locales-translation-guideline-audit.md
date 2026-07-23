@@ -212,11 +212,11 @@ Commit message:
 
 **Files:**
 - Create: `test/unit/components/i18n/translation-guidelines.test.ts`
-- Modify: `src/components/i18n/locales/kn/messages.json`
+- Modify: `src/components/i18n/locales/kn.json`
 
 **Step 1: Write the corpus test**
 
-Load every locale directory and English messages. For each locale, assert:
+Load every locale file and the English dictionary. For each locale, assert:
 
 ```ts
 expect(Object.keys(messages).sort()).toEqual(Object.keys(english).sort());
@@ -261,7 +261,7 @@ stage.
 Stage only:
 
 - `test/unit/components/i18n/translation-guidelines.test.ts`
-- `src/components/i18n/locales/kn/messages.json`
+- `src/components/i18n/locales/kn.json`
 
 Commit message:
 
@@ -301,7 +301,7 @@ Each locale row must contain:
 
 List `en` and every locale represented by:
 
-`rg --files src/components/i18n/locales -g 'messages.json' | sed 's#/messages.json##; s#.*/##' | sort`
+`rg --files src/components/i18n/locales -g '*.json' | sed 's#\.json$##; s#.*/##' | sort`
 
 Initialize every row to `pending`. Do not mark a locale reviewed based on
 existing tests or historical commits.
@@ -335,7 +335,7 @@ Commit message:
 ### Task 4: Audit and stabilize the English source
 
 **Files:**
-- Modify if findings exist: `src/components/i18n/locales/en/messages.json`
+- Modify if findings exist: `src/components/i18n/locales/en.json`
 - Modify: `test/unit/components/i18n/translation-guidelines.test.ts`
 - Modify: `docs/plans/2026-07-19-all-locales-translation-audit-ledger.md`
 
@@ -453,21 +453,21 @@ test-first contract for Tasks 6–12.
 
 **Files:**
 - Modify as findings require:
-  - `src/components/i18n/locales/da/messages.json`
-  - `src/components/i18n/locales/de/messages.json`
-  - `src/components/i18n/locales/es/messages.json`
-  - `src/components/i18n/locales/fi/messages.json`
-  - `src/components/i18n/locales/fil/messages.json`
-  - `src/components/i18n/locales/fr/messages.json`
-  - `src/components/i18n/locales/id/messages.json`
-  - `src/components/i18n/locales/it/messages.json`
-  - `src/components/i18n/locales/ms/messages.json`
-  - `src/components/i18n/locales/nl/messages.json`
-  - `src/components/i18n/locales/no/messages.json`
-  - `src/components/i18n/locales/pt/messages.json`
-  - `src/components/i18n/locales/ro/messages.json`
-  - `src/components/i18n/locales/sv/messages.json`
-  - `src/components/i18n/locales/tr/messages.json`
+  - `src/components/i18n/locales/da.json`
+  - `src/components/i18n/locales/de.json`
+  - `src/components/i18n/locales/es.json`
+  - `src/components/i18n/locales/fi.json`
+  - `src/components/i18n/locales/fil.json`
+  - `src/components/i18n/locales/fr.json`
+  - `src/components/i18n/locales/id.json`
+  - `src/components/i18n/locales/it.json`
+  - `src/components/i18n/locales/ms.json`
+  - `src/components/i18n/locales/nl.json`
+  - `src/components/i18n/locales/no.json`
+  - `src/components/i18n/locales/pt.json`
+  - `src/components/i18n/locales/ro.json`
+  - `src/components/i18n/locales/sv.json`
+  - `src/components/i18n/locales/tr.json`
 - Modify: `test/unit/components/i18n/translation-guidelines.test.ts`
 - Modify: `docs/plans/2026-07-19-all-locales-translation-audit-ledger.md`
 
@@ -518,7 +518,7 @@ Preserve all keys, placeholders, and required boundary spaces.
 
 For each locale:
 
-`git diff -- src/components/i18n/locales/<locale>/messages.json`
+`git diff -- src/components/i18n/locales/<locale>.json`
 
 Reconcile repeated concepts such as block, link, upload, preview, rendered
 content, board, status, caption, alt text, loop, and cover art.
@@ -689,7 +689,7 @@ Commit message:
 
 **Files:**
 - Modify: `test/unit/components/i18n/untranslated-strings.test.ts`
-- Modify as findings require: `src/components/i18n/locales/*/messages.json`
+- Modify as findings require: `src/components/i18n/locales/*.json`
 - Modify: `docs/plans/2026-07-19-all-locales-translation-audit-ledger.md`
 
 **Step 1: Generate the current retention inventory**
@@ -748,7 +748,7 @@ Commit message:
 ### Task 14: Perform independent second-pass reviews
 
 **Files:**
-- Modify as findings require: `src/components/i18n/locales/*/messages.json`
+- Modify as findings require: `src/components/i18n/locales/*.json`
 - Modify: `test/unit/components/i18n/translation-guidelines.test.ts`
 - Modify: `docs/plans/2026-07-19-all-locales-translation-audit-ledger.md`
 
@@ -791,7 +791,7 @@ message.
 ### Task 15: Run completion verification
 
 **Files:**
-- Review: `src/components/i18n/locales/*/messages.json`
+- Review: `src/components/i18n/locales/*.json`
 - Review: `scripts/i18n/check-translations.mjs`
 - Review: `scripts/i18n/check-translations.test.mjs`
 - Review: `test/unit/components/i18n/*.test.ts`

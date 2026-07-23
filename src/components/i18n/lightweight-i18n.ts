@@ -1,6 +1,6 @@
 import type { I18nDictionary } from '../../../types/configs/i18n-dictionary';
 
-import enMessages from './locales/en/messages.json';
+import enMessages from './locales/en.json';
 
 /**
  * Lightweight i18n implementation for English-only usage.

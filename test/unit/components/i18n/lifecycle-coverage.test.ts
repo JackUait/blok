@@ -11,7 +11,7 @@ type LifecycleCategory =
   | 'catalog-only';
 
 const SRC_DIR = resolve(__dirname, '../../../../src');
-const ENGLISH_PATH = join(SRC_DIR, 'components/i18n/locales/en/messages.json');
+const ENGLISH_PATH = join(SRC_DIR, 'components/i18n/locales/en.json');
 const CATALOG_ONLY_KEYS = new Set([
   'blockSettings.convertWithChildrenWarning',
   'tools.columns.turnInto',

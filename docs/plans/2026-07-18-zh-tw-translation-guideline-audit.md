@@ -47,7 +47,7 @@ Expected: failures identify the 15 untranslated values and the contextual wordin
 ### Task 2: Correct the Traditional Chinese (Taiwan) locale
 
 **Files:**
-- Modify: `src/components/i18n/locales/zh-TW/messages.json`
+- Modify: `src/components/i18n/locales/zh-TW.json`
 
 **Step 1: Localize all remaining English UI values**
 
@@ -95,7 +95,7 @@ Check `zh-TW` for unexpected ASCII-only values, placeholder drift, non-native pu
 ### Task 4: Run repository verification and review the diff
 
 **Files:**
-- Review: `src/components/i18n/locales/zh-TW/messages.json`
+- Review: `src/components/i18n/locales/zh-TW.json`
 - Review: `test/unit/components/i18n/taiwan-traditional-chinese.test.ts`
 
 **Step 1: Run project checks**

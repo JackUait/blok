@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ListItem as List, type ListItemConfig, type ListItemData } from '../../../src/tools/list';
-import defaultDictionary from '../../../src/components/i18n/locales/en/messages.json';
+import defaultDictionary from '../../../src/components/i18n/locales/en.json';
 import type { API, BlockToolConstructorOptions } from '../../../types';
 import type { I18nDictionary } from '../../../types/configs';
 import type { MenuConfig } from '../../../types/tools/menu-config';

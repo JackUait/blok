@@ -35,8 +35,7 @@ function runCheckerFixture(sourceRaw, localeRaw) {
 
   try {
     mkdirSync(scriptDir, { recursive: true });
-    mkdirSync(join(localesDir, 'en'), { recursive: true });
-    mkdirSync(join(localesDir, 'fr'), { recursive: true });
+    mkdirSync(localesDir, { recursive: true });
     mkdirSync(join(root, 'node_modules'), { recursive: true });
     symlinkSync(
       realpathSync(new URL('../../node_modules/typescript', import.meta.url)),
@@ -47,8 +46,8 @@ function runCheckerFixture(sourceRaw, localeRaw) {
       scriptPath,
       readFileSync(new URL('./check-translations.mjs', import.meta.url), 'utf8')
     );
-    writeFileSync(join(localesDir, 'en/messages.json'), sourceRaw);
-    writeFileSync(join(localesDir, 'fr/messages.json'), localeRaw);
+    writeFileSync(join(localesDir, 'en.json'), sourceRaw);
+    writeFileSync(join(localesDir, 'fr.json'), localeRaw);
 
     return spawnSync(process.execPath, [scriptPath], { encoding: 'utf8' });
   } finally {

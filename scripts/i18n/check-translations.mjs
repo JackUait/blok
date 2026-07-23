@@ -87,7 +87,7 @@ function extractKeys(obj, prefix = '') {
  * }} Raw JSON, safe dictionary, and root validation result
  */
 function loadTranslationFile(locale) {
-  const filePath = join(LOCALES_DIR, locale, 'messages.json');
+  const filePath = join(LOCALES_DIR, `${locale}.json`);
   const raw = readFileSync(filePath, 'utf-8');
   const parsed = JSON.parse(raw);
   const invalidRoot =
@@ -106,8 +106,8 @@ function loadTranslationFile(locale) {
  */
 function getAvailableLocales() {
   return readdirSync(LOCALES_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => entry.name.slice(0, -'.json'.length));
 }
 
 /**
@@ -497,9 +497,9 @@ export function scanSourceKeys(dir) {
 }
 
 /**
- * Phase 3: Verifies that all static i18n keys used in source code exist in en/messages.json.
+ * Phase 3: Verifies that all static i18n keys used in source code exist in en.json.
  *
- * @param {Set<string>} sourceKeys - Keys defined in en/messages.json
+ * @param {Set<string>} sourceKeys - Keys defined in en.json
  * @returns {boolean} True if errors were found
  */
 function checkKeyCoverage(sourceKeys) {
@@ -509,20 +509,20 @@ function checkKeyCoverage(sourceKeys) {
 
   console.log(`${colors.dim}Found ${usedKeys.size} unique static key references in source${colors.reset}\n`);
 
-  // Keys used in code but not defined in en/messages.json
+  // Keys used in code but not defined in en.json
   const missingFromSource = [...usedKeys].filter((key) => !sourceKeys.has(key));
 
-  // Keys defined in en/messages.json but not referenced in code (warning only)
+  // Keys defined in en.json but not referenced in code (warning only)
   const unusedInCode = [...sourceKeys].filter((key) => !usedKeys.has(key));
 
   let hasErrors = false;
 
   if (missingFromSource.length === 0) {
-    console.log(`${colors.green}✓${colors.reset} All source keys are defined in en/messages.json`);
+    console.log(`${colors.green}✓${colors.reset} All source keys are defined in en.json`);
   } else {
     hasErrors = true;
     console.log(
-      `${colors.red}✗${colors.reset} ${missingFromSource.length} key${missingFromSource.length === 1 ? '' : 's'} used in source but missing from en/messages.json:`
+      `${colors.red}✗${colors.reset} ${missingFromSource.length} key${missingFromSource.length === 1 ? '' : 's'} used in source but missing from en.json:`
     );
     for (const key of missingFromSource.sort()) {
       console.log(`  ${colors.red}-${colors.reset} ${key}`);
@@ -531,7 +531,7 @@ function checkKeyCoverage(sourceKeys) {
 
   if (unusedInCode.length > 0) {
     console.log(
-      `\n${colors.yellow}⚠${colors.reset} ${unusedInCode.length} key${unusedInCode.length === 1 ? '' : 's'} in en/messages.json not found in static source scan (may be dynamic):`
+      `\n${colors.yellow}⚠${colors.reset} ${unusedInCode.length} key${unusedInCode.length === 1 ? '' : 's'} in en.json not found in static source scan (may be dynamic):`
     );
     for (const key of unusedInCode.sort()) {
       console.log(`  ${colors.yellow}?${colors.reset} ${key}`);
@@ -547,7 +547,7 @@ function checkKeyCoverage(sourceKeys) {
  */
 function main() {
   console.log(`\n${colors.dim}Checking translation completeness...${colors.reset}\n`);
-  console.log(`${colors.dim}Source of truth: ${SOURCE_LOCALE}/messages.json${colors.reset}\n`);
+  console.log(`${colors.dim}Source of truth: ${SOURCE_LOCALE}.json${colors.reset}\n`);
 
   const availableLocales = getAvailableLocales();
   const localeFiles = new Map(
@@ -666,7 +666,7 @@ function main() {
 
   if (coverageErrors) {
     console.log(
-      `${colors.red}Source coverage check failed.${colors.reset} Add missing keys to en/messages.json.\n`
+      `${colors.red}Source coverage check failed.${colors.reset} Add missing keys to en.json.\n`
     );
     hasErrors = true;
   } else {

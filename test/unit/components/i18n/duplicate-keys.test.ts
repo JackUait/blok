@@ -1,5 +1,5 @@
 /**
- * Regression test: locale `messages.json` files must not contain duplicate
+ * Regression test: locale JSON files must not contain duplicate
  * JSON keys.
  *
  * `JSON.parse` silently keeps the last occurrence of a repeated key, so a
@@ -11,7 +11,7 @@
  * Written red-first: it FAILS until every duplicate key is removed.
  */
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 const REPO_ROOT = resolve(__dirname, '../../../..');
@@ -19,13 +19,8 @@ const LOCALES_DIR = resolve(REPO_ROOT, 'src/components/i18n/locales');
 
 const listLocaleCodes = (): string[] =>
   readdirSync(LOCALES_DIR)
-    .filter(name => {
-      try {
-        return statSync(join(LOCALES_DIR, name)).isDirectory();
-      } catch {
-        return false;
-      }
-    })
+    .filter(name => name.endsWith('.json'))
+    .map(name => name.slice(0, -'.json'.length))
     .sort();
 
 /**
@@ -50,7 +45,7 @@ const findDuplicateKeys = (raw: string): string[] => {
 
 describe('locale files have no duplicate JSON keys', () => {
   it.each(listLocaleCodes())('%s has every key exactly once', locale => {
-    const raw = readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8');
+    const raw = readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8');
     const duplicates = findDuplicateKeys(raw);
 
     expect(

@@ -7,7 +7,7 @@ message in every Blok locale follows
 `src/components/i18n/locales/TRANSLATION_GUIDELINES.md`, and correct every defect
 found.
 
-The audit includes `en/messages.json` because unclear or contextually incorrect
+The audit includes `en.json` because unclear or contextually incorrect
 source copy propagates into every translation. It also includes all 68 localized
 dictionaries.
 
@@ -37,7 +37,7 @@ context-appropriate terminology.
 
 The audit covers every value in:
 
-`src/components/i18n/locales/*/messages.json`
+`src/components/i18n/locales/*.json`
 
 For each locale, it evaluates:
 

@@ -8,7 +8,7 @@
  *   3. No known mistranslations or guideline violations remain.
  */
 import { describe, test, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
 
 // ---------------------------------------------------------------------------
@@ -17,20 +17,15 @@ import { join, resolve } from 'path';
 
 const LOCALES_DIR = resolve(__dirname, '../../../../src/components/i18n/locales');
 
-function getLocaleDirs(): string[] {
+function getLocaleCodes(): string[] {
   return readdirSync(LOCALES_DIR)
-    .filter(f => {
-      try {
-        return statSync(join(LOCALES_DIR, f)).isDirectory();
-      } catch {
-        return false;
-      }
-    })
+    .filter(name => name.endsWith('.json'))
+    .map(name => name.slice(0, -'.json'.length))
     .sort();
 }
 
 function loadMessages(locale: string): Record<string, string> {
-  return JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'messages.json'), 'utf-8')) as Record<string, string>;
+  return JSON.parse(readFileSync(join(LOCALES_DIR, `${locale}.json`), 'utf-8')) as Record<string, string>;
 }
 
 /** Find duplicate values within a group of searchTerms keys */
@@ -211,7 +206,7 @@ function findNativeScriptViolations(
 // ---------------------------------------------------------------------------
 
 describe('searchTerms translation quality', () => {
-  const locales = getLocaleDirs();
+  const locales = getLocaleCodes();
   const nonLatinLocales = locales.filter(
     locale => locale in EXPECTED_SEARCH_SCRIPTS
   );

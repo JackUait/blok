@@ -79,6 +79,13 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
     kind: 'internal',
     reason: 'pointer-drag suppression flag; owned by DragManager, not app code',
   },
+  // Viewport navigation, not a block-tree snapshot operation: it belongs on the
+  // editor facade (`editor.blocks.scrollToBlock`) / the BlokEditor handle, not
+  // the reactive `useBlocks` surface.
+  scrollToBlock: {
+    kind: 'internal',
+    reason: 'viewport navigation; reachable via editor.blocks.scrollToBlock and useBlokHandle, not the useBlocks snapshot',
+  },
 };
 
 describe('React block-API parity with core Blocks contract', () => {

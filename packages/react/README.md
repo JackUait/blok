@@ -55,6 +55,7 @@ export function Editor() {
 ## Also exported
 
 - `useBlok(config, deps?)` — the hook behind the component, returns `Blok | null`.
+- `useBlokHandle()` — a stable, null-safe imperative handle (`focus`/`clear`/`save`/`render`/`setReadOnly`); attach via `<BlokEditor ref={handle.ref} />` instead of guarding a raw `Blok | null` ref.
 - `BlokContent` — the mount-point `<div>`, if you want to wire the hook yourself.
 - `useBlocks(editor)` — a reactive snapshot of the block tree plus a manipulation API.
 - `createReactBlock` / `createReactInlineTool` — author block and inline tools as React components.

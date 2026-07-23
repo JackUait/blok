@@ -226,6 +226,42 @@ describe('ModificationsObserver', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  // Read-only is honored at DELIVERY, not just at enqueue: a change queued while
+  // EDITABLE, with read-only toggled on before the batch fires, must still be
+  // suppressed. The two tests above set isEnabled BEFORE emitting, so they only
+  // exercise the enqueue-time guard — these cover the mid-batch race the
+  // delivery-time guard exists for.
+  it('does not deliver onChange when read-only is toggled on AFTER the change is queued', () => {
+    const { observer, eventsDispatcher, onChange, readOnly } = createObserver();
+
+    observer.enable();
+    // Editable when the mutation is queued — passes the enqueue-time guard.
+    readOnly.isEnabled = false;
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+    // Read-only flips on before the batch window elapses.
+    readOnly.isEnabled = true;
+    vi.advanceTimersByTime(modificationsObserverBatchTimeout + 1);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('does not serialize or emit onSave when read-only is toggled on AFTER the change is queued', async () => {
+    const onSave = vi.fn();
+    const { observer, eventsDispatcher, saverSave, readOnly } = createObserver({ onSave });
+
+    saverSave.mockResolvedValue({ time: 1, version: '1', blocks: [] });
+    observer.enable();
+    readOnly.isEnabled = false;
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+    readOnly.isEnabled = true;
+    await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+    expect(saverSave).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('emits onChange with the latest single event after batching time', () => {
     const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
 

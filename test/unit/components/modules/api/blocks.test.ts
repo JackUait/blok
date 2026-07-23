@@ -982,6 +982,129 @@ describe('BlocksAPI', () => {
     });
   });
 
+  describe('scrollToBlock (public API)', () => {
+    let originalScrollTo: typeof window.scrollTo;
+    let originalQuerySelector: typeof document.querySelector;
+    let mockScrollTo: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      originalScrollTo = window.scrollTo;
+      originalQuerySelector = document.querySelector.bind(document);
+      mockScrollTo = vi.fn();
+      window.scrollTo = mockScrollTo as unknown as typeof window.scrollTo;
+      Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    });
+
+    afterEach(() => {
+      window.scrollTo = originalScrollTo;
+      document.querySelector = originalQuerySelector;
+    });
+
+    const stubElement = (top: number): HTMLElement => {
+      const el = document.createElement('div');
+
+      el.getBoundingClientRect = () =>
+        ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) });
+
+      return el;
+    };
+
+    it('is exposed on the public methods surface', () => {
+      const { blocksApi } = createBlocksApi();
+
+      expect(typeof blocksApi.methods.scrollToBlock).toBe('function');
+    });
+
+    it('scrolls to, selects, highlights and announces the target block by id', () => {
+      const targetBlock = createBlockStub({ id: 'target-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'target-1' ? targetBlock : undefined
+      );
+
+      const el = stubElement(320);
+
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="target-1"]' ? el : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('target-1');
+
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 320, behavior: 'smooth' });
+      expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
+      expect(el.classList.contains('blok-block--target')).toBe(true);
+      expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('applies the configured topOffset', () => {
+      const { blocksApi } = createBlocksApi({
+        configOverrides: { scrollToBlock: { topOffset: 50 } },
+      });
+
+      const el = stubElement(300);
+
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="off-1"]' ? el : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('off-1');
+
+      // 300 (top) + 0 (scrollY) - 50 (topOffset) = 250
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 250, behavior: 'smooth' });
+    });
+
+    it('no-ops when no element matches the id', () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      document.querySelector = vi.fn().mockReturnValue(null) as typeof document.querySelector;
+
+      blocksApi.methods.scrollToBlock?.('missing');
+
+      expect(mockScrollTo).not.toHaveBeenCalled();
+      expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
+      expect(mockAnnounce).not.toHaveBeenCalled();
+    });
+
+    it('drains a matching deferred hash scroll so a later render() cannot re-fire it', () => {
+      const targetBlock = createBlockStub({ id: 'deferred-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({ blocks: [ targetBlock ] });
+
+      blok.Renderer.pendingHashScroll = 'deferred-1';
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'deferred-1' ? targetBlock : undefined
+      );
+
+      const el = stubElement(120);
+
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="deferred-1"]' ? el : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('deferred-1');
+
+      expect(mockScrollTo).toHaveBeenCalled();
+      expect(blok.Renderer.pendingHashScroll).toBeNull();
+    });
+
+    it('leaves an unrelated deferred hash scroll intact', () => {
+      const { blocksApi, blok } = createBlocksApi();
+
+      blok.Renderer.pendingHashScroll = 'other-block';
+
+      const el = stubElement(100);
+
+      document.querySelector = vi.fn((selector: string): Element | null =>
+        selector === '[data-blok-id="scrolled"]' ? el : originalQuerySelector(selector)
+      );
+
+      blocksApi.methods.scrollToBlock?.('scrolled');
+
+      // A public scroll to a DIFFERENT block must not consume the pending hash.
+      expect(blok.Renderer.pendingHashScroll).toBe('other-block');
+    });
+  });
+
 
   describe('block insertion APIs', () => {
     it('inserts a new block and wraps it with BlockAPI', () => {

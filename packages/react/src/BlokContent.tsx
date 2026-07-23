@@ -2,7 +2,43 @@ import { useEffect, useRef, forwardRef } from 'react';
 import { getHolder } from './holder-map';
 import { getRegistry } from './registry-map';
 import { BlockPortalHost } from './BlockPortalHost';
+import type { Blok } from '@/types';
 import type { BlokContentProps } from './types';
+
+/**
+ * Re-drive the boot-time URL-hash scroll now that the editor's holder is in the
+ * document. Reads the current hash, decodes it (falling back to the raw value on
+ * a malformed percent-sequence, which simply matches no block), and asks the
+ * editor to scroll — a one-shot drain of the navigation the constructor deferred
+ * because the holder was detached. No-op when the URL carries no hash.
+ * @param editor - the ready Blok instance whose holder just connected
+ */
+function drainDeferredHashScroll(editor: Blok): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const raw = window.location.hash.slice(1);
+
+  if (raw === '') {
+    return;
+  }
+
+  editor.blocks.scrollToBlock?.(safeDecodeHashFragment(raw));
+}
+
+/**
+ * Decodes a URL hash fragment, falling back to the raw value on a malformed
+ * percent-sequence (e.g. `%ZZ`) — which simply matches no block downstream.
+ * @param raw - hash fragment without the leading `#`
+ */
+function safeDecodeHashFragment(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
 
 /**
  * Component that provides the DOM mount point for a Blok editor.
@@ -37,6 +73,14 @@ export const BlokContent = forwardRef<HTMLDivElement, BlokContentProps>(
       }
 
       containerRef.current.appendChild(holder);
+
+      // The editor rendered its seeded content into this holder while it was
+      // still detached from the document, so the boot-time URL-hash scroll —
+      // which queries the LIVE document — found nothing and deferred. Now that
+      // the holder is connected, drain that deferred navigation once via the
+      // public scroll API (a no-op when there's no matching hash/block), so
+      // consumers don't have to hand-roll a DOM-polling hook.
+      drainDeferredHashScroll(editor);
 
       return (): void => {
         holder.remove();

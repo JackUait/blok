@@ -132,6 +132,47 @@ export declare const BlokEditor: React.ForwardRefExoticComponent<
 >;
 
 /**
+ * A typed, null-safe imperative handle for a `<BlokEditor>`. Its methods safely
+ * no-op until the editor is ready, so consumers don't re-declare a
+ * `forwardRef`/`useImperativeHandle` with `?.` guards. Attach via
+ * `<BlokEditor ref={handle.ref} />`.
+ *
+ * `current` / `isReady` are imperative reads (they do NOT trigger a re-render
+ * when readiness flips — use `useBlokReady` for that); `current` is the escape
+ * hatch to the full editor API beyond the shortcuts below.
+ */
+export interface BlokEditorHandle {
+  /** Ref callback to attach to `<BlokEditor ref={handle.ref} />`. Stable across renders. */
+  readonly ref: React.RefCallback<Blok | null>;
+  /** The live editor instance, or null before ready / after unmount. */
+  readonly current: Blok | null;
+  /** True once the editor is ready (the ref has been populated). */
+  readonly isReady: boolean;
+  /** Focus the editor. Returns whether focus landed; `false` (no-op) before ready. */
+  focus(atEnd?: boolean): boolean;
+  /** Clear all content. Resolves immediately (no-op) before ready. */
+  clear(): Promise<void>;
+  /** Serialize the current content, or resolve to `null` before ready. */
+  save(): Promise<OutputData | null>;
+  /** Render new content in place. Resolves immediately (no-op) before ready. */
+  render(data: OutputData | LooseOutputData): Promise<void>;
+  /** Set or toggle read-only mode. Resolves to the resulting state; `false` (no-op) before ready. */
+  setReadOnly(state?: boolean): Promise<boolean>;
+}
+
+/**
+ * Returns a stable, null-safe {@link BlokEditorHandle} for a `<BlokEditor>`.
+ *
+ * @example
+ * ```tsx
+ * const blok = useBlokHandle();
+ * <BlokEditor ref={blok.ref} tools={tools} data={data} />;
+ * <button onClick={() => blok.focus()}>Focus</button>;
+ * ```
+ */
+export declare function useBlokHandle(): BlokEditorHandle;
+
+/**
  * Registers app-wide Blok defaults for every `useBlok` / `<BlokEditor>` rendered
  * beneath it. Per-instance config overrides these, and the `tools` registry is
  * merged (shared registry composes with per-instance additions) rather than

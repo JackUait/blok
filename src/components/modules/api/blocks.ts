@@ -64,6 +64,7 @@ export class BlocksAPI extends Module {
       transact: (fn: () => void): void => this.transact(fn),
       transactWithoutCapture: (fn: () => void): void => this.transactWithoutCapture(fn),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
+      scrollToBlock: (id: string): void => this.scrollToBlock(id),
     };
   }
 
@@ -695,6 +696,51 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Scrolls the block with the given id into view, selects it, highlights its
+   * arrival and announces the navigation to assistive tech. No-op when no block
+   * element with that id is present in the document.
+   *
+   * Public counterpart of the URL-hash scroll performed at boot. Adapters that
+   * mount the editor into a DETACHED holder (React/Vue/Angular) render their
+   * seeded content before the holder joins the document, so the boot-time
+   * hash scroll — which queries the live document — finds nothing and defers.
+   * Those adapters can drain that deferred navigation by calling this once the
+   * holder connects, instead of hand-rolling a DOM-polling hook.
+   * @param id - target block id
+   */
+  public scrollToBlock(id: string): void {
+    const el = document.querySelector(`[data-blok-id="${CSS.escape(id)}"]`);
+
+    if (el === null) {
+      return;
+    }
+
+    /**
+     * A public scroll to this exact block consumes any deferred boot-time hash
+     * scroll for it, so a later render()-driven drain can't re-fire the same
+     * navigation. An unrelated pending hash is left untouched.
+     */
+    if (this.Blok.Renderer.pendingHashScroll === id) {
+      this.Blok.Renderer.pendingHashScroll = null;
+    }
+
+    const topOffset = this.config.scrollToBlock?.topOffset ?? 0;
+    const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
+
+    window.scrollTo({ top: y, behavior: 'smooth' });
+
+    const block = this.Blok.BlockManager.getBlockById(id);
+
+    if (block !== undefined) {
+      this.Blok.BlockSelection.selectBlock(block);
+    }
+
+    highlightBlockArrival(el);
+
+    announce(this.Blok.I18n.t('a11y.navigatedToBlock'));
+  }
+
+  /**
    * If Renderer.pendingHashScroll is set (hash-based scroll was deferred because the
    * target block did not exist at init time), attempt to scroll to and select the block now.
    * Always clears the pending hash afterward (one-shot).
@@ -708,25 +754,6 @@ export class BlocksAPI extends Module {
 
     this.Blok.Renderer.pendingHashScroll = null;
 
-    const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
-
-    if (el === null) {
-      return;
-    }
-
-    const topOffset = this.config.scrollToBlock?.topOffset ?? 0;
-    const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
-
-    window.scrollTo({ top: y, behavior: 'smooth' });
-
-    const block = this.Blok.BlockManager.getBlockById(hash);
-
-    if (block !== undefined) {
-      this.Blok.BlockSelection.selectBlock(block);
-    }
-
-    highlightBlockArrival(el);
-
-    announce(this.Blok.I18n.t('a11y.navigatedToBlock'));
+    this.scrollToBlock(hash);
   }
 }

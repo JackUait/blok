@@ -146,6 +146,78 @@ describe('BlokContent', () => {
     expect(div).toBeEmptyDOMElement();
   });
 
+  describe('deferred hash scroll drain on holder connect', () => {
+    const setHash = (hash: string): void => {
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, hash },
+        writable: true,
+        configurable: true,
+      });
+    };
+
+    afterEach(() => {
+      setHash('');
+    });
+
+    it('drains the URL-hash scroll via editor.blocks.scrollToBlock once the holder connects', () => {
+      setHash('#blockXYZ');
+      const scrollToBlock = vi.fn();
+
+      (mockEditor as { blocks?: unknown }).blocks = { scrollToBlock };
+      setHolder(mockEditor, mockHolder);
+
+      render(
+        <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+      );
+
+      expect(scrollToBlock).toHaveBeenCalledWith('blockXYZ');
+    });
+
+    it('decodes a percent-encoded hash before draining', () => {
+      setHash('#Hello%20World');
+      const scrollToBlock = vi.fn();
+
+      (mockEditor as { blocks?: unknown }).blocks = { scrollToBlock };
+      setHolder(mockEditor, mockHolder);
+
+      render(
+        <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+      );
+
+      expect(scrollToBlock).toHaveBeenCalledWith('Hello World');
+    });
+
+    it('does not scroll when there is no URL hash', () => {
+      setHash('');
+      const scrollToBlock = vi.fn();
+
+      (mockEditor as { blocks?: unknown }).blocks = { scrollToBlock };
+      setHolder(mockEditor, mockHolder);
+
+      render(
+        <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+      );
+
+      expect(scrollToBlock).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the raw hash when it is a malformed percent-sequence', () => {
+      setHash('#abc%ZZdef');
+      const scrollToBlock = vi.fn();
+
+      (mockEditor as { blocks?: unknown }).blocks = { scrollToBlock };
+      setHolder(mockEditor, mockHolder);
+
+      expect(() =>
+        render(
+          <BlokContent editor={mockEditor as unknown as Parameters<typeof BlokContent>[0]['editor']} data-testid="content" />
+        )
+      ).not.toThrow();
+
+      expect(scrollToBlock).toHaveBeenCalledWith('abc%ZZdef');
+    });
+  });
+
   it('should remove the holder from the container when editor changes to null', () => {
     setHolder(mockEditor, mockHolder);
 

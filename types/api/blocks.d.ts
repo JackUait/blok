@@ -267,4 +267,18 @@ export interface Blocks {
    * @param active - true when a drag starts, false when it ends
    */
   setPointerDragActive?(active: boolean): void;
+
+  /**
+   * Scroll the block with the given id into view, select it, highlight its
+   * arrival and announce the navigation to assistive tech. No-op when no block
+   * element with that id is present in the document.
+   *
+   * Public counterpart of the boot-time URL-hash scroll. Adapters that mount
+   * into a detached holder (React/Vue/Angular) render seeded content before the
+   * holder joins the document, so the boot hash scroll defers; they can drain it
+   * by calling this once the holder connects.
+   *
+   * @param id - target block id
+   */
+  scrollToBlock?(id: string): void;
 }

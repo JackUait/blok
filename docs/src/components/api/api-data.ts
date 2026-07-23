@@ -2514,7 +2514,7 @@ export function Editor() {
         type: "Ref<Blok | null>",
         default: "—",
         description:
-          "Forwarded to the live Blok instance for imperative calls (save, render, blocks, caret, …). Null until the editor mounts.",
+          "Forwarded to the live Blok instance for imperative calls (save, render, blocks, caret, …). Null until the editor mounts, so calls must guard on ref.current. For the common shortcuts without the guards, @bloklabs/react's useBlokHandle() returns a stable, null-safe handle — attach it via ref={handle.ref} and call handle.focus()/save()/clear()/render()/setReadOnly() directly (each safely no-ops until ready); handle.current is the escape hatch to the full instance.",
       },
       {
         option: "className, id, …",
@@ -2761,6 +2761,13 @@ if (saved) {
         description:
           "The block whose holder contains/equals a DOM element — maps an event target back to a block.",
         example: `const node = blocks.getBlockByElement(event.target as HTMLElement);`,
+      },
+      {
+        name: "scrollToBlock(id)",
+        returnType: "void",
+        description:
+          "Scroll a block into view, select it, pulse the arrival highlight and announce the navigation to assistive tech — the public counterpart of the boot-time URL-hash scroll. No-op when no block with that id is in the document. Framework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers; @bloklabs/react drains it automatically once the holder connects — call this yourself for deep-linking after the editor is ready.",
+        example: `blocks.scrollToBlock(nodeId);`,
       },
       {
         name: "composeBlockData(toolName)",

@@ -255,6 +255,14 @@ describe('CI critical-path law', () => {
         name: 'Run Unit Tests',
         run: 'yarn test --shard=${{ matrix.shard }}',
       },
+      {
+        // The react package carries its own vitest config (the root one cannot
+        // resolve the @bloklabs/core/view subpath through the root alias), so
+        // its suite runs separately — on one shard only, since it is not sharded.
+        name: 'Run @bloklabs/react Unit Tests',
+        if: "matrix.shard == '1/2'",
+        run: 'yarn workspace @bloklabs/react test',
+      },
     ]);
   });
 

@@ -44,6 +44,8 @@ const EXEMPTIONS: Record<string, string> = {
   'twitter-tweet': 'X/Twitter widgets.js hook — the blockquote is styled by the third-party embed script',
   'text-post-media': 'Threads embed hook — the blockquote is styled by the third-party embed script',
   'is-focused': 'behaviour marker read by Flipper/DomIterator; the visual state comes from [data-blok-focused]',
+  className:
+    'not a class at all — it is the VALUE of the `class` key in the HTML-attribute→React-prop map in packages/react/src/view-nodes-to-react.ts, which the harvest cannot tell apart from a class list',
 };
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build']);

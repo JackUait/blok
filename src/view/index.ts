@@ -7,7 +7,13 @@
  * class. Enforced by test/unit/view/index.purity.test.ts.
  */
 export { blocksToHtml } from './blocks-to-html';
-export type { BlocksToHtmlOptions, ViewBlockRenderer, ViewRenderContext } from './blocks-to-html';
+export type {
+  BlocksToHtmlOptions,
+  ViewBlockRenderer,
+  ViewRenderContext,
+  ViewUrlContext,
+  ViewUrlTransform,
+} from './blocks-to-html';
 export { blocksToPlainText } from './blocks-to-plain-text';
 export { htmlTextContent } from './html-text';
 export { outlineFromOutputData } from './outline';

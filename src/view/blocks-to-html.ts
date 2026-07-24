@@ -9,6 +9,7 @@
  */
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import type { BlokViewSchema } from '../shared/sanitize-schema';
+import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
@@ -40,6 +41,28 @@ export interface ViewRenderContext {
 export type ViewBlockRenderer = (data: Record<string, unknown>, ctx: ViewRenderContext) => string;
 
 /**
+ * Context handed to {@link ViewUrlTransform} for one URL occurrence.
+ */
+export interface ViewUrlContext {
+  /** Which attribute the URL lands on. */
+  attr: 'href' | 'src';
+  /**
+   * Tool type of the block this URL belongs to (e.g. `'image'`, `'bookmark'`).
+   * `undefined` for anchors inside a block's inline-HTML text, which have no
+   * single owning block.
+   */
+  blockType?: string;
+}
+
+/**
+ * A pure URL rewrite hook (e.g. rewrite hrefs, route CDN image URLs). Runs
+ * BEFORE the shared unsafe-scheme strip, so a transform can never re-introduce
+ * a `javascript:`/`data:` sink — the result is still gated. Returning an empty
+ * string drops the URL attribute entirely.
+ */
+export type ViewUrlTransform = (url: string, ctx: ViewUrlContext) => string;
+
+/**
  * Options for {@link blocksToHtml} / `blocksToPlainText`.
  */
 export interface BlocksToHtmlOptions {
@@ -59,6 +82,20 @@ export interface BlocksToHtmlOptions {
    * emit no root of their own.
    */
   toolAttributes?: boolean;
+  /**
+   * When true, each block Blok renders carries a `data-blok-id="<id>"`
+   * attribute on its root element (list items carry it on each `<li>`, not the
+   * grouped `<ul>`/`<ol>`), so "copy link to block" deep links resolve off the
+   * live editor. Off by default; blocks without an id, and bare containers that
+   * emit no root of their own (database), are left unstamped.
+   */
+  blockIds?: boolean;
+  /**
+   * Pure URL rewrite hook applied to every block URL (image/video/audio src,
+   * file/bookmark/embed href) and every inline anchor href, sequenced BEFORE
+   * the unsafe-scheme strip. See {@link ViewUrlTransform}.
+   */
+  transformUrl?: ViewUrlTransform;
 }
 
 /**
@@ -89,22 +126,25 @@ export interface HtmlRenderer {
 const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
 
 /**
- * Insert a `data-blok-tool="<type>"` marker onto the first opening tag of
+ * Insert a `name="value"` attribute onto the first opening tag of
  * Blok-generated markup. Operates only on our own emitter output (which always
- * opens with `<tag`), so the leading-tag match is exact; a value with special
- * characters is entity-escaped, and a non-element string (empty / comment) is
- * returned unchanged.
+ * opens with `<tag`), so the leading-tag match is exact; the value is
+ * entity-escaped, and a non-element string (empty / comment) is returned
+ * unchanged.
  * @param html - Blok's rendered markup for one block or list run
- * @param type - tool type to record
+ * @param name - attribute name to insert
+ * @param value - attribute value (entity-escaped)
  */
-const stampToolAttr = (html: string, type: string): string => {
-  return html.replace(/^\s*<[a-z][a-z0-9]*/i, (openTag) => `${openTag} data-blok-tool="${escapeHtml(type)}"`);
+const stampAttr = (html: string, name: string, value: string): string => {
+  return html.replace(/^\s*<[a-z][a-z0-9]*/i, (openTag) => `${openTag} ${name}="${escapeHtml(value)}"`);
 };
 
 export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOptions): HtmlRenderer => {
   const renderers = options.renderers ?? {};
   const onUnknownBlock = options.onUnknownBlock ?? 'skip';
   const toolAttributes = options.toolAttributes === true;
+  const blockIds = options.blockIds === true;
+  const transformUrl = options.transformUrl;
 
   /**
    * The composed inline allowlist: the schema's baseSanitize wins over the
@@ -119,8 +159,13 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   /** Ids currently on the render stack — breaks parent-reference cycles. */
   const active = new Set<string>();
 
+  /** Inline-anchor URL rewrite bridge (blockType unknown at the inline layer). */
+  const inlineUrlTransform = transformUrl === undefined
+    ? undefined
+    : (url: string, attr: 'href' | 'src'): string => transformUrl(url, { attr, blockType: undefined });
+
   const env: EmitterEnv = {
-    inline: (value) => sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig),
+    inline: (value) => sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform),
     escape: (value) => escapeHtml(typeof value === 'string' ? value : ''),
     childrenOf: (id) => model.childrenOf(id),
     blocksById: (ids) => {
@@ -135,6 +180,20 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       });
     },
     renderList: (blocks) => renderList(blocks),
+    url: (name, value, blockType) => {
+      if (typeof value !== 'string' || value === '') {
+        return '';
+      }
+
+      const resolved = transformUrl === undefined ? value : transformUrl(value, { attr: name, blockType });
+
+      if (typeof resolved !== 'string' || resolved === '' || hasUnsafeUrlProtocol(resolved, name)) {
+        return '';
+      }
+
+      return ` ${name}="${escapeHtml(resolved)}"`;
+    },
+    idAttr: (block) => (blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : ''),
   };
 
   const ctxFor = (block: ViewBlock): ViewRenderContext => ({
@@ -167,11 +226,13 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     const emitter = builtinEmitters[block.type];
 
     if (emitter !== undefined) {
-      const html = emitter(block, env);
+      const bare = BARE_CONTAINER_TOOLS.has(block.type);
+      const base = emitter(block, env);
+      const withId = blockIds && !bare && block.id !== undefined
+        ? stampAttr(base, 'data-blok-id', block.id)
+        : base;
 
-      return toolAttributes && !BARE_CONTAINER_TOOLS.has(block.type)
-        ? stampToolAttr(html, block.type)
-        : html;
+      return toolAttributes && !bare ? stampAttr(withId, 'data-blok-tool', block.type) : withId;
     }
 
     /** Unknown tool: the block is skipped/commented, its children still render. */
@@ -226,7 +287,7 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       const run = blocks.slice(from, end).filter((item) => item.id === undefined || !active.has(item.id));
       const listHtml = renderListRun(run, env);
 
-      return (toolAttributes ? stampToolAttr(listHtml, 'list') : listHtml) + renderFrom(blocks, end);
+      return (toolAttributes ? stampAttr(listHtml, 'data-blok-tool', 'list') : listHtml) + renderFrom(blocks, end);
     }
 
     return renderGuarded(block) + renderFrom(blocks, from + 1);

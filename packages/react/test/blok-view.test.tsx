@@ -105,6 +105,43 @@ describe('BlokView', () => {
     expect(mark).not.toBeNull();
     expect(mark?.style.color).toBe('rgb(255, 0, 0)');
   });
+
+  it('forwards toolAttributes so blocks carry the data-blok-tool styling hook', () => {
+    const { container } = render(<BlokView data={paragraphDoc('Hi')} toolAttributes />);
+
+    expect(container.querySelector('p')?.getAttribute('data-blok-tool')).toBe('paragraph');
+  });
+
+  it('forwards blockIds so blocks carry data-blok-id deep-link anchors', () => {
+    const { container } = render(
+      <BlokView data={{ blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hi' } }] }} blockIds />
+    );
+
+    expect(container.querySelector('p')?.getAttribute('data-blok-id')).toBe('p1');
+  });
+
+  it('forwards transformUrl so media/link URLs are rewritten', () => {
+    const { container } = render(
+      <BlokView
+        data={{ blocks: [{ type: 'image', data: { url: '/pic.png', alt: 'x' } }] }}
+        transformUrl={(url) => `https://cdn.test${url}`}
+      />
+    );
+
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/pic.png');
+  });
+
+  it('forwards id and arbitrary div attributes onto the wrapper', () => {
+    const { container } = render(
+      <BlokView data={paragraphDoc('x')} id="doc" data-testid="reader" aria-label="Article body" />
+    );
+
+    const wrapper = container.firstElementChild;
+
+    expect(wrapper?.getAttribute('id')).toBe('doc');
+    expect(wrapper?.getAttribute('data-testid')).toBe('reader');
+    expect(wrapper?.getAttribute('aria-label')).toBe('Article body');
+  });
 });
 
 describe('useBlokView', () => {
@@ -170,5 +207,23 @@ describe('useBlokView', () => {
 
     expect(container.querySelector('p')).toHaveTextContent('two');
     expect(Object.is(results[0], results[1])).toBe(false);
+  });
+
+  it('forwards toolAttributes / blockIds / transformUrl options', () => {
+    const Probe = (): React.ReactNode => {
+      const content = useBlokView(
+        { blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'Hi' } }] },
+        { toolAttributes: true, blockIds: true }
+      );
+
+      return <div data-testid="probe">{content}</div>;
+    };
+
+    render(<Probe />);
+
+    const p = screen.getByTestId('probe').querySelector('p');
+
+    expect(p?.getAttribute('data-blok-tool')).toBe('paragraph');
+    expect(p?.getAttribute('data-blok-id')).toBe('p1');
   });
 });

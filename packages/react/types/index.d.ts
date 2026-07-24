@@ -945,13 +945,11 @@ export interface BlockPortalHostProps {
 export declare function BlockPortalHost(props: BlockPortalHostProps): React.ReactElement;
 
 /**
- * Props for {@link BlokView}.
- *
- * @experimental Built on the `@experimental` view tree of
- * `@bloklabs/core/view` — not frozen until a second framework adapter
- * consumes it.
+ * Props for {@link BlokView}. Beyond the render options below, any standard
+ * `<div>` attribute (`id`, `style`, `data-*`, `aria-*`, event handlers, …) is
+ * forwarded onto the single wrapper element.
  */
-export interface BlokViewProps {
+export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Saved document to display (strict or loose wire shape; nullish tolerated). */
   data: OutputData | LooseOutputData | null | undefined;
   /** View schema from `defineBlokSchema` — display under the composition that produced the document. */
@@ -960,18 +958,23 @@ export interface BlokViewProps {
   renderers?: BlocksToHtmlOptions['renderers'];
   /** Unknown-tool policy (default 'skip'). */
   onUnknownBlock?: BlocksToHtmlOptions['onUnknownBlock'];
-  /** Class for the single wrapper div. */
-  className?: string;
+  /** Stamp `data-blok-tool="<type>"` on each block root as a styling hook (pairs with the opt-in view stylesheet). */
+  toolAttributes?: BlocksToHtmlOptions['toolAttributes'];
+  /** Stamp `data-blok-id="<id>"` on each block root (list items on their `<li>`) for "copy link to block" deep links. */
+  blockIds?: BlocksToHtmlOptions['blockIds'];
+  /** Pure URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. */
+  transformUrl?: BlocksToHtmlOptions['transformUrl'];
 }
 
 /**
  * Display a saved Blok document synchronously — one `<div>` wrapper, no
- * editor chrome, no ids, no async, no effects. Content is mapped from the
- * sanitized view tree to real React elements, so it renders identically
- * under SSR.
+ * editor chrome, no async, no effects. Content is mapped from the sanitized
+ * view tree to real React elements, so it renders identically under SSR.
  *
- * @experimental Not frozen until a second framework adapter consumes the
- * underlying view tree.
+ * The intended read-only path — reach for it instead of `BlokEditor readOnly`,
+ * which ships the full editing runtime to every viewer. The props API is
+ * semver-stable; only the raw `ViewNode` tree the bindings map from remains
+ * `@experimental`, and using `BlokView` never exposes you to it.
  */
 export declare function BlokView(props: BlokViewProps): React.ReactNode;
 
@@ -982,8 +985,8 @@ export declare function BlokView(props: BlokViewProps): React.ReactNode;
  * Synchronous, effect-free (SSR-safe), memoized on the data reference and
  * the individual option values.
  *
- * @experimental Not frozen until a second framework adapter consumes the
- * underlying view tree.
+ * The props-based signature is semver-stable; only the raw `ViewNode` tree the
+ * bindings map from remains `@experimental`.
  */
 export declare function useBlokView(
   data: OutputData | LooseOutputData | null | undefined,

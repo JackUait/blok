@@ -461,17 +461,32 @@ const filterAttributes = (node: P5Element, decision: AttrDecision): void => {
 };
 
 /**
- * Strip href/src attributes whose values resolve to unsafe schemes —
- * the shared URL policy (`stripUnsafeUrls` in the DOM pipeline).
- * @param node - parse5 element to harden
+ * A URL rewrite bridge for inline anchors/media in a fragment: `(url, attr) =>
+ * newUrl`, run before the unsafe-scheme strip. Returning `''` drops the URL.
  */
-const applyUrlPolicy = (node: P5Element): void => {
-  replaceAttrs(node, node.attrs.filter((attr) => {
+export type FragmentUrlTransform = (url: string, attr: 'href' | 'src') => string;
+
+/**
+ * Apply the URL rewrite hook (if any) then strip href/src attributes whose
+ * (possibly rewritten) values resolve to unsafe schemes — the shared URL
+ * policy (`stripUnsafeUrls` in the DOM pipeline). The transform runs BEFORE the
+ * strip, so a rewrite can never smuggle in an unsafe scheme.
+ * @param node - parse5 element to harden
+ * @param transform - optional URL rewrite hook
+ */
+const applyUrlPolicy = (node: P5Element, transform: FragmentUrlTransform | undefined): void => {
+  replaceAttrs(node, node.attrs.flatMap((attr) => {
     if (attr.name !== 'href' && attr.name !== 'src') {
-      return true;
+      return [attr];
     }
 
-    return !hasUnsafeUrlProtocol(attr.value, attr.name);
+    const resolved = transform === undefined ? attr.value : transform(attr.value, attr.name);
+
+    if (typeof resolved !== 'string' || hasUnsafeUrlProtocol(resolved, attr.name)) {
+      return [];
+    }
+
+    return [resolved === attr.value ? attr : { name: attr.name, value: resolved }];
   }));
 };
 
@@ -489,7 +504,8 @@ const sanitizeChildren = (
   parent: P5ParentNode,
   config: SanitizerConfig,
   parentIsBlock: boolean,
-  parentIsTop: boolean
+  parentIsTop: boolean,
+  transform: FragmentUrlTransform | undefined
 ): void => {
   /**
    * Handle one child; returns the index to continue scanning from
@@ -540,16 +556,16 @@ const sanitizeChildren = (
     }
 
     filterAttributes(node, resolution.attrs);
-    applyUrlPolicy(node);
+    applyUrlPolicy(node, transform);
 
     if (isTemplateNode(node)) {
       // Stricter than janitor (which cannot see template content via its
       // TreeWalker): parse5 serializes template.content, so it must be
       // sanitized or an allowed <template> would leak arbitrary markup.
-      sanitizeChildren(node.content, config, false, true);
+      sanitizeChildren(node.content, config, false, true, transform);
     }
 
-    sanitizeChildren(node, config, BLOCK_ELEMENT_NAMES.has(tagName), false);
+    sanitizeChildren(node, config, BLOCK_ELEMENT_NAMES.has(tagName), false, transform);
 
     return index + 1;
   };
@@ -704,8 +720,13 @@ const normalizeInlineMarkupFragment = (fragment: P5ParentNode): void => {
  * treated as literal text and returned entity-escaped.
  * @param html - fragment markup to sanitize
  * @param config - tag allowlist, or PLAINTEXT
+ * @param transform - optional URL rewrite hook applied before the unsafe-scheme strip
  */
-export const sanitizeHtmlFragment = (html: string, config: SanitizerConfig | PlaintextRule): string => {
+export const sanitizeHtmlFragment = (
+  html: string,
+  config: SanitizerConfig | PlaintextRule,
+  transform?: FragmentUrlTransform
+): string => {
   if (config === PLAINTEXT) {
     return escapeHtml(html);
   }
@@ -718,7 +739,7 @@ export const sanitizeHtmlFragment = (html: string, config: SanitizerConfig | Pla
   const contextElement = parseFragment('<div></div>').childNodes[0] as P5Element;
   const fragment = parseFragment(contextElement, html, {});
 
-  sanitizeChildren(fragment, config, true, true);
+  sanitizeChildren(fragment, config, true, true, transform);
   normalizeInlineMarkupFragment(fragment);
 
   return serialize(fragment);

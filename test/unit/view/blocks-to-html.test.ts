@@ -580,4 +580,122 @@ describe('blocksToHtml', () => {
       expect(html).not.toContain('data-blok-tool="database"');
     });
   });
+
+  describe('blockIds option (data-blok-id deep-link anchors)', () => {
+    it('is off by default — output carries no data-blok-id attributes', () => {
+      const html = blocksToHtml(doc([{ id: 'p1', type: 'paragraph', data: { text: 'Hi' } }]));
+
+      expect(html).not.toContain('data-blok-id');
+      expect(html).toBe('<p>Hi</p>');
+    });
+
+    it('stamps each block root with data-blok-id when enabled', () => {
+      const html = blocksToHtml(
+        doc([
+          { id: 'p1', type: 'paragraph', data: { text: 'Hi' } },
+          { id: 'h1', type: 'header', data: { text: 'Title', level: 2 } },
+        ]),
+        { blockIds: true }
+      );
+
+      expect(html).toBe('<p data-blok-id="p1">Hi</p><h2 data-blok-id="h1">Title</h2>');
+    });
+
+    it('threads ids onto each <li> in a collapsed list run, not the <ul>', () => {
+      const html = blocksToHtml(
+        doc([
+          { id: 'l1', type: 'list', data: { text: 'one', style: 'unordered' } },
+          { id: 'l2', type: 'list', data: { text: 'two', style: 'unordered' } },
+        ]),
+        { blockIds: true }
+      );
+
+      expect(html).toBe('<ul><li data-blok-id="l1">one</li><li data-blok-id="l2">two</li></ul>');
+    });
+
+    it('composes with toolAttributes (tool marker first, then id)', () => {
+      const html = blocksToHtml(
+        doc([{ id: 'p1', type: 'paragraph', data: { text: 'Hi' } }]),
+        { blockIds: true, toolAttributes: true }
+      );
+
+      expect(html).toBe('<p data-blok-tool="paragraph" data-blok-id="p1">Hi</p>');
+    });
+
+    it('skips a bare container (database) but stamps its child block', () => {
+      const html = blocksToHtml(
+        doc([
+          { id: 'db', type: 'database', data: {} },
+          { id: 'p', type: 'paragraph', parent: 'db', data: { text: 'row' } },
+        ]),
+        { blockIds: true }
+      );
+
+      expect(html).toBe('<p data-blok-id="p">row</p>');
+    });
+
+    it('leaves an id-less block unstamped', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { blockIds: true });
+
+      expect(html).toBe('<p>Hi</p>');
+    });
+
+    it('entity-escapes the id value', () => {
+      const html = blocksToHtml(doc([{ id: 'a"b', type: 'paragraph', data: { text: 'Hi' } }]), { blockIds: true });
+
+      expect(html).toBe('<p data-blok-id="a&quot;b">Hi</p>');
+    });
+  });
+
+  describe('transformUrl option (link + media rewrite hook)', () => {
+    it('rewrites a media block src before it is emitted', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'image', data: { url: '/pic.png', alt: 'x' } }]),
+        { transformUrl: (url, ctx) => (ctx.attr === 'src' && ctx.blockType === 'image' ? `https://cdn.test${url}` : url) }
+      );
+
+      expect(html).toBe('<figure><img src="https://cdn.test/pic.png" alt="x"></figure>');
+    });
+
+    it('rewrites an inline anchor href (blockType undefined for inline)', () => {
+      const seen: Array<{ url: string; blockType: string | undefined }> = [];
+      const html = blocksToHtml(
+        doc([{ type: 'paragraph', data: { text: 'see <a href="/a">link</a>' } }]),
+        {
+          transformUrl: (url, ctx) => {
+            seen.push({ url, blockType: ctx.blockType });
+
+            return `https://x.test${url}`;
+          },
+        }
+      );
+
+      expect(html).toBe('<p>see <a href="https://x.test/a">link</a></p>');
+      expect(seen).toEqual([{ url: '/a', blockType: undefined }]);
+    });
+
+    it('runs the transform BEFORE the unsafe-scheme strip — a transform to javascript: is still dropped', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'bookmark', data: { url: 'https://ok.test', title: 'T' } }]),
+        { transformUrl: () => 'javascript:alert(1)' }
+      );
+
+      expect(html).toBe('<a>T</a>');
+    });
+
+    it('a transform returning empty string drops the URL attribute', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'image', data: { url: '/pic.png', alt: 'x' } }]),
+        { transformUrl: () => '' }
+      );
+
+      expect(html).toBe('<figure><img alt="x"></figure>');
+    });
+
+    it('is inert when not provided (URLs pass through unchanged)', () => {
+      const html = blocksToHtml(doc([{ type: 'image', data: { url: '/pic.png', alt: 'x' } }]));
+
+      expect(html).toBe('<figure><img src="/pic.png" alt="x"></figure>');
+    });
+  });
 });

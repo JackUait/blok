@@ -14,11 +14,11 @@ import { viewNodesToReact } from './view-nodes-to-react';
  * Synchronous and effect-free (SSR-safe); memoized on the data reference and
  * the individual option values.
  *
- * @experimental Built on the `@experimental` ViewNode tree of
- * `@bloklabs/core/view` — not frozen until a second framework adapter
- * consumes it.
+ * The props-based signature is semver-stable. The raw `ViewNode` tree the
+ * bindings map from remains `@experimental` — but consumers of this hook never
+ * touch it directly.
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
- * @param options - schema / custom renderers / unknown-block policy
+ * @param options - schema / renderers / unknown-block policy / toolAttributes / blockIds / transformUrl
  */
 export const useBlokView = (
   data: OutputData | LooseOutputData | null | undefined,
@@ -27,12 +27,17 @@ export const useBlokView = (
   const schema = options?.schema;
   const renderers = options?.renderers;
   const onUnknownBlock = options?.onUnknownBlock;
+  const toolAttributes = options?.toolAttributes;
+  const blockIds = options?.blockIds;
+  const transformUrl = options?.transformUrl;
 
   return useMemo(() => {
     return createElement(
       Fragment,
       null,
-      ...viewNodesToReact(blocksToViewNodes(data, { schema, renderers, onUnknownBlock }))
+      ...viewNodesToReact(
+        blocksToViewNodes(data, { schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl })
+      )
     );
-  }, [data, schema, renderers, onUnknownBlock]);
+  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl]);
 };

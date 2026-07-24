@@ -71,7 +71,8 @@
     },
     "./umd": {
       "default": "./dist/blok.umd.js"
-    }
+    },
+    "./view.css": "./view.css"
   },
   "bin": {
     "migrate-from-editorjs": "./codemod/migrate-editorjs-to-blok.js"
@@ -81,6 +82,7 @@
     "types",
     "src",
     "codemod",
+    "view.css",
     "NOTICE"
   ],
   "publishConfig": {

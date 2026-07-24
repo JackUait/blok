@@ -68,6 +68,14 @@ describe("view renderer section", () => {
     expect(unknown!.type).toContain("'comment'");
   });
 
+  it("documents the styling / deep-link / url-rewrite options", () => {
+    const method = section!.methods!.find((m) => m.name.startsWith("blocksToHtml"));
+    const names = method!.params!.map((p) => p.name);
+    expect(names).toContain("options.toolAttributes");
+    expect(names).toContain("options.blockIds");
+    expect(names).toContain("options.transformUrl");
+  });
+
   it("documents the renderer context services", () => {
     const method = section!.methods!.find((m) => m.name.startsWith("blocksToHtml"));
     const renderers = method!.params!.find((p) => p.name === "options.renderers");
@@ -103,7 +111,22 @@ describe("view renderer section", () => {
     expect(view!.description).toContain("readOnly");
     expect(view!.description).toContain("dangerouslySetInnerHTML");
     const propNames = view!.params!.map((p) => p.name);
-    expect(propNames).toEqual(["data", "schema", "renderers", "onUnknownBlock", "className"]);
+    expect(propNames).toEqual([
+      "data",
+      "schema",
+      "renderers",
+      "onUnknownBlock",
+      "toolAttributes",
+      "blockIds",
+      "transformUrl",
+      "...divProps",
+    ]);
+  });
+
+  it("presents BlokView as the stable, obvious read-only path", () => {
+    const view = section!.methods!.find((m) => m.name === "BlokView");
+    // The props API is stable; only the raw ViewNode tree stays experimental.
+    expect(view!.description.toLowerCase()).toContain("stable");
   });
 
   it("documents useBlokView as wrapper-free for label/cell slots", () => {

@@ -2912,9 +2912,9 @@ export function Comments({ comments }) {
     id: "view-api",
     badge: "Core",
     title: "View renderer",
-    lastUpdated: "2026-07-22",
+    lastUpdated: "2026-07-24",
     description:
-      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, @bloklabs/react ships <BlokView> and useBlokView, which replace <BlokEditor readOnly> at display-only call sites.",
+      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, <BlokView> (and the wrapper-free useBlokView) is the obvious read-only path — reach for it instead of <BlokEditor readOnly>, which ships the full editing runtime (toolbar, history, mutation machinery) to every viewer. Output is intentionally unstyled: enable toolAttributes and import the opt-in @bloklabs/core/view.css to reproduce the editor's block spacing from the same --blok-block-padding-* tokens, enable blockIds for copy-link-to-block deep links, and pass transformUrl to rewrite hrefs / CDN image URLs.",
     example: `// schema.ts — pure and module-scope-safe; share it between editor and server
 import { defineBlokSchema } from '@bloklabs/core/view';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -2965,6 +2965,29 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
             default: "'skip'",
             description:
               "What to do with a block whose tool has no renderer: drop it silently, or leave an HTML comment marker in the output.",
+          },
+          {
+            name: "options.toolAttributes",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Stamp data-blok-tool=\"<type>\" on each block root (list runs on their <ul>/<ol>) as a styling hook. Import the opt-in @bloklabs/core/view.css to reproduce the editor's block spacing from the same --blok-block-padding-* tokens, instead of reverse-engineering it with bare-tag CSS. Only Blok's built-in markup is stamped; custom renderers and bare containers (database) are left untouched.",
+          },
+          {
+            name: "options.blockIds",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Stamp data-blok-id=\"<id>\" on each block root (list items on their <li>, not the grouped <ul>/<ol>), so \"copy link to block\" deep links resolve off the live editor. Blocks without an id and bare containers that emit no root of their own (database) are left unstamped.",
+          },
+          {
+            name: "options.transformUrl",
+            type: "(url, ctx) => string",
+            required: false,
+            description:
+              "Pure URL rewrite hook applied to every block URL (image/video/audio src, file/bookmark/embed href) and every inline anchor href — for rewriting hrefs or routing CDN image URLs. ctx is { attr: 'href' | 'src', blockType?: string } (blockType is undefined for inline anchors). It runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink; returning '' drops the URL.",
           },
         ],
         example: `import { blocksToHtml } from '@bloklabs/core/view';
@@ -3037,7 +3060,7 @@ const nodes = blocksToViewNodes(savedData);
         name: "BlokView",
         returnType: "ReactNode",
         description:
-          "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). Use it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR.",
+          "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). This is the obvious read-only path — reach for it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR. Its props API is stable; only the raw ViewNode tree it maps from (via blocksToViewNodes) stays experimental, and using BlokView never exposes you to it.",
         params: [
           {
             name: "data",
@@ -3065,17 +3088,47 @@ const nodes = blocksToViewNodes(savedData);
             description: "Unknown-tool policy ('comment' markers are dropped in the React tree).",
           },
           {
-            name: "className",
-            type: "string",
+            name: "toolAttributes",
+            type: "boolean",
             required: false,
-            description: "Class for the single wrapper div.",
+            default: "false",
+            description: "Stamp data-blok-tool on each block root (pairs with @bloklabs/core/view.css). Forwards to blocksToHtml.",
+          },
+          {
+            name: "blockIds",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description: "Stamp data-blok-id on each block root (list items on their <li>) for copy-link-to-block deep links.",
+          },
+          {
+            name: "transformUrl",
+            type: "(url, ctx) => string",
+            required: false,
+            description: "URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml.",
+          },
+          {
+            name: "...divProps",
+            type: "HTMLAttributes<HTMLDivElement>",
+            required: false,
+            description: "Any standard <div> attribute (className, id, style, data-*, aria-*, event handlers, …) is forwarded onto the single wrapper element.",
           },
         ],
         example: `import { BlokView } from '@bloklabs/react';
 import { schema } from './schema';
+import '@bloklabs/core/view.css'; // opt-in block-spacing baseline
 
 export function Article({ saved }: { saved: OutputData }) {
-  return <BlokView data={saved} schema={schema.viewSchema} className="prose" />;
+  return (
+    <BlokView
+      data={saved}
+      schema={schema.viewSchema}
+      toolAttributes
+      blockIds
+      id="article-body"
+      className="prose"
+    />
+  );
 }`,
       },
       {

@@ -6,15 +6,13 @@
  * Sanitization contract: every inline-content field passes through
  * `env.inline` (the parse5 allowlist walker) before interpolation; scalar
  * non-HTML fields go through `env.escape`; URL attributes go through
- * {@link urlAttr}, which enforces the shared URL scheme policy. Emitters never
- * interpolate unsanitized strings.
+ * `env.url`, which applies the `transformUrl` hook then enforces the shared
+ * URL scheme policy. Emitters never interpolate unsanitized strings.
  *
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*). Never import
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
-import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import type { ViewBlock } from './document-model';
-import { escapeHtml } from './sanitize';
 
 /**
  * Rendering services handed to every emitter by the dispatcher.
@@ -30,6 +28,18 @@ export interface EmitterEnv {
   blocksById(ids: unknown): ViewBlock[];
   /** Render a sibling run of blocks (applies list-run grouping). */
   renderList(blocks: ViewBlock[]): string;
+  /**
+   * Build a ` name="value"` attribute for a URL-bearing block field. Applies
+   * the configured `transformUrl` hook first, then the shared unsafe-scheme
+   * strip — dropping the attribute entirely when the value is empty or resolves
+   * to an unsafe scheme.
+   */
+  url(name: 'href' | 'src', value: unknown, blockType: string): string;
+  /**
+   * Build the ` data-blok-id="<id>"` attribute for a block when the `blockIds`
+   * option is on and the block carries an id; empty string otherwise.
+   */
+  idAttr(block: ViewBlock): string;
 }
 
 /**
@@ -58,21 +68,6 @@ const str = (data: Record<string, unknown>, key: string): string => {
  */
 const trail = (html: string, block: ViewBlock, env: EmitterEnv): string => {
   return html + env.renderList(env.childrenOf(block.id));
-};
-
-/**
- * Build a ` name="value"` attribute for a URL-bearing attribute, dropping it
- * entirely when the value is empty or resolves to an unsafe scheme (shared
- * URL policy — same semantics as the editor's stripUnsafeUrls pass).
- * @param name - 'href' or 'src'
- * @param value - raw URL value from block data
- */
-const urlAttr = (name: 'href' | 'src', value: unknown): string => {
-  if (typeof value !== 'string' || value === '' || hasUnsafeUrlProtocol(value, name)) {
-    return '';
-  }
-
-  return ` ${name}="${escapeHtml(value)}"`;
 };
 
 /**
@@ -175,7 +170,7 @@ export const renderListRun = (items: ViewBlock[], env: EmitterEnv): string => {
       ? buildLevel(from + 1, depth + 1)
       : { html: '', next: from + 1 };
 
-    const li = `<li>${itemContent(items[from])}${nested.html}</li>`;
+    const li = `<li${env.idAttr(items[from])}>${itemContent(items[from])}${nested.html}</li>`;
     const rest = buildItems(nested.next, depth, style);
 
     return { html: li + rest.html, next: rest.next };
@@ -325,7 +320,7 @@ export const builtinEmitters: Record<string, Emitter> = {
   },
 
   image: (block, env) => {
-    const img = `<img${urlAttr('src', block.data.url)} alt="${env.escape(str(block.data, 'alt'))}">`;
+    const img = `<img${env.url('src', block.data.url, block.type)} alt="${env.escape(str(block.data, 'alt'))}">`;
 
     return trail(`<figure>${img}${figcaption(block, env)}</figure>`, block, env);
   },
@@ -334,13 +329,13 @@ export const builtinEmitters: Record<string, Emitter> = {
     const controls = block.data.hideControls === true ? '' : ' controls';
     const autoplay = block.data.autoplay === true ? ' autoplay' : '';
     const loop = block.data.loop === true ? ' loop' : '';
-    const video = `<video${urlAttr('src', block.data.url)}${controls}${autoplay}${loop}></video>`;
+    const video = `<video${env.url('src', block.data.url, block.type)}${controls}${autoplay}${loop}></video>`;
 
     return trail(`<figure>${video}${figcaption(block, env)}</figure>`, block, env);
   },
 
   audio: (block, env) => {
-    const audio = `<audio${urlAttr('src', block.data.url)} controls></audio>`;
+    const audio = `<audio${env.url('src', block.data.url, block.type)} controls></audio>`;
 
     return trail(`<figure>${audio}${figcaption(block, env, ['title'])}</figure>`, block, env);
   },
@@ -348,13 +343,13 @@ export const builtinEmitters: Record<string, Emitter> = {
   file: (block, env) => {
     const label = str(block.data, 'fileName') || str(block.data, 'url');
 
-    return trail(`<a${urlAttr('href', block.data.url)} download>${env.escape(label)}</a>`, block, env);
+    return trail(`<a${env.url('href', block.data.url, block.type)} download>${env.escape(label)}</a>`, block, env);
   },
 
   bookmark: (block, env) => {
     const label = str(block.data, 'title') || str(block.data, 'url');
 
-    return trail(`<a${urlAttr('href', block.data.url)}>${env.escape(label)}</a>`, block, env);
+    return trail(`<a${env.url('href', block.data.url, block.type)}>${env.escape(label)}</a>`, block, env);
   },
 
   embed: (block, env) => {
@@ -368,7 +363,7 @@ export const builtinEmitters: Record<string, Emitter> = {
     const source = str(block.data, 'source');
     const label = str(block.data, 'service') || source;
 
-    return trail(`<a${urlAttr('href', source)}>${env.escape(label)}</a>`, block, env);
+    return trail(`<a${env.url('href', source, block.type)}>${env.escape(label)}</a>`, block, env);
   },
 
   table: emitTable,

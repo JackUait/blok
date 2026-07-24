@@ -34,6 +34,28 @@ export interface ViewRenderContext {
 export type ViewBlockRenderer = (data: Record<string, unknown>, ctx: ViewRenderContext) => string;
 
 /**
+ * Context handed to {@link ViewUrlTransform} for one URL occurrence.
+ */
+export interface ViewUrlContext {
+  /** Which attribute the URL lands on. */
+  attr: 'href' | 'src';
+  /**
+   * Tool type of the block this URL belongs to (e.g. `'image'`, `'bookmark'`).
+   * `undefined` for anchors inside a block's inline-HTML text, which have no
+   * single owning block.
+   */
+  blockType?: string;
+}
+
+/**
+ * A pure URL rewrite hook (e.g. rewrite hrefs, route CDN image URLs). Runs
+ * BEFORE the shared unsafe-scheme strip, so a transform can never re-introduce
+ * a `javascript:`/`data:` sink — the result is still gated. Returning an empty
+ * string drops the URL attribute entirely.
+ */
+export type ViewUrlTransform = (url: string, ctx: ViewUrlContext) => string;
+
+/**
  * Options for {@link blocksToHtml} / {@link blocksToPlainText}.
  */
 export interface BlocksToHtmlOptions {
@@ -46,11 +68,25 @@ export interface BlocksToHtmlOptions {
   /**
    * When true, each block Blok renders carries a `data-blok-tool="<type>"`
    * attribute on its root element (list runs on their `<ul>`/`<ol>`), giving
-   * consumers a styling hook without a shipped stylesheet. Off by default;
-   * only Blok's own built-in markup is stamped (custom renderers and bare
-   * containers like `database` are left untouched).
+   * consumers a styling hook (see the opt-in `@bloklabs/core/view.css`
+   * stylesheet). Off by default; only Blok's own built-in markup is stamped
+   * (custom renderers and bare containers like `database` are left untouched).
    */
   toolAttributes?: boolean;
+  /**
+   * When true, each block Blok renders carries a `data-blok-id="<id>"`
+   * attribute on its root element (list items on their `<li>`, not the grouped
+   * `<ul>`/`<ol>`), so "copy link to block" deep links resolve off the live
+   * editor. Off by default; blocks without an id and bare containers that emit
+   * no root of their own (`database`) are left unstamped.
+   */
+  blockIds?: boolean;
+  /**
+   * Pure URL rewrite hook applied to every block URL (image/video/audio src,
+   * file/bookmark/embed href) and every inline anchor href, sequenced BEFORE
+   * the unsafe-scheme strip. See {@link ViewUrlTransform}.
+   */
+  transformUrl?: ViewUrlTransform;
 }
 
 /**

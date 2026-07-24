@@ -1,0 +1,32 @@
+/**
+ * Opt-in baseline stylesheet for `@bloklabs/core/view` output.
+ *
+ * The view renderer emits clean, unstyled semantic HTML. Enable the tool hook —
+ * `blocksToHtml(data, { toolAttributes: true })` or the React
+ * `<BlokView toolAttributes />` — so each block root carries
+ * `data-blok-tool="<type>"`, then import this sheet to reproduce the editor's
+ * block spacing without reverse-engineering it:
+ *
+ *   import '@bloklabs/core/view.css';
+ *
+ * Spacing routes through the SAME public custom properties the editor reads
+ * (`--blok-block-padding-*`), so overriding them on a container retunes both
+ * the editor and the read-only view from one place. This is a spacing baseline
+ * only — it deliberately ships no colors, fonts, or borders, leaving the visual
+ * design to the host.
+ */
+
+[data-blok-tool] {
+  margin: 0;
+  padding-top: var(--blok-block-padding-top, 7px);
+  padding-bottom: var(--blok-block-padding-bottom, 7px);
+  padding-inline: var(--blok-block-padding-inline, 2px);
+}
+
+/*
+ * List runs carry the tool hook on their `<ul>`/`<ol>`; keep the block padding
+ * but restore the marker indentation a reset `padding-inline` would collapse.
+ */
+[data-blok-tool="list"] {
+  padding-inline-start: calc(var(--blok-block-padding-inline, 2px) + 1.5em);
+}

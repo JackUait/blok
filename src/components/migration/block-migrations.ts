@@ -73,14 +73,16 @@ export function applyBlockMigration(
  * fields (`id`, `type`, `tunes`, …) are preserved.
  * @param blocks - blocks in Blok's output shape
  * @param migrations - the host's per-type migration map
+ * @param onError - optional failure reporter; a throwing rule leaves that block's data untouched
  * @returns the blocks with migrated `data`
  */
 export function migrateBlocks(
   blocks: OutputBlockData[],
-  migrations: BlockMigrations
+  migrations: BlockMigrations,
+  onError?: (type: string, error: unknown) => void
 ): OutputBlockData[] {
   return blocks.map((block) => {
-    const data = applyBlockMigration(block.type, block.data, migrations);
+    const data = applyBlockMigration(block.type, block.data, migrations, onError);
 
     return data === block.data ? block : { ...block, data };
   });

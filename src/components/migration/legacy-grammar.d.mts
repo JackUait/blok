@@ -19,6 +19,30 @@ export interface LegacyExpandContext {
    * keep untouched blocks byte-identical.
    */
   stampMissingIds?: boolean;
+  /**
+   * Host-supplied grammar entries, matched BEFORE the built-in table (so a host
+   * can cover an unknown legacy type or override a built-in mapping).
+   */
+  rules?: LegacyGrammarEntry[];
+}
+
+/**
+ * Where the expanded block sits in the array being expanded — lets an expander
+ * absorb following siblings (flat-with-count legacy formats).
+ */
+export interface LegacyExpandPosition {
+  siblings: OutputBlockData[];
+  index: number;
+}
+
+/**
+ * An expander returns either the blocks it produced, or those blocks plus the
+ * number of FOLLOWING siblings it absorbed. `consumed` is clamped to what
+ * actually remains, so a truncated document can never over-consume.
+ */
+export interface LegacyExpansion {
+  blocks: OutputBlockData[];
+  consumed: number;
 }
 
 export interface LegacyGrammarEntry {
@@ -29,7 +53,17 @@ export interface LegacyGrammarEntry {
   lossyFields: string[];
   docNote: string;
   detect(block: OutputBlockData): boolean;
-  expand(block: OutputBlockData, ctx: Required<LegacyExpandContext>): OutputBlockData[];
+  /**
+   * Per-block nesting test for entries whose structure depends on the data (a
+   * list with nested items, a toggle with a non-empty body). Falls back to
+   * `contributesNesting` when absent.
+   */
+  detectNesting?(block: OutputBlockData): boolean;
+  expand(
+    block: OutputBlockData,
+    ctx: Required<Omit<LegacyExpandContext, 'rules'>>,
+    position: LegacyExpandPosition
+  ): OutputBlockData[] | LegacyExpansion;
 }
 
 export interface LegacyFormatAnalysis {
@@ -44,11 +78,19 @@ export function expandLegacyBlocks(
   ctx: LegacyExpandContext
 ): OutputBlockData[];
 
-export function analyzeLegacyFormat(blocks: OutputBlockData[]): LegacyFormatAnalysis;
+export function matchLegacyRule(
+  block: OutputBlockData,
+  rules?: LegacyGrammarEntry[]
+): LegacyGrammarEntry | null;
 
-export function hasLegacyBlocks(blocks: OutputBlockData[]): boolean;
+export function analyzeLegacyFormat(
+  blocks: OutputBlockData[],
+  rules?: LegacyGrammarEntry[]
+): LegacyFormatAnalysis;
 
-export function hasLegacyNesting(blocks: OutputBlockData[]): boolean;
+export function hasLegacyBlocks(blocks: OutputBlockData[], rules?: LegacyGrammarEntry[]): boolean;
+
+export function hasLegacyNesting(blocks: OutputBlockData[], rules?: LegacyGrammarEntry[]): boolean;
 
 export function createBlockIdGenerator(): () => string;
 

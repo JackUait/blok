@@ -182,7 +182,11 @@ export interface BlokMountOptions {
    * Host-supplied per-type block migrations: `{ [blockType]: (data) => data }`.
    *
    * Each rule upgrades a block's stored `data` from an old shape to the current
-   * one, and is applied at load (after the Tool's own `upgradeData`). Unlike
+   * one, and is applied at load BEFORE format analysis — so `dataModel: 'auto'`
+   * detects (and on save preserves) the POST-migration shape, and a rule that
+   * upgrades a legacy shape is not quietly undone by an 'auto' round-trip. Rules
+   * also run again when a block is composed later (e.g. inserted through the
+   * API), which is why they must be idempotent. Unlike
    * `upgradeData`, these rules live OUTSIDE the tool class — so a host can
    * migrate a third-party tool it doesn't own, or its own tool without editing
    * the class. Rules must be pure and idempotent; a throwing rule falls back to

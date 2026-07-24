@@ -39,7 +39,7 @@ How each Editor.js block/tool is handled. "Auto-migrated at runtime" means the c
 |------------------------|------------------|-------|
 | `paragraph` | Drop-in unchanged | Bundled as `Blok.Paragraph` (the default block). |
 | `header` | Drop-in unchanged | Bundled as `Blok.Header`. |
-| `list` (nested **and** string-array items) | Auto-migrated at runtime **+** codemod | Each item expands to a flat `list` block. |
+| `list` (nested **and** string-array items) | Auto-migrated at runtime **+** codemod | Each item expands to a flat `list` block. Both list dialects are read: v1 (`data.start`, `item.checked`) and v2 / nested-list (`data.meta.start`, `item.meta.checked`). `meta.counterType` is dropped (warns) — Blok's ordered lists use decimal markers. |
 | `checklist` (standalone tool) | Auto-migrated at runtime **+** codemod | Becomes `list` blocks with checklist style. |
 | `toggleList` | Auto-migrated at runtime **+** codemod → `toggle` | Becomes a `toggle` block (or a toggle `header` when `titleVariant` is set); body blocks flatten into parented children. |
 | `callout` (legacy `body`/`variant` shape) | Auto-migrated at runtime **+** codemod | Legacy `{ body, variant, emoji }` → flat `{ emoji, textColor, backgroundColor }`; body blocks flatten into parented children. |
@@ -579,9 +579,92 @@ A few EditorJS fields have no Blok equivalent and are **dropped** on load. The b
 | `quote` | `caption`, `alignment` |
 | `image` | `withBackground` |
 | `linkTool` | `meta.site_name` |
-| `list` item | `meta` |
+| `list` | `meta.counterType` (ordered-list marker style) |
 
 When migration drops one of these, Blok emits a `console.warn` (prefixed `[Blok migration]`) naming the block type and field, so the loss is visible in the console rather than silent. If you depend on any of these, capture them before migrating.
+
+For an offline batch upgrade, take delivery of that report instead of reading the console — every dropped field arrives as data:
+
+```javascript
+import { migrate } from '@bloklabs/core/migrate';
+
+const { data, report } = migrate(storedDocument);
+
+report.lossyFields; // [{ blockType: 'linkTool', field: 'meta.site_name', verb: 'dropped' }, …]
+```
+
+### Migrating Explicitly (`@bloklabs/core/migrate`)
+
+The same transform the renderer runs at load is exported, so you can upgrade persisted records without opening an editor:
+
+```javascript
+import {
+  migrate,
+  migrateLegacyBlocks,
+  migrateLegacyOutputData,
+  needsLegacyMigration,
+  matchLegacyRule,
+  LEGACY_GRAMMAR,
+} from '@bloklabs/core/migrate';
+```
+
+Two kinds of rule compose here, and `migrate(data, options)` runs them in the one correct order:
+
+1. **Data rules** (`migrations`) rewrite a single block's `data` — old shape → new shape, keyed by block type. They run **first**, while the sibling layout is still the original one.
+2. **Grammar rules** (`rules`) restructure the tree: change a block's `type`, split one block into several, absorb following siblings, recurse into container bodies.
+
+```javascript
+let n = 0;
+const { data, report } = migrate(storedDocument, {
+  migrations: { myCard: (d) => ('name' in d ? { ...d, title: d.name } : d) },
+  rules: [alertRule],
+  // Supplying generateId makes the migration PURE: the same document migrates
+  // to an equal result every time, so you can compare stored vs. migrated.
+  generateId: () => `blk-${n++}`,
+});
+```
+
+#### Teaching it a legacy shape Blok doesn't know
+
+A grammar entry reuses the whole interpreter — container recursion, orphan re-parenting, 1:N splits, id minting — so you never re-implement the dispatch loop. Host entries are matched **before** the built-in table, so they can also override a built-in mapping.
+
+```javascript
+const alertRule = {
+  legacyType: 'alert',
+  targetType: 'callout',
+  cardinality: '1:N',
+  contributesNesting: true,
+  lossyFields: [],
+  docNote: '`alert` → `callout` + message paragraph.',
+  detect: (block) => block.type === 'alert',
+  expand: (block, ctx) => {
+    const calloutId = block.id ?? ctx.generateId();
+    const childId = ctx.generateId();
+
+    return [
+      { id: calloutId, type: 'callout', data: { emoji: '🚨' }, content: [childId] },
+      { id: childId, type: 'paragraph', data: { text: block.data.message }, parent: calloutId },
+    ];
+  },
+};
+```
+
+For a legacy container that stores its body as a **count of following siblings** (common in Editor.js-era tools), return `{ blocks, consumed }` — the interpreter skips exactly that many siblings, and `consumed` is clamped to what remains, so a truncated document can't over-consume:
+
+```javascript
+expand: (block, ctx, { siblings, index }) => {
+  const id = block.id ?? ctx.generateId();
+  const followers = siblings.slice(index + 1, index + 1 + block.data.items);
+  const children = followers.map((child) => ({ ...child, id: child.id ?? ctx.generateId(), parent: id }));
+
+  return {
+    blocks: [{ id, type: 'toggle', data: { text: block.data.text }, content: children.map((c) => c.id) }, ...children],
+    consumed: followers.length,
+  };
+}
+```
+
+`matchLegacyRule(block, options?)` returns the entry claiming a single block (or `null`) — use it to dispatch per block instead of re-scanning the table each time. `LEGACY_GRAMMAR` is the built-in table itself, readable for coverage introspection.
 
 ---
 

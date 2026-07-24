@@ -14,6 +14,7 @@ import {
   type DataFormatAnalysis,
 } from '../utils/data-model-transform';
 import { migrateMarkColors } from '../utils/color-migration';
+import { migrateBlocks } from '../migration/block-migrations';
 import { applyLinkConfig } from '../utils/apply-link-config';
 import { DATA_ATTR } from '../constants';
 import { BlocksRendered } from '../events';
@@ -131,9 +132,22 @@ export class Renderer extends Module {
     // rendered — e.g. to run app-specific legacy-data migrations inside Blok.
     // Runs on the raw saved shape (before format analysis / hierarchical
     // expansion) so the hook sees exactly what was passed to render().
-    const sourceBlocks = this.config.onBeforeRender !== undefined
+    const hookedBlocks = this.config.onBeforeRender !== undefined
       ? this.config.onBeforeRender(blocksData)
       : blocksData;
+
+    // Host-supplied per-type data migrations (`config.migrations`) run HERE —
+    // before format analysis — so `dataModel: 'auto'` inspects the POST-migration
+    // shape. Applying them later (at composeBlock time) let 'auto' detect the
+    // pre-migration legacy format and collapse the document back to that shape on
+    // save, quietly undoing the migration. Rules are contractually pure and
+    // idempotent, so the composeBlock pass (which also covers blocks inserted
+    // through the API later) can safely see already-migrated data.
+    const sourceBlocks = this.config.migrations !== undefined
+      ? migrateBlocks(hookedBlocks, this.config.migrations, (type, error) => {
+        logLabeled(`Migration for «${type}» blocks failed; keeping stored data.`, 'warn', error);
+      })
+      : hookedBlocks;
 
     if (sourceBlocks.length === 0) {
       BlockManager.insert();

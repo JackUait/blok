@@ -18,7 +18,11 @@ import type { OutputBlockData } from '../../../../types';
 interface GrammarEntry {
   legacyType: string;
   detect(block: OutputBlockData): boolean;
-  expand(block: OutputBlockData, ctx: unknown): OutputBlockData[];
+  expand(
+    block: OutputBlockData,
+    ctx: never,
+    position: never
+  ): OutputBlockData[] | { blocks: OutputBlockData[]; consumed: number };
 }
 
 /** A deterministic, collision-free id generator for the shared-module side. */

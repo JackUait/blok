@@ -108,6 +108,13 @@ function normalizeListItem(item) {
     return { content: item.text, checked: item.checked };
   }
 
+  // @editorjs/list v2 (nested-list) moved per-item state under `meta`:
+  // `{ content, meta: { checked }, items }`. Lift it back to the flat field the
+  // rest of the grammar reads, so v1 and v2 dialects share one code path.
+  if (isPlainObject(item) && item.checked === undefined && isPlainObject(item.meta) && item.meta.checked !== undefined) {
+    return { ...item, checked: item.meta.checked };
+  }
+
   return item;
 }
 
@@ -138,6 +145,13 @@ function getTableContentRows(data) {
 
 function isCellWithBlockRefs(cell) {
   return typeof cell === 'object' && cell !== null && Array.isArray(cell.blocks);
+}
+
+/** Whether a legacy container block (toggleList/callout) carries body blocks. */
+function hasLegacyBody(block) {
+  const body = block.data && block.data.body;
+
+  return Boolean(body && Array.isArray(body.blocks) && body.blocks.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -273,10 +287,27 @@ function expandListItems(items, parentId, depth, style, start, tunes, blocks, ct
   return childIds;
 }
 
+/**
+ * Read the ordered-list start across both Editor.js list dialects: v1 stores it
+ * flat (`data.start`), v2 (nested-list) under `data.meta.start`.
+ */
+function readListStart(listData) {
+  if (listData.start !== undefined) {
+    return listData.start;
+  }
+
+  return isPlainObject(listData.meta) ? listData.meta.start : undefined;
+}
+
 function expandList(listData, tunes, ctx) {
   const blocks = [];
 
-  expandListItems(listData.items, undefined, 0, listData.style, listData.start, tunes, blocks, ctx);
+  if (isPlainObject(listData.meta) && listData.meta.counterType !== undefined) {
+    // Blok's ordered lists always use decimal markers.
+    ctx.warn('list', 'meta.counterType', 'dropped');
+  }
+
+  expandListItems(listData.items, undefined, 0, listData.style, readListStart(listData), tunes, blocks, ctx);
 
   return blocks;
 }
@@ -302,17 +333,17 @@ function expandLegacyBodyBlocks(bodyBlocks, parentId, ctx) {
   const childIds = [];
   const childBlocks = [];
 
-  for (const childBlock of bodyBlocks) {
-    // Recurse through the full interpreter so nested legacy structures inside a
-    // toggle/callout body are fully flattened rather than surviving as legacy
-    // types (which would render as a stub). A single legacy block may expand
-    // into N root-level siblings (e.g. a list with N items); every parent-less
-    // root becomes a direct child here so nothing is orphaned.
-    const expanded = expandLegacyBlocks([childBlock], ctx);
+  // Recurse through the full interpreter so nested legacy structures inside a
+  // toggle/callout body are fully flattened rather than surviving as legacy
+  // types (which would render as a stub). A single legacy block may expand
+  // into N root-level siblings (e.g. a list with N items); every parent-less
+  // root becomes a direct child here so nothing is orphaned. The WHOLE body is
+  // expanded in one pass (not block-by-block) so sibling-consuming expanders
+  // see their followers inside a container body too.
+  const expanded = expandLegacyBlocks(bodyBlocks, ctx);
 
-    for (const emitted of expanded) {
-      appendEmittedBlock(emitted, parentId, childIds, childBlocks, ctx);
-    }
+  for (const emitted of expanded) {
+    appendEmittedBlock(emitted, parentId, childIds, childBlocks, ctx);
   }
 
   // Invariant: every emitted block either carries a parent ref (descendant
@@ -636,7 +667,8 @@ function expandAttachesEntry(block, ctx) {
  * @property {string[]} lossyFields  - source fields dropped with no Blok equivalent
  * @property {string} docNote        - human-readable one-line note for the compatibility matrix
  * @property {(block: any) => boolean} detect
- * @property {(block: any, ctx: any) => any[]} expand
+ * @property {((block: any) => boolean)} [detectNesting] - per-block nesting test; falls back to `contributesNesting`
+ * @property {(block: any, ctx: any, position: { siblings: any[], index: number }) => any[] | { blocks: any[], consumed: number }} expand
  */
 
 /** @type {LegacyGrammarEntry[]} */
@@ -649,6 +681,7 @@ const LEGACY_GRAMMAR = [
     lossyFields: ['meta', 'counterType'],
     docNote: 'Nested `items[]` become flat `list` blocks (parent/content refs preserved).',
     detect: detectList,
+    detectNesting: (block) => hasNestedListItems(block.data.items),
     expand: expandListEntry,
   },
   {
@@ -679,6 +712,7 @@ const LEGACY_GRAMMAR = [
     lossyFields: [],
     docNote: '`toggleList` → `toggle` (or toggle `header` when `titleVariant` is set) + child body blocks.',
     detect: detectToggleList,
+    detectNesting: hasLegacyBody,
     expand: expandToggleListEntry,
   },
   {
@@ -689,6 +723,7 @@ const LEGACY_GRAMMAR = [
     lossyFields: [],
     docNote: 'Legacy `{ body, variant, emoji }` → flat `{ emoji, textColor, backgroundColor }` + child body blocks.',
     detect: detectCallout,
+    detectNesting: hasLegacyBody,
     expand: expandCalloutEntry,
   },
   {
@@ -772,6 +807,9 @@ function normalizeCtx(ctx) {
   return {
     generateId: ctx.generateId,
     warn: typeof ctx.warn === 'function' ? ctx.warn : NOOP_WARN,
+    // Host-supplied grammar entries, matched BEFORE the built-in table so a host
+    // can both cover a type Blok knows nothing about and override a built-in.
+    rules: Array.isArray(ctx.rules) ? ctx.rules : [],
     // Whether to mint an id for PASSTHROUGH (non-migrated) blocks that lack one.
     // The runtime requires every block to carry an id, so it stamps (default).
     // The codemod is a source-rewrite tool that keeps untouched blocks
@@ -790,16 +828,71 @@ function normalizeCtx(ctx) {
  * @param {{ generateId: () => string, warn?: (blockType: string, field: string, verb: string) => void }} ctx
  * @returns {any[]}
  */
+/**
+ * Normalize an expander's return value. An expander may return either a plain
+ * array of blocks (consuming only the block it was handed) or
+ * `{ blocks, consumed }` when it absorbed `consumed` FOLLOWING siblings — the
+ * shape flat-with-count legacy formats need (a toggle storing its body as "the
+ * next N blocks"). `consumed` is clamped to what actually remains, so a
+ * truncated document can never over-consume or loop.
+ * @param {any} result - the expander's return value
+ * @param {number} remaining - siblings available after the expanded block
+ */
+function normalizeExpansion(result, remaining) {
+  if (Array.isArray(result)) {
+    return { blocks: result, consumed: 0 };
+  }
+
+  const blocks = Array.isArray(result.blocks) ? result.blocks : [];
+  const requested = typeof result.consumed === 'number' ? Math.floor(result.consumed) : 0;
+  const consumed = Math.max(0, Math.min(requested, remaining));
+
+  return { blocks, consumed };
+}
+
+/**
+ * The effective grammar for a pass: host entries first (so a host can override a
+ * built-in), then the built-in table.
+ * @param {any[]} rules
+ */
+function resolveGrammar(rules) {
+  return rules && rules.length > 0 ? [...rules, ...LEGACY_GRAMMAR] : LEGACY_GRAMMAR;
+}
+
+/**
+ * The per-block match primitive: which grammar entry (if any) claims this block.
+ * Exposed because dispatching per block through the array-shaped helpers means
+ * allocating a throwaway array and re-scanning the whole table for every block.
+ * @param {any} block
+ * @param {any[]} [rules] - host-supplied entries, matched before the built-ins
+ * @returns {any|null} the matching entry, or null
+ */
+function matchLegacyRule(block, rules) {
+  const entry = resolveGrammar(rules).find((candidate) => candidate.detect(block));
+
+  return entry === undefined ? null : entry;
+}
+
 function expandLegacyBlocks(blocks, ctx) {
   const resolved = normalizeCtx(ctx);
+  const grammar = resolveGrammar(resolved.rules);
   const out = [];
+  let index = 0;
 
-  for (const block of blocks) {
-    const entry = LEGACY_GRAMMAR.find((candidate) => candidate.detect(block));
+  while (index < blocks.length) {
+    const block = blocks[index];
+    const entry = grammar.find((candidate) => candidate.detect(block));
 
     if (entry) {
-      out.push(...entry.expand(block, resolved));
-    } else if (resolved.stampMissingIds) {
+      const result = entry.expand(block, resolved, { siblings: blocks, index });
+      const expansion = normalizeExpansion(result, blocks.length - index - 1);
+
+      out.push(...expansion.blocks);
+      index += 1 + expansion.consumed;
+      continue;
+    }
+
+    if (resolved.stampMissingIds) {
       // Runtime policy: every block must carry an id; keep the historical
       // shallow-copy-on-passthrough semantics (never alias the input block).
       out.push({ ...block, id: block.id != null ? block.id : resolved.generateId() });
@@ -807,6 +900,7 @@ function expandLegacyBlocks(blocks, ctx) {
       // Codemod policy: leave untouched blocks byte-identical (no id injection).
       out.push(block);
     }
+    index++;
   }
 
   return out;
@@ -815,51 +909,52 @@ function expandLegacyBlocks(blocks, ctx) {
 /**
  * Whether any block in the array matches a legacy grammar entry.
  * @param {any[]} blocks
+ * @param {any[]} [rules] - host-supplied entries, matched before the built-ins
  */
-function hasLegacyBlocks(blocks) {
-  return blocks.some((block) => LEGACY_GRAMMAR.some((entry) => entry.detect(block)));
+function hasLegacyBlocks(blocks, rules) {
+  return blocks.some((block) => matchLegacyRule(block, rules) !== null);
 }
 
 /**
  * Reproduce the runtime's legacy-format nesting heuristic: a legacy document is
- * considered "nested" when it contains a table/warning (always structural), a
- * legacy list with nested items, or a toggle/callout whose body has blocks.
+ * considered "nested" when a matched entry either always implies structure
+ * (`contributesNesting`, e.g. table/warning) or says so for this specific block
+ * (`detectNesting`, e.g. a list with nested items, a toggle/callout with a
+ * non-empty body). Host entries participate through the same two fields.
  * @param {any[]} blocks
+ * @param {any[]} [rules] - host-supplied entries, matched before the built-ins
  */
-function hasLegacyNesting(blocks) {
+function hasLegacyNesting(blocks, rules) {
   return blocks.some((block) => {
-    if (detectTable(block) || detectWarning(block)) {
-      return true;
-    }
-    if (detectList(block)) {
-      return hasNestedListItems(block.data.items);
-    }
-    if (detectToggleList(block)) {
-      return Boolean(block.data.body && Array.isArray(block.data.body.blocks) && block.data.body.blocks.length > 0);
-    }
-    if (detectCallout(block)) {
-      return Boolean(block.data.body && Array.isArray(block.data.body.blocks) && block.data.body.blocks.length > 0);
+    const entry = matchLegacyRule(block, rules);
+
+    if (entry === null) {
+      return false;
     }
 
-    return false;
+    return typeof entry.detectNesting === 'function'
+      ? Boolean(entry.detectNesting(block))
+      : Boolean(entry.contributesNesting);
   });
 }
 
 /**
  * Combined legacy-format analysis for the runtime's analyzeDataFormat wrapper.
  * @param {any[]} blocks
+ * @param {any[]} [rules] - host-supplied entries, matched before the built-ins
  * @returns {{ hasLegacyBlocks: boolean, hasNesting: boolean }}
  */
-function analyzeLegacyFormat(blocks) {
+function analyzeLegacyFormat(blocks, rules) {
   return {
-    hasLegacyBlocks: hasLegacyBlocks(blocks),
-    hasNesting: hasLegacyNesting(blocks),
+    hasLegacyBlocks: hasLegacyBlocks(blocks, rules),
+    hasNesting: hasLegacyNesting(blocks, rules),
   };
 }
 
 export {
   LEGACY_GRAMMAR,
   expandLegacyBlocks,
+  matchLegacyRule,
   analyzeLegacyFormat,
   hasLegacyBlocks,
   hasLegacyNesting,

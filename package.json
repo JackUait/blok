@@ -22,6 +22,9 @@
       "markdown": [
         "./types/markdown.d.ts"
       ],
+      "migrate": [
+        "./types/migrate.d.ts"
+      ],
       "view": [
         "./types/view.d.ts"
       ],

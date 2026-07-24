@@ -10,6 +10,7 @@ import { generateBlockId } from '../utils';
 // shared verbatim with the standalone codemod, so the two migration surfaces
 // cannot drift. The runtime drives it with nanoid ids + a deduping console.warn.
 import { expandLegacyBlocks, analyzeLegacyFormat } from '../migration/legacy-grammar.mjs';
+import type { LegacyGrammarEntry } from '../migration/legacy-grammar.d.mts';
 
 /**
  * Build the per-pass lossy-field warning sink handed to the grammar interpreter.
@@ -146,14 +147,32 @@ export const analyzeDataFormat = (blocks: OutputBlockData[]): DataFormatAnalysis
 };
 
 /**
+ * Environment a caller may override when expanding legacy data. Defaults match
+ * the editor's own load path (nanoid ids + a deduping `console.warn`); the
+ * public `@bloklabs/core/migrate` surface forwards a host's own generator,
+ * lossy-field sink, and extra grammar entries through here, so an explicit
+ * migration can be pure and extensible without a second code path.
+ */
+export interface ExpandOptions {
+  generateId?: () => string;
+  warn?: (blockType: string, field: string, verb: string) => void;
+  rules?: LegacyGrammarEntry[];
+}
+
+/**
  * Expand legacy nested format to hierarchical flat-with-references format
  * @param blocks - array of blocks potentially containing nested structures
+ * @param options - optional id generator / lossy-field sink / host grammar entries
  * @returns expanded array of flat blocks with parent/content references
  */
-export const expandToHierarchical = (blocks: OutputBlockData[]): OutputBlockData[] => {
+export const expandToHierarchical = (
+  blocks: OutputBlockData[],
+  options: ExpandOptions = {}
+): OutputBlockData[] => {
   return expandLegacyBlocks(blocks, {
-    generateId: generateBlockId,
-    warn: createMigrationWarn(),
+    generateId: options.generateId ?? generateBlockId,
+    warn: options.warn ?? createMigrationWarn(),
+    rules: options.rules,
   });
 };
 

@@ -2338,14 +2338,15 @@ const echoes = createEmittedEchoWindow();
 // before re-rendering incoming props: if (echoes.matches(next)) return;`,
       },
       {
-        name: "migrateLegacyBlocks(blocks)",
+        name: "migrateLegacyBlocks(blocks, options?)",
         returnType: "OutputBlockData[]",
         description:
-          "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parentId`/`content`, and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. Use it to migrate a stored document explicitly — a one-off batch upgrade of persisted records, or a pre-load normalization step — instead of hand-rolling per-tool shape conversion. `migrateLegacyOutputData(data)` is the envelope-preserving variant, and `needsLegacyMigration(blocks)` reports whether a migration would change anything (skip the id-minting pass when the document is already current).",
+          "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parentId`/`content`, and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. `options` exposes the migration context: `generateId` makes the pass PURE (migrate the same document twice and the outputs are equal — needed to compare a stored doc against its migration, or to re-run migration per render without minting fresh ids), `onLossyField` delivers every dropped field instead of dumping it to `console.warn`, and `rules` adds your own grammar entries. `migrateLegacyOutputData(data, options?)` is the envelope-preserving variant; `needsLegacyMigration(blocks, options?)` reports whether a migration would change anything; `matchLegacyRule(block, options?)` is the per-block primitive that returns the entry claiming a single block (or `null`) without re-scanning the table for every block.",
         example: `import {
   migrateLegacyBlocks,
   migrateLegacyOutputData,
   needsLegacyMigration,
+  matchLegacyRule,
 } from '@bloklabs/core/migrate';
 
 // Batch-upgrade persisted Editor.js documents
@@ -2354,7 +2355,17 @@ const upgraded = migrateLegacyOutputData(storedDocument);
 // Or migrate just the blocks, skipping the pass when already current
 const blocks = needsLegacyMigration(stored.blocks)
   ? migrateLegacyBlocks(stored.blocks)
-  : stored.blocks;`,
+  : stored.blocks;
+
+// Deterministic migration: same input → equal output, every time
+let n = 0;
+const pure = migrateLegacyBlocks(stored.blocks, {
+  generateId: () => \`blk-\${n++}\`,
+  onLossyField: ({ blockType, field }) => report(blockType, field),
+});
+
+// Dispatch per block without allocating a throwaway array
+const entry = matchLegacyRule(stored.blocks[0]); // → { legacyType, targetType, … } | null`,
         note:
           "For a data shape only a specific tool understands (a columns layout, a custom media envelope) that core's built-in migration can't read, give that tool a static `upgradeData(data)` — a pure function returning the tool's current data shape. Blok runs it at load, while composing each stored block, before the tool is constructed; a hook that throws is caught and the block loads with its stored data.",
       },
@@ -2362,7 +2373,7 @@ const blocks = needsLegacyMigration(stored.blocks)
         name: "migrations (config) & migrateOutputData(data, migrations)",
         returnType: "OutputData",
         description:
-          "Declare per-type \"old data shape → new data shape\" rules from OUTSIDE the tool class. Where `upgradeData` must live inside a tool you own, `migrations` is a map keyed by block type you pass in editor config — so you can migrate a third-party tool you don't control, or your own tool without editing (and re-shipping) its class. Each rule is a pure `(data) => data` transform (return the input unchanged, or `undefined`, when already current). Blok applies it at load, after the tool's own `upgradeData`; a throwing rule falls back to the stored data (never a blank editor). The same map works offline: pass it to `migrateOutputData(data, migrations)` (or `migrateBlocks(blocks, migrations)`) from `@bloklabs/core/migrate` to batch-upgrade persisted records without opening an editor. Available on all three framework adapters as the `migrations` prop/input.",
+          "Declare per-type \"old data shape → new data shape\" rules from OUTSIDE the tool class. Where `upgradeData` must live inside a tool you own, `migrations` is a map keyed by block type you pass in editor config — so you can migrate a third-party tool you don't control, or your own tool without editing (and re-shipping) its class. Each rule is a pure `(data) => data` transform (return the input unchanged, or `undefined`, when already current). Blok applies it at load, after the tool's own `upgradeData` and BEFORE format analysis — so `dataModel: 'auto'` sees the post-migration shape and an 'auto' round-trip can't quietly undo the migration by saving the old shape back. A throwing rule falls back to the stored data (never a blank editor). The same map works offline: pass it to `migrateOutputData(data, migrations)` (or `migrateBlocks(blocks, migrations)`) from `@bloklabs/core/migrate` to batch-upgrade persisted records without opening an editor. Available on all three framework adapters as the `migrations` prop/input.",
         example: `// 1. At load, via editor config
 new Blok({
   tools: { myCard: MyCard },
@@ -2381,6 +2392,63 @@ const upgraded = migrateOutputData(storedDocument, {
 });`,
         note:
           "Rules must be pure and idempotent — they run on every load, including on already-current data. Prefer `migrations` (config) for shapes a host decides from the outside; prefer a tool's own `upgradeData` for shapes only that tool understands. They compose: `upgradeData` runs first, then the config `migrations` rule for that type.",
+      },
+      {
+        name: "migrate(data, { migrations, rules, generateId, onLossyField })",
+        returnType: "{ data: OutputData; report: MigrationReport }",
+        description:
+          "The composed entry point: runs BOTH migration passes in the one correct order and reports what the migration cost. Data rules (`migrations`) only rewrite a block's `data`, so they run first, while the sibling layout is still the original one; grammar rules (`rules`) then restructure the tree. Getting that order backwards yields subtly wrong nesting with no error — `migrate` makes the correct order the only order. The `report` names every field the mapping could not carry over (`lossyFields`) and every data rule that threw (`errors`), so a batch upgrade of persisted records is no longer silent about its own data loss.",
+        example: `import { migrate } from '@bloklabs/core/migrate';
+
+let n = 0;
+const { data, report } = migrate(storedDocument, {
+  // 1. data rules — old data shape → new data shape, by block type
+  migrations: {
+    myCard: (d) => ('name' in d ? { ...d, title: d.name } : d),
+  },
+  // 2. grammar rules — structural: type changes, 1:N splits, sibling absorption
+  rules: [alertRule],
+  generateId: () => \`blk-\${n++}\`,
+});
+
+report.lossyFields; // [{ blockType: 'linkTool', field: 'meta.site_name', verb: 'dropped' }]
+report.errors;      // [{ type: 'myCard', error }] — that block kept its stored data`,
+        note:
+          "`report.lossyFields` is what `console.warn` used to say and nothing could read. Log it next to a batch upgrade and you get an auditable record of exactly what the upgrade dropped, per block type.",
+      },
+      {
+        name: "rules (custom legacy grammar entries)",
+        returnType: "LegacyGrammarEntry[]",
+        description:
+          "Teach the migration machinery a legacy shape Blok doesn't know. A grammar entry is `{ legacyType, detect, expand, targetType, cardinality, contributesNesting, lossyFields, docNote }`; passing entries via `rules` reuses the whole interpreter — recursion into container bodies, the orphan re-parenting invariant, 1:N splits, id minting — instead of re-implementing the dispatch loop around a data-only rule. Host entries are matched BEFORE the built-in table, so they can also override a built-in mapping. Unlike a `migrations` rule, an entry may change a block's `type` and emit several blocks. `expand(block, ctx, { siblings, index })` may also return `{ blocks, consumed }` to absorb the following `consumed` siblings — the shape flat-with-count legacy formats need (a container storing its body as \"the next N blocks\"); `consumed` is clamped to what remains, so a truncated document can't over-consume. Read `LEGACY_GRAMMAR` to introspect the built-in coverage.",
+        example: `import { migrate, LEGACY_GRAMMAR } from '@bloklabs/core/migrate';
+
+// A legacy \`alert\` → callout + child paragraph (type change AND a 1:N split)
+const alertRule = {
+  legacyType: 'alert',
+  targetType: 'callout',
+  cardinality: '1:N',
+  contributesNesting: true,
+  lossyFields: [],
+  docNote: '\`alert\` → \`callout\` + message paragraph.',
+  detect: (block) => block.type === 'alert',
+  expand: (block, ctx) => {
+    const calloutId = block.id ?? ctx.generateId();
+    const childId = ctx.generateId();
+
+    return [
+      { id: calloutId, type: 'callout', data: { emoji: '🚨' }, content: [childId] },
+      { id: childId, type: 'paragraph', data: { text: block.data.message }, parent: calloutId },
+    ];
+  },
+};
+
+const { data } = migrate(storedDocument, { rules: [alertRule] });
+
+// What does Blok migrate out of the box?
+LEGACY_GRAMMAR.map((entry) => [entry.legacyType, entry.targetType, entry.lossyFields]);`,
+        note:
+          "A container rule whose body is stored as a COUNT of following siblings returns `{ blocks, consumed }` — the interpreter skips exactly that many siblings, so the children are re-parented once and never emitted twice.",
       },
     ],
   },

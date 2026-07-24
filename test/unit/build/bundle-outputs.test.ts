@@ -540,7 +540,7 @@ describe('dist weight (consumer parse cost)', () => {
 })
 
 describe('Angular adapter package.json wiring', () => {
-  const exportsMap = packageJson.exports as Record<string, Record<string, string>>
+  const exportsMap = packageJson.exports as Record<string, Record<string, string> | string>
   const typesVersions = (packageJson as unknown as {
     typesVersions?: Record<string, Record<string, string[]>>
   }).typesVersions

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.4](https://github.com/JackUait/blok/compare/v1.4.3...v1.4.4) (2026-07-25)
+
+### Features
+
+- **Migrate** — Hosts can now declare per-block-type migration rules from the outside to upgrade stored blocks from an old data shape to a new one without editing the tool class. Rules are applied at load (after each tool's own `upgradeData`) and also exposed as a standalone `migrateOutputData` via `@bloklabs/core/migrate` for offline batch upgrades. Available on all three framework adapters.
+
 ## [1.4.2](https://github.com/JackUait/blok/compare/v1.4.1...v1.4.2) (2026-07-23)
 
 ### Bug Fixes

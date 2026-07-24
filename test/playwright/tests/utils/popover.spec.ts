@@ -328,7 +328,13 @@ const createBlokWithBlocks = async (
     {
       holder: HOLDER_ID,
       blokBlocks: blocks,
-      blokTools: tools,
+      // The evaluate argument must be structured-cloneable, so only the
+      // serializable tool shape crosses the boundary (tool classes are handled
+      // dynamically inside `buildTools`). Typing it as the serializable subset
+      // also keeps Playwright's arg-type recursion shallow — the full
+      // `ToolsConfigInput` graph (which reaches deep DOM types) otherwise trips
+      // TS2589 "type instantiation is excessively deep".
+      blokTools: tools as SerializableToolsConfig | undefined,
       blokTunes: tunes,
       PopoverItemTypeValues: {
         Default: PopoverItemType.Default,

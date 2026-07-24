@@ -839,6 +839,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return {
         icon: toolboxItem.icon,
         title: translateToolTitle(this.i18n, toolboxItem, tool.name),
+        // A live host element (a portal target the adapter owns) renders in
+        // place of the string title, tracking the host's own i18n.
+        titleEl: toolboxItem.titleEl,
         name: toolboxItem.name ?? tool.name,
         onActivate: (): void => {
           void this.toolButtonActivated(tool.name, toolboxItem.data);

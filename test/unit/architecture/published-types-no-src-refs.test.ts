@@ -40,6 +40,8 @@ const SRC_DIR = join(REPO_ROOT, 'src');
 const PACKAGES_DIR = join(REPO_ROOT, 'packages');
 const ICONS_SOURCE = join(SRC_DIR, 'components', 'icons', 'index.ts');
 const ICONS_DTS = join(TYPES_DIR, 'icons.d.ts');
+const MESSAGES_SOURCE = join(SRC_DIR, 'components', 'i18n', 'locales', 'en.json');
+const MESSAGE_KEYS_DTS = join(TYPES_DIR, 'message-keys.d.ts');
 
 /** Recursively collect every `.d.ts` file under `types/`. */
 function collectDeclarationFiles(dir: string): string[] {
@@ -167,6 +169,28 @@ describe('types/icons.d.ts stays in sync with src icon exports', () => {
       { missing, stale },
       'types/icons.d.ts drifted from src/components/icons/index.ts. ' +
         'Run `node scripts/generate-icons-dts.mjs` to regenerate it.',
+    ).toEqual({ missing: [], stale: [] });
+  });
+});
+
+describe('types/message-keys.d.ts stays in sync with en.json', () => {
+  it('declares exactly the built-in translation keys shipped in en.json', () => {
+    const parsed = JSON.parse(readFileSync(MESSAGES_SOURCE, 'utf-8')) as Record<string, string>;
+    const sourceKeys = new Set(Object.keys(parsed));
+
+    const declaration = readFileSync(MESSAGE_KEYS_DTS, 'utf-8');
+    // Union members are emitted one per line as `  | 'key'`.
+    const declaredKeys = new Set(
+      [...declaration.matchAll(/^\s*\|\s*'([^']+)'/gm)].map((m) => m[1]),
+    );
+
+    const missing = [...sourceKeys].filter((key) => !declaredKeys.has(key)).sort();
+    const stale = [...declaredKeys].filter((key) => !sourceKeys.has(key)).sort();
+
+    expect(
+      { missing, stale },
+      'types/message-keys.d.ts drifted from src/components/i18n/locales/en.json. ' +
+        'Run `node scripts/generate-message-keys-dts.mjs` to regenerate it.',
     ).toEqual({ missing: [], stale: [] });
   });
 });

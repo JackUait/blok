@@ -33,6 +33,7 @@ export default defineConfig({
       '@/types': path.resolve(dirname, '../../types'),
       '@bloklabs/core/view': path.resolve(dirname, '../../src/view/index.ts'),
       '@bloklabs/core/adapters': path.resolve(dirname, '../../src/adapters.ts'),
+      '@bloklabs/core/locales': path.resolve(dirname, '../../src/locales.ts'),
       '@bloklabs/core': path.resolve(dirname, '../../src/blok.ts'),
     },
   },

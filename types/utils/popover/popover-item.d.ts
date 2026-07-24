@@ -142,9 +142,20 @@ export interface PopoverItemDefaultBaseParams {
   type?: PopoverItemType.Default;
 
   /**
-   * Displayed text
+   * Displayed text.
    */
   title?: string;
+
+  /**
+   * A live host element rendered in place of the text {@link title} — appended
+   * as-is with its node identity preserved, so an external renderer (e.g. a
+   * React portal rendering a host-i18n label) keeps owning and updating it.
+   * When set it wins over `title` for display; keep providing `title`/
+   * {@link englishTitle} so search and promoted-item dedup (which key off the
+   * string title) still have a term to match. Mirrors the `icon` dual model
+   * without widening the widely-consumed string `title`.
+   */
+  titleEl?: HTMLElement;
 
   /**
    * Item icon to be appeared near a title.

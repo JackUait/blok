@@ -74,6 +74,24 @@ const injectPortalRegistry = (tools: unknown, registry: BlockPortalRegistry): un
       [BLOK_PORTAL_REGISTRY_CONFIG_KEY]: registry,
       [BLOK_TOOL_NAME_CONFIG_KEY]: name,
     };
+
+    // A React block tool whose toolbox title is a ReactElement needs a live
+    // portal that only the editor's registry can host. Build a per-editor
+    // toolbox override (element-title hosts registered now) and let core's
+    // per-tool `toolbox` setting carry it. Undefined = no ReactElement titles,
+    // so the static string/`toolNames.*` path is left untouched.
+    const buildPortalToolbox = (base.class as {
+      __buildPortalToolbox?: (r: BlockPortalRegistry, n: string) => unknown;
+    }).__buildPortalToolbox;
+
+    const portalToolbox = typeof buildPortalToolbox === 'function' && base.toolbox === undefined
+      ? buildPortalToolbox(registry, name)
+      : undefined;
+
+    if (portalToolbox !== undefined) {
+      base.toolbox = portalToolbox;
+    }
+
     result[name] = base;
   }
 

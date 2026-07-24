@@ -47,6 +47,97 @@ export const ALL_LOCALE_CODES: readonly SupportedLocale[] = [
 ] as const;
 
 /**
+ * Aliases mapping non-Blok locale tags onto the supported code that serves
+ * them. Keyed by lower-cased tag (full tag or base language).
+ *
+ * - `ckb` is the canonical BCP-47 tag for Sorani/Central Kurdish; Blok's
+ *   catalog ships under the legacy `ku` code.
+ * - `nb` (Norwegian Bokmål) is what browsers and most apps emit for Norwegian;
+ *   Blok ships a single `no` catalog.
+ * @internal
+ */
+const LOCALE_ALIASES: Readonly<Record<string, SupportedLocale>> = {
+  ckb: 'ku',
+  nb: 'no',
+};
+
+const supportedSet: ReadonlySet<string> = new Set(ALL_LOCALE_CODES);
+
+const isSupported = (code: string): code is SupportedLocale => supportedSet.has(code);
+
+/**
+ * Preserve Chinese script/region information before the base-language
+ * fallback would collapse every `zh-*` tag onto `zh`.
+ */
+const matchChinese = (normalized: string): SupportedLocale | null => {
+  const parts = normalized.split('-');
+
+  if (parts[0] !== 'zh') {
+    return null;
+  }
+
+  if (parts.includes('tw') || parts.includes('hant')) {
+    return 'zh-TW';
+  }
+
+  return 'zh';
+};
+
+/**
+ * Normalize an arbitrary BCP-47 language tag to a supported Blok locale.
+ *
+ * This is the single source of truth for turning host-supplied tags
+ * (`navigator.language`, an app's locale string, `'en-US'`, `'ru-RU'`,
+ * `'nb-NO'`) into a `SupportedLocale`. It is applied on every path that
+ * accepts a locale — browser detection AND explicit `config.i18n.locale` /
+ * `i18n.update({ locale })` — so region subtags and aliases resolve
+ * identically everywhere instead of only during auto-detection.
+ *
+ * @param tag - any language tag, e.g. `'en'`, `'en-US'`, `'zh-Hant'`, `'nb'`
+ * @returns the matching supported locale, or `null` when none applies. A
+ *   `null` result is the observable "unsupported locale" signal: hosts can
+ *   call this to decide whether a locale will be honored before applying it.
+ */
+export const normalizeLocale = (tag: string): SupportedLocale | null => {
+  if (typeof tag !== 'string' || tag.length === 0) {
+    return null;
+  }
+
+  const normalized = tag.toLowerCase();
+
+  const chinese = matchChinese(normalized);
+
+  if (chinese !== null) {
+    return chinese;
+  }
+
+  // Full-tag alias (e.g. an alias that only applies with a region subtag).
+  if (normalized in LOCALE_ALIASES) {
+    return LOCALE_ALIASES[normalized];
+  }
+
+  // Exact supported match (e.g. 'ru', 'en').
+  if (isSupported(normalized)) {
+    return normalized;
+  }
+
+  // Fall back to the base language (e.g. 'en-US' -> 'en', 'nb-NO' -> 'nb').
+  const baseLang = normalized.split('-')[0];
+
+  if (baseLang !== undefined) {
+    if (baseLang in LOCALE_ALIASES) {
+      return LOCALE_ALIASES[baseLang];
+    }
+
+    if (isSupported(baseLang)) {
+      return baseLang;
+    }
+  }
+
+  return null;
+};
+
+/**
  * Default locale to use when detection fails or locale is not supported
  */
 export const DEFAULT_LOCALE: SupportedLocale = 'en';

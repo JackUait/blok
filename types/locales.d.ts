@@ -46,6 +46,21 @@ export declare const getLocaleSync: (code: SupportedLocale) => LocaleConfig | un
 export declare const getDirection: (code: SupportedLocale) => 'ltr' | 'rtl';
 
 /**
+ * Normalize an arbitrary BCP-47 language tag to a supported Blok locale.
+ *
+ * Accepts region-tagged (`'en-US'`, `'ru-RU'`), script-tagged (`'zh-Hant'`)
+ * and aliased (`'nb'` → `'no'`, `'ckb'` → `'ku'`) tags. The same normalizer
+ * runs on browser detection and on explicit `config.i18n.locale` /
+ * `i18n.update({ locale })`.
+ *
+ * @param tag - any language tag
+ * @returns the matching supported locale, or `null` when unsupported. A `null`
+ *   result is the observable "unsupported locale" signal — call this to check
+ *   whether a locale will be honored before applying it.
+ */
+export declare const normalizeLocale: (tag: string) => SupportedLocale | null;
+
+/**
  * Clear the locale cache.
  * Primarily useful for testing to ensure test isolation.
  * @internal

@@ -40,6 +40,9 @@ export {
   // Direction utilities
   getDirection,
 
+  // BCP-47 normalization
+  normalizeLocale,
+
   // Testing utilities
   clearLocaleCache,
 } from './components/i18n/locales';

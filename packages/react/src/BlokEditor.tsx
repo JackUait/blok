@@ -68,6 +68,18 @@ export interface BlokEditorProps
    */
   onReady?: (editor: Blok) => void;
   /**
+   * Library-neutral shorthand for the active locale — a plain BCP-47 string
+   * (`'en'`, `'ru-RU'`, `'nb'`) the host owns and updates. It is normalized and
+   * routed to `editor.i18n.update({ locale })` in place (caret/undo survive),
+   * so a host with its own language switcher never has to build an `i18n`
+   * config object or destroy the editor. Pair it with the re-exported
+   * `getDirection`/`normalizeLocale` to compute `dir` yourself.
+   *
+   * Shorthand for `i18n={{ locale }}`: if both are given, this wins. For
+   * message overrides or an explicit direction, use the full `i18n` prop.
+   */
+  locale?: string;
+  /**
    * Called after a batch render completes (core `blocks:rendered` event). The
    * declarative analog of `ref.current.on('blocks:rendered', …)` — mirrors the
    * Vue/Angular adapters' rendered-lifecycle outputs.
@@ -96,7 +108,7 @@ const CONFIG_KEY_SET = new Set<string>(USE_BLOK_CONFIG_KEYS);
  * ```
  */
 export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
-  function BlokEditor({ deps, onReady, onBlocksRendered, onBlockRendered, ...rest }, ref) {
+  function BlokEditor({ deps, onReady, locale, onBlocksRendered, onBlockRendered, ...rest }, ref) {
     const config: Record<string, unknown> = {};
     const divProps: Record<string, unknown> = {};
 
@@ -108,6 +120,16 @@ export const BlokEditor = forwardRef<Blok | null, BlokEditorProps>(
       } else {
         divProps[key] = value;
       }
+    }
+
+    // `locale` is a neutral shorthand for `i18n.locale`. Fold it into the i18n
+    // config (winning over any locale already there) so the single reactive
+    // `i18n.update` path in `useBlok` carries it — no separate resolver. A fresh
+    // object each render is fine: that path is deep-equal–deduped.
+    if (locale !== undefined) {
+      const existingI18n = config.i18n as Record<string, unknown> | undefined;
+
+      config.i18n = { ...existingI18n, locale };
     }
 
     const editor = useBlok(config, deps);

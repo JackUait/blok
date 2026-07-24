@@ -14,7 +14,7 @@ export default defineConfig({
     },
     rollupOptions: {
       // The core and the framework are peers — never bundled into the adapter.
-      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@bloklabs/core', '@bloklabs/core/adapters', '@bloklabs/core/view'],
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@bloklabs/core', '@bloklabs/core/adapters', '@bloklabs/core/view', '@bloklabs/core/locales'],
       output: [
         { format: 'es', entryFileNames: 'index.mjs' },
         { format: 'cjs', entryFileNames: 'index.cjs' },
@@ -27,6 +27,7 @@ export default defineConfig({
       '@/types': path.resolve(dirname, '../../types'),
       '@bloklabs/core/view': path.resolve(dirname, '../../src/view/index.ts'),
       '@bloklabs/core/adapters': path.resolve(dirname, '../../src/adapters.ts'),
+      '@bloklabs/core/locales': path.resolve(dirname, '../../src/locales.ts'),
       '@bloklabs/core': path.resolve(dirname, '../../src/blok.ts'),
     },
   },

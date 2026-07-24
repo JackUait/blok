@@ -8,6 +8,9 @@ import {
   BlokConfig,
   I18nConfig,
   I18nDictionary,
+  BlokMessageKey,
+  BlokMessages,
+  ToolNameMessageKey,
   SanitizerConfig,
 } from './configs';
 import { InlineToolConstructable, InlineToolConstructorOptions, ToolConstructable, ToolSettings } from './tools';
@@ -93,6 +96,9 @@ export {
   LogLevels,
   ConversionConfig,
   I18nDictionary,
+  BlokMessageKey,
+  BlokMessages,
+  ToolNameMessageKey,
   I18nConfig,
   UserInfo,
   OnReadyHandler,

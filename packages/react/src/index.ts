@@ -1,4 +1,8 @@
 export { useBlok } from './useBlok';
+// Host-i18n bridge (#41): re-export the direction/normalization helpers so a
+// host that owns its locale state can compute `dir` and validate tags without
+// deep-importing core. `<BlokEditor locale>` pairs with these.
+export { getDirection, normalizeLocale } from '@bloklabs/core/locales';
 export { BlokContent } from './BlokContent';
 export { BlokEditor } from './BlokEditor';
 export { useBlokHandle } from './useBlokHandle';

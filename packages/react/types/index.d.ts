@@ -8,6 +8,11 @@ import type { BlockTuneData } from '@bloklabs/core';
 import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
 import type React from 'react';
 
+// Host-i18n bridge (#41): the direction/normalization helpers re-exported by
+// the runtime index. Bare `@bloklabs/core/locales` resolves to the core's own
+// self-contained declaration, so this stays free of any `../src` reference.
+export { getDirection, normalizeLocale } from '@bloklabs/core/locales';
+
 /**
  * Configuration for the useBlok hook.
  * Accepts all BlokConfig properties except `holder`, plus a React-only `width` prop.
@@ -102,6 +107,13 @@ export interface BlokEditorProps
   'data-testid'?: string;
   /** Called once the editor is ready, with the live Blok instance (ref is also committed). */
   onReady?: (editor: Blok) => void;
+  /**
+   * Library-neutral shorthand for the active locale — a plain BCP-47 string the
+   * host owns and updates. Normalized and routed to `editor.i18n.update` in
+   * place. Shorthand for `i18n={{ locale }}` (wins if both are set); pair with
+   * the re-exported `getDirection` / `normalizeLocale` to compute `dir`.
+   */
+  locale?: string;
   /**
    * Called after a batch render completes (core `blocks:rendered` event). The
    * declarative analog of `ref.current.on('blocks:rendered', …)` — mirrors the
@@ -686,8 +698,8 @@ export type ReactBlockViewProps<Data, Config = Record<string, unknown>> = Omit<
   'commit' | 'readOnly'
 >;
 
-/** A toolbox entry whose `icon` may be a React element instead of an SVG string. */
-export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
+/** A toolbox entry whose `icon`/`title` may be a React element instead of a string. */
+export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon' | 'title'> & {
   /**
    * Toolbox icon. Accepts the markup string core consumes directly, or the same
    * React element rendered in the block body — the factory serializes elements
@@ -696,6 +708,16 @@ export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
    * serialization retries on the next browser-side access.
    */
   icon?: string | React.ReactElement;
+  /**
+   * Toolbox label. A plain string is translated by core through the
+   * `toolNames.*` namespace. A ReactElement instead renders live in the host's
+   * React tree (via the editor's shared BlockPortalHost), so the label tracks
+   * the host's OWN i18n — no mirroring strings into Blok's dictionary. Pair a
+   * ReactElement title with `titleKey` so multilingual search still resolves an
+   * English term. Requires `useBlok`/`BlokEditor` (which wires the portal
+   * registry); with vanilla core a ReactElement title is dropped.
+   */
+  title?: string | React.ReactElement;
 };
 
 /** Toolbox config for React blocks: single entry or several variants. */

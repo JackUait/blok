@@ -9,7 +9,7 @@ import {
   DEFAULT_LOCALE,
   loadLocale,
   getDirection,
-  ALL_LOCALE_CODES,
+  normalizeLocale,
   enMessages,
 } from '../i18n/locales';
 
@@ -278,7 +278,16 @@ export class I18n extends Module {
     if (requestedLocale === undefined || requestedLocale === 'auto') {
       await this.detectAndSetLocale();
     } else {
-      await this.setLocale(requestedLocale);
+      const normalized = normalizeLocale(requestedLocale);
+
+      if (normalized === null) {
+        console.warn(
+          `Unsupported locale "${requestedLocale}" in config.i18n.locale. Falling back to "${this.defaultLocale}".`
+        );
+        await this.setLocale(this.defaultLocale);
+      } else {
+        await this.setLocale(normalized);
+      }
     }
 
     // Merge custom messages on top of base translations (if provided)
@@ -347,12 +356,16 @@ export class I18n extends Module {
 
     if (locale === 'auto') {
       await this.detectAndSetLocale();
-    } else if (this.isLocaleSupported(locale)) {
-      await this.setLocale(locale);
     } else {
-      console.warn(`Unsupported locale "${locale}" passed to i18n.update(). Keeping "${previous}".`);
+      const normalized = normalizeLocale(locale);
 
-      return false;
+      if (normalized === null) {
+        console.warn(`Unsupported locale "${locale}" passed to i18n.update(). Keeping "${previous}".`);
+
+        return false;
+      }
+
+      await this.setLocale(normalized);
     }
 
     if (this.customMessages !== null) {
@@ -403,26 +416,28 @@ export class I18n extends Module {
 
   /**
    * Apply default locale from config if valid.
-   * The locale is type-checked at compile time via SupportedLocale type.
+   * Normalized through the shared BCP-47 normalizer so a region-tagged or
+   * aliased default (`'en-US'`, `'nb'`) resolves instead of being stored raw.
    */
-  private applyDefaultLocale(defaultLocale: SupportedLocale | undefined): void {
+  private applyDefaultLocale(defaultLocale: string | undefined): void {
     if (defaultLocale === undefined) {
       return;
     }
 
-    this.defaultLocale = defaultLocale;
+    const normalized = normalizeLocale(defaultLocale);
+
+    if (normalized === null) {
+      console.warn(`Unsupported defaultLocale "${defaultLocale}". Keeping "${this.defaultLocale}".`);
+
+      return;
+    }
+
+    this.defaultLocale = normalized;
   }
 
   /**
-   * Check if a locale code is supported.
-   * All 69 locales in ALL_LOCALE_CODES are supported.
-   */
-  private isLocaleSupported(locale: string): locale is SupportedLocale {
-    return ALL_LOCALE_CODES.includes(locale as SupportedLocale);
-  }
-
-  /**
-   * Detect best matching locale from browser settings
+   * Detect best matching locale from browser settings, using the shared
+   * normalizer so detection and explicit paths agree.
    */
   private detectBrowserLocale(): SupportedLocale {
     if (typeof navigator === 'undefined') {
@@ -436,7 +451,7 @@ export class I18n extends Module {
         continue;
       }
 
-      const matched = this.matchLanguageTag(lang);
+      const matched = normalizeLocale(lang);
 
       if (matched !== null) {
         return matched;
@@ -444,58 +459,5 @@ export class I18n extends Module {
     }
 
     return this.defaultLocale;
-  }
-
-  /**
-   * Match a browser language tag to a supported locale.
-   * All 69 locales are supported.
-   *
-   * @param languageTag - BCP 47 language tag (e.g., 'en-US', 'ru')
-   */
-  private matchLanguageTag(languageTag: string): SupportedLocale | null {
-    const normalized = languageTag.toLowerCase();
-    const chineseLocale = this.matchChineseLanguageTag(normalized);
-
-    if (chineseLocale !== null) {
-      return chineseLocale;
-    }
-
-    // Try exact match (e.g., 'ru')
-    if (this.isLocaleSupported(normalized)) {
-      return normalized;
-    }
-
-    // Try base language (e.g., 'en-US' -> 'en')
-    const baseLang = normalized.split('-')[0];
-
-    // `ku` is Blok's legacy public code for its Sorani/Central Kurdish catalog.
-    // Browsers use the canonical `ckb` tag, so normalize that tag before the
-    // generic supported-language fallback.
-    if (baseLang === 'ckb') {
-      return 'ku';
-    }
-
-    if (baseLang !== undefined && this.isLocaleSupported(baseLang)) {
-      return baseLang;
-    }
-
-    return null;
-  }
-
-  /**
-   * Preserve Chinese script and Taiwan region information before base-language fallback.
-   */
-  private matchChineseLanguageTag(normalized: string): SupportedLocale | null {
-    const parts = normalized.split('-');
-
-    if (parts[0] !== 'zh') {
-      return null;
-    }
-
-    if (parts.includes('tw') || parts.includes('hant')) {
-      return 'zh-TW';
-    }
-
-    return 'zh';
   }
 }

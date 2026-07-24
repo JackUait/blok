@@ -103,6 +103,39 @@ describe('createReactBlock end-to-end wiring', () => {
     unmount();
   });
 
+  it('injects a per-editor toolbox override when a react block has a ReactNode title', async () => {
+    const LocalizedTool = createReactBlock({
+      type: 'localized',
+      propSchema: {},
+      toolbox: { icon: '<svg></svg>', title: <span>Локализовано</span>, titleKey: 'localized' },
+      component: () => <div />,
+    });
+
+    const { unmount } = renderHook(() => useBlok({ tools: { localized: LocalizedTool } }));
+
+    await flushReady();
+
+    const tools = constructorConfigs[0].tools as Record<string, { toolbox?: unknown }>;
+    const toolbox = tools.localized.toolbox as Array<{ titleEl?: unknown }> | undefined;
+
+    expect(toolbox).toBeDefined();
+    expect(toolbox?.[0]?.titleEl).toBeInstanceOf(HTMLElement);
+
+    unmount();
+  });
+
+  it('does NOT add a toolbox override when a react block has only a string title', async () => {
+    const { unmount } = renderHook(() => useBlok({ tools: { probe: ReactTool } }));
+
+    await flushReady();
+
+    const tools = constructorConfigs[0].tools as Record<string, { toolbox?: unknown }>;
+
+    expect(tools.probe.toolbox).toBeUndefined();
+
+    unmount();
+  });
+
   it('does NOT inject a registry into a vanilla tool config', async () => {
     const { unmount } = renderHook(() =>
       useBlok({ tools: { probe: ReactTool, vanilla: { class: VanillaTool, config: { keep: 1 } } } })

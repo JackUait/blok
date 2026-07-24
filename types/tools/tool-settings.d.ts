@@ -18,9 +18,19 @@ export type ToolboxConfig = ToolboxConfigEntry | ToolboxConfigEntry[];
  */
 export interface ToolboxConfigEntry {
   /**
-   * Tool title for Toolbox (human-readable fallback)
+   * Tool title for Toolbox (human-readable fallback), translated via
+   * {@link titleKey}/the `toolNames.*` namespace.
    */
   title?: string;
+
+  /**
+   * A live host element rendered in place of the string {@link title} in the
+   * toolbox — a mutation-free node an adapter renders its own label into (e.g.
+   * a React portal driven by the host's i18n). Used as-is and NOT sent through
+   * the `toolNames.*` translation; pair it with {@link titleKey} so multilingual
+   * search still has an English term to match.
+   */
+  titleEl?: HTMLElement;
 
   /**
    * Translation key for the title (e.g., 'text', 'heading', 'bulletedList').

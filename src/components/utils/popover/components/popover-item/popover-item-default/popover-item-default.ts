@@ -265,6 +265,8 @@ export class PopoverItemDefault extends PopoverItem {
     const isNestedInline = renderParams?.isNestedInline ?? false;
 
     const title = params.title;
+    // A live host element (a portal target) wins over the string title.
+    const titleHost = params.titleEl;
 
     // Icon
     if (params.icon) {
@@ -273,7 +275,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
 
     // Title
-    if (title !== undefined) {
+    if (title !== undefined || titleHost !== undefined) {
       const titleEl = document.createElement('div');
 
       titleEl.className = params.secondaryLabel
@@ -281,7 +283,7 @@ export class PopoverItemDefault extends PopoverItem {
         : 'mr-auto whitespace-nowrap text-[13px] font-medium leading-5';
       titleEl.setAttribute(DATA_ATTR.popoverItemTitle, '');
       titleEl.setAttribute('data-blok-testid', 'popover-item-title');
-      titleEl.textContent = title;
+      PopoverItemDefault.setTitleContent(titleEl, titleHost ?? title ?? '');
 
       root.appendChild(titleEl);
       this.nodes.titleEl = titleEl;
@@ -381,6 +383,19 @@ export class PopoverItemDefault extends PopoverItem {
 
     container.replaceChildren();
     container.insertAdjacentHTML('afterbegin', icon);
+  }
+
+  /**
+   * Applies the item title into its container. A string becomes text; a live
+   * element is appended as-is with its node identity preserved, so an external
+   * renderer (e.g. a React portal) keeps owning it. Mirrors
+   * {@link PopoverItemDefault.setIconContent}.
+   *
+   * @param container - the title container element
+   * @param title - title text or live host element
+   */
+  private static setTitleContent(container: HTMLElement, title: string | HTMLElement): void {
+    container.replaceChildren(title instanceof HTMLElement ? title : document.createTextNode(title));
   }
 
   /**
@@ -660,11 +675,13 @@ export class PopoverItemDefault extends PopoverItem {
    * Restores the original title
    */
   private restoreOriginalTitle(): void {
-    if (!this.nodes.titleEl || this.params.title === undefined) {
+    const original = this.params.titleEl ?? this.params.title;
+
+    if (!this.nodes.titleEl || original === undefined) {
       return;
     }
 
-    this.nodes.titleEl.textContent = this.params.title;
+    PopoverItemDefault.setTitleContent(this.nodes.titleEl, original);
   }
 
   /**
@@ -715,7 +732,17 @@ export class PopoverItemDefault extends PopoverItem {
       return;
     }
 
-    this.nodes.titleEl.textContent = params.title;
+    /**
+     * Never stringify over a live host element (matches updateIcon): a
+     * confirmation state carries a string title, but writing it would detach
+     * the host element its external renderer (e.g. a React portal) still owns.
+     * The original element stays visible instead of the confirmation string.
+     */
+    if (this.params.titleEl !== undefined) {
+      return;
+    }
+
+    PopoverItemDefault.setTitleContent(this.nodes.titleEl, params.title);
   }
 
   /**

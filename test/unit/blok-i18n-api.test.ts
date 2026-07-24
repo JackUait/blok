@@ -120,6 +120,21 @@ describe('Blok i18n runtime API', () => {
     expect(editor.i18n.t('a11y.insertBlock')).toBe('Вставить блок');
   });
 
+  it('normalizes a region-tagged locale passed to update()', async () => {
+    const editor = await createEditor();
+
+    await editor.i18n.update({ locale: 'ru-RU' });
+
+    expect(editor.i18n.getLocale()).toBe('ru');
+    expect(editor.i18n.t('a11y.insertBlock')).toBe('Вставить блок');
+  });
+
+  it('normalizes a region-tagged locale passed via config.i18n.locale', async () => {
+    const editor = await createEditor({ i18n: { locale: 'ru-RU' } });
+
+    expect(editor.i18n.getLocale()).toBe('ru');
+  });
+
   it('applies host message overrides on top of the active locale', async () => {
     const editor = await createEditor();
 

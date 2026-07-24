@@ -61,8 +61,8 @@ export type ReactBlockViewProps<Data, Config = Record<string, unknown>> = Omit<
   'commit' | 'readOnly'
 >;
 
-/** A toolbox entry whose `icon` may be a React element instead of an SVG string. */
-export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
+/** A toolbox entry whose `icon`/`title` may be a React element instead of a string. */
+export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon' | 'title'> & {
   /**
    * Toolbox icon. Core's toolbox chrome consumes markup strings, but React
    * authors may pass the same element they render in the block body — the
@@ -71,6 +71,17 @@ export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon'> & {
    * returned as-is and serialization retries on the next browser-side access.
    */
   icon?: string | ReactElement;
+  /**
+   * Toolbox label. A plain string is translated by core through the
+   * `toolNames.*` namespace as usual. A ReactElement instead renders live in
+   * the HOST's React tree (via the editor's shared BlockPortalHost), so the
+   * label tracks the host's OWN i18n — no mirroring of strings into Blok's
+   * dictionary. Pair a ReactElement title with `titleKey` so multilingual
+   * search still resolves an English term. Requires the editor to be created
+   * through `useBlok`/`BlokEditor` (which wires the portal registry); a
+   * ReactElement title is dropped when the tool is used with vanilla core.
+   */
+  title?: string | ReactElement;
 };
 
 /** Toolbox config for React blocks: single entry or several variants. */
@@ -133,6 +144,13 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 }) & {
   readonly __isBlokReactBlock: true;
   readonly toolbox: ToolboxConfig | undefined;
+  /**
+   * Adapter-internal: builds a per-editor toolbox whose ReactElement titles are
+   * live portals registered in `registry`. Called by `useBlok`; returns
+   * undefined when no entry has a ReactElement title. Not part of the public
+   * tool contract.
+   */
+  __buildPortalToolbox(registry: BlockPortalRegistry, toolName: string): ToolboxConfig | undefined;
   readonly isReadOnlySupported: boolean;
 } {
   /**
@@ -162,35 +180,120 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
     return markup === '' ? null : markup;
   };
 
-  const convertToolbox = (): { value: ToolboxConfig | undefined; complete: boolean } => {
-    const status = { complete: true };
+  /**
+   * Convert one React toolbox entry to a core-valid entry: serialize a React
+   * icon to markup, and DROP a ReactElement title (core titles are
+   * string | HTMLElement only). A string title passes through untouched; the
+   * live element title is re-attached per-editor by `buildPortalToolbox`.
+   *
+   * `deferred` is true when icon serialization could not complete (SSR /
+   * mid-render) and must be retried; the entry is returned with its element
+   * icon left in place.
+   *
+   * @param entry - the authored React toolbox entry
+   */
+  const toCoreEntry = (
+    entry: ReactToolboxConfigEntry
+  ): { entry: ToolboxConfigEntry; deferred: boolean } => {
+    const { icon, title, ...rest } = entry;
+    const core: ToolboxConfigEntry = { ...(rest as ToolboxConfigEntry) };
 
-    const toEntry = (entry: ReactToolboxConfigEntry): ToolboxConfigEntry => {
-      if (!isValidElement(entry.icon)) {
-        return entry as ToolboxConfigEntry;
-      }
-
-      const markup = renderElementToMarkup(entry.icon);
-
-      if (markup === null) {
-        // Leave the element in place (a consumer reading `toolbox` outside the
-        // browser can still use it) and skip caching so a later browser-side
-        // access serializes it properly.
-        status.complete = false;
-
-        return entry as ToolboxConfigEntry;
-      }
-
-      return { ...entry, icon: markup };
-    };
-
-    if (spec.toolbox === undefined) {
-      return { value: undefined, complete: status.complete };
+    if (typeof title === 'string') {
+      core.title = title;
     }
 
-    const value = Array.isArray(spec.toolbox) ? spec.toolbox.map(toEntry) : toEntry(spec.toolbox);
+    if (!isValidElement(icon)) {
+      if (icon !== undefined) {
+        core.icon = icon;
+      }
 
-    return { value, complete: status.complete };
+      return { entry: core, deferred: false };
+    }
+
+    const markup = renderElementToMarkup(icon);
+
+    if (markup === null) {
+      // Serialization deferred (SSR / mid-render): leave the element in place
+      // and skip caching so a later browser-side access serializes it.
+      (core as ReactToolboxConfigEntry).icon = icon;
+
+      return { entry: core, deferred: true };
+    }
+
+    core.icon = markup;
+
+    return { entry: core, deferred: false };
+  };
+
+  const convertToolbox = (): { value: ToolboxConfig | undefined; complete: boolean } => {
+    if (spec.toolbox === undefined) {
+      return { value: undefined, complete: true };
+    }
+
+    const entries = Array.isArray(spec.toolbox) ? spec.toolbox : [spec.toolbox];
+    const converted = entries.map((entry) => toCoreEntry(entry));
+    const complete = converted.every((result) => !result.deferred);
+    const coreEntries = converted.map((result) => result.entry);
+    const value = Array.isArray(spec.toolbox) ? coreEntries : coreEntries[0];
+
+    return { value, complete };
+  };
+
+  /**
+   * Build a per-editor toolbox in which every ReactElement title is a live
+   * portal: a Blok-owned mutation-free host element registered in the editor's
+   * `registry`, into which the ReactNode renders through the shared
+   * BlockPortalHost — so the label tracks the host's own i18n.
+   *
+   * Returns undefined when no entry has a ReactElement title (nothing to
+   * override; the static string/`toolNames.*` path already covers it).
+   *
+   * @param registry - the editor's portal registry (from `useBlok`)
+   * @param toolName - the name the tool is registered under
+   */
+  const buildPortalToolbox = (
+    registry: BlockPortalRegistry,
+    toolName: string
+  ): ToolboxConfig | undefined => {
+    if (spec.toolbox === undefined) {
+      return undefined;
+    }
+
+    const entries = Array.isArray(spec.toolbox) ? spec.toolbox : [spec.toolbox];
+
+    // Nothing to override unless at least one entry has a ReactElement title;
+    // the static string/`toolNames.*` path already covers the rest.
+    if (!entries.some((entry) => isValidElement(entry.title))) {
+      return undefined;
+    }
+
+    return entries.map((entry, index): ToolboxConfigEntry => {
+      const { entry: core } = toCoreEntry(entry);
+
+      if (!isValidElement(entry.title)) {
+        return core;
+      }
+
+      const host = document.createElement('span');
+
+      host.setAttribute('data-blok-mutation-free', 'true');
+
+      const node = entry.title;
+      const TitleComponent: ComponentType<Record<string, unknown>> = (): ReactElement => <>{node}</>;
+
+      TitleComponent.displayName = `BlokToolboxTitle(${toolName})`;
+
+      // Unique within this per-editor registry; register() is idempotent, so a
+      // StrictMode double-build replaces rather than duplicates.
+      registry.register(`__blok-toolbox-title__:${toolName}:${index}`, {
+        hostEl: host,
+        component: TitleComponent,
+        props: {},
+        toolName,
+      });
+
+      return { ...core, titleEl: host };
+    });
   };
 
   /** Lazily-computed core-compatible toolbox (React element icons serialized once). */
@@ -245,6 +348,17 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
     public static get toolbox(): ToolboxConfig | undefined {
       return resolveToolbox();
+    }
+
+    /**
+     * Adapter-internal (see the return-type doc): builds the per-editor toolbox
+     * override whose ReactElement titles are live portals in `registry`.
+     */
+    public static __buildPortalToolbox(
+      registry: BlockPortalRegistry,
+      toolName: string
+    ): ToolboxConfig | undefined {
+      return buildPortalToolbox(registry, toolName);
     }
 
     /**

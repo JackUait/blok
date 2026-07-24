@@ -43,9 +43,15 @@ export interface I18nConfig {
   /**
    * Active locale code ('en', 'ru', etc.) or 'auto' to detect from browser.
    * All 69 locales are supported and will be loaded on-demand.
+   *
+   * Region- and script-tagged BCP-47 values (`'en-US'`, `'zh-Hant'`) and
+   * aliases (`'nb'`) are accepted too: they are normalized to a supported
+   * locale via {@link normalizeLocale}. The `SupportedLocale` members are kept
+   * in the union for editor autocomplete; the trailing `(string & {})` widens
+   * it to any tag without collapsing the literal suggestions.
    * @default 'auto'
    */
-  locale?: SupportedLocale | 'auto';
+  locale?: SupportedLocale | 'auto' | (string & {});
 
   /**
    * Custom dictionary that overrides locale-based translations.
@@ -60,7 +66,8 @@ export interface I18nConfig {
 
   /**
    * Fallback locale when detection fails or requested locale unavailable.
+   * Normalized like {@link I18nConfig.locale}.
    * @default 'en'
    */
-  defaultLocale?: SupportedLocale;
+  defaultLocale?: SupportedLocale | (string & {});
 }

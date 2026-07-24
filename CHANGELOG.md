@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.5](https://github.com/JackUait/blok/compare/v1.4.4...v1.4.5) (2026-07-25)
+
+### Features
+
+- **Migrate** — The legacy-format interpreter is now extensible from the host: `rules` entries are matched before the built-in grammar (so they can override it) while reusing container recursion, orphan re-parenting and 1:N splits; expanders may consume following siblings via `{ blocks, consumed }`; and passing `generateId` makes migration pure, so a document migrates to an equal result twice. Adds `migrate(data, options)` composing the data-rule and grammar passes in the correct order, `matchLegacyRule()` for per-block matching, and a `report` carrying `lossyFields`/`errors` instead of console-only warnings. Editor.js list v2 `meta` fields (`start`, `checked`) are now read.
+
+### Bug Fixes
+
+- **Migrate** — `config.migrations` now runs before format analysis, so `dataModel: 'auto'` inspects post-migration blocks instead of collapsing the document back to its legacy shape on save.
+- **Types** — `typesVersions` now maps the `migrate` subpath, fixing TS2307 for consumers on `moduleResolution: "node"`.
+
 ## [1.4.4](https://github.com/JackUait/blok/compare/v1.4.3...v1.4.4) (2026-07-25)
 
 ### Features

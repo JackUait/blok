@@ -95,11 +95,23 @@ export {
   I18nDictionary,
   I18nConfig,
   UserInfo,
+  OnReadyHandler,
+  OnChangeHandler,
+  OnSaveHandler,
+  OnErrorHandler,
+  OnEnterHandler,
+  OnSubmitHandler,
+  OnBeforeRenderHandler,
+  OnAfterRenderHandler,
+  OnThemeChangeHandler,
+  OnBeforePasteHandler,
+  BlokStyleConfig,
+  BlokLinkConfig,
 } from './configs';
 
 export * from './utils/popover';
 
-export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData} from './data-formats/output-data';
+export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData, BlokData} from './data-formats/output-data';
 export { flattenTree, BlockTreeSpec, FlattenTreeOptions } from './data-formats/block-tree';
 export {
   PropertyType,

@@ -3,6 +3,46 @@ import {BlockTuneData} from '../block-tunes/block-tune-data';
 import { BlockId } from './block-id';
 
 /**
+ * Adapts a block-data shape declared as a plain `interface` so it drops into
+ * the `Record<string, unknown>` block-`data` slot.
+ *
+ * The footgun: a TypeScript `interface` has no implicit index signature (it is
+ * open to declaration merging, so the compiler can't assume no incompatible
+ * members appear later), which makes it **not assignable** to
+ * `Record<string, unknown>`. A structurally identical `type` alias *is*
+ * assignable. So this compiles:
+ *
+ * ```ts
+ * type TaskData = { title: string };          // assignable to the slot
+ * ```
+ *
+ * but the same shape written as an `interface` does not, forcing consumers to
+ * rewrite it as a `type` alias (and often leave a load-bearing comment
+ * explaining why). There are three escape hatches:
+ *
+ * 1. Declare the data as a `type` alias instead of an `interface`.
+ * 2. `interface TaskData extends Record<string, unknown> { title: string }`.
+ * 3. Wrap the existing interface with `BlokData<T>` at the use site.
+ *
+ * `BlokData` re-projects `T` through a homomorphic mapped type, which the
+ * compiler treats as having an implicit index signature — so the result is
+ * assignable to the data slot while every declared key keeps its precise type
+ * (reading an unknown key still yields `unknown`). An existing interface value
+ * is assignable to `BlokData<T>` too, so no rewrite is needed.
+ *
+ * @example
+ * import type { BlokData, OutputBlockData } from '@bloklabs/core';
+ * interface TaskData { title: string; done: boolean }
+ * const block: OutputBlockData<'task', BlokData<TaskData>> = {
+ *   type: 'task',
+ *   data: { title: 'Ship it', done: false },
+ * };
+ *
+ * @template T - the interface (or object type) describing the block's data.
+ */
+export type BlokData<T> = { [K in keyof T]: T[K] };
+
+/**
  * Output of one Tool
  *
  * @template Type - the string literal describing a tool type

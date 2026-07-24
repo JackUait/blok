@@ -624,3 +624,39 @@ export interface BlokMountOptions {
  * identical to the pre-split BlokConfig — existing consumers compile unchanged.
  */
 export interface BlokConfig extends BlokMountOptions, BlokState {}
+
+/**
+ * Named aliases for the config's callback and nested-object members.
+ *
+ * A wrapper component (React/Vue/Angular props, a controlled-editor facade)
+ * that needs to type one of these handlers otherwise reaches in with
+ * `NonNullable<BlokConfig['onSave']>` / `BlokConfig['style']` index-access —
+ * which silently breaks the day a field is renamed or its shape is refactored.
+ * Bind to these stable names instead. Each is derived from the exact config
+ * member, so it can never drift from the option it aliases.
+ * ------------------------------------------------------------------------- */
+
+/** {@link BlokMountOptions.onReady} handler. */
+export type OnReadyHandler = NonNullable<BlokMountOptions['onReady']>;
+/** {@link BlokMountOptions.onChange} handler. */
+export type OnChangeHandler = NonNullable<BlokMountOptions['onChange']>;
+/** {@link BlokMountOptions.onSave} handler. */
+export type OnSaveHandler = NonNullable<BlokMountOptions['onSave']>;
+/** {@link BlokMountOptions.onError} handler. */
+export type OnErrorHandler = NonNullable<BlokMountOptions['onError']>;
+/** {@link BlokMountOptions.onEnter} handler. */
+export type OnEnterHandler = NonNullable<BlokMountOptions['onEnter']>;
+/** {@link BlokMountOptions.onSubmit} handler. */
+export type OnSubmitHandler = NonNullable<BlokMountOptions['onSubmit']>;
+/** {@link BlokMountOptions.onBeforeRender} handler. */
+export type OnBeforeRenderHandler = NonNullable<BlokMountOptions['onBeforeRender']>;
+/** {@link BlokMountOptions.onAfterRender} handler. */
+export type OnAfterRenderHandler = NonNullable<BlokMountOptions['onAfterRender']>;
+/** {@link BlokMountOptions.onThemeChange} handler. */
+export type OnThemeChangeHandler = NonNullable<BlokMountOptions['onThemeChange']>;
+/** {@link BlokMountOptions.onBeforePaste} handler. */
+export type OnBeforePasteHandler = NonNullable<BlokMountOptions['onBeforePaste']>;
+/** {@link BlokMountOptions.style} — the editor style/theming config object. */
+export type BlokStyleConfig = NonNullable<BlokMountOptions['style']>;
+/** {@link BlokMountOptions.link} — the anchor-building config object. */
+export type BlokLinkConfig = NonNullable<BlokMountOptions['link']>;

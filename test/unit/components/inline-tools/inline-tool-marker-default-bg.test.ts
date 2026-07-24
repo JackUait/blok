@@ -59,6 +59,28 @@ describe('MarkerInlineTool.sanitize — default page backgrounds', () => {
     expect(result).not.toMatch(/background-color/i);
   });
 
+  it.each(['#fefefe', '#fafafa', 'rgb(250, 250, 250)'])(
+    'strips near-white (but not exact-white) background-color %s from a pasted <mark>',
+    (value) => {
+      const result = sanitizeMarkHtml(`<mark style="background-color: ${value}">hello</mark>`);
+
+      expect(result).not.toMatch(/background-color/i);
+    }
+  );
+
+  it('strips a transparent-only background so no spurious empty <mark> style survives', () => {
+    const result = sanitizeMarkHtml('<mark style="background-color: transparent">hello</mark>');
+
+    expect(result).not.toMatch(/background-color/i);
+    expect(result).not.toMatch(/style=/i);
+  });
+
+  it('keeps Blok\'s pale gray highlight preset #f1f1ef (a real highlight, not invisible)', () => {
+    const result = sanitizeMarkHtml('<mark style="background-color: #f1f1ef">hello</mark>');
+
+    expect(result).toMatch(/background-color/i);
+  });
+
   it('preserves an intentional non-default background-color', () => {
     const result = sanitizeMarkHtml('<mark style="background-color: #fbecdd">hello</mark>');
 

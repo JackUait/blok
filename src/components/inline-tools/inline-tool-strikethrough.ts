@@ -18,5 +18,9 @@ export class StrikethroughInlineTool extends createSimpleMarkTool({
   shortcut: 'CMD+SHIFT+S',
   spec: {
     tag: 's',
+    // Legacy strikethrough tags: recognized as the same mark and whitelisted
+    // for paste so <del>/<strike> survive and normalize to canonical <s>
+    // (mirrors bold's ['b'] and italic's ['em']).
+    aliasTags: ['del', 'strike'],
   },
 }) {}

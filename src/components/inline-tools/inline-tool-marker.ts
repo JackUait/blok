@@ -13,7 +13,7 @@ import { createColorPicker } from '../shared/color-picker';
 import type { ColorPickerHandle } from '../shared/color-picker';
 import { colorVarName } from '../shared/color-presets';
 import { mapToNearestPresetName } from '../utils/color-mapping';
-import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../utils/default-page-colors';
+import { isInvisibleBackground } from '../utils/default-page-colors';
 
 /**
  * Color mode type — either text color or background color
@@ -110,13 +110,14 @@ export class MarkerInlineTool implements InlineTool {
         }
 
         /**
-         * Strip default page background-colors (white / near-black) so a
-         * pasted <mark> from another editor doesn't persist a bg that was
-         * really just the source page background.
+         * Strip invisible background-colors (transparent, near-white light-page
+         * bg, near-black dark-page bg) so a pasted <mark> from another editor
+         * (Notion/Word/Summernote/old Blok) doesn't persist a bg that produced
+         * no visible highlight — otherwise it lands as a spurious empty <mark>.
          */
         const bg = style.getPropertyValue('background-color');
 
-        if (bg && (isDefaultWhiteBackground(bg) || isDefaultDarkBackground(bg))) {
+        if (bg && isInvisibleBackground(bg)) {
           style.removeProperty('background-color');
         }
 

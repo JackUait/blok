@@ -158,9 +158,11 @@ export function createReactInlineTool<Config = Record<string, unknown>, State = 
 ): (new (options: InlineToolConstructorOptions) => InlineTool) & {
   readonly __isBlokReactInlineTool: true;
   readonly isInline: true;
+  readonly type: string;
   readonly title: string | undefined;
-  readonly titleKey: string | undefined;
+  readonly titleKey: string;
   readonly shortcut: string | undefined;
+  readonly mark: MarkSpec<State> | undefined;
   readonly sanitize: SanitizerConfig | undefined;
   readonly isReadOnlySupported: boolean;
 } {
@@ -169,16 +171,37 @@ export function createReactInlineTool<Config = Record<string, unknown>, State = 
     public static readonly __isBlokReactInlineTool = true as const;
     public static readonly isInline = true as const;
 
+    /** The tool's type name — also the default translation key and mark tag context. */
+    public static get type(): string {
+      return spec.type;
+    }
+
     public static get title(): string | undefined {
       return spec.title;
     }
 
-    public static get titleKey(): string | undefined {
-      return spec.titleKey;
+    /**
+     * Translation key core i18n resolves as `toolNames.{titleKey}`. Defaults to
+     * the tool `type` so a custom mark localizes through the conventional
+     * `toolNames.{type}` key (as built-in tools do) instead of silently falling
+     * to the un-translated capitalized tool name. When the consumer supplies no
+     * matching i18n entry, core still falls through to that same label — the
+     * default is a no-op there and never a regression.
+     */
+    public static get titleKey(): string {
+      return spec.titleKey ?? spec.type;
     }
 
     public static get shortcut(): string | undefined {
       return spec.shortcut;
+    }
+
+    /**
+     * The declared mark spec (if any). Exposed as a static so consumers can
+     * assert a tool's mark in unit tests without mocking the factory.
+     */
+    public static get mark(): MarkSpec<State> | undefined {
+      return spec.mark;
     }
 
     public static get sanitize(): SanitizerConfig | undefined {

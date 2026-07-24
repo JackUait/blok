@@ -19,7 +19,71 @@ describe('StrikethroughInlineTool', () => {
     expect(StrikethroughInlineTool.isInline).toBe(true);
     expect(StrikethroughInlineTool.title).toBe('Strikethrough');
     expect(StrikethroughInlineTool.titleKey).toBe('strikethrough');
-    expect(StrikethroughInlineTool.sanitize).toStrictEqual({ s: {} });
+    // Legacy strikethrough tags <del>/<strike> must survive paste sanitization
+    // (they are aliases of the canonical <s>, mirroring bold's <b>/<strong>).
+    expect(StrikethroughInlineTool.sanitize).toStrictEqual({ s: {}, del: {}, strike: {} });
+  });
+
+  describe('legacy alias tags', () => {
+    it.each(['del', 'strike'])('treats selection inside a <%s> tag as active', (tagName) => {
+      const container = document.createElement('div');
+      const alias = document.createElement(tagName);
+      const text = document.createTextNode('hello');
+
+      alias.appendChild(text);
+      container.appendChild(alias);
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+
+      range.selectNodeContents(alias);
+
+      const mockSelection = {
+        rangeCount: 1,
+        getRangeAt: vi.fn().mockReturnValue(range),
+      } as unknown as Selection;
+
+      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      expect(typeof config.isActive === 'function' && config.isActive()).toBe(true);
+
+      document.body.removeChild(container);
+    });
+
+    it.each(['del', 'strike'])('unwraps a <%s> alias when toggled off', (tagName) => {
+      const container = document.createElement('div');
+      const alias = document.createElement(tagName);
+      const text = document.createTextNode('hello');
+
+      alias.appendChild(text);
+      container.appendChild(alias);
+      document.body.appendChild(container);
+
+      const range = document.createRange();
+
+      range.selectNodeContents(alias);
+
+      const mockSelection = {
+        rangeCount: 1,
+        getRangeAt: vi.fn().mockReturnValue(range),
+        removeAllRanges: vi.fn(),
+        addRange: vi.fn(),
+      } as unknown as Selection;
+
+      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection);
+
+      const config = tool.render() as PopoverItemDefaultBaseParams;
+
+      (config.onActivate as () => void)();
+
+      expect(container.querySelector(tagName)).toBeNull();
+      expect(container.querySelector('s')).toBeNull();
+      expect(container.textContent).toBe('hello');
+
+      document.body.removeChild(container);
+    });
   });
 
   it('renders menu config with strikethrough icon and callbacks', () => {

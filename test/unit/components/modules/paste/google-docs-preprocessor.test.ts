@@ -84,6 +84,23 @@ describe('preprocessGoogleDocsHtml', () => {
       expect(result).not.toContain('<mark');
     });
 
+    it.each(['#fefefe', '#fafafa', 'rgb(250, 250, 250)'])(
+      'should treat near-white background %s as invisible (no spurious mark)',
+      (value) => {
+        const html = `<span style="color: rgb(0, 0, 0); background-color: ${value};">text</span>`;
+        const result = preprocessGoogleDocsHtml(html);
+
+        expect(result).not.toContain('<mark');
+      }
+    );
+
+    it('should still convert a genuine pale highlight #f1f1ef (near-white floor keeps it visible)', () => {
+      const html = '<span style="color: rgb(0, 0, 0); background-color: #f1f1ef;">gray highlight</span>';
+      const result = preprocessGoogleDocsHtml(html);
+
+      expect(result).toContain('<mark');
+    });
+
     it('should not convert dark mode browser clipboard span with near-black background to mark', () => {
       /**
        * When the browser natively copies text from a contenteditable in dark mode,

@@ -101,10 +101,38 @@ describe('createReactInlineTool', () => {
     expect(Tool.titleKey).toBe('descriptionColor');
   });
 
-  it('leaves titleKey undefined when the spec does not declare one', () => {
+  it('defaults titleKey to the spec type so a custom mark is localizable via toolNames.{type}', () => {
+    // Without a default, core i18n has no `toolNames.{type}` key to resolve and
+    // the label silently falls to the un-translated capitalized tool name.
+    // Defaulting to the type mirrors how built-in tools declare their titleKey
+    // (`bold`, `text`, …) and stays a no-op when the consumer has no i18n entry.
     const Tool = createReactInlineTool({ type: 'descriptionColor', component: ColorIcon });
 
-    expect(Tool.titleKey).toBeUndefined();
+    expect(Tool.titleKey).toBe('descriptionColor');
+  });
+
+  it('an explicit titleKey still wins over the type default', () => {
+    const Tool = createReactInlineTool({
+      type: 'descriptionColor',
+      titleKey: 'tools.custom.description',
+      component: ColorIcon,
+    });
+
+    expect(Tool.titleKey).toBe('tools.custom.description');
+  });
+
+  it('exposes the resolved type and mark spec as statics so consumers can unit-test without mocking the factory', () => {
+    const mark: MarkSpec = { tag: 'span', className: 'hl-description' };
+    const Tool = createReactInlineTool({ type: 'descriptionColor', component: ColorIcon, mark });
+
+    expect(Tool.type).toBe('descriptionColor');
+    expect(Tool.mark).toBe(mark);
+  });
+
+  it('static mark is undefined when the spec declares no mark', () => {
+    const Tool = createReactInlineTool({ type: 'descriptionColor', component: ColorIcon });
+
+    expect(Tool.mark).toBeUndefined();
   });
 
   it('render() returns a MenuConfig with a mutation-free host icon and registers ONE portal entry', () => {

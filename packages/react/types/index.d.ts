@@ -812,9 +812,9 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>, Sta
   title?: string;
   /**
    * Translation key for the toolbar label, resolved by core i18n as
-   * `toolNames.{titleKey}` (or used verbatim when it contains a dot). Without
-   * it a custom tool's label is only localizable through the legacy
-   * capitalized-tool-name fallback.
+   * `toolNames.{titleKey}` (or used verbatim when it contains a dot). Defaults
+   * to `type`, so a custom tool localizes through the conventional
+   * `toolNames.{type}` key (as built-in tools do) with no extra wiring.
    */
   titleKey?: string;
   /** The component rendered as the tool's toolbar icon/UI. */
@@ -872,7 +872,20 @@ export interface CreateReactInlineToolSpec<Config = Record<string, unknown>, Sta
  */
 export declare function createReactInlineTool<Config = Record<string, unknown>, State = void>(
   spec: CreateReactInlineToolSpec<Config, State>
-): InlineToolConstructable;
+): InlineToolConstructable & {
+  readonly __isBlokReactInlineTool: true;
+  readonly isInline: true;
+  /** The tool's type name (also the default `titleKey`). */
+  readonly type: string;
+  readonly title: string | undefined;
+  /** Translation key core resolves as `toolNames.{titleKey}`; defaults to `type`. */
+  readonly titleKey: string;
+  readonly shortcut: string | undefined;
+  /** The declared mark spec, exposed so tools can be unit-tested without mocking the factory. */
+  readonly mark: MarkSpec<State> | undefined;
+  readonly sanitize: SanitizerConfig | undefined;
+  readonly isReadOnlySupported: boolean;
+};
 
 /**
  * Tool-config key carrying the editor's portal registry into a

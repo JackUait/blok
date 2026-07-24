@@ -3,6 +3,7 @@ import { normalizeInlineMarkupIn } from '../../utils/inline-normalization';
 import {
   isDefaultDarkBackground as isDefaultDarkBackgroundShared,
   isDefaultWhiteBackground as isDefaultWhiteBackgroundShared,
+  isInvisibleBackground,
 } from '../../utils/default-page-colors';
 
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
@@ -433,16 +434,13 @@ function convertSpanToSemanticHtml(span: Element, isGoogleDocs: boolean): string
     ? color !== undefined && !isDefaultBlack(color)
     : color !== undefined && !isDefaultBlack(color) && !isDefaultLightText(color));
   /**
-   * Default page backgrounds (white/near-white, near-black) are filtered for both
-   * branches. Google Docs writes the page background-color onto every <span> in
-   * the clipboard payload — without this filter, the nearest-preset color mapping
-   * would attach a default-bg styled <mark> to every paragraph.
+   * Invisible backgrounds (transparent, near-white light-page bg, near-black
+   * dark-page bg) are filtered for both branches. Google Docs writes the page
+   * background-color onto every <span> in the clipboard payload — without this
+   * filter, the nearest-preset color mapping would attach a default-bg styled
+   * <mark> to every paragraph.
    */
-  const hasBgColor =
-    bgColor !== undefined &&
-    bgColor !== 'transparent' &&
-    !isDefaultWhiteBackground(bgColor) &&
-    !isDefaultDarkBackground(bgColor);
+  const hasBgColor = bgColor !== undefined && !isInvisibleBackground(bgColor);
 
   if (!isBold && !isItalic && !hasColor && !hasBgColor) {
     return null;

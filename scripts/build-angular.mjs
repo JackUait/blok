@@ -211,6 +211,7 @@ writeFileSync(
     `export * from './components/utils/blocks-tree';`,
     `export * from './components/utils/readonly-config';`,
     `export * from './shared/deep-equal';`,
+    `export * from './shared/output-data';`,
     `export * from './shared/prop-schema';`,
     `export * from './tools/nested-blocks';`,
     `export { DATA_ATTR } from './components/constants/data-attributes';`,

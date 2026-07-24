@@ -10,6 +10,9 @@ import type { BlokEventMap } from '../../events';
 import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
 import type { EventsDispatcher } from '../../utils/events';
+import { log } from '../../utils';
+import { applyBlockMigration } from '../../migration/block-migrations';
+import type { BlockMigrations } from '../../migration/block-migrations';
 import type { API } from '../api';
 
 import type { ComposeBlockOptions } from './types';
@@ -26,6 +29,11 @@ export interface BlockFactoryDependencies {
   tools: ToolsCollection<BlockToolAdapter>;
   /** All module instances */
   moduleInstances: BlokModules;
+  /**
+   * Host-supplied per-type block-migration rules from editor config
+   * (`config.migrations`). Applied at load, after each Tool's own `upgradeData`.
+   */
+  migrations?: BlockMigrations;
 }
 
 /**
@@ -81,11 +89,22 @@ export class BlockFactory {
     // a static `upgradeData`; a throwing hook falls back to the stored data.
     const upgradedData = tool.upgradeData(data ?? {});
 
+    // Apply the host's own config-level migration for this type on top of the
+    // Tool's `upgradeData` — the rules a host declares from the OUTSIDE for a
+    // tool it doesn't own (or its own tool without editing the class). A
+    // throwing rule falls back to the pre-migration data, never a blank editor.
+    const migratedData = applyBlockMigration(
+      name,
+      upgradedData,
+      this.dependencies.migrations,
+      (migratedType, error) => log(`Migration for block «${migratedType}» threw; loading the block with its stored data instead.`, 'warn', error)
+    );
+
     const block = new Block({
       id,
       // Wire DTOs (e.g. Editor.js backends) may carry `data: null`; the
       // destructuring default above only covers `undefined`.
-      data: upgradedData,
+      data: migratedData,
       tool,
       api: this.dependencies.API,
       readOnly: this.readOnlyState,

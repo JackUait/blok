@@ -4,6 +4,7 @@ import {API, Blok, LogLevels, LooseOutputData, OutputBlockData, OutputData} from
 import {SanitizerConfig} from './sanitizer-config';
 import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
+import type { BlockMigrations } from '../migrate';
 import type { UserInfo } from './user-info';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
@@ -177,7 +178,18 @@ export interface BlokMountOptions {
    */
   dataModel?: DataModelFormat;
 
-
+  /**
+   * Host-supplied per-type block migrations: `{ [blockType]: (data) => data }`.
+   *
+   * Each rule upgrades a block's stored `data` from an old shape to the current
+   * one, and is applied at load (after the Tool's own `upgradeData`). Unlike
+   * `upgradeData`, these rules live OUTSIDE the tool class — so a host can
+   * migrate a third-party tool it doesn't own, or its own tool without editing
+   * the class. Rules must be pure and idempotent; a throwing rule falls back to
+   * the stored data (never a blank editor). The same map can be passed to
+   * `migrateOutputData` from `@bloklabs/core/migrate` for offline batch upgrades.
+   */
+  migrations?: BlockMigrations;
 
   /**
    * First Block placeholder

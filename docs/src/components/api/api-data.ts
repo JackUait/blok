@@ -2358,6 +2358,30 @@ const blocks = needsLegacyMigration(stored.blocks)
         note:
           "For a data shape only a specific tool understands (a columns layout, a custom media envelope) that core's built-in migration can't read, give that tool a static `upgradeData(data)` — a pure function returning the tool's current data shape. Blok runs it at load, while composing each stored block, before the tool is constructed; a hook that throws is caught and the block loads with its stored data.",
       },
+      {
+        name: "migrations (config) & migrateOutputData(data, migrations)",
+        returnType: "OutputData",
+        description:
+          "Declare per-type \"old data shape → new data shape\" rules from OUTSIDE the tool class. Where `upgradeData` must live inside a tool you own, `migrations` is a map keyed by block type you pass in editor config — so you can migrate a third-party tool you don't control, or your own tool without editing (and re-shipping) its class. Each rule is a pure `(data) => data` transform (return the input unchanged, or `undefined`, when already current). Blok applies it at load, after the tool's own `upgradeData`; a throwing rule falls back to the stored data (never a blank editor). The same map works offline: pass it to `migrateOutputData(data, migrations)` (or `migrateBlocks(blocks, migrations)`) from `@bloklabs/core/migrate` to batch-upgrade persisted records without opening an editor. Available on all three framework adapters as the `migrations` prop/input.",
+        example: `// 1. At load, via editor config
+new Blok({
+  tools: { myCard: MyCard },
+  migrations: {
+    // key = block type; old shape → new shape
+    myCard: (data) => ('name' in data ? { ...data, title: data.name } : data),
+    image:  (data) => (data.file?.url ? { ...data, url: data.file.url } : data),
+  },
+});
+
+// 2. Offline / batch — same rules, no editor
+import { migrateOutputData } from '@bloklabs/core/migrate';
+
+const upgraded = migrateOutputData(storedDocument, {
+  myCard: (data) => ({ ...data, title: data.name }),
+});`,
+        note:
+          "Rules must be pure and idempotent — they run on every load, including on already-current data. Prefer `migrations` (config) for shapes a host decides from the outside; prefer a tool's own `upgradeData` for shapes only that tool understands. They compose: `upgradeData` runs first, then the config `migrations` rule for that type.",
+      },
     ],
   },
   {

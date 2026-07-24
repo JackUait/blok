@@ -14,6 +14,20 @@ import { expandToHierarchical } from '../components/utils/data-model-transform';
 import { analyzeLegacyFormat } from '../components/migration/legacy-grammar.mjs';
 
 /**
+ * Host-supplied per-type block migrations. Lets a host declare "old data shape →
+ * new data shape" rules for ANY block type from the outside — the same rules the
+ * editor accepts via `config.migrations`, usable here for offline batch upgrades.
+ */
+export {
+  migrateBlocks,
+  migrateOutputData,
+} from '../components/migration/block-migrations';
+export type {
+  BlockMigration,
+  BlockMigrations,
+} from '../components/migration/block-migrations';
+
+/**
  * Migrate legacy / Editor.js-style blocks into Blok's hierarchical
  * flat-with-references format.
  *

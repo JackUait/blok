@@ -47,6 +47,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'notifierPosition',
   'notifier',
   'width',
+  'migrations',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 /**

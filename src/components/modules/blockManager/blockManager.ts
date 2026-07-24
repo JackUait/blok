@@ -390,6 +390,7 @@ export class BlockManager extends Module {
         eventsDispatcher: this.eventsDispatcher,
         tools: this.Blok.Tools.blockTools,
         moduleInstances: this.Blok,
+        migrations: this.config.migrations,
       },
       this.bindBlockEvents.bind(this)
     );

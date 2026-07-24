@@ -3,6 +3,7 @@ import {
   migrateLegacyBlocks,
   migrateLegacyOutputData,
   needsLegacyMigration,
+  migrateOutputData,
 } from '../../../src/migrate';
 import type { OutputBlockData } from '../../../types';
 
@@ -78,5 +79,28 @@ describe('needsLegacyMigration', () => {
 
     expect(needsLegacyMigration(legacy)).toBe(true);
     expect(needsLegacyMigration(current)).toBe(false);
+  });
+});
+
+describe('migrateOutputData (host-supplied rules)', () => {
+  it('upgrades a custom block by type via a host rule while preserving the envelope', () => {
+    const saved = {
+      time: 42,
+      version: '1.0.0',
+      blocks: [
+        { id: 'a', type: 'myCard', data: { name: 'Old' } },
+        { id: 'b', type: 'paragraph', data: { text: 'keep' } },
+      ],
+    };
+
+    const migrated = migrateOutputData(saved, {
+      myCard: (data) => ({ ...data, title: (data as { name?: string }).name }),
+    });
+
+    expect(migrated.time).toBe(42);
+    expect(migrated.version).toBe('1.0.0');
+    expect(migrated.blocks[0].data).toEqual({ name: 'Old', title: 'Old' });
+    // Untouched block passes through unchanged.
+    expect(migrated.blocks[1].data).toEqual({ text: 'keep' });
   });
 });

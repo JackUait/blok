@@ -71,6 +71,8 @@ export const BlokEditor = defineComponent({
     onSubmit: { type: Function as PropType<BlokConfig['onSubmit']>, default: undefined },
     // Fire-and-forget error channel — a plain declared prop copied into config.
     onError: { type: Function as PropType<BlokConfig['onError']>, default: undefined },
+    /** Host-supplied per-type block migrations applied at load. */
+    migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

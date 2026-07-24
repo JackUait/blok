@@ -480,6 +480,73 @@ describe('BlockFactory', () => {
       // The tool is constructed with the UPGRADED data, not the stored data.
       expect(createSpy.mock.calls[0][0]).toEqual({ legacy: 'shape', migrated: true });
     });
+
+    it('applies a host-supplied config migration over stored data before construction', () => {
+      const migratingDependencies = createMockDependencies();
+
+      migratingDependencies.migrations = {
+        paragraph: (data) => ({ ...data, host: true }),
+      };
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+
+      const adapter = migratingFactory.getTool('paragraph');
+
+      if (adapter === undefined) {
+        throw new Error('paragraph tool is not registered in the test factory');
+      }
+
+      const createSpy = vi.spyOn(adapter, 'create');
+
+      migratingFactory.composeBlock({ tool: 'paragraph', data: { text: 'x' } });
+
+      expect(createSpy.mock.calls[0][0]).toEqual({ text: 'x', host: true });
+    });
+
+    it('runs the config migration AFTER the tool upgradeData hook', () => {
+      const migratingDependencies = createMockDependencies();
+
+      migratingDependencies.migrations = {
+        paragraph: (data) => ({ ...data, order: [...((data as { order?: string[] }).order ?? []), 'config'] }),
+      };
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+
+      const adapter = migratingFactory.getTool('paragraph');
+
+      if (adapter === undefined) {
+        throw new Error('paragraph tool is not registered in the test factory');
+      }
+
+      vi.spyOn(adapter, 'upgradeData')
+        .mockImplementation((data: BlockToolData) => ({ ...data, order: ['upgrade'] }));
+      const createSpy = vi.spyOn(adapter, 'create');
+
+      migratingFactory.composeBlock({ tool: 'paragraph', data: {} });
+
+      // upgradeData ran first, then the host config migration appended on top.
+      expect(createSpy.mock.calls[0][0]).toEqual({ order: ['upgrade', 'config'] });
+    });
+
+    it('falls back to the pre-migration data when a config migration throws', () => {
+      const migratingDependencies = createMockDependencies();
+
+      migratingDependencies.migrations = {
+        paragraph: () => { throw new Error('bad migration'); },
+      };
+      const migratingFactory = new BlockFactory(migratingDependencies, bindBlockEventsFn);
+
+      const adapter = migratingFactory.getTool('paragraph');
+
+      if (adapter === undefined) {
+        throw new Error('paragraph tool is not registered in the test factory');
+      }
+
+      const createSpy = vi.spyOn(adapter, 'create');
+
+      const block = migratingFactory.composeBlock({ tool: 'paragraph', data: { text: 'safe' } });
+
+      expect(block).toBeInstanceOf(Block);
+      expect(createSpy.mock.calls[0][0]).toEqual({ text: 'safe' });
+    });
   });
 
   describe('hasTool', () => {

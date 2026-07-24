@@ -201,6 +201,8 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
 
   // ---- Construction-only seed inputs (read once at construction) ----
   @Input() tools?: BlokConfig['tools'];
+  /** Host-supplied per-type block migrations applied at load (merged across layers). */
+  @Input() migrations?: BlokConfig['migrations'];
 
   /**
    * Escape hatch: a full config object for keys without a dedicated input
@@ -290,6 +292,16 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
       this.defaults.tools !== undefined
     ) {
       cfg.tools = { ...this.defaults.tools, ...this.config?.tools, ...this.tools };
+    }
+
+    // migration registries merge like tools: shared defaults compose with
+    // per-instance rules.
+    if (
+      this.migrations !== undefined ||
+      this.config?.migrations !== undefined ||
+      this.defaults.migrations !== undefined
+    ) {
+      cfg.migrations = { ...this.defaults.migrations, ...this.config?.migrations, ...this.migrations };
     }
 
     const data = this.data$();

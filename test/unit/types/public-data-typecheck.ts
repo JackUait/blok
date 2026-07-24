@@ -8,7 +8,7 @@
  */
 
 import type { Blok, BlokConfig, OutputData } from '../../../types';
-import { equalsOutputData, isEmptyOutputData } from '../../../types';
+import { equalsOutputData, isEmptyOutputData, normalizeOutputData, normalizeOutputBlocks } from '../../../types';
 import type { LooseOutputData, OutputBlockData } from '../../../types/data-formats/output-data';
 
 /** Resolves to `true` only when `T` is exactly `any`. */
@@ -55,3 +55,16 @@ const _isEmptyAcceptsLoose: boolean = isEmptyOutputData(dtoFromBackend);
 
 void _equalsAcceptsLoose;
 void _isEmptyAcceptsLoose;
+
+// The loose-wire normalizers must live on the STABLE main entry (not only the
+// no-semver `./adapters` entry): a consumer holding a backend DTO turns it into
+// strict OutputData without blind-casting `as OutputData` or hand-mapping (which
+// silently drops tunes/parent/content/indent). normalizeOutputData returns the
+// strict document shape; normalizeOutputBlocks returns strict blocks.
+const _normalizedDoc: OutputData = normalizeOutputData(dtoFromBackend);
+const _normalizedDocFromNull: OutputData = normalizeOutputData(null);
+const _normalizedBlocks: OutputBlockData[] = normalizeOutputBlocks(dtoFromBackend.blocks);
+
+void _normalizedDoc;
+void _normalizedDocFromNull;
+void _normalizedBlocks;

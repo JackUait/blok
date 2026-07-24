@@ -67,7 +67,7 @@ export { ColumnData } from './tools/column';
 // Block type → data registry (#10)
 // ---------------------------------------------------------------------------
 
-import { OutputBlockData } from './data-formats/output-data';
+import { LooseOutputData, OutputBlockData, OutputData } from './data-formats/output-data';
 import { ParagraphData as _ParagraphData } from './tools/paragraph';
 import { HeaderData as _HeaderData } from './tools/header';
 import { ListData as _ListData } from './tools/list';
@@ -148,6 +148,27 @@ export function isBlockType<K extends keyof BlokBlockDataMap>(
   block: OutputBlockData,
   type: K,
 ): block is OutputBlockData<K, BlokBlockDataMap[K]>;
+
+/**
+ * Collects every saved block of a given type from a document, typing each
+ * result's `data` via {@link BlokBlockDataMap} instead of
+ * `Record<string, unknown>`. The null-tolerant, collection counterpart of
+ * {@link isBlockType} — replaces the `(data?.blocks ?? []).filter(...)` +
+ * `data as XData` cast every feature re-does. Narrows off the augmentable
+ * registry, so custom tools registered via declaration merging are typed too.
+ *
+ * @example
+ * const headers = blocksOfType(editor.save(), 'header');
+ * headers[0].data.level; // number — no cast
+ *
+ * @param data - a saved document (e.g. from `editor.save()`); nullish tolerated.
+ * @param type - a registered block type (a {@link BlokBlockDataMap} key).
+ * @returns the matching blocks, with `data` typed for `type`.
+ */
+export function blocksOfType<K extends keyof BlokBlockDataMap>(
+  data: OutputData | LooseOutputData | null | undefined,
+  type: K,
+): Array<OutputBlockData<K, BlokBlockDataMap[K]>>;
 
 // Inline tools
 export const Bold: InlineToolConstructable;

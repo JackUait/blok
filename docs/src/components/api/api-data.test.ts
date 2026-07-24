@@ -890,20 +890,37 @@ describe("loose wire-shape input and OutputData utilities", () => {
     expect(prop!.description).toContain("data-blok-rendered");
   });
 
-  it("output-data section documents equalsOutputData and isEmptyOutputData with examples", () => {
+  it("output-data section documents the predicates and normalizers with examples", () => {
     const methods = findSection("output-data")?.methods ?? [];
     const names = methods.map((m) => m.name);
     expect(names).toContain("equalsOutputData(a, b)");
     expect(names).toContain("isEmptyOutputData(data)");
+    // The loose-wire normalizers must be documented on the stable main entry
+    // (not only the no-semver ./adapters entry) so consumers stop blind-casting
+    // backend DTOs as OutputData.
+    expect(names).toContain("normalizeOutputData(data)");
+    expect(names).toContain("normalizeOutputBlocks(blocks)");
     for (const method of methods) {
       expect(method.example).toBeDefined();
       expect(method.example!).toContain("@bloklabs/core");
-      expect(method.returnType).toBe("boolean");
+      expect(method.returnType).toBeDefined();
     }
+    // The predicates answer yes/no questions.
+    const predicates = ["equalsOutputData(a, b)", "isEmptyOutputData(data)"];
+    for (const name of predicates) {
+      expect(methods.find((m) => m.name === name)!.returnType).toBe("boolean");
+    }
+    // The normalizers hand back the strict saved shapes.
+    expect(methods.find((m) => m.name === "normalizeOutputData(data)")!.returnType).toBe("OutputData");
+    expect(methods.find((m) => m.name === "normalizeOutputBlocks(blocks)")!.returnType).toBe("OutputBlockData[]");
     const equals = methods.find((m) => m.name === "equalsOutputData(a, b)");
     // Equality ignores the volatile envelope fields — the load-bearing fact.
     expect(equals!.description).toMatch(/time/);
     expect(equals!.description).toMatch(/version/);
+    // Normalization preserves hierarchy/tunes a hand-written mapper would drop.
+    const normalize = methods.find((m) => m.name === "normalizeOutputData(data)");
+    expect(normalize!.description).toMatch(/tunes/);
+    expect(normalize!.description).toMatch(/parent/);
   });
 
   it("output-data section description mentions the loose input variant", () => {

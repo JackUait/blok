@@ -39,6 +39,8 @@ describe("view renderer section", () => {
     expect(names).toEqual([
       "blocksToHtml(data, options?)",
       "blocksToPlainText(data, options?)",
+      "htmlTextContent(html)",
+      "outlineFromOutputData(data)",
       "defineBlokSchema(config)",
       "blocksToViewNodes(data, options?)",
       "BlokView",

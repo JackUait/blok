@@ -2274,6 +2274,60 @@ const data = await editor.save();
 submitButton.disabled = isEmptyOutputData(data);
 // → true for a fresh editor holding one blank paragraph`,
       },
+      {
+        name: "normalizeOutputData(data)",
+        returnType: "OutputData",
+        description:
+          "Normalizes a whole loose backend DTO into the strict saved OutputData shape, exported from the main entry. A nullish document becomes `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each block is normalized so `null`/missing `data` becomes `{}` and `null`/empty ids are dropped for regeneration. Unlike a hand-written `blocks.map(...)` mapper it preserves every passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata — so hierarchy and tunes are never silently lost. Idempotent: a strict document passes through unchanged.",
+        example: `import { normalizeOutputData } from '@bloklabs/core';
+
+// A loose Editor.js-era DTO (data: null, id: null) from your backend
+const strict = normalizeOutputData(dtoFromApi);
+// → strict OutputData, safe to persist or diff — no blind \`as OutputData\` cast`,
+      },
+      {
+        name: "normalizeOutputBlocks(blocks)",
+        returnType: "OutputBlockData[]",
+        description:
+          "Block-level counterpart of normalizeOutputData, exported from the main entry: normalizes an array of loose wire blocks into the strict saved shape (`null`/missing `data` → `{}`, `null`/empty `id` dropped for regeneration) while passing every other field through untouched. Use normalizeOutputData when you hold the whole document envelope.",
+        example: `import { normalizeOutputBlocks } from '@bloklabs/core';
+
+const blocks = normalizeOutputBlocks(looseBlocksFromApi);
+// → OutputBlockData[] with tunes/parent/content/indent intact`,
+      },
+      {
+        name: "EMPTY_OUTPUT_DATA",
+        returnType: "OutputData",
+        description:
+          "A shared, deeply frozen empty document (`{ blocks: [] }`), exported from the main entry. Use it in place of a hand-written `{ blocks: [] }` literal for cleared/pristine baselines. Frozen (blocks array included) so a shared reference can never be mutated into a stale non-empty baseline.",
+        example: `import { EMPTY_OUTPUT_DATA, equalsOutputData } from '@bloklabs/core';
+
+const saved = await editor.save();
+const isPristine = equalsOutputData(saved, EMPTY_OUTPUT_DATA, {
+  ignoreEmptyDefaultBlocks: true,
+});`,
+      },
+      {
+        name: "toRenderableData(data)",
+        returnType: "OutputData | LooseOutputData",
+        description:
+          "Maps a controlled `data` value to something render()/blocks.render() accepts, exported from the main entry: a whole-document `null` (a controlled \"clear to empty\") becomes `{ blocks: [] }`; any real document passes through untouched. render()'s strict guard reads `data.blocks` and would throw on `null`, so route a nullable controlled value through this first.",
+        example: `import { toRenderableData } from '@bloklabs/core';
+
+// \`draft\` may be null when the host clears the document
+await editor.blocks.render(toRenderableData(draft));`,
+      },
+      {
+        name: "createEmittedEchoWindow(capacity?)",
+        returnType: "{ record; matches; clear }",
+        description:
+          "Creates a bounded window of recently emitted onSave payloads for recognizing controlled-`data` echoes, exported from the main entry. Deduping against only the LAST emitted payload is not enough: a host that persists on save and refetches can hand back a STALE echo (an earlier save arriving after a newer one already replaced the baseline), and re-rendering it would clobber the caret and any content typed since. Matching is structural (equalsOutputData), so envelopes reshaped in transit (fresh `time`, stripped ids) still count as echoes.",
+        example: `import { createEmittedEchoWindow } from '@bloklabs/core';
+
+const echoes = createEmittedEchoWindow();
+// in onSave: echoes.record(data)
+// before re-rendering incoming props: if (echoes.matches(next)) return;`,
+      },
     ],
   },
   {
@@ -2934,6 +2988,25 @@ const html = blocksToHtml(savedData, {
 
 // A 160-character preview for a card or meta description
 const preview = blocksToPlainText(savedData).slice(0, 160);`,
+      },
+      {
+        name: "htmlTextContent(html)",
+        returnType: "string",
+        description:
+          "Extract the plain text of an HTML fragment — synchronous and DOM-free, the view renderer's replacement for element.textContent. Entities are decoded (`a &lt; b` → `a < b`) and `<br>` becomes a newline. Use it instead of hand-rolling a DOMParser strip (which needs a DOM) when reducing an inline-HTML field to text.",
+        example: `import { htmlTextContent } from '@bloklabs/core/view';
+
+htmlTextContent('<b>Intro</b> &amp; more'); // → 'Intro & more'`,
+      },
+      {
+        name: "outlineFromOutputData(data)",
+        returnType: "OutlineItem[]",
+        description:
+          "Extract the heading outline of a saved document — the source for a table of contents. Synchronous and DOM-free: walks the document in reading order (top-level blocks, then structural children), picks header blocks, and reduces each heading's inline HTML to plain text. Each item is { id?, level, text } — the block id drives anchor links / scroll targets, so no separate DOMParser pass is needed. Headings with empty text are skipped.",
+        example: `import { outlineFromOutputData } from '@bloklabs/core/view';
+
+const toc = outlineFromOutputData(savedData);
+// → [{ id: 'h1', level: 1, text: 'Getting Started' }, ...]`,
       },
       {
         name: "defineBlokSchema(config)",

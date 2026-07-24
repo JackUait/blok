@@ -9,6 +9,9 @@
 export { blocksToHtml } from './blocks-to-html';
 export type { BlocksToHtmlOptions, ViewBlockRenderer, ViewRenderContext } from './blocks-to-html';
 export { blocksToPlainText } from './blocks-to-plain-text';
+export { htmlTextContent } from './html-text';
+export { outlineFromOutputData } from './outline';
+export type { OutlineItem } from './outline';
 /**
  * `blocksToViewNodes` and the `ViewNode` tree are `@experimental` — not
  * frozen until a second framework adapter consumes them.

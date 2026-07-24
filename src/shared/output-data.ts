@@ -161,6 +161,19 @@ export function createEmittedEchoWindow(capacity: number = 20): {
 }
 
 /**
+ * A shared, deeply frozen empty document. Consumers persisting editor content
+ * repeatedly hand-write `{ blocks: [] }` for cleared/pristine baselines; this
+ * is the canonical value to use instead. Frozen (blocks array included) so a
+ * shared reference can never be mutated into a stale non-empty baseline.
+ */
+export const EMPTY_OUTPUT_DATA: OutputData = Object.freeze({
+  // Freeze the array too, so a shared reference can't be mutated. The public
+  // `blocks` type is mutable (`OutputBlockData[]`), so the frozen (readonly)
+  // array is re-widened through `unknown` — runtime stays frozen.
+  blocks: Object.freeze([]) as unknown as OutputBlockData[],
+});
+
+/**
  * Maps a controlled `data` value to something the editor's `render()` accepts.
  * A whole-document `null` — a controlled "clear to empty" — becomes
  * `{ blocks: [] }`; any real document passes through untouched.
@@ -194,6 +207,33 @@ export function normalizeOutputBlocks(blocks: Array<OutputBlockData | LooseOutpu
       data: data ?? {},
     };
   });
+}
+
+/**
+ * Normalizes a whole loose wire document into the strict saved
+ * {@link OutputData} shape at an input boundary. A nullish document becomes
+ * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each
+ * block is passed through {@link normalizeOutputBlocks}, so `null`/missing
+ * `data` becomes `{}` and `null`/empty ids are dropped for regeneration.
+ *
+ * Unlike a hand-written `blocks.map(...)` mapper, this preserves every block
+ * passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata —
+ * so a backend DTO can be turned into strict `OutputData` without silently
+ * losing hierarchy or tunes. Idempotent: a strict document passes through
+ * unchanged (shallow-copied).
+ * @param data - a document in the strict or loose wire shape, or nullish
+ * @returns the document in the strict saved shape
+ */
+export function normalizeOutputData(data: AnyOutputData): OutputData {
+  if (data === null || data === undefined) {
+    return { blocks: [] };
+  }
+
+  return {
+    ...(typeof data.version === 'string' ? { version: data.version } : {}),
+    ...(typeof data.time === 'number' ? { time: data.time } : {}),
+    blocks: normalizeOutputBlocks(data.blocks),
+  };
 }
 
 /**

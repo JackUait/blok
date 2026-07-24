@@ -45,6 +45,7 @@ export { Bookmark } from './link/bookmark';
 // Tool-authoring helpers
 export { defineTool } from './define-tool';
 export { isBlockType } from './is-block-type';
+export { blocksOfType } from './blocks-of-type';
 
 // Inline tools
 export { BoldInlineTool as Bold } from '../components/inline-tools/inline-tool-bold';

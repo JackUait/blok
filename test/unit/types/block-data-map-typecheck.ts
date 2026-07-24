@@ -11,9 +11,9 @@
  * is the single guard that narrows `block.data` off it.
  */
 
-import { isBlockType } from '../../../types/tools-entry';
+import { blocksOfType, isBlockType } from '../../../types/tools-entry';
 import type { BlokBlockDataMap } from '../../../types/tools-entry';
-import type { OutputBlockData } from '../../../types/data-formats/output-data';
+import type { OutputBlockData, OutputData } from '../../../types/data-formats/output-data';
 
 declare const block: OutputBlockData;
 
@@ -22,6 +22,16 @@ if (isBlockType(block, 'header')) {
   const level: number = block.data.level;
   void level;
 }
+
+// The collection helper narrows every result's `data` off the registry too —
+// no `data as HeaderData` cast, and it is null-tolerant at the call site.
+declare const doc: OutputData | null | undefined;
+const headers = blocksOfType(doc, 'header');
+const firstLevel: number | undefined = headers[0]?.data.level;
+void firstLevel;
+
+// @ts-expect-error - 'not-a-tool' is not a BlokBlockDataMap key
+void blocksOfType(doc, 'not-a-tool');
 
 if (isBlockType(block, 'table')) {
   // TableData carries `content`; property access is typed, not `unknown`.

@@ -772,11 +772,23 @@ export { markSanitizerConfig } from './components/marks/mark-engine';
 export { BlockRendered, BlocksRendered } from './components/events';
 
 /**
- * Structural comparison and emptiness predicates for saved documents.
- * Semver-guaranteed so consumers never hand-write deep equality for the
- * `data → render → onSave → data` echo round-trip or emptiness gating.
+ * Structural comparison and emptiness predicates for saved documents, the
+ * loose-wire normalizers, the shared empty-document constant, and the
+ * `onSave`-echo window. Semver-guaranteed so consumers never hand-write deep
+ * equality for the `data → render → onSave → data` echo round-trip, emptiness
+ * gating, a `null`-stripping DTO mapper (which silently drops
+ * tunes/parent/content/indent), a `{ blocks: [] }` empty-document literal, or a
+ * controlled-echo dedupe window.
  */
-export { equalsOutputData, isEmptyOutputData } from './shared/output-data';
+export {
+  EMPTY_OUTPUT_DATA,
+  createEmittedEchoWindow,
+  equalsOutputData,
+  isEmptyOutputData,
+  normalizeOutputData,
+  normalizeOutputBlocks,
+  toRenderableData,
+} from './shared/output-data';
 
 /**
  * Pure hierarchical-spec flattener: turn `children`-nested block specs into the

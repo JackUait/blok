@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { equalsOutputData, isEmptyOutputData, normalizeOutputBlocks } from '../../../src/shared/output-data';
+import {
+  EMPTY_OUTPUT_DATA,
+  equalsOutputData,
+  isEmptyOutputData,
+  normalizeOutputBlocks,
+  normalizeOutputData,
+  toRenderableData,
+} from '../../../src/shared/output-data';
 
 import type { OutputData } from '../../../types';
 
@@ -143,6 +150,93 @@ describe('normalizeOutputBlocks', () => {
     expect(normalized).toEqual([
       { id: 'b1', type: 'table', data: { content: [] }, parent: 'p1', tunes: { align: 'center' } },
     ]);
+  });
+});
+
+describe('normalizeOutputData', () => {
+  it('normalizes a whole loose document into the strict saved shape', () => {
+    const normalized = normalizeOutputData({
+      time: 123,
+      version: '2.29.0',
+      blocks: [
+        { id: null, type: 'paragraph', data: null },
+        { id: 'a1', type: 'header', data: { text: 'Title', level: 2 } },
+      ],
+    });
+
+    expect(normalized).toEqual({
+      time: 123,
+      version: '2.29.0',
+      blocks: [
+        { type: 'paragraph', data: {} },
+        { id: 'a1', type: 'header', data: { text: 'Title', level: 2 } },
+      ],
+    });
+  });
+
+  it('coerces a nullish document to an empty strict document', () => {
+    expect(normalizeOutputData(null)).toEqual({ blocks: [] });
+    expect(normalizeOutputData(undefined)).toEqual({ blocks: [] });
+  });
+
+  it('strips null envelope fields (time/version) instead of carrying them through', () => {
+    const normalized = normalizeOutputData({ time: null, version: null, blocks: [] });
+
+    expect(normalized).toEqual({ blocks: [] });
+    expect('time' in normalized).toBe(false);
+    expect('version' in normalized).toBe(false);
+  });
+
+  it('preserves tunes/parent/content/indent that a hand-written mapper would drop', () => {
+    const normalized = normalizeOutputData({
+      blocks: [
+        {
+          id: 'b1',
+          type: 'table',
+          data: { content: [] },
+          parent: 'p1',
+          content: ['c1', 'c2'],
+          indent: 2,
+          tunes: { align: 'center' },
+        },
+      ],
+    });
+
+    expect(normalized.blocks[0]).toEqual({
+      id: 'b1',
+      type: 'table',
+      data: { content: [] },
+      parent: 'p1',
+      content: ['c1', 'c2'],
+      indent: 2,
+      tunes: { align: 'center' },
+    });
+  });
+});
+
+describe('EMPTY_OUTPUT_DATA', () => {
+  it('is a shareable empty document consumers can use instead of a `{ blocks: [] }` literal', () => {
+    expect(EMPTY_OUTPUT_DATA).toEqual({ blocks: [] });
+    expect(isEmptyOutputData(EMPTY_OUTPUT_DATA)).toBe(true);
+    expect(equalsOutputData(EMPTY_OUTPUT_DATA, { blocks: [] })).toBe(true);
+  });
+
+  it('is deeply frozen so a shared reference can never be mutated', () => {
+    expect(Object.isFrozen(EMPTY_OUTPUT_DATA)).toBe(true);
+    expect(Object.isFrozen(EMPTY_OUTPUT_DATA.blocks)).toBe(true);
+    expect(() => (EMPTY_OUTPUT_DATA.blocks as unknown[]).push({})).toThrow();
+  });
+});
+
+describe('toRenderableData', () => {
+  it('maps a controlled `null` (clear-to-empty) to an empty document render() accepts', () => {
+    expect(toRenderableData(null)).toEqual({ blocks: [] });
+  });
+
+  it('passes a real document through untouched', () => {
+    const document = doc([{ id: 'b1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+    expect(toRenderableData(document)).toBe(document);
   });
 });
 

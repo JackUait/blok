@@ -32,7 +32,7 @@ import { CalloutTool as Callout } from './tools/callout';
 import { CodeTool as Code } from './tools/code';
 import { ToggleItem as Toggle } from './tools/toggle';
 
-export { Blok, version, DATA_ATTR, equalsOutputData, isEmptyOutputData } from './blok';
+export { Blok, version, DATA_ATTR, EMPTY_OUTPUT_DATA, createEmittedEchoWindow, equalsOutputData, isEmptyOutputData, normalizeOutputData, normalizeOutputBlocks, toRenderableData } from './blok';
 
 // Re-export all tools
 export {

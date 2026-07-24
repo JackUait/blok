@@ -81,6 +81,46 @@ export declare function blocksToPlainText(
 ): string;
 
 /**
+ * Extract the plain text of an HTML fragment — synchronous and DOM-free, the
+ * view renderer's replacement for `element.textContent`. Entities are decoded
+ * (`a &lt; b` → `a < b`) and `<br>` becomes a newline. Consumers building a
+ * table of contents or previews otherwise hand-roll a DOMParser strip.
+ *
+ * @param html - fragment markup
+ * @returns the fragment's plain text ('' for an empty fragment)
+ */
+export declare function htmlTextContent(html: string): string;
+
+/**
+ * One entry in a document outline (see {@link outlineFromOutputData}).
+ */
+export interface OutlineItem {
+  /**
+   * The heading block's id, for anchor links / scroll targets. Absent when the
+   * heading block carries no id.
+   */
+  id?: string;
+  /** Heading level (the header block's `level`, clamped to 1–6). */
+  level: number;
+  /** Plain-text heading label (inline HTML entity-decoded, tags stripped). */
+  text: string;
+}
+
+/**
+ * Extract the heading outline of a saved Blok document, synchronously and
+ * DOM-free — the source for a table of contents. Walks the document in reading
+ * order (top-level blocks, then structural children), picks `header` blocks,
+ * and reduces each heading's inline HTML to plain text ({@link htmlTextContent}).
+ * Headings with empty (or whitespace-only) text are skipped.
+ *
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @returns outline items in document reading order ([] for heading-less/malformed documents)
+ */
+export declare function outlineFromOutputData(
+  data: OutputData | LooseOutputData | null | undefined
+): OutlineItem[];
+
+/**
  * An element in the view tree: lowercase tag name, sanitized attributes as a
  * plain string record, ordered children.
  *

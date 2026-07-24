@@ -41,7 +41,7 @@ import {
   EditorI18n,
 } from './api';
 
-import { LooseOutputData, OutputData } from './data-formats';
+import { LooseOutputData, LooseOutputBlockData, OutputData, OutputBlockData } from './data-formats';
 import { BlockMutationEvent, BlockMutationEventMap, BlockMutationType } from './events/block';
 import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdded';
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
@@ -263,6 +263,75 @@ export function equalsOutputData(
  * @param data - document to inspect
  */
 export function isEmptyOutputData(data: OutputData | LooseOutputData | null | undefined): boolean;
+
+/**
+ * Normalizes a whole loose wire document into the strict saved
+ * {@link OutputData} shape at an input boundary. A nullish document becomes
+ * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each
+ * block is normalized (see {@link normalizeOutputBlocks}), so `null`/missing
+ * `data` becomes `{}` and `null`/empty ids are dropped for regeneration.
+ *
+ * Unlike a hand-written `blocks.map(...)` mapper, this preserves every block
+ * passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata —
+ * so a backend DTO can be turned into strict `OutputData` without silently
+ * losing hierarchy or tunes. Idempotent: a strict document passes through
+ * unchanged (shallow-copied).
+ * @param data - a document in the strict or loose wire shape, or nullish
+ */
+export function normalizeOutputData(data: OutputData | LooseOutputData | null | undefined): OutputData;
+
+/**
+ * Normalizes blocks from the loose wire shape into the strict saved shape: a
+ * `null`/missing `data` becomes `{}`, a `null`/empty `id` is dropped so the
+ * block factory generates a fresh one. All other fields
+ * (`tunes`/`parent`/`content`/`indent`/edit metadata) pass through untouched.
+ * Idempotent — strict blocks pass through unchanged (shallow-copied). Use
+ * {@link normalizeOutputData} to normalize a whole document envelope.
+ * @param blocks - blocks in either the strict or the loose wire shape
+ */
+export function normalizeOutputBlocks(
+  blocks: Array<OutputBlockData | LooseOutputBlockData>
+): OutputBlockData[];
+
+/**
+ * A shared, deeply frozen empty document. Use in place of a hand-written
+ * `{ blocks: [] }` literal for cleared/pristine baselines. Frozen (blocks array
+ * included) so a shared reference can never be mutated into a stale non-empty
+ * baseline.
+ */
+export const EMPTY_OUTPUT_DATA: OutputData;
+
+/**
+ * Maps a controlled `data` value to something `render()` / `blocks.render()`
+ * accepts: a whole-document `null` (a controlled "clear to empty") becomes
+ * `{ blocks: [] }`; any real document passes through untouched. `render()`'s
+ * strict guard reads `data.blocks` and would throw on `null`, so route a
+ * nullable controlled value through this first.
+ * @param data - a controlled document, or `null` for an empty document
+ */
+export function toRenderableData(
+  data: OutputData | LooseOutputData | null,
+): OutputData | LooseOutputData;
+
+/**
+ * Creates a bounded window of recently emitted `onSave` payloads for
+ * recognizing controlled-`data` echoes. Deduping against only the LAST emitted
+ * payload is not enough: a host that persists on save and refetches can hand
+ * back a STALE echo (an earlier save arriving after a newer one already
+ * replaced the baseline), and re-rendering it would clobber the caret and any
+ * content typed since. Matching is structural ({@link equalsOutputData}), so
+ * envelopes reshaped in transit (fresh `time`, stripped ids) still count as
+ * echoes.
+ * @param capacity - payloads retained before the oldest is evicted (default 20)
+ */
+export function createEmittedEchoWindow(capacity?: number): {
+  /** Records a payload the editor emitted via `onSave`. */
+  record(data: OutputData | LooseOutputData): void;
+  /** True when the document content-equals any recorded payload. */
+  matches(data: OutputData | LooseOutputData | null | undefined): boolean;
+  /** Forgets all recorded payloads (external content took over). */
+  clear(): void;
+};
 
 /**
  * Composes a base sanitizer config from a list of per-tool sanitize configs

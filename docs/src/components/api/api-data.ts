@@ -2134,11 +2134,20 @@ editor.listeners.offById(listenerId);`,
       {
         name: "tools.getBlockTools()",
         returnType: "BlockToolAdapter[]",
-        description: "Get all available block tool instances.",
+        description:
+          "Get all available block tool adapters. Each adapter exposes `name` plus tool metadata, including `assetKind` — set to `'image' | 'video' | 'audio' | 'file'` on media tools that store an uploaded asset URL at `data.url`, and `undefined` otherwise. Use it to discover the media-bearing tool set at runtime (instead of hardcoding each tool's data shape) and reconcile a saved document's `data.url`s against your CDN — e.g. to garbage-collect orphaned uploads.",
         example: `const blockTools = editor.tools.getBlockTools();
 blockTools.forEach(tool => {
   console.log('Available tool:', tool.name);
-});`,
+});
+
+// Discover which block types hold uploaded media, then collect their URLs
+const mediaTypes = new Set(
+  editor.tools.getBlockTools().filter(t => t.assetKind).map(t => t.name)
+);
+const referenced = (await editor.save()).blocks
+  .filter(b => mediaTypes.has(b.type))
+  .map(b => b.data.url);`,
       },
       {
         name: "tools.update(name, config)",
@@ -2327,6 +2336,27 @@ await editor.blocks.render(toRenderableData(draft));`,
 const echoes = createEmittedEchoWindow();
 // in onSave: echoes.record(data)
 // before re-rendering incoming props: if (echoes.matches(next)) return;`,
+      },
+      {
+        name: "migrateLegacyBlocks(blocks)",
+        returnType: "OutputBlockData[]",
+        description:
+          "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parentId`/`content`, and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. Use it to migrate a stored document explicitly — a one-off batch upgrade of persisted records, or a pre-load normalization step — instead of hand-rolling per-tool shape conversion. `migrateLegacyOutputData(data)` is the envelope-preserving variant, and `needsLegacyMigration(blocks)` reports whether a migration would change anything (skip the id-minting pass when the document is already current).",
+        example: `import {
+  migrateLegacyBlocks,
+  migrateLegacyOutputData,
+  needsLegacyMigration,
+} from '@bloklabs/core/migrate';
+
+// Batch-upgrade persisted Editor.js documents
+const upgraded = migrateLegacyOutputData(storedDocument);
+
+// Or migrate just the blocks, skipping the pass when already current
+const blocks = needsLegacyMigration(stored.blocks)
+  ? migrateLegacyBlocks(stored.blocks)
+  : stored.blocks;`,
+        note:
+          "For a data shape only a specific tool understands (a columns layout, a custom media envelope) that core's built-in migration can't read, give that tool a static `upgradeData(data)` — a pure function returning the tool's current data shape. Blok runs it at load, while composing each stored block, before the tool is constructed; a hook that throws is caught and the block loads with its stored data.",
       },
     ],
   },
@@ -3007,10 +3037,19 @@ const html = blocksToHtml(savedData, {
         returnType: "string",
         description:
           "Extract the plain text of a saved document — blocks are separated by \\n\\n, list items by \\n, table cells by \\t. Synchronous and DOM-free, same options as blocksToHtml. Ideal for previews, search indexing, and character counts.",
+        note:
+          "There is no core \"document size\" helper because the two sizes you might mean are measured differently: `blocksToPlainText(data).length` is the visible content length (what a user typed), while `new TextEncoder().encode(JSON.stringify(data)).length` is the transport size in bytes (what a save/upload limit — e.g. 500KB — should check). Use the plain-text length for content rules and the JSON byte length for storage rules.",
         example: `import { blocksToPlainText } from '@bloklabs/core/view';
 
 // A 160-character preview for a card or meta description
-const preview = blocksToPlainText(savedData).slice(0, 160);`,
+const preview = blocksToPlainText(savedData).slice(0, 160);
+
+// Content length (characters the user typed) vs transport size (bytes on the wire)
+const contentLength = blocksToPlainText(savedData).length;
+const transportBytes = new TextEncoder().encode(JSON.stringify(savedData)).length;
+if (transportBytes > 500 * 1024) {
+  throw new Error('Document exceeds the 500KB save limit');
+}`,
       },
       {
         name: "htmlTextContent(html)",

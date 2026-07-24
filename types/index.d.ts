@@ -65,6 +65,7 @@ export {
   BlockToolConstructorOptions,
   BlockTool,
   BlockToolData,
+  AssetKind,
   Tool,
   ToolConstructable,
   ToolboxConfig,

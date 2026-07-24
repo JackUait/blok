@@ -1,5 +1,6 @@
 import type {
   API,
+  AssetKind,
   BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
@@ -102,6 +103,10 @@ export class VideoTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  public static get assetKind(): AssetKind {
+    return 'video';
   }
 
   public static get pasteConfig(): PasteConfig {

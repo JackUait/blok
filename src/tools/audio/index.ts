@@ -1,5 +1,6 @@
 import type {
   API,
+  AssetKind,
   BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
@@ -108,6 +109,10 @@ export class AudioTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  public static get assetKind(): AssetKind {
+    return 'audio';
   }
 
   public static get pasteConfig(): PasteConfig {

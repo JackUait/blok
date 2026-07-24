@@ -91,6 +91,18 @@ describe("view renderer section", () => {
     expect(method!.example).toContain(".slice(0, 160)");
   });
 
+  it("distinguishes content length from transport byte size (no core size helper)", () => {
+    const method = section!.methods!.find((m) => m.name.startsWith("blocksToPlainText"));
+    // The note steers consumers away from hand-rolling a "document size" helper:
+    // plain-text length for content rules, JSON byte length for storage rules.
+    expect(method!.note).toBeDefined();
+    expect(method!.note).toContain("blocksToPlainText(data).length");
+    expect(method!.note).toContain("TextEncoder");
+    expect(method!.note).toContain("JSON.stringify");
+    // The example demonstrates the transport-size check.
+    expect(method!.example).toContain("TextEncoder");
+  });
+
   it("documents the defineBlokSchema round-trip contract", () => {
     const method = section!.methods!.find((m) => m.name.startsWith("defineBlokSchema"));
     expect(method!.returnType).toContain("editorConfig");

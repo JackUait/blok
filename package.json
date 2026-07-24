@@ -60,6 +60,11 @@
       "import": "./dist/view.mjs",
       "require": "./dist/view.cjs"
     },
+    "./migrate": {
+      "types": "./types/migrate.d.ts",
+      "import": "./dist/migrate.mjs",
+      "require": "./dist/migrate.cjs"
+    },
     "./adapters": {
       "import": "./dist/adapters.mjs",
       "require": "./dist/adapters.cjs"

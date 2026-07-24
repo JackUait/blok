@@ -9,6 +9,7 @@ import { ToolboxConfigEntry } from '../tool-settings';
 import { ConversionConfig } from '../../configs/conversion-config';
 import { PasteConfig } from '../../configs/paste-config';
 import { SanitizerConfig } from '../../configs/sanitizer-config';
+import { AssetKind } from '../block-tool';
 import { BaseToolAdapter } from './base-tool-adapter';
 
 interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
@@ -55,6 +56,23 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
    * Returns Tool conversion configuration
    */
   conversionConfig: ConversionConfig | undefined;
+
+  /**
+   * Returns the media asset kind the Tool stores at `data.url` (image, video,
+   * audio, file), or undefined for non-media tools. Lets consumers enumerate the
+   * media-bearing tool set for orphaned-asset cleanup without hardcoding each
+   * tool's data shape.
+   */
+  assetKind: AssetKind | undefined;
+
+  /**
+   * Upgrades a stored block's data through the Tool's own `upgradeData` hook.
+   * Returns the data unchanged when the Tool declares no hook, or when the hook
+   * throws (the failure is logged, never propagated — a bad migration must not
+   * break document load).
+   * @param data - the stored block data
+   */
+  upgradeData(data: BlockToolData): BlockToolData;
 
   /**
    * Returns enabled inline tools for Tool

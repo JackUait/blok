@@ -110,6 +110,17 @@ export interface BlockTool extends BaseTool {
 }
 
 /**
+ * The kind of host-uploaded asset a media tool stores at `data.url`.
+ *
+ * A tool that declares a static `assetKind` advertises that every instance
+ * keeps its canonical asset URL at `data.url`, letting consumers enumerate the
+ * media-bearing tool set (via `api.tools.getBlockTools()`) and reconcile a saved
+ * document against a CDN — e.g. to garbage-collect orphaned uploads — without
+ * hardcoding each tool's data shape.
+ */
+export type AssetKind = 'image' | 'video' | 'audio' | 'file';
+
+/**
  * Describe constructor parameters
  */
 export interface BlockToolConstructorOptions<D extends object = any, C extends object = any> extends BaseToolConstructorOptions<C> {
@@ -150,6 +161,34 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * plain user content (toggle, callout, a nestable paragraph).
    */
   ownsChildren?: boolean;
+
+  /**
+   * Declares that this Tool stores a host-uploaded asset URL at `data.url`.
+   *
+   * Set it on media tools (image, video, audio, file) so consumers can discover
+   * the media-bearing tool set at runtime — `api.tools.getBlockTools().filter(t => t.assetKind)`
+   * — and diff a saved document's `data.url`s against a CDN to clean up orphaned
+   * uploads, instead of hardcoding each tool's data shape. Leave unset for tools
+   * that hold no uploaded asset.
+   */
+  assetKind?: AssetKind;
+
+  /**
+   * Per-tool data-migration hook (a STATIC method on the Tool class). Upgrades a
+   * stored block's `data` from a legacy shape the Tool once wrote into the shape
+   * it reads today.
+   *
+   * Blok runs it at load — while composing each stored block, before the Tool is
+   * constructed — for the legacy shapes core's global migration cannot know
+   * about (a columns layout, a custom media envelope). It must be a pure
+   * function of `data`: return the upgraded data, or the input unchanged when it
+   * is already current (so it stays safe to run on every load and idempotent
+   * across repeated runs). A hook that throws is caught and the block loads with
+   * its stored data instead of failing the whole document.
+   * @param data - the stored block data (any shape the Tool has ever written)
+   * @returns the data in the Tool's current shape
+   */
+  upgradeData?(data: BlockToolData): BlockToolData;
 
   /**
    * @constructor

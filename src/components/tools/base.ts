@@ -90,7 +90,19 @@ export enum InternalBlockToolSettings {
    * Tool exclusively manages its own child blocks (table cells, column_list
    * columns) — no user gesture may nest an arbitrary block into it
    */
-  OwnsChildren = 'ownsChildren'
+  OwnsChildren = 'ownsChildren',
+  /**
+   * Tool stores a host-uploaded asset URL at `data.url` (image, video, audio,
+   * file). Lets consumers discover the media-bearing tool set for orphaned-CDN
+   * cleanup without hardcoding each tool's data shape.
+   */
+  AssetKind = 'assetKind',
+  /**
+   * Per-tool data-migration hook: upgrades a stored block's `data` from a
+   * legacy shape the tool once wrote into the shape it reads today. Runs at load
+   * (block composition), before the tool is constructed.
+   */
+  UpgradeData = 'upgradeData'
 }
 
 /**

@@ -75,11 +75,17 @@ export class BlockFactory {
       throw new ToolNotFoundError(name, `Could not compose Block. Tool «${name}» not found.`);
     }
 
+    // Give the Tool a chance to upgrade a legacy data shape it once wrote into
+    // the shape it reads today — the per-tool migration core's global grammar
+    // cannot know about (columns, custom media). No-op unless the Tool declares
+    // a static `upgradeData`; a throwing hook falls back to the stored data.
+    const upgradedData = tool.upgradeData(data ?? {});
+
     const block = new Block({
       id,
       // Wire DTOs (e.g. Editor.js backends) may carry `data: null`; the
       // destructuring default above only covers `undefined`.
-      data: data ?? {},
+      data: upgradedData,
       tool,
       api: this.dependencies.API,
       readOnly: this.readOnlyState,

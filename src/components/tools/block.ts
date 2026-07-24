@@ -1,5 +1,6 @@
 import { composeBaseSanitizeConfig } from '../../shared/sanitize-schema';
 import { isEmpty, isObject } from '../utils';
+import { log } from '../utils/logger';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import { ToolsCollection } from './collection';
@@ -7,6 +8,7 @@ import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
 
 import type {
+  AssetKind,
   BlockAPI,
   BlockTool as IBlockTool,
   BlockToolData,
@@ -92,6 +94,45 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get ownsChildren(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.OwnsChildren] === true;
+  }
+
+  /**
+   * Returns the media asset kind the Tool stores at `data.url`, or undefined
+   * for non-media tools. Lets consumers enumerate the media-bearing tool set
+   * (via `api.tools.getBlockTools()`) for orphaned-asset cleanup without
+   * hardcoding each tool's data shape.
+   */
+  public get assetKind(): AssetKind | undefined {
+    return (this.constructable as unknown as Record<string, AssetKind | undefined>)[InternalBlockToolSettings.AssetKind];
+  }
+
+  /**
+   * Upgrade a stored block's data through the Tool's own `upgradeData` hook, if
+   * it declares one. Lets a Tool migrate a legacy data shape it once wrote into
+   * the shape it reads today — the shapes core's global grammar migration can't
+   * know about (columns, custom media). Called at load, before construction.
+   *
+   * Returns the data unchanged when the Tool declares no hook. A hook that
+   * throws must never break document load: the original data is returned and the
+   * failure is surfaced as a console warning, so a bad migration degrades to
+   * "unmigrated" rather than a blank editor.
+   * @param data - the stored block data
+   * @returns the upgraded data (or the original on absence/error)
+   */
+  public upgradeData(data: BlockToolData): BlockToolData {
+    const upgrade = (this.constructable as unknown as Record<string, ((data: BlockToolData) => BlockToolData) | undefined>)[InternalBlockToolSettings.UpgradeData];
+
+    if (typeof upgrade !== 'function') {
+      return data;
+    }
+
+    try {
+      return upgrade.call(this.constructable, data);
+    } catch (error) {
+      log(`Tool «${this.name}» upgradeData() threw; loading the block with its stored data instead.`, 'warn', error);
+
+      return data;
+    }
   }
 
   /**

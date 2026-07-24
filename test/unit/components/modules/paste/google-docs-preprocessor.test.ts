@@ -443,6 +443,33 @@ describe('preprocessGoogleDocsHtml', () => {
     expect(result).toContain('<th>header one<br>header two</th>');
   });
 
+  it('converts <p> boundaries to <br> inside cells for NON-Google-Docs HTML', () => {
+    /**
+     * Word, Notion exports, and generic web tables wrap each cell line in a
+     * separate <p> exactly like Google Docs does. Cell-paragraph unwrapping is
+     * a property of table-cell HTML, not of the source app, so it must run for
+     * all pasted HTML — otherwise the sanitizer strips <p> and the line breaks
+     * are lost for every non-gdocs source.
+     */
+    const html = '<table><tr><td><p>line one</p><p>line two</p></td></tr></table>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<td>line one<br>line two</td>');
+    expect(result).not.toContain('<p>');
+  });
+
+  it('drops nbsp-only spacer paragraphs inside cells for NON-Google-Docs HTML', () => {
+    /**
+     * A visual-spacer `<p>&nbsp;</p>` between two lines must not become a stray
+     * blank line in the cell. nbsp-only cell paragraphs collapse away.
+     */
+    const html = '<table><tr><td><p>line one</p><p>&nbsp;</p><p>line two</p></td></tr></table>';
+    const result = preprocessGoogleDocsHtml(html);
+
+    expect(result).toContain('<td>line one<br>line two</td>');
+    expect(result).not.toContain('&nbsp;');
+  });
+
   it('does not leave trailing <br> after last paragraph in cell', () => {
     const html = '<table><tr><td><p>only line</p></td></tr></table>';
     const result = preprocessGoogleDocsHtml(html);

@@ -462,6 +462,24 @@ describe('BlockFactory', () => {
       expect(typeof block.id).toBe('string');
       expect(block.id.length).toBeGreaterThan(0);
     });
+
+    it('runs the tool upgradeData hook over stored data before the tool sees it', () => {
+      const adapter = factory.getTool('paragraph');
+
+      if (adapter === undefined) {
+        throw new Error('paragraph tool is not registered in the test factory');
+      }
+
+      const upgradeSpy = vi.spyOn(adapter, 'upgradeData')
+        .mockImplementation((data: BlockToolData) => ({ ...data, migrated: true }));
+      const createSpy = vi.spyOn(adapter, 'create');
+
+      factory.composeBlock({ tool: 'paragraph', data: { legacy: 'shape' } });
+
+      expect(upgradeSpy).toHaveBeenCalledWith({ legacy: 'shape' });
+      // The tool is constructed with the UPGRADED data, not the stored data.
+      expect(createSpy.mock.calls[0][0]).toEqual({ legacy: 'shape', migrated: true });
+    });
   });
 
   describe('hasTool', () => {

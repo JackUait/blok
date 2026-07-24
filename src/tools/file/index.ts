@@ -1,5 +1,6 @@
 import type {
   API,
+  AssetKind,
   BlockAPI,
   BlockTool,
   BlockToolConstructorOptions,
@@ -149,6 +150,10 @@ export class FileTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  public static get assetKind(): AssetKind {
+    return 'file';
   }
 
   public static get pasteConfig(): PasteConfig {

@@ -368,6 +368,49 @@ describe('BlockToolAdapter', () => {
         expect(tool.isLineBreaksEnabled).toBe(false);
       }
     });
+
+    it('reports the asset kind when the tool declares one', () => {
+      const constructable = createConstructable({ assetKind: 'image' });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.assetKind).toBe('image');
+    });
+
+    it('reports undefined asset kind for non-media tools', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.assetKind).toBeUndefined();
+    });
+  });
+
+  describe('data upgrade hook', () => {
+    it('runs the static upgradeData over incoming data when the tool declares one', () => {
+      const constructable = createConstructable({
+        upgradeData: (data: BlockToolData) => ({ ...data, migrated: true }),
+      });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.upgradeData({ text: 'x' })).toEqual({ text: 'x', migrated: true });
+    });
+
+    it('returns the data unchanged when the tool declares no upgradeData', () => {
+      const { tool } = createBlockTool();
+      const data = { text: 'x' };
+
+      expect(tool.upgradeData(data)).toBe(data);
+    });
+
+    it('falls back to the original data when the tool upgradeData throws', () => {
+      const constructable = createConstructable({
+        upgradeData: () => {
+          throw new Error('bad migration');
+        },
+      });
+      const { tool } = createBlockTool({ constructable });
+      const data = { text: 'x' };
+
+      expect(tool.upgradeData(data)).toBe(data);
+    });
   });
 
   describe('configuration getters', () => {

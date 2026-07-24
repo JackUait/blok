@@ -29,9 +29,18 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
   convertGoogleDocsStyles(wrapper, isGoogleDocs);
 
+  /**
+   * Unwrapping `<p>` line-boundaries inside table cells is a property of the
+   * cell HTML, not of the source app: Word, Notion exports, and generic web
+   * tables all wrap each cell line in its own `<p>` exactly like Google Docs.
+   * The sanitizer strips `<p>` (not in the allowed config), so if this only ran
+   * for Google-Docs-flagged HTML every other source lost its in-cell line
+   * breaks. Run it for all pasted HTML.
+   */
+  convertTableCellParagraphs(wrapper);
+
   if (isGoogleDocs) {
     stampColumnsCandidateTables(wrapper);
-    convertTableCellParagraphs(wrapper);
     promoteImages(wrapper);
   }
 
@@ -557,13 +566,39 @@ function stampColumnsCandidateTables(wrapper: HTMLElement): void {
 /**
  * Convert `<p>` boundaries to `<br>` line breaks inside table cells.
  *
- * Google Docs wraps each line in a cell as a separate `<p>`.  The sanitizer
- * strips `<p>` (not in the allowed config), losing line breaks.  Converting
- * to `<br>` preserves them since `<br>` IS in the config (`{ br: {} }`).
+ * Editors wrap each line in a cell as a separate `<p>`.  The sanitizer strips
+ * `<p>` (not in the allowed config), losing line breaks.  Converting to `<br>`
+ * preserves them since `<br>` IS in the config (`{ br: {} }`).
+ *
+ * Empty / nbsp-only paragraphs are visual spacers, not content lines — they are
+ * dropped rather than turned into a stray blank `<br>` line in the cell.
  *
  * Only targets `<td>` and `<th>` elements — top-level `<p>` tags are left
  * intact so the paste pipeline can split them into separate blocks.
  */
+/**
+ * A spacer is whitespace/nbsp-only text with no element children — an empty
+ * `<p>` or `<p>&nbsp;</p>`. A paragraph whose textContent is empty but which
+ * holds an `<img>` (or other element) is NOT a spacer; removing it would destroy
+ * the media. `\s` matches U+00A0 (the &nbsp; a spacer decodes to).
+ */
+function isSpacerParagraph(p: Element): boolean {
+  return p.children.length === 0 && (p.textContent ?? '').replace(/\s/g, '') === '';
+}
+
+/** Replace a cell `<p>` with its content + a `<br>`, or drop it if it is a spacer. */
+function unwrapCellParagraph(p: Element): void {
+  if (isSpacerParagraph(p)) {
+    p.remove();
+
+    return;
+  }
+
+  const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
+
+  p.replaceWith(fragment);
+}
+
 function convertTableCellParagraphs(wrapper: HTMLElement): void {
   for (const cell of Array.from(wrapper.querySelectorAll('td, th'))) {
     const paragraphs = cell.querySelectorAll('p');
@@ -572,11 +607,7 @@ function convertTableCellParagraphs(wrapper: HTMLElement): void {
       continue;
     }
 
-    for (const p of Array.from(paragraphs)) {
-      const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
-
-      p.replaceWith(fragment);
-    }
+    Array.from(paragraphs).forEach(unwrapCellParagraph);
 
     // Remove trailing <br> from the cell
     cell.innerHTML = cell.innerHTML.replace(/(<br\s*\/?>|\s)+$/i, '');

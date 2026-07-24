@@ -1,4 +1,5 @@
 import type {
+  AssetKind,
   BlockTool,
   BlockToolConstructorOptions,
   PasteConfig,
@@ -148,6 +149,10 @@ export class ImageTool implements BlockTool {
 
   public static get isReadOnlySupported(): boolean {
     return true;
+  }
+
+  public static get assetKind(): AssetKind {
+    return 'image';
   }
 
   public static get pasteConfig(): PasteConfig {

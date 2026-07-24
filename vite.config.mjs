@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
           full: path.resolve(__dirname, 'src', 'full.ts'),
           markdown: path.resolve(__dirname, 'src', 'markdown', 'index.ts'),
           view: path.resolve(__dirname, 'src', 'view', 'index.ts'),
+          migrate: path.resolve(__dirname, 'src', 'migrate', 'index.ts'),
           adapters: path.resolve(__dirname, 'src', 'adapters.ts'),
           icons: path.resolve(__dirname, 'src', 'icons', 'index.ts'),
         },

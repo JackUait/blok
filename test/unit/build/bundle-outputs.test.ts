@@ -494,8 +494,14 @@ describe('dist weight (consumer parse cost)', () => {
   )
 
   it('emits UI message locales as JSON.parse strings, not object literals', () => {
+    // The per-locale message data ships as lazy dynamic-import chunks at the dist
+    // root. They were named `messages-<locale>.mjs` until b0ff515b ("name files by
+    // locale") renamed the source JSON, so they are now `<locale>-<hash>.mjs`. The
+    // main build's own chunks live under chunks/, so an 8-char content-hash suffix
+    // on a dist-root .mjs uniquely identifies a locale message file.
+    const localeChunkRe = /-[A-Za-z0-9_-]{8}\.mjs$/
     const messageFiles = readdirSync(dist).filter(
-      (name) => name.startsWith('messages-') && name.endsWith('.mjs'),
+      (name) => name.endsWith('.mjs') && localeChunkRe.test(name),
     )
     expect(messageFiles.length).toBeGreaterThan(0)
     const objectLiteralLocales = messageFiles.filter(

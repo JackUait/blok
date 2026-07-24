@@ -190,6 +190,10 @@ const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
   const partialAdapter = {
     constructable: MockBlockTool as BlockToolConstructable,
     create: vi.fn((_data, _block, _readOnly) => new MockBlockTool()),
+    // Real BlockToolAdapter always exposes upgradeData() (no-op unless the Tool
+    // declares a static upgradeData); BlockFactory.composeBlock calls it on every
+    // insert, so the stub must provide a passthrough.
+    upgradeData: vi.fn((data: BlockToolData) => data),
     sanitizeConfig: {},
     conversionConfig: {
       import: 'text',

@@ -65,6 +65,13 @@ const externalDistPlugin = (): Plugin => {
       if (id === "@bloklabs/core/view") {
         return { id: resolve(parentDistDir, "view.mjs") };
       }
+      // Same hazard as /view: the adapter imports @bloklabs/core/locales (the
+      // #41 getDirection/normalizeLocale re-export). Unaliased it falls through
+      // to the root exports map's `types` condition and drags a .d.ts into the
+      // runtime graph. Resolve it to the built locales bundle.
+      if (id === "@bloklabs/core/locales") {
+        return { id: resolve(parentDistDir, "locales.mjs") };
+      }
       if (id.startsWith("/dist/")) {
         return { id: resolve(parentDistDir, id.slice("/dist/".length)) };
       }

@@ -6,11 +6,10 @@
 import type { OutputBlockData } from '../../../types';
 
 /**
- * Environment injected into every grammar `expand()` so the transforms stay
- * pure. The runtime supplies nanoid ids + a deduping `console.warn`; the codemod
- * supplies locally-minted ids + a no-op warn.
+ * What a CALLER hands `expandLegacyBlocks`. Only `generateId` is required; the
+ * interpreter fills in the rest before any expander runs.
  */
-export interface LegacyExpandContext {
+export interface LegacyExpandOptions {
   generateId(): string;
   warn?(blockType: string, field: string, verb: 'dropped' | 'ignored'): void;
   /**
@@ -24,6 +23,18 @@ export interface LegacyExpandContext {
    * can cover an unknown legacy type or override a built-in mapping).
    */
   rules?: LegacyGrammarEntry[];
+}
+
+/**
+ * What every `expand()` RECEIVES — the caller's options after normalization, so
+ * the transforms stay pure and an expander can call `ctx.warn(...)` without a
+ * guard. The runtime supplies nanoid ids + a deduping `console.warn`; the
+ * codemod supplies locally-minted ids + a no-op warn.
+ */
+export interface LegacyExpandContext {
+  generateId(): string;
+  warn(blockType: string, field: string, verb: 'dropped' | 'ignored'): void;
+  stampMissingIds: boolean;
 }
 
 /**
@@ -61,7 +72,7 @@ export interface LegacyGrammarEntry {
   detectNesting?(block: OutputBlockData): boolean;
   expand(
     block: OutputBlockData,
-    ctx: Required<Omit<LegacyExpandContext, 'rules'>>,
+    ctx: LegacyExpandContext,
     position: LegacyExpandPosition
   ): OutputBlockData[] | LegacyExpansion;
 }
@@ -75,7 +86,7 @@ export const LEGACY_GRAMMAR: LegacyGrammarEntry[];
 
 export function expandLegacyBlocks(
   blocks: OutputBlockData[],
-  ctx: LegacyExpandContext
+  ctx: LegacyExpandOptions
 ): OutputBlockData[];
 
 export function matchLegacyRule(

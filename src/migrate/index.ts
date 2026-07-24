@@ -15,9 +15,9 @@
  *   - GRAMMAR rules (`rules`) restructure the block tree (type changes, 1:N
  *     splits, sibling absorption, container recursion).
  *
- * {@link migrate} runs them in the one correct order — data rules first, while
- * the sibling layout is still the original one — so hosts never have to
- * rediscover that ordering.
+ * {@link migrate} runs them in the one correct order — data rules first, so a
+ * rule keyed on a legacy type still finds that type to key on — and hosts never
+ * have to rediscover the ordering.
  */
 import type { OutputBlockData, OutputData } from '../../types';
 import { expandToHierarchical } from '../components/utils/data-model-transform';
@@ -52,6 +52,7 @@ export type {
 export type {
   LegacyGrammarEntry,
   LegacyExpandContext,
+  LegacyExpandOptions,
   LegacyExpandPosition,
   LegacyExpansion,
 } from '../components/migration/legacy-grammar.d.mts';
@@ -83,6 +84,25 @@ export interface LegacyMigrationOptions {
   rules?: LegacyGrammarEntry[];
 }
 
+/**
+ * Options for a legacy migration, or just the grammar entries.
+ *
+ * `rules` is an array everywhere it is documented and stored, so handing that
+ * array straight to one of these helpers is the obvious call — and silently
+ * reading it as "no options" would answer "nothing to migrate", the exact class
+ * of quiet wrongness this surface exists to remove. Both forms are accepted.
+ */
+export type LegacyMigrationArg<T> = T | LegacyGrammarEntry[];
+
+/** Normalize the `options | rules[]` argument into an options object. */
+const toOptions = <T extends { rules?: LegacyGrammarEntry[] }>(arg: LegacyMigrationArg<T> | undefined): T => {
+  if (Array.isArray(arg)) {
+    return { rules: arg } as T;
+  }
+
+  return arg ?? ({} as T);
+};
+
 /** Build the grammar-facing `warn` from a host's `onLossyField`, if any. */
 const toWarnSink = (
   onLossyField: LegacyMigrationOptions['onLossyField']
@@ -108,12 +128,14 @@ const toWarnSink = (
  */
 export const migrateLegacyBlocks = (
   blocks: OutputBlockData[],
-  options: LegacyMigrationOptions = {}
+  options?: LegacyMigrationArg<LegacyMigrationOptions>
 ): OutputBlockData[] => {
+  const resolved = toOptions(options);
+
   return expandToHierarchical(blocks, {
-    generateId: options.generateId,
-    warn: toWarnSink(options.onLossyField),
-    rules: options.rules,
+    generateId: resolved.generateId,
+    warn: toWarnSink(resolved.onLossyField),
+    rules: resolved.rules,
   });
 };
 
@@ -127,7 +149,7 @@ export const migrateLegacyBlocks = (
  */
 export const migrateLegacyOutputData = (
   data: OutputData,
-  options: LegacyMigrationOptions = {}
+  options?: LegacyMigrationArg<LegacyMigrationOptions>
 ): OutputData => {
   return {
     ...data,
@@ -146,9 +168,9 @@ export const migrateLegacyOutputData = (
  */
 export const needsLegacyMigration = (
   blocks: OutputBlockData[],
-  options: Pick<LegacyMigrationOptions, 'rules'> = {}
+  options?: LegacyMigrationArg<Pick<LegacyMigrationOptions, 'rules'>>
 ): boolean => {
-  const analysis = analyzeLegacyFormat(blocks, options.rules);
+  const analysis = analyzeLegacyFormat(blocks, toOptions(options).rules);
 
   return analysis.hasLegacyBlocks || analysis.hasNesting;
 };
@@ -164,9 +186,9 @@ export const needsLegacyMigration = (
  */
 export const matchLegacyRule = (
   block: OutputBlockData,
-  options: Pick<LegacyMigrationOptions, 'rules'> = {}
+  options?: LegacyMigrationArg<Pick<LegacyMigrationOptions, 'rules'>>
 ): LegacyGrammarEntry | null => {
-  return matchLegacyRuleInGrammar(block, options.rules);
+  return matchLegacyRuleInGrammar(block, toOptions(options).rules);
 };
 
 /**
@@ -195,31 +217,40 @@ export interface MigrateOptions extends LegacyMigrationOptions {
  * Migrate a stored document through BOTH passes in the one correct order, and
  * report what the migration cost.
  *
- * The ordering is load-bearing: host data rules run FIRST, because they only
- * rewrite a block's `data` and never move blocks — so any grammar rule that
- * reasons about sibling layout (a legacy container storing its body as "the
- * next N blocks") still sees the original document. Run them the other way
- * round and you get subtly wrong nesting with no error.
+ * The ordering is load-bearing: host data rules run FIRST because they are keyed
+ * by BLOCK TYPE, and the grammar rewrites types (`linkTool` → `bookmark`) and
+ * explodes containers into many blocks. Run them the other way round and a rule
+ * keyed on a legacy type never fires at all — the type it named no longer
+ * exists — and the block stays silently unmigrated.
+ *
+ * So the two passes divide cleanly: data rules shape the grammar's INPUT (e.g.
+ * repairing a legacy field so a built-in rule can detect it), and the grammar
+ * owns the OUTPUT for the types it rewrites — fields with no slot in the target
+ * shape are not merged through.
  * @param data - a stored OutputData document
  * @param options - data rules, grammar rules, id generator, lossy-field sink
  * @returns the migrated document and a report of dropped fields / failed rules
  */
-export const migrate = (data: OutputData, options: MigrateOptions = {}): MigrationResult => {
+export const migrate = (
+  data: OutputData,
+  options?: LegacyMigrationArg<MigrateOptions>
+): MigrationResult => {
+  const resolved = toOptions(options);
   const lossyFields: LossyFieldReport[] = [];
   const errors: Array<{ type: string; error: unknown }> = [];
 
   // Pass 1 — host data rules, on the original sibling layout.
-  const withHostData = options.migrations !== undefined
-    ? migrateBlocks(data.blocks, options.migrations, (type, error) => errors.push({ type, error }))
+  const withHostData = resolved.migrations !== undefined
+    ? migrateBlocks(data.blocks, resolved.migrations, (type, error) => errors.push({ type, error }))
     : data.blocks;
 
   // Pass 2 — the legacy grammar, which is what actually restructures the tree.
   const blocks = migrateLegacyBlocks(withHostData, {
-    generateId: options.generateId,
-    rules: options.rules,
+    generateId: resolved.generateId,
+    rules: resolved.rules,
     onLossyField: (report) => {
       lossyFields.push(report);
-      options.onLossyField?.(report);
+      resolved.onLossyField?.(report);
     },
   });
 

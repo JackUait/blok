@@ -54,14 +54,15 @@ export declare function migrateBlocks(
 export declare function migrateOutputData(data: OutputData, migrations: BlockMigrations): OutputData;
 
 /**
- * Environment injected into every grammar expander, so each transform stays a
- * pure function of `(block, ctx, position)`.
+ * What every grammar expander RECEIVES, so each transform stays a pure function
+ * of `(block, ctx, position)`. Every field is present — the interpreter fills in
+ * the caller's omissions — so an expander can call `ctx.warn(...)` unguarded.
  */
 export interface LegacyExpandContext {
   /** Mint a fresh block id. */
   generateId(): string;
-  /** Report a field the mapping could not carry over. */
-  warn(blockType: string, field: string, verb: string): void;
+  /** Report a field the mapping could not carry over; it reaches `report.lossyFields`. */
+  warn(blockType: string, field: string, verb: 'dropped' | 'ignored'): void;
   /** Whether passthrough (non-migrated) blocks lacking an id get one stamped. */
   stampMissingIds: boolean;
 }
@@ -157,6 +158,15 @@ export interface LegacyMigrationOptions {
 }
 
 /**
+ * Options for a legacy migration, or just the grammar entries.
+ *
+ * `rules` is an array everywhere it is documented and stored, so handing that
+ * array straight to one of these helpers is the obvious call — and reading it as
+ * "no options" would silently answer "nothing to migrate". Both forms work.
+ */
+export type LegacyMigrationArg<T> = T | LegacyGrammarEntry[];
+
+/**
  * Migrate legacy / Editor.js-style blocks into Blok's hierarchical
  * flat-with-references format.
  *
@@ -170,7 +180,7 @@ export interface LegacyMigrationOptions {
  */
 export declare function migrateLegacyBlocks(
   blocks: OutputBlockData[],
-  options?: LegacyMigrationOptions
+  options?: LegacyMigrationArg<LegacyMigrationOptions>
 ): OutputBlockData[];
 
 /**
@@ -183,7 +193,7 @@ export declare function migrateLegacyBlocks(
  */
 export declare function migrateLegacyOutputData(
   data: OutputData,
-  options?: LegacyMigrationOptions
+  options?: LegacyMigrationArg<LegacyMigrationOptions>
 ): OutputData;
 
 /**
@@ -197,7 +207,7 @@ export declare function migrateLegacyOutputData(
  */
 export declare function needsLegacyMigration(
   blocks: OutputBlockData[],
-  options?: Pick<LegacyMigrationOptions, 'rules'>
+  options?: LegacyMigrationArg<Pick<LegacyMigrationOptions, 'rules'>>
 ): boolean;
 
 /**
@@ -211,7 +221,7 @@ export declare function needsLegacyMigration(
  */
 export declare function matchLegacyRule(
   block: OutputBlockData,
-  options?: Pick<LegacyMigrationOptions, 'rules'>
+  options?: LegacyMigrationArg<Pick<LegacyMigrationOptions, 'rules'>>
 ): LegacyGrammarEntry | null;
 
 /**
@@ -240,16 +250,24 @@ export interface MigrateOptions extends LegacyMigrationOptions {
  * Migrate a stored document through BOTH passes in the one correct order, and
  * report what the migration cost.
  *
- * The ordering is load-bearing: host data rules run FIRST, because they only
- * rewrite a block's `data` and never move blocks — so any grammar rule that
- * reasons about sibling layout (a legacy container storing its body as "the next
- * N blocks") still sees the original document. Run them the other way round and
- * you get subtly wrong nesting with no error.
+ * The ordering is load-bearing: host data rules run FIRST because they are keyed
+ * by BLOCK TYPE, and the grammar rewrites types (`linkTool` → `bookmark`) and
+ * explodes containers into many blocks. Run them the other way round and a rule
+ * keyed on a legacy type never fires at all — the type it named no longer
+ * exists — and the block stays silently unmigrated.
+ *
+ * So the two passes divide cleanly: data rules shape the grammar's INPUT (e.g.
+ * repairing a legacy field so a built-in rule can detect it), and the grammar
+ * owns the OUTPUT for the types it rewrites — fields with no slot in the target
+ * shape are not merged through.
  * @param data - a stored OutputData document
  * @param options - data rules, grammar rules, id generator, lossy-field sink
  * @returns the migrated document and a report of dropped fields / failed rules
  */
-export declare function migrate(data: OutputData, options?: MigrateOptions): MigrationResult;
+export declare function migrate(
+  data: OutputData,
+  options?: LegacyMigrationArg<MigrateOptions>
+): MigrationResult;
 
 /**
  * The built-in Editor.js→Blok rule table, in match order. Read it to introspect

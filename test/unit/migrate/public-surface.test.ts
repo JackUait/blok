@@ -7,6 +7,7 @@ import {
   matchLegacyRule,
 } from '../../../src/migrate';
 import type { OutputBlockData } from '../../../types';
+import type { LegacyExpandContext } from '../../../src/components/migration/legacy-grammar.d.mts';
 
 /**
  * The public migration surface (`@bloklabs/core/migrate`) used to hide the
@@ -177,6 +178,30 @@ describe('migrate (composed entry point)', () => {
     expect((result.report.errors[0].error as Error).message).toBe('bad rule');
   });
 
+  it('routes a HOST rule\u2019s lossy warnings into the same report', () => {
+    const rule = {
+      legacyType: 'alert',
+      targetType: 'callout',
+      cardinality: '1:1' as const,
+      contributesNesting: false,
+      lossyFields: ['severity'],
+      docNote: 'Host rule',
+      detect: (block: OutputBlockData) => block.type === 'alert',
+      expand: (block: OutputBlockData, ctx: LegacyExpandContext) => {
+        ctx.warn('alert', 'severity', 'dropped');
+
+        return [{ ...block, type: 'callout', data: {} }];
+      },
+    };
+
+    const { report } = migrate(
+      { time: 1, version: '1.0.0', blocks: [{ id: 'a1', type: 'alert', data: { severity: 'high' } }] },
+      { rules: [rule], generateId: counterIds() }
+    );
+
+    expect(report.lossyFields).toEqual([{ blockType: 'alert', field: 'severity', verb: 'dropped' }]);
+  });
+
   it('is deterministic: the same document migrates to an equal result twice', () => {
     const doc = {
       time: 1,
@@ -186,5 +211,38 @@ describe('migrate (composed entry point)', () => {
 
     expect(migrate(doc, { generateId: counterIds() }).data)
       .toEqual(migrate(doc, { generateId: counterIds() }).data);
+  });
+});
+
+describe('rules passed as a bare array', () => {
+  const rule = {
+    legacyType: 'alert',
+    targetType: 'callout',
+    cardinality: '1:1' as const,
+    contributesNesting: true,
+    lossyFields: [],
+    docNote: 'Host rule',
+    detect: (block: OutputBlockData) => block.type === 'alert',
+    expand: (block: OutputBlockData) => [{ ...block, type: 'callout', data: { emoji: '🚨' } }],
+  };
+  const blocks: OutputBlockData[] = [{ id: 'a1', type: 'alert', data: {} }];
+
+  /**
+   * `rules` is an ARRAY everywhere it is documented and stored, so handing that
+   * array straight to a helper is the obvious call. Ignoring it would answer
+   * "nothing to migrate" — the silent-wrong answer, which is worse than a throw.
+   */
+  it('is accepted by every rules-taking entry point, not silently ignored', () => {
+    expect(matchLegacyRule(blocks[0], [rule])?.targetType).toBe('callout');
+    expect(needsLegacyMigration(blocks, [rule])).toBe(true);
+    expect(migrateLegacyBlocks(blocks, [rule])[0].type).toBe('callout');
+    expect(migrateLegacyOutputData({ time: 1, version: '1.0.0', blocks }, [rule]).blocks[0].type).toBe('callout');
+    expect(migrate({ time: 1, version: '1.0.0', blocks }, [rule]).data.blocks[0].type).toBe('callout');
+  });
+
+  it('still accepts the options-object form', () => {
+    expect(matchLegacyRule(blocks[0], { rules: [rule] })?.targetType).toBe('callout');
+    expect(needsLegacyMigration(blocks, { rules: [rule] })).toBe(true);
+    expect(migrateLegacyBlocks(blocks, { rules: [rule] })[0].type).toBe('callout');
   });
 });

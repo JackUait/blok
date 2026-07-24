@@ -610,8 +610,10 @@ import {
 
 Two kinds of rule compose here, and `migrate(data, options)` runs them in the one correct order:
 
-1. **Data rules** (`migrations`) rewrite a single block's `data` — old shape → new shape, keyed by block type. They run **first**, while the sibling layout is still the original one.
+1. **Data rules** (`migrations`) rewrite a single block's `data` — old shape → new shape, keyed by block type. They run **first**.
 2. **Grammar rules** (`rules`) restructure the tree: change a block's `type`, split one block into several, absorb following siblings, recurse into container bodies.
+
+That order is load-bearing, because data rules are keyed by block **type** and the grammar rewrites types (`linkTool` → `bookmark`) and explodes containers into many blocks. Run them the other way round and a rule keyed on a legacy type never fires — the type it named no longer exists — and the block stays silently unmigrated. Practically: data rules shape the grammar's **input** (repair a legacy field so a built-in rule can detect it); the grammar owns the **output** for types it rewrites, so extra fields a data rule adds are not merged into the target shape.
 
 ```javascript
 let n = 0;

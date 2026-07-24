@@ -37,7 +37,7 @@ describe('applyBlockMigration', () => {
     const data: BlockToolData = { name: 'x' };
 
     expect(applyBlockMigration('myCard', data, { myCard: () => undefined as unknown as BlockToolData })).toBe(data);
-    expect(applyBlockMigration('myCard', data, { myCard: () => null as unknown as BlockToolData })).toBe(data);
+    expect(applyBlockMigration('myCard', data, { myCard: () => null })).toBe(data);
   });
 
   it('catches a throwing rule, returns the original data, and reports via onError', () => {

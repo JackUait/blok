@@ -226,4 +226,31 @@ describe('useBlokView', () => {
     expect(p?.getAttribute('data-blok-tool')).toBe('paragraph');
     expect(p?.getAttribute('data-blok-id')).toBe('p1');
   });
+
+  /**
+   * The soft isolation root is what makes BlokView's output look like a
+   * read-only editor render: the scoped preflight and the token/colour layers
+   * key on the bare `[data-blok-interface]` attribute.
+   */
+  describe('soft isolation root', () => {
+    it('marks the wrapper as a view isolation root', () => {
+      const { container } = render(<BlokView data={paragraphDoc('Hi')} />);
+
+      expect(container.firstElementChild?.getAttribute('data-blok-interface')).toBe('view');
+    });
+
+    it('never claims the editor isolation value, which carries all:initial', () => {
+      const { container } = render(<BlokView data={paragraphDoc('Hi')} />);
+
+      expect(container.firstElementChild?.getAttribute('data-blok-interface')).not.toBe('blok');
+    });
+
+    it('lets a caller override it', () => {
+      const { container } = render(
+        <BlokView data={paragraphDoc('Hi')} data-blok-interface="custom" />
+      );
+
+      expect(container.firstElementChild?.getAttribute('data-blok-interface')).toBe('custom');
+    });
+  });
 });

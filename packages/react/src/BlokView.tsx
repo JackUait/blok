@@ -53,5 +53,15 @@ export const BlokView = ({
 }: BlokViewProps): ReactNode => {
   const content = useBlokView(data, { schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl });
 
-  return <div {...divProps}>{content}</div>;
+  /**
+   * `data-blok-interface="view"` makes the wrapper a soft isolation root, which
+   * is what gives the rendered blocks the same appearance as a read-only
+   * editor: the scoped preflight and the token/colour layers key on the bare
+   * `[data-blok-interface]` attribute, so classes emitted outside it compute
+   * differently. The value is `view`, never `blok` — the latter carries
+   * `all: initial !important`, which would block host typography entirely.
+   *
+   * Written BEFORE the `divProps` spread so a caller can still override it.
+   */
+  return <div data-blok-interface="view" {...divProps}>{content}</div>;
 };

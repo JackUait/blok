@@ -96,6 +96,26 @@ export interface BlocksToHtmlOptions {
    * the unsafe-scheme strip. See {@link ViewUrlTransform}.
    */
   transformUrl?: ViewUrlTransform;
+  /**
+   * Wrap the output in `<div data-blok-interface="view">` (default `false`).
+   *
+   * The wrapper is what makes the emitted classes render like a read-only
+   * editor: the scoped preflight (`src/styles/preflight.css`) applies its
+   * box-sizing, margin, padding and border resets ONLY under
+   * `[data-blok-interface]`, and the token/colour layers key on the same bare
+   * attribute. Without it, identical classes compute differently.
+   *
+   * The value is deliberately `view`, not `blok` — `all: initial !important` is
+   * keyed on `[data-blok-interface=blok]` (`src/styles/isolation.css`), which
+   * would also block host typography from cascading in and would match
+   * editor-targeting selectors.
+   *
+   * Opt-in rather than default-on because switching it on would add an element
+   * to every existing consumer's output — a breaking change to this published
+   * API. `<BlokView>` stamps the attribute onto the wrapper it already renders,
+   * so React consumers get parity without setting this.
+   */
+  root?: boolean;
 }
 
 /**
@@ -312,5 +332,12 @@ export const blocksToHtml = (
   data: OutputData | LooseOutputData | null | undefined,
   options: BlocksToHtmlOptions = {}
 ): string => {
-  return createHtmlRenderer(buildDocumentModel(data), options).renderTopLevel();
+  const body = createHtmlRenderer(buildDocumentModel(data), options).renderTopLevel();
+
+  /**
+   * An empty document still yields the wrapper when opted in: consumers style
+   * the container, and a container that vanishes for empty content forces them
+   * to handle two output shapes.
+   */
+  return options.root === true ? `<div data-blok-interface="view">${body}</div>` : body;
 };

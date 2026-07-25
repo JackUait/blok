@@ -698,4 +698,40 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<figure><img src="/pic.png" alt="x"></figure>');
     });
   });
+
+  /**
+   * The isolation root exists for VISUAL PARITY with a read-only editor: the
+   * scoped preflight (src/styles/preflight.css) applies its box-sizing, margin,
+   * padding and border resets only under `[data-blok-interface]`, and the token
+   * and colour layers key on the same bare attribute. Emitted classes do not
+   * compute correctly outside it.
+   *
+   * It is OPT-IN here on purpose — defaulting it on would add a wrapper element
+   * to every existing consumer's output, a breaking change to a published API.
+   * `<BlokView>` stamps the attribute onto the wrapper it already renders, so
+   * React consumers get parity without opting in.
+   */
+  describe('root wrapper', () => {
+    it('emits no wrapper by default (published fragment contract is unchanged)', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'hi' } }]));
+
+      expect(html).toBe('<p>hi</p>');
+    });
+
+    it('wraps in a soft isolation root when opted in', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'hi' } }]), { root: true });
+
+      expect(html).toBe('<div data-blok-interface="view"><p>hi</p></div>');
+    });
+
+    it('never uses the editor isolation value, which would apply all:initial', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'hi' } }]), { root: true });
+
+      expect(html).not.toContain('data-blok-interface="blok"');
+    });
+
+    it('still wraps an empty document so the container is stable for styling', () => {
+      expect(blocksToHtml(null, { root: true })).toBe('<div data-blok-interface="view"></div>');
+    });
+  });
 });

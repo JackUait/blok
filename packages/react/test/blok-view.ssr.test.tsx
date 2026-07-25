@@ -33,7 +33,12 @@ describe('BlokView SSR', () => {
       />
     );
 
-    expect(html).toContain('<div class="rich">');
+    /**
+     * The wrapper is a soft isolation root (so the emitted classes compute the
+     * same way they do inside a read-only editor) AND still carries the
+     * caller's className.
+     */
+    expect(html).toContain('<div data-blok-interface="view" class="rich">');
     expect(html).toContain('<h3>SSR Title</h3>');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('checked=""');

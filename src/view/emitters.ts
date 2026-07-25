@@ -40,6 +40,18 @@ export interface EmitterEnv {
    * option is on and the block carries an id; empty string otherwise.
    */
   idAttr(block: ViewBlock): string;
+  /**
+   * Build every root attribute the dispatcher would otherwise stamp onto the
+   * first opening tag — presentational `class`, `data-blok-tool`,
+   * `data-blok-id` — honouring the same options.
+   *
+   * Only emitters listed as self-stamping in `blocks-to-html.ts` use this. An
+   * emitter that WRAPS its styled element (a toggleable header emits
+   * `<details><summary><h2>`) must place them itself: the typography has to land
+   * on the `<h2>`, and the tool hook must sit on the SAME element or the parity
+   * harness pairs the wrapper against the editor's heading.
+   */
+  rootAttrs(block: ViewBlock): string;
 }
 
 /**
@@ -279,7 +291,12 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   header: (block, env) => {
     const level = Math.min(Math.max(Number(block.data.level) || 1, 1), 6);
-    const heading = `<h${level}>${env.inline(block.data.text)}</h${level}>`;
+    /**
+     * Classes go on the HEADING, never on the `<details>` wrapper below — the
+     * editor styles its h-tag, and `<h1>`-`<h6>` carry UA font-size/weight that
+     * would override anything merely inherited from an ancestor.
+     */
+    const heading = `<h${level}${env.rootAttrs(block)}>${env.inline(block.data.text)}</h${level}>`;
 
     if (block.data.isToggleable === true) {
       const open = block.data.isOpen === true ? ' open' : '';

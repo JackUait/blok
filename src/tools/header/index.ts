@@ -22,6 +22,7 @@ import { DATA_ATTR } from '../../components/constants';
 import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
+import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
@@ -274,10 +275,13 @@ export class Header implements BlockTool {
    * Base styles for all header levels
    */
   /**
-   * Padding routes through the public --blok-block-padding-top/-bottom/-inline
-   * tokens (fallbacks preserve the historical 7px/7px/2px, matching blok-block).
+   * Static presentational classes live in `src/shared/tool-classes/header.ts`
+   * so the view emitter stamps the exact same set (padding routes through the
+   * public --blok-block-padding-* tokens there). `outline-hidden` stays here: it
+   * suppresses the focus ring on a contenteditable host and has no static
+   * counterpart.
    */
-  private static readonly BASE_STYLES = 'pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] px-[var(--blok-block-padding-inline,2px)] m-0 outline-hidden [&_p]:p-0! [&_p]:m-0! [&_div]:p-0! [&_div]:m-0!';
+  private static readonly BASE_STYLES = `${HEADER_BASE_CLASSES.join(' ')} outline-hidden`;
 
   /**
    * Styles
@@ -1266,12 +1270,12 @@ export class Header implements BlockTool {
     icon: string;
     styles: string;
   }> = [
-    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: `Heading ${1}`, icon: IconH1, styles: 'text-3xl font-semibold mt-8 mb-px' },
-    { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: `Heading ${2}`, icon: IconH2, styles: 'text-2xl font-semibold mt-[26px] mb-px' },
-    { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: `Heading ${3}`, icon: IconH3, styles: 'text-xl font-semibold mt-5 mb-px' },
-    { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: `Heading ${4}`, icon: IconH4, styles: 'text-lg font-semibold mt-3 mb-px' },
-    { number: 5, tag: 'H5', nameKey: 'tools.header.heading5', name: `Heading ${5}`, icon: IconH5, styles: 'text-base font-semibold mt-3 mb-px' },
-    { number: 6, tag: 'H6', nameKey: 'tools.header.heading6', name: `Heading ${6}`, icon: IconH6, styles: 'text-sm font-semibold mt-3 mb-px' },
+    { number: 1, tag: 'H1', nameKey: 'tools.header.heading1', name: `Heading ${1}`, icon: IconH1, styles: HEADER_LEVEL_CLASSES[1].join(' ') },
+    { number: 2, tag: 'H2', nameKey: 'tools.header.heading2', name: `Heading ${2}`, icon: IconH2, styles: HEADER_LEVEL_CLASSES[2].join(' ') },
+    { number: 3, tag: 'H3', nameKey: 'tools.header.heading3', name: `Heading ${3}`, icon: IconH3, styles: HEADER_LEVEL_CLASSES[3].join(' ') },
+    { number: 4, tag: 'H4', nameKey: 'tools.header.heading4', name: `Heading ${4}`, icon: IconH4, styles: HEADER_LEVEL_CLASSES[4].join(' ') },
+    { number: 5, tag: 'H5', nameKey: 'tools.header.heading5', name: `Heading ${5}`, icon: IconH5, styles: HEADER_LEVEL_CLASSES[5].join(' ') },
+    { number: 6, tag: 'H6', nameKey: 'tools.header.heading6', name: `Heading ${6}`, icon: IconH6, styles: HEADER_LEVEL_CLASSES[6].join(' ') },
   ];
 
   /**

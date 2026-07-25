@@ -771,6 +771,44 @@ describe('blocksToHtml', () => {
       expect('tag' in first ? first.attrs.class : '').toContain('[&>p:first-of-type]:mt-0');
     });
 
+    /**
+     * REGRESSION: the dispatcher stamps the FIRST opening tag, so a toggleable
+     * header — which emits `<details><summary><h2>` — had its heading
+     * typography land on the `<details>`. `<h1>`-`<h6>` carry UA font-size and
+     * font-weight, which override anything merely inherited from an ancestor, so
+     * the heading rendered at the wrong size. The class-parity harness could not
+     * catch it: it compares class SETS on paired roots and both sides had the
+     * same set, just on structurally different elements.
+     *
+     * Wrapping emitters now place their own root attributes via env.rootAttrs().
+     */
+    it('puts a toggleable header\'s classes on the heading, not the details wrapper', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'header', data: { text: 'T', level: 2, isToggleable: true } }]),
+        { classes: true }
+      );
+
+      expect(html).toContain('<h2 class="');
+      expect(html).toContain('text-2xl');
+      expect(html).toMatch(/^<details><summary><h2 class=/);
+    });
+
+    it('keeps the tool hook on the same element as the classes for wrapping emitters', () => {
+      const html = blocksToHtml(
+        doc([{ id: 'h1', type: 'header', data: { text: 'T', level: 2, isToggleable: true } }]),
+        { classes: true, toolAttributes: true, blockIds: true }
+      );
+
+      /**
+       * The hook must not drift onto the wrapper: the parity harness pairs on
+       * data-blok-tool, so a hook on `<details>` would be compared against the
+       * editor's `<h2>` and silently mask real drift.
+       */
+      expect(html).toContain('data-blok-tool="header"');
+      expect(html).not.toContain('<details data-blok-tool');
+      expect(html).toMatch(/<h2 class="[^"]*" data-blok-tool="header" data-blok-id="h1">/);
+    });
+
     it('does not stamp bare containers, which emit no root of their own', () => {
       const html = blocksToHtml(
         doc([{ id: 'db', type: 'database', data: {} }]),

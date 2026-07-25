@@ -163,6 +163,18 @@ export interface HtmlRenderer {
 const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
 
 /**
+ * Tools whose emitter places its own presentational classes via
+ * `env.classAttr()`, so the dispatcher must NOT stamp them onto the first
+ * opening tag.
+ *
+ * These are the emitters that WRAP their styled element: a toggleable header
+ * emits `<details><summary><h2>`, and stamping the first tag would put the
+ * heading typography on the `<details>` — where `<h1>`-`<h6>` UA font-size and
+ * weight then override it. A new wrapping emitter must be added here.
+ */
+const SELF_STAMPING_TOOLS = new Set(['header']);
+
+/**
  * Insert a `name="value"` attribute onto the first opening tag of
  * Blok-generated markup. Operates only on our own emitter output (which always
  * opens with `<tag`), so the leading-tag match is exact; the value is
@@ -257,6 +269,14 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       return ` ${name}="${escapeHtml(resolved)}"`;
     },
     idAttr: (block) => (blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : ''),
+    rootAttrs: (block) => {
+      const list = classes ? classesFor(block.type, block.data) : [];
+      const classPart = list.length === 0 ? '' : ` class="${escapeHtml(list.join(' '))}"`;
+      const toolPart = toolAttributes ? ` data-blok-tool="${escapeHtml(block.type)}"` : '';
+      const idPart = blockIds && block.id !== undefined ? ` data-blok-id="${escapeHtml(block.id)}"` : '';
+
+      return `${classPart}${toolPart}${idPart}`;
+    },
   };
 
   const ctxFor = (block: ViewBlock): ViewRenderContext => ({
@@ -291,14 +311,25 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     if (emitter !== undefined) {
       const bare = BARE_CONTAINER_TOOLS.has(block.type);
       const base = emitter(block, env);
+
+      /** Self-stamping emitters placed all root attributes via env.rootAttrs(). */
+      if (SELF_STAMPING_TOOLS.has(block.type)) {
+        return base;
+      }
+
       const withId = blockIds && !bare && block.id !== undefined
         ? stampAttr(base, 'data-blok-id', block.id)
         : base;
 
       const withTool = toolAttributes && !bare ? stampAttr(withId, 'data-blok-tool', block.type) : withId;
 
-      /** Bare containers emit no root of their own, so there is nothing to stamp. */
-      return classes && !bare ? stampClass(withTool, classesFor(block.type, block.data)) : withTool;
+      /**
+       * Bare containers emit no root of their own, and self-stamping emitters
+       * have already placed their classes — so neither is stamped here.
+       */
+      const centrallyStamped = classes && !bare && !SELF_STAMPING_TOOLS.has(block.type);
+
+      return centrallyStamped ? stampClass(withTool, classesFor(block.type, block.data)) : withTool;
     }
 
     /** Unknown tool: the block is skipped/commented, its children still render. */

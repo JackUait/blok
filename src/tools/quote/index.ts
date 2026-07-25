@@ -16,6 +16,7 @@ import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-san
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
+import { quoteClasses } from '../../shared/tool-classes/quote';
 
 export interface QuoteData extends BlockToolData {
   text: string;
@@ -24,25 +25,14 @@ export interface QuoteData extends BlockToolData {
 
 const DEFAULT_PLACEHOLDER = 'tools.quote.placeholder';
 
-const BASE_CLASSES = [
-  'border-l-[3px]',
-  'border-current',
-  'pl-[0.9em]',
-  'pr-[0.9em]',
-  // Vertical padding follows the public --blok-block-padding-top/-bottom
-  // tokens with the quote's own 0.2em defaults as fallbacks. These win over
-  // the blok-block declarations by generated-utility source order (equal
-  // specificity) — pinned by the compiled-cascade test in
-  // test/unit/styles/host-customization-tokens.test.ts.
-  'pt-[var(--blok-block-padding-top,0.2em)]',
-  'pb-[var(--blok-block-padding-bottom,0.2em)]',
-  'leading-[1.5]',
-  'outline-hidden',
-  'mt-[0.3em]',
-  'mb-[0.3em]',
-];
-
-const LARGE_CLASS = 'text-[1.2em]';
+/**
+ * Static presentational classes (including `blok-block` and the
+ * source-order-sensitive padding overrides) live in
+ * `src/shared/tool-classes/quote.ts` so the view emitter stamps the exact same
+ * set. `outline-hidden` stays here: it suppresses the focus ring on a
+ * contenteditable host and has no static counterpart.
+ */
+const EDIT_CLASSES = ['outline-hidden'];
 
 export class Quote implements BlockTool {
   private api: API;
@@ -80,10 +70,9 @@ export class Quote implements BlockTool {
     const el = document.createElement('blockquote');
 
     el.className = twMerge(
-      this.api.styles.block,
-      BASE_CLASSES,
-      getPlaceholderClasses('focus'),
-      this._data.size === 'large' ? LARGE_CLASS : ''
+      quoteClasses(this._data.size === 'large' ? 'large' : 'default'),
+      EDIT_CLASSES,
+      getPlaceholderClasses('focus')
     );
     el.setAttribute(DATA_ATTR.tool, 'quote');
     el.contentEditable = 'false';
@@ -205,10 +194,9 @@ export class Quote implements BlockTool {
 
     if (this._element) {
       this._element.className = twMerge(
-        this.api.styles.block,
-        BASE_CLASSES,
-        getPlaceholderClasses('focus'),
-        size === 'large' ? LARGE_CLASS : ''
+        quoteClasses(size),
+        EDIT_CLASSES,
+        getPlaceholderClasses('focus')
       );
     }
   }

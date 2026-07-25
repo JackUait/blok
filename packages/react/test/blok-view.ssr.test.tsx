@@ -39,7 +39,10 @@ describe('BlokView SSR', () => {
      * caller's className.
      */
     expect(html).toContain('<div data-blok-interface="view" class="rich">');
-    expect(html).toContain('<h3>SSR Title</h3>');
+    /** Level-3 typography comes from the shared tool-classes module. */
+    expect(html).toContain('<h3 class="');
+    expect(html).toContain('text-xl');
+    expect(html).toContain('>SSR Title</h3>');
     expect(html).toContain('type="checkbox"');
     expect(html).toContain('checked=""');
     expect(errorSpy).not.toHaveBeenCalled();

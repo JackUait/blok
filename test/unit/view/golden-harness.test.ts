@@ -395,7 +395,7 @@ const parseViewHtml = (html: string): HTMLElement => {
  * no content on either side, see the file header), so its class parity is
  * covered by the visual-regression spec instead.
  */
-const CLASS_PARITY_TOOLS = new Set<string>(['paragraph']);
+const CLASS_PARITY_TOOLS = new Set<string>(['paragraph', 'header', 'quote']);
 
 /**
  * Classes the live editor legitimately carries that a static view never does.

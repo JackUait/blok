@@ -7,6 +7,7 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import type { DividerData } from './types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconDivider } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 
@@ -34,6 +35,7 @@ export class DividerTool implements BlockTool {
     const wrapper = document.createElement('div');
 
     wrapper.className = twMerge('py-3', 'leading-[1px]');
+    wrapper.setAttribute(DATA_ATTR.tool, 'divider');
 
     const hr = document.createElement('hr');
 

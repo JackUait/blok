@@ -17,6 +17,7 @@ import {
   SPLIT_HALF_STYLES,
 } from './constants';
 import type { CodeViewMode } from './constants';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown } from '../../components/icons';
 
 export interface CodeDOMRefs {
@@ -117,6 +118,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Wrapper
   const wrapper = document.createElement('div');
   wrapper.className = WRAPPER_STYLES;
+  wrapper.setAttribute(DATA_ATTR.tool, 'code');
 
   // Header
   const header = document.createElement('div');

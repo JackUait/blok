@@ -26,6 +26,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   // Wrapper — flex row: emoji | children
   const wrapper = document.createElement('div');
   wrapper.className = WRAPPER_STYLES;
+  wrapper.setAttribute(DATA_ATTR.tool, 'callout');
 
   // Emoji button
   const emojiButton = document.createElement('button');

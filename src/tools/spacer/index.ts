@@ -6,6 +6,7 @@ import type {
   ToolboxConfig,
 } from '../../../types';
 import type { SpacerData } from './types';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
 import { AlignmentGuide, collectSiblingBlocks, findSnapTarget, measureEdgeOffsets } from './alignment-guide';
@@ -115,6 +116,7 @@ export class SpacerTool implements BlockTool {
     const wrapper = document.createElement('div');
 
     wrapper.setAttribute('data-blok-spacer', '');
+    wrapper.setAttribute(DATA_ATTR.tool, 'spacer');
     wrapper.className = twMerge('relative', 'group/spacer', 'rounded-md');
     wrapper.style.height = `${this.height}px`;
     this.element = wrapper;

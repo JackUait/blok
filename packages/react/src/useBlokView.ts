@@ -36,7 +36,22 @@ export const useBlokView = (
       Fragment,
       null,
       ...viewNodesToReact(
-        blocksToViewNodes(data, { schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl })
+        blocksToViewNodes(data, {
+          schema,
+          renderers,
+          onUnknownBlock,
+          toolAttributes,
+          blockIds,
+          transformUrl,
+          /**
+           * Presentational classes are ON here, unlike the raw `blocksToHtml`
+           * string API where enabling them by default would change every
+           * existing consumer's markup. Looking like a read-only editor render
+           * is the whole point of this path, and the classes are inert until
+           * `@bloklabs/core/view.css` is imported.
+           */
+          classes: true,
+        })
       )
     );
   }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl]);

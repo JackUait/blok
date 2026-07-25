@@ -9,6 +9,7 @@
  */
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import type { BlokViewSchema } from '../shared/sanitize-schema';
+import { classesFor } from '../shared/tool-classes';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
 import type { DocumentModel, ViewBlock } from './document-model';
@@ -116,6 +117,22 @@ export interface BlocksToHtmlOptions {
    * so React consumers get parity without setting this.
    */
   root?: boolean;
+  /**
+   * Stamp each block root with the same presentational classes the editor's
+   * tools apply (default `false`).
+   *
+   * This is the mechanism behind visual parity: the classes come from
+   * `src/shared/tool-classes/*`, the single source both the tools' `render()`
+   * and this renderer read, so the two cannot drift (enforced by the golden
+   * harness's class-parity guarantee). They need `@bloklabs/core/view.css` — and
+   * the `root` wrapper, or an equivalent `[data-blok-interface]` ancestor — to
+   * actually paint.
+   *
+   * Opt-in for the same reason as {@link root}: switching it on by default would
+   * change the markup every existing consumer of this published API receives.
+   * `<BlokView>` enables it internally, so React consumers get parity for free.
+   */
+  classes?: boolean;
 }
 
 /**
@@ -159,11 +176,37 @@ const stampAttr = (html: string, name: string, value: string): string => {
   return html.replace(/^\s*<[a-z][a-z0-9]*/i, (openTag) => `${openTag} ${name}="${escapeHtml(value)}"`);
 };
 
+/**
+ * Merge classes onto the first opening tag of Blok-generated markup.
+ *
+ * Operates only on our own emitter output (which always opens with `<tag`), so
+ * the leading-tag match is exact. An existing `class` attribute is EXTENDED
+ * rather than replaced, and a non-element string (empty / comment) is returned
+ * unchanged.
+ * @param html - Blok's rendered markup for one block or list run
+ * @param classes - classes to add
+ */
+const stampClass = (html: string, classes: readonly string[]): string => {
+  if (classes.length === 0) {
+    return html;
+  }
+
+  const added = escapeHtml(classes.join(' '));
+  const withExistingClass = /^(\s*<[a-z][a-z0-9]*[^>]*?)\sclass="([^"]*)"/i;
+
+  if (withExistingClass.test(html)) {
+    return html.replace(withExistingClass, (_match, head: string, prior: string) => `${head} class="${prior} ${added}"`);
+  }
+
+  return html.replace(/^\s*<[a-z][a-z0-9]*/i, (openTag) => `${openTag} class="${added}"`);
+};
+
 export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOptions): HtmlRenderer => {
   const renderers = options.renderers ?? {};
   const onUnknownBlock = options.onUnknownBlock ?? 'skip';
   const toolAttributes = options.toolAttributes === true;
   const blockIds = options.blockIds === true;
+  const classes = options.classes === true;
   const transformUrl = options.transformUrl;
 
   /**
@@ -252,7 +295,10 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
         ? stampAttr(base, 'data-blok-id', block.id)
         : base;
 
-      return toolAttributes && !bare ? stampAttr(withId, 'data-blok-tool', block.type) : withId;
+      const withTool = toolAttributes && !bare ? stampAttr(withId, 'data-blok-tool', block.type) : withId;
+
+      /** Bare containers emit no root of their own, so there is nothing to stamp. */
+      return classes && !bare ? stampClass(withTool, classesFor(block.type, block.data)) : withTool;
     }
 
     /** Unknown tool: the block is skipped/commented, its children still render. */

@@ -395,7 +395,7 @@ const parseViewHtml = (html: string): HTMLElement => {
  * no content on either side, see the file header), so its class parity is
  * covered by the visual-regression spec instead.
  */
-const CLASS_PARITY_TOOLS = new Set<string>([]);
+const CLASS_PARITY_TOOLS = new Set<string>(['paragraph']);
 
 /**
  * Classes the live editor legitimately carries that a static view never does.
@@ -551,6 +551,8 @@ describe('golden harness: view renderer vs live editor', () => {
       schema: defineBlokSchema({ tools: fullTools as never }).viewSchema,
       /** Guarantee 4 pairs block roots on this hook. */
       toolAttributes: true,
+      /** Guarantee 4 compares the classes this stamps. */
+      classes: true,
     }));
 
     const editorHosts = collectHosts(redactor);

@@ -50,6 +50,15 @@ describe('BlokView SSR', () => {
   it('useBlokView renders unwrapped in static markup', () => {
     const Label = (): React.ReactNode => <label>{useBlokView({ blocks: [{ type: 'paragraph', data: { text: 'hi' } }] })}</label>;
 
-    expect(renderToStaticMarkup(<Label />)).toBe('<label><p>hi</p></label>');
+    /**
+     * "Unwrapped" is the contract under test: the block element is a DIRECT
+     * child of the caller's `<label>`, with no interposed element. The
+     * presentational classes come from the shared tool-classes modules — this
+     * path enables them so it matches a read-only editor render — and are inert
+     * until `@bloklabs/core/view.css` is imported.
+     */
+    expect(renderToStaticMarkup(<Label />)).toBe(
+      '<label><p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">hi</p></label>'
+    );
   });
 });

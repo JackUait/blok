@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { blocksToHtml, defineBlokSchema } from '../../../src/view';
+import { blocksToHtml, blocksToViewNodes, defineBlokSchema } from '../../../src/view';
 
 import type { LooseOutputData, OutputBlockData, OutputData } from '../../../types';
 
@@ -732,6 +732,52 @@ describe('blocksToHtml', () => {
 
     it('still wraps an empty document so the container is stable for styling', () => {
       expect(blocksToHtml(null, { root: true })).toBe('<div data-blok-interface="view"></div>');
+    });
+  });
+
+  /**
+   * Presentational classes come from `src/shared/tool-classes/*`, the single
+   * source the editor's tools read too — that shared origin is what the golden
+   * harness's class-parity guarantee enforces. Opt-in here so enabling parity
+   * does not change existing consumers' markup.
+   */
+  describe('presentational classes', () => {
+    it('stamps none by default (published fragment contract is unchanged)', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]));
+
+      expect(html).toBe('<p>Hi</p>');
+    });
+
+    it('stamps the shared paragraph classes when opted in', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
+
+      expect(html).toBe(
+        '<p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">Hi</p>'
+      );
+    });
+
+    it('entity-escapes arbitrary-variant classes so they survive reparsing', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
+      const nodes = blocksToViewNodes(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
+      const first = nodes[0];
+
+      /**
+       * `&` and `>` are escaped in the serialized attribute, but must decode
+       * back to the literal Tailwind selector — otherwise `[&>p...]` variants
+       * would not match once a browser (or parse5, via blocksToViewNodes)
+       * parses the markup.
+       */
+      expect(html).toContain('[&amp;&gt;p:first-of-type]:mt-0');
+      expect('tag' in first ? first.attrs.class : '').toContain('[&>p:first-of-type]:mt-0');
+    });
+
+    it('does not stamp bare containers, which emit no root of their own', () => {
+      const html = blocksToHtml(
+        doc([{ id: 'db', type: 'database', data: {} }]),
+        { classes: true }
+      );
+
+      expect(html).toBe('');
     });
   });
 });

@@ -30,6 +30,7 @@ import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-san
 import { stripFakeBackgroundElements } from '../../components/utils';
 import { getPlaceholderClasses, isContentEmpty, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
+import { PARAGRAPH_CLASSES } from '../../shared/tool-classes/paragraph';
 
 /**
  * Tool's input and output data format
@@ -214,16 +215,11 @@ export class Paragraph implements BlockTool {
    * @returns HTMLDivElement
    */
   /**
-   * Paragraph wrapper styling classes using Tailwind.
+   * Edit-only wrapper classes. The static presentational ones live in
+   * `src/shared/tool-classes/paragraph.ts` so the view emitter stamps the exact
+   * same set — see that module for why the split exists.
    */
-  private static readonly WRAPPER_CLASSES = [
-    'leading-[1.5]',
-    'outline-hidden',
-    'mt-px',
-    'mb-px',
-    '[&>p:first-of-type]:mt-0',
-    '[&>p:last-of-type]:mb-0',
-  ];
+  private static readonly EDIT_CLASSES = ['outline-hidden'];
 
 
 
@@ -255,8 +251,8 @@ export class Paragraph implements BlockTool {
     const div = document.createElement('DIV') as HTMLDivElement;
 
     div.className = twMerge(
-      this.api.styles.block,
-      Paragraph.WRAPPER_CLASSES,
+      PARAGRAPH_CLASSES,
+      Paragraph.EDIT_CLASSES,
       getPlaceholderClasses('focus')
     );
     div.setAttribute(DATA_ATTR.tool, 'paragraph');

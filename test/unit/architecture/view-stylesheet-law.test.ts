@@ -1,7 +1,11 @@
+import { execFileSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { describe, expect, it } from 'vitest';
+
+import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../../../src/shared/block-scaffolding';
+import { ALL_STATIC_CLASSES } from '../../../src/shared/tool-classes';
 
 /**
  * VIEW BASELINE STYLESHEET LAW
@@ -19,13 +23,40 @@ import { describe, expect, it } from 'vitest';
  * keys on the tool hook and reads the real padding tokens with their editor
  * defaults — not hand-picked numbers that can silently diverge.
  *
- * Deliberately zero-dependency: readable in a no-install context.
+ * Since the parity work the sheet is GENERATED (scripts/generate-view-css.mjs)
+ * from the same shared class modules the emitters stamp, so the law also pins
+ * the three properties a generated artifact needs: that it covers every class
+ * those modules can emit, that the committed file is what the generator
+ * currently produces, and that it has not quietly grown unbounded.
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
+/**
+ * Measured at 46,315 bytes when the sheet was first generated (Phase A: text
+ * blocks + scaffolding), rounded up ~15%.
+ *
+ * Raising this is a DECISION, not a fix. The documented next step when Phase B
+ * media styling pushes the sheet past the budget is to split it into an opt-in
+ * `view-media.css`, so hosts rendering text-only documents keep paying for text
+ * only — not to pick a bigger number.
+ */
+const VIEW_CSS_BYTE_BUDGET = 53_000;
+
 const readManifest = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8')) as Record<string, unknown>;
+
+/**
+ * Render a class name the way it appears as a CSS selector.
+ *
+ * Tailwind escapes every character outside `[A-Za-z0-9_-]` with a backslash, so
+ * `leading-[1.5]` is emitted as `.leading-\[1\.5\]`. Substring-matching the raw
+ * class name would find `pl-8` inside `.pl-8\.5` and report coverage the sheet
+ * does not have.
+ * @param cls - a class name as written in the shared modules
+ */
+const cssEscapeClass = (cls: string): string =>
+  `.${cls.replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`)}`;
 
 describe('view baseline stylesheet law', () => {
   it('ships the opt-in stylesheet at the repo root', () => {
@@ -61,5 +92,55 @@ describe('view baseline stylesheet law', () => {
     expect(mainCss).toContain('--blok-block-padding-top,7px');
     expect(mainCss).toContain('--blok-block-padding-bottom,7px');
     expect(mainCss).toContain('--blok-block-padding-inline,2px');
+  });
+
+  describe('generated coverage', () => {
+    /** Guards the escape helper itself — a broken one would fake coverage. */
+    it.each([
+      ['leading-[1.5]', '.leading-\\[1\\.5\\]'],
+      ['[&>p:first-of-type]:mt-0', '.\\[\\&\\>p\\:first-of-type\\]\\:mt-0'],
+      ['pl-8', '.pl-8'],
+    ])('escapes %s the way Tailwind emits it', (cls, expected) => {
+      expect(cssEscapeClass(cls)).toBe(expected);
+    });
+
+    it('covers every class the shared modules can emit', () => {
+      const css = readFileSync(join(repoRoot, 'view.css'), 'utf-8');
+
+      /**
+       * Missing coverage means the generator's prune dropped a rule the
+       * emitters still stamp — the exact failure a jsdom class-parity gate
+       * cannot see, because both sides agree on the class and neither knows
+       * whether a stylesheet backs it.
+       */
+      const uncovered = [
+        ...new Set([...ALL_STATIC_CLASSES, ...BLOCK_WRAPPER_CLASSES, ...BLOCK_CONTENT_CLASSES]),
+      ].filter((cls) => !css.includes(cssEscapeClass(cls)));
+
+      expect(uncovered, `view.css is missing rules for: ${uncovered.join(', ')}`).toEqual([]);
+    });
+
+    it('is regeneration-fresh', () => {
+      const before = readFileSync(join(repoRoot, 'view.css'), 'utf-8');
+
+      execFileSync('node', ['scripts/generate-view-css.mjs'], { cwd: repoRoot });
+
+      expect(
+        readFileSync(join(repoRoot, 'view.css'), 'utf-8'),
+        'view.css is stale — run `node scripts/generate-view-css.mjs`'
+      ).toBe(before);
+    }, 60_000);
+
+    it('stays within the byte budget', () => {
+      expect(readFileSync(join(repoRoot, 'view.css')).byteLength).toBeLessThan(VIEW_CSS_BYTE_BUDGET);
+    });
+
+    it('ships no webfonts — a view inherits the host typography', () => {
+      /**
+       * fonts.css alone is ~226 KB of base64. Bundling it would quintuple the
+       * sheet for a face most hosts already serve.
+       */
+      expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('@font-face');
+    });
   });
 });

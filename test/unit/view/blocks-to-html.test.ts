@@ -821,6 +821,70 @@ describe('blocksToHtml', () => {
       expect(html).not.toMatch(/<details[^>]*class=/);
     });
 
+    /**
+     * `checklist.css` styles the checkbox entirely through
+     * `[data-list-style="checklist"] input[type="checkbox"]`, and main.css
+     * resolves the public `--blok-list-padding-start` token through
+     * `[data-list-style] { --_blok-list-pad: … }`. Without the attribute on the
+     * grouping element neither rule can ever match a view, so the checkbox
+     * falls back to the native browser control and the padding token is inert
+     * — a visual gap no class comparison can see.
+     */
+    it('stamps data-list-style on the list container under parity', () => {
+      const html = blocksToHtml(
+        doc([
+          { type: 'list', data: { text: 'a', style: 'checklist', checked: true } },
+        ]),
+        { classes: true }
+      );
+
+      expect(html).toContain('<ul data-list-style="checklist">');
+    });
+
+    it('leaves the list container bare when classes are off', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'list', data: { text: 'a', style: 'checklist' } }])
+      );
+
+      expect(html).not.toContain('data-list-style');
+    });
+
+    /**
+     * These two attributes carry no behaviour in a view — they exist purely so
+     * the editor's own stylesheets can reach it. `heading.css` keys every
+     * host-overridable `--blok-heading-N-font-size` on the level attribute, and
+     * main.css keys the nested-heading margin reset on the children container.
+     * Both would otherwise be inert in a view while live in the editor, which is
+     * exactly the drift a host retuning a token would hit.
+     */
+    it('stamps data-blok-heading-level so the per-level heading tokens apply', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'header', data: { text: 'T', level: 4 } }]),
+        { classes: true }
+      );
+
+      expect(html).toContain('data-blok-heading-level="4"');
+    });
+
+    it.each([
+      ['toggle', { type: 'toggle', data: { text: 'T', isOpen: true } }],
+      ['callout', { type: 'callout', data: { emoji: '💡' } }],
+    ])('marks the %s children container so nested headings lose their root margin', (_tool, block) => {
+      const html = blocksToHtml(doc([block]), { classes: true });
+
+      expect(html).toContain('data-blok-toggle-children');
+    });
+
+    it('stamps neither hook when classes are off', () => {
+      const html = blocksToHtml(doc([
+        { type: 'header', data: { text: 'T', level: 4 } },
+        { type: 'toggle', data: { text: 'T' } },
+      ]));
+
+      expect(html).not.toContain('data-blok-heading-level');
+      expect(html).not.toContain('data-blok-toggle-children');
+    });
+
     it('keeps the tool hook on the same element as the classes for wrapping emitters', () => {
       const html = blocksToHtml(
         doc([{ id: 'h1', type: 'header', data: { text: 'T', level: 2, isToggleable: true } }]),
@@ -834,7 +898,7 @@ describe('blocksToHtml', () => {
        */
       expect(html).toContain('data-blok-tool="header"');
       expect(html).not.toContain('<details data-blok-tool');
-      expect(html).toMatch(/<h2 class="[^"]*" data-blok-tool="header" data-blok-id="h1">/);
+      expect(html).toMatch(/<h2 class="[^"]*" data-blok-tool="header" data-blok-id="h1"/);
     });
 
     /**

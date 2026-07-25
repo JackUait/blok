@@ -153,6 +153,16 @@ const childrenOnly = (block: ViewBlock, env: EmitterEnv): string => {
   return env.renderList(env.childrenOf(block.id));
 };
 
+/**
+ * Marks a nested-block container the way the editor's toggle and callout tools
+ * do. `main.css` keys the heading override
+ * `[data-blok-toggle-children] :is(h1, …, h6) { margin-top: 1px }` on it, which
+ * is what stops a heading nested in a toggle or callout from taking its
+ * root-level top margin (`mt-8` for an h1). Purely presentational here — the
+ * view has no hierarchy manager to drive.
+ */
+const CHILDREN_CONTAINER_ATTR = ' data-blok-toggle-children';
+
 /** List style read with the unordered default (mirrors the list tool). */
 const listStyleOf = (block: ViewBlock): string => {
   const style = block.data.style;
@@ -266,8 +276,18 @@ export const renderListRun = (items: ViewBlock[], env: EmitterEnv): string => {
     const tag = style === 'ordered' ? 'ol' : 'ul';
     const run = buildItems(from, depth, style);
     const rest = buildLevel(run.next, depth);
+    /**
+     * Under parity the grouping element carries `data-list-style` the way the
+     * editor's list container does. Two stylesheets key on it and would
+     * otherwise never match in a view: `checklist.css` (the whole custom
+     * checkbox appearance — without this the view falls back to the native
+     * browser control) and main.css's `--_blok-list-pad` indirection, which
+     * resolves the public `--blok-list-padding-start` token the `<li>`'s
+     * `ps-[var(--_blok-list-pad,0px)]` reads.
+     */
+    const styleAttr = env.classesEnabled ? ` data-list-style="${env.escape(style)}"` : '';
 
-    return { html: `<${tag}${startAttr}>${run.html}</${tag}>` + rest.html, next: rest.next };
+    return { html: `<${tag}${startAttr}${styleAttr}>${run.html}</${tag}>` + rest.html, next: rest.next };
   };
 
   return buildLevel(0, 0).html;
@@ -362,7 +382,14 @@ export const builtinEmitters: Record<string, Emitter> = {
      * editor styles its h-tag, and `<h1>`-`<h6>` carry UA font-size/weight that
      * would override anything merely inherited from an ancestor.
      */
-    const heading = `<h${level}${env.rootAttrs(block)}>${env.inline(block.data.text)}</h${level}>`;
+    /**
+     * `data-blok-heading-level` is what `src/styles/heading.css` keys its
+     * per-level rules on — the host-overridable `--blok-heading-N-font-size`
+     * tokens. Without it a host retuning those would see the editor change and
+     * the view stay put.
+     */
+    const levelAttr = env.classesEnabled ? ` data-blok-heading-level="${level}"` : '';
+    const heading = `<h${level}${env.rootAttrs(block)}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
 
     if (block.data.isToggleable === true) {
       const open = block.data.isOpen === true ? ' open' : '';
@@ -437,7 +464,7 @@ export const builtinEmitters: Record<string, Emitter> = {
      * the emoji and the body do not share the editor's layout.
      */
     const body = env.classesEnabled
-      ? `<div${env.classList(CALLOUT_CHILDREN_CLASSES)}>${children}</div>`
+      ? `<div${env.classList(CALLOUT_CHILDREN_CLASSES)}${CHILDREN_CONTAINER_ATTR}>${children}</div>`
       : children;
 
     return `<aside>${marker}${body}</aside>`;
@@ -448,7 +475,7 @@ export const builtinEmitters: Record<string, Emitter> = {
     const summary = `<summary${env.classList([...TOGGLE_HEADER_ROW_CLASSES, ...TOGGLE_CONTENT_CLASSES])}>${env.inline(block.data.text)}</summary>`;
     const children = childrenOnly(block, env);
     const body = env.classesEnabled
-      ? `<div${env.classList(TOGGLE_CHILDREN_CLASSES)}>${children}</div>`
+      ? `<div${env.classList(TOGGLE_CHILDREN_CLASSES)}${CHILDREN_CONTAINER_ATTR}>${children}</div>`
       : children;
 
     return `<details${open}>${summary}${body}</details>`;

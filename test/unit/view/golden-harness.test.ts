@@ -380,6 +380,111 @@ const parseViewHtml = (html: string): HTMLElement => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Class parity (guarantee 4)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Tools whose class parity is enforced. A tool joins this set in the same
+ * change that moves its static classes into `src/shared/tool-classes/*` —
+ * membership IS the proof that the extraction landed.
+ *
+ * Tools absent from the set still run guarantees 1-3; only the class
+ * comparison is skipped for them.
+ *
+ * NOTE: `spacer` can never join this set — it has no fixture here (it carries
+ * no content on either side, see the file header), so its class parity is
+ * covered by the visual-regression spec instead.
+ */
+const CLASS_PARITY_TOOLS = new Set<string>([]);
+
+/**
+ * Classes the live editor legitimately carries that a static view never does.
+ * Everything NOT excluded here must match on both sides — that is the law, so
+ * each exclusion is a deliberate claim that the class has no static
+ * counterpart, and carries its reason.
+ */
+const EDITOR_ONLY_CLASSES = new Set([
+  /** Focus-ring suppression on contenteditable hosts; nothing to suppress in a static render. */
+  'outline-hidden',
+  /**
+   * Tailwind `group` markers. They paint nothing themselves — they only enable
+   * `group-hover/*:` rules on edit chrome (the code block's copy button, the
+   * spacer's resize grips), none of which a static view renders.
+   */
+  'group/code',
+  'group/spacer',
+]);
+
+/**
+ * Is this an empty-state placeholder utility?
+ *
+ * `getPlaceholderClasses()` expands to a dozen-plus Tailwind arbitrary-variant
+ * strings — `empty:focus:before:cursor-text`,
+ * `[&[data-empty=true]:focus]:before:text-block-placeholder`,
+ * `data-[blok-empty=true]:before:content-[attr(data-placeholder)]`, … — and the
+ * exact set differs per tool and per Tailwind version. Matching them
+ * structurally (a `::before` rule gated on an empty-state variant) is both
+ * exhaustive and stable, where an enumerated list would silently rot.
+ *
+ * A static view renders saved content, never an empty editable awaiting input,
+ * so none of these have a counterpart.
+ * @param cls - single class name
+ */
+const isPlaceholderClass = (cls: string): boolean => cls.includes(':before:') && cls.includes('empty');
+
+/**
+ * Block roots in document order — the elements carrying `data-blok-tool`.
+ *
+ * Pairing on the tool hook rather than on inline-content hosts is what makes
+ * class parity comparable: the presentational classes live on the block ROOT,
+ * while a host is often a descendant of it (a list item's content container,
+ * for instance).
+ * @param root - subtree root (redactor / parsed view container)
+ */
+const blockRoots = (root: Element): Element[] => Array.from(root.querySelectorAll('[data-blok-tool]'));
+
+/**
+ * Compare the class sets of paired block roots.
+ * @param editorRoots - block roots from the live read-only editor
+ * @param viewRoots - block roots from the parsed view output
+ * @returns a human-readable diff, or null when the two agree
+ */
+const classDiff = (editorRoots: Element[], viewRoots: Element[]): string | null => {
+  const norm = (el: Element): string =>
+    Array.from(el.classList)
+      .filter((cls) => !EDITOR_ONLY_CLASSES.has(cls) && !isPlaceholderClass(cls))
+      .sort()
+      .join(' ');
+
+  if (editorRoots.length !== viewRoots.length) {
+    return `block-root count differs: editor ${editorRoots.length} vs view ${viewRoots.length}`;
+  }
+
+  for (const [index, editorRoot] of editorRoots.entries()) {
+    const viewRoot = viewRoots[index];
+    const editorTool = editorRoot.getAttribute('data-blok-tool');
+    const viewTool = viewRoot.getAttribute('data-blok-tool');
+
+    if (editorTool !== viewTool) {
+      return `block ${index}: tool differs — editor "${editorTool}" vs view "${viewTool}"`;
+    }
+
+    const editorClasses = norm(editorRoot);
+    const viewClasses = norm(viewRoot);
+
+    if (editorClasses !== viewClasses) {
+      return [
+        `block ${index} (${editorTool}) class set differs:`,
+        `  editor: ${editorClasses}`,
+        `  view:   ${viewClasses}`,
+      ].join('\n');
+    }
+  }
+
+  return null;
+};
+
+/* ------------------------------------------------------------------ */
 /* Non-vacuity accounting                                              */
 /* ------------------------------------------------------------------ */
 
@@ -442,7 +547,11 @@ describe('golden harness: view renderer vs live editor', () => {
   const compareFixture = async (toolName: string, blocks: OutputBlockData[]): Promise<{ redactor: Element; viewRoot: HTMLElement }> => {
     const data: OutputData = { blocks };
     const redactor = await renderInEditor(blocks);
-    const viewRoot = parseViewHtml(blocksToHtml(data, { schema: defineBlokSchema({ tools: fullTools as never }).viewSchema }));
+    const viewRoot = parseViewHtml(blocksToHtml(data, {
+      schema: defineBlokSchema({ tools: fullTools as never }).viewSchema,
+      /** Guarantee 4 pairs block roots on this hook. */
+      toolAttributes: true,
+    }));
 
     const editorHosts = collectHosts(redactor);
     const viewHosts = collectHosts(viewRoot);
@@ -463,6 +572,13 @@ describe('golden harness: view renderer vs live editor', () => {
     const viewText = normalizeWhitespace(blocksToPlainText(data));
 
     expect(editorText, `[${toolName}] plain text`).toBe(viewText);
+
+    /** Guarantee 4: paired block roots carry identical class sets (visual parity). */
+    if (CLASS_PARITY_TOOLS.has(toolName)) {
+      const classes = classDiff(blockRoots(redactor), blockRoots(viewRoot));
+
+      expect(classes, `[${toolName}] class parity drift:\n${classes ?? ''}`).toBeNull();
+    }
 
     comparedTools.add(toolName);
     comparedFragmentCount += editorHosts.length;

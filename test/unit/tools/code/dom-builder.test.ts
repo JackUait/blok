@@ -92,6 +92,23 @@ describe('buildCodeDOM', () => {
     expect(languageButton.hasAttribute('aria-haspopup')).toBe(false);
   });
 
+  it('renders the language label as plain text in readOnly mode', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { languageButton } = buildCodeDOM({
+      code: '',
+      languageName: 'LaTeX',
+      readOnly: true,
+      copyLabel: 'Copy code',
+    });
+
+    // No affordances of a button: no pointer cursor, no hover background,
+    // no focus stop, and the text stays selectable like any other text.
+    expect(languageButton.className).not.toContain('cursor-pointer');
+    expect(languageButton.className).not.toContain('hover:bg-item-hover-bg');
+    expect(languageButton.className).not.toContain('select-none');
+    expect(languageButton.tabIndex).toBe(-1);
+  });
+
   it('code element renders initial code text', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { codeElement } = buildCodeDOM({

@@ -1301,6 +1301,28 @@ describe('CodeTool', () => {
       expect(chevron.hidden).toBe(true);
     });
 
+    it('turns the language label into plain text when entering readonly and back', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLElement;
+
+      expect(langBtn.className).toContain('cursor-pointer');
+      expect(langBtn.tabIndex).toBe(0);
+
+      tool.setReadOnly(true);
+
+      expect(langBtn.className).not.toContain('cursor-pointer');
+      expect(langBtn.className).not.toContain('hover:bg-item-hover-bg');
+      expect(langBtn.tabIndex).toBe(-1);
+
+      tool.setReadOnly(false);
+
+      expect(langBtn.className).toContain('cursor-pointer');
+      expect(langBtn.className).toContain('hover:bg-item-hover-bg');
+      expect(langBtn.tabIndex).toBe(0);
+    });
+
     it('restores the language chevron and picker when exiting readonly', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));

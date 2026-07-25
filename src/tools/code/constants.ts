@@ -65,6 +65,8 @@ export const LANGUAGES: LanguageEntry[] = [
 export const WRAPPER_STYLES = ['group/code', ...CODE_WRAPPER_CLASSES].join(' ');
 export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text';
 export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
+/** Read-only has no picker to open — the language label is plain, unfocusable text there. */
+export const LANGUAGE_LABEL_STYLES = 'inline-flex items-center px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
 export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';

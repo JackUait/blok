@@ -29,6 +29,8 @@ import {
   AUTO_DETECTED_KEY,
   PLAIN_TEXT_KEY,
   COPIED_FEEDBACK_STYLES,
+  LANGUAGE_BUTTON_STYLES,
+  LANGUAGE_LABEL_STYLES,
   PREVIEWABLE_LANGUAGES,
   CODE_TAB_KEY,
   PREVIEW_TAB_KEY,
@@ -325,10 +327,14 @@ export class CodeTool implements BlockTool {
       this._dom.codeElement.removeAttribute('spellcheck');
       this._picker?.hide();
       this._dom.languageButton.removeAttribute('aria-haspopup');
+      this._dom.languageButton.className = LANGUAGE_LABEL_STYLES;
+      this._dom.languageButton.tabIndex = -1;
     } else {
       this._dom.codeElement.setAttribute('contenteditable', 'plaintext-only');
       this._dom.codeElement.setAttribute('spellcheck', 'false');
       this._dom.languageButton.setAttribute('aria-haspopup', 'listbox');
+      this._dom.languageButton.className = LANGUAGE_BUTTON_STYLES;
+      this._dom.languageButton.removeAttribute('tabindex');
     }
 
     // The chevron advertises an openable picker — there is none in read-only

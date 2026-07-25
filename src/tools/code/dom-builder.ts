@@ -2,6 +2,7 @@ import {
   WRAPPER_STYLES,
   HEADER_STYLES,
   LANGUAGE_BUTTON_STYLES,
+  LANGUAGE_LABEL_STYLES,
   HEADER_CONTROLS_STYLES,
   HEADER_BUTTON_STYLES,
   HEADER_BUTTON_MATCHED_STYLES,
@@ -127,11 +128,13 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   // Language button (opens language picker) — includes text + chevron icon
   const languageButton = document.createElement('button');
   languageButton.type = 'button';
-  languageButton.className = LANGUAGE_BUTTON_STYLES;
+  languageButton.className = readOnly ? LANGUAGE_LABEL_STYLES : LANGUAGE_BUTTON_STYLES;
   languageButton.setAttribute('data-blok-testid', 'code-language-btn');
 
   // Read-only has no picker to open — the button is a plain label there
-  if (!readOnly) {
+  if (readOnly) {
+    languageButton.tabIndex = -1;
+  } else {
     languageButton.setAttribute('aria-haspopup', 'listbox');
   }
 

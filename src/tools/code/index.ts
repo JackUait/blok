@@ -210,16 +210,22 @@ export class CodeTool implements BlockTool {
     dom.copyButton.addEventListener('click', () => this.copyCode());
     tooltipOnHover(dom.copyButton, this.api.i18n.t(COPY_CODE_KEY), { placement: 'bottom' });
 
-    if (!this.readOnly) {
-      this._picker = this.buildLanguagePicker(dom.languageButton, dom.wrapper);
+    dom.languageButton.addEventListener('click', () => {
+      if (this.readOnly) {
+        return;
+      }
 
-      dom.languageButton.addEventListener('click', () => {
-        if (this._picker?.isShown) {
-          this._picker.hide();
-        } else {
-          this._picker?.show();
-        }
-      });
+      this.ensureLanguagePicker();
+
+      if (this._picker?.isShown) {
+        this._picker.hide();
+      } else {
+        this._picker?.show();
+      }
+    });
+
+    if (!this.readOnly) {
+      this.ensureLanguagePicker();
     }
 
     return dom.wrapper;
@@ -317,10 +323,24 @@ export class CodeTool implements BlockTool {
     if (state) {
       this._dom.codeElement.setAttribute('contenteditable', 'false');
       this._dom.codeElement.removeAttribute('spellcheck');
+      this._picker?.hide();
+      this._dom.languageButton.removeAttribute('aria-haspopup');
     } else {
       this._dom.codeElement.setAttribute('contenteditable', 'plaintext-only');
       this._dom.codeElement.setAttribute('spellcheck', 'false');
+      this._dom.languageButton.setAttribute('aria-haspopup', 'listbox');
     }
+
+    // The chevron advertises an openable picker — there is none in read-only
+    this._dom.languageChevron.hidden = state;
+  }
+
+  private ensureLanguagePicker(): void {
+    if (this._picker || !this._dom) {
+      return;
+    }
+
+    this._picker = this.buildLanguagePicker(this._dom.languageButton, this._dom.wrapper);
   }
 
   public save(_blockContent: HTMLElement): CodeData {

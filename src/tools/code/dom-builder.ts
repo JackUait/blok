@@ -22,6 +22,7 @@ import { IconCopy, IconCode, IconPreview, IconSplitView, IconChevronDown } from 
 export interface CodeDOMRefs {
   wrapper: HTMLElement;
   languageButton: HTMLButtonElement;
+  languageChevron: HTMLElement;
   copyButton: HTMLButtonElement;
   preElement: HTMLPreElement;
   codeElement: HTMLElement;
@@ -125,8 +126,12 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const languageButton = document.createElement('button');
   languageButton.type = 'button';
   languageButton.className = LANGUAGE_BUTTON_STYLES;
-  languageButton.setAttribute('aria-haspopup', 'listbox');
   languageButton.setAttribute('data-blok-testid', 'code-language-btn');
+
+  // Read-only has no picker to open — the button is a plain label there
+  if (!readOnly) {
+    languageButton.setAttribute('aria-haspopup', 'listbox');
+  }
 
   const langText = document.createElement('span');
   langText.textContent = languageName;
@@ -135,6 +140,8 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
   const chevronSpan = document.createElement('span');
   chevronSpan.className = 'inline-flex items-center ml-0.5 -mr-0.5';
   chevronSpan.innerHTML = IconChevronDown;
+  chevronSpan.setAttribute('data-blok-testid', 'code-language-chevron');
+  chevronSpan.hidden = readOnly;
   languageButton.appendChild(chevronSpan);
 
   // Spacer
@@ -241,5 +248,5 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     wrapper.appendChild(codeBody);
   }
 
-  return { wrapper, languageButton, copyButton, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
+  return { wrapper, languageButton, languageChevron: chevronSpan, copyButton, preElement, codeElement, gutterElement, viewModeContainer, previewElement, splitContainer };
 }

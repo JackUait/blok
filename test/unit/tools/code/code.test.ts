@@ -1288,6 +1288,34 @@ describe('CodeTool', () => {
       expect(codeEl.getAttribute('contenteditable')).toBe('plaintext-only');
     });
 
+    it('hides the language chevron when entering readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }));
+      const el = tool.render();
+      const chevron = el.querySelector('[data-blok-testid="code-language-chevron"]') as HTMLElement;
+
+      expect(chevron.hidden).toBe(false);
+
+      tool.setReadOnly(true);
+
+      expect(chevron.hidden).toBe(true);
+    });
+
+    it('restores the language chevron and picker when exiting readonly', async () => {
+      const { CodeTool } = await import('../../../../src/tools/code');
+      const tool = new CodeTool(createOptions({ code: 'const x = 1;' }, { readOnly: true }));
+      const el = tool.render();
+      const chevron = el.querySelector('[data-blok-testid="code-language-chevron"]') as HTMLElement;
+      const langBtn = el.querySelector('[data-blok-testid="code-language-btn"]') as HTMLButtonElement;
+
+      expect(chevron.hidden).toBe(true);
+
+      tool.setReadOnly(false);
+
+      expect(chevron.hidden).toBe(false);
+      expect(langBtn.getAttribute('aria-haspopup')).toBe('listbox');
+    });
+
     it('is a no-op when called before render', async () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'hello' }));

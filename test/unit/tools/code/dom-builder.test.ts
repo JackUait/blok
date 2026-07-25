@@ -79,6 +79,19 @@ describe('buildCodeDOM', () => {
     expect(languageButton.querySelector('svg')).toBeTruthy();
   });
 
+  it('hides the language chevron in readOnly mode', async () => {
+    const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
+    const { languageButton, languageChevron } = buildCodeDOM({
+      code: '',
+      languageName: 'TypeScript',
+      readOnly: true,
+      copyLabel: 'Copy code',
+    });
+
+    expect(languageChevron.hidden).toBe(true);
+    expect(languageButton.hasAttribute('aria-haspopup')).toBe(false);
+  });
+
   it('code element renders initial code text', async () => {
     const { buildCodeDOM } = await import('../../../../src/tools/code/dom-builder');
     const { codeElement } = buildCodeDOM({

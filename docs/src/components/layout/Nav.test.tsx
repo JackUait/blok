@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { Nav } from './Nav';
 import { I18nProvider } from '../../contexts/I18nContext';
 import type { NavLink } from '@/types/navigation';

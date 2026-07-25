@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Check, Globe } from "lucide-react";
 import { useI18n, useLocalePath } from "../../contexts/I18nContext";
 import type { Locale } from "../../i18n";

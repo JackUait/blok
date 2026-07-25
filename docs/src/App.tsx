@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "./components/common/PageTransition";
 import { usePageTracking } from "./hooks/usePageTracking";

@@ -2,7 +2,7 @@
 // locale tree (../common/Link), while the language switch deliberately crosses
 // into the other one and already carries a fully-qualified address, so it uses
 // react-router's Link directly — mapping it again would produce `/ru/ru/…`.
-import { Link as CrossLocaleLink } from "react-router-dom";
+import { Link as CrossLocaleLink } from "react-router";
 import { Globe } from "lucide-react";
 import { useI18n, useLocalePath } from "../../contexts/I18nContext";
 import { Link } from "../common/Link";

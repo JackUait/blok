@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { DocsHub } from './DocsHub';
 import { MODULE_ORDER } from './api-nav';

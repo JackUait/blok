@@ -1,7 +1,7 @@
 // docs/src/components/api/ApiModuleBody.test.tsx
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ApiModuleBody } from './ApiModuleBody';

@@ -1,6 +1,6 @@
 // docs/src/components/api/ApiIndexRedirect.tsx
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { resolveLegacyHash } from './api-nav';
 import { DocsHub } from './DocsHub';
 import { useLocalizedHref } from '../../contexts/I18nContext';

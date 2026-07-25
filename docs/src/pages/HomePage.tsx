@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';

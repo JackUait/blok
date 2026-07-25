@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import type { Locale } from '../../i18n';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { LanguageSelector } from './LanguageSelector';

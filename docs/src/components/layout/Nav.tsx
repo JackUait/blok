@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { Link } from "../common/Link";
 import { Logo } from "../common/Logo";
 import { Search } from "../common/Search";

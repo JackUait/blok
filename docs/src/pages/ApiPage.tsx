@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router';
 import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Sidebar } from '../components/common/Sidebar';

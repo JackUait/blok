@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { useLocalizedHref } from '../contexts/I18nContext';
 
 // Tools moved into the general docs page; keep old /tools links working. The

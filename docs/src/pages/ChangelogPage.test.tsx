@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import ChangelogPage from './ChangelogPage';
 import { I18nProvider } from '../contexts/I18nContext';
 import enJson from '../i18n/en.json';

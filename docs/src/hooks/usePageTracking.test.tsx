@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate } from "react-router";
 import { useEffect } from "react";
 import { usePageTracking, getPageSection } from "./usePageTracking";
 

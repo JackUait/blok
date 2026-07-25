@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { trackPageView } from "@/lib/analytics";
 
 const KNOWN_SECTIONS = ["demo", "docs", "migration", "changelog"] as const;

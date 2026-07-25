@@ -1,7 +1,7 @@
 // docs/src/components/api/ApiIndexRedirect.test.tsx
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route, useParams, useLocation } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useParams, useLocation } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { ApiIndexRedirect } from './ApiIndexRedirect';
 

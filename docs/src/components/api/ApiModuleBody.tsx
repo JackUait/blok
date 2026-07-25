@@ -1,6 +1,6 @@
 // docs/src/components/api/ApiModuleBody.tsx
 import React, { useEffect } from 'react';
-import { Navigate, useLocation, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router';
 import { ApiSection } from './ApiSection';
 import { ApiPagination } from './ApiPagination';
 import { ToolSection } from '../tools/ToolSection';

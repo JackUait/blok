@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { Link as RouterLink, type LinkProps as RouterLinkProps } from 'react-router-dom';
+import { Link as RouterLink, type LinkProps as RouterLinkProps } from 'react-router';
 import { useLocalizedHref } from '../../contexts/I18nContext';
 
 export interface LinkProps extends Omit<RouterLinkProps, 'to'> {

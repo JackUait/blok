@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router';
 import { I18nProvider } from '../contexts/I18nContext';
 import { FrameworkProvider } from '../contexts/FrameworkContext';
 import { ApiPage } from './ApiPage';

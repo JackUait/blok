@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Links, Meta, Outlet, Scripts, useLocation } from 'react-router-dom';
+import { Links, Meta, Outlet, Scripts, useLocation } from 'react-router';
 import App from './App';
 import { I18nProvider, StoredLocaleRedirect, useRouteLocale } from './contexts/I18nContext';
 import { FrameworkProvider } from './contexts/FrameworkContext';

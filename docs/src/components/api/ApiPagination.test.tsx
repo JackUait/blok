@@ -1,7 +1,7 @@
 // docs/src/components/api/ApiPagination.test.tsx
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { ApiPagination } from './ApiPagination';
 import { MODULE_ORDER } from './api-nav';

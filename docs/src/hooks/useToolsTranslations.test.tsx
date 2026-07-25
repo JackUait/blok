@@ -1,7 +1,7 @@
 // docs/src/hooks/useToolsTranslations.test.tsx
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../contexts/I18nContext';
 import { useToolsTranslations } from './useToolsTranslations';
 import { TOOL_SECTIONS } from '../components/tools/tools-data';

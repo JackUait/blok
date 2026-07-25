@@ -7,7 +7,7 @@ import {
   useMemo,
   type ReactNode,
 } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 
 /** The integration entry points Blok ships an adapter (or core API) for. */
 export type Framework = 'vanilla' | 'react' | 'vue' | 'angular';

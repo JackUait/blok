@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { Hero, SLOT_KINDS } from './Hero';
 import { LAYOUTS, CARD_KEYS } from './heroFormations';
 import { I18nProvider } from '../../contexts/I18nContext';

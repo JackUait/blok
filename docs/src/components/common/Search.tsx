@@ -6,7 +6,7 @@ import {
   useCallback,
 } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Link } from "./Link";
 import { search, getSearchIndex } from "@/utils/search";
 import type { SearchResult } from "@/types/search";

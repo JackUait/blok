@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { FrameworkToggle } from '../common/FrameworkToggle';

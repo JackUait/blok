@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, renderHook, screen, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { I18nProvider, StoredLocaleRedirect, useI18n, useLocalePath } from './I18nContext';
 
 const STORAGE_KEY = 'blok-docs-locale';

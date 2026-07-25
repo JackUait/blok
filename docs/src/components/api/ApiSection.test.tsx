@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { ApiSection } from './ApiSection';
 import type { ApiSection as ApiSectionType } from './api-data';
 import { I18nProvider } from '../../contexts/I18nContext';

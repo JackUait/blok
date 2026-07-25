@@ -1,7 +1,7 @@
 // docs/src/components/tools/ToolSection.test.tsx
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
 import { ToolSection } from './ToolSection';

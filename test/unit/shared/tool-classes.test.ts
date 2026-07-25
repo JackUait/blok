@@ -5,6 +5,13 @@ import { describe, expect, it } from 'vitest';
 
 import { ALL_STATIC_CLASSES, classesFor } from '../../../src/shared/tool-classes';
 import { headerClasses } from '../../../src/shared/tool-classes/header';
+import {
+  LIST_CHECKBOX_CLASSES,
+  LIST_CHECKED_CLASSES,
+  LIST_CHECKLIST_CONTENT_CLASSES,
+  LIST_INDENT_PER_LEVEL,
+  LIST_ITEM_CLASSES,
+} from '../../../src/shared/tool-classes/list';
 import { PARAGRAPH_CLASSES } from '../../../src/shared/tool-classes/paragraph';
 import { quoteClasses } from '../../../src/shared/tool-classes/quote';
 
@@ -122,6 +129,40 @@ describe('shared tool classes', () => {
       ]);
 
       expect(toggleTool.BASE_STYLES).toBe(['outline-hidden', ...toggleShared.TOGGLE_WRAPPER_CLASSES].join(' '));
+    });
+  });
+
+  describe('list', () => {
+    it('puts the block classes on the item, since each item IS a block', () => {
+      expect(classesFor('list', {})).toEqual(LIST_ITEM_CLASSES);
+      expect(LIST_ITEM_CLASSES).toContain('ps-[var(--_blok-list-pad,0px)]');
+    });
+
+    it('does not vary classes by depth — indentation is not class-driven', () => {
+      /**
+       * The editor indents with an inline `margin-left: depth * 27px`; the view
+       * nests `<ul>`/`<ol>`. Neither uses a depth class, so a depth-varying class
+       * factory would be fiction. LIST_INDENT_PER_LEVEL exists so the generated
+       * stylesheet can give the nested lists the SAME step.
+       */
+      expect(classesFor('list', { depth: 0 })).toEqual(classesFor('list', { depth: 3 }));
+      expect(LIST_INDENT_PER_LEVEL).toBe(27);
+    });
+
+    it('gives checklists their own content classes, without min-w-0', () => {
+      expect(LIST_CHECKLIST_CONTENT_CLASSES).not.toContain('min-w-0');
+      expect(LIST_CHECKLIST_CONTENT_CLASSES).toContain('leading-[1.5]');
+    });
+
+    it('exposes the checked-item styling', () => {
+      expect(LIST_CHECKED_CLASSES).toEqual(['line-through', 'opacity-60']);
+    });
+
+    it('is the single source for the tool indent constants', async () => {
+      const listTool = await import('../../../src/tools/list/constants');
+
+      expect(listTool.INDENT_PER_LEVEL).toBe(LIST_INDENT_PER_LEVEL);
+      expect(listTool.CHECKBOX_STYLES).toBe(LIST_CHECKBOX_CLASSES.join(' '));
     });
   });
 

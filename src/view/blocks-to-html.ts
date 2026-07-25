@@ -414,7 +414,17 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       const run = blocks.slice(from, end).filter((item) => item.id === undefined || !active.has(item.id));
       const listHtml = renderListRun(run, env);
 
-      return (toolAttributes ? stampAttr(listHtml, 'data-blok-tool', 'list') : listHtml) + renderFrom(blocks, end);
+      /**
+       * Under parity each `<li>` carries the tool hook itself (every list item
+       * IS a block), so stamping the grouping `<ul>`/`<ol>` too would double it
+       * and break one-to-one pairing against the editor's flat item blocks.
+       * Without parity the legacy run-level hook is preserved unchanged.
+       */
+      const stampedRun = toolAttributes && !classes
+        ? stampAttr(listHtml, 'data-blok-tool', 'list')
+        : listHtml;
+
+      return stampedRun + renderFrom(blocks, end);
     }
 
     return renderGuarded(block) + renderFrom(blocks, from + 1);

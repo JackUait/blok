@@ -15,6 +15,14 @@
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
 import { CODE_AREA_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
+import {
+  LIST_CHECKBOX_CLASSES,
+  LIST_CHECKED_CLASSES,
+  LIST_CHECKLIST_CONTENT_CLASSES,
+  LIST_CHECKLIST_ROW_CLASSES,
+  LIST_CONTENT_CLASSES,
+  LIST_ITEM_ROW_CLASSES,
+} from '../shared/tool-classes/list';
 import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { ViewBlock } from './document-model';
 
@@ -178,11 +186,40 @@ export const renderListRun = (items: ViewBlock[], env: EmitterEnv): string => {
   }, []);
 
   const itemContent = (item: ViewBlock): string => {
-    const checkbox = listStyleOf(item) === 'checklist'
-      ? `<input type="checkbox"${item.data.checked === true ? ' checked' : ''} disabled>`
+    const isChecklist = listStyleOf(item) === 'checklist';
+    const checkbox = isChecklist
+      ? `<input type="checkbox"${item.data.checked === true ? ' checked' : ''} disabled${env.classList(LIST_CHECKBOX_CLASSES)}>`
       : '';
+    const text = env.inline(item.data.text);
+    const children = env.renderList(env.childrenOf(item.id));
 
-    return checkbox + env.inline(item.data.text) + env.renderList(env.childrenOf(item.id));
+    if (!env.classesEnabled) {
+      return checkbox + text + children;
+    }
+
+    /**
+     * Under parity the item mirrors the editor's inner layout: a flex row
+     * holding the marker/checkbox beside a content cell. Without it the
+     * checkbox and text do not align the way they do while editing.
+     */
+    const row = isChecklist ? LIST_CHECKLIST_ROW_CLASSES : LIST_ITEM_ROW_CLASSES;
+
+    if (!isChecklist) {
+      return `<div${env.classList(row)}><div${env.classList(LIST_CONTENT_CLASSES)}>${text}</div></div>${children}`;
+    }
+
+    /**
+     * A CHECKED item is struck through and faded, and carries `data-checked` —
+     * which `src/styles/checklist.css` keys its dark-mode rules on. The view
+     * previously rendered completed items as plain text.
+     */
+    const checked = item.data.checked === true;
+    const contentClasses = checked
+      ? [...LIST_CHECKLIST_CONTENT_CLASSES, ...LIST_CHECKED_CLASSES]
+      : LIST_CHECKLIST_CONTENT_CLASSES;
+    const content = `<div${env.classList(contentClasses)} data-checked="${String(checked)}">${text}</div>`;
+
+    return `<div${env.classList(row)}>${checkbox}${content}</div>${children}`;
   };
 
   /** One recursion step: the markup produced plus the index to continue from. */
@@ -204,7 +241,14 @@ export const renderListRun = (items: ViewBlock[], env: EmitterEnv): string => {
       ? buildLevel(from + 1, depth + 1)
       : { html: '', next: from + 1 };
 
-    const li = `<li${env.idAttr(items[from])}>${itemContent(items[from])}${nested.html}</li>`;
+    /**
+     * Each list ITEM is its own block, so the block's root attributes belong on
+     * the `<li>` — not on the grouping `<ul>`/`<ol>`, which has no editor
+     * counterpart (the editor renders a flat item sequence). Keeping them here
+     * is also what lets the parity harness pair view `<li>`s against the
+     * editor's item blocks one-to-one.
+     */
+    const li = `<li${env.classesEnabled ? env.rootAttrs(items[from]) : env.idAttr(items[from])}>${itemContent(items[from])}${nested.html}</li>`;
     const rest = buildItems(nested.next, depth, style);
 
     return { html: li + rest.html, next: rest.next };

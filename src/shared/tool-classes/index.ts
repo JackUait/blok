@@ -23,13 +23,25 @@
  * site.
  */
 import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from './callout';
-import { CODE_WRAPPER_CLASSES } from './code';
+import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from './code';
 import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from './divider';
 import { HEADER_LEVEL_CLASSES, headerClasses } from './header';
+import {
+  LIST_CHECKBOX_CLASSES,
+  LIST_CHECKLIST_ROW_CLASSES,
+  LIST_CONTENT_CLASSES,
+  LIST_ITEM_CLASSES,
+  LIST_ITEM_ROW_CLASSES,
+} from './list';
 import { PARAGRAPH_CLASSES } from './paragraph';
 import { quoteClasses } from './quote';
 import { SPACER_WRAPPER_CLASSES } from './spacer';
-import { TOGGLE_WRAPPER_CLASSES } from './toggle';
+import {
+  TOGGLE_CHILDREN_CLASSES,
+  TOGGLE_CONTENT_CLASSES,
+  TOGGLE_HEADER_ROW_CLASSES,
+  TOGGLE_WRAPPER_CLASSES,
+} from './toggle';
 
 /** Static classes for tools whose set does not vary with block data. */
 const STATIC_BY_TOOL: Record<string, readonly string[]> = {
@@ -39,6 +51,12 @@ const STATIC_BY_TOOL: Record<string, readonly string[]> = {
   toggle: TOGGLE_WRAPPER_CLASSES,
   divider: DIVIDER_WRAPPER_CLASSES,
   spacer: SPACER_WRAPPER_CLASSES,
+  /**
+   * Each list ITEM is its own block, so these land on the `<li>` — never on the
+   * grouping `<ul>`/`<ol>`, which has no editor counterpart (the editor renders
+   * a flat item sequence).
+   */
+  list: LIST_ITEM_CLASSES,
 };
 
 /**
@@ -120,5 +138,13 @@ export const ALL_STATIC_CLASSES: readonly string[] = [
      */
     ...DIVIDER_RULE_CLASSES,
     ...CALLOUT_CHILDREN_CLASSES,
+    ...TOGGLE_CONTENT_CLASSES,
+    ...TOGGLE_HEADER_ROW_CLASSES,
+    ...TOGGLE_CHILDREN_CLASSES,
+    ...CODE_AREA_CLASSES,
+    ...LIST_ITEM_ROW_CLASSES,
+    ...LIST_CHECKLIST_ROW_CLASSES,
+    ...LIST_CONTENT_CLASSES,
+    ...LIST_CHECKBOX_CLASSES,
   ]),
 ].sort();

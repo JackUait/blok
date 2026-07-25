@@ -18,6 +18,11 @@ import {
   CHECKBOX_STYLES,
   TOOL_NAME,
 } from './constants';
+import {
+  LIST_CHECKED_CLASSES,
+  LIST_CHECKLIST_CONTENT_CLASSES,
+  LIST_CONTENT_CLASSES,
+} from '../../shared/tool-classes/list';
 import type { ListItemData, ListItemStyle } from './types';
 
 /**
@@ -71,8 +76,7 @@ export const applyChecklistCheckedState = (
   }
 
   if (content) {
-    content.classList.toggle('line-through', checked);
-    content.classList.toggle('opacity-60', checked);
+    LIST_CHECKED_CLASSES.forEach((cls) => content.classList.toggle(cls, checked));
     content.setAttribute('data-checked', String(checked));
   }
 };
@@ -231,7 +235,7 @@ export const buildStandardContent = (context: DOMBuilderContext): HTMLElement =>
 
   // Create content container
   const contentContainer = document.createElement('div');
-  contentContainer.className = twMerge('flex-1 min-w-0 outline-hidden', ...getPlaceholderClasses('always'));
+  contentContainer.className = twMerge(LIST_CONTENT_CLASSES, 'outline-hidden', ...getPlaceholderClasses('always'));
   contentContainer.setAttribute('data-blok-testid', LIST_TEST_IDS.contentContainer);
   contentContainer.contentEditable = context.readOnly ? 'false' : 'true';
   contentContainer.innerHTML = data.text;
@@ -278,10 +282,9 @@ export const buildChecklistContent = (context: DOMBuilderContext): HTMLElement =
 
   const content = document.createElement('div');
   content.className = twMerge(
-    // Literal 1.5, not `leading-normal`: that resolves to the --leading-normal
-    // theme token, which a host can redefine.
-    'flex-1 outline-hidden leading-[1.5]',
-    data.checked ? 'line-through opacity-60' : '',
+    LIST_CHECKLIST_CONTENT_CLASSES,
+    'outline-hidden',
+    data.checked ? LIST_CHECKED_CLASSES : '',
     ...getPlaceholderClasses('always')
   );
   content.setAttribute('data-blok-testid', LIST_TEST_IDS.checklistContent);

@@ -861,6 +861,57 @@ describe('blocksToHtml', () => {
       expect(html).toBe('<hr data-blok-tool="divider" data-blok-id="d1">');
     });
 
+    /**
+     * REGRESSION: a checked checklist item rendered as plain text in the view.
+     * The editor strikes it through and fades it (`line-through opacity-60`) and
+     * sets `data-checked`, which src/styles/checklist.css keys its dark-mode
+     * rules on. Only the subtree assertion could catch this — the classes sit on
+     * a content cell below the block root.
+     */
+    it('strikes through and fades a checked checklist item', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'list', data: { style: 'checklist', text: 'Done', checked: true } }]),
+        { classes: true }
+      );
+
+      expect(html).toContain('line-through');
+      expect(html).toContain('opacity-60');
+      expect(html).toContain('data-checked="true"');
+    });
+
+    it('leaves an unchecked checklist item unstruck', () => {
+      const html = blocksToHtml(
+        doc([{ type: 'list', data: { style: 'checklist', text: 'Todo', checked: false } }]),
+        { classes: true }
+      );
+
+      expect(html).not.toContain('line-through');
+      expect(html).toContain('data-checked="false"');
+    });
+
+    it('puts the tool hook on each list item, not the grouping list', () => {
+      const html = blocksToHtml(
+        doc([
+          { id: 'a', type: 'list', data: { style: 'unordered', text: 'one' } },
+          { id: 'b', type: 'list', data: { style: 'unordered', text: 'two' } },
+        ]),
+        { classes: true, toolAttributes: true }
+      );
+
+      /** Every list item IS a block; the <ul> is only a grouping container. */
+      expect(html).not.toMatch(/<ul[^>]*data-blok-tool/);
+      expect(html.match(/data-blok-tool="list"/g)).toHaveLength(2);
+    });
+
+    it('keeps the legacy run-level hook when parity is off', () => {
+      const html = blocksToHtml(
+        doc([{ id: 'a', type: 'list', data: { style: 'unordered', text: 'one' } }]),
+        { toolAttributes: true }
+      );
+
+      expect(html).toContain('<ul data-blok-tool="list">');
+    });
+
     it('does not stamp bare containers, which emit no root of their own', () => {
       const html = blocksToHtml(
         doc([{ id: 'db', type: 'database', data: {} }]),

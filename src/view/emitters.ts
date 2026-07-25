@@ -12,7 +12,10 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*). Never import
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
+import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
+import { CODE_AREA_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
+import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES } from '../shared/tool-classes/toggle';
 import type { ViewBlock } from './document-model';
 
 /**
@@ -335,9 +338,35 @@ export const builtinEmitters: Record<string, Emitter> = {
 
   code: (block, env) => {
     const language = str(block.data, 'language');
-    const classAttr = language === '' ? '' : ` class="language-${env.escape(language)}"`;
+    /**
+     * `language-*` is a long-standing syntax-highlighter hook in this renderer's
+     * published output — it is emitted unconditionally, NOT behind the parity
+     * flag.
+     */
+    const languageAttr = language === '' ? '' : ` class="language-${env.escape(language)}"`;
+    /**
+     * The `<pre>` carries the code-area classes (monospace font, padding, wrap
+     * and scroll behaviour). Omitting them was the most visible parity gap of
+     * any block, and a root-only class comparison could not see it: the block
+     * root carries the wrapper classes, these belong one level down.
+     */
+    const inner = `<code${languageAttr}>${env.escape(block.data.code)}</code>`;
 
-    return trail(`<pre><code${classAttr}>${env.escape(block.data.code)}</code></pre>`, block, env);
+    /**
+     * Under parity the block needs its own wrapper: the editor's box (border,
+     * radius, background, overflow clipping) lives on a container AROUND the
+     * code area, so collapsing both onto the `<pre>` would mix the box with the
+     * text padding.
+     */
+    if (env.classesEnabled) {
+      return trail(
+        `<div${env.rootAttrs(block)}><pre${env.classList(CODE_AREA_CLASSES)}>${inner}</pre></div>`,
+        block,
+        env
+      );
+    }
+
+    return trail(`<pre${env.rootAttrs(block)}>${inner}</pre>`, block, env);
   },
 
   /**
@@ -358,14 +387,27 @@ export const builtinEmitters: Record<string, Emitter> = {
   callout: (block, env) => {
     const emoji = str(block.data, 'emoji');
     const marker = emoji === '' ? '' : `<span>${env.escape(emoji)}</span>`;
+    const children = childrenOnly(block, env);
+    /**
+     * The editor holds a callout's children in their own flex child; without it
+     * the emoji and the body do not share the editor's layout.
+     */
+    const body = env.classesEnabled
+      ? `<div${env.classList(CALLOUT_CHILDREN_CLASSES)}>${children}</div>`
+      : children;
 
-    return `<aside>${marker}${childrenOnly(block, env)}</aside>`;
+    return `<aside>${marker}${body}</aside>`;
   },
 
   toggle: (block, env) => {
     const open = block.data.isOpen === true ? ' open' : '';
+    const summary = `<summary${env.classList([...TOGGLE_HEADER_ROW_CLASSES, ...TOGGLE_CONTENT_CLASSES])}>${env.inline(block.data.text)}</summary>`;
+    const children = childrenOnly(block, env);
+    const body = env.classesEnabled
+      ? `<div${env.classList(TOGGLE_CHILDREN_CLASSES)}>${children}</div>`
+      : children;
 
-    return `<details${open}><summary>${env.inline(block.data.text)}</summary>${childrenOnly(block, env)}</details>`;
+    return `<details${open}>${summary}${body}</details>`;
   },
 
   image: (block, env) => {

@@ -435,6 +435,58 @@ const EDITOR_ONLY_CLASSES = new Set([
 const isPlaceholderClass = (cls: string): boolean => cls.includes(':before:') && cls.includes('empty');
 
 /**
+ * Classes belonging to EDIT-CHROME CONTAINERS — elements a static view has no
+ * counterpart for at all, so their classes cannot be compared.
+ *
+ * `isSkippedSubtree` already drops `button`/`svg`/`input`, but chrome mounted on
+ * plain `<div>`s (the code block's header bar holding the language picker and
+ * copy button, a toggle's disclosure-arrow row) needs listing. Each entry is a
+ * claim that the element exists only for editing.
+ */
+const EDIT_CHROME_CLASSES = new Set<string>([
+  /**
+   * The code block's header bar — language picker + copy button. A static view
+   * renders no header at all, so none of its layout classes have a counterpart.
+   */
+  'gap-1',
+  'items-center',
+  'px-3',
+  'py-1.5',
+  'text-xs',
+  'text-gray-text',
+  'opacity-0',
+  'transition-opacity',
+  /** The code block's line-number gutter, also editor-only. */
+  'flex-1',
+  'min-w-0',
+  /** Caret colour: a static render has no caret. */
+  'caret-text-primary',
+  /**
+   * The editor hides a closed toggle's children with `hidden`; the view uses a
+   * `<details>` without `open`, which hides them natively. Same outcome, and
+   * `hidden` on the view side would actually break it.
+   */
+  'hidden',
+]);
+
+/**
+ * Is this class part of an edit-chrome container, or otherwise without a static
+ * counterpart?
+ * @param cls - single class name
+ */
+const isEditChromeClass = (cls: string): boolean =>
+  EDIT_CHROME_CLASSES.has(cls) || cls.startsWith('group-hover/') || cls.includes('can-hover:');
+
+/**
+ * Classes the VIEW legitimately adds that the editor has no equivalent for.
+ *
+ * `language-*` on `<code>` is a long-standing syntax-highlighter hook in the
+ * view's published output; the editor applies Prism to the DOM directly instead.
+ * @param cls - single class name
+ */
+const isViewOnlyClass = (cls: string): boolean => cls.startsWith('language-');
+
+/**
  * Block roots in document order — the elements carrying `data-blok-tool`.
  *
  * Pairing on the tool hook rather than on inline-content hosts is what makes
@@ -480,6 +532,80 @@ const classDiff = (editorRoots: Element[], viewRoots: Element[]): string | null 
         `  editor: ${editorClasses}`,
         `  view:   ${viewClasses}`,
       ].join('\n');
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Every styling class appearing ANYWHERE in a block's subtree, editor-only ones
+ * removed.
+ *
+ * Root-set equality alone is not enough: it caught the toggleable-header
+ * placement bug, but it is blind to a class the view omits from an INNER element
+ * — the code block's `<pre>` padding and monospace font, a callout's children
+ * container, a toggle's content wrapper. Those live below the root, so the root
+ * comparison passes while the render visibly differs.
+ *
+ * The two assertions are complementary: root equality pins WHERE the block's own
+ * classes go, subtree equality pins THAT nothing is missing.
+ * @param root - a block root element
+ */
+const subtreeClasses = (root: Element): string[] => {
+  const all = new Set<string>();
+
+  const visit = (el: Element): void => {
+    if (isSkippedSubtree(el)) {
+      return;
+    }
+
+    for (const cls of Array.from(el.classList)) {
+      if (
+        !EDITOR_ONLY_CLASSES.has(cls)
+        && !isPlaceholderClass(cls)
+        && !isEditChromeClass(cls)
+        && !isViewOnlyClass(cls)
+      ) {
+        all.add(cls);
+      }
+    }
+
+    for (const child of Array.from(el.children)) {
+      visit(child);
+    }
+  };
+
+  visit(root);
+
+  return [...all].sort();
+};
+
+/**
+ * Compare subtree class unions for paired block roots.
+ * @param editorRoots - block roots from the live read-only editor
+ * @param viewRoots - block roots from the parsed view output
+ * @returns a human-readable diff, or null when the two agree
+ */
+const subtreeDiff = (editorRoots: Element[], viewRoots: Element[]): string | null => {
+  for (const [index, editorRoot] of editorRoots.entries()) {
+    const viewRoot = viewRoots[index];
+
+    if (viewRoot === undefined) {
+      return `block ${index}: no matching view root`;
+    }
+
+    const editorSet = subtreeClasses(editorRoot);
+    const viewSet = subtreeClasses(viewRoot);
+    const missing = editorSet.filter((cls) => !viewSet.includes(cls));
+    const extra = viewSet.filter((cls) => !editorSet.includes(cls));
+
+    if (missing.length > 0 || extra.length > 0) {
+      return [
+        `block ${index} (${editorRoot.getAttribute('data-blok-tool')}) subtree classes differ:`,
+        missing.length > 0 ? `  missing from view: ${missing.join(' ')}` : '',
+        extra.length > 0 ? `  extra in view:     ${extra.join(' ')}` : '',
+      ].filter((line) => line !== '').join('\n');
     }
   }
 
@@ -582,6 +708,11 @@ describe('golden harness: view renderer vs live editor', () => {
       const classes = classDiff(blockRoots(redactor), blockRoots(viewRoot));
 
       expect(classes, `[${toolName}] class parity drift:\n${classes ?? ''}`).toBeNull();
+
+      /** Guarantee 4b: no styling class is missing from (or extra in) the subtree. */
+      const subtree = subtreeDiff(blockRoots(redactor), blockRoots(viewRoot));
+
+      expect(subtree, `[${toolName}] subtree parity drift:\n${subtree ?? ''}`).toBeNull();
     }
 
     comparedTools.add(toolName);

@@ -7,6 +7,23 @@
  * view never renders. It stays at the tool's call site, as does every
  * `HEADER_*` / `VIEW_MODE_*` / `GUTTER_*` constant (all editor chrome).
  */
+/**
+ * The `<pre>` code area. Without these a static render loses the monospace
+ * font, the padding and the scroll/wrap behaviour — the most visible parity gap
+ * of any block, and invisible to a root-only class comparison.
+ */
+export const CODE_AREA_CLASSES: readonly string[] = [
+  'block',
+  'px-4',
+  'py-3',
+  'font-mono',
+  'text-sm',
+  'leading-relaxed',
+  'whitespace-pre-wrap',
+  'overflow-x-auto',
+  'min-h-[1.5em]',
+];
+
 export const CODE_WRAPPER_CLASSES: readonly string[] = [
   'flex',
   'flex-col',

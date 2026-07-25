@@ -24,6 +24,13 @@ export interface BlokViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
   blockIds?: BlocksToHtmlOptions['blockIds'];
   /** Pure URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. */
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
+  /**
+   * Render with the editor's presentational classes and per-block scaffolding
+   * so the output matches a read-only editor render (default `true`). Needs
+   * `@bloklabs/core/view.css` imported to paint. Set `false` for unstyled
+   * semantic markup.
+   */
+  classes?: BlocksToHtmlOptions['classes'];
 }
 
 /**
@@ -49,9 +56,25 @@ export const BlokView = ({
   toolAttributes,
   blockIds,
   transformUrl,
+  classes,
   ...divProps
 }: BlokViewProps): ReactNode => {
-  const content = useBlokView(data, { schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl });
+  /**
+   * `classes: true` by default — this component's job is to look like a
+   * read-only editor render, and it already owns a wrapper element, so the
+   * per-block scaffolding parity needs is not a surprise here. (The bare
+   * `useBlokView` hook defaults it OFF, because its contract is to emit no
+   * wrapper at all.) Pass `classes={false}` for unstyled semantic markup.
+   */
+  const content = useBlokView(data, {
+    schema,
+    renderers,
+    onUnknownBlock,
+    toolAttributes,
+    blockIds,
+    transformUrl,
+    classes: classes ?? true,
+  });
 
   /**
    * `data-blok-interface="view"` makes the wrapper a soft isolation root, which

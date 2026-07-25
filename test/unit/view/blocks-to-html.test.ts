@@ -751,24 +751,50 @@ describe('blocksToHtml', () => {
     it('stamps the shared paragraph classes when opted in', () => {
       const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
 
+      /**
+       * Pins the FULL parity shape once: the core's holder → content
+       * scaffolding (whose descendant selectors are what style inline links,
+       * bold and italic) wrapping the tool's own element.
+       */
       expect(html).toBe(
-        '<p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">Hi</p>'
+        '<div data-blok-element class="relative opacity-100 first:mt-0 last:pb-0 last:mb-0 '
+        + '[&amp;_a]:cursor-pointer [&amp;_a]:underline [&amp;_a]:text-link [&amp;_b]:font-bold [&amp;_i]:italic">'
+        + '<div class="relative mx-auto transition-colors duration-150 ease-out max-w-blok-content">'
+        + '<p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">Hi</p>'
+        + '</div></div>'
       );
     });
 
+    it('emits no scaffolding when classes are off', () => {
+      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]));
+
+      expect(html).toBe('<p>Hi</p>');
+      expect(html).not.toContain('data-blok-element');
+    });
+
     it('entity-escapes arbitrary-variant classes so they survive reparsing', () => {
-      const html = blocksToHtml(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
-      const nodes = blocksToViewNodes(doc([{ type: 'paragraph', data: { text: 'Hi' } }]), { classes: true });
-      const first = nodes[0];
+      const data = doc([{ type: 'paragraph', data: { text: 'Hi' } }]);
+      const html = blocksToHtml(data, { classes: true });
+      const nodes = blocksToViewNodes(data, { classes: true });
 
       /**
        * `&` and `>` are escaped in the serialized attribute, but must decode
-       * back to the literal Tailwind selector — otherwise `[&>p...]` variants
-       * would not match once a browser (or parse5, via blocksToViewNodes)
-       * parses the markup.
+       * back to the literal Tailwind selector — otherwise `[&>p...]` and
+       * `[&_a]` variants would not match once a browser (or parse5, via
+       * blocksToViewNodes) parses the markup.
        */
       expect(html).toContain('[&amp;&gt;p:first-of-type]:mt-0');
-      expect('tag' in first ? first.attrs.class : '').toContain('[&>p:first-of-type]:mt-0');
+
+      const holder = nodes[0];
+      const holderClass = 'tag' in holder ? holder.attrs.class : '';
+
+      expect(holderClass).toContain('[&_a]:text-link');
+
+      const content = 'tag' in holder ? holder.children[0] : undefined;
+      const paragraph = content !== undefined && 'tag' in content ? content.children[0] : undefined;
+
+      expect(paragraph !== undefined && 'tag' in paragraph ? paragraph.attrs.class : '')
+        .toContain('[&>p:first-of-type]:mt-0');
     });
 
     /**
@@ -790,7 +816,9 @@ describe('blocksToHtml', () => {
 
       expect(html).toContain('<h2 class="');
       expect(html).toContain('text-2xl');
-      expect(html).toMatch(/^<details><summary><h2 class=/);
+      expect(html).toContain('<details><summary><h2 class=');
+      /** The details wrapper itself must carry no heading typography. */
+      expect(html).not.toMatch(/<details[^>]*class=/);
     });
 
     it('keeps the tool hook on the same element as the classes for wrapping emitters', () => {
@@ -821,7 +849,7 @@ describe('blocksToHtml', () => {
       const styled = blocksToHtml(doc([{ type: 'divider', data: {} }]), { classes: true });
 
       expect(bare).toBe('<hr>');
-      expect(styled).toMatch(/^<div class="py-3 leading-\[1px\]"><hr class="border-t/);
+      expect(styled).toContain('<div class="py-3 leading-[1px]"><hr class="border-t');
     });
 
     it('still stamps the divider tool hook when classes are off', () => {

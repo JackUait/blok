@@ -1,3 +1,4 @@
+import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../../shared/block-scaffolding';
 import { DATA_ATTR } from '../constants';
 import { twMerge } from '../utils/tw';
 
@@ -10,8 +11,14 @@ export class StyleManager {
    * Tailwind styles for the Block elements
    */
   private static readonly styles = {
-    wrapper: 'relative opacity-100 first:mt-0 last:pb-0 last:mb-0 [&_a]:cursor-pointer [&_a]:underline [&_a]:text-link [&_b]:font-bold [&_i]:italic',
-    content: 'relative mx-auto transition-colors duration-150 ease-out max-w-blok-content',
+    /**
+     * Single-sourced in `src/shared/block-scaffolding.ts` so the view renderer
+     * reproduces this scaffolding exactly — the inline appearance of links,
+     * bold and italic in every block comes from the wrapper's descendant
+     * selectors here, not from any tool's own classes.
+     */
+    wrapper: BLOCK_WRAPPER_CLASSES.join(' '),
+    content: BLOCK_CONTENT_CLASSES.join(' '),
     contentSelected: 'bg-selection rounded-[4px] **:[[contenteditable]]:select-none [&_img]:opacity-55 **:data-[blok-tool=stub]:opacity-55',
     contentStretched: 'max-w-none',
   };

@@ -9,6 +9,7 @@
  */
 import { INLINE_TEXT_SANITIZE } from '../components/shared/inline-content-sanitize';
 import type { BlokViewSchema } from '../shared/sanitize-schema';
+import { BLOCK_CONTENT_CLASSES, BLOCK_WRAPPER_CLASSES } from '../shared/block-scaffolding';
 import { classesFor } from '../shared/tool-classes';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 import { buildDocumentModel, normalizeViewBlock } from './document-model';
@@ -172,7 +173,7 @@ const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
  * heading typography on the `<details>` — where `<h1>`-`<h6>` UA font-size and
  * weight then override it. A new wrapping emitter must be added here.
  */
-const SELF_STAMPING_TOOLS = new Set(['header', 'divider']);
+const SELF_STAMPING_TOOLS = new Set(['header', 'divider', 'code']);
 
 /**
  * Insert a `name="value"` attribute onto the first opening tag of
@@ -342,6 +343,32 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
       : children;
   };
 
+  /**
+   * Wrap one block's markup in the core's `holder → content` scaffolding.
+   *
+   * Reproducing this is REQUIRED for parity, and it is not per-tool styling: the
+   * appearance of links, bold and italic inside every block comes from the
+   * holder's descendant selectors (`[&_a]:text-link`, `[&_b]:font-bold`,
+   * `[&_i]:italic`), and the centred measure from the content element's
+   * `mx-auto max-w-blok-content`. A view emitting only tool classes renders
+   * unstyled links at full width.
+   *
+   * Two extra elements per block is a structural change to this renderer's
+   * published output, so it happens only when `classes` asked for parity.
+   * `data-blok-element` marks the holder, matching the editor's own marker.
+   * @param html - the block's own rendered markup
+   */
+  const scaffold = (html: string): string => {
+    if (!classes || html === '') {
+      return html;
+    }
+
+    const wrapper = escapeHtml(BLOCK_WRAPPER_CLASSES.join(' '));
+    const content = escapeHtml(BLOCK_CONTENT_CLASSES.join(' '));
+
+    return `<div data-blok-element class="${wrapper}"><div class="${content}">${html}</div></div>`;
+  };
+
   const renderGuarded = (block: ViewBlock): string => {
     if (block.id !== undefined) {
       if (active.has(block.id)) {
@@ -351,7 +378,8 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     }
 
     try {
-      return renderBlock(block);
+      /** Bare containers contribute no block of their own, so they get no holder. */
+      return BARE_CONTAINER_TOOLS.has(block.type) ? renderBlock(block) : scaffold(renderBlock(block));
     } finally {
       if (block.id !== undefined) {
         active.delete(block.id);

@@ -1,7 +1,7 @@
 /**
  * Constants for the Toggle tool
  */
-import { TOGGLE_WRAPPER_CLASSES } from '../../shared/tool-classes/toggle';
+import { TOGGLE_CHILDREN_CLASSES, TOGGLE_CONTENT_CLASSES, TOGGLE_HEADER_ROW_CLASSES, TOGGLE_WRAPPER_CLASSES } from '../../shared/tool-classes/toggle';
 
 import { IconChevronRightSmall } from '../../components/icons';
 
@@ -44,7 +44,8 @@ export const BASE_STYLES = ['outline-hidden', ...TOGGLE_WRAPPER_CLASSES].join(' 
 /**
  * Styles for toggle content area
  */
-export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.5] flex-1 min-w-0';
+/** Static classes live in src/shared/tool-classes/toggle.ts; outline-hidden is edit-only. */
+export const CONTENT_STYLES = ['outline-hidden', ...TOGGLE_CONTENT_CLASSES].join(' ');
 
 /**
  * Styles for toggle wrapper (arrow + content layout)
@@ -54,7 +55,7 @@ export const CONTENT_STYLES = 'outline-hidden pl-0.5 leading-[1.5] flex-1 min-w-
  * arrow down to the vertical middle of the whole block; items-start plus a
  * one-line-tall arrow box (see ARROW_STYLES h-[1.5em]) keeps it on the first line.
  */
-export const TOGGLE_WRAPPER_STYLES = 'flex items-start';
+export const TOGGLE_WRAPPER_STYLES = TOGGLE_HEADER_ROW_CLASSES.join(' ');
 
 /**
  * Styles for the toggle arrow button
@@ -92,7 +93,7 @@ export const BODY_PLACEHOLDER_STYLES = 'hidden pl-7 pt-[8px] pb-[8px] text-gray-
  * Styles for the children container element.
  * pl-7 (28px) aligns children with the toggle list title text start (arrow button total width).
  */
-export const TOGGLE_CHILDREN_STYLES = 'pl-7';
+export const TOGGLE_CHILDREN_STYLES = TOGGLE_CHILDREN_CLASSES.join(' ');
 
 /**
  * Data attributes specific to the toggle tool

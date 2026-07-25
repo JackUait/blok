@@ -87,6 +87,33 @@ export interface BlocksToHtmlOptions {
    * the unsafe-scheme strip. See {@link ViewUrlTransform}.
    */
   transformUrl?: ViewUrlTransform;
+  /**
+   * When true, the output is wrapped in `<div data-blok-interface="view">`
+   * (default `false`).
+   *
+   * The wrapper is what makes Blok's emitted classes compute the way they do in
+   * the editor: the scoped preflight applies its box-sizing/margin/padding/border
+   * resets only under `[data-blok-interface]`, and the token and colour layers
+   * key on the same attribute.
+   *
+   * Opt-in because enabling it adds an element to existing output. `<BlokView>`
+   * marks its own wrapper instead, so React consumers do not need this.
+   */
+  root?: boolean;
+  /**
+   * When true, blocks are rendered with the editor's presentational classes and
+   * the per-block `holder → content` scaffolding, so the result matches a
+   * read-only editor render (default `false`).
+   *
+   * Requires `@bloklabs/core/view.css`, plus {@link root} (or an equivalent
+   * `[data-blok-interface]` ancestor), to actually paint. A few tools also gain
+   * a wrapper element under this flag where the editor has one.
+   *
+   * Opt-in because it changes the emitted markup. `<BlokView>` enables it by
+   * default; the `useBlokView` hook does not, since its contract is to emit no
+   * wrapper elements.
+   */
+  classes?: boolean;
 }
 
 /**

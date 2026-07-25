@@ -54,14 +54,12 @@ describe('BlokView SSR', () => {
     const Label = (): React.ReactNode => <label>{useBlokView({ blocks: [{ type: 'paragraph', data: { text: 'hi' } }] })}</label>;
 
     /**
-     * "Unwrapped" is the contract under test: the block element is a DIRECT
-     * child of the caller's `<label>`, with no interposed element. The
-     * presentational classes come from the shared tool-classes modules — this
-     * path enables them so it matches a read-only editor render — and are inert
-     * until `@bloklabs/core/view.css` is imported.
+     * "Unwrapped" is the contract under test, and it is why the hook defaults
+     * `classes` OFF while `<BlokView>` defaults it on: parity rendering wraps
+     * every block in the core's holder → content scaffolding, which would defeat
+     * the point of a hook that exists for placement inside `<label>`s, table
+     * cells and other slots where extra elements are invalid or unwanted.
      */
-    expect(renderToStaticMarkup(<Label />)).toBe(
-      '<label><p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">hi</p></label>'
-    );
+    expect(renderToStaticMarkup(<Label />)).toBe('<label><p>hi</p></label>');
   });
 });

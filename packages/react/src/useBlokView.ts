@@ -30,6 +30,7 @@ export const useBlokView = (
   const toolAttributes = options?.toolAttributes;
   const blockIds = options?.blockIds;
   const transformUrl = options?.transformUrl;
+  const classes = options?.classes;
 
   return useMemo(() => {
     return createElement(
@@ -44,15 +45,18 @@ export const useBlokView = (
           blockIds,
           transformUrl,
           /**
-           * Presentational classes are ON here, unlike the raw `blocksToHtml`
-           * string API where enabling them by default would change every
-           * existing consumer's markup. Looking like a read-only editor render
-           * is the whole point of this path, and the classes are inert until
-           * `@bloklabs/core/view.css` is imported.
+           * Opt-in, NOT defaulted on. Parity rendering wraps every block in the
+           * core's holder → content scaffolding, which would contradict this
+           * hook's contract of emitting no wrapper element — the reason it
+           * exists is placement inside `<label>`s, table cells and other slots
+           * where extra elements are invalid or unwanted.
+           *
+           * `<BlokView>` passes `classes: true` for its own output, since it
+           * already owns a wrapper and its job IS to look like the editor.
            */
-          classes: true,
+          classes,
         })
       )
     );
-  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl]);
+  }, [data, schema, renderers, onUnknownBlock, toolAttributes, blockIds, transformUrl, classes]);
 };

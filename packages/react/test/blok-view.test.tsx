@@ -245,6 +245,27 @@ describe('useBlokView', () => {
       expect(container.firstElementChild?.getAttribute('data-blok-interface')).not.toBe('blok');
     });
 
+    it('renders parity scaffolding by default, unlike the bare hook', () => {
+      const { container } = render(<BlokView data={paragraphDoc('Hi')} />);
+
+      /**
+       * BlokView already owns a wrapper and its job is to look like a read-only
+       * editor, so the core's holder → content scaffolding belongs here. The
+       * holder's descendant selectors are what style inline links/bold/italic.
+       */
+      const holder = container.querySelector('[data-blok-element]');
+
+      expect(holder?.className).toContain('[&_a]:text-link');
+      expect(holder?.querySelector('.max-w-blok-content')).not.toBeNull();
+    });
+
+    it('can be opted out of for unstyled semantic markup', () => {
+      const { container } = render(<BlokView data={paragraphDoc('Hi')} classes={false} />);
+
+      expect(container.querySelector('[data-blok-element]')).toBeNull();
+      expect(container.querySelector('p')?.className).toBe('');
+    });
+
     it('lets a caller override it', () => {
       const { container } = render(
         <BlokView data={paragraphDoc('Hi')} data-blok-interface="custom" />

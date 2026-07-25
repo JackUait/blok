@@ -9,6 +9,7 @@ import type { SpacerData } from './types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconSpacer } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { SPACER_WRAPPER_CLASSES } from '../../shared/tool-classes/spacer';
 import { AlignmentGuide, collectSiblingBlocks, findSnapTarget, measureEdgeOffsets } from './alignment-guide';
 import { COLUMNS_ATTR } from '../columns-shared';
 
@@ -117,7 +118,8 @@ export class SpacerTool implements BlockTool {
 
     wrapper.setAttribute('data-blok-spacer', '');
     wrapper.setAttribute(DATA_ATTR.tool, 'spacer');
-    wrapper.className = twMerge('relative', 'group/spacer', 'rounded-md');
+    /** `group/spacer` is edit-only: it enables group-hover rules on the grips. */
+    wrapper.className = twMerge(SPACER_WRAPPER_CLASSES, 'group/spacer');
     wrapper.style.height = `${this.height}px`;
     this.element = wrapper;
 

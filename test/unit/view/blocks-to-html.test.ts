@@ -809,6 +809,30 @@ describe('blocksToHtml', () => {
       expect(html).toMatch(/<h2 class="[^"]*" data-blok-tool="header" data-blok-id="h1">/);
     });
 
+    /**
+     * The divider's spacing lives on a WRAPPER in the editor, with the border on
+     * the `<hr>` inside it. Reproducing that needs an extra element, which is a
+     * STRUCTURAL change to published output — so it appears only when parity was
+     * explicitly asked for. Default output stays the bare semantic `<hr>`
+     * existing consumers already receive.
+     */
+    it('emits the divider spacing wrapper only when classes are requested', () => {
+      const bare = blocksToHtml(doc([{ type: 'divider', data: {} }]));
+      const styled = blocksToHtml(doc([{ type: 'divider', data: {} }]), { classes: true });
+
+      expect(bare).toBe('<hr>');
+      expect(styled).toMatch(/^<div class="py-3 leading-\[1px\]"><hr class="border-t/);
+    });
+
+    it('still stamps the divider tool hook when classes are off', () => {
+      const html = blocksToHtml(
+        doc([{ id: 'd1', type: 'divider', data: {} }]),
+        { toolAttributes: true, blockIds: true }
+      );
+
+      expect(html).toBe('<hr data-blok-tool="divider" data-blok-id="d1">');
+    });
+
     it('does not stamp bare containers, which emit no root of their own', () => {
       const html = blocksToHtml(
         doc([{ id: 'db', type: 'database', data: {} }]),

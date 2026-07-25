@@ -12,6 +12,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*). Never import
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
+import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
 import type { ViewBlock } from './document-model';
 
 /**
@@ -52,6 +53,24 @@ export interface EmitterEnv {
    * harness pairs the wrapper against the editor's heading.
    */
   rootAttrs(block: ViewBlock): string;
+  /**
+   * Build a ` class="…"` attribute for an INNER element from an explicit class
+   * list, honouring the `classes` option (empty string when it is off).
+   *
+   * For elements that are not the block root — a divider's `<hr>` inside its
+   * spacing wrapper — whose classes therefore never come from `classesFor`.
+   */
+  classList(list: readonly string[]): string;
+  /**
+   * Whether the caller asked for editor-identical rendering (`classes: true`).
+   *
+   * A few emitters need an extra WRAPPER element to reproduce the editor's box
+   * model (the divider's spacing wrapper). That wrapper is a structural change
+   * to this renderer's published output, so it appears only when parity was
+   * explicitly requested; the default output stays the clean semantic HTML
+   * existing consumers already receive.
+   */
+  classesEnabled: boolean;
 }
 
 /**
@@ -321,7 +340,20 @@ export const builtinEmitters: Record<string, Emitter> = {
     return trail(`<pre><code${classAttr}>${env.escape(block.data.code)}</code></pre>`, block, env);
   },
 
-  divider: (block, env) => trail('<hr>', block, env),
+  /**
+   * The divider is a WRAPPER around the rule, matching the editor: the wrapper
+   * carries the vertical spacing and the minimal line-height, the `<hr>` carries
+   * the border. Emitting a bare `<hr>` would put the block's spacing classes on
+   * the rule itself and pair the wrong elements in the parity harness.
+   */
+  divider: (block, env) =>
+    trail(
+      env.classesEnabled
+        ? `<div${env.rootAttrs(block)}><hr${env.classList(DIVIDER_RULE_CLASSES)}></div>`
+        : `<hr${env.rootAttrs(block)}>`,
+      block,
+      env
+    ),
 
   callout: (block, env) => {
     const emoji = str(block.data, 'emoji');

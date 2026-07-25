@@ -10,6 +10,7 @@ import type { DividerData } from './types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { IconDivider } from '../../components/icons';
 import { twMerge } from '../../components/utils/tw';
+import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from '../../shared/tool-classes/divider';
 
 /**
  * Divider block tool — renders a thin horizontal line separator.
@@ -34,22 +35,13 @@ export class DividerTool implements BlockTool {
   public render(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = twMerge('py-3', 'leading-[1px]');
+    wrapper.className = twMerge(DIVIDER_WRAPPER_CLASSES);
     wrapper.setAttribute(DATA_ATTR.tool, 'divider');
 
     const hr = document.createElement('hr');
 
     hr.setAttribute('data-blok-divider', '');
-    // There is no `--color-border-primary` in the theme (only `-secondary`), so
-    // `border-border-primary` emitted nothing and the rule fell back to
-    // currentColor. Reference the underlying token directly.
-    hr.className = twMerge(
-      'border-t',
-      'border-(--blok-border-primary)',
-      'border-b-0',
-      'border-l-0',
-      'border-r-0'
-    );
+    hr.className = twMerge(DIVIDER_RULE_CLASSES);
     wrapper.appendChild(hr);
     this.element = wrapper;
 

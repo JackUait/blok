@@ -172,7 +172,7 @@ const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
  * heading typography on the `<details>` — where `<h1>`-`<h6>` UA font-size and
  * weight then override it. A new wrapping emitter must be added here.
  */
-const SELF_STAMPING_TOOLS = new Set(['header']);
+const SELF_STAMPING_TOOLS = new Set(['header', 'divider']);
 
 /**
  * Insert a `name="value"` attribute onto the first opening tag of
@@ -277,6 +277,8 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
 
       return `${classPart}${toolPart}${idPart}`;
     },
+    classList: (list) => (classes && list.length > 0 ? ` class="${escapeHtml(list.join(' '))}"` : ''),
+    classesEnabled: classes,
   };
 
   const ctxFor = (block: ViewBlock): ViewRenderContext => ({

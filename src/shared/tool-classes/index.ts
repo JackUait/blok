@@ -22,13 +22,23 @@
  * grips, `group/*` markers) do NOT belong here — they stay at the tool's call
  * site.
  */
+import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from './callout';
+import { CODE_WRAPPER_CLASSES } from './code';
+import { DIVIDER_RULE_CLASSES, DIVIDER_WRAPPER_CLASSES } from './divider';
 import { HEADER_LEVEL_CLASSES, headerClasses } from './header';
 import { PARAGRAPH_CLASSES } from './paragraph';
 import { quoteClasses } from './quote';
+import { SPACER_WRAPPER_CLASSES } from './spacer';
+import { TOGGLE_WRAPPER_CLASSES } from './toggle';
 
 /** Static classes for tools whose set does not vary with block data. */
 const STATIC_BY_TOOL: Record<string, readonly string[]> = {
   paragraph: PARAGRAPH_CLASSES,
+  code: CODE_WRAPPER_CLASSES,
+  callout: CALLOUT_WRAPPER_CLASSES,
+  toggle: TOGGLE_WRAPPER_CLASSES,
+  divider: DIVIDER_WRAPPER_CLASSES,
+  spacer: SPACER_WRAPPER_CLASSES,
 };
 
 /**
@@ -104,5 +114,11 @@ export const ALL_STATIC_CLASSES: readonly string[] = [
     /** Both quote sizes. */
     ...quoteClasses('default'),
     ...quoteClasses('large'),
+    /**
+     * Inner-element classes that emitters stamp directly rather than via
+     * `classesFor`, so they are not reachable from STATIC_BY_TOOL.
+     */
+    ...DIVIDER_RULE_CLASSES,
+    ...CALLOUT_CHILDREN_CLASSES,
   ]),
 ].sort();

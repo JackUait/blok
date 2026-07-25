@@ -1,6 +1,7 @@
 /**
  * Constants for the Toggle tool
  */
+import { TOGGLE_WRAPPER_CLASSES } from '../../shared/tool-classes/toggle';
 
 import { IconChevronRightSmall } from '../../components/icons';
 
@@ -32,7 +33,13 @@ export const ARIA_LABEL_EXPAND_KEY = 'tools.toggle.ariaLabelExpand';
  * --blok-block-padding-top/-bottom tokens (7px fallbacks); mt-[2px] mb-px
  * provides block margin.
  */
-export const BASE_STYLES = 'outline-hidden pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] mt-[2px] mb-px';
+/**
+ * Static presentational classes live in `src/shared/tool-classes/toggle.ts` so
+ * the view emitter stamps the exact same set. `outline-hidden` stays here: it
+ * suppresses the focus ring on a contenteditable host and has no static
+ * counterpart.
+ */
+export const BASE_STYLES = ['outline-hidden', ...TOGGLE_WRAPPER_CLASSES].join(' ');
 
 /**
  * Styles for toggle content area

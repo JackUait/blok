@@ -1,3 +1,5 @@
+import { CODE_WRAPPER_CLASSES } from '../../shared/tool-classes/code';
+
 export const TOOL_NAME = 'code';
 
 // i18n keys
@@ -54,7 +56,13 @@ export const LANGUAGES: LanguageEntry[] = [
 ];
 
 // CSS — Tailwind classes
-export const WRAPPER_STYLES = 'group/code flex flex-col rounded-xl border border-border-secondary bg-bg-secondary overflow-hidden my-2';
+/**
+ * Static presentational classes live in `src/shared/tool-classes/code.ts` so the
+ * view emitter stamps the exact same set. `group/code` stays here: it paints
+ * nothing, existing only to enable the `group-hover/code:` rules on the header
+ * controls below, which a static view never renders.
+ */
+export const WRAPPER_STYLES = ['group/code', ...CODE_WRAPPER_CLASSES].join(' ');
 export const HEADER_STYLES = 'flex items-center gap-1 px-3 py-1.5 text-xs text-gray-text';
 export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 rounded cursor-pointer bg-transparent border-0 text-xs text-gray-text font-medium transition-colors can-hover:hover:bg-item-hover-bg select-none';
 export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';

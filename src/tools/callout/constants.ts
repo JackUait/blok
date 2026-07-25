@@ -1,5 +1,7 @@
 // src/tools/callout/constants.ts
 
+import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from '../../shared/tool-classes/callout';
+
 export const TOOL_NAME = 'callout';
 
 // i18n keys
@@ -29,7 +31,11 @@ export const DEFAULT_EMOJI = '💡';
 // Vertical padding follows the public --blok-block-padding-top/-bottom tokens
 // with the callout's own 5px defaults as fallbacks (pl-8/pr-4 are the callout
 // card inset, not the generic block inset — they stay hardcoded).
-export const WRAPPER_STYLES = 'rounded-xl pl-8 pr-4 pt-[var(--blok-block-padding-top,5px)] pb-[var(--blok-block-padding-bottom,5px)] my-1 flex items-start gap-2 relative';
+/**
+ * Static presentational classes live in `src/shared/tool-classes/callout.ts` so
+ * the view emitter stamps the exact same set.
+ */
+export const WRAPPER_STYLES = CALLOUT_WRAPPER_CLASSES.join(' ');
 // h-[38px] = py-[7px]×2 + 1.5rem×1 = 14+24; explicit height prevents platform-specific emoji font metrics from inflating the button
 export const EMOJI_BUTTON_STYLES = 'text-[1.5rem] leading-[1] cursor-pointer bg-transparent border-0 px-0 py-[7px] h-[38px] flex-shrink-0 select-none';
-export const CHILDREN_STYLES = 'flex-1 min-w-0';
+export const CHILDREN_STYLES = CALLOUT_CHILDREN_CLASSES.join(' ');

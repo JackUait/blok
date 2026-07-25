@@ -75,6 +75,56 @@ describe('shared tool classes', () => {
     });
   });
 
+  describe('relocated tool constants', () => {
+    it.each([
+      ['code'],
+      ['callout'],
+      ['toggle'],
+      ['divider'],
+      ['spacer'],
+    ])('%s resolves a non-empty class list', (tool) => {
+      expect(classesFor(tool, {}).length).toBeGreaterThan(0);
+    });
+
+    it('excludes Tailwind group markers, which only drive edit-chrome hover rules', () => {
+      expect(classesFor('code', {})).not.toContain('group/code');
+      expect(classesFor('spacer', {})).not.toContain('group/spacer');
+    });
+
+    it('excludes the toggle focus-ring suppression', () => {
+      expect(classesFor('toggle', {})).not.toContain('outline-hidden');
+    });
+
+    /**
+     * The tools' own `*_STYLES` constants must DERIVE from the shared arrays.
+     * A second literal copy would drift silently — the class-parity harness only
+     * catches divergence once a fixture exercises it.
+     */
+    it('keeps the tool constants derived from the shared source, not copied', async () => {
+      const [codeShared, codeTool] = await Promise.all([
+        import('../../../src/shared/tool-classes/code'),
+        import('../../../src/tools/code/constants'),
+      ]);
+
+      expect(codeTool.WRAPPER_STYLES).toBe(['group/code', ...codeShared.CODE_WRAPPER_CLASSES].join(' '));
+
+      const [calloutShared, calloutTool] = await Promise.all([
+        import('../../../src/shared/tool-classes/callout'),
+        import('../../../src/tools/callout/constants'),
+      ]);
+
+      expect(calloutTool.WRAPPER_STYLES).toBe(calloutShared.CALLOUT_WRAPPER_CLASSES.join(' '));
+      expect(calloutTool.CHILDREN_STYLES).toBe(calloutShared.CALLOUT_CHILDREN_CLASSES.join(' '));
+
+      const [toggleShared, toggleTool] = await Promise.all([
+        import('../../../src/shared/tool-classes/toggle'),
+        import('../../../src/tools/toggle/constants'),
+      ]);
+
+      expect(toggleTool.BASE_STYLES).toBe(['outline-hidden', ...toggleShared.TOGGLE_WRAPPER_CLASSES].join(' '));
+    });
+  });
+
   describe('classesFor', () => {
     it('resolves classes by tool type', () => {
       expect(classesFor('paragraph', {})).toEqual(PARAGRAPH_CLASSES);

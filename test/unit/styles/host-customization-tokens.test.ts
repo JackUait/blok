@@ -23,6 +23,8 @@ import { describe, expect, it } from 'vitest';
 
 import { css as searchInputCss } from '../../../src/components/utils/popover/components/search-input/search-input.const';
 import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../../src/components/utils/placeholder';
+import { HEADER_BASE_CLASSES } from '../../../src/shared/tool-classes/header';
+import { QUOTE_BASE_CLASSES } from '../../../src/shared/tool-classes/quote';
 import { WRAPPER_STYLES as CALLOUT_WRAPPER_STYLES } from '../../../src/tools/callout/constants';
 import { BASE_STYLES, CHECKLIST_ITEM_STYLES, ITEM_STYLES } from '../../../src/tools/list/constants';
 import { BASE_STYLES as TOGGLE_BASE_STYLES } from '../../../src/tools/toggle/constants';
@@ -370,13 +372,17 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(CALLOUT_WRAPPER_STYLES).not.toContain('py-[5px]');
     });
 
-    it('routes header padding through the three tokens with 7px/7px/2px fallbacks (BASE_STYLES is module-local — source scan)', () => {
-      const headerSource = readToolSource('header/index.ts');
-
-      expect(headerSource).toContain('pt-[var(--blok-block-padding-top,7px)]');
-      expect(headerSource).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
-      expect(headerSource).toContain('px-[var(--blok-block-padding-inline,2px)]');
-      expect(headerSource).not.toContain('py-[7px] px-[2px]');
+    /**
+     * Reads the shared module directly rather than scanning the tool's source:
+     * these classes moved to `src/shared/tool-classes/header.ts` so the view
+     * renderer stamps the same set, and being exported they can now be asserted
+     * as values instead of matched as text.
+     */
+    it('routes header padding through the three tokens with 7px/7px/2px fallbacks', () => {
+      expect(HEADER_BASE_CLASSES).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(HEADER_BASE_CLASSES).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(HEADER_BASE_CLASSES).toContain('px-[var(--blok-block-padding-inline,2px)]');
+      expect(HEADER_BASE_CLASSES).not.toContain('py-[7px]');
     });
 
     it('anchors the toggle-heading arrow offset to the top-padding token so a host override keeps the arrow aligned', () => {
@@ -386,12 +392,10 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(headerSource).not.toContain('top-[calc(7px_+_0.65em)]');
     });
 
-    it('routes quote vertical padding through the tokens with quote-specific 0.2em fallbacks (BASE_CLASSES is module-local — source scan)', () => {
-      const quoteSource = readToolSource('quote/index.ts');
-
-      expect(quoteSource).toContain('pt-[var(--blok-block-padding-top,0.2em)]');
-      expect(quoteSource).toContain('pb-[var(--blok-block-padding-bottom,0.2em)]');
-      expect(quoteSource).not.toContain('py-[0.2em]');
+    it('routes quote vertical padding through the tokens with quote-specific 0.2em fallbacks', () => {
+      expect(QUOTE_BASE_CLASSES).toContain('pt-[var(--blok-block-padding-top,0.2em)]');
+      expect(QUOTE_BASE_CLASSES).toContain('pb-[var(--blok-block-padding-bottom,0.2em)]');
+      expect(QUOTE_BASE_CLASSES).not.toContain('py-[0.2em]');
     });
 
     it('keeps the quote 0.2em fallbacks winning over the blok-block defaults in the compiled cascade (equal specificity — source order decides)', async () => {
@@ -403,9 +407,8 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       // with the real quote candidates and pin that quote's padding rules are
       // emitted after .blok-block.
       const utility = blokBlockUtility();
-      const quoteSource = readToolSource('quote/index.ts');
-      const quotePt = quoteSource.match(/pt-\[var\(--blok-block-padding-top,[^\]]+\)\]/)?.[0];
-      const quotePb = quoteSource.match(/pb-\[var\(--blok-block-padding-bottom,[^\]]+\)\]/)?.[0];
+      const quotePt = QUOTE_BASE_CLASSES.find((cls) => cls.startsWith('pt-[var(--blok-block-padding-top,'));
+      const quotePb = QUOTE_BASE_CLASSES.find((cls) => cls.startsWith('pb-[var(--blok-block-padding-bottom,'));
 
       expect(utility).not.toBe('');
       expect(quotePt).toBeDefined();

@@ -21,6 +21,13 @@
  * Edit-only classes (placeholders, focus rings, hover affordances, resize
  * grips, `group/*` markers) do NOT belong here — they stay at the tool's call
  * site.
+ *
+ * NAMING IS LOAD-BEARING. `test/unit/styles/tailwind-class-emits-law.test.ts`
+ * only harvests class strings from identifiers matching
+ * `(?:^|_)(?:CLASS|CLASSES|STYLES)$`. Every export holding class strings in this
+ * directory MUST end in `_CLASS` or `_CLASSES`, or its classes silently fall out
+ * of that law's coverage and a dead Tailwind token can ship unnoticed. Moving
+ * classes here from a tool already caught one such near-miss.
  */
 import { CALLOUT_CHILDREN_CLASSES, CALLOUT_WRAPPER_CLASSES } from './callout';
 import { CODE_AREA_CLASSES, CODE_WRAPPER_CLASSES } from './code';

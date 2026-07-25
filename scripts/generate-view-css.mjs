@@ -301,6 +301,49 @@ const dropUnusedKeyframes = (root) => {
 };
 
 /**
+ * Relocate the Tailwind-v4 border-colour compat rules into `@layer base`.
+ *
+ * main.css authors these UNLAYERED (`:where([data-blok-interface]) * {
+ * border-color: var(--color-gray-200) }`), restoring v3's grey default now that
+ * v4 defaults border-color to currentColor. Unlayered beats EVERY layered
+ * utility regardless of specificity, so left as-is it overrides `.border-current`
+ * and the view paints a grey quote bar where the read-only editor paints a black
+ * one (the editor's build lands the same rule in a layer). These are semantic
+ * base resets, so moving them into `@layer base` lets the per-tool border
+ * utilities win — exactly the cascade the editor produces. Mirrors the
+ * `:not([class])` guard the legacy baseline uses for the same unlayered-wins
+ * hazard on `[data-blok-tool]`.
+ * @param root - the pruned postcss root
+ */
+const layerizeBorderCompat = (root) => {
+  const base = postcss.atRule({ name: 'layer', params: 'base' });
+  const moved = [];
+
+  root.each((node) => {
+    if (node.type !== 'rule' || !node.nodes || node.nodes.length === 0) {
+      return;
+    }
+
+    const everyDeclIsBorderCompat = node.nodes.every(
+      (decl) => decl.type === 'decl' && decl.prop === 'border-color' && decl.value.includes('--color-gray-200')
+    );
+
+    if (everyDeclIsBorderCompat) {
+      moved.push(node);
+    }
+  });
+
+  for (const node of moved) {
+    base.append(node.clone());
+    node.remove();
+  }
+
+  if (base.nodes.length > 0) {
+    root.append(base);
+  }
+};
+
+/**
  * The legacy contract: `blocksToHtml(data, { toolAttributes: true })` with
  * classes OFF emits bare semantic tags whose only hook is `data-blok-tool`.
  * Those hand-written rules must survive verbatim — hr-platform ships against
@@ -353,6 +396,20 @@ const HEADER = `/**
 `;
 
 /**
+ * Canonical Tailwind cascade-layer order, byte-for-byte what UI.loadStyles
+ * (src/components/modules/ui.ts) prepends before the editor's own sheet.
+ *
+ * The compiled output below registers `@layer utilities { }` BEFORE
+ * `@layer base { }`, and CSS fixes layer precedence by first declaration — so
+ * without this statement `base` outranks `utilities` and the scoped preflight
+ * resets (`* { padding: 0; border: 0 solid }`) beat every padding/border
+ * utility: block rhythm collapses, quote borders and list indents vanish. The
+ * editor dodges this only because it prepends the same line at runtime; the
+ * standalone sheet must carry it itself. Pins `base` before `utilities`.
+ */
+const LAYER_ORDER = '@layer properties;\n@layer theme, base, components, utilities;\n';
+
+/**
  * Compile, prune and write the stylesheet.
  */
 const main = async () => {
@@ -400,8 +457,9 @@ const main = async () => {
 
   prune(parsed, root);
   dropUnusedKeyframes(parsed);
+  layerizeBorderCompat(parsed);
 
-  writeFileSync(OUTPUT, `${HEADER}${parsed.toString().trim()}\n${LEGACY_BASELINE}`);
+  writeFileSync(OUTPUT, `${HEADER}${LAYER_ORDER}${parsed.toString().trim()}\n${LEGACY_BASELINE}`);
 
   process.stdout.write(`view.css: ${candidates.length} candidates -> ${readFileSync(OUTPUT).byteLength} bytes\n`);
 };

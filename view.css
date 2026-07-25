@@ -13,6 +13,8 @@
  * Ships no webfonts — the view inherits the host's typography. Point
  * `--blok-font-mono` at a monospace face to match the editor's code blocks.
  */
+@layer properties;
+@layer theme, base, components, utilities;
 /*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
 @layer properties;
 @keyframes blok-checkbox-pop {
@@ -1115,9 +1117,6 @@
     opacity: 0.45;
   }
 }
-:where([data-blok-interface], [data-blok-popover]) *, :where([data-blok-interface], [data-blok-popover]) ::after, :where([data-blok-interface], [data-blok-popover]) ::before, :where([data-blok-interface], [data-blok-popover]) ::backdrop, :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
-  border-color: var(--color-gray-200, currentcolor);
-}
 [data-drop-indicator="top"], [data-drop-indicator="bottom"] {
   --drop-line-start: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));
 }
@@ -1210,6 +1209,11 @@
       --tw-content: "";
     }
   }
+}
+@layer base{
+:where([data-blok-interface], [data-blok-popover]) *, :where([data-blok-interface], [data-blok-popover]) ::after, :where([data-blok-interface], [data-blok-popover]) ::before, :where([data-blok-interface], [data-blok-popover]) ::backdrop, :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
+  border-color: var(--color-gray-200, currentcolor);
+}
 }
 
 /*

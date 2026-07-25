@@ -105,6 +105,11 @@ const CROSS_BROWSER_TESTS = [
 
 // Logic/API tests - browser-agnostic, run once on Chromium
 const LOGIC_TESTS = [
+  // View<->read-only visual parity. MUST live in LOGIC_TESTS: CI's e2e matrix
+  // (.github/workflows/ci.yml) runs chromium/firefox/webkit/chromium-logic only,
+  // so a spec left in the chromium-default project never gates a PR.
+  '**/visual-regression/view-parity.spec.ts',
+
   // API tests (pure logic, no DOM dependencies)
   '**/api/**/*.spec.ts',
 

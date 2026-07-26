@@ -1061,15 +1061,21 @@ describe('Embed toolbar integration', () => {
 });
 
 describe('Embed stored-data URL safety (stored XSS guard)', () => {
-  // Saved documents are attacker-controllable in host apps: data.embed must be
-  // re-validated at RENDER time, not only when a URL is pasted.
+  // Saved documents are attacker-controllable in host apps: the embed target
+  // must be re-derived and re-validated at RENDER time, not only when a URL is
+  // pasted. Registry blocks derive from `source`, generic ones from `embed`.
   it.each([
     ['javascript:alert(1)'],
     ['data:text/html,<script>alert(1)</script>'],
     ['//evil.example/frame'],
     ['http://evil.example/frame'],
   ])('refuses to render an iframe for unsafe stored embed URL %s', (embed) => {
-    const tool = new Embed(createOptions(iframeData({ embed })));
+    const tool = new Embed(
+      createOptions(
+        { service: '', source: embed, embed, kind: 'iframe' },
+        { allowGenericEmbed: true }
+      )
+    );
 
     const root = tool.render();
 
@@ -1077,12 +1083,12 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
     expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
   });
 
-  it('refuses the script path entirely when the stored embed URL is unsafe', () => {
+  it('refuses the script path entirely when the stored source is unsafe', () => {
     const tool = new Embed(
       createOptions({
         service: 'threads',
-        source: 'https://www.threads.net/@zuck/post/C8z2Qq0Rk1x',
-        embed: 'javascript:alert(1)',
+        source: 'javascript:alert(1)',
+        embed: 'https://www.threads.com/@zuck/post/C8z2Qq0Rk1x',
         kind: 'script',
       })
     );
@@ -1116,6 +1122,85 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
     const root = tool.render();
 
     expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://www.youtube.com/embed/dQw4w9WgXcQ');
+  });
+
+  // The "only registry-matched URLs are ever embedded" invariant must hold at
+  // RENDER time too: stored JSON never proves the URL once passed the paste UI.
+  it('refuses to frame a stored generic embed when the host never opted in', () => {
+    const tool = new Embed(
+      createOptions(
+        {
+          service: '',
+          source: 'https://evil.example',
+          embed: 'https://evil.example/fake-sso',
+          kind: 'iframe',
+        },
+        { allowGenericEmbed: false }
+      )
+    );
+
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('frames a stored generic embed when the host did opt in', () => {
+    const tool = new Embed(
+      createOptions(
+        {
+          service: '',
+          source: 'https://example.com/page',
+          embed: 'https://example.com/page',
+          kind: 'iframe',
+        },
+        { allowGenericEmbed: true }
+      )
+    );
+
+    expect(tool.render().querySelector('iframe')?.getAttribute('src')).toBe('https://example.com/page');
+  });
+
+  it('refuses to frame a stored registry service whose source is not a registry URL', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'youtube',
+        source: 'https://evil.example',
+        embed: 'https://evil.example/fake-sso',
+        kind: 'iframe',
+      })
+    );
+
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('re-derives the iframe src from the registry, ignoring a tampered stored embed URL', () => {
+    const tool = new Embed(createOptions(iframeData({ embed: 'https://evil.example/fake-sso' })));
+
+    expect(tool.render().querySelector('iframe')?.getAttribute('src')).toBe(
+      'https://www.youtube.com/embed/dQw4w9WgXcQ'
+    );
+  });
+
+  it('re-derives the threads permalink from the registry, ignoring a tampered stored embed URL', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'threads',
+        source: 'https://www.threads.net/@zuck/post/C8z2Qq0Rk1x',
+        embed: 'https://evil.example/fake-sso',
+        kind: 'script',
+      })
+    );
+
+    const permalink = tool
+      .render()
+      .querySelector('blockquote')
+      ?.getAttribute('data-text-post-permalink');
+
+    expect(permalink).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
   });
 
   it('rejects unsafe embed URLs in validate() so they are dropped on save', () => {

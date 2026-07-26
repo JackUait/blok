@@ -14,6 +14,9 @@
  *
  * - `toSafeEmbedSrc(...)` (embed/index.ts) — https-only, for iframe src and
  *   embed-widget hrefs;
+ * - `this.embedSrc()` (embed/index.ts) — the stricter resolver: https-only AND
+ *   registry-derived (or host-opted-in generic), so a stored block can never
+ *   frame an origin the embed registry does not sanction;
  * - `setSafeLinkHref(el, url)` (registry.ts) — http/https-only, skips the
  *   attribute entirely for unsafe values, for navigable anchors;
  * - a `*_WIDGET_SRC` module constant (compile-time provider script URL);
@@ -93,7 +96,7 @@ function collectSinks(): Sink[] {
 }
 
 function isSanctioned(sink: Sink): boolean {
-  if (sink.rhs.startsWith('toSafeEmbedSrc(')) {
+  if (sink.rhs.startsWith('toSafeEmbedSrc(') || sink.rhs === 'this.embedSrc()') {
     return true;
   }
 

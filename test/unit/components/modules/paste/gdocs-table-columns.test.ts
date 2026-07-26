@@ -21,6 +21,12 @@ const MULTI_ROW_TABLE =
   '<tr><td><p>A2</p></td><td><p>B2</p></td></tr>' +
   '</tbody></table>';
 
+const MULTI_ROW_IMAGE_TABLE =
+  '<table><tbody>' +
+  '<tr><td><p><span><img src="https://lh3.googleusercontent.com/photo1" width="200" height="150" alt=""/></span></p></td><td><p>Caption one</p></td></tr>' +
+  '<tr><td><p><span><img src="https://lh3.googleusercontent.com/photo2" width="200" height="150" alt=""/></span></p></td><td><p>Caption two</p></td></tr>' +
+  '</tbody></table>';
+
 const SINGLE_CELL_TABLE =
   '<table><tbody><tr><td><p>Only cell</p></td></tr></tbody></table>';
 
@@ -41,25 +47,53 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
     expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(true);
   });
 
-  it('stamps a multi-row table with 2 columns as a columns candidate', () => {
+  it('does NOT stamp a text-only multi-row 2-column table (summary tables are tabular data)', () => {
     const result = parse(preprocessGoogleDocsHtml(gdocs(MULTI_ROW_TABLE)));
+    const table = result.querySelector('table');
+
+    expect(table).not.toBeNull();
+    expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(false);
+  });
+
+  it('stamps a multi-row 2-column table containing an image (photo+text layout)', () => {
+    const result = parse(preprocessGoogleDocsHtml(gdocs(MULTI_ROW_IMAGE_TABLE)));
     const table = result.querySelector('table');
 
     expect(table).not.toBeNull();
     expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(true);
   });
 
-  it('stamps a multi-row table with 3 columns as a columns candidate', () => {
-    const threeCol =
-      '<table><tbody>' +
-      '<tr><td><p>A1</p></td><td><p>B1</p></td><td><p>C1</p></td></tr>' +
-      '<tr><td><p>A2</p></td><td><p>B2</p></td><td><p>C2</p></td></tr>' +
-      '</tbody></table>';
-    const result = parse(preprocessGoogleDocsHtml(gdocs(threeCol)));
+  it('stamps a text-only single-row 3-column table (single-row layouts always convert)', () => {
+    const threeCells =
+      '<table><tbody><tr>' +
+      '<td><p>A</p></td><td><p>B</p></td><td><p>C</p></td>' +
+      '</tr></tbody></table>';
+    const result = parse(preprocessGoogleDocsHtml(gdocs(threeCells)));
     const table = result.querySelector('table');
 
     expect(table).not.toBeNull();
     expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(true);
+  });
+
+  it('does NOT stamp a multi-row 3-column table, even when it contains an image', () => {
+    const textOnly =
+      '<table><tbody>' +
+      '<tr><td><p>A1</p></td><td><p>B1</p></td><td><p>C1</p></td></tr>' +
+      '<tr><td><p>A2</p></td><td><p>B2</p></td><td><p>C2</p></td></tr>' +
+      '</tbody></table>';
+    const withImage =
+      '<table><tbody>' +
+      '<tr><td><p><img src="https://lh3.googleusercontent.com/g1" alt=""/></p></td><td><p>B1</p></td><td><p>C1</p></td></tr>' +
+      '<tr><td><p>A2</p></td><td><p>B2</p></td><td><p>C2</p></td></tr>' +
+      '</tbody></table>';
+
+    for (const html of [textOnly, withImage]) {
+      const result = parse(preprocessGoogleDocsHtml(gdocs(html)));
+      const table = result.querySelector('table');
+
+      expect(table).not.toBeNull();
+      expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(false);
+    }
   });
 
   it('does NOT stamp a table with 4 columns', () => {
@@ -128,7 +162,7 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
   it('does NOT stamp a nested table inside a bigger table (only the outer one)', () => {
     const nested =
       '<table><tbody>' +
-      '<tr><td>' + SINGLE_ROW_TABLE + '</td><td><p>B1</p></td></tr>' +
+      '<tr><td>' + SINGLE_ROW_TABLE + '</td><td><p><img src="https://lh3.googleusercontent.com/outer" alt=""/></p></td></tr>' +
       '<tr><td><p>A2</p></td><td><p>B2</p></td></tr>' +
       '</tbody></table>';
     const result = parse(preprocessGoogleDocsHtml(gdocs(nested)));

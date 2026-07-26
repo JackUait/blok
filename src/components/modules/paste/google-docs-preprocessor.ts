@@ -521,16 +521,33 @@ function convertAnchorColorStyles(wrapper: HTMLElement): void {
 }
 
 /**
- * Stamp every 2- or 3-column Google Docs table as a columns-layout candidate.
- * Docs has no native column layout, so writers fake columns with a narrow
- * table; the HTML paste handler expands stamped tables into
+ * The table's own rows (nested tables' rows excluded) as arrays of TD/TH
+ * cells, in document order.
+ */
+function ownRowCells(table: HTMLTableElement): HTMLElement[][] {
+  return Array.from(table.querySelectorAll('tr'))
+    .filter((row) => row.closest('table') === table)
+    .map((row) => Array.from(row.children)
+      .filter((child): child is HTMLElement => child.tagName === 'TD' || child.tagName === 'TH'));
+}
+
+/**
+ * Stamp Google Docs tables that are columns LAYOUTS (not tabular data) as
+ * columns candidates. Docs has no native column layout, so writers fake
+ * columns with a table; the HTML paste handler expands stamped tables into
  * `column_list`/`column` blocks instead of a table block (each table column's
  * cells stack top-to-bottom inside one Blok column).
  *
- * Only tables whose rows ALL have the same cell count of 2 or 3 qualify —
- * ragged rows or merged cells mean genuinely tabular data. Also not stamped:
- * Google Sheets pastes (a selection there is tabular data, marked by
- * `<google-sheets-html-origin>`) and tables nested inside another table
+ * The editorial rules for what counts as layout:
+ * - a single-row table with 2 or 3 cells, whatever the content;
+ * - a multi-row uniform 2-column table containing at least one image
+ *   (photo+text side-by-side). Text-only multi-row tables (e.g. the
+ *   what/where/for-whom "summary" table) are genuinely tabular, and so are
+ *   multi-row 3-column tables even with photos (a 3-across photo grid).
+ *
+ * Never stamped: ragged rows or merged cells (tabular data), Google Sheets
+ * pastes (a selection there is tabular data, marked by
+ * `<google-sheets-html-origin>`), and tables nested inside another table
  * (columns cannot live in a table cell).
  */
 function stampColumnsCandidateTables(wrapper: HTMLElement): void {
@@ -543,21 +560,23 @@ function stampColumnsCandidateTables(wrapper: HTMLElement): void {
       continue;
     }
 
-    const ownRows = Array.from(table.querySelectorAll('tr'))
-      .filter((row) => row.closest('table') === table);
+    const rows = ownRowCells(table);
 
-    if (ownRows.length === 0) {
+    if (rows.length === 0) {
       continue;
     }
 
-    const cellCounts = ownRows.map((row) => Array.from(row.children)
-      .filter((child) => child.tagName === 'TD' || child.tagName === 'TH')
-      .length);
+    const columnCount = rows[0].length;
+    const isUniform = rows.every((cells) => cells.length === columnCount);
 
-    const columnCount = cellCounts[0];
-    const isUniform = cellCounts.every((count) => count === columnCount);
+    if (!isUniform) {
+      continue;
+    }
 
-    if (isUniform && (columnCount === 2 || columnCount === 3)) {
+    const isSingleRowLayout = rows.length === 1 && (columnCount === 2 || columnCount === 3);
+    const isPhotoTextLayout = rows.length > 1 && columnCount === 2 && table.querySelector('img') !== null;
+
+    if (isSingleRowLayout || isPhotoTextLayout) {
       table.setAttribute(COLUMNS_CANDIDATE_ATTR, '');
     }
   }

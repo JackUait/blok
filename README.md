@@ -4,13 +4,33 @@
   </a>
 </p>
 
-## It's Blok!
+# Blok
 
-Blok is a headless, block-based rich text editor for the web. If you've used Notion, you know the feel: every paragraph, heading, image, or list is its own block that you can drag around, nest, and convert into something else.
+A block-based rich text editor for the web, like the one in Notion: every paragraph, heading, image or list is its own block you can drag, nest, and convert into something else.
 
-The difference from a normal `contenteditable` setup is the data. A `contenteditable` field hands you one HTML blob and leaves you to parse it. Blok stores content as typed JSON blocks instead, so the output is the same whether you save it to a database, diff it, or render it on a server that never touches the DOM.
+The difference from a plain `contenteditable` field is what you get back. `contenteditable` hands you one HTML blob and leaves you to parse it; Blok saves typed JSON blocks, so the same content can go into a database column, be diffed between revisions, or be rendered on a server that never touches the DOM. And it's headless: Blok ships the engine and the tools, not a theme, so the chrome is yours.
 
-It's headless on purpose. Blok ships the editing engine and a set of tools; it does not impose a chrome or a theme. You wire it into your own UI.
+- **JSON in, JSON out.** `save()` returns `{ id, type, data }` blocks — no HTML parsing on your side.
+- **Renders without a browser.** `@bloklabs/core/view` turns saved documents into sanitized HTML synchronously, in Node, workers, or React Server Components.
+- **React, Vue and Angular adapters.** Separate packages that peer on the core, so the engine is never bundled twice. In React, `<BlokEditor data={…} onSave={…} />` is a real controlled component.
+- **69 languages, RTL included.** Locales lazy-load by browser language; right-to-left scripts lay out correctly.
+- **CRDT-backed undo.** History runs on Yjs: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`.
+- **Extensible by design.** Block tools, inline tools and block tunes, each reaching the editor through 21 API namespaces (`blocks`, `caret`, `selection`, `marks`, …).
+- **Migration path from Editor.js.** Blok is a fork; a codemod (`npx migrate-from-editorjs`) and a data migration guide ship with it.
+
+```js
+import { Blok, defaultTools } from '@bloklabs/core/full';
+import { blocksToHtml } from '@bloklabs/core/view';
+
+const editor = new Blok({ holder: 'editor', tools: defaultTools });
+
+const data = await editor.save();
+//=> { blocks: [{ id: 'a1', type: 'header', data: { text: 'Hello', level: 2 } },
+//               { id: 'a2', type: 'paragraph', data: { text: 'A <b>block</b>-based editor.' } }] }
+
+blocksToHtml(data);
+//=> '<h2>Hello</h2><p>A <b>block</b>-based editor.</p>'
+```
 
 <p align="center">
   <a href="https://blokeditor.com/demo" target="_blank" rel="noopener noreferrer">
@@ -20,86 +40,74 @@ It's headless on purpose. Blok ships the editing engine and a set of tools; it d
 
 <p align="center"><a href="https://blokeditor.com/demo">Try the live demo →</a></p>
 
-## What's in the box
+---
 
-| Feature | What you get |
-| --- | --- |
-| **Block tools** | Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. Plus a Notion-style database block (rows are child blocks) and embed/bookmark blocks for pasted links. |
-| **Inline formatting** | Bold, italic, underline, strikethrough, inline code, link, and a highlight marker. |
-| **Slash menu & markdown** | Type `/` in an empty block to search and insert, or type markdown (`#`, `-`, `1.`, `[]`, `>`) and it converts on space. |
-| **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, auto-scrolls near edges. Keyboard works too. |
-| **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
-| **69 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
-| **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules. Tools reach the editor through 18 API namespaces (`blocks`, `caret`, `selection`, …). |
-| **Smart paste** | A handler chain keeps block structure intact on internal paste, strips Google Docs HTML noise, and lets tools claim specific file types or patterns. |
-| **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |
-| **Read-only mode** | Call `readOnly.set(true)` and the editor re-renders without editing affordances. |
-| **Accessibility** | ARIA live announcements for drag and block ops, Notion-style vertical caret movement, semantic data attributes for tests. |
+## Contents
 
-## Installation
+- [Getting started](#getting-started)
+- [Framework adapters](#framework-adapters)
+- [What's in the box](#whats-in-the-box)
+- [Rendering saved content](#rendering-saved-content)
+- [Styling and theming](#styling-and-theming)
+- [Other entry points](#other-entry-points)
+- [Documentation](#documentation)
+- [Community](#community)
+- [Contributing](#contributing)
+- [License and attribution](#license-and-attribution)
 
-With a bundler (Vite, webpack, Rollup, etc.):
+---
+
+## Getting started
+
+**1. Install the package** (Node 20.19 or newer):
 
 ```bash
 npm install @bloklabs/core
 # or: yarn add @bloklabs/core / pnpm add @bloklabs/core
 ```
 
-Using a framework? Add the adapter package alongside the core:
+**2. Add a container to your page:**
 
-```bash
-npm install @bloklabs/core @bloklabs/react    # or @bloklabs/vue / @bloklabs/angular
+```html
+<div id="editor"></div>
 ```
 
-```js
-// ESM
-import Blok from '@bloklabs/core';
-
-// CommonJS
-const { Blok } = require('@bloklabs/core');
-```
-
-The core package ships the engine but no tools, so you choose what to load. Import individual tools from `@bloklabs/core/tools`, or grab the batteries-included bundle:
+**3. Create the editor.** The core package ships the engine but no tools, so you pick what to load. The quickest start is the batteries-included bundle:
 
 ```js
 import { Blok, defaultTools, defaultInlineTools } from '@bloklabs/core/full';
 
-new Blok({
+const editor = new Blok({
   holder: 'editor',
   tools: defaultTools,
   inlineTools: defaultInlineTools,
 });
 ```
 
-### Framework adapters & other entry points
+To ship less, import tools one by one from `@bloklabs/core/tools` and pass only those.
 
-The adapters are separate packages that peer on `@bloklabs/core`, so versions stay in lockstep and the editor engine is never bundled twice.
+**4. Save the content** whenever you need it — on a button click, on a timer, on form submit:
 
-- `@bloklabs/react` — React 18/19 adapter. The recommended entry point is `<BlokEditor>`, an all-in-one component that forwards a ref to the live `Blok` instance:
+```js
+const data = await editor.save();
+// Store `data` as JSON. Pass it back later as `new Blok({ holder, tools, data })`.
+```
 
-  ```tsx
-  const [data, setData] = useState(initialData);
-  <BlokEditor tools={tools} data={data} onSave={setData} theme={theme} />;
-  ```
+That's the whole loop: create, edit, `save()`, re-render.
 
-  `data` + `onSave` make `<BlokEditor>` a true **controlled component**. `data` is reactive: passing new content re-renders the editor in place (deep-equal–deduped, so identical content never clobbers the caret). `onSave` is the output half: it fires — debounced — with the full serialized `OutputData` on every content change, so you no longer poll `ref.current.save()` by hand. Wiring `onSave={setData}` is safe and caret-stable: the adapter records the editor's own emitted output as the content baseline, so echoing it back deep-equal–dedupes to a no-op (no re-render) while genuine external `data` changes still render. (You can still forward a ref and call `ref.current.render(newData)` for ad-hoc reloads, or use the lower-level `onChange(api, event)` for mutation events.)
+### CommonJS
 
-  Reactive props (`readOnly`, `theme`, `width`, `autofocus`) sync without remounting. When structural config like `tools` needs to change, pass a `deps` array — the editor is destroyed and recreated whenever any dep value changes. Keep each value inside `deps` referentially stable: pass primitives or `useMemo`-stable objects, since a dep value whose identity changes every render recreates the editor each time. (The individual values are compared, not the array wrapper, so a fresh `[a, b]` literal each render is fine when `a` and `b` are stable; omitting `deps` creates the editor once.)
+```js
+const { Blok } = require('@bloklabs/core');
+```
 
-  Don't wrap `<BlokEditor>` in `styled()` or any HOC that reserves the `theme` prop — styled-components claims `theme` for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it through `className`.
-
-  For advanced control (e.g., rendering outside a single container), use `useBlok` + `BlokContent` directly.
-- `@bloklabs/vue` — Vue 3 adapter: `<BlokEditor>` component plus `useBlok`/`useBlocks` composables and `createVueBlock` for authoring block tools as Vue components.
-- `@bloklabs/angular` — Angular adapter (APF partial-Ivy bundle): `BlokEditorComponent`, `injectBlocks`, and `createAngularBlock` for component-based block tools.
-- `@bloklabs/core/markdown` — `markdownToBlocks(md)` to import Markdown (GFM, with optional math) as Blok data.
-- `@bloklabs/core/locales` — locale data, if you'd rather load it yourself.
-
-### CDN (no bundler)
+### CDN, no bundler
 
 ```html
 <script src="https://unpkg.com/@bloklabs/core/dist/blok.iife.js"></script>
 <!-- or jsDelivr: https://cdn.jsdelivr.net/npm/@bloklabs/core/dist/blok.iife.js -->
 
+<div id="editor"></div>
 <script>
   const editor = new BlokEditor.Blok({ holder: 'editor' });
 </script>
@@ -107,9 +115,79 @@ The adapters are separate packages that peer on `@bloklabs/core`, so versions st
 
 The IIFE build puts everything under the `BlokEditor` global.
 
-## Styling & theming
+---
 
-Blok's chrome is customizable through public `--blok-*` CSS custom properties. Pass them as `style.tokens` in the constructor config (or swap them at runtime with `editor.tokens.set()`) to recolor popovers, surfaces, selection, headings, lists, and block rhythm — the full token list is in the [API reference](https://blokeditor.com).
+## Framework adapters
+
+Adapters are separate packages that peer on `@bloklabs/core`, so versions stay in lockstep and the editor engine is never bundled twice:
+
+```bash
+npm install @bloklabs/core @bloklabs/react    # or @bloklabs/vue / @bloklabs/angular
+```
+
+### React
+
+`<BlokEditor>` is an all-in-one component that forwards a ref to the live `Blok` instance:
+
+```tsx
+const [data, setData] = useState(initialData);
+
+<BlokEditor tools={tools} data={data} onSave={setData} theme={theme} />;
+```
+
+`data` + `onSave` make it a **true controlled component**: `data` is reactive, and `onSave` fires (debounced) with the full serialized `OutputData` on every content change — no polling `ref.current.save()` by hand. Wiring `onSave={setData}` is caret-stable: the adapter records its own emitted output as the baseline, so echoing it back deduplicates to a no-op while genuine external changes still render.
+
+Three things worth knowing:
+
+- **Reactive props sync without remounting** — `readOnly`, `theme`, `width`, `autofocus`.
+- **Structural config needs `deps`** — pass a `deps` array to recreate the editor when values like `tools` change. Keep each value referentially stable (primitives or `useMemo`), or you recreate the editor on every render.
+- **Don't wrap it in `styled()`** — styled-components claims the `theme` prop for its own `ThemeProvider`, so it never reaches the editor and theme sync silently breaks. Render `<BlokEditor>` directly and style it via `className`.
+
+For advanced control (e.g. rendering outside a single container) use `useBlok` + `BlokContent` directly.
+
+### Vue and Angular
+
+- **`@bloklabs/vue`** — Vue 3: `<BlokEditor>`, the `useBlok`/`useBlocks` composables, and `createVueBlock` for authoring block tools as Vue components.
+- **`@bloklabs/angular`** — Angular (APF partial-Ivy bundle): `BlokEditorComponent`, `injectBlocks`, and `createAngularBlock` for component-based block tools.
+
+---
+
+## What's in the box
+
+| Feature | What you get |
+| --- | --- |
+| **Block tools** | Paragraph, heading, list, quote, callout, code, image, divider, table, toggle, and a column layout. Plus a Notion-style database block (rows are child blocks) and embed/bookmark blocks for pasted links. |
+| **Inline formatting** | Bold, italic, underline, strikethrough, inline code, link, and a highlight marker. |
+| **Slash menu and markdown** | Type `/` in an empty block to search and insert, or type markdown (`#`, `-`, `1.`, `[]`, `>`) and it converts on space. |
+| **Drag and drop** | Pointer-based reordering (not the flaky HTML5 drag API). Grab multiple blocks, hold Alt to duplicate while dragging, auto-scrolls near edges. Keyboard works too. |
+| **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
+| **69 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
+| **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules, over 21 API namespaces. |
+| **Smart paste** | A handler chain keeps block structure intact on internal paste, strips Google Docs HTML noise, and lets tools claim specific file types or patterns. |
+| **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |
+| **Read-only mode** | Call `readOnly.set(true)` and the editor re-renders without editing affordances. |
+| **Accessibility** | ARIA live announcements for drag and block ops, Notion-style vertical caret movement, semantic data attributes for tests. |
+
+---
+
+## Rendering saved content
+
+`@bloklabs/core/view` renders a saved document to HTML **synchronously, without a DOM** — so it runs in Node, in a worker, or inside a React Server Component. Every inline field is sanitized against the allowlist before interpolation:
+
+```js
+import { blocksToHtml, blocksToPlainText } from '@bloklabs/core/view';
+
+blocksToHtml(data);      //=> '<h2>Hello</h2><p>A <b>block</b>-based editor.</p>'
+blocksToPlainText(data); //=> 'Hello\n\nA block-based editor.'
+```
+
+Ship `@bloklabs/core/view.css` alongside it to match the editor's own look, or style the output yourself.
+
+---
+
+## Styling and theming
+
+Blok's chrome is customizable through public `--blok-*` CSS custom properties. Pass them as `style.tokens` in the constructor config (or swap them at runtime with `editor.tokens.set()`) to recolor popovers, surfaces, selection, headings, lists, and block rhythm. The full token list is in the [API reference](https://blokeditor.com).
 
 Layout hooks are CSS-only. The most commonly overridden one is the **editor gutter**: Blok reserves `--blok-editor-gutter-start: 56px` in edit mode for the floating +/⠿ block controls and collapses it automatically in read-only mode, so don't hand-roll wrapper padding for those controls. To change or remove it, declare the token on the wrapper element itself:
 
@@ -120,6 +198,18 @@ Layout hooks are CSS-only. The most commonly overridden one is the **editor gutt
 ```
 
 Blok declares its defaults at zero specificity via `:where()`, so any host declaration wins. The gutter tokens are state-dependent and therefore rejected by `style.tokens` / `tokens.set()` — set them in CSS as above.
+
+---
+
+## Other entry points
+
+- **`@bloklabs/core/markdown`** — `markdownToBlocks(md)` imports Markdown (GFM, optional math) as Blok data.
+- **`@bloklabs/core/migrate`** — data migrations: upgrade your own block shapes between versions, and convert saved Editor.js documents to Blok's format.
+- **`@bloklabs/core/locales`** — locale data, if you'd rather load it yourself.
+- **`@bloklabs/core/icons`** — the editor's icon set as SVG strings.
+- **`npx migrate-from-editorjs`** — a codemod that rewrites Editor.js imports and config in your source.
+
+---
 
 ## Documentation
 
@@ -140,7 +230,7 @@ yarn test    # unit tests
 yarn lint    # ESLint + TypeScript
 ```
 
-## License & Attribution
+## License and attribution
 
 Blok is licensed under the [Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE) for attribution.
 

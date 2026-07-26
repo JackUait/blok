@@ -116,6 +116,27 @@ describe('Embed tool', () => {
     expect(iframe?.getAttribute('sandbox')).toContain('allow-scripts');
   });
 
+  /**
+   * A popup opened from a sandboxed frame inherits the frame's sandbox flags
+   * unless `allow-popups-to-escape-sandbox` is granted, and providers refuse to
+   * serve their own pages into a sandboxed top-level document
+   * (YouTube's watch page answers ERR_BLOCKED_BY_RESPONSE). Without the flag,
+   * the player's "Watch on YouTube" button opens a browser error page.
+   */
+  it('lets provider popups escape the sandbox so "Watch on YouTube" opens the real page', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'youtube',
+        source: 'https://youtu.be/dQw4w9WgXcQ',
+        embed: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      })
+    );
+
+    const iframe = tool.render().querySelector('iframe');
+
+    expect(iframe?.getAttribute('sandbox')).toContain('allow-popups-to-escape-sandbox');
+  });
+
   it('resolves a pasted Twitter/X URL as a script embed', () => {
     const tool = new Embed(createOptions());
 

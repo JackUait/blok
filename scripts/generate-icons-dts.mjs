@@ -1,6 +1,6 @@
 /**
  * Generates `types/icons.d.ts` — the self-contained public declaration for the
- * `@dodopizza/blok/icons` subpath — from `src/components/icons/index.ts`.
+ * `@bloklabs/core/icons` subpath — from `src/components/icons/index.ts`.
  *
  * WHY THIS EXISTS: `types/*.d.ts` is the package's published type surface and
  * MUST NOT re-export from raw `../src/...` (doing so drags implementation `.ts`
@@ -24,7 +24,7 @@ const SOURCE = join(REPO_ROOT, 'src', 'components', 'icons', 'index.ts');
 const TARGET = join(REPO_ROOT, 'types', 'icons.d.ts');
 
 const HEADER = `/**
- * Public SVG-string icon constants for the \`@dodopizza/blok/icons\` subpath.
+ * Public SVG-string icon constants for the \`@bloklabs/core/icons\` subpath.
  *
  * AUTO-GENERATED from \`src/components/icons/index.ts\` by
  * \`scripts/generate-icons-dts.mjs\`. Do NOT edit by hand — re-run the script.

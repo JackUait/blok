@@ -1,5 +1,5 @@
 /**
- * Public SVG-string icon constants for the `@dodopizza/blok/icons` subpath.
+ * Public SVG-string icon constants for the `@bloklabs/core/icons` subpath.
  *
  * AUTO-GENERATED from `src/components/icons/index.ts` by
  * `scripts/generate-icons-dts.mjs`. Do NOT edit by hand — re-run the script.

@@ -62,8 +62,10 @@ describe('convertGdocs', () => {
   });
 
   it('converts table cell paragraphs to br-separated content', () => {
+    // Multi-row single-column text-only: stays a table (a 1x1 table would
+    // unwrap into plain paragraphs before reaching the table builder).
     const html = gdocs(
-      '<table><tbody><tr><td><p><span>Line A</span></p><p><span>Line B</span></p></td></tr></tbody></table>'
+      '<table><tbody><tr><td><p><span>Line A</span></p><p><span>Line B</span></p></td></tr><tr><td><p><span>Row two</span></p></td></tr></tbody></table>'
     );
     const result = JSON.parse(convertGdocs(html));
     const tableBlock = result.blocks.find((b: { type: string }) => b.type === 'table');
@@ -77,6 +79,21 @@ describe('convertGdocs', () => {
     expect(cellBlocks.length).toBeGreaterThan(0);
     expect(cellBlocks[0].data.text).toContain('Line A');
     expect(cellBlocks[0].data.text).toContain('Line B');
+  });
+
+  it('unwraps a single-cell Google Docs table into plain paragraph blocks', () => {
+    const html = gdocs(
+      '<table><tbody><tr><td><p><span>Line A</span></p><p><span>Line B</span></p></td></tr></tbody></table>'
+    );
+    const result = JSON.parse(convertGdocs(html));
+    const types = result.blocks.map((b: { type: string }) => b.type);
+
+    expect(types).not.toContain('table');
+    const paragraphTexts = result.blocks
+      .filter((b: { type: string }) => b.type === 'paragraph')
+      .map((b: { data: { text: string } }) => b.data.text);
+
+    expect(paragraphTexts).toEqual(['Line A', 'Line B']);
   });
 
   it('preserves link color via mark wrapping', () => {
@@ -141,7 +158,7 @@ describe('convertGdocs', () => {
 
   it('does not produce double <br> from table cell double-preprocessing', () => {
     const html = gdocs(
-      '<table><tbody><tr><td><p><span>Line 1</span></p><p><span>Line 2</span></p></td></tr></tbody></table>'
+      '<table><tbody><tr><td><p><span>Line 1</span></p><p><span>Line 2</span></p></td></tr><tr><td><p><span>Row two</span></p></td></tr></tbody></table>'
     );
     const result = JSON.parse(convertGdocs(html));
     const cellBlocks = result.blocks.filter(

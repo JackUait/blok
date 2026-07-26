@@ -22,8 +22,9 @@ const GDOCS_SINGLE_ROW_TABLE = [
   '</b>',
 ].join('');
 
-// A two-row, two-column table: still a columns layout — each table column's
-// cells stack top-to-bottom inside one Blok column.
+// A text-only two-row, two-column table: genuinely tabular data (the Docs
+// "summary table" idiom) — multi-row tables only convert to columns when
+// they carry a photo, so this one must stay a table.
 const GDOCS_MULTI_ROW_TABLE = [
   '<b id="docs-internal-guid-test" style="font-weight:normal;">',
   '<div dir="ltr" align="left">',
@@ -31,6 +32,18 @@ const GDOCS_MULTI_ROW_TABLE = [
   '<tr><td><p dir="ltr"><span>A1</span></p></td><td><p dir="ltr"><span>B1</span></p></td></tr>',
   '<tr><td><p dir="ltr"><span>A2</span></p></td><td><p dir="ltr"><span>B2</span></p></td></tr>',
   '</tbody></table>',
+  '</div>',
+  '</b>',
+].join('');
+
+// A lone-cell table is a Docs "callout box": it unwraps into plain blocks
+// (a one-column column_list is not representable — the editor dissolves it).
+const GDOCS_SINGLE_CELL_TABLE = [
+  '<b id="docs-internal-guid-test" style="font-weight:normal;">',
+  '<div dir="ltr" align="left">',
+  '<table><tbody><tr>',
+  '<td><p dir="ltr"><span>Callout text</span></p></td>',
+  '</tr></tbody></table>',
   '</div>',
   '</b>',
 ].join('');
@@ -181,29 +194,34 @@ test.describe('Columns paste from Google Docs (2/3-column table)', () => {
     expect(childTexts(columnBlocks[1]?.id)).toEqual(['Right one', 'Right two']);
   });
 
-  test('a multi-row 2-column table pastes as columns with each column\'s cells stacked', async ({ page }) => {
+  test('a text-only multi-row 2-column table stays a table (no columns conversion)', async ({ page }) => {
     await createBlok(page);
     await focusFirstParagraph(page);
 
     await simulatePaste(page, GDOCS_MULTI_ROW_TABLE);
 
-    const columnList = page.getByTestId('column-list');
+    const saved = await save(page);
 
-    await expect(columnList).toBeVisible();
-    await expect(columnList.locator('[data-blok-column]')).toHaveCount(2);
+    expect(saved?.blocks.filter((b) => b.type === 'table')).toHaveLength(1);
+    expect(saved?.blocks.some((b) => b.type === 'column_list')).toBe(false);
+  });
+
+  test('a single-cell table unwraps into a plain paragraph', async ({ page }) => {
+    await createBlok(page);
+    await focusFirstParagraph(page);
+
+    await simulatePaste(page, GDOCS_SINGLE_CELL_TABLE);
 
     const saved = await save(page);
 
     expect(saved?.blocks.some((b) => b.type === 'table')).toBe(false);
+    expect(saved?.blocks.some((b) => b.type === 'column_list')).toBe(false);
 
-    const columnBlocks = saved?.blocks.filter((b) => b.type === 'column') ?? [];
-    const childTexts = (columnId: string | undefined): string[] =>
-      (saved?.blocks ?? [])
-        .filter((b) => b.parent === columnId)
-        .map((b) => String((b.data as { text?: string }).text ?? ''));
+    const paragraphTexts = saved?.blocks
+      .filter((b) => b.type === 'paragraph')
+      .map((b) => String((b.data as { text?: string }).text ?? ''));
 
-    expect(childTexts(columnBlocks[0]?.id)).toEqual(['A1', 'A2']);
-    expect(childTexts(columnBlocks[1]?.id)).toEqual(['B1', 'B2']);
+    expect(paragraphTexts).toContain('Callout text');
   });
 
   test('a four-column Google Docs table still pastes as a table', async ({ page }) => {

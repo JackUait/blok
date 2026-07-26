@@ -68,6 +68,39 @@ describe('buildMetaDescriptors', () => {
     expect(find(buildMetaDescriptors('/docs/table'), 'name', 'robots')).toBeUndefined();
   });
 
+  // GitHub Pages serves static files only, so the `Link: <...>; rel="alternate"`
+  // header form of this advertisement is unavailable — the <link> tag is the
+  // only way an agent parsing the page can find the markdown mirror.
+  it('advertises the page markdown mirror as a typed alternate', () => {
+    expect(buildMetaDescriptors('/docs/table')).toContainEqual({
+      tagName: 'link',
+      rel: 'alternate',
+      type: 'text/markdown',
+      href: `${SITE_URL}/docs/table.md`,
+    });
+    expect(buildMetaDescriptors('/')).toContainEqual({
+      tagName: 'link',
+      rel: 'alternate',
+      type: 'text/markdown',
+      href: `${SITE_URL}/index.md`,
+    });
+  });
+
+  it('points a localized page at its own locale mirror, not the English one', () => {
+    expect(buildMetaDescriptors('/ru/docs/table')).toContainEqual({
+      tagName: 'link',
+      rel: 'alternate',
+      type: 'text/markdown',
+      href: `${SITE_URL}/ru/docs/table.md`,
+    });
+  });
+
+  it('advertises a mirror on noindex routes too, since agents still fetch them', () => {
+    expect(find(buildMetaDescriptors('/tools'), 'type', 'text/markdown')?.href).toBe(
+      `${SITE_URL}/tools.md`,
+    );
+  });
+
   it('falls back to the site defaults on an unknown path', () => {
     const descriptors = buildMetaDescriptors('/docs/not-a-real-module');
     expect(descriptors).toContainEqual({ title: ROUTE_METADATA['/'].title });

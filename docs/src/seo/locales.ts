@@ -83,6 +83,25 @@ export const localizedPrerenderPaths = (paths: readonly string[]): string[] => [
   ),
 ];
 
+/**
+ * The agent-readable markdown mirror of a page, as a root-relative path. The
+ * build writes one file per prerendered route (`scripts/generate-seo-artifacts.mjs`)
+ * and every advertisement of it — the `<link rel="alternate">` tag and the
+ * visually hidden pointer — resolves the address through this one function, so
+ * a mirror the site names is a mirror the build emitted.
+ *
+ * `.md` rather than a second directory index because GitHub Pages already
+ * serves that extension as `text/markdown; charset=utf-8`.
+ */
+export const markdownMirrorPath = (pathname: string): string => {
+  const normalized = stripTrailingSlash(pathname);
+  return normalized === '/' ? '/index.md' : `${normalized}.md`;
+};
+
+/** Absolute form of {@link markdownMirrorPath}. */
+export const markdownMirrorUrl = (pathname: string): string =>
+  `${SITE_URL}${markdownMirrorPath(pathname)}`;
+
 export interface AlternateUrl {
   /**
    * Lower-case on purpose. These go through `createElement('link', props)`, and

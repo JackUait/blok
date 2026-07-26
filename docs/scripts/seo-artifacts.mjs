@@ -30,12 +30,6 @@ export const renderSitemap = (entries) => {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="${SITEMAP_NS}">\n${urls}\n</urlset>\n`;
 };
 
-/** `/docs/table` -> `docs/table.md`, `/` -> `index.md`. */
-export const mirrorPathForRoute = (route) => {
-  const trimmed = route.replace(/^\/+/, '').replace(/\/+$/, '');
-  return trimmed === '' ? 'index.md' : `${trimmed}.md`;
-};
-
 // Chrome that surrounds the article on every page. Dropping it is what keeps a
 // mirror from being 60% sidebar. `nav` covers the site nav, the breadcrumb
 // trail and the prev/next pager; `aside` covers the docs sidebar and the

@@ -14,7 +14,6 @@ import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import {
   htmlToMarkdown,
-  mirrorPathForRoute,
   renderLlmsFull,
   renderLlmsIndex,
   renderMarkdownMirror,
@@ -92,6 +91,7 @@ const loadManifest = async () => {
       STATIC_PATHS: paths.STATIC_PATHS,
       DEFAULT_LOCALE: locales.DEFAULT_LOCALE,
       absoluteUrl: locales.absoluteUrl,
+      markdownMirrorPath: locales.markdownMirrorPath,
       splitLocalePath: locales.splitLocalePath,
       getRouteMetadata: metadata.getRouteMetadata,
       SITE_URL: metadata.SITE_URL,
@@ -111,6 +111,7 @@ const main = async () => {
     ROUTES,
     DEFAULT_LOCALE,
     absoluteUrl,
+    markdownMirrorPath,
     splitLocalePath,
     getRouteMetadata,
     SITE_URL,
@@ -149,6 +150,25 @@ const main = async () => {
     }
 
     const dom = new JSDOM(fs.readFileSync(htmlPath, 'utf8'));
+    // Every page advertises its markdown mirror twice — a <link rel="alternate">
+    // in the head and the visually hidden pointer in the body — and neither may
+    // name a file this run does not write. `/404` is exempt: it exports its own
+    // meta (no alternate) and a mirror of an error page is not content.
+    if (route !== '/404') {
+      const advertised = dom.window.document
+        .querySelector('link[rel="alternate"][type="text/markdown"]')
+        ?.getAttribute('href');
+      const expected = `${SITE_URL}${markdownMirrorPath(route)}`;
+      if (advertised !== expected) {
+        throw new Error(
+          `Route ${route} advertises markdown mirror ${advertised ?? '(none)'}; expected ${expected}`,
+        );
+      }
+      if (!(dom.window.document.body.textContent ?? '').includes(expected)) {
+        throw new Error(`Route ${route} renders no visible-to-agents pointer at ${expected}`);
+      }
+    }
+
     return {
       route,
       metadata,
@@ -188,7 +208,7 @@ const main = async () => {
 
   // --- markdown mirrors ------------------------------------------------------
   const mirrors = pages.map((page) => {
-    const file = path.join(OUT_DIR, mirrorPathForRoute(page.route));
+    const file = path.join(OUT_DIR, markdownMirrorPath(page.route).slice(1));
     const content = renderMarkdownMirror({
       title: page.metadata.title,
       description: page.metadata.description,

@@ -1,6 +1,6 @@
 // docs/src/seo/meta-descriptors.ts
 import { buildJsonLd } from './jsonld';
-import { LOCALES, OG_LOCALE, alternateUrls, splitLocalePath } from './locales';
+import { LOCALES, OG_LOCALE, alternateUrls, markdownMirrorUrl, splitLocalePath } from './locales';
 import { ROUTE_METADATA, getRouteMetadata } from './route-metadata';
 
 /**
@@ -43,6 +43,14 @@ export const buildMetaDescriptors = (pathname: string): MetaDescriptor[] => {
     { name: 'description', content: meta.description },
     ...(meta.noindex ? [{ name: 'robots', content: 'noindex, follow' }] : []),
     { tagName: 'link', rel: 'canonical', href: meta.canonical },
+
+    // The page as clean markdown, for agents that fetch URLs. Emitted as a tag
+    // rather than the `Link: <...>; rel="alternate"` response header because
+    // GitHub Pages serves static files and lets nobody set headers; a
+    // DOM-parsing fetcher is therefore the only client that can be reached.
+    // Kept on noindex routes too — "don't put this in a search index" says
+    // nothing about whether an agent may read it.
+    { tagName: 'link', rel: 'alternate', type: 'text/markdown', href: markdownMirrorUrl(pathname) },
 
     // Reciprocal on both trees — an unreciprocated hreflang set is ignored
     // outright. Omitted where the page is noindex, which hreflang cannot rescue.

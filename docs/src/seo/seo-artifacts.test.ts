@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   htmlToMarkdown,
-  mirrorPathForRoute,
   renderLlmsFull,
   renderLlmsIndex,
   renderMarkdownMirror,
@@ -72,36 +71,6 @@ describe('renderSitemap', () => {
   });
 });
 
-describe('mirrorPathForRoute', () => {
-  it('maps every route to a sibling .md file', () => {
-    expect(mirrorPathForRoute('/')).toBe('index.md');
-    expect(mirrorPathForRoute('/demo')).toBe('demo.md');
-    expect(mirrorPathForRoute('/docs/table')).toBe('docs/table.md');
-    expect(mirrorPathForRoute('/migration/reference')).toBe('migration/reference.md');
-  });
-
-  it('keeps the locale tree separate', () => {
-    expect(mirrorPathForRoute('/ru')).toBe('ru.md');
-    expect(mirrorPathForRoute('/ru/docs/table')).toBe('ru/docs/table.md');
-  });
-
-  it('never produces the same file for two different routes', () => {
-    const routes = [
-      '/',
-      '/docs',
-      '/docs/table',
-      '/tools',
-      '/migration',
-      '/migration/reference',
-      '/ru',
-      '/ru/docs/table',
-    ];
-    const files = routes.map(mirrorPathForRoute);
-
-    expect(new Set(files).size).toBe(routes.length);
-  });
-});
-
 describe('htmlToMarkdown', () => {
   const FIXTURE = `
     <nav><a href="/demo">Demo</a></nav>
@@ -118,12 +87,20 @@ const b = 2;</code></pre>
       </table>
       <div><span>Wrapped</span> <strong>inline</strong> text</div>
     </main>
+    <div class="sr-only" aria-hidden="true">A Markdown version of this page is available at https://blokeditor.com/docs/table.md.</div>
     <aside><a href="/docs/list">On this page</a></aside>
     <footer>Footer</footer>
     <script>console.log('x')</script>
   `;
 
   const markdown = () => htmlToMarkdown(elementFrom(FIXTURE), { siteUrl: SITE_URL });
+
+  // The pointer that tells an agent where the mirror lives has no business
+  // inside the mirror: it would tell every reader of docs/table.md to go read
+  // docs/table.md.
+  it('drops the aria-hidden markdown pointer along with the rest of the chrome', () => {
+    expect(markdown()).not.toContain('.md');
+  });
 
   it('converts headings, paragraphs and lists', () => {
     const md = markdown();

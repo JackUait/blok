@@ -8,9 +8,11 @@ type Descriptor = Record<string, unknown>;
 const find = (descriptors: Descriptor[], key: string, value: string): Descriptor | undefined =>
   descriptors.find((d) => d[key] === value);
 
+// `rel="alternate"` is also how the page advertises its markdown mirror, so the
+// hreflang set is the subset that actually carries an hreflang.
 const alternates = (descriptors: Descriptor[]): { hreflang: unknown; href: unknown }[] =>
   descriptors
-    .filter((d) => d.tagName === 'link' && d.rel === 'alternate')
+    .filter((d) => d.tagName === 'link' && d.rel === 'alternate' && d.hreflang !== undefined)
     .map((d) => ({ hreflang: d.hreflang, href: d.href }));
 
 const jsonLdGraph = (descriptors: Descriptor[]): Record<string, unknown>[] => {

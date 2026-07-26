@@ -9,6 +9,11 @@
 
 User-agent: *
 Allow: /
+# Cloudflare's Content-Signal directive (CC0): the machine-readable form of the
+# sentence above. `search` = search results, `ai-input` = live AI answer
+# context, `ai-train` = model training. Strict validators warn about the
+# unrecognised directive; RFC 9309 tells parsers to ignore lines they don't know.
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
 # --- AI answer engines / retrieval crawlers (explicit opt-in) ---
 

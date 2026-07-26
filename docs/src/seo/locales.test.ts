@@ -9,6 +9,8 @@ import {
   alternateUrls,
   localizedPath,
   localizedPrerenderPaths,
+  markdownMirrorPath,
+  markdownMirrorUrl,
   splitLocalePath,
 } from './locales';
 import { SITE_URL } from './route-metadata';
@@ -135,5 +137,37 @@ describe('alternateUrls', () => {
       { hreflang: 'ru', href: `${SITE_URL}/ru/` },
       { hreflang: 'x-default', href: `${SITE_URL}/` },
     ]);
+  });
+});
+
+describe('markdownMirrorPath', () => {
+  it('maps every route to a sibling .md file', () => {
+    expect(markdownMirrorPath('/')).toBe('/index.md');
+    expect(markdownMirrorPath('/demo')).toBe('/demo.md');
+    expect(markdownMirrorPath('/docs/table')).toBe('/docs/table.md');
+    expect(markdownMirrorPath('/migration/reference')).toBe('/migration/reference.md');
+  });
+
+  it('resolves the served trailing-slash form to the same file', () => {
+    expect(markdownMirrorPath('/docs/table/')).toBe(markdownMirrorPath('/docs/table'));
+    expect(markdownMirrorPath('/ru/')).toBe(markdownMirrorPath('/ru'));
+  });
+
+  it('keeps the locale tree separate', () => {
+    expect(markdownMirrorPath('/ru')).toBe('/ru.md');
+    expect(markdownMirrorPath('/ru/docs/table')).toBe('/ru/docs/table.md');
+  });
+
+  it('never produces the same file for two different prerendered routes', () => {
+    const files = localizedPrerenderPaths(PRERENDER_PATHS).map(markdownMirrorPath);
+
+    expect(new Set(files).size).toBe(files.length);
+  });
+});
+
+describe('markdownMirrorUrl', () => {
+  it('is absolute, so a mirror fetched on its own still names its origin', () => {
+    expect(markdownMirrorUrl('/docs/table')).toBe(`${SITE_URL}/docs/table.md`);
+    expect(markdownMirrorUrl('/')).toBe(`${SITE_URL}/index.md`);
   });
 });

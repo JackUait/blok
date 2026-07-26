@@ -4,6 +4,7 @@ import App from './App';
 import { I18nProvider, StoredLocaleRedirect, useRouteLocale } from './contexts/I18nContext';
 import { FrameworkProvider } from './contexts/FrameworkContext';
 import { buildMetaDescriptors } from './seo/meta-descriptors';
+import { MarkdownPointer } from './seo/MarkdownPointer';
 import { HTML_LANG, splitLocalePath } from './seo/locales';
 import stylesheet from './index.css?url';
 
@@ -74,7 +75,8 @@ export const Layout = ({ children }: { children: ReactNode }) => {
   // Written here, not by an effect: prerendering renders this file to HTML and
   // never runs effects, so a runtime mutation would leave every Russian file
   // claiming lang="en".
-  const { locale } = splitLocalePath(useLocation().pathname);
+  const { pathname } = useLocation();
+  const { locale } = splitLocalePath(pathname);
 
   return (
     <html lang={HTML_LANG[locale]}>
@@ -92,6 +94,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         <script dangerouslySetInnerHTML={{ __html: THEME_FLASH }} />
       </head>
       <body>
+        <MarkdownPointer pathname={pathname} />
         {children}
         <Scripts />
       </body>

@@ -134,14 +134,6 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
     expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(false);
   });
 
-  it('does NOT stamp a single-row table with only one cell', () => {
-    const result = parse(preprocessGoogleDocsHtml(gdocs(SINGLE_CELL_TABLE)));
-    const table = result.querySelector('table');
-
-    expect(table).not.toBeNull();
-    expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(false);
-  });
-
   it('does NOT stamp tables outside a Google Docs wrapper', () => {
     const result = parse(preprocessGoogleDocsHtml(SINGLE_ROW_TABLE));
     const table = result.querySelector('table');
@@ -228,5 +220,72 @@ describe('preprocessGoogleDocsHtml — 2/3-column table columns candidate stampi
 
     expect(table).not.toBeNull();
     expect(table?.hasAttribute(COLUMNS_CANDIDATE_ATTR)).toBe(true);
+  });
+});
+
+describe('preprocessGoogleDocsHtml — single-column layout table unwrapping', () => {
+  it('unwraps a single-cell table into top-level content (callout box)', () => {
+    const result = parse(preprocessGoogleDocsHtml(gdocs(SINGLE_CELL_TABLE)));
+
+    expect(result.querySelector('table')).toBeNull();
+    expect(result.textContent).toContain('Only cell');
+  });
+
+  it('unwraps a two-paragraph single cell into two top-level paragraphs', () => {
+    const twoParas =
+      '<table><tbody><tr><td><p><span>First</span></p><p><span>Second</span></p></td></tr></tbody></table>';
+    const result = parse(preprocessGoogleDocsHtml(gdocs(twoParas)));
+    const paragraphs = Array.from(result.querySelectorAll('p'));
+
+    expect(result.querySelector('table')).toBeNull();
+    expect(paragraphs.map((p) => p.textContent)).toEqual(['First', 'Second']);
+  });
+
+  it('promotes an image freed from an unwrapped single-cell table to top level', () => {
+    const withImage =
+      '<table><tbody><tr><td><p><span><img src="https://lh3.googleusercontent.com/x" alt=""/></span></p></td></tr></tbody></table>';
+    const result = parse(preprocessGoogleDocsHtml(gdocs(withImage)));
+    const img = result.querySelector('img');
+
+    expect(result.querySelector('table')).toBeNull();
+    expect(img).not.toBeNull();
+    expect(img?.parentElement).toBe(result);
+  });
+
+  it('unwraps a multi-row single-column table containing an image, cells in row order', () => {
+    const photoStack =
+      '<table><tbody>' +
+      '<tr><td><p><span><img src="https://lh3.googleusercontent.com/y" alt=""/></span></p></td></tr>' +
+      '<tr><td><p><span>Caption below</span></p></td></tr>' +
+      '</tbody></table>';
+    const result = parse(preprocessGoogleDocsHtml(gdocs(photoStack)));
+
+    expect(result.querySelector('table')).toBeNull();
+    expect(result.querySelector('img')).not.toBeNull();
+    expect(result.textContent).toContain('Caption below');
+  });
+
+  it('keeps a text-only multi-row single-column table as a table', () => {
+    const textStack =
+      '<table><tbody>' +
+      '<tr><td><p>A1</p></td></tr>' +
+      '<tr><td><p>A2</p></td></tr>' +
+      '</tbody></table>';
+    const result = parse(preprocessGoogleDocsHtml(gdocs(textStack)));
+
+    expect(result.querySelector('table')).not.toBeNull();
+  });
+
+  it('does NOT unwrap single-cell tables outside a Google Docs wrapper', () => {
+    const result = parse(preprocessGoogleDocsHtml(SINGLE_CELL_TABLE));
+
+    expect(result.querySelector('table')).not.toBeNull();
+  });
+
+  it('does NOT unwrap single-cell tables in Google Sheets pastes', () => {
+    const sheets = `<b id="docs-internal-guid-test"><google-sheets-html-origin>${SINGLE_CELL_TABLE}</google-sheets-html-origin></b>`;
+    const result = parse(preprocessGoogleDocsHtml(sheets));
+
+    expect(result.querySelector('table')).not.toBeNull();
   });
 });

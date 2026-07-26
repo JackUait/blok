@@ -29,6 +29,10 @@ export function preprocessGoogleDocsHtml(html: string): string {
 
   convertGoogleDocsStyles(wrapper, isGoogleDocs);
 
+  if (isGoogleDocs) {
+    unwrapLayoutSingleColumnTables(wrapper);
+  }
+
   /**
    * Unwrapping `<p>` line-boundaries inside table cells is a property of the
    * cell HTML, not of the source app: Word, Notion exports, and generic web
@@ -529,6 +533,47 @@ function ownRowCells(table: HTMLTableElement): HTMLElement[][] {
     .filter((row) => row.closest('table') === table)
     .map((row) => Array.from(row.children)
       .filter((child): child is HTMLElement => child.tagName === 'TD' || child.tagName === 'TH'));
+}
+
+/**
+ * Unwrap single-column LAYOUT tables into plain top-level content.
+ *
+ * A one-column table can never become a `column_list` (the editor dissolves
+ * single-column lists), so tables the editorial rules classify as layout —
+ * a lone-cell "callout box" (any content) or a multi-row single-column stack
+ * holding a photo — are unwrapped instead: the `<table>` is replaced by each
+ * cell's children in row order. Text-only multi-row single-column tables are
+ * genuinely tabular and stay tables. Sheets pastes and nested tables are
+ * never touched.
+ *
+ * MUST run before `convertTableCellParagraphs` (so freed `<p>`s become
+ * top-level paragraphs that split into separate blocks, not `<br>` runs) and
+ * before `promoteImages` (so freed images get promoted like any other).
+ */
+function unwrapLayoutSingleColumnTables(wrapper: HTMLElement): void {
+  if (wrapper.querySelector('google-sheets-html-origin') !== null) {
+    return;
+  }
+
+  for (const table of Array.from(wrapper.querySelectorAll('table'))) {
+    if (table.parentElement?.closest('table') !== null) {
+      continue;
+    }
+
+    const rows = ownRowCells(table);
+
+    if (rows.length === 0 || rows.some((cells) => cells.length !== 1)) {
+      continue;
+    }
+
+    const isLayout = rows.length === 1 || table.querySelector('img') !== null;
+
+    if (!isLayout) {
+      continue;
+    }
+
+    table.replaceWith(...rows.flatMap(([cell]) => Array.from(cell.childNodes)));
+  }
 }
 
 /**

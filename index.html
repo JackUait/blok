@@ -68,6 +68,27 @@
       padding: 40px 0 88px;
     }
 
+    /* Editor / Blok View split (dev comparison, toggled from Settings) */
+    #editor-split { display: flex; gap: 48px; align-items: flex-start; }
+    #editor-col, #blokview-col { flex: 1 1 0; min-width: 0; }
+    #editor-sheet.is-split { max-width: 1400px; }
+    #editor-sheet.is-split #blokview-col { border-left: 1px solid #ebebeb; padding-left: 48px; }
+    .dark-mode #editor-sheet.is-split #blokview-col { border-left-color: #2f2f2f; }
+    .pg-col-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--pg-muted);
+      margin-bottom: 16px;
+    }
+    .dark-mode .pg-col-label { color: #a8a8a8; }
+    .pg-col-note { font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.7; margin-left: 8px; }
+    @media (max-width: 900px) {
+      #editor-split { flex-direction: column; gap: 32px; }
+      #editor-sheet.is-split #blokview-col { border-left: 0; padding-left: 0; border-top: 1px solid #ebebeb; padding-top: 32px; }
+    }
+
     /* One-time page load reveal */
     @media (prefers-reduced-motion: no-preference) {
       body.ready .playground-header { animation: pg-fade-down 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -960,8 +981,17 @@
 
     <!-- Editor tab -->
     <div id="tab-editor" role="tabpanel">
-      <div class="pg-sheet antialiased max-md:px-5">
-        <div id="blok"></div>
+      <div class="pg-sheet antialiased max-md:px-5" id="editor-sheet">
+        <div id="editor-split">
+          <div id="editor-col">
+            <div class="pg-col-label" id="editor-col-label" hidden>Editor</div>
+            <div id="blok"></div>
+          </div>
+          <div id="blokview-col" class="hidden">
+            <div class="pg-col-label">Blok View<span class="pg-col-note">read-only render · view.css</span></div>
+            <div id="blokview-panel"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1009,6 +1039,12 @@
           <span class="settings-row-label">Readonly</span>
           <kbd class="settings-kbd">⌥R</kbd>
           <input type="checkbox" id="toggle-readonly" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
+        <label class="settings-row">
+          <span class="settings-row-label">Blok View</span>
+          <kbd class="settings-kbd">⌥V</kbd>
+          <input type="checkbox" id="toggle-blokview" class="peer sr-only">
           <span class="pill-toggle"></span>
         </label>
         <label class="settings-row">
@@ -1071,6 +1107,12 @@
   <script type="module">
     import './src/playground/playground.css';
     import { Blok } from './src/blok.ts';
+    import { blocksToHtml } from './src/view/index.ts';
+    // Raw text of the published opt-in view stylesheet. We scope it under
+    // #blokview-panel before injecting, because the live editor ALSO stamps
+    // `data-blok-tool` on its blocks — an unscoped import would double-style the
+    // editor. Scoping keeps the sheet affecting only the Blok View render.
+    import viewCssText from './view.css?raw';
     import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
@@ -1088,6 +1130,7 @@
      */
     const state = {
       readOnly: false,
+      blokView: false,
       darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       autofocus: true,
       locale: 'en',
@@ -2071,6 +2114,7 @@
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
           console.log('something changed', event);
+          refreshBlokView();
         },
       };
     }
@@ -2089,6 +2133,7 @@
         blok.destroy();
         blok = new Blok(buildConfig());
         window.blok = blok;
+        blok.isReady?.then(refreshBlokView);
       }, 50);
     }
 
@@ -2227,6 +2272,7 @@
 
       const settingsShortcuts = {
         KeyR: () => document.getElementById('toggle-readonly').click(),
+        KeyV: () => document.getElementById('toggle-blokview').click(),
         KeyD: () => document.getElementById('toggle-dark').click(),
         KeyF: () => document.getElementById('toggle-autofocus').click(),
         KeyT: () => document.getElementById('toggle-rtl').click(),
@@ -2332,6 +2378,58 @@
       state.readOnly = toggleReadonly.checked;
       await blok.readOnly.toggle(state.readOnly);
     });
+
+    /**
+     * Blok View — render the current document through the framework-agnostic
+     * view renderer (`blocksToHtml`) next to the editor, styled with the
+     * published `view.css`, so its read-only output can be compared against the
+     * live editor at a glance.
+     */
+    const toggleBlokview = document.getElementById('toggle-blokview');
+    const editorSheet = document.getElementById('editor-sheet');
+    const editorColLabel = document.getElementById('editor-col-label');
+    const blokviewCol = document.getElementById('blokview-col');
+    const blokviewPanel = document.getElementById('blokview-panel');
+
+    // Scope every view.css rule under #blokview-panel, then inject once. The
+    // editor stamps `data-blok-tool` on its own blocks, so an unscoped sheet
+    // would restyle the editor too.
+    (function injectScopedViewCss() {
+      const scoped = viewCssText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/([^{}]+)\{/g, (_m, sel) =>
+          sel.split(',').map((s) => `#blokview-panel ${s.trim()}`).filter(Boolean).join(', ') + ' {');
+      const style = document.createElement('style');
+      style.id = 'blokview-scoped-css';
+      style.textContent = scoped;
+      document.head.appendChild(style);
+    })();
+
+    let blokViewRefreshTimer;
+    async function refreshBlokView() {
+      if (!state.blokView) return;
+      clearTimeout(blokViewRefreshTimer);
+      blokViewRefreshTimer = setTimeout(async () => {
+        if (!state.blokView) return;
+        try {
+          const data = await blok.save();
+          blokviewPanel.innerHTML = blocksToHtml(data, { toolAttributes: true });
+        } catch (err) {
+          console.error('Blok View render failed', err);
+        }
+      }, 120);
+    }
+
+    function applyBlokView(enabled) {
+      state.blokView = enabled;
+      toggleBlokview.checked = enabled;
+      blokviewCol.classList.toggle('hidden', !enabled);
+      editorSheet.classList.toggle('is-split', enabled);
+      editorColLabel.hidden = !enabled;
+      if (enabled) refreshBlokView();
+    }
+
+    toggleBlokview.addEventListener('change', () => applyBlokView(toggleBlokview.checked));
 
     toggleDark.addEventListener('change', () => {
       applyDarkMode(toggleDark.checked, { animate: true });

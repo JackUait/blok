@@ -47,3 +47,32 @@ describe('video Uploader.handleFile', () => {
       .rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
   });
 });
+
+describe('editor-level uploader fallback', () => {
+  const assetsApi = (over = {}) => ({
+    uploadByFile: vi.fn(async () => ({ url: 'https://cdn/editor-file' })),
+    uploadByUrl: vi.fn(async () => ({ url: 'https://cdn/editor-url' })),
+    isConfigured: vi.fn(() => true),
+    ...over,
+  });
+
+  it('uploads through the editor-level uploader when the tool declares none', async () => {
+    const assets = assetsApi();
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleFile(makeFile('a.mp4', 'video/mp4', 10)))
+      .resolves.toMatchObject({ url: 'https://cdn/editor-file' });
+    expect(assets.uploadByFile).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({ kind: 'video', tool: 'video' })
+    );
+  });
+
+  it('still falls back to a blob URL when nothing is configured', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:video');
+    const assets = assetsApi({ isConfigured: vi.fn(() => false) });
+
+    await expect(new Uploader({}, assets).handleFile(makeFile('a.mp4', 'video/mp4', 10)))
+      .resolves.toMatchObject({ url: 'blob:video' });
+  });
+});

@@ -1,4 +1,5 @@
 import type { VideoConfig } from '../../../types/tools/video';
+import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES, URL_PATTERN } from './constants';
@@ -31,12 +32,24 @@ function parseUrl(raw: string): URL | null {
 }
 
 export class Uploader {
-  constructor(private readonly config: VideoConfig) {}
+  /**
+   * @param config - the tool's own user config
+   * @param assets - the editor's asset uploader (`api.uploader`). Consulted only
+   * when the tool declares no uploader of its own, so a tool-level uploader
+   * stays authoritative for its kind.
+   */
+  constructor(
+    private readonly config: VideoConfig,
+    private readonly assets?: AssetUploaderApi,
+  ) {}
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateUrl(raw);
     if (this.config.uploader?.uploadByUrl) {
       return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
+    }
+    if (this.assets?.isConfigured('video', 'uploadByUrl')) {
+      return this.assets.uploadByUrl(raw, { kind: 'video', tool: 'video', onProgress: options.onProgress });
     }
 
     return { url: raw };
@@ -46,6 +59,9 @@ export class Uploader {
     this.validateFile(file);
     if (this.config.uploader?.uploadByFile) {
       return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
+    }
+    if (this.assets?.isConfigured('video', 'uploadByFile')) {
+      return this.assets.uploadByFile(file, { kind: 'video', tool: 'video', onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };
@@ -65,7 +81,10 @@ export class Uploader {
     // YouTube, …) would otherwise render a permanently black player — those
     // belong in an embed block. The paste path already enforces this pattern;
     // the URL field used to accept anything http(s).
-    if (!this.config.uploader?.uploadByUrl && !URL_PATTERN.test(raw)) {
+    const canRehost = this.config.uploader?.uploadByUrl !== undefined ||
+      this.assets?.isConfigured('video', 'uploadByUrl') === true;
+
+    if (!canRehost && !URL_PATTERN.test(raw)) {
       throw new VideoUploadError('NOT_MEDIA_URL', raw);
     }
   }

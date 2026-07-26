@@ -40,6 +40,7 @@ import { Saver } from '../components/modules/saver';
 import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
 import { ToolsAPI } from '../components/modules/api/tools';
+import { UploaderAPI } from '../components/modules/api/uploader';
 import { I18n } from '../components/modules/i18n';
 
 import { ThemeManager } from '../components/modules/themeManager';
@@ -50,6 +51,7 @@ export interface BlokModules {
   BlocksAPI: BlocksAPI,
   CaretAPI: CaretAPI,
   ToolsAPI: ToolsAPI,
+  UploaderAPI: UploaderAPI,
   EventsAPI: EventsAPI,
   HistoryAPI: HistoryAPI,
   I18nAPI: I18nAPI,

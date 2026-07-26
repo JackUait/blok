@@ -35,6 +35,7 @@ import {
   I18n,
   Ui,
   Tools,
+  Uploader,
   Theme,
   ThemeMode,
   ResolvedTheme,
@@ -163,6 +164,7 @@ export {
   I18nUpdateOptions,
   Ui,
   Tools,
+  Uploader,
   Theme,
   ThemeMode,
   ResolvedTheme,
@@ -197,6 +199,8 @@ export interface API {
   blocks: Blocks;
   caret: Caret;
   tools: Tools;
+  /** Asset uploads routed by asset kind (see {@link Uploader}). */
+  uploader: Uploader;
   events: Events;
   history: History;
   listeners: Listeners;

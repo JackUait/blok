@@ -329,3 +329,44 @@ describe('Uploader', () => {
     });
   });
 });
+
+describe('editor-level uploader fallback', () => {
+  const assetsApi = (over = {}) => ({
+    uploadByFile: vi.fn(async () => ({ url: 'https://cdn/editor-file' })),
+    uploadByUrl: vi.fn(async () => ({ url: 'https://cdn/editor-url' })),
+    isConfigured: vi.fn(() => true),
+    ...over,
+  });
+
+  it('uploads through the editor-level uploader when the tool declares none', async () => {
+    const assets = assetsApi();
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleFile(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })))
+      .resolves.toMatchObject({ url: 'https://cdn/editor-file' });
+    expect(assets.uploadByFile).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({ kind: 'image', tool: 'image' })
+    );
+  });
+
+  it("keeps the tool's own uploader authoritative over the editor-level one", async () => {
+    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/tool' });
+    const assets = assetsApi();
+    const u = new Uploader({ uploader: { uploadByFile } }, assets);
+
+    await expect(u.handleFile(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })))
+      .resolves.toMatchObject({ url: 'https://cdn/tool' });
+    expect(assets.uploadByFile).not.toHaveBeenCalled();
+  });
+
+  it('still falls back to a blob URL when nothing is configured', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    const assets = assetsApi({ isConfigured: vi.fn(() => false) });
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleFile(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })))
+      .resolves.toMatchObject({ url: 'blob:test' });
+    expect(assets.uploadByFile).not.toHaveBeenCalled();
+  });
+});

@@ -47,6 +47,7 @@ const createBlokStub = (rectangleSelection: Record<string, unknown>): BlokModule
     BlocksAPI: emptyMethods,
     CaretAPI: emptyMethods,
     ToolsAPI: emptyMethods,
+    UploaderAPI: emptyMethods,
     EventsAPI: emptyMethods,
     HistoryAPI: emptyMethods,
     ListenersAPI: emptyMethods,

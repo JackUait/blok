@@ -232,3 +232,45 @@ describe('Uploader — endpoint upload (handleUrl)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('editor-level uploader fallback', () => {
+  const assetsApi = (over = {}) => ({
+    uploadByFile: vi.fn(async () => ({ url: 'https://cdn/editor-file' })),
+    uploadByUrl: vi.fn(async () => ({ url: 'https://cdn/editor-url' })),
+    isConfigured: vi.fn(() => true),
+    ...over,
+  });
+
+  it('uploads through the editor-level uploader when the tool declares none', async () => {
+    const assets = assetsApi();
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleFile(makeFile())).resolves.toMatchObject({ url: 'https://cdn/editor-file' });
+    expect(assets.uploadByFile).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({ kind: 'file', tool: 'file' })
+    );
+  });
+
+  it('keeps a configured endpoint authoritative over the editor-level uploader', async () => {
+    const assets = assetsApi();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ url: 'https://api/uploaded.pdf' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new Uploader({ endpoints: '/up' }, assets).handleFile(makeFile());
+
+    expect(assets.uploadByFile).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('still returns full file metadata on the blob fallback', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:abc');
+    const assets = assetsApi({ isConfigured: vi.fn(() => false) });
+
+    await expect(new Uploader({}, assets).handleFile(makeFile('a.pdf', 'application/pdf', 2048)))
+      .resolves.toEqual({ url: 'blob:abc', fileName: 'a.pdf', size: 2048, mimeType: 'application/pdf' });
+  });
+});

@@ -22,6 +22,7 @@ export class API extends Module {
       blocks: this.Blok.BlocksAPI.methods,
       caret: this.Blok.CaretAPI.methods,
       tools: this.Blok.ToolsAPI.methods,
+      uploader: this.Blok.UploaderAPI.methods,
       events: this.Blok.EventsAPI.methods,
       history: this.Blok.HistoryAPI.methods,
       listeners: this.Blok.ListenersAPI.methods,

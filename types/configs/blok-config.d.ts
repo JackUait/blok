@@ -6,6 +6,7 @@ import {I18nConfig} from './i18n-config';
 import { BlockMutationEvent } from '../events/block';
 import type { BlockMigrations } from '../migrate';
 import type { UserInfo } from './user-info';
+import type { BlokUploader } from './uploader';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
 /**
@@ -251,6 +252,27 @@ export interface BlokMountOptions {
   tools?: {
     [toolName: string]: ToolConstructable|ToolSettings;
   }
+
+  /**
+   * Editor-level uploader, keyed by asset kind rather than by tool.
+   *
+   * Every media tool routes through it, so one implementation covers images,
+   * video, audio and files — and covers assets a tool holds outside its own
+   * media family, such as the audio block's cover art (`kind: 'image'`), which
+   * has no tool-level uploader of its own.
+   *
+   * A tool-level `uploader` (e.g. `tools.image.config.uploader`) stays
+   * authoritative for its own kind and takes precedence; this is the fallback.
+   * Without either, assets become `blob:` URLs that do not survive a reload.
+   * @example
+   * uploader: {
+   *   async uploadByFile(file, { kind, tool }) {
+   *     const res = await fetch(`/upload/${kind}`, { method: 'POST', body: file });
+   *     return { url: (await res.json()).url };
+   *   },
+   * }
+   */
+  uploader?: BlokUploader;
 
   /**
    * Data to render on Blok start.

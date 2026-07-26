@@ -73,6 +73,8 @@ export const BlokEditor = defineComponent({
     onError: { type: Function as PropType<BlokConfig['onError']>, default: undefined },
     /** Host-supplied per-type block migrations applied at load. */
     migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
+    /** Editor-level uploader, routed by asset kind (images, video, audio, files). */
+    uploader: { type: Object as PropType<BlokConfig['uploader']>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */
     recreateKey: { type: null as unknown as PropType<unknown> },
   },

@@ -111,3 +111,31 @@ describe('Audio Uploader', () => {
     );
   });
 });
+
+describe('editor-level uploader fallback', () => {
+  const assetsApi = (over = {}) => ({
+    uploadByFile: vi.fn(async () => ({ url: 'https://cdn/editor-file' })),
+    uploadByUrl: vi.fn(async () => ({ url: 'https://cdn/editor-url' })),
+    isConfigured: vi.fn(() => true),
+    ...over,
+  });
+
+  it('uploads through the editor-level uploader when the tool declares none', async () => {
+    const assets = assetsApi();
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleFile(mp3(10))).resolves.toMatchObject({ url: 'https://cdn/editor-file' });
+    expect(assets.uploadByFile).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({ kind: 'audio', tool: 'audio' })
+    );
+  });
+
+  it('lets an editor-level uploadByUrl satisfy a proxy-only share link', async () => {
+    const assets = assetsApi();
+    const u = new Uploader({}, assets);
+
+    await expect(u.handleUrl('https://drive.google.com/file/d/abc123/view'))
+      .resolves.toMatchObject({ url: 'https://cdn/editor-url' });
+  });
+});

@@ -1,4 +1,5 @@
 import type { FileConfig, FileUploadResult } from '../../../types/tools/file';
+import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { DEFAULT_MAX_SIZE } from './constants';
 import { FileToolError } from './errors';
@@ -16,7 +17,16 @@ function parseUrl(raw: string): URL | null {
 }
 
 export class Uploader {
-  constructor(private readonly config: FileConfig) {}
+  /**
+   * @param config - the tool's own user config
+   * @param assets - the editor's asset uploader (`api.uploader`). Consulted only
+   * when the tool declares no uploader of its own, so a tool-level uploader
+   * stays authoritative for its kind.
+   */
+  constructor(
+    private readonly config: FileConfig,
+    private readonly assets?: AssetUploaderApi,
+  ) {}
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<FileUploadResult> {
     this.validateFile(file);
@@ -27,6 +37,9 @@ export class Uploader {
     const endpoint = this.fileEndpoint();
     if (endpoint !== undefined) {
       return this.uploadFileToEndpoint(endpoint, file);
+    }
+    if (this.assets?.isConfigured('file', 'uploadByFile')) {
+      return this.assets.uploadByFile(file, { kind: 'file', tool: 'file', onProgress: options.onProgress });
     }
 
     return {
@@ -46,6 +59,9 @@ export class Uploader {
     const endpoint = this.urlEndpoint();
     if (endpoint !== undefined) {
       return this.uploadUrlToEndpoint(endpoint, raw);
+    }
+    if (this.assets?.isConfigured('file', 'uploadByUrl')) {
+      return this.assets.uploadByUrl(raw, { kind: 'file', tool: 'file', onProgress: options.onProgress });
     }
 
     return { url: raw };

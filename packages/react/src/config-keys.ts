@@ -48,6 +48,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'notifier',
   'width',
   'migrations',
+  'uploader',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 /**

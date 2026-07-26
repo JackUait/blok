@@ -36,6 +36,7 @@ describe("API_SECTIONS", () => {
       "ui-api",
       "listeners-api",
       "tools-api",
+      "uploader-api",
       "output-data",
       "block-data",
       "blok-editor",

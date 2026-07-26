@@ -15,6 +15,7 @@ import { SelectionAPI } from './api/selection';
 import { StylesAPI } from './api/styles';
 import { ToolbarAPI } from './api/toolbar';
 import { ToolsAPI } from './api/tools';
+import { UploaderAPI } from './api/uploader';
 import { TooltipAPI } from './api/tooltip';
 import { UiAPI } from './api/ui';
 
@@ -61,6 +62,7 @@ export const Modules = {
   SaverAPI,
   SelectionAPI,
   ToolsAPI,
+  UploaderAPI,
   StylesAPI,
   ToolbarAPI,
   TooltipAPI,

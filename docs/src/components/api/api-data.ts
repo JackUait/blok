@@ -370,6 +370,13 @@ const editor = new Blok(config);`,
           "Internationalization config (locale + message dictionary). Live: switch language at runtime via `i18n.update({ locale, messages })` \u2014 the editor relabels in place, so caret and undo history survive a language switch (`defaultLocale` is the exception and stays mount-only). Custom tool titles are localizable by registration name — e.g. a `fileLink` tool via `messages: { 'toolNames.fileLink': '…' }` — or via a `titleKey` in the tool's toolbox entry.",
       },
       {
+        option: "uploader",
+        type: "BlokUploader",
+        default: "undefined",
+        description:
+          "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks \u2014 including assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own. A tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence; this is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
+      },
+      {
         option: "theme",
         type: "'auto' | 'light' | 'dark'",
         default: "'auto'",
@@ -2202,6 +2209,48 @@ editor.tools.setInlineToolbar(true);`,
         ],
         example: `if (editor.tools.isInstalled('image')) {
   editor.tools.update('image', { uploader: { uploadByFile } });
+}`,
+      },
+    ],
+  },
+  {
+    id: "uploader-api",
+    badge: "Uploader",
+    title: "Uploader API",
+    description:
+      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`, which is why an audio block's cover art reaches your image pipeline instead of the audio endpoint that would reject it. Resolution order for a kind: the tool whose static `assetKind` matches (e.g. `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback \u2014 a `blob:` URL for files, the URL verbatim for links.",
+    methods: [
+      {
+        name: "uploader.uploadByFile(file, ctx)",
+        returnType: "Promise<{ url: string; fileName?: string }>",
+        description:
+          "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }` where `kind` is the ASSET kind, not the requesting tool \u2014 they differ whenever a tool holds an asset outside its own media family.",
+        example: `// Inside a custom block tool that holds a thumbnail
+const { url } = await this.api.uploader.uploadByFile(file, {
+  kind: 'image',
+  tool: 'my-card',
+  onProgress: (percent) => this.showProgress(percent),
+});`,
+      },
+      {
+        name: "uploader.uploadByUrl(url, ctx)",
+        returnType: "Promise<{ url: string }>",
+        description:
+          "Re-host an asset the user supplied by URL and return the stored URL. Without an uploader for the kind, the URL is stored verbatim \u2014 configure one if a strict `img-src`/`media-src` policy or link rot would break third-party URLs.",
+        example: `const { url } = await this.api.uploader.uploadByUrl(pastedUrl, {
+  kind: 'image',
+  tool: 'my-card',
+});`,
+      },
+      {
+        name: "uploader.isConfigured(kind, method?)",
+        returnType: "boolean",
+        description:
+          "Whether a host uploader handles this kind. False means the caller would get the local fallback \u2014 useful for deciding whether an asset is worth uploading at all, e.g. inlining small extracted artwork as a `data:` URL instead.",
+        example: `if (this.api.uploader.isConfigured('image', 'uploadByFile')) {
+  const { url } = await this.api.uploader.uploadByFile(artwork, { kind: 'image' });
+} else {
+  // no image pipeline — keep it inline rather than minting a doomed blob: URL
 }`,
       },
     ],

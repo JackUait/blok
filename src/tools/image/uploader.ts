@@ -1,4 +1,5 @@
 import type { ImageConfig } from '../../../types/tools/image';
+import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { compressImage } from './compress';
@@ -43,7 +44,16 @@ function dataUrlToFile(dataUrl: string): File {
 }
 
 export class Uploader {
-  constructor(private readonly config: ImageConfig) {}
+  /**
+   * @param config - the tool's own user config
+   * @param assets - the editor's asset uploader (`api.uploader`). Consulted only
+   * when the tool declares no uploader of its own, so a tool-level uploader
+   * stays authoritative for its kind.
+   */
+  constructor(
+    private readonly config: ImageConfig,
+    private readonly assets?: AssetUploaderApi,
+  ) {}
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     if (isImageDataUrl(raw)) {
@@ -52,6 +62,9 @@ export class Uploader {
     this.validateUrl(raw);
     if (this.config.uploader?.uploadByUrl) {
       return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
+    }
+    if (this.assets?.isConfigured('image', 'uploadByUrl')) {
+      return this.assets.uploadByUrl(raw, { kind: 'image', tool: 'image', onProgress: options.onProgress });
     }
 
     return { url: raw };
@@ -67,6 +80,9 @@ export class Uploader {
     if (this.config.uploader?.uploadByFile) {
       return this.config.uploader.uploadByFile(uploaded, { onProgress: options.onProgress });
     }
+    if (this.assets?.isConfigured('image', 'uploadByFile')) {
+      return this.assets.uploadByFile(uploaded, { kind: 'image', tool: 'image', onProgress: options.onProgress });
+    }
 
     return { url: URL.createObjectURL(uploaded), fileName: uploaded.name };
   }
@@ -75,8 +91,11 @@ export class Uploader {
     if (this.config.uploader?.uploadByUrl) {
       return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
-    if (this.config.uploader?.uploadByFile) {
+    if (this.config.uploader?.uploadByFile || this.assets?.isConfigured('image', 'uploadByFile')) {
       return this.handleFile(dataUrlToFile(raw), options);
+    }
+    if (this.assets?.isConfigured('image', 'uploadByUrl')) {
+      return this.assets.uploadByUrl(raw, { kind: 'image', tool: 'image', onProgress: options.onProgress });
     }
 
     return { url: raw };

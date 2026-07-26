@@ -24,7 +24,8 @@ describe('resolveCover', () => {
 
   it('re-uploads via the host uploader when present', async () => {
     const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/cover.jpg' });
-    await expect(resolveCover(cover, { uploadByFile })).resolves.toBe('https://cdn/cover.jpg');
+    const uploader = { uploadByFile, isConfigured: (): boolean => true };
+    await expect(resolveCover(cover, uploader)).resolves.toBe('https://cdn/cover.jpg');
     expect(uploadByFile).toHaveBeenCalled();
   });
 

@@ -5,7 +5,7 @@ export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }>
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api', 'view-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'marks-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api'] },
-  { key: 'extending', moduleIds: ['tools-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
+  { key: 'extending', moduleIds: ['tools-api', 'uploader-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
   { key: 'dataTypes', moduleIds: ['output-data', 'block-data'] },
   { key: 'adapters', moduleIds: ['blok-editor', 'use-blocks', 'use-blok-ready'] },
 ];
@@ -42,6 +42,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'notifier-api': 'Notifier',
   'tooltip-api': 'Tooltip',
   'tools-api': 'Tools',
+  'uploader-api': 'Uploader',
   'events-api': 'Events',
   'listeners-api': 'Listeners',
   'sanitizer-api': 'Sanitizer',

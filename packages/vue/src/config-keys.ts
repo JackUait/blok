@@ -48,6 +48,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'onSubmit',
   'onError',
   'migrations',
+  'uploader',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 export type BlokEditorConfigKey = (typeof BLOK_EDITOR_CONFIG_KEYS)[number];

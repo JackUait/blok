@@ -79,6 +79,11 @@ const createMockAPIMethods = (): APIInterface => ({
     setInlineToolbar: vi.fn(),
     isInstalled: vi.fn(() => false),
   },
+  uploader: {
+    uploadByFile: vi.fn(async (file: File) => ({ url: `blob:${file.name}` })),
+    uploadByUrl: vi.fn(async (url: string) => ({ url })),
+    isConfigured: vi.fn(() => false),
+  },
   events: {
     on: vi.fn(),
     off: vi.fn(),

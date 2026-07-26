@@ -79,12 +79,23 @@ vi.mock('../../../../src/tools/audio/uploader', () => {
   return { AudioUploadError, Uploader };
 });
 
+/**
+ * The editor's asset-kind-routed uploader. Cover art goes through this, NOT
+ * through the audio tool's own `config.uploader`.
+ */
+const uploaderApi = {
+  uploadByFile: vi.fn(async (file: File) => ({ url: `https://cdn/${file.name}` })),
+  uploadByUrl: vi.fn(async (url: string) => ({ url })),
+  isConfigured: vi.fn(() => true),
+};
+
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
   i18n: {
     t: (k: string) => messages[k] ?? k,
     has: (k: string) => k in messages,
   },
+  uploader: uploaderApi,
 } as unknown as API);
 
 const createMockBlock = (): BlockAPI => ({
@@ -552,13 +563,17 @@ describe('AudioTool', () => {
       return { tool, root, block };
     };
 
-    it('stores a submitted cover URL and re-renders the image', () => {
+    it('stores a submitted cover URL and re-renders the image', async () => {
       const { root, block } = renderTool();
       root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
       coverPickerCalls[0].onUrl('https://cdn/cover.png');
 
-      const img = root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img');
-      expect(img?.getAttribute('src')).toBe('https://cdn/cover.png');
+      // The URL now goes through the editor's image pipeline first, so the
+      // re-render lands a microtask later. See cover-uploader.test.ts.
+      await vi.waitFor(() => {
+        const img = root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img');
+        expect(img?.getAttribute('src')).toBe('https://cdn/cover.png');
+      });
       expect(block.dispatchChange).toHaveBeenCalled();
       expect(coverPickerCalls[0].handle.close).toHaveBeenCalled();
     });
@@ -586,20 +601,22 @@ describe('AudioTool', () => {
       expect(cover.classList.contains('is-picker-open')).toBe(false);
     });
 
-    it('uploads a cover file through the configured uploader', async () => {
-      const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/uploaded.png' });
-      const { root } = renderTool({}, { uploader: { uploadByFile } });
+    it('uploads a cover file as an image asset, never through the audio uploader', async () => {
+      const audioUploadByFile = vi.fn();
+      const { root } = renderTool({}, { uploader: { uploadByFile: audioUploadByFile } });
       root.querySelector<HTMLButtonElement>('[data-role="audio-cover-change"]')!.click();
 
       const file = new File(['x'], 'c.png', { type: 'image/png' });
       coverPickerCalls[0].onFile(file);
       await vi.waitFor(() => {
-        expect(uploadByFile).toHaveBeenCalledWith(file);
+        expect(uploaderApi.uploadByFile).toHaveBeenCalledWith(file, { kind: 'image', tool: 'audio' });
       });
       await vi.waitFor(() => {
         const img = root.querySelector<HTMLImageElement>('[data-role="audio-cover"] img');
-        expect(img?.getAttribute('src')).toBe('https://cdn/uploaded.png');
+        expect(img?.getAttribute('src')).toBe('https://cdn/c.png');
       });
+      // The audio tool's own uploader is an audio endpoint — it must not see an image.
+      expect(audioUploadByFile).not.toHaveBeenCalled();
     });
 
     it('rejects a non-image file via setError without mutating data', () => {

@@ -58,7 +58,7 @@ export class FileTool implements BlockTool {
     this.readOnly = options.readOnly;
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
-    this.uploader = new Uploader(this.config);
+    this.uploader = new Uploader(this.config, this.api.uploader);
   }
 
   public render(): HTMLElement {

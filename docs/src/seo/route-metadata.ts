@@ -227,6 +227,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Register tools, update the toolbox at runtime, and read back which tools are currently available.',
     h1: 'Tools API: register and update tools',
   },
+  'uploader-api': {
+    title: 'Blok Uploader API — upload assets by kind',
+    description:
+      'Route file and URL uploads by asset kind, so an audio block\u2019s cover art reaches your image pipeline instead of your audio endpoint.',
+    h1: 'Uploader API: upload assets by kind',
+  },
   'events-api': {
     title: 'Blok Events API — on, off, emit',
     description:

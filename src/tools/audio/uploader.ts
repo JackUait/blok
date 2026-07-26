@@ -1,4 +1,5 @@
 import type { AudioConfig } from '../../../types/tools/audio';
+import type { Uploader as AssetUploaderApi } from '../../../types/api/uploader';
 import { resolveMaxSize } from '../../components/utils/max-size';
 import { matchesMime } from '../../components/utils/mime-match';
 import { DEFAULT_MAX_SIZE, DEFAULT_MIME_TYPES } from './constants';
@@ -32,7 +33,16 @@ function parseUrl(raw: string): URL | null {
 }
 
 export class Uploader {
-  constructor(private readonly config: AudioConfig) {}
+  /**
+   * @param config - the tool's own user config
+   * @param assets - the editor's asset uploader (`api.uploader`). Consulted only
+   * when the tool declares no uploader of its own, so a tool-level uploader
+   * stays authoritative for its kind.
+   */
+  constructor(
+    private readonly config: AudioConfig,
+    private readonly assets?: AssetUploaderApi,
+  ) {}
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateUrl(raw);
@@ -41,7 +51,10 @@ export class Uploader {
     // form. Proxy-only services (Drive, OneDrive) reject browser hotlinking,
     // so their link only works when a backend can fetch and re-host it.
     const share = normalizeAudioShareLink(raw);
-    if (share?.requiresProxy && !this.config.uploader?.uploadByUrl) {
+    const canRehost = this.config.uploader?.uploadByUrl !== undefined ||
+      this.assets?.isConfigured('audio', 'uploadByUrl') === true;
+
+    if (share?.requiresProxy && !canRehost) {
       throw new AudioUploadError(
         share.service === 'onedrive' ? 'ONEDRIVE_NEEDS_UPLOADER' : 'GOOGLE_DRIVE_NEEDS_UPLOADER',
         raw,
@@ -51,6 +64,13 @@ export class Uploader {
     if (this.config.uploader?.uploadByUrl) {
       return this.config.uploader.uploadByUrl(share?.url ?? raw, { onProgress: options.onProgress });
     }
+    if (this.assets?.isConfigured('audio', 'uploadByUrl')) {
+      return this.assets.uploadByUrl(share?.url ?? raw, {
+        kind: 'audio',
+        tool: 'audio',
+        onProgress: options.onProgress,
+      });
+    }
 
     return { url: share?.url ?? raw };
   }
@@ -59,6 +79,9 @@ export class Uploader {
     this.validateFile(file);
     if (this.config.uploader?.uploadByFile) {
       return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
+    }
+    if (this.assets?.isConfigured('audio', 'uploadByFile')) {
+      return this.assets.uploadByFile(file, { kind: 'audio', tool: 'audio', onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };

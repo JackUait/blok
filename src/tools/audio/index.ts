@@ -37,6 +37,7 @@ import { readTrackMetadata, resolveCover } from './metadata';
 import { Uploader, AudioUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
+import { logLabeled } from '../../components/utils/logger';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -67,7 +68,7 @@ export class AudioTool implements BlockTool {
     this.readOnly = options.readOnly;
     this.data = { ...options.data, url: options.data?.url ?? '' };
     this.state = this.data.url ? 'RENDERED' : 'EMPTY';
-    this.uploader = new Uploader(this.config);
+    this.uploader = new Uploader(this.config, this.api.uploader);
   }
 
   public render(): HTMLElement {
@@ -320,7 +321,16 @@ export class AudioTool implements BlockTool {
         if (meta.title) { this.data.title = meta.title; dirty.value = true; }
         if (meta.artist) { this.data.artist = meta.artist; dirty.value = true; }
         if (meta.cover) {
-          const coverUrl = await resolveCover(meta.cover, this.config.uploader).catch(() => undefined);
+          // Artwork is a nice-to-have, so a failure must not strand the track —
+          // but it is logged rather than swallowed, since a silent drop reads
+          // exactly like a track that carries no artwork at all.
+          const coverUrl = await resolveCover(meta.cover, this.api.uploader, this.block.name)
+            .catch((error: unknown) => {
+              logLabeled('Audio: could not store the track\'s embedded cover art', 'warn', error);
+
+              return undefined;
+            });
+
           if (coverUrl) { this.data.coverUrl = coverUrl; dirty.value = true; }
         }
         if (stale()) return;
@@ -665,12 +675,12 @@ export class AudioTool implements BlockTool {
       this.coverPicker?.setError(error);
       return;
     }
-    const uploader = this.config.uploader;
-    const upload = uploader?.uploadByFile
-      ? uploader.uploadByFile(file).then((res) => res.url)
-      : Promise.resolve(URL.createObjectURL(file));
-    void upload
-      .then((url) => {
+    // Cover art is an IMAGE asset owned by an audio block. Routing on the asset
+    // kind sends it to the host's image pipeline; the audio tool's own uploader
+    // is an audio endpoint and rejects it.
+    void this.api.uploader
+      .uploadByFile(file, { kind: 'image', tool: this.block.name })
+      .then(({ url }) => {
         if (this.destroyed) {
           // Block was removed mid-upload: a no-uploader blob URL would otherwise
           // leak (it was never assigned to coverUrl, so removed() can't revoke it).
@@ -688,8 +698,20 @@ export class AudioTool implements BlockTool {
   }
 
   private applyCoverUrl(url: string): void {
-    this.setCover(url);
-    this.coverPicker?.close();
+    // Mirrors the audio URL path: a host that re-hosts assets gets the chance to
+    // fetch this one too, so a cover survives link rot and a strict img-src.
+    void this.api.uploader
+      .uploadByUrl(url, { kind: 'image', tool: this.block.name })
+      .then(({ url: stored }) => {
+        if (this.destroyed) return;
+        this.setCover(stored);
+        this.coverPicker?.close();
+      })
+      .catch(() => {
+        this.coverPicker?.setError(
+          tr(this.api.i18n, 'tools.audio.errorUploadFailed', 'Upload failed')
+        );
+      });
   }
 
   private setCover(url: string): void {

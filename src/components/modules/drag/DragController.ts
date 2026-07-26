@@ -83,7 +83,14 @@ export class DragController extends Module {
 
     this.targetDetector = new DropTargetDetector(
       { contentRect: this.Blok.UI.contentRect },
-      this.Blok.BlockManager
+      this.Blok.BlockManager,
+      {
+        isColumnsEnabled: () => {
+          const { blockTools } = this.Blok.Tools;
+
+          return blockTools.has('column_list') && blockTools.has('column');
+        },
+      }
     );
 
     this.operations = new DragOperations(

@@ -125,6 +125,11 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
     transactMoves: vi.fn((cb: () => void) => cb()),
   };
 
+  // Side (left/right) drops are gated on the columns tool being registered.
+  const tools = {
+    blockTools: new Map([['column_list', {}], ['column', {}]]),
+  };
+
   const state = {
     BlockManager: blockManager as unknown as BlokModules['BlockManager'],
     BlockSelection: blockSelection as unknown as BlokModules['BlockSelection'],
@@ -132,6 +137,7 @@ const createSetup = (dups: Block | Block[]): DupSetup => {
     Caret: caret as unknown as BlokModules['Caret'],
     UI: ui as unknown as BlokModules['UI'],
     I18n: i18n as unknown as BlokModules['I18n'],
+    Tools: tools as unknown as BlokModules['Tools'],
     YjsManager: yjsManager as unknown as BlokModules['YjsManager'],
   } as BlokModules;
 

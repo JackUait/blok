@@ -31,14 +31,28 @@ export interface BlockManagerAdapter {
   blocks: Block[];
 }
 
+export interface DropTargetDetectorOptions {
+  /**
+   * Whether the columns tool is registered in the editor. Side (left/right)
+   * drops exist solely to create or extend a column layout, so without the
+   * tool they can never be honoured — the drop would either be dropped on the
+   * floor or fall back to a plain reorder that contradicts the vertical
+   * indicator the user was shown. Read live (not captured) so a runtime
+   * `tools.update` takes effect on the next drag.
+   */
+  isColumnsEnabled?: () => boolean;
+}
+
 export class DropTargetDetector {
   private ui: UIAdapter;
   private blockManager: BlockManagerAdapter;
   private sourceBlocks: Block[] = [];
+  private isColumnsEnabled: () => boolean;
 
-  constructor(ui: UIAdapter, blockManager: BlockManagerAdapter) {
+  constructor(ui: UIAdapter, blockManager: BlockManagerAdapter, options: DropTargetDetectorOptions = {}) {
     this.ui = ui;
     this.blockManager = blockManager;
+    this.isColumnsEnabled = options.isColumnsEnabled ?? ((): boolean => true);
   }
 
   /**
@@ -272,6 +286,12 @@ export class DropTargetDetector {
     clientX: number,
     clientY: number
   ): DropTarget | null {
+    // Without the columns tool there is no layout to create — a side-drop would
+    // show a vertical "new column" indicator the editor cannot honour.
+    if (!this.isColumnsEnabled()) {
+      return null;
+    }
+
     // Columns stack below this breakpoint — no side-by-side layout.
     if (window.innerWidth < 651) {
       return null;

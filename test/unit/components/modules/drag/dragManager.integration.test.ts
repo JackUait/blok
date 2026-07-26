@@ -196,12 +196,18 @@ const createDragManager = (
     has: vi.fn(() => false),
   };
 
+  // Side (left/right) drops are gated on the columns tool being registered.
+  const tools = {
+    blockTools: new Map([['column_list', {}], ['column', {}]]),
+  };
+
   const defaults: ModuleOverrides = {
     BlockManager: blockManager as unknown as BlokModules["BlockManager"],
     BlockSelection: blockSelection as unknown as BlokModules["BlockSelection"],
     Toolbar: toolbar as unknown as BlokModules["Toolbar"],
     UI: ui as unknown as BlokModules["UI"],
     I18n: i18n as unknown as BlokModules["I18n"],
+    Tools: tools as unknown as BlokModules["Tools"],
   };
 
   const yjsManager = {

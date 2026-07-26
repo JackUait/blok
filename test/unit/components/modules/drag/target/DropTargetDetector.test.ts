@@ -1447,6 +1447,29 @@ describe('DropTargetDetector', () => {
       document.body.removeChild(target.holder);
     });
 
+    it('should NOT side-drop when the columns tool is disabled in the editor config', () => {
+      const source = createSideTestBlock({ id: 'source' });
+      const target = createSideTestBlock({ id: 'target' });
+      stubRect(target);
+
+      const bm = createSideBlockManager([target, source]);
+      const det = new DropTargetDetector(createSideUIAdapter(), bm, { isColumnsEnabled: () => false });
+      det.setSourceBlocks([source]);
+
+      document.body.appendChild(target.holder);
+      const inner = document.createElement('div');
+      target.holder.appendChild(inner);
+
+      // Same coordinates that produce 'right'/'left' with columns enabled.
+      const right = det.determineDropTarget(inner, 480, 150, source);
+      const left = det.determineDropTarget(inner, 320, 150, source);
+
+      expect(['top', 'bottom']).toContain(right?.edge);
+      expect(['top', 'bottom']).toContain(left?.edge);
+
+      document.body.removeChild(target.holder);
+    });
+
     it('should NOT produce a horizontal edge for the column container, or a childless column_list', () => {
       const source = createSideTestBlock({ id: 'source' });
       const column = createSideTestBlock({ id: 'col', name: 'column' });

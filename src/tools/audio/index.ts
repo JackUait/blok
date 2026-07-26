@@ -38,6 +38,7 @@ import { Uploader, AudioUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
 import { logLabeled } from '../../components/utils/logger';
+import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -221,6 +222,9 @@ export class AudioTool implements BlockTool {
         icon: IconDownload,
         title: tr(i18n, 'tools.audio.download', 'Download'),
         name: 'audio-download',
+        // A stored URL with a non-downloadable scheme (javascript:, data:text/html)
+        // has nothing to download — the item stays visible but inert.
+        isDisabled: safeDownloadHref(this.data.url) === null,
         closeOnActivate: true,
         onActivate: (): void => this.download(),
       },
@@ -626,8 +630,14 @@ export class AudioTool implements BlockTool {
   }
 
   private download(): void {
+    const href = safeDownloadHref(this.data.url);
+
+    if (href === null) {
+      return;
+    }
+
     const a = document.createElement('a');
-    a.href = this.data.url;
+    a.href = href;
     a.download = this.data.fileName ?? '';
     a.target = '_blank';
     a.rel = 'noopener';

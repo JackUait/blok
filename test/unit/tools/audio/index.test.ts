@@ -649,3 +649,60 @@ describe('AudioTool', () => {
     });
   });
 });
+
+describe('AudioTool — Download is scheme-gated (stored XSS)', () => {
+  /**
+   * Records the href of every anchor that is actually clicked, so a
+   * `javascript:` URL reaching the sink is observable instead of silently
+   * executing.
+   */
+  const captureClickedHrefs = (): string[] => {
+    const hrefs: string[] = [];
+
+    vi.spyOn(document.body, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
+      if (node instanceof HTMLAnchorElement) {
+        const anchor: HTMLAnchorElement = node;
+
+        vi.spyOn(anchor, 'click').mockImplementation(() => {
+          hrefs.push(anchor.getAttribute('href') ?? '');
+        });
+      }
+
+      return node;
+    });
+
+    return hrefs;
+  };
+
+  const downloadItem = (tool: AudioTool): Record<string, unknown> | undefined =>
+    toMenuArray(tool.renderSettings()).find((item) => item.name === 'audio-download');
+
+  it('does not navigate to a stored javascript: URL', () => {
+    const hrefs = captureClickedHrefs();
+    const tool = new AudioTool(opts({ url: 'javascript:fetch("/admin/api", { credentials: "include" })' }));
+
+    tool.render();
+    (downloadItem(tool)?.onActivate as (() => void) | undefined)?.();
+
+    expect(hrefs).toEqual([]);
+  });
+
+  it('disables the Download item when the stored URL is not downloadable', () => {
+    const tool = new AudioTool(opts({ url: 'javascript:alert(1)' }));
+
+    tool.render();
+
+    expect(downloadItem(tool)?.isDisabled).toBe(true);
+  });
+
+  it('still downloads http(s) and blob: URLs', () => {
+    const hrefs = captureClickedHrefs();
+    const tool = new AudioTool(opts({ url: 'https://cdn/track.mp3' }));
+
+    tool.render();
+    expect(downloadItem(tool)?.isDisabled).not.toBe(true);
+    (downloadItem(tool)?.onActivate as (() => void) | undefined)?.();
+
+    expect(hrefs).toEqual(['https://cdn/track.mp3']);
+  });
+});

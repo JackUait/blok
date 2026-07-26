@@ -66,6 +66,19 @@ describe('downloadImage', () => {
     restore();
   });
 
+  it('never puts a stored javascript: URL on the anchor (stored XSS)', async () => {
+    // The CORS fallback path is the dangerous one: it points the anchor at the
+    // raw stored URL.
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    const { attrs, restore } = captureAnchors();
+
+    await downloadImage('javascript:fetch("/admin/api", { credentials: "include" })', 'pic.png');
+
+    expect(attrs).toEqual([]);
+
+    restore();
+  });
+
   it('falls back to a direct anchor when the response is not ok', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 403, blob: async () => new Blob() })));
     const { attrs, restore } = captureAnchors();

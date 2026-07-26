@@ -85,6 +85,41 @@ export function safeImageSrc(url: string): string | null {
   return null;
 }
 
+/** Schemes a stored media URL may use when it becomes a download anchor's href. */
+const SAFE_DOWNLOAD_PROTOCOLS = new Set(['http:', 'https:', 'blob:']);
+
+/**
+ * Sanitize a stored media URL for use as a download/open anchor href.
+ * Returns the resolved URL when safe, or null when the action must be refused.
+ *
+ * Stored block data is untrusted — a persisted `javascript:` URL on an anchor
+ * executes in the host page's origin the moment the anchor is clicked, with the
+ * victim's session (this shipped as stored XSS in the audio/video "Download"
+ * action). Relative URLs resolve against the document base; `blob:` is allowed
+ * because the default uploader hands out object URLs for local files, and inert
+ * raster `data:` images are allowed because cover art and pasted images use
+ * them. Everything else — `javascript:`, `data:text/html`, `data:image/svg+xml`,
+ * `vbscript:`, `file:` — is refused.
+ * @param url - stored URL to gate
+ */
+export function safeDownloadHref(url: string): string | null {
+  if (url.trim() === '') {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(url, typeof document !== 'undefined' ? document.baseURI : undefined);
+
+    if (parsed.protocol === 'data:') {
+      return isSafeRasterImageDataUrl(parsed.href) ? parsed.href : null;
+    }
+
+    return SAFE_DOWNLOAD_PROTOCOLS.has(parsed.protocol) ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * True when the URL carries an explicit scheme that is not in the href
  * allowlist. Used to reject user-entered link targets before insertion.

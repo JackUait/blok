@@ -735,3 +735,60 @@ describe('VideoTool — URL field validation', () => {
     expect(root.querySelector('video')?.getAttribute('src')).toBe('https://cdn.example.com/hosted.mp4');
   });
 });
+
+describe('VideoTool — Download is scheme-gated (stored XSS)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Records the href of every anchor that is actually clicked. */
+  const captureClickedHrefs = (): string[] => {
+    const hrefs: string[] = [];
+
+    vi.spyOn(document.body, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
+      if (node instanceof HTMLAnchorElement) {
+        const anchor: HTMLAnchorElement = node;
+
+        vi.spyOn(anchor, 'click').mockImplementation(() => {
+          hrefs.push(anchor.getAttribute('href') ?? '');
+        });
+      }
+
+      return node;
+    });
+
+    return hrefs;
+  };
+
+  const downloadItem = (tool: VideoTool): Record<string, unknown> | undefined =>
+    (tool.renderSettings() as unknown[])
+      .find((item) => (item as { name?: string }).name === 'video-download') as Record<string, unknown> | undefined;
+
+  it('does not navigate to a stored javascript: URL', () => {
+    const hrefs = captureClickedHrefs();
+    const tool = new VideoTool(createOptions({ url: 'javascript:fetch("/admin/api")' }));
+
+    tool.render();
+    (downloadItem(tool)?.onActivate as (() => void) | undefined)?.();
+
+    expect(hrefs).toEqual([]);
+  });
+
+  it('disables the Download item when the stored URL is not downloadable', () => {
+    const tool = new VideoTool(createOptions({ url: 'javascript:alert(1)' }));
+
+    tool.render();
+
+    expect(downloadItem(tool)?.isDisabled).toBe(true);
+  });
+
+  it('still downloads http(s) URLs', () => {
+    const hrefs = captureClickedHrefs();
+    const tool = new VideoTool(createOptions({ url: 'https://x/y.mp4' }));
+
+    tool.render();
+    expect(downloadItem(tool)?.isDisabled).not.toBe(true);
+    (downloadItem(tool)?.onActivate as (() => void) | undefined)?.();
+
+    expect(hrefs).toEqual(['https://x/y.mp4']);
+  });
+});

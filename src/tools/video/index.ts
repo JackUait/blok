@@ -35,6 +35,7 @@ import { attachControls, type ControlsHandle } from './controls';
 import { Uploader, VideoUploadError, type UploadResult } from './uploader';
 import { uploadErrorMessage } from '../../components/utils/upload-error-message';
 import { pickDisplayMaxSize } from '../../components/utils/max-size';
+import { safeDownloadHref } from '../../components/utils/sanitize-url';
 
 type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
 
@@ -216,6 +217,9 @@ export class VideoTool implements BlockTool {
         icon: IconDownload,
         title: tr(i18n, 'tools.video.download', 'Download'),
         name: 'video-download',
+        // A stored URL with a non-downloadable scheme (javascript:, data:text/html)
+        // has nothing to download — the item stays visible but inert.
+        isDisabled: safeDownloadHref(this.data.url) === null,
         closeOnActivate: true,
         onActivate: (): void => this.download(),
       },
@@ -550,8 +554,14 @@ export class VideoTool implements BlockTool {
   }
 
   private download(): void {
+    const href = safeDownloadHref(this.data.url);
+
+    if (href === null) {
+      return;
+    }
+
     const a = document.createElement('a');
-    a.href = this.data.url;
+    a.href = href;
     a.download = this.data.fileName ?? '';
     a.target = '_blank';
     a.rel = 'noopener';

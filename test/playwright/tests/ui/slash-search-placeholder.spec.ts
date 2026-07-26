@@ -66,12 +66,71 @@ test.describe('slash search placeholder', () => {
     await page.keyboard.type('/');
     await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
 
-    // The element must use inline-flex display so "/" and the ::after placeholder
-    // are on the same line — not stacked vertically.
+    // "/" and the ::after placeholder must share one line — not stack vertically.
+    // Asserted on geometry rather than on a specific `display` value: the pill box
+    // may never grow past a single line box (plus its 2px block padding).
+    const { height, lineHeight } = await paragraph.evaluate((el) => {
+      const styles = window.getComputedStyle(el);
+
+      return {
+        height: el.getBoundingClientRect().height,
+        lineHeight: parseFloat(styles.lineHeight),
+      };
+    });
+
+    expect(height).toBeLessThan(lineHeight * 1.6);
+  });
+
+  /**
+   * Regression: the caret in the slash-search input was drawn at the height of the
+   * whole block (line box + the pill's 9px top margin — 38px measured), starting at
+   * the pill's left border instead of inside its padding.
+   *
+   * Root cause: the pill made the block's contenteditable a flex container. A flex
+   * container establishes no inline formatting context, so an EMPTY editable has no
+   * line box for the engine to size the caret from and it falls back to the
+   * containing block's box. (With text typed the caret sizes off the text run, which
+   * is why only the empty state — the + button path, which inserts no "/" — was
+   * visibly broken.)
+   *
+   * The invariant: the pill must lay its content out inline, so its own line box
+   * always sizes the caret.
+   */
+  test('should not make the search input a flex container (caret sizing)', async ({ page }) => {
+    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
+    await paragraph.click();
+
+    await page.keyboard.type('/');
+    await expect(paragraph).toHaveAttribute('data-blok-slash-search', /.+/);
+
     const display = await paragraph.evaluate(
       (el) => window.getComputedStyle(el).display
     );
-    expect(display).toBe('inline-flex');
+
+    expect(['flex', 'inline-flex', 'grid', 'inline-grid']).not.toContain(display);
+  });
+
+  test('should not make the empty (+ button) search input a flex container', async ({ page }) => {
+    const paragraph = page.locator(CONTENT_EDITABLE_SELECTOR);
+
+    await paragraph.click();
+    await paragraph.hover();
+
+    const plusButton = page.locator('[data-blok-testid="plus-button"]');
+
+    await expect(plusButton).toBeVisible();
+    await plusButton.click();
+
+    const pill = page.locator('[data-blok-slash-search]');
+
+    await expect(pill).toHaveAttribute('data-blok-slash-search', /.+/);
+    // The + button path inserts no "/", so the editable stays empty — the state
+    // where a flex container leaves the caret without a line box of its own.
+    await expect(pill).toHaveText('');
+
+    const display = await pill.evaluate((el) => window.getComputedStyle(el).display);
+
+    expect(['flex', 'inline-flex', 'grid', 'inline-grid']).not.toContain(display);
   });
 
   test('should keep "/" text visible (not transparent) in the search input', async ({ page }) => {

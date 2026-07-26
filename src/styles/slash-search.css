@@ -3,16 +3,25 @@
  * When the user types "/" to open the toolbox, the contenteditable
  * transforms to look like a search input.
  *
- * The element is set to inline-flex so that the ::after pseudo-element
- * (placeholder text) renders on the same line as the "/" character and
- * any typed query — not on a new line below it (which happens with the
- * default block display).
+ * The element is inline-level so that the ::after pseudo-element (placeholder
+ * text) renders on the same line as the "/" character and any typed query —
+ * not on a new line below it (which happens with the default block display).
+ *
+ * It must be `inline-block`, NOT `inline-flex`: this element is the block's
+ * contenteditable, and a flex container establishes no inline formatting
+ * context. With no line box of its own, an EMPTY editable (the + button path
+ * opens the search with no "/" typed) leaves the engine nothing to size the
+ * caret from, so it falls back to the containing block's box — the caret was
+ * painted 38px tall against a 28px pill, starting at the pill's left border
+ * instead of inside its padding. As an inline-block the pill has its own line
+ * box, so the caret always matches the input's own text line.
+ * Vertical centering comes from that line box (the block's line-height), which
+ * is what `align-items: center` was doing for the flex items.
  */
 [data-blok-slash-search],
 [data-blok-slash-search]:focus-visible {
   @apply bg-search-input-bg rounded-[6px] transition-colors duration-150 w-fit whitespace-nowrap px-2 py-[2px] mt-[9px];
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
 }
 
 [data-blok-table-cell] [data-blok-slash-search],

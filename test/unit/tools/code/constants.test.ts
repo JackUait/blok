@@ -6,6 +6,7 @@ import {
   DEFAULT_LANGUAGE, TAB_STRING, LANGUAGES, PREVIEWABLE_LANGUAGES,
   HIGHLIGHTABLE_LANGUAGES,
   CODE_AREA_STYLES, GUTTER_STYLES, GUTTER_LINE_STYLES, CODE_BODY_STYLES,
+  HEADER_BUTTON_STYLES, HEADER_BUTTON_MATCHED_STYLES,
 } from '../../../../src/tools/code/constants';
 
 describe('Code Block Constants', () => {
@@ -148,6 +149,20 @@ describe('Code Block Constants', () => {
 
     it('CODE_AREA_STYLES pins caret color so it does not take on syntax token colors', () => {
       expect(CODE_AREA_STYLES).toContain('caret-text-primary');
+    });
+  });
+
+  describe('Header button styles', () => {
+    // The copy button swaps its 20px icon for a text-xs "Copied!" label, which
+    // would shrink the button. Pinning the box keeps both states the same size.
+    it('HEADER_BUTTON_STYLES pins the button box so icon and text states match', () => {
+      expect(HEADER_BUTTON_STYLES).toContain('h-7');
+      expect(HEADER_BUTTON_STYLES).toContain('min-w-7');
+    });
+
+    it('HEADER_BUTTON_MATCHED_STYLES pins the button box so icon and text states match', () => {
+      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('h-8.5');
+      expect(HEADER_BUTTON_MATCHED_STYLES).toContain('min-w-8.5');
     });
   });
 });

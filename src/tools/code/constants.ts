@@ -68,8 +68,13 @@ export const LANGUAGE_BUTTON_STYLES = 'inline-flex items-center px-1.5 py-0.5 ro
 /** Read-only has no picker to open — the language label is plain, unfocusable text there. */
 export const LANGUAGE_LABEL_STYLES = 'inline-flex items-center px-1.5 py-0.5 bg-transparent border-0 text-xs text-gray-text font-medium';
 export const HEADER_CONTROLS_STYLES = 'flex items-center gap-1 opacity-0 group-hover/code:opacity-100 transition-opacity';
-export const HEADER_BUTTON_STYLES = 'p-1 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
-export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+/**
+ * `h-*`/`min-w-*` pin the box: the copy button swaps its 20px icon for a
+ * text-xs "Copied!" label, which would otherwise shrink it below the height of
+ * its own icon state and of the neighbouring view-mode buttons.
+ */
+export const HEADER_BUTTON_STYLES = 'p-1 h-7 min-w-7 rounded cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
+export const HEADER_BUTTON_MATCHED_STYLES = 'p-1.5 h-8.5 min-w-8.5 rounded-lg cursor-pointer bg-transparent border-0 text-gray-text transition-colors can-hover:hover:bg-item-hover-bg flex items-center justify-center';
 /**
  * Static classes live in `src/shared/tool-classes/code.ts`. `outline-hidden` and
  * `caret-text-primary` stay here — a static render has no focus ring and no

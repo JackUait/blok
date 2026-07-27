@@ -275,10 +275,9 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // caption footer with hairline), always 100% wide (resizer removed), tall stretched
     // cover panel + music-note placeholder, hero 56px waveform, larger filled play puck,
     // gear-anchored speed menu, loop active = solid black. +~3KB intentional growth.
-    // Audio "alive" motion pass: staggered mount entrance (blok-audio-rise), a now-playing
-    // equalizer badge on the cover (blok-audio-eq-bounce, dark overlay pill + white bars,
-    // revealed only while data-playing) and a play-puck heartbeat ring (blok-audio-pulse) —
-    // all reduced-motion gated. +~2.5KB intentional growth.
+    // Audio "alive" motion pass: staggered mount entrance (blok-audio-rise), reduced-motion
+    // gated. +~2.5KB intentional growth. (The cover equalizer badge and the play-puck
+    // heartbeat ring that shipped with this pass were later removed — both read as noise.)
     // Audio caption add/remove animation: caption row is a collapsing grid wrapper
     // (grid-template-rows 1fr↔0fr + opacity) with an inner padding/border element,
     // a .is-collapsed state, and a reduced-motion transition:none — so toggling the

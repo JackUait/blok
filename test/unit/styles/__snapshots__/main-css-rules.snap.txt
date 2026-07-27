@@ -5741,7 +5741,6 @@
   --blok-audio-seek-pct: 0%;
   --blok-audio-vol-pct: 100%;
   --blok-audio-speed-pct: 50%;
-  --blok-audio-pulse-ring: color-mix(in srgb, var(--blok-text-primary) 20%, transparent);
   --blok-audio-disc-size: 92px;
   --blok-audio-groove-w: 0.75px;
   --blok-audio-groove-gap: 2px;
@@ -6380,64 +6379,12 @@
   animation-delay: 160ms;
 }
 
-[data-blok-tool="audio"] .blok-audio-eq {
-  position: absolute;
-  left: var(--blok-space-1-5);
-  bottom: var(--blok-space-1-5);
-  display: flex;
-  align-items: flex-end;
-  gap: var(--blok-space-0-5);
-  height: 13px;
-  padding: var(--blok-space-1);
-  border-radius: var(--blok-radius-sm);
-  background: var(--blok-overlay-dark);
-  opacity: 0;
-  transform: translateY(3px) scale(0.85);
-  transform-origin: bottom left;
-  pointer-events: none;
-  transition: opacity var(--blok-duration-slow) var(--blok-ease-popover), transform var(--blok-duration-slow) var(--blok-ease-popover);
-}
-
-[data-blok-tool="audio"] .blok-audio-eq__bar {
-  width: 3px;
-  height: 30%;
-  border-radius: var(--blok-radius-pill);
-  background: var(--blok-text-on-dark);
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar {
-  animation: blok-audio-eq-bounce var(--blok-duration-bounce) var(--blok-ease-spring) infinite;
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar:nth-child(2) {
-  animation-delay: -450ms;
-  animation-duration: 620ms;
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar:nth-child(3) {
-  animation-delay: -200ms;
-  animation-duration: 540ms;
-}
-
-[data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
-  animation: blok-audio-pulse var(--blok-duration-rotation) var(--blok-ease-spring) infinite;
-}
-
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-inner, [data-blok-tool="audio"] .blok-audio-controls [data-role], [data-blok-tool="audio"] .blok-audio-controls__volume {
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-title, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-artist, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-waveform, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-eq__bar, [data-blok-tool="audio"] .blok-audio-inner[data-playing="true"] .blok-audio-controls [data-role="audio-play"] {
+[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"][data-state="rendered"] .blok-audio-cover, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-title, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-artist, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-waveform, [data-blok-tool="audio"][data-state="rendered"] .blok-audio-controls {
   animation: none;
-}
-
-[@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-eq {
-  transition: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-tool="audio"] .blok-audio-caption-row__inner {

@@ -38,4 +38,40 @@ describe('attachWaveform', () => {
     expect(media.currentTime).toBeCloseTo(50, 0);
     handle.destroy();
   });
+
+  it('paints once the canvas gains a box, even with no media events', () => {
+    // The canvas is always detached (zero-sized) when attachWaveform runs — the
+    // figure is only appended to the block afterwards — so the attach-time paint
+    // is a no-op. Nothing else must be required to get the bars on screen.
+    const observers: Array<{ cb: ResizeObserverCallback; targets: Element[] }> = [];
+    class StubResizeObserver {
+      private entry: { cb: ResizeObserverCallback; targets: Element[] };
+      public constructor(cb: ResizeObserverCallback) {
+        this.entry = { cb, targets: [] };
+        observers.push(this.entry);
+      }
+      public observe(target: Element): void { this.entry.targets.push(target); }
+      public unobserve(): void {}
+      public disconnect(): void { this.entry.targets = []; }
+    }
+    vi.stubGlobal('ResizeObserver', StubResizeObserver);
+
+    const mount = document.createElement('div');
+    const media = document.createElement('audio');
+    const handle = attachWaveform({ mount, media, peaks: [0.1, 0.5, 1, 0.5] });
+    const canvas = mount.querySelector<HTMLCanvasElement>('[data-role="audio-waveform-canvas"]');
+    if (!canvas) throw new Error('canvas was not mounted');
+    expect(canvas.width).toBe(300); // untouched default — nothing painted yet
+
+    // The block is mounted and the canvas finally has a layout box.
+    canvas.getBoundingClientRect = (): DOMRect =>
+      ({ left: 0, width: 200, top: 0, height: 40, right: 200, bottom: 40, x: 0, y: 0, toJSON: () => ({}) });
+    const observer = observers.find((o) => o.targets.includes(canvas));
+    expect(observer).toBeDefined();
+    observer?.cb([], {} as ResizeObserver);
+
+    // A paint sized the backing store to the box it now occupies.
+    expect(canvas.width).toBe(200 * (globalThis.devicePixelRatio || 1));
+    handle.destroy();
+  });
 });

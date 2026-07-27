@@ -259,8 +259,22 @@ export function attachWaveform(opts: {
   media.addEventListener('loadedmetadata', onTime);
   draw(0);
 
+  // The canvas is still detached when this runs (the figure is appended to the
+  // block afterwards), so the paint above is always a no-op — and while paused
+  // no media event is guaranteed to follow. Watch the box instead: the bars are
+  // painted the moment the canvas has one, and repainted whenever it changes
+  // (editor resize, or a container going from display:none to visible).
+  const resizeObserver = typeof ResizeObserver === 'undefined'
+    ? null
+    : new ResizeObserver(() => {
+      // The running loop already repaints every frame; don't double-paint.
+      if (!anim.rafId) draw(globalThis.performance?.now?.() ?? 0);
+    });
+  resizeObserver?.observe(canvas);
+
   return {
     destroy(): void {
+      resizeObserver?.disconnect();
       if (anim.rafId) cancelAnimationFrame(anim.rafId);
       anim.playing = false;
       canvas.removeEventListener('pointerdown', onDown);

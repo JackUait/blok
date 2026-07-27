@@ -81,9 +81,19 @@ export const LIST_CHECKLIST_CONTENT_CLASSES: readonly string[] = ['flex-1', 'lea
  */
 export const LIST_CHECKED_CLASSES: readonly string[] = ['line-through', 'opacity-60'];
 
-/** A checklist item's checkbox. */
+/**
+ * A checklist item's checkbox.
+ *
+ * The top margin CENTRES the fixed 20px (`h-5` = 1.25rem) box on the first line
+ * box of the item's text, whose height is `1.5em` ({@link
+ * LIST_CHECKLIST_CONTENT_CLASSES}). It must stay a formula: a hardcoded offset
+ * only centres at one font size, and the row's font size is host-settable —
+ * the list tool's `itemSize` config writes it inline on this very row, and any
+ * ambient font-size the editor inherits changes it too. At 16px the formula
+ * still resolves to the historical 2px.
+ */
 export const LIST_CHECKBOX_CLASSES: readonly string[] = [
-  'mt-0.5',
+  'mt-[calc((1.5em_-_1.25rem)/2)]',
   'w-5',
   'mr-2',
   'h-5',

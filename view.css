@@ -79,9 +79,6 @@
   .my-2 {
     margin-block: calc(var(--spacing) * 2);
   }
-  .mt-0\.5 {
-    margin-top: calc(var(--spacing) * 0.5);
-  }
   .mt-3 {
     margin-top: calc(var(--spacing) * 3);
   }
@@ -99,6 +96,9 @@
   }
   .mt-\[26px\] {
     margin-top: 26px;
+  }
+  .mt-\[calc\(\(1\.5em_-_1\.25rem\)\/2\)\] {
+    margin-top: calc((1.5em - 1.25rem) / 2);
   }
   .mt-px {
     margin-top: 1px;

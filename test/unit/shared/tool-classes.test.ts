@@ -158,6 +158,22 @@ describe('shared tool classes', () => {
       expect(LIST_CHECKED_CLASSES).toEqual(['line-through', 'opacity-60']);
     });
 
+    /**
+     * REGRESSION: the checkbox carried a hardcoded `mt-0.5` (2px), which only
+     * centres the 20px box on a 24px line box — i.e. at font-size 16px alone.
+     * The row's font size is host-settable (the list tool's `itemSize` config
+     * writes it inline), so at any other size the checkbox drifted off the
+     * text's centre — 9px at itemSize 28px.
+     */
+    it('centres the checkbox with a formula, not an offset tuned for one font size', () => {
+      const topMargin = LIST_CHECKBOX_CLASSES.find(cls => cls.startsWith('mt-'));
+
+      expect(topMargin).toBe('mt-[calc((1.5em_-_1.25rem)/2)]');
+      /** 1.5em is the content cell's line box; 1.25rem is the checkbox's own h-5. */
+      expect(LIST_CHECKLIST_CONTENT_CLASSES).toContain('leading-[1.5]');
+      expect(LIST_CHECKBOX_CLASSES).toContain('h-5');
+    });
+
     it('is the single source for the tool indent constants', async () => {
       const listTool = await import('../../../src/tools/list/constants');
 

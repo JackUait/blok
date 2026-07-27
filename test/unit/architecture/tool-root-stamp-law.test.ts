@@ -125,5 +125,7 @@ describe('tool root stamp law', () => {
       root.getAttribute('data-blok-tool'),
       `${name}'s root element is unstamped — the parity gate and view.css cannot see it`
     ).toBe(name);
-  });
+    // 120s: the code tool's dynamic import pulls the whole highlighter chain,
+    // which blows the global 20s ceiling on a heavily loaded machine.
+  }, 120_000);
 });

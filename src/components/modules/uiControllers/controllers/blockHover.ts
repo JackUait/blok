@@ -5,6 +5,16 @@ import { throttle } from '../../../utils';
 import { Controller } from './_base';
 
 /**
+ * Every Blok instance binds its own document-level mousemove listener, so on a
+ * page hosting several editors each one would resolve hover independently and
+ * leave its plus/drag controls behind while the pointer sits in another editor.
+ * This page-level registry lets an instance recognise that the pointer belongs
+ * to a sibling editor and stand down, so the page behaves as if it hosted a
+ * single editor. With one entry, arbitration is a no-op.
+ */
+const enabledHoverControllers = new Set<BlockHoverController>();
+
+/**
  * BlockHoverController detects when user hovers over blocks or finds nearest block.
  *
  * Responsibilities:
@@ -12,6 +22,7 @@ import { Controller } from './_base';
  * - Find block by element hit or nearest by Y distance
  * - Emit BlockHovered events
  * - Track last hovered block to avoid duplicate events
+ * - Arbitrate hover ownership against other editors on the same page
  */
 export class BlockHoverController extends Controller {
   /**
@@ -56,6 +67,21 @@ export class BlockHoverController extends Controller {
   private isEnabled: boolean = false;
 
   /**
+   * This editor's wrapper element, used to tell this instance's blocks apart
+   * from those of other editors sharing the page.
+   */
+  private wrapperElement: HTMLElement | null = null;
+
+  /**
+   * Store the editor wrapper so hover ownership can be arbitrated between
+   * editors on the same page.
+   * @param wrapper - the instance's `[data-blok-editor]` element
+   */
+  public setWrapperElement(wrapper: HTMLElement): void {
+    this.wrapperElement = wrapper;
+  }
+
+  /**
    * Enable block hover detection
    */
   public override enable(): void {
@@ -64,6 +90,7 @@ export class BlockHoverController extends Controller {
     }
 
     this.isEnabled = true;
+    enabledHoverControllers.add(this);
     /**
      * Local function that handles block hover detection
      * Bound to 'this' to preserve context when passed to throttle
@@ -96,6 +123,17 @@ export class BlockHoverController extends Controller {
       }
 
       const closestBlockWrapper = (event.target as Element | null)?.closest('[data-blok-testid="block-wrapper"]');
+
+      /**
+       * The pointer is over a block of a different editor on this page. That
+       * editor answers the hover; this one stands down so the page never shows
+       * two sets of block controls at once.
+       */
+      if (closestBlockWrapper && this.belongsToAnotherEditor(closestBlockWrapper)) {
+        this.yieldHoverToOtherEditor();
+
+        return;
+      }
 
       /**
        * When the cursor is in the gap between children inside a [data-blok-child-toolbar]
@@ -138,6 +176,16 @@ export class BlockHoverController extends Controller {
        * but only if the cursor is within the extended hover zone (100px from content edges).
        */
       if (!hoveredBlockElement) {
+        /**
+         * Outside every block, the gutter/gap hover belongs to whichever editor
+         * the pointer is closest to — only that one runs nearest-block detection.
+         */
+        if (!this.isNearestEditorToPointer(event.clientX, event.clientY)) {
+          this.yieldHoverToOtherEditor();
+
+          return;
+        }
+
         this.emitNearestBlockHoveredInZone(event.clientX, event.clientY);
 
         return;
@@ -304,11 +352,111 @@ export class BlockHoverController extends Controller {
   }
 
   /**
+   * Whether the given element lives inside a different editor that is also
+   * listening for hover on this page.
+   * @param element - element under the pointer
+   */
+  private belongsToAnotherEditor(element: Element): boolean {
+    if (this.wrapperElement?.contains(element) === true) {
+      return false;
+    }
+
+    for (const controller of enabledHoverControllers) {
+      if (controller !== this && controller.wrapperElement?.contains(element) === true) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Whether this editor is the closest one to the pointer among the editors
+   * listening on this page. A lone editor always wins, so single-editor pages
+   * keep their existing nearest-block behaviour.
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   */
+  private isNearestEditorToPointer(clientX: number, clientY: number): boolean {
+    if (this.wrapperElement === null || enabledHoverControllers.size < 2) {
+      return true;
+    }
+
+    const ownDistance = BlockHoverController.distanceToElement(this.wrapperElement, clientX, clientY);
+
+    /**
+     * Side-by-side editors can sit exactly the same distance from the pointer.
+     * The registry preserves registration order, so ties go to the editor
+     * registered first — otherwise both would claim the pointer and the page
+     * would again show two sets of controls.
+     */
+    const controllers = [...enabledHoverControllers];
+    const ownIndex = controllers.indexOf(this);
+
+    return controllers.every((controller, index) => {
+      if (index === ownIndex || controller.wrapperElement === null) {
+        return true;
+      }
+
+      const distance = BlockHoverController.distanceToElement(controller.wrapperElement, clientX, clientY);
+
+      return distance > ownDistance || (distance === ownDistance && index > ownIndex);
+    });
+  }
+
+  /**
+   * Distance from the pointer to an element's box, zero when the pointer is
+   * inside it.
+   * @param element - element to measure against
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   */
+  private static distanceToElement(element: HTMLElement, clientX: number, clientY: number): number {
+    const rect = element.getBoundingClientRect();
+    const dx = Math.max(rect.left - clientX, 0, clientX - rect.right);
+    const dy = Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+
+    return Math.hypot(dx, dy);
+  }
+
+  /**
+   * Hand the pointer over to another editor: drop this editor's block controls
+   * so only one set is visible on the page. Menus the user opened here stay put
+   * — moving the pointer away must not dismiss them.
+   */
+  private yieldHoverToOtherEditor(): void {
+    this.blockHoveredState.lastHoveredBlockId = null;
+
+    const { Toolbar, BlockSettings, InlineToolbar, DragManager } = this.Blok;
+
+    if (!Toolbar.opened) {
+      return;
+    }
+
+    /**
+     * A menu the user opened here, or a drag in flight, outranks the pointer:
+     * walking over a sibling editor must not dismiss them.
+     */
+    const isBusy = BlockSettings.opened
+      || BlockSettings.isOpening
+      || InlineToolbar.opened
+      || Toolbar.toolbox.opened === true
+      || DragManager.isDragging;
+
+    if (isBusy) {
+      return;
+    }
+
+    Toolbar.close();
+  }
+
+  /**
    * Disable the controller and clear its listeners.
    */
   public override disable(): void {
     super.disable();
     this.isEnabled = false;
+    enabledHoverControllers.delete(this);
   }
 
   /**

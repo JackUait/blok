@@ -280,6 +280,7 @@ export class UI extends Module<UINodes> {
       eventsDispatcher: this.eventsDispatcher,
     });
     this.blockHoverController.state = this.Blok;
+    this.blockHoverController.setWrapperElement(this.nodes.wrapper);
 
     /**
      * Create handlers for click and touch events

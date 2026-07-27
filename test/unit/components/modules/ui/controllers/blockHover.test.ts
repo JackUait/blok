@@ -12,6 +12,21 @@ const createBlokStub = (): BlokModules => {
       blocks: [],
       getBlockByChildNode: vi.fn(),
     },
+    Toolbar: {
+      opened: false,
+      close: vi.fn(),
+      toolbox: { opened: false },
+    },
+    BlockSettings: {
+      opened: false,
+      isOpening: false,
+    },
+    InlineToolbar: {
+      opened: false,
+    },
+    DragManager: {
+      isDragging: false,
+    },
   } as unknown as BlokModules;
 };
 
@@ -1015,6 +1030,239 @@ describe('BlockHoverController', () => {
       vi.runAllTimers();
 
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('multiple editors on one page', () => {
+    /**
+     * Every Blok instance binds its own document-level mousemove handler, so
+     * without page-level arbitration each instance resolves hover on its own and
+     * several editors show their plus/drag controls at the same time. The page
+     * must behave as if it hosted a single editor: exactly one editor owns the
+     * pointer, every other one closes its toolbar.
+     */
+    const createEditorWrapper = (top: number, bottom: number): HTMLElement => {
+      const wrapper = document.createElement('div');
+
+      wrapper.setAttribute('data-blok-editor', '');
+      vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+        left: 100,
+        right: 700,
+        top,
+        bottom,
+        width: 600,
+        height: bottom - top,
+        x: 100,
+        y: top,
+        toJSON: () => ({}),
+      });
+      document.body.appendChild(wrapper);
+
+      return wrapper;
+    };
+
+    const dispatchMouseMove = (target: Element, clientX: number, clientY: number): void => {
+      const event = new MouseEvent('mousemove', {
+        clientX,
+        clientY,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: target });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+    };
+
+    it('closes its toolbar when the pointer moves onto another editor\'s block', () => {
+      const first = createBlockHoverController();
+      const second = createBlockHoverController();
+
+      const firstWrapper = createEditorWrapper(0, 400);
+      const secondWrapper = createEditorWrapper(500, 900);
+
+      first.controller.setWrapperElement(firstWrapper);
+      second.controller.setWrapperElement(secondWrapper);
+
+      const secondBlock = createMockBlock('block-b', 600, 700);
+      const secondBlockWrapper = secondBlock.holder;
+
+      secondBlockWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      secondWrapper.appendChild(secondBlockWrapper);
+
+      (first.controller as unknown as { enable: () => void }).enable();
+      (second.controller as unknown as { enable: () => void }).enable();
+
+      /** The first editor's toolbar is currently showing */
+      (first.blok.Toolbar as unknown as { opened: boolean }).opened = true;
+
+      /** The second editor resolves the block, the first one owns nothing there */
+      (second.blok.BlockManager as { blocks: typeof second.blok.BlockManager.blocks }).blocks = [secondBlock];
+      vi.mocked(second.blok.BlockManager.getBlockByChildNode).mockReturnValue(secondBlock);
+      vi.mocked(first.blok.BlockManager.getBlockByChildNode).mockReturnValue(undefined);
+
+      dispatchMouseMove(secondBlockWrapper, 400, 650);
+
+      /** The second editor takes over */
+      expect(second.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: secondBlock,
+        target: secondBlockWrapper,
+      });
+
+      /** and the first one gives up its controls instead of leaving them behind */
+      expect(first.blok.Toolbar.close).toHaveBeenCalled();
+      expect(first.eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('gives the gutter/gap hover to the nearest editor only', () => {
+      const first = createBlockHoverController();
+      const second = createBlockHoverController();
+
+      const firstWrapper = createEditorWrapper(0, 400);
+      const secondWrapper = createEditorWrapper(500, 900);
+
+      first.controller.setWrapperElement(firstWrapper);
+      second.controller.setWrapperElement(secondWrapper);
+
+      const firstBlock = createMockBlock('block-a', 100, 200);
+      const secondBlock = createMockBlock('block-b', 600, 700);
+
+      (first.controller as unknown as { enable: () => void }).enable();
+      (second.controller as unknown as { enable: () => void }).enable();
+
+      (first.blok.BlockManager as { blocks: typeof first.blok.BlockManager.blocks }).blocks = [firstBlock];
+      (second.blok.BlockManager as { blocks: typeof second.blok.BlockManager.blocks }).blocks = [secondBlock];
+      (second.blok.Toolbar as unknown as { opened: boolean }).opened = true;
+
+      /** Page background between the editors, closer to the first one */
+      const pageBackground = document.createElement('div');
+
+      document.body.appendChild(pageBackground);
+
+      dispatchMouseMove(pageBackground, 400, 430);
+
+      expect(first.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: firstBlock,
+        target: firstBlock.holder,
+      });
+      expect(second.eventsDispatcher.emit).not.toHaveBeenCalled();
+      expect(second.blok.Toolbar.close).toHaveBeenCalled();
+    });
+
+    it('keeps a single editor answering gutter hovers regardless of its rect', () => {
+      /**
+       * Arbitration must never make a lone editor stop responding — a page with
+       * one editor keeps the existing nearest-block behaviour untouched.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const block = createMockBlock('block-1', 100, 200);
+      const pageBackground = document.createElement('div');
+
+      document.body.appendChild(pageBackground);
+
+      (controller as unknown as { enable: () => void }).enable();
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+
+      dispatchMouseMove(pageBackground, 400, 5000);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+      expect(blok.Toolbar.close).not.toHaveBeenCalled();
+    });
+
+    it('breaks an exact distance tie so side-by-side editors never both claim it', () => {
+      const first = createBlockHoverController();
+      const second = createBlockHoverController();
+
+      /** Two editors at the same Y, so a point above both is equidistant */
+      first.controller.setWrapperElement(createEditorWrapper(200, 400));
+      second.controller.setWrapperElement(createEditorWrapper(200, 400));
+
+      const firstBlock = createMockBlock('block-a', 200, 300);
+      const secondBlock = createMockBlock('block-b', 200, 300);
+
+      (first.controller as unknown as { enable: () => void }).enable();
+      (second.controller as unknown as { enable: () => void }).enable();
+
+      (first.blok.BlockManager as { blocks: typeof first.blok.BlockManager.blocks }).blocks = [firstBlock];
+      (second.blok.BlockManager as { blocks: typeof second.blok.BlockManager.blocks }).blocks = [secondBlock];
+
+      const pageBackground = document.createElement('div');
+
+      document.body.appendChild(pageBackground);
+
+      dispatchMouseMove(pageBackground, 400, 100);
+
+      expect(first.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: firstBlock,
+        target: firstBlock.holder,
+      });
+      expect(second.eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('stops arbitrating once its editor is destroyed', () => {
+      /**
+       * A destroyed editor must drop out of the page-level registry, otherwise
+       * the surviving editor keeps yielding to a corpse and never shows its
+       * controls again.
+       */
+      const survivor = createBlockHoverController();
+      const destroyed = createBlockHoverController();
+
+      survivor.controller.setWrapperElement(createEditorWrapper(500, 900));
+      destroyed.controller.setWrapperElement(createEditorWrapper(0, 400));
+
+      const block = createMockBlock('block-1', 600, 700);
+
+      (survivor.controller as unknown as { enable: () => void }).enable();
+      (destroyed.controller as unknown as { enable: () => void }).enable();
+      (destroyed.controller as unknown as { disable: () => void }).disable();
+
+      (survivor.blok.BlockManager as { blocks: typeof survivor.blok.BlockManager.blocks }).blocks = [block];
+
+      const pageBackground = document.createElement('div');
+
+      document.body.appendChild(pageBackground);
+
+      /** Pointer sits in the destroyed editor's old area */
+      dispatchMouseMove(pageBackground, 400, 200);
+
+      expect(survivor.eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block,
+        target: block.holder,
+      });
+    });
+
+    it('does not steal the toolbar away while a menu is open in another editor', () => {
+      const first = createBlockHoverController();
+      const second = createBlockHoverController();
+
+      const firstWrapper = createEditorWrapper(0, 400);
+      const secondWrapper = createEditorWrapper(500, 900);
+
+      first.controller.setWrapperElement(firstWrapper);
+      second.controller.setWrapperElement(secondWrapper);
+
+      const secondBlock = createMockBlock('block-b', 600, 700);
+      const secondBlockWrapper = secondBlock.holder;
+
+      secondBlockWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      secondWrapper.appendChild(secondBlockWrapper);
+
+      (first.controller as unknown as { enable: () => void }).enable();
+      (second.controller as unknown as { enable: () => void }).enable();
+
+      /** The user has the block settings menu of the first editor open */
+      (first.blok.Toolbar as unknown as { opened: boolean }).opened = true;
+      (first.blok.BlockSettings as unknown as { opened: boolean }).opened = true;
+
+      vi.mocked(second.blok.BlockManager.getBlockByChildNode).mockReturnValue(secondBlock);
+      (second.blok.BlockManager as { blocks: typeof second.blok.BlockManager.blocks }).blocks = [secondBlock];
+
+      dispatchMouseMove(secondBlockWrapper, 400, 650);
+
+      expect(first.blok.Toolbar.close).not.toHaveBeenCalled();
     });
   });
 

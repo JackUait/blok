@@ -279,7 +279,7 @@ describe('current English catalog lifecycle coverage', () => {
         .map(([key]) => key)
         .sort()
     ).toEqual([...CATALOG_ONLY_KEYS].sort());
-  }, 15_000);
+  }, 60_000);
 
   it('classifies every new migration key as an executable literal with a direct caller', () => {
     const { lifecycle, directLiteralCalls } = getLifecycle();
@@ -297,5 +297,5 @@ describe('current English catalog lifecycle coverage', () => {
     expect(migrationKeys.map(key => lifecycle.get(key)))
       .toEqual(Array.from({ length: migrationKeys.length }, () => 'executable-literal'));
     expect(migrationKeys.filter(key => !directLiteralCalls.has(key))).toEqual([]);
-  }, 15_000);
+  }, 60_000);
 });

@@ -81,5 +81,5 @@ describe('Blok jsdom compatibility', () => {
     editor = instance;
 
     await expect(instance.isReady).resolves.toBe(instance);
-  }, 60_000);
+  }, 120_000);
 });

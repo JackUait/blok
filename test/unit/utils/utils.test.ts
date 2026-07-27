@@ -786,6 +786,16 @@ describe('utils', () => {
       });
     });
 
+    it('should replace backslash with \\', () => {
+      expect(beautifyShortcut('CMD+BACKSLASH')).toContain('\\');
+      expect(beautifyShortcut('CMD+BACKSLASH')).not.toMatch(/backslash/i);
+    });
+
+    it('should replace slash with /', () => {
+      expect(beautifyShortcut('CMD+SLASH')).toContain('/');
+      expect(beautifyShortcut('CMD+SLASH')).not.toMatch(/slash/i);
+    });
+
     it('should replace arrow keys', () => {
       expect(beautifyShortcut('Up')).toContain('↑');
       expect(beautifyShortcut('Down')).toContain('↓');

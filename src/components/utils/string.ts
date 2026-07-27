@@ -24,6 +24,8 @@ export const beautifyShortcut = (shortcut: string): string => {
   const normalizedShortcut = shortcut
     .replace(/shift/gi, '⇧')
     .replace(/backspace/gi, '⌫')
+    .replace(/backslash/gi, '\\')
+    .replace(/slash/gi, '/')
     .replace(/enter/gi, '⏎')
     .replace(/up/gi, '↑')
     .replace(/left/gi, '→')

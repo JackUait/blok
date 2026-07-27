@@ -170,16 +170,26 @@ export class PopoverInline extends PopoverDesktop {
   }
 
   /**
-   * Stretch the convert row and separators across the full grid width and
-   * right-align the convert row chevron. Item elements are owned by the
-   * popover-item components, so the grid spans are patched here where the
-   * grid itself is defined.
+   * Dress the convert row as the card's header — the current block's identity
+   * badge plus its turn-into affordance — and stretch it and the separators
+   * across the full grid width. Item elements are owned by the popover-item
+   * components, so their look is patched here where the grid card is defined:
+   * the icon gets the canonical squircle chip back (the inline item style
+   * strips it for the icon-only formatting buttons), the row grows to chip
+   * height with a chip-to-label gap, and the chevron nudges toward the
+   * submenu on row hover and holds that position while the submenu is open.
    */
   private applyGridItemSpans(): void {
     const root = this.nodes.popover;
 
-    root.querySelectorAll(`[${DATA_ATTR.itemName}="convert-to"]`).forEach((convertEl) => {
-      convertEl.classList.add('col-span-full', 'w-full');
+    for (const convertEl of root.querySelectorAll(`[${DATA_ATTR.itemName}="convert-to"]`)) {
+      // group/convert is named so only row hover, not whole-card hover,
+      // drives the chevron motion below.
+      convertEl.className = twMerge(convertEl.className, 'col-span-full w-full max-h-9 gap-2 group/convert');
+
+      for (const icon of convertEl.querySelectorAll('[data-blok-testid="popover-item-icon"]')) {
+        icon.className = popoverItemCls.icon;
+      }
 
       convertEl
         .querySelectorAll('[data-blok-testid="popover-item-title"]')
@@ -187,8 +197,17 @@ export class PopoverInline extends PopoverDesktop {
 
       convertEl
         .querySelectorAll('[data-blok-testid="popover-item-chevron-right"]')
-        .forEach((chevron) => chevron.classList.add('ml-auto', 'text-text-secondary'));
-    });
+        .forEach((chevron) => chevron.classList.add(
+          'ml-auto',
+          'text-text-secondary',
+          'transition-transform',
+          'duration-150',
+          'ease-out',
+          'can-hover:group-hover/convert:translate-x-0.5',
+          'group-data-[blok-popover-item-children-open]/convert:translate-x-0.5',
+          'group-data-[blok-popover-item-children-open]/convert:text-text-primary'
+        ));
+    }
 
     root
       .querySelectorAll('[data-blok-testid="popover-item-separator"]')

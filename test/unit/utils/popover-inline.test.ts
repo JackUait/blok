@@ -136,6 +136,51 @@ describe('PopoverInline', () => {
       expect(chevron?.className).toContain('text-text-secondary');
     });
 
+    it('wraps the current-block icon in the house squircle chip', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const icon = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-icon"]');
+
+      expect(icon?.className).toContain('bg-popover-icon-bg');
+      expect(icon?.className).toContain('rounded-lg');
+      expect(icon?.className).not.toContain('bg-transparent');
+    });
+
+    it('sets the header row rhythm: chip-height row with a chip-to-label gap', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const convert = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"]');
+
+      expect(convert?.className).toContain('max-h-9');
+      expect(convert?.className).not.toContain('max-h-8');
+      expect(convert?.className).toContain('gap-2');
+      // Named group so only row hover (not whole-card hover) drives the chevron
+      expect(convert?.className).toContain('group/convert');
+    });
+
+    it('nudges the chevron toward the submenu on hover and while the menu is open', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const chevron = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
+
+      expect(chevron?.className).toContain('transition-transform');
+      expect(chevron?.className).toContain('can-hover:group-hover/convert:translate-x-0.5');
+      expect(chevron?.className).toContain('group-data-[blok-popover-item-children-open]/convert:translate-x-0.5');
+      expect(chevron?.className).toContain('group-data-[blok-popover-item-children-open]/convert:text-text-primary');
+    });
+
     it('points the convert row chevron to the right, since the menu opens sideways', () => {
       const popover = createGridPopover();
 

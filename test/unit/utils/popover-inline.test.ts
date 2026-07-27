@@ -136,6 +136,81 @@ describe('PopoverInline', () => {
       expect(chevron?.className).toContain('text-text-secondary');
     });
 
+    it('points the convert row chevron to the right, since the menu opens sideways', () => {
+      const popover = createGridPopover();
+
+      popover.show();
+
+      const chevron = popover
+        .getElement()
+        .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
+
+      expect(chevron?.className).not.toContain('rotate-90');
+    });
+
+    it('marks the convert row as expanded/selected while its menu is open', () => {
+      const popover = createGridPopover();
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      popover.show();
+
+      const convertItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.name === 'convert-to'
+      );
+
+      expect(convertItem).toBeDefined();
+
+      instance.showNestedItems(convertItem!);
+
+      const convertEl = popover.getElement().querySelector('[data-blok-item-name="convert-to"]');
+
+      expect(convertEl).toHaveAttribute(DATA_ATTR.popoverItemChildrenOpen, 'true');
+      expect(convertEl).toHaveAttribute('aria-expanded', 'true');
+
+      popover.closeNestedPopover();
+
+      expect(convertEl).not.toHaveAttribute(DATA_ATTR.popoverItemChildrenOpen);
+      expect(convertEl).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('opens the convert menu beside the toolbar, not below it', () => {
+      const popover = createGridPopover();
+      const instance = popover as unknown as PopoverInlineInternal;
+
+      document.body.appendChild(popover.getElement());
+      popover.show();
+
+      const toolbarRect: DOMRect = {
+        left: 100,
+        right: 300,
+        top: 50,
+        bottom: 150,
+        width: 200,
+        height: 100,
+        x: 100,
+        y: 50,
+        toJSON: () => ({}),
+      };
+
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(toolbarRect);
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(toolbarRect);
+
+      const convertItem = instance.items.find(
+        (item): item is PopoverItemDefault =>
+          item instanceof PopoverItemDefault && item.name === 'convert-to'
+      );
+
+      instance.showNestedItems(convertItem!);
+
+      const nestedContainer = instance.nestedPopover
+        ?.getElement()
+        .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
+
+      // Sits at the toolbar's right edge (minus the 4px overlap), in root-relative coordinates.
+      expect(nestedContainer?.style.left).toBe('196px');
+    });
+
     it('does not pin the container to the single-row toolbar height', () => {
       const popover = createGridPopover();
 

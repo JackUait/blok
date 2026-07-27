@@ -194,6 +194,8 @@ export const DATA_ATTR = {
   popoverItemSecondaryTitle: 'data-blok-popover-item-secondary-title',
   /** Item is active/selected */
   popoverItemActive: 'data-blok-popover-item-active',
+  /** Item's child menu is currently open — keeps the trigger looking selected */
+  popoverItemChildrenOpen: 'data-blok-popover-item-children-open',
   /** Confirmation state */
   popoverItemConfirmation: 'data-blok-popover-item-confirmation',
   /** Disable hover styling */

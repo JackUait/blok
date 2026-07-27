@@ -160,6 +160,27 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
+   * Keeps the trigger looking selected (and reported as expanded) while its
+   * submenu is on screen.
+   */
+  public override onChildrenOpen(): void {
+    super.onChildrenOpen();
+
+    this.nodes.root?.setAttribute(DATA_ATTR.popoverItemChildrenOpen, 'true');
+    this.nodes.root?.setAttribute('aria-expanded', 'true');
+  }
+
+  /**
+   * Drops the selected/expanded state once the submenu is closed.
+   */
+  public override onChildrenClose(): void {
+    super.onChildrenClose();
+
+    this.nodes.root?.removeAttribute(DATA_ATTR.popoverItemChildrenOpen);
+    this.nodes.root?.setAttribute('aria-expanded', 'false');
+  }
+
+  /**
    * Toggles item hidden state
    * @param isHidden - true if item should be hidden
    */
@@ -227,6 +248,7 @@ export class PopoverItemDefault extends PopoverItem {
     }
     if (this.hasChildren) {
       root.setAttribute(DATA_ATTR.hasChildren, 'true');
+      root.setAttribute('aria-expanded', 'false');
     }
 
     // Expose the item's ARIA role. In a listbox context (e.g. the Toolbox) the
@@ -335,7 +357,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (showChevron) {
       const chevronEl = document.createElement('div');
 
-      chevronEl.className = this.getChevronClass(isInline);
+      chevronEl.className = this.getChevronClass();
       chevronEl.setAttribute(DATA_ATTR.popoverItemIcon, '');
       chevronEl.setAttribute(DATA_ATTR.popoverItemIconChevronRight, '');
       chevronEl.setAttribute('data-blok-testid', 'popover-item-chevron-right');
@@ -431,13 +453,13 @@ export class PopoverItemDefault extends PopoverItem {
   }
 
   /**
-   * Gets the chevron class based on context
+   * Gets the chevron class. The glyph always points right — submenus open
+   * sideways in every context, including the inline toolbar.
    */
-  private getChevronClass(isInline: boolean): string {
+  private getChevronClass(): string {
     return twMerge(
       css.icon,
-      'w-5 h-5 bg-transparent',
-      isInline && 'rotate-90'
+      'w-5 h-5 bg-transparent'
     );
   }
 

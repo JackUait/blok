@@ -336,23 +336,9 @@ export class PopoverInline extends PopoverDesktop {
      */
     nestedPopoverEl.setAttribute(DATA_ATTR.nestedLevel, getNestedLevelAttrValue(nestedPopover.nestingLevel));
 
-    // Apply level-1 specific positioning styles
-    if (nestedPopover.nestingLevel === 1 && nestedContainer instanceof HTMLElement) {
-      // Position near the trigger item, clamped to stay within the toolbar bounds
-      const itemEl = item.getElement();
-      const triggerLeft = itemEl ? itemEl.offsetLeft + this.offsetLeft : 0;
-      const nestedWidth = nestedPopover.size.width;
-      const toolbarWidth = this.nodes.popoverContainer.offsetWidth;
-      const maxLeft = Math.max(0, toolbarWidth - nestedWidth);
-      const left = Math.max(0, Math.min(triggerLeft, maxLeft));
-
-      nestedContainer.style.left = `${left}px`;
-
-      // Open right below the trigger item's row of the grid card
-      const triggerBottom = itemEl ? itemEl.offsetTop + itemEl.offsetHeight : this.nodes.popoverContainer.offsetHeight;
-
-      nestedContainer.style.top = `${triggerBottom + 3}px`;
-    }
+    // Horizontal/vertical placement is the shared desktop one: the submenu opens
+    // beside the toolbar card (to its right, viewport-clamped), not below the
+    // trigger row. Nothing to override here.
 
     return nestedPopover;
   }

@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0](https://github.com/JackUait/blok/compare/v1.4.5...v1.5.0) (2026-07-27)
+
+### Features
+
+- **View renderer** — `@bloklabs/core/view` now reaches visual parity with the read-only editor: every core block (paragraph, header, quote, list, checklist, code, callout, toggle, divider, spacer) renders from single-sourced class modules shared with the editor, `view.css` is generated from those modules, and a soft isolation root plus reproduced block scaffolding keep the output pixel-equal. A class-parity gate and a view↔read-only visual parity gate now run in CI, and the playground gains a side-by-side Blok View comparison panel.
+- **Paste** — Google Docs layout tables are now recognized: multi-row two-column tables carrying photos convert into column blocks, and single-column layout tables unwrap into their content instead of arriving as one-cell tables.
+- **Inline toolbar** — The convert menu now opens sideways with its trigger marked selected, and the convert row is styled as the card's header.
+- **Callout** — A newly picked emoji jumps into the old one's place, and the emoji picker opens instantly without waiting on its dataset to download.
+- **Tools** — `data-blok-tool` is now stamped on code, callout, divider and spacer roots.
+- **Docs** — The docs site advertises its markdown mirrors and declares Content-Signal; the published `@bloklabs/core/icons` subpath is documented; the README is restructured around benefits, facts and a runnable example.
+
+### Bug Fixes
+
+- **Security** — Stored `javascript:` XSS closed on two sinks: media download hrefs are scheme-gated, and stored embed renders are gated on the provider registry rather than a bare `https:` check.
+- **Drag & Drop** — Drops on the seam between two blocks now resolve instead of dead-ending; the drop indicator no longer promises a nesting the drop would refuse; side-drops are gated on the columns tool actually being registered.
+- **Columns** — The drop animation no longer balloons the row while a block lands.
+- **Code** — In read-only mode the language label renders as plain text and the language dropdown toggle is hidden; the copy button keeps the same height in its "Copied!" state.
+- **Toolbar** — Multiple editors on one page now show one set of block controls instead of stacking duplicates; the slash-search caret is sized to the input, not the block.
+- **Tooltip** — A bubble is never parked in the viewport corner when its anchor stops rendering.
+- **List** — The checklist checkbox is centred on its text at any font size.
+- **Embed** — Provider popups (e.g. "open in app") can escape the iframe sandbox again.
+- **Audio** — Cover art uploads are routed to the image pipeline instead of the audio endpoint.
+- **Shortcuts** — `BACKSLASH`/`SLASH` render as `\` and `/` in shortcut hints.
+- **Dependencies** — All 40 open Dependabot alerts remediated at their root causes.
+
 ## [1.4.5](https://github.com/JackUait/blok/compare/v1.4.4...v1.4.5) (2026-07-25)
 
 ### Features

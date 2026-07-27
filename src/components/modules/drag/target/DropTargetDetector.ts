@@ -43,6 +43,55 @@ export interface DropTargetDetectorOptions {
   isColumnsEnabled?: () => boolean;
 }
 
+/** A block paired with its measured holder rect. */
+interface MeasuredBlock {
+  block: Block;
+  rect: DOMRect;
+}
+
+/**
+ * Resolves a point that fell in the margin BETWEEN two stacked holders to the
+ * nearer of them.
+ *
+ * Block holders do not touch — a vertical margin separates them — while the drop
+ * line is painted ON that seam (pinned to a holder edge and pulled half its
+ * thickness across it). So the seam is exactly where a user aiming at the line
+ * puts the cursor, yet it belongs to no block's rect. Left unresolved it is a
+ * dead band: the indicator blinks off as the cursor jitters across it, and a
+ * mouseup there drops nothing at all.
+ *
+ * Only an INTERIOR seam qualifies: a candidate must exist both above and below
+ * the point. That sandwich requirement is what keeps the empty page above the
+ * first block and below the last one a non-target, with no tolerance constant
+ * guessing how wide a margin is allowed to be.
+ *
+ * @param candidates - Blocks eligible at this X position, with their rects
+ * @param clientY - Cursor Y position
+ * @returns The nearer adjacent block, or null when the point is not on a seam
+ */
+const resolveSeamBlock = (candidates: MeasuredBlock[], clientY: number): Block | null => {
+  const above = candidates.reduce<MeasuredBlock | null>(
+    (nearest, candidate) =>
+      candidate.rect.bottom <= clientY && (nearest === null || candidate.rect.bottom > nearest.rect.bottom)
+        ? candidate
+        : nearest,
+    null
+  );
+  const below = candidates.reduce<MeasuredBlock | null>(
+    (nearest, candidate) =>
+      candidate.rect.top >= clientY && (nearest === null || candidate.rect.top < nearest.rect.top)
+        ? candidate
+        : nearest,
+    null
+  );
+
+  if (above === null || below === null) {
+    return null;
+  }
+
+  return clientY - above.rect.bottom <= below.rect.top - clientY ? above.block : below.block;
+};
+
 export class DropTargetDetector {
   private ui: UIAdapter;
   private blockManager: BlockManagerAdapter;
@@ -107,7 +156,35 @@ export class DropTargetDetector {
       return { block: leftZoneBlock, holder: leftZoneBlock.holder };
     }
 
+    // Fallback: the cursor is in the vertical margin BETWEEN two holders, which
+    // belongs to no block's rect. That seam is exactly where the drop line is
+    // painted, so it is where a user aiming at the line puts the cursor — left
+    // unresolved it is a dead band that blinks the indicator off and drops
+    // nothing on mouseup. Resolve it to the block it sits nearest.
+    const seamBlock = this.findBlockAcrossSeam(clientX, clientY);
+
+    if (seamBlock) {
+      return { block: seamBlock, holder: seamBlock.holder };
+    }
+
     return { block: undefined, holder: null };
+  }
+
+  /**
+   * Resolves a cursor sitting on the seam between two stacked holders, limited
+   * to the blocks whose holder spans the cursor horizontally — so a point off to
+   * the side of the content never picks one up. See {@link resolveSeamBlock}.
+   *
+   * @param clientX - Cursor X position
+   * @param clientY - Cursor Y position
+   * @returns The nearer adjacent block, or null when the point is not on a seam
+   */
+  private findBlockAcrossSeam(clientX: number, clientY: number): Block | null {
+    const candidates = this.blockManager.blocks
+      .map(block => ({ block, rect: block.holder.getBoundingClientRect() }))
+      .filter(({ rect }) => clientX >= rect.left && clientX <= rect.right);
+
+    return resolveSeamBlock(candidates, clientY);
   }
 
   /**
@@ -129,20 +206,23 @@ export class DropTargetDetector {
     }
 
     // Find block by Y position
-    for (const block of this.blockManager.blocks) {
+    const candidates = this.blockManager.blocks
       // Skip source blocks
-      if (this.sourceBlocks.includes(block)) {
-        continue;
-      }
+      .filter(block => !this.sourceBlocks.includes(block))
+      .map(block => ({ block, rect: block.holder.getBoundingClientRect() }));
 
-      const rect = block.holder.getBoundingClientRect();
+    const containing = candidates.find(
+      ({ rect }) => clientY >= rect.top && clientY <= rect.bottom
+    );
 
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        return block;
-      }
+    if (containing) {
+      return containing.block;
     }
 
-    return null;
+    // Same seam problem as the content column: the margin between two holders is
+    // where the drop line is painted, so a point that lands in it resolves to the
+    // nearer neighbour instead of nothing.
+    return resolveSeamBlock(candidates, clientY);
   }
 
   /**

@@ -53,6 +53,8 @@ const CROSS_BROWSER_TESTS = [
   '**/ui/popover-root-boundary.spec.ts',
   // Browser-specific event handling
   '**/drag-drop.spec.ts',
+  // Hit testing on the seam between blocks — pointer/rect rounding is engine-specific
+  '**/drag-indicator-stability.spec.ts',
   '**/copy-paste.spec.ts',
   '**/tools/link-paste.spec.ts',
   '**/tools/code-block-paste.spec.ts',

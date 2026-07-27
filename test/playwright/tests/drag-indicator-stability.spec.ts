@@ -91,8 +91,16 @@ test.describe('drop indicator stability', () => {
     await createBlok(page);
 
     const source = page.getByTestId('block-wrapper').filter({ hasText: 'Grade description' }).first();
+    const sourceBox = await source.boundingBox();
 
-    await source.hover();
+    if (!sourceBox) {
+      throw new Error('missing bounding box for the source block');
+    }
+
+    // A raw mouse move, not locator.hover(): Firefox never settles the hover
+    // action on a block holder, and all this needs is the pointer over the block
+    // so the drag handle appears.
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
 
     const settings = page.locator(SETTINGS_BUTTON_SELECTOR);
 

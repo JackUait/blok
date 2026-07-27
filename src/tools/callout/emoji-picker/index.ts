@@ -2,7 +2,7 @@
 
 import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
 import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
-import { onHover } from '../../../components/utils/tooltip';
+import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';
 import {
@@ -244,6 +244,14 @@ export class EmojiPicker {
     this._open = false;
     this._positionTracker?.detach();
     this._positionTracker = null;
+
+    /**
+     * Every control in here owns a hover tooltip on the shared singleton.
+     * Hiding the root takes their layout boxes away, so the bubble has to go
+     * with them — otherwise it outlives the picker anchored to an element
+     * that no longer renders.
+     */
+    hideTooltip();
     this._element.hidden = true;
     document.removeEventListener('keydown', this._onDocumentKeydown, true);
     this.closeSkinTonePopover();

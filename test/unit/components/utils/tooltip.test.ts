@@ -1250,4 +1250,67 @@ describe('Tooltip utility', () => {
 
     hide();
   });
+
+  /**
+   * Regression: picking an emoji in the callout picker parked the tooltip in
+   * the viewport's top-left corner. `EmojiPicker.close()` hides its root
+   * (`hidden = true`), so every emoji button inside it loses its layout box.
+   * A reveal that lands at/after that moment measured an all-zero rect, and
+   * `applyPlacement`'s viewport clamp turned the resulting negative `left`
+   * into `left: 0; top: 10` — a bubble stuck in the corner instead of no
+   * bubble at all. An anchor with no layout box can't be pointed at, so the
+   * tooltip must decline rather than guess coordinates.
+   */
+  it('declines to anchor to a trigger that has no layout box', () => {
+    const target = createTargetElement();
+
+    show(target, 'visible anchor');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper).toHaveAttribute('data-blok-shown', 'true');
+
+    // The picker that owns this trigger just hid itself.
+    const hiddenTarget = createTargetElement();
+
+    hiddenTarget.checkVisibility = vi.fn(() => false);
+
+    show(hiddenTarget, 'hidden anchor');
+
+    expect(wrapper).toHaveAttribute('data-blok-shown', 'false');
+    expect(wrapper?.style.left).not.toBe('0px');
+  });
+
+  it('declines to anchor to a trigger detached from the document', () => {
+    const target = createTargetElement();
+
+    show(target, 'visible anchor');
+
+    const wrapper = getTooltipWrapper();
+
+    expect(wrapper).toHaveAttribute('data-blok-shown', 'true');
+
+    const detached = createTargetElement();
+
+    detached.remove();
+
+    show(detached, 'detached anchor');
+
+    expect(wrapper).toHaveAttribute('data-blok-shown', 'false');
+  });
+
+  it('drops a delayed reveal whose trigger lost its layout box while the delay ran', () => {
+    vi.useFakeTimers();
+
+    const target = createTargetElement();
+
+    show(target, 'delayed', { delay: 100 });
+
+    // The owning surface closes before the delay elapses.
+    target.checkVisibility = vi.fn(() => false);
+
+    vi.advanceTimersByTime(100);
+
+    expect(getTooltipWrapper()).toHaveAttribute('data-blok-shown', 'false');
+  });
 });

@@ -232,6 +232,20 @@ class Tooltip {
     }
 
     /**
+     * A trigger with no layout box cannot be pointed at. Its
+     * `getBoundingClientRect()` is all zeros, which placement math turns into
+     * a negative `left` that {@link applyPlacement}'s viewport clamp rounds
+     * up to the top-left corner — a bubble parked in the corner instead of no
+     * bubble at all. Bail out (and dismiss anything currently open) instead of
+     * guessing coordinates.
+     */
+    if (!this.canAnchorTo(element)) {
+      this.hide();
+
+      return;
+    }
+
+    /**
      * A new show supersedes any pending grace hide from a previous trigger's
      * exit. Without this, the stale grace timer fires during a delayed show
      * and hide() clears the pending showing timeout — the new tooltip never
@@ -313,6 +327,18 @@ class Tooltip {
          * Clear the timeout reference after execution to maintain correct state.
          */
         this.showingTimeout = null;
+
+        /**
+         * The surface owning the trigger may have closed while the delay ran,
+         * which would reveal the bubble at coordinates measured against an
+         * element that is no longer on screen.
+         */
+        if (!this.canAnchorTo(element)) {
+          this.hide();
+
+          return;
+        }
+
         this.reveal();
       }, showingOptions.delay);
 
@@ -320,6 +346,28 @@ class Tooltip {
     }
 
     this.reveal();
+  }
+
+  /**
+   * Whether `element` can serve as a placement anchor: it has to be in the
+   * document AND actually rendered. `checkVisibility()` is the exact test —
+   * it reports `false` for `display: none` subtrees, which is what hiding a
+   * container (e.g. the emoji picker's `hidden = true`) does to every control
+   * inside it. Environments without the API (jsdom) fall back to the
+   * connectivity check alone.
+   * @param {HTMLElement} element - candidate placement anchor
+   * @returns {boolean} true when the tooltip may be positioned against it
+   */
+  private canAnchorTo(element: HTMLElement): boolean {
+    if (!element.isConnected) {
+      return false;
+    }
+
+    if (typeof element.checkVisibility !== 'function') {
+      return true;
+    }
+
+    return element.checkVisibility();
   }
 
   /**

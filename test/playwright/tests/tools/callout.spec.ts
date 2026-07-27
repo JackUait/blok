@@ -90,6 +90,32 @@ test('selects emoji from picker and updates button', async ({ page }) => {
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText(emojiChar ?? '');
 });
 
+/**
+ * Regression: the hover tooltip on an emoji button outlived the picker.
+ * `close()` hides the picker root, which takes the layout box away from every
+ * button inside it, so a reveal landing at/after that moment measured an
+ * all-zero rect and the viewport clamp parked the bubble at `left: 0; top: 10`
+ * — a label flashing in the screen's top-left corner after every pick.
+ */
+test('leaves no tooltip parked in the corner after picking an emoji', async ({ page }) => {
+  await createBlok(page, createCalloutData());
+  await page.getByTestId('callout-emoji-btn').click();
+  await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
+
+  const targetEmoji = page.locator('[data-emoji-native="👉"]');
+
+  await targetEmoji.hover();
+
+  const tooltip = page.getByTestId('tooltip');
+
+  await expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
+
+  await targetEmoji.click();
+
+  await expect(tooltip).toHaveAttribute('data-blok-shown', 'false');
+  expect(await tooltip.evaluate((el) => el.style.left)).not.toBe('0px');
+});
+
 test('removes emoji via Remove button', async ({ page }) => {
   await createBlok(page, createCalloutData({ emoji: '💡' }));
   await page.getByTestId('callout-emoji-btn').click();

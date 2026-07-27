@@ -6,6 +6,7 @@ import type { Block } from '../../../block';
 import { DATA_ATTR, createSelector } from '../../../constants';
 import { DRAG_CONFIG } from '../utils/drag.constants';
 import { getBlockNestingDepth, getListItemDepth } from '../utils/depthUtils';
+import { deepestLegalStructuralDepth } from '../utils/structuralParent';
 import { resolveTargetDepth, selectPointerDepth } from '../../../../tools/list/depth-validator';
 import { INDENT_PER_LEVEL } from '../../../../tools/list/constants';
 
@@ -942,7 +943,7 @@ export class DropTargetDetector {
       ? selectPointerDepth(clientX, this.ui.contentRect.left, INDENT_PER_LEVEL)
       : undefined;
 
-    return resolveTargetDepth({
+    const resolvedDepth = resolveTargetDepth({
       currentDepth: sourceDepth,
       previousIsListItem: previousIsNestingContext,
       previousDepth: prevDepthValue,
@@ -954,6 +955,76 @@ export class DropTargetDetector {
       // under any preceding block.
       previousExists: true,
     });
+
+    return this.clampToApplicableDepth(resolvedDepth, dropIndex, sourceBlock);
+  }
+
+  /**
+   * Caps a previewed depth at the deepest one the drop can actually apply.
+   *
+   * A non-list block realises its depth ONLY by becoming a structural child, and
+   * the drop refuses to parent it under anything but a list item. Without this
+   * cap the indicator tucked itself one indent step in whenever the cursor moved
+   * right — promising a nesting the drop then declined, so the block silently
+   * landed at root. List items are exempt: they carry their own indent via the
+   * list tool's moved() hook, so their previewed depth is honest either way.
+   *
+   * @param depth - the depth resolved from the cursor / neighbours
+   * @param dropIndex - index of the slot the block is dropping into
+   * @param sourceBlock - the dragged block, when known
+   * @returns the depth to preview
+   */
+  private clampToApplicableDepth(depth: number, dropIndex: number, sourceBlock?: Block): number {
+    // No source (unit tests, the parity guard) leaves auto-resolution untouched.
+    if (depth <= 0 || sourceBlock === undefined || sourceBlock.name === 'list') {
+      return depth;
+    }
+
+    // Read the predecessors through getBlockByIndex — the same accessor the rest
+    // of calculateTargetDepth uses to reach its neighbours.
+    const preceding: Block[] = [];
+
+    for (let index = dropIndex - 1; index >= 0; index--) {
+      const block = this.blockManager.getBlockByIndex(index);
+
+      if (block !== undefined && !this.sourceBlocks.includes(block)) {
+        preceding.push(block);
+      }
+    }
+
+    // A block's ancestors always precede it, so every candidate's structural
+    // depth is derivable from this set alone.
+    const byId = new Map(preceding.map(block => [block.id, block]));
+    const candidates = preceding.map(block => ({
+      id: block.id,
+      isList: block.name === 'list',
+      depth: this.structuralDepthOf(block, byId),
+    }));
+
+    return deepestLegalStructuralDepth(false, depth, candidates);
+  }
+
+  /**
+   * Structural depth of a block — the length of its parentId chain, matching
+   * BlockManager.getBlockDepth (which the drop path reads). The `visited` guard
+   * mirrors it too, so a malformed parent cycle cannot hang the drag.
+   *
+   * @param block - block to measure
+   * @param byId - the preceding blocks keyed by id (contains every ancestor)
+   * @returns depth (0 for a root block)
+   */
+  private structuralDepthOf(block: Block, byId: Map<string, Block>): number {
+    const visited = new Set<string>([block.id]);
+    let depth = 0;
+    let parentId = block.parentId;
+
+    while (parentId != null && !visited.has(parentId)) {
+      visited.add(parentId);
+      depth += 1;
+      parentId = byId.get(parentId)?.parentId ?? null;
+    }
+
+    return depth;
   }
 
   /**

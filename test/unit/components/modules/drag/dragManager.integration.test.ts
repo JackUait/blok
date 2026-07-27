@@ -774,6 +774,9 @@ describe("DragManager - Component Integration", () => {
 
       // Source (blocks[0]) is a plain paragraph — it will nest, not stay at root.
       const listTarget = blocks[3];
+      // A real list item's tool name is what makes it a legal nesting parent for
+      // a non-list block; without it the drop would bail to root.
+      (listTarget as unknown as { name: string }).name = "list";
       listTarget.holder.setAttribute("data-list-depth", "1");
       const listContent = listTarget.holder.querySelector(
         "[data-blok-element-content]",

@@ -24,6 +24,7 @@ import { hasPassedThreshold } from './utils/drag.constants';
 import { findScrollableAncestor } from './utils/findScrollableAncestor';
 import { ListItemDescendants } from './utils/ListItemDescendants';
 import { getListItemDepth } from './utils/depthUtils';
+import { resolveStructuralParent } from './utils/structuralParent';
 import {
   hasLogicalSourceAncestor,
   isMoveTargetValid,
@@ -1073,13 +1074,10 @@ export class DragController extends Module {
    * nesting parent for the moved block. Returns null for a root-level drop
    * (depth 0) or when there is no suitable ancestor at this position.
    *
-   * Legal-parent rule (Notion parity): a list item may nest under ANY preceding
-   * block (a bullet nests under a preceding paragraph too); every OTHER block may
-   * nest only under a preceding LIST item — never under a plain paragraph or a
-   * (closed) toggle. Open containers are re-homed earlier by resolveParentForDrop,
-   * so they never reach here. This keeps cursor-authoritative (cap-and-hold) depth
-   * for list drags while stopping a paragraph/other block from silently nesting
-   * under a non-list predecessor it dropped beside.
+   * The rule itself lives in {@link resolveStructuralParent} so the drop
+   * indicator clamps to the SAME rule and can never preview an indent this
+   * refuses (see DropTargetDetector.calculateTargetDepth). Open containers are
+   * re-homed earlier by resolveParentForDrop, so they never reach here.
    * @param movedBlock - the block that was dropped
    * @param dropDepth - the visual depth the drop indicator showed
    * @param movingIds - ids of every block in the moving group (skipped as anchors)
@@ -1089,44 +1087,23 @@ export class DragController extends Module {
     dropDepth: number,
     movingIds: Set<string>
   ): string | null {
+    // A root drop needs no anchor — skip walking (and measuring) every predecessor.
     if (dropDepth <= 0) {
       return null;
     }
 
-    const movedIsList = movedBlock.name === 'list';
     const index = this.Blok.BlockManager.getBlockIndex(movedBlock);
-    const preceding = this.Blok.BlockManager.blocks.slice(0, index).reverse();
+    const preceding = this.Blok.BlockManager.blocks
+      .slice(0, index)
+      .reverse()
+      .filter(candidate => !movingIds.has(candidate.id))
+      .map(candidate => ({
+        id: candidate.id,
+        isList: candidate.name === 'list',
+        depth: this.Blok.BlockManager.getBlockDepth(candidate),
+      }));
 
-    for (const candidate of preceding) {
-      if (movingIds.has(candidate.id)) {
-        continue;
-      }
-
-      // A list item may nest under any block; any other block may nest only under
-      // a list item (paragraphs / closed toggles are not valid nesting parents).
-      const candidateIsList = candidate.name === 'list';
-      const isValidParent = movedIsList || candidateIsList;
-
-      const candidateDepth = this.Blok.BlockManager.getBlockDepth(candidate);
-
-      if (candidateDepth === dropDepth - 1) {
-        // Candidate sits exactly at the target parent depth: nest under it only
-        // when it is a legal parent, otherwise bail to root (never nest a
-        // non-list block under a plain paragraph or a closed toggle).
-        return isValidParent ? candidate.id : null;
-      }
-
-      // No ancestor at the exact target depth. A non-list block clamps onto the
-      // nearest shallower LIST item — flat list carriers are all structural
-      // depth 0, so this is the deepest reachable parent and matches the
-      // "nest from the bottom" preview. A list block (or a non-list block whose
-      // nearest predecessor is not a list) bails to root rather than over-nesting.
-      if (candidateDepth < dropDepth - 1) {
-        return !movedIsList && candidateIsList ? candidate.id : null;
-      }
-    }
-
-    return null;
+    return resolveStructuralParent(movedBlock.name === 'list', dropDepth, preceding);
   }
 
   /**

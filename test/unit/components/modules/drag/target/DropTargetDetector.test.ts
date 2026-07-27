@@ -772,13 +772,19 @@ describe('DropTargetDetector', () => {
       it('nests a non-list source one level under an already-indented non-list block', () => {
         // Generic nesting context: a paragraph indented to level 1 (via data-blok-indent,
         // not a list) is a valid parent, so a block dropped after it can nest to level 2.
+        // The indented paragraph is a child of a list item — that ancestor is what
+        // makes depth 1 reachable, since the drop parents a non-list block only
+        // under a list. Modelling it keeps the mock faithful to the real tree.
+        const parentItem = createMockListBlock('parent', 0);
         const previousBlock = createMockBlock('prev', 'paragraph');
         previousBlock.holder.setAttribute('data-blok-depth', '1');
+        (previousBlock as { parentId: string | null }).parentId = 'parent';
         const targetBlock = createMockBlock('target');
         const sourceBlock = createMockBlock('source', 'header'); // non-list, indent 0
 
         mockBlockManager.getBlockIndex = vi.fn(() => 1);
         mockBlockManager.getBlockByIndex = vi.fn((index) => {
+          if (index === 0) return parentItem;
           if (index === 1) return previousBlock;
 
           return undefined;

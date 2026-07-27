@@ -123,6 +123,21 @@ export const animateColumnWidths = (params: {
   const startGrows = computeStartGrows(startWidths, finalGrows);
   const container = holders[0].parentElement;
 
+  // The interpolation REFLOWS text: a column pinned near zero width wraps its
+  // content into a tall stack, so the row would balloon (measured 6x its settled
+  // height) and shove every block below it down and back over 200ms. Pin the row
+  // to the height it just settled at and clip the transient wrapping, so the
+  // widths animate inside a box of constant height. This also makes the row's
+  // final geometry readable RIGHT NOW — playSiblingShift measures the blocks
+  // below immediately after this call and would otherwise FLIP them against the
+  // ballooned layout.
+  const settledHeight = container?.getBoundingClientRect().height ?? 0;
+
+  if (container !== null && container !== undefined && settledHeight > 0) {
+    container.style.height = `${settledHeight}px`;
+    container.style.overflow = 'hidden';
+  }
+
   // Alias to a local so the forEach mutations don't trip no-param-reassign.
   const newColumn = newColumnHolder;
 
@@ -162,6 +177,8 @@ export const animateColumnWidths = (params: {
       el.style.flexGrow = String(finalGrows[index]);
     });
     newColumn?.style.removeProperty('opacity');
+    container?.style.removeProperty('height');
+    container?.style.removeProperty('overflow');
     container?.removeAttribute(COLUMN_DROP_ANIMATING_ATTR);
   });
 };

@@ -81,11 +81,9 @@ export const deepestLegalStructuralDepth = (
   desiredDepth: number,
   preceding: StructuralParentCandidate[]
 ): number => {
-  for (let depth = desiredDepth; depth > 0; depth--) {
-    if (resolveStructuralParent(movedIsList, depth, preceding) !== null) {
-      return depth;
-    }
-  }
+  // Depths from the desired one down to 1; the first that resolves wins.
+  const reachable = Array.from({ length: desiredDepth }, (_, offset) => desiredDepth - offset)
+    .find(depth => resolveStructuralParent(movedIsList, depth, preceding) !== null);
 
-  return 0;
+  return reachable ?? 0;
 };

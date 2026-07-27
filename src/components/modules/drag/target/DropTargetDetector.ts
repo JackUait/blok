@@ -981,16 +981,11 @@ export class DropTargetDetector {
     }
 
     // Read the predecessors through getBlockByIndex — the same accessor the rest
-    // of calculateTargetDepth uses to reach its neighbours.
-    const preceding: Block[] = [];
-
-    for (let index = dropIndex - 1; index >= 0; index--) {
-      const block = this.blockManager.getBlockByIndex(index);
-
-      if (block !== undefined && !this.sourceBlocks.includes(block)) {
-        preceding.push(block);
-      }
-    }
+    // of calculateTargetDepth uses to reach its neighbours. Nearest first.
+    const preceding = Array.from(
+      { length: dropIndex },
+      (_, offset) => this.blockManager.getBlockByIndex(dropIndex - 1 - offset)
+    ).filter((block): block is Block => block !== undefined && !this.sourceBlocks.includes(block));
 
     // A block's ancestors always precede it, so every candidate's structural
     // depth is derivable from this set alone.
@@ -1015,16 +1010,18 @@ export class DropTargetDetector {
    */
   private structuralDepthOf(block: Block, byId: Map<string, Block>): number {
     const visited = new Set<string>([block.id]);
-    let depth = 0;
-    let parentId = block.parentId;
 
-    while (parentId != null && !visited.has(parentId)) {
+    const walk = (parentId: string | null | undefined): number => {
+      if (parentId == null || visited.has(parentId)) {
+        return 0;
+      }
+
       visited.add(parentId);
-      depth += 1;
-      parentId = byId.get(parentId)?.parentId ?? null;
-    }
 
-    return depth;
+      return 1 + walk(byId.get(parentId)?.parentId ?? null);
+    };
+
+    return walk(block.parentId);
   }
 
   /**

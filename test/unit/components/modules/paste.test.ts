@@ -1974,12 +1974,16 @@ describe('Paste module', () => {
         '<p dir="ltr"><span>Intro</span></p>',
         '<div dir="ltr" align="left">',
         '<table><tbody>',
+        // Two rows per table: a lone-cell gdocs table is unwrapped as a layout
+        // callout box, so multi-row text-only tables keep these genuine tables.
         '<tr><td><p><span>T1 Cell</span></p></td></tr>',
+        '<tr><td><p><span>T1 Row 2</span></p></td></tr>',
         '</tbody></table></div>',
         '<p dir="ltr"><span>Middle</span></p>',
         '<div dir="ltr" align="left">',
         '<table><tbody>',
         '<tr><td><p><span>T2 Cell</span></p></td></tr>',
+        '<tr><td><p><span>T2 Row 2</span></p></td></tr>',
         '</tbody></table></div>',
         '</b>',
       ].join('');
@@ -1987,7 +1991,7 @@ describe('Paste module', () => {
       const dataTransfer = new MockDataTransfer(
         {
           'text/html': googleDocsHtml,
-          'text/plain': 'Intro\nT1 Cell\nMiddle\nT2 Cell',
+          'text/plain': 'Intro\nT1 Cell\nT1 Row 2\nMiddle\nT2 Cell\nT2 Row 2',
         },
         {} as FileList,
         ['text/html', 'text/plain']

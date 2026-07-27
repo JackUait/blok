@@ -54,7 +54,7 @@ const createMockAPI = (): API =>
     },
   }) as unknown as API;
 
-const createOptions = <T>(data: T): BlockToolConstructorOptions<T> => ({
+const createOptions = <T extends object>(data: T): BlockToolConstructorOptions<T> => ({
   data,
   config: {},
   api: createMockAPI(),
@@ -73,7 +73,7 @@ const createOptions = <T>(data: T): BlockToolConstructorOptions<T> => ({
 const TOOLS: Array<{
   name: string;
   load: () => Promise<new (options: BlockToolConstructorOptions<never>) => { render: () => HTMLElement }>;
-  data: unknown;
+  data: object;
 }> = [
   {
     name: 'paragraph',

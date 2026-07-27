@@ -118,7 +118,6 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'components/utils/link-hover-card.ts': 'Fixed top-layer hover card continuously tracks its live anchor and viewport bounds.',
   'components/utils/popover/anchored-position.ts': 'Shared coordinate-space engine and the only approved root anchored style writer.',
   'components/utils/popover/popover-desktop.ts': 'Shared root popover delegates boundary resolution and continuously tracks movement.',
-  'components/utils/popover/popover-inline.ts': 'Inline and nested popovers write offsets inside their own local positioned wrappers.',
   'components/utils/tooltip.ts': 'Fixed tooltip uses viewport coordinates and intentionally dismisses on capture-phase scroll.',
   'tools/callout/emoji-picker/index.ts': 'Fixed-backdrop picker continuously repositions from its live callout anchor.',
   'tools/database/database-card-drag.ts': 'Fixed pointer-following card ghost refreshes coordinates on every drag pointer move.',

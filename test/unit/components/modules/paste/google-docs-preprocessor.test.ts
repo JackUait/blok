@@ -429,7 +429,12 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts <p> boundaries to <br> inside table cells', () => {
-    const html = gdocs('<table><tr><td><p>line one</p><p>line two</p></td></tr></table>');
+    /**
+     * Multi-row text-only single-column tables stay tables (a lone-cell gdocs
+     * table is unwrapped as a layout callout box, so a second row keeps this
+     * fixture a genuine data table).
+     */
+    const html = gdocs('<table><tr><td><p>line one</p><p>line two</p></td></tr><tr><td><p>second row</p></td></tr></table>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<td>line one<br>line two</td>');
@@ -437,7 +442,7 @@ describe('preprocessGoogleDocsHtml', () => {
   });
 
   it('converts <p> boundaries to <br> inside <th> cells', () => {
-    const html = gdocs('<table><tr><th><p>header one</p><p>header two</p></th></tr></table>');
+    const html = gdocs('<table><tr><th><p>header one</p><p>header two</p></th></tr><tr><th><p>second row</p></th></tr></table>');
     const result = preprocessGoogleDocsHtml(html);
 
     expect(result).toContain('<th>header one<br>header two</th>');
@@ -590,6 +595,7 @@ describe('preprocessGoogleDocsHtml', () => {
       '<div dir="ltr" align="left">',
       '<table><tbody>',
       '<tr><td><p><span style="font-weight:700;">T1 Cell</span></p></td></tr>',
+      '<tr><td><p><span>T1 Second row</span></p></td></tr>',
       '</tbody></table></div>',
       '<h2 dir="ltr"><span>Middle section</span></h2>',
       '<p dir="ltr"><span>Text between tables</span></p>',

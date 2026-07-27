@@ -170,7 +170,7 @@ const getClassGroup = (className: string): string | null => {
   return null;
 };
 
-type ClassValue = string | string[] | undefined | null | false;
+type ClassValue = string | readonly string[] | undefined | null | false;
 
 /**
  * Processes a single class and adds it to the result maps
@@ -205,12 +205,12 @@ const flattenInputs = (inputs: ClassValue[]): string[] => {
       continue;
     }
 
-    if (Array.isArray(input)) {
-      strings.push(...input.filter(Boolean));
+    if (typeof input === 'string') {
+      strings.push(input);
       continue;
     }
 
-    strings.push(input);
+    strings.push(...input.filter(Boolean));
   }
 
   return strings;

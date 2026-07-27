@@ -2062,8 +2062,7 @@
 }
 
 [data-blok-slash-search], [data-blok-slash-search]:focus-visible {
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
 }
 
 [data-blok-table-cell] [data-blok-slash-search], [data-blok-table-cell] [data-blok-slash-search]:focus-visible {

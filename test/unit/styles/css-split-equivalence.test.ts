@@ -436,8 +436,17 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // why plain read-only keeps its gutter (in-place readOnly.set() flips
     // must not shift layout; the copy-link hover control lives there).
     // Bumps the multiplier to 1.412.
+    // 2026-07-27: slash-search caret sizing — slash-search.css re-keyed the
+    // pill to the input's own metrics (inline-block + explicit caret rules,
+    // ~0.7KB, landed in fix(toolbox) b2748749 without its ledger entry).
+    // Bumps the multiplier to 1.414.
+    // 2026-07-27: callout emoji swap animation — keyframes.css gained
+    // blok-callout-emoji-jump-in (spring landing with squash) and
+    // blok-callout-emoji-knock-out (old emoji tips over and falls) plus their
+    // doc comment (~0.9KB) for the picker swap choreography. Bumps the
+    // multiplier to 1.417.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.412);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.417);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

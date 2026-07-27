@@ -704,7 +704,11 @@ describe('CalloutTool', () => {
       const [onSelect] = customPicker.mock.calls[0] as [(emoji: string) => void];
 
       onSelect('🎉');
-      expect(emojiBtn.textContent).toBe('🎉');
+      // The displayed emoji lives in the face span; a transient knock-out
+      // ghost of the previous emoji may coexist in the button while animating
+      const face = emojiBtn.querySelector('[data-blok-testid="callout-emoji-face"]');
+
+      expect(face!.textContent).toBe('🎉');
     });
 
     it('opens built-in picker when config.emojiPicker is not provided', async () => {
@@ -751,7 +755,9 @@ describe('CalloutTool', () => {
       const [onSelect] = customPicker.mock.calls[0] as [(emoji: string) => void];
       onSelect('');
 
-      expect(emojiBtn.textContent).toBe('');
+      const face = emojiBtn.querySelector('[data-blok-testid="callout-emoji-face"]');
+
+      expect(face!.textContent).toBe('');
     });
   });
 });

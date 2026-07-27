@@ -28,6 +28,8 @@ import {
   EDIT_ICON_KEY,
   ADD_EMOJI_KEY,
   DEFAULT_EMOJI,
+  EMOJI_JUMP_IN_ANIMATION,
+  EMOJI_GHOST_STYLES,
 } from './constants';
 
 /**
@@ -399,17 +401,62 @@ export class CalloutTool implements BlockTool {
   }
 
   private setEmoji(native: string): void {
+    const previous = this._data.emoji;
+
     this._data.emoji = native;
 
     if (this._dom === null) {
       return;
     }
 
-    this._dom.emojiButton.textContent = native;
+    if (native !== previous) {
+      this.animateEmojiSwap(previous, native);
+    }
+
+    this._dom.emojiFace.textContent = native;
     this._dom.emojiButton.setAttribute(
       'aria-label',
       native !== '' ? native : this.api.i18n.t(ADD_EMOJI_KEY)
     );
+  }
+
+  /**
+   * The newly picked emoji jumps into the seat while the previous one gets
+   * knocked off it: a transient ghost of the old emoji tips over and falls,
+   * and the face (already holding the newcomer) plays a leap-and-land spring.
+   */
+  private animateEmojiSwap(previous: string, next: string): void {
+    if (this._dom === null || (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false)) {
+      return;
+    }
+
+    const { emojiButton, emojiFace } = this._dom;
+
+    // A rapid re-pick interrupts the running choreography — clear it first
+    emojiButton.querySelector('[data-blok-testid="callout-emoji-ghost"]')?.remove();
+    emojiFace.classList.remove(EMOJI_JUMP_IN_ANIMATION);
+    void emojiButton.offsetWidth; // reflow so re-adding the class restarts the animation
+
+    if (previous !== '') {
+      const ghost = document.createElement('span');
+
+      ghost.className = EMOJI_GHOST_STYLES;
+      ghost.textContent = previous;
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.setAttribute('data-blok-testid', 'callout-emoji-ghost');
+      ghost.addEventListener('animationend', () => ghost.remove(), { once: true });
+      ghost.addEventListener('animationcancel', () => ghost.remove(), { once: true });
+      emojiButton.appendChild(ghost);
+    }
+
+    if (next !== '') {
+      emojiFace.classList.add(EMOJI_JUMP_IN_ANIMATION);
+      emojiFace.addEventListener(
+        'animationend',
+        () => emojiFace.classList.remove(EMOJI_JUMP_IN_ANIMATION),
+        { once: true }
+      );
+    }
   }
 
   public static get toolbox(): ToolboxConfig {

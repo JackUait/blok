@@ -1064,7 +1064,7 @@ const editor = new Blok({
     saveDataShape: `interface AudioData {
   url: string;             // Audio source URL — http(s) or blob:
   caption?: string;        // Plain-text caption
-  captionVisible?: boolean; // Caption visible in the rendered state
+  captionVisible?: boolean; // Caption is opt-in — switch it on in block settings
   title?: string;          // Track title (from file metadata or edited)
   artist?: string;         // Track artist
   coverUrl?: string;       // Cover art image URL

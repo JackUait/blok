@@ -12,6 +12,11 @@ export type AudioAlignment = 'left' | 'center' | 'right';
 export interface AudioData extends BlockToolData {
   url: string;
   caption?: string;
+  /**
+   * Whether the caption row is shown. The caption is opt-in: with the flag
+   * absent the row appears only when `caption` already carries text (content
+   * saved before the caption became opt-in).
+   */
   captionVisible?: boolean;
   title?: string;
   artist?: string;

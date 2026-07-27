@@ -155,7 +155,7 @@ export class AudioTool implements BlockTool {
   public renderSettings(): MenuConfig {
     const i18n = this.api.i18n;
     const current: AudioAlignment = this.data.alignment ?? 'center';
-    const captionVisible = this.data.captionVisible !== false;
+    const captionVisible = this.isCaptionVisible();
     const alignments: { value: AudioAlignment; title: string; icon: string }[] = [
       { value: 'left', title: tr(i18n, 'tools.audio.alignmentLeft', 'Align left'), icon: IconAlignLeft },
       { value: 'center', title: tr(i18n, 'tools.audio.alignmentCenter', 'Align center'), icon: IconAlignCenter },
@@ -395,7 +395,7 @@ export class AudioTool implements BlockTool {
     const r = this.root;
     r.setAttribute('data-state', this.state.toLowerCase());
     r.setAttribute('data-align', this.data.alignment ?? 'center');
-    r.setAttribute('data-caption', this.data.captionVisible === false ? 'off' : 'on');
+    r.setAttribute('data-caption', this.isCaptionVisible() ? 'on' : 'off');
   }
 
   private renderState(): void {
@@ -502,8 +502,7 @@ export class AudioTool implements BlockTool {
     body.appendChild(this.controlsHandle.element);
 
     // Caption row — outside body, below the card
-    const captionVisible = this.data.captionVisible !== false;
-    if (captionVisible) {
+    if (this.isCaptionVisible()) {
       figure.appendChild(this.createCaptionRow());
     }
 
@@ -548,6 +547,16 @@ export class AudioTool implements BlockTool {
     return row;
   }
 
+  /**
+   * The caption is opt-in: a fresh player carries no `captionVisible` flag and
+   * shows no caption row until the setting is switched on. Content saved before
+   * the switch to opt-in has no flag either but does carry caption text — that
+   * text keeps its row so existing captions never silently disappear.
+   */
+  private isCaptionVisible(): boolean {
+    return this.data.captionVisible ?? Boolean(this.data.caption);
+  }
+
   private prefersReducedMotion(): boolean {
     return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   }
@@ -560,7 +569,7 @@ export class AudioTool implements BlockTool {
   }
 
   private toggleCaption(): void {
-    const enabling = this.data.captionVisible === false;
+    const enabling = !this.isCaptionVisible();
     this.data.captionVisible = enabling;
     // Removing the caption clears its text too, so re-enabling starts fresh
     // rather than resurrecting the old text.

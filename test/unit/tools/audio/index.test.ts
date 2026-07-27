@@ -420,7 +420,7 @@ describe('AudioTool', () => {
   });
 
   it('caption round-trip: blur on [data-role="audio-caption"] updates save().caption', () => {
-    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: '' }));
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: '', captionVisible: true }));
     const root = tool.render();
     const captionEl = root.querySelector<HTMLElement>('[data-role="audio-caption"]');
     expect(captionEl).not.toBeNull();
@@ -431,7 +431,7 @@ describe('AudioTool', () => {
 
   it('uses the localized caption placeholder when config does not override it', () => {
     const tool = new AudioTool({
-      ...opts({ url: 'https://x/y.mp3' }),
+      ...opts({ url: 'https://x/y.mp3', captionVisible: true }),
       api: createMockApi({ 'tools.audio.captionPlaceholder': 'Audiobeschriftung schreiben…' }),
     });
     const root = tool.render();
@@ -455,6 +455,38 @@ describe('AudioTool', () => {
     if (!target?.onActivate) throw new Error(`no activatable setting named ${name}`);
     target.onActivate();
   };
+
+  it('a fresh block renders no caption field until the setting is switched on', () => {
+    setReducedMotion(true);
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3' }));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="audio-caption-row"]')).toBeNull();
+    const settings = tool.renderSettings();
+    const flat = Array.isArray(settings) ? settings : [settings];
+    const captionItem = flat.find((it) => (it as { name?: string }).name === 'audio-caption') as { isActive?: boolean };
+    expect(captionItem.isActive).toBe(false);
+    expect(tool.save().captionVisible).toBeUndefined();
+  });
+
+  it('switching the Caption setting on adds the field and records the opt-in', () => {
+    setReducedMotion(true);
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3' }));
+    const root = tool.render();
+
+    activateSetting(tool, 'audio-caption');
+
+    expect(root.querySelector('[data-role="audio-caption"]')).not.toBeNull();
+    expect(tool.save().captionVisible).toBe(true);
+  });
+
+  it('keeps a caption saved before the opt-in switch visible without a flag', () => {
+    setReducedMotion(true);
+    const tool = new AudioTool(opts({ url: 'https://x/y.mp3', caption: 'Legacy words' }));
+    const root = tool.render();
+
+    expect(root.querySelector('[data-role="audio-caption"]')?.textContent).toBe('Legacy words');
+  });
 
   it('removing the caption hides the field in edit mode and clears the text', () => {
     setReducedMotion(true);

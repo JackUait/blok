@@ -97,6 +97,26 @@ function saveSkinTone(index: number): void {
 /** Dice SVG for the random button. */
 const ICON_DICE = IconDice;
 
+/**
+ * Warm the caches the picker blocks on when it opens.
+ *
+ * The emoji dataset is a lazy chunk of ~415KB (~57KB compressed), and `open()`
+ * awaits it. Fetching it at click time is nearly the whole of a slow first open:
+ * on a throttled 4G profile that open measured ~500ms, versus ~50ms once this
+ * has run. Both loaders are module-cached, so calling this on hover/focus of the
+ * trigger moves the transfer off the open path — and repeat calls are free.
+ *
+ * Fire-and-forget: a warm-up that fails must stay silent and let `open()` retry.
+ * @param locale - active editor locale, whose emoji annotations are warmed too
+ */
+export function prefetchEmojiPickerData(locale: string): void {
+  void loadEmojiData().catch(() => undefined);
+
+  if (locale !== 'en') {
+    void loadEmojiLocale(locale).catch(() => undefined);
+  }
+}
+
 export class EmojiPicker {
   private readonly onSelect: (native: string) => void;
   private readonly onRemove: () => void;
@@ -113,6 +133,13 @@ export class EmojiPicker {
   private _allEmojis: ProcessedEmoji[] = [];
   private _skinTone = 0;
   private _showingEmptyState = false;
+  /**
+   * Whether the body currently holds the complete, unfiltered grid. Rebuilding
+   * it costs ~40ms of element creation plus two forced layouts over ~1900
+   * nodes, and a reopen asks for the exact same markup — so when this is true
+   * the grid is reused as-is.
+   */
+  private _hasFullGrid = false;
 
   private _anchorEl: HTMLElement | null = null;
   private _previouslyFocused: HTMLElement | null = null;
@@ -193,8 +220,9 @@ export class EmojiPicker {
     this._element.setAttribute('data-theme', this.resolveTheme());
 
     const storedTone = loadSkinTone();
+    const toneChanged = storedTone !== this._skinTone;
 
-    if (storedTone !== this._skinTone) {
+    if (toneChanged) {
       this._skinTone = storedTone;
       this._skinToneToggle.textContent = SKIN_TONE_HANDS[storedTone];
 
@@ -215,7 +243,20 @@ export class EmojiPicker {
       }
     }
 
-    this.renderEmojiGrid(this._allEmojis);
+    if (this._hasFullGrid) {
+      // Identical markup to what a rebuild would produce — only the tone (which
+      // another picker instance may have changed) and the scroll offset drift.
+      if (toneChanged) {
+        this.applySkinToneToGrid();
+      }
+
+      this._nav.hidden = false;
+      this._body.scrollTop = 0;
+      requestAnimationFrame(() => this.updateActiveNav());
+    } else {
+      this.renderEmojiGrid(this._allEmojis);
+    }
+
     this.showBackdrop();
 
     // Unhide before positioning so getBoundingClientRect returns real dimensions
@@ -555,7 +596,11 @@ export class EmojiPicker {
       this.applySkinToneActiveStyle(btn, i === index);
     }
 
-    // Update all emoji buttons in-place (no re-render, preserves scroll)
+    this.applySkinToneToGrid();
+  }
+
+  /** Repaints every rendered emoji button at the current tone, preserving scroll. */
+  private applySkinToneToGrid(): void {
     const buttons = Array.from(this._body.querySelectorAll<HTMLButtonElement>('[data-emoji-native]'));
 
     for (const btn of buttons) {
@@ -692,6 +737,7 @@ export class EmojiPicker {
       this._body.innerHTML = '';
       this._sectionEls.clear();
       this._showingEmptyState = false;
+      this._hasFullGrid = false;
 
       const byCategory = groupEmojisByCategory(results);
 
@@ -746,6 +792,7 @@ export class EmojiPicker {
 
     this.buildCategoryNav(visibleCategories);
     this._nav.hidden = false;
+    this._hasFullGrid = true;
 
     // Set initial active nav after layout
     requestAnimationFrame(() => this.updateActiveNav());
@@ -755,6 +802,7 @@ export class EmojiPicker {
     this._body.innerHTML = '';
     this._showingEmptyState = true;
     this._sectionEls.clear();
+    this._hasFullGrid = false;
 
     const empty = document.createElement('div');
     empty.className = [

@@ -20,7 +20,7 @@ import { mountChildBlocks } from '../nested-blocks';
 import { createColorPicker, type ColorPickerHandle } from '../../components/shared/color-picker';
 import { colorVarName } from '../../components/shared/color-presets';
 import { mapToNearestPresetName } from '../../components/utils/color-mapping';
-import { EmojiPicker } from './emoji-picker';
+import { EmojiPicker, prefetchEmojiPickerData } from './emoji-picker';
 import { IconCallout, IconEmojiSmile, IconPaintRoller } from '../../components/icons';
 import {
   TOOL_NAME,
@@ -143,6 +143,35 @@ export class CalloutTool implements BlockTool {
     this.applyColors();
 
     if (!this.readOnly) {
+      /**
+       * Warm the emoji dataset ahead of the click. Fetching that chunk at click
+       * time is nearly the whole of a slow first open, so two signals start it
+       * early: landing on the trigger (a few hundred ms of runway) and simply
+       * editing this callout (seconds of it, and whoever is writing a callout is
+       * the person likely to reach for its icon).
+       *
+       * Skipped when a host supplies its own picker — that chunk is never used.
+       */
+      if (this._customEmojiPicker === undefined) {
+        const prefetch = (): void => prefetchEmojiPickerData(this.api.i18n.getLocale());
+
+        dom.emojiButton.addEventListener('pointerenter', prefetch);
+        dom.emojiButton.addEventListener('pointerdown', prefetch);
+        dom.emojiButton.addEventListener('focus', prefetch);
+
+        // Editing is a weaker signal than aiming at the button, so it yields to
+        // real work rather than competing with typing.
+        dom.wrapper.addEventListener('focusin', () => {
+          const idle = window.requestIdleCallback;
+
+          if (typeof idle === 'function') {
+            idle(() => prefetch());
+          } else {
+            setTimeout(prefetch, 0);
+          }
+        }, { once: true });
+      }
+
       dom.emojiButton.addEventListener('click', () => this.openEmojiPicker());
       dom.emojiButton.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {

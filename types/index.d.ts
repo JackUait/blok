@@ -551,19 +551,11 @@ export class Blok {
    */
   public static subscribeReady(listener: () => void): () => void;
 
-  public blocks: Blocks;
-  public caret: Caret;
-  public history: History;
-  public sanitizer: Sanitizer;
-  public saver: Saver;
-  public selection: Selection;
-  public styles: Styles;
-  public tools: Tools;
-  public toolbar: Toolbar;
-  public inlineToolbar: InlineToolbar;
-  public tooltip: Tooltip;
-  public readOnly: ReadOnly;
-  public theme: Theme;
+  /**
+   * Editor-level namespaces. Everything else (`blocks`, `caret`, `tools`,
+   * `uploader`, `marks`, …) comes from the merged `Blok extends Omit<API, …>`
+   * interface below — the instance inherits the whole API surface at runtime.
+   */
   public width: Width;
   public placeholder: Placeholder;
   public tokens: Tokens;
@@ -620,6 +612,22 @@ export class Blok {
    */
   public destroy(): void;
 }
+
+/**
+ * A Blok instance carries the entire {@link API} surface directly: `exportAPI()`
+ * sets the instance's prototype to the API methods object, so anything a tool
+ * reaches through `api.*` is also reachable as `editor.*` — `editor.uploader`,
+ * `editor.marks`, `editor.notifier`, `editor.rectangleSelection`, and so on.
+ *
+ * Declaration merging (rather than a hand-copied member list on the class) is
+ * what keeps the two in sync: a namespace added to `API` shows up here for free.
+ * `i18n` is excluded because the editor widens it to {@link EditorI18n} — the
+ * tool-facing `I18n` plus `update()`.
+ *
+ * These namespaces exist only once `isReady` resolves; before that, type the
+ * reference as {@link PendingBlok}.
+ */
+export interface Blok extends Omit<API, 'i18n'> {}
 
 export { Blok as EditorJS };
 export default Blok;

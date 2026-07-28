@@ -1613,14 +1613,20 @@ export class TableCellSelection {
   }
 
   /**
-   * Find a cell by coordinate attributes first, falling back to index-based
-   * lookup when coordinate attributes are not present.
+   * Find the cell occupying logical coordinate (row, col).
    *
-   * When both primary lookups fail (e.g. `col` points to a covered logical
-   * column that has no physical <td> of its own), scan all cells in the row
-   * and return the one whose colspan range covers `col`.  This handles the
-   * case where `expandRectToMergedSpans` has expanded the selection corner to
-   * a column that is spanned by an origin cell at a lower column index.
+   * A merge-covered coordinate has no <td> of its own — the cell that occupies
+   * it is the merge ORIGIN, which sits at a lower row and/or column. So when
+   * the exact-coordinate lookup misses, scan every cell for the one whose span
+   * RECTANGLE contains (row, col). The scan is grid-wide, not row-scoped: a
+   * coordinate covered by a rowspan lives in an earlier <tr> entirely.
+   *
+   * The physical-index fallback is reserved for grids that carry no coordinate
+   * attributes at all (legacy non-table grid elements). On a merge-touched
+   * grid a physical <td> index diverges from the logical column, so using it
+   * resolves a real but WRONG cell further right — which stretched the
+   * selection overlay across the columns beyond the merge instead of boxing
+   * just the merged cell.
    */
   private findCellByCoordOrIndex(
     rows: NodeListOf<Element>,
@@ -1635,23 +1641,20 @@ export class TableCellSelection {
       return coordCell;
     }
 
-    const indexCell = rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
+    const hasCoordAttrs = this.grid.querySelector(`[${CELL_ROW_ATTR}]`) !== null;
 
-    if (indexCell) {
-      return indexCell;
+    if (hasCoordAttrs) {
+      return Array.from(this.grid.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`)).find(cell => {
+        const cellRow = Number(cell.getAttribute(CELL_ROW_ATTR));
+        const cellCol = Number(cell.getAttribute(CELL_COL_ATTR));
+        const td = cell as HTMLTableCellElement;
+
+        return cellRow <= row && cellRow + (td.rowSpan || 1) - 1 >= row
+          && cellCol <= col && cellCol + (td.colSpan || 1) - 1 >= col;
+      });
     }
 
-    // Neither coord-based nor index-based lookup found a cell.  Walk all
-    // physical cells in the row to find one whose logical column range covers
-    // the requested column (origin cellCol <= col <= cellCol + colSpan - 1).
-    const rowCells = Array.from(rows[row]?.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`) ?? []);
-
-    return rowCells.find(cell => {
-      const cellCol = Number(cell.getAttribute(CELL_COL_ATTR));
-      const cellColSpan = (cell as HTMLTableCellElement).colSpan || 1;
-
-      return cellCol <= col && cellCol + cellColSpan - 1 >= col;
-    });
+    return rows[row]?.querySelectorAll(`[${CELL_ATTR}]`)[col] as HTMLElement | undefined;
   }
 
   /**

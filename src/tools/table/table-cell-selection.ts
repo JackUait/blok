@@ -208,6 +208,8 @@ interface CellSelectionOptions {
   onSplitCell?: (row: number, col: number) => void;
   /** Returns the colspan and rowspan of the cell at (row, col). Used to expand the selection rect to full merged-cell spans. */
   getCellSpan?: (row: number, col: number) => { colspan: number; rowspan: number };
+  /** Returns the origin of the merge covering (row, col), or null when the cell is not merged. Used to expand the rect UP/LEFT onto merge origins. */
+  getMergeOrigin?: (row: number, col: number) => [number, number] | null;
   /** Toggle an inline mark across every block of every selected cell, as one undo step. */
   onFormatCells?: (cells: HTMLElement[], mark: CellMark) => void;
   /** Fill the leftmost column right / the top row down across the selected rectangle, as one undo step. */
@@ -247,6 +249,7 @@ export class TableCellSelection {
   private isMergedCell: ((row: number, col: number) => boolean) | undefined;
   private onSplitCell: ((row: number, col: number) => void) | undefined;
   private getCellSpan: ((row: number, col: number) => { colspan: number; rowspan: number }) | undefined;
+  private getMergeOrigin: ((row: number, col: number) => [number, number] | null) | undefined;
   private onFormatCells: ((cells: HTMLElement[], mark: CellMark) => void) | undefined;
   private onFillCells: ((cells: HTMLElement[], range: SelectionRange, direction: FillDirection) => void) | undefined;
   private lastPaintedRange: SelectionRange | null = null;
@@ -293,6 +296,7 @@ export class TableCellSelection {
     this.isMergedCell = options.isMergedCell;
     this.onSplitCell = options.onSplitCell;
     this.getCellSpan = options.getCellSpan;
+    this.getMergeOrigin = options.getMergeOrigin;
     this.onFormatCells = options.onFormatCells;
     this.onFillCells = options.onFillCells;
     this.i18n = options.i18n;
@@ -1053,10 +1057,15 @@ export class TableCellSelection {
   }
 
   /**
-   * Expand a selection rect to fully include the spans of any merged cells
-   * whose origins fall within the rect. Iterates until the rect is stable,
-   * since pulling in a new merged cell may expose further cells that extend
-   * beyond the current boundary.
+   * Expand a selection rect to fully include every merge it touches. Iterates
+   * until the rect is stable, since pulling in a new merged cell may expose
+   * further cells that extend beyond the current boundary.
+   *
+   * A merge is pulled in from its ORIGIN outward, so the rect grows up and left
+   * as readily as down and right: a slot inside the rect can be covered by a
+   * merge that starts above or to the left of it, and leaving that merge half
+   * inside makes the rectangle unmergeable (canMergeCells refuses a partially
+   * overlapping merge) even though the merged cell is painted as selected.
    */
   private expandRectToMergedSpans(rect: SelectionRange): SelectionRange {
     if (!this.getCellSpan) {
@@ -1076,21 +1085,28 @@ export class TableCellSelection {
     const rows = Array.from({ length: rect.maxRow - rect.minRow + 1 }, (_, i) => rect.minRow + i);
     const cols = Array.from({ length: rect.maxCol - rect.minCol + 1 }, (_, i) => rect.minCol + i);
 
+    const getMergeOrigin = this.getMergeOrigin;
+
     const expanded = rows.reduce<SelectionRange>((acc, r) => {
       return cols.reduce<SelectionRange>((inner, c) => {
-        const { colspan, rowspan } = getCellSpan(r, c);
+        // Measure the merge from its origin: a covered slot reports a 1x1 span
+        // of its own and would otherwise leave its merge half outside the rect.
+        const [originRow, originCol] = getMergeOrigin?.(r, c) ?? [r, c];
+        const { colspan, rowspan } = getCellSpan(originRow, originCol);
 
         return {
-          minRow: inner.minRow,
-          maxRow: Math.max(inner.maxRow, r + rowspan - 1),
-          minCol: inner.minCol,
-          maxCol: Math.max(inner.maxCol, c + colspan - 1),
+          minRow: Math.min(inner.minRow, originRow),
+          maxRow: Math.max(inner.maxRow, originRow + rowspan - 1),
+          minCol: Math.min(inner.minCol, originCol),
+          maxCol: Math.max(inner.maxCol, originCol + colspan - 1),
         };
       }, acc);
     }, rect);
 
     const changed =
+      expanded.minRow !== rect.minRow ||
       expanded.maxRow !== rect.maxRow ||
+      expanded.minCol !== rect.minCol ||
       expanded.maxCol !== rect.maxCol;
 
     return changed ? this.expandRectStep(expanded) : expanded;

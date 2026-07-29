@@ -331,6 +331,92 @@ test.describe('Table merge and split', () => {
     expect(split[1][1].mergedInto).toBeUndefined();
   });
 
+  test('a selection that swallows an existing merged cell merges again', async ({ page }) => {
+    await createBlok(page, {
+      tools: defaultTools,
+      data: {
+        blocks: [{
+          type: 'table',
+          data: {
+            withHeadings: true,
+            content: [
+              ['Feature', 'Status', 'Notes'],
+              ['Grid rendering', 'Complete', 'Supports any size'],
+              ['Keyboard navigation', 'Complete', 'Tab and Enter keys'],
+              ['Paste support', 'Complete', 'HTML tables supported'],
+              ['Heading row', 'Complete', 'Toggle in settings'],
+            ],
+          },
+        }],
+      },
+    });
+    await expect(page.locator(TABLE_SELECTOR)).toBeVisible();
+
+    // Merge rows 1-3 x cols 0-1 first (the playground shape from the report).
+    await selectCells(page, 1, 0, 3, 1);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(6);
+    await openPill(page);
+    await page.getByText('Merge cells').click();
+    await expect(getCellAt(page, 1, 0)).toHaveAttribute('rowspan', '3');
+    await expect(page.locator('[data-blok-table-selection-pill]')).toHaveCount(0);
+
+    // Now select the heading row plus the existing merge and merge again.
+    const startBox = assertBoundingBox(await getCellAt(page, 0, 0).boundingBox(), 'cell [0,0]');
+    const endBox = assertBoundingBox(await getCellAt(page, 4, 1).boundingBox(), 'cell [4,1]');
+
+    await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 10 });
+    await page.mouse.up();
+
+    await openPill(page);
+    await page.getByText('Merge cells').click();
+
+    await expect(getCellAt(page, 0, 0)).toHaveAttribute('rowspan', '5');
+    await expect(getCellAt(page, 0, 0)).toHaveAttribute('colspan', '2');
+
+    const merged = await savedContent(page);
+
+    expect(merged[0][0].rowspan).toBe(5);
+    expect(merged[2][0].mergedInto).toEqual([0, 0]);
+    expect(merged[2][1].mergedInto).toEqual([0, 0]);
+  });
+
+  test('a selection whose merged cell STARTS to its left still offers Merge cells', async ({ page }) => {
+    // Regression: the painted rectangle is expanded to full merge spans only
+    // DOWN and RIGHT. A merge that begins in a column left of the selection
+    // keeps the rectangle partially overlapping it, canMergeCells() refuses,
+    // and the "Merge cells" item silently disappears — even though the merged
+    // cell is painted as selected.
+    await create3x3Table(page);
+
+    // Merge [1,0]-[1,1]: a one-row merge starting in column 0.
+    await selectCells(page, 1, 0, 1, 1);
+    await expect(page.locator('[data-blok-table-cell-selected]')).toHaveCount(2);
+    await openPill(page);
+    await page.getByText('Merge cells').click();
+    await expect(getCellAt(page, 1, 0)).toHaveAttribute('colspan', '2');
+    await expect(page.locator('[data-blok-table-selection-pill]')).toHaveCount(0);
+
+    // Select columns 1-2 across all rows. Row 1's column 1 is covered by the
+    // merge whose origin sits at column 0, outside the rectangle.
+    const startBox = assertBoundingBox(await getCellAt(page, 0, 1).boundingBox(), 'cell [0,1]');
+    const endBox = assertBoundingBox(await getCellAt(page, 2, 2).boundingBox(), 'cell [2,2]');
+
+    await page.mouse.move(startBox.x + startBox.width / 2, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(endBox.x + endBox.width / 2, endBox.y + endBox.height / 2, { steps: 10 });
+    await page.mouse.up();
+
+    await openPill(page);
+    await page.getByText('Merge cells').click();
+
+    // The rectangle grows left to swallow the merge origin, so the whole grid
+    // collapses into one cell.
+    await expect(getCellAt(page, 0, 0)).toHaveAttribute('colspan', '3');
+    await expect(getCellAt(page, 0, 0)).toHaveAttribute('rowspan', '3');
+  });
+
   test('every cell of a merged table stays editable and addressable after a split', async ({ page }) => {
     await create3x3Table(page);
     await mergeTopLeft2x2(page);

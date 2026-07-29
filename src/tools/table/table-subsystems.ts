@@ -1327,6 +1327,9 @@ export class TableSubsystems {
       getCellSpan: (row, col) => {
         return this.host.model.getCellSpan(row, col);
       },
+      getMergeOrigin: (row, col) => {
+        return this.host.model.getMergeOrigin(row, col);
+      },
       onFormatCells: (cells, mark) => {
         this.handleCellFormat(cells, mark);
       },

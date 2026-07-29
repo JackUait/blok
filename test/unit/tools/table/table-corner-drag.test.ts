@@ -1232,6 +1232,44 @@ describe('TableCornerDrag', () => {
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 298, pointerId: 1 }));
     });
 
+    it('keeps removing rows and scrolling up while the pointer sits at the top', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      /*
+       * The mirror of the downward case: the page is scrolled so the corner sits
+       * in the top band, and the pointer has run out of screen to drag further
+       * up with. Shrinking has to keep going and the page has to follow.
+       */
+      const { geo, scrollTop } = pageWithRows([30, 30, 30]);
+      const scrollBy = installPageScroll(scrollTop);
+
+      // Page scrolled down: the table's corner is 20px from the viewport top.
+      scrollTop(70);
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 18, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 4, pointerId: 1 }));
+
+      const removedByTheMove = options.onRemoveLastRow.mock.calls.length;
+
+      frames.run(20);
+
+      expect(options.onRemoveLastRow.mock.calls.length).toBe(removedByTheMove + 1);
+      expect(scrollBy.mock.calls.some(([, y]) => typeof y === 'number' && y < 0)).toBe(true);
+
+      frames.run(20);
+
+      expect(options.onRemoveLastRow.mock.calls.length).toBe(removedByTheMove + 3);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 4, pointerId: 1 }));
+    });
+
     it('does not auto-scroll while the corner is well above the viewport bottom', () => {
       const options = createDefaultOptions(wrapper, grid);
       const { geo, scrollTop } = pageWithRows([30, 30]);

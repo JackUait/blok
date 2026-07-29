@@ -53,6 +53,9 @@ const AUTO_SCROLL_COLUMN_INTERVAL = 200;
  */
 const AUTO_SCROLL_VIEWPORT_BAND = 24;
 
+/** Which way the page auto-scroll is running, if at all. */
+type VerticalAutoScroll = 'none' | 'down' | 'up';
+
 interface DragState {
   startX: number;
   startY: number;
@@ -72,11 +75,11 @@ interface DragState {
   /** Timestamp of the last column the auto-scroll appended; 0 before the first frame. */
   autoScrollGrewAt: number;
   /**
-   * Whether the downward auto-scroll is running. Sticky on purpose: its own
-   * reveal scroll parks the corner exactly on the arming threshold, so
-   * re-deriving this every frame let sub-pixel jitter cancel the loop.
+   * Which way the page auto-scroll is running. Sticky on purpose: its own reveal
+   * scroll parks the corner exactly on the arming threshold, so re-deriving this
+   * every frame let sub-pixel jitter cancel the loop.
    */
-  downArmed: boolean;
+  verticalArm: VerticalAutoScroll;
 }
 
 export class TableCornerDrag {
@@ -296,7 +299,7 @@ export class TableCornerDrag {
       pointerY: e.clientY,
       autoScrollFrame: null,
       autoScrollGrewAt: 0,
-      downArmed: false,
+      verticalArm: 'none',
     };
 
     this.updateTooltip();
@@ -361,7 +364,7 @@ export class TableCornerDrag {
 
     this.dragState.pointerX = e.clientX;
     this.dragState.pointerY = e.clientY;
-    this.updateDownArming();
+    this.updateVerticalArming();
 
     /*
      * Once the auto-scroll is armed it owns horizontal growth, so the pointer
@@ -375,9 +378,9 @@ export class TableCornerDrag {
     const targetRight = this.shouldAutoScrollRight()
       ? rect.right
       : e.clientX + this.dragState.grabOffsetX;
-    const targetBottom = this.shouldAutoScrollDown()
-      ? rect.bottom
-      : e.clientY + this.dragState.grabOffsetY;
+    const targetBottom = this.verticalAutoScroll() === 'none'
+      ? e.clientY + this.dragState.grabOffsetY
+      : rect.bottom;
 
     this.resizeToCorner(targetRight, targetBottom);
 
@@ -403,7 +406,7 @@ export class TableCornerDrag {
     }
 
     // Re-check after the walk: growing the table may have brought the corner down.
-    this.updateDownArming();
+    this.updateVerticalArming();
 
     if (!this.shouldAutoScroll()) {
       this.stopAutoScroll();
@@ -420,7 +423,7 @@ export class TableCornerDrag {
   }
 
   private shouldAutoScroll(): boolean {
-    return this.shouldAutoScrollRight() || this.shouldAutoScrollDown();
+    return this.shouldAutoScrollRight() || this.verticalAutoScroll() !== 'none';
   }
 
   private shouldAutoScrollRight(): boolean {
@@ -438,38 +441,74 @@ export class TableCornerDrag {
   }
 
   private shouldAutoScrollDown(): boolean {
-    return this.dragState !== null && this.dragState.didDrag && this.dragState.downArmed;
+    return this.verticalAutoScroll() === 'down';
+  }
+
+  private shouldAutoScrollUp(): boolean {
+    return this.verticalAutoScroll() === 'up';
+  }
+
+  /** One metered step for the vertical axis: down appends a row, up drops one. */
+  private meteredBottom(edge: DOMRect, down: boolean, up: boolean): number {
+    if (down) {
+      return edge.bottom + 1;
+    }
+
+    if (up) {
+      return edge.bottom - this.measureLastRowHeight() - 1;
+    }
+
+    return edge.bottom;
+  }
+
+  private verticalAutoScroll(): VerticalAutoScroll {
+    if (this.dragState === null || !this.dragState.didDrag) {
+      return 'none';
+    }
+
+    return this.dragState.verticalArm;
   }
 
   /**
    * Vertically the table is bounded by the page, not by its own scroller (which
-   * hides overflow-y), so this arms on the viewport and scrolls the window.
+   * hides overflow-y), so this arms on the viewport and scrolls the window. Both
+   * ends matter: the bottom band grows the table when the pointer runs out of
+   * screen, the top band keeps shrinking it in the mirrored case.
    *
-   * Arming needs the pointer AND the corner down in the band — a corner still
+   * Arming needs the pointer AND the corner inside the band — a corner still
    * mid-screen can be dragged to the pointer normally, and metering on top of
-   * that would grow the table without being asked. Staying armed needs only the
+   * that would resize the table without being asked. Staying armed needs only the
    * pointer, because the reveal scroll parks the corner right on the threshold:
    * measured in Chrome, a corner at 695.98 against a 696 limit cancelled the
    * loop after two rows.
    */
-  private updateDownArming(): void {
+  private updateVerticalArming(): void {
     const state = this.dragState;
 
     if (state === null || !state.didDrag) {
       return;
     }
 
-    const limit = window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND;
+    const lower = window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND;
+    const bottom = this.gridEl.getBoundingClientRect().bottom;
 
-    if (state.pointerY < limit) {
-      state.downArmed = false;
+    if (state.pointerY >= lower) {
+      if (state.verticalArm !== 'down') {
+        state.verticalArm = bottom >= lower ? 'down' : 'none';
+      }
 
       return;
     }
 
-    if (this.gridEl.getBoundingClientRect().bottom >= limit) {
-      state.downArmed = true;
+    if (state.pointerY <= AUTO_SCROLL_VIEWPORT_BAND) {
+      if (state.verticalArm !== 'up') {
+        state.verticalArm = bottom <= AUTO_SCROLL_VIEWPORT_BAND ? 'up' : 'none';
+      }
+
+      return;
     }
+
+    state.verticalArm = 'none';
   }
 
   private stopAutoScroll(): void {
@@ -485,7 +524,7 @@ export class TableCornerDrag {
     }
 
     state.autoScrollGrewAt = 0;
-    state.downArmed = false;
+    state.verticalArm = 'none';
   }
 
   private autoScrollTick(timestamp: number): void {
@@ -499,8 +538,9 @@ export class TableCornerDrag {
 
     const right = this.shouldAutoScrollRight();
     const down = this.shouldAutoScrollDown();
+    const up = this.shouldAutoScrollUp();
 
-    if (!right && !down) {
+    if (!right && !down && !up) {
       return;
     }
 
@@ -516,11 +556,12 @@ export class TableCornerDrag {
 
       /*
        * Any target past an edge appends exactly one row/column and settles;
-       * targeting the current edge on the other axis leaves it alone.
+       * targeting the current edge on the other axis leaves it alone. Shrinking
+       * has to clear the whole last row, which is what the removal rule asks for.
        */
       const edge = this.gridEl.getBoundingClientRect();
 
-      this.resizeToCorner(right ? edge.right + 1 : edge.right, down ? edge.bottom + 1 : edge.bottom);
+      this.resizeToCorner(right ? edge.right + 1 : edge.right, this.meteredBottom(edge, down, up));
     }
 
     // Scrolling stays per-frame even between columns, so the reveal is smooth.
@@ -536,6 +577,15 @@ export class TableCornerDrag {
       }
     }
 
+    if (up) {
+      // Negative: the corner has risen above the band, so bring the page back up.
+      const rise = this.gridEl.getBoundingClientRect().bottom - AUTO_SCROLL_VIEWPORT_BAND;
+
+      if (rise < 0) {
+        window.scrollBy(0, rise);
+      }
+    }
+
     /*
      * Re-anchor to the corner's new on-screen position. Without this the pointer
      * would owe back every pixel the auto-scroll travelled before it could
@@ -547,7 +597,7 @@ export class TableCornerDrag {
       state.grabOffsetX = parked.right - state.pointerX;
     }
 
-    if (down) {
+    if (down || up) {
       state.grabOffsetY = parked.bottom - state.pointerY;
     }
 

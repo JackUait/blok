@@ -316,6 +316,86 @@ test.describe('Table Corner Drag Handle', () => {
     expect(grownBottom).toBeLessThan(dy + lastRowHeight);
   });
 
+  /*
+   * The behaviours Notion documents for this handle, asserted directly:
+   *
+   *   "To add more rows and columns, drag the bottom-right corner of the table
+   *    outward diagonally. To add just columns, drag outward to the right and
+   *    drag towards the bottom to add just more rows."
+   *    — notion.com/help/columns-headings-and-dividers
+   *   "drag the bottom right corner of the table to add or remove rows and
+   *    columns at the same time"
+   *
+   * Pixel column widths keep the whole gesture inside the scroll container, so
+   * the auto-scroll never joins in and these test only the documented axes.
+   */
+  test('Corner drag right adds only columns, and down adds only rows', async ({ page }) => {
+    await createTableWithWidths(page, [['A', 'B', 'C'], ['D', 'E', 'F']], [120, 120, 120]);
+
+    const rows = page.locator(ROW_SELECTOR);
+    const columns = rows.nth(0).locator(CELL_SELECTOR);
+
+    expect(await rows.count()).toBe(2);
+    expect(await columns.count()).toBe(3);
+
+    const dragCornerBy = async (dx: number, dy: number): Promise<void> => {
+      const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + dx, y + dy, { steps: 5 });
+      await page.mouse.up();
+    };
+
+    await dragCornerBy(130, 0);
+
+    expect(await columns.count()).toBeGreaterThan(3);
+    expect(await rows.count()).toBe(2);
+
+    const columnsAfterHorizontal = await columns.count();
+
+    await dragCornerBy(0, 80);
+
+    expect(await rows.count()).toBeGreaterThan(2);
+    expect(await columns.count()).toBe(columnsAfterHorizontal);
+  });
+
+  test('Corner drag inward removes empty trailing rows and columns', async ({ page }) => {
+    /*
+     * Notion's inward drag removes rows and columns; Blok additionally refuses to
+     * discard content, so `canRemoveLast*` gates on the trailing row/column being
+     * empty. That is the over-dragged case this walks back, and a table with text
+     * in the last column keeps it (verified: dragging inward over 'C'/'F'/'I'
+     * removed nothing).
+     */
+    await createTableWithWidths(
+      page,
+      [['A', 'B', ''], ['D', 'E', ''], ['', '', '']],
+      [120, 120, 120]
+    );
+
+    const rows = page.locator(ROW_SELECTOR);
+    const columns = rows.nth(0).locator(CELL_SELECTOR);
+
+    expect(await rows.count()).toBe(3);
+    expect(await columns.count()).toBe(3);
+
+    const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // Back past the last column's own width and the last row's own height.
+    await page.mouse.move(x - 130, y - 40, { steps: 5 });
+    await page.mouse.up();
+
+    expect(await columns.count()).toBe(2);
+    expect(await rows.count()).toBe(2);
+  });
+
   test('Corner drag auto-scrolls and keeps growing at the container edge', async ({ page }) => {
     /*
      * 20 columns hit the fluid-mode per-column minimum, so the grid is wider

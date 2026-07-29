@@ -279,6 +279,42 @@ test.describe('Table Corner Drag Handle', () => {
     expect(grownBottom).toBeLessThan(dy + lastRowHeight);
   });
 
+  test('Corner drag auto-scrolls and keeps growing at the container edge', async ({ page }) => {
+    /*
+     * 20 columns hit the fluid-mode per-column minimum, so the grid is wider
+     * than its scroll container and its corner is clipped to the visible edge.
+     * Holding the drag there must scroll the container and keep appending —
+     * without it the gesture dead-ends at the edge.
+     */
+    await createTable(page, [
+      Array.from({ length: 20 }, (_, i) => `H${i}`),
+      Array.from({ length: 20 }, (_, i) => `C${i}`),
+    ]);
+
+    const scrollContainer = page.locator('[data-blok-table-scroll]');
+    const containerBox = assertBoundingBox(await scrollContainer.boundingBox(), 'Scroll container');
+    const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);
+    const cornerBox = assertBoundingBox(await cornerHandle.boundingBox(), 'Corner handle');
+
+    const columns = page.locator(ROW_SELECTOR).nth(0).locator(CELL_SELECTOR);
+    const startY = cornerBox.y + cornerBox.height / 2;
+
+    await page.mouse.move(cornerBox.x + cornerBox.width / 2, startY);
+    await page.mouse.down();
+    // Park just inside the container's right edge and hold there.
+    await page.mouse.move(containerBox.x + containerBox.width - 4, startY, { steps: 5 });
+
+    const parked = await columns.count();
+
+    await expect.poll(() => columns.count(), { timeout: 5_000 }).toBeGreaterThan(parked);
+
+    const scrolled = await scrollContainer.evaluate(el => el.scrollLeft);
+
+    expect(scrolled).toBeGreaterThan(0);
+
+    await page.mouse.up();
+  });
+
   test('Scroll container has overflow classes during corner drag column addition', async ({ page }) => {
     // Regression: corner drag's onAddColumn did not enable scroll overflow,
     // causing the grid to overflow unclipped and the hit zone to appear

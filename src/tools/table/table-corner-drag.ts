@@ -29,6 +29,12 @@ const CORNER_OFFSET = 16;
  */
 const MAX_STEPS_PER_MOVE = 200;
 
+/** How close to the scroll container's right edge arms the auto-scroll, in px. */
+const AUTO_SCROLL_BAND = 24;
+
+/** How fast a table parked at that edge keeps growing, in px per millisecond. */
+const AUTO_SCROLL_SPEED = 0.25;
+
 interface DragState {
   startX: number;
   startY: number;
@@ -41,6 +47,14 @@ interface DragState {
   grabOffsetY: number;
   pointerId: number;
   didDrag: boolean;
+  /** Last seen pointer position — the auto-scroll runs without new events. */
+  pointerX: number;
+  pointerY: number;
+  autoScrollFrame: number | null;
+  /** Timestamp of the previous auto-scroll frame; 0 before the first one. */
+  autoScrollAt: number;
+  /** Width the auto-scroll has asked for but no column has covered yet, in px. */
+  pendingGrowth: number;
 }
 
 export class TableCornerDrag {
@@ -256,6 +270,11 @@ export class TableCornerDrag {
       grabOffsetY: gridRect.bottom - e.clientY,
       pointerId: e.pointerId,
       didDrag: false,
+      pointerX: e.clientX,
+      pointerY: e.clientY,
+      autoScrollFrame: null,
+      autoScrollAt: 0,
+      pendingGrowth: 0,
     };
 
     this.updateTooltip();
@@ -282,6 +301,7 @@ export class TableCornerDrag {
 
     const { didDrag, pointerId } = this.dragState;
 
+    this.stopAutoScroll();
     this.dragState = null;
     hideTooltip();
     this.hitZone.releasePointerCapture(pointerId);
@@ -317,6 +337,9 @@ export class TableCornerDrag {
       this.onDragStart();
     }
 
+    this.dragState.pointerX = e.clientX;
+    this.dragState.pointerY = e.clientY;
+
     this.resizeToCorner(
       e.clientX + this.dragState.grabOffsetX,
       e.clientY + this.dragState.grabOffsetY
@@ -325,6 +348,111 @@ export class TableCornerDrag {
     this.updateTooltip();
     // Rows/columns just committed changed the grid's extent; follow it.
     this.syncPosition();
+    this.updateAutoScroll();
+  }
+
+  /**
+   * Notion keeps extending a table that has run out of visible room: hold the
+   * corner against the scroll container's right edge and it scrolls, appending
+   * columns as it goes.
+   *
+   * Armed only once the grid actually overflows the container. While it still
+   * fits, the geometry walk above can reach the pointer on its own, and growing
+   * on top of that would run away from it.
+   */
+  private updateAutoScroll(): void {
+    if (this.dragState === null) {
+      return;
+    }
+
+    if (!this.shouldAutoScroll()) {
+      this.stopAutoScroll();
+
+      return;
+    }
+
+    if (this.dragState.autoScrollFrame !== null) {
+      return;
+    }
+
+    this.dragState.autoScrollAt = 0;
+    this.dragState.autoScrollFrame = requestAnimationFrame(timestamp => { this.autoScrollTick(timestamp); });
+  }
+
+  private shouldAutoScroll(): boolean {
+    const sc = this.scrollContainer;
+
+    if (sc === null || this.dragState === null || !this.dragState.didDrag) {
+      return false;
+    }
+
+    if (sc.scrollWidth <= sc.clientWidth + 1) {
+      return false;
+    }
+
+    return this.dragState.pointerX >= sc.getBoundingClientRect().right - AUTO_SCROLL_BAND;
+  }
+
+  private stopAutoScroll(): void {
+    const state = this.dragState;
+
+    if (state === null) {
+      return;
+    }
+
+    if (state.autoScrollFrame !== null) {
+      cancelAnimationFrame(state.autoScrollFrame);
+      state.autoScrollFrame = null;
+    }
+
+    state.autoScrollAt = 0;
+    state.pendingGrowth = 0;
+  }
+
+  private autoScrollTick(timestamp: number): void {
+    const state = this.dragState;
+    const sc = this.scrollContainer;
+
+    if (state === null || sc === null) {
+      return;
+    }
+
+    state.autoScrollFrame = null;
+
+    if (!this.shouldAutoScroll()) {
+      return;
+    }
+
+    // The first frame only establishes the clock, so the rate is independent of
+    // the display's refresh interval.
+    const elapsed = state.autoScrollAt === 0 ? 0 : timestamp - state.autoScrollAt;
+
+    state.autoScrollAt = timestamp;
+    state.pendingGrowth += elapsed * AUTO_SCROLL_SPEED;
+
+    const before = this.gridEl.getBoundingClientRect();
+
+    this.resizeToCorner(before.right + state.pendingGrowth, state.pointerY + state.grabOffsetY);
+
+    // Only width that materialised pays the debt down: a fraction of a column
+    // carries over to the next frame instead of appending one per frame.
+    const grown = this.gridEl.getBoundingClientRect().right - before.right;
+
+    state.pendingGrowth = Math.max(0, state.pendingGrowth - grown);
+
+    sc.scrollLeft = sc.scrollWidth;
+
+    /*
+     * Re-anchor to the corner's new on-screen position. Without this the pointer
+     * would owe back every pixel the auto-scroll travelled before it could
+     * shrink anything — dragging away from the edge would do nothing.
+     */
+    state.grabOffsetX = this.gridEl.getBoundingClientRect().right - state.pointerX;
+
+    this.syncPosition();
+    this.updateTooltip();
+
+    state.autoScrollFrame = requestAnimationFrame(next => { this.autoScrollTick(next); });
   }
 
   /**
@@ -425,6 +553,7 @@ export class TableCornerDrag {
 
     const { didDrag, pointerId } = this.dragState;
 
+    this.stopAutoScroll();
     this.dragState = null;
     hideTooltip();
     this.hitZone.releasePointerCapture(pointerId);
@@ -476,6 +605,7 @@ export class TableCornerDrag {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
+    this.stopAutoScroll();
     this.dragState = null;
     hideTooltip();
     this.hitZone.remove();

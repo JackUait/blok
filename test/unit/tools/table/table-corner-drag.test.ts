@@ -673,4 +673,36 @@ describe('TableCornerDrag', () => {
       expect(hitZone.style.left).toBe('784px');
     });
   });
+
+  describe('corner grip visual', () => {
+    it('renders a grip that is hidden at rest and revealed on proximity', () => {
+      cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
+
+      const grip = wrapper.querySelector('[data-blok-testid="table-corner-grip"]');
+
+      if (!(grip instanceof HTMLElement)) {
+        throw new Error('grip not rendered');
+      }
+
+      expect(grip.classList.contains('opacity-0')).toBe(true);
+
+      cornerDrag.setProximity(true);
+      expect(grip.classList.contains('opacity-0')).toBe(false);
+
+      cornerDrag.setProximity(false);
+      expect(grip.classList.contains('opacity-0')).toBe(true);
+    });
+
+    it('keeps the grip non-interactive so the hit zone owns the gesture', () => {
+      cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
+
+      const grip = wrapper.querySelector('[data-blok-testid="table-corner-grip"]');
+
+      if (!(grip instanceof HTMLElement)) {
+        throw new Error('grip not rendered');
+      }
+
+      expect(grip.style.pointerEvents).toBe('none');
+    });
+  });
 });

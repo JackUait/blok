@@ -500,11 +500,17 @@ export class TableSubsystems {
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
       },
+      /*
+       * Notion's corner drag removes rows and columns whatever they hold, and the
+       * whole gesture is a single undo entry. Gating on emptiness meant walking a
+       * drag back over typed cells did nothing at all, which is the common case
+       * after over-dragging. The floor stays at 1x1.
+       */
       canRemoveLastRow: () => {
-        return this.host.model.rows > 1 && isRowEmpty(gridEl, this.host.model.rows - 1);
+        return this.host.model.rows > 1;
       },
       canRemoveLastColumn: () => {
-        return this.host.model.cols > 1 && isColumnEmpty(gridEl, this.host.model.cols - 1);
+        return this.host.model.cols > 1;
       },
       onClickAdd: () => {
         this.host.runTransactedStructuralOp(() => {

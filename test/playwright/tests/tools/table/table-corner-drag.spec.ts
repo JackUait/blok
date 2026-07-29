@@ -362,17 +362,17 @@ test.describe('Table Corner Drag Handle', () => {
     expect(await columns.count()).toBe(columnsAfterHorizontal);
   });
 
-  test('Corner drag inward removes empty trailing rows and columns', async ({ page }) => {
+  test('Corner drag inward removes rows and columns, content included', async ({ page }) => {
     /*
-     * Notion's inward drag removes rows and columns; Blok additionally refuses to
-     * discard content, so `canRemoveLast*` gates on the trailing row/column being
-     * empty. That is the over-dragged case this walks back, and a table with text
-     * in the last column keeps it (verified: dragging inward over 'C'/'F'/'I'
-     * removed nothing).
+     * Every cell here holds text: Notion's inward drag removes rows and columns
+     * regardless, and the gesture is one undo entry. This is the assertion that
+     * caught Blok's old emptiness gate, under which dragging back over typed
+     * cells did nothing — a unit test cannot see it, because a mocked block API
+     * leaves the cells textually empty either way.
      */
     await createTableWithWidths(
       page,
-      [['A', 'B', ''], ['D', 'E', ''], ['', '', '']],
+      [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
       [120, 120, 120]
     );
 
@@ -394,6 +394,39 @@ test.describe('Table Corner Drag Handle', () => {
 
     expect(await columns.count()).toBe(2);
     expect(await rows.count()).toBe(2);
+  });
+
+  test('One undo restores everything an inward drag removed', async ({ page }) => {
+    // The safety net that makes a content-removing drag acceptable.
+    await createTableWithWidths(
+      page,
+      [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
+      [120, 120, 120]
+    );
+
+    const rows = page.locator(ROW_SELECTOR);
+    const columns = rows.nth(0).locator(CELL_SELECTOR);
+    const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 130, y - 40, { steps: 5 });
+    await page.mouse.up();
+
+    expect(await columns.count()).toBe(2);
+    expect(await rows.count()).toBe(2);
+    await expect(page.getByText('I')).toBeHidden();
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout
+    await page.waitForTimeout(YJS_CAPTURE_TIMEOUT);
+    await page.locator(CELL_SELECTOR).first().click();
+    await page.keyboard.press(UNDO_SHORTCUT);
+
+    await expect.poll(() => rows.count()).toBe(3);
+    expect(await columns.count()).toBe(3);
+    await expect(page.getByText('I')).toBeVisible();
   });
 
   test('Corner drag auto-scrolls and keeps growing at the container edge', async ({ page }) => {

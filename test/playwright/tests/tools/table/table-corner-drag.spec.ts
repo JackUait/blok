@@ -352,6 +352,46 @@ test.describe('Table Corner Drag Handle', () => {
     await page.mouse.up();
   });
 
+  test('Corner drag scrolls the page while held at the viewport bottom', async ({ page }) => {
+    /*
+     * Rows are bounded by the page, not by the table's own scroller (which hides
+     * overflow-y), so running out of room downward has to scroll the window.
+     */
+    // Short enough that the corner starts on screen, so the drag can reach it.
+    await createTable(page, Array.from({ length: 6 }, (_, r) => [`A${r}`, `B${r}`]));
+
+    const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);
+    const cornerBox = assertBoundingBox(await cornerHandle.boundingBox(), 'Corner handle');
+    const viewport = page.viewportSize();
+
+    if (viewport === null) {
+      throw new Error('viewport size unavailable');
+    }
+
+    const rows = page.locator(ROW_SELECTOR);
+    const startX = cornerBox.x + cornerBox.width / 2;
+
+    await page.mouse.move(startX, cornerBox.y + cornerBox.height / 2);
+    await page.mouse.down();
+    // Drag to the very bottom of the viewport and hold there.
+    await page.mouse.move(startX, viewport.height - 2, { steps: 5 });
+
+    /*
+     * Everything up to here is the corner tracking the pointer. What the
+     * auto-scroll adds is growth that continues while the pointer sits still,
+     * plus the page scrolling to keep the corner in view.
+     */
+    const settled = await rows.count();
+
+    await expect.poll(() => rows.count(), { timeout: 5_000 }).toBeGreaterThan(settled);
+
+    const scrolled = await page.evaluate(() => window.scrollY);
+
+    expect(scrolled).toBeGreaterThan(0);
+
+    await page.mouse.up();
+  });
+
   test('Scroll container has overflow classes during corner drag column addition', async ({ page }) => {
     // Regression: corner drag's onAddColumn did not enable scroll overflow,
     // causing the grid to overflow unclipped and the hit zone to appear

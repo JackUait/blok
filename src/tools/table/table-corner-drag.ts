@@ -46,6 +46,13 @@ const AUTO_SCROLL_OVERSHOOT = 0;
  */
 const AUTO_SCROLL_COLUMN_INTERVAL = 200;
 
+/**
+ * How close to the viewport's lower edge counts as having run out of screen.
+ * Rows are never clipped the way columns are, so the vertical trigger is the
+ * pointer running out of room to drag with rather than the corner being hidden.
+ */
+const AUTO_SCROLL_VIEWPORT_BAND = 24;
+
 interface DragState {
   startX: number;
   startY: number;
@@ -64,6 +71,12 @@ interface DragState {
   autoScrollFrame: number | null;
   /** Timestamp of the last column the auto-scroll appended; 0 before the first frame. */
   autoScrollGrewAt: number;
+  /**
+   * Whether the downward auto-scroll is running. Sticky on purpose: its own
+   * reveal scroll parks the corner exactly on the arming threshold, so
+   * re-deriving this every frame let sub-pixel jitter cancel the loop.
+   */
+  downArmed: boolean;
 }
 
 export class TableCornerDrag {
@@ -283,6 +296,7 @@ export class TableCornerDrag {
       pointerY: e.clientY,
       autoScrollFrame: null,
       autoScrollGrewAt: 0,
+      downArmed: false,
     };
 
     this.updateTooltip();
@@ -347,6 +361,7 @@ export class TableCornerDrag {
 
     this.dragState.pointerX = e.clientX;
     this.dragState.pointerY = e.clientY;
+    this.updateDownArming();
 
     /*
      * Once the auto-scroll is armed it owns horizontal growth, so the pointer
@@ -356,11 +371,15 @@ export class TableCornerDrag {
      * grew the table 1751px). Targeting the current edge leaves columns alone —
      * neither the grow nor the shrink branch fires.
      */
-    const targetRight = this.shouldAutoScroll()
-      ? this.gridEl.getBoundingClientRect().right
+    const rect = this.gridEl.getBoundingClientRect();
+    const targetRight = this.shouldAutoScrollRight()
+      ? rect.right
       : e.clientX + this.dragState.grabOffsetX;
+    const targetBottom = this.shouldAutoScrollDown()
+      ? rect.bottom
+      : e.clientY + this.dragState.grabOffsetY;
 
-    this.resizeToCorner(targetRight, e.clientY + this.dragState.grabOffsetY);
+    this.resizeToCorner(targetRight, targetBottom);
 
     this.updateTooltip();
     // Rows/columns just committed changed the grid's extent; follow it.
@@ -383,6 +402,9 @@ export class TableCornerDrag {
       return;
     }
 
+    // Re-check after the walk: growing the table may have brought the corner down.
+    this.updateDownArming();
+
     if (!this.shouldAutoScroll()) {
       this.stopAutoScroll();
 
@@ -398,6 +420,10 @@ export class TableCornerDrag {
   }
 
   private shouldAutoScroll(): boolean {
+    return this.shouldAutoScrollRight() || this.shouldAutoScrollDown();
+  }
+
+  private shouldAutoScrollRight(): boolean {
     const sc = this.scrollContainer;
 
     if (sc === null || this.dragState === null || !this.dragState.didDrag) {
@@ -409,6 +435,41 @@ export class TableCornerDrag {
     }
 
     return this.dragState.pointerX > sc.getBoundingClientRect().right + AUTO_SCROLL_OVERSHOOT;
+  }
+
+  private shouldAutoScrollDown(): boolean {
+    return this.dragState !== null && this.dragState.didDrag && this.dragState.downArmed;
+  }
+
+  /**
+   * Vertically the table is bounded by the page, not by its own scroller (which
+   * hides overflow-y), so this arms on the viewport and scrolls the window.
+   *
+   * Arming needs the pointer AND the corner down in the band — a corner still
+   * mid-screen can be dragged to the pointer normally, and metering on top of
+   * that would grow the table without being asked. Staying armed needs only the
+   * pointer, because the reveal scroll parks the corner right on the threshold:
+   * measured in Chrome, a corner at 695.98 against a 696 limit cancelled the
+   * loop after two rows.
+   */
+  private updateDownArming(): void {
+    const state = this.dragState;
+
+    if (state === null || !state.didDrag) {
+      return;
+    }
+
+    const limit = window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND;
+
+    if (state.pointerY < limit) {
+      state.downArmed = false;
+
+      return;
+    }
+
+    if (this.gridEl.getBoundingClientRect().bottom >= limit) {
+      state.downArmed = true;
+    }
   }
 
   private stopAutoScroll(): void {
@@ -424,19 +485,22 @@ export class TableCornerDrag {
     }
 
     state.autoScrollGrewAt = 0;
+    state.downArmed = false;
   }
 
   private autoScrollTick(timestamp: number): void {
     const state = this.dragState;
-    const sc = this.scrollContainer;
 
-    if (state === null || sc === null) {
+    if (state === null) {
       return;
     }
 
     state.autoScrollFrame = null;
 
-    if (!this.shouldAutoScroll()) {
+    const right = this.shouldAutoScrollRight();
+    const down = this.shouldAutoScrollDown();
+
+    if (!right && !down) {
       return;
     }
 
@@ -450,21 +514,42 @@ export class TableCornerDrag {
     } else if (timestamp - state.autoScrollGrewAt >= AUTO_SCROLL_COLUMN_INTERVAL) {
       state.autoScrollGrewAt = timestamp;
 
-      // Any target past the edge appends exactly one column, then settles.
-      const edge = this.gridEl.getBoundingClientRect().right;
+      /*
+       * Any target past an edge appends exactly one row/column and settles;
+       * targeting the current edge on the other axis leaves it alone.
+       */
+      const edge = this.gridEl.getBoundingClientRect();
 
-      this.resizeToCorner(edge + 1, state.pointerY + state.grabOffsetY);
+      this.resizeToCorner(right ? edge.right + 1 : edge.right, down ? edge.bottom + 1 : edge.bottom);
     }
 
     // Scrolling stays per-frame even between columns, so the reveal is smooth.
-    sc.scrollLeft = sc.scrollWidth;
+    if (right && this.scrollContainer !== null) {
+      this.scrollContainer.scrollLeft = this.scrollContainer.scrollWidth;
+    }
+
+    if (down) {
+      const overshoot = this.gridEl.getBoundingClientRect().bottom - (window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND);
+
+      if (overshoot > 0) {
+        window.scrollBy(0, overshoot);
+      }
+    }
 
     /*
      * Re-anchor to the corner's new on-screen position. Without this the pointer
      * would owe back every pixel the auto-scroll travelled before it could
      * shrink anything — dragging away from the edge would do nothing.
      */
-    state.grabOffsetX = this.gridEl.getBoundingClientRect().right - state.pointerX;
+    const parked = this.gridEl.getBoundingClientRect();
+
+    if (right) {
+      state.grabOffsetX = parked.right - state.pointerX;
+    }
+
+    if (down) {
+      state.grabOffsetY = parked.bottom - state.pointerY;
+    }
 
     this.syncPosition();
     this.updateTooltip();

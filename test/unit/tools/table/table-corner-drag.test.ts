@@ -1100,6 +1100,167 @@ describe('TableCornerDrag', () => {
     });
   });
 
+  describe('auto-scroll past the viewport bottom', () => {
+    const VIEWPORT_HEIGHT = 300;
+    const realViewportHeight = window.innerHeight;
+
+    // defineProperty outlives restoreAllMocks, so put the viewport back by hand.
+    afterEach(() => {
+      Object.defineProperty(window, 'innerHeight', { value: realViewportHeight,
+        configurable: true });
+    });
+
+    /**
+     * A page whose geometry owns its own scroll offset, so scrolling can be fed
+     * back into the stubbed rects without writing through a parameter.
+     */
+    const pageWithRows = (rowHeights: number[]): { geo: Geometry; scrollTop: (by: number) => void } => {
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100],
+        rowHeights };
+
+      return { geo,
+        // Scrolling the page down moves content up.
+        scrollTop: (by: number): void => {
+          geo.top -= by;
+        } };
+    };
+
+    const installPageScroll = (scrollTop: (by: number) => void): ReturnType<typeof vi.fn> => {
+      Object.defineProperty(window, 'innerHeight', { value: VIEWPORT_HEIGHT,
+        configurable: true });
+
+      return vi.spyOn(window, 'scrollBy').mockImplementation((_x?: unknown, y?: unknown): void => {
+        scrollTop(typeof y === 'number' ? y : 0);
+      });
+    };
+
+    const captureFrames = (): { run: (frames: number) => void } => {
+      const queue: FrameRequestCallback[] = [];
+      let now = 1000;
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback): number => {
+        queue.push(cb);
+
+        return queue.length;
+      });
+      vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((): void => {
+        queue.length = 0;
+      });
+
+      return {
+        run: (frames: number): void => {
+          for (let i = 0; i < frames; i++) {
+            const cb = queue.shift();
+
+            if (cb === undefined) {
+              return;
+            }
+            now += 16;
+            cb(now);
+          }
+        },
+      };
+    };
+
+    it('keeps appending rows and scrolling the page while the pointer sits at the bottom', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      // Bottom lands at y=290, just inside a 300px viewport.
+      const { geo, scrollTop } = pageWithRows([30, 30, 30, 30, 30, 30, 30, 30, 30, 20]);
+      const scrollBy = installPageScroll(scrollTop);
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      // Corner is at y=290; drag it down to the very bottom of the viewport.
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 285, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 298, pointerId: 1 }));
+
+      const addedByTheMove = options.onAddRow.mock.calls.length;
+
+      // Metered at one row per 200ms, same clock as the columns.
+      frames.run(20);
+
+      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 1);
+      expect(scrollBy).toHaveBeenCalled();
+
+      frames.run(20);
+
+      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 3);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 298, pointerId: 1 }));
+    });
+
+    it('survives a reveal scroll that lands the corner a hair above the band', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const { geo, scrollTop } = pageWithRows([30, 30, 30, 30, 30, 30, 30, 30, 30, 20]);
+      /*
+       * Real browsers do not land on the threshold exactly — measured in Chrome,
+       * the reveal left the corner at 695.98 against a 696 limit. Over-scrolling
+       * by half a pixel reproduces that: re-deriving armed-ness every frame
+       * cancels the loop after the first row or two.
+       */
+      const scrollBy = installPageScroll(by => { scrollTop(by + 0.5); });
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 285, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 298, pointerId: 1 }));
+
+      const addedByTheMove = options.onAddRow.mock.calls.length;
+
+      frames.run(60);
+
+      expect(scrollBy).toHaveBeenCalled();
+      // ~960ms of holding: four metered rows, none of them lost to a self-cancel.
+      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 4);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 298, pointerId: 1 }));
+    });
+
+    it('does not auto-scroll while the corner is well above the viewport bottom', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const { geo, scrollTop } = pageWithRows([30, 30]);
+      const scrollBy = installPageScroll(scrollTop);
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      // Drag down, but both corner and pointer stay far from the viewport edge.
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 200, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 120, pointerId: 1 }));
+
+      const addedByTheMove = options.onAddRow.mock.calls.length;
+
+      frames.run(20);
+
+      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove);
+      expect(scrollBy).not.toHaveBeenCalled();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 120, pointerId: 1 }));
+    });
+  });
+
   describe('corner grip visual', () => {
     it('renders a grip that is hidden at rest and revealed on proximity', () => {
       cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));

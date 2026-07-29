@@ -75,6 +75,20 @@ const CORE_TO_REACT: Record<keyof Blocks, Classification> = {
   insertInsideParent: { kind: 'exposed' },
   transact: { kind: 'exposed' },
   transactWithoutCapture: { kind: 'exposed' },
+  // The gesture-spanning twins of transact(). Unlike transact(fn), which cannot
+  // be left open, these are a manually balanced pair: a missed endTransaction
+  // leaves the undo group open for the rest of the session. They exist for
+  // pointer gestures inside tools (table corner/edge drags), where the mutation
+  // spans many pointermove events and no synchronous function can wrap it.
+  // App code wanting one undo entry should use the safe transact(fn).
+  beginTransaction: {
+    kind: 'internal',
+    reason: 'manually balanced undo-group primitive for pointer gestures; app code uses the self-closing transact(fn)',
+  },
+  endTransaction: {
+    kind: 'internal',
+    reason: 'closing half of beginTransaction; app code uses the self-closing transact(fn)',
+  },
   setPointerDragActive: {
     kind: 'internal',
     reason: 'pointer-drag suppression flag; owned by DragManager, not app code',

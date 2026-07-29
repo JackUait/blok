@@ -20,6 +20,7 @@ import type { TableModel } from './table-model';
 import {
   applyPixelWidths,
   computeHalfAvgWidth,
+  computeAvgWidth,
   enableScrollOverflow,
   getCellPosition,
   isColumnEmpty,
@@ -420,13 +421,17 @@ export class TableSubsystems {
       onAddColumn: () => {
         this.host.runStructuralOp(() => {
           const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
-          const halfWidth = this.host.model.initialColWidth !== undefined
-            ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
-            : computeHalfAvgWidth(colWidths);
-          const newWidths = [...colWidths, halfWidth];
+          /*
+           * Notion's corner drag lays down ordinary columns, so this gesture uses
+           * the table's own column width rather than the `initialColWidth / 2`
+           * the insert-column paths use — at half width the table needed two
+           * columns' worth of travel to advance one column.
+           */
+          const width = this.host.model.initialColWidth ?? computeAvgWidth(colWidths);
+          const newWidths = [...colWidths, width];
 
-          this.host.grid.addColumn(gridEl, undefined, colWidths, halfWidth);
-          this.host.model.addColumn(undefined, halfWidth);
+          this.host.grid.addColumn(gridEl, undefined, colWidths, width);
+          this.host.model.addColumn(undefined, width);
           this.host.model.setColWidths(newWidths);
           applyPixelWidths(gridEl, newWidths);
           enableScrollOverflow(this.host.ensureScrollContainer());

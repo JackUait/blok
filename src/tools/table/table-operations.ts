@@ -265,6 +265,15 @@ export const computeHalfAvgWidth = (colWidths: number[]): number =>
     (colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length / 2) * 100
   ) / 100;
 
+/**
+ * Mean column width. Used where a new column should look like the ones already
+ * there — the corner drag — rather than the half width the insert paths use.
+ */
+export const computeAvgWidth = (colWidths: number[]): number =>
+  colWidths.length === 0
+    ? 0
+    : Math.round((colWidths.reduce((sum, w) => sum + w, 0) / colWidths.length) * 100) / 100;
+
 export const computeInitialColWidth = (colWidths: number[]): number => {
   if (colWidths.length === 0) {
     return 0;

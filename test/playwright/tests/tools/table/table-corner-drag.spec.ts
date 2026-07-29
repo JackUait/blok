@@ -154,6 +154,32 @@ const createTable = async (
 };
 
 /**
+ * A pixel-width table. Without explicit widths a table fills its container, so
+ * its corner starts pinned to that container's right edge.
+ */
+const createTableWithWidths = async (
+  page: Page,
+  content: string[][],
+  colWidths: number[]
+): Promise<void> => {
+  await createBlok(page, {
+    tools: defaultTools,
+    data: {
+      blocks: [
+        {
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content,
+            colWidths,
+          },
+        },
+      ],
+    },
+  });
+};
+
+/**
  * Click the corner drag handle using the mouse API directly.
  * The handle is positioned at bottom: -36px, right: -36px from the table wrapper,
  * and may be obscured by other overlays (e.g. toolbar tooltip), so we use
@@ -230,11 +256,22 @@ test.describe('Table Corner Drag Handle', () => {
      * Rows and columns keep being appended until the edge reaches the dragged
      * point and no further — so the overshoot is under one row/column, whatever
      * the sizes of the ones that got added.
+     *
+     * Growth is measured as the grid's own width/height, not its on-screen
+     * position: a table dragged past its scroll container gets scrolled to keep
+     * the corner in view, which pins the visible right edge to that container.
+     *
+     * Explicit column widths keep the grid narrower than its container, so the
+     * whole gesture stays inside it and the auto-scroll never arms — this test is
+     * about the corner tracking the pointer, which is a different contract.
      */
-    await createTable(page, [['A', 'B'], ['C', 'D']]);
+    await createTableWithWidths(page, [['A', 'B'], ['C', 'D']], [120, 120]);
 
     const grid = page.locator(`${GRID_SELECTOR}`);
-    const gridBefore = assertBoundingBox(await grid.boundingBox(), 'Grid');
+    const sizeOf = (): Promise<{ width: number; height: number }> =>
+      grid.evaluate(el => ({ width: el.getBoundingClientRect().width,
+        height: el.getBoundingClientRect().height }));
+    const gridBefore = await sizeOf();
 
     const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);
     const cornerBox = assertBoundingBox(await cornerHandle.boundingBox(), 'Corner handle');
@@ -257,7 +294,7 @@ test.describe('Table Corner Drag Handle', () => {
 
     expect(await firstRowCells.count()).toBeGreaterThan(2);
 
-    const gridAfter = assertBoundingBox(await grid.boundingBox(), 'Grid');
+    const gridAfter = await sizeOf();
     const { lastColumnWidth, lastRowHeight } = await page.evaluate(() => {
       const rowEls = document.querySelectorAll('[data-blok-table-row]');
       const lastRow = rowEls[rowEls.length - 1] as HTMLElement;
@@ -270,8 +307,8 @@ test.describe('Table Corner Drag Handle', () => {
       };
     });
 
-    const grownRight = gridAfter.x + gridAfter.width - (gridBefore.x + gridBefore.width);
-    const grownBottom = gridAfter.y + gridAfter.height - (gridBefore.y + gridBefore.height);
+    const grownRight = gridAfter.width - gridBefore.width;
+    const grownBottom = gridAfter.height - gridBefore.height;
 
     expect(grownRight).toBeGreaterThanOrEqual(dx - 1);
     expect(grownRight).toBeLessThan(dx + lastColumnWidth);
@@ -301,8 +338,8 @@ test.describe('Table Corner Drag Handle', () => {
 
     await page.mouse.move(cornerBox.x + cornerBox.width / 2, startY);
     await page.mouse.down();
-    // Park just inside the container's right edge and hold there.
-    await page.mouse.move(containerBox.x + containerBox.width - 4, startY, { steps: 5 });
+    // Park past the container's right edge — inside it the corner needs no help.
+    await page.mouse.move(containerBox.x + containerBox.width + 8, startY, { steps: 5 });
 
     const parked = await columns.count();
 

@@ -29,11 +29,22 @@ const CORNER_OFFSET = 16;
  */
 const MAX_STEPS_PER_MOVE = 200;
 
-/** How close to the scroll container's right edge arms the auto-scroll, in px. */
-const AUTO_SCROLL_BAND = 24;
+/**
+ * How far past the scroll container's right edge the pointer must be to arm the
+ * auto-scroll. Kept at 0: while the pointer is still inside the container the
+ * corner can be dragged normally, and growing on top of that would move the
+ * table without the user asking.
+ */
+const AUTO_SCROLL_OVERSHOOT = 0;
 
-/** How fast a table parked at that edge keeps growing, in px per millisecond. */
-const AUTO_SCROLL_SPEED = 0.25;
+/**
+ * How long a table parked past that edge waits between appended columns.
+ *
+ * Growth has to be throttled in whole columns, not pixels per frame: asking the
+ * geometry walk to grow by a fraction of a column still appends a whole one, so
+ * a px/ms budget appended one per frame (~3600px/s) instead of metering them.
+ */
+const AUTO_SCROLL_COLUMN_INTERVAL = 200;
 
 interface DragState {
   startX: number;
@@ -51,10 +62,8 @@ interface DragState {
   pointerX: number;
   pointerY: number;
   autoScrollFrame: number | null;
-  /** Timestamp of the previous auto-scroll frame; 0 before the first one. */
-  autoScrollAt: number;
-  /** Width the auto-scroll has asked for but no column has covered yet, in px. */
-  pendingGrowth: number;
+  /** Timestamp of the last column the auto-scroll appended; 0 before the first frame. */
+  autoScrollGrewAt: number;
 }
 
 export class TableCornerDrag {
@@ -273,8 +282,7 @@ export class TableCornerDrag {
       pointerX: e.clientX,
       pointerY: e.clientY,
       autoScrollFrame: null,
-      autoScrollAt: 0,
-      pendingGrowth: 0,
+      autoScrollGrewAt: 0,
     };
 
     this.updateTooltip();
@@ -340,10 +348,19 @@ export class TableCornerDrag {
     this.dragState.pointerX = e.clientX;
     this.dragState.pointerY = e.clientY;
 
-    this.resizeToCorner(
-      e.clientX + this.dragState.grabOffsetX,
-      e.clientY + this.dragState.grabOffsetY
-    );
+    /*
+     * Once the auto-scroll is armed it owns horizontal growth, so the pointer
+     * must stop driving it: each frame re-anchors the grab offset to the corner
+     * the scroll just parked at the container edge, which would otherwise make
+     * every further pixel of travel worth a whole column (measured: a 180px drag
+     * grew the table 1751px). Targeting the current edge leaves columns alone —
+     * neither the grow nor the shrink branch fires.
+     */
+    const targetRight = this.shouldAutoScroll()
+      ? this.gridEl.getBoundingClientRect().right
+      : e.clientX + this.dragState.grabOffsetX;
+
+    this.resizeToCorner(targetRight, e.clientY + this.dragState.grabOffsetY);
 
     this.updateTooltip();
     // Rows/columns just committed changed the grid's extent; follow it.
@@ -352,13 +369,14 @@ export class TableCornerDrag {
   }
 
   /**
-   * Notion keeps extending a table that has run out of visible room: hold the
-   * corner against the scroll container's right edge and it scrolls, appending
-   * columns as it goes.
+   * Notion keeps extending a table that has run out of visible room: drag the
+   * corner past the scroll container's right edge and it scrolls to keep the
+   * corner in view, appending columns for as long as the pointer is held there.
    *
-   * Armed only once the grid actually overflows the container. While it still
-   * fits, the geometry walk above can reach the pointer on its own, and growing
-   * on top of that would run away from it.
+   * Two conditions, both required. The pointer must be outside the container —
+   * inside it the geometry walk reaches the corner unaided, and scrolling then
+   * would move the table without being asked. And the grid must actually
+   * overflow, or there is nothing to scroll into view.
    */
   private updateAutoScroll(): void {
     if (this.dragState === null) {
@@ -375,7 +393,7 @@ export class TableCornerDrag {
       return;
     }
 
-    this.dragState.autoScrollAt = 0;
+    this.dragState.autoScrollGrewAt = 0;
     this.dragState.autoScrollFrame = requestAnimationFrame(timestamp => { this.autoScrollTick(timestamp); });
   }
 
@@ -390,7 +408,7 @@ export class TableCornerDrag {
       return false;
     }
 
-    return this.dragState.pointerX >= sc.getBoundingClientRect().right - AUTO_SCROLL_BAND;
+    return this.dragState.pointerX > sc.getBoundingClientRect().right + AUTO_SCROLL_OVERSHOOT;
   }
 
   private stopAutoScroll(): void {
@@ -405,8 +423,7 @@ export class TableCornerDrag {
       state.autoScrollFrame = null;
     }
 
-    state.autoScrollAt = 0;
-    state.pendingGrowth = 0;
+    state.autoScrollGrewAt = 0;
   }
 
   private autoScrollTick(timestamp: number): void {
@@ -423,23 +440,23 @@ export class TableCornerDrag {
       return;
     }
 
-    // The first frame only establishes the clock, so the rate is independent of
-    // the display's refresh interval.
-    const elapsed = state.autoScrollAt === 0 ? 0 : timestamp - state.autoScrollAt;
+    /*
+     * The first frame only starts the clock — holding briefly (a drag that ends
+     * just past the edge) must not append anything. Growth is metered off the
+     * frame timestamp, so the rate does not follow the display's refresh rate.
+     */
+    if (state.autoScrollGrewAt === 0) {
+      state.autoScrollGrewAt = timestamp;
+    } else if (timestamp - state.autoScrollGrewAt >= AUTO_SCROLL_COLUMN_INTERVAL) {
+      state.autoScrollGrewAt = timestamp;
 
-    state.autoScrollAt = timestamp;
-    state.pendingGrowth += elapsed * AUTO_SCROLL_SPEED;
+      // Any target past the edge appends exactly one column, then settles.
+      const edge = this.gridEl.getBoundingClientRect().right;
 
-    const before = this.gridEl.getBoundingClientRect();
+      this.resizeToCorner(edge + 1, state.pointerY + state.grabOffsetY);
+    }
 
-    this.resizeToCorner(before.right + state.pendingGrowth, state.pointerY + state.grabOffsetY);
-
-    // Only width that materialised pays the debt down: a fraction of a column
-    // carries over to the next frame instead of appending one per frame.
-    const grown = this.gridEl.getBoundingClientRect().right - before.right;
-
-    state.pendingGrowth = Math.max(0, state.pendingGrowth - grown);
-
+    // Scrolling stays per-frame even between columns, so the reveal is smooth.
     sc.scrollLeft = sc.scrollWidth;
 
     /*

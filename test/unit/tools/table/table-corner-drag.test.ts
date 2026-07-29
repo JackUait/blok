@@ -921,10 +921,10 @@ describe('TableCornerDrag', () => {
       };
     };
 
-    /** Drag the handle up to the container's visible right edge (400) and hold. */
+    /** Drag the handle out past the container's visible right edge (400) and hold. */
     const startEdgeDrag = (hitZone: HTMLElement): void => {
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 380, clientY: 60, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 395, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 405, clientY: 60, pointerId: 1 }));
     };
 
     it('keeps appending columns and scrolling while the pointer sits at the edge', () => {
@@ -946,13 +946,21 @@ describe('TableCornerDrag', () => {
 
       const addedByTheMove = options.onAddColumn.mock.calls.length;
 
-      // ~320ms parked at the edge: enough travel for at least one 60px column.
+      /*
+       * Columns are metered one per 200ms, so 16ms frames buy exactly one by
+       * 320ms and three by 640ms. Pinning the count both ways is what catches a
+       * throttle that appends per frame instead of per interval.
+       */
       frames.run(20);
 
-      expect(options.onAddColumn.mock.calls.length).toBeGreaterThan(addedByTheMove);
+      expect(options.onAddColumn.mock.calls.length).toBe(addedByTheMove + 1);
       expect(view.scrollLeft()).toBeGreaterThan(0);
 
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 395, clientY: 60, pointerId: 1 }));
+      frames.run(20);
+
+      expect(options.onAddColumn.mock.calls.length).toBe(addedByTheMove + 3);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 405, clientY: 60, pointerId: 1 }));
     });
 
     /** Guard: growing on top of a corner that can already reach the pointer runs away from it. */
@@ -974,7 +982,7 @@ describe('TableCornerDrag', () => {
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      // Drag to within the edge band (900 - 24) but the grid stays narrower.
+      // Drag well right but stay inside the container, which the grid never fills.
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
       hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 600, clientY: 60, pointerId: 1 }));
 
@@ -986,6 +994,41 @@ describe('TableCornerDrag', () => {
       expect(view.scrollLeft()).toBe(0);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 600, clientY: 60, pointerId: 1 }));
+    });
+
+    it('lets the metered loop own growth while the pointer is outside the container', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = overflowing();
+      const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+      installGeometry(wrapper, grid, geo, view);
+      wireGeometryOps(options, grid, geo);
+
+      const frames = captureFrames();
+
+      cornerDrag = new TableCornerDrag(options);
+      cornerDrag.attachScrollContainer(view.el);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      startEdgeDrag(hitZone);
+      // One frame parks the corner at the edge and re-anchors the grab offset.
+      frames.run(1);
+
+      const parked = options.onAddColumn.mock.calls.length;
+
+      /*
+       * Travelling further right while already outside must add nothing on its
+       * own: with the offset re-anchored to the parked corner, pointer-driven
+       * growth would count each of these pixels as a whole column.
+       */
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 420, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 440, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 460, clientY: 60, pointerId: 1 }));
+
+      expect(options.onAddColumn.mock.calls.length).toBe(parked);
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 460, clientY: 60, pointerId: 1 }));
     });
 
     it('stops auto-scrolling once the pointer is released', () => {
@@ -1009,7 +1052,7 @@ describe('TableCornerDrag', () => {
       // The very first frame reveals the clipped corner, proving the loop runs.
       expect(view.scrollLeft()).toBeGreaterThan(0);
 
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 395, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 405, clientY: 60, pointerId: 1 }));
 
       const settledColumns = options.onAddColumn.mock.calls.length;
       const settledScroll = view.scrollLeft();

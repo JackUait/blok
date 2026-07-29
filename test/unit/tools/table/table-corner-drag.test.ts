@@ -563,4 +563,35 @@ describe('TableCornerDrag', () => {
       expect(hitZone.isConnected).toBe(false);
     });
   });
+
+  describe('listener hygiene', () => {
+    it('removes the pointercancel listener when a drag ends normally', () => {
+      cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`);
+
+      if (!(hitZone instanceof HTMLElement)) {
+        throw new Error('hit zone not rendered');
+      }
+
+      const removeSpy = vi.spyOn(hitZone, 'removeEventListener');
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+      }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+      }));
+
+      const removedEvents = removeSpy.mock.calls.map(([eventName]) => eventName);
+
+      expect(removedEvents).toContain('pointercancel');
+    });
+  });
 });

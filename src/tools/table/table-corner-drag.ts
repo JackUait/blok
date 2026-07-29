@@ -240,6 +240,9 @@ export class TableCornerDrag {
     this.hitZone.releasePointerCapture(pointerId);
     this.hitZone.removeEventListener('pointermove', this.boundPointerMove);
     this.hitZone.removeEventListener('pointerup', this.boundPointerUp);
+    // handlePointerDown binds pointercancel on every drag; without this a stale
+    // listener accumulates per completed drag.
+    this.hitZone.removeEventListener('pointercancel', this.boundPointerCancel);
 
     if (!didDrag) {
       if (this.onClickAdd) {

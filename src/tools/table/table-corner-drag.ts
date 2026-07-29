@@ -16,8 +16,6 @@ export interface TableCornerDragOptions {
   canRemoveLastRow: () => boolean;
   canRemoveLastColumn: () => boolean;
   onClickAdd?: () => void;
-  /** Pixel width of the column a subsequent onAddColumn() will insert. */
-  getNewColumnWidth?: () => number;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -25,13 +23,22 @@ const DRAG_THRESHOLD = 5;
 /** How far the 36x36 hit zone straddles the grid corner, in px. */
 const CORNER_OFFSET = 16;
 
+/**
+ * Upper bound on how many rows/columns a single pointermove may add or remove.
+ * Only a runaway guard — a full-screen flick adds a few dozen at most.
+ */
+const MAX_STEPS_PER_MOVE = 200;
+
 interface DragState {
   startX: number;
   startY: number;
-  unitWidth: number;
-  unitHeight: number;
-  addedRows: number;
-  addedCols: number;
+  /**
+   * Where the pointer landed inside the handle, as the distance to the grid's
+   * corner. Held for the whole gesture so the corner tracks the pointer from
+   * wherever it was grabbed instead of jumping under it.
+   */
+  grabOffsetX: number;
+  grabOffsetY: number;
   pointerId: number;
   didDrag: boolean;
 }
@@ -51,7 +58,6 @@ export class TableCornerDrag {
   private canRemoveLastRow: () => boolean;
   private canRemoveLastColumn: () => boolean;
   private onClickAdd: (() => void) | null;
-  private getNewColumnWidth: (() => number) | null;
   private dragState: DragState | null = null;
   private scrollContainer: HTMLElement | null = null;
   private boundScrollHandler: (() => void) | null = null;
@@ -76,7 +82,6 @@ export class TableCornerDrag {
     this.canRemoveLastRow = options.canRemoveLastRow;
     this.canRemoveLastColumn = options.canRemoveLastColumn;
     this.onClickAdd = options.onClickAdd ?? null;
-    this.getNewColumnWidth = options.getNewColumnWidth ?? null;
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
@@ -210,46 +215,45 @@ export class TableCornerDrag {
     this.grip.classList.remove('border-gray-600');
   }
 
-  private measureUnitHeight(): number {
+  /**
+   * Height of the bottom row, measured live. Rows are not uniform — one with
+   * wrapped text is several times taller than an empty one — so a frozen step
+   * would detach the grid's edge from the pointer after the first removal.
+   */
+  private measureLastRowHeight(): number {
     const rows = this.gridEl.querySelectorAll('[data-blok-table-row]');
     const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
 
-    return lastRow?.offsetHeight || 30;
+    return lastRow?.getBoundingClientRect().height ?? 0;
   }
 
   /**
-   * The drag step must equal the column the drag will actually insert
-   * (initialColWidth / 2), not the rendered width of the existing last column.
-   * Using the latter made a 226px drag add zero columns while the same distance
-   * downward added several rows.
+   * Width of the rightmost column, measured live: columns carry whatever width
+   * the user resized them to.
+   *
+   * Taken as the innermost cell that ends at the grid's right edge, so a cell
+   * merged across the last two columns does not report the pair as one column
+   * whenever some other row still splits them.
    */
-  private measureUnitWidth(): number {
-    const newColumnWidth = this.getNewColumnWidth?.();
+  private measureLastColumnWidth(gridRight: number): number {
+    const cells = Array.from(this.gridEl.querySelectorAll<HTMLElement>('[data-blok-table-cell]'));
+    const left = cells.reduce((innermost, cell) => {
+      const rect = cell.getBoundingClientRect();
 
-    if (newColumnWidth !== undefined && newColumnWidth > 0) {
-      return newColumnWidth;
-    }
+      return Math.abs(rect.right - gridRight) <= 1 && rect.left > innermost ? rect.left : innermost;
+    }, -Infinity);
 
-    const firstRow = this.gridEl.querySelector('[data-blok-table-row]');
-
-    if (!firstRow) {
-      return 100;
-    }
-
-    const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-    const lastCell = cells[cells.length - 1] as HTMLElement | undefined;
-
-    return lastCell?.offsetWidth || 100;
+    return left === -Infinity ? 0 : gridRight - left;
   }
 
   private handlePointerDown(e: PointerEvent): void {
+    const gridRect = this.gridEl.getBoundingClientRect();
+
     this.dragState = {
       startX: e.clientX,
       startY: e.clientY,
-      unitWidth: this.measureUnitWidth(),
-      unitHeight: this.measureUnitHeight(),
-      addedRows: 0,
-      addedCols: 0,
+      grabOffsetX: gridRect.right - e.clientX,
+      grabOffsetY: gridRect.bottom - e.clientY,
       pointerId: e.pointerId,
       didDrag: false,
     };
@@ -313,34 +317,105 @@ export class TableCornerDrag {
       this.onDragStart();
     }
 
-    const { unitHeight, unitWidth } = this.dragState;
-
-    const targetRows = Math.trunc(dy / unitHeight);
-    const targetCols = Math.trunc(dx / unitWidth);
-
-    while (this.dragState.addedRows < targetRows) {
-      this.onAddRow();
-      this.dragState.addedRows++;
-    }
-
-    while (this.dragState.addedRows > targetRows && this.canRemoveLastRow()) {
-      this.onRemoveLastRow();
-      this.dragState.addedRows--;
-    }
-
-    while (this.dragState.addedCols < targetCols) {
-      this.onAddColumn();
-      this.dragState.addedCols++;
-    }
-
-    while (this.dragState.addedCols > targetCols && this.canRemoveLastColumn()) {
-      this.onRemoveLastColumn();
-      this.dragState.addedCols--;
-    }
+    this.resizeToCorner(
+      e.clientX + this.dragState.grabOffsetX,
+      e.clientY + this.dragState.grabOffsetY
+    );
 
     this.updateTooltip();
     // Rows/columns just committed changed the grid's extent; follow it.
     this.syncPosition();
+  }
+
+  /**
+   * Grow or shrink the grid until its bottom-right corner meets the dragged
+   * point — Notion's model. Every decision is made against the grid's live
+   * geometry rather than a step frozen at pointerdown, which is what keeps the
+   * corner glued to the pointer across columns and rows of unequal size.
+   *
+   * Adding stops as soon as the edge reaches the pointer, and removing only
+   * fires once the pointer has cleared the whole last column/row, so the two
+   * directions can never fight over the same pixel.
+   */
+  private resizeToCorner(targetRight: number, targetBottom: number): void {
+    const cursor = { rect: this.gridEl.getBoundingClientRect(),
+      steps: 0 };
+
+    // jsdom and pre-layout report an empty box; there is nothing to measure.
+    if (cursor.rect.width === 0 && cursor.rect.height === 0) {
+      return;
+    }
+
+    while (targetRight > cursor.rect.right && cursor.steps++ < MAX_STEPS_PER_MOVE) {
+      this.onAddColumn();
+
+      const grown = this.nextRect(cursor.rect, (next, prev) => next.right > prev.right);
+
+      if (grown === null) {
+        break;
+      }
+      cursor.rect = grown;
+    }
+
+    // Measuring the last column costs a pass over every cell; only pay for it
+    // while the corner is actually being dragged back into the grid.
+    while (targetRight < cursor.rect.right && cursor.steps++ < MAX_STEPS_PER_MOVE && this.canRemoveLastColumn()) {
+      const width = this.measureLastColumnWidth(cursor.rect.right);
+
+      if (width <= 0 || targetRight > cursor.rect.right - width) {
+        break;
+      }
+      this.onRemoveLastColumn();
+
+      const shrunk = this.nextRect(cursor.rect, (next, prev) => next.right < prev.right);
+
+      if (shrunk === null) {
+        break;
+      }
+      cursor.rect = shrunk;
+    }
+
+    while (targetBottom > cursor.rect.bottom && cursor.steps++ < MAX_STEPS_PER_MOVE) {
+      this.onAddRow();
+
+      const grown = this.nextRect(cursor.rect, (next, prev) => next.bottom > prev.bottom);
+
+      if (grown === null) {
+        break;
+      }
+      cursor.rect = grown;
+    }
+
+    while (targetBottom < cursor.rect.bottom && cursor.steps++ < MAX_STEPS_PER_MOVE && this.canRemoveLastRow()) {
+      const height = this.measureLastRowHeight();
+
+      if (height <= 0 || targetBottom > cursor.rect.bottom - height) {
+        break;
+      }
+      this.onRemoveLastRow();
+
+      const shrunk = this.nextRect(cursor.rect, (next, prev) => next.bottom < prev.bottom);
+
+      if (shrunk === null) {
+        break;
+      }
+      cursor.rect = shrunk;
+    }
+  }
+
+  /**
+   * The grid's geometry after a row/column was committed, or null when the edge
+   * did not move the way the caller expected — a grid that cannot follow (a
+   * width-constrained layout, a rejected operation) would otherwise spin its
+   * loop until the step budget ran out.
+   */
+  private nextRect(
+    previous: DOMRect,
+    moved: (next: DOMRect, previous: DOMRect) => boolean
+  ): DOMRect | null {
+    const next = this.gridEl.getBoundingClientRect();
+
+    return moved(next, previous) ? next : null;
   }
 
   private handlePointerUp(_e: PointerEvent): void {

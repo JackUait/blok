@@ -11,6 +11,7 @@ const HOLDER_ID = 'blok';
 const CELL_SELECTOR = '[data-blok-table-cell]';
 const ROW_SELECTOR = '[data-blok-table-row]';
 const CORNER_DRAG_SELECTOR = '[data-blok-table-corner-drag]';
+const GRID_SELECTOR = '[data-blok-table-scroll] table';
 const SINGLETON_TOOLTIP_SELECTOR = '[data-blok-interface="tooltip"]';
 
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
@@ -223,47 +224,59 @@ test.describe('Table Corner Drag Handle', () => {
     await expect(tooltip).toHaveText('3\u00D72');
   });
 
-  test('Corner drag adds rows and columns', async ({ page }) => {
-    // 1. Create a 2x2 table
+  test('Corner drag grows the table until its corner catches the pointer', async ({ page }) => {
+    /*
+     * Notion's contract: the grid's bottom-right corner follows the pointer.
+     * Rows and columns keep being appended until the edge reaches the dragged
+     * point and no further — so the overshoot is under one row/column, whatever
+     * the sizes of the ones that got added.
+     */
     await createTable(page, [['A', 'B'], ['C', 'D']]);
 
-    // 2. Get the bounding box of the corner handle
+    const grid = page.locator(`${GRID_SELECTOR}`);
+    const gridBefore = assertBoundingBox(await grid.boundingBox(), 'Grid');
+
     const cornerHandle = page.locator(CORNER_DRAG_SELECTOR);
     const cornerBox = assertBoundingBox(await cornerHandle.boundingBox(), 'Corner handle');
 
-    // Measure the unit sizes that the drag handler uses internally:
-    // unitHeight = last row's offsetHeight, unitWidth = last cell's offsetWidth.
-    const { unitWidth, unitHeight } = await page.evaluate(() => {
-      const rows = document.querySelectorAll('[data-blok-table-row]');
-      const lastRow = rows[rows.length - 1] as HTMLElement;
-      const firstRow = rows[0];
-      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-      const lastCell = cells[cells.length - 1] as HTMLElement;
-
-      return { unitWidth: lastCell.offsetWidth, unitHeight: lastRow.offsetHeight };
-    });
-
     const startX = cornerBox.x + cornerBox.width / 2;
     const startY = cornerBox.y + cornerBox.height / 2;
+    const dx = 180;
+    const dy = 90;
 
-    // 3. Drag diagonally: beyond one unit in each direction to add 1 row and 1 column
     await page.mouse.move(startX, startY);
     await page.mouse.down();
-    await page.mouse.move(
-      startX + unitWidth + 10,
-      startY + unitHeight + 10,
-      { steps: 10 }
-    );
+    await page.mouse.move(startX + dx, startY + dy, { steps: 10 });
     await page.mouse.up();
 
-    // 4. Verify the table has more rows and more columns than before
     const rows = page.locator(ROW_SELECTOR);
 
-    await expect(rows).toHaveCount(3);
+    expect(await rows.count()).toBeGreaterThan(2);
 
     const firstRowCells = rows.nth(0).locator(CELL_SELECTOR);
 
-    await expect(firstRowCells).toHaveCount(3);
+    expect(await firstRowCells.count()).toBeGreaterThan(2);
+
+    const gridAfter = assertBoundingBox(await grid.boundingBox(), 'Grid');
+    const { lastColumnWidth, lastRowHeight } = await page.evaluate(() => {
+      const rowEls = document.querySelectorAll('[data-blok-table-row]');
+      const lastRow = rowEls[rowEls.length - 1] as HTMLElement;
+      const cells = rowEls[0].querySelectorAll('[data-blok-table-cell]');
+      const lastCell = cells[cells.length - 1] as HTMLElement;
+
+      return {
+        lastColumnWidth: lastCell.getBoundingClientRect().width,
+        lastRowHeight: lastRow.getBoundingClientRect().height,
+      };
+    });
+
+    const grownRight = gridAfter.x + gridAfter.width - (gridBefore.x + gridBefore.width);
+    const grownBottom = gridAfter.y + gridAfter.height - (gridBefore.y + gridBefore.height);
+
+    expect(grownRight).toBeGreaterThanOrEqual(dx - 1);
+    expect(grownRight).toBeLessThan(dx + lastColumnWidth);
+    expect(grownBottom).toBeGreaterThanOrEqual(dy - 1);
+    expect(grownBottom).toBeLessThan(dy + lastRowHeight);
   });
 
   test('Scroll container has overflow classes during corner drag column addition', async ({ page }) => {

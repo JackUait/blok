@@ -408,14 +408,6 @@ export class TableSubsystems {
     this.cornerDrag = new TableCornerDrag({
       wrapper: this.host.element,
       gridEl,
-      // Same step the "+" column drag uses, so both gestures feel identical.
-      getNewColumnWidth: () => {
-        const colWidths = this.host.model.colWidths ?? readPixelWidths(gridEl);
-
-        return this.host.model.initialColWidth !== undefined
-          ? Math.round((this.host.model.initialColWidth / 2) * 100) / 100
-          : computeHalfAvgWidth(colWidths);
-      },
       onAddRow: () => {
         this.host.runStructuralOp(() => {
           this.host.grid.addRow(gridEl);

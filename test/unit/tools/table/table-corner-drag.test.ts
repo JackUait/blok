@@ -72,6 +72,123 @@ const createDefaultOptions = (wrapper: HTMLElement, gridEl: HTMLElement) => ({
   canRemoveLastColumn: vi.fn(() => true),
 });
 
+/**
+ * Live geometry model behind the stubbed rects. The corner drag is
+ * geometry-driven (Notion-style: the grid's corner follows the pointer), so the
+ * tests have to expose real column widths / row heights that change as the
+ * handlers add and remove them.
+ */
+interface Geometry {
+  left: number;
+  top: number;
+  colWidths: number[];
+  rowHeights: number[];
+}
+
+const sum = (values: number[]): number => values.reduce((total, v) => total + v, 0);
+
+const rectOf = (left: number, top: number, width: number, height: number): DOMRect => ({
+  x: left,
+  y: top,
+  left,
+  top,
+  width,
+  height,
+  right: left + width,
+  bottom: top + height,
+  toJSON: () => ({}),
+});
+
+const installGeometry = (wrapper: HTMLElement, grid: HTMLElement, geo: Geometry): void => {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement): DOMRect {
+    const width = sum(geo.colWidths);
+    const height = sum(geo.rowHeights);
+
+    if (this === grid || this === wrapper) {
+      return rectOf(geo.left, geo.top, width, height);
+    }
+
+    if (this.hasAttribute('data-blok-table-row')) {
+      const index = Array.from(grid.querySelectorAll('[data-blok-table-row]')).indexOf(this);
+
+      return rectOf(geo.left, geo.top + sum(geo.rowHeights.slice(0, index)), width, geo.rowHeights[index] ?? 0);
+    }
+
+    if (this.hasAttribute('data-blok-table-cell')) {
+      const col = Number(this.getAttribute('data-blok-table-cell-col'));
+      const row = Number(this.getAttribute('data-blok-table-cell-row'));
+
+      return rectOf(
+        geo.left + sum(geo.colWidths.slice(0, col)),
+        geo.top + sum(geo.rowHeights.slice(0, row)),
+        geo.colWidths[col] ?? 0,
+        geo.rowHeights[row] ?? 0,
+      );
+    }
+
+    return rectOf(0, 0, 0, 0);
+  });
+};
+
+/**
+ * Wire the add/remove callbacks so they mutate both the DOM and the geometry,
+ * the way the real table does — otherwise a geometry-driven drag can never
+ * settle.
+ */
+const wireGeometryOps = (
+  options: ReturnType<typeof createDefaultOptions>,
+  grid: HTMLTableElement,
+  geo: Geometry,
+  newColWidth = 60,
+  newRowHeight = 30
+): void => {
+  const rows = (): HTMLElement[] => Array.from(grid.querySelectorAll<HTMLElement>('[data-blok-table-row]'));
+
+  options.onAddColumn.mockImplementation(() => {
+    const col = geo.colWidths.length;
+
+    rows().forEach((row, r) => {
+      const td = document.createElement('td');
+
+      td.setAttribute('data-blok-table-cell', '');
+      td.setAttribute('data-blok-table-cell-row', String(r));
+      td.setAttribute('data-blok-table-cell-col', String(col));
+      row.appendChild(td);
+    });
+    geo.colWidths.push(newColWidth);
+  });
+
+  options.onRemoveLastColumn.mockImplementation(() => {
+    rows().forEach(row => row.lastElementChild?.remove());
+    geo.colWidths.pop();
+  });
+
+  options.onAddRow.mockImplementation(() => {
+    const row = document.createElement('tr');
+    const r = geo.rowHeights.length;
+
+    row.setAttribute('data-blok-table-row', '');
+    geo.colWidths.forEach((_, c) => {
+      const td = document.createElement('td');
+
+      td.setAttribute('data-blok-table-cell', '');
+      td.setAttribute('data-blok-table-cell-row', String(r));
+      td.setAttribute('data-blok-table-cell-col', String(c));
+      row.appendChild(td);
+    });
+    grid.querySelector('tbody')?.appendChild(row);
+    geo.rowHeights.push(newRowHeight);
+  });
+
+  options.onRemoveLastRow.mockImplementation(() => {
+    grid.querySelectorAll('[data-blok-table-row]')[geo.rowHeights.length - 1]?.remove();
+    geo.rowHeights.pop();
+  });
+
+  options.getTableSize.mockImplementation(() => ({ rows: geo.rowHeights.length,
+    cols: geo.colWidths.length }));
+};
+
 describe('TableCornerDrag', () => {
   let wrapper: HTMLDivElement;
   let grid: HTMLTableElement;
@@ -200,73 +317,120 @@ describe('TableCornerDrag', () => {
   });
 
   describe('drag to add', () => {
-    it('calls onAddRow when dragging downward by one unit height', () => {
-      const options = createDefaultOptions(wrapper, grid);
+    /** 3x2 grid of 100px columns and 30px rows: corner at (300, 60). */
+    const defaultGeometry = (): Geometry => ({ left: 0,
+      top: 0,
+      colWidths: [100, 100, 100],
+      rowHeights: [30, 30] });
 
+    it('adds a row as soon as the dragged corner passes the grid bottom edge', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = defaultGeometry();
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
-
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 130, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 130, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 75, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 75, pointerId: 1 }));
 
       expect(options.onAddRow).toHaveBeenCalledOnce();
       expect(options.onAddColumn).not.toHaveBeenCalled();
       expect(options.onDragEnd).toHaveBeenCalledOnce();
     });
 
-    it('calls onAddColumn when dragging rightward by one unit width', () => {
+    it('adds a column as soon as the dragged corner passes the grid right edge', () => {
       const options = createDefaultOptions(wrapper, grid);
+      const geo = defaultGeometry();
 
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      const firstRow = grid.querySelector('[data-blok-table-row]')!;
-      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-
-      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 206, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 312, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 312, clientY: 60, pointerId: 1 }));
 
       expect(options.onAddColumn).toHaveBeenCalledOnce();
       expect(options.onAddRow).not.toHaveBeenCalled();
       expect(options.onDragEnd).toHaveBeenCalledOnce();
     });
 
+    it('keeps adding columns until the grid corner catches up with the pointer', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = defaultGeometry();
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 700, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: 60, pointerId: 1 }));
+
+      // 300 + 7 x 60 = 720: the first edge at or past the pointer.
+      expect(options.onAddColumn).toHaveBeenCalledTimes(7);
+      expect(sum(geo.colWidths)).toBe(720);
+    });
+
+    it('measures the drag from the corner, not from where inside the handle it was grabbed', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = defaultGeometry();
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      // Pressed 16px inside the corner — the same offset must ride along.
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 284, clientY: 44, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 294, clientY: 44, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 294, clientY: 44, pointerId: 1 }));
+
+      expect(options.onAddColumn).toHaveBeenCalledOnce();
+    });
+
     it('adds both rows and columns on diagonal drag', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = defaultGeometry();
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 400, clientY: 150, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 400, clientY: 150, pointerId: 1 }));
+
+      expect(options.onAddColumn).toHaveBeenCalledTimes(2);
+      expect(options.onAddRow).toHaveBeenCalledTimes(3);
+      expect(options.onDragEnd).toHaveBeenCalledOnce();
+      expect(document.body.style.cursor).toBe('');
+    });
+
+    it('does not resize while the grid has no layout', () => {
       const options = createDefaultOptions(wrapper, grid);
 
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
-
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      const firstRow = grid.querySelector('[data-blok-table-row]')!;
-      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
-
-      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
-
       hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 306, clientY: 166, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 160, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 500, clientY: 400, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 500, clientY: 400, pointerId: 1 }));
 
-      expect(options.onAddRow).toHaveBeenCalledTimes(2);
-      expect(options.onAddColumn).toHaveBeenCalledTimes(2);
-      expect(options.onDragEnd).toHaveBeenCalledOnce();
-      expect(document.body.style.cursor).toBe('');
+      expect(options.onAddColumn).not.toHaveBeenCalled();
+      expect(options.onAddRow).not.toHaveBeenCalled();
     });
 
     it('fires onDragStart after exceeding threshold', () => {
@@ -328,98 +492,136 @@ describe('TableCornerDrag', () => {
   });
 
   describe('drag to remove', () => {
-    it('calls onRemoveLastRow when dragging upward', () => {
-      const options = createDefaultOptions(wrapper, grid);
+    /** Last column is 300px wide (user-resized): corner at (500, 60). */
+    const wideLastColumn = (): Geometry => ({ left: 0,
+      top: 0,
+      colWidths: [100, 100, 300],
+      rowHeights: [30, 30] });
 
+    it('keeps the last column while the corner is still inside it', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const geo = wideLastColumn();
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
 
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 500, clientY: 60, pointerId: 1 }));
+      // 120px left: past a nominal column step, but short of this 300px one.
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 380, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 380, clientY: 60, pointerId: 1 }));
 
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 64, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 64, pointerId: 1 }));
-
-      expect(options.onRemoveLastRow).toHaveBeenCalledOnce();
+      expect(options.onRemoveLastColumn).not.toHaveBeenCalled();
     });
 
-    it('calls onRemoveLastColumn when dragging leftward', () => {
+    it('removes the last column once the corner passes its real left edge', () => {
       const options = createDefaultOptions(wrapper, grid);
+      const geo = wideLastColumn();
 
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const firstRow = grid.querySelector('[data-blok-table-row]')!;
-      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
 
-      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: -6, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: -6, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 500, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 190, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 190, clientY: 60, pointerId: 1 }));
 
       expect(options.onRemoveLastColumn).toHaveBeenCalledOnce();
+      expect(geo.colWidths).toEqual([100, 100]);
+    });
+
+    it('removes rows by their real heights rather than a frozen step', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      // A wrapped last row is taller than the one above it: corner at (300, 120).
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 90] };
+
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 120, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 25, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 25, pointerId: 1 }));
+
+      expect(options.onRemoveLastRow).toHaveBeenCalledOnce();
+      expect(geo.rowHeights).toEqual([30]);
     });
 
     it('does not call onRemoveLastRow when canRemoveLastRow returns false', () => {
       const options = createDefaultOptions(wrapper, grid);
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 30] };
 
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       options.canRemoveLastRow.mockReturnValue(false);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
 
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 64, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 64, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 10, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 10, pointerId: 1 }));
 
       expect(options.onRemoveLastRow).not.toHaveBeenCalled();
     });
 
     it('does not call onRemoveLastColumn when canRemoveLastColumn returns false', () => {
       const options = createDefaultOptions(wrapper, grid);
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 30] };
 
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       options.canRemoveLastColumn.mockReturnValue(false);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const firstRow = grid.querySelector('[data-blok-table-row]')!;
-      const cells = firstRow.querySelectorAll('[data-blok-table-cell]');
 
-      Object.defineProperty(cells[cells.length - 1], 'offsetWidth', { value: 100 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: -6, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: -6, clientY: 100, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 60, pointerId: 1 }));
 
       expect(options.onRemoveLastColumn).not.toHaveBeenCalled();
     });
 
     it('does not remove below 1×1 minimum size', () => {
       const options = createDefaultOptions(wrapper, grid);
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 30, 30] };
       let removeCount = 0;
 
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       options.canRemoveLastRow.mockImplementation(() => {
         // Allow first removal, block second (simulating 1-row minimum)
         removeCount++;
+
         return removeCount <= 1;
       });
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
 
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      // Try to remove 3 rows (but canRemoveLastRow only allows 1)
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 4, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 4, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 90, pointerId: 1 }));
+      // Far enough up to strip every row; the guard must stop it after one.
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 0, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 0, pointerId: 1 }));
 
       expect(options.onRemoveLastRow).toHaveBeenCalledOnce();
     });
@@ -427,21 +629,20 @@ describe('TableCornerDrag', () => {
 
   describe('tooltip updates during drag', () => {
     it('updates singleton tooltip during drag', () => {
-      let currentSize = { rows: 2, cols: 3 };
       const options = createDefaultOptions(wrapper, grid);
+      const geo: Geometry = { left: 0,
+        top: 0,
+        colWidths: [100, 100, 100],
+        rowHeights: [30, 30] };
 
-      options.getTableSize.mockImplementation(() => currentSize);
-      options.onAddRow.mockImplementation(() => { currentSize = { rows: currentSize.rows + 1, cols: currentSize.cols }; });
-
+      installGeometry(wrapper, grid, geo);
+      wireGeometryOps(options, grid, geo);
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
-      const rows = grid.querySelectorAll('[data-blok-table-row]');
 
-      Object.defineProperty(rows[rows.length - 1], 'offsetHeight', { value: 30 });
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, pointerId: 1 }));
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 136, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 75, pointerId: 1 }));
 
       expect(mockShowTooltip).toHaveBeenCalledWith(
         hitZone,
@@ -449,7 +650,7 @@ describe('TableCornerDrag', () => {
         expect.objectContaining({ placement: 'bottom' }),
       );
 
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 100, clientY: 136, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 300, clientY: 75, pointerId: 1 }));
     });
   });
 
@@ -592,40 +793,6 @@ describe('TableCornerDrag', () => {
       const removedEvents = removeSpy.mock.calls.map(([eventName]) => eventName);
 
       expect(removedEvents).toContain('pointercancel');
-    });
-  });
-
-  describe('horizontal drag step', () => {
-    it('adds a column once the pointer travels the new column width, not the last column width', () => {
-      const options = createDefaultOptions(wrapper, grid);
-      const getNewColumnWidth = vi.fn(() => 50);
-
-      cornerDrag = new TableCornerDrag({ ...options, getNewColumnWidth });
-
-      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`);
-
-      if (!(hitZone instanceof HTMLElement)) {
-        throw new Error('hit zone not rendered');
-      }
-
-      hitZone.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true,
-        clientX: 0,
-        clientY: 0,
-        pointerId: 1,
-      }));
-      /*
-       * 60px right: past one 50px new column, but short of the 100px rendered
-       * width of the grid's existing last column.
-       */
-      hitZone.dispatchEvent(new PointerEvent('pointermove', {
-        bubbles: true,
-        clientX: 60,
-        clientY: 0,
-        pointerId: 1,
-      }));
-
-      expect(options.onAddColumn).toHaveBeenCalledTimes(1);
     });
   });
 

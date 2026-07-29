@@ -271,7 +271,25 @@ describe('Table scroll container', () => {
       HTMLElement.prototype.setPointerCapture = vi.fn();
       HTMLElement.prototype.releasePointerCapture = vi.fn();
 
-      // Simulate corner drag: pointerdown then pointermove past threshold + 1 unit
+      /*
+       * The drag resizes against live layout, which jsdom does not compute: a
+       * grid reporting an empty box is treated as pre-layout and left alone.
+       * A fixed non-zero box lets exactly one column through (the grid never
+       * appears to widen, which stops the loop).
+       */
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        width: 300,
+        height: 60,
+        right: 300,
+        bottom: 60,
+        toJSON: () => ({}),
+      });
+
+      // Simulate corner drag: pointerdown then pointermove past the threshold
       const hitZone = element.querySelector('[data-blok-table-corner-drag]') as HTMLElement;
 
       expect(hitZone).not.toBeNull();
@@ -283,7 +301,7 @@ describe('Table scroll container', () => {
         bubbles: true,
       }));
 
-      // Move right by 110px (>threshold 5px, >unitWidth 100px fallback in jsdom)
+      // Move right by 110px: past the threshold and past the grid's right edge
       hitZone.dispatchEvent(new PointerEvent('pointermove', {
         clientX: 210,
         clientY: 100,

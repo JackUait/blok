@@ -594,4 +594,38 @@ describe('TableCornerDrag', () => {
       expect(removedEvents).toContain('pointercancel');
     });
   });
+
+  describe('horizontal drag step', () => {
+    it('adds a column once the pointer travels the new column width, not the last column width', () => {
+      const options = createDefaultOptions(wrapper, grid);
+      const getNewColumnWidth = vi.fn(() => 50);
+
+      cornerDrag = new TableCornerDrag({ ...options, getNewColumnWidth });
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`);
+
+      if (!(hitZone instanceof HTMLElement)) {
+        throw new Error('hit zone not rendered');
+      }
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+      }));
+      /*
+       * 60px right: past one 50px new column, but short of the 100px rendered
+       * width of the grid's existing last column.
+       */
+      hitZone.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: 60,
+        clientY: 0,
+        pointerId: 1,
+      }));
+
+      expect(options.onAddColumn).toHaveBeenCalledTimes(1);
+    });
+  });
 });

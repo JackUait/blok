@@ -15,6 +15,8 @@ export interface TableCornerDragOptions {
   canRemoveLastRow: () => boolean;
   canRemoveLastColumn: () => boolean;
   onClickAdd?: () => void;
+  /** Pixel width of the column a subsequent onAddColumn() will insert. */
+  getNewColumnWidth?: () => number;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -44,6 +46,7 @@ export class TableCornerDrag {
   private canRemoveLastRow: () => boolean;
   private canRemoveLastColumn: () => boolean;
   private onClickAdd: (() => void) | null;
+  private getNewColumnWidth: (() => number) | null;
   private dragState: DragState | null = null;
   private readonly boundMouseEnter: () => void;
   private readonly boundMouseLeave: () => void;
@@ -65,6 +68,7 @@ export class TableCornerDrag {
     this.canRemoveLastRow = options.canRemoveLastRow;
     this.canRemoveLastColumn = options.canRemoveLastColumn;
     this.onClickAdd = options.onClickAdd ?? null;
+    this.getNewColumnWidth = options.getNewColumnWidth ?? null;
 
     this.hitZone = document.createElement('div');
     this.hitZone.setAttribute(CORNER_DRAG_ATTR, '');
@@ -116,7 +120,19 @@ export class TableCornerDrag {
     return lastRow?.offsetHeight || 30;
   }
 
+  /**
+   * The drag step must equal the column the drag will actually insert
+   * (initialColWidth / 2), not the rendered width of the existing last column.
+   * Using the latter made a 226px drag add zero columns while the same distance
+   * downward added several rows.
+   */
   private measureUnitWidth(): number {
+    const newColumnWidth = this.getNewColumnWidth?.();
+
+    if (newColumnWidth !== undefined && newColumnWidth > 0) {
+      return newColumnWidth;
+    }
+
     const firstRow = this.gridEl.querySelector('[data-blok-table-row]');
 
     if (!firstRow) {

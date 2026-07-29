@@ -48,7 +48,12 @@ export const getCumulativeColEdges = (grid: HTMLElement): number[] => {
 export interface TableDragOptions {
   grid: HTMLElement;
   onAction: (action: RowColAction) => void;
-  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
+  /**
+   * Drag started/ended. `dragIndex` is the row/column being carried (-1 when the
+   * drag ended), so listeners can paint the whole range as selected — the user
+   * needs to see WHAT is moving, not just that something is.
+   */
+  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void;
   /**
    * Can this row/column be picked up at all? False when it is part of a merge
    * that extends beyond it. The gesture is then rejected on sight with a
@@ -71,7 +76,7 @@ export interface TableDragOptions {
 export class TableRowColDrag {
   private grid: HTMLElement;
   private onAction: (action: RowColAction) => void;
-  private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null) => void) | null;
+  private onDragStateChange: ((isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void) | null;
   private canDrag: ((type: 'row' | 'col', index: number) => boolean) | null;
   private canDrop: ((type: 'row' | 'col', fromIndex: number, toIndex: number) => boolean) | null;
 
@@ -157,7 +162,7 @@ export class TableRowColDrag {
     document.removeEventListener('pointerup', this.boundDocPointerUp);
     document.removeEventListener('pointercancel', this.boundDocPointerCancel);
 
-    this.onDragStateChange?.(false, null);
+    this.onDragStateChange?.(false, null, -1);
     this.isDragging = false;
     this.isDragRejected = false;
     this.dragType = null;
@@ -254,7 +259,7 @@ export class TableRowColDrag {
   private startDrag(): void {
     this.grid.style.userSelect = 'none';
     document.body.style.cursor = 'grabbing';
-    this.onDragStateChange?.(true, this.dragType);
+    this.onDragStateChange?.(true, this.dragType, this.dragFromIndex);
 
     this.highlightSourceCells();
     this.createDropIndicator();

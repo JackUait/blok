@@ -2597,6 +2597,12 @@ describe('Table Tool', () => {
           getBlockIndex: vi.fn().mockReturnValue(undefined),
           getBlocksCount: vi.fn().mockReturnValue(0),
         },
+        toolbar: {
+          close: vi.fn(),
+          open: vi.fn(),
+          toggleBlockSettings: vi.fn(),
+          toggleToolbox: vi.fn(),
+        },
       } as never);
       const options: BlockToolConstructorOptions<TableData, TableConfig> = {
         data: { withHeadings: false, withHeadingColumn: false, content, colWidths },
@@ -2967,6 +2973,61 @@ describe('Table Tool', () => {
       expect(toolbarClose).toHaveBeenCalledWith({ setExplicitlyClosed: false });
 
       // Clean up
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      document.body.removeChild(element);
+    });
+
+    it('selects the whole row when a row grip drag starts', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      simulateMouseOver(cell);
+
+      const grip = element.querySelector('[data-blok-table-grip-row="1"]') as HTMLElement;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 120 }));
+
+      const rows = element.querySelectorAll('[data-blok-table-row]');
+      const draggedRowCells = Array.from(rows[1].querySelectorAll('[data-blok-table-cell]'));
+
+      expect(draggedRowCells).toHaveLength(2);
+      draggedRowCells.forEach(cellEl => {
+        expect(cellEl.hasAttribute('data-blok-table-cell-selected')).toBe(true);
+      });
+
+      document.dispatchEvent(new PointerEvent('pointerup', {}));
+      document.body.removeChild(element);
+    });
+
+    it('selects the whole column when a column grip drag starts', () => {
+      const { element } = createDragWidthTable(
+        [['A', 'B'], ['C', 'D']],
+        [200, 200]
+      );
+
+      const cell = element.querySelector('[data-blok-table-cell]') as HTMLElement;
+
+      simulateMouseOver(cell);
+
+      const grip = element.querySelector('[data-blok-table-grip-col="1"]') as HTMLElement;
+
+      grip.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true }));
+      document.dispatchEvent(new PointerEvent('pointermove', { clientX: 130, clientY: 100 }));
+
+      const draggedColCells = Array.from(
+        element.querySelectorAll('[data-blok-table-cell-col="1"]')
+      );
+
+      expect(draggedColCells).toHaveLength(2);
+      draggedColCells.forEach(cellEl => {
+        expect(cellEl.hasAttribute('data-blok-table-cell-selected')).toBe(true);
+      });
+
       document.dispatchEvent(new PointerEvent('pointerup', {}));
       document.body.removeChild(element);
     });

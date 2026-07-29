@@ -98,6 +98,32 @@ describe('TableRowColDrag', () => {
     grid?.remove();
   });
 
+  describe('drag state notification', () => {
+    it('reports the dragged row index when a row drag starts', () => {
+      grid = createGrid(3, 3);
+      const onDragStateChange = vi.fn();
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn(), onDragStateChange });
+
+      startDrag(drag, 'row', 1, 50, 50);
+
+      expect(onDragStateChange).toHaveBeenCalledWith(true, 'row', 1);
+
+      drag.cleanup();
+    });
+
+    it('reports the dragged column index when a column drag starts', () => {
+      grid = createGrid(3, 3);
+      const onDragStateChange = vi.fn();
+      const drag = new TableRowColDrag({ grid, onAction: vi.fn(), onDragStateChange });
+
+      startDrag(drag, 'col', 2, 250, 20);
+
+      expect(onDragStateChange).toHaveBeenCalledWith(true, 'col', 2);
+
+      drag.cleanup();
+    });
+  });
+
   describe('source cell highlighting during row drag', () => {
     it('applies gray background to dragged row cells', () => {
       grid = createGrid(3, 3);
@@ -363,7 +389,7 @@ describe('TableRowColDrag', () => {
 
       document.dispatchEvent(new PointerEvent('pointercancel'));
 
-      expect(onDragStateChange).toHaveBeenCalledWith(false, null);
+      expect(onDragStateChange).toHaveBeenCalledWith(false, null, -1);
     });
 
     it('cleans up column drag on pointercancel', () => {

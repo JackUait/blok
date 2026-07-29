@@ -532,7 +532,7 @@ export class TableSubsystems {
       onAction: (action: RowColAction) => this.handleRowColAction(gridEl, action),
       onClearContents: (type, index) => this.clearRangeContents(type, index),
       onColorChange: (type, index, color, mode) => this.colorRange(type, index, color, mode),
-      onDragStateChange: (isDragging: boolean) => {
+      onDragStateChange: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => {
         if (this.resize) {
           this.resize.enabled = !isDragging;
         }
@@ -540,8 +540,19 @@ export class TableSubsystems {
         this.addControls?.setDisplay(!isDragging);
         this.cornerDrag?.setDisplay(!isDragging);
 
-        if (isDragging) {
-          this.host.api.toolbar.close({ setExplicitlyClosed: false });
+        if (!isDragging) {
+          return;
+        }
+
+        this.host.api.toolbar.close({ setExplicitlyClosed: false });
+
+        // Paint the whole row/column as selected the moment it is picked up.
+        // Without it the only blue box on screen is the single focused cell,
+        // which reads as "this cell is moving" instead of the whole range.
+        if (dragType === 'row') {
+          this.cellSelection?.selectRow(dragIndex);
+        } else if (dragType === 'col') {
+          this.cellSelection?.selectColumn(dragIndex);
         }
       },
       onGripClick: (type, index) => {

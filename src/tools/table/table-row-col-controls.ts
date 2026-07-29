@@ -49,7 +49,7 @@ export interface TableRowColControlsOptions {
   onClearContents: (type: 'row' | 'col', index: number) => void;
   /** Paint every cell in the grip's row/column. */
   onColorChange: (type: 'row' | 'col', index: number, color: string | null, mode: CellColorMode) => void;
-  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null) => void;
+  onDragStateChange?: (isDragging: boolean, dragType: 'row' | 'col' | null, dragIndex: number) => void;
   onGripClick?: (type: 'row' | 'col', index: number) => void;
   onGripPopoverClose?: () => void;
   /** Can this row/column be dragged at all? See TableDragOptions.canDrag. */
@@ -149,9 +149,9 @@ export class TableRowColControls {
     this.drag = new TableRowColDrag({
       grid: this.grid,
       onAction: this.onAction,
-      onDragStateChange: (isDragging, dragType) => {
+      onDragStateChange: (isDragging, dragType, dragIndex) => {
         this.handleDragStateChange(isDragging, dragType);
-        options.onDragStateChange?.(isDragging, dragType);
+        options.onDragStateChange?.(isDragging, dragType, dragIndex);
       },
       canDrag: options.canDrag,
       canDrop: options.canDrop,

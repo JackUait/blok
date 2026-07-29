@@ -1511,6 +1511,63 @@ test.describe('table tool', () => {
       await expect(ghost).toHaveCount(0);
     });
 
+    test('dragging row grip selects the whole row', async ({ page }) => {
+      await createTable3x3(page);
+
+      await page.locator(CELL_SELECTOR).first().click();
+
+      const rowGrip = page.locator(ROW_GRIP_SELECTOR).first();
+
+      await expect(rowGrip).toBeVisible();
+
+      const gripBox = assertBoundingBox(await rowGrip.boundingBox(), 'Row grip');
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX, startY + 50, { steps: 5 });
+
+      // Every cell of the dragged row carries the selection, so the user sees
+      // the whole row moving rather than a single boxed cell.
+      const selectedInFirstRow = page
+        .locator('[data-blok-table-row]')
+        .first()
+        .locator('[data-blok-table-cell-selected]');
+
+      await expect(selectedInFirstRow).toHaveCount(3);
+
+      await page.mouse.up();
+    });
+
+    test('dragging column grip selects the whole column', async ({ page }) => {
+      await createTable3x3(page);
+
+      await page.locator(CELL_SELECTOR).nth(1).locator('[contenteditable="true"]').first().click();
+
+      const colGrip = page.locator(COL_GRIP_SELECTOR).nth(1);
+
+      await expect(colGrip).toBeVisible();
+
+      const gripBox = assertBoundingBox(await colGrip.boundingBox(), 'Column grip');
+
+      const startX = gripBox.x + gripBox.width / 2;
+      const startY = gripBox.y + gripBox.height / 2;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(startX + 40, startY, { steps: 5 });
+
+      // Scoped to real rows: the body-mounted drag ghost clones the same cells,
+      // selection attribute and all.
+      const selectedInColumn = page.locator('[data-blok-table-row] [data-blok-table-cell-col="1"][data-blok-table-cell-selected]');
+
+      await expect(selectedInColumn).toHaveCount(3);
+
+      await page.mouse.up();
+    });
+
     test('dragging column grip reorders column and shows ghost', async ({ page }) => {
       await createTable3x3(page);
 

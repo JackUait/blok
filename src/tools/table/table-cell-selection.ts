@@ -183,7 +183,12 @@ const isOtherInteractionActive = (grid: HTMLElement): boolean => {
 interface CellSelectionOptions {
   grid: HTMLElement;
   rectangleSelection?: { cancelActiveSelection: () => void };
-  onSelectionActiveChange?: (hasSelection: boolean) => void;
+  /**
+   * `isMultiCell` is true only for a real range. A single-cell caret box exists
+   * whenever the caret is anywhere in the table, so consumers that suppress
+   * pointer gestures must gate on the range, not on mere selection existence.
+   */
+  onSelectionActiveChange?: (hasSelection: boolean, isMultiCell: boolean) => void;
   onSelectionRangeChange?: (range: SelectionRange) => void;
   onClearContent?: (cells: HTMLElement[]) => void;
   onCopy?: (cells: HTMLElement[], clipboardData: DataTransfer) => void;
@@ -220,7 +225,7 @@ interface CellSelectionOptions {
 export class TableCellSelection {
   private grid: HTMLElement;
   private rectangleSelection?: { cancelActiveSelection: () => void };
-  private onSelectionActiveChange: ((hasSelection: boolean) => void) | undefined;
+  private onSelectionActiveChange: ((hasSelection: boolean, isMultiCell: boolean) => void) | undefined;
   private onClearContent: ((cells: HTMLElement[]) => void) | undefined;
   private i18n: I18n;
   private anchorCell: CellCoord | null = null;
@@ -508,7 +513,8 @@ export class TableCellSelection {
     // Crossed into a different cell — start selection
     if (!this.isSelecting) {
       this.isSelecting = true;
-      this.onSelectionActiveChange?.(true);
+      // Crossing a cell boundary is multi-cell by definition.
+      this.onSelectionActiveChange?.(true, true);
 
       // Prevent native text selection from extending across cell boundaries.
       // We restore userSelect in handlePointerUp.
@@ -1005,7 +1011,7 @@ export class TableCellSelection {
     this.keyboardExtent = null;
 
     if (hadSelection) {
-      this.onSelectionActiveChange?.(false);
+      this.onSelectionActiveChange?.(false, false);
     }
   }
 
@@ -1041,7 +1047,7 @@ export class TableCellSelection {
     this.extentCell = { row: toRow, col: toCol };
     this.paintSelection();
     this.hasSelection = true;
-    this.onSelectionActiveChange?.(true);
+    this.onSelectionActiveChange?.(true, this.selectedCells.length > 1);
 
     if (this.lastPaintedRange) {
       this.onSelectionRangeChange?.(this.lastPaintedRange);

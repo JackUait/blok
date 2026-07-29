@@ -403,6 +403,39 @@ describe('TableCellSelection', () => {
     });
   });
 
+  describe('onSelectionActiveChange multi-cell flag', () => {
+    it('reports isMultiCell false for a single-cell caret box', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      // Click without crossing cells — the path that produced the real bug.
+      simulateDrag(grid, 0, 0, 0, 0);
+
+      expect(callback).toHaveBeenCalledWith(true, false);
+    });
+
+    it('reports isMultiCell true for a row selection', () => {
+      const callback = vi.fn();
+
+      selection.destroy();
+      selection = new TableCellSelection({
+        grid,
+        i18n: mockI18n,
+        onSelectionActiveChange: callback,
+      });
+
+      selection.selectRow(0);
+
+      expect(callback).toHaveBeenCalledWith(true, true);
+    });
+  });
+
   describe('onSelectionActiveChange callback', () => {
     it('fires true when drag selection starts', () => {
       const callback = vi.fn();
@@ -416,7 +449,7 @@ describe('TableCellSelection', () => {
 
       simulateDrag(grid, 0, 0, 1, 1);
 
-      expect(callback).toHaveBeenCalledWith(true);
+      expect(callback).toHaveBeenCalledWith(true, expect.any(Boolean));
     });
 
     it('does not fire false when drag ends but selection persists', () => {
@@ -433,8 +466,8 @@ describe('TableCellSelection', () => {
 
       // Should have been called once with true, never with false
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(true);
-      expect(callback).not.toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(true, expect.any(Boolean));
+      expect(callback).not.toHaveBeenCalledWith(false, false);
     });
 
     it('fires false when selection is cleared by click-away', () => {
@@ -465,7 +498,7 @@ describe('TableCellSelection', () => {
 
       vi.useRealTimers();
 
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
     });
 
     it('fires true for programmatic selectRow', () => {
@@ -480,7 +513,7 @@ describe('TableCellSelection', () => {
 
       selection.selectRow(1);
 
-      expect(callback).toHaveBeenCalledWith(true);
+      expect(callback).toHaveBeenCalledWith(true, expect.any(Boolean));
     });
 
     it('fires true for programmatic selectColumn', () => {
@@ -495,7 +528,7 @@ describe('TableCellSelection', () => {
 
       selection.selectColumn(0);
 
-      expect(callback).toHaveBeenCalledWith(true);
+      expect(callback).toHaveBeenCalledWith(true, expect.any(Boolean));
     });
 
     it('fires false when programmatic selection is cleared by click-away', () => {
@@ -526,7 +559,7 @@ describe('TableCellSelection', () => {
 
       vi.useRealTimers();
 
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
     });
   });
 
@@ -859,7 +892,7 @@ describe('TableCellSelection', () => {
       vi.useRealTimers();
 
       // Selection should clear — click was outside the grid and outside any popover
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
 
       outsideEl.remove();
@@ -1213,7 +1246,7 @@ describe('TableCellSelection', () => {
       expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
 
       // Verify onSelectionActiveChange called with false (selection dismissed)
-      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false, false);
 
       // Verify preventDefault called
       expect(preventDefaultSpy).toHaveBeenCalled();
@@ -1249,7 +1282,7 @@ describe('TableCellSelection', () => {
       expect(onClearContent.mock.calls[0][0]).toHaveLength(3);
 
       // Verify onSelectionActiveChange called with false (selection dismissed)
-      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false, false);
 
       // Verify preventDefault called
       expect(preventDefaultSpy).toHaveBeenCalled();
@@ -1500,7 +1533,7 @@ describe('TableCellSelection', () => {
       // Overlay and selected attributes should be removed
       expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).toBeNull();
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
-      expect(onSelectionActiveChange).toHaveBeenCalledWith(false);
+      expect(onSelectionActiveChange).toHaveBeenCalledWith(false, false);
     });
 
     it('should not call onCopy when clipboardData is null', () => {
@@ -1634,7 +1667,7 @@ describe('TableCellSelection', () => {
 
       simulateClick(grid, 1, 2);
 
-      expect(callback).toHaveBeenCalledWith(true);
+      expect(callback).toHaveBeenCalledWith(true, expect.any(Boolean));
     });
 
     it('clears previous single-cell selection when clicking a different cell', () => {
@@ -1678,7 +1711,7 @@ describe('TableCellSelection', () => {
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(1);
       expect(grid.querySelector(`[${OVERLAY_ATTR}]`)).not.toBeNull();
       // Should NOT have fired onSelectionActiveChange(false) — selection was never cleared
-      expect(callback).not.toHaveBeenCalledWith(false);
+      expect(callback).not.toHaveBeenCalledWith(false, false);
     });
 
     it('allows drag-extending from an already-selected cell', () => {
@@ -1718,7 +1751,7 @@ describe('TableCellSelection', () => {
       document.dispatchEvent(clearEvent);
 
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
     });
 
     it('does not create selection when clicking grip elements', () => {
@@ -1870,7 +1903,7 @@ describe('TableCellSelection', () => {
       popoverItem.dispatchEvent(clearEvent);
 
       // Selection must remain because the click is inside an open popover
-      expect(callback).not.toHaveBeenCalledWith(false);
+      expect(callback).not.toHaveBeenCalledWith(false, false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(3);
 
       popoverEl.remove();
@@ -1905,7 +1938,7 @@ describe('TableCellSelection', () => {
       outsideEl.dispatchEvent(clearEvent);
 
       // Selection should clear — click was outside the grid and outside any popover
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
 
       outsideEl.remove();
@@ -1934,7 +1967,7 @@ describe('TableCellSelection', () => {
 
       document.dispatchEvent(clearEvent);
 
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
       expect(grid.querySelectorAll(`[${SELECTED_ATTR}]`)).toHaveLength(0);
     });
 
@@ -1959,7 +1992,7 @@ describe('TableCellSelection', () => {
 
       document.dispatchEvent(clearEvent);
 
-      expect(callback).toHaveBeenCalledWith(false);
+      expect(callback).toHaveBeenCalledWith(false, false);
     });
   });
 

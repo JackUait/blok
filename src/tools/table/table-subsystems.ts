@@ -264,6 +264,10 @@ export class TableSubsystems {
         });
       },
       onDragStart: () => {
+        // Same reason as the corner drag: without an open group each added row
+        // or column becomes its own undo entry.
+        this.host.api.blocks.beginTransaction?.();
+
         if (this.resize) {
           this.resize.enabled = false;
         }
@@ -361,6 +365,7 @@ export class TableSubsystems {
 
         this.addControls?.syncRowButtonWidth();
         dragState.addedCols = 0;
+        this.host.api.blocks.endTransaction?.();
       },
     });
 
@@ -454,6 +459,11 @@ export class TableSubsystems {
         });
       },
       onDragStart: () => {
+        // One gesture, one undo entry. Without this each added row is its own
+        // stack item: block operations call stopCapturing() per operation and
+        // the 500ms Yjs captureTimeout does not merge them.
+        this.host.api.blocks.beginTransaction?.();
+
         if (this.resize) {
           this.resize.enabled = false;
         }
@@ -467,6 +477,7 @@ export class TableSubsystems {
         this.addControls?.setDisplay(true);
         this.addControls?.syncRowButtonWidth();
         this.cornerDrag?.syncPosition();
+        this.host.api.blocks.endTransaction?.();
       },
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };

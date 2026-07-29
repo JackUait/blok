@@ -34,6 +34,8 @@ const createMockAPI = (): API => ({
     insert: vi.fn(),
     getBlocksCount: () => 0,
     setBlockParent: vi.fn(),
+    beginTransaction: vi.fn(),
+    endTransaction: vi.fn(),
   },
   caret: {
     setToBlock: vi.fn(),
@@ -149,6 +151,49 @@ describe('TableSubsystems', () => {
       const sc = document.createElement('div');
 
       expect(() => subsystems.attachScrollContainer(sc)).not.toThrow();
+    });
+  });
+
+  describe('corner drag undo grouping', () => {
+    it('opens a transaction on drag start and closes it on drag end', () => {
+      HTMLElement.prototype.setPointerCapture = vi.fn();
+      HTMLElement.prototype.releasePointerCapture = vi.fn();
+
+      const { subsystems, gridEl, host } = createSubsystems();
+
+      subsystems.initAll(gridEl);
+
+      const hitZone = host.element?.querySelector('[data-blok-table-corner-drag]');
+
+      if (!(hitZone instanceof HTMLElement)) {
+        throw new Error('corner drag hit zone not rendered');
+      }
+
+      hitZone.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+      }));
+      // Past DRAG_THRESHOLD, so the gesture counts as a drag rather than a tap.
+      hitZone.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 40,
+        pointerId: 1,
+      }));
+
+      expect(host.api.blocks.beginTransaction).toHaveBeenCalledTimes(1);
+      expect(host.api.blocks.endTransaction).not.toHaveBeenCalled();
+
+      hitZone.dispatchEvent(new PointerEvent('pointerup', {
+        bubbles: true,
+        clientX: 0,
+        clientY: 40,
+        pointerId: 1,
+      }));
+
+      expect(host.api.blocks.endTransaction).toHaveBeenCalledTimes(1);
     });
   });
 });

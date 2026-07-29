@@ -628,4 +628,49 @@ describe('TableCornerDrag', () => {
       expect(options.onAddColumn).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('corner anchoring', () => {
+    const stubRect = (el: HTMLElement, rect: { left: number; top: number; width: number; height: number }): void => {
+      vi.spyOn(el, 'getBoundingClientRect').mockImplementation(() => ({
+        x: rect.left,
+        y: rect.top,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        right: rect.left + rect.width,
+        bottom: rect.top + rect.height,
+        toJSON: () => ({}),
+      }));
+    };
+
+    it('follows the grid right edge after a column is added', () => {
+      stubRect(wrapper, { left: 100, top: 50, width: 700, height: 100 });
+      stubRect(grid, { left: 100, top: 50, width: 700, height: 100 });
+
+      cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
+      cornerDrag.syncPosition();
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`);
+
+      if (!(hitZone instanceof HTMLElement)) {
+        throw new Error('hit zone not rendered');
+      }
+
+      /*
+       * left  = gridRight(800) - wrapperLeft(100) - CORNER_OFFSET(16) = 684
+       * top   = gridBottom(150) - wrapperTop(50)  - CORNER_OFFSET(16) =  84
+       * The 36px zone therefore straddles the corner rather than sitting
+       * wholly outside it, which is what it used to do.
+       */
+      expect(hitZone.style.left).toBe('684px');
+      expect(hitZone.style.top).toBe('84px');
+
+      // The grid widens by 100px; the handle must track it.
+      stubRect(grid, { left: 100, top: 50, width: 800, height: 100 });
+      cornerDrag.syncPosition();
+
+      expect(hitZone.style.left).toBe('784px');
+    });
+  });
 });

@@ -466,6 +466,7 @@ export class TableSubsystems {
         this.rowColControls?.refresh();
         this.addControls?.setDisplay(true);
         this.addControls?.syncRowButtonWidth();
+        this.cornerDrag?.syncPosition();
       },
       getTableSize: () => {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
@@ -506,6 +507,10 @@ export class TableSubsystems {
         });
       },
     });
+
+    if (this.host.scrollContainer) {
+      this.cornerDrag.attachScrollContainer(this.host.scrollContainer);
+    }
   }
 
   private initRowColControls(gridEl: HTMLElement): void {

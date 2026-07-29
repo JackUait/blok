@@ -21,6 +21,9 @@ export interface TableCornerDragOptions {
 
 const DRAG_THRESHOLD = 5;
 
+/** How far the 36x36 hit zone straddles the grid corner, in px. */
+const CORNER_OFFSET = 16;
+
 interface DragState {
   startX: number;
   startY: number;
@@ -48,6 +51,9 @@ export class TableCornerDrag {
   private onClickAdd: (() => void) | null;
   private getNewColumnWidth: (() => number) | null;
   private dragState: DragState | null = null;
+  private scrollContainer: HTMLElement | null = null;
+  private boundScrollHandler: (() => void) | null = null;
+  private scrollContainerResizeObserver: ResizeObserver | null = null;
   private readonly boundMouseEnter: () => void;
   private readonly boundMouseLeave: () => void;
   private readonly boundPointerDown: (e: PointerEvent) => void;
@@ -94,6 +100,54 @@ export class TableCornerDrag {
     this.hitZone.addEventListener('pointerdown', this.boundPointerDown);
 
     this.wrapper.appendChild(this.hitZone);
+    this.syncPosition();
+  }
+
+  /**
+   * Pin the hit zone to the grid's bottom-right corner.
+   *
+   * The old static `bottom: -36px; right: -16px` was measured against the
+   * wrapper, which does not grow with the grid inside its scroll container — so
+   * adding a column left the handle stranded well inside the table (measured:
+   * grid right edge moved 699px -> 816px while the handle stayed put).
+   *
+   * The right edge is clamped to the scroll container's visible right edge, the
+   * same rule TableAddControls.computeVisibleWidth() applies.
+   */
+  public syncPosition(): void {
+    const gridRect = this.gridEl.getBoundingClientRect();
+    const wrapperRect = this.wrapper.getBoundingClientRect();
+
+    // jsdom and pre-layout return all-zero rects; keep the static offsets.
+    if (gridRect.width === 0 && gridRect.height === 0) {
+      return;
+    }
+
+    const visibleRight = this.scrollContainer !== null
+      ? Math.min(gridRect.right, this.scrollContainer.getBoundingClientRect().right)
+      : gridRect.right;
+
+    this.hitZone.style.bottom = '';
+    this.hitZone.style.right = '';
+    this.hitZone.style.left = `${visibleRight - wrapperRect.left - CORNER_OFFSET}px`;
+    this.hitZone.style.top = `${gridRect.bottom - wrapperRect.top - CORNER_OFFSET}px`;
+  }
+
+  public attachScrollContainer(sc: HTMLElement): void {
+    if (this.scrollContainer && this.boundScrollHandler) {
+      this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
+    }
+
+    this.scrollContainerResizeObserver?.disconnect();
+
+    this.scrollContainer = sc;
+    this.boundScrollHandler = (): void => { this.syncPosition(); };
+    sc.addEventListener('scroll', this.boundScrollHandler, { passive: true });
+
+    this.scrollContainerResizeObserver = new ResizeObserver(() => {
+      this.syncPosition();
+    });
+    this.scrollContainerResizeObserver.observe(sc);
   }
 
   private updateTooltip(): void {
@@ -242,6 +296,8 @@ export class TableCornerDrag {
     }
 
     this.updateTooltip();
+    // Rows/columns just committed changed the grid's extent; follow it.
+    this.syncPosition();
   }
 
   private handlePointerUp(_e: PointerEvent): void {
@@ -283,6 +339,15 @@ export class TableCornerDrag {
   }
 
   public destroy(): void {
+    if (this.scrollContainer && this.boundScrollHandler) {
+      this.scrollContainer.removeEventListener('scroll', this.boundScrollHandler);
+      this.scrollContainer = null;
+      this.boundScrollHandler = null;
+    }
+
+    this.scrollContainerResizeObserver?.disconnect();
+    this.scrollContainerResizeObserver = null;
+
     this.hitZone.removeEventListener('mouseenter', this.boundMouseEnter);
     this.hitZone.removeEventListener('mouseleave', this.boundMouseLeave);
     this.hitZone.removeEventListener('pointerdown', this.boundPointerDown);

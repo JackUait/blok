@@ -260,6 +260,22 @@ export interface Blocks {
   transactWithoutCapture?(fn: () => void): void;
 
   /**
+   * Open an undo group that stays open across async boundaries.
+   * Block operations performed until endTransaction() is called are grouped
+   * into a single undo entry. Use for pointer gestures that mutate the
+   * document continuously (e.g. dragging a table's corner to add rows), where
+   * transact() cannot help because it only wraps a synchronous function.
+   *
+   * Every call must be paired with endTransaction().
+   */
+  beginTransaction?(): void;
+
+  /**
+   * Close the undo group opened by beginTransaction().
+   */
+  endTransaction?(): void;
+
+  /**
    * Notify BlockManager that a pointer drag interaction has started or ended.
    * While active, DOM-mutation-triggered Yjs syncs are suppressed to prevent
    * cross-cell browser DOM mutations from corrupting Yjs state.

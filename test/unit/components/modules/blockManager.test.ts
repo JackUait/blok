@@ -1696,4 +1696,44 @@ describe('BlockManager', () => {
       expect(block.lastEditedAt).toBe(lastEditedAtBefore);
     });
   });
+
+  describe('spanning tool transactions', () => {
+    it('suppresses stopCapturing across an async boundary until endToolTransaction', async () => {
+      const { blockManager } = createBlockManager();
+
+      blockManager.prepare();
+      blockManager.beginToolTransaction();
+
+      expect(blockManager.suppressStopCapturing).toBe(true);
+
+      await Promise.resolve();
+
+      /*
+       * Still open after the microtask queue drains — this is what a pointer
+       * gesture needs and what transactForTool could not provide.
+       */
+      expect(blockManager.suppressStopCapturing).toBe(true);
+
+      blockManager.endToolTransaction();
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      expect(blockManager.suppressStopCapturing).toBe(false);
+    });
+
+    it('restores the outer group when a synchronous transaction nests inside an open one', () => {
+      const { blockManager } = createBlockManager();
+
+      blockManager.prepare();
+      blockManager.beginToolTransaction();
+
+      blockManager.transactForTool(() => {
+        expect(blockManager.suppressStopCapturing).toBe(true);
+      });
+
+      expect(blockManager.suppressStopCapturing).toBe(true);
+    });
+  });
 });

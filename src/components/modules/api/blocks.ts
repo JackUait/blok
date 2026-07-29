@@ -63,6 +63,8 @@ export class BlocksAPI extends Module {
       insertInsideParent: this.insertInsideParent,
       transact: (fn: () => void): void => this.transact(fn),
       transactWithoutCapture: (fn: () => void): void => this.transactWithoutCapture(fn),
+      beginTransaction: (): void => this.beginTransaction(),
+      endTransaction: (): void => this.endTransaction(),
       setPointerDragActive: (active: boolean): void => this.setPointerDragActive(active),
       scrollToBlock: (id: string): void => this.scrollToBlock(id),
     };
@@ -662,6 +664,23 @@ export class BlocksAPI extends Module {
    */
   private transact(fn: () => void): void {
     this.Blok.BlockManager.transactForTool(fn);
+  }
+
+  /**
+   * Open an undo group that stays open across async boundaries.
+   * Use for pointer gestures that mutate the document continuously, where
+   * transact() cannot help because it only wraps a synchronous function.
+   * Must be paired with endTransaction().
+   */
+  private beginTransaction(): void {
+    this.Blok.BlockManager.beginToolTransaction();
+  }
+
+  /**
+   * Close the undo group opened by beginTransaction().
+   */
+  private endTransaction(): void {
+    this.Blok.BlockManager.endToolTransaction();
   }
 
   /**

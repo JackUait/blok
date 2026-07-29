@@ -309,6 +309,14 @@ export class BlockManager extends Module {
   private pendingParentSyncPromise: Promise<void> | null = null;
 
   /**
+   * Saved `suppressStopCapturing` values, one per open tool transaction.
+   * A stack rather than a single field so a synchronous `transactForTool`
+   * nested inside an open gesture group restores the outer group instead of
+   * closing it.
+   */
+  private toolTransactionStack: boolean[] = [];
+
+  /**
    * Operations handler for state changes
    */
   private operations!: BlockOperations;
@@ -901,46 +909,69 @@ export class BlockManager extends Module {
    * (e.g., table add row = multiple block inserts).
    */
   public transactForTool(fn: () => void): void {
-    this.Blok.YjsManager.stopCapturing();
-
-    const prevSuppress = this.operations.suppressStopCapturing;
-
-    this.operations.suppressStopCapturing = true;
+    this.beginToolTransaction();
 
     try {
       fn();
     } finally {
-      // Closing boundary uses two nested queueMicrotask calls to ensure correct ordering.
-      //
-      // Microtask ordering after fn() returns:
-      //   [D1..D4 continuations, C (schedulePendingCellCheck), T (outer)]
-      //
-      // C runs BEFORE T (outer). During C, ensureCellHasBlock inserts fire, and
-      // scheduleParentSync queues P2 (flushParentSyncs). P2 is appended to the queue
-      // AFTER T (outer), so when T (outer) runs, P2 hasn't run yet.
-      //
-      // By queueing T_inner from inside T (outer), T_inner lands AFTER P2 in the queue:
-      //   After C runs: [T (outer), P2]
-      //   T (outer) runs, queues T_inner: [P2, T_inner]
-      //   P2 runs: sets pendingParentSyncPromise
-      //   T_inner runs: finds pendingParentSyncPromise set → waits for it → stopCapturing()
-      //
-      // This ensures the parent sync's updateBlockData fires inside the same undo group
-      // as the structural operation (deletes + empty cell inserts + table data update).
+      this.endToolTransaction();
+    }
+  }
+
+  /**
+   * Open an undo group that block operations will not split.
+   *
+   * Unlike `transactForTool`, this may stay open across async boundaries, so a
+   * pointer gesture (table corner drag, "+" button drag) commits as a single
+   * undo entry instead of one per row or column. Block operations otherwise
+   * call `stopCapturing()` per operation, and the 500ms Yjs `captureTimeout`
+   * does not merge them.
+   *
+   * Every call MUST be paired with `endToolTransaction()`.
+   */
+  public beginToolTransaction(): void {
+    this.Blok.YjsManager.stopCapturing();
+
+    this.toolTransactionStack.push(this.operations.suppressStopCapturing);
+    this.operations.suppressStopCapturing = true;
+  }
+
+  /**
+   * Close the undo group opened by `beginToolTransaction()`.
+   */
+  public endToolTransaction(): void {
+    const prevSuppress = this.toolTransactionStack.pop() ?? false;
+
+    // Closing boundary uses two nested queueMicrotask calls to ensure correct ordering.
+    //
+    // Microtask ordering after the operation returns:
+    //   [D1..D4 continuations, C (schedulePendingCellCheck), T (outer)]
+    //
+    // C runs BEFORE T (outer). During C, ensureCellHasBlock inserts fire, and
+    // scheduleParentSync queues P2 (flushParentSyncs). P2 is appended to the queue
+    // AFTER T (outer), so when T (outer) runs, P2 hasn't run yet.
+    //
+    // By queueing T_inner from inside T (outer), T_inner lands AFTER P2 in the queue:
+    //   After C runs: [T (outer), P2]
+    //   T (outer) runs, queues T_inner: [P2, T_inner]
+    //   P2 runs: sets pendingParentSyncPromise
+    //   T_inner runs: finds pendingParentSyncPromise set → waits for it → stopCapturing()
+    //
+    // This ensures the parent sync's updateBlockData fires inside the same undo group
+    // as the structural operation (deletes + empty cell inserts + table data update).
+    queueMicrotask(() => {
       queueMicrotask(() => {
-        queueMicrotask(() => {
-          if (this.pendingParentSyncPromise !== null) {
-            void this.pendingParentSyncPromise.then(() => {
-              this.Blok.YjsManager.stopCapturing();
-              this.operations.suppressStopCapturing = prevSuppress;
-            });
-          } else {
+        if (this.pendingParentSyncPromise !== null) {
+          void this.pendingParentSyncPromise.then(() => {
             this.Blok.YjsManager.stopCapturing();
             this.operations.suppressStopCapturing = prevSuppress;
-          }
-        });
+          });
+        } else {
+          this.Blok.YjsManager.stopCapturing();
+          this.operations.suppressStopCapturing = prevSuppress;
+        }
       });
-    }
+    });
   }
 
   /**

@@ -128,6 +128,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
   'tools/spacer/alignment-guide.ts': 'Fixed alignment guide receives fresh viewport coordinates throughout pointer dragging.',
   'tools/table/table-add-controls.ts': 'Add controls convert measured table geometry into offsets local to the table wrapper.',
   'tools/table/table-cell-selection.ts': 'Selection overlay and pill convert cell rects into the table grid local coordinate space.',
+  'tools/table/table-corner-drag.ts': 'Corner resize handle converts the grid rect into offsets local to the table wrapper so it tracks the grid as columns are added.',
   'tools/table/table-row-col-controls.ts': 'Row and column grips convert cell rects into offsets local to their table overlay.',
   'tools/table/table-row-col-drag.ts': 'Fixed ghost follows pointer coordinates while the local drop indicator uses table offsets.',
 };

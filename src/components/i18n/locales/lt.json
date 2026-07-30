@@ -114,6 +114,7 @@
   "tools.table.dragToAddRemoveRows": "Vilkite norėdami pridėti arba pašalinti eilutes",
   "tools.table.clickToAddColumn": "Spustelėkite norėdami pridėti naują stulpelį",
   "tools.table.dragToAddRemoveColumns": "Vilkite norėdami pridėti arba pašalinti stulpelius",
+  "tools.table.dragToAddRemoveRowsColumns": "Vilkite norėdami pridėti arba pašalinti eilutes/stulpelius",
   "tools.table.fitToPageWidth": "Pritaikyti prie puslapio pločio",
   "tools.table.fullWidth": "Visas plotis",
   "tools.table.textSize": "Teksto dydis",

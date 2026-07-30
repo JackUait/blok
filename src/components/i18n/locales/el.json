@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Σύρετε για προσθήκη ή αφαίρεση γραμμών",
   "tools.table.clickToAddColumn": "Κάντε κλικ για να προσθέσετε μια νέα στήλη",
   "tools.table.dragToAddRemoveColumns": "Σύρετε για προσθήκη ή αφαίρεση στηλών",
+  "tools.table.dragToAddRemoveRowsColumns": "Σύρετε για προσθήκη ή αφαίρεση γραμμών/στηλών",
   "tools.table.fitToPageWidth": "Προσαρμογή στο πλάτος σελίδας",
   "tools.table.fullWidth": "Πλήρες πλάτος",
   "tools.table.textSize": "Μέγεθος κειμένου",

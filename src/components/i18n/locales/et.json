@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Lohista ridade lisamiseks või eemaldamiseks",
   "tools.table.clickToAddColumn": "Klõpsa uue veeru lisamiseks",
   "tools.table.dragToAddRemoveColumns": "Lohista veergude lisamiseks või eemaldamiseks",
+  "tools.table.dragToAddRemoveRowsColumns": "Lohista ridade/veergude lisamiseks või eemaldamiseks",
   "tools.table.fitToPageWidth": "Sobita lehe laiusega",
   "tools.table.fullWidth": "Täislaius",
   "tools.table.textSize": "Teksti suurus",

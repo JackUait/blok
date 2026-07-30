@@ -1,11 +1,13 @@
+import type { I18n } from '../../../types/api';
+import { createTooltipContent } from '../../components/modules/toolbar/tooltip';
 import { show as showTooltip, hide as hideTooltip } from '../../components/utils/tooltip';
-import { twMerge } from '../../components/utils/tw';
 
 const CORNER_DRAG_ATTR = 'data-blok-table-corner-drag';
 
 export interface TableCornerDragOptions {
   wrapper: HTMLElement;
   gridEl: HTMLElement;
+  i18n: I18n;
   onAddRow: () => void;
   onAddColumn: () => void;
   onRemoveLastRow: () => void;
@@ -93,7 +95,7 @@ export class TableCornerDrag {
   private wrapper: HTMLElement;
   private gridEl: HTMLElement;
   private hitZone: HTMLElement;
-  private grip: HTMLElement;
+  private i18n: I18n;
   private getTableSize: () => { rows: number; cols: number };
   private onAddRow: () => void;
   private onAddColumn: () => void;
@@ -118,6 +120,7 @@ export class TableCornerDrag {
   constructor(options: TableCornerDragOptions) {
     this.wrapper = options.wrapper;
     this.gridEl = options.gridEl;
+    this.i18n = options.i18n;
     this.getTableSize = options.getTableSize;
     this.onAddRow = options.onAddRow;
     this.onAddColumn = options.onAddColumn;
@@ -152,45 +155,8 @@ export class TableCornerDrag {
     this.hitZone.addEventListener('mouseleave', this.boundMouseLeave);
     this.hitZone.addEventListener('pointerdown', this.boundPointerDown);
 
-    /*
-     * The affordance itself. Idle-hidden and revealed on proximity, using the
-     * same opacity transition and gray tone as the row/column grips
-     * (see table-grip-visuals.ts) so the table reads as one visual family.
-     */
-    this.grip = document.createElement('div');
-    this.grip.setAttribute('data-blok-testid', 'table-corner-grip');
-    this.grip.setAttribute('contenteditable', 'false');
-    this.grip.className = twMerge(
-      'absolute',
-      'rounded-sm',
-      'border-b-2',
-      'border-r-2',
-      'border-gray-400',
-      'opacity-0',
-      'transition-opacity',
-      'duration-150'
-    );
-    Object.assign(this.grip.style, {
-      width: '8px',
-      height: '8px',
-      left: '12px',
-      top: '12px',
-      // The hit zone owns the gesture; the mark must never intercept it.
-      pointerEvents: 'none',
-    });
-
-    this.hitZone.appendChild(this.grip);
-
     this.wrapper.appendChild(this.hitZone);
     this.syncPosition();
-  }
-
-  /**
-   * Reveal or hide the grip. Driven by pointer proximity to the table so the
-   * affordance is discoverable without becoming permanent chrome.
-   */
-  public setProximity(near: boolean): void {
-    this.grip.classList.toggle('opacity-0', !near);
   }
 
   /**
@@ -246,10 +212,17 @@ export class TableCornerDrag {
     showTooltip(this.hitZone, `${size.cols}\u00D7${size.rows}`, { placement: 'bottom' });
   }
 
+  /**
+   * Hovering teaches the gesture; only once a drag is under way does the size
+   * readout take over. The corner carries no painted mark, so a bare "3x2"
+   * would name the table's size without ever saying what the handle does.
+   */
   private handleMouseEnter(): void {
-    this.updateTooltip();
-    this.setProximity(true);
-    this.grip.classList.add('border-gray-600');
+    showTooltip(
+      this.hitZone,
+      createTooltipContent([this.i18n.t('tools.table.dragToAddRemoveRowsColumns')]),
+      { placement: 'bottom' }
+    );
   }
 
   private handleMouseLeave(): void {
@@ -257,8 +230,6 @@ export class TableCornerDrag {
       return;
     }
     hideTooltip();
-    this.setProximity(false);
-    this.grip.classList.remove('border-gray-600');
   }
 
   /**

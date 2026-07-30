@@ -101,6 +101,7 @@
   "tools.table.dragToAddRemoveRows": "Prevucite za dodavanje ili uklanjanje redova",
   "tools.table.clickToAddColumn": "Kliknite za dodavanje nove kolone",
   "tools.table.dragToAddRemoveColumns": "Prevucite za dodavanje ili uklanjanje kolona",
+  "tools.table.dragToAddRemoveRowsColumns": "Prevucite za dodavanje ili uklanjanje redova/kolona",
   "tools.table.fitToPageWidth": "Prilagodi širini stranice",
   "tools.table.fullWidth": "Puna širina",
   "tools.table.textSize": "Veličina teksta",

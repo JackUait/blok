@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Քաշեք՝ տողեր ավելացնելու կամ հեռացնելու համար",
   "tools.table.clickToAddColumn": "Սեղմեք՝ նոր սյունակ ավելացնելու համար",
   "tools.table.dragToAddRemoveColumns": "Քաշեք՝ սյունակներ ավելացնելու կամ հեռացնելու համար",
+  "tools.table.dragToAddRemoveRowsColumns": "Քաշեք՝ տողեր/սյունակներ ավելացնելու կամ հեռացնելու համար",
   "tools.table.fitToPageWidth": "Հարմարեցնել էջի լայնությանը",
   "tools.table.fullWidth": "Ամբողջ լայնություն",
   "tools.table.textSize": "Տեքստի չափը",

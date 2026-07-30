@@ -101,6 +101,7 @@
   "tools.table.dragToAddRemoveRows": "ረድፎችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.clickToAddColumn": "አዲስ አምድ ለመጨመር ጠቅ ያድርጉ",
   "tools.table.dragToAddRemoveColumns": "አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
+  "tools.table.dragToAddRemoveRowsColumns": "ረድፎችን/አምዶችን ለመጨመር ወይም ለማስወገድ ይጎትቱ",
   "tools.table.fitToPageWidth": "ከገጹ ስፋት ጋር አስማማ",
   "tools.table.fullWidth": "ሙሉ ስፋት",
   "tools.table.textSize": "የጽሑፍ መጠን",

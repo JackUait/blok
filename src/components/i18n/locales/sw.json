@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Buruta ili kuongeza au kuondoa safu mlalo",
   "tools.table.clickToAddColumn": "Bofya ili kuongeza safu wima mpya",
   "tools.table.dragToAddRemoveColumns": "Buruta ili kuongeza au kuondoa safu wima",
+  "tools.table.dragToAddRemoveRowsColumns": "Buruta ili kuongeza au kuondoa safu mlalo/wima",
   "tools.table.fitToPageWidth": "Linganisha na upana wa ukurasa",
   "tools.table.fullWidth": "Upana kamili",
   "tools.table.textSize": "Ukubwa wa maandishi",

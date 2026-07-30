@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Ziehen, um Zeilen hinzuzufügen oder zu entfernen",
   "tools.table.clickToAddColumn": "Klicken, um eine Spalte hinzuzufügen",
   "tools.table.dragToAddRemoveColumns": "Ziehen, um Spalten hinzuzufügen oder zu entfernen",
+  "tools.table.dragToAddRemoveRowsColumns": "Ziehen, um Zeilen/Spalten hinzuzufügen oder zu entfernen",
   "tools.table.fitToPageWidth": "An Seitenbreite anpassen",
   "tools.table.fullWidth": "Volle Breite",
   "tools.table.textSize": "Textgröße",

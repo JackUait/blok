@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "قۇر قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "tools.table.clickToAddColumn": "يېڭى ئىستون قوشۇش ئۈچۈن چېكىڭ",
   "tools.table.dragToAddRemoveColumns": "ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
+  "tools.table.dragToAddRemoveRowsColumns": "قۇر/ئىستون قوشۇش ياكى ئۆچۈرۈش ئۈچۈن سۆرەڭ",
   "tools.table.fitToPageWidth": "بەت كەڭلىكىگە ماسلاشتۇرۇش",
   "tools.table.fullWidth": "تولۇق كەڭلىك",
   "tools.table.textSize": "تېكىست چوڭلۇقى",

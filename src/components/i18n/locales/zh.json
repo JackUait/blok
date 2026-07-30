@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "拖动以添加或删除行",
   "tools.table.clickToAddColumn": "点击添加新列",
   "tools.table.dragToAddRemoveColumns": "拖动以添加或删除列",
+  "tools.table.dragToAddRemoveRowsColumns": "拖动以添加或删除行/列",
   "tools.table.fitToPageWidth": "适应页面宽度",
   "tools.table.fullWidth": "全宽",
   "tools.table.textSize": "文本大小",

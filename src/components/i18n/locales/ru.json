@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Перетащите, чтобы добавить или удалить строки",
   "tools.table.clickToAddColumn": "Нажмите, чтобы добавить новый столбец",
   "tools.table.dragToAddRemoveColumns": "Перетащите, чтобы добавить или удалить столбцы",
+  "tools.table.dragToAddRemoveRowsColumns": "Перетащите, чтобы добавить или удалить строки/столбцы",
   "tools.table.fitToPageWidth": "По ширине страницы",
   "tools.table.fullWidth": "Полная ширина",
   "tools.table.textSize": "Размер текста",

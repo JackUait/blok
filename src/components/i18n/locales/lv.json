@@ -114,6 +114,7 @@
   "tools.table.dragToAddRemoveRows": "Velciet, lai pievienotu vai noņemtu rindas",
   "tools.table.clickToAddColumn": "Noklikšķiniet, lai pievienotu jaunu kolonnu",
   "tools.table.dragToAddRemoveColumns": "Velciet, lai pievienotu vai noņemtu kolonnas",
+  "tools.table.dragToAddRemoveRowsColumns": "Velciet, lai pievienotu vai noņemtu rindas/kolonnas",
   "tools.table.fitToPageWidth": "Pielāgot lapas platumam",
   "tools.table.fullWidth": "Pilns platums",
   "tools.table.textSize": "Teksta izmērs",

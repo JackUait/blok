@@ -112,6 +112,7 @@
   "tools.table.dragToAddRemoveRows": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ",
   "tools.table.clickToAddColumn": "ຄລິກເພື່ອເພີ່ມຖັນໃໝ່",
   "tools.table.dragToAddRemoveColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບຖັນ",
+  "tools.table.dragToAddRemoveRowsColumns": "ລາກເພື່ອເພີ່ມ ຫຼື ລຶບແຖວ/ຖັນ",
   "tools.table.fitToPageWidth": "ປັບໃຫ້ພໍດີກັບຄວາມກວ້າງໜ້າ",
   "tools.table.fullWidth": "ຄວາມກວ້າງເຕັມ",
   "tools.table.textSize": "ຂະໜາດຂໍ້ຄວາມ",

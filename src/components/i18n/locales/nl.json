@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Sleep om rijen toe te voegen of te verwijderen",
   "tools.table.clickToAddColumn": "Klik om een nieuwe kolom toe te voegen",
   "tools.table.dragToAddRemoveColumns": "Sleep om kolommen toe te voegen of te verwijderen",
+  "tools.table.dragToAddRemoveRowsColumns": "Sleep om rijen/kolommen toe te voegen of te verwijderen",
   "tools.table.fitToPageWidth": "Aanpassen aan paginabreedte",
   "tools.table.fullWidth": "Volledige breedte",
   "tools.table.textSize": "Tekstgrootte",

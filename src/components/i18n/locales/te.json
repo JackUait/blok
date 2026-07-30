@@ -101,6 +101,7 @@
   "tools.table.dragToAddRemoveRows": "వరుసలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "tools.table.clickToAddColumn": "కొత్త స్తంభం జోడించడానికి నొక్కండి",
   "tools.table.dragToAddRemoveColumns": "స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
+  "tools.table.dragToAddRemoveRowsColumns": "వరుసలు/స్తంభాలు జోడించడానికి లేదా తొలగించడానికి లాగండి",
   "tools.table.fitToPageWidth": "పేజీ వెడల్పుకు సరిపోల్చు",
   "tools.table.fullWidth": "పూర్తి వెడల్పు",
   "tools.table.textSize": "వచన పరిమాణం",

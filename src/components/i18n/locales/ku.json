@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ڕیز",
   "tools.table.clickToAddColumn": "کلیک بکە بۆ زیادکردنی ستوونی نوێ",
   "tools.table.dragToAddRemoveColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ستوون",
+  "tools.table.dragToAddRemoveRowsColumns": "ڕاکێشە بۆ زیادکردن یان سڕینەوەی ڕیز/ستوون",
   "tools.table.fitToPageWidth": "بگونجێنە بە پانی لاپەڕە",
   "tools.table.fullWidth": "پانی تەواو",
   "tools.table.textSize": "قەبارەی دەق",

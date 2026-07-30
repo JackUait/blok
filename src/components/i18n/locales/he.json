@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "גרור להוספה או הסרה של שורות",
   "tools.table.clickToAddColumn": "לחץ להוספת עמודה חדשה",
   "tools.table.dragToAddRemoveColumns": "גרור להוספה או הסרה של עמודות",
+  "tools.table.dragToAddRemoveRowsColumns": "גרור להוספה או הסרה של שורות/עמודות",
   "tools.table.fitToPageWidth": "התאם לרוחב הדף",
   "tools.table.fullWidth": "רוחב מלא",
   "tools.table.textSize": "גודל טקסט",

@@ -82,6 +82,7 @@
   "tools.table.dragToAddRemoveRows": "Drag to add or remove rows",
   "tools.table.clickToAddColumn": "Click to add a new column",
   "tools.table.dragToAddRemoveColumns": "Drag to add or remove columns",
+  "tools.table.dragToAddRemoveRowsColumns": "Drag to add or remove rows/columns",
   "tools.table.fitToPageWidth": "Fit to page width",
   "tools.table.fullWidth": "Full width",
   "tools.table.textSize": "Text size",

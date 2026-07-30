@@ -112,6 +112,7 @@
   "tools.table.dragToAddRemoveRows": "पंक्ती जोडण्यासाठी किंवा काढण्यासाठी ओढा",
   "tools.table.clickToAddColumn": "नवीन स्तंभ जोडण्यासाठी क्लिक करा",
   "tools.table.dragToAddRemoveColumns": "स्तंभ जोडण्यासाठी किंवा काढण्यासाठी ओढा",
+  "tools.table.dragToAddRemoveRowsColumns": "पंक्ती/स्तंभ जोडण्यासाठी किंवा काढण्यासाठी ओढा",
   "tools.table.fitToPageWidth": "पृष्ठाच्या रुंदीत बसवा",
   "tools.table.fullWidth": "पूर्ण रुंदी",
   "tools.table.textSize": "मजकुराचा आकार",

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TableCornerDrag } from '../../../../src/tools/table/table-corner-drag';
 import { simulateMouseenter, simulateMouseleave } from '../../../helpers/simulate';
+import type { I18n } from '../../../../types/api';
 
 const mockShowTooltip = vi.fn();
 const mockHideTooltip = vi.fn();
@@ -58,9 +59,20 @@ const createGrid = (rows: number, cols: number): HTMLTableElement => {
   return table;
 };
 
+const DRAG_HINT_KEY = 'tools.table.dragToAddRemoveRowsColumns';
+const DRAG_HINT_TEXT = 'Drag to add or remove rows/columns';
+
+const createI18nStub = (): I18n & { t: ReturnType<typeof vi.fn> } => ({
+  t: vi.fn((key: string) => (key === DRAG_HINT_KEY ? DRAG_HINT_TEXT : key)),
+  has: (key: string) => key === DRAG_HINT_KEY,
+  getEnglishTranslation: (key: string) => (key === DRAG_HINT_KEY ? DRAG_HINT_TEXT : key),
+  getLocale: () => 'en',
+});
+
 const createDefaultOptions = (wrapper: HTMLElement, gridEl: HTMLElement) => ({
   wrapper,
   gridEl,
+  i18n: createI18nStub(),
   onAddRow: vi.fn(),
   onAddColumn: vi.fn(),
   onRemoveLastRow: vi.fn(),
@@ -294,21 +306,42 @@ describe('TableCornerDrag', () => {
   });
 
   describe('hover tooltip', () => {
-    it('shows singleton tooltip with table size on mouseenter', () => {
+    /*
+     * Hovering the corner has to teach the gesture \u2014 the handle itself is
+     * invisible until the pointer is on it, so a bare "3x2" says nothing about
+     * what dragging would do. The size readout is still the right content once
+     * a drag is under way (see "tooltip updates during drag").
+     */
+    it('shows the drag hint on mouseenter', () => {
       const options = createDefaultOptions(wrapper, grid);
 
-      options.getTableSize.mockReturnValue({ rows: 2, cols: 3 });
       cornerDrag = new TableCornerDrag(options);
 
       const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
       simulateMouseenter(hitZone);
 
-      expect(mockShowTooltip).toHaveBeenCalledWith(
-        hitZone,
-        '3\u00D72',
-        expect.objectContaining({ placement: 'bottom' }),
-      );
+      expect(options.i18n.t).toHaveBeenCalledWith(DRAG_HINT_KEY);
+
+      const [target, content, opts] = mockShowTooltip.mock.calls[0];
+
+      expect(target).toBe(hitZone);
+      expect((content as HTMLElement).textContent).toBe(DRAG_HINT_TEXT);
+      expect(opts).toEqual(expect.objectContaining({ placement: 'bottom' }));
+    });
+
+    it('emphasises the verb the way the add-control tooltips do', () => {
+      const options = createDefaultOptions(wrapper, grid);
+
+      cornerDrag = new TableCornerDrag(options);
+
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
+
+      simulateMouseenter(hitZone);
+
+      const content = mockShowTooltip.mock.calls[0][1] as HTMLElement;
+
+      expect(content.querySelector('span')?.textContent).toBe('Drag');
     });
 
     it('hides singleton tooltip on mouseleave', () => {
@@ -1344,35 +1377,19 @@ describe('TableCornerDrag', () => {
     });
   });
 
-  describe('corner grip visual', () => {
-    it('renders a grip that is hidden at rest and revealed on proximity', () => {
+  describe('corner affordance', () => {
+    /*
+     * The corner carries no painted mark. A dot sitting outside the table's own
+     * border read as a stray glyph rather than a handle; the tooltip on hover is
+     * the affordance now.
+     */
+    it('paints nothing at the corner', () => {
       cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
 
-      const grip = wrapper.querySelector('[data-blok-testid="table-corner-grip"]');
+      const hitZone = wrapper.querySelector(`[${CORNER_DRAG_ATTR}]`) as HTMLElement;
 
-      if (!(grip instanceof HTMLElement)) {
-        throw new Error('grip not rendered');
-      }
-
-      expect(grip.classList.contains('opacity-0')).toBe(true);
-
-      cornerDrag.setProximity(true);
-      expect(grip.classList.contains('opacity-0')).toBe(false);
-
-      cornerDrag.setProximity(false);
-      expect(grip.classList.contains('opacity-0')).toBe(true);
-    });
-
-    it('keeps the grip non-interactive so the hit zone owns the gesture', () => {
-      cornerDrag = new TableCornerDrag(createDefaultOptions(wrapper, grid));
-
-      const grip = wrapper.querySelector('[data-blok-testid="table-corner-grip"]');
-
-      if (!(grip instanceof HTMLElement)) {
-        throw new Error('grip not rendered');
-      }
-
-      expect(grip.style.pointerEvents).toBe('none');
+      expect(wrapper.querySelector('[data-blok-testid="table-corner-grip"]')).toBeNull();
+      expect(hitZone.children.length).toBe(0);
     });
   });
 });

@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "ރޯ އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.clickToAddColumn": "އާ ކޮލަމެއް އިތުރުކުރަން ކްލިކް ކުރޭ",
   "tools.table.dragToAddRemoveColumns": "ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
+  "tools.table.dragToAddRemoveRowsColumns": "ރޯ/ކޮލަމް އިތުރުކުރަން ނުވަތަ ނައްތާލަން ދަމާލާ",
   "tools.table.fitToPageWidth": "ޞަފްޙާގެ ފުޅާމިނަށް ފައްތާ",
   "tools.table.fullWidth": "ފުރިހަމަ ފުޅާމިން",
   "tools.table.textSize": "ލިޔުމުގެ ސައިޒު",

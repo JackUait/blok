@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Arraste para adicionar ou remover linhas",
   "tools.table.clickToAddColumn": "Clique para adicionar uma nova coluna",
   "tools.table.dragToAddRemoveColumns": "Arraste para adicionar ou remover colunas",
+  "tools.table.dragToAddRemoveRowsColumns": "Arraste para adicionar ou remover linhas/colunas",
   "tools.table.fitToPageWidth": "Ajustar à largura da página",
   "tools.table.fullWidth": "Largura total",
   "tools.table.textSize": "Tamanho do texto",

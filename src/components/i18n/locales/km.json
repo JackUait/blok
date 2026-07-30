@@ -78,6 +78,7 @@
   "tools.table.dragToAddRemoveRows": "អូសដើម្បីបន្ថែម ឬលុបជួរដេក",
   "tools.table.clickToAddColumn": "ចុចដើម្បីបន្ថែមជួរឈរថ្មី",
   "tools.table.dragToAddRemoveColumns": "អូសដើម្បីបន្ថែម ឬលុបជួរឈរ",
+  "tools.table.dragToAddRemoveRowsColumns": "អូសដើម្បីបន្ថែម ឬលុបជួរដេក/ឈរ",
   "tools.table.fitToPageWidth": "ធ្វើឱ្យសមនឹងទទឹងទំព័រ",
   "tools.table.fullWidth": "ទទឹងពេញ",
   "tools.table.textSize": "ទំហំអត្ថបទ",

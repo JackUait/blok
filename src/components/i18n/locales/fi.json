@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Vedä lisätäksesi tai poistaaksesi rivejä",
   "tools.table.clickToAddColumn": "Napsauta lisätäksesi sarakkeen",
   "tools.table.dragToAddRemoveColumns": "Vedä lisätäksesi tai poistaaksesi sarakkeita",
+  "tools.table.dragToAddRemoveRowsColumns": "Vedä lisätäksesi tai poistaaksesi rivejä/sarakkeita",
   "tools.table.fitToPageWidth": "Sovita sivun leveyteen",
   "tools.table.fullWidth": "Koko leveys",
   "tools.table.textSize": "Tekstin koko",

@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Přetažením přidáte nebo odeberete řádky",
   "tools.table.clickToAddColumn": "Kliknutím přidáte nový sloupec",
   "tools.table.dragToAddRemoveColumns": "Přetažením přidáte nebo odeberete sloupce",
+  "tools.table.dragToAddRemoveRowsColumns": "Přetažením přidáte nebo odeberete řádky/sloupce",
   "tools.table.fitToPageWidth": "Přizpůsobit šířce stránky",
   "tools.table.fullWidth": "Celá šířka",
   "tools.table.textSize": "Velikost textu",

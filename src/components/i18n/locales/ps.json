@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "د قطارونو اضافه یا لرې کولو لپاره کش کړئ",
   "tools.table.clickToAddColumn": "د نوي کالم د اضافه کولو لپاره کلیک وکړئ",
   "tools.table.dragToAddRemoveColumns": "د کالمونو اضافه یا لرې کولو لپاره کش کړئ",
+  "tools.table.dragToAddRemoveRowsColumns": "د قطارونو/کالمونو اضافه یا لرې کولو لپاره کش کړئ",
   "tools.table.fitToPageWidth": "د پاڼې پلنوالي سره برابر کړئ",
   "tools.table.fullWidth": "بشپړ پلنوالی",
   "tools.table.textSize": "د متن اندازه",

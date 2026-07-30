@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Húzza sorok hozzáadásához vagy eltávolításához",
   "tools.table.clickToAddColumn": "Kattintson új oszlop hozzáadásához",
   "tools.table.dragToAddRemoveColumns": "Húzza oszlopok hozzáadásához vagy eltávolításához",
+  "tools.table.dragToAddRemoveRowsColumns": "Húzza sorok/oszlopok hozzáadásához vagy eltávolításához",
   "tools.table.fitToPageWidth": "Igazítás az oldal szélességéhez",
   "tools.table.fullWidth": "Teljes szélesség",
   "tools.table.textSize": "Szövegméret",

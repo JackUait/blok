@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "ドラッグして行を追加・削除",
   "tools.table.clickToAddColumn": "クリックして新しい列を追加",
   "tools.table.dragToAddRemoveColumns": "ドラッグして列を追加・削除",
+  "tools.table.dragToAddRemoveRowsColumns": "ドラッグして行/列を追加・削除",
   "tools.table.fitToPageWidth": "ページ幅に合わせる",
   "tools.table.fullWidth": "全幅",
   "tools.table.textSize": "テキストサイズ",

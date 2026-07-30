@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "ลากเพื่อเพิ่มหรือลบแถว",
   "tools.table.clickToAddColumn": "คลิกเพื่อเพิ่มคอลัมน์ใหม่",
   "tools.table.dragToAddRemoveColumns": "ลากเพื่อเพิ่มหรือลบคอลัมน์",
+  "tools.table.dragToAddRemoveRowsColumns": "ลากเพื่อเพิ่มหรือลบแถว/คอลัมน์",
   "tools.table.fitToPageWidth": "ปรับให้พอดีกับความกว้างของหน้า",
   "tools.table.fullWidth": "เต็มความกว้าง",
   "tools.table.textSize": "ขนาดข้อความ",

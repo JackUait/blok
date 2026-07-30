@@ -78,6 +78,7 @@
   "tools.table.dragToAddRemoveRows": "ಸಾಲುಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ",
   "tools.table.clickToAddColumn": "ಹೊಸ ಕಾಲಮ್ ಸೇರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
   "tools.table.dragToAddRemoveColumns": "ಕಾಲಮ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ",
+  "tools.table.dragToAddRemoveRowsColumns": "ಸಾಲುಗಳನ್ನು/ಕಾಲಮ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ಎಳೆಯಿರಿ",
   "tools.table.fitToPageWidth": "ಪುಟದ ಅಗಲಕ್ಕೆ ಹೊಂದಿಸಿ",
   "tools.table.fullWidth": "ಪೂರ್ಣ ಅಗಲ",
   "tools.table.textSize": "ಪಠ್ಯದ ಗಾತ್ರ",

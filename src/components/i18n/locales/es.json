@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Arrastra para añadir o eliminar filas",
   "tools.table.clickToAddColumn": "Haz clic para añadir una columna nueva",
   "tools.table.dragToAddRemoveColumns": "Arrastra para añadir o eliminar columnas",
+  "tools.table.dragToAddRemoveRowsColumns": "Arrastra para añadir o eliminar filas/columnas",
   "tools.table.fitToPageWidth": "Ajustar al ancho de la página",
   "tools.table.fullWidth": "Ancho completo",
   "tools.table.textSize": "Tamaño del texto",

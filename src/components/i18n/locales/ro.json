@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Trageți pentru a adăuga sau elimina rânduri",
   "tools.table.clickToAddColumn": "Faceți clic pentru a adăuga o coloană nouă",
   "tools.table.dragToAddRemoveColumns": "Trageți pentru a adăuga sau elimina coloane",
+  "tools.table.dragToAddRemoveRowsColumns": "Trageți pentru a adăuga sau elimina rânduri/coloane",
   "tools.table.fitToPageWidth": "Potrivire la lățimea paginii",
   "tools.table.fullWidth": "Lățime completă",
   "tools.table.textSize": "Dimensiunea textului",

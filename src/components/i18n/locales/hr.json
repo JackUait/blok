@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Povuci za dodavanje ili uklanjanje redaka",
   "tools.table.clickToAddColumn": "Klikni za dodavanje novog stupca",
   "tools.table.dragToAddRemoveColumns": "Povuci za dodavanje ili uklanjanje stupaca",
+  "tools.table.dragToAddRemoveRowsColumns": "Povuci za dodavanje ili uklanjanje redaka/stupaca",
   "tools.table.fitToPageWidth": "Prilagodi širini stranice",
   "tools.table.fullWidth": "Puna širina",
   "tools.table.textSize": "Veličina teksta",

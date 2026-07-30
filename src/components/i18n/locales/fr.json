@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Glisser pour ajouter ou supprimer des lignes",
   "tools.table.clickToAddColumn": "Cliquer pour ajouter une nouvelle colonne",
   "tools.table.dragToAddRemoveColumns": "Glisser pour ajouter ou supprimer des colonnes",
+  "tools.table.dragToAddRemoveRowsColumns": "Glisser pour ajouter ou supprimer des lignes/colonnes",
   "tools.table.fitToPageWidth": "Ajuster à la largeur de la page",
   "tools.table.fullWidth": "Pleine largeur",
   "tools.table.textSize": "Taille du texte",

@@ -161,6 +161,7 @@ const ENGLISH_GUIDELINE_EXPECTATIONS: Readonly<Record<string, string>> = {
   'tools.table.insertRowAbove': 'Insert row above',
   'tools.table.insertRowBelow': 'Insert row below',
   'tools.table.clearSelection': 'Clear contents',
+  'tools.table.dragToAddRemoveRowsColumns': 'Drag to add or remove rows/columns',
   'tools.table.placement': 'Alignment',
   'tools.table.placementTopLeft': 'Top left',
   'tools.table.placementTopCenter': 'Top center',

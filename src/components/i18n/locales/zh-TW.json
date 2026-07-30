@@ -82,6 +82,7 @@
   "tools.table.dragToAddRemoveRows": "拖曳以新增或刪除列",
   "tools.table.clickToAddColumn": "按一下以新增一欄",
   "tools.table.dragToAddRemoveColumns": "拖曳以新增或刪除欄",
+  "tools.table.dragToAddRemoveRowsColumns": "拖曳以新增或刪除列/欄",
   "tools.table.fitToPageWidth": "配合頁面寬度",
   "tools.table.fullWidth": "全寬",
   "tools.table.textSize": "文字大小",

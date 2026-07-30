@@ -101,6 +101,7 @@
   "tools.table.dragToAddRemoveRows": "সারি যোগ বা সরাতে টানুন",
   "tools.table.clickToAddColumn": "নতুন কলাম যোগ করতে ক্লিক করুন",
   "tools.table.dragToAddRemoveColumns": "কলাম যোগ বা সরাতে টানুন",
+  "tools.table.dragToAddRemoveRowsColumns": "সারি/কলাম যোগ বা সরাতে টানুন",
   "tools.table.fitToPageWidth": "পৃষ্ঠার প্রস্থে ফিট করুন",
   "tools.table.fullWidth": "সম্পূর্ণ প্রস্থ",
   "tools.table.textSize": "টেক্সটের আকার",

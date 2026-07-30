@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Kéo để thêm hoặc xóa hàng",
   "tools.table.clickToAddColumn": "Nhấp để thêm cột mới",
   "tools.table.dragToAddRemoveColumns": "Kéo để thêm hoặc xóa cột",
+  "tools.table.dragToAddRemoveRowsColumns": "Kéo để thêm hoặc xóa hàng/cột",
   "tools.table.fitToPageWidth": "Vừa với chiều rộng trang",
   "tools.table.fullWidth": "Toàn bộ chiều rộng",
   "tools.table.textSize": "Cỡ chữ",

@@ -12,13 +12,14 @@
  *      operations call stopCapturing() per operation and the 500ms Yjs
  *      captureTimeout does not merge them.
  *
- * The third test covers discoverability: the corner affordance rendered nothing
- * at all, at any state including hover.
+ * The remaining tests cover discoverability: the corner is unpainted, so the
+ * hover tooltip is the only thing that names the gesture.
  */
 
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
+import { TOOLTIP_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -29,6 +30,7 @@ declare global {
 }
 
 const HOLDER_ID = 'blok';
+const CORNER_HANDLE_SELECTOR = '[data-blok-table-corner-drag]';
 const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 
 const resetBlok = async (page: Page): Promise<void> => {
@@ -66,13 +68,13 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
 const rowCount = (page: Page): Promise<number> =>
   page.locator('[data-blok-table-row]').count();
 
-/** Drag the corner grip by (dx, dy) from its centre. */
+/** Drag the corner handle by (dx, dy) from its centre. */
 const dragCorner = async (page: Page, dx: number, dy: number): Promise<void> => {
-  const grip = page.getByTestId('table-corner-grip');
-  const box = await grip.boundingBox();
+  const handle = page.locator(CORNER_HANDLE_SELECTOR);
+  const box = await handle.boundingBox();
 
   if (box === null) {
-    throw new Error('corner grip has no bounding box');
+    throw new Error('corner handle has no bounding box');
   }
 
   const startX = box.x + box.width / 2;
@@ -130,17 +132,18 @@ test.describe('Table corner drag resize', () => {
     await expect.poll(() => rowCount(page)).toBe(before);
   });
 
-  test('reveals the grip on hover and hides it at rest', async ({ page }) => {
-    const grip = page.getByTestId('table-corner-grip');
+  test('teaches the gesture with a tooltip when the corner is hovered', async ({ page }) => {
+    const tooltip = page.locator(TOOLTIP_INTERFACE_SELECTOR);
 
-    await expect
-      .poll(() => grip.evaluate(el => getComputedStyle(el).opacity))
-      .toBe('0');
+    await expect(tooltip).toBeHidden();
 
-    await page.locator('[data-blok-table-cell]').first().hover();
+    await page.locator(CORNER_HANDLE_SELECTOR).hover();
 
-    await expect
-      .poll(() => grip.evaluate(el => getComputedStyle(el).opacity))
-      .not.toBe('0');
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toHaveText('Drag to add or remove rows/columns');
+  });
+
+  test('paints no mark at the corner', async ({ page }) => {
+    await expect(page.getByTestId('table-corner-grip')).toHaveCount(0);
   });
 });

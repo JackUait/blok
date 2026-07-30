@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "Satır eklemek veya kaldırmak için sürükle",
   "tools.table.clickToAddColumn": "Yeni sütun eklemek için tıkla",
   "tools.table.dragToAddRemoveColumns": "Sütun eklemek veya kaldırmak için sürükle",
+  "tools.table.dragToAddRemoveRowsColumns": "Satır/sütun eklemek veya kaldırmak için sürükle",
   "tools.table.fitToPageWidth": "Sayfa genişliğine sığdır",
   "tools.table.fullWidth": "Tam genişlik",
   "tools.table.textSize": "Metin boyutu",

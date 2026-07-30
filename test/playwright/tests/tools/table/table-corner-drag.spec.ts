@@ -236,18 +236,41 @@ test.describe('Table Corner Drag Handle', () => {
     await expect(firstRowCellsAfter).toHaveCount(3);
   });
 
-  test('Tooltip shows table size on hover', async ({ page }) => {
+  test('Tooltip names the gesture on hover', async ({ page }) => {
     // 1. Create a 2x3 table
     await createTable(page, [['A', 'B', 'C'], ['D', 'E', 'F']]);
 
     // 2. Hover over the corner drag handle (uses mouse API to bypass overlay interception)
     await hoverCornerHandle(page);
 
-    // 3. Verify the singleton tooltip is visible and shows "3×2" (cols×rows)
+    /*
+     * 3. The corner is unpainted, so hover is where the gesture is taught. A
+     *    bare "3x2" named the table's size without saying what dragging does;
+     *    the size readout belongs to the drag itself, asserted below.
+     */
     const tooltip = page.locator(SINGLETON_TOOLTIP_SELECTOR);
 
     await expect(tooltip).toHaveAttribute('data-blok-shown', 'true');
-    await expect(tooltip).toHaveText('3\u00D72');
+    await expect(tooltip).toHaveText('Drag to add or remove rows/columns');
+  });
+
+  test('Tooltip switches to the live size once the drag starts', async ({ page }) => {
+    await createTable(page, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+
+    const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 10, { steps: 3 });
+
+    const tooltip = page.locator(SINGLETON_TOOLTIP_SELECTOR);
+
+    // The count follows the drag; what matters is that the readout replaced the hint.
+    await expect(tooltip).toHaveText(/^\d+\u00D7\d+$/u);
+
+    await page.mouse.up();
   });
 
   test('Corner drag grows the table until its corner catches the pointer', async ({ page }) => {

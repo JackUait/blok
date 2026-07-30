@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "पंक्तियाँ जोड़ने या हटाने के लिए खींचें",
   "tools.table.clickToAddColumn": "नया स्तंभ जोड़ने के लिए क्लिक करें",
   "tools.table.dragToAddRemoveColumns": "स्तंभ जोड़ने या हटाने के लिए खींचें",
+  "tools.table.dragToAddRemoveRowsColumns": "पंक्तियाँ/स्तंभ जोड़ने या हटाने के लिए खींचें",
   "tools.table.fitToPageWidth": "पृष्ठ की चौड़ाई में फ़िट करें",
   "tools.table.fullWidth": "पूरी चौड़ाई",
   "tools.table.textSize": "टेक्स्ट का आकार",

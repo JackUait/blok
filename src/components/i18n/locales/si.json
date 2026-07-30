@@ -101,6 +101,7 @@
   "tools.table.dragToAddRemoveRows": "පේළි එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "tools.table.clickToAddColumn": "නව තීරුවක් එක් කිරීමට ක්ලික් කරන්න",
   "tools.table.dragToAddRemoveColumns": "තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
+  "tools.table.dragToAddRemoveRowsColumns": "පේළි/තීරු එක් කිරීමට හෝ ඉවත් කිරීමට අදින්න",
   "tools.table.fitToPageWidth": "පිටුවේ පළලට සරිලන ලෙස",
   "tools.table.fullWidth": "සම්පූර්ණ පළල",
   "tools.table.textSize": "පෙළ ප්‍රමාණය",

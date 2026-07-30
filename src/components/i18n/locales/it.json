@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Trascina per aggiungere o rimuovere righe",
   "tools.table.clickToAddColumn": "Clicca per aggiungere una nuova colonna",
   "tools.table.dragToAddRemoveColumns": "Trascina per aggiungere o rimuovere colonne",
+  "tools.table.dragToAddRemoveRowsColumns": "Trascina per aggiungere o rimuovere righe/colonne",
   "tools.table.fitToPageWidth": "Adatta alla larghezza della pagina",
   "tools.table.fullWidth": "Larghezza massima",
   "tools.table.textSize": "Dimensione del testo",

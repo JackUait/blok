@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "ჩავლებით გადაიტანეთ სტრიქონების დასამატებლად ან წასაშლელად",
   "tools.table.clickToAddColumn": "დააწკაპუნეთ ახალი სვეტის დასამატებლად",
   "tools.table.dragToAddRemoveColumns": "ჩავლებით გადაიტანეთ სვეტების დასამატებლად ან წასაშლელად",
+  "tools.table.dragToAddRemoveRowsColumns": "ჩავლებით გადაიტანეთ სტრიქონების/სვეტების დასამატებლად ან წასაშლელად",
   "tools.table.fitToPageWidth": "გვერდის სიგანეზე მორგება",
   "tools.table.fullWidth": "სრული სიგანე",
   "tools.table.textSize": "ტექსტის ზომა",

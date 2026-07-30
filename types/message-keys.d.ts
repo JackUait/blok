@@ -490,6 +490,7 @@ export type BlokMessageKey =
   | 'tools.table.deleteRow'
   | 'tools.table.dragToAddRemoveColumns'
   | 'tools.table.dragToAddRemoveRows'
+  | 'tools.table.dragToAddRemoveRowsColumns'
   | 'tools.table.duplicateColumn'
   | 'tools.table.duplicateRow'
   | 'tools.table.fitToPageWidth'

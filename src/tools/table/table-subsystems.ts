@@ -132,9 +132,6 @@ export class TableSubsystems {
   private rowColControls: TableRowColControls | null = null;
   private cellSelection: TableCellSelection | null = null;
   private cornerDrag: TableCornerDrag | null = null;
-  private cornerProximityTarget: HTMLElement | null = null;
-  private boundCornerProximityEnter: (() => void) | null = null;
-  private boundCornerProximityLeave: (() => void) | null = null;
   private scrollHaze: TableScrollHaze | null = null;
   private gridPasteCleanup: (() => void) | null = null;
   private pendingHighlight: PendingHighlight | null = null;
@@ -197,7 +194,6 @@ export class TableSubsystems {
     this.resize = null;
     this.addControls?.destroy();
     this.addControls = null;
-    this.detachCornerProximity();
     this.cornerDrag?.destroy();
     this.cornerDrag = null;
     this.rowColControls?.destroy();
@@ -382,24 +378,7 @@ export class TableSubsystems {
     }
   }
 
-  /**
-   * Release the wrapper hover listeners that reveal the corner grip.
-   * Called before re-attaching and on teardown so repeated init calls do not
-   * stack listeners on the same wrapper.
-   */
-  private detachCornerProximity(): void {
-    if (this.cornerProximityTarget && this.boundCornerProximityEnter && this.boundCornerProximityLeave) {
-      this.cornerProximityTarget.removeEventListener('mouseenter', this.boundCornerProximityEnter);
-      this.cornerProximityTarget.removeEventListener('mouseleave', this.boundCornerProximityLeave);
-    }
-
-    this.cornerProximityTarget = null;
-    this.boundCornerProximityEnter = null;
-    this.boundCornerProximityLeave = null;
-  }
-
   private initCornerDrag(gridEl: HTMLElement): void {
-    this.detachCornerProximity();
     this.cornerDrag?.destroy();
 
     if (!this.host.element) {
@@ -409,6 +388,7 @@ export class TableSubsystems {
     this.cornerDrag = new TableCornerDrag({
       wrapper: this.host.element,
       gridEl,
+      i18n: this.host.api.i18n,
       onAddRow: () => {
         this.host.runStructuralOp(() => {
           this.host.grid.addRow(gridEl);
@@ -547,13 +527,6 @@ export class TableSubsystems {
       this.cornerDrag.attachScrollContainer(this.host.scrollContainer);
     }
 
-    // Reveal the grip while the pointer is anywhere over the table, so the
-    // affordance is discoverable before the user finds the 36px corner.
-    this.cornerProximityTarget = this.host.element;
-    this.boundCornerProximityEnter = (): void => { this.cornerDrag?.setProximity(true); };
-    this.boundCornerProximityLeave = (): void => { this.cornerDrag?.setProximity(false); };
-    this.cornerProximityTarget.addEventListener('mouseenter', this.boundCornerProximityEnter);
-    this.cornerProximityTarget.addEventListener('mouseleave', this.boundCornerProximityLeave);
   }
 
   private initRowColControls(gridEl: HTMLElement): void {

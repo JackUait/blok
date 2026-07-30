@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Træk for at tilføje eller fjerne rækker",
   "tools.table.clickToAddColumn": "Klik for at tilføje en ny kolonne",
   "tools.table.dragToAddRemoveColumns": "Træk for at tilføje eller fjerne kolonner",
+  "tools.table.dragToAddRemoveRowsColumns": "Træk for at tilføje eller fjerne rækker/kolonner",
   "tools.table.fitToPageWidth": "Tilpas til sidebredde",
   "tools.table.fullWidth": "Fuld bredde",
   "tools.table.textSize": "Tekststørrelse",

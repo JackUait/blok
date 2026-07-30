@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Seret untuk menambah atau mengalih keluar baris",
   "tools.table.clickToAddColumn": "Klik untuk menambah lajur baharu",
   "tools.table.dragToAddRemoveColumns": "Seret untuk menambah atau mengalih keluar lajur",
+  "tools.table.dragToAddRemoveRowsColumns": "Seret untuk menambah atau mengalih keluar baris/lajur",
   "tools.table.fitToPageWidth": "Muatkan pada lebar halaman",
   "tools.table.fullWidth": "Lebar penuh",
   "tools.table.textSize": "Saiz teks",

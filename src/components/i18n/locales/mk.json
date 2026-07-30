@@ -80,6 +80,7 @@
   "tools.table.dragToAddRemoveRows": "Повлечете за додавање или отстранување редови",
   "tools.table.clickToAddColumn": "Кликнете за додавање нова колона",
   "tools.table.dragToAddRemoveColumns": "Повлечете за додавање или отстранување колони",
+  "tools.table.dragToAddRemoveRowsColumns": "Повлечете за додавање или отстранување редови/колони",
   "tools.table.fitToPageWidth": "Прилагоди на ширината на страницата",
   "tools.table.fullWidth": "Целосна ширина",
   "tools.table.textSize": "Големина на текстот",

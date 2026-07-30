@@ -103,6 +103,7 @@
   "tools.table.dragToAddRemoveRows": "برای افزودن یا حذف سطرها بکشید",
   "tools.table.clickToAddColumn": "برای افزودن ستون جدید کلیک کنید",
   "tools.table.dragToAddRemoveColumns": "برای افزودن یا حذف ستون‌ها بکشید",
+  "tools.table.dragToAddRemoveRowsColumns": "برای افزودن یا حذف سطرها/ستون‌ها بکشید",
   "tools.table.fitToPageWidth": "متناسب با عرض صفحه",
   "tools.table.fullWidth": "عرض کامل",
   "tools.table.textSize": "اندازه متن",

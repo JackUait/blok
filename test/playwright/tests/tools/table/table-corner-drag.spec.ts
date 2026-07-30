@@ -385,14 +385,12 @@ test.describe('Table Corner Drag Handle', () => {
     expect(await columns.count()).toBe(columnsAfterHorizontal);
   });
 
-  test('Corner drag inward removes populated rows but keeps populated columns', async ({ page }) => {
+  test('Corner drag inward keeps populated rows and columns', async ({ page }) => {
     /*
-     * Every cell here holds text. Rows go: over-dragging and pulling back is the
-     * common case, and one undo brings them back. A column does not, because it
-     * spans every row — losing one costs a whole field of the table, and the
-     * gesture can overshoot without the pointer travelling (the edge auto-scroll
-     * grows it while held). So the inward walk stops at the first trailing column
-     * that holds content.
+     * Every cell here holds text, so the inward walk has nothing it may take. The
+     * gesture can overshoot without the pointer travelling — held at the container
+     * edge the auto-scroll keeps growing the table — so pulling back is routine and
+     * must not cost typed cells.
      */
     await createTableWithWidths(
       page,
@@ -416,9 +414,10 @@ test.describe('Table Corner Drag Handle', () => {
     await page.mouse.move(x - 130, y - 40, { steps: 5 });
     await page.mouse.up();
 
-    expect(await rows.count()).toBe(2);
+    expect(await rows.count()).toBe(3);
     expect(await columns.count()).toBe(3);
     await expect(page.getByText('C', { exact: true })).toBeVisible();
+    await expect(page.getByText('I', { exact: true })).toBeVisible();
   });
 
   test('Corner drag inward removes a trailing column once it is empty', async ({ page }) => {
@@ -447,15 +446,39 @@ test.describe('Table Corner Drag Handle', () => {
     expect(await rows.count()).toBe(2);
   });
 
+  test('Corner drag inward removes a trailing row once it is empty', async ({ page }) => {
+    // The row gate is the column gate: emptiness, checked on the trailing row only.
+    await createTableWithWidths(
+      page,
+      [['A', 'B'], ['C', 'D'], ['', '']],
+      [120, 120]
+    );
+
+    const rows = page.locator(ROW_SELECTOR);
+
+    expect(await rows.count()).toBe(3);
+
+    const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 40, { steps: 5 });
+    await page.mouse.up();
+
+    expect(await rows.count()).toBe(2);
+    await expect(page.getByText('C', { exact: true })).toBeVisible();
+  });
+
   test('One undo restores everything an inward drag removed', async ({ page }) => {
     /*
-     * The safety net that makes a content-removing drag acceptable. The trailing
-     * column is empty so the same gesture takes a column and a populated row, and
-     * one undo has to bring back both.
+     * The trailing row and column are both empty, so one gesture takes both — and
+     * one undo has to bring them back together, not a step at a time.
      */
     await createTableWithWidths(
       page,
-      [['A', 'B', ''], ['D', 'E', ''], ['G', 'H', '']],
+      [['A', 'B', ''], ['D', 'E', ''], ['', '', '']],
       [120, 120, 120]
     );
 
@@ -472,7 +495,6 @@ test.describe('Table Corner Drag Handle', () => {
 
     expect(await columns.count()).toBe(2);
     expect(await rows.count()).toBe(2);
-    await expect(page.getByText('G', { exact: true })).toBeHidden();
 
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(YJS_CAPTURE_TIMEOUT);
@@ -481,7 +503,7 @@ test.describe('Table Corner Drag Handle', () => {
 
     await expect.poll(() => rows.count()).toBe(3);
     expect(await columns.count()).toBe(3);
-    await expect(page.getByText('G', { exact: true })).toBeVisible();
+    await expect(page.getByText('E', { exact: true })).toBeVisible();
   });
 
   test('Corner drag auto-scrolls and keeps growing at the container edge', async ({ page }) => {

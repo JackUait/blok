@@ -158,4 +158,26 @@ describe('corner drag content guard', () => {
 
     expect(options.canRemoveLastColumn()).toBe(true);
   });
+
+  it('allows removing an empty trailing row', () => {
+    const { options } = createCornerDragOptions();
+
+    expect(options.canRemoveLastRow()).toBe(true);
+  });
+
+  it('refuses to remove a trailing row that holds content', () => {
+    const { options, gridEl } = createCornerDragOptions();
+
+    writeIntoCell(gridEl, 1, 1, 'keep me');
+
+    expect(options.canRemoveLastRow()).toBe(false);
+  });
+
+  it('still allows removing a trailing row when only earlier rows hold content', () => {
+    const { options, gridEl } = createCornerDragOptions();
+
+    writeIntoCell(gridEl, 0, 0, 'keep me');
+
+    expect(options.canRemoveLastRow()).toBe(true);
+  });
 });

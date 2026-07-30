@@ -481,16 +481,15 @@ export class TableSubsystems {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
       },
       /*
-       * Rows the drag removes whatever they hold — appending a few too many and
-       * pulling back is the common case, and the whole gesture is one undo entry.
-       * Columns are not symmetric: one column spans every row, so shrinking past
-       * a populated one wipes a whole field of the table in a gesture the pointer
-       * can overshoot on its own (the edge auto-scroll grows it without travel).
-       * So the inward walk stops at the first trailing column holding content;
-       * emptying it is the way to say you meant it. The floor stays at 1x1.
+       * The drag shrinks the grid but never carries away typed content: the
+       * inward walk stops at the first trailing row or column that holds any.
+       * The gesture overshoots on its own — held at the container edge the
+       * auto-scroll keeps growing the table with no pointer travel — so pulling
+       * back is routine and must not cost cells. Emptying the trailing row or
+       * column re-arms the walk. Same gate as the +/- bar drag. Floor is 1x1.
        */
       canRemoveLastRow: () => {
-        return this.host.model.rows > 1;
+        return this.host.model.rows > 1 && isRowEmpty(gridEl, this.host.model.rows - 1);
       },
       canRemoveLastColumn: () => {
         return this.host.model.cols > 1 && isColumnEmpty(gridEl, this.host.model.cols - 1);

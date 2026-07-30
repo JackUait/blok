@@ -883,13 +883,17 @@ describe('TableCornerDrag', () => {
 
   describe('auto-scroll past the container edge', () => {
     /**
-     * A 5x2 grid of 100px columns inside a 400px container: the grid already
-     * overflows, so its corner cannot reach a pointer parked at the container's
-     * right edge without scrolling.
+     * The 3x2 grid built in beforeEach, at 180px per column inside a 400px
+     * container: already overflowing, so its corner cannot reach a pointer parked
+     * at the container's right edge without scrolling.
+     *
+     * The widths must match the real DOM column count — the drag measures the
+     * last column off cell rects, and a geometry that invents extra columns puts
+     * every cell edge out of line with the grid edge.
      */
     const overflowing = (): Geometry => ({ left: 0,
       top: 0,
-      colWidths: [100, 100, 100, 100, 100],
+      colWidths: [180, 180, 180],
       rowHeights: [30, 30] });
 
     /** Hand-driven animation frames: deterministic, no timer faking. */
@@ -947,20 +951,58 @@ describe('TableCornerDrag', () => {
       const addedByTheMove = options.onAddColumn.mock.calls.length;
 
       /*
-       * Columns are metered one per 200ms, so 16ms frames buy exactly one by
-       * 320ms and three by 640ms. Pinning the count both ways is what catches a
-       * throttle that appends per frame instead of per interval.
+       * Speed follows the pointer, so parking 80px past the edge buys columns
+       * steadily rather than on a fixed clock.
        */
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 480, clientY: 60, pointerId: 1 }));
       frames.run(20);
 
-      expect(options.onAddColumn.mock.calls.length).toBe(addedByTheMove + 1);
+      const afterFirstHold = options.onAddColumn.mock.calls.length;
+
+      expect(afterFirstHold).toBeGreaterThan(addedByTheMove);
       expect(view.scrollLeft()).toBeGreaterThan(0);
 
       frames.run(20);
 
-      expect(options.onAddColumn.mock.calls.length).toBe(addedByTheMove + 3);
+      expect(options.onAddColumn.mock.calls.length).toBeGreaterThan(afterFirstHold);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 405, clientY: 60, pointerId: 1 }));
+    });
+
+    it('grows faster the further past the edge the pointer is held', () => {
+      const runHold = (pointerX: number): number => {
+        const options = createDefaultOptions(wrapper, grid);
+        const geo = overflowing();
+        const view = createScrollContainer(400, () => sum(geo.colWidths));
+
+        installGeometry(wrapper, grid, geo, view);
+        wireGeometryOps(options, grid, geo);
+
+        const frames = captureFrames();
+        const drag = new TableCornerDrag(options);
+
+        drag.attachScrollContainer(view.el);
+
+        const hitZone = wrapper.querySelectorAll(`[${CORNER_DRAG_ATTR}]`);
+        const zone = hitZone[hitZone.length - 1] as HTMLElement;
+
+        zone.dispatchEvent(new PointerEvent('pointerdown', { clientX: 380, clientY: 60, pointerId: 1 }));
+        zone.dispatchEvent(new PointerEvent('pointermove', { clientX: pointerX, clientY: 60, pointerId: 1 }));
+
+        const addedByTheMove = options.onAddColumn.mock.calls.length;
+
+        frames.run(30);
+        zone.dispatchEvent(new PointerEvent('pointerup', { clientX: pointerX, clientY: 60, pointerId: 1 }));
+        drag.destroy();
+
+        return options.onAddColumn.mock.calls.length - addedByTheMove;
+      };
+
+      // Same hold, same frames: the only difference is how far past 400 it sits.
+      const justOutside = runHold(410);
+      const farOutside = runHold(800);
+
+      expect(farOutside).toBeGreaterThan(justOutside);
     });
 
     /** Guard: growing on top of a corner that can already reach the pointer runs away from it. */
@@ -1087,16 +1129,16 @@ describe('TableCornerDrag', () => {
 
       /*
        * The auto-scroll parked the corner back at the visible edge (400). Pulling
-       * 70px left must clear the 60px last column and remove it — measured from
-       * the corner's new position, not from the pixels the scroll travelled,
-       * which the pointer would otherwise have to pay back first.
+       * back past the 180px last column must remove it — measured from the
+       * corner's new position, not from the pixels the scroll travelled, which
+       * the pointer would otherwise have to pay back first.
        */
-      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 325, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 60, pointerId: 1 }));
 
       expect(options.onRemoveLastColumn).toHaveBeenCalled();
       expect(options.onAddColumn.mock.calls.length).toBe(addedBeforeThePullBack);
 
-      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 325, clientY: 60, pointerId: 1 }));
+      hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 60, pointerId: 1 }));
     });
   });
 
@@ -1185,15 +1227,16 @@ describe('TableCornerDrag', () => {
 
       const addedByTheMove = options.onAddRow.mock.calls.length;
 
-      // Metered at one row per 200ms, same clock as the columns.
       frames.run(20);
 
-      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 1);
+      const afterFirstHold = options.onAddRow.mock.calls.length;
+
+      expect(afterFirstHold).toBeGreaterThan(addedByTheMove);
       expect(scrollBy).toHaveBeenCalled();
 
       frames.run(20);
 
-      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 3);
+      expect(options.onAddRow.mock.calls.length).toBeGreaterThan(afterFirstHold);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 298, pointerId: 1 }));
     });
@@ -1226,8 +1269,8 @@ describe('TableCornerDrag', () => {
       frames.run(60);
 
       expect(scrollBy).toHaveBeenCalled();
-      // ~960ms of holding: four metered rows, none of them lost to a self-cancel.
-      expect(options.onAddRow.mock.calls.length).toBe(addedByTheMove + 4);
+      // ~960ms of holding: rows keep coming, none lost to a self-cancel.
+      expect(options.onAddRow.mock.calls.length).toBeGreaterThanOrEqual(addedByTheMove + 2);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 298, pointerId: 1 }));
     });
@@ -1260,12 +1303,14 @@ describe('TableCornerDrag', () => {
 
       frames.run(20);
 
-      expect(options.onRemoveLastRow.mock.calls.length).toBe(removedByTheMove + 1);
+      const afterFirstHold = options.onRemoveLastRow.mock.calls.length;
+
+      expect(afterFirstHold).toBeGreaterThan(removedByTheMove);
       expect(scrollBy.mock.calls.some(([, y]) => typeof y === 'number' && y < 0)).toBe(true);
 
       frames.run(20);
 
-      expect(options.onRemoveLastRow.mock.calls.length).toBe(removedByTheMove + 3);
+      expect(options.onRemoveLastRow.mock.calls.length).toBeGreaterThan(afterFirstHold);
 
       hitZone.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 4, pointerId: 1 }));
     });

@@ -451,8 +451,11 @@ test.describe('Table Corner Drag Handle', () => {
 
     await page.mouse.move(cornerBox.x + cornerBox.width / 2, startY);
     await page.mouse.down();
-    // Park past the container's right edge — inside it the corner needs no help.
-    await page.mouse.move(containerBox.x + containerBox.width + 8, startY, { steps: 5 });
+    /*
+     * Park well past the container's right edge: speed follows the pointer, so
+     * sitting 8px out crawls while this races. Inside the edge it never arms.
+     */
+    await page.mouse.move(containerBox.x + containerBox.width + 160, startY, { steps: 5 });
 
     const parked = await columns.count();
 

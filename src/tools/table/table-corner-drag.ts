@@ -38,13 +38,17 @@ const MAX_STEPS_PER_MOVE = 200;
 const AUTO_SCROLL_OVERSHOOT = 0;
 
 /**
- * How long a table parked past that edge waits between appended columns.
+ * Auto-scroll speed, as table growth per second per pixel the pointer is held
+ * past the edge: 10px out grows 80px/s, 100px out grows 800px/s. Speed follows
+ * the pointer rather than a fixed cadence, so how fast the table expands stays
+ * under the reader's thumb — the same proportional rule drag-autoscroll uses
+ * everywhere else.
  *
- * Growth has to be throttled in whole columns, not pixels per frame: asking the
- * geometry walk to grow by a fraction of a column still appends a whole one, so
- * a px/ms budget appended one per frame (~3600px/s) instead of metering them.
+ * The budget accrues in pixels but is only ever spent in WHOLE rows/columns:
+ * asking the geometry walk to grow by a fraction of one still appends a whole
+ * one, which is how a px/ms budget once appended one per frame (~3600px/s).
  */
-const AUTO_SCROLL_COLUMN_INTERVAL = 200;
+const AUTO_SCROLL_GAIN_PER_SECOND = 8;
 
 /**
  * How close to the viewport's lower edge counts as having run out of screen.
@@ -72,8 +76,11 @@ interface DragState {
   pointerX: number;
   pointerY: number;
   autoScrollFrame: number | null;
-  /** Timestamp of the last column the auto-scroll appended; 0 before the first frame. */
-  autoScrollGrewAt: number;
+  /** Timestamp of the previous auto-scroll frame; 0 before the first one. */
+  autoScrollAt: number;
+  /** Growth earned from the pointer but not yet spent on a whole row/column. */
+  pendingX: number;
+  pendingY: number;
   /**
    * Which way the page auto-scroll is running. Sticky on purpose: its own reveal
    * scroll parks the corner exactly on the arming threshold, so re-deriving this
@@ -298,7 +305,9 @@ export class TableCornerDrag {
       pointerX: e.clientX,
       pointerY: e.clientY,
       autoScrollFrame: null,
-      autoScrollGrewAt: 0,
+      autoScrollAt: 0,
+      pendingX: 0,
+      pendingY: 0,
       verticalArm: 'none',
     };
 
@@ -418,7 +427,7 @@ export class TableCornerDrag {
       return;
     }
 
-    this.dragState.autoScrollGrewAt = 0;
+    this.dragState.autoScrollAt = 0;
     this.dragState.autoScrollFrame = requestAnimationFrame(timestamp => { this.autoScrollTick(timestamp); });
   }
 
@@ -442,6 +451,33 @@ export class TableCornerDrag {
 
   private shouldAutoScrollDown(): boolean {
     return this.verticalAutoScroll() === 'down';
+  }
+
+  /** How far past each trigger edge the pointer is being held, in px. */
+  private overshootRight(): number {
+    const sc = this.scrollContainer;
+
+    if (sc === null || this.dragState === null) {
+      return 0;
+    }
+
+    return Math.max(0, this.dragState.pointerX - sc.getBoundingClientRect().right);
+  }
+
+  private overshootDown(): number {
+    if (this.dragState === null) {
+      return 0;
+    }
+
+    return Math.max(0, this.dragState.pointerY - (window.innerHeight - AUTO_SCROLL_VIEWPORT_BAND));
+  }
+
+  private overshootUp(): number {
+    if (this.dragState === null) {
+      return 0;
+    }
+
+    return Math.max(0, AUTO_SCROLL_VIEWPORT_BAND - this.dragState.pointerY);
   }
 
   private shouldAutoScrollUp(): boolean {
@@ -523,7 +559,9 @@ export class TableCornerDrag {
       state.autoScrollFrame = null;
     }
 
-    state.autoScrollGrewAt = 0;
+    state.autoScrollAt = 0;
+    state.pendingX = 0;
+    state.pendingY = 0;
     state.verticalArm = 'none';
   }
 
@@ -546,22 +584,40 @@ export class TableCornerDrag {
 
     /*
      * The first frame only starts the clock — holding briefly (a drag that ends
-     * just past the edge) must not append anything. Growth is metered off the
-     * frame timestamp, so the rate does not follow the display's refresh rate.
+     * just past the edge) must not append anything. Everything after is measured
+     * off the frame timestamp, so the rate does not follow the refresh rate.
      */
-    if (state.autoScrollGrewAt === 0) {
-      state.autoScrollGrewAt = timestamp;
-    } else if (timestamp - state.autoScrollGrewAt >= AUTO_SCROLL_COLUMN_INTERVAL) {
-      state.autoScrollGrewAt = timestamp;
+    const elapsed = state.autoScrollAt === 0 ? 0 : (timestamp - state.autoScrollAt) / 1000;
 
-      /*
-       * Any target past an edge appends exactly one row/column and settles;
-       * targeting the current edge on the other axis leaves it alone. Shrinking
-       * has to clear the whole last row, which is what the removal rule asks for.
-       */
-      const edge = this.gridEl.getBoundingClientRect();
+    state.autoScrollAt = timestamp;
 
-      this.resizeToCorner(right ? edge.right + 1 : edge.right, this.meteredBottom(edge, down, up));
+    if (right) {
+      state.pendingX += this.overshootRight() * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+
+      const rect = this.gridEl.getBoundingClientRect();
+      const step = this.measureLastColumnWidth(rect.right);
+
+      if (step > 0 && state.pendingX >= step) {
+        state.pendingX -= step;
+        // Any target past the edge appends exactly one column, then settles.
+        this.resizeToCorner(rect.right + 1, rect.bottom);
+      }
+    }
+
+    if (down || up) {
+      const overshoot = down ? this.overshootDown() : this.overshootUp();
+
+      state.pendingY += overshoot * AUTO_SCROLL_GAIN_PER_SECOND * elapsed;
+
+      const step = this.measureLastRowHeight();
+
+      if (step > 0 && state.pendingY >= step) {
+        state.pendingY -= step;
+
+        const edge = this.gridEl.getBoundingClientRect();
+
+        this.resizeToCorner(edge.right, this.meteredBottom(edge, down, up));
+      }
     }
 
     // Scrolling stays per-frame even between columns, so the reveal is smooth.

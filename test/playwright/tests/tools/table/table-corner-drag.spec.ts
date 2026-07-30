@@ -385,13 +385,14 @@ test.describe('Table Corner Drag Handle', () => {
     expect(await columns.count()).toBe(columnsAfterHorizontal);
   });
 
-  test('Corner drag inward removes rows and columns, content included', async ({ page }) => {
+  test('Corner drag inward removes populated rows but keeps populated columns', async ({ page }) => {
     /*
-     * Every cell here holds text: Notion's inward drag removes rows and columns
-     * regardless, and the gesture is one undo entry. This is the assertion that
-     * caught Blok's old emptiness gate, under which dragging back over typed
-     * cells did nothing — a unit test cannot see it, because a mocked block API
-     * leaves the cells textually empty either way.
+     * Every cell here holds text. Rows go: over-dragging and pulling back is the
+     * common case, and one undo brings them back. A column does not, because it
+     * spans every row — losing one costs a whole field of the table, and the
+     * gesture can overshoot without the pointer travelling (the edge auto-scroll
+     * grows it while held). So the inward walk stops at the first trailing column
+     * that holds content.
      */
     await createTableWithWidths(
       page,
@@ -415,15 +416,46 @@ test.describe('Table Corner Drag Handle', () => {
     await page.mouse.move(x - 130, y - 40, { steps: 5 });
     await page.mouse.up();
 
+    expect(await rows.count()).toBe(2);
+    expect(await columns.count()).toBe(3);
+    await expect(page.getByText('C', { exact: true })).toBeVisible();
+  });
+
+  test('Corner drag inward removes a trailing column once it is empty', async ({ page }) => {
+    // The guard is emptiness, not a ban: clearing the column re-arms the gesture.
+    await createTableWithWidths(
+      page,
+      [['A', 'B', ''], ['C', 'D', '']],
+      [120, 120, 120]
+    );
+
+    const rows = page.locator(ROW_SELECTOR);
+    const columns = rows.nth(0).locator(CELL_SELECTOR);
+
+    expect(await columns.count()).toBe(3);
+
+    const box = assertBoundingBox(await page.locator(CORNER_DRAG_SELECTOR).boundingBox(), 'Corner handle');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 130, y, { steps: 5 });
+    await page.mouse.up();
+
     expect(await columns.count()).toBe(2);
     expect(await rows.count()).toBe(2);
   });
 
   test('One undo restores everything an inward drag removed', async ({ page }) => {
-    // The safety net that makes a content-removing drag acceptable.
+    /*
+     * The safety net that makes a content-removing drag acceptable. The trailing
+     * column is empty so the same gesture takes a column and a populated row, and
+     * one undo has to bring back both.
+     */
     await createTableWithWidths(
       page,
-      [['A', 'B', 'C'], ['D', 'E', 'F'], ['G', 'H', 'I']],
+      [['A', 'B', ''], ['D', 'E', ''], ['G', 'H', '']],
       [120, 120, 120]
     );
 
@@ -440,7 +472,7 @@ test.describe('Table Corner Drag Handle', () => {
 
     expect(await columns.count()).toBe(2);
     expect(await rows.count()).toBe(2);
-    await expect(page.getByText('I')).toBeHidden();
+    await expect(page.getByText('G', { exact: true })).toBeHidden();
 
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(YJS_CAPTURE_TIMEOUT);
@@ -449,7 +481,7 @@ test.describe('Table Corner Drag Handle', () => {
 
     await expect.poll(() => rows.count()).toBe(3);
     expect(await columns.count()).toBe(3);
-    await expect(page.getByText('I')).toBeVisible();
+    await expect(page.getByText('G', { exact: true })).toBeVisible();
   });
 
   test('Corner drag auto-scrolls and keeps growing at the container edge', async ({ page }) => {

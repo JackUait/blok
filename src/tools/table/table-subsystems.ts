@@ -481,16 +481,19 @@ export class TableSubsystems {
         return { rows: this.host.model.rows, cols: this.host.model.cols };
       },
       /*
-       * Notion's corner drag removes rows and columns whatever they hold, and the
-       * whole gesture is a single undo entry. Gating on emptiness meant walking a
-       * drag back over typed cells did nothing at all, which is the common case
-       * after over-dragging. The floor stays at 1x1.
+       * Rows the drag removes whatever they hold — appending a few too many and
+       * pulling back is the common case, and the whole gesture is one undo entry.
+       * Columns are not symmetric: one column spans every row, so shrinking past
+       * a populated one wipes a whole field of the table in a gesture the pointer
+       * can overshoot on its own (the edge auto-scroll grows it without travel).
+       * So the inward walk stops at the first trailing column holding content;
+       * emptying it is the way to say you meant it. The floor stays at 1x1.
        */
       canRemoveLastRow: () => {
         return this.host.model.rows > 1;
       },
       canRemoveLastColumn: () => {
-        return this.host.model.cols > 1;
+        return this.host.model.cols > 1 && isColumnEmpty(gridEl, this.host.model.cols - 1);
       },
       onClickAdd: () => {
         this.host.runTransactedStructuralOp(() => {

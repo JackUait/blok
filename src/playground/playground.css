@@ -9,4 +9,16 @@
   id plus its layer(utilities) marker — neither applies here.
 */
 @import 'tailwindcss/theme.css';
-@import 'tailwindcss/utilities.css';
+@import 'tailwindcss/utilities.css' source(none);
+
+/*
+  Scan the page chrome ONLY. Left to auto-detect, this entry scans all of src/
+  and re-emits the editor's own utilities (e.g. `text-3xl` from the header
+  tool) UNSCOPED — and it loads after Blok's sheet, so those copies beat the
+  token rules in styles/heading.css on source order. That made
+  `style.fontSize.heading.*` inert on the dev page while working in the built
+  bundle. Editor markup gets its utilities from Blok's scoped sheet, so it
+  needs nothing from here.
+*/
+@source '.';
+@source '../../index.html';

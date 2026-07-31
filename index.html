@@ -712,6 +712,36 @@
     }
     .dark-mode .settings-row-label { color: #ffffff; }
 
+    /* Stacked row: label + value on top, full-width control beneath */
+    .settings-row-stack {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .settings-row-stack > .settings-stack-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .settings-stack-head > .settings-row-label { flex: 1; }
+    .settings-value {
+      font-family: 'PT Mono', monospace;
+      font-size: 11px;
+      color: var(--pg-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .dark-mode .settings-value { color: #a8a8a8; }
+
+    .settings-range {
+      width: 100%;
+      height: 4px;
+      margin: 4px 0;
+      padding: 0;
+      cursor: pointer;
+      accent-color: var(--pg-ink);
+    }
+    .dark-mode .settings-range { accent-color: #ffffff; }
+
     .settings-row-icon {
       width: 20px;
       height: 20px;
@@ -1072,6 +1102,13 @@
             <span id="locale-trigger-label">English</span>
           </button>
         </div>
+        <div class="settings-row settings-row-stack" style="cursor: default;">
+          <div class="settings-stack-head">
+            <span class="settings-row-label">Text size</span>
+            <span class="settings-value" id="font-scale-value">100%</span>
+          </div>
+          <input type="range" id="font-scale" class="settings-range" min="80" max="150" step="5" value="100" aria-label="Editor text size">
+        </div>
         <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Notification position</span>
           <kbd class="settings-kbd">⌥N</kbd>
@@ -1118,6 +1155,7 @@
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
+    import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
     // Default import only — the json-as-string vite plugin rewrites JSON
     // modules to a lone default export, so named JSON imports throw on load.
@@ -1136,6 +1174,7 @@
       locale: 'en',
       rtl: false,
       notifierPosition: 'bottom-center',
+      fontScale: 1,
       tools: {
         paragraph: true,
         header: true,
@@ -2110,7 +2149,7 @@
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
         i18n: { locale: state.locale, direction: state.rtl ? 'rtl' : 'ltr' },
-        style: { contentAlign: 'center' },
+        style: { contentAlign: 'center', fontSize: buildFontScaleConfig(state.fontScale) },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
           console.log('something changed', event);
@@ -2695,6 +2734,24 @@
     selectNotifierPosition.addEventListener('change', () => {
       state.notifierPosition = selectNotifierPosition.value;
       reinitEditor();
+    });
+
+    /**
+     * Text size slider.
+     *
+     * Writes the `--blok-*-font-size` tokens straight onto the holder while
+     * dragging — the same tokens `style.fontSize` produces, but live: a reinit
+     * per drag step would destroy the editor and reset its content. The scale
+     * also feeds buildConfig(), so any later reinit rebuilds at the same size
+     * through the real config path.
+     */
+    const fontScaleInput = document.getElementById('font-scale');
+    const fontScaleValue = document.getElementById('font-scale-value');
+    fontScaleInput.addEventListener('input', () => {
+      state.fontScale = Number(fontScaleInput.value) / 100;
+      fontScaleValue.textContent = `${fontScaleInput.value}%`;
+      applyFontScale(document.getElementById('blok'), state.fontScale);
+      applyFontScale(document.getElementById('blokview-panel'), state.fontScale);
     });
 
     /**

@@ -26,9 +26,24 @@ describe('playground owns its Tailwind utilities', () => {
 
   it('playground.css imports Tailwind utilities unscoped (no layer marker)', () => {
     const css = readFileSync(playgroundCssPath, 'utf-8');
-    expect(css).toMatch(/@import\s+['"]tailwindcss\/utilities\.css['"]\s*;/);
+    expect(css).toMatch(/@import\s+['"]tailwindcss\/utilities\.css['"]/);
     // layer(utilities) is the marker the build-time scope transform keys off —
     // the playground entry must never carry it on an import.
     expect(css).not.toMatch(/@import\s+[^;]*layer\(\s*utilities\s*\)/);
+  });
+
+  /**
+   * Auto-detection scans all of src/, so this entry re-emitted the editor's own
+   * utilities (`text-3xl` from the header tool …) UNSCOPED. Loading after Blok's
+   * sheet, those copies beat the token rules in styles/heading.css on source
+   * order — `style.fontSize.heading.*` was inert on the dev page while working
+   * in the built bundle. The chrome's own sources are the only ones to scan.
+   */
+  it('playground.css scans only the page chrome, never the editor sources', () => {
+    const css = readFileSync(playgroundCssPath, 'utf-8');
+
+    expect(css).toMatch(/@import\s+['"]tailwindcss\/utilities\.css['"]\s+source\(\s*none\s*\)/);
+    expect(css).toMatch(/@source\s+['"]\.['"]\s*;/);
+    expect(css).toMatch(/@source\s+['"]\.\.\/\.\.\/index\.html['"]\s*;/);
   });
 });

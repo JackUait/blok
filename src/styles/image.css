@@ -61,7 +61,7 @@
   margin-top: var(--blok-space-2);
   /* Two fixed steps: 12px on narrow figures, 13.5px from the medium
      breakpoint up (@container rule below; matches OVERLAY_MEDIUM_THRESHOLD). */
-  font-size: 12px;
+  font-size: var(--blok-image-caption-font-size, 12px);
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -109,7 +109,9 @@
 /* Full-size step for display text — same breakpoint as OVERLAY_MEDIUM_THRESHOLD
    in src/tools/image/ui.ts so text and toolbar tier switch together. */
 @container (min-width: 360px) {
-  [data-blok-tool="image"] .blok-image-caption { font-size: 13.5px; }
+  /* A configured --blok-image-caption-font-size opts out of the two-step
+     scale entirely: one host-chosen size at every figure width. */
+  [data-blok-tool="image"] .blok-image-caption { font-size: var(--blok-image-caption-font-size, 13.5px); }
   [data-blok-tool="image"] .blok-image-caption-row__alt {
     padding: 3px 8px;
     font-size: 11px;

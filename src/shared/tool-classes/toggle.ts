@@ -28,6 +28,8 @@ export const TOGGLE_HEADER_ROW_CLASSES: readonly string[] = ['flex', 'items-star
  * content element is contenteditable, a static `<summary>` is not.
  */
 export const TOGGLE_CONTENT_CLASSES: readonly string[] = [
+  /** Host font-size hook (`config.style.fontSize.toggle`) for the title line. */
+  'text-[length:var(--blok-toggle-font-size,inherit)]',
   'pl-0.5',
   'leading-[1.5]',
   'flex-1',

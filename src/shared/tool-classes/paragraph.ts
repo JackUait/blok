@@ -16,6 +16,15 @@
  */
 export const PARAGRAPH_CLASSES: readonly string[] = [
   'blok-block',
+  /**
+   * Host font-size hook (`config.style.fontSize.paragraph`). The `inherit`
+   * fallback is what a paragraph did before the token existed, so an
+   * unconfigured editor is unchanged — and it keeps paragraphs nested in a
+   * callout/toggle/quote following THAT block's size rather than pinning them
+   * to the editor's. The tool's own `styles.size` config still wins: it lands
+   * as an inline style.
+   */
+  'text-[length:var(--blok-paragraph-font-size,inherit)]',
   'leading-[1.5]',
   'mt-px',
   'mb-px',

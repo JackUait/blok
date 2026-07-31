@@ -1528,6 +1528,33 @@ const editor = new Blok({
   style: { contentAlign: 'center' },
 });
 
+// Per-block, per-scenario type scale — every text-bearing block (and every
+// scenario inside it: a caption, a density mode, a size variant) is settable
+// from the config. Each entry writes that block's --blok-*-font-size token,
+// so the same knob is reachable through style.tokens / editor.tokens.set()
+// and from plain CSS. Omitted keys keep Blok's built-in size.
+new Blok({
+  holder: 'editor',
+  style: {
+    fontSize: {
+      paragraph: '17px',
+      heading: { 1: '2.25rem', 2: '1.75rem', 3: '1.375rem' },
+      list: { item: '17px', checklist: '17px' },
+      quote: { default: '17px', large: '1.4em' },
+      callout: '17px',
+      code: '13px',
+      toggle: '17px',
+      table: { compact: '14px', comfortable: '17px' },
+      image: { caption: '13px' },
+      video: { caption: '13px' },
+      audio: { caption: '13px' },
+      file: { caption: '13px' },
+      embed: { caption: '13px' },
+      bookmark: { title: '15px', description: '13px', link: '13px' },
+    },
+  },
+});
+
 // Flip theme tokens at runtime — e.g. from a host light/dark toggle.
 // set() replaces the whole set, so tokens dropped from the new palette
 // stop applying. Available immediately; calls before isReady are buffered.

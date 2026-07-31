@@ -17,7 +17,8 @@ export const CODE_AREA_CLASSES: readonly string[] = [
   'px-4',
   'py-3',
   'font-mono',
-  'text-sm',
+  /** Host font-size hook (`config.style.fontSize.code`); 0.875rem is `text-sm`. */
+  'text-[length:var(--blok-code-font-size,0.875rem)]',
   'leading-relaxed',
   'whitespace-pre-wrap',
   'overflow-x-auto',

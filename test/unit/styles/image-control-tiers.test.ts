@@ -80,7 +80,12 @@ describe('Image control size tiers (src/styles/image.css)', () => {
     const body = findRuleBody('[data-blok-tool="image"] .blok-image-caption');
 
     expect(body).not.toBeNull();
-    expect(body).toContain('font-size: 12px');
+    /**
+     * The two steps are the FALLBACKS of the host font-size hook
+     * (`config.style.fontSize.image.caption`): configuring it pins one size at
+     * every width, leaving it unset keeps the historical 12px/13.5px step.
+     */
+    expect(body).toContain('font-size: var(--blok-image-caption-font-size, 12px)');
     expect(css).toMatch(/@container\s*\(min-width:\s*360px\)/);
   });
 });

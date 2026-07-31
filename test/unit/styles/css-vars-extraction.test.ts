@@ -304,6 +304,23 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // declaration would shadow ancestor-level host overrides via
   // nearest-ancestor custom-property inheritance.
   '--blok-placeholder-color',
+  // Consumer-supplied per-block font sizes (config.style.fontSize, or any
+  // --blok-* channel: style.tokens / editor.tokens.set() / plain CSS). Each
+  // falls back to that block's historical size, so an unconfigured editor is
+  // byte-identical. Deliberately never declared in the palette, for the same
+  // nearest-ancestor-shadowing reason as the block-padding tokens above.
+  '--blok-checklist-font-size',
+  '--blok-list-font-size',
+  '--blok-table-font-size',
+  '--blok-table-comfortable-font-size',
+  '--blok-image-caption-font-size',
+  '--blok-video-caption-font-size',
+  '--blok-audio-caption-font-size',
+  '--blok-file-caption-font-size',
+  '--blok-embed-caption-font-size',
+  '--blok-bookmark-title-font-size',
+  '--blok-bookmark-description-font-size',
+  '--blok-bookmark-link-font-size',
 ]);
 
 describe('R3 — every var() reference resolves to a declared token', () => {

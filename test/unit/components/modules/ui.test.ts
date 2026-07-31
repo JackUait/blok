@@ -1322,6 +1322,62 @@ describe("UI module", () => {
       expect(fontStyleTags).toHaveLength(0);
     });
 
+    it("injects per-block font-size tokens when config.style.fontSize is set", () => {
+      const holder = document.createElement("div");
+      holder.id = "test-editor-font-size";
+      document.body.appendChild(holder);
+
+      const eventsDispatcher = {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      };
+
+      const ui = new UI({
+        config: {
+          holder,
+          minHeight: 50,
+          style: {
+            fontSize: {
+              paragraph: "17px",
+              heading: { 1: "2.25rem" },
+              image: { caption: "13px" },
+            },
+          },
+        },
+        eventsDispatcher: eventsDispatcher as unknown as UI["eventsDispatcher"],
+      });
+      const blok = createBlokStub();
+      ui.state = blok;
+
+      const wrapper = document.createElement("div");
+      const redactor = document.createElement("div");
+      const bottomZone = document.createElement("div");
+      wrapper.appendChild(redactor);
+      holder.appendChild(wrapper);
+      (ui as { nodes: UI["nodes"] }).nodes = { holder, wrapper, redactor, bottomZone };
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const tag = document.getElementById("blok-font-test-editor-font-size");
+
+      expect(tag?.textContent).toContain("--blok-paragraph-font-size: 17px;");
+      expect(tag?.textContent).toContain("--blok-heading-1-font-size: 2.25rem;");
+      expect(tag?.textContent).toContain("--blok-image-caption-font-size: 13px;");
+    });
+
+    it("does not inject a style tag when config.style.fontSize is empty", () => {
+      const { ui } = createUI({ configOverrides: { style: { fontSize: {} } } });
+
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const fontStyleTags = Array.from(document.head.querySelectorAll("style")).filter(
+        (tag) => tag.id.startsWith("blok-font-"),
+      );
+
+      expect(fontStyleTags).toHaveLength(0);
+    });
+
     it("injects a style tag when config.style.fontFamily is set", () => {
       const holder = document.createElement("div");
       holder.id = "my-editor";

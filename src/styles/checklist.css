@@ -68,3 +68,15 @@
 [data-blok-theme="dark"] [data-blok-interface] [data-list-style="checklist"] [data-checked="true"] {
   opacity: 0.45;
 }
+
+/*
+  Checklist type scale. Checklist items share the list block root (and so the
+  --blok-list-font-size utility on it), but hosts size checkboxes' rows
+  separately often enough to warrant their own scenario
+  (`config.style.fontSize.list.checklist`) — it layers on top, falling back to
+  the list token and finally to inheriting, which is the pre-token behaviour.
+  Un-layered, so it beats the layered size utility on the same element.
+*/
+[data-list-style="checklist"] {
+  font-size: var(--blok-checklist-font-size, var(--blok-list-font-size, inherit));
+}

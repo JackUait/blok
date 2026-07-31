@@ -16,6 +16,7 @@ import { Flipper } from '../flipper';
 import { SelectionUtils as Selection } from '../selection/index';
 import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
+import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
@@ -782,18 +783,21 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * Injects font-family override stylesheets when any config.style font field is set.
+   * Injects font override stylesheets when any config.style font field is set.
    * Handles: --blok-font-family (legacy), --blok-font-sans, --blok-font-serif,
-   * --blok-font-mono, and --blok-font-handwriting.
+   * --blok-font-mono, --blok-font-handwriting, and the per-block, per-scenario
+   * `--blok-*-font-size` tokens built from config.style.fontSize.
    */
   private loadFontStyles(): void {
     const style = this.config.style;
+    const fontSizeLines = buildFontSizeVarLines(style?.fontSize);
     const hasAnyFont =
       style?.fontFamily ||
       style?.fontFamilySans ||
       style?.fontFamilySerif ||
       style?.fontFamilyMono ||
-      style?.fontFamilyHandwriting;
+      style?.fontFamilyHandwriting ||
+      fontSizeLines.length > 0;
 
     if (!hasAnyFont) {
       return;
@@ -815,6 +819,10 @@ export class UI extends Module<UINodes> {
     if (style.fontFamilySerif)       varLines.push(`  --blok-font-serif: ${style.fontFamilySerif};`);
     if (style.fontFamilyMono)        varLines.push(`  --blok-font-mono: ${style.fontFamilyMono};`);
     if (style.fontFamilyHandwriting) varLines.push(`  --blok-font-handwriting: ${style.fontFamilyHandwriting};`);
+
+    for (const line of fontSizeLines) {
+      varLines.push(`  ${line}`);
+    }
 
     const vars = varLines.join('\n');
     const css = [

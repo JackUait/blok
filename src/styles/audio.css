@@ -722,7 +722,7 @@
   display: block;
   padding-top: var(--blok-space-2-5);
   border-top: 1px solid var(--blok-border-subtle);
-  font-size: var(--blok-font-size-ui-label);
+  font-size: var(--blok-audio-caption-font-size, var(--blok-font-size-ui-label));
   color: var(--blok-text-secondary);
   line-height: var(--blok-line-height-body);
   outline: none;

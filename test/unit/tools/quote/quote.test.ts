@@ -124,7 +124,7 @@ describe('Quote Tool', () => {
       const tool = new Quote(createQuoteOptions({ size: 'large' }));
       const el = tool.render();
 
-      expect(el.className).toContain('text-[1.2em]');
+      expect(el.className).toContain('text-[length:var(--blok-quote-large-font-size,1.2em)]');
     });
 
     it('sets data-blok-tool attribute to quote', async () => {
@@ -287,7 +287,7 @@ describe('Quote Tool', () => {
 
       settings[0].children.items[1].onActivate(); // Activate "Large"
 
-      expect(el.className).toContain('text-[1.2em]');
+      expect(el.className).toContain('text-[length:var(--blok-quote-large-font-size,1.2em)]');
       expect(tool.save(el).size).toBe('large');
     });
 

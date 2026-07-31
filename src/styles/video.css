@@ -70,7 +70,7 @@
   min-width: 0;
   display: block;
   margin-top: var(--blok-space-2);
-  font-size: 13.5px;
+  font-size: var(--blok-video-caption-font-size, 13.5px);
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;

@@ -40,15 +40,26 @@
 }
 
 /*
+ * Compact text density — the default. 0.875rem is the `text-sm` scale the
+ * cells carried as a utility class before the size became host-configurable
+ * (`config.style.fontSize.table.compact`). Authored here rather than as a
+ * utility because un-layered rules beat layered utilities, so the comfortable
+ * rule below (and the cell-content inherit rule above) keep their precedence
+ * without needing !important.
+ */
+[data-blok-table-cell] {
+  font-size: var(--blok-table-font-size, 0.875rem);
+}
+
+/*
  * Comfortable text density: bump the cell type scale from the compact
- * default (text-sm on each cell) to the regular editor size. Cell block
- * content inherits this via the font-size:inherit rule above, so one
- * attribute on the <table> retypes every cell. Attribute + descendant
- * gives (0,2,0), which outranks the cells' text-sm utility in both the
- * dev (@layer) and flattened production cascades.
+ * default to the regular editor size (`config.style.fontSize.table.comfortable`).
+ * Cell block content inherits this via the font-size:inherit rule above, so one
+ * attribute on the <table> retypes every cell. Attribute + descendant gives
+ * (0,2,0), which outranks the compact rule above.
  */
 [data-blok-table-text-size="comfortable"] [data-blok-table-cell] {
-  font-size: 1rem;
+  font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
 /* ─── Cell content placement ──────────────────────────────────── */

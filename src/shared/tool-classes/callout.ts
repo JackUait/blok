@@ -10,6 +10,12 @@
  * static view does not render.
  */
 export const CALLOUT_WRAPPER_CLASSES: readonly string[] = [
+  /**
+   * Host font-size hook (`config.style.fontSize.callout`). Set on the wrapper
+   * so the callout's child blocks inherit it — they carry `inherit`-fallback
+   * size utilities of their own.
+   */
+  'text-[length:var(--blok-callout-font-size,inherit)]',
   'rounded-xl',
   'pl-8',
   'pr-4',

@@ -141,9 +141,16 @@ describe('Code Block Constants', () => {
     });
 
     it('GUTTER_STYLES uses same text size and line height as CODE_AREA_STYLES', () => {
-      expect(GUTTER_STYLES).toContain('text-sm');
+      /**
+       * Both read the host font-size hook (config.style.fontSize.code) with
+       * the same text-sm fallback: the gutter and the code are separate
+       * columns whose lines only stay aligned while their scales match.
+       */
+      const sizeUtility = 'text-[length:var(--blok-code-font-size,0.875rem)]';
+
+      expect(GUTTER_STYLES).toContain(sizeUtility);
       expect(GUTTER_STYLES).toContain('leading-relaxed');
-      expect(CODE_AREA_STYLES).toContain('text-sm');
+      expect(CODE_AREA_STYLES).toContain(sizeUtility);
       expect(CODE_AREA_STYLES).toContain('leading-relaxed');
     });
 

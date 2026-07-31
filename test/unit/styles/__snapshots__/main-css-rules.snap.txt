@@ -1693,6 +1693,10 @@
   opacity: 0.45;
 }
 
+[data-list-style="checklist"] {
+  font-size: var(--blok-checklist-font-size, var(--blok-list-font-size, inherit));
+}
+
 :where([data-blok-interface], [data-blok-popover]) *, :where([data-blok-interface], [data-blok-popover]) ::after, :where([data-blok-interface], [data-blok-popover]) ::before, :where([data-blok-interface], [data-blok-popover]) ::backdrop, :where([data-blok-interface], [data-blok-popover]) ::file-selector-button {
   border-color: var(--color-gray-200, currentcolor);
 }
@@ -1927,8 +1931,12 @@
   font-size: inherit !important;
 }
 
+[data-blok-table-cell] {
+  font-size: var(--blok-table-font-size, 0.875rem);
+}
+
 [data-blok-table-text-size="comfortable"] [data-blok-table-cell] {
-  font-size: 1rem;
+  font-size: var(--blok-table-comfortable-font-size, 1rem);
 }
 
 [data-blok-cell-placement="top-center"] {
@@ -3847,7 +3855,7 @@
 [data-blok-tool="image"] .blok-image-caption {
   display: block;
   margin-top: var(--blok-space-2);
-  font-size: 12px;
+  font-size: var(--blok-image-caption-font-size, 12px);
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -3897,7 +3905,7 @@
 }
 
 [@container (min-width: 360px)] [data-blok-tool="image"] .blok-image-caption {
-  font-size: 13.5px;
+  font-size: var(--blok-image-caption-font-size, 13.5px);
 }
 
 [@container (min-width: 360px)] [data-blok-tool="image"] .blok-image-caption-row__alt {
@@ -4594,7 +4602,7 @@
   min-width: 0;
   display: block;
   margin-top: var(--blok-space-2);
-  font-size: 13.5px;
+  font-size: var(--blok-video-caption-font-size, 13.5px);
   color: var(--blok-text-secondary);
   line-height: 1.5;
   outline: none;
@@ -6294,7 +6302,7 @@
   display: block;
   padding-top: var(--blok-space-2-5);
   border-top: 1px solid var(--blok-border-subtle);
-  font-size: var(--blok-font-size-ui-label);
+  font-size: var(--blok-audio-caption-font-size, var(--blok-font-size-ui-label));
   color: var(--blok-text-secondary);
   line-height: var(--blok-line-height-body);
   outline: none;
@@ -6741,7 +6749,7 @@
   outline: none;
   text-align: left;
   color: var(--blok-text-secondary, inherit);
-  font-size: 0.875em;
+  font-size: var(--blok-embed-caption-font-size, 0.875em);
 }
 
 [data-blok-tool="embed"] [data-role="embed-caption"]:empty::before {
@@ -6812,7 +6820,7 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__title {
-  font-size: 14px;
+  font-size: var(--blok-bookmark-title-font-size, 14px);
   line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
@@ -6821,7 +6829,7 @@
 
 [data-blok-tool="bookmark"] .blok-bookmark__description {
   margin-top: var(--blok-space-0-5);
-  font-size: 12px;
+  font-size: var(--blok-bookmark-description-font-size, 12px);
   line-height: 16px;
   color: var(--blok-text-secondary);
   display: -webkit-box;
@@ -6836,7 +6844,7 @@
   min-width: 0;
   margin-top: auto;
   padding-top: var(--blok-space-1-5);
-  font-size: 12px;
+  font-size: var(--blok-bookmark-link-font-size, 12px);
   line-height: 16px;
 }
 
@@ -6870,7 +6878,7 @@
   border-radius: var(--blok-radius-lg);
   padding: var(--blok-space-3) var(--blok-space-3-5);
   color: var(--blok-text-secondary);
-  font-size: 14px;
+  font-size: var(--blok-bookmark-title-font-size, 14px);
   line-height: 20px;
 }
 
@@ -7056,7 +7064,7 @@
 }
 
 [data-blok-tool="file"] .blok-file-caption {
-  font-size: var(--blok-font-size-ui-label);
+  font-size: var(--blok-file-caption-font-size, var(--blok-font-size-ui-label));
   line-height: var(--blok-line-height-body);
   color: var(--blok-text-secondary);
   outline: none;

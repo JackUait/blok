@@ -31,7 +31,7 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__title {
-  font-size: 14px;
+  font-size: var(--blok-bookmark-title-font-size, 14px);
   line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
@@ -40,7 +40,7 @@
 
 [data-blok-tool="bookmark"] .blok-bookmark__description {
   margin-top: var(--blok-space-0-5);
-  font-size: 12px;
+  font-size: var(--blok-bookmark-description-font-size, 12px);
   line-height: 16px;
   color: var(--blok-text-secondary);
   display: -webkit-box;
@@ -55,7 +55,7 @@
   min-width: 0;
   margin-top: auto;
   padding-top: var(--blok-space-1-5);
-  font-size: 12px;
+  font-size: var(--blok-bookmark-link-font-size, 12px);
   line-height: 16px;
 }
 
@@ -90,6 +90,8 @@
   border-radius: var(--blok-radius-lg);
   padding: var(--blok-space-3) var(--blok-space-3-5);
   color: var(--blok-text-secondary);
-  font-size: 14px;
+  /* Empty/loading/error text stands in for the title, so it follows the title
+     token — a host that retypes the card must not get a mismatched shell. */
+  font-size: var(--blok-bookmark-title-font-size, 14px);
   line-height: 20px;
 }

@@ -760,7 +760,7 @@ describe('blocksToHtml', () => {
         '<div data-blok-element class="relative opacity-100 first:mt-0 last:pb-0 last:mb-0 '
         + '[&amp;_a]:cursor-pointer [&amp;_a]:underline [&amp;_a]:text-link [&amp;_b]:font-bold [&amp;_i]:italic">'
         + '<div class="relative mx-auto transition-colors duration-150 ease-out max-w-blok-content">'
-        + '<p class="blok-block leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">Hi</p>'
+        + '<p class="blok-block text-[length:var(--blok-paragraph-font-size,inherit)] leading-[1.5] mt-px mb-px [&amp;&gt;p:first-of-type]:mt-0 [&amp;&gt;p:last-of-type]:mb-0">Hi</p>'
         + '</div></div>'
       );
     });

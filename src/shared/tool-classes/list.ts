@@ -31,6 +31,12 @@ export const ORDERED_LIST_INDENT_PER_LEVEL = 26;
  * suppression on a contenteditable host).
  */
 export const LIST_ITEM_CLASSES: readonly string[] = [
+  /**
+   * Host font-size hook (`config.style.fontSize.list.item`). Checklists take
+   * their own token on top of this one — see `src/styles/checklist.css`. The
+   * tool's `itemSize` config still wins: it lands as an inline style.
+   */
+  'text-[length:var(--blok-list-font-size,inherit)]',
   'pt-[var(--blok-block-padding-top,7px)]',
   'pb-[var(--blok-block-padding-bottom,7px)]',
   'mt-[2px]',

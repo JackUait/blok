@@ -280,8 +280,26 @@
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
   }
-  .text-\[1\.2em\] {
-    font-size: 1.2em;
+  .text-\[length\:var\(--blok-callout-font-size\,inherit\)\] {
+    font-size: var(--blok-callout-font-size,inherit);
+  }
+  .text-\[length\:var\(--blok-code-font-size\,0\.875rem\)\] {
+    font-size: var(--blok-code-font-size,0.875rem);
+  }
+  .text-\[length\:var\(--blok-list-font-size\,inherit\)\] {
+    font-size: var(--blok-list-font-size,inherit);
+  }
+  .text-\[length\:var\(--blok-paragraph-font-size\,inherit\)\] {
+    font-size: var(--blok-paragraph-font-size,inherit);
+  }
+  .text-\[length\:var\(--blok-quote-font-size\,inherit\)\] {
+    font-size: var(--blok-quote-font-size,inherit);
+  }
+  .text-\[length\:var\(--blok-quote-large-font-size\,1\.2em\)\] {
+    font-size: var(--blok-quote-large-font-size,1.2em);
+  }
+  .text-\[length\:var\(--blok-toggle-font-size\,inherit\)\] {
+    font-size: var(--blok-toggle-font-size,inherit);
   }
   .leading-\[1\.5\] {
     --tw-leading: 1.5;
@@ -1116,6 +1134,9 @@
   :root:not([data-blok-theme="light"]) [data-blok-interface] [data-list-style="checklist"] [data-checked="true"] {
     opacity: 0.45;
   }
+}
+[data-list-style="checklist"] {
+  font-size: var(--blok-checklist-font-size, var(--blok-list-font-size, inherit));
 }
 [data-drop-indicator="top"], [data-drop-indicator="bottom"] {
   --drop-line-start: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));

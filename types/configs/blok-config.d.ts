@@ -18,6 +18,92 @@ import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptN
 export type DataModelFormat = 'legacy' | 'hierarchical' | 'auto';
 
 /**
+ * Per-block, per-scenario font-size overrides for {@link BlokConfig.style}.
+ *
+ * Every value is any valid CSS `font-size` (px, rem, em, clamp(), …) and is
+ * applied by writing the block's `--blok-*-font-size` custom property, so the
+ * same knob is reachable at runtime through `editor.tokens.set()`.
+ *
+ * Blocks whose text has one scenario take a bare string; blocks with several
+ * (a caption, a density mode, a size variant) take one key per scenario.
+ * Omitted keys keep Blok's built-in size.
+ */
+export interface BlokFontSizeConfig {
+  /** Paragraph text. Cascades into callout/toggle/quote children too, which inherit. */
+  paragraph?: string;
+  /** Heading text, per level. Same tokens the CSS-only `--blok-heading-N-font-size` hooks use. */
+  heading?: {
+    1?: string;
+    2?: string;
+    3?: string;
+    4?: string;
+    5?: string;
+    6?: string;
+  };
+  /** List item text. `checklist` falls back to `item` when omitted. */
+  list?: {
+    /** Bulleted and ordered item text. */
+    item?: string;
+    /** Checklist item text. */
+    checklist?: string;
+  };
+  /** Quote text, per `data.size` variant. */
+  quote?: {
+    /** Default-size quotes. */
+    default?: string;
+    /** Quotes saved with `size: 'large'` (built-in: 1.2em). */
+    large?: string;
+  };
+  /** Callout text. */
+  callout?: string;
+  /** Code block text. */
+  code?: string;
+  /** Toggle title text. */
+  toggle?: string;
+  /** Table cell text, per text-size setting. */
+  table?: {
+    /** Cells in the default `compact` density. */
+    compact?: string;
+    /** Cells while the table's `textSize` is `comfortable`. */
+    comfortable?: string;
+  };
+  /** Image block. */
+  image?: {
+    /** Caption under the image. */
+    caption?: string;
+  };
+  /** Video block. */
+  video?: {
+    /** Caption under the player. */
+    caption?: string;
+  };
+  /** Audio block. */
+  audio?: {
+    /** Caption under the player. */
+    caption?: string;
+  };
+  /** File block. */
+  file?: {
+    /** Caption under the file card. */
+    caption?: string;
+  };
+  /** Embed block. */
+  embed?: {
+    /** Caption under the embed. */
+    caption?: string;
+  };
+  /** Bookmark card. */
+  bookmark?: {
+    /** Card title. */
+    title?: string;
+    /** Card description. */
+    description?: string;
+    /** Card link row. */
+    link?: string;
+  };
+}
+
+/**
  * Context handed to {@link BlokConfig.onError} describing where a reported
  * error originated. Modeled as an object (rather than a bare string) so new
  * error sources can be added without a breaking signature change.
@@ -557,6 +643,28 @@ export interface BlokMountOptions {
      * @example "'Caveat', cursive"
      */
     fontFamilyHandwriting?: string;
+
+    /**
+     * Per-block, per-scenario font sizes. Each entry writes that block's
+     * `--blok-*-font-size` custom property, so a host retypes one block from
+     * the config instead of targeting Blok's internal class names.
+     *
+     * Per-tool size config still wins where it exists (`tools.paragraph`'s
+     * `styles.size`, the list's `itemSize`) — those are inline styles.
+     * @example
+     * ```typescript
+     * style: {
+     *   fontSize: {
+     *     paragraph: '17px',
+     *     heading: { 1: '2.25rem', 2: '1.75rem' },
+     *     quote: { large: '1.4em' },
+     *     table: { comfortable: '17px' },
+     *     image: { caption: '13px' },
+     *   },
+     * }
+     * ```
+     */
+    fontSize?: BlokFontSizeConfig;
 
     /**
      * Global content alignment within the editor.

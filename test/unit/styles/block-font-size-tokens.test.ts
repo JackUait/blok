@@ -34,8 +34,15 @@ describe('per-block font-size tokens', () => {
       expect(LIST_ITEM_CLASSES).toContain(sizeUtility('--blok-list-font-size', 'inherit'));
     });
 
-    it('callout reads --blok-callout-font-size, inheriting by default', () => {
-      expect(CALLOUT_WRAPPER_CLASSES).toContain(sizeUtility('--blok-callout-font-size', 'inherit'));
+    it('callout reads --blok-callout-font-size, falling back to the paragraph token then inherit', () => {
+      /**
+       * The whole callout → paragraph → inherit chain lives in this ONE
+       * declaration. Naming the token again on the child paragraph squared any
+       * relative value, so `calc(1em * 1.5)` gave a 24px wrapper 36px text.
+       */
+      expect(CALLOUT_WRAPPER_CLASSES).toContain(
+        sizeUtility('--blok-callout-font-size', 'var(--blok-paragraph-font-size,inherit)')
+      );
     });
 
     it('toggle title reads --blok-toggle-font-size, inheriting by default', () => {
@@ -80,17 +87,18 @@ describe('per-block font-size tokens', () => {
       expect(css).toContain(`font-size: ${declaration}`);
     });
 
-    it('lets the callout token beat the paragraph token for the callout body', () => {
+    it('lets the callout body inherit the wrapper size instead of re-reading the token', () => {
       /**
        * A callout renders its text as a CHILD paragraph block, so the
        * paragraph's own size utility would otherwise win and a host that set
        * both `fontSize.callout` and `fontSize.paragraph` could never make
        * callout text differ from body text — the callout scenario would only
-       * size the emoji row. Precedence: callout → paragraph → inherit.
+       * size the emoji row. This rule still beats that utility, but resolves to
+       * `inherit`: the wrapper has already applied the callout → paragraph →
+       * inherit chain, and naming a relative token twice down one inheritance
+       * chain squares it.
        */
-      expect(css).toContain(
-        'font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit))'
-      );
+      expect(css).toContain('[data-blok-tool="callout"] [data-blok-tool="paragraph"] {\n  font-size: inherit;');
     });
 
     it('keeps the six heading levels on their pre-existing tokens', () => {

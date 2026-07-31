@@ -481,18 +481,33 @@
  * Callout emoji vertical centering for heading first children.
  * Headings have taller line boxes than the emoji button, so the emoji
  * needs a top margin to shift its center down to match the heading's
- * first line center.  Values: (heading-line-height − emoji-line-height) / 2 + 1px mt-px.
- * Emoji button: text-[1.5rem] leading-[1] → line-height 24px.
- * H1 text-3xl leading-[1.3] → 39px; H2 text-2xl → 31.2px; H3 text-xl → 26px.
+ * first line center: (heading-line-box − emoji-line-box) / 2 + the 1px mt-px
+ * the child carries.
+ *
+ * Both line boxes are host-settable, so the offset has to be DERIVED from those
+ * tokens rather than precomputed. As the literals 8.5px / 4.6px / 2px it only
+ * centred at the default sizes — scaling `fontSize.heading.1` alongside
+ * `fontSize.callout` left the emoji 5.25px adrift.
+ *
+ * The formula is written once and each level contributes only its own size
+ * token (repeating the fallback that level's rule declares in heading.css).
+ * `1em` is the emoji's line box: the button carries `text-[1.5em] leading-[1]`,
+ * so ONE em of the button is exactly the emoji line — see EMOJI_BUTTON_STYLES
+ * for why em must be read against the element's own font here.
  */
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child :is(h1, h2, h3)) {
+  --_blok-callout-emoji-line: 1em;
+
+  margin-top: calc((var(--_blok-callout-heading-size) * var(--blok-heading-line-height, 1.3) - var(--_blok-callout-emoji-line)) / 2 + 1px);
+}
 [data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h1) {
-  margin-top: 8.5px;
+  --_blok-callout-heading-size: var(--blok-heading-1-font-size, 1.875rem);
 }
 [data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h2) {
-  margin-top: 4.6px;
+  --_blok-callout-heading-size: var(--blok-heading-2-font-size, 1.5rem);
 }
 [data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
-  margin-top: var(--blok-space-0-5);
+  --_blok-callout-heading-size: var(--blok-heading-3-font-size, 1.25rem);
 }
 
 /**
@@ -528,13 +543,19 @@
   paragraph size utility. Without this rule the paragraph token would win
   inside callouts, so a host setting both `fontSize.callout` and
   `fontSize.paragraph` could never make callout text differ from body text —
-  `fontSize.callout` would size only the emoji row. Precedence here is
-  callout → paragraph → inherit, mirroring the checklist → list → inherit
-  chain in checklist.css. Un-layered and (0,2,0), so it beats the layered
-  (dev) / later-source-order (prod) size utility on the child.
+  `fontSize.callout` would size only the emoji row. Un-layered and (0,2,0), so
+  it beats the layered (dev) / later-source-order (prod) size utility on the
+  child.
+
+  It resolves to `inherit`, NOT to the token, because the wrapper has already
+  applied it (CALLOUT_WRAPPER_CLASSES, which also carries the callout →
+  paragraph → inherit fallback chain). Naming the token twice down one
+  inheritance chain squares any relative value: `calc(1em * 1.5)` gave a 24px
+  wrapper a 36px paragraph, so callout text outgrew both plain body text and
+  the emoji sized off the wrapper.
 */
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
-  font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit));
+  font-size: inherit;
 }
 
 /*

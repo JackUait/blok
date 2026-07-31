@@ -305,7 +305,7 @@ describe('dom-builder', () => {
 
       expect(marker).toHaveTextContent('1.');
       expect(marker).toHaveAttribute('aria-hidden', 'true');
-      expect(marker.style.paddingRight).toBe('11px');
+      expect(marker.style.paddingRight).toBe('0.6875em');
       expect(marker.style.minWidth).toBe('fit-content');
     });
 
@@ -353,26 +353,48 @@ describe('dom-builder', () => {
     it('applies ordered list marker styles', () => {
       const marker = createMarker('ordered', 0);
 
-      expect(marker.style.paddingRight).toBe('11px');
+      // 0.6875em is the historical 11px gutter, expressed against the item's
+      // font size so it stays 11px at the default and grows with the text.
+      expect(marker.style.paddingRight).toBe('0.6875em');
       expect(marker.style.minWidth).toBe('fit-content');
     });
 
     it('applies unordered list marker styles', () => {
       const marker = createMarker('unordered', 0);
 
-      expect(marker.style.paddingLeft).toBe('1px');
-      expect(marker.style.paddingRight).toBe('13px');
-      expect(marker.style.fontSize).toBe('24px');
+      /**
+       * Every metric is em-relative so the bullet column scales with the item's
+       * font size, and each one still resolves to its historical pixel value at
+       * the default 16px item: a 24px glyph with 1px/13px of gutter.
+       */
+      const emsOf = (value: string): number => Number(/-?[\d.]+em/.exec(value)?.[0].replace('em', ''));
+      /** The marker's own font, against which its paddings resolve. */
+      const markerPx = emsOf(marker.style.fontSize) * 16;
+
+      expect(markerPx).toBe(24);
+      expect(emsOf(marker.style.paddingLeft) * markerPx).toBeCloseTo(1, 3);
+      expect(emsOf(marker.style.paddingRight) * markerPx).toBeCloseTo(13, 3);
       expect(marker.style.fontFamily).toBe('Arial');
+    });
+
+    it('sizes the unordered marker with no absolute unit, so it scales with the item font', () => {
+      const marker = createMarker('unordered', 0);
+      const metrics = [marker.style.fontSize, marker.style.lineHeight, marker.style.paddingLeft, marker.style.paddingRight];
+
+      // A px/rem metric here pins the bullet to one font size: the glyph stayed
+      // 24px while host-scaled text grew past it, dropping the bullet 6px off
+      // the centre of its own text line at 1.5x.
+      expect(metrics.some(value => /\d(px|rem)\b/.test(value))).toBe(false);
     });
 
     it('sets line-height on unordered marker to match content line box so bullet aligns with text', () => {
       const marker = createMarker('unordered', 0);
 
-      // Without this, the marker inherits line-height: 1.5 from the parent, giving it a
-      // 36px line box (1.5 × 24px) while the content has a 24px line box (1.5 × 16px).
-      // items-start would then misalign the bullet downward within the taller box.
-      expect(marker.style.lineHeight).toBe('1.5rem');
+      // The marker's font is 1.5em of the item, so line-height 1 makes its line
+      // box exactly 1.5em of the ITEM font — the same box the content gets from
+      // `leading-[1.5]`, at every font size. A fixed 1.5rem only matched while
+      // the item resolved to 16px.
+      expect(marker.style.lineHeight).toBe('1');
     });
   });
 

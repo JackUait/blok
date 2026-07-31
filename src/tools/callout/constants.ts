@@ -36,12 +36,32 @@ export const DEFAULT_EMOJI = '💡';
  * the view emitter stamps the exact same set.
  */
 export const WRAPPER_STYLES = CALLOUT_WRAPPER_CLASSES.join(' ');
-// h-[38px] = py-[7px]×2 + 1.5rem×1 = 14+24; explicit height prevents platform-specific emoji font metrics from inflating the button
-// relative anchors the absolutely-positioned knock-out ghost during the swap animation
-export const EMOJI_BUTTON_STYLES = 'relative text-[1.5rem] leading-[1] cursor-pointer bg-transparent border-0 px-0 py-[7px] h-[38px] flex-shrink-0 select-none';
+/**
+ * The emoji has to stay centred on the FIRST line of the body text at every size
+ * the host asks for via `config.style.fontSize.callout`, which splits the button's
+ * metrics in two:
+ *
+ * - The GLYPH scales with the text: `text-[1.5em]` is the historical 24px emoji
+ *   at a 16px callout. As `1.5rem` it ignored the config outright and sat 16.5px
+ *   above the centre of its text line at 1.5x.
+ * - The PADDING must NOT scale. The emoji's centre lands at `padding-top + 0.75em`
+ *   and the text's first line centre at `--blok-block-padding-top + 0.75em` (the
+ *   `blok-block` rhythm plus its `leading-[1.5]` line box), so the em halves cancel
+ *   and only equal padding aligns them. Reusing the block-rhythm token also keeps
+ *   the two together when a host retunes it.
+ *
+ * The height is therefore glyph + padding (38px at the defaults), still explicit so
+ * platform-specific emoji font metrics can't inflate the button. It says `1em`, not
+ * `1.5em`: em resolves against the element's OWN font-size, which `text-[1.5em]` has
+ * already scaled. Writing the glyph's height as `1.5em` here applied the 1.5 twice —
+ * a 36px line box around a 24px emoji, which then slid off the text as it scaled.
+ *
+ * `relative` anchors the absolutely-positioned knock-out ghost during the swap animation.
+ */
+export const EMOJI_BUTTON_STYLES = 'relative text-[1.5em] leading-[1] cursor-pointer bg-transparent border-0 px-0 pt-[var(--blok-block-padding-top,7px)] pb-[var(--blok-block-padding-bottom,7px)] h-[calc(1em+var(--blok-block-padding-top,7px)+var(--blok-block-padding-bottom,7px))] flex-shrink-0 select-none';
 // inline-block: transforms don't apply to non-replaced inline elements
 export const EMOJI_FACE_STYLES = 'inline-block origin-bottom';
 export const EMOJI_JUMP_IN_ANIMATION = 'animate-[blok-callout-emoji-jump-in_420ms_ease-out_both]';
-// top-[7px] mirrors the button's py-[7px] so the ghost sits exactly on the face
-export const EMOJI_GHOST_STYLES = 'absolute left-0 top-[7px] origin-bottom pointer-events-none select-none animate-[blok-callout-emoji-knock-out_250ms_ease-in_both]';
+// top mirrors the button's padding-top so the ghost sits exactly on the face
+export const EMOJI_GHOST_STYLES = 'absolute left-0 top-[var(--blok-block-padding-top,7px)] origin-bottom pointer-events-none select-none animate-[blok-callout-emoji-knock-out_250ms_ease-in_both]';
 export const CHILDREN_STYLES = CALLOUT_CHILDREN_CLASSES.join(' ');

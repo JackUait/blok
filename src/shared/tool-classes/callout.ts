@@ -14,8 +14,15 @@ export const CALLOUT_WRAPPER_CLASSES: readonly string[] = [
    * Host font-size hook (`config.style.fontSize.callout`). Set on the wrapper
    * so the callout's child blocks inherit it — they carry `inherit`-fallback
    * size utilities of their own.
+   *
+   * This is the ONLY place the callout scale may be applied. The child
+   * paragraph used to re-declare the same token (see main.css), which squared
+   * any relative value: at `calc(1em * 1.5)` the body text rendered 36px
+   * against a 24px wrapper, so the emoji sized off the wrapper fell off the
+   * text's centre line. The paragraph fallback moved here with it, keeping the
+   * documented callout → paragraph → inherit precedence in one declaration.
    */
-  'text-[length:var(--blok-callout-font-size,inherit)]',
+  'text-[length:var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit))]',
   'rounded-xl',
   'pl-8',
   'pr-4',

@@ -73,8 +73,12 @@ describe('shared tool classes', () => {
 
   describe('quote', () => {
     it('adds the large modifier only for size large', () => {
-      expect(quoteClasses('large')).toContain('text-[1.2em]');
-      expect(quoteClasses('default')).not.toContain('text-[1.2em]');
+      // The bare `text-[1.2em]` became a host font-size hook keeping 1.2em as
+      // its fallback; block-font-size-tokens.test.ts pins the token itself.
+      const largeSize = 'text-[length:var(--blok-quote-large-font-size,1.2em)]';
+
+      expect(quoteClasses('large')).toContain(largeSize);
+      expect(quoteClasses('default')).not.toContain(largeSize);
     });
 
     it('keeps blok-block first so its padding overrides win by source order', () => {

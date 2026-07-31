@@ -69,19 +69,45 @@ describe('buildCalloutDOM', () => {
     expect(emojiButton.getAttribute('aria-label')).toBe('💡');
   });
 
-  it('emoji button renders emoji at 24px (1.5rem)', async () => {
+  it('emoji button sizes the emoji relative to the callout text, not at a fixed 24px', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
     const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
-    expect(emojiButton.className).toContain('text-[1.5rem]');
+    // 1.5em of a 16px callout is the historical 24px. As `1.5rem` the emoji
+    // ignored `style.fontSize.callout` entirely and sat 16.5px above the centre
+    // of its text line at 1.5x.
+    expect(emojiButton.className).toContain('text-[1.5em]');
   });
 
   it('emoji button aligns to start of first line', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
     const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
-    expect(emojiButton.className).toContain('py-[7px]');
+    /**
+     * The emoji's centre sits at `padding-top + 0.75em`; the body text's first
+     * line centre sits at `--blok-block-padding-top + 0.75em` (its `blok-block`
+     * padding and its `leading-[1.5]` line box). The em halves cancel, so the
+     * button must take the SAME block-rhythm padding as the paragraph — a value
+     * that deliberately does not scale with the font. Scaling it instead put the
+     * emoji 3px off centre at 0.8x.
+     */
+    expect(emojiButton.className).toContain('pt-[var(--blok-block-padding-top,7px)]');
+    expect(emojiButton.className).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
     expect(emojiButton.className).toContain('flex-shrink-0');
+  });
+
+  it('sizes the emoji button as its own glyph plus that padding, so nothing is pinned to one font size', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
+
+    /**
+     * `1em` of the button — whose font `text-[1.5em]` has already scaled — plus
+     * the padding: the historical 38px at a 16px callout. `1.5em` here would
+     * apply the 1.5 a second time, boxing a 24px emoji in a 36px line.
+     */
+    expect(emojiButton.className).toContain(
+      'h-[calc(1em+var(--blok-block-padding-top,7px)+var(--blok-block-padding-bottom,7px))]'
+    );
   });
 
   it('childContainer fills remaining space', async () => {

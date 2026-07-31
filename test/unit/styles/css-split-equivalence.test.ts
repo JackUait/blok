@@ -444,8 +444,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // blok-callout-emoji-knock-out (old emoji tips over and falls) plus their
     // doc comment (~0.9KB) for the picker swap choreography. Bumps the
     // multiplier to 1.417.
+    // 2026-08-01: font-scale alignment — the callout emoji's heading offsets in
+    // main.css became `calc()` derivations of the heading size/line-height tokens
+    // instead of the literals 8.5px / 4.6px / 2px, which only centred the emoji at
+    // the default heading sizes (~0.5KB of formula text, the private
+    // --_blok-callout-heading-size / --_blok-callout-emoji-line tokens the R2
+    // literal-repeat law requires, and the doc comment). Bumps the multiplier
+    // to 1.419.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.417);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.419);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

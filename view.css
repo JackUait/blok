@@ -280,8 +280,8 @@
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
   }
-  .text-\[length\:var\(--blok-callout-font-size\,inherit\)\] {
-    font-size: var(--blok-callout-font-size,inherit);
+  .text-\[length\:var\(--blok-callout-font-size\,var\(--blok-paragraph-font-size\,inherit\)\)\] {
+    font-size: var(--blok-callout-font-size,var(--blok-paragraph-font-size,inherit));
   }
   .text-\[length\:var\(--blok-code-font-size\,0\.875rem\)\] {
     font-size: var(--blok-code-font-size,0.875rem);
@@ -1161,6 +1161,15 @@
 [data-blok-toggle-children] :is(h1, h2, h3, h4, h5, h6) {
   margin-top: 1px;
 }
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h1) {
+  --_blok-callout-heading-size: var(--blok-heading-1-font-size, 1.875rem);
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h2) {
+  --_blok-callout-heading-size: var(--blok-heading-2-font-size, 1.5rem);
+}
+[data-blok-component="callout"] button:has(+ [data-blok-toggle-children] > :first-child h3) {
+  --_blok-callout-heading-size: var(--blok-heading-3-font-size, 1.25rem);
+}
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);
@@ -1194,7 +1203,7 @@
   --blok-column-gutter: min(2rem, 4vw);
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
-  font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit));
+  font-size: inherit;
 }
 @property --tw-border-style {
   syntax: "*";

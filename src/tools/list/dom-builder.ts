@@ -431,17 +431,32 @@ export const createMarker = (style: ListItemStyle, depth: number): HTMLElement =
     // Placeholder marker - will be updated by OrderedMarkerManager
     marker.textContent = '1.';
     marker.className = twMerge(marker.className, 'text-right');
-    marker.style.paddingRight = '11px';
+    // The number inherits the item's font size, so its gutter is expressed in
+    // the same em: 0.6875em is the historical 11px at a 16px item.
+    marker.style.paddingRight = '0.6875em';
     marker.style.minWidth = 'fit-content';
   } else {
     const bulletChar = getBulletCharacter(depth);
+
     marker.textContent = bulletChar;
-    marker.className = twMerge(marker.className, 'w-6 text-center flex justify-center');
-    marker.style.paddingLeft = '1px';
-    marker.style.paddingRight = '13px';
-    marker.style.fontSize = '24px';
+    /**
+     * Every metric here is em-relative on purpose. The item's font size is
+     * host-settable (`config.style.fontSize.list.item`, the tool's `itemSize`,
+     * or any ambient size the editor inherits), and an absolute glyph beside
+     * host-scaled text only lines up at the one size it was tuned for — the
+     * 24px bullet sat 6px above the centre of its own text line at 1.5x.
+     *
+     * `1.5em` is the historical 24px glyph at a 16px item; the box metrics are
+     * then the historical pixels over that 24px (`w-[1em]` = 24px wide), and
+     * `line-height: 1` makes the marker's line box exactly 1.5em of the ITEM
+     * font — the same box `leading-[1.5]` gives the content cell.
+     */
+    marker.className = twMerge(marker.className, 'w-[1em] text-center flex justify-center');
+    marker.style.paddingLeft = 'calc(1em / 24)';
+    marker.style.paddingRight = 'calc(13em / 24)';
+    marker.style.fontSize = '1.5em';
     marker.style.fontFamily = 'Arial';
-    marker.style.lineHeight = '1.5rem';
+    marker.style.lineHeight = '1';
   }
 
   return marker;

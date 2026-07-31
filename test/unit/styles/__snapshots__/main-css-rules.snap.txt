@@ -7879,6 +7879,10 @@
   animation: none;
 }
 
+[data-blok-tool="callout"] [data-blok-tool="paragraph"] {
+  font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit));
+}
+
 [data-blok-tool="image"] .blok-image-toolbar {
   position: absolute;
   top: 10px;

@@ -311,6 +311,10 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // nearest-ancestor-shadowing reason as the block-padding tokens above.
   '--blok-checklist-font-size',
   '--blok-list-font-size',
+  // Read by the callout-body precedence rule (callout → paragraph → inherit);
+  // the other class-based scenarios live in Tailwind utilities, not main.css.
+  '--blok-callout-font-size',
+  '--blok-paragraph-font-size',
   '--blok-table-font-size',
   '--blok-table-comfortable-font-size',
   '--blok-image-caption-font-size',

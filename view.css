@@ -1193,6 +1193,9 @@
 [data-blok-columns] {
   --blok-column-gutter: min(2rem, 4vw);
 }
+[data-blok-tool="callout"] [data-blok-tool="paragraph"] {
+  font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit));
+}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;

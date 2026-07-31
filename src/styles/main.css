@@ -522,6 +522,22 @@
 @import './resize-cue.css';
 
 /*
+  Callout body type scale.
+
+  A callout renders its text as a CHILD paragraph block, which carries the
+  paragraph size utility. Without this rule the paragraph token would win
+  inside callouts, so a host setting both `fontSize.callout` and
+  `fontSize.paragraph` could never make callout text differ from body text —
+  `fontSize.callout` would size only the emoji row. Precedence here is
+  callout → paragraph → inherit, mirroring the checklist → list → inherit
+  chain in checklist.css. Un-layered and (0,2,0), so it beats the layered
+  (dev) / later-source-order (prod) size utility on the child.
+*/
+[data-blok-tool="callout"] [data-blok-tool="paragraph"] {
+  font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit));
+}
+
+/*
   Image tool — selectors audited by unit tests (no backdrop-filter regression,
   lightbox bar/btn sizing, pan cursor + transform spring). Kept inline in
   main.css (not image.css) so the suite's direct readFileSync of main.css

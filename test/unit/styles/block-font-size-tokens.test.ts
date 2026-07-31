@@ -80,6 +80,19 @@ describe('per-block font-size tokens', () => {
       expect(css).toContain(`font-size: ${declaration}`);
     });
 
+    it('lets the callout token beat the paragraph token for the callout body', () => {
+      /**
+       * A callout renders its text as a CHILD paragraph block, so the
+       * paragraph's own size utility would otherwise win and a host that set
+       * both `fontSize.callout` and `fontSize.paragraph` could never make
+       * callout text differ from body text — the callout scenario would only
+       * size the emoji row. Precedence: callout → paragraph → inherit.
+       */
+      expect(css).toContain(
+        'font-size: var(--blok-callout-font-size, var(--blok-paragraph-font-size, inherit))'
+      );
+    });
+
     it('keeps the six heading levels on their pre-existing tokens', () => {
       for (const level of [1, 2, 3, 4, 5, 6]) {
         expect(css).toContain(`font-size: var(--blok-heading-${level}-font-size,`);

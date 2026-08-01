@@ -46,6 +46,16 @@ const DATA: OutputData = {
       content: ['callout-heading-child'],
     },
     { id: 'callout-heading-child', type: 'header', data: { text: 'Heading in a callout', level: 1 }, parent: 'callout-with-heading' },
+    {
+      id: 'bookmark-card',
+      type: 'bookmark',
+      data: {
+        url: 'https://github.com/jackuait/blok',
+        title: 'Blok — headless block-based rich text editor',
+        description: 'Notion-style editor where every content entity is a block.',
+        favicon: 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+      },
+    },
   ],
 };
 
@@ -75,6 +85,11 @@ const createScaledBlok = async (page: Page, scale: number): Promise<void> => {
           callout: `calc(1em * ${textScale})`,
           list: { item: `calc(1em * ${textScale})` },
           heading: { 1: `calc(1.875rem * ${textScale})` },
+          bookmark: {
+            title: `calc(0.875em * ${textScale})`,
+            description: `calc(0.75em * ${textScale})`,
+            link: `calc(0.75em * ${textScale})`,
+          },
         },
       },
     });
@@ -212,6 +227,74 @@ test('list bullet holds its place on the text line as the item scale changes', a
  * 24px emoji, so scaling `fontSize.heading.1` or `fontSize.callout` moved both
  * line boxes and left the offsets behind.
  */
+/**
+ * The bookmark card is a shell built AROUND text the host sizes through
+ * `fontSize.bookmark.*`: the content column's padding, the gaps between title,
+ * description and link row, the favicon and every line box. All of it was
+ * absolute (12px/14px padding, 2px/6px gaps, a 16px favicon, 20px/16px line
+ * heights), so the card kept its 14px-tuned proportions while its text grew —
+ * at 1.5x the text nearly touched the border and outgrew its own line boxes.
+ *
+ * Each metric is measured against the font size that governs it; the RATIO is
+ * what must hold across scales.
+ */
+const bookmarkMetrics = async (page: Page): Promise<Record<string, number>> =>
+  page.evaluate((root) => {
+    const card = document.querySelector(root)?.querySelector('[data-blok-id="bookmark-card"]');
+    const pick = (selector: string): CSSStyleDeclaration => {
+      const el = card?.querySelector(selector);
+
+      if (!(el instanceof HTMLElement)) {
+        throw new Error(`missing bookmark element: ${selector}`);
+      }
+
+      return getComputedStyle(el);
+    };
+
+    const content = pick('[data-role="bookmark-content"]');
+    const title = pick('[data-role="bookmark-title"]');
+    const description = pick('[data-role="bookmark-description"]');
+    const linkRow = pick('[data-role="bookmark-link-row"]');
+    const favicon = pick('[data-role="bookmark-favicon"]');
+
+    const titleSize = parseFloat(title.fontSize);
+    const descriptionSize = parseFloat(description.fontSize);
+    const linkSize = parseFloat(linkRow.fontSize);
+
+    return {
+      contentPaddingTop: parseFloat(content.paddingTop) / titleSize,
+      contentPaddingLeft: parseFloat(content.paddingLeft) / titleSize,
+      contentMinHeight: parseFloat(content.minHeight) / titleSize,
+      titleLineHeight: parseFloat(title.lineHeight) / titleSize,
+      descriptionMarginTop: parseFloat(description.marginTop) / descriptionSize,
+      descriptionLineHeight: parseFloat(description.lineHeight) / descriptionSize,
+      linkRowPaddingTop: parseFloat(linkRow.paddingTop) / linkSize,
+      linkRowLineHeight: parseFloat(linkRow.lineHeight) / linkSize,
+      faviconHeight: parseFloat(favicon.height) / linkSize,
+      faviconMarginRight: parseFloat(favicon.marginRight) / linkSize,
+    };
+  }, BLOK_INTERFACE_SELECTOR);
+
+test('bookmark card keeps its padding and gaps proportional as the bookmark scale changes', async ({ page }) => {
+  const readings: Record<string, number>[] = [];
+
+  for (const scale of SCALES) {
+    await createScaledBlok(page, scale);
+    readings.push(await bookmarkMetrics(page));
+  }
+
+  const [baseline, ...rest] = readings;
+
+  for (const reading of rest) {
+    for (const metric of Object.keys(baseline)) {
+      expect(
+        reading[metric],
+        `${metric} drifted relative to its governing font size`
+      ).toBeCloseTo(baseline[metric], 2);
+    }
+  }
+});
+
 test('callout emoji holds its place on a heading child as the scale changes', async ({ page }) => {
   const readings = await measureAcrossScales(
     page,

@@ -6800,6 +6800,7 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark {
+  --bookmark-gap: 0.5em;
   display: flex;
   width: 100%;
   overflow: hidden;
@@ -6816,26 +6817,27 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__content {
+  --bookmark-scale: var(--blok-bookmark-title-font-size, 14px);
   flex: 4 1 180px;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 60px;
-  padding: var(--blok-space-3) var(--blok-space-3-5);
+  min-height: calc(var(--bookmark-scale) * 30 / 7);
+  padding: calc(var(--bookmark-scale) * 6 / 7) var(--bookmark-scale);
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__title {
   font-size: var(--blok-bookmark-title-font-size, 14px);
-  line-height: 20px;
+  line-height: 1.42857;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__description {
-  margin-top: var(--blok-space-0-5);
+  margin-top: 0.16667em;
   font-size: var(--blok-bookmark-description-font-size, 12px);
-  line-height: 16px;
+  line-height: 1.33333;
   color: var(--blok-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -6848,16 +6850,16 @@
   align-items: center;
   min-width: 0;
   margin-top: auto;
-  padding-top: var(--blok-space-1-5);
+  padding-top: var(--bookmark-gap);
   font-size: var(--blok-bookmark-link-font-size, 12px);
-  line-height: 16px;
+  line-height: 1.33333;
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__favicon {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-right: var(--blok-space-1-5);
+  width: 1.33333em;
+  height: 1.33333em;
+  margin-right: var(--bookmark-gap);
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__url {
@@ -6879,12 +6881,13 @@
 }
 
 [data-blok-tool="bookmark"] .blok-bookmark__placeholder {
+  --bookmark-scale: 1em;
   border: 1px solid var(--blok-popover-border);
   border-radius: var(--blok-radius-lg);
-  padding: var(--blok-space-3) var(--blok-space-3-5);
+  padding: calc(var(--bookmark-scale) * 6 / 7) var(--bookmark-scale);
   color: var(--blok-text-secondary);
   font-size: var(--blok-bookmark-title-font-size, 14px);
-  line-height: 20px;
+  line-height: 1.42857;
 }
 
 [data-blok-tool="file"] {

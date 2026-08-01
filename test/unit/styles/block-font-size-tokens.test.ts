@@ -101,6 +101,20 @@ describe('per-block font-size tokens', () => {
       expect(css).toContain('[data-blok-tool="callout"] [data-blok-tool="paragraph"] {\n  font-size: inherit;');
     });
 
+    it('spaces the bookmark card off the title token, once per inheritance chain', () => {
+      /**
+       * The card's padding and floor height have no font size of their own, so
+       * they read the title token directly. The empty/loading/error placeholder
+       * ALREADY applies that token to itself — naming it again there would
+       * square a relative value (`calc(1em * 1.5)` would pad a 24px shell by
+       * 36px), so its scale is a plain em.
+       */
+      expect(css).toContain(
+        '.blok-bookmark__content {\n  --bookmark-scale: var(--blok-bookmark-title-font-size, 14px);'
+      );
+      expect(css).toContain('.blok-bookmark__placeholder {\n  --bookmark-scale: 1em;');
+    });
+
     it('keeps the six heading levels on their pre-existing tokens', () => {
       for (const level of [1, 2, 3, 4, 5, 6]) {
         expect(css).toContain(`font-size: var(--blok-heading-${level}-font-size,`);

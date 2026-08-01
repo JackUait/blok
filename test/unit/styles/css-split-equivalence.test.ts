@@ -451,8 +451,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // --_blok-callout-heading-size / --_blok-callout-emoji-line tokens the R2
     // literal-repeat law requires, and the doc comment). Bumps the multiplier
     // to 1.419.
+    // 2026-08-01: bookmark card font-scale — bookmark.css moved its padding,
+    // line boxes, gaps and favicon off absolute px onto the title token and em
+    // (~0.9KB of calc()/token text plus the doc comment explaining which of the
+    // two bases each metric resolves against). Bumps the multiplier to 1.421.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.419);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.421);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -790,13 +790,18 @@ export class UI extends Module<UINodes> {
    */
   private loadFontStyles(): void {
     const style = this.config.style;
-    const fontSizeLines = buildFontSizeVarLines(style?.fontSize);
+
+    if (style === undefined) {
+      return;
+    }
+
+    const fontSizeLines = buildFontSizeVarLines(style.fontSize);
     const hasAnyFont =
-      style?.fontFamily ||
-      style?.fontFamilySans ||
-      style?.fontFamilySerif ||
-      style?.fontFamilyMono ||
-      style?.fontFamilyHandwriting ||
+      style.fontFamily ||
+      style.fontFamilySans ||
+      style.fontFamilySerif ||
+      style.fontFamilyMono ||
+      style.fontFamilyHandwriting ||
       fontSizeLines.length > 0;
 
     if (!hasAnyFont) {

@@ -81,6 +81,9 @@
       "sanitizer": "Очистка",
       "tooltip": "Всплывающие подсказки",
       "readOnly": "Только чтение",
+      "theme": "Тема",
+      "width": "Ширина",
+      "placeholder": "Плейсхолдер",
       "i18n": "Локализация",
       "ui": "Интерфейс",
       "listeners": "Слушатели",
@@ -241,9 +244,9 @@
         },
         "data": {
           "option": "data",
-          "type": "OutputData | LooseOutputData",
+          "type": "OutputData | LooseOutputData | null",
           "default": "undefined",
-          "description": "Начальные данные для отображения. Принимается нестрогий формат: значения `null` для `data`, `id` или `time` блока (частые в backend-DTO) нормализуются на границе."
+          "description": "Начальные данные для отображения. Принимается нестрогий формат: значения `null` для `data`, `id` или `time` блока (частые в backend-DTO) нормализуются на границе. Целиком `null` тоже допустим и превращается в пустой документ, поэтому nullable-состояние контролируемого компонента можно передавать как есть."
         },
         "readOnly": {
           "option": "readOnly",
@@ -273,7 +276,19 @@
           "option": "onEnter",
           "type": "(event: KeyboardEvent, api: API) => boolean | void",
           "default": "undefined",
-          "description": "Срабатывает при нажатии Enter в блоке, прежде чем Blok разделит его или создаст новый. Верните true, чтобы пометить событие обработанным — Blok отменит своё разделение/создание блока (нативный перенос строки всё равно предотвращается). Не срабатывает для Shift+Enter, инструментов с enableLineBreaks и пока Enter принадлежит поповеру или тулбару. Подходит для чат-полей («Enter отправляет») — сочетайте с настройкой preserveBlank параграфа вместо наследования от Paragraph."
+          "description": "Срабатывает при нажатии Enter в блоке, прежде чем Blok разделит его или создаст новый. Верните true, чтобы пометить событие обработанным — Blok отменит своё разделение/создание блока (нативный перенос строки всё равно предотвращается). Не срабатывает для инструментов с enableLineBreaks и пока Enter принадлежит поповеру или тулбару, а также для Shift+Enter с мягким переносом строки — кроме iOS, где Safari сообщает Shift+Enter для завершающего предложение «. », и Blok создаёт блок, поэтому хук срабатывает и там. Подходит для чат-полей («Enter отправляет») — сочетайте с настройкой preserveBlank параграфа вместо наследования от Paragraph."
+        },
+        "onSubmit": {
+          "option": "onSubmit",
+          "type": "(data: OutputData, api: API) => void",
+          "default": "undefined",
+          "description": "Срабатывает с полным сериализованным содержимым на том же Enter, который создал бы или разделил блок, — жест «Enter отправляет», без ручного вызова save() внутри onEnter. Обработанный onEnter (вернувший true) имеет приоритет и подавляет его."
+        },
+        "onError": {
+          "option": "onError",
+          "type": "(error: Error, context: BlokErrorContext) => void",
+          "default": "undefined",
+          "description": "Срабатывает, когда операция завершается ошибкой, которую Blok иначе только записал бы в лог. Сейчас единственный источник — сериализация: если отложенное автосохранение или явный save() выбрасывает ошибку, она приходит сюда, а не теряется вместе с результатом."
         },
         "autofocus": {
           "option": "autofocus",
@@ -304,6 +319,36 @@
           "type": "'auto' | 'light' | 'dark'",
           "default": "'auto'",
           "description": "Цветовая тема; 'auto' следует настройке ОС через prefers-color-scheme"
+        },
+        "link": {
+          "option": "link",
+          "type": "{ target?: string; rel?: string; transformHref?: (href: string) => string }",
+          "default": "undefined",
+          "description": "Управляет тем, как Blok создаёт ссылки на всех путях: строчный инструмент Link, сохранённый HTML при blocks.render() и вставленные `<a>`. Постобработка готового DOM больше не нужна."
+        },
+        "onBeforePaste": {
+          "option": "onBeforePaste",
+          "type": "(html: string) => string | null",
+          "default": "undefined",
+          "description": "Преобразует исходный `text/html` из буфера обмена до предобработки и санитизации в Blok. Верните HTML для дальнейшей вставки или null, чтобы пропустить HTML-путь и вставить как обычный текст."
+        },
+        "onBeforeRender": {
+          "option": "onBeforeRender",
+          "type": "(blocks: OutputBlockData[]) => OutputBlockData[]",
+          "default": "undefined",
+          "description": "Преобразует массив блоков прямо перед каждым рендером (первым и каждым вызовом blocks.render()), поэтому миграции данных приложения выполняются внутри Blok, а не заранее."
+        },
+        "onAfterRender": {
+          "option": "onAfterRender",
+          "type": "(api: API) => void",
+          "default": "undefined",
+          "description": "Срабатывает после завершения рендера, когда блоки уже в DOM, — при первом рендере и при каждом вызове blocks.render(). В отличие от onReady, вызывается не один раз."
+        },
+        "resolveUser": {
+          "option": "resolveUser",
+          "type": "(id: string) => UserInfo | Promise<UserInfo | null> | null",
+          "default": "undefined",
+          "description": "Преобразует ID пользователя в данные для отображения, когда Blok показывает, кто редактировал блок (например, в подвале настроек блока). Может быть синхронной или асинхронной; верните null для неизвестного пользователя — тогда Blok покажет только дату."
         }
       }
     },
@@ -663,7 +708,7 @@
                 "message": { "description": "Текст уведомления. Может содержать HTML." },
                 "type": { "description": "Тип уведомления. `confirm` и `prompt` добавляют кнопки действий." },
                 "style": { "description": "Встроенный визуальный стиль для уведомлений-алертов." },
-                "time": { "description": "Время автозакрытия в мс для всех типов уведомлений (по умолчанию 8000)." },
+                "time": { "description": "Время автозакрытия в мс для уведомлений-алертов (по умолчанию 8000). `confirm` и `prompt` — модальные и остаются на экране, пока пользователь не ответит." },
                 "okText": { "description": "Текст кнопки подтверждения/отправки (только для `confirm`/`prompt`)." },
                 "okHandler": { "description": "Колбэк подтверждения/отправки. Получает событие клика для `confirm` или значение поля для `prompt`. Обязателен для уведомлений типа prompt." },
                 "cancelText": { "description": "Текст кнопки отмены (только для `confirm`)." },
@@ -735,6 +780,57 @@
       "properties": {
         "togglesInPlace": {
           "description": "Константа наблюдаемости: всегда true — `readOnly.set()` переключает режим на месте, сохраняя экземпляры блоков, курсор, историю отмен и прокрутку, вместо пересоздания редактора. Проверяйте её, прежде чем полагаться на семантику переключения на месте."
+        }
+      }
+    },
+    "themeApi": {
+      "title": "Theme API",
+      "badge": "Тема",
+      "description": "Чтение и смена цветовой темы редактора на лету. Режим `'auto'` следует настройке ОС через prefers-color-scheme, поэтому итоговая тема может отличаться от заданного режима.",
+      "methods": {
+        "theme": {
+          "get": {
+            "note": "Возвращает заданный режим — `'auto'`, `'light'` или `'dark'`, — а не то, что отображается сейчас. Для этого есть `getResolved()`."
+          },
+          "set": {
+            "note": "Меняет тему на месте: без пересоздания редактора и без перерисовки содержимого блоков."
+          },
+          "getResolved": {
+            "note": "Возвращает `'light'` или `'dark'` с учётом настройки ОС, чтобы интерфейс вокруг редактора мог совпадать с ним."
+          }
+        }
+      }
+    },
+    "widthApi": {
+      "title": "Width API",
+      "badge": "Ширина",
+      "description": "Управление шириной контента редактора: `'narrow'` сохраняет максимальную ширину по умолчанию, `'full'` снимает ограничение, и содержимое занимает весь контейнер.",
+      "methods": {
+        "width": {
+          "get": {
+            "note": "Возвращает активный режим; по умолчанию — `'narrow'`."
+          },
+          "set": {
+            "note": "Задаёт режим явно — то, что нужно, когда ширина определяется вашим состоянием."
+          },
+          "toggle": {
+            "note": "Переключает между `'narrow'` и `'full'` — для кнопки «на всю ширину» в один клик."
+          }
+        }
+      }
+    },
+    "placeholderApi": {
+      "title": "Placeholder API",
+      "badge": "Плейсхолдер",
+      "description": "Чтение и смена плейсхолдера редактора — подсказки в пустом блоке по умолчанию — без пересоздания редактора.",
+      "methods": {
+        "placeholder": {
+          "get": {
+            "note": "Возвращает текущий текст плейсхолдера или `false`, если он отключён."
+          },
+          "set": {
+            "note": "Обновляет существующие блоки на месте и применяется к блокам, созданным позже; передайте `false`, чтобы убрать плейсхолдер."
+          }
         }
       }
     },
@@ -1138,7 +1234,7 @@
         "details": {
           "summary": "Нажмите /, чтобы открыть тулбокс со всем, что можно добавить: заголовки, списки, изображения, таблицы и другое. Выбирайте, не берясь за мышь.",
           "benefit1": "Начните печатать, чтобы отфильтровать тулбокс до нужного",
-          "benefit2": "Markdown-сокращения: # для заголовка, - для списка, > для цитаты",
+          "benefit2": "Markdown-сокращения: # для заголовка, - для списка, > для тоггла, \" для цитаты",
           "benefit3": "Или нажмите кнопку + на любой пустой строке",
           "benefit4": "Всё работает с клавиатуры"
         }
@@ -1157,7 +1253,7 @@
       },
       "embeds": {
         "title": "Встраивание 100+ сервисов",
-        "description": "Вставьте ссылку, чтобы встроить 100+ сервисов — YouTube, Figma, Spotify, Gist — или получить карточку-закладку.",
+        "description": "Вставьте ссылку, чтобы встроить 100+ сервисов — YouTube, Figma, Spotify, CodePen — или получить карточку-закладку.",
         "learnMore": "Подробнее о встраиваниях",
         "details": {
           "summary": "Вставьте ссылку, и Blok сам подберёт, как её лучше показать.",
@@ -1229,7 +1325,7 @@
       "reactDescription": "Хук useBlok управляет жизненным циклом редактора, а <BlokContent> монтирует его. React 18 и 19.",
       "vueName": "Vue",
       "vueTagline": "Композабл и компонент",
-      "vueDescription": "Та же структура, что и в React: useBlok управляет редактором, а <BlokContent> монтирует его. Vue 3.",
+      "vueDescription": "Та же структура, что и в React: useBlok управляет редактором, а <BlokContent> монтирует его. Vue 3.5+.",
       "angularName": "Angular",
       "angularTagline": "Standalone-компонент",
       "angularDescription": "Добавьте <blok-editor> и привяжите инструменты. Standalone-компонент, Angular 20+.",
@@ -1440,7 +1536,7 @@
     "customBlockToolTitle": "Блочные инструменты переносятся без изменений",
     "customBlockToolNote": "Blok читает те же ключи — render, save, validate, renderSettings, merge, onPaste и статические toolbox/conversionConfig. При желании добавьте setReadOnly(state) для более дешёвого переключения режима только для чтения.",
     "droppedFieldsTitle": "Отбрасываемые поля и предупреждения о миграции",
-    "droppedFieldsWarning": "Когда миграция отбрасывает поле без эквивалента в Blok, она выводит console.warn с именем блока и поля — потеря никогда не проходит молча. Если какое-то из этих полей вам нужно, сверьтесь с таблицей до миграции.",
+    "droppedFieldsWarning": "Когда Blok загружает legacy-данные в рантайме, он выводит console.warn с именем блока и поля. Codemod мигрирует те же данные молча, а migrate/migrateLegacyBlocks из @bloklabs/core/migrate сообщают о потерях, только если передать onLossyField. Поэтому, если какое-то из этих полей вам нужно, сверьтесь с таблицей до миграции.",
     "droppedFieldsQuoteBlock": "quote",
     "droppedFieldsQuoteFields": "alignment (caption автоматически переносится в следующий параграф)",
     "droppedFieldsImageBlock": "image",
@@ -1448,7 +1544,9 @@
     "droppedFieldsLinkToolBlock": "linkTool",
     "droppedFieldsLinkToolFields": "meta.site_name",
     "droppedFieldsListBlock": "list item",
-    "droppedFieldsListFields": "meta (отбрасывается молча — без console.warn)",
+    "droppedFieldsListFields": "meta.counterType (meta.checked и meta.start переносятся)",
+    "droppedFieldsAttachesBlock": "attaches",
+    "droppedFieldsAttachesFields": "file.name, file.size, file.extension (метаданные файла теряются, когда блок становится закладкой)",
     "droppedFieldsColBlock": "Блок",
     "droppedFieldsColFields": "Отбрасываемые поля",
     "codemodTitle": "Кодмод",
@@ -1578,10 +1676,30 @@
       "list": "Список",
       "table": "Таблица",
       "toggle": "Переключатель",
+      "callout": "Выноска",
+      "database": "База данных",
+      "database-row": "Строка базы данных",
+      "divider": "Разделитель",
+      "spacer": "Отступ",
+      "quote": "Цитата",
+      "code": "Код",
+      "image": "Изображение",
+      "column_list": "Колонки",
+      "column": "Колонка",
+      "embed": "Встраивание",
+      "bookmark": "Закладка",
+      "file": "Файл",
+      "audio": "Аудио",
+      "video": "Видео",
       "bold": "Жирный",
       "italic": "Курсив",
       "link": "Ссылка",
-      "marker": "Маркер"
+      "marker": "Маркер",
+      "underline": "Подчёркнутый",
+      "strikethrough": "Зачёркнутый",
+      "inlineCode": "Строчный код",
+      "equation": "Формула",
+      "clearFormat": "Очистить формат"
     }
   }
 }

@@ -27,6 +27,10 @@ const FIXTURE_CHANGELOG = vi.hoisted(
 ### 🐛 Bug Fixes
 
 - Fix a thing
+
+### ⚠ BREAKING CHANGES
+
+- Drop the legacy API
 `,
 );
 
@@ -99,6 +103,27 @@ describe('ChangelogPage', () => {
       renderChangelogPage('ru');
 
       expect(screen.getByText(ru.description)).toBeInTheDocument();
+    });
+
+    it('labels a bare-⚠ BREAKING CHANGES entry as breaking', () => {
+      renderChangelogPage();
+
+      expect(screen.getByText(en.category.breaking)).toBeInTheDocument();
+    });
+
+    it('renders the release date in the date it was tagged, west of UTC', () => {
+      // Bare YYYY-MM-DD parses as UTC midnight, so any zone behind UTC used to
+      // render the previous day.
+      const originalTz = process.env.TZ;
+      process.env.TZ = 'America/Los_Angeles';
+
+      try {
+        renderChangelogPage();
+
+        expect(screen.getByText('Jan 1, 2024')).toBeInTheDocument();
+      } finally {
+        process.env.TZ = originalTz;
+      }
     });
 
     it('renders the Nav component', () => {

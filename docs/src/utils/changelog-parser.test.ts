@@ -122,6 +122,38 @@ describe('changelog-parser', () => {
       expect(changes.find((c) => c.description === 'fix vulnerability')?.category).toBe('security');
     });
 
+    it('should categorize BREAKING CHANGES headers written with a bare ⚠ (no variation selector)', () => {
+      const markdown = `
+# Changelog
+
+## [2.0.0](url) (2026-01-23)
+
+### ⚠ BREAKING CHANGES
+
+- the \`@bloklabs/*\` scope rebrand
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[0].category).toBe('breaking');
+    });
+
+    it('should categorize BREAKING CHANGES headers without an emoji', () => {
+      const markdown = `
+# Changelog
+
+## [2.0.0](url) (2026-01-23)
+
+### BREAKING CHANGES
+
+- drop the legacy API
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[0].category).toBe('breaking');
+    });
+
     it('should handle category headers without emojis', () => {
       const markdown = `
 # Changelog

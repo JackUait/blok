@@ -81,6 +81,9 @@
       "sanitizer": "Sanitizer",
       "tooltip": "Tooltip",
       "readOnly": "ReadOnly",
+      "theme": "Theme",
+      "width": "Width",
+      "placeholder": "Placeholder",
       "i18n": "I18n",
       "ui": "UI",
       "listeners": "Listeners",
@@ -241,9 +244,9 @@
         },
         "data": {
           "option": "data",
-          "type": "OutputData | LooseOutputData",
+          "type": "OutputData | LooseOutputData | null",
           "default": "undefined",
-          "description": "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary."
+          "description": "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary. A whole-document null is also accepted and normalized to an empty document, so nullable controlled state can be passed straight through."
         },
         "readOnly": {
           "option": "readOnly",
@@ -273,7 +276,19 @@
           "option": "onEnter",
           "type": "(event: KeyboardEvent, api: API) => boolean | void",
           "default": "undefined",
-          "description": "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for Shift+Enter, tools with enableLineBreaks, or while a popover/toolbar owns Enter. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph."
+          "description": "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for tools with enableLineBreaks or while a popover/toolbar owns Enter, and not for a soft-line-break Shift+Enter — except on iOS, where Safari reports Shift+Enter for a sentence-ending '. ' and Blok creates a block, so the hook fires there too. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph."
+        },
+        "onSubmit": {
+          "option": "onSubmit",
+          "type": "(data: OutputData, api: API) => void",
+          "default": "undefined",
+          "description": "Fires with the full serialized content on the same Enter that would create or split a block — the \"Enter sends\" gesture, without wiring save() into onEnter by hand. A handled onEnter (one returning true) takes precedence and suppresses it."
+        },
+        "onError": {
+          "option": "onError",
+          "type": "(error: Error, context: BlokErrorContext) => void",
+          "default": "undefined",
+          "description": "Fires when an operation fails in a way Blok would otherwise only log. Today the sole source is serialization: when the debounced auto-save or an explicit save() throws, the error is reported here instead of the output being dropped silently."
         },
         "autofocus": {
           "option": "autofocus",
@@ -304,6 +319,36 @@
           "type": "'auto' | 'light' | 'dark'",
           "default": "'auto'",
           "description": "Color theme; 'auto' follows the OS preference via prefers-color-scheme"
+        },
+        "link": {
+          "option": "link",
+          "type": "{ target?: string; rel?: string; transformHref?: (href: string) => string }",
+          "default": "undefined",
+          "description": "Controls how Blok builds anchors on every path that creates them — the Link inline tool, stored HTML rendered by blocks.render(), and pasted `<a>` — so you never have to post-process the rendered DOM."
+        },
+        "onBeforePaste": {
+          "option": "onBeforePaste",
+          "type": "(html: string) => string | null",
+          "default": "undefined",
+          "description": "Transforms the raw `text/html` clipboard payload before Blok preprocesses or sanitizes it. Return the HTML to feed into the paste pipeline, or null to skip the HTML path and fall through to plain text."
+        },
+        "onBeforeRender": {
+          "option": "onBeforeRender",
+          "type": "(blocks: OutputBlockData[]) => OutputBlockData[]",
+          "default": "undefined",
+          "description": "Transforms the blocks array just before every render (the initial one and every blocks.render() call), so app-specific data migrations run inside Blok instead of ahead of it."
+        },
+        "onAfterRender": {
+          "option": "onAfterRender",
+          "type": "(api: API) => void",
+          "default": "undefined",
+          "description": "Fires after a render completes and the blocks are in the DOM — on the initial render and on every blocks.render() call. Unlike onReady, it is not once-only."
+        },
+        "resolveUser": {
+          "option": "resolveUser",
+          "type": "(id: string) => UserInfo | Promise<UserInfo | null> | null",
+          "default": "undefined",
+          "description": "Resolves a user id to display information when Blok shows who edited a block (e.g. the block settings footer). May be sync or async; return null for unknown users and Blok falls back to showing only the date."
         }
       }
     },
@@ -659,7 +704,7 @@
                 "message": { "description": "Notification text. May contain HTML." },
                 "type": { "description": "Notification type. `confirm` and `prompt` add action buttons." },
                 "style": { "description": "Built-in visual style for alert notifications." },
-                "time": { "description": "Auto-dismiss delay in ms for every notification type (default 8000)." },
+                "time": { "description": "Auto-dismiss delay in ms for alert notifications (default 8000). `confirm` and `prompt` are modal and stay until the user resolves them." },
                 "okText": { "description": "Label for the confirm/submit button (`confirm`/`prompt` types only)." },
                 "okHandler": { "description": "Confirm/submit callback. Receives the click event for `confirm`, or the input value for `prompt`. Required for prompt notifications." },
                 "cancelText": { "description": "Label for the cancel button (`confirm` type only)." },
@@ -720,6 +765,57 @@
           },
           "toggle": {
             "note": "Kept for compatibility; without a parameter it flips the current state."
+          }
+        }
+      }
+    },
+    "themeApi": {
+      "title": "Theme API",
+      "badge": "Theme",
+      "description": "Read and change the editor's color theme at runtime. `'auto'` follows the OS preference via prefers-color-scheme, so the resolved theme can differ from the mode you set.",
+      "methods": {
+        "theme": {
+          "get": {
+            "note": "Returns the configured mode — `'auto'`, `'light'` or `'dark'` — not what is currently painted. Use `getResolved()` for that."
+          },
+          "set": {
+            "note": "Switches the theme in place; no editor recreation and no re-render of block content."
+          },
+          "getResolved": {
+            "note": "Returns `'light'` or `'dark'` after evaluating the OS preference, so host chrome around the editor can match it."
+          }
+        }
+      }
+    },
+    "widthApi": {
+      "title": "Width API",
+      "badge": "Width",
+      "description": "Control the editor's content width mode: `'narrow'` keeps the default max-width, `'full'` removes it so content fills its container.",
+      "methods": {
+        "width": {
+          "get": {
+            "note": "Returns the active mode, defaulting to `'narrow'`."
+          },
+          "set": {
+            "note": "Applies a mode explicitly — the right call when the width is driven by your own state."
+          },
+          "toggle": {
+            "note": "Flips between `'narrow'` and `'full'`, for a one-click \"full width\" control."
+          }
+        }
+      }
+    },
+    "placeholderApi": {
+      "title": "Placeholder API",
+      "badge": "Placeholder",
+      "description": "Read and change the editor-level placeholder — the hint shown on the empty default block — without recreating the editor.",
+      "methods": {
+        "placeholder": {
+          "get": {
+            "note": "Returns the current placeholder text, or `false` when it is disabled."
+          },
+          "set": {
+            "note": "Updates existing blocks in place and applies to blocks created afterwards; pass `false` to clear it."
           }
         }
       }
@@ -1065,7 +1161,7 @@
         "details": {
           "summary": "Press / to open the toolbox — everything you can add: headings, lists, images, tables and more. Pick one without reaching for the mouse.",
           "benefit1": "Start typing to filter the toolbox to what you want",
-          "benefit2": "Markdown shortcuts: # for a heading, - for a list, > for a quote",
+          "benefit2": "Markdown shortcuts: # for a heading, - for a list, > for a toggle, \" for a quote",
           "benefit3": "Or click the + button on any empty line",
           "benefit4": "Everything works from the keyboard"
         }
@@ -1084,7 +1180,7 @@
       },
       "embeds": {
         "title": "Embed 100+ services",
-        "description": "Paste a link to embed 100+ services like YouTube, Figma, Spotify and Gist, or get an OpenGraph bookmark card.",
+        "description": "Paste a link to embed 100+ services like YouTube, Figma, Spotify and CodePen, or get an OpenGraph bookmark card.",
         "learnMore": "Learn more about embeds",
         "details": {
           "summary": "Paste a link and Blok works out how best to display it.",
@@ -1156,7 +1252,7 @@
       "reactDescription": "The useBlok hook owns the editor lifecycle; <BlokContent> mounts it. React 18 and 19.",
       "vueName": "Vue",
       "vueTagline": "A composable and a component",
-      "vueDescription": "Same shape as React: useBlok drives the editor, <BlokContent> mounts it. Vue 3.",
+      "vueDescription": "Same shape as React: useBlok drives the editor, <BlokContent> mounts it. Vue 3.5+.",
       "angularName": "Angular",
       "angularTagline": "A standalone component",
       "angularDescription": "Add <blok-editor> and bind your tools. Standalone component, Angular 20+.",
@@ -1367,7 +1463,7 @@
     "customBlockToolTitle": "Block tools port unchanged",
     "customBlockToolNote": "Blok reads the same keys — render, save, validate, renderSettings, merge, onPaste, and the toolbox/conversionConfig statics. Optionally add setReadOnly(state) for cheaper read-only toggling.",
     "droppedFieldsTitle": "Dropped fields & migration warnings",
-    "droppedFieldsWarning": "When migration drops a field with no Blok equivalent, it logs a console.warn naming the block and field — the loss is never silent. Check this table before migrating if you depend on any of them.",
+    "droppedFieldsWarning": "When Blok loads legacy data at runtime it logs a console.warn naming the block and field. The codemod migrates the same data silently, and migrate/migrateLegacyBlocks from @bloklabs/core/migrate only report drops when you pass onLossyField — so check this table before migrating if you depend on any of them.",
     "droppedFieldsQuoteBlock": "quote",
     "droppedFieldsQuoteFields": "alignment (caption is auto-migrated into a following paragraph)",
     "droppedFieldsImageBlock": "image",
@@ -1375,7 +1471,9 @@
     "droppedFieldsLinkToolBlock": "linkTool",
     "droppedFieldsLinkToolFields": "meta.site_name",
     "droppedFieldsListBlock": "list item",
-    "droppedFieldsListFields": "meta (dropped silently — no console.warn)",
+    "droppedFieldsListFields": "meta.counterType (meta.checked and meta.start are migrated)",
+    "droppedFieldsAttachesBlock": "attaches",
+    "droppedFieldsAttachesFields": "file.name, file.size, file.extension (the file metadata is dropped when the block becomes a bookmark)",
     "droppedFieldsColBlock": "Block",
     "droppedFieldsColFields": "Dropped field(s)",
     "codemodTitle": "Codemod",
@@ -1505,10 +1603,30 @@
       "list": "List",
       "table": "Table",
       "toggle": "Toggle",
+      "callout": "Callout",
+      "database": "Database",
+      "database-row": "Database Row",
+      "divider": "Divider",
+      "spacer": "Spacer",
+      "quote": "Quote",
+      "code": "Code",
+      "image": "Image",
+      "column_list": "Columns",
+      "column": "Column",
+      "embed": "Embed",
+      "bookmark": "Bookmark",
+      "file": "File",
+      "audio": "Audio",
+      "video": "Video",
       "bold": "Bold",
       "italic": "Italic",
       "link": "Link",
-      "marker": "Marker"
+      "marker": "Marker",
+      "underline": "Underline",
+      "strikethrough": "Strikethrough",
+      "inlineCode": "Inline Code",
+      "equation": "Equation",
+      "clearFormat": "Clear Format"
     }
   }
 }

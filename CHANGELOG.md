@@ -19,6 +19,8 @@ All notable changes to this project will be documented in this file.
 - **Styles** — Callout emoji and list markers stay aligned with their text as the font size scales, and the bookmark card's padding, line boxes, gaps and favicon scale with the card's own type. `fontSize.callout` now wins over `fontSize.paragraph` in the callout body.
 - **Types** — The public `Blok` class exposes its full API surface.
 
+## [1.5.0](https://github.com/JackUait/blok/compare/v1.4.5...v1.5.0) (2026-07-27)
+
 ### Features
 
 - **View renderer** — `@bloklabs/core/view` now reaches visual parity with the read-only editor: every core block (paragraph, header, quote, list, checklist, code, callout, toggle, divider, spacer) renders from single-sourced class modules shared with the editor, `view.css` is generated from those modules, and a soft isolation root plus reproduced block scaffolding keep the output pixel-equal. A class-parity gate and a view↔read-only visual parity gate now run in CI, and the playground gains a side-by-side Blok View comparison panel.
@@ -58,6 +60,29 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - **Migrate** — Hosts can now declare per-block-type migration rules from the outside to upgrade stored blocks from an old data shape to a new one without editing the tool class. Rules are applied at load (after each tool's own `upgradeData`) and also exposed as a standalone `migrateOutputData` via `@bloklabs/core/migrate` for offline batch upgrades. Available on all three framework adapters.
+
+## [1.4.3](https://github.com/JackUait/blok/compare/v1.4.2...v1.4.3) (2026-07-24)
+
+### Features
+
+- **API** — The output-data helpers are promoted to a stable entry point, alongside new document-query utilities.
+- **Types** — Named config aliases and a `BlokData` interface adapter.
+- **Tools** — Type-safe tool authoring helpers, plus an explicit paste priority.
+- **View** — Root-caused view gaps #29–#33 and #35 from the hr-platform/KB audit.
+- **i18n** — Root-caused i18n audit gaps #36–#41.
+- **Migrate / Tools / Paste** — Root-caused hr-platform/KB gaps #50–#53.
+
+### Bug Fixes
+
+- **Controlled editor** — Five audit findings root-caused, followed by findings #7 and #9 (and the missing test for #8).
+- **Marks / Paste** — Four inline-tool and sanitizer audit findings root-caused.
+- **Build (Angular)** — `toRenderableData` is exported from the staged adapters-contract.
+- **Types** — Widened the `exports` cast so the string-valued `./view.css` entry type-checks.
+
+### Maintenance
+
+- i18n message files are named by locale.
+- Repaired the test/build drift that blocked the release preflight.
 
 ## [1.4.2](https://github.com/JackUait/blok/compare/v1.4.1...v1.4.2) (2026-07-23)
 

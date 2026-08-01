@@ -1,10 +1,25 @@
 // docs/src/hooks/useToolsTranslations.test.tsx
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../contexts/I18nContext';
 import { useToolsTranslations } from './useToolsTranslations';
-import { TOOL_SECTIONS } from '../components/tools/tools-data';
+import { TOOL_SECTIONS, TOOLS_SIDEBAR_SECTIONS } from '../components/tools/tools-data';
+
+// getTranslation returns the key itself when a key is missing, so the fallback
+// only shows up with a `t` that resolves nothing.
+const unresolvedTranslations = vi.hoisted(() => ({ value: false }));
+
+vi.mock('../contexts/I18nContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../contexts/I18nContext')>();
+  return {
+    ...actual,
+    useI18n: () => {
+      const real = actual.useI18n();
+      return unresolvedTranslations.value ? { ...real, t: (key: string) => key } : real;
+    },
+  };
+});
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>
@@ -13,6 +28,10 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('useToolsTranslations', () => {
+  afterEach(() => {
+    unresolvedTranslations.value = false;
+  });
+
   it('returns toolSections with correct count', () => {
     const { result } = renderHook(() => useToolsTranslations(), { wrapper });
     expect(result.current.toolSections).toHaveLength(TOOL_SECTIONS.length);
@@ -40,6 +59,20 @@ describe('useToolsTranslations', () => {
   it('returns a non-empty filterLabel', () => {
     const { result } = renderHook(() => useToolsTranslations(), { wrapper });
     expect(result.current.filterLabel.length).toBeGreaterThan(0);
+  });
+
+  it('falls back to the hardcoded label when a link has no translation', () => {
+    unresolvedTranslations.value = true;
+
+    const { result } = renderHook(() => useToolsTranslations(), { wrapper });
+    const labels = result.current.sidebarSections.flatMap((section) =>
+      section.links.map((link) => link.label)
+    );
+    const expected = TOOLS_SIDEBAR_SECTIONS.flatMap((section) =>
+      section.links.map((link) => link.label)
+    );
+
+    expect(labels).toEqual(expected);
   });
 
   it('every section has a non-empty title', () => {

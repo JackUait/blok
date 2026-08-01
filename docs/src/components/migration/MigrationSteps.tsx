@@ -134,6 +134,7 @@ export const MigrationSteps: React.FC = () => {
                 ['droppedFieldsImageBlock', 'droppedFieldsImageFields'],
                 ['droppedFieldsLinkToolBlock', 'droppedFieldsLinkToolFields'],
                 ['droppedFieldsListBlock', 'droppedFieldsListFields'],
+                ['droppedFieldsAttachesBlock', 'droppedFieldsAttachesFields'],
               ] as const).map(([blockKey, fieldsKey]) => (
                 <div key={blockKey} className="grid grid-cols-[7rem_1fr] items-baseline gap-3 px-4 py-2.5 transition-colors hover:bg-secondary/40 sm:grid-cols-[10rem_1fr]">
                   <code className="break-all font-mono text-xs text-foreground">{t(`migration.${blockKey}`)}</code>

@@ -1450,12 +1450,10 @@ const REDO_ARROW = (
   </svg>
 );
 
-// "Conflict-free" is the whole point: two people edit the same line at once, and
-// undo reverts only your own change. So this is a shared paragraph with two named
-// live cursors (Ana + Lee). Hovering the tile *undoes* Ana's word — it retracts
-// into her caret and stays gone while you look (⌘Z) — and leaving the tile *redoes*
-// it, springing back (⌘⇧Z). Lee's word never moves: the collision that never
-// happens. Plain undo/redo buttons couldn't show it.
+// Undo/redo is the whole point, so the tile plays it out on a paragraph you just
+// typed. Hovering *undoes* the last word — it retracts into the caret and stays
+// gone while you look (⌘Z) — and leaving the tile *redoes* it, springing back
+// (⌘⇧Z). Plain undo/redo buttons couldn't show that.
 const UndoViz: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -1529,34 +1527,23 @@ const UndoViz: React.FC = () => {
   }, [reduce]);
 
   const undone = phase === "undo";
-  // While you undo, Lee keeps working: his word grows (caret advancing) on hover
-  // and settles back on leave — two people editing at once, no collision.
-  const typing = phase === "undo";
 
   return (
     <div ref={rootRef} aria-hidden="true" className="w-full">
-      <div ref={cardRef} className="relative w-full rounded-xl border border-border/60 bg-card px-3 pb-3 pt-7">
+      <div ref={cardRef} className="relative w-full rounded-xl border border-border/60 bg-card p-3">
         {/* brand border revealed where the glow blob touches the document */}
         <span
           ref={edgeRef}
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-30 rounded-xl border-[1.5px] border-brand-from opacity-0 transition-opacity duration-200"
         />
-        {/* the co-edited line — both labelled cursors live in the same sentence */}
+        {/* the line you just typed — the last word is the one undo takes back */}
         <div className="flex h-3.5 items-center gap-1.5">
           <span className="h-1.5 w-6 rounded-full bg-foreground/12" />
-          {/* Ana — her word retracts into the caret on undo, springs back on redo */}
+          {/* an earlier word of the same edit — undo doesn't reach back this far */}
+          <span className="h-1.5 w-7 rounded-full bg-primary/35" />
+          {/* the last word — it retracts into the caret on undo, springs back on redo */}
           <span className="relative flex h-3.5 items-center">
-            <CursorFlag
-              name="Ana"
-              className="bg-primary"
-              style={{
-                transform: undone ? "translateX(-1.75rem)" : "translateX(0)",
-                transition: undone
-                  ? "transform 360ms cubic-bezier(0.5,0,0.75,0)"
-                  : "transform 560ms cubic-bezier(0.34,1.56,0.64,1)",
-              }}
-            />
             <span
               className="h-1.5 w-7 origin-left rounded-full bg-primary"
               style={{
@@ -1579,19 +1566,6 @@ const UndoViz: React.FC = () => {
             />
           </span>
           <span className="h-1.5 w-3 rounded-full bg-foreground/12" />
-          {/* Lee — keeps typing while you undo; his text never collides with Ana's */}
-          <span className="relative flex h-3.5 items-center">
-            <CursorFlag name="Lee" className="bg-indigo-500" />
-            <span
-              className="h-1.5 rounded-full bg-indigo-500"
-              style={{
-                width: typing ? "2.75rem" : "1.5rem",
-                // grow in discrete jumps (keystroke-by-keystroke), settle smoothly
-                transition: typing ? "width 760ms steps(6, end) 70ms" : "width 420ms ease-out",
-              }}
-            />
-            <span className="bento-caret ml-0.5 h-3.5 w-0.5 rounded-full bg-indigo-500" style={{ animationDelay: "0.5s" }} />
-          </span>
           <span className="h-1.5 flex-1 rounded-full bg-foreground/12" />
         </div>
         {/* the rest of the paragraph */}
@@ -1607,17 +1581,6 @@ const UndoViz: React.FC = () => {
     </div>
   );
 };
-
-// A collaborator's name tab, sitting just above their caret — the speech-tab
-// corner (squared bottom-right) points down at the cursor.
-const CursorFlag: React.FC<{ name: string; className: string; style?: React.CSSProperties }> = ({ name, className, style }) => (
-  <span
-    style={style}
-    className={`absolute bottom-full right-0 mb-1 whitespace-nowrap rounded-md rounded-br-[2px] px-1 py-px text-[7px] font-bold leading-[1.5] text-white shadow-sm ${className}`}
-  >
-    {name}
-  </span>
-);
 
 // The undo/redo shortcut tag above the document, cross-fading with the phase.
 // Each key is its own keycap; only the pill's own border lights brand pink where

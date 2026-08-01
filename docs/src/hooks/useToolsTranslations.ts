@@ -7,15 +7,18 @@ import type { ToolSection, ToolsSidebarSection } from '../components/tools/tools
 export const useToolsTranslations = () => {
   const { t, locale } = useI18n();
 
+  // `t` returns the key itself when it cannot resolve it, so an unresolved key
+  // has to be detected rather than treated as a falsy value.
+  const translateOr = (key: string, fallback: string): string => {
+    const translated = t(key);
+    return translated !== key ? translated : fallback;
+  };
+
   const toolSections = useMemo((): ToolSection[] => {
-    return TOOL_SECTIONS.map((section) => {
-      const titleKey = `tools.links.${section.id}`;
-      const titleTranslated = t(titleKey);
-      return {
-        ...section,
-        title: titleTranslated !== titleKey ? titleTranslated : section.title,
-      };
-    });
+    return TOOL_SECTIONS.map((section) => ({
+      ...section,
+      title: translateOr(`tools.links.${section.id}`, section.title),
+    }));
   }, [t, locale]);
 
   const sidebarSections = useMemo((): ToolsSidebarSection[] => {
@@ -24,14 +27,14 @@ export const useToolsTranslations = () => {
         title: t('tools.sections.blockTools'),
         links: TOOLS_SIDEBAR_SECTIONS[0].links.map((link) => ({
           id: link.id,
-          label: t(`tools.links.${link.id}`) || link.label,
+          label: translateOr(`tools.links.${link.id}`, link.label),
         })),
       },
       {
         title: t('tools.sections.inlineTools'),
         links: TOOLS_SIDEBAR_SECTIONS[1].links.map((link) => ({
           id: link.id,
-          label: t(`tools.links.${link.id}`) || link.label,
+          label: translateOr(`tools.links.${link.id}`, link.label),
         })),
       },
     ];

@@ -3,7 +3,7 @@ import { useI18n } from '../contexts/I18nContext';
 import type { ApiSection } from '../components/api/api-data';
 import { API_SECTIONS as BASE_API_SECTIONS } from '../components/api/api-data';
 import type { SidebarSection } from '../components/common/Sidebar';
-import { SIDEBAR_GROUPS } from '../components/api/api-nav';
+import { SIDEBAR_GROUPS, MODULE_LABELS_EN } from '../components/api/api-nav';
 import { SECTION_ICONS } from '../components/api/section-icons';
 import { TOOL_SECTIONS } from '../components/tools/tools-data';
 
@@ -31,6 +31,9 @@ const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'notifier-api': 'api.notifierApi',
   'sanitizer-api': 'api.sanitizerApi',
   'tooltip-api': 'api.tooltipApi',
+  'theme-api': 'api.themeApi',
+  'width-api': 'api.widthApi',
+  'placeholder-api': 'api.placeholderApi',
   'readonly-api': 'api.readOnlyApi',
   'i18n-api': 'api.i18nApi',
   'ui-api': 'api.uiApi',
@@ -65,6 +68,9 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
   'notifier-api': 'api.links.notifier',
   'sanitizer-api': 'api.links.sanitizer',
   'tooltip-api': 'api.links.tooltip',
+  'theme-api': 'api.links.theme',
+  'width-api': 'api.links.width',
+  'placeholder-api': 'api.links.placeholder',
   'readonly-api': 'api.links.readOnly',
   'i18n-api': 'api.links.i18n',
   'ui-api': 'api.links.ui',
@@ -165,11 +171,17 @@ export const useApiTranslations = () => {
         return translated !== undefined ? { ...row, description: translated } : row;
       });
 
+      // A section whose locale entry is missing keeps its authored English copy
+      // instead of rendering the raw key ("api.themeApi.title") at the reader.
       return {
         ...section,
-        title: t(`${translationKey}.title`),
-        badge: section.badge ? t(`${translationKey}.badge`) : undefined,
-        description: section.description ? t(`${translationKey}.description`) : undefined,
+        title: safeTranslate(t, `${translationKey}.title`) ?? section.title,
+        badge: section.badge
+          ? safeTranslate(t, `${translationKey}.badge`) ?? section.badge
+          : undefined,
+        description: section.description
+          ? safeTranslate(t, `${translationKey}.description`) ?? section.description
+          : undefined,
         ...(translatedMethods !== undefined && { methods: translatedMethods }),
         ...(translatedProperties !== undefined && { properties: translatedProperties }),
         ...(translatedTable !== undefined && { table: translatedTable }),
@@ -182,7 +194,15 @@ export const useApiTranslations = () => {
       title: t(`api.sections.${group.key}`),
       icon: SECTION_ICONS[group.key],
       iconAnimation: group.key,
-      links: group.moduleIds.map((id) => ({ id, label: t(SIDEBAR_LINK_KEYS[id]) })),
+      // A module with no SIDEBAR_LINK_KEYS entry (or an untranslated one) falls
+      // back to its English label — t(undefined) would throw and blank the page.
+      links: group.moduleIds.map((id) => ({
+        id,
+        label:
+          (SIDEBAR_LINK_KEYS[id] !== undefined ? safeTranslate(t, SIDEBAR_LINK_KEYS[id]) : undefined)
+          ?? MODULE_LABELS_EN[id]
+          ?? id,
+      })),
     }));
 
     // Built-in tools now live in the general docs nav. Split by tool type and

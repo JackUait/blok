@@ -19,6 +19,7 @@ const EMOJI_TO_CATEGORY: Record<string, Change["category"]> = {
   "🔧": "changed", // CI/CD or infrastructure changes
   "🧹": "changed", // Chores
   "🧪": "changed", // Tests
+  "⚠": "breaking", // Bare U+26A0 — how the CHANGELOG writes BREAKING CHANGES
   "⚠️": "deprecated",
   "🗑️": "removed",
   "🔒": "security",
@@ -35,6 +36,8 @@ const SKIP_EMOJIS = new Set(["♻️"]);
 
 // Fallback text to category mapping for headers without emojis
 const TEXT_TO_CATEGORY: Record<string, Change["category"]> = {
+  "breaking changes": "breaking",
+  breaking: "breaking",
   features: "added",
   "bug fixes": "fix",
   fixes: "fix",

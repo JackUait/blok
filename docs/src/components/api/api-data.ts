@@ -301,10 +301,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "data",
-        type: "OutputData | LooseOutputData",
+        type: "OutputData | LooseOutputData | null",
         default: "undefined",
         description:
-          "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary.",
+          "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary. A whole-document `null` is also accepted and normalized to an empty document, so nullable controlled state can be passed straight through without a `value ?? { blocks: [] }` guard.",
       },
       {
         option: "readOnly",
@@ -339,7 +339,42 @@ const editor = new Blok(config);`,
         type: "(event: KeyboardEvent, api: API) => boolean | void",
         default: "undefined",
         description:
-          "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for Shift+Enter, tools with enableLineBreaks, or while a popover/toolbar owns Enter. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph.",
+          "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for tools with enableLineBreaks or while a popover/toolbar owns Enter, and not for a soft-line-break Shift+Enter — except on iOS, where Safari reports Shift+Enter for a sentence-ending '. ' and Blok creates a block, so the hook fires there too. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph.",
+      },
+      {
+        option: "onSubmit",
+        type: "(data: OutputData, api: API) => void",
+        default: "undefined",
+        description:
+          "Fires with the full serialized OutputData on the Enter that would otherwise create or split a block — the \"Enter sends\" gesture. Blok serializes the document and suppresses the default split, so you don't wire save() into onEnter by hand. It inherits every onEnter escape; when both are set, an onEnter that returns true takes precedence and suppresses onSubmit.",
+      },
+      {
+        option: "onError",
+        type: "(error: Error, context: { source: 'save' }) => void",
+        default: "undefined",
+        description:
+          "Fires when an editor operation fails that Blok would otherwise only log; today the sole source is serialization. Both the debounced auto-save and an explicit save() route through it, and a failed save() resolves with undefined — so pair onError with onSave to tell a successful serialization from a failed one.",
+      },
+      {
+        option: "onBeforePaste",
+        type: "(html: string) => string | null",
+        default: "undefined",
+        description:
+          "Transforms the raw `text/html` clipboard payload before any Blok preprocessing or sanitization, so a capture-phase paste interceptor is no longer needed. Return the HTML to feed into the rest of the paste pipeline, or null to skip the HTML path and fall through to plain text.",
+      },
+      {
+        option: "onBeforeRender",
+        type: "(blocks: OutputBlockData[]) => OutputBlockData[]",
+        default: "undefined",
+        description:
+          "Transforms the blocks array just before it is rendered — on the initial render and on every `blocks.render()` call. Receives the raw saved blocks (before format analysis or hierarchical expansion) and returns the blocks to render, so app-specific data migrations run inside Blok instead of ahead of it.",
+      },
+      {
+        option: "onAfterRender",
+        type: "(api: API) => void",
+        default: "undefined",
+        description:
+          "Fires after each render completes and the blocks are in the DOM — the initial render and every `blocks.render()`. Use it for post-render side effects (scroll restoration, attaching observers). Distinct from onReady, which fires once when the editor first becomes ready.",
       },
       {
         option: "autofocus",
@@ -382,6 +417,20 @@ const editor = new Blok(config);`,
         default: "'auto'",
         description:
           "Color theme; 'auto' follows the OS preference via prefers-color-scheme",
+      },
+      {
+        option: "link",
+        type: "{ target?: string; rel?: string; transformHref?: (href: string) => string; transform?: (context: LinkTransformContext) => LinkTransformResult | void }",
+        default: "undefined",
+        description:
+          "Controls the anchors Blok creates, instead of post-processing the rendered DOM. Applies on every path that produces an `<a>`: the Link inline tool, `blocks.render()` (anchors coming from stored block HTML) and paste. `target` defaults to '_blank' and `rel` to 'nofollow'. `transform` is the superset and supersedes `transformHref` (which is then ignored) — it receives the href, text and element and may return `href`, `target`, `rel` and extra `attributes`; omitted fields fall back to the shorthand defaults, including the same-page `_self` rule. Both must be idempotent: on the render and paste paths they re-run against already-transformed anchors on every render.",
+      },
+      {
+        option: "resolveUser",
+        type: "(id: string) => UserInfo | Promise<UserInfo | null> | null",
+        default: "undefined",
+        description:
+          "Resolves the `lastEditedBy` user id Blok shows in the block settings footer. May return synchronously or asynchronously; return null for an unknown user and Blok falls back to showing the date only.",
       },
     ],
   },
@@ -510,6 +559,13 @@ if (index !== undefined) {
     console.log('Clicked on block:', block.id);
   }
 });`,
+      },
+      {
+        name: "blocks.scrollToBlock(id)",
+        returnType: "void",
+        description:
+          "Scroll a block into view, select it, pulse the arrival highlight and announce the navigation to assistive tech — the public counterpart of the boot-time URL-hash scroll. No-op when no block with that id is in the document. Framework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers; @bloklabs/react drains it automatically once the holder connects — call this yourself for deep-linking after the editor is ready.",
+        example: `editor.blocks.scrollToBlock(nodeId);`,
       },
       {
         name: "blocks.getChildren(parentId)",
@@ -1979,6 +2035,98 @@ editor.tooltip.onHover(button, 'Click me', {
     ],
   },
   {
+    id: "theme-api",
+    badge: "Theme",
+    title: "Theme API",
+    description:
+      "Read and switch the editor color theme at runtime. The configured mode and the theme actually painted are two different questions — `get()` answers the first, `getResolved()` the second.",
+    methods: [
+      {
+        name: "theme.get()",
+        returnType: "'light' | 'dark' | 'auto'",
+        description:
+          "The configured theme mode — exactly what was passed as `config.theme` or last set via `theme.set()`. Returns 'auto' when the editor follows the OS preference, so this is not the theme currently painted.",
+        example: `console.log(editor.theme.get()); // 'auto'`,
+      },
+      {
+        name: "theme.set(mode)",
+        returnType: "void",
+        description:
+          "Set the theme mode. Pass 'light' or 'dark' to pin it, or 'auto' to follow the OS preference via prefers-color-scheme.",
+        example: `editor.theme.set('dark');
+
+// Back to following the OS
+editor.theme.set('auto');`,
+      },
+      {
+        name: "theme.getResolved()",
+        returnType: "'light' | 'dark'",
+        description:
+          "The theme after evaluating the OS preference when the mode is 'auto' — the theme actually being painted. Use it to match surrounding UI to the editor.",
+        example: `editor.theme.set('auto');
+console.log(editor.theme.getResolved()); // 'dark' on a dark-mode OS`,
+      },
+    ],
+  },
+  {
+    id: "width-api",
+    badge: "Width",
+    title: "Width API",
+    description:
+      "Control the editor content width mode — 'narrow' keeps content inside the default `--max-width-content`, 'full' drops the constraint so it fills its container.",
+    methods: [
+      {
+        name: "width.get()",
+        returnType: "'narrow' | 'full'",
+        description: "The active content width mode. Defaults to 'narrow'.",
+        example: `console.log(editor.width.get()); // 'narrow'`,
+      },
+      {
+        name: "width.set(value)",
+        returnType: "void",
+        description:
+          "Set the content width mode. This is what the React/Vue/Angular `width` prop syncs to after mount.",
+        example: `editor.width.set('full');`,
+      },
+      {
+        name: "width.toggle()",
+        returnType: "void",
+        description:
+          "Flip the content width mode between 'narrow' and 'full' — the one-call \"full width\" switch.",
+        example: `editor.width.toggle();`,
+      },
+    ],
+  },
+  {
+    id: "placeholder-api",
+    badge: "Placeholder",
+    title: "Placeholder API",
+    description:
+      "Read and change the editor-level placeholder (the hint shown on the empty default block) at runtime, without recreating the editor.",
+    methods: [
+      {
+        name: "placeholder.get()",
+        returnType: "string | false",
+        description:
+          "The current editor placeholder, or false when it is disabled.",
+        example: `console.log(editor.placeholder.get()); // 'Type / for commands'`,
+      },
+      {
+        name: "placeholder.set(value)",
+        returnType: "void",
+        description:
+          "Sets the editor placeholder; updates existing blocks in place and applies to blocks created afterward. Pass false to disable. Available synchronously after construction — pre-ready calls are buffered and replayed.",
+        example: `const editor = new Blok({ holder: 'blok' });
+
+// Safe before isReady — buffered and replayed once the editor boots
+editor.placeholder.set('Write something…');
+
+// Disable it
+editor.placeholder.set(false);`,
+      },
+    ],
+  },
+  {
     id: "readonly-api",
     badge: "ReadOnly",
     title: "ReadOnly API",
@@ -2213,6 +2361,13 @@ const mediaTypes = new Set(
 const referenced = (await editor.save()).blocks
   .filter(b => mediaTypes.has(b.type))
   .map(b => b.data.url);`,
+      },
+      {
+        name: "tools.getToolsConfig()",
+        returnType: "ToolsConfig",
+        description:
+          "Returns the tools-related configuration of this instance — { tools, inlineToolbar?, tunes?, theme? } — for creating nested Blok editors with the same tool set.",
+        example: `const nested = new Blok({ holder, ...editor.tools.getToolsConfig() });`,
       },
       {
         name: "tools.update(name, config)",
@@ -2751,7 +2906,7 @@ export function Editor() {
         option: "width",
         type: "'narrow' | 'full'",
         default: "'narrow'",
-        description: "Content width mode (reactive). Synced after mount via editor.width.set().",
+        description: "Content width mode (reactive). Synced after mount via editor.width.set() — see the Width API for the imperative surface (get / set / toggle).",
       },
       {
         option: "style",
@@ -2777,7 +2932,7 @@ export function Editor() {
         option: "placeholder",
         type: "string | false",
         default: "—",
-        description: "Placeholder shown in the first empty block.",
+        description: "Placeholder shown in the first empty block. See the Placeholder API to change it at runtime via editor.placeholder.set().",
       },
       {
         option: "onBlocksRendered",
@@ -2899,6 +3054,19 @@ const rowBlocks = blocks.getChildren(databaseBlockId);`,
         description:
           "Serialize the WHOLE document to Markdown (async, lazy-loaded serializer). Structure Markdown can't express (e.g. merged table cells) is dropped.",
         example: `const md = await blocks.exportMarkdown();`,
+      },
+      {
+        name: "markdownToBlocks(md, config?)",
+        returnType: "Promise<OutputBlockData[]>",
+        description:
+          "Convert Markdown to blocks WITHOUT an editor instance — the standalone `@bloklabs/core/markdown` subpath, not a method on the hook. It needs no DOM and no mounted Blok, so it is the server-side path insertMarkdown/exportMarkdown cannot cover: import Markdown in a Node job, seed a document, or precompute `data` before the editor mounts. `config` is a `MarkdownImportConfig` (tool mapping, GFM, extensions). The result is ready for `blocks.render()` or `blocks.insertMany()`.",
+        example: `import { markdownToBlocks } from '@bloklabs/core/markdown';
+
+// No editor instance required — this also runs on the server
+const parsed = await markdownToBlocks('# Title\\n\\n- one\\n- two');
+
+// -> OutputBlockData[]; store it, or hand it to a live editor
+await blocks.render({ blocks: parsed });`,
       },
       {
         name: "move(id, target)",
@@ -3044,13 +3212,6 @@ if (saved) {
         description:
           "The block whose holder contains/equals a DOM element — maps an event target back to a block.",
         example: `const node = blocks.getBlockByElement(event.target as HTMLElement);`,
-      },
-      {
-        name: "scrollToBlock(id)",
-        returnType: "void",
-        description:
-          "Scroll a block into view, select it, pulse the arrival highlight and announce the navigation to assistive tech — the public counterpart of the boot-time URL-hash scroll. No-op when no block with that id is in the document. Framework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers; @bloklabs/react drains it automatically once the holder connects — call this yourself for deep-linking after the editor is ready.",
-        example: `blocks.scrollToBlock(nodeId);`,
       },
       {
         name: "composeBlockData(toolName)",

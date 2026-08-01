@@ -52,6 +52,18 @@ const Icons = {
       <path d="M20 6L9 17l-5-5" />
     </svg>
   ),
+  breaking: () => (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M13 2L4.5 12.5H11l-.5 9.5L19 11.5h-6.5L13 2z" />
+    </svg>
+  ),
   deprecated: () => (
     <svg
       viewBox="0 0 24 24"
@@ -141,7 +153,10 @@ const LOCALE_MAP: Record<string, string> = {
 };
 
 const formatDate = (dateString: string, locale: string): string => {
-  const date = new Date(dateString);
+  // A bare YYYY-MM-DD parses as UTC midnight, which renders as the previous day
+  // in any zone behind UTC — so build the date from its parts in local time.
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   return date.toLocaleDateString(LOCALE_MAP[locale] ?? "en-US", {
     month: "short",
     day: "numeric",

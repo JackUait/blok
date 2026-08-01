@@ -221,6 +221,24 @@ const MODULE_COPY: Record<string, Copy> = {
       "Attach tooltips to your own tool UI using the editor's own tooltip implementation.",
     h1: 'Tooltip API: tooltips for your own tool UI',
   },
+  'theme-api': {
+    title: 'Blok Theme API — get, set, getResolved',
+    description:
+      "Read and switch the editor's light, dark, or auto theme at runtime, and resolve what auto currently evaluates to.",
+    h1: 'Theme API: switch light, dark, and auto',
+  },
+  'width-api': {
+    title: 'Blok Width API — narrow and full layouts',
+    description:
+      "Read, set, and toggle the editor's content width between the default narrow column and the full width of its container.",
+    h1: 'Width API: narrow and full editor layouts',
+  },
+  'placeholder-api': {
+    title: 'Blok Placeholder API — get and set',
+    description:
+      'Change the empty-block placeholder at runtime; it updates existing blocks in place and applies to blocks created afterward.',
+    h1: 'Placeholder API: change the placeholder at runtime',
+  },
   'tools-api': {
     title: 'Blok Tools API — register and update tools',
     description:

@@ -102,7 +102,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Header',
     description:
-      'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) for H1–H3.',
+      'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) at every level — the toolbox lists "Toggle heading 1" through "Toggle heading 6", reachable with the markdown shortcuts `>#` through `>######`.',
     importExample: `import { Header } from '@bloklabs/core/tools';`,
     configOptions: [
       {
@@ -759,8 +759,10 @@ const editor = new Blok({
     type: 'block',
     title: 'Columns',
     description:
-      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns.',
-    importExample: `import { ColumnList } from '@bloklabs/core/tools';`,
+      'A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing "Turn into columns". Column widths are resizable via the separators between columns. Both tools can be registered at once with the `Columns` group handle — `tools: { columns: Columns }` expands to the `column_list` and `column` tools; saved JSON still contains `column_list` and `column` blocks.',
+    importExample: `import { ColumnList } from '@bloklabs/core/tools';
+// …or register both column tools at once with the group handle:
+import { Columns } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `interface ColumnListData {
   // No persisted fields. The structure lives in the block's contentIds,
@@ -1055,6 +1057,12 @@ const editor = new Blok({
           'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
       },
       {
+        option: 'sources',
+        type: "'upload' | 'url' | 'both'",
+        default: "'both'",
+        description: 'Restrict how the media may be added — file upload only, URL only, or both.',
+      },
+      {
         option: 'captionPlaceholder',
         type: 'string',
         default: '"Write a caption…"',
@@ -1138,6 +1146,12 @@ const editor = new Blok({
         default: '100 MiB',
         description:
           'Max upload size. A number caps every type (bytes); an object caps per MIME type with `\'*\'` as the fallback.',
+      },
+      {
+        option: 'sources',
+        type: "'upload' | 'url' | 'both'",
+        default: "'both'",
+        description: 'Restrict how the media may be added — file upload only, URL only, or both.',
       },
       {
         option: 'captionPlaceholder',
@@ -1285,16 +1299,16 @@ const editor = new Blok({
     type: 'inline',
     title: 'Marker',
     description:
-      'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset text and background swatches plus a Default reset. Activated with Cmd/Ctrl+Shift+H.',
+      'Applies text colour or background colour to selected text using `<mark style="color:...">` or `<mark style="background-color:...">`. Opens a colour picker with preset text and background swatches plus a Default reset. Preset swatches are normalised to CSS custom properties (`var(--blok-color-<name>-<text|bg>)`) when saved, so themes can restyle them; a custom non-preset colour is stored exactly as given. Activated with Cmd/Ctrl+Shift+H.',
     importExample: `import { Marker } from '@bloklabs/core/tools';`,
     configOptions: [],
     saveDataShape: `// Stored as HTML inside the block's text field.
-// Text colour:       '<mark style="color:#e03e2d">red text</mark>'
-// Background colour: '<mark style="background-color:#ffd966">highlighted</mark>'`,
+// Text colour:       '<mark style="color: var(--blok-color-red-text); background-color: transparent;">red text</mark>'
+// Background colour: '<mark style="background-color: var(--blok-color-yellow-bg);">highlighted text</mark>'`,
     saveDataExample: `{
   "type": "paragraph",
   "data": {
-    "text": "<mark style=\\"background-color:#ffd966\\">highlighted text</mark>"
+    "text": "<mark style=\\"background-color: var(--blok-color-yellow-bg);\\">highlighted text</mark>"
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';

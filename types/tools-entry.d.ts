@@ -180,6 +180,7 @@ export const Strikethrough: InlineToolConstructable;
 export const Underline: InlineToolConstructable;
 export const InlineCode: InlineToolConstructable;
 export const Equation: InlineToolConstructable;
+export const ClearFormat: InlineToolConstructable;
 
 /**
  * Default block tools configuration

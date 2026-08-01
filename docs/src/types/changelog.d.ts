@@ -1,4 +1,11 @@
-export type ChangeCategory = 'added' | 'changed' | 'fix' | 'deprecated' | 'removed' | 'security';
+export type ChangeCategory =
+  | 'added'
+  | 'changed'
+  | 'fix'
+  | 'breaking'
+  | 'deprecated'
+  | 'removed'
+  | 'security';
 
 export type ReleaseType = 'major' | 'minor' | 'patch';
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1](https://github.com/JackUait/blok/compare/v1.6.0...v1.6.1) (2026-08-02)
+
+### Bug Fixes
+
+- **Callout** — The panel's vertical inset now reads its own `--blok-callout-padding-block` token (flat 5px default) instead of riding `--blok-block-padding-top/-bottom`, so a host's compact-rhythm override no longer collapses the callout card onto its text. The emoji button deliberately keeps reading the rhythm tokens so the glyph tracks the first text line under any rhythm a host sets. Defaults render byte-identically; hosts that wanted squashed callouts opt back in via `--blok-callout-padding-block: 0`.
+
+### Maintenance
+
+- **Docs** — 151 verified inaccuracies root-caused and fixed across the docs site, a new guide explains how to set per-block font sizes correctly, and the docs test suite now resolves Blok's public members through the TypeScript compiler instead of a regex.
+
 ## [1.6.0](https://github.com/JackUait/blok/compare/v1.5.0...v1.6.0) (2026-08-01)
 
 ### Features

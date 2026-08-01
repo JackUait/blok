@@ -1,12 +1,67 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve, join } from "node:path";
+import ts from "typescript";
 import { API_SECTIONS } from "./api-data";
 
 /** Repo root — docs/src/components/api → up four levels. */
 const BLOK_ROOT = resolve(__dirname, "..", "..", "..", "..");
 const readSource = (rel: string): string =>
   readFileSync(join(BLOK_ROOT, rel), "utf8");
+
+/**
+ * Every property reachable on a `Blok` instance in a consumer's TypeScript,
+ * resolved by the compiler so that members inherited through the
+ * `interface Blok extends Omit<API, 'i18n'>` merge count too.
+ */
+let blokInstanceMembersCache: Set<string> | null = null;
+
+const blokInstanceMembers = (): Set<string> => {
+  if (blokInstanceMembersCache !== null) {
+    return blokInstanceMembersCache;
+  }
+
+  const entry = join(BLOK_ROOT, "types", "index.d.ts");
+  const program = ts.createProgram([entry], {
+    strict: true,
+    noEmit: true,
+    skipLibCheck: true,
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+  });
+  const checker = program.getTypeChecker();
+  const source = program.getSourceFile(entry);
+  if (source === undefined) {
+    throw new Error(`Could not load ${entry}`);
+  }
+
+  const moduleSymbol = checker.getSymbolAtLocation(source);
+  if (moduleSymbol === undefined) {
+    throw new Error(`${entry} is not a module`);
+  }
+
+  const blok = checker
+    .getExportsOfModule(moduleSymbol)
+    .find((symbol) => symbol.getName() === "Blok");
+  if (blok === undefined) {
+    throw new Error("types/index.d.ts does not export Blok");
+  }
+
+  blokInstanceMembersCache = new Set(
+    checker
+      .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(blok))
+      .map((symbol) => symbol.getName())
+  );
+
+  return blokInstanceMembersCache;
+};
+
+/**
+ * Building a program over the whole `types/` graph costs a few seconds — more
+ * than the suite's 5s default, which made this guard time out at random.
+ */
+const TYPE_RESOLUTION_TIMEOUT_MS = 30_000;
 
 describe("API_SECTIONS", () => {
   it("should have all defined sections", () => {
@@ -829,14 +884,18 @@ describe("docs accuracy against public type surface (root-cause guards)", () => 
   it("Blok Class properties table lists only real public members of the Blok class", () => {
     // Root cause: the properties table is hand-authored; every listed member must exist
     // on the public Blok class in types/index.d.ts, or a TS consumer copying `editor.<prop>`
-    // gets "Property '<prop>' does not exist on type 'Blok'". Events are exposed via the
-    // on/off/emit methods, not an `events` property.
-    const dts = readSource("types/index.d.ts");
-    const classBody = dts.match(/export class Blok \{([\s\S]*?)\n\}/)?.[1] ?? "";
-    const publicMembers = new Set(
-      [...classBody.matchAll(/public\s+(?:readonly\s+)?(\w+)/g)].map((m) => m[1])
-    );
+    // gets "Property '<prop>' does not exist on type 'Blok'".
+    //
+    // Resolve the member set through the compiler, not a regex over the class body: most
+    // namespaces (`blocks`, `caret`, `tools`, `uploader`, …) reach the instance through
+    // `export interface Blok extends Omit<API, 'i18n'>` declaration merging, which is what
+    // keeps the class in sync with the API surface. A class-body-only scan reports every
+    // one of those as undocumented-but-real and the guard fails on correct docs.
+    const publicMembers = blokInstanceMembers();
     expect(publicMembers.size).toBeGreaterThan(0);
+    // The guard is only meaningful if a name that is NOT on the type is rejected.
+    expect(publicMembers.has("notAMemberOfBlok")).toBe(false);
+
     const core = API_SECTIONS.find((s) => s.id === "core");
     for (const prop of core?.properties ?? []) {
       expect(
@@ -844,7 +903,7 @@ describe("docs accuracy against public type surface (root-cause guards)", () => 
         `Blok Class property "${prop.name}" is documented but is not a public member of the Blok class in types/index.d.ts`
       ).toBe(true);
     }
-  });
+  }, TYPE_RESOLUTION_TIMEOUT_MS);
 
   it("block.save() example only shows fields present on the public SavedData type", () => {
     // Root cause: block.save() is publicly typed Promise<void|SavedData>; the illustrated

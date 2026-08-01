@@ -10,15 +10,17 @@ const readSource = (rel: string): string =>
   readFileSync(join(BLOK_ROOT, rel), "utf8");
 
 /**
- * Every property reachable on a `Blok` instance in a consumer's TypeScript,
- * resolved by the compiler so that members inherited through the
- * `interface Blok extends Omit<API, 'i18n'>` merge count too.
+ * The published surface a consumer can actually reach, resolved by the
+ * compiler: every property of a `Blok` instance (so members inherited through
+ * the `interface Blok extends Omit<API, 'i18n'>` merge count too), plus the
+ * named exports of the package root — some documented members (`DATA_ATTR`,
+ * `version`) are root exports rather than instance properties.
  */
-let blokInstanceMembersCache: Set<string> | null = null;
+let publicSurfaceCache: { instanceMembers: Set<string>; rootExports: Set<string> } | null = null;
 
-const blokInstanceMembers = (): Set<string> => {
-  if (blokInstanceMembersCache !== null) {
-    return blokInstanceMembersCache;
+const publicSurface = (): { instanceMembers: Set<string>; rootExports: Set<string> } => {
+  if (publicSurfaceCache !== null) {
+    return publicSurfaceCache;
   }
 
   const entry = join(BLOK_ROOT, "types", "index.d.ts");
@@ -41,21 +43,25 @@ const blokInstanceMembers = (): Set<string> => {
     throw new Error(`${entry} is not a module`);
   }
 
-  const blok = checker
-    .getExportsOfModule(moduleSymbol)
-    .find((symbol) => symbol.getName() === "Blok");
+  const rootExportSymbols = checker.getExportsOfModule(moduleSymbol);
+  const blok = rootExportSymbols.find((symbol) => symbol.getName() === "Blok");
   if (blok === undefined) {
     throw new Error("types/index.d.ts does not export Blok");
   }
 
-  blokInstanceMembersCache = new Set(
-    checker
-      .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(blok))
-      .map((symbol) => symbol.getName())
-  );
+  publicSurfaceCache = {
+    instanceMembers: new Set(
+      checker
+        .getPropertiesOfType(checker.getDeclaredTypeOfSymbol(blok))
+        .map((symbol) => symbol.getName())
+    ),
+    rootExports: new Set(rootExportSymbols.map((symbol) => symbol.getName())),
+  };
 
-  return blokInstanceMembersCache;
+  return publicSurfaceCache;
 };
+
+const blokInstanceMembers = (): Set<string> => publicSurface().instanceMembers;
 
 /**
  * Building a program over the whole `types/` graph costs a few seconds — more
@@ -677,7 +683,7 @@ describe("API_SECTIONS", () => {
         "onSave",
         "onChange",
         "onReady",
-        "deps",
+        "deps / recreateKey",
         "readOnly",
         "theme",
         "width",
@@ -693,8 +699,11 @@ describe("API_SECTIONS", () => {
 
     it("deps row warns that tool-config functions do not belong in deps", () => {
       const section = API_SECTIONS.find((s) => s.id === "blok-editor");
-      const depsRow = section!.table!.find((row) => row.option === "deps");
+      const depsRow = section!.table!.find((row) => row.option === "deps / recreateKey");
       expect(depsRow!.description).toMatch(/function/i);
+      // `deps` is React-only; Vue/Angular spell the same knob `recreateKey`, so
+      // the row must name both rather than reading as a cross-adapter prop.
+      expect(depsRow!.description).toContain("recreateKey");
     });
 
     it("has a usage example showing the controlled data + onSave pair", () => {
@@ -894,16 +903,20 @@ describe("docs accuracy against public type surface (root-cause guards)", () => 
     // `export interface Blok extends Omit<API, 'i18n'>` declaration merging, which is what
     // keeps the class in sync with the API surface. A class-body-only scan reports every
     // one of those as undocumented-but-real and the guard fails on correct docs.
-    const publicMembers = blokInstanceMembers();
-    expect(publicMembers.size).toBeGreaterThan(0);
+    // A handful of documented members (DATA_ATTR, version) are not on the class
+    // at all — they are named exports of the package root — so accept either.
+    const { instanceMembers, rootExports } = publicSurface();
+    expect(instanceMembers.size).toBeGreaterThan(0);
+    expect(rootExports.size).toBeGreaterThan(0);
     // The guard is only meaningful if a name that is NOT on the type is rejected.
-    expect(publicMembers.has("notAMemberOfBlok")).toBe(false);
+    expect(instanceMembers.has("notAMemberOfBlok")).toBe(false);
+    expect(rootExports.has("notAMemberOfBlok")).toBe(false);
 
     const core = API_SECTIONS.find((s) => s.id === "core");
     for (const prop of core?.properties ?? []) {
       expect(
-        publicMembers.has(prop.name),
-        `Blok Class property "${prop.name}" is documented but is not a public member of the Blok class in types/index.d.ts`
+        instanceMembers.has(prop.name) || rootExports.has(prop.name),
+        `Blok Class property "${prop.name}" is documented but is neither a public member of the Blok class nor a named export of the package root in types/index.d.ts`
       ).toBe(true);
     }
   }, TYPE_RESOLUTION_TIMEOUT_MS);
@@ -1021,7 +1034,7 @@ describe("loose wire-shape input and OutputData utilities", () => {
   it("output-data section documents the predicates and normalizers with examples", () => {
     const methods = findSection("output-data")?.methods ?? [];
     const names = methods.map((m) => m.name);
-    expect(names).toContain("equalsOutputData(a, b)");
+    expect(names).toContain("equalsOutputData(a, b, options?)");
     expect(names).toContain("isEmptyOutputData(data)");
     // The loose-wire normalizers must be documented on the stable main entry
     // (not only the no-semver ./adapters entry) so consumers stop blind-casting
@@ -1034,14 +1047,14 @@ describe("loose wire-shape input and OutputData utilities", () => {
       expect(method.returnType).toBeDefined();
     }
     // The predicates answer yes/no questions.
-    const predicates = ["equalsOutputData(a, b)", "isEmptyOutputData(data)"];
+    const predicates = ["equalsOutputData(a, b, options?)", "isEmptyOutputData(data)"];
     for (const name of predicates) {
       expect(methods.find((m) => m.name === name)!.returnType).toBe("boolean");
     }
     // The normalizers hand back the strict saved shapes.
     expect(methods.find((m) => m.name === "normalizeOutputData(data)")!.returnType).toBe("OutputData");
     expect(methods.find((m) => m.name === "normalizeOutputBlocks(blocks)")!.returnType).toBe("OutputBlockData[]");
-    const equals = methods.find((m) => m.name === "equalsOutputData(a, b)");
+    const equals = methods.find((m) => m.name === "equalsOutputData(a, b, options?)");
     // Equality ignores the volatile envelope fields — the load-bearing fact.
     expect(equals!.description).toMatch(/time/);
     expect(equals!.description).toMatch(/version/);

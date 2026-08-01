@@ -40,8 +40,10 @@ describe("view renderer section", () => {
       "blocksToHtml(data, options?)",
       "blocksToPlainText(data, options?)",
       "htmlTextContent(html)",
+      "sanitizeHtmlFragment(html, config)",
       "outlineFromOutputData(data)",
       "defineBlokSchema(config)",
+      "composeBaseSanitizeConfig(configs)",
       "blocksToViewNodes(data, options?)",
       "BlokView",
       "useBlokView(data, options?)",
@@ -131,6 +133,10 @@ describe("view renderer section", () => {
       "toolAttributes",
       "blockIds",
       "transformUrl",
+      // `classes` is the only BlokView prop whose default is ON (`classes ?? true`
+      // in packages/react/src/BlokView.tsx) — it must be enumerated so readers can
+      // explain the class attributes in the output and discover `classes={false}`.
+      "classes",
       "...divProps",
     ]);
   });

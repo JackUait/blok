@@ -34,6 +34,16 @@ describe("migration-data", () => {
     expect(notBundled?.tools).toEqual(["personality", "button"]);
   });
 
+  it("does not advertise marker as loading as-is", () => {
+    const dropIn = COMPATIBILITY_GROUPS.find((g) => g.id === "drop-in");
+    // Editor.js writes <mark class="cdx-marker"> with no inline style. Blok's marker
+    // sanitizer allows no attributes on a mark that carries no inline color/
+    // background-color (src/components/inline-tools/inline-tool-marker.ts), and
+    // preflight resets the UA <mark> highlight — so the text survives but the
+    // highlight does not. Claiming "loads as-is" hides that.
+    expect(dropIn?.tools).not.toContain("marker");
+  });
+
   it("every compatibility group's tools are listed in exactly one group", () => {
     const seen = new Set<string>();
     for (const group of COMPATIBILITY_GROUPS) {

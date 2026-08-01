@@ -38,7 +38,7 @@ const ROWS: ComparisonRow[] = [
   },
   {
     labelKey: "rowBlocks",
-    blok: "19 built-in",
+    blok: "20 built-in",
     editorjs: "Paragraph only",
     tiptap: "Basics only",
     lexical: "Primitives",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { FeatureModal, type FeatureDetail } from './FeatureModal';
 import { I18nProvider } from '../../contexts/I18nContext';
 
@@ -23,10 +24,13 @@ const renderModal = (
   feature: FeatureDetail | null = mockFeature,
   onClose = vi.fn(),
   visual: React.ReactNode = visualNode,
+  initialPath = '/',
 ) =>
   render(
     <I18nProvider>
-      <FeatureModal feature={feature} visual={visual} onClose={onClose} />
+      <MemoryRouter initialEntries={[initialPath]}>
+        <FeatureModal feature={feature} visual={visual} onClose={onClose} />
+      </MemoryRouter>
     </I18nProvider>
   );
 
@@ -145,6 +149,13 @@ describe('FeatureModal', () => {
     expect(link).toHaveAttribute('href', '/docs#core-save');
   });
 
+  it('should keep the reader in the Russian tree when linking into the docs', () => {
+    renderModal(mockFeature, vi.fn(), visualNode, '/ru');
+
+    const link = screen.getByRole('link', { name: 'View documentation' });
+    expect(link).toHaveAttribute('href', '/ru/docs#core-save');
+  });
+
   it('should render the close button with accessible aria-label', () => {
     renderModal();
     expect(screen.getByRole('button', { name: 'Close modal' })).toBeInTheDocument();
@@ -196,7 +207,9 @@ describe('FeatureModal', () => {
   it('should render Russian strings when locale is ru', () => {
     render(
       <I18nProvider locale="ru">
-        <FeatureModal feature={mockFeature} visual={visualNode} onClose={vi.fn()} />
+        <MemoryRouter initialEntries={['/ru']}>
+          <FeatureModal feature={mockFeature} visual={visualNode} onClose={vi.fn()} />
+        </MemoryRouter>
       </I18nProvider>
     );
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeInTheDocument();

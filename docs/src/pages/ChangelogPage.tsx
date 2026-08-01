@@ -255,6 +255,12 @@ interface ChangelogContentProps {
 
 const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) => {
   const { t, locale } = useI18n();
+  // `t` returns the key itself when it cannot resolve it, so an unresolved key
+  // has to be detected rather than treated as a falsy value.
+  const translateOr = (key: string, fallback: string): string => {
+    const translated = t(key);
+    return translated !== key ? translated : fallback;
+  };
   const headerClass = cn(
     'mx-auto max-w-3xl px-6 pb-24 text-center',
     inline ? 'pt-10' : 'pt-16 sm:pt-24',
@@ -336,7 +342,10 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                     </span>
                   )}
                   <Badge variant="outline" className="uppercase">
-                    {t(`changelog.releaseType.${release.releaseType}`) || release.releaseType}
+                    {translateOr(
+                      `changelog.releaseType.${release.releaseType}`,
+                      release.releaseType,
+                    )}
                   </Badge>
                   <span className="text-sm font-medium text-muted-foreground">
                     {formatDate(release.date, locale)}
@@ -374,7 +383,7 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                               <span className="[&>svg]:size-full" aria-hidden="true">
                                 <IconFor name={change.category as keyof typeof Icons} />
                               </span>
-                              {t(`changelog.category.${change.category}`) || change.category}
+                              {translateOr(`changelog.category.${change.category}`, change.category)}
                             </Badge>
                             <span className="text-sm leading-relaxed text-muted-foreground">
                               {formatDescription(change.description)}

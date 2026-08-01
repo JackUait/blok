@@ -220,10 +220,16 @@ export class EditorComponent {
     // Pinned to the published version (BLOK_VERSION, derived from root
     // package.json) rather than the unpinned default, so a future release can't
     // silently change what this copy-pasted snippet loads.
+    // `tools` is required: without it only the internal tools are registered
+    // and the first block falls through to the stub renderer. The IIFE global
+    // re-exports `defaultTools` alongside `Blok` (src/full.ts).
     code: `<div id="editor"></div>
 <script src="https://unpkg.com/@bloklabs/core@${BLOK_VERSION}/dist/blok.iife.js"></script>
 <script>
-  new BlokEditor.Blok({ holder: 'editor' });
+  new BlokEditor.Blok({
+    holder: 'editor',
+    tools: BlokEditor.defaultTools,
+  });
 </script>`,
     mono: <GlobeMark />,
     brand: "var(--primary)",

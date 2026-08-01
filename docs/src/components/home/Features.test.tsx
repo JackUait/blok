@@ -1,12 +1,15 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, within, act, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { Features, EMBED_ROWS, LANGUAGE_COUNT, pickLocaleIndex } from './Features';
 import { I18nProvider } from '../../contexts/I18nContext';
 
 const renderFeatures = (locale: 'en' | 'ru' = 'en') =>
   render(
     <I18nProvider locale={locale}>
-      <Features />
+      <MemoryRouter initialEntries={[locale === 'ru' ? '/ru' : '/']}>
+        <Features />
+      </MemoryRouter>
     </I18nProvider>
   );
 

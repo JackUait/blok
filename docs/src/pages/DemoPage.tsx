@@ -18,11 +18,20 @@ const trackDemoAction = (action: string): void => {
   trackEvent(ANALYTICS_EVENTS.demoAction, { action });
 };
 
+/**
+ * The shape of the Blok instance the playground actually uses. `save` and
+ * `clear` are shorthands installed straight on the instance; undo/redo are not
+ * — they live on the `history` namespace and return void, not a Promise.
+ * `history` is optional so this stays assignable to EditorWrapper's own handle
+ * type.
+ */
 interface BlokEditor {
   save: () => Promise<unknown>;
   clear: () => Promise<void>;
-  undo: () => Promise<void>;
-  redo: () => Promise<void>;
+  history?: {
+    undo: () => void;
+    redo: () => void;
+  };
   destroy?: () => void;
 }
 
@@ -72,18 +81,14 @@ function useDemoEditor() {
     }
   }, [t]);
 
-  const handleUndo = useCallback(async () => {
+  const handleUndo = useCallback(() => {
     trackDemoAction('undo');
-    if (editorRef.current) {
-      await editorRef.current.undo();
-    }
+    editorRef.current?.history?.undo();
   }, []);
 
-  const handleRedo = useCallback(async () => {
+  const handleRedo = useCallback(() => {
     trackDemoAction('redo');
-    if (editorRef.current) {
-      await editorRef.current.redo();
-    }
+    editorRef.current?.history?.redo();
   }, []);
 
   return { t, showOutput, setShowOutput, output, handleEditorReady, handleSave, handleClear, handleUndo, handleRedo };

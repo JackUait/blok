@@ -121,7 +121,7 @@ export const API_SECTIONS: ApiSection[] = [
     lastUpdated: "2026-06-30",
     title: "Blok Class",
     description:
-      "The main editor class that initializes and manages the Blok editor instance.",
+      "The main editor class that initializes and manages the Blok editor instance. Every namespace a tool reaches through `api.*` is also reachable on the instance as `editor.*` — the properties below are that same surface, plus the `width`, `placeholder`, `tokens` and `i18n` namespaces the class declares itself.",
     methods: [
       {
         name: "save()",
@@ -131,6 +131,13 @@ export const API_SECTIONS: ApiSection[] = [
         example: `// Save editor content
 const data = await editor.save();
 console.log(data.blocks); // Array of block data`,
+        errors: [
+          {
+            condition: "The editor is in read-only mode when save() is called.",
+            message: "Blok's content can not be saved in read-only mode",
+            resolution: "Call `readOnly.set(false)` before saving, or persist from the last `onSave` payload / your own mirrored state.",
+          },
+        ],
       },
       {
         name: "render(data)",
@@ -159,7 +166,8 @@ editor.focus(true);`,
       {
         name: "clear()",
         returnType: "Promise<void>",
-        description: "Removes all blocks from the editor.",
+        description:
+          "Removes all content from the editor. One empty block of the default tool is left behind, so the editor is never block-less — a subsequent save() still returns `blocks: []`, because the blank default block does not validate and is dropped from the output.",
         example: `// Clear all content
 await editor.clear();`,
       },
@@ -207,12 +215,58 @@ if (!ready) {
 // later
 unsubscribe();`,
       },
+      {
+        name: "createSelector(attr, value?)",
+        returnType: "string",
+        description:
+          "Named export of the package root (not a member of the Blok class) — builds a CSS selector from a `DATA_ATTR` value. With no `value` it produces a presence selector; with one it produces an equality selector. Use it together with `Blok.DATA_ATTR` instead of matching Blok's internal class names, which are not part of the public surface.",
+        example: `import { DATA_ATTR, createSelector } from '@bloklabs/core';
+
+createSelector(DATA_ATTR.element); // '[data-blok-element]'
+document.querySelectorAll(createSelector(DATA_ATTR.selected, true));`,
+      },
+      {
+        name: "icons",
+        returnType: "string",
+        description:
+          "Named exports of the `@bloklabs/core/icons` subpath (not members of the Blok class) — Blok's own glyphs as SVG strings, one `Icon*` constant per glyph (`IconBold`, `IconPlus`, `IconTrash`, `IconWarning`, …). Because they are plain strings they drop straight into the places a tool must supply markup: a tool's `static get toolbox()` icon and the entries returned by `renderSettings()`. The subpath ships a generated, self-contained declaration file (`types/icons.d.ts`) listing every constant, so editor autocomplete is the reference for the full set.",
+        example: `import { IconBold, IconPlus } from '@bloklabs/core/icons';
+
+class Callout {
+  static get toolbox() {
+    return { title: 'Callout', icon: IconPlus };
+  }
+
+  renderSettings() {
+    return [{ icon: IconBold, title: 'Bold text', onActivate: () => this.toggleBold() }];
+  }
+}`,
+      },
     ],
     properties: [
       {
+        name: "DATA_ATTR",
+        type: "Record<DataAttrKey, DataAttrValue>",
+        description:
+          "Named export of the package root (`import { DATA_ATTR } from '@bloklabs/core'`), not a property of the editor instance — the stable `data-blok-*` attribute names Blok writes on its DOM. This is the supported way to query editor DOM and write host tests, instead of matching internal class names. The `DataAttrKey` / `DataAttrValue` types and the `createSelector()` helper are exported alongside it.",
+      },
+      {
+        name: "version",
+        type: "string",
+        description:
+          "Named export of the package root (`import { version } from '@bloklabs/core'`), not a property of the editor instance — the running editor version, the same value stamped into `OutputData.version`.",
+      },
+      {
+        name: "PendingBlok",
+        type: "{ isReady; isRendered; destroy(); theme; width; placeholder; tokens; i18n }",
+        description:
+          "A type exported from the package root (`import type { PendingBlok } from '@bloklabs/core'`), not a property of the editor instance — the surface guaranteed to exist synchronously between `new Blok(config)` and `isReady` resolving. Blok builds its module APIs (`blocks`, `caret`, `history`, `readOnly`, …) asynchronously, so reading them earlier returns `undefined`. `PendingBlok` declares only the eight members listed here, which turns that window into a compile error instead of an `undefined` at runtime: `const pending: PendingBlok = new Blok(config); const editor = await pending.isReady;`.",
+      },
+      {
         name: "isReady",
         type: "Promise<Blok>",
-        description: "Promise that resolves with the ready editor instance",
+        description:
+          "Promise that resolves with the ready editor instance. The API namespaces below (`blocks`, `caret`, `history`, `readOnly`, …) are built asynchronously and are `undefined` until it resolves — type the reference you hold during that window as `PendingBlok`.",
       },
       {
         name: "isRendered",
@@ -233,6 +287,68 @@ unsubscribe();`,
         name: "inlineToolbar",
         type: "InlineToolbar",
         description: "Inline toolbar API module",
+      },
+      { name: "tools", type: "Tools", description: "Tools API module" },
+      {
+        name: "uploader",
+        type: "Uploader",
+        description: "Uploader API module — asset uploads routed by asset kind",
+      },
+      { name: "events", type: "Events", description: "Events API module" },
+      {
+        name: "listeners",
+        type: "Listeners",
+        description: "Listeners API module",
+      },
+      { name: "notifier", type: "Notifier", description: "Notifier API module" },
+      {
+        name: "sanitizer",
+        type: "Sanitizer",
+        description: "Sanitizer API module",
+      },
+      {
+        name: "selection",
+        type: "Selection",
+        description: "Selection API module",
+      },
+      {
+        name: "marks",
+        type: "Marks",
+        description: "Marks API module — range-aware inline-mark operations",
+      },
+      { name: "styles", type: "Styles", description: "Styles API module" },
+      { name: "tooltip", type: "Tooltip", description: "Tooltip API module" },
+      { name: "readOnly", type: "ReadOnly", description: "ReadOnly API module" },
+      { name: "ui", type: "Ui", description: "UI API module" },
+      { name: "theme", type: "Theme", description: "Theme API module" },
+      { name: "width", type: "Width", description: "Width API module" },
+      {
+        name: "placeholder",
+        type: "Placeholder",
+        description: "Placeholder API module",
+      },
+      {
+        name: "tokens",
+        type: "Tokens",
+        description: "Runtime theme-tokens API module",
+      },
+      {
+        name: "i18n",
+        type: "EditorI18n",
+        description:
+          "I18n API module — everything a tool gets through `api.i18n`, widened with `update()`",
+      },
+      {
+        name: "config",
+        type: "Readonly<Pick<BlokConfig, 'linkPaste' | 'link'>>",
+        description:
+          "Read-only view of selected editor configuration: the `link` and `linkPaste` options this instance was constructed with. A custom inline or link tool reads the host's link policy from here (as `api.config`) instead of re-deriving it.",
+      },
+      {
+        name: "rectangleSelection",
+        type: "{ cancelActiveSelection(): void; isRectActivated(): boolean; clearSelection(): void; startSelection(pageX: number, pageY: number, shiftKey?: boolean): void; endSelection(): void }",
+        description:
+          "Drag-select (rubber-band) control, also reachable inside a tool as `api.rectangleSelection`. `startSelection(pageX, pageY, shiftKey?)` begins a rubber-band from page coordinates; `endSelection()` resets the drag state and hides the overlay; `isRectActivated()` reports whether a rubber-band is currently active; `clearSelection()` drops the active flag; `cancelActiveSelection()` aborts a selection in progress (clear + end) — what another selection system, e.g. table cell selection, calls when it takes priority.",
       },
     ],
   },
@@ -277,14 +393,21 @@ const editor = new Blok(config);`,
         type: "Record<string, ToolConstructable | ToolSettings>",
         default: "{}",
         description:
-          "Available block and inline tools. Per-tool `toolbox: false` keeps a tool registered (existing blocks still render, blocks.insert() still works) while removing it from every user-insertion path — the + / slash menu, the convert menu, and its keyboard shortcut. Useful for permission gating — and flippable at runtime via `tools.update(name, { toolbox })` (the React adapter applies changes to the `tools` prop's `toolbox` values automatically), so a permission change never requires recreating the editor.",
+          "Available block and inline tools. Nothing is registered by default: the `{}` default leaves only Blok's internal tools (`stub`, `delete`, `copyLink`, `convertTo`), so a bare `new Blok({ holder })` cannot render even a paragraph. Two ready-made bundles are exported from `@bloklabs/core/full` — `defaultTools` (paragraph, header and list, all with `inlineToolbar: true`) and `allTools` (`defaultTools` plus quote, callout, code, toggle and every inline tool). Per-tool `toolbox: false` keeps a tool registered (existing blocks still render, blocks.insert() still works) while removing it from every user-insertion path — the + / slash menu, the convert menu, and its keyboard shortcut. Useful for permission gating — and flippable at runtime via `tools.update(name, { toolbox })` (the React adapter applies changes to the `tools` prop's `toolbox` values automatically), so a permission change never requires recreating the editor.",
+      },
+      {
+        option: "tunes",
+        type: "string[]",
+        default: "undefined",
+        description:
+          "Names of block tunes added to every block tool that does not declare its own `tunes` set. The tune classes themselves must be registered in `tools` (a class with `static isTune = true`).",
       },
       {
         option: "placeholder",
         type: "string | false",
         default: "false",
         description:
-          "Placeholder text shown in the first block when the editor is empty; false disables it",
+          "Placeholder text handed to every block of the default tool — not only the first block, and not only while the document is empty. With the built-in paragraph it is visible whenever a block is empty and focused. Note that `false` (also the default) does not remove the placeholder: the paragraph tool then falls back to its own built-in localized text (\"Write something or press / to select a tool\"). To blank it, give the default tool an empty placeholder of its own — `tools: { paragraph: { class: Paragraph, placeholder: '' } }`.",
       },
       {
         option: "minHeight",
@@ -307,8 +430,22 @@ const editor = new Blok(config);`,
           "Initial data to render. The loose wire shape is accepted: `null` values for block `data`, `id`, or `time` (common in backend DTOs) are normalized at the boundary. A whole-document `null` is also accepted and normalized to an empty document, so nullable controlled state can be passed straight through without a `value ?? { blocks: [] }` guard.",
       },
       {
+        option: "dataModel",
+        type: "'legacy' | 'hierarchical' | 'auto'",
+        default: "'auto'",
+        description:
+          "Input/output data model. 'auto' detects the format of the data you render and preserves it on save; 'legacy' always uses the nested `items[]` structure; 'hierarchical' always uses flat blocks with `parent`/`content` references.",
+      },
+      {
+        option: "sanitizer",
+        type: "SanitizerConfig",
+        default: "{}",
+        description:
+          "Editor-wide default sanitizer allowlist. Composed with each tool's own `sanitize` rules and applied on save, on render, on paste and on copy of selected blocks.",
+      },
+      {
         option: "readOnly",
-        type: "boolean | { hideControls: boolean }",
+        type: "boolean | { hideControls?: boolean }",
         default: "false",
         description:
           "Enable read-only mode. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings, and inline toolbar. Live: change at runtime via `readOnly.set(state, { hideControls })` — the same instance flips modes in place, preserving caret, undo history and scroll.",
@@ -353,7 +490,7 @@ const editor = new Blok(config);`,
         type: "(error: Error, context: { source: 'save' }) => void",
         default: "undefined",
         description:
-          "Fires when an editor operation fails that Blok would otherwise only log; today the sole source is serialization. Both the debounced auto-save and an explicit save() route through it, and a failed save() resolves with undefined — so pair onError with onSave to tell a successful serialization from a failed one.",
+          "Fires when an editor operation fails that Blok would otherwise only log; today the sole source is serialization. Both the debounced auto-save and an explicit save() route through it. A failed save() rejects with the underlying error — it never resolves with undefined — so wrap explicit saves in try/catch; onError additionally surfaces failures of the debounced auto-save, which has no promise of its own.",
       },
       {
         option: "onBeforePaste",
@@ -367,14 +504,14 @@ const editor = new Blok(config);`,
         type: "(blocks: OutputBlockData[]) => OutputBlockData[]",
         default: "undefined",
         description:
-          "Transforms the blocks array just before it is rendered — on the initial render and on every `blocks.render()` call. Receives the raw saved blocks (before format analysis or hierarchical expansion) and returns the blocks to render, so app-specific data migrations run inside Blok instead of ahead of it.",
+          "Transforms the blocks array just before it is rendered — on the initial render, on every `blocks.render()` call, and on the repaints Blok performs itself (a runtime `i18n.update()`, and the read-only fallback re-render). Receives the raw saved blocks (before format analysis or hierarchical expansion) and returns the blocks to render, so app-specific data migrations run inside Blok instead of ahead of it. It must therefore be idempotent: those repaints feed it blocks it has already transformed.",
       },
       {
         option: "onAfterRender",
         type: "(api: API) => void",
         default: "undefined",
         description:
-          "Fires after each render completes and the blocks are in the DOM — the initial render and every `blocks.render()`. Use it for post-render side effects (scroll restoration, attaching observers). Distinct from onReady, which fires once when the editor first becomes ready.",
+          "Fires after each render batch lands in the DOM: the initial render, every `blocks.render()`, and the repaints Blok performs itself — a runtime `i18n.update()` locale/messages change, and a `readOnly.set()` toggle that falls back to a full re-render because a mounted tool does not support in-place read-only. Use it for post-render side effects (scroll restoration, attaching observers), keeping in mind those extra triggers if you count renders. Distinct from onReady, which fires once when the editor first becomes ready.",
       },
       {
         option: "autofocus",
@@ -382,6 +519,13 @@ const editor = new Blok(config);`,
         default: "false",
         description:
           "If true, sets the caret in the first block once the editor is ready",
+      },
+      {
+        option: "scrollToBlock",
+        type: "{ topOffset?: number }",
+        default: "undefined",
+        description:
+          "Blok always smooth-scrolls to the block whose id matches the page URL hash (`#<blockId>`) once blocks are rendered — including blocks rendered later via `blocks.render()`. This option only tunes that behavior: `topOffset` (default 0) reserves space above the block for a sticky header.",
       },
       {
         option: "inlineToolbar",
@@ -419,6 +563,13 @@ const editor = new Blok(config);`,
           "Color theme; 'auto' follows the OS preference via prefers-color-scheme",
       },
       {
+        option: "onThemeChange",
+        type: "(resolvedTheme: ResolvedTheme) => void",
+        default: "undefined",
+        description:
+          "Fires with the RESOLVED theme ('light' or 'dark') whenever it changes — both when the OS preference flips while `theme` is 'auto', and when `theme.set()` changes what the theme resolves to. It does not fire on initialization, and it does not fire when a `theme.set()` leaves the resolved theme unchanged. A core config option, not an adapter-only prop; the framework adapters expose the same callback as the `onThemeChange` prop / `theme-change` emit / `themeChange` output.",
+      },
+      {
         option: "link",
         type: "{ target?: string; rel?: string; transformHref?: (href: string) => string; transform?: (context: LinkTransformContext) => LinkTransformResult | void }",
         default: "undefined",
@@ -426,11 +577,46 @@ const editor = new Blok(config);`,
           "Controls the anchors Blok creates, instead of post-processing the rendered DOM. Applies on every path that produces an `<a>`: the Link inline tool, `blocks.render()` (anchors coming from stored block HTML) and paste. `target` defaults to '_blank' and `rel` to 'nofollow'. `transform` is the superset and supersedes `transformHref` (which is then ignored) — it receives the href, text and element and may return `href`, `target`, `rel` and extra `attributes`; omitted fields fall back to the shorthand defaults, including the same-page `_self` rule. Both must be idempotent: on the render and paste paths they re-run against already-transformed anchors on every render.",
       },
       {
+        option: "linkPaste",
+        type: "{ allowGenericEmbed?: boolean }",
+        default: "undefined",
+        description:
+          "Notion-style link-paste behavior. Set `allowGenericEmbed: true` to also offer \"Create embed\" (framed in a sandboxed iframe) for URLs that match no registered embed provider; the default keeps Blok's registry-only embed guarantee.",
+      },
+      {
+        option: "user",
+        type: "{ id: string }",
+        default: "undefined",
+        description:
+          "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Pair it with `resolveUser` to render a name in the block settings footer.",
+      },
+      {
         option: "resolveUser",
         type: "(id: string) => UserInfo | Promise<UserInfo | null> | null",
         default: "undefined",
         description:
           "Resolves the `lastEditedBy` user id Blok shows in the block settings footer. May return synchronously or asynchronously; return null for an unknown user and Blok falls back to showing the date only.",
+      },
+      {
+        option: "notifierPosition",
+        type: "NotifierPosition",
+        default: "'bottom-center'",
+        description:
+          "Where the built-in toast container is anchored on screen.",
+      },
+      {
+        option: "notifier",
+        type: "(options: NotifierOptions | ConfirmNotifierOptions | PromptNotifierOptions) => void",
+        default: "undefined",
+        description:
+          "Replaces the built-in toast entirely — Blok calls your handler with the same options object instead of rendering its own DOM notification.",
+      },
+      {
+        option: "logLevel",
+        type: "LogLevels",
+        default: "LogLevels.VERBOSE",
+        description:
+          "How much Blok logs to the console. Values are `VERBOSE`, `INFO`, `WARN` and `ERROR` — there is no \"silent\" level, so `LogLevels.ERROR` is the quietest. `LogLevels` is a named export of the package root.",
       },
     ],
   },
@@ -469,6 +655,37 @@ await editor.blocks.render(data);`,
         example: `const html = '<h1>Title</h1><p>Hello World</p>';
 await editor.blocks.renderFromHTML(html);
 // HTML is converted to appropriate blocks`,
+      },
+      {
+        name: "blocks.importMarkdown(md, options?)",
+        returnType: "Promise<OutputData>",
+        description:
+          "Convert a Markdown string to blocks and render them, REPLACING the current document — it calls `blocks.render()` internally. The converter is lazy-loaded on first call, and the resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions). For additive insertion, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.",
+        example: `const data = await editor.blocks.importMarkdown('# Title\\n\\n- one\\n- two');
+// The whole document is replaced; data is the rendered OutputData`,
+        params: [
+          {
+            name: "md",
+            type: "string",
+            required: true,
+            description: "Markdown source string.",
+          },
+          {
+            name: "options",
+            type: "MarkdownImportConfig",
+            required: false,
+            default: "undefined",
+            description: "Tool mapping, GFM toggle, and micromark/mdast extensions.",
+          },
+        ],
+      },
+      {
+        name: "blocks.exportMarkdown()",
+        returnType: "Promise<string>",
+        description:
+          "Serialize the current document to Markdown — the outbound twin of `importMarkdown`. Blocks are read through the Saver, so the output reflects the saved (validated) document rather than raw DOM, and the promise resolves to '' when there is nothing to save. Blocks owned by a table cell are serialized inside the pipe table instead of being repeated as loose lines. What Markdown cannot express is degraded: table `colspan`/`rowspan` and heading columns are dropped, and a table with no heading row gets an empty header row, since GFM requires one.",
+        example: `const md = await editor.blocks.exportMarkdown();
+// → '# Title\\n\\n- one\\n- two'`,
       },
       {
         name: "blocks.delete(index?, setCaret?)",
@@ -577,6 +794,29 @@ children.forEach(child => {
 });`,
       },
       {
+        name: "blocks.setBlockParent(blockId, parentId)",
+        returnType: "void",
+        description:
+          "Reparent a block: updates the block's `parentId` and the parent's `contentIds` through core's single reparent chokepoint. Pass `null` to move the block back to the root level. An unknown `blockId` is a no-op that logs a warning; a `parentId` that would make the block a descendant of itself throws.",
+        example: `// Move a block into a container block
+editor.blocks.setBlockParent('child-block-id', 'parent-block-id');
+
+// Move it back to the root level
+editor.blocks.setBlockParent('child-block-id', null);`,
+      },
+      {
+        name: "blocks.insertInsideParent(parentId, insertIndex, childData?)",
+        returnType: "BlockAPI",
+        description:
+          "Insert a block as a child of `parentId` atomically: the creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely (preferable to `insert()` followed by a reparent, which is two). `insertIndex` is the FLAT document index where the child should appear; `childData` defaults to an empty paragraph.",
+        example: `const parentIndex = editor.blocks.getBlockIndex('parent-block-id') ?? 0;
+const child = editor.blocks.insertInsideParent(
+  'parent-block-id',
+  parentIndex + 1,
+  { text: 'Nested content' },
+);`,
+      },
+      {
         name: "blocks.getBlocksCount()",
         returnType: "number",
         description: "Get the total number of blocks in the editor.",
@@ -617,7 +857,8 @@ const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undef
             type: "ToolConfig",
             required: false,
             default: "{}",
-            description: "Tool config for this block instance.",
+            description:
+              "Ignored — accepted only to keep the positional signature stable. The editor binds it to `_config` and never reads it, and the block-manager insert options carry no `config` field, so the created block still uses the editor-level tool config from `config.tools`. Pass `undefined`.",
           },
           {
             name: "index",
@@ -851,6 +1092,79 @@ editor.blocks.stopBlockMutationWatching(0);
 // Perform block replacement...
 // Mutation observer will not fire for this block`,
       },
+      {
+        name: "blocks.startBlockMutationWatching(blockId)",
+        returnType: "void",
+        description:
+          "Re-arm mutation watching on a block previously silenced by `stopBlockMutationWatching`. It takes an **id**, not an index, because inserts and replacements between the two calls shift indexes; an id that no longer exists is silently skipped — a block replaced in place was constructed with its own watcher.",
+        example: `const blockId = editor.blocks.getBlockByIndex(0)?.id;
+editor.blocks.stopBlockMutationWatching(0);
+// Perform block replacement...
+if (blockId) {
+  editor.blocks.startBlockMutationWatching(blockId);
+}`,
+      },
+      {
+        name: "blocks.transact(fn)",
+        returnType: "void",
+        description:
+          "Group every block operation performed inside `fn` into a single undo entry. `fn` must be SYNCHRONOUS — operations that land after an await are no longer part of the group. Use it so structural edits are not partially undoable.",
+        example: `editor.blocks.transact(() => {
+  editor.blocks.insert('paragraph', { text: 'One' });
+  editor.blocks.insert('paragraph', { text: 'Two' });
+});
+// A single Cmd+Z removes both blocks`,
+      },
+      {
+        name: "blocks.beginTransaction()",
+        returnType: "void",
+        description:
+          "Open an undo group that stays open across async boundaries. Every block operation until `endTransaction()` lands in one undo entry. Use it for pointer gestures that mutate the document continuously (dragging a table's corner to add rows), where `transact()` cannot help because it only wraps a synchronous function. Every call must be paired with `endTransaction()`.",
+        example: `editor.blocks.beginTransaction();
+// ... continuous mutations across async boundaries ...
+editor.blocks.endTransaction();`,
+      },
+      {
+        name: "blocks.endTransaction()",
+        returnType: "void",
+        description: "Close the undo group opened by `beginTransaction()`.",
+        example: `editor.blocks.beginTransaction();
+// ... continuous mutations across async boundaries ...
+editor.blocks.endTransaction();`,
+      },
+      {
+        name: "blocks.transactWithoutCapture(fn)",
+        returnType: "void",
+        description:
+          "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.",
+        example: `editor.blocks.transactWithoutCapture(() => {
+  editor.blocks.insert('paragraph', {}, undefined, 0);
+});
+// Nothing was added to the undo history`,
+      },
+      {
+        name: "blocks.setPointerDragActive(active)",
+        returnType: "void",
+        description:
+          "Tell core that a pointer drag interaction started or ended. While it is active, DOM-mutation-triggered Yjs syncs are suppressed so browser DOM churn during the drag cannot corrupt Yjs state.",
+        example: `editor.blocks.setPointerDragActive(true);
+// ... run the drag gesture ...
+editor.blocks.setPointerDragActive(false);`,
+      },
+    ],
+    properties: [
+      {
+        name: "isSyncingFromYjs",
+        type: "boolean",
+        description:
+          "Readonly getter — true while a Yjs sync operation (undo/redo) is in progress. Tools read it to skip cleanup that would fight undo state. Note this is a PROPERTY on `editor.blocks`, unlike the React hook's `isSyncingFromYjs()` method.",
+      },
+      {
+        name: "isPointerDragActive",
+        type: "boolean",
+        description:
+          "Readonly getter — true while a pointer drag interaction is active. Framework adapters read it to defer a programmatic `dispatchChange` mid-drag (core silently drops such a change) and re-dispatch it once the drag ends.",
+      },
     ],
   },
   {
@@ -907,6 +1221,63 @@ if (entry) {
   console.log('Active entry:', entry.title);
 }`,
       },
+      {
+        name: "block.getChildren()",
+        returnType: "BlockAPI[]",
+        description:
+          "This block's direct children as BlockAPI objects, in order. Returns an empty array when the block has no editor API attached (a virtual block).",
+        example: `const block = editor.blocks.getById('toggle-123');
+block?.getChildren().forEach((child) => console.log(child.id));`,
+      },
+      {
+        name: "block.setParent(parentId)",
+        returnType: "void",
+        description:
+          "Reparent this block under `parentId`, or back to the root level with `null`. Routes through core's universal `setBlockParent` chokepoint, so the parent's `contentIds` is updated together with this block's `parentId`.",
+        example: `const block = editor.blocks.getById('block-123');
+block?.setParent('parent-block-id');
+
+// Back to the root level
+block?.setParent(null);`,
+      },
+      {
+        name: "block.insertChild(childData?, position?)",
+        returnType: "BlockAPI | null",
+        description:
+          "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `childData` defaults to an empty paragraph. Returns null when the block has no editor API attached (a virtual block).",
+        example: `const block = editor.blocks.getById('toggle-123');
+const child = block?.insertChild({ text: 'Hidden content' });
+
+// Place it among the existing children instead of appending
+block?.insertChild({ text: 'First' }, 'start');
+block?.insertChild({ text: 'After that one' }, { after: 'child-id' });`,
+        params: [
+          {
+            name: "childData",
+            type: "BlockToolData",
+            required: false,
+            default: "empty paragraph",
+            description: "Data for the new child block.",
+          },
+          {
+            name: "position",
+            type: "BlockChildPosition",
+            required: false,
+            default: "'end'",
+            description:
+              "Where among the existing children to insert: 'start', 'end', { before: childId } or { after: childId }.",
+          },
+        ],
+      },
+      {
+        name: "block.moveChild(childId, delta)",
+        returnType: "void",
+        description:
+          "Move a direct child by `delta` positions among its siblings, clamped to the valid range. A child carrying its own subtree lands past the target sibling's descendants, not inside them. No-op when `delta` is 0, when `childId` is not a direct child, or when the clamped move would not change the position.",
+        example: `const block = editor.blocks.getById('toggle-123');
+block?.moveChild('child-id', -1); // one position toward the start
+block?.moveChild('child-id', 1);  // one position toward the end`,
+      },
     ],
     properties: [
       { name: "id", type: "string", description: "Unique block identifier" },
@@ -951,6 +1322,12 @@ if (entry) {
         description: "Id of the parent block, or null if this block has no parent",
       },
       {
+        name: "contentIds",
+        type: "readonly string[]",
+        description:
+          "Ids of this block's direct children, in order — a read-only copy, so mutating it changes nothing. The block-level counterpart of parentId: it lets a container tool read its children without reaching for the editor API",
+      },
+      {
         name: "preservedData",
         type: "BlockToolData",
         description:
@@ -978,8 +1355,12 @@ if (entry) {
         example: `// Set to start of first block
 editor.caret.setToFirstBlock('start');
 
-// Set to end of first block with offset
-editor.caret.setToFirstBlock('end', 5);`,
+// Set to end of first block
+editor.caret.setToFirstBlock('end');
+
+// Offset applies only to the 'default' position —
+// 'start' and 'end' place the caret at the boundary and ignore it
+editor.caret.setToFirstBlock('default', 5);`,
       },
       {
         name: "caret.setToLastBlock(position?, offset?)",
@@ -1041,7 +1422,7 @@ if (block) {
             type: "number",
             required: false,
             default: "0",
-            description: "Character offset from position within the target input.",
+            description: "Absolute character offset from the start of the block's current input. Applied only when `position` is `'default'` — `'start'` and `'end'` place the caret at the boundary and ignore it.",
           },
         ],
         errors: [
@@ -1114,13 +1495,14 @@ editor.off('block:rendered', handleRendered);`,
       {
         name: "emit(event, data)",
         returnType: "void",
-        description: "Emit a custom event.",
-        example: `editor.emit('custom-event', { message: 'Hello', data: 123 });
-
-// Listen to custom events
+        description:
+          "Emit a custom event. Fire-and-forget over the listeners registered at that moment — there is no replay, so a handler subscribed after the emit never sees it.",
+        example: `// Subscribe first — an emit with no listener is simply dropped
 editor.on('custom-event', (data) => {
   console.log(data.message); // 'Hello'
-});`,
+});
+
+editor.emit('custom-event', { message: 'Hello', data: 123 });`,
       },
     ],
   },
@@ -1178,8 +1560,10 @@ for (let i = 0; i < 3; i++) {
         name: "history.clear()",
         returnType: "void",
         description: "Clear all history. Removes all undo/redo entries.",
-        example: `// Clear history when loading new content
-editor.blocks.render(newData);
+        example: `// Clear history when loading new content.
+// render() is async and records its own undo entries,
+// so await it before clearing.
+await editor.blocks.render(newData);
 editor.history.clear();`,
       },
     ],
@@ -1193,9 +1577,27 @@ editor.history.clear();`,
       {
         name: "saver.save()",
         returnType: "Promise<OutputData>",
-        description: "Alias for the main save() method.",
-        example: `const data = await editor.saver.save();
-// Returns: { version, time, blocks }`,
+        description:
+          "Alias for the main save() method. **Rejects while read-only mode is enabled** — it warns and throws `Error(\"Blok's content can not be saved in read-only mode\")` before reaching the Saver. Guard the call with `editor.readOnly.isEnabled`, or call `await editor.readOnly.set(false)` first.",
+        example: `if (!editor.readOnly.isEnabled) {
+  const data = await editor.saver.save();
+  // Returns: { version, time, blocks }
+}`,
+        errors: [
+          {
+            condition: "Read-only mode is enabled (`editor.readOnly.isEnabled === true`).",
+            message: "Blok's content can not be saved in read-only mode",
+            resolution:
+              "Disable read-only with `readOnly.set(false)` before saving, or gate the call on `readOnly.isEnabled`.",
+          },
+          {
+            condition: "Collecting the data failed (a tool's save() threw).",
+            message:
+              "Blok's content can not be saved because collecting data failed — or the originating tool error, re-thrown when one was recorded",
+            resolution:
+              "Inspect the rejected error: it is the tool's own error whenever the Saver recorded one.",
+          },
+        ],
       },
     ],
   },
@@ -1279,7 +1681,7 @@ editor.selection.restore();`,
     title: "Marks API",
     lastUpdated: "2026-07-22",
     description:
-      "Range-aware inline-mark operations for building inline formatting tools. Where selection.findParentTag only inspects the selection's anchor node, api.marks operates on the WHOLE range: has answers \"is every text node in the selection covered\", apply and remove split partially-covered wrappers at the range boundaries, update fully-covering wrappers in place, and restore the selection afterwards — and apply and remove extend the range over trailing whitespace browsers exclude from double-click selections. A mark is described declaratively by a MarkSpec (tag, aliasTags, className, attributes, style); aliasTags lets legacy tag variants (e.g. <b> next to <strong>, <em> next to <i>) match as the SAME mark while new wrappers always use the canonical tag. String values are static and participate in the mark's identity; function-form values are resolved from the state passed to apply/toggle and are deliberately EXCLUDED from identity — that is what makes a colour picker ONE mark updating in place rather than N mutually-cancelling marks. Two specs sharing tag, classNames and static attributes belong to the same family and compose on a single element — e.g. a text-colour spec and a background-colour spec both on one <mark>. Every method defaults to the live selection's first range when no range is passed. The core export markSanitizerConfig(spec) derives the sanitizer rule a mark produces — allowlist the spec's tag, strip style properties and classes the spec does not declare, keep declared attributes, with function-form values handled by property name so dynamic values are never dropped on save. The React adapter's createReactInlineTool applies the same derivation automatically when a tool declares a mark spec.",
+      "Range-aware inline-mark operations for building inline formatting tools. Where selection.findParentTag only inspects the selection's two boundary nodes (anchor and focus) and their ancestors, api.marks operates on the WHOLE range: has answers \"is every text node in the selection covered\", apply and remove split partially-covered wrappers at the range boundaries, update fully-covering wrappers in place, and restore the selection afterwards — and apply and remove extend the range over trailing whitespace browsers exclude from double-click selections. A mark is described declaratively by a MarkSpec (tag, aliasTags, className, attributes, style); aliasTags lets legacy tag variants (e.g. <b> next to <strong>, <em> next to <i>) match as the SAME mark while new wrappers always use the canonical tag. String values are static and participate in the mark's identity; function-form values are resolved from the state passed to apply/toggle and are deliberately EXCLUDED from identity — that is what makes a colour picker ONE mark updating in place rather than N mutually-cancelling marks. Two specs sharing tag, classNames and static attributes belong to the same family and compose on a single element — e.g. a text-colour spec and a background-colour spec both on one <mark>. Every method defaults to the live selection's first range when no range is passed. The core export markSanitizerConfig(spec) derives the sanitizer rule a mark produces — allowlist the spec's tag, strip style properties and classes the spec does not declare, keep declared attributes, with function-form values handled by property name so dynamic values are never dropped on save. The React adapter's createReactInlineTool applies the same derivation automatically when a tool declares a mark spec.",
     example: `// One spec = one mark. Static values (tag, className, attribute/style
 // strings) form the mark's identity; function-form values do not.
 const textColor = {
@@ -1312,7 +1714,7 @@ class TextColorTool {
         name: "marks.has(spec, range?)",
         returnType: "boolean",
         description:
-          "Whether every text node in the range is inside a wrapper matching the spec — whitespace-only text nodes are ignored, and at a collapsed caret the caret's ancestors are checked. Unlike selection.findParentTag (anchor node only), a selection that only partially carries the mark reports false.",
+          "Whether every text node in the range is inside a wrapper matching the spec — whitespace-only text nodes are ignored, and at a collapsed caret the caret's ancestors are checked. Unlike selection.findParentTag (which only checks the selection's boundary nodes and their ancestors), a selection that only partially carries the mark reports false.",
         params: [
           {
             name: "spec",
@@ -1393,7 +1795,7 @@ const current = snapshot?.style['color']; // e.g. 'rgb(37, 99, 235)'`,
         name: "marks.apply(spec, state?, range?)",
         returnType: "HTMLElement[]",
         description:
-          "Wrap the range in the mark, or update matching wrappers in place. Splits partially-covered same-family wrappers at the range boundaries, extends the range over trailing whitespace browsers exclude from double-click selections, and leaves the new contents selected. Returns the created or updated wrapper elements.",
+          "Wrap the range in the mark, or update matching wrappers in place. Splits partially-covered same-family wrappers at the range boundaries, extends the range over trailing whitespace browsers exclude from double-click selections, and leaves the new contents selected. Returns the created or updated wrapper elements. A collapsed range (a bare caret with nothing selected) is a no-op — apply returns an empty array without touching the DOM or the selection.",
         params: [
           {
             name: "spec",
@@ -1424,7 +1826,7 @@ editor.marks.apply(colorMark, { color: '#2563eb' });`,
         name: "marks.remove(spec, range?)",
         returnType: "HTMLElement[]",
         description:
-          "Remove the spec's declared properties and classes from wrappers in the range, unwrapping wrappers left bare. Partially-covered wrappers are split so text outside the range keeps its formatting, and the selection is restored. Returns the wrappers that survived because they still carry other properties.",
+          "Remove the spec's declared properties and classes from wrappers in the range, unwrapping wrappers left bare. For a non-collapsed range, partially-covered wrappers are split so text outside the range keeps its formatting. A collapsed caret instead targets its enclosing wrapper whole — no split occurs and the spec's properties are stripped from the entire wrapper. The selection is restored either way. Returns the wrappers that survived because they still carry other properties.",
         params: [
           {
             name: "spec",
@@ -1448,7 +1850,7 @@ editor.marks.apply(colorMark, { color: '#2563eb' });`,
         name: "marks.toggle(spec, state?, range?)",
         returnType: "boolean",
         description:
-          "remove when the range already carries the mark, apply otherwise. Returns the resulting state: true when the mark is now applied.",
+          "remove when the range already carries the mark, apply otherwise. Returns the resulting state: true when the mark is now applied. At a collapsed caret with no existing mark this returns true without applying anything — apply is a no-op on a collapsed range. Call toggle on a non-collapsed range, or treat the return value as the intended state rather than a confirmation.",
         params: [
           {
             name: "spec",
@@ -1751,10 +2153,12 @@ class MyCustomTool {
         name: "toolbar.close(options?)",
         returnType: "void",
         description: "Close the toolbar with optional configuration.",
-        example: `// Standard close (prevents hover reopen — default)
+        example: `// Standard close. The next mousemove re-opens the toolbar: close() clears the
+// hovered block and resets the hover dedup, so BlockHovered fires again.
 editor.toolbar.close();
 
-// Close but allow the toolbar to reopen on hover
+// Close and keep it closed while the pointer stays on the same block
+// (skips the hover-state reset, so no BlockHovered is re-emitted for it).
 editor.toolbar.close({ setExplicitlyClosed: false });`,
       },
       {
@@ -1776,9 +2180,10 @@ editor.toolbar.toggleBlockSettings(true);
 // Force close
 editor.toolbar.toggleBlockSettings(false);
 
-// Anchor the settings popover to a custom trigger element,
-// placed to the left of the anchor
-editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: true });`,
+// Anchor the settings popover to a custom trigger element.
+// Left placement is already the default for an element trigger —
+// opt out to open the popover to the right instead:
+editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: false });`,
         params: [
           {
             name: "openingState",
@@ -1800,7 +2205,7 @@ editor.toolbar.toggleBlockSettings(true, triggerEl, { placeLeftOfAnchor: true })
             required: false,
             default: "undefined",
             description:
-              "Placement overrides — `placeLeftOfAnchor` positions the popover to the left of the anchor.",
+              "Placement overrides. `placeLeftOfAnchor` is already `true` when you pass a trigger element — set it to `false` to open the popover to the right of the trigger instead.",
           },
         ],
       },
@@ -1859,7 +2264,8 @@ editor.toolbar.setHidden(false);`,
     id: "notifier-api",
     badge: "Notifier",
     title: "Notifier API",
-    description: "Display notification messages to users.",
+    description:
+      "Display notification messages to users. Rendering is pluggable: pass `notifier: (options) => …` in the constructor config and Blok calls your handler instead of rendering anything — the built-in toast is skipped entirely (including its i18n `okText`/`cancelText` defaults), and any error your handler throws propagates to the `show()` call site. `notifierPosition` places the built-in container: 'bottom-left' | 'bottom-right' | 'bottom-center' | 'top-left' | 'top-right' | 'top-center' (default 'bottom-center').",
     methods: [
       {
         name: "notifier.show(options)",
@@ -1871,7 +2277,8 @@ editor.notifier.show({
   message: 'Changes saved',
   style: 'success'
 });
-// → renders a toast in the corner of the editor; returns nothing to await
+// → renders a body-mounted, viewport-fixed toast (default: bottom-center —
+//   see config.notifierPosition); returns nothing to await
 
 // Confirm notification
 editor.notifier.show({
@@ -1912,7 +2319,7 @@ editor.notifier.show({
             type: "'success' | 'error'",
             required: false,
             default: "undefined",
-            description: "Built-in visual style for alert notifications.",
+            description: "Marks the notification's semantic kind. `'error'` raises the message's screen-reader live region to `assertive` (otherwise `polite`), and the value is stamped onto `data-blok-testid` as `notification-success` / `notification-error`. The built-in toast looks identical either way — there is no success/error coloring.",
           },
           {
             name: "options.time",
@@ -1925,7 +2332,7 @@ editor.notifier.show({
             name: "options.okText",
             type: "string",
             required: false,
-            default: "'Confirm' / 'Ok'",
+            default: "i18n `notifier.confirm` / `notifier.ok` ('Confirm' / 'OK' in English)",
             description: "Label for the confirm/submit button (confirm/prompt types only).",
           },
           {
@@ -1939,8 +2346,8 @@ editor.notifier.show({
             name: "options.cancelText",
             type: "string",
             required: false,
-            default: "'Cancel'",
-            description: "Label for the cancel button (confirm type only).",
+            default: "i18n `notifier.cancel` ('Cancel' in English)",
+            description: "Label for the cancel button (confirm and prompt types).",
           },
           {
             name: "options.cancelHandler",
@@ -1975,7 +2382,7 @@ editor.notifier.show({
           {
             condition: "The notifier module fails to load (e.g. blocked by CSP, dynamic import failure).",
             message: "[Blok] Failed to display notification. Reason: <error>",
-            resolution: "show() never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site.",
+            resolution: "The built-in notifier never throws or rejects — check the browser console, since the failure is logged rather than propagated to your call site. A custom `config.notifier` handler is a different story: it is called synchronously and its exceptions are not caught.",
           },
         ],
       },
@@ -1985,19 +2392,37 @@ editor.notifier.show({
     id: "sanitizer-api",
     badge: "Sanitizer",
     title: "Sanitizer API",
-    description: "Clean and sanitize HTML content to prevent XSS attacks.",
+    description:
+      "Clean and sanitize HTML content to prevent XSS attacks. A tool's `static get sanitize()` may also map a data field to the string `'plaintext'` instead of a tag map, which marks that field as literal source text rather than markup.",
+    example: `// A tool declares which of its data fields are markup and which are literal text
+class CodeTool {
+  static get sanitize() {
+    return {
+      code: 'plaintext',            // literal source — never HTML-parsed
+      caption: { b: true, i: true } // markup — sanitized against these tags
+    };
+  }
+}`,
     methods: [
       {
         name: "sanitizer.clean(taintString, config)",
         returnType: "string",
         description:
-          "Clean HTML string using the provided sanitizer configuration.",
+          "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing.",
         example: `const dirtyHtml = '<script>alert("xss")</script><p>Hello</p>';
 const clean = editor.sanitizer.clean(dirtyHtml, {
   p: true,  // Allow <p> tags
   b: true   // Allow <b> tags
 });
 // Returns: '<p>Hello</p>' (script tag removed)`,
+      },
+    ],
+    properties: [
+      {
+        name: "plaintext",
+        type: "'plaintext'",
+        description:
+          "A field-level sanitizer rule a tool declares in `static get sanitize()`, and part of the `SanitizerRule` union exported from the package root. Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and drops text shaped like a stray end tag — irrecoverable corruption for a field holding literal source text, such as a code block's `code`. A field marked `'plaintext'` skips tag sanitization, the URL-scheme pass and the editor-level global sanitizer, and round-trips byte-identical. It is declared as a plain string literal rather than a Symbol, so tool sanitize configs survive JSON and `structuredClone`.",
       },
     ],
   },
@@ -2016,6 +2441,62 @@ editor.tooltip.show(button, 'Click to save', {
   placement: 'top',
   delay: 200 // timeout before showing
 });`,
+        params: [
+          {
+            name: "element",
+            type: "HTMLElement",
+            required: true,
+            description: "Element the tooltip is anchored to.",
+          },
+          {
+            name: "content",
+            type: "TooltipContent",
+            required: true,
+            description: "Tooltip content — a string, HTMLElement, DocumentFragment or Node.",
+          },
+          {
+            name: "options",
+            type: "TooltipOptions",
+            required: false,
+            default: "undefined",
+            description: "Placement and timing overrides. `onHover()` takes the same object.",
+          },
+          {
+            name: "options.placement",
+            type: "string",
+            required: false,
+            default: "'bottom'",
+            description: "Declared as `string`; the values honored are 'top', 'bottom', 'left' and 'right'. Auto-flipped to the opposite side when the requested side lacks room in the viewport.",
+          },
+          {
+            name: "options.delay",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Milliseconds to wait before showing. Skipped entirely when another tooltip hid within the previous 300 ms, so sweeping across adjacent triggers stays instant.",
+          },
+          {
+            name: "options.marginTop",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Extra vertical offset, applied for bottom placement only.",
+          },
+          {
+            name: "options.marginLeft",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Extra horizontal offset, applied for left placement only.",
+          },
+          {
+            name: "options.marginRight",
+            type: "number",
+            required: false,
+            default: "0",
+            description: "Extra horizontal offset, applied for right placement only.",
+          },
+        ],
       },
       {
         name: "tooltip.hide()",
@@ -2026,7 +2507,7 @@ editor.tooltip.show(button, 'Click to save', {
       {
         name: "tooltip.onHover(element, content, options?)",
         returnType: "void",
-        description: "Show tooltip on hover using event listeners.",
+        description: "Show tooltip on hover using event listeners. Takes the same `options` as `show()`, except that keyboard-focus reveals ignore `delay` so keyboard users never wait.",
         example: `const button = document.querySelector('button');
 editor.tooltip.onHover(button, 'Click me', {
   placement: 'bottom'
@@ -2039,7 +2520,7 @@ editor.tooltip.onHover(button, 'Click me', {
     badge: "Theme",
     title: "Theme API",
     description:
-      "Read and switch the editor color theme at runtime. The configured mode and the theme actually painted are two different questions — `get()` answers the first, `getResolved()` the second.",
+      "Read and switch the editor color theme at runtime. The configured mode and the theme actually painted are two different questions — `get()` answers the first, `getResolved()` the second. To be notified instead of polling, pass the core config option `onThemeChange`, which fires with the resolved theme when it changes (including OS-preference flips while the mode is 'auto').",
     methods: [
       {
         name: "theme.get()",
@@ -2131,7 +2612,7 @@ editor.placeholder.set(false);`,
     badge: "ReadOnly",
     title: "ReadOnly API",
     description:
-      "Control the read-only state of the editor. Toggling is in-place: the same editor instance flips modes, preserving caret position, undo history and scroll — so an edit/view toggle is `readOnly.set(!isEditing)` on ONE instance instead of destroying one editor and constructing another.",
+      "Control the read-only state of the editor. Toggling is in-place as long as every registered block tool implements `setReadOnly(state)` on its prototype — every bundled tool does — so the same editor instance flips modes, preserving caret position, undo history and scroll, and an edit/view toggle is `readOnly.set(!isEditing)` on ONE instance instead of destroying one editor and constructing another. The check is all-or-nothing: install a single block tool without `setReadOnly` and every toggle falls back to a save → clear → re-render cycle, which recreates all block instances and does not restore the caret (scroll is restored, and the undo history is deliberately left untouched).",
     example: `// The edit/view toggle: one instance, one call.
 // Caret, undo history and scroll survive the switch —
 // no destroy-and-recreate.
@@ -2147,7 +2628,9 @@ async function setEditing(isEditing: boolean) {
         name: "readOnly.set(state, options?)",
         returnType: "Promise<boolean>",
         description:
-          "Set read-only mode to the specified boolean state. The toggle happens in place — no destroy/recreate: block instances, caret position, undo history and scroll are preserved. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings and inline toolbar while read-only is active — the option writes the object form of `config.readOnly`, so the live state reflects it. Returns the new state.",
+          "Set read-only mode to the specified boolean state. The toggle happens in place — no destroy/recreate: block instances, caret position, undo history and scroll are preserved — provided every registered block tool implements `setReadOnly(state)` on its prototype. The check is all-or-nothing, and a single tool without it (every bundled tool has one; a third-party tool may not) sends EVERY toggle down the fallback path — save → clear → re-render — which recreates all block instances and does not restore the caret, while scroll and undo history still survive. Pass `{ hideControls: true }` to also hide the hover toolbar, block settings and inline toolbar while read-only is active — the option writes the object form of `config.readOnly`, so the live state reflects it. Returns the new state.",
+        note:
+          "The preferred way to enter/leave read-only mode — it toggles in place, preserving caret, undo history and scroll, as long as every registered block tool implements `setReadOnly()`. Returns a promise resolving to the new state once applied.",
         params: [
           {
             name: "state",
@@ -2159,9 +2642,9 @@ async function setEditing(isEditing: boolean) {
             name: "options.hideControls",
             type: "boolean",
             required: false,
-            default: "false",
+            default: "unchanged (inherits the current `config.readOnly`)",
             description:
-              "Hide all editor controls (hover toolbar, block settings popover, inline toolbar) while read-only is active.",
+              "Hide all editor controls (hover toolbar, block settings popover, inline toolbar) while read-only is active. Sticky: `set()` writes `config.readOnly` only when you pass an actual boolean, so omitting the option keeps whatever `hideControls` is currently in effect — from the constructor config or an earlier `set()` call. Pass `{ hideControls: false }` explicitly to bring the controls back; `false` is only the effective value when `config.readOnly` was never given in object form.",
           },
         ],
         example: `// The edit/view toggle: ONE instance, flipped in place —
@@ -2202,7 +2685,7 @@ await editor.readOnly.toggle(false);`,
         name: "togglesInPlace",
         type: "true",
         description:
-          "Observability constant: always true — `readOnly.set()` flips the mode in place, preserving block instances, caret, undo history and scroll, instead of recreating the editor. Assert on it before relying on in-place toggle semantics.",
+          "A build-level marker, hardcoded to `true`: this build of Blok implements the in place toggle path instead of always recreating the editor. It is not a capability probe — it does not report whether the currently installed tool set qualifies for that path (which needs every block tool to implement `setReadOnly`, and is not exposed anywhere). Use it only to detect a Blok build old enough to predate in-place toggling.",
       },
     ],
   },
@@ -2211,7 +2694,7 @@ await editor.readOnly.toggle(false);`,
     badge: "I18n",
     title: "I18n API",
     description:
-      "Internationalization support for translating UI strings, plus the runtime `i18n.update()` mutator that switches language in place.",
+      "Internationalization support for translating UI strings, plus the runtime `i18n.update()` mutator that switches language in place. The locale catalogue itself ships as a separate published entry point, `@bloklabs/core/locales`: only English is bundled, the other 68 locales load on demand, and `normalizeLocale()` is the pre-flight check for a locale you did not hard-code — `i18n.update({ locale })` with an unsupported tag keeps the current locale and warns on the console instead of throwing.",
     methods: [
       {
         name: "i18n.t(dictKey, vars?)",
@@ -2251,7 +2734,7 @@ console.log(locale); // 'en'`,
         name: "i18n.getDirection()",
         returnType: "'ltr' | 'rtl'",
         description:
-          "Get the text direction currently in effect \u2014 derived from the active locale unless an explicit `direction` override was set.",
+          "Get the text direction currently in effect \u2014 derived from the active locale unless an explicit `direction` override was set. Editor instance only: the `api.i18n` handed to tools carries just `t`, `has`, `getEnglishTranslation` and `getLocale`, so a tool must take the direction from the host (its own config, or the `i18n:changed` event) rather than calling this.",
         example: `if (editor.i18n.getDirection() === 'rtl') {
   // mirror your own chrome next to the editor
 }`,
@@ -2260,7 +2743,7 @@ console.log(locale); // 'en'`,
         name: "i18n.update({ locale?, messages?, direction? })",
         returnType: "Promise<void>",
         description:
-          "Switch language at runtime. `config.i18n` is otherwise read once during boot, so a host with a language switcher had to recreate the editor to relabel it \u2014 losing caret, focus, selection and undo history. `update()` relabels in place instead: no recreation, nothing lost. `locale` accepts any supported code or `'auto'` to re-run browser detection; `messages` merges host overrides over the locale dictionary and is re-applied automatically after every later locale change (a bare locale flip never silently drops your custom strings); `direction` overrides the direction implied by the locale, which you normally do not need. Calls are serialized internally, so lazily-loaded locale chunks cannot land out of order \u2014 the last call wins. Scope: everything. Chrome built on demand (block settings, the convert menu, notifications, screen-reader announcements) picks up the new locale the next time it opens; the eagerly-stamped chrome (toolbar and plus-button labels, tooltips, the toolbox list) is relabelled immediately; and block content \u2014 placeholders, media-toolbar labels, cell controls, anything a tool resolved while rendering \u2014 is repainted from your data, including tools that know nothing about locale changes. The repaint is invisible to you: `onChange` does not fire, scroll is kept, and the caret returns to the block that had it. Fires the `i18n:changed` event with `{ locale, direction }`. Available synchronously after construction \u2014 a call made before `isReady` is applied once the editor has booted. `update()` is exposed on the editor instance only, not on the `api.i18n` handed to tools, so a third-party tool cannot flip the host's locale. The React/Vue/Angular adapters drive it reactively: change the `i18n` prop/input and the editor follows in place. Note `defaultLocale` is not accepted \u2014 it only decides the fallback while resolving the initial locale.",
+          "Switch language at runtime. `config.i18n` is otherwise read once during boot, so a host with a language switcher had to recreate the editor to relabel it \u2014 losing caret, focus, selection and undo history. `update()` relabels in place instead: no recreation, nothing lost. `locale` accepts any supported code or `'auto'` to re-run browser detection; `messages` merges host overrides over the locale dictionary and is re-applied automatically after every later locale change (a bare locale flip never silently drops your custom strings); `direction` overrides the direction implied by the locale, which you normally do not need. Calls are serialized internally, so lazily-loaded locale chunks cannot land out of order \u2014 the last call wins. Scope: everything. Chrome built on demand (block settings, the convert menu, notifications, screen-reader announcements) picks up the new locale the next time it opens; the eagerly-stamped chrome (toolbar and plus-button labels, tooltips, the toolbox list) is relabelled immediately; and block content \u2014 placeholders, media-toolbar labels, cell controls, anything a tool resolved while rendering \u2014 is repainted from your data, including tools that know nothing about locale changes. The repaint is invisible to you: `onChange` does not fire, scroll is kept, and the caret returns to the block that had it. Fires the `i18n:changed` event with `{ locale, direction }`. Available synchronously after construction \u2014 a call made before `isReady` is applied once the editor has booted. `update()` and `getDirection()` are exposed on the editor instance only, not on the `api.i18n` handed to tools (which carries just `t`, `has`, `getEnglishTranslation` and `getLocale`), so a third-party tool cannot flip the host's locale. The React/Vue/Angular adapters drive it reactively: change the `i18n` prop/input and the editor follows in place. Note `defaultLocale` is not accepted \u2014 it only decides the fallback while resolving the initial locale.",
         example: `// Host language switcher \u2014 no remount, caret and undo survive.
 await editor.i18n.update({ locale: 'ru' });
 
@@ -2276,6 +2759,85 @@ await editor.i18n.update({ locale: 'auto' });
 editor.events.on('i18n:changed', ({ locale, direction }) => {
   document.documentElement.dir = direction;
 });`,
+      },
+      {
+        name: "normalizeLocale(tag)",
+        returnType: "SupportedLocale | null",
+        description:
+          "From `@bloklabs/core/locales`. Normalizes an arbitrary BCP-47 language tag — region-tagged (`'en-US'`), script-tagged (`'zh-Hant'`) or aliased (`'nb'` → `'no'`, `'ckb'` → `'ku'`) — to a supported Blok locale, and returns `null` when the tag is unsupported. The same normalizer runs on browser detection and on explicit `config.i18n.locale` / `i18n.update({ locale })`, so a `null` here is exactly the tag that `update()` would refuse: it keeps the current locale and warns on the console rather than throwing.",
+        example: `import { normalizeLocale } from '@bloklabs/core/locales';
+
+// 'en-US' -> 'en'; null when the tag is not supported
+const code = normalizeLocale(navigator.language);
+
+if (code !== null) {
+  await editor.i18n.update({ locale: code });
+}`,
+      },
+      {
+        name: "loadLocale(code)",
+        returnType: "Promise<LocaleConfig>",
+        description:
+          "From `@bloklabs/core/locales`. Loads one locale on demand. Only English is bundled — the other 68 are fetched when asked for.",
+        example: `import { loadLocale } from '@bloklabs/core/locales';
+
+const fr = await loadLocale('fr');`,
+      },
+      {
+        name: "preloadLocales(codes)",
+        returnType: "Promise<void>",
+        description:
+          "From `@bloklabs/core/locales`. Loads several locales up front — e.g. the ones your language switcher offers — so a later switch does not wait on a fetch.",
+        example: `import { preloadLocales } from '@bloklabs/core/locales';
+
+await preloadLocales(['fr', 'de', 'ru']);`,
+      },
+      {
+        name: "buildRegistry(codes)",
+        returnType: "Promise<LocaleRegistry>",
+        description:
+          "From `@bloklabs/core/locales`. Loads the given codes and returns them together as a `LocaleRegistry`.",
+        example: `import { buildRegistry } from '@bloklabs/core/locales';
+
+const registry = await buildRegistry(['en', 'ru']);`,
+      },
+      {
+        name: "getLocaleSync(code)",
+        returnType: "LocaleConfig | undefined",
+        description:
+          "From `@bloklabs/core/locales`. Returns an already-loaded locale synchronously, or `undefined` when it has not been loaded yet.",
+        example: `import { getLocaleSync, loadLocale } from '@bloklabs/core/locales';
+
+const ru = getLocaleSync('ru') ?? await loadLocale('ru');`,
+      },
+      {
+        name: "getDirection(code)",
+        returnType: "'ltr' | 'rtl'",
+        description:
+          "From `@bloklabs/core/locales`. Text direction for a locale CODE. Not the same function as `editor.i18n.getDirection()`, which takes no argument and reports the direction the mounted editor is currently using.",
+        example: `import { getDirection } from '@bloklabs/core/locales';
+
+document.documentElement.dir = getDirection('ar'); // 'rtl'`,
+      },
+    ],
+    properties: [
+      {
+        name: "DEFAULT_LOCALE",
+        type: "SupportedLocale",
+        description:
+          "From `@bloklabs/core/locales`. The default locale code, `'en'`.",
+      },
+      {
+        name: "ALL_LOCALE_CODES",
+        type: "readonly SupportedLocale[]",
+        description:
+          "From `@bloklabs/core/locales`. All 69 supported locale codes — the list to build a language switcher from, or to hand to `preloadLocales`.",
+      },
+      {
+        name: "enLocale",
+        type: "LocaleConfig",
+        description:
+          "From `@bloklabs/core/locales`. The English dictionary, the only locale bundled by default and the fallback for missing keys.",
       },
     ],
   },
@@ -2424,6 +2986,21 @@ editor.tools.setInlineToolbar(true);`,
   editor.tools.update('image', { uploader: { uploadByFile } });
 }`,
       },
+      {
+        name: "defineTool(toolClass, settings?)",
+        returnType: "ExternalToolSettings",
+        description:
+          "A registration helper exported from `@bloklabs/core/tools`, not a member of the `tools` namespace. The plain `tools` map types every entry with a bare `ToolSettings` whose `Config` falls back to `Record<string, unknown>`, so a misspelled config key (`defaultLevle` for `defaultLevel`) compiles silently. `defineTool` recovers the tool's real config type from its constructor and applies it to `settings.config`, turning those typos into compile errors. The type-checking happens on the `settings` argument; the RETURN type stays the erased `ExternalToolSettings`, so the result drops straight into the `tools` map. `ExtractToolConfig<TClass>` — the type that does the recovery — is exported alongside it, and falls back to `Record<string, unknown>` for tool classes whose constructor declares no concrete config.",
+        example: `import { Blok } from '@bloklabs/core';
+import { Header, defineTool } from '@bloklabs/core/tools';
+
+new Blok({
+  tools: {
+    header: defineTool(Header, { config: { levels: [1, 2, 3] } }),
+    // \`defaultLevle: 2\` here would now be a compile error
+  },
+});`,
+      },
     ],
   },
   {
@@ -2447,7 +3024,7 @@ const { url } = await this.api.uploader.uploadByFile(file, {
       },
       {
         name: "uploader.uploadByUrl(url, ctx)",
-        returnType: "Promise<{ url: string }>",
+        returnType: "Promise<{ url: string; fileName?: string }>",
         description:
           "Re-host an asset the user supplied by URL and return the stored URL. Without an uploader for the kind, the URL is stored verbatim \u2014 configure one if a strict `img-src`/`media-src` policy or link rot would break third-party URLs.",
         example: `const { url } = await this.api.uploader.uploadByUrl(pastedUrl, {
@@ -2523,10 +3100,10 @@ interface OutputData {
     ],
     methods: [
       {
-        name: "equalsOutputData(a, b)",
+        name: "equalsOutputData(a, b, options?)",
         returnType: "boolean",
         description:
-          "Structural equality for saved documents, exported from the main entry. Compares the `blocks` arrays deeply; the volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo. Block ids participate only when BOTH sides carry one: the editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo — no id-stripping wrapper needed on the consumer side. Nullish documents and loose wire shapes are accepted — `null`/`undefined` compares equal to `{ blocks: [] }`.",
+          "Structural equality for saved documents, exported from the main entry. Compares the `blocks` arrays deeply; the volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo. Block ids participate only when BOTH sides carry one: the editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo — no id-stripping wrapper needed on the consumer side. Nullish documents and loose wire shapes are accepted — `null`/`undefined` compares equal to `{ blocks: [] }`. The third argument is `EqualsOutputDataOptions` (also exported from the main entry): `ignoreEmptyDefaultBlocks` (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing, so a pristine editor holding one empty paragraph equals a saved-empty baseline — the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
         example: `import { equalsOutputData } from '@bloklabs/core';
 
 const saved = await editor.save();
@@ -2567,6 +3144,79 @@ const blocks = normalizeOutputBlocks(looseBlocksFromApi);
 // → OutputBlockData[] with tunes/parent/content/indent intact`,
       },
       {
+        name: "BlokData<T>",
+        returnType: "{ [K in keyof T]: T[K] }",
+        description:
+          "A type helper, exported from the main entry, that lets an `interface` block-data shape fit the `data` slot. A TS `interface` has no implicit index signature and is therefore not assignable to `Record<string, unknown>`, so `OutputBlockData<'task', TaskData>` fails to compile when `TaskData` is an interface. `BlokData<T>` re-projects `T` through a homomorphic mapped type, which the compiler does treat as having an implicit index signature, while every declared key keeps its precise type. No rewrite is needed: an existing interface value is assignable to `BlokData<T>`, and a `type` alias already satisfies the slot on its own.",
+        example: `import type { BlokData, OutputBlockData } from '@bloklabs/core';
+
+interface TaskData { title: string; done: boolean }
+
+const block: OutputBlockData<'task', BlokData<TaskData>> = {
+  type: 'task',
+  data: { title: 'Ship it', done: false },
+};`,
+      },
+      {
+        name: "flattenTree(spec, options?)",
+        returnType: "Array<OutputBlockData & { id: string }>",
+        description:
+          "Turns an ergonomic nested spec into the flat DFS pre-order `OutputBlockData[]` Blok stores, wiring every `parent`/`content` link for you, exported from the main entry alongside its `BlockTreeSpec` and `FlattenTreeOptions` types. A spec node is `{ type?, data?, tunes?, id?, children? }`; the pure counterpart of the live `blocks.insertTree()` mutation — the same DFS without an editor — so nested content (columns, tables, a whole document) can be seeded without hand-authoring `parent`/`content` id arrays. Every returned block has a resolved `id` (generated when the spec omitted one), so the array is safe to reference by id; leaves omit the empty `content` array. `options` takes `parentId` (the `parent` assigned to the root node(s)) and `generateId` (id generator for nodes without an explicit `id` — pass a deterministic one for reproducible output). Reusing an explicit `id` within the spec throws.",
+        example: `import { flattenTree } from '@bloklabs/core';
+
+// A two-column layout, written as a tree instead of parent/content id arrays
+const blocks = flattenTree([
+  {
+    type: 'column_list',
+    children: [
+      { type: 'column', children: [{ type: 'paragraph', data: { text: 'Left' } }] },
+      { type: 'column', children: [{ type: 'paragraph', data: { text: 'Right' } }] },
+    ],
+  },
+]);
+
+// Ready to hand to the \`data\` config option, render() or blocks.insertMany()
+console.log(blocks); // flat, DFS pre-order, every parent/content link wired`,
+      },
+      {
+        name: "isBlockType(block, type)",
+        returnType: "block is OutputBlockData<K, BlokBlockDataMap[K]>",
+        description:
+          "A type guard exported from `@bloklabs/core/tools` that narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>` — it replaces the `block.type === 'header'` check plus `data as HeaderData` cast. `BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath; it is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way.",
+        example: `import { isBlockType } from '@bloklabs/core/tools';
+import type { OutputData } from '@bloklabs/core';
+
+function logHeadings(saved: OutputData) {
+  for (const block of saved.blocks) {
+    if (isBlockType(block, 'header')) {
+      console.log(block.data.level); // number — no cast
+    }
+  }
+}
+
+// A custom tool joins the registry by declaration merging
+declare module '@bloklabs/core/tools' {
+  interface BlokBlockDataMap {
+    'my-widget': { widgetId: string };
+  }
+}`,
+      },
+      {
+        name: "blocksOfType(data, type)",
+        returnType: "Array<OutputBlockData<K, BlokBlockDataMap[K]>>",
+        description:
+          "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`: collects every saved block of a given type from a document with each result's `data` typed through `BlokBlockDataMap`. Null-tolerant — a `null`/`undefined` document, and the loose `LooseOutputData` wire shape, are accepted — so it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.",
+        example: `import { blocksOfType } from '@bloklabs/core/tools';
+import type { OutputData } from '@bloklabs/core';
+
+// \`saved\` may be null — blocksOfType tolerates it and returns []
+function buildToc(saved: OutputData | null) {
+  return blocksOfType(saved, 'header')
+    // data.text / data.level are typed — no cast
+    .map((block) => ({ text: block.data.text, level: block.data.level }));
+}`,
+      },
+      {
         name: "EMPTY_OUTPUT_DATA",
         returnType: "OutputData",
         description:
@@ -2603,7 +3253,7 @@ const echoes = createEmittedEchoWindow();
         name: "migrateLegacyBlocks(blocks, options?)",
         returnType: "OutputBlockData[]",
         description:
-          "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parentId`/`content`, and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. `options` exposes the migration context: `generateId` makes the pass PURE (migrate the same document twice and the outputs are equal — needed to compare a stored doc against its migration, or to re-run migration per render without minting fresh ids), `onLossyField` delivers every dropped field instead of dumping it to `console.warn`, and `rules` adds your own grammar entries. `migrateLegacyOutputData(data, options?)` is the envelope-preserving variant; `needsLegacyMigration(blocks, options?)` reports whether a migration would change anything; `matchLegacyRule(block, options?)` is the per-block primitive that returns the entry claiming a single block (or `null`) without re-scanning the table for every block. Every rules-taking entry point accepts either the options object or a bare `rules` array, so passing the array directly can't silently read as \"no rules\".",
+          "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parent`/`content` (`parent` is the saved-document field; `parentId` is the useBlocks BlockNode snapshot field), and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. `options` exposes the migration context: `generateId` makes the pass PURE (migrate the same document twice and the outputs are equal — needed to compare a stored doc against its migration, or to re-run migration per render without minting fresh ids), `onLossyField` delivers every dropped field instead of dumping it to `console.warn`, and `rules` adds your own grammar entries. `migrateLegacyOutputData(data, options?)` is the envelope-preserving variant; `needsLegacyMigration(blocks, options?)` reports whether a migration would change anything; `matchLegacyRule(block, options?)` is the per-block primitive that returns the entry claiming a single block (or `null`) without re-scanning the table for every block. Every rules-taking entry point accepts either the options object or a bare `rules` array, so passing the array directly can't silently read as \"no rules\".",
         example: `import {
   migrateLegacyBlocks,
   migrateLegacyOutputData,
@@ -2642,7 +3292,12 @@ new Blok({
   migrations: {
     // key = block type; old shape → new shape
     myCard: (data) => ('name' in data ? { ...data, title: data.name } : data),
-    image:  (data) => (data.file?.url ? { ...data, url: data.file.url } : data),
+    // \`data\` is BlockToolData (Record<string, unknown>), so narrow before reading
+    image: (data) => {
+      const file = data.file as { url?: string } | undefined;
+
+      return file?.url ? { ...data, url: file.url } : data;
+    },
   },
 });
 
@@ -2683,10 +3338,12 @@ report.errors;      // [{ type: 'myCard', error }] — that block kept its store
         returnType: "LegacyGrammarEntry[]",
         description:
           "Teach the migration machinery a legacy shape Blok doesn't know. A grammar entry is `{ legacyType, detect, expand, targetType, cardinality, contributesNesting, lossyFields, docNote }`; passing entries via `rules` reuses the whole interpreter — recursion into container bodies, the orphan re-parenting invariant, 1:N splits, id minting — instead of re-implementing the dispatch loop around a data-only rule. Host entries are matched BEFORE the built-in table, so they can also override a built-in mapping. Unlike a `migrations` rule, an entry may change a block's `type` and emit several blocks. `expand(block, ctx, { siblings, index })` may also return `{ blocks, consumed }` to absorb the following `consumed` siblings — the shape flat-with-count legacy formats need (a container storing its body as \"the next N blocks\"); `consumed` is clamped to what remains, so a truncated document can't over-consume. Read `LEGACY_GRAMMAR` to introspect the built-in coverage.",
-        example: `import { migrate, LEGACY_GRAMMAR } from '@bloklabs/core/migrate';
+        example: `import { migrate, LEGACY_GRAMMAR, type LegacyGrammarEntry } from '@bloklabs/core/migrate';
 
-// A legacy \`alert\` → callout + child paragraph (type change AND a 1:N split)
-const alertRule = {
+// A legacy \`alert\` → callout + child paragraph (type change AND a 1:N split).
+// The annotation is load-bearing: without it \`cardinality\` widens to \`string\`
+// and \`detect\`/\`expand\` lose their contextual parameter types.
+const alertRule: LegacyGrammarEntry = {
   legacyType: 'alert',
   targetType: 'callout',
   cardinality: '1:N',
@@ -2818,7 +3475,7 @@ const listItemBlock: OutputBlockData = {
     title: "BlokEditor component",
     lastUpdated: "2026-07-17",
     description:
-      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. It accepts every editor config option as a prop, forwards unknown props to the container div, and exposes the live Blok instance via ref/onReady. The props below cover the adapter-specific surface; everything else matches the Configuration options.",
+      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
     example: `import { useState } from 'react';
 import { BlokEditor } from '@bloklabs/react';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -2840,48 +3497,101 @@ export function Editor() {
     />
   );
 }`,
+    methods: [
+      {
+        name: "useBlok(config, deps?)",
+        returnType: "Blok | null (React) | Ref<Blok | null> (Vue)",
+        description:
+          "The split mount path behind `<BlokEditor>`: create the instance yourself and hand it a mount point. `useBlok` takes the SAME options as the component — its config type is `UseBlokConfig`, which is `BlokConfig` minus `holder` (the adapter owns the mount element) plus an adapter-level `width`. The reactive-after-mount subset is documented on `UseBlokConfig` itself: `readOnly`, `hideToolbar`, `inlineToolbar`, `autofocus`, `theme`, `width`, `placeholder`, `style.tokens`, `i18n` and `data` sync in place on the same instance; every other option is consumed once at editor creation. It returns null until the editor exists (SSR, first render). React takes a `deps` dependency LIST as the second argument; Vue takes a reactive config source (ref or getter) and a SINGLE `recreateKey` as the second argument. Angular's equivalent is the `[blokContent]` directive (`BlokContentDirective`), which builds the instance into its own host element and exposes it as the `instance` signal / `(ready)` output.",
+        example: `import { useBlok, BlokContent } from '@bloklabs/react';
+import { Header, Paragraph } from '@bloklabs/core/tools';
+
+export function Editor() {
+  const editor = useBlok({
+    tools: { paragraph: Paragraph, header: Header },
+    readOnly: false,
+  });
+
+  return <BlokContent editor={editor} className="my-editor" />;
+}`,
+      },
+      {
+        name: "BlokContent",
+        returnType: "React/Vue component",
+        description:
+          "The mount point for an instance created by `useBlok`. Renders a `<div>` and adopts the editor's detached holder into it. Its only own prop is `editor: Blok | null` (`BlokContentProps`) — pass null before the instance exists and it simply renders the empty container. In React it also extends `React.HTMLAttributes<HTMLDivElement>`, so `className`, `id` and the rest are forwarded to that div, and it forwards a ref to it. Angular's counterpart is the `[blokContent]` directive, which creates the instance itself rather than receiving one.",
+        example: `import { useBlok, BlokContent } from '@bloklabs/react';
+
+const editor = useBlok({ tools });
+
+// \`editor\` is null until the instance exists — BlokContent handles that
+<BlokContent editor={editor} className="prose" />`,
+      },
+      {
+        name: "provideBlok(defaults)",
+        returnType: "void | EnvironmentProviders",
+        description:
+          "Registers app-wide Blok defaults so every editor beneath it inherits a shared tools registry, theme or i18n config instead of repeating them per instance. React spells it as `<BlokProvider defaults={…}>` (with `useBlokDefaults()` to read them back), Vue as `provideBlok(defaults)` called in a parent's `setup` (backed by the `BLOK_DEFAULT_CONFIG` injection key, with `useBlokDefaults()` to read), and Angular as `provideBlok(defaults)` returning `EnvironmentProviders` for a `providers` array (backed by the `BLOK_DEFAULT_CONFIG` injection token). Merge rule, identical in all three: a defined per-instance config value overrides the default, EXCEPT `tools`, where the two registries are merged — the shared registry composes with per-instance additions rather than being replaced.",
+        example: `// React
+import { BlokProvider } from '@bloklabs/react';
+
+<BlokProvider defaults={{ theme: 'dark', tools: sharedTools }}>
+  <App />
+</BlokProvider>
+
+// Vue — inside a parent component's setup()
+import { provideBlok } from '@bloklabs/vue';
+provideBlok({ theme: 'dark', tools: sharedTools });
+
+// Angular
+import { provideBlok } from '@bloklabs/angular';
+bootstrapApplication(AppComponent, {
+  providers: [provideBlok({ theme: 'dark', tools: sharedTools })],
+});`,
+      },
+    ],
     table: [
       {
         option: "tools",
         type: "Record<string, ToolConstructable | ToolSettings>",
         default: "—",
         description:
-          "Block tools to register. Functions anywhere inside a tool's config (e.g. an uploader callback) are re-bound to the latest render automatically — pass inline closures freely; only tool classes changing requires a deps entry.",
+          "Block tools to register. React only: functions anywhere inside a tool's config (e.g. an uploader callback) are re-bound to the latest render automatically, so inline closures are safe and only a changed tool CLASS needs a `deps` entry. Vue and Angular have no equivalent — a closure in a tool config is captured when the editor is constructed and goes stale, so keep it in a stable ref/field, or force a rebuild by changing `recreateKey`.",
       },
       {
         option: "data",
-        type: "OutputData",
+        type: "OutputData | LooseOutputData | null",
         default: "—",
         description:
-          "Editor content (reactive). Seeds the initial document; after mount, new content — including transitions to and from empty content — re-renders in place on the same instance (never recreates the editor). Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret.",
+          "Editor content (reactive). Seeds the initial document; after mount, new content — including transitions to and from empty content — re-renders in place on the same instance (never recreates the editor). Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret. A whole-document `null` is the controlled \"clear to empty\" value (route it through `toRenderableData` when you call render() yourself), and loose backend DTOs are accepted as-is. Angular widens it to `… | undefined`; Vue's prop is declared `PropType<OutputData>` and is the narrow outlier.",
       },
       {
         option: "onSave",
         type: "(data: OutputData, api: API) => void",
         default: "—",
         description:
-          "The output half of the controlled component: fires (debounced) with the full serialized document on every content change — no manual save() polling. Wiring onSave={setData} is safe and recursion-free.",
+          "The output half of the controlled component: fires (debounced) with the full serialized document on every content change — no manual save() polling. Wiring onSave={setData} is safe and recursion-free. The `(data, api)` arity is React's, where the prop is passed straight through to the core config. Vue maps it to the `save` emit and Angular to the `save` output, both carrying `OutputData` only: `@save=\"(data) => …\"` / `(save)=\"…\"` — or use `v-model:data` / `[(data)]`, backed by Vue's `update:data` emit and Angular's `dataChange` output.",
       },
       {
         option: "onChange",
-        type: "(api: API, event: CustomEvent) => void",
+        type: "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
         default: "—",
         description:
-          "Low-level mutation events (block added/changed/moved/removed), for when you need per-mutation granularity instead of serialized output.",
+          "Low-level mutation events (block added/changed/moved/removed), for when you need per-mutation granularity instead of serialized output. A batch of mutations arrives as an ARRAY, so branch on `Array.isArray(event)` before reading `event.detail`. Two positional arguments is React's arity; Vue's `change` emit and Angular's `change` output deliver ONE object instead — `@change=\"({ api, event }) => …\"` / `(change)=\"…\"` with `$event.api` and `$event.event`.",
       },
       {
         option: "onReady",
         type: "(editor: Blok) => void",
         default: "—",
         description:
-          "Called with the live Blok instance, exactly once per editor instance. Fires after the forwarded ref commits, so ref.current is also populated. The editor is recreated (and onReady re-fired) only when deps change or the component remounts — data changes, including to/from empty content, re-render in place and never re-fire it.",
+          "Called with the live Blok instance, exactly once per editor instance. Fires after the forwarded ref commits, so ref.current is also populated. The editor is recreated (and onReady re-fired) only when deps/recreateKey change or the component remounts — data changes, including to/from empty content, re-render in place and never re-fire it. Vue and Angular spell it as the `ready` emit/output (`@ready` / `(ready)`).",
       },
       {
-        option: "deps",
-        type: "DependencyList",
-        default: "[]",
+        option: "deps / recreateKey",
+        type: "DependencyList (React) | unknown (Vue, Angular)",
+        default: "[] (React)",
         description:
-          "Values that destroy and recreate the editor when their identity changes (for structural config like tool classes). Keep each value referentially stable. Functions inside tool configs do NOT belong here — they are re-bound to the latest render automatically.",
+          "Values whose identity change destroys and recreates the editor (for structural config like tool classes). React takes an array — `deps` — and recreates when any entry's identity changes. Vue (`:recreate-key`) and Angular ([recreateKey]) take a SINGLE value instead and recreate when that value's identity changes; pass a fresh object/array literal or a bumped counter. `deps` does not exist on Vue/Angular. Keep each value referentially stable. Functions inside tool configs do NOT belong here on React — they are re-bound to the latest render automatically.",
       },
       {
         option: "readOnly",
@@ -2900,7 +3610,7 @@ export function Editor() {
         option: "onThemeChange",
         type: "(resolvedTheme: 'light' | 'dark') => void",
         default: "—",
-        description: "Called with the resolved theme whenever it changes (e.g. when 'auto' follows the OS).",
+        description: "Called with the resolved theme whenever it changes (e.g. when 'auto' follows the OS). Vue and Angular spell it as the `theme-change` emit / `themeChange` output (`@theme-change` / `(themeChange)`).",
       },
       {
         option: "width",
@@ -2913,7 +3623,7 @@ export function Editor() {
         type: "BlokConfig['style']",
         default: "—",
         description:
-          "Styling config. `style.tokens` is reactive: changed `--blok-*` overrides sync in place after mount via editor.tokens.set() (deep-equal deduped), so a host light/dark toggle needs no remount. Replace semantics — pass the whole palette; tokens dropped from it stop applying. Angular exposes this as the separate [styleTokens] input.",
+          "Styling config. `style.tokens` is reactive: changed `--blok-*` overrides sync in place after mount via editor.tokens.set() (deep-equal deduped), so a host light/dark toggle needs no remount. Replace semantics — pass the whole palette; tokens dropped from it stop applying. Angular has no `style` input: it exposes only `style.tokens`, as the separate `[styleTokens]` input (`Record<string, string>`). The remaining `style` keys — `fontSize`, `contentAlign`, `nativeSelection` — must go through Angular's `[config]` escape hatch.",
       },
       {
         option: "i18n",
@@ -2921,6 +3631,13 @@ export function Editor() {
         default: "—",
         description:
           "Internationalization config (reactive). A changed `locale`, `messages` or `direction` syncs in place after mount via editor.i18n.update() (deep-equal deduped), so a language switcher relabels the editor without remounting it \u2014 caret, focus, selection and undo history survive. `defaultLocale` is the exception and is read only at construction. Angular exposes this as the [i18n] input.",
+      },
+      {
+        option: "locale",
+        type: "string",
+        default: "—",
+        description:
+          "React only. A library-neutral BCP-47 shorthand for `i18n.locale`: it is folded into the i18n config and applied in place via editor.i18n.update({ locale }), so a language switch keeps caret, focus and undo history. It WINS over `i18n.locale` when both are given. Pair it with `getDirection` / `normalizeLocale`, re-exported from @bloklabs/react, to compute `dir` and validate tags yourself. Vue and Angular have no such prop — pass the locale inside the `i18n` prop/input.",
       },
       {
         option: "autofocus",
@@ -2932,20 +3649,20 @@ export function Editor() {
         option: "placeholder",
         type: "string | false",
         default: "—",
-        description: "Placeholder shown in the first empty block. See the Placeholder API to change it at runtime via editor.placeholder.set().",
+        description: "Placeholder text handed to every block of the default tool — not only the first block; with the built-in paragraph it shows while a block is empty and focused. See the Configuration table for what `false` does (and does not) disable, and the Placeholder API to change it at runtime via editor.placeholder.set().",
       },
       {
         option: "onBlocksRendered",
         type: "(payload: BlocksRenderedPayload) => void",
         default: "—",
         description:
-          "Called after a batch render completes (core blocks:rendered event) — the declarative analog of editor.on('blocks:rendered', …).",
+          "Called after a batch render completes (core blocks:rendered event) — the declarative analog of editor.on('blocks:rendered', …). Vue and Angular spell it as the `blocks-rendered` emit / `blocksRendered` output.",
       },
       {
         option: "onBlockRendered",
         type: "(payload: BlockRenderedPayload) => void",
         default: "—",
-        description: "Called for each block rendered into the DOM (core block:rendered event).",
+        description: "Called for each block rendered into the DOM (core block:rendered event). Vue and Angular spell it as the `block-rendered` emit / `blockRendered` output.",
       },
       {
         option: "ref",
@@ -2969,7 +3686,7 @@ export function Editor() {
     title: "useBlocks",
     lastUpdated: "2026-07-17",
     description:
-      "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and injectBlocks() in @bloklabs/angular. Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays.",
+      "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and `injectBlocks(editor)` in @bloklabs/angular — pass the `instance` signal of BlokEditorComponent/BlokContentDirective, and call it from an injection context (a field initializer or the constructor). Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays.",
     example: `import { useBlok, BlokContent, useBlocks } from '@bloklabs/react';
 
 export function Outline() {
@@ -3006,7 +3723,7 @@ const rowBlocks = blocks.getChildren(databaseBlockId);`,
         name: "insert(spec?)",
         returnType: "BlockNode | null",
         description:
-          "Insert one block (type, data, parentId, position, focus/caret). Returns the created node, or null when rejected (unknown tool, dangling parentId). An explicit id that already exists is insert-if-absent. Atomic — one undo step.",
+          "Insert one block (type, data, parentId, position, tunes, id, focus/caret, replace). `replace: true` combined with a `position` that targets an existing block replaces that block instead of inserting beside it — a programmatic \"turn into\". Returns the created node, or null when rejected (unknown tool type, dangling parentId, or a `replace` whose target is missing). An explicit id that already exists is insert-if-absent. Atomic — one undo step.",
         example: `const node = blocks.insert({
   type: 'header',
   data: { text: 'New section', level: 2 },
@@ -3304,7 +4021,7 @@ export function Comments({ comments }) {
     title: "View renderer",
     lastUpdated: "2026-07-24",
     description:
-      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, <BlokView> (and the wrapper-free useBlokView) is the obvious read-only path — reach for it instead of <BlokEditor readOnly>, which ships the full editing runtime (toolbar, history, mutation machinery) to every viewer. Output is intentionally unstyled: enable toolAttributes and import the opt-in @bloklabs/core/view.css to reproduce the editor's block spacing from the same --blok-block-padding-* tokens, enable blockIds for copy-link-to-block deep links, and pass transformUrl to rewrite hrefs / CDN image URLs.",
+      "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, <BlokView> (and the wrapper-free useBlokView) is the obvious read-only path — reach for it instead of <BlokEditor readOnly>, which ships the full editing runtime (toolbar, history, mutation machinery) to every viewer. Output is unstyled by default: opt into classes + root together with the opt-in @bloklabs/core/view.css for editor parity, or toolAttributes alone with that stylesheet for the classless baseline that reproduces the editor's block spacing from the same --blok-block-padding-* tokens; enable blockIds for copy-link-to-block deep links, and pass transformUrl to rewrite hrefs / CDN image URLs.",
     example: `// schema.ts — pure and module-scope-safe; share it between editor and server
 import { defineBlokSchema } from '@bloklabs/core/view';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -3339,7 +4056,7 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
             type: "BlokViewSchema",
             required: false,
             description:
-              "viewSchema from defineBlokSchema. Its per-tool sanitize allowlist merges over the default inline allowlist, so documents display under the composition that produced them.",
+              "viewSchema from defineBlokSchema. Its single composed baseSanitize — folded from the enabled INLINE TOOLS and TUNES, not from block tools' own static sanitize — is spread over the renderer's default inline allowlist, so inline content displays under the same composition that produced it. viewSchema.tools is carried for consumers; the renderer does not read it. To control a custom block's markup, use renderers.",
           },
           {
             name: "options.renderers",
@@ -3378,6 +4095,22 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
             required: false,
             description:
               "Pure URL rewrite hook applied to every block URL (image/video/audio src, file/bookmark/embed href) and every inline anchor href — for rewriting hrefs or routing CDN image URLs. ctx is { attr: 'href' | 'src', blockType?: string } (blockType is undefined for inline anchors). It runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink; returning '' drops the URL.",
+          },
+          {
+            name: "options.root",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Wrap the output in <div data-blok-interface=\"view\">. Not cosmetic: the scoped preflight and the token/colour layers key on the bare [data-blok-interface] attribute, so emitted classes compute differently without the wrapper and @bloklabs/core/view.css cannot reproduce the editor's appearance. Opt-in because it adds an element to existing output. <BlokView> stamps the attribute on its own wrapper, so React consumers never set this.",
+          },
+          {
+            name: "options.classes",
+            type: "boolean",
+            required: false,
+            default: "false",
+            description:
+              "Render blocks with the editor's presentational classes and the per-block holder → content scaffolding, so the result matches a read-only editor render. Requires @bloklabs/core/view.css plus root: true (or an [data-blok-interface] ancestor) to actually paint; a few tools also gain a wrapper element under this flag. <BlokView> enables it by default; the useBlokView hook does not.",
           },
         ],
         example: `import { blocksToHtml } from '@bloklabs/core/view';
@@ -3421,6 +4154,16 @@ if (transportBytes > 500 * 1024) {
 htmlTextContent('<b>Intro</b> &amp; more'); // → 'Intro & more'`,
       },
       {
+        name: "sanitizeHtmlFragment(html, config)",
+        returnType: "string",
+        description:
+          "Sanitize an HTML fragment against a sanitizer config with no DOM (parse5-backed, matching the editor's html-janitor semantics). `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. The DOM-free counterpart of `api.sanitizer.clean()` — use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
+        example: `import { sanitizeHtmlFragment } from '@bloklabs/core/view';
+
+sanitizeHtmlFragment('<b>bold</b><script>x()</script>', { b: {} });
+// → '<b>bold</b>'`,
+      },
+      {
         name: "outlineFromOutputData(data)",
         returnType: "OutlineItem[]",
         description:
@@ -3446,6 +4189,19 @@ const editor = new Blok({ holder: 'editor', ...schema.editorConfig });
 const html = blocksToHtml(savedData, { schema: schema.viewSchema });`,
       },
       {
+        name: "composeBaseSanitizeConfig(configs)",
+        returnType: "SanitizerConfig",
+        description:
+          "Fold an ordered list of sanitize configs with the editor's exact merge semantics — a later-wins Object.assign (inline tools first, then tunes). Function rules are carried by reference, and rules for the same tag are REPLACED, never deep-merged. This is the same fold defineBlokSchema uses to build viewSchema.baseSanitize, exposed for hand-built lists. Exported from both @bloklabs/core and @bloklabs/core/view.",
+        example: `import { composeBaseSanitizeConfig } from '@bloklabs/core/view';
+
+const baseSanitize = composeBaseSanitizeConfig([
+  { b: {}, i: {} },
+  { a: { href: true } },
+]);
+// → { b: {}, i: {}, a: { href: true } }`,
+      },
+      {
         name: "blocksToViewNodes(data, options?)",
         returnType: "ViewNode[]",
         description:
@@ -3459,7 +4215,7 @@ const nodes = blocksToViewNodes(savedData);
         name: "BlokView",
         returnType: "ReactNode",
         description:
-          "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). This is the obvious read-only path — reach for it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR. Its props API is stable; only the raw ViewNode tree it maps from (via blocksToViewNodes) stays experimental, and using BlokView never exposes you to it.",
+          "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). The wrapper always carries data-blok-interface=\"view\", which is what makes the emitted classes compute as they do in the editor; it is written BEFORE the divProps spread, so a caller can override it — never to \"blok\", which carries all: initial !important and would block host typography. This is the obvious read-only path — reach for it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR. Its props API is stable; only the raw ViewNode tree it maps from (via blocksToViewNodes) stays experimental, and using BlokView never exposes you to it.",
         params: [
           {
             name: "data",
@@ -3507,6 +4263,13 @@ const nodes = blocksToViewNodes(savedData);
             description: "URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml.",
           },
           {
+            name: "classes",
+            type: "boolean",
+            required: false,
+            default: "true",
+            description: "Render with the editor's presentational classes and the per-block holder → content scaffolding, so the output matches a read-only editor render. On by default here — this component owns a wrapper and its job is to look like the editor — and it needs @bloklabs/core/view.css imported to paint. Pass classes={false} for unstyled semantic markup.",
+          },
+          {
             name: "...divProps",
             type: "HTMLAttributes<HTMLDivElement>",
             required: false,
@@ -3534,7 +4297,7 @@ export function Article({ saved }: { saved: OutputData }) {
         name: "useBlokView(data, options?)",
         returnType: "ReactNode",
         description:
-          "The wrapper-free form of BlokView: returns a Fragment of the block elements with no extra <div>, for slots where a wrapper is invalid or unwanted — checkbox labels, table cells, headings. Synchronous and effect-free (SSR-safe), memoized on the data reference and the individual option values. Same options as blocksToHtml.",
+          "The wrapper-free form of BlokView: returns a Fragment of the block elements with no extra <div>, for slots where a wrapper is invalid or unwanted — checkbox labels, table cells, headings. Synchronous and effect-free (SSR-safe), memoized on the data reference and the individual option values. Same options as blocksToHtml, except root — which the hook ignores, since emitting no wrapper is its contract — and classes, which defaults to false here (it defaults to true in <BlokView>, which owns a wrapper). Passing root: true type-checks and silently does nothing; wrap the returned Fragment yourself in an element carrying data-blok-interface=\"view\" when you need view.css to paint.",
         example: `import { useBlokView } from '@bloklabs/react';
 
 function RowLabel({ saved }: { saved: OutputData }) {

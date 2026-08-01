@@ -99,7 +99,10 @@ describe('useApiTranslations', () => {
     expect(focusMethod?.description).toBe('Устанавливает фокус на редактор. Опционально позиционирует курсор в конце содержимого.');
 
     const clearMethod = coreSection?.methods?.find(m => m.name === 'clear()');
-    expect(clearMethod?.description).toBe('Удаляет все блоки из редактора.');
+    // The description now also documents what clear() leaves behind (one empty
+    // default block) and what save() returns afterwards, so assert on the
+    // stable lead-in only.
+    expect(clearMethod?.description).toContain('Удаляет всё содержимое редактора');
 
     const destroyMethod = coreSection?.methods?.find(m => m.name === 'destroy()');
     expect(destroyMethod?.description).toBe('Уничтожает экземпляр редактора и удаляет все DOM-элементы и обработчики событий.');
@@ -110,7 +113,9 @@ describe('useApiTranslations', () => {
     const coreSection = result.current.apiSections.find(s => s.id === 'core');
 
     const isReadyProp = coreSection?.properties?.find(p => p.name === 'isReady');
-    expect(isReadyProp?.description).toBe('Promise, который разрешается готовым экземпляром редактора');
+    // The description now also documents the PendingBlok window, so assert on
+    // the stable lead-in only.
+    expect(isReadyProp?.description).toContain('Promise, который разрешается готовым экземпляром редактора');
 
     const blocksProp = coreSection?.properties?.find(p => p.name === 'blocks');
     expect(blocksProp?.description).toBe('Модуль API для работы с блоками');
@@ -124,7 +129,9 @@ describe('useApiTranslations', () => {
     expect(holderRow?.description).toBe('Контейнер (ID или элемент DOM)');
 
     const toolsRow = configSection?.table?.find(r => r.option === 'tools');
-    expect(toolsRow?.description).toBe('Доступные блочные и строчные инструменты');
+    // The row now also documents per-tool `toolbox: false` and the runtime
+    // tools.update() setter, so assert on the stable lead-in only.
+    expect(toolsRow?.description).toContain('Доступные блочные и строчные инструменты');
 
     const readOnlyRow = configSection?.table?.find(r => r.option === 'readOnly');
     // The row now also documents the reactive-config contract (hideControls +

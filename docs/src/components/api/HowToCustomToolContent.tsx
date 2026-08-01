@@ -59,7 +59,12 @@ const OUTPUT_CODE = `const data = await editor.save();
 // tune is a settings-menu control — set `isTune` and return a menu item.
 const VALIDATE_AND_TUNE_CODE = `// callout-tool.ts (extended)
 export class CalloutTool {
-  // ...constructor, render() unchanged
+  // ...constructor unchanged; render() now keeps its element as \`this.box\`.
+
+  // Opt into read-only mode. Without it, creating the editor with
+  // \`readOnly: true\` — or calling \`readOnly.toggle(true)\` — throws
+  // "To enable read-only mode all connected tools should support it".
+  static isReadOnlySupported = true;
 
   save(block: HTMLElement) {
     return { text: block.textContent ?? '' };
@@ -68,6 +73,12 @@ export class CalloutTool {
   // Drop empty callouts when the editor saves.
   validate(savedData: { text: string }) {
     return savedData.text.trim().length > 0;
+  }
+
+  // Optional: flip the DOM in place. If any registered tool lacks
+  // setReadOnly(), every toggle re-runs a full save/clear/render cycle.
+  setReadOnly(state: boolean) {
+    this.box.contentEditable = String(!state);
   }
 }
 
@@ -82,12 +93,14 @@ export class TextColorTune {
 
 // Setup half: adapted to the active framework like the step snippets above.
 const TUNES_REGISTER_CODE = `import { Blok } from '@bloklabs/core';
+import { Paragraph } from '@bloklabs/core/tools';
 import { CalloutTool } from './callout-tool';
 import { TextColorTune } from './text-color-tune';
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
+    paragraph: Paragraph, // the default block every empty editor starts with
     callout: { class: CalloutTool, tunes: ['textColor'] },
     // Register the tune as a tool so a block can list it by name.
     textColor: TextColorTune,
@@ -149,7 +162,11 @@ export const CalloutTool = createVueBlock<{ text: string }>({
   angular: {
     language: 'typescript',
     code: `import { Component, inject } from '@angular/core';
-import { createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
+import {
+  createAngularBlock,
+  BLOK_BLOCK_CONTEXT,
+  type AngularBlockRenderContext,
+} from '@bloklabs/angular';
 
 @Component({
   standalone: true,
@@ -161,7 +178,9 @@ import { createAngularBlock, BLOK_BLOCK_CONTEXT } from '@bloklabs/angular';
 })
 export class CalloutComponent {
   // Per-block context: data() signal, commit(), readOnly(), block API.
-  ctx = inject(BLOK_BLOCK_CONTEXT);
+  // The token is typed \`AngularBlockRenderContext<unknown>\`, so cast it to
+  // your data shape — otherwise \`ctx.data().text\` fails strict templates.
+  ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<{ text: string }>;
 }
 
 export const CalloutTool = createAngularBlock<{ text: string }>({

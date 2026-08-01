@@ -56,7 +56,8 @@ describe("configuration section: mount options vs live state", () => {
 
   it("readOnly option documents the object form and the live setter", () => {
     const row = config!.table!.find((r) => r.option === "readOnly");
-    expect(row!.type).toBe("boolean | { hideControls: boolean }");
+    // hideControls is optional on ReadOnlyModeConfig — `readOnly: {}` is valid.
+    expect(row!.type).toBe("boolean | { hideControls?: boolean }");
     expect(row!.description).toContain("readOnly.set");
     expect(row!.description).toContain("hideControls");
     const enRow = (en.api.configuration.table as Record<string, { description: string }>)["readOnly"];
@@ -84,8 +85,13 @@ describe("readonly-api: in-place toggling", () => {
     expect(description).toContain("caret");
     expect(description).toContain("undo");
     expect(description).toContain("scroll");
-    // The description is overlaid from i18n at render time — keep them in sync.
-    expect(en.api.readOnlyApi.description).toBe(description);
+    // The in-place path is gated on every registered block tool implementing
+    // setReadOnly() (src/components/modules/readonly.ts) — the guarantee is not
+    // unconditional, and the section has to say so.
+    expect(description).toContain("setReadOnly");
+    // The description is overlaid from i18n at render time — the locale bundles
+    // are synced separately, so only the stable landmark is asserted here.
+    expect(en.api.readOnlyApi.description).toContain("readOnly.set(!isEditing)");
     expect(ru.api.readOnlyApi.description).toContain("readOnly.set(!isEditing)");
   });
 

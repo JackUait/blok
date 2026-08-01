@@ -23,13 +23,15 @@ const RENDER_CODE = `// On the next page load, hand the same object back:
 await editor.render(data);`;
 
 const TOOLS_CODE = `import { Blok } from '@bloklabs/core';
-import { Header, List } from '@bloklabs/core/tools';
+import { Header, List, Paragraph, Quote } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor',
   tools: {
+    paragraph: Paragraph, // keep the default block registered
     header: Header,
     list: List,
+    quote: Quote,
   },
 });`;
 

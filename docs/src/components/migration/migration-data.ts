@@ -42,7 +42,12 @@ export const DIFF_CHANGES: DiffChange[] = [
   {
     titleKey: "migration.changeTypes",
     removed: "import type { EditorConfig } from '@editorjs/editorjs';",
-    added: "import type { BlokConfig } from '@bloklabs/core';",
+    // The AST pass renames EditorConfig → BlokConfig, but IMPORT_TRANSFORMS has no
+    // rule for a named-only import of the bare '@editorjs/editorjs' specifier — the
+    // specifier rewrite only matches subpaths, and every other rule needs a default
+    // or namespace binding — so the module specifier survives and must be changed by
+    // hand (codemod/migrate-editorjs-to-blok.js:499-590, :1199).
+    added: "import type { BlokConfig } from '@editorjs/editorjs'; // specifier still needs a manual change",
   },
   {
     titleKey: "migration.changeCssSelectors",
@@ -79,10 +84,15 @@ export const COMPATIBILITY_GROUPS: CompatibilityGroup[] = [
     id: "drop-in",
     titleKey: "migration.compatGroupDropIn",
     hintKey: "migration.compatGroupDropInHint",
-    // marker/inlineCode keep their <mark>/<code> inline markup, and audio ships as
-    // a default block tool — all three are bundled and registered by default
-    // (src/tools/index.ts), so saved data loads as-is with no conversion.
-    tools: ["paragraph", "header", "code", "embed", "marker", "inlineCode", "audio"],
+    // inlineCode keeps its <code> inline markup and audio ships as a default block
+    // tool — both are bundled and registered by default (src/tools/index.ts), so
+    // saved data loads as-is with no conversion. `marker` is deliberately NOT here:
+    // its sanitizer returns no allowed attributes for a <mark> without an inline
+    // color/background-color (src/components/inline-tools/inline-tool-marker.ts:135)
+    // and preflight resets the UA highlight (src/styles/preflight.css:94-96), so an
+    // Editor.js mark loads without its highlight. It is listed in the dropped-fields
+    // table in MigrationSteps.tsx instead.
+    tools: ["paragraph", "header", "code", "embed", "inlineCode", "audio"],
   },
   {
     id: "auto",

@@ -16,8 +16,12 @@ type GtagWindow = Window & { gtag?: (...args: unknown[]) => void };
 const editorStub = vi.hoisted(() => ({
   save: vi.fn(async () => ({ blocks: [] })),
   clear: vi.fn(async () => undefined),
-  undo: vi.fn(async () => undefined),
-  redo: vi.fn(async () => undefined),
+  // Mirrors the real instance: only save/clear/render/focus/on/off/emit are
+  // installed on it, undo/redo live on the `history` namespace and return void.
+  history: {
+    undo: vi.fn(() => undefined),
+    redo: vi.fn(() => undefined),
+  },
 }));
 
 vi.mock('../components/demo/EditorWrapper', async (importOriginal) => {
@@ -273,20 +277,22 @@ describe('DemoPage', () => {
       expect(readyEvents[0]).toEqual(['event', 'demo_editor_ready', {}]);
     });
 
-    it('tracks the undo control', () => {
+    it('tracks the undo control and drives it through the history namespace', () => {
       renderDemoContent();
 
       fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
 
       expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'undo' }]);
+      expect(editorStub.history.undo).toHaveBeenCalledTimes(1);
     });
 
-    it('tracks the redo control', () => {
+    it('tracks the redo control and drives it through the history namespace', () => {
       renderDemoContent();
 
       fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
 
       expect(gtagCalls()).toContainEqual(['event', 'demo_action', { action: 'redo' }]);
+      expect(editorStub.history.redo).toHaveBeenCalledTimes(1);
     });
 
     it('tracks the Get JSON control', () => {

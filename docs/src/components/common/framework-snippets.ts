@@ -70,16 +70,14 @@ console.log(data.blocks);`,
       code: `import { BlokEditor } from '@bloklabs/react';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
 
+export const tools = {
+  paragraph: Paragraph,
+  header: { class: Header, placeholder: 'Enter a heading' },
+  list: List,
+};
+
 export function Editor() {
-  return (
-    <BlokEditor
-      tools={{
-        paragraph: Paragraph,
-        header: { class: Header, placeholder: 'Enter a heading' },
-        list: List,
-      }}
-    />
-  );
+  return <BlokEditor tools={tools} />;
 }`,
     },
     save: {
@@ -97,7 +95,8 @@ export function Editor() {
 
   return (
     <>
-      <BlokEditor onSave={setData} />
+      {/* \`tools\` is the same map as above — the adapter adds no defaults. */}
+      <BlokEditor tools={tools} onSave={setData} />
       <pre>{JSON.stringify(data?.blocks, null, 2)}</pre>
     </>
   );
@@ -138,8 +137,9 @@ const data = ref<OutputData>();
 </script>
 
 <template>
-  <!-- @save fires with the latest content — no manual save() call needed. -->
-  <BlokEditor @save="(d: OutputData) => (data = d)" />
+  <!-- @save fires with the latest content — no manual save() call needed.
+       \`tools\` is the same map as above; the adapter adds no defaults. -->
+  <BlokEditor :tools="tools" @save="(d: OutputData) => (data = d)" />
   <pre>{{ data?.blocks }}</pre>
 </template>`,
     },
@@ -252,18 +252,26 @@ export class EditorComponent {}`,
 };
 
 /**
- * Per-framework snippet for the tutorial's first "mount" step — the bare editor
- * with no tools yet. Curated rather than generated because the vanilla version
- * awaits `editor.isReady`, which each adapter expresses differently (the
- * adapters surface readiness for you, so the explicit await falls away).
+ * Per-framework snippet for the tutorial's first "mount" step — the smallest
+ * editor that still types: nothing but `paragraph`, the tool every empty
+ * editor's default block resolves to. Blok bundles no block tools, so an
+ * unregistered `paragraph` renders a "this block cannot be displayed" card
+ * instead of an editable line. Curated rather than generated because the
+ * vanilla version awaits `editor.isReady`, which each adapter expresses
+ * differently (the adapters surface readiness for you, so the explicit await
+ * falls away).
  */
 export const TUTORIAL_MOUNT_SNIPPETS: Record<Framework, Snippet> = {
   vanilla: {
     language: 'typescript',
     code: `import { Blok } from '@bloklabs/core';
+import { Paragraph } from '@bloklabs/core/tools';
 
 const editor = new Blok({
   holder: 'editor', // the id of a <div> on your page
+  tools: {
+    paragraph: Paragraph, // the default block every empty editor starts with
+  },
 });
 
 await editor.isReady;`,
@@ -271,36 +279,48 @@ await editor.isReady;`,
   react: {
     language: 'tsx',
     code: `import { BlokEditor } from '@bloklabs/react';
+import { Paragraph } from '@bloklabs/core/tools';
 
 export function Editor() {
   // <BlokEditor> mounts the editor for you — no holder id, and it manages
-  // its own readiness lifecycle.
-  return <BlokEditor />;
+  // its own readiness lifecycle. It registers no tools of its own, so the
+  // default block still needs \`paragraph\`.
+  return <BlokEditor tools={{ paragraph: Paragraph }} />;
 }`,
   },
   vue: {
     language: 'vue',
     code: `<script setup lang="ts">
 import { BlokEditor } from '@bloklabs/vue';
+import { Paragraph } from '@bloklabs/core/tools';
+
+// The adapter registers no tools of its own, so the default block still
+// needs \`paragraph\`.
+const tools = { paragraph: Paragraph };
 </script>
 
 <template>
   <!-- <BlokEditor> mounts the editor for you — no holder id needed. -->
-  <BlokEditor />
+  <BlokEditor :tools="tools" />
 </template>`,
   },
   angular: {
     language: 'typescript',
     code: `import { Component } from '@angular/core';
 import { BlokEditorComponent } from '@bloklabs/angular';
+import { Paragraph } from '@bloklabs/core/tools';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
   imports: [BlokEditorComponent],
-  template: \`<blok-editor />\`,
+  template: \`<blok-editor [tools]="tools" />\`,
 })
-export class EditorComponent {}`,
+export class EditorComponent {
+  // The adapter registers no tools of its own, so the default block still
+  // needs \`paragraph\`.
+  tools = { paragraph: Paragraph };
+}`,
   },
 };
 

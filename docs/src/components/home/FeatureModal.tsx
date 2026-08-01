@@ -8,6 +8,7 @@ import {
   type Variants,
 } from "framer-motion";
 import { useI18n } from "../../contexts/I18nContext";
+import { Link } from "../common/Link";
 import { Typo } from "../common/Typo";
 
 // Backdrop fades; the panel slides in from its edge.
@@ -360,8 +361,8 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                 button presses in on tap. */}
             {feature.details.apiLink && (
               <div className="shrink-0 border-t border-border/60 px-5 py-4 sm:px-7">
-                <a
-                  href={feature.details.apiLink}
+                <Link
+                  to={feature.details.apiLink}
                   className="group relative inline-flex w-full items-center justify-center rounded-full bg-primary py-3.5 pl-6 pr-14 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_-10px_rgba(225,75,110,0.55)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_14px_34px_-10px_rgba(225,75,110,0.65)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <Typo>{t('home.featureModal.viewApiDocs')}</Typo>
@@ -379,7 +380,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({
                       />
                     </svg>
                   </span>
-                </a>
+                </Link>
               </div>
             )}
           </motion.div>

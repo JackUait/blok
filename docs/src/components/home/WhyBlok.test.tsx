@@ -67,7 +67,9 @@ describe('WhyBlok', () => {
     renderTable();
     const blocksRow = screen.getByText(/built-in blocks/i).closest('tr');
     expect(blocksRow).not.toBeNull();
-    expect(within(blocksRow as HTMLElement).getByText(/19 built-in/i)).toBeInTheDocument();
+    // Matches `defaultBlockTools` in src/tools/index.ts (20 entries) and the
+    // 20 block sections in the docs' own tools reference.
+    expect(within(blocksRow as HTMLElement).getByText(/20 built-in/i)).toBeInTheDocument();
   });
 
   it('renders Russian copy when locale is ru', () => {

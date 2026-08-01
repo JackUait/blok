@@ -23,7 +23,7 @@ describe("marks section", () => {
   it("leads with the range-aware contrast to selection.findParentTag", () => {
     const description = section!.description ?? "";
     expect(description).toContain("findParentTag");
-    expect(description).toContain("anchor node");
+    expect(description).toContain("boundary nodes");
     expect(description).toContain("WHOLE range");
     // The behaviors that make range-awareness worth having must be stated.
     expect(description).toContain("split");

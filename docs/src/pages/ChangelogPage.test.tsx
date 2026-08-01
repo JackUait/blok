@@ -5,6 +5,7 @@ import ChangelogPage from './ChangelogPage';
 import { I18nProvider } from '../contexts/I18nContext';
 import enJson from '../i18n/en.json';
 import ruJson from '../i18n/ru.json';
+import type { Release } from '@/types/changelog';
 
 const en = enJson.changelog;
 const ru = ruJson.changelog;
@@ -36,6 +37,20 @@ const FIXTURE_CHANGELOG = vi.hoisted(
 
 vi.mock('../../../CHANGELOG.md?raw', () => ({ default: FIXTURE_CHANGELOG }));
 
+// Lets a single test hand the page a release the parser cannot produce today,
+// so the untranslated-label fallback can be exercised.
+const parsedReleasesOverride = vi.hoisted(() => ({ current: null as Release[] | null }));
+
+vi.mock('../utils/changelog-parser', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/changelog-parser')>();
+
+  return {
+    ...actual,
+    parseChangelog: (markdown: string): Release[] =>
+      parsedReleasesOverride.current ?? actual.parseChangelog(markdown),
+  };
+});
+
 const renderChangelogPage = (locale: 'en' | 'ru' = 'en') =>
   render(
     <MemoryRouter>
@@ -54,6 +69,7 @@ describe('ChangelogPage', () => {
 
   afterEach(() => {
     delete (window as GtagWindow).gtag;
+    parsedReleasesOverride.current = null;
     vi.restoreAllMocks();
   });
 
@@ -124,6 +140,38 @@ describe('ChangelogPage', () => {
       } finally {
         process.env.TZ = originalTz;
       }
+    });
+
+    // `t` returns the key itself when it cannot resolve it, so `t(key) || raw`
+    // never reached its fallback and the page rendered the raw key.
+    it('falls back to the raw label when a category has no translation', () => {
+      parsedReleasesOverride.current = [
+        {
+          version: '2.0.0',
+          releaseType: 'major',
+          date: '2024-02-01',
+          changes: [{ category: 'experimental', description: 'Something new' }],
+        },
+      ] as unknown as Release[];
+
+      renderChangelogPage();
+
+      expect(screen.getByText('experimental')).toBeInTheDocument();
+    });
+
+    it('falls back to the raw label when a release type has no translation', () => {
+      parsedReleasesOverride.current = [
+        {
+          version: '2.0.0',
+          releaseType: 'nightly',
+          date: '2024-02-01',
+          changes: [{ category: 'added', description: 'Something new' }],
+        },
+      ] as unknown as Release[];
+
+      renderChangelogPage();
+
+      expect(screen.getByText('nightly')).toBeInTheDocument();
     });
 
     it('renders the Nav component', () => {

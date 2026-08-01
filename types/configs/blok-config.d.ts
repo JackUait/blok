@@ -651,6 +651,15 @@ export interface BlokMountOptions {
      *
      * Per-tool size config still wins where it exists (`tools.paragraph`'s
      * `styles.size`, the list's `itemSize`) — those are inline styles.
+     *
+     * Read once at construction, and NOT reactive: the injected stylesheet
+     * outranks `editor.tokens.set()` for the scenarios it declares, so a size
+     * that must change after mount belongs in `style.tokens` /
+     * `editor.tokens.set()` and must be left out of here. Like `style.tokens`,
+     * the sheet is page-global — it retypes every Blok editor on the page.
+     *
+     * Callout body text is a child paragraph block: it follows `callout` and
+     * falls back to `paragraph` when `callout` is unset.
      * @example
      * ```typescript
      * style: {

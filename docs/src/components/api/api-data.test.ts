@@ -263,6 +263,71 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("zero specificity");
       expect(description).toContain("any positive specificity always wins");
     });
+
+    it("documents style.fontSize as the supported way to size text per block and scenario", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // Before this config existed, font size was reachable only by accident,
+      // so hosts targeted Blok's internal class names. The docs must name the
+      // config, the token each key writes, and the "omitted keys keep the
+      // built-in size" guarantee.
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("style.fontSize");
+      expect(description).toContain("--blok-paragraph-font-size");
+      expect(description).toContain("--blok-heading-1-font-size");
+
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("fontSize: {");
+      expect(example).toContain("checklist:");
+      expect(example).toContain("comfortable:");
+    });
+
+    it("documents that per-tool size settings outrank style.fontSize", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // A block carrying its own size (paragraph styles.size, list itemSize)
+      // renders it as an inline style, so style.fontSize cannot reach it —
+      // otherwise hosts read a config-wide size as broken.
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("itemSize");
+    });
+
+    it("documents that a size set via style.fontSize cannot be changed later by editor.tokens.set() (runtime-verified against the built bundle)", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // Verified in a browser: with style.fontSize.paragraph = '30px',
+      // tokens.set({ '--blok-paragraph-font-size': '12px' }) left the paragraph
+      // at 30px — the fontSize sheet sits later in <head> at equal specificity.
+      // A host that needs runtime resizing must use one channel, not both.
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("leave that scenario out of `style.fontSize`");
+    });
+
+    it("documents that style.fontSize retypes every editor on the page, and that callout text falls back to the paragraph size", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // Both runtime-verified: a second, unconfigured editor on the same page
+      // rendered at the configured 30px, and a callout whose own size was unset
+      // followed fontSize.paragraph (callout renders its text as a child block).
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("every Blok editor on the page");
+      expect(description).toContain("`fontSize.callout`");
+    });
+
+    it("documents which fontSize scenarios the view renderer honors", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // view.css declares the paragraph/heading/list/checklist/quote/callout/
+      // code/toggle tokens only — captions, table cells and bookmark parts are
+      // editor-only scenarios.
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("view renderer");
+    });
   });
 
   describe("Blocks API", () => {

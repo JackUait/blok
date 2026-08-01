@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
 import type { BlokConfig } from '@/types';
-import type { Listeners as ListenersAPI } from '@/types/api/listeners';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -21,8 +20,6 @@ declare global {
     secondListenerId?: string | null;
   }
 }
-
-type BlokWithListeners = Blok & { listeners: ListenersAPI };
 
 type CreateBlokOptions = Partial<BlokConfig>;
 
@@ -91,7 +88,7 @@ test.describe('api.listeners', () => {
     await createBlok(page);
 
     await page.evaluate(() => {
-      const blok = window.blokInstance as BlokWithListeners | undefined;
+      const blok = window.blokInstance;
 
       if (!blok) {
         throw new Error('Blok instance not found');
@@ -124,7 +121,7 @@ test.describe('api.listeners', () => {
     await page.waitForFunction(() => window.listenerCallCount === 1);
 
     await page.evaluate(() => {
-      const blok = window.blokInstance as BlokWithListeners | undefined;
+      const blok = window.blokInstance;
 
       if (!blok || !window.listenersTestTarget || !window.listenersTestHandler) {
         throw new Error('Listener prerequisites were not set');
@@ -140,7 +137,7 @@ test.describe('api.listeners', () => {
     expect(callCount).toBe(1);
 
     await page.evaluate(() => {
-      const blok = window.blokInstance as BlokWithListeners | undefined;
+      const blok = window.blokInstance;
 
       if (!blok || !window.listenersTestTarget || !window.listenersTestHandler) {
         throw new Error('Listener prerequisites were not set');
@@ -160,7 +157,7 @@ test.describe('api.listeners', () => {
     await page.waitForFunction(() => window.listenerCallCount === 1);
 
     await page.evaluate(() => {
-      const blok = window.blokInstance as BlokWithListeners | undefined;
+      const blok = window.blokInstance;
 
       if (window.secondListenerId && blok) {
         blok.listeners.offById(window.secondListenerId);
@@ -178,7 +175,7 @@ test.describe('api.listeners', () => {
     await createBlok(page);
 
     await page.evaluate(() => {
-      const blok = window.blokInstance as BlokWithListeners | undefined;
+      const blok = window.blokInstance;
 
       if (!blok) {
         throw new Error('Blok instance not found');

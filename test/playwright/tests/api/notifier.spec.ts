@@ -1,7 +1,6 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok } from '@/types';
-import type { Notifier as NotifierAPI } from '@/types/api/notifier';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
@@ -10,8 +9,6 @@ declare global {
     blokInstance?: Blok;
   }
 }
-
-type BlokWithNotifier = Blok & { notifier: NotifierAPI };
 
 const HOLDER_ID = 'blok';
 const NOTIFIER_CONTAINER_SELECTOR = '[data-blok-testid="notifier-container"]';
@@ -82,7 +79,7 @@ test.describe('api.notifier', () => {
     const message = 'Blok notifier alert';
 
     await page.evaluate(({ text }) => {
-      const blok = window.blokInstance as BlokWithNotifier | undefined;
+      const blok = window.blokInstance;
 
       blok?.notifier.show({
         message: text,
@@ -107,7 +104,7 @@ test.describe('api.notifier', () => {
     const cancelText = 'No, keep';
 
     await page.evaluate(({ text, ok, cancel }) => {
-      const blok = window.blokInstance as BlokWithNotifier | undefined;
+      const blok = window.blokInstance;
 
       blok?.notifier.show({
         message: text,

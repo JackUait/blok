@@ -220,11 +220,11 @@
   .pt-\[var\(--blok-block-padding-top\,0\.2em\)\] {
     padding-top: var(--blok-block-padding-top,0.2em);
   }
-  .pt-\[var\(--blok-block-padding-top\,5px\)\] {
-    padding-top: var(--blok-block-padding-top,5px);
-  }
   .pt-\[var\(--blok-block-padding-top\,7px\)\] {
     padding-top: var(--blok-block-padding-top,7px);
+  }
+  .pt-\[var\(--blok-callout-padding-block\,5px\)\] {
+    padding-top: var(--blok-callout-padding-block,5px);
   }
   .pr-4 {
     padding-right: calc(var(--spacing) * 4);
@@ -235,11 +235,11 @@
   .pb-\[var\(--blok-block-padding-bottom\,0\.2em\)\] {
     padding-bottom: var(--blok-block-padding-bottom,0.2em);
   }
-  .pb-\[var\(--blok-block-padding-bottom\,5px\)\] {
-    padding-bottom: var(--blok-block-padding-bottom,5px);
-  }
   .pb-\[var\(--blok-block-padding-bottom\,7px\)\] {
     padding-bottom: var(--blok-block-padding-bottom,7px);
+  }
+  .pb-\[var\(--blok-callout-padding-block\,5px\)\] {
+    padding-bottom: var(--blok-callout-padding-block,5px);
   }
   .pl-0\.5 {
     padding-left: calc(var(--spacing) * 0.5);

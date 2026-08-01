@@ -25,7 +25,7 @@ import { css as searchInputCss } from '../../../src/components/utils/popover/com
 import { PLACEHOLDER_ACTIVE_CLASSES, PLACEHOLDER_CLASSES, PLACEHOLDER_FOCUS_ONLY_CLASSES } from '../../../src/components/utils/placeholder';
 import { HEADER_BASE_CLASSES } from '../../../src/shared/tool-classes/header';
 import { QUOTE_BASE_CLASSES } from '../../../src/shared/tool-classes/quote';
-import { WRAPPER_STYLES as CALLOUT_WRAPPER_STYLES } from '../../../src/tools/callout/constants';
+import { EMOJI_BUTTON_STYLES as CALLOUT_EMOJI_BUTTON_STYLES, EMOJI_GHOST_STYLES as CALLOUT_EMOJI_GHOST_STYLES, WRAPPER_STYLES as CALLOUT_WRAPPER_STYLES } from '../../../src/tools/callout/constants';
 import { BASE_STYLES, CHECKLIST_ITEM_STYLES, ITEM_STYLES } from '../../../src/tools/list/constants';
 import { BASE_STYLES as TOGGLE_BASE_STYLES } from '../../../src/tools/toggle/constants';
 
@@ -366,10 +366,22 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(TOGGLE_BASE_STYLES).not.toContain('py-[7px]');
     });
 
-    it('routes callout wrapper vertical padding through the tokens with callout-specific 5px fallbacks', () => {
-      expect(CALLOUT_WRAPPER_STYLES).toContain('pt-[var(--blok-block-padding-top,5px)]');
-      expect(CALLOUT_WRAPPER_STYLES).toContain('pb-[var(--blok-block-padding-bottom,5px)]');
+    it('routes the callout panel inset through its own token so a rhythm override cannot collapse the panel', () => {
+      // The wrapper's vertical padding is the card's box inset, not block
+      // rhythm. When it rode --blok-block-padding-*, the documented rhythm
+      // override (--blok-block-padding-top: 0; …) collapsed the panel onto
+      // its text, and no host-side restore could fix panel and emoji with
+      // one token — they genuinely need different values.
+      expect(CALLOUT_WRAPPER_STYLES).toContain('pt-[var(--blok-callout-padding-block,5px)]');
+      expect(CALLOUT_WRAPPER_STYLES).toContain('pb-[var(--blok-callout-padding-block,5px)]');
+      expect(CALLOUT_WRAPPER_STYLES).not.toContain('--blok-block-padding-');
       expect(CALLOUT_WRAPPER_STYLES).not.toContain('py-[5px]');
+    });
+
+    it('keeps the callout emoji on the rhythm tokens so the glyph tracks the first text line when a host retunes rhythm', () => {
+      expect(CALLOUT_EMOJI_BUTTON_STYLES).toContain('pt-[var(--blok-block-padding-top,7px)]');
+      expect(CALLOUT_EMOJI_BUTTON_STYLES).toContain('pb-[var(--blok-block-padding-bottom,7px)]');
+      expect(CALLOUT_EMOJI_GHOST_STYLES).toContain('top-[var(--blok-block-padding-top,7px)]');
     });
 
     /**

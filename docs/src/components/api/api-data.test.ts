@@ -264,6 +264,20 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("toggle-heading arrow");
     });
 
+    it("documents the callout panel inset as its own token, outside block rhythm", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("--blok-callout-padding-block");
+      // Callouts no longer ride the rhythm tokens, so they must not be listed
+      // among the blocks a rhythm override retunes.
+      expect(description).not.toContain("5px vertical for callouts");
+
+      const example = stylesSection!.example ?? "";
+      expect(example).toContain("--blok-callout-padding-block");
+    });
+
     it("documents the zero-specificity theming, content-max-width authority, and readonly gutter facts", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();

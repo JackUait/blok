@@ -28,9 +28,10 @@ export const EMOJI_CATEGORY_FLAGS_KEY = 'tools.callout.emojiCategoryFlags';
 export const DEFAULT_EMOJI = '💡';
 
 // CSS — Tailwind classes
-// Vertical padding follows the public --blok-block-padding-top/-bottom tokens
-// with the callout's own 5px defaults as fallbacks (pl-8/pr-4 are the callout
-// card inset, not the generic block inset — they stay hardcoded).
+// Vertical padding is the card's own inset via --blok-callout-padding-block
+// (flat 5px default; see shared/tool-classes/callout.ts for why it must not
+// ride the block-rhythm tokens). pl-8/pr-4 are the horizontal card inset,
+// not the generic block inset — they stay hardcoded.
 /**
  * Static presentational classes live in `src/shared/tool-classes/callout.ts` so
  * the view emitter stamps the exact same set.
@@ -48,7 +49,9 @@ export const WRAPPER_STYLES = CALLOUT_WRAPPER_CLASSES.join(' ');
  *   and the text's first line centre at `--blok-block-padding-top + 0.75em` (the
  *   `blok-block` rhythm plus its `leading-[1.5]` line box), so the em halves cancel
  *   and only equal padding aligns them. Reusing the block-rhythm token also keeps
- *   the two together when a host retunes it.
+ *   the two together when a host retunes it. The WRAPPER deliberately does not
+ *   share this token — its inset is `--blok-callout-padding-block` — so don't
+ *   "unify" them: the button must follow the text's rhythm, the panel must not.
  *
  * The height is therefore glyph + padding (38px at the defaults), still explicit so
  * platform-specific emoji font metrics can't inflate the button. It says `1em`, not

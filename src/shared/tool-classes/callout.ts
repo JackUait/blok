@@ -26,8 +26,17 @@ export const CALLOUT_WRAPPER_CLASSES: readonly string[] = [
   'rounded-xl',
   'pl-8',
   'pr-4',
-  'pt-[var(--blok-block-padding-top,5px)]',
-  'pb-[var(--blok-block-padding-bottom,5px)]',
+  /**
+   * The panel's own box inset — deliberately NOT the `--blok-block-padding-*`
+   * rhythm tokens. The documented rhythm override (compact read-only
+   * rendering) must tighten the space between blocks without collapsing the
+   * callout card onto its text, and the emoji button inside must keep riding
+   * the rhythm tokens with the child text — one token cannot express both
+   * values. Flat 5px default: falling back to the rhythm token would restore
+   * the coupling this exists to break.
+   */
+  'pt-[var(--blok-callout-padding-block,5px)]',
+  'pb-[var(--blok-callout-padding-block,5px)]',
   'my-1',
   'flex',
   'items-start',

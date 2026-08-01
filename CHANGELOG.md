@@ -2,7 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.0](https://github.com/JackUait/blok/compare/v1.4.5...v1.5.0) (2026-07-27)
+## [1.6.0](https://github.com/JackUait/blok/compare/v1.5.0...v1.6.0) (2026-08-01)
+
+### Features
+
+- **Font size** — `config.style.fontSize` now carries one entry per text scenario in every text-bearing block (paragraph, headings, quote, callout, code, toggle, list, checklist, table cells, captions, bookmark cards). Each entry writes that block's `--blok-*-font-size` custom property, so the same knob is reachable through `style.tokens`, `editor.tokens.set()` and plain CSS. An unconfigured editor renders byte-identically to before.
+- **API** — `beginTransaction`/`endTransaction` group operations spanning a pointer gesture into a single undo entry, for cases where the synchronous `transact(fn)` cannot reach across async boundaries.
+- **Table corner drag** — The bottom-right corner now behaves the way Notion documents it: the grid tracks the pointer through live geometry instead of a unit frozen at pointerdown, a Notion-style grip replaces the old 8px dot, hovering it explains the gesture, appended columns are full width, and the whole gesture commits as one undo entry.
+- **Table auto-scroll** — Holding the corner at the scroll container's edge or in the viewport's top/bottom band scrolls and grows the table as it goes. Growth follows the pointer — 8px/s for every pixel held past the edge — rather than a fixed clock.
+- **Table selection** — Dragging a row or column grip paints the entire dragged range instead of boxing only the focused cell.
+- **Playground** — A text-size slider (80%–150%) scales every `style.fontSize` scenario from its own CSS default.
+
+### Bug Fixes
+
+- **Table** — An inward corner drag stops at the first trailing row or column that holds content instead of deleting typed cells; the handle is anchored to the grid rather than the wrapper, so it no longer drifts inside the table as it grows; a caret click no longer leaves the corner handle and "+" buttons dead until the user clicks outside; clicking inside a merged cell boxes only that cell, and expanding a selection reaches merge origins, not just spans; a stale `pointercancel` listener no longer accumulates per completed drag.
+- **Styles** — Callout emoji and list markers stay aligned with their text as the font size scales, and the bookmark card's padding, line boxes, gaps and favicon scale with the card's own type. `fontSize.callout` now wins over `fontSize.paragraph` in the callout body.
+- **Types** — The public `Blok` class exposes its full API surface.
 
 ### Features
 

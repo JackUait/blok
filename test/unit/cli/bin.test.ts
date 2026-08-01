@@ -7,6 +7,14 @@ const BIN_PATH = path.resolve(__dirname, '../../../packages/cli/bin/blok-cli.mjs
 const DIST_PATH = path.resolve(__dirname, '../../../packages/cli/dist/cli.mjs');
 const CLI_VERSION = JSON.parse(readFileSync(path.resolve(__dirname, '../../../packages/cli/package.json'), 'utf-8')).version;
 
+/**
+ * Every case here spawns a node subprocess, and the two conversion cases load the
+ * whole CLI bundle inside it. Under release-preflight load that costs 20-40x what
+ * it does idle (2s -> 23s, measured at load 94), so the suite carries its own
+ * ceiling rather than inheriting the global one.
+ */
+const SUBPROCESS_TIMEOUT_MS = 120_000;
+
 describe('blok-cli binary', () => {
   it('bin entry point exists and is executable', () => {
     expect(existsSync(BIN_PATH)).toBe(true);
@@ -71,4 +79,4 @@ describe('blok-cli binary', () => {
 
     expect(output).toContain('Usage: blok-cli');
   });
-});
+}, SUBPROCESS_TIMEOUT_MS);

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2](https://github.com/JackUait/blok/compare/v1.6.1...v1.6.2) (2026-08-02)
+
+### Bug Fixes
+
+- **Callout** — Enter can leave the panel again. Previously it could only ever add another line inside, so every press stamped one more empty paragraph into the callout; those blanks are saved with the document, and the callout reloaded with its text pinned to the top of a panel padded out by invisible lines. Behaviour now matches Notion: Enter adds a line inside, Enter on an empty last line steps out. A callout nested in a column hands that block to the column rather than the document root, the exit block is saved in the position it renders in, and the whole exit is a single undo/redo step. Toggles and columns keep their existing behaviour.
+
 ## [1.6.1](https://github.com/JackUait/blok/compare/v1.6.0...v1.6.1) (2026-08-02)
 
 ### Bug Fixes

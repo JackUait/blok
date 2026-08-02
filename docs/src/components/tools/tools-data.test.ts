@@ -126,3 +126,18 @@ describe('tools documentation coverage', () => {
     });
   }
 });
+
+describe('callout keyboard exit', () => {
+  /**
+   * A callout holds its text in child blocks, so "how do I get back out" is a
+   * question the docs have to answer — every Enter used to add another line
+   * inside the panel and Backspace was the only escape. Now Enter on the empty
+   * last line leaves the callout, and the docs say so.
+   */
+  it('documents that Enter on the empty last line exits the callout', () => {
+    const description = TOOL_SECTIONS.find((s) => s.id === 'callout')?.description ?? '';
+
+    expect(description).toContain('Enter');
+    expect(description).toMatch(/empty last line|blank line/i);
+  });
+});

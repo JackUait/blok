@@ -775,6 +775,7 @@ describe('KeyboardNavigation', () => {
         id: calloutParentId,
         contentIds: [childBlockId],
         holder: calloutHolder,
+        parentId: null,
       });
 
       const emptyChildBlock = createBlock({
@@ -844,8 +845,18 @@ describe('KeyboardNavigation', () => {
       expect(setBlockParent).not.toHaveBeenCalledWith(emptyChildBlock, null);
       expect(move).not.toHaveBeenCalled();
       expect(removeBlock).not.toHaveBeenCalled();
-      // Should insert a new block after the callout (index 0 + 1 = 1)
-      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(1);
+      /**
+       * The exit block must clear the callout's whole flat-array span. Children
+       * follow their container in the flat array, so the callout's own child
+       * sits at parentIndex + 1 — inserting there put the new ROOT block before
+       * it, an order that survives into save() output ([callout, newBlock,
+       * child]) even though the DOM shows the child inside the callout. The
+       * child's index + 1 is the first slot past the container.
+       * `forceTopLevel` anchors the holder at workingArea root: without it, a
+       * callout with no following block falls back to `afterend previous`,
+       * which is the empty child INSIDE the panel.
+       */
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2, false, false, true);
       // New block should NOT be parented to the callout
       expect(setBlockParent).not.toHaveBeenCalled();
       // Focus should move to the new block
@@ -944,7 +955,22 @@ describe('KeyboardNavigation', () => {
       isCaretAtEndOfInputSpy.mockRestore();
     });
 
-    it('does not promote when callout has multiple children (last child empty)', () => {
+    /**
+     * Notion parity: Enter on the empty LAST line of a callout leaves the
+     * callout. The exit used to be gated on the callout having exactly ONE
+     * child, so every callout that actually had content trapped the caret —
+     * each Enter fell through to the generic sibling insert and stamped one
+     * more empty paragraph INSIDE the panel (measured in a real browser:
+     * children 1 → 2 → 3 → 4, panel 52 → 91 → 130 → 169px). Those empty
+     * children are saved, so the callout reloads with its text pinned to the
+     * top of a panel padded out by invisible blank lines, and Backspace was
+     * the only way out.
+     *
+     * The empty line already sits at the end of the container's flat-array
+     * span, so exiting is a one-level outdent of that very block — no insert,
+     * no delete, and the caret never leaves the block it was in.
+     */
+    it('exits the callout on Enter when the empty last child has siblings', () => {
       const calloutParentId = 'callout-parent';
       const firstChildId = 'first-child';
       const lastChildId = 'last-child';
@@ -958,6 +984,12 @@ describe('KeyboardNavigation', () => {
         id: calloutParentId,
         contentIds: [firstChildId, lastChildId],
         holder: calloutHolder,
+        parentId: null,
+      });
+
+      const firstChild = createBlock({
+        id: firstChildId,
+        parentId: calloutParentId,
       });
 
       const emptyLastChild = createBlock({
@@ -974,26 +1006,131 @@ describe('KeyboardNavigation', () => {
       const newBlock = createBlock({ id: 'new-block' });
       const setBlockParent = vi.fn();
       const move = vi.fn();
+      const removeBlock = vi.fn();
       const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
       const getBlockIndex = vi.fn((block: Block) => {
         if (block === calloutParent) return 0;
+        if (block === firstChild) return 1;
         if (block === emptyLastChild) return 2;
         return -1;
       });
       const getBlockById = vi.fn((id: string) => {
         if (id === calloutParentId) return calloutParent;
+        if (id === firstChildId) return firstChild;
         if (id === lastChildId) return emptyLastChild;
         return undefined;
       });
+      const setToBlock = vi.fn();
 
       const blok = createBlokModules({
         BlockManager: {
           currentBlock: emptyLastChild,
           currentBlockIndex: 2,
+          blocks: [calloutParent, firstChild, emptyLastChild],
           insertDefaultBlockAtIndex,
           split: vi.fn(),
           setBlockParent,
           move,
+          removeBlock,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock,
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // The empty line leaves the callout — it becomes the block after it.
+      expect(setBlockParent).toHaveBeenCalledWith(emptyLastChild, null);
+      // and nothing new is stamped inside the panel.
+      expect(insertDefaultBlockAtIndex).not.toHaveBeenCalled();
+      expect(setBlockParent).not.toHaveBeenCalledWith(newBlock, calloutParentId);
+      // The caret stays in the block the user was already in.
+      expect(setToBlock).toHaveBeenCalledWith(emptyLastChild);
+      // The callout keeps its remaining content.
+      expect(removeBlock).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    /**
+     * A callout nested in a column must hand the exit block to the COLUMN, not
+     * to the document root: `forceTopLevel` anchors holders at workingArea
+     * root, which would strand the new paragraph outside the column layout.
+     */
+    it('keeps the exit block in the container\'s own parent when the callout is nested', () => {
+      const columnId = 'col-1';
+      const calloutId = 'callout-nested';
+      const childBlockId = 'child-block';
+
+      const calloutHolder = document.createElement('div');
+      const childContainer = document.createElement('div');
+      childContainer.setAttribute('data-blok-toggle-children', '');
+      calloutHolder.appendChild(childContainer);
+
+      const column = createBlock({ id: columnId, name: 'column', contentIds: [calloutId] });
+      const callout = createBlock({
+        id: calloutId,
+        name: 'callout',
+        parentId: columnId,
+        contentIds: [childBlockId],
+        holder: calloutHolder,
+      });
+      const emptyChild = createBlock({
+        id: childBlockId,
+        isEmpty: true,
+        parentId: calloutId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+          input.contentEditable = 'true';
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === column) return 0;
+        if (block === callout) return 1;
+        if (block === emptyChild) return 2;
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === columnId) return column;
+        if (id === calloutId) return callout;
+        if (id === childBlockId) return emptyChild;
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyChild,
+          currentBlockIndex: 2,
+          blocks: [column, callout, emptyChild],
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move: vi.fn(),
           getBlockIndex,
           getBlockById,
           transactForTool: vi.fn((fn: () => void) => fn()),
@@ -1020,12 +1157,10 @@ describe('KeyboardNavigation', () => {
 
       keyboardNavigation.handleEnter(event);
 
-      // Should NOT promote — callout has content (multiple children)
-      expect(setBlockParent).not.toHaveBeenCalledWith(emptyLastChild, null);
-      expect(move).not.toHaveBeenCalled();
-      // Should insert a new block inside the callout
-      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(3);
-      expect(setBlockParent).toHaveBeenCalledWith(newBlock, calloutParentId);
+      // Inserted past the callout's span, but NOT forced to workingArea root…
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(3, false, false, false);
+      // …and adopted by the column the callout itself lives in.
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, columnId);
 
       isCaretAtStartOfInputSpy.mockRestore();
       isCaretAtEndOfInputSpy.mockRestore();

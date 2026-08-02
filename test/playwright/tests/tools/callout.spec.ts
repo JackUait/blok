@@ -168,6 +168,93 @@ test('Enter in child block creates another child block', async ({ page }) => {
   await expect(childBlocks).toHaveCount(2);
 });
 
+/**
+ * Notion parity: Enter on the empty last line leaves the callout.
+ *
+ * The exit used to be gated on the callout having exactly one child, so a
+ * callout with any content trapped the caret — each Enter stamped one more
+ * empty paragraph inside the panel (measured in a real browser: children
+ * 1 → 2 → 3 → 4, panel 52 → 91 → 130 → 169px). Those children are saved, so the
+ * callout came back with its text pinned to the top of a panel padded out by
+ * invisible blank lines, and Backspace was the only escape.
+ */
+test('Enter on the empty last line exits the callout instead of padding it', async ({ page }) => {
+  await createBlok(page, createCalloutData());
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
+  await childEditable.click();
+  await page.keyboard.type('first line');
+
+  const panel = page.locator(CALLOUT_BLOCK_SELECTOR);
+  const heightWithOneLine = await panel.evaluate((el) => el.getBoundingClientRect().height);
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+
+  // The empty line left the panel — the callout is back to its single line…
+  await expect(page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`)).toHaveCount(1);
+  expect(await panel.evaluate((el) => el.getBoundingClientRect().height)).toBe(heightWithOneLine);
+
+  // …and the caret came with it, so typing lands outside the callout.
+  await page.keyboard.type('outside');
+
+  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const calloutId = saved?.blocks.find((b) => b.type === 'callout')?.id;
+
+  expect(saved?.blocks.filter((b) => b.parent === calloutId).map((b) => b.data.text)).toEqual(['first line']);
+  expect(saved?.blocks.filter((b) => b.parent == null).map((b) => b.data.text ?? null)).toEqual([null, 'outside']);
+});
+
+/**
+ * The exit block has to clear the callout's whole flat-array span. Children
+ * follow their container in the flat array, so inserting at the callout's own
+ * index + 1 put the new ROOT block ahead of the callout's own child — an order
+ * that reaches save() output, where the block visually after the panel is
+ * emitted before the block inside it.
+ */
+test('Enter out of an empty callout keeps saved block order matching the page', async ({ page }) => {
+  await createBlok(page, createCalloutData());
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
+  await childEditable.click();
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('outside');
+
+  const saved = await page.evaluate(async () => window.blokInstance?.save());
+  const calloutId = saved?.blocks.find((b) => b.type === 'callout')?.id ?? '';
+
+  expect(saved?.blocks.map((b) => `${b.type}:${b.parent ?? 'root'}`))
+    .toEqual(['callout:root', `paragraph:${calloutId}`, 'paragraph:root']);
+});
+
+/**
+ * The exit is a reparent, and a bare `setBlockParent` splits across two history
+ * stacks — the parentId write lands as its own Y.UndoManager stack item, which
+ * leaves undo working but redo a silent no-op. The exit runs inside
+ * `transactMoves` so both directions replay it as one step.
+ */
+test('undo and redo of the callout exit both replay in one step', async ({ page }) => {
+  const UNDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+  const REDO_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+Shift+z';
+
+  await createBlok(page, createCalloutData());
+  const childEditable = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [data-blok-component="paragraph"] [contenteditable]`);
+  await childEditable.click();
+  await page.keyboard.type('first line');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+
+  const childCount = page.locator(`${CALLOUT_BLOCK_SELECTOR} [data-blok-toggle-children] [contenteditable]`);
+
+  await expect(childCount).toHaveCount(1);
+
+  // One undo puts the empty line back inside the panel…
+  await page.keyboard.press(UNDO_SHORTCUT);
+  await expect(childCount).toHaveCount(2);
+
+  // …and one redo takes it back out again.
+  await page.keyboard.press(REDO_SHORTCUT);
+  await expect(childCount).toHaveCount(1);
+});
+
 test('read-only mode: emoji button is not interactive', async ({ page }) => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');

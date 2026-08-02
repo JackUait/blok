@@ -425,11 +425,6 @@ export class KeyboardNavigation extends BlockEventComposer {
    * @returns the block that should receive focus after the operation
    */
   /**
-   * If the current block is an empty last child of a toggle, promotes it to a
-   * sibling after the toggle (like pressing Enter on an empty last list item).
-   * Returns the promoted block, or null if no promotion occurred.
-   */
-  /**
    * Whether a nested block should stepwise-outdent — used both for Enter on an
    * empty nested block and for Backspace at the start of a nested block (the
    * "remove one indent level" gesture). True only for blocks structurally nested
@@ -485,6 +480,13 @@ export class KeyboardNavigation extends BlockEventComposer {
     return true;
   }
 
+  /**
+   * Enter on the empty LAST child of a container: hands back the block the
+   * caret should land in outside that container, or null when the container
+   * keeps the caret inside (toggles, columns) and the caller should fall
+   * through to the normal "new sibling below" path.
+   * @param currentBlock - the block where Enter was pressed
+   */
   private promoteLastEmptyToggleChild(currentBlock: Block): Block | null {
     if (!currentBlock.isEmpty || currentBlock.parentId == null || this.isCurrentBlockInsideTableCell) {
       return null;
@@ -524,17 +526,78 @@ export class KeyboardNavigation extends BlockEventComposer {
     }
 
     /**
-     * Non-toggle containers (e.g. callout): when the only child is empty,
-     * exit by inserting a new block after the container. The container and
-     * its child are preserved so the user can return to it.
+     * Non-toggle containers (e.g. callout). Notion parity: Enter on the empty
+     * LAST line leaves the container.
+     *
+     * With other children present, that empty line IS the exit block — outdent
+     * it one structural level and keep the caret in it. It already sits at the
+     * end of the container's flat-array span (children follow their container,
+     * and an empty block has no descendants of its own), so only its parent
+     * link and its holder move; `setBlockParent` relocates the holder to just
+     * after the container. Nothing is inserted and nothing is deleted, so the
+     * whole exit is one undo step.
+     *
+     * This used to be gated on the container having exactly ONE child, which
+     * meant every callout with content trapped the caret: Enter fell through to
+     * the generic Case 2 sibling insert and stamped one more empty paragraph
+     * inside the panel, every time. Those blocks are saved, so the callout
+     * reloaded with its text pinned to the top of a panel padded out by
+     * invisible blank lines, and Backspace was the only way out.
      */
-    if (parentBlock.contentIds.length !== 1) {
-      return null;
+    if (parentBlock.contentIds.length > 1) {
+      /**
+       * Same wrapper the Tab outdent uses: a bare `setBlockParent` splits
+       * across two history stacks, and the parentId write lands as its own
+       * Y.UndoManager stack item. `transactMoves` attaches it to the move
+       * entry instead, so undo AND redo replay the exit as one step.
+       */
+      const { YjsManager } = this.Blok;
+
+      if (typeof YjsManager.transactMoves === 'function') {
+        YjsManager.transactMoves(() => {
+          this.outdentCurrentBlock();
+        });
+      } else {
+        this.outdentCurrentBlock();
+      }
+
+      return currentBlock;
     }
 
-    const parentIndex = this.Blok.BlockManager.getBlockIndex(parentBlock);
+    /**
+     * The empty line is the container's ONLY child. Outdenting it would leave a
+     * childless callout — a panel with no text area and no way back into it —
+     * so insert a fresh block after the container instead and preserve both.
+     *
+     * The index must clear the container's whole flat-array span: its children
+     * follow it, so the old `parentIndex + 1` put the exit block BEFORE the
+     * callout's own child in the flat array (and in save() output) while the
+     * DOM showed it after the panel. The child's index + 1 is the first free
+     * slot past the container.
+     */
+    const exitIndex = this.Blok.BlockManager.getBlockIndex(currentBlock) + 1;
+    const containerParentId = parentBlock.parentId;
 
-    return this.Blok.BlockManager.insertDefaultBlockAtIndex(parentIndex + 1);
+    /**
+     * `forceTopLevel` anchors the holder at workingArea root — required when the
+     * container is top-level, because the flat predecessor at `exitIndex` is the
+     * empty child INSIDE the panel and `afterend previous` would drop the exit
+     * block back into it. A NESTED container (a callout inside a column) must
+     * not force root: the exit block belongs beside the callout in the column,
+     * so it inherits the container's own parent instead.
+     */
+    const newBlock = this.Blok.BlockManager.insertDefaultBlockAtIndex(
+      exitIndex,
+      false,
+      false,
+      containerParentId === null
+    );
+
+    if (containerParentId !== null) {
+      this.Blok.BlockManager.setBlockParent(newBlock, containerParentId);
+    }
+
+    return newBlock;
   }
 
   private createBlockOnEnter(currentBlock: Block): Block {

@@ -88,6 +88,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'notifier.ok',
     'tools.colorPicker.defaultSwatchLabel',
     'tools.colorPicker.colorSwatchLabel',
+    // "Media" is the standard loanword in Azerbaijani UIs.
+    'toolbox.sectionMedia',
   ]),
   bg: new Set(['notifier.ok']),
   // "Text" is a direct cognate of the English word in Czech.
@@ -99,6 +101,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   da: new Set([
     'tools.colorPicker.color.orange',
     'toolNames.database',
+    // Same Danish loanword as toolNames.database, reused as a section title.
+    'toolbox.sectionDatabase',
     // "Link" is the standard loanword for a hyperlink in Danish UIs.
     'toolNames.link',
     'tools.callout.colorOrange',
@@ -148,6 +152,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.callout.color',
     // "Color" is the standard Spanish cognate and names both marker modes.
     'toolNames.marker',
+    // Same Spanish cognate reused as the toolbox Color section title.
+    'toolbox.sectionColor',
   ]),
   // "Link" is the standard loanword for a hyperlink in Estonian UIs; "OK" is
   // the conventional compact confirmation label.
@@ -162,7 +168,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.colorSwatchLabel',
   ]),
   // "OK" is the conventional compact confirmation label in Finnish UIs.
-  fi: new Set(['notifier.ok']),
+  // "Media" is the standard Finnish loanword for media content.
+  fi: new Set(['notifier.ok', 'toolbox.sectionMedia']),
   fil: new Set([
     'tools.link.emailAddress',
     'tools.code.autoDetected',
@@ -193,6 +200,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     // "Database", "Code", "Alt text", "header", and "heading" are established
     // contemporary Filipino/Taglish product and accessibility terms.
     'toolNames.database',
+    // "Media"/"Database" are the same established Taglish loanwords reused as
+    // toolbox section titles.
+    'toolbox.sectionMedia',
+    'toolbox.sectionDatabase',
     'tools.code.codeTab',
     'toolNames.code',
     'toolNames.inlineCode',
@@ -233,13 +244,22 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.colorPicker.defaultSwatchLabel',
     'tools.colorPicker.colorSwatchLabel',
   ]),
-  id: new Set(['tools.image.cropRatioOval', 'tools.database.defaultStatusProperty']),
+  id: new Set([
+    'tools.image.cropRatioOval',
+    'tools.database.defaultStatusProperty',
+    // "Media" is the standard Indonesian loanword for media content.
+    'toolbox.sectionMedia',
+  ]),
   it: new Set([
     // Established Italian product and computing loanwords.
     'searchTerms.layout',
     'toolNames.file',
     'toolNames.link',
     'toolNames.database',
+    // "Media"/"Database" are the same Italian loanwords reused as toolbox
+    // section titles.
+    'toolbox.sectionMedia',
+    'toolbox.sectionDatabase',
     'tools.image.emptyLink',
     'tools.file.emptyLink',
     'tools.video.emptyLink',
@@ -263,6 +283,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.database.defaultStatusProperty',
     'searchTerms.grid',
     'notifier.ok',
+    // "Media" is the standard Malay loanword for media content.
+    'toolbox.sectionMedia',
   ]),
   // Placeholder-only swatch templates contain no English lexical material;
   // Burmese independently requires the same modifier-before-noun order.
@@ -281,6 +303,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   nl: new Set([
     'toolNames.link',
     'toolNames.database',
+    // "Media"/"Database" are the same Dutch loanwords reused as toolbox
+    // section titles.
+    'toolbox.sectionMedia',
+    'toolbox.sectionDatabase',
     'toolNames.code',
     'tools.code.codeTab',
     'searchTerms.code',
@@ -294,6 +320,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ]),
   no: new Set([
     'toolNames.database',
+    // Same Bokmål loanword as toolNames.database, reused as a section title.
+    'toolbox.sectionDatabase',
     'tools.image.sizeFull',
     'tools.database.defaultStatusProperty',
     // "Artist" is the established Bokmål music-metadata noun.
@@ -334,6 +362,8 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   ro: new Set([
     'toolNames.text',
     'toolNames.link',
+    // "Media" is the standard Romanian term for media content.
+    'toolbox.sectionMedia',
     'searchTerms.separator',
     'searchTerms.program',
     'tools.image.emptyLink',
@@ -353,9 +383,12 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.link.linkText',
     'notifier.ok',
   ]),
-  sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval']),
+  // "Media" is the standard Albanian loanword for media content.
+  sq: new Set(['searchTerms.program', 'tools.image.cropRatioOval', 'toolbox.sectionMedia']),
   sv: new Set([
     'toolNames.text',
+    // "Media" is the standard Swedish term for media content.
+    'toolbox.sectionMedia',
     'tools.colorPicker.color.orange',
     'tools.callout.colorOrange',
     'tools.image.sizeFull',

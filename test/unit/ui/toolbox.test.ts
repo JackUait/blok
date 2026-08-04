@@ -2801,6 +2801,180 @@ describe('Toolbox', () => {
     });
   });
 
+  describe('toolbox sections', () => {
+    const svg = '<svg></svg>';
+
+    const makeTool = (name: string, toolbox: unknown): BlockToolAdapter =>
+      ({ name, toolbox } as unknown as BlockToolAdapter);
+
+    /**
+     * A color-capable tool whose entry declares a section, so the toolbox
+     * renders section headers AND the flat block-color commands.
+     */
+    const createSectionedColorTools = (): ToolsCollection<BlockToolAdapter> => createToolsCollection([
+      ['paragraph', ({
+        name: 'paragraph',
+        toolbox: { title: 'Text', icon: svg, section: 'basic' },
+        sanitizeConfig: { textColor: false, backgroundColor: false, text: {} },
+      } as unknown as BlockToolAdapter)],
+    ]);
+
+    it('groups entries under section headers in fixed order regardless of registration order', () => {
+      const tools = createToolsCollection([
+        ['image', makeTool('image', { title: 'Image', icon: svg, section: 'media' })],
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['database', makeTool('database', [
+          { title: 'Database', icon: svg, name: 'database', section: 'database' },
+          { title: 'Board', icon: svg, name: 'board', section: 'database' },
+        ])],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; name?: string }>;
+
+      expect(items.map((item) => item.name)).toEqual([
+        'toolbox-section-basic', 'paragraph',
+        'toolbox-section-media', 'image',
+        'toolbox-section-database', 'database', 'board',
+      ]);
+      expect(items[0].type).toBe('html');
+      expect(items[2].type).toBe('html');
+      expect(items[4].type).toBe('html');
+    });
+
+    it('renders header labels through i18n and marks headers with a testid', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; element?: HTMLElement }>;
+      const headerElement = items[0].element;
+
+      // The mock i18n echoes the key, proving the label went through i18n.t
+      expect(headerElement?.textContent).toBe('toolbox.sectionBasic');
+      expect(headerElement?.getAttribute('data-blok-testid')).toBe('toolbox-section-title');
+    });
+
+    it('keeps the flat list when no entry declares a section', () => {
+      new Toolbox({ api: mocks.api, tools: mocks.tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; name?: string }>;
+
+      expect(items.map((item) => item.name)).toEqual(['testTool']);
+      expect(items.every((item) => item.type === undefined)).toBe(true);
+    });
+
+    it('appends unsectioned entries after labeled sections behind a plain separator', () => {
+      const tools = createToolsCollection([
+        ['customTool', makeTool('customTool', { title: 'Custom', icon: svg })],
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; name?: string }>;
+
+      expect(items.map((item) => item.name)).toEqual([
+        'toolbox-section-basic', 'paragraph', undefined, 'customTool',
+      ]);
+      expect(items[2].type).toBe('separator');
+    });
+
+    it('labels the block-color commands with a Color section header', () => {
+      new Toolbox({ api: mocks.api, tools: createSectionedColorTools(), i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; name?: string }>;
+      const headerIndex = items.findIndex((item) => item.name === 'toolbox-section-color');
+      const firstColorIndex = items.findIndex((item) => item.name?.startsWith('block-color-'));
+
+      expect(headerIndex).toBeGreaterThan(-1);
+      expect(items[headerIndex].type).toBe('html');
+      expect(firstColorIndex).toBe(headerIndex + 1);
+    });
+
+    it('omits the Color header when sectioning is inactive', () => {
+      // Color-capable tool registered, but no entry declares a section →
+      // the whole list stays flat, including the color commands.
+      const tools = createToolsCollection([
+        ['paragraph', ({
+          name: 'paragraph',
+          toolbox: { title: 'Text', icon: svg },
+          sanitizeConfig: { textColor: false, backgroundColor: false, text: {} },
+        } as unknown as BlockToolAdapter)],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ name?: string }>;
+
+      expect(items.some((item) => item.name === 'toolbox-section-color')).toBe(false);
+    });
+
+    it('hides the Color header on open when the current block does not support color', () => {
+      const plainBlock = {
+        ...mocks.blockAPI,
+        name: 'testTool',
+        isEmpty: false,
+      } as unknown as BlockAPI;
+
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(plainBlock);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools: createSectionedColorTools(), i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('toolbox-section-color', true);
+    });
+
+    it('hides a section header when every entry in it is restricted inside a table cell', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['header', makeTool('header', { title: 'Heading 1', icon: svg, name: 'header-1', section: 'basic' })],
+        ['table', makeTool('table', { title: 'Table', icon: svg, section: 'media' })],
+      ]);
+
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+
+      const calls = mockPopoverInstance.toggleItemHiddenByName.mock.calls;
+
+      // 'table' is the only media entry → the media header hides with it
+      expect(calls).toContainEqual(['toolbox-section-media', true]);
+      // basic keeps the visible paragraph entry → its header must stay
+      expect(calls).not.toContainEqual(['toolbox-section-basic', true]);
+    });
+
+    it('restores the hidden section header when the toolbox closes', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['table', makeTool('table', { title: 'Table', icon: svg, section: 'media' })],
+      ]);
+
+      const cellBlocksContainer = document.createElement('div');
+
+      cellBlocksContainer.setAttribute('data-blok-table-cell-blocks', '');
+      cellBlocksContainer.appendChild(mocks.blockAPI.holder);
+
+      const toolbox = new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      toolbox.open();
+      mockPopoverInstance.toggleItemHiddenByName.mockClear();
+
+      toolbox.close();
+
+      expect(mockPopoverInstance.toggleItemHiddenByName).toHaveBeenCalledWith('toolbox-section-media', false);
+    });
+  });
+
   describe('accessibility (combobox + listbox)', () => {
     it('constructs the popover as a listbox with the provided listboxId', () => {
        

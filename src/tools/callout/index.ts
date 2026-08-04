@@ -495,6 +495,7 @@ export class CalloutTool implements BlockTool {
       name: TOOL_NAME,
       searchTerms: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
       searchTermKeys: ['callout', 'note', 'info', 'warning', 'tip', 'alert'],
+      section: 'basic',
     };
   }
 

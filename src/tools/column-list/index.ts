@@ -242,6 +242,7 @@ export class ColumnList implements BlockTool {
       name: `column_list-${count}`,
       data: { columnCount: count },
       searchTerms: [...base.searchTerms, `${count}c`, `c${count}`],
+      section: 'advanced' as const,
     }));
   }
 

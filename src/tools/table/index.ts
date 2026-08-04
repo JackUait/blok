@@ -377,6 +377,7 @@ export class Table implements BlockTool {
       titleKey: 'tools.table.title',
       searchTerms: ['table', 'grid', 'spreadsheet'],
       searchTermKeys: ['table', 'grid', 'spreadsheet'],
+      section: 'basic',
     };
   }
 

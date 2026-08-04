@@ -684,6 +684,65 @@ const openToolbox = async (page: Page): Promise<void> => {
   await expect(popover).toHaveAttribute('data-blok-popover-opened', 'true');
 };
 
+test.describe('toolbox sections', () => {
+  const HTML_ITEM_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="popover-item-html"]`;
+  const SECTION_TITLE_SELECTOR = `${POPOVER_SELECTOR} [data-blok-testid="toolbox-section-title"]`;
+
+  /**
+   * Create a blok instance with the full default tool set (window.Blok on the
+   * test page merges the default tools in).
+   * @param page - The Playwright page object
+   */
+  const createDefaultBlok = async (page: Page): Promise<void> => {
+    await resetBlok(page);
+
+    await page.evaluate(async ({ holder }) => {
+      const blok = new window.Blok({ holder });
+
+      window.blokInstance = blok;
+      await blok.isReady;
+    }, { holder: HOLDER_ID });
+  };
+
+  test.beforeAll(() => {
+    ensureBlokBundleBuilt();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await gotoTestPage(page);
+  });
+
+  test('groups default tools under labeled section headers in fixed order', async ({ page }) => {
+    await createDefaultBlok(page);
+    await openToolbox(page);
+
+    await expect(page.locator(SECTION_TITLE_SELECTOR)).toHaveText([
+      'Basic blocks',
+      'Media',
+      'Database',
+      'Advanced blocks',
+      'Color',
+    ]);
+  });
+
+  test('hides section headers while searching and restores them when the query is cleared', async ({ page }) => {
+    await createDefaultBlok(page);
+    await openToolbox(page);
+
+    // While a query is active the list is re-ranked flat — headers hide.
+    await page.keyboard.type('table');
+
+    await expect(page.locator(`${HTML_ITEM_SELECTOR}[data-blok-hidden="true"]`)).toHaveCount(5);
+
+    // Clearing the query back to "/" restores the sectioned view.
+    for (let i = 0; i < 'table'.length; i++) {
+      await page.keyboard.press('Backspace');
+    }
+
+    await expect(page.locator(`${HTML_ITEM_SELECTOR}[data-blok-hidden="true"]`)).toHaveCount(0);
+  });
+});
+
 test.describe('toolbox keyboard navigation', () => {
   test.beforeAll(() => {
     ensureBlokBundleBuilt();

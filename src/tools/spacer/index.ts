@@ -188,6 +188,7 @@ export class SpacerTool implements BlockTool {
       titleKey: 'spacer',
       searchTerms: ['spacer', 'space', 'gap', 'blank', 'whitespace', 'margin', 'padding'],
       searchTermKeys: ['spacer', 'space', 'gap'],
+      section: 'advanced',
     };
   }
 

@@ -47,7 +47,7 @@ describe('icon house-spec fixes', () => {
   describe('IconUnderline', () => {
     it('should keep the bottom rule inside the 3-17 content inset', () => {
       expect(IconUnderline).not.toContain('18.5');
-      expect(IconUnderline).toContain('16.5');
+      expect(IconUnderline).toContain('M5.5 16h9');
     });
   });
 

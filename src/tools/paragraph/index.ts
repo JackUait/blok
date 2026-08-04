@@ -524,6 +524,7 @@ export class Paragraph implements BlockTool {
       titleKey: 'text',
       searchTerms: ['p', 'paragraph', 'plain'],
       searchTermKeys: ['paragraph', 'plain'],
+      section: 'basic',
     };
   }
 }

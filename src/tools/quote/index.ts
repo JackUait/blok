@@ -227,6 +227,7 @@ export class Quote implements BlockTool {
       shortcut: '"',
       searchTerms: ['quote', 'blockquote', 'citation'],
       searchTermKeys: ['quote', 'blockquote', 'citation'],
+      section: 'basic',
     };
   }
 

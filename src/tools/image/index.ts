@@ -144,6 +144,7 @@ export class ImageTool implements BlockTool {
       icon: IconImage,
       titleKey: 'image',
       searchTerms: ['image', 'img', 'picture', 'photo', 'media'],
+      section: 'media',
     };
   }
 

@@ -99,6 +99,7 @@ export class VideoTool implements BlockTool {
       icon: IconVideo,
       titleKey: 'video',
       searchTerms: ['video', 'movie', 'clip', 'player', 'mp4', 'media'],
+      section: 'media',
     };
   }
 

@@ -25,7 +25,7 @@ export const IconBold = `
   <path
     d="M6.5 4V16M6.5 4H10.8C12.3 4 13.5 5.3 13.5 6.9C13.5 8.5 12.3 9.8 10.8 9.8H6.5M6.5 9.8H11.4C12.9 9.8 14.1 11.2 14.1 12.9C14.1 14.6 12.9 16 11.4 16H6.5"
     stroke="currentColor"
-    stroke-width="1.9"
+    stroke-width="1.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
@@ -36,7 +36,7 @@ export const IconBold = `
 export const IconItalic = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path
-    d="M8.5 4h6m-10 12h6m1-12-4 12"
+    d="M9 4h6m-10 12h6m1-12-4 12"
     stroke="currentColor"
     stroke-width="1.25"
     stroke-linecap="round"
@@ -56,33 +56,33 @@ export const IconLink = `
 // Marker/Color icon (letter A in rounded square)
 export const IconMarker = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <rect x="2.75" y="2.75" width="14.5" height="14.5" rx="3.5" stroke="currentColor" stroke-width="1.25"/>
-  <path d="M7.1 13.75 10 6.5l2.9 7.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8.75 10.75h2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <rect x="3" y="3" width="14" height="14" rx="3.5" stroke="currentColor" stroke-width="1.25"/>
+  <path d="M7 13.75 10 6.25l3 7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.6 11h2.8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
 // Equation/inline math icon (radical/square-root glyph)
 export const IconEquation = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M3.25 10.5 5 14l2.75-8h8" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10.2 9.8 13.4 13M13.4 9.8 10.2 13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4.25 10.5 6 14.5 8.5 5.5h7.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10.4 11.1 13.8 14.5M13.8 11.1 10.4 14.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
 // Clear format icon (T with strike-out x)
 export const IconClearFormat = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4 4.5H12M8 4.5V15.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M12.7 11.3 16.1 14.7M16.1 11.3 12.7 14.7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M4 4h8M8 4v12" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12.8 12.6 16.2 16M16.2 12.6 12.8 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
 // Underline icon
 export const IconUnderline = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M6 3.5V10a4 4 0 0 0 8 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M5.5 16.5h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M6 4v5.5a4 4 0 0 0 8 0V4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.5 16h9" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
 </svg>
 `;
 
@@ -549,7 +549,7 @@ export const IconSpacer = `
 // Code inline icon (angle brackets: </>)
 export const IconCode = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="m7 6-4 4 4 4m6-8 4 4-4 4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m8 5.5-4 4.5 4 4.5m4-9 4 4.5-4 4.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

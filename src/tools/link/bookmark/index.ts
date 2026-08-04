@@ -49,6 +49,7 @@ export class Bookmark implements BlockTool {
       icon: IconLink,
       titleKey: 'bookmark',
       searchTerms: ['bookmark', 'link', 'url', 'preview', 'card'],
+      section: 'media',
     };
   }
 

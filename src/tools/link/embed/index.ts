@@ -160,6 +160,7 @@ export class Embed implements BlockTool {
       icon: IconGlobe,
       titleKey: 'embed',
       searchTerms: ['embed', 'iframe', 'video', 'youtube', 'media'],
+      section: 'media',
     };
   }
 

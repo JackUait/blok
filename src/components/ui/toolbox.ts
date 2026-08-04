@@ -17,6 +17,7 @@ import { getBlockColorToolboxEntries, type BlockColorData } from '../shared/bloc
 import type { API, BlockToolData, ToolboxConfigEntry, PopoverItemParams, BlockAPI } from '@/types';
 import type { PopoverPositionUpdate } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../constants';
 
 
@@ -61,6 +62,16 @@ export interface ToolboxEventMap {
  * Available i18n dict keys that should be passed to the constructor
  */
 type ToolboxTextLabelsKeys = 'filter' | 'nothingFound' | 'slashSearchPlaceholder';
+
+/**
+ * A toolbox entry mapped to its popover item, with the section it resolved to
+ * (undefined = trailing unlabeled group).
+ */
+type SectionedToolboxEntry = {
+  params: PopoverItemParams;
+  name: string;
+  section: string | undefined;
+};
 
 /**
  * Pick the DOMRect used to anchor the toolbox popover.
@@ -274,6 +285,26 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * supports block-level color.
    */
   private colorCommandNames: string[] = [];
+
+  /**
+   * Entry names per rendered section, in section render order. Populated only
+   * when sectioning is active (some entry declared a `section`). Used to hide
+   * a section header once every entry under it is hidden.
+   */
+  private sectionEntryNames = new Map<string, string[]>();
+
+  /**
+   * Entry names currently hidden via toggleItemHiddenByName (table-cell
+   * restrictions, color gating). Basis for section header visibility.
+   */
+  private hiddenEntryNames = new Set<string>();
+
+  /**
+   * Section header item names currently hidden. Tracked so header visibility
+   * is only toggled on transitions — toggleItemHiddenByName must not fire
+   * when nothing changed.
+   */
+  private hiddenSectionHeaders = new Set<string>();
 
   /**
    * Toolbox constructor
@@ -701,9 +732,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       for (const entry of entries) {
         const entryName = entry.name ?? tool.name;
 
-        this.popover?.toggleItemHiddenByName(entryName, isHidden);
+        this.toggleEntryHidden(entryName, isHidden);
       }
     }
+
+    this.syncSectionHeadersHidden();
   }
 
   /**
@@ -712,7 +745,50 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    */
   private toggleColorCommandsHidden(isHidden: boolean): void {
     for (const name of this.colorCommandNames) {
-      this.popover?.toggleItemHiddenByName(name, isHidden);
+      this.toggleEntryHidden(name, isHidden);
+    }
+
+    this.syncSectionHeadersHidden();
+  }
+
+  /**
+   * Toggles one entry's hidden state in the popover and records it, so
+   * section header visibility can be derived from the hidden set.
+   * @param entryName - popover item name to toggle
+   * @param isHidden - true to hide the entry, false to show it
+   */
+  private toggleEntryHidden(entryName: string, isHidden: boolean): void {
+    this.popover?.toggleItemHiddenByName(entryName, isHidden);
+
+    if (isHidden) {
+      this.hiddenEntryNames.add(entryName);
+    } else {
+      this.hiddenEntryNames.delete(entryName);
+    }
+  }
+
+  /**
+   * Hides a section header once EVERY entry under it is hidden, and restores
+   * it when any entry comes back. Toggles only on transitions so no popover
+   * call is made when nothing changed.
+   */
+  private syncSectionHeadersHidden(): void {
+    for (const [section, entryNames] of this.sectionEntryNames) {
+      const headerName = Toolbox.sectionHeaderName(section);
+      const shouldHide = entryNames.length > 0 && entryNames.every((name) => this.hiddenEntryNames.has(name));
+      const isHidden = this.hiddenSectionHeaders.has(headerName);
+
+      if (shouldHide === isHidden) {
+        continue;
+      }
+
+      if (shouldHide) {
+        this.hiddenSectionHeaders.add(headerName);
+      } else {
+        this.hiddenSectionHeaders.delete(headerName);
+      }
+
+      this.popover?.toggleItemHiddenByName(headerName, shouldHide);
     }
   }
 
@@ -852,8 +928,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       };
     };
 
-    const result = this.toolsToBeDisplayed
-      .reduce<PopoverItemParams[]>((acc, tool) => {
+    const entriesWithSections = this.toolsToBeDisplayed
+      .reduce<SectionedToolboxEntry[]>((acc, tool) => {
         const { toolbox } = tool;
 
         if (toolbox === undefined) {
@@ -863,11 +939,30 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         const items = Array.isArray(toolbox) ? toolbox : [ toolbox ];
 
         items.forEach((item, index) => {
-          acc.push(toPopoverItem(item, tool, index === 0));
+          acc.push({
+            params: toPopoverItem(item, tool, index === 0),
+            name: item.name ?? tool.name,
+            // Unknown section values (possible from untyped JS configs) fall
+            // back to the trailing unlabeled group instead of breaking order.
+            section: item.section !== undefined && Toolbox.SECTION_ORDER.includes(item.section) ? item.section : undefined,
+          });
         });
 
         return acc;
       }, []);
+
+    this.sectionEntryNames = new Map();
+    this.hiddenEntryNames = new Set();
+    this.hiddenSectionHeaders = new Set();
+
+    /**
+     * Sectioning is opt-in per entry: with no declared sections the toolbox
+     * stays a flat list (back-compat for hosts registering only custom tools).
+     */
+    const sectioningActive = entriesWithSections.some((entry) => entry.section !== undefined);
+    const result: PopoverItemParams[] = sectioningActive
+      ? this.buildSectionedItems(entriesWithSections)
+      : entriesWithSections.map((entry) => entry.params);
 
     /**
      * Append flat block-color commands ("Red Background", "Orange Text color", …)
@@ -882,6 +977,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       const colorEntries = getBlockColorToolboxEntries(this.api.i18n);
 
       this.colorCommandNames = colorEntries.map((entry) => entry.name);
+
+      if (sectioningActive) {
+        result.push(this.buildSectionHeaderItem('color'));
+        this.sectionEntryNames.set('color', [ ...this.colorCommandNames ]);
+      }
 
       colorEntries.forEach((entry) => {
         result.push({
@@ -901,6 +1001,86 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this._toolboxItemsToBeDisplayed = result;
 
     return result;
+  }
+
+  /**
+   * Fixed render order of the labeled toolbox sections.
+   */
+  private static readonly SECTION_ORDER: string[] = ['basic', 'media', 'database', 'advanced'];
+
+  /**
+   * i18n keys of the section header labels. 'color' is toolbox-internal: it
+   * labels the block-color commands and is not part of the public
+   * ToolboxSection union.
+   */
+  private static readonly SECTION_TITLE_KEYS: Record<string, string> = {
+    basic: 'toolbox.sectionBasic',
+    media: 'toolbox.sectionMedia',
+    database: 'toolbox.sectionDatabase',
+    advanced: 'toolbox.sectionAdvanced',
+    color: 'toolbox.sectionColor',
+  };
+
+  /**
+   * Popover item name of a section's header, used to toggle its visibility.
+   * @param section - section id
+   */
+  private static sectionHeaderName(section: string): string {
+    return `toolbox-section-${section}`;
+  }
+
+  /**
+   * Assembles the grouped list: labeled known sections in fixed order, then
+   * unsectioned entries behind a plain separator. Also records each section's
+   * entry names for header-visibility syncing.
+   * @param entries - flat toolbox entries with their resolved section
+   */
+  private buildSectionedItems(entries: SectionedToolboxEntry[]): PopoverItemParams[] {
+    const result: PopoverItemParams[] = [];
+
+    for (const section of Toolbox.SECTION_ORDER) {
+      const sectionEntries = entries.filter((entry) => entry.section === section);
+
+      if (sectionEntries.length === 0) {
+        continue;
+      }
+
+      result.push(this.buildSectionHeaderItem(section));
+      this.sectionEntryNames.set(section, sectionEntries.map((entry) => entry.name));
+      result.push(...sectionEntries.map((entry) => entry.params));
+    }
+
+    const unsectioned = entries.filter((entry) => entry.section === undefined);
+
+    if (unsectioned.length > 0) {
+      result.push({ type: PopoverItemType.Separator });
+      result.push(...unsectioned.map((entry) => entry.params));
+    }
+
+    return result;
+  }
+
+  /**
+   * Builds the labeled header rendered above a section's entries. An Html
+   * popover item: skipped by keyboard navigation (no focusable controls) and
+   * hidden automatically while a search query is active — during search the
+   * list is re-ranked flat, so static group labels would mislabel it.
+   * @param section - section id the header labels
+   */
+  private buildSectionHeaderItem(section: string): PopoverItemParams {
+    const element = document.createElement('div');
+
+    // Same visual language as the search-time group labels in PopoverDesktop.
+    element.className = 'pl-2 pr-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-text/50 cursor-default';
+    element.setAttribute('role', 'separator');
+    element.setAttribute('data-blok-testid', 'toolbox-section-title');
+    element.textContent = this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]);
+
+    return {
+      type: PopoverItemType.Html,
+      element,
+      name: Toolbox.sectionHeaderName(section),
+    };
   }
 
   /**

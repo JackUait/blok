@@ -10,9 +10,11 @@ const TOOL_CLASS_CODE = `// callout-tool.ts
 export class CalloutTool {
   private data: { text: string };
 
-  // Shows the tool in the "/" menu.
+  // Shows the tool in the "/" menu. \`section\` groups the entry under a
+  // labeled heading ('basic' | 'media' | 'database' | 'advanced'); omit it
+  // to list the entry in the trailing unlabeled group.
   static get toolbox() {
-    return { title: 'Callout', icon: '💡' };
+    return { title: 'Callout', icon: '💡', section: 'basic' };
   }
 
   constructor({ data }: { data: { text?: string } }) {

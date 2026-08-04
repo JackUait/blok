@@ -872,6 +872,7 @@ export class CodeTool implements BlockTool {
       shortcut: '```',
       searchTerms: ['code', 'pre', 'snippet', 'program'],
       searchTermKeys: ['code', 'pre', 'snippet', 'program'],
+      section: 'media',
     };
   }
 

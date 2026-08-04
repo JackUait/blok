@@ -1732,6 +1732,30 @@ describe('PopoverDesktop', () => {
 
       expect(alphaItem?.getElement()?.hasAttribute(DATA_ATTR.hidden)).toBe(false);
     });
+
+    it('named html item hidden via toggleItemHiddenByName stays hidden across a filter cycle', () => {
+      const headerElement = document.createElement('div');
+
+      headerElement.textContent = 'Basic blocks';
+
+      const popover = createPopover({
+        items: [
+          { type: PopoverItemType.Html, element: headerElement, name: 'toolbox-section-basic' },
+          { title: 'Alpha', name: 'alpha', onActivate: vi.fn() },
+        ],
+      });
+
+      popover.show();
+
+      popover.toggleItemHiddenByName('toolbox-section-basic', true);
+
+      // A non-empty query hides html items anyway; clearing it used to reveal
+      // them again, overriding the permanent hide.
+      popover.filterItems('alp');
+      popover.filterItems('');
+
+      expect(headerElement.parentElement?.hasAttribute(DATA_ATTR.hidden)).toBe(true);
+    });
   });
 
   describe('width consistency during search', () => {

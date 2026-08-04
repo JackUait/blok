@@ -72,6 +72,7 @@ export class DividerTool implements BlockTool {
       shortcut: '---',
       searchTerms: ['hr', 'line', 'separator', 'rule', '---', 'divider', 'delimiter', 'splitter'],
       searchTermKeys: ['divider', 'separator', 'delimiter', 'splitter'],
+      section: 'basic',
     };
   }
 

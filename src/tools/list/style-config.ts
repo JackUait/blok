@@ -43,6 +43,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTerms: ['ul', 'bullet', 'unordered', 'list'],
     searchTermKeys: ['bullet', 'unordered', 'list'],
     shortcut: 'CMD+SHIFT+5',
+    section: 'basic',
   },
   {
     icon: IconListNumbered,
@@ -52,6 +53,7 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTerms: ['ol', 'ordered', 'number', 'list'],
     searchTermKeys: ['ordered', 'number', 'list'],
     shortcut: 'CMD+SHIFT+6',
+    section: 'basic',
   },
   {
     icon: IconListChecklist,
@@ -61,5 +63,6 @@ export const getToolboxConfig = (): ToolboxConfig => [
     searchTerms: ['checkbox', 'task', 'todo', 'check', 'list'],
     searchTermKeys: ['checkbox', 'task', 'todo', 'check', 'list'],
     shortcut: 'CMD+SHIFT+7',
+    section: 'basic',
   },
 ];

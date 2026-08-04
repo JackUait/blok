@@ -145,6 +145,7 @@ export class FileTool implements BlockTool {
       icon: IconFile,
       titleKey: 'file',
       searchTerms: ['file', 'attachment', 'upload', 'download', 'pdf', 'document'],
+      section: 'media',
     };
   }
 

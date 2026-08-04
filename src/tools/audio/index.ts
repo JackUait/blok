@@ -106,6 +106,7 @@ export class AudioTool implements BlockTool {
       icon: IconMusic,
       titleKey: 'audio',
       searchTerms: ['audio', 'music', 'sound', 'song', 'mp3', 'track', 'media'],
+      section: 'media',
     };
   }
 

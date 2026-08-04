@@ -1395,6 +1395,7 @@ export class Header implements BlockTool {
       searchTerms: [`h${level.number}`, 'title', 'header', 'heading'],
       searchTermKeys: ['title', 'header', 'heading'],
       shortcut: '#'.repeat(level.number),
+      section: 'basic' as const,
     }));
 
     const toggleHeadingEntries = Header.DEFAULT_LEVELS
@@ -1407,6 +1408,7 @@ export class Header implements BlockTool {
         searchTerms: ['toggle', 'heading', `h${level.number}`, 'collapsible'],
         searchTermKeys: ['toggle', 'heading', 'collapsible'],
         shortcut: '>' + '#'.repeat(level.number),
+        section: 'advanced' as const,
       }));
 
     return [...headingEntries, ...toggleHeadingEntries];

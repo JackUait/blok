@@ -160,20 +160,22 @@ describe('inline formatting glyph hygiene', () => {
     expect(IconBold).not.toMatch(/Z/i);
   });
 
-  it('IconBold carries semantic bold weight', () => {
-    // a Bold glyph drawn at the 1.25 hairline does not read as "bold" — the B
-    // is the one glyph whose MEANING is weight, so it renders heavier (like
-    // every production toolbar); it is deliberately outside the menu-weight family
-    expect(IconBold).toContain('stroke-width="1.9"');
+  it('IconBold shares the family hairline weight', () => {
+    // the 1.9 "semantic bold" experiment read as a different icon set once the
+    // inline toolbar placed all nine glyphs side by side (user-directed
+    // unification 2026-08-05) — the B's meaning is carried by the letterform,
+    // its weight by the shared 1.25 hairline like every stroke icon system
+    expect(IconBold).toContain('stroke-width="1.25"');
   });
 
   it('IconUnderline rule hugs the U bowl width', () => {
-    // the old rule ran 11 units under an 8-unit bowl — reads misaligned
-    expect(IconUnderline).toContain('M5.5 16.5h9');
+    // the old rule ran 11 units under an 8-unit bowl — reads misaligned;
+    // the rule sits ON the shared y16 baseline of the inline glyph family
+    expect(IconUnderline).toContain('M5.5 16h9');
   });
 
   it('IconEquation x sits centered under the radical bar', () => {
-    expect(IconEquation).toContain('M10.2 9.8');
+    expect(IconEquation).toContain('M10.4 11.1');
   });
 
   it('IconClearFormat is a hairline T with a strike-out x', () => {

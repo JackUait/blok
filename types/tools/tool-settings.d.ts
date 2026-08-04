@@ -14,6 +14,14 @@ export type ToolClass = new (...args: any[]) => any;
 export type ToolboxConfig = ToolboxConfigEntry | ToolboxConfigEntry[];
 
 /**
+ * Known toolbox sections. When at least one displayed entry declares a
+ * section, the toolbox groups entries under labeled section headers rendered
+ * in this fixed order: basic → media → database → advanced. Entries without
+ * a section are appended after the labeled sections behind a plain separator.
+ */
+export type ToolboxSection = 'basic' | 'media' | 'database' | 'advanced';
+
+/**
  * Tool's Toolbox settings
  */
 export interface ToolboxConfigEntry {
@@ -76,6 +84,15 @@ export interface ToolboxConfigEntry {
    * Unlike tool-level shortcuts, these are per-entry hints for tools with multiple variants.
    */
   shortcut?: string;
+
+  /**
+   * Toolbox section this entry is grouped under (per-entry, so one tool can
+   * spread entries across sections — e.g. headings in 'basic', toggle
+   * headings in 'advanced'). Omit it to keep the entry in the trailing
+   * unlabeled group; when NO displayed entry declares a section the toolbox
+   * stays a flat list.
+   */
+  section?: ToolboxSection;
 }
 
 /**

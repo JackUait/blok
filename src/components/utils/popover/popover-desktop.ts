@@ -1735,9 +1735,10 @@ export class PopoverDesktop extends PopoverAbstract {
       .forEach((item) => {
         const isDefaultItem = item instanceof PopoverItemDefault;
         const isSeparatorOrHtml = item instanceof PopoverItemSeparator || item instanceof PopoverItemHtml;
+        const isPermanentlyHidden = item.name !== undefined && this.isNamePermanentlyHidden(item.name);
         const isHidden = isDefaultItem
-          ? !matchingTopLevel.includes(item) || (item.name !== undefined && this.isNamePermanentlyHidden(item.name))
-          : isSeparatorOrHtml && (isNothingFound || !isEmptyQuery);
+          ? !matchingTopLevel.includes(item) || isPermanentlyHidden
+          : (isSeparatorOrHtml && (isNothingFound || !isEmptyQuery)) || isPermanentlyHidden;
 
         item.toggleHidden(isHidden);
       });

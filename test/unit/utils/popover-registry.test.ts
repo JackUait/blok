@@ -469,6 +469,140 @@ describe('PopoverRegistry', () => {
     });
   });
 
+  describe('same-trigger click suppression (clicking the item that opened the popover does nothing)', () => {
+    /**
+     * Simulates a full press gesture on an element: pointerdown (arms the
+     * suppression when the popover is already open) followed by the click.
+     */
+    const pressAndClick = (element: HTMLElement): void => {
+      element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    };
+
+    it('swallows the click of a press that started on the open popover\'s interactive trigger', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      const clickListener = vi.fn();
+
+      trigger.addEventListener('click', clickListener);
+
+      registry.register(popover, trigger);
+      pressAndClick(trigger);
+
+      expect(clickListener).not.toHaveBeenCalled();
+      expect(popover.hide).not.toHaveBeenCalled();
+
+      trigger.remove();
+    });
+
+    it('does not swallow the opening click (popover registered mid-gesture, after pointerdown)', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      const clickListener = vi.fn();
+
+      trigger.addEventListener('click', clickListener);
+
+      // Mouseup-driven openers (settings toggler, plus button) register the
+      // popover BETWEEN pointerdown and click of the same gesture.
+      trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      registry.register(popover, trigger);
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(clickListener).toHaveBeenCalledTimes(1);
+
+      trigger.remove();
+    });
+
+    it('does not swallow clicks when the trigger is a non-interactive anchor (e.g. a block holder)', () => {
+      const holderTrigger = document.createElement('div');
+      const linkInsideHolder = document.createElement('a');
+
+      holderTrigger.appendChild(linkInsideHolder);
+      document.body.appendChild(holderTrigger);
+
+      const popoverEl = document.createElement('div');
+      const popover = {
+        hide: vi.fn(),
+        hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
+        getElement: vi.fn(() => popoverEl),
+        getFocusHost: vi.fn(() => null),
+      } as unknown as PopoverAbstract;
+
+      const clickListener = vi.fn();
+
+      linkInsideHolder.addEventListener('click', clickListener);
+
+      registry.register(popover, holderTrigger);
+      pressAndClick(linkInsideHolder);
+
+      expect(clickListener).toHaveBeenCalledTimes(1);
+
+      holderTrigger.remove();
+    });
+
+    it('does not swallow the click when the popover closed between press and click', () => {
+      const { popover, trigger } = createMockPopover();
+
+      document.body.appendChild(trigger);
+      const clickListener = vi.fn();
+
+      trigger.addEventListener('click', clickListener);
+
+      registry.register(popover, trigger);
+      trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      registry.unregister(popover);
+      trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(clickListener).toHaveBeenCalledTimes(1);
+
+      trigger.remove();
+    });
+
+    it('does not swallow a click landing outside the pressed trigger', () => {
+      const { popover, trigger } = createMockPopover();
+      const outsideElement = document.createElement('button');
+
+      document.body.appendChild(trigger);
+      document.body.appendChild(outsideElement);
+
+      const clickListener = vi.fn();
+
+      outsideElement.addEventListener('click', clickListener);
+
+      registry.register(popover, trigger);
+      trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      outsideElement.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      expect(clickListener).toHaveBeenCalledTimes(1);
+
+      trigger.remove();
+      outsideElement.remove();
+    });
+  });
+
+  describe('isOpenTrigger', () => {
+    it('reports whether an element is (or is inside) the trigger of an open popover', () => {
+      const { popover, trigger } = createMockPopover();
+      const iconInsideTrigger = document.createElement('span');
+
+      trigger.appendChild(iconInsideTrigger);
+
+      expect(registry.isOpenTrigger(trigger)).toBe(false);
+
+      registry.register(popover, trigger);
+
+      expect(registry.isOpenTrigger(trigger)).toBe(true);
+      expect(registry.isOpenTrigger(iconInsideTrigger)).toBe(true);
+      expect(registry.isOpenTrigger(document.createElement('button'))).toBe(false);
+
+      registry.unregister(popover);
+
+      expect(registry.isOpenTrigger(trigger)).toBe(false);
+    });
+  });
+
   describe('nested (contained) popover registration', () => {
     it('does NOT close an ancestor popover when a contained child registers', () => {
       const parent = createMockPopover();

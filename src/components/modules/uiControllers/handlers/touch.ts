@@ -1,3 +1,5 @@
+import { PopoverRegistry } from '../../../utils/popover/popover-registry';
+
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 
 /**
@@ -25,6 +27,17 @@ export const createRedactorTouchHandler = (
   deps: RedactorTouchHandlerDependencies
 ): ((event: Event) => void) => {
   return (event: Event): void => {
+    /**
+     * Same-trigger law: a press that started on the interactive trigger of an
+     * already-open popover (e.g. the image toolbar's "..." button while its
+     * settings menu is open) belongs to that popover. Switching the current
+     * block or moving the toolbar here would close the menu mid-gesture, and
+     * the ensuing click would re-open it with a visible flicker.
+     */
+    if (PopoverRegistry.instance.isSameTriggerPressActive()) {
+      return;
+    }
+
     const initialTarget = event.target as HTMLElement;
 
     /**

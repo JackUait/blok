@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PlusButtonHandler, TOOLBOX_POPOVER_ID } from '../../../../../src/components/modules/toolbar/plus-button';
+import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
+import type { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { ToolbarNodes } from '../../../../../src/components/modules/toolbar/types';
 
@@ -119,6 +121,77 @@ describe('PlusButtonHandler', () => {
       plusButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
 
       expect(handleClickSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleClick — same-trigger no-op (clicking the item that opened the popover does nothing)', () => {
+    let closeToolboxSpy: ReturnType<typeof vi.fn>;
+    let handler: PlusButtonHandler;
+
+    beforeEach(() => {
+      closeToolboxSpy = vi.fn();
+
+      const blokModules = {
+        I18n: {
+          t: vi.fn((key: string) => key),
+        },
+        BlockSettings: {
+          opened: false,
+          close: vi.fn(),
+        },
+        BlockSelection: {
+          anyBlockSelected: false,
+          clearSelection: vi.fn(),
+        },
+      } as unknown as BlokModules;
+
+      handler = new PlusButtonHandler(() => blokModules, {
+        getToolboxOpened: () => true,
+        openToolbox: vi.fn(),
+        openToolboxWithoutSlash: vi.fn(),
+        closeToolbox: closeToolboxSpy,
+        moveAndOpenToolbar: vi.fn(),
+      });
+    });
+
+    afterEach(() => {
+      PopoverRegistry.resetForTests();
+    });
+
+    /**
+     * Registers a mock popover in the registry with the given trigger,
+     * simulating an open toolbox anchored to that element.
+     */
+    const registerOpenPopoverFor = (trigger: HTMLElement): void => {
+      const popoverEl = document.createElement('div');
+      const popover = {
+        hide: vi.fn(),
+        hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
+        getElement: vi.fn(() => popoverEl),
+        getFocusHost: vi.fn(() => null),
+      } as unknown as PopoverAbstract;
+
+      PopoverRegistry.instance.register(popover, trigger);
+    };
+
+    it('does nothing when the open toolbox is anchored to this plus button', () => {
+      const plusButton = handler.make(emptyNodes());
+
+      registerOpenPopoverFor(plusButton);
+
+      handler.handleClick();
+
+      expect(closeToolboxSpy).not.toHaveBeenCalled();
+    });
+
+    it('still closes the toolbox when it is not anchored to this plus button', () => {
+      handler.make(emptyNodes());
+
+      registerOpenPopoverFor(document.createElement('button'));
+
+      handler.handleClick();
+
+      expect(closeToolboxSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

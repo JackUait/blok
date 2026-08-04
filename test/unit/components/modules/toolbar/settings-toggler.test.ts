@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { SettingsTogglerHandler } from '../../../../../src/components/modules/toolbar/settings-toggler';
 import { ClickDragHandler } from '../../../../../src/components/modules/toolbar/click-handler';
+import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
+import type { PopoverAbstract } from '../../../../../src/components/utils/popover/popover-abstract';
 import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import type { BlockSettings } from '../../../../../src/components/modules/toolbar/blockSettings';
@@ -422,6 +424,59 @@ describe('SettingsTogglerHandler', () => {
       expect(() => {
         exposeHandleClick(settingsTogglerHandler).handleClick();
       }).not.toThrow();
+    });
+
+    describe('same-trigger no-op (clicking the item that opened the popover does nothing)', () => {
+      afterEach(() => {
+        PopoverRegistry.resetForTests();
+      });
+
+      /**
+       * Registers a mock popover in the registry with the given trigger,
+       * simulating an open block settings menu anchored to that element.
+       */
+      const registerOpenPopoverFor = (trigger: HTMLElement): void => {
+        const popoverEl = document.createElement('div');
+        const popover = {
+          hide: vi.fn(),
+          hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
+          getElement: vi.fn(() => popoverEl),
+          getFocusHost: vi.fn(() => null),
+        } as unknown as PopoverAbstract;
+
+        PopoverRegistry.instance.register(popover, trigger);
+      };
+
+      it('does nothing when the open menu was opened by this toggler', () => {
+        settingsTogglerHandler.setHoveredBlock(mockBlock);
+        const blok = getBlok();
+        const blockSettings = blok.BlockSettings as MockBlockSettings;
+
+        blockSettings.opened = true;
+        const togglerElement = (settingsTogglerHandler as unknown as {
+          settingsTogglerElement: HTMLElement;
+        }).settingsTogglerElement;
+
+        registerOpenPopoverFor(togglerElement);
+
+        exposeHandleClick(settingsTogglerHandler).handleClick();
+
+        expect(blockSettings.close).not.toHaveBeenCalled();
+        expect(blockSettings.open).not.toHaveBeenCalled();
+      });
+
+      it('still closes the menu when it was opened from a different trigger', () => {
+        settingsTogglerHandler.setHoveredBlock(mockBlock);
+        const blok = getBlok();
+        const blockSettings = blok.BlockSettings as MockBlockSettings;
+
+        blockSettings.opened = true;
+        registerOpenPopoverFor(document.createElement('button'));
+
+        exposeHandleClick(settingsTogglerHandler).handleClick();
+
+        expect(blockSettings.close).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should open BlockSettings without changing hovered block when settings toggler is clicked', () => {

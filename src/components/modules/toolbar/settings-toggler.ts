@@ -4,6 +4,7 @@ import { DATA_ATTR, TEST_ID } from '../../constants';
 import { Dom as $ } from '../../dom';
 import { IconMenu } from '../../icons';
 import { getUserOS } from '../../utils';
+import { PopoverRegistry } from '../../utils/popover/popover-registry';
 import { hide, onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';
 
@@ -340,6 +341,18 @@ export class SettingsTogglerHandler {
     blok.BlockManager.currentBlock = targetBlock;
 
     if (blok.BlockSettings.opened) {
+      /**
+       * Same-trigger law: activating the toggler while the menu it opened is
+       * still open must do nothing — the menu stays open (no toggle-close, no
+       * re-open flicker). Escape or an outside press closes it.
+       */
+      if (
+        this.settingsTogglerElement !== null &&
+        PopoverRegistry.instance.isOpenTrigger(this.settingsTogglerElement)
+      ) {
+        return;
+      }
+
       blok.BlockSettings.close();
     } else {
       void blok.BlockSettings.open(targetBlock, this.settingsTogglerElement ?? undefined);

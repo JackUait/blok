@@ -3,6 +3,8 @@ import {
   createRedactorTouchHandler,
   getClickedNode,
 } from '../../../../../../src/components/modules/uiControllers/handlers/touch';
+import { PopoverRegistry } from '../../../../../../src/components/utils/popover/popover-registry';
+import type { PopoverAbstract } from '../../../../../../src/components/utils/popover/popover-abstract';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 
 const createBlokStub = (): BlokModules => {
@@ -159,6 +161,81 @@ describe('Touch Handler', () => {
   });
 
   describe('createRedactorTouchHandler', () => {
+    describe('same-trigger press (clicking the item that opened the popover does nothing)', () => {
+      afterEach(() => {
+        PopoverRegistry.resetForTests();
+      });
+
+      it('does nothing when the press started on the open popover\'s interactive trigger', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        // An image-toolbar-style "..." button inside the redactor with its
+        // settings popover open and registered.
+        const trigger = document.createElement('button');
+
+        redactorElement.appendChild(trigger);
+
+        const popoverEl = document.createElement('div');
+        const popover = {
+          hide: vi.fn(),
+          hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
+          getElement: vi.fn(() => popoverEl),
+          getFocusHost: vi.fn(() => null),
+        } as unknown as PopoverAbstract;
+
+        PopoverRegistry.resetForTests().register(popover, trigger);
+
+        // The registry arms the same-trigger press on document pointerdown,
+        // which precedes the mousedown the touch handler receives.
+        trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+        const event = new MouseEvent('mousedown', { bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: trigger });
+
+        handler(event);
+
+        expect(blok.BlockManager.setCurrentBlockByChildNode).not.toHaveBeenCalled();
+        expect(blok.Toolbar.moveAndOpen).not.toHaveBeenCalled();
+      });
+
+      it('behaves normally when a popover is open but the press is elsewhere', () => {
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const trigger = document.createElement('button');
+        const elsewhere = document.createElement('div');
+
+        redactorElement.appendChild(trigger);
+        redactorElement.appendChild(elsewhere);
+
+        const popoverEl = document.createElement('div');
+        const popover = {
+          hide: vi.fn(),
+          hasNode: vi.fn((node: Node) => popoverEl.contains(node)),
+          getElement: vi.fn(() => popoverEl),
+          getFocusHost: vi.fn(() => null),
+        } as unknown as PopoverAbstract;
+
+        PopoverRegistry.resetForTests().register(popover, trigger);
+
+        elsewhere.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+        const event = new MouseEvent('mousedown', { bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: elsewhere });
+
+        handler(event);
+
+        expect(blok.BlockManager.setCurrentBlockByChildNode).toHaveBeenCalledWith(elsewhere);
+      });
+    });
+
     it('sets current block by child node on touch', () => {
       const handler = createRedactorTouchHandler({
         Blok: blok,

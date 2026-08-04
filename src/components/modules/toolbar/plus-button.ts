@@ -5,6 +5,7 @@ import { Dom as $ } from '../../dom';
 import { IconPlus } from '../../icons';
 import { SelectionUtils } from '../../selection/index';
 import { getUserOS } from '../../utils';
+import { PopoverRegistry } from '../../utils/popover/popover-registry';
 import { onHover } from '../../utils/tooltip';
 import { twJoin } from '../../utils/tw';
 
@@ -105,6 +106,12 @@ export class PlusButtonHandler {
   private hoveredBlockInternal: Block | null = null;
 
   /**
+   * Reference to the plus button element, used to recognize the toolbox this
+   * button anchors when enforcing the same-trigger no-op in handleClick()
+   */
+  private plusButtonElement: HTMLElement | null = null;
+
+  /**
    * Creates the plus button element with tooltip
    * @param nodes - Toolbar nodes object to populate with the plus button
    * @returns The created plus button element
@@ -164,6 +171,8 @@ export class PlusButtonHandler {
     // eslint-disable-next-line no-param-reassign -- nodes is mutated by design
     nodes.plusButton = plusButton;
 
+    this.plusButtonElement = plusButton;
+
     this.refreshI18n(plusButton);
 
     return plusButton;
@@ -204,6 +213,20 @@ export class PlusButtonHandler {
    * @param insertAbove - if true, insert above the current block instead of below
    */
   public handleClick(insertAbove = false): void {
+    /**
+     * Same-trigger law: activating the plus button while the toolbox it
+     * anchors is still open must do nothing — the toolbox stays open with no
+     * side effects (no close, no selection clearing). Escape or an outside
+     * press closes it.
+     */
+    if (
+      this.getToolboxOpened() &&
+      this.plusButtonElement !== null &&
+      PopoverRegistry.instance.isOpenTrigger(this.plusButtonElement)
+    ) {
+      return;
+    }
+
     const { BlockManager, BlockSettings, BlockSelection, Caret } = this.getBlok();
 
     // Close other menus and clear selections

@@ -11,6 +11,16 @@ interface PopoverRegistryEntry {
 }
 
 /**
+ * Whether a popover trigger is an interactive control (the "item" a user
+ * clicks to open the popover) as opposed to an anchor-style trigger (a block
+ * holder or toolbar wrapper passed only for positioning/dismissal geometry).
+ * Only controls take part in same-trigger click suppression — swallowing
+ * clicks inside an anchor-style trigger would break the content it wraps.
+ */
+const isInteractiveTriggerControl = (element: HTMLElement): boolean =>
+  element.matches('button, [role="button"]');
+
+/**
  * Singleton registry that manages open popovers.
  * Enforces mutual exclusion (only one popover open at a time)
  * and handles click-outside-to-close behavior.
@@ -52,6 +62,18 @@ export class PopoverRegistry {
    * Bound reference to the pointerdown handler for add/remove symmetry
    */
   private boundPointerDown: ((e: PointerEvent) => void) | null = null;
+
+  /**
+   * Bound reference to the capture-phase click handler for add/remove symmetry
+   */
+  private boundClickCapture: ((e: MouseEvent) => void) | null = null;
+
+  /**
+   * Trigger element of an already-open popover that the current pointer press
+   * started on. Armed by {@link handleDocumentPointerDown}, consumed by
+   * {@link handleDocumentClickCapture} to make that click a no-op.
+   */
+  private pressedOpenTrigger: HTMLElement | null = null;
 
   /**
    * Bound reference to the capture-phase keydown handler for add/remove symmetry
@@ -171,6 +193,32 @@ export class PopoverRegistry {
   }
 
   /**
+   * Checks whether the given element is (or is inside) the trigger element of
+   * a currently-open popover. Trigger handlers use this to honor the
+   * same-trigger law: activating the item that opened a popover while that
+   * popover is still open must do nothing.
+   * @param element - element to test against registered trigger elements
+   */
+  public isOpenTrigger(element: HTMLElement): boolean {
+    return this.stack.some(
+      entry => entry.triggerElement === element || entry.triggerElement.contains(element)
+    );
+  }
+
+  /**
+   * Whether the current pointer press started on the interactive trigger of an
+   * already-open popover (armed by {@link handleDocumentPointerDown}, which
+   * runs during pointerdown — before the mousedown/touchstart handlers that
+   * consult this). Editor-level press handlers use it to leave the whole
+   * gesture to the popover: moving the toolbar or switching the current block
+   * on such a press would tear the popover down mid-gesture and the ensuing
+   * click would re-open it with a visible flicker.
+   */
+  public isSameTriggerPressActive(): boolean {
+    return this.pressedOpenTrigger !== null;
+  }
+
+  /**
    * Cleans up the registry: removes the document listeners and clears the stack
    */
   public destroy(): void {
@@ -261,11 +309,15 @@ export class PopoverRegistry {
    * Handles pointerdown events on the document.
    * Walks the stack in reverse (topmost first). For each entry:
    * - If the click target is inside the popover, stop (click is inside).
-   * - If the click target is inside the trigger element, stop (click is on trigger).
+   * - If the click target is inside the trigger element, stop (click is on
+   *   trigger) — and when that trigger is an interactive control, arm
+   *   same-trigger click suppression so the ensuing click is a no-op.
    * - Otherwise, close the popover by calling hide().
    * @param event - the pointerdown event
    */
   private handleDocumentPointerDown(event: PointerEvent): void {
+    this.pressedOpenTrigger = null;
+
     const target = event.target;
 
     if (!(target instanceof Node)) {
@@ -280,6 +332,9 @@ export class PopoverRegistry {
       }
 
       if (entry.triggerElement.contains(target)) {
+        this.pressedOpenTrigger = isInteractiveTriggerControl(entry.triggerElement)
+          ? entry.triggerElement
+          : null;
         break;
       }
 
@@ -289,6 +344,46 @@ export class PopoverRegistry {
     for (const entry of entriesToClose) {
       entry.popover.hide();
     }
+  }
+
+  /**
+   * Capture-phase click handler enforcing the same-trigger law: a click that
+   * started (pointerdown) on the interactive trigger of an already-open
+   * popover must do nothing. The popover neither closes (guaranteed by
+   * {@link handleDocumentPointerDown} ignoring trigger presses) nor re-opens —
+   * this swallow keeps the trigger's own click handler from running the open
+   * path again, which would replay the popover's opening animation.
+   * @param event - the click event
+   */
+  private handleDocumentClickCapture(event: MouseEvent): void {
+    const pressedTrigger = this.pressedOpenTrigger;
+
+    this.pressedOpenTrigger = null;
+
+    if (pressedTrigger === null) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    if (!pressedTrigger.contains(target)) {
+      return;
+    }
+
+    /**
+     * The popover may have closed between press and click (e.g. via Escape or
+     * a mouseup-driven handler); a click on a trigger with nothing open
+     * anymore must behave normally.
+     */
+    if (!this.isOpenTrigger(pressedTrigger)) {
+      return;
+    }
+
+    event.stopImmediatePropagation();
   }
 
   /**
@@ -302,10 +397,12 @@ export class PopoverRegistry {
     }
 
     this.boundPointerDown = (e: PointerEvent): void => this.handleDocumentPointerDown(e);
+    this.boundClickCapture = (e: MouseEvent): void => this.handleDocumentClickCapture(e);
     this.boundKeyDown = (e: KeyboardEvent): void => this.handleDocumentKeyDown(e);
     this.boundFocusIn = (e: FocusEvent): void => this.handleDocumentFocusIn(e);
 
     document.addEventListener('pointerdown', this.boundPointerDown);
+    document.addEventListener('click', this.boundClickCapture, true);
     document.addEventListener('keydown', this.boundKeyDown, true);
     document.addEventListener('focusin', this.boundFocusIn, true);
   }
@@ -314,9 +411,16 @@ export class PopoverRegistry {
    * Removes the document listeners
    */
   private removeDocumentListener(): void {
+    this.pressedOpenTrigger = null;
+
     if (this.boundPointerDown !== null) {
       document.removeEventListener('pointerdown', this.boundPointerDown);
       this.boundPointerDown = null;
+    }
+
+    if (this.boundClickCapture !== null) {
+      document.removeEventListener('click', this.boundClickCapture, true);
+      this.boundClickCapture = null;
     }
 
     if (this.boundKeyDown !== null) {

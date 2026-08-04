@@ -146,7 +146,7 @@ describe('PopoverInline', () => {
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-icon"]');
 
       expect(icon?.className).toContain('bg-popover-icon-bg');
-      expect(icon?.className).toContain('rounded-lg');
+      expect(icon?.className).toContain('rounded-md');
       expect(icon?.className).not.toContain('bg-transparent');
     });
 

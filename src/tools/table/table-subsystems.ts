@@ -1042,7 +1042,7 @@ export class TableSubsystems {
       .filter((block): block is BlockAPI => block !== null && block !== undefined)
       .map(block => ({
         block,
-        input: block.holder.querySelector<HTMLElement>('[contenteditable="true"]'),
+        input: block.holder.querySelector<HTMLElement>('[contenteditable="true"]:not([data-blok-mutation-free])'),
       }))
       .filter((target): target is { block: BlockAPI; input: HTMLElement } =>
         target.input !== null && (target.input.textContent ?? '').trim() !== '');

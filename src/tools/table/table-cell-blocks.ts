@@ -543,7 +543,7 @@ export class TableCellBlocks {
       return;
     }
 
-    const editables = container.querySelectorAll<HTMLElement>('[contenteditable="true"]');
+    const editables = container.querySelectorAll<HTMLElement>('[contenteditable="true"]:not([data-blok-mutation-free])');
 
     if (editables.length === 0) {
       return;

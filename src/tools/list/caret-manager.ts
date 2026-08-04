@@ -28,7 +28,7 @@ export const setCaretToBlockContent = (
     if (!holder) return;
 
     // Find the contenteditable element within the new block
-    const contentEl = holder.querySelector('[contenteditable="true"]');
+    const contentEl = holder.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
     if (!(contentEl instanceof HTMLElement)) {
       // Fallback to setToBlock if no content element found
       api.caret.setToBlock(block, position);
@@ -66,7 +66,7 @@ export const setCaretToBlockContent = (
 
   // Try synchronous focus first — the block is already in the DOM after insert()
   const holder = block.holder;
-  const contentEl = holder?.querySelector('[contenteditable="true"]');
+  const contentEl = holder?.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
 
   if (contentEl instanceof HTMLElement) {
     applyFocus();
@@ -163,7 +163,7 @@ export const setCaretToBlockContentOffset = (
     const holder = block.holder;
     if (!holder) return;
 
-    const contentEl = holder.querySelector('[contenteditable="true"]');
+    const contentEl = holder.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
     if (!(contentEl instanceof HTMLElement)) {
       api.caret.setToBlock(block, 'end');
       api.caret.updateLastCaretAfterPosition();
@@ -188,7 +188,7 @@ export const setCaretToBlockContentOffset = (
   };
 
   const holder = block.holder;
-  const contentEl = holder?.querySelector('[contenteditable="true"]');
+  const contentEl = holder?.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
 
   if (contentEl instanceof HTMLElement) {
     applyFocus();

@@ -100,7 +100,7 @@ export class ToolbarPositioner {
      * For list items, find the actual text content element ([contenteditable]) and use its position
      * to properly center the toolbar on the text, not on the marker which may have different font-size
      */
-    const textElement = listItemElement?.querySelector('[contenteditable]');
+    const textElement = listItemElement?.querySelector('[contenteditable]:not([data-blok-mutation-free])');
     const pluginsContent = targetBlock.pluginsContent;
     /**
      * If the tool provides a toolbar anchor element, use it instead of searching
@@ -117,7 +117,7 @@ export class ToolbarPositioner {
      */
     const editableDescendant =
       !toolbarAnchor && !pluginsContent.matches('[contenteditable]')
-        ? (pluginsContent.querySelector('[contenteditable]') ?? null)
+        ? (pluginsContent.querySelector('[contenteditable]:not([data-blok-mutation-free])') ?? null)
         : null;
     const contentElement = textElement ?? listItemElement ?? toolbarAnchor ?? editableDescendant ?? pluginsContent;
     const contentRect = contentElement.getBoundingClientRect();

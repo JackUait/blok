@@ -763,7 +763,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     }
 
     if (this.openedWithSlash) {
-      const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+      const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]:not([data-blok-mutation-free])');
 
       if (contentEditable !== null) {
         this.stripSlashQuery(contentEditable, this.resolveSlashQuerySpan(contentEditable));
@@ -990,7 +990,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     const currentBlockParentId: string | null = currentBlock.parentId ?? null;
 
-    const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+    const contentEditable = currentBlock.holder.querySelector<HTMLElement>('[contenteditable="true"]:not([data-blok-mutation-free])');
 
     /**
      * The slash query span (slash→caret) the user typed before picking a tool.
@@ -1190,7 +1190,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     this.currentContentEditable = activeEl instanceof HTMLElement && activeEl.isContentEditable && this.currentBlockForSearch.contains(activeEl)
       ? activeEl
-      : this.currentBlockForSearch.querySelector('[contenteditable="true"]');
+      : this.currentBlockForSearch.querySelector('[contenteditable="true"]:not([data-blok-mutation-free])');
 
     if (this.currentContentEditable instanceof HTMLElement) {
       this.currentContentEditable.setAttribute(DATA_ATTR.slashSearch, this.i18nLabels.slashSearchPlaceholder);

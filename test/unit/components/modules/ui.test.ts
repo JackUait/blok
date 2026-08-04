@@ -1240,6 +1240,200 @@ describe("UI module", () => {
     });
   });
 
+  describe("capture clicks below editor", () => {
+    /**
+     * jsdom has no layout — the wrapper rect must be stubbed explicitly.
+     */
+    const stubRect = (
+      element: Element,
+      rect: { left: number; right: number; top: number; bottom: number },
+    ): void => {
+      vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
+        ...rect,
+        width: rect.right - rect.left,
+        height: rect.bottom - rect.top,
+        x: rect.left,
+        y: rect.top,
+        toJSON: () => rect,
+      });
+    };
+
+    const createCaptureUI = (
+      options: CreateUIOptions = {},
+    ): CreateUIResult => {
+      const result = createUI({
+        configOverrides: { captureClicksBelowEditor: true },
+        ...options,
+      });
+
+      result.wrapper.setAttribute(DATA_ATTR.editor, "");
+      stubRect(result.wrapper, { left: 100, right: 500, top: 0, bottom: 400 });
+
+      Object.assign(result.blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+
+      (
+        result.ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      return result;
+    };
+
+    const clickAt = (
+      target: Element,
+      coords: { clientX: number; clientY: number },
+    ): void => {
+      target.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, ...coords }),
+      );
+    };
+
+    it("appends a block when clicking host background below the editor", () => {
+      const { blok } = createCaptureUI();
+
+      clickAt(document.body, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+      expect(blok.Caret.setToTheLastBlock).toHaveBeenCalledTimes(1);
+      expect(blok.Toolbar.moveAndOpen).toHaveBeenCalledWith(
+        blok.BlockManager.lastBlock,
+      );
+    });
+
+    it("appends when clicking the holder's own empty area below the wrapper", () => {
+      const { blok, holder } = createCaptureUI();
+
+      clickAt(holder, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not listen when the flag is off", () => {
+      const { ui, blok, wrapper } = createUI();
+
+      wrapper.setAttribute(DATA_ATTR.editor, "");
+      stubRect(wrapper, { left: 100, right: 500, top: 0, bottom: 400 });
+      Object.assign(blok.BlockManager, {
+        lastBlock: {
+          tool: { isDefault: true },
+          isEmpty: false,
+          holder: document.createElement("div"),
+        },
+      });
+      (
+        ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      clickAt(document.body, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("ignores clicks above the editor bottom edge", () => {
+      const { blok } = createCaptureUI();
+
+      clickAt(document.body, { clientX: 300, clientY: 200 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("ignores clicks outside the editor's horizontal band", () => {
+      const { blok } = createCaptureUI();
+
+      clickAt(document.body, { clientX: 600, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("ignores clicks on host content that does not contain the editor", () => {
+      const { blok } = createCaptureUI();
+      const hostContent = document.createElement("div");
+
+      document.body.appendChild(hostContent);
+
+      clickAt(hostContent, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("ignores clicks landing inside an outer editor instance", () => {
+      const outerEditor = document.createElement("div");
+
+      outerEditor.setAttribute(DATA_ATTR.editor, "");
+      document.body.appendChild(outerEditor);
+
+      const { blok, holder } = createCaptureUI();
+
+      // Nest our editor inside the outer editor's surface
+      outerEditor.appendChild(holder);
+
+      clickAt(outerEditor, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("stands down when a stacked editor sits closer above the click", () => {
+      const { blok } = createCaptureUI();
+      const lowerEditor = document.createElement("div");
+
+      lowerEditor.setAttribute(DATA_ATTR.editor, "");
+      document.body.appendChild(lowerEditor);
+      stubRect(lowerEditor, { left: 100, right: 500, top: 500, bottom: 800 });
+
+      clickAt(document.body, { clientX: 300, clientY: 900 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("acts when it is the closest editor above the click", () => {
+      const { blok } = createCaptureUI();
+      const upperEditor = document.createElement("div");
+
+      upperEditor.setAttribute(DATA_ATTR.editor, "");
+      document.body.appendChild(upperEditor);
+      stubRect(upperEditor, { left: 100, right: 500, top: 0, bottom: 300 });
+
+      clickAt(document.body, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops listening after read-only unbinds the mutable listeners", () => {
+      const { ui, blok } = createCaptureUI();
+
+      (
+        ui as unknown as { unbindReadOnlySensitiveListeners: () => void }
+      ).unbindReadOnlySensitiveListeners();
+
+      clickAt(document.body, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+
+    it("does not fire when selection is not collapsed", () => {
+      vi.spyOn(SelectionUtils, "isCollapsed", "get").mockReturnValue(false);
+
+      const { blok } = createCaptureUI();
+
+      clickAt(document.body, { clientX: 300, clientY: 450 });
+
+      expect(blok.BlockManager.insertAtEnd).not.toHaveBeenCalled();
+      expect(blok.Caret.setToTheLastBlock).not.toHaveBeenCalled();
+    });
+  });
+
   describe("ToggleShortcuts", () => {
     it("registers ToggleShortcuts during prepare()", async () => {
       const { ui, blok } = createUI({ attachNodes: false });

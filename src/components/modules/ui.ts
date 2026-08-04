@@ -1061,6 +1061,19 @@ export class UI extends Module<UINodes> {
     }, false);
 
     /**
+     * Opt-in zero-footprint alternative to the bottom zone: clicks on the host
+     * page below the editor append a block. Bubble phase, so any host element
+     * that stops propagation wins automatically.
+     */
+    if (this.config.captureClicksBelowEditor === true) {
+      this.readOnlyMutableListeners.on(document, 'click', (event: Event) => {
+        if (event instanceof MouseEvent) {
+          this.documentClickedBelowEditor(event);
+        }
+      }, false);
+    }
+
+    /**
      * Redactor click handler for anchor navigation (plain or Ctrl+click)
      */
     this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
@@ -1147,22 +1160,31 @@ export class UI extends Module<UINodes> {
    * Creates a new default block if needed, focuses the last block, and opens the toolbar.
    */
   private bottomZoneClicked(event: MouseEvent): void {
+    if (this.appendBlockAtBottom()) {
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+    }
+  }
+
+  /**
+   * Shared append behavior for the bottom zone and the opt-in document-level
+   * click capture: insert a default block at the end if needed, focus it and
+   * open the toolbar. Returns false when the editor guards reject the action.
+   */
+  private appendBlockAtBottom(): boolean {
     if (!Selection.isCollapsed) {
-      return;
+      return false;
     }
 
     const { BlockSelection, BlockManager, Caret, Toolbar } = this.Blok;
 
     if (BlockSelection.anyBlockSelected) {
-      return;
+      return false;
     }
 
     if (!BlockManager.lastBlock) {
-      return;
+      return false;
     }
-
-    event.stopImmediatePropagation();
-    event.stopPropagation();
 
     /**
      * Insert a default-block at the bottom if:
@@ -1175,6 +1197,66 @@ export class UI extends Module<UINodes> {
 
     Caret.setToTheLastBlock();
     Toolbar.moveAndOpen(BlockManager.lastBlock);
+
+    return true;
+  }
+
+  /**
+   * Opt-in (`captureClicksBelowEditor`) document-level handler: a click on the
+   * empty background below the editor appends a block, so hosts can drop the
+   * bottom zone (`minHeight: 0`) without losing the affordance.
+   *
+   * "Empty background" means the click target is the holder or one of its
+   * ancestors — clicks on sibling host content never qualify. Propagation is
+   * never stopped: hosts keep their own click handling.
+   */
+  private documentClickedBelowEditor(event: MouseEvent): void {
+    const target = event.target;
+
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    /**
+     * Empty-space test: the click landed on the background of an element that
+     * contains the editor (`contains` includes the holder itself).
+     */
+    if (!target.contains(this.nodes.holder)) {
+      return;
+    }
+
+    /**
+     * Nested-editor guard: when this instance lives inside another editor's
+     * surface, clicks on that surface belong to the outer instance.
+     */
+    if (target.closest(`[${DATA_ATTR.editor}]`) !== null) {
+      return;
+    }
+
+    const rect = this.nodes.wrapper.getBoundingClientRect();
+
+    if (event.clientY < rect.bottom || event.clientX < rect.left || event.clientX > rect.right) {
+      return;
+    }
+
+    /**
+     * Stacked-editors arbitration: every instance sees the same document
+     * click, so each decides standalone — only the instance whose bottom edge
+     * is closest above the click acts; document order breaks exact ties.
+     */
+    const matchingEditors = Array.from(target.querySelectorAll(`[${DATA_ATTR.editor}]`)).filter((editor) => {
+      const editorRect = editor.getBoundingClientRect();
+
+      return editorRect.bottom <= event.clientY && event.clientX >= editorRect.left && event.clientX <= editorRect.right;
+    });
+    const closestBottom = Math.max(...matchingEditors.map((editor) => editor.getBoundingClientRect().bottom));
+    const winner = matchingEditors.find((editor) => editor.getBoundingClientRect().bottom === closestBottom);
+
+    if (winner !== this.nodes.wrapper) {
+      return;
+    }
+
+    this.appendBlockAtBottom();
   }
 
   /**

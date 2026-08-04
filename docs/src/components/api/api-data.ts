@@ -417,6 +417,13 @@ const editor = new Blok(config);`,
           "Height in px of the editor's bottom clickable zone",
       },
       {
+        option: "captureClicksBelowEditor",
+        type: "boolean",
+        default: "false",
+        description:
+          "Opt-in: clicks on the host page below the editor append a block, with zero layout footprint. Pair with `minHeight: 0` to remove the bottom zone entirely. Only clicks landing on the empty background of an element that contains the editor count — clicks on your own content rendered below are ignored, and propagation is never stopped, so host click handlers keep working alongside.",
+      },
+      {
         option: "defaultBlock",
         type: "string",
         default: "'paragraph'",

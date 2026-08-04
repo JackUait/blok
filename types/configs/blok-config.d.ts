@@ -382,6 +382,21 @@ export interface BlokMountOptions {
   minHeight?: number;
 
   /**
+   * Opt-in: clicks on the host page below the editor append a block, with zero
+   * layout footprint. Typically paired with `minHeight: 0` to remove the
+   * bottom zone entirely.
+   *
+   * A click appends only when it lands below the editor within its horizontal
+   * band, on the background of an element containing the editor (the holder or
+   * one of its ancestors) — clicks on sibling host content are ignored. The
+   * listener never stops propagation, so host click handlers on those
+   * containers still run alongside.
+   *
+   * @default false
+   */
+  captureClicksBelowEditor?: boolean;
+
+  /**
    * Blok's log level (how many logs you want to see)
    */
   logLevel?: LogLevels;

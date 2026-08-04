@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0](https://github.com/JackUait/blok/compare/v1.6.2...v1.7.0) (2026-08-04)
+
+### Features
+
+- **Embed** — A stored generic embed the host hasn't allowed to be framed now renders as a clickable link card instead of the inert "No embed link" state, so the URL stays visible in both read and edit views and can never be silently lost. A new `linkPaste.allowedEmbedOrigins` hostname/wildcard trust list gives hosts fine-grained control as a middle ground before the all-or-nothing `allowGenericEmbed` flag. Tampered stored data stays fully inert, and no new iframe paths are introduced.
+
+### Bug Fixes
+
+- **Editor** — Queries for a block's first editable element now skip mutation-free markers such as a list item's bullet span, closing the remaining "marker ghost" sites where Enter could write an item's own HTML into the bullet and the toolbar centred on the marker's box instead of the text. An architecture test now enforces the guard on every `contenteditable` selector in the codebase.
+
 ## [1.6.2](https://github.com/JackUait/blok/compare/v1.6.1...v1.6.2) (2026-08-02)
 
 ### Bug Fixes

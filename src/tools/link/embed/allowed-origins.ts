@@ -12,17 +12,17 @@ export function isAllowedEmbedOrigin(url: string, patterns: readonly string[] | 
     return false;
   }
 
-  let hostname: string;
+  const hostname = ((): string | null => {
+    try {
+      const parsed = new URL(url);
 
-  try {
-    const parsed = new URL(url);
-
-    if (parsed.protocol !== 'https:') {
-      return false;
+      return parsed.protocol === 'https:' ? parsed.hostname.toLowerCase() : null;
+    } catch {
+      return null;
     }
+  })();
 
-    hostname = parsed.hostname.toLowerCase();
-  } catch {
+  if (hostname === null) {
     return false;
   }
 

@@ -4,12 +4,13 @@ import type { API, BlockToolConstructorOptions, PatternPasteEvent } from '../../
 
 const createMockAPI = (
   blocksDelete?: (id: string) => void,
-  allowGenericEmbed = false
+  allowGenericEmbed = false,
+  allowedEmbedOrigins?: string[]
 ): API =>
   ({
     i18n: { t: (key: string) => key, has: () => false },
     blocks: { delete: blocksDelete ?? ((): void => undefined) },
-    config: { linkPaste: { allowGenericEmbed } },
+    config: { linkPaste: { allowGenericEmbed, allowedEmbedOrigins } },
   }) as unknown as API;
 
 const createOptions = (
@@ -20,10 +21,11 @@ const createOptions = (
     blocksDelete?: (id: string) => void;
     blockId?: string;
     allowGenericEmbed?: boolean;
+    allowedEmbedOrigins?: string[];
   } = {}
 ): BlockToolConstructorOptions<EmbedData> =>
   ({
-    api: createMockAPI(overrides.blocksDelete, overrides.allowGenericEmbed ?? false),
+    api: createMockAPI(overrides.blocksDelete, overrides.allowGenericEmbed ?? false, overrides.allowedEmbedOrigins),
     block: {
       id: overrides.blockId ?? 'embed-block',
       dispatchChange: overrides.dispatchChange ?? ((): void => undefined),
@@ -1068,7 +1070,6 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
     ['javascript:alert(1)'],
     ['data:text/html,<script>alert(1)</script>'],
     ['//evil.example/frame'],
-    ['http://evil.example/frame'],
   ])('refuses to render an iframe for unsafe stored embed URL %s', (embed) => {
     const tool = new Embed(
       createOptions(
@@ -1081,6 +1082,22 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
 
     expect(root.querySelector('iframe')).toBeNull();
     expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('refuses to FRAME a stored http embed but keeps the URL as a link card', () => {
+    // Framing requires https; a plain http hyperlink is as safe as any other
+    // link, so the URL degrades to the card instead of vanishing.
+    const tool = new Embed(
+      createOptions(
+        { service: '', source: 'http://evil.example/frame', embed: 'http://evil.example/frame', kind: 'iframe' },
+        { allowGenericEmbed: true }
+      )
+    );
+
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).not.toBeNull();
   });
 
   it('refuses the script path entirely when the stored source is unsafe', () => {
@@ -1142,7 +1159,9 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
     const root = tool.render();
 
     expect(root.querySelector('iframe')).toBeNull();
-    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+    // Not framed — but the stored link stays visible as a safe link card
+    // instead of the inert empty state.
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).not.toBeNull();
   });
 
   it('frames a stored generic embed when the host did opt in', () => {
@@ -1213,5 +1232,146 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
         embed: 'javascript:alert(1)',
       })
     ).toBe(false);
+  });
+});
+
+describe('Embed tool — link-card fallback and origin allowlist', () => {
+  const genericData = (overrides: Partial<EmbedData> = {}): Partial<EmbedData> => ({
+    service: '',
+    source: 'https://dashboard.example.com/widget/42',
+    embed: 'https://dashboard.example.com/widget/42',
+    kind: 'iframe',
+    ...overrides,
+  });
+
+  it('renders a safe link card for a non-allowed generic embed', () => {
+    const tool = new Embed(createOptions(genericData(), { readOnly: true }));
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).toBeNull();
+
+    const anchor = root.querySelector<HTMLAnchorElement>('[data-role="embed-link-card-anchor"]');
+
+    expect(anchor?.getAttribute('href')).toBe('https://dashboard.example.com/widget/42');
+    expect(anchor?.getAttribute('target')).toBe('_blank');
+    expect(anchor?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(root.textContent).toContain('dashboard.example.com');
+  });
+
+  it('hides card actions in read-only mode and shows them in edit mode', () => {
+    const readOnly = new Embed(createOptions(genericData(), { readOnly: true })).render();
+
+    expect(readOnly.querySelector('[data-role="embed-link-card-actions"]')).toBeNull();
+
+    const editable = new Embed(createOptions(genericData(), { readOnly: false })).render();
+
+    expect(editable.querySelector('[data-role="embed-link-card-actions"]')).not.toBeNull();
+  });
+
+  it('frames a generic embed whose origin is allowlisted', () => {
+    const tool = new Embed(
+      createOptions(genericData(), { allowedEmbedOrigins: ['dashboard.example.com'] })
+    );
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')?.getAttribute('src')).toBe('https://dashboard.example.com/widget/42');
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).toBeNull();
+  });
+
+  it('does not let a lookalike origin satisfy a wildcard allowlist entry', () => {
+    const tool = new Embed(
+      createOptions(
+        genericData({ source: 'https://evilfoo.com/x', embed: 'https://evilfoo.com/x' }),
+        { allowedEmbedOrigins: ['*.foo.com'] }
+      )
+    );
+    const root = tool.render();
+
+    expect(root.querySelector('iframe')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).not.toBeNull();
+  });
+
+  it('renders the empty state (no card, no anchor) for a non-http(s) stored source', () => {
+    const tool = new Embed(
+      createOptions(genericData({ source: 'javascript:alert(1)', embed: 'javascript:alert(1)' }))
+    );
+    const root = tool.render();
+
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).toBeNull();
+    expect(root.querySelector('a')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('keeps tampered registry data inert — no link card for a claimed trusted service', () => {
+    const tool = new Embed(
+      createOptions({
+        service: 'youtube',
+        source: 'https://evil.example',
+        embed: 'https://evil.example/fake-sso',
+        kind: 'iframe',
+      })
+    );
+    const root = tool.render();
+
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-empty"]')).not.toBeNull();
+  });
+
+  it('save() returns the stored data unchanged after rendering as a link card', () => {
+    const data = genericData({ width: 580, height: 320 });
+    const tool = new Embed(createOptions(data));
+
+    tool.render();
+
+    expect(tool.save()).toEqual({
+      service: '',
+      source: 'https://dashboard.example.com/widget/42',
+      embed: 'https://dashboard.example.com/widget/42',
+      kind: 'iframe',
+      width: 580,
+      height: 320,
+    });
+  });
+
+  it('replace action swaps the card for the URL input form', () => {
+    const tool = new Embed(createOptions(genericData()));
+    const root = tool.render();
+
+    root.querySelector<HTMLButtonElement>('[data-role="embed-link-card-replace"]')?.click();
+
+    expect(root.querySelector('[data-role="embed-url-form"]')).not.toBeNull();
+    expect(root.querySelector('[data-blok-testid="embed-link-card"]')).toBeNull();
+  });
+
+  it('delete action removes the block through the API (id re-resolved to index)', () => {
+    const blocksDelete = vi.fn();
+    const getBlockIndex = vi.fn(() => 4);
+    const options = createOptions(genericData(), { blocksDelete, blockId: 'card-block' });
+
+    (options.api.blocks as unknown as { getBlockIndex: typeof getBlockIndex }).getBlockIndex = getBlockIndex;
+    const tool = new Embed(options);
+
+    tool.render().querySelector<HTMLButtonElement>('[data-role="embed-link-card-delete"]')?.click();
+
+    expect(getBlockIndex).toHaveBeenCalledWith('card-block');
+    expect(blocksDelete).toHaveBeenCalledWith(4);
+  });
+
+  it('copy action writes the source URL to the clipboard', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+
+    try {
+      const tool = new Embed(createOptions(genericData()));
+
+      tool.render().querySelector<HTMLButtonElement>('[data-role="embed-link-card-copy"]')?.click();
+      await Promise.resolve();
+
+      expect(writeText).toHaveBeenCalledWith('https://dashboard.example.com/widget/42');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

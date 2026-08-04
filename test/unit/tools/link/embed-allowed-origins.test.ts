@@ -33,7 +33,6 @@ describe('isAllowedEmbedOrigin', () => {
 
   it('rejects non-https URLs even when the hostname is listed', () => {
     expect(isAllowedEmbedOrigin('http://foo.com/x', ['foo.com'])).toBe(false);
-    // eslint-disable-next-line no-script-url -- asserting the guard against this exact scheme
     expect(isAllowedEmbedOrigin('javascript:alert(1)', ['foo.com'])).toBe(false);
   });
 

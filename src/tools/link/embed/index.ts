@@ -10,11 +10,12 @@ import type {
   ToolboxConfig,
 } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
-import { IconCopy, IconGlobe, IconLinkCopy, IconReplace } from '../../../components/icons';
+import { IconCopy, IconGlobe, IconLinkCopy, IconReplace, IconTrash } from '../../../components/icons';
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
-import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, type EmbedKind } from '../registry';
+import { EMBED_SERVICES, matchEmbedService, isHttpUrl, isHttpsUrl, setSafeLinkHref, type EmbedKind } from '../registry';
+import { isAllowedEmbedOrigin } from './allowed-origins';
 
 export interface EmbedData extends BlockToolData {
   service: string;
@@ -62,16 +63,44 @@ function toSafeEmbedSrc(value: string | undefined): string {
  * frame off the provider. Anything else is a generic embed and needs the host
  * opt-in. Unresolvable data yields '' and renders the inert empty state.
  */
-function resolveEmbedSrc(data: Partial<EmbedData>, allowGeneric: boolean): string {
+type EmbedRenderMode = 'iframe' | 'link' | 'empty';
+
+interface EmbedRenderDecision {
+  mode: EmbedRenderMode;
+  src: string;
+}
+
+function resolveEmbedRender(
+  data: Partial<EmbedData>,
+  opts: { allowGeneric: boolean; allowedOrigins?: readonly string[] }
+): EmbedRenderDecision {
   const service = data.service ?? '';
 
   if (EMBED_SERVICES[service] !== undefined) {
     const match = data.source !== undefined ? matchEmbedService(data.source) : null;
+    const src = match?.service === service ? toSafeEmbedSrc(match.embedUrl) : '';
 
-    return match?.service === service ? toSafeEmbedSrc(match.embedUrl) : '';
+    // A registry block whose source no longer matches its claimed service is
+    // tampered data — it stays fully inert (no link card either): a clickable
+    // card would lend the trusted service's framing to an arbitrary URL.
+    return { mode: src === '' ? 'empty' : 'iframe', src };
   }
 
-  return allowGeneric ? toSafeEmbedSrc(data.embed) : '';
+  if (opts.allowGeneric || isAllowedEmbedOrigin(data.embed ?? '', opts.allowedOrigins)) {
+    const src = toSafeEmbedSrc(data.embed);
+
+    if (src !== '') {
+      return { mode: 'iframe', src };
+    }
+  }
+
+  // Not allowed to frame — degrade to a safe link card so the stored URL
+  // stays visible instead of vanishing into the empty state.
+  if (data.source !== undefined && isHttpUrl(data.source)) {
+    return { mode: 'link', src: '' };
+  }
+
+  return { mode: 'empty', src: '' };
 }
 
 const DEFAULT_WIDTH = 580;
@@ -203,9 +232,18 @@ export class Embed implements BlockTool {
     return this.api.config?.linkPaste?.allowGenericEmbed === true;
   }
 
-  /** The only URL this block is allowed to hand to a live sink. */
+  private embedRender(): EmbedRenderDecision {
+    return resolveEmbedRender(this.data, {
+      allowGeneric: this.isGenericAllowed(),
+      allowedOrigins: this.api.config?.linkPaste?.allowedEmbedOrigins,
+    });
+  }
+
+  /** The only URL this block is allowed to hand to a live frame/widget sink. */
   private embedSrc(): string {
-    return resolveEmbedSrc(this.data, this.isGenericAllowed());
+    const render = this.embedRender();
+
+    return render.mode === 'iframe' ? render.src : '';
   }
 
   public render(): HTMLElement {
@@ -323,9 +361,19 @@ export class Embed implements BlockTool {
 
     this.detachResizers();
 
+    const { mode } = this.embedRender();
+
+    // A generic embed the host hasn't allowed degrades to a safe link card —
+    // the URL stays visible but is never framed.
+    if (mode === 'link') {
+      this.root.replaceChildren(this.buildLinkCard());
+
+      return;
+    }
+
     // Unsafe or non-registry stored URLs render the inert empty state — never
     // a frame/widget.
-    if (this.embedSrc() === '') {
+    if (mode === 'empty') {
       this.root.replaceChildren(this.buildEmpty());
 
       return;
@@ -421,6 +469,120 @@ export class Embed implements BlockTool {
     container.appendChild(script);
 
     return container;
+  }
+
+  /**
+   * Safe fallback for a stored generic embed the host hasn't allowed to be
+   * framed: the URL renders as a plain link card (anchor via the guarded
+   * `setSafeLinkHref` sink) instead of an iframe or an empty state, so the
+   * link is always visible and can never be silently lost or overwritten.
+   */
+  private buildLinkCard(): HTMLElement {
+    const source = this.data.source ?? '';
+    const el = document.createElement('div');
+
+    el.setAttribute('data-blok-testid', 'embed-link-card');
+    el.className = 'blok-embed-linkcard';
+
+    const anchor = document.createElement('a');
+
+    anchor.setAttribute('data-role', 'embed-link-card-anchor');
+    anchor.className = 'blok-embed-linkcard__anchor';
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    setSafeLinkHref(anchor, source);
+
+    const glyph = document.createElement('span');
+
+    glyph.className = 'blok-embed-linkcard__glyph';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = IconGlobe;
+    anchor.appendChild(glyph);
+
+    // Unparsable sources never reach the link mode, but keep the card
+    // resilient: the full URL below still identifies the target.
+    const hostname = ((): string => {
+      try {
+        return new URL(source).hostname;
+      } catch {
+        return '';
+      }
+    })();
+
+    const host = document.createElement('span');
+
+    host.className = 'blok-embed-linkcard__host';
+    host.textContent = hostname;
+    anchor.appendChild(host);
+
+    const url = document.createElement('span');
+
+    url.className = 'blok-embed-linkcard__url';
+    url.textContent = source;
+    anchor.appendChild(url);
+
+    const open = document.createElement('span');
+
+    open.className = 'blok-embed-linkcard__open';
+    open.textContent = this.api.i18n.t('tools.embed.openOriginal');
+    anchor.appendChild(open);
+
+    el.appendChild(anchor);
+
+    if (!this.readOnly) {
+      el.appendChild(this.buildLinkCardActions(source));
+    }
+
+    return el;
+  }
+
+  private buildLinkCardActions(source: string): HTMLElement {
+    const actions = document.createElement('div');
+
+    actions.setAttribute('data-role', 'embed-link-card-actions');
+    actions.className = 'blok-embed-linkcard__actions';
+
+    const makeAction = (role: string, icon: string, label: string, onClick: () => void): HTMLButtonElement => {
+      const button = document.createElement('button');
+
+      button.type = 'button';
+      button.setAttribute('data-role', role);
+      button.className = 'blok-embed-linkcard__action';
+      button.setAttribute('aria-label', label);
+      button.title = label;
+      button.innerHTML = icon;
+      button.addEventListener('click', onClick);
+
+      return button;
+    };
+
+    actions.appendChild(
+      makeAction('embed-link-card-copy', IconCopy, this.api.i18n.t('tools.link.copyUrl'), () => {
+        void navigator.clipboard?.writeText(source);
+      })
+    );
+
+    actions.appendChild(
+      makeAction('embed-link-card-replace', IconReplace, this.api.i18n.t('tools.embed.replace'), () => {
+        // Show the URL form in place; stored data stays intact until a new
+        // link actually resolves, so aborting the replace loses nothing.
+        this.root?.replaceChildren(this.buildEmpty());
+      })
+    );
+
+    actions.appendChild(
+      makeAction('embed-link-card-delete', IconTrash, this.api.i18n.t('blockSettings.delete'), () => {
+        // `api.blocks.delete` is index-based; re-resolve the id at click time
+        // so an earlier deletion can't shift an innocent sibling into our slot.
+        const index = this.api.blocks.getBlockIndex(this.block.id);
+
+        if (index !== undefined) {
+          void this.api.blocks.delete(index);
+        }
+      })
+    );
+
+    return actions;
   }
 
   private buildEmpty(): HTMLElement {

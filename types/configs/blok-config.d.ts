@@ -473,6 +473,16 @@ export interface BlokMountOptions {
      * @default false
      */
     allowGenericEmbed?: boolean;
+
+    /**
+     * Fine-grained trust list for generic embeds. Entries are hostnames
+     * (`dashboards.example.com`) or wildcard subdomain patterns
+     * (`*.internal.example.dev` — matches any subdomain depth, never the bare
+     * suffix). A stored generic embed whose https URL matches an entry is
+     * framed; any other generic embed renders as a safe link card instead.
+     * `allowGenericEmbed: true` subsumes this list.
+     */
+    allowedEmbedOrigins?: string[];
   };
 
   /**

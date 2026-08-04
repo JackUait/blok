@@ -49,6 +49,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'width',
   'migrations',
   'uploader',
+  'captureClicksBelowEditor',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 
 /**

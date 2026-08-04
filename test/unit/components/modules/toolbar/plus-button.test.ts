@@ -125,7 +125,7 @@ describe('PlusButtonHandler', () => {
   });
 
   describe('handleClick — same-trigger no-op (clicking the item that opened the popover does nothing)', () => {
-    let closeToolboxSpy: ReturnType<typeof vi.fn>;
+    let closeToolboxSpy: ReturnType<typeof vi.fn<() => void>>;
     let handler: PlusButtonHandler;
 
     beforeEach(() => {
@@ -147,8 +147,8 @@ describe('PlusButtonHandler', () => {
 
       handler = new PlusButtonHandler(() => blokModules, {
         getToolboxOpened: () => true,
-        openToolbox: vi.fn(),
-        openToolboxWithoutSlash: vi.fn(),
+        openToolbox: vi.fn<() => void>(),
+        openToolboxWithoutSlash: vi.fn<() => void>(),
         closeToolbox: closeToolboxSpy,
         moveAndOpenToolbar: vi.fn(),
       });

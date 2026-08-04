@@ -73,6 +73,11 @@ const createOptions = (
   block: { id: 'code-block-id' } as never,
 });
 
+// Explicit 120s ceiling (3rd describe argument): the dynamic
+// `await import('../../../../src/tools/code')` pulls the highlighter import
+// chain, which under heavy machine load can blow the preflight's global
+// --testTimeout on whichever test pays the import first. An explicit timeout
+// overrides the CLI flag (same fix as test/unit/cli/bin.test.ts in 1.6.0).
 describe('CodeTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1664,4 +1669,4 @@ describe('CodeTool', () => {
       el.remove();
     });
   });
-});
+}, 120_000);

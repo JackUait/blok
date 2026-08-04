@@ -455,8 +455,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // line boxes, gaps and favicon off absolute px onto the title token and em
     // (~0.9KB of calc()/token text plus the doc comment explaining which of the
     // two bases each metric resolves against). Bumps the multiplier to 1.421.
+    // 2026-08-04: embed link-card fallback — embed.css gained the
+    // .blok-embed-linkcard rules (card container, anchor, glyph/host/url/open
+    // segments and the hover-revealed actions cluster) for the safe link-card
+    // rendered when an embed origin isn't trusted (~2.3KB, landed in
+    // feat(embed) 217a3234 without its ledger entry). Bumps the multiplier
+    // to 1.428.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.421);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.428);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -6763,6 +6763,110 @@
   pointer-events: none;
 }
 
+.blok-embed-linkcard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  width: 100%;
+  font-family: var(--blok-font-family, var(--blok-font-sans));
+  background: var(--blok-bg-primary);
+  border: 1px solid var(--blok-border-subtle);
+  border-radius: var(--blok-space-2-5);
+  transition: border-color .15s ease;
+}
+
+.blok-embed-linkcard:hover {
+  border-color: var(--blok-border-primary);
+}
+
+.blok-embed-linkcard__anchor {
+  display: flex;
+  align-items: center;
+  gap: var(--blok-space-2);
+  flex: 1;
+  min-width: 0;
+  padding: var(--blok-space-2) var(--blok-space-3);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--blok-text-primary);
+  text-decoration: none;
+}
+
+.blok-embed-linkcard__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--blok-text-tertiary);
+}
+
+.blok-embed-linkcard__glyph svg {
+  width: 16px;
+  height: 16px;
+}
+
+.blok-embed-linkcard__host {
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.blok-embed-linkcard__url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--blok-text-tertiary);
+}
+
+.blok-embed-linkcard__open {
+  flex-shrink: 0;
+  color: var(--blok-text-secondary);
+}
+
+.blok-embed-linkcard__anchor:hover .blok-embed-linkcard__open {
+  color: var(--blok-color-accent);
+}
+
+.blok-embed-linkcard__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blok-space-0-5);
+  padding-right: var(--blok-space-1);
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.blok-embed-linkcard:hover .blok-embed-linkcard__actions, .blok-embed-linkcard:focus-within .blok-embed-linkcard__actions {
+  opacity: 1;
+}
+
+.blok-embed-linkcard__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--blok-space-1-5);
+  background: transparent;
+  color: var(--blok-text-tertiary);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.blok-embed-linkcard__action:hover {
+  background: var(--blok-bg-secondary);
+  color: var(--blok-text-primary);
+}
+
+.blok-embed-linkcard__action svg {
+  width: 16px;
+  height: 16px;
+}
+
 [data-blok-tool="header"] {
   font-weight: var(--blok-heading-font-weight, 600);
   margin-bottom: var(--blok-heading-margin-bottom, 1px);

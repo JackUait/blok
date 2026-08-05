@@ -1500,6 +1500,34 @@ const editor = new Blok({
   },
 });`,
   },
+  {
+    id: 'supSub',
+    exportName: 'SupSub',
+    type: 'inline',
+    title: 'Superscript & Subscript',
+    description:
+      'One toolbar button with a two-option popover that toggles superscript (`<sup>`) or subscript (`<sub>`) on the selection. The two modes are mutually exclusive — applying one removes the other. Shortcuts: Cmd/Ctrl+Period for superscript, Cmd/Ctrl+Comma for subscript.',
+    importExample: `import { SupSub } from '@bloklabs/core/tools';`,
+    configOptions: [],
+    saveDataShape: `// Stored as HTML inside the block's text field:
+// "E = mc<sup>2</sup>" or "H<sub>2</sub>O"`,
+    saveDataExample: `{
+  "type": "paragraph",
+  "data": { "text": "E = mc<sup>2</sup>" }
+}`,
+    usageExample: `import { Blok } from '@bloklabs/core';
+import { Paragraph, SupSub } from '@bloklabs/core/tools';
+
+const editor = new Blok({
+  holder: 'editor',
+  tools: {
+    // Paragraph is the default block and is not bundled with the core —
+    // without it the editor starts with an "unsupported block" stub.
+    paragraph: Paragraph,
+    supSub: SupSub,
+  },
+});`,
+  },
 ];
 
 // Derived lookup sets used by the documentation coverage unit test.

@@ -162,7 +162,7 @@ export const EditorWrapper: React.FC<{
     Image, File: FileTool, Audio, Video, ColumnList, Column,
     Embed, Bookmark,
     Bold, Italic, Underline, Strikethrough,
-    InlineCode, Equation, Link, Marker, ClearFormat,
+    InlineCode, Equation, Link, Marker, ClearFormat, SupSub,
   } = mods.tools;
 
   const { props: settingsProps, deps: settingsDeps } = buildEditorSettingsProps(settings, resolvedTheme);
@@ -211,6 +211,7 @@ export const EditorWrapper: React.FC<{
         strikethrough: Strikethrough,
         inlineCode: InlineCode,
         equation: Equation,
+        supSub: SupSub,
       }}
       data={{
         blocks: [

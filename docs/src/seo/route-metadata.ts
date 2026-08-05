@@ -495,6 +495,12 @@ const TOOL_COPY: Record<string, Copy> = {
       'Remove every inline mark from a selection in one action, leaving plain text without touching block structure.',
     h1: 'Clear format: strip inline styling',
   },
+  supSub: {
+    title: 'Superscript & Subscript Tool — Raised and Lowered Text',
+    description:
+      'Toggle superscript or subscript from one toolbar button or with Cmd/Ctrl+Period and Cmd/Ctrl+Comma, and the sup/sub markup Blok stores.',
+    h1: 'Superscript & subscript: raised and lowered text',
+  },
 };
 
 const TOOL_GROUP_TITLES: Record<'block' | 'inline', string> = {

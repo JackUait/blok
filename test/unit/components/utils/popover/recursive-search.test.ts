@@ -86,6 +86,8 @@ describe('filterItems with promoted items', () => {
 
     expect(promotedGroupLabel).not.toBeNull();
     expect(promotedGroupLabel?.textContent).toBe('Convert to');
+    // Sentence case, not all-caps
+    expect(promotedGroupLabel?.classList.contains('uppercase')).toBe(false);
   });
 
   it('should handle multi-level nesting with parent chain labels', () => {

@@ -1071,7 +1071,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const element = document.createElement('div');
 
     // Same visual language as the search-time group labels in PopoverDesktop.
-    element.className = 'pl-2 pr-3 pt-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-text/50 cursor-default';
+    element.className = 'pl-2 pr-3 pt-2.5 pb-1 text-[11px] font-medium text-gray-text/50 cursor-default';
     element.setAttribute('role', 'separator');
     element.setAttribute('data-blok-testid', 'toolbox-section-title');
     element.textContent = this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]);

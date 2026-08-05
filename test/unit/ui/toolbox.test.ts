@@ -2858,6 +2858,19 @@ describe('Toolbox', () => {
       expect(headerElement?.getAttribute('data-blok-testid')).toBe('toolbox-section-title');
     });
 
+    it('renders section labels in sentence case, not all-caps', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ type?: string; element?: HTMLElement }>;
+      const headerElement = items[0].element;
+
+      expect(headerElement?.classList.contains('uppercase')).toBe(false);
+    });
+
     it('keeps the flat list when no entry declares a section', () => {
       new Toolbox({ api: mocks.api, tools: mocks.tools, i18nLabels, i18n: mockI18n });
 

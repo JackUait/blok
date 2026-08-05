@@ -1271,16 +1271,8 @@ export class PopoverDesktop extends PopoverAbstract {
     // Apply position: absolute for nested container
     nestedContainer.style.position = 'absolute';
 
-    // Overlap (px) the nested submenu is allowed to share with the parent's
-    // trailing edge — matches the `--nested-popover-overlap` CSS variable
-    // (0.25rem = 4px).
-    const overlap = 4;
-
-    // Submenus ALWAYS open on the right of their parent, regardless of the
-    // parent's own side or the space available — a side that flips with
-    // geometry made the same menu open left or right on different blocks.
     // The nested container stays positioned relative to its parent popover
-    // root (its offset parent), so the viewport coordinate is converted into
+    // root (its offset parent), so viewport coordinates are converted into
     // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
     const parentRootRect = this.nodes.popover.getBoundingClientRect();
@@ -1306,6 +1298,14 @@ export class PopoverDesktop extends PopoverAbstract {
       return;
     }
 
+    // Overlap (px) the nested submenu is allowed to share with the parent's
+    // trailing edge — matches the `--nested-popover-overlap` CSS variable
+    // (0.25rem = 4px).
+    const overlap = 4;
+
+    // Submenus otherwise ALWAYS open on the right of their parent, regardless
+    // of the parent's own side or the space available — a side that flips with
+    // geometry made the same menu open left or right on different blocks.
     // Horizontal: place the submenu beside the parent, overlapping its trailing
     // edge by `overlap` px, then convert to parent-root-relative pixels.
     const viewportLeft = parentRect.right - overlap;

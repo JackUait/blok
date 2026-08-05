@@ -1534,7 +1534,7 @@ export class PopoverDesktop extends PopoverAbstract {
 
     el.setAttribute(attr, '');
     el.setAttribute('role', 'separator');
-    el.className = 'pl-2 pr-3 pt-2.5 pb-1 text-[11px] font-medium text-gray-text/50 cursor-default';
+    el.className = 'pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text/50 cursor-default';
     el.textContent = label;
 
     return el;

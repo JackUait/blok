@@ -11,7 +11,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
-import { clampNestedPopoverTop } from './popover-nested-position';
+import { clampNestedPopoverTop, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
@@ -1284,6 +1284,27 @@ export class PopoverDesktop extends PopoverAbstract {
     // that local coordinate space.
     const parentRect = this.nodes.popoverContainer.getBoundingClientRect();
     const parentRootRect = this.nodes.popover.getBoundingClientRect();
+
+    // Items may opt out of the beside-placement and open under the parent
+    // popover instead (the inline toolbar's link field). Left edges aligned,
+    // flipping above only when the viewport leaves no room below.
+    if (triggerItem.childrenPlacement === 'below') {
+      const { left, top, side } = resolveNestedPopoverBelowPlacement({
+        parentRect,
+        nestedWidth: this.nestedPopover?.size.width ?? 0,
+        nestedHeight: this.nestedPopover?.size.height ?? 0,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      });
+
+      nestedContainer.style.left = `${left - parentRootRect.left}px`;
+      nestedContainer.style.top = `${top - parentRootRect.top}px`;
+
+      actualPopoverEl.setAttribute('data-side', side);
+      actualPopoverEl.setAttribute('data-align', 'start');
+
+      return;
+    }
 
     // Horizontal: place the submenu beside the parent, overlapping its trailing
     // edge by `overlap` px, then convert to parent-root-relative pixels.

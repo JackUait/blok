@@ -1068,6 +1068,53 @@ describe('PopoverDesktop', () => {
       expect(nested?.getElement().getAttribute('data-side')).toBe('right');
     });
 
+    it('opens the nested popover below the parent when the trigger item asks for below placement', () => {
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Parent',
+            name: 'parent',
+            children: {
+              placement: 'below',
+              items: [ { title: 'Child', name: 'child', onActivate: vi.fn() } ],
+            },
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+
+      vi.spyOn(instance.nodes.popoverContainer, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 300, top: 200, right: 640, bottom: 290, width: 340, height: 90 })
+      );
+      vi.spyOn(instance.nodes.popover, 'getBoundingClientRect').mockReturnValue(
+        createRect({ left: 280, top: 180, right: 660, bottom: 300, width: 380, height: 120 })
+      );
+
+      const parentItem = instance.items.find(
+        (item): item is PopoverItemDefault => item instanceof PopoverItemDefault && item.hasChildren
+      );
+
+      expect(parentItem).toBeDefined();
+
+      if (parentItem) {
+        instance.showNestedPopoverForItem(parentItem);
+      }
+
+      const nested = instance.nestedPopover;
+
+      expect(nested).toBeInstanceOf(PopoverDesktop);
+      expect(nested?.getElement().getAttribute('data-side')).toBe('bottom');
+      expect(nested?.getElement().getAttribute('data-align')).toBe('start');
+
+      // jsdom measures the nested popover as 0×0, so the placement resolves to
+      // the parent's left edge (300) and gap below its bottom (290 + 4), both
+      // converted into the parent-root coordinate space (280, 180).
+      const nestedContainer = (nested as unknown as PopoverDesktopInternal).nodes.popoverContainer;
+
+      expect(nestedContainer.style.left).toBe('20px');
+      expect(nestedContainer.style.top).toBe('114px');
+    });
+
     it('closes the nested popover when the pointer moves onto container chrome that is no item', () => {
       vi.useFakeTimers();
       const popover = createPopover({

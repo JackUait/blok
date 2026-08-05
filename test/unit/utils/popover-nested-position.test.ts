@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampNestedPopoverTop, resolveNestedPopoverSide } from '../../../src/components/utils/popover/popover-nested-position';
+import { clampNestedPopoverTop, resolveNestedPopoverBelowPlacement, resolveNestedPopoverSide } from '../../../src/components/utils/popover/popover-nested-position';
 
 describe('resolveNestedPopoverSide', () => {
   it('opens nested popover to the right of a normal parent when there is room', () => {
@@ -161,5 +161,166 @@ describe('resolveNestedPopoverSide', () => {
     // spaceRight = 1024 - 712 + 12 = 324, spaceLeft = 200.
     // Neither fits 525; pick larger → right (324 > 200). No flip.
     expect(openLeft).toBe(false);
+  });
+});
+
+describe('resolveNestedPopoverBelowPlacement', () => {
+  it('places the nested popover a gap below the parent with left edges aligned', () => {
+    const { left, top, side } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: 300, top: 200, bottom: 280 },
+      nestedWidth: 340,
+      nestedHeight: 60,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+    });
+
+    expect(side).toBe('bottom');
+    expect(left).toBe(300);
+    // parent bottom 280 + default gap 4
+    expect(top).toBe(284);
+  });
+
+  it('clamps left so the popover keeps the viewport margin on the right', () => {
+    const { left } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: 1000, top: 200, bottom: 280 },
+      nestedWidth: 340,
+      nestedHeight: 60,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+    });
+
+    // 1280 - 340 - 8 = 932
+    expect(left).toBe(932);
+  });
+
+  it('never crosses the left viewport margin', () => {
+    const { left } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: -40, top: 200, bottom: 280 },
+      nestedWidth: 340,
+      nestedHeight: 60,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+    });
+
+    expect(left).toBe(8);
+  });
+
+  it('flips above the parent when there is no room below', () => {
+    const { top, side } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: 300, top: 600, bottom: 690 },
+      nestedWidth: 340,
+      nestedHeight: 60,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+    });
+
+    expect(side).toBe('top');
+    // parent top 600 - gap 4 - height 60
+    expect(top).toBe(536);
+  });
+
+  it('stays below and clamps into the viewport when neither side fits', () => {
+    const { top, side } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: 300, top: 60, bottom: 660 },
+      nestedWidth: 340,
+      nestedHeight: 200,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+    });
+
+    expect(side).toBe('bottom');
+    // clamp: maxTop = 720 - 200 - 8 = 512
+    expect(top).toBe(512);
+  });
+
+  it('respects a custom gap', () => {
+    const { top } = resolveNestedPopoverBelowPlacement({
+      parentRect: { left: 300, top: 200, bottom: 280 },
+      nestedWidth: 340,
+      nestedHeight: 60,
+      viewportWidth: 1280,
+      viewportHeight: 720,
+      gap: 10,
+    });
+
+    expect(top).toBe(290);
+  });
+
+  /**
+   * LAW: invariant sweep. Placement bugs cluster at viewport extremes that
+   * hand-picked cases miss — sweep the parent card through every vertical and
+   * horizontal position (including past the screen edges) and assert the
+   * contract at each one:
+   *
+   *   1. GAP — the popover never touches a screen border (>= margin away)
+   *      whenever it can physically fit.
+   *   2. BELOW-FIRST — when there is room below the parent, it sits exactly
+   *      `gap` px below it; when only above fits, exactly `gap` px above.
+   *   3. ALIGNED — the popover keeps the parent's left edge whenever doing so
+   *      violates no margin.
+   */
+  describe('LAW: gap/side/alignment invariants hold for every parent position', () => {
+    const viewport = { width: 1280, height: 720 };
+    const margin = 8;
+    const gap = 4;
+    const nested = { width: 340, height: 60 };
+    const parentHeight = 90;
+
+    it('sweeps the parent from offscreen-above to offscreen-below', () => {
+      for (let parentTop = -parentHeight - 20; parentTop <= viewport.height + 20; parentTop += 7) {
+        const parentRect = { left: 400, top: parentTop, bottom: parentTop + parentHeight };
+        const { top, side } = resolveNestedPopoverBelowPlacement({
+          parentRect,
+          nestedWidth: nested.width,
+          nestedHeight: nested.height,
+          viewportWidth: viewport.width,
+          viewportHeight: viewport.height,
+        });
+        const label = `parentTop=${parentTop}`;
+
+        // 1. GAP — never touches the screen top/bottom.
+        expect(top, `${label}: popover touches screen top`).toBeGreaterThanOrEqual(margin);
+        expect(top + nested.height, `${label}: popover touches screen bottom`).toBeLessThanOrEqual(viewport.height - margin);
+
+        // 2. BELOW-FIRST — room below → exactly gap below the parent.
+        const belowTop = parentRect.bottom + gap;
+        const fitsBelow = belowTop >= margin && belowTop + nested.height <= viewport.height - margin;
+
+        if (fitsBelow) {
+          expect(side, `${label}: should open below`).toBe('bottom');
+          expect(top, `${label}: not attached below the parent`).toBe(belowTop);
+        } else {
+          const aboveTop = parentRect.top - gap - nested.height;
+          const fitsAbove = aboveTop >= margin && aboveTop + nested.height <= viewport.height - margin;
+
+          if (fitsAbove) {
+            expect(side, `${label}: should flip above`).toBe('top');
+            expect(top, `${label}: not attached above the parent`).toBe(aboveTop);
+          }
+        }
+      }
+    });
+
+    it('sweeps the parent from offscreen-left to offscreen-right', () => {
+      for (let parentLeft = -nested.width; parentLeft <= viewport.width + 20; parentLeft += 9) {
+        const { left } = resolveNestedPopoverBelowPlacement({
+          parentRect: { left: parentLeft, top: 200, bottom: 200 + parentHeight },
+          nestedWidth: nested.width,
+          nestedHeight: nested.height,
+          viewportWidth: viewport.width,
+          viewportHeight: viewport.height,
+        });
+        const label = `parentLeft=${parentLeft}`;
+
+        // 1. GAP — never touches the screen left/right.
+        expect(left, `${label}: popover touches screen left`).toBeGreaterThanOrEqual(margin);
+        expect(left + nested.width, `${label}: popover touches screen right`).toBeLessThanOrEqual(viewport.width - margin);
+
+        // 3. ALIGNED — keeps the parent's left edge when no margin is violated.
+        if (parentLeft >= margin && parentLeft + nested.width <= viewport.width - margin) {
+          expect(left, `${label}: popover not aligned with the parent`).toBe(parentLeft);
+        }
+      }
+    });
   });
 });

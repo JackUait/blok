@@ -182,6 +182,18 @@ export abstract class PopoverItem {
   }
 
   /**
+   * Where the children popover opens relative to the parent popover:
+   * beside it (default) or below it.
+   */
+  public get childrenPlacement(): 'beside' | 'below' {
+    if (this.params === undefined || !('children' in this.params)) {
+      return 'beside';
+    }
+
+    return this.params.children?.placement ?? 'beside';
+  }
+
+  /**
    * True if popover should close once item is activated
    */
   public get closeOnActivate(): boolean | undefined {

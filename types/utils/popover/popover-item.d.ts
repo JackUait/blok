@@ -47,6 +47,14 @@ export interface PopoverItemChildren {
   hideChevron?: boolean;
 
   /**
+   * Where the children popover opens relative to the parent popover.
+   * 'beside' (default) opens it next to the parent, vertically centered on
+   * the trigger item; 'below' opens it under the parent with left edges
+   * aligned (e.g. the inline toolbar's link field).
+   */
+  placement?: 'beside' | 'below';
+
+  /**
    * Width of the nested popover. Defaults to '280px'.
    * Use 'auto' to fit content width.
    */

@@ -87,6 +87,76 @@ export function resolveNestedPopoverSide(input: NestedPopoverPositionInput): Nes
 }
 
 /**
+ * Input for resolving the position of a nested popover that opens below its
+ * parent popover (e.g. the inline toolbar's link field) instead of beside it.
+ * All coordinates are in viewport space.
+ */
+export interface NestedPopoverBelowPlacementInput {
+  /** Viewport-relative rect of the parent popover container. */
+  parentRect: { left: number; top: number; bottom: number };
+  /** Measured nested popover width. */
+  nestedWidth: number;
+  /** Measured nested popover height. */
+  nestedHeight: number;
+  /** Current viewport width (window.innerWidth). */
+  viewportWidth: number;
+  /** Current viewport height (window.innerHeight). */
+  viewportHeight: number;
+  /** Vertical gap (px) between the parent and the nested popover. Defaults to 4. */
+  gap?: number;
+  /** Minimum gap from the viewport edges. Defaults to 8. */
+  margin?: number;
+}
+
+export interface NestedPopoverBelowPlacementOutput {
+  /** Viewport-relative left of the nested popover. */
+  left: number;
+  /** Viewport-relative top of the nested popover. */
+  top: number;
+  /** Side of the parent the popover ended up on ('bottom' = below it). */
+  side: 'bottom' | 'top';
+}
+
+/**
+ * Places a nested popover below its parent popover: left edges aligned,
+ * `gap` px under the parent's bottom edge. Flips above the parent when
+ * there is no room below (and above fits); when neither side fits, stays
+ * below and clamps into the viewport via {@link clampNestedPopoverTop}.
+ * Horizontally the popover keeps the parent's left edge unless that would
+ * violate a viewport margin.
+ */
+export function resolveNestedPopoverBelowPlacement(input: NestedPopoverBelowPlacementInput): NestedPopoverBelowPlacementOutput {
+  const {
+    parentRect,
+    nestedWidth,
+    nestedHeight,
+    viewportWidth,
+    viewportHeight,
+    gap = 4,
+    margin = 8,
+  } = input;
+
+  const maxLeft = viewportWidth - nestedWidth - margin;
+  const left = Math.max(margin, Math.min(parentRect.left, maxLeft));
+
+  const belowTop = parentRect.bottom + gap;
+  const aboveTop = parentRect.top - gap - nestedHeight;
+  const fitsBelow = belowTop >= margin && belowTop + nestedHeight <= viewportHeight - margin;
+  const fitsAbove = aboveTop >= margin;
+
+  const side: 'bottom' | 'top' = fitsBelow || !fitsAbove ? 'bottom' : 'top';
+  const desiredTop = side === 'bottom' ? belowTop : aboveTop;
+  const { top } = clampNestedPopoverTop({
+    desiredTop,
+    nestedHeight,
+    viewportHeight,
+    margin,
+  });
+
+  return { left, top, side };
+}
+
+/**
  * Input for clamping the nested popover's vertical position.
  * All coordinates are in viewport space.
  */

@@ -2871,6 +2871,22 @@ describe('Toolbox', () => {
       expect(headerElement?.classList.contains('uppercase')).toBe(false);
     });
 
+    it('gives the topmost section header a tighter top padding than the following ones', () => {
+      const tools = createToolsCollection([
+        ['paragraph', makeTool('paragraph', { title: 'Text', icon: svg, section: 'basic' })],
+        ['image', makeTool('image', { title: 'Image', icon: svg, section: 'media' })],
+      ]);
+
+      new Toolbox({ api: mocks.api, tools, i18nLabels, i18n: mockI18n });
+
+      const items = lastPopoverItems.value as Array<{ name?: string; element?: HTMLElement }>;
+      const firstHeader = items.find((item) => item.name === 'toolbox-section-basic')?.element;
+      const secondHeader = items.find((item) => item.name === 'toolbox-section-media')?.element;
+
+      expect(firstHeader?.classList.contains('pt-2.5')).toBe(false);
+      expect(secondHeader?.classList.contains('pt-2.5')).toBe(true);
+    });
+
     it('keeps the flat list when no entry declares a section', () => {
       new Toolbox({ api: mocks.api, tools: mocks.tools, i18nLabels, i18n: mockI18n });
 

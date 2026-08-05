@@ -1045,7 +1045,7 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         continue;
       }
 
-      result.push(this.buildSectionHeaderItem(section));
+      result.push(this.buildSectionHeaderItem(section, result.length === 0));
       this.sectionEntryNames.set(section, sectionEntries.map((entry) => entry.name));
       result.push(...sectionEntries.map((entry) => entry.params));
     }
@@ -1066,12 +1066,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * hidden automatically while a search query is active — during search the
    * list is re-ranked flat, so static group labels would mislabel it.
    * @param section - section id the header labels
+   * @param isFirst - true for the topmost header, which sits right under the
+   * popover's own top padding and so needs less of its own
    */
-  private buildSectionHeaderItem(section: string): PopoverItemParams {
+  private buildSectionHeaderItem(section: string, isFirst = false): PopoverItemParams {
     const element = document.createElement('div');
 
     // Same visual language as the search-time group labels in PopoverDesktop.
-    element.className = 'pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text/50 cursor-default';
+    element.className = `pl-2 pr-3 ${isFirst ? 'pt-0.5' : 'pt-2.5'} pb-1 text-xs font-medium text-gray-text/50 cursor-default`;
     element.setAttribute('role', 'separator');
     element.setAttribute('data-blok-testid', 'toolbox-section-title');
     element.textContent = this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]);

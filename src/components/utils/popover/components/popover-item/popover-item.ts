@@ -218,4 +218,13 @@ export abstract class PopoverItem {
 
     return this.params.isActive === true;
   }
+
+  /**
+   * True if the item computes its active state on every read, so it can go
+   * stale when something else changes the document (e.g. clearing formatting
+   * un-bolds the selection the bold item reports on)
+   */
+  public get hasDynamicActiveState(): boolean {
+    return this.params !== undefined && 'isActive' in this.params && typeof this.params.isActive === 'function';
+  }
 }

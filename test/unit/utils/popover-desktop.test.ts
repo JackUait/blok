@@ -1588,6 +1588,45 @@ describe('PopoverDesktop', () => {
     });
   });
 
+  describe('item activation', () => {
+    it('refreshes active state of sibling items after an item is activated', () => {
+      /**
+       * Models the inline toolbar: "Clear formatting" strips the marks other
+       * items report as active, so their buttons must un-highlight right away.
+       */
+      let isBold = true;
+
+      const popover = createPopover({
+        items: [
+          {
+            title: 'Bold',
+            name: 'bold',
+            onActivate: vi.fn(),
+            isActive: () => isBold,
+          },
+          {
+            title: 'Clear formatting',
+            name: 'clearFormat',
+            onActivate: () => {
+              isBold = false;
+            },
+            isActive: () => false,
+          },
+        ],
+      });
+
+      popover.show();
+
+      const [boldItem, clearItem] = (popover as unknown as PopoverDesktopInternal).itemsDefault;
+
+      expect(boldItem.getElement()).toHaveAttribute(DATA_ATTR.popoverItemActive);
+
+      clearItem.getElement()?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(boldItem.getElement()).not.toHaveAttribute(DATA_ATTR.popoverItemActive);
+    });
+  });
+
   describe('events', () => {
     it('emits ClosedOnActivate when nested popover closes due to child activation', () => {
       const popover = createPopover({

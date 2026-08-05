@@ -536,6 +536,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
      */
     this.refreshItemActiveState(item);
 
+    /**
+     * Siblings can depend on the same document state the activated item just
+     * changed (clearing formatting drops the marks bold/italic/code report on),
+     * so their dynamic isActive() callbacks have to be re-read too.
+     */
+    this.itemsDefault
+      .filter(x => x !== item && x.hasDynamicActiveState)
+      .forEach(x => this.refreshItemActiveState(x));
+
     // A destructive item swaps its content to a "click again to confirm" prompt
     // silently; announce that mode change so screen readers learn the click did
     // not act immediately. Reuses the existing results-announcer live region.

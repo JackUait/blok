@@ -252,7 +252,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 411 + 122 + 25 + 2 closure for all 560 keys', () => {
+  it('rebuilds a disjoint 413 + 123 + 25 + 2 closure for all 563 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -266,10 +266,10 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(560);
+    expect(lifecycle.size).toBe(563);
     expect(counts).toEqual({
-      'executable-literal': 411,
-      'finite-dynamic': 122,
+      'executable-literal': 413,
+      'finite-dynamic': 123,
       'registered-namespace-compatible': 25,
       'catalog-only': 2,
     });

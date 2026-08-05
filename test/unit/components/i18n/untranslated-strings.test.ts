@@ -173,6 +173,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
   fil: new Set([
     'tools.link.emailAddress',
     'tools.code.autoDetected',
+    // "Superscript"/"Subscript" are the established Filipino office terms
+    // (Word's Filipino UI keeps the English labels).
+    'tools.supSub.superscript',
+    'tools.supSub.subscript',
     'tools.image.emptyLink',
     'tools.image.cropRatioOval',
     // "File"/"Link"/"Preview"/"Board"/"Embed"/"Toggle" are the standard
@@ -317,6 +321,10 @@ const COGNATE_RETENTIONS: Record<string, Set<string>> = {
     'tools.link.webLink',
     // "OK" is the conventional compact confirmation label in Dutch UIs.
     'notifier.ok',
+    // "Superscript"/"Subscript" are the exact Dutch office-suite terms
+    // (Word and LibreOffice in Dutch use the English labels verbatim).
+    'tools.supSub.superscript',
+    'tools.supSub.subscript',
   ]),
   no: new Set([
     'toolNames.database',

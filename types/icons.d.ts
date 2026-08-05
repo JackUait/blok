@@ -17,6 +17,8 @@ export declare const IconItalic: string;
 export declare const IconLink: string;
 export declare const IconMarker: string;
 export declare const IconEquation: string;
+export declare const IconSuperscript: string;
+export declare const IconSubscript: string;
 export declare const IconClearFormat: string;
 export declare const IconUnderline: string;
 export declare const IconStrikethrough: string;

@@ -77,7 +77,7 @@ export interface SimpleMarkToolClass {
  * rendering needs it (trailing/consecutive spaces) on the next input event.
  * @param element - element to normalize
  */
-const normalizeNbspIn = (element: HTMLElement): void => {
+export const normalizeNbspIn = (element: HTMLElement): void => {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
 
   while (true) {

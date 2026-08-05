@@ -1,7 +1,7 @@
 // test/playwright/tests/host-customization-tokens.spec.ts
 
 import type { Page } from '@playwright/test';
-import type { Blok, OutputData } from '@/types';
+import type { Blok, OutputData, ReadOnlyModeConfig } from '@/types';
 import { ensureBlokBundleBuilt } from './helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../src/components/constants';
 import { expect, gotoTestPage, test } from './helpers/shared-page';
@@ -55,7 +55,7 @@ const resetBlok = async (page: Page): Promise<void> => {
 
 interface CreateOptions {
   data?: OutputData;
-  readOnly?: boolean;
+  readOnly?: boolean | ReadOnlyModeConfig;
   containerStyle?: Record<string, string>;
   styleTokens?: Record<string, string>;
   hideToolbar?: boolean;
@@ -156,7 +156,32 @@ test('default heading typography is unchanged: h1 font-size 30px, line-height 39
   await expect(header).toHaveCSS('margin-top', '32px');
 });
 
-test('read-only gutter collapses in production and restores when toggled back to editable', async ({ page }) => {
+test('chromeless read-only gutter collapses in production and restores when toggled back to editable', async ({ page }) => {
+  await createBlok(page, {
+    containerStyle: { '--blok-editor-gutter-start': '56px' },
+    readOnly: { hideControls: true },
+    data: { blocks: [{ type: 'paragraph', data: { text: 'Read only content' } }] },
+  });
+
+  const redactor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-redactor]`);
+
+  await expect(redactor).toBeVisible();
+  await expect(redactor).toHaveCSS('padding-inline-start', '0px');
+
+  await page.evaluate(async () => {
+    const blok = window.blokInstance ?? (() => {
+      throw new Error('Blok instance not found');
+    })();
+
+    await blok.readOnly.toggle(false);
+  });
+
+  await page.waitForFunction(() => window.blokInstance?.readOnly.isEnabled === false);
+
+  await expect(redactor).toHaveCSS('padding-inline-start', '56px');
+});
+
+test('plain read-only keeps the gutter in production, before and after a mode flip', async ({ page }) => {
   await createBlok(page, {
     containerStyle: { '--blok-editor-gutter-start': '56px' },
     readOnly: true,
@@ -166,7 +191,15 @@ test('read-only gutter collapses in production and restores when toggled back to
   const redactor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-redactor]`);
 
   await expect(redactor).toBeVisible();
-  await expect(redactor).toHaveCSS('padding-inline-start', '0px');
+
+  /*
+   * cb27a17c moved the collapse off read-only and onto
+   * [data-blok-controls-hidden]: plain read-only still renders the
+   * block-hover copy-link control in that gutter, and readOnly.set() flips
+   * modes in place — collapsing here jumped the whole document ~56px
+   * sideways on every toggle. Only the chromeless form may collapse.
+   */
+  await expect(redactor).toHaveCSS('padding-inline-start', '56px');
 
   await page.evaluate(async () => {
     const blok = window.blokInstance ?? (() => {

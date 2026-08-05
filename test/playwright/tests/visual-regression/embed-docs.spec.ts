@@ -8,8 +8,9 @@ import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
  *
  * One screenshot per service. All non-localhost network is stubbed with a
  * deterministic gray page, so each snapshot captures the embed block chrome
- * plus the per-service iframe aspect ratio without depending on third-party
- * providers.
+ * plus the per-service iframe geometry without depending on third-party
+ * providers. Services flagged `resizableHeight` in the registry render a fixed
+ * pixel height; the rest keep an aspect ratio.
  */
 
 declare global {

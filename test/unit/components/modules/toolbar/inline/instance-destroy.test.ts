@@ -1,3 +1,4 @@
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InlineToolbar } from '../../../../../../src/components/modules/toolbar/inline/index';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
@@ -98,7 +99,27 @@ vi.mock('../../../../../../src/components/selection/index', () => {
 
 vi.mock('../../../../../../src/components/utils/popover/popover-inline', () => ({
   PopoverInline: class MockPopoverInline {
-    hide = vi.fn();
+    /**
+     * Subscribers registered via on(), grouped by event name — the part of
+     * EventsDispatcher that PopoverAbstract inherits.
+     */
+    private subscribers = new Map<string, Array<() => void>>();
+
+    on = vi.fn((eventName: string, callback: () => void) => {
+      const listeners = this.subscribers.get(eventName) ?? [];
+
+      listeners.push(callback);
+      this.subscribers.set(eventName, listeners);
+    });
+
+    /**
+     * Mirrors PopoverAbstract.hide(): the close sequence ends with a
+     * SYNCHRONOUS PopoverEvent.Closed emit to the subscribers.
+     */
+    hide = vi.fn(() => {
+      this.subscribers.get(PopoverEvent.Closed)?.forEach(callback => callback());
+    });
+
     destroy = vi.fn();
     show = vi.fn();
     getElement = vi.fn(() => document.createElement('div'));
@@ -115,6 +136,8 @@ interface ToolbarInternals {
     createInstances: ReturnType<typeof vi.fn>;
   };
   popoverBuilder: { build: ReturnType<typeof vi.fn> };
+  shortcutManager: { destroy: ReturnType<typeof vi.fn> };
+  popover: { hide: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> } | null;
   nodes: { wrapper: HTMLElement };
   activateToolByShortcut: (name: string) => Promise<void>;
   invokeToolActionDirectly: (name: string) => void;
@@ -242,6 +265,34 @@ describe('InlineToolbar inline tool instance destroy lifecycle', () => {
     // A close() after destroy must not double-destroy
     inlineToolbar.close();
     expect(destroyFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('module destroy() while the toolbar is open completes teardown despite the popover Closed event', async () => {
+    stubOpenInstances([
+      { render: vi.fn(() => ({ name: 'a' })), destroy: vi.fn() },
+    ]);
+
+    const { wrapper } = internals().nodes;
+
+    document.body.appendChild(wrapper);
+
+    await inlineToolbar.tryToShow();
+    expect(inlineToolbar.opened).toBe(true);
+
+    const popover = internals().popover;
+
+    expect(popover).not.toBeNull();
+
+    expect(() => inlineToolbar.destroy()).not.toThrow();
+
+    // hide() emits Closed synchronously; destroy() must not let that event
+    // re-enter close() and tear the popover down a second time.
+    expect(popover?.hide).toHaveBeenCalledTimes(1);
+    expect(popover?.destroy).toHaveBeenCalledTimes(1);
+
+    // Both only run if destroy() got past the popover teardown.
+    expect(internals().shortcutManager.destroy).toHaveBeenCalledTimes(1);
+    expect(document.body.contains(wrapper)).toBe(false);
   });
 
   it('a popover-build failure during open destroys the already-created instances', async () => {

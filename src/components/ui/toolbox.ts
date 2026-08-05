@@ -1062,9 +1062,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
   /**
    * Builds the labeled header rendered above a section's entries. An Html
-   * popover item: skipped by keyboard navigation (no focusable controls) and
-   * hidden automatically while a search query is active — during search the
-   * list is re-ranked flat, so static group labels would mislabel it.
+   * popover item: skipped by keyboard navigation because the popover derives
+   * focus stops from an Html item's inner controls only (see
+   * PopoverDesktop#getFlippableElementsForItem) and a header has none, so it
+   * must stay control-less. It is also hidden automatically while a search
+   * query is active — during search the list is re-ranked flat, so static
+   * group labels would mislabel it.
    * @param section - section id the header labels
    * @param isFirst - true for the topmost header, which sits right under the
    * popover's own top padding and so needs less of its own

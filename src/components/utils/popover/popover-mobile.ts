@@ -141,15 +141,12 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   private getFlippableElementsForItem(item: PopoverItem): HTMLElement[] {
     if (item instanceof PopoverItemHtml) {
-      const controls = item.getControls();
-
-      if (controls.length > 0) {
-        return controls;
-      }
-
-      const element = item.getElement();
-
-      return element ? [ element ] : [];
+      // The wrapper is role="presentation" and non-focusable: only the inner
+      // interactive controls are focus stops. A decorative item (section header,
+      // metadata footer) contributes none — falling back to the wrapper would
+      // put a role="presentation" element under aria-activedescendant and steal
+      // index 0 from the first real option.
+      return item.getControls();
     }
 
     if (!(item instanceof PopoverItemDefault) || item.isDisabled) {

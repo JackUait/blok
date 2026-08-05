@@ -628,7 +628,7 @@ describe('PopoverDesktop', () => {
       }
     });
 
-    it('falls back to the wrapper element for HTML items without inner controls', () => {
+    it('contributes no focus stop for HTML items without inner controls', () => {
       const htmlElement = document.createElement('div');
 
       htmlElement.textContent = 'static content';
@@ -647,8 +647,62 @@ describe('PopoverDesktop', () => {
         item => item.name === 'static-html'
       )?.getElement();
 
+      // The wrapper is role="presentation": a decorative Html item (a slash-menu
+      // section header, a metadata footer) is not a menu option and must never
+      // become a keyboard stop.
       expect(htmlItemWrapper).not.toBeNull();
-      expect(instance.flippableElements).toEqual([ htmlItemWrapper ]);
+      expect(instance.flippableElements).toEqual([]);
+    });
+
+    it('skips decorative section headers so keyboard focus starts on the first real option', async () => {
+      const sectionHeader = document.createElement('div');
+
+      sectionHeader.setAttribute('role', 'separator');
+      sectionHeader.textContent = 'Basic blocks';
+
+      const popover = createPopover({
+        items: [
+          {
+            type: PopoverItemType.Html,
+            name: 'toolbox-section-basic',
+            element: sectionHeader,
+          },
+          {
+            title: 'Alpha',
+            name: 'alpha',
+            onActivate: vi.fn(),
+          },
+          {
+            title: 'Beta',
+            name: 'beta',
+            onActivate: vi.fn(),
+          },
+        ],
+      });
+      const instance = popover as unknown as PopoverDesktopInternal;
+      const alphaElement = instance.itemsDefault[0].getElement();
+      const betaElement = instance.itemsDefault[1].getElement();
+
+      expect(alphaElement).not.toBeNull();
+      expect(betaElement).not.toBeNull();
+
+      if (alphaElement === null || betaElement === null) {
+        return;
+      }
+
+      expect(instance.flippableElements).toEqual([alphaElement, betaElement]);
+
+      popover.show();
+
+      // focusInitialElement() runs in a microtask scheduled by show()
+      await Promise.resolve();
+
+      const flipper = getMockFlipper();
+
+      // Index 0 — the position focusInitialElement() and the empty-query search
+      // branch focus — must resolve to the first real option, not the header.
+      expect(flipper.lastActivatedWith?.[0]).toBe(alphaElement);
+      expect(flipper.focusItem).toHaveBeenCalledWith(0, { skipNextTab: true });
     });
   });
 

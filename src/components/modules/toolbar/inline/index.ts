@@ -364,10 +364,15 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     // close() empties this.tools after destroying, so this never double-fires.
     this.destroyToolsInstances();
 
+    // Detach the reference before hiding: hide() emits Closed synchronously and
+    // the handler subscribed in open() calls close() on identity match, which
+    // would null this.popover mid-teardown and tear it down a second time.
     if (this.popover) {
-      this.popover.hide?.();
-      this.popover.destroy?.();
+      const openPopover = this.popover;
+
       this.popover = null;
+      openPopover.hide?.();
+      openPopover.destroy?.();
     }
 
     this.shortcutManager.destroy();

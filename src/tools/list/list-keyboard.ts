@@ -358,9 +358,12 @@ export const handleOutdent = async(
   // Sync current content before updating
   syncContentFromDOM();
 
-  // Decrease depth by 1
+  // Decrease depth by 1. Do NOT write it into `data` here: `data` IS the tool's
+  // live `_data`, and setListItemData diffs the incoming depth against it to
+  // decide whether to touch the DOM — pre-mutating it makes that diff a no-op,
+  // so the indent/marker never move. The payload below carries the depth, and
+  // adjustDepthTo writes `data.depth` once the DOM has been updated.
   const newDepth = currentDepth - 1;
-  data.depth = newDepth;
 
   // Update the block data and re-render
   const updatedBlock = await api.blocks.update(blockId || '', {
@@ -472,8 +475,9 @@ export const handleIndent = async(
   // Sync current content before updating
   syncContentFromDOM();
 
+  // Symmetric to handleOutdent: the live `data.depth` must stay at the OLD value
+  // so setListItemData sees a real change and re-renders the indent/marker.
   const newDepth = currentDepth + 1;
-  data.depth = newDepth;
 
   const updatedBlock = await api.blocks.update(blockId || '', {
     ...data,

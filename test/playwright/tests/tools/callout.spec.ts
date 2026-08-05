@@ -102,6 +102,20 @@ test('leaves no tooltip parked in the corner after picking an emoji', async ({ p
   await page.getByTestId('callout-emoji-btn').click();
   await expect(page.locator('[data-emoji-picker-body]')).toBeVisible();
 
+  /**
+   * Settle the picker's 180ms opening animation BEFORE hovering. Hovering
+   * while it runs makes Playwright's actionability loop scroll the emoji grid
+   * on its own: its first scroll-into-view measures the still-transformed
+   * (`translateY/scale`) geometry and scrolls the body down a row, and the
+   * one right before the pointer lands scrolls it back — a `scroll` event
+   * delivered a frame AFTER `mouseenter` revealed the bubble. The editor then
+   * correctly dismisses it (a `position: fixed` tooltip must not outlive a
+   * scroll of the container holding its anchor), so the hover assertion below
+   * would be racing a scroll no real user performs by moving the mouse.
+   */
+  await page.locator('[data-blok-emoji-picker]')
+    .evaluate((picker) => picker.getAnimations().forEach((animation) => animation.finish()));
+
   const targetEmoji = page.locator('[data-emoji-native="👉"]');
 
   await targetEmoji.hover();

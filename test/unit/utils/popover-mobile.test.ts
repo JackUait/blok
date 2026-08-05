@@ -204,7 +204,7 @@ describe('PopoverMobile', () => {
       expect(flippable).toContain(secondButton);
     });
 
-    it('falls back to the wrapper element for HTML items without inner controls', () => {
+    it('contributes no focus stop for HTML items without inner controls', () => {
       const htmlElement = document.createElement('div');
 
       htmlElement.textContent = 'static content';
@@ -221,8 +221,62 @@ describe('PopoverMobile', () => {
 
       const flippable = (popover as unknown as { flippableElements: HTMLElement[] }).flippableElements;
 
-      expect(flippable).toHaveLength(1);
-      expect(flippable[0].contains(htmlElement)).toBe(true);
+      // The wrapper is role="presentation": a decorative Html item (a slash-menu
+      // section header, a metadata footer) is not a menu option and must never
+      // become a keyboard stop.
+      expect(flippable).toEqual([]);
+    });
+
+    it('skips decorative section headers so keyboard focus starts on the first real option', () => {
+      const sectionHeader = document.createElement('div');
+
+      sectionHeader.setAttribute('role', 'separator');
+      sectionHeader.textContent = 'Basic blocks';
+
+      const { popover } = createPopover({
+        items: [
+          {
+            type: PopoverItemType.Html,
+            name: 'toolbox-section-basic',
+            element: sectionHeader,
+          },
+          {
+            title: 'Alpha',
+            name: 'alpha',
+            onActivate: vi.fn(),
+          },
+          {
+            title: 'Beta',
+            name: 'beta',
+            onActivate: vi.fn(),
+          },
+        ],
+      });
+
+      const internals = popover as unknown as {
+        flippableElements: HTMLElement[];
+        items: Array<{ name?: string; getElement: () => HTMLElement | null }>;
+      };
+      const headerWrapper = internals.items[0].getElement();
+      const alphaElement = internals.items[1].getElement();
+      const betaElement = internals.items[2].getElement();
+
+      expect(headerWrapper).not.toBeNull();
+      expect(alphaElement).not.toBeNull();
+      expect(betaElement).not.toBeNull();
+
+      if (headerWrapper === null || alphaElement === null || betaElement === null) {
+        return;
+      }
+
+      expect(internals.flippableElements).toEqual([alphaElement, betaElement]);
+
+      popover.show();
+
+      // show() focuses index 0 — the highlight must land on the first real
+      // option, never on the role="presentation" header wrapper.
+      expect(alphaElement).toHaveAttribute(DATA_ATTR.focused, 'true');
+      expect(headerWrapper).not.toHaveAttribute(DATA_ATTR.focused);
     });
   });
 

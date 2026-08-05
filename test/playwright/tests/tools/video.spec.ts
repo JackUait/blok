@@ -1,14 +1,24 @@
 // test/playwright/tests/tools/video.spec.ts
 
+import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
-import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
+import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 
 const HOLDER_ID = 'blok';
 const VIDEO_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-tool="video"]`;
-const SAMPLE_VIDEO_URL = 'https://example.com/sample.mp4';
+// A real, decodable H.264 clip (640×360) served by the Playwright webServer,
+// which runs `npx serve .` from the repo root. It MUST decode: any `error`
+// event on the <video> routes the block to the terminal ERROR state, which
+// tears the player out of the DOM (src/tools/video/index.ts renderState).
+// A dead/remote URL made these tests race the ~250 ms network failure.
+// The origin is derived from the test page so a webServer port change carries
+// over, and the `.mp4` suffix satisfies URL_PATTERN (video/constants.ts).
+const SAMPLE_VIDEO_FILE = 'public/samples/big-buck-bunny.mp4';
+const SAMPLE_VIDEO_URL = new URL(`/${SAMPLE_VIDEO_FILE}`, TEST_PAGE_URL).href;
+const SAMPLE_VIDEO_PATH = join(process.cwd(), SAMPLE_VIDEO_FILE);
 
 declare global {
   interface Window {
@@ -90,11 +100,7 @@ test('uploads a video file via the picker and renders a player', async ({ page }
   await insertVideoBlock(page);
 
   const videoBlock = page.locator(VIDEO_BLOCK_SELECTOR);
-  await videoBlock.getByTestId('file-input').setInputFiles({
-    name: 'clip.mp4',
-    mimeType: 'video/mp4',
-    buffer: Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]),
-  });
+  await videoBlock.getByTestId('file-input').setInputFiles(SAMPLE_VIDEO_PATH);
 
   await expect(videoBlock).toHaveAttribute('data-state', 'rendered');
   const player = videoBlock.getByTestId('video-player');

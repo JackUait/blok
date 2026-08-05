@@ -85,6 +85,20 @@
   100% { background-color: transparent; }
 }
 
+/* Link-field suggestion row / inline error reveal — call sites in
+   popover-animation.css. Restarts only when the element toggles from
+   display:none, so it fires on appear, not on every keystroke. */
+@keyframes blok-link-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Soft nudge when a resizable block (image/video/embed) hits its minimum
    width — shared by the resize-cue rules in resize-cue.css. */
 @keyframes blok-resize-recoil {

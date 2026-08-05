@@ -341,7 +341,9 @@ describe('LinkInlineTool', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(error).not.toBeNull();
     expect(error?.hidden).toBe(false);
-    expect(error?.textContent).toBe('tools.link.invalidLink');
+    // trim(): the decorative warning icon's SVG markup contributes formatting
+    // whitespace to textContent; the announced message is what matters.
+    expect(error?.textContent?.trim()).toBe('tools.link.invalidLink');
     expect(error?.id).toBeTruthy();
     expect(input.getAttribute('aria-describedby')).toContain(error?.id ?? '');
   });
@@ -363,6 +365,44 @@ describe('LinkInlineTool', () => {
 
     expect(input.hasAttribute('aria-invalid')).toBe(false);
     expect(error?.hidden).toBe(true);
+  });
+
+  it('hides the suggestion row while the validation error is shown', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Typing a complete-looking URL surfaces the suggestion row.
+    expect(getSuggestionChip(wrapper)?.classList.contains('hidden')).toBe(false);
+
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+    // The error and the confirmable suggestion row contradict each other —
+    // while "Invalid link" is shown the row must not offer the same URL.
+    expect(getSuggestionChip(wrapper)?.classList.contains('hidden')).toBe(true);
+  });
+
+  it('restores the suggestion row when the user edits the input after an error', () => {
+    const { tool } = createTool();
+    const renderResult = tool.render() as unknown as LinkToolRenderResult;
+    const wrapper = renderResult.children.items[0].element;
+    const input = getInputFromWrapper(wrapper);
+
+    input.value = 'https://google .com';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    (tool as unknown as { enterPressed(event: KeyboardEvent): void }).enterPressed(createEnterEventStubs() as unknown as KeyboardEvent);
+
+    input.value = 'https://google.com';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const error = wrapper.querySelector<HTMLElement>('[data-blok-link-tool-error]');
+
+    expect(error?.hidden).toBe(true);
+    expect(getSuggestionChip(wrapper)?.classList.contains('hidden')).toBe(false);
   });
 
   it.each([
@@ -744,6 +784,24 @@ describe('LinkInlineTool', () => {
       const typeEl = itemWrapper.querySelector('[data-link-suggestion-type]');
 
       expect(typeEl?.textContent).toBe('Jump to section');
+    });
+
+    it('shows the enter-key hint only when the URL is confirmable', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+      const update = tool as unknown as { updateSuggestion(v: string): void };
+
+      update.updateSuggestion('asd');
+
+      const hint = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
+
+      expect(hint).not.toBeNull();
+      // Incomplete URL: pressing Enter would fail, so the hint must not promise it.
+      expect(hint?.classList.contains('hidden')).toBe(true);
+
+      update.updateSuggestion('https://example.com');
+
+      expect(hint?.classList.contains('hidden')).toBe(false);
     });
 
     it('prefills the URL field and suppresses the suggestion chip when editing an existing link', () => {

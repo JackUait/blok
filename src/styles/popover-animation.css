@@ -47,9 +47,24 @@
   transform: none;
 }
 
+/* ─── Inline link field: suggestion row & error reveal ──────────────────── */
+
+/* Keyed off the visibility toggle (Tailwind `hidden` class / `hidden`
+   attribute), so the reveal plays once when the element appears and never
+   re-triggers while the user keeps typing. */
+[data-link-suggestion]:not(.hidden),
+[data-blok-link-tool-error]:not([hidden]) {
+  animation: blok-link-reveal 140ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-blok-popover-container] {
     transition: none;
     transform: none;
+  }
+
+  [data-link-suggestion]:not(.hidden),
+  [data-blok-link-tool-error]:not([hidden]) {
+    animation: none;
   }
 }

@@ -506,6 +506,14 @@ export const IconHash = `
 </svg>
 `;
 
+// Return/enter key icon (link suggestion confirm hint)
+export const IconReturn = `
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M14.75 5.5V9.25C14.75 10.3546 13.8546 11.25 12.75 11.25H5.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.25 8.5L5.5 11.25L8.25 14" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`;
+
 // Quote icon
 export const IconQuote = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">

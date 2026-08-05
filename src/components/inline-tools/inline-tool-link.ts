@@ -7,7 +7,7 @@ import type { BlokConfig } from '../../../types/configs/blok-config';
 import type { Notifier, Toolbar, I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
-import { IconLink, IconGlobe, IconMail, IconHash, IconTrash } from '../icons';
+import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
@@ -16,8 +16,23 @@ import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/res
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
 
-const SUGGESTION_ROW_VALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left cursor-pointer can-hover:hover:bg-item-hover-bg transition-colors';
-const SUGGESTION_ROW_INVALID = 'flex items-center gap-2 w-full mt-0.5 px-1.5 py-1.5 rounded-md text-left pointer-events-none';
+const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-[10px] text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
+const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
+const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
+
+/**
+ * The suggestion's leading icon sits in the same soft chip the popover menus
+ * use for their item icons, so the link card reads as part of one system.
+ */
+const SUGGESTION_ICON_CHIP = 'flex items-center justify-center size-6 shrink-0 rounded-md bg-popover-icon-bg text-gray-text transition-opacity duration-150 [&_svg]:size-4';
+const SUGGESTION_URL_TEXT = 'block text-[13px] leading-[18px] font-medium truncate';
+const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt-px';
+
+/**
+ * Keycap-style ⏎ affordance on the confirmable suggestion row. Shown only when
+ * pressing Enter would actually insert the link.
+ */
+const ENTER_HINT_BASE = 'items-center justify-center size-5 shrink-0 rounded-md bg-popover-icon-bg text-gray-text [&_svg]:size-3.5';
 
 /**
  * Link Tool
@@ -64,7 +79,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * Tailwind classes for input
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border aria-invalid:border-[var(--blok-color-danger)] focus:aria-invalid:border-[var(--blok-color-danger)] mobile:text-[15px] mobile:font-medium';
 
   /**
    * Data attributes for e2e selectors
@@ -86,6 +101,7 @@ export class LinkInlineTool implements InlineTool {
     inputWrapper: HTMLElement | null;
     suggestion: HTMLElement | null;
     error: HTMLElement | null;
+    errorMessage: HTMLElement | null;
     divider: HTMLElement | null;
     removeButton: HTMLButtonElement | null;
     button: HTMLButtonElement | null;
@@ -97,6 +113,7 @@ export class LinkInlineTool implements InlineTool {
       inputWrapper: null,
       suggestion: null,
       error: null,
+      errorMessage: null,
       divider: null,
       removeButton: null,
       button: null,
@@ -235,6 +252,9 @@ export class LinkInlineTool implements InlineTool {
     });
     input.addEventListener('paste', () => {
       requestAnimationFrame(() => {
+        // A paste replaces the rejected value, so the stale error must not
+        // linger next to the freshly revealed suggestion row.
+        this.clearValidationError();
         this.updateSuggestion(input.value);
       });
     });
@@ -278,7 +298,8 @@ export class LinkInlineTool implements InlineTool {
     const label = document.createElement('div');
 
     label.className = twMerge(
-      'hidden px-0.5 mb-1.5 text-xs font-normal tracking-[0.01em] text-gray-text',
+      // px-2.5 keeps the caption on the same optical column as the input text.
+      'hidden px-2.5 mb-1.5 text-xs font-normal tracking-[0.01em] text-gray-text',
       topGap ? 'mt-3.5' : ''
     );
     label.textContent = text;
@@ -308,12 +329,12 @@ export class LinkInlineTool implements InlineTool {
     const button = document.createElement('button');
 
     button.type = 'button';
-    button.className = 'hidden group/remove w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[10px] text-left text-sm font-medium text-text-primary cursor-pointer can-hover:hover:bg-red-500/10 can-hover:hover:text-red-500 transition-colors appearance-none border-0 bg-transparent font-[inherit]';
+    button.className = 'hidden group/remove w-full flex items-center gap-2.5 px-2 py-1.5 rounded-[10px] text-left text-sm font-medium text-text-primary cursor-pointer can-hover:hover:bg-red-500/10 can-hover:hover:text-red-500 focus-visible:bg-red-500/10 focus-visible:text-red-500 outline-hidden transition-colors appearance-none border-0 bg-transparent font-[inherit]';
     button.setAttribute('data-blok-testid', 'inline-tool-remove-link');
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'shrink-0 flex text-gray-text transition-colors can-hover:group-hover/remove:text-red-500 [&>svg]:size-5';
+    iconEl.className = 'shrink-0 flex text-gray-text transition-colors can-hover:group-hover/remove:text-red-500 group-focus-visible/remove:text-red-500 [&>svg]:size-5';
     iconEl.innerHTML = IconTrash;
 
     const label = document.createElement('span');
@@ -337,11 +358,29 @@ export class LinkInlineTool implements InlineTool {
   private createError(): HTMLElement {
     const error = document.createElement('div');
 
+    // No display class on the root so the `hidden` attribute keeps working;
+    // the flex layout lives on the inner row instead.
     error.id = this.errorId;
-    error.className = 'mt-1 px-1.5 text-xs text-red-500';
+    error.className = 'mt-1.5 px-1.5';
     error.setAttribute('data-blok-link-tool-error', '');
     error.setAttribute('role', 'alert');
     error.hidden = true;
+
+    const row = document.createElement('span');
+
+    row.className = 'flex items-center gap-1.5 text-xs font-medium text-[var(--blok-color-danger)]';
+
+    const iconEl = document.createElement('span');
+
+    iconEl.className = 'shrink-0 flex [&_svg]:size-3.5';
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.innerHTML = IconWarning;
+
+    const message = document.createElement('span');
+
+    this.nodes.errorMessage = message;
+    row.append(iconEl, message);
+    error.append(row);
 
     return error;
   }
@@ -351,12 +390,15 @@ export class LinkInlineTool implements InlineTool {
    * mark the input aria-invalid, describing it by the error region.
    */
   private showValidationError(): void {
-    if (!this.nodes.input || !this.nodes.error) {
+    if (!this.nodes.input || !this.nodes.error || !this.nodes.errorMessage) {
       return;
     }
 
-    this.nodes.error.textContent = this.i18n.t('tools.link.invalidLink');
+    this.nodes.errorMessage.textContent = this.i18n.t('tools.link.invalidLink');
     this.nodes.error.hidden = false;
+    // The error and the suggestion row contradict each other — while the URL
+    // is rejected, the row must not keep offering that same URL as confirmable.
+    this.nodes.suggestion?.classList.add('hidden');
     setFieldValidity(this.nodes.input, false, this.errorId);
   }
 
@@ -368,7 +410,9 @@ export class LinkInlineTool implements InlineTool {
       return;
     }
 
-    this.nodes.error.textContent = '';
+    if (this.nodes.errorMessage) {
+      this.nodes.errorMessage.textContent = '';
+    }
     this.nodes.error.hidden = true;
     setFieldValidity(this.nodes.input, true, this.errorId);
   }
@@ -394,7 +438,7 @@ export class LinkInlineTool implements InlineTool {
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = 'text-gray-text shrink-0 flex [&>svg]:size-7';
+    iconEl.className = SUGGESTION_ICON_CHIP;
     iconEl.setAttribute('data-link-suggestion-icon', '');
 
     const textEl = document.createElement('span');
@@ -403,16 +447,23 @@ export class LinkInlineTool implements InlineTool {
 
     const urlEl = document.createElement('span');
 
-    urlEl.className = 'block text-xs font-medium text-text-primary truncate';
+    urlEl.className = `${SUGGESTION_URL_TEXT} text-text-primary`;
     urlEl.setAttribute('data-link-suggestion-url', '');
 
     const typeEl = document.createElement('span');
 
-    typeEl.className = 'block text-[10.5px] text-gray-text leading-tight mt-px';
+    typeEl.className = SUGGESTION_TYPE_TEXT;
     typeEl.setAttribute('data-link-suggestion-type', '');
 
+    const enterHint = document.createElement('span');
+
+    enterHint.className = `hidden ${ENTER_HINT_BASE}`;
+    enterHint.setAttribute('data-link-suggestion-enter-hint', '');
+    enterHint.setAttribute('aria-hidden', 'true');
+    enterHint.innerHTML = IconReturn;
+
     textEl.append(urlEl, typeEl);
-    row.append(iconEl, textEl);
+    row.append(iconEl, textEl, enterHint);
     wrapper.append(divider, row);
 
     row.addEventListener('mousedown', (e) => e.preventDefault());
@@ -445,21 +496,27 @@ export class LinkInlineTool implements InlineTool {
     const urlEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-url]');
     const typeEl = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-type]');
     const row = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-row]');
+    const enterHint = this.nodes.suggestion.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
 
     if (iconEl) {
       iconEl.innerHTML = icon;
-      iconEl.className = `${isComplete ? 'text-gray-text' : 'text-gray-text opacity-40'} shrink-0 flex [&>svg]:size-7`;
+      iconEl.className = `${SUGGESTION_ICON_CHIP} ${isComplete ? '' : 'opacity-50'}`.trim();
     }
     if (urlEl) {
       urlEl.textContent = trimmed;
-      urlEl.className = `block text-xs font-medium truncate ${isComplete ? 'text-text-primary' : 'text-gray-text'}`;
+      urlEl.className = `${SUGGESTION_URL_TEXT} ${isComplete ? 'text-text-primary' : 'text-gray-text'}`;
     }
     if (typeEl) {
       typeEl.textContent = isComplete ? label : this.i18n.t('tools.link.keepTyping');
-      typeEl.className = 'block text-[10.5px] text-gray-text leading-tight mt-px';
     }
-    if (row) {
+    if (row instanceof HTMLButtonElement) {
       row.className = isComplete ? SUGGESTION_ROW_VALID : SUGGESTION_ROW_INVALID;
+      // pointer-events-none does not stop keyboard focus — keep the inert row
+      // out of the tab order too.
+      row.tabIndex = isComplete ? 0 : -1;
+    }
+    if (enterHint) {
+      enterHint.className = `${isComplete ? 'flex' : 'hidden'} ${ENTER_HINT_BASE}`;
     }
 
     this.nodes.suggestion.classList.remove('hidden');

@@ -1019,6 +1019,128 @@ test.describe('inline tool link', () => {
       expect(field.top).toBeGreaterThanOrEqual(0);
       expect(field.bottom).toBeLessThanOrEqual(viewportHeight);
     });
+
+    // The input stretches with its content after open (see 'link field width'
+    // below), so the card's footprint can grow while it is already placed.
+    // Near the right viewport edge that growth must re-clamp the card back
+    // inside the viewport instead of pushing it offscreen.
+    test('keeps the growing link field inside the viewport at the right edge', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'edgeword',
+          },
+        },
+      ]);
+
+      await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
+
+        if (!container) {
+          throw new Error('Holder is not available');
+        }
+
+        container.style.marginLeft = 'calc(100vw - 260px)';
+      }, { holder: HOLDER_ID });
+
+      const paragraph = getParagraphByText(page, 'edgeword');
+
+      await selectText(paragraph, 'edgeword');
+      const linkInput = await ensureLinkInputOpen(page);
+
+      await linkInput.fill('https://a-very-long-link.example.com/with/a/deep/path?and=query');
+
+      await expect(async () => {
+        const geometry = await page.evaluate(() => {
+          const input = document.querySelector('[data-blok-testid="inline-tool-input"]');
+          const nestedContainer = input?.closest('[data-blok-popover-container]');
+          const toolbar = document.querySelector('[data-blok-interface="inline-toolbar"] [data-blok-popover-container]');
+
+          if (!(nestedContainer instanceof HTMLElement)) {
+            throw new Error('Link field container is not available');
+          }
+
+          const rect = nestedContainer.getBoundingClientRect();
+
+          return {
+            right: rect.right,
+            left: rect.left,
+            offsetWidth: nestedContainer.offsetWidth,
+            styleLeft: nestedContainer.style.left,
+            toolbarLeft: toolbar?.getBoundingClientRect().left ?? null,
+            viewportWidth: window.innerWidth,
+          };
+        });
+
+        expect(geometry.right, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.viewportWidth - 7);
+      }).toPass();
+    });
+  });
+
+  test.describe('link field width', () => {
+    test('rests narrow and stretches with the typed link up to the old width', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Size the link field by its content',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByText(page, 'Size the link field by its content');
+
+      await selectText(paragraph, 'link field');
+      const linkInput = await ensureLinkInputOpen(page);
+
+      // offsetWidth: the popover's 120ms entrance transform (scale 0.98)
+      // distorts boundingBox() mid-animation; layout width is transform-free.
+      // The card (popover container) is measured alongside the input — the
+      // container clips its content, so an input-only assertion would pass
+      // even while the card visually cuts the field off.
+      const widths = (): Promise<{ input: number; card: number }> => linkInput.evaluate((el) => {
+        const card = el.closest('[data-blok-popover-container]');
+
+        if (!(card instanceof HTMLElement)) {
+          throw new Error('Link field card is not available');
+        }
+
+        return { input: (el as HTMLElement).offsetWidth, card: card.offsetWidth };
+      });
+
+      // At rest (placeholder only) the field sits at the narrow default.
+      const initial = await widths();
+
+      expect(initial.input).toBe(220);
+
+      const cardChrome = initial.card - initial.input;
+
+      // A medium link stretches the field to its text.
+      await linkInput.fill('https://blok.example.com/docs/links');
+
+      const medium = await widths();
+
+      expect(medium.input).toBeGreaterThan(225);
+      expect(medium.input).toBeLessThan(315);
+      expect(medium.card).toBe(medium.input + cardChrome);
+
+      // A long link caps at the old fixed width — and the card grows with it.
+      await linkInput.fill('https://a-very-long-link.example.com/with/a/deep/path?and=query');
+
+      const long = await widths();
+
+      expect(long.input).toBe(320);
+      expect(long.card).toBe(320 + cardChrome);
+
+      // Clearing the value settles the field back to the narrow default.
+      await linkInput.fill('');
+
+      const cleared = await widths();
+
+      expect(cleared.input).toBe(220);
+      expect(cleared.card).toBe(220 + cardChrome);
+    });
   });
 });
 

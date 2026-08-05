@@ -11,7 +11,7 @@ import type { SearchableItem } from './components/search-input';
 import { SearchInput, SearchInputEvent, scoreSearchMatch } from './components/search-input';
 import { PopoverAbstract } from './popover-abstract';
 import { CSSVariables, css as popoverCss } from './popover.const';
-import { clampNestedPopoverTop, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
+import { clampNestedPopoverTop, NESTED_POPOVER_VIEWPORT_MARGIN, resolveNestedPopoverBelowPlacement } from './popover-nested-position';
 import { resolvePosition } from './popover-position';
 import { createPositionTracker, resolveBoundaryRect, type PositionTracker } from './anchored-position';
 import { stripPopoverAttribute } from '../top-layer';
@@ -131,6 +131,13 @@ export class PopoverDesktop extends PopoverAbstract {
    * Item nested popover is displayed for
    */
   protected nestedPopoverTriggerItem: PopoverItem | null = null;
+
+  /**
+   * Re-clamps a below-placement nested popover (the inline toolbar's link
+   * field) while it is open: its content-driven width changes as the user
+   * types, and unobserved growth would push the card past the viewport edge.
+   */
+  private nestedBelowResizeObserver: ResizeObserver | null = null;
 
   /**
    * Last hovered item inside popover.
@@ -1149,6 +1156,9 @@ export class PopoverDesktop extends PopoverAbstract {
     const triggerItemElement = this.nestedPopoverTriggerItem?.getElement();
     const elementToRemove = this.nestedPopover.getElement();
 
+    this.nestedBelowResizeObserver?.disconnect();
+    this.nestedBelowResizeObserver = null;
+
     this.nestedPopover.off(PopoverEvent.ClosedOnActivate, this.closeOnNestedActivate);
     this.nestedPopover.hide();
     this.nestedPopover.destroy();
@@ -1247,6 +1257,33 @@ export class PopoverDesktop extends PopoverAbstract {
     });
 
     this.nestedPopover.show();
+
+    // A below-placement popover keeps its content-driven width while open, so
+    // observe it and re-clamp its position as the content grows or shrinks.
+    // The observer's initial fire also settles any drift between the pre-show
+    // clone measurement and the real rendered size.
+    if (item.childrenPlacement === 'below' && typeof ResizeObserver !== 'undefined') {
+      const nestedContainerEl = nestedPopoverEl.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+
+      if (nestedContainerEl instanceof HTMLElement) {
+        this.nestedBelowResizeObserver = new ResizeObserver(() => {
+          // Reposition on the next frame, not inside the observer callback:
+          // the callback's own style writes shift layout in the same frame,
+          // which makes Firefox drop the follow-up notification as an
+          // undelivered resize-observer loop — leaving the card clamped
+          // against a stale mid-growth width.
+          requestAnimationFrame(() => {
+            if (this.nestedPopover === null || this.nestedPopover === undefined) {
+              return;
+            }
+
+            this.applyNestedPopoverPositioning(nestedPopoverEl, item);
+          });
+        });
+        this.nestedBelowResizeObserver.observe(nestedContainerEl);
+      }
+    }
+
     this.flipper?.deactivate();
 
     return this.nestedPopover;
@@ -1281,15 +1318,44 @@ export class PopoverDesktop extends PopoverAbstract {
     // popover instead (the inline toolbar's link field). Left edges aligned,
     // flipping above only when the viewport leaves no room below.
     if (triggerItem.childrenPlacement === 'below') {
+      // The link field sizes its input to the typed content, so the card must
+      // not stay frozen at the show()-time --width: the container follows its
+      // content live, and the resize observer attached in showNestedPopover
+      // re-runs this placement whenever the content grows or shrinks.
+      nestedContainer.style.width = 'max-content';
+      nestedContainer.style.minWidth = '0';
+
+      // Prefer live layout sizes once the popover is rendered; the initial
+      // pre-show call falls back to the detached-clone measurement
+      // (offsetWidth is 0 until the top-layer popover is shown).
+      const nestedWidth = nestedContainer.offsetWidth > 0
+        ? nestedContainer.offsetWidth
+        : this.nestedPopover?.size.width ?? 0;
+      const nestedHeight = nestedContainer.offsetHeight > 0
+        ? nestedContainer.offsetHeight
+        : this.nestedPopover?.size.height ?? 0;
+
       const { left, top, side } = resolveNestedPopoverBelowPlacement({
         parentRect,
-        nestedWidth: this.nestedPopover?.size.width ?? 0,
-        nestedHeight: this.nestedPopover?.size.height ?? 0,
+        nestedWidth,
+        nestedHeight,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
       });
 
-      nestedContainer.style.left = `${left - parentRootRect.left}px`;
+      // A left below parentRect.left means the right-viewport clamp engaged.
+      // Express that clamp as a CSS right-pin instead of a measured left: the
+      // browser then keeps the card's right edge exactly on the margin while
+      // the content-driven width keeps changing, so a transiently stale width
+      // measurement (Firefox settles intrinsic sizes across frames) can never
+      // strand the card past the viewport edge.
+      if (left < parentRect.left) {
+        nestedContainer.style.left = 'auto';
+        nestedContainer.style.right = `${parentRootRect.right - (window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN)}px`;
+      } else {
+        nestedContainer.style.right = 'auto';
+        nestedContainer.style.left = `${left - parentRootRect.left}px`;
+      }
       nestedContainer.style.top = `${top - parentRootRect.top}px`;
 
       actualPopoverEl.setAttribute('data-side', side);

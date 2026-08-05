@@ -9,12 +9,22 @@ import type { MenuConfig } from '../../../types/tools';
 import { DATA_ATTR, createSelector, INLINE_TOOLBAR_INTERFACE_VALUE } from '../constants';
 import { IconLink, IconGlobe, IconMail, IconHash, IconTrash, IconReturn, IconWarning } from '../icons';
 import { SelectionUtils } from '../selection/index';
-import { log } from '../utils';
+import { isMobileScreen, log } from '../utils';
 import { PopoverItemType } from '../utils/popover';
 import { setFieldValidity } from '../utils/field-validity';
 import { applyResolvedLinkAttributes, resolveLinkAttributes } from '../utils/resolve-link-attributes';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { twMerge } from '../utils/tw';
+
+/**
+ * Content-driven input width: the field rests at the narrow default and
+ * stretches with the typed link, capped at the old fixed width. The chrome
+ * constant covers the input's own horizontal padding, borders and caret slack
+ * on top of the measured text width.
+ */
+const INPUT_MIN_WIDTH = 220;
+const INPUT_MAX_WIDTH = 320;
+const INPUT_CHROME_WIDTH = 28;
 
 const SUGGESTION_ROW_BASE = 'flex items-center gap-2.5 w-full mt-0.5 px-1.5 py-1.5 rounded-[10px] text-left appearance-none border-0 bg-transparent font-[inherit] outline-hidden';
 const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:hover:bg-item-hover-bg focus-visible:bg-item-hover-bg transition-colors`;
@@ -79,7 +89,7 @@ export class LinkInlineTool implements InlineTool {
   /**
    * Tailwind classes for input
    */
-  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[320px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border aria-invalid:border-[var(--blok-color-danger)] focus:aria-invalid:border-[var(--blok-color-danger)] mobile:text-[15px] mobile:font-medium';
+  private readonly INPUT_BASE_CLASSES = 'hidden w-full min-w-[220px] m-0 px-2.5 py-1.5 text-sm leading-[22px] font-medium text-text-primary bg-item-hover-bg border border-transparent rounded-[10px]! outline-hidden box-border appearance-none font-[inherit] placeholder:text-gray-text transition-[background-color,border-color,box-shadow] duration-150 ease-out focus:bg-popover-bg focus:border-search-input-focus-border aria-invalid:border-[var(--blok-color-danger)] focus:aria-invalid:border-[var(--blok-color-danger)] mobile:text-[15px] mobile:font-medium';
 
   /**
    * Data attributes for e2e selectors
@@ -124,6 +134,11 @@ export class LinkInlineTool implements InlineTool {
    * mode the labeled Page/Title fields replace the create-mode suggestion chip.
    */
   private editing = false;
+
+  /**
+   * Reused canvas for measuring the input's text width (see measureTextWidth).
+   */
+  private measureCanvas: HTMLCanvasElement | null = null;
 
   /**
    * Stable id linking the input to its inline error via aria-describedby.
@@ -256,14 +271,73 @@ export class LinkInlineTool implements InlineTool {
         // linger next to the freshly revealed suggestion row.
         this.clearValidationError();
         this.updateSuggestion(input.value);
+        this.resizeInput();
       });
     });
     input.addEventListener('input', () => {
       this.clearValidationError();
       this.updateSuggestion(input.value);
+      this.resizeInput();
     });
 
     return input;
+  }
+
+  /**
+   * Measure how wide `text` renders in the URL input's own font. Returns null
+   * when measurement is unavailable (no canvas 2d context, e.g. jsdom) — the
+   * class-based fallback width applies then.
+   * @param text - the string to measure
+   */
+  private measureTextWidth(text: string): number | null {
+    if (!this.nodes.input) {
+      return null;
+    }
+
+    this.measureCanvas ??= document.createElement('canvas');
+    const context = this.measureCanvas.getContext('2d');
+
+    if (!context) {
+      return null;
+    }
+
+    const style = window.getComputedStyle(this.nodes.input);
+    const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`.trim();
+
+    if (font !== '') {
+      context.font = font;
+    }
+
+    return context.measureText(text).width;
+  }
+
+  /**
+   * Size the URL input to its content: rest at the narrow default and stretch
+   * with the typed link, capped at the old fixed width. Mobile keeps the
+   * fluid class-based width — the popover manages its own sizing there.
+   */
+  private resizeInput(): void {
+    const input = this.nodes.input;
+
+    if (!input) {
+      return;
+    }
+
+    if (isMobileScreen()) {
+      input.style.width = '';
+
+      return;
+    }
+
+    const measured = this.measureTextWidth(input.value || input.placeholder || '');
+
+    if (measured === null) {
+      return;
+    }
+
+    const width = Math.ceil(Math.min(Math.max(measured + INPUT_CHROME_WIDTH, INPUT_MIN_WIDTH), INPUT_MAX_WIDTH));
+
+    input.style.width = `${width}px`;
   }
 
   /**
@@ -361,7 +435,9 @@ export class LinkInlineTool implements InlineTool {
     // No display class on the root so the `hidden` attribute keeps working;
     // the flex layout lives on the inner row instead.
     error.id = this.errorId;
-    error.className = 'mt-1.5 px-1.5';
+    // w-0 + min-w-full for the same reason as the suggestion wrapper: a long
+    // localized message must not widen the content-driven card.
+    error.className = 'w-0 min-w-full mt-1.5 px-1.5';
     error.setAttribute('data-blok-link-tool-error', '');
     error.setAttribute('role', 'alert');
     error.hidden = true;
@@ -423,7 +499,11 @@ export class LinkInlineTool implements InlineTool {
   private createSuggestion(): HTMLElement {
     const wrapper = document.createElement('div');
 
-    wrapper.className = 'hidden';
+    // w-0 + min-w-full: the URL input alone drives the card's content-driven
+    // width — the row contributes nothing to the intrinsic measurement (its
+    // long untruncated URL text would otherwise inflate the card) yet still
+    // renders at the card's resolved width, which is what lets it truncate.
+    wrapper.className = 'hidden w-0 min-w-full';
     wrapper.setAttribute('data-link-suggestion', '');
 
     const divider = document.createElement('div');
@@ -652,6 +732,7 @@ export class LinkInlineTool implements InlineTool {
     // Edit mode uses the labeled Page/Title fields, not the create-mode
     // suggestion chip — keep it hidden even though the URL is prefilled.
     this.updateSuggestion(this.nodes.input.value);
+    this.resizeInput();
 
     this.nodes.input.className = twMerge(this.INPUT_BASE_CLASSES, 'block');
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, true);
@@ -798,6 +879,7 @@ export class LinkInlineTool implements InlineTool {
     this.nodes.input.className = this.INPUT_BASE_CLASSES;
     this.setBooleanStateAttribute(this.nodes.input, this.DATA_ATTRIBUTES.inputOpened, false);
     this.nodes.input.value = '';
+    this.nodes.input.style.width = '';
     this.setEditAffordancesVisible(false);
     this.clearValidationError();
     this.nodes.suggestion?.classList.add('hidden');

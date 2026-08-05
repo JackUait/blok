@@ -87,6 +87,13 @@ export function resolveNestedPopoverSide(input: NestedPopoverPositionInput): Nes
 }
 
 /**
+ * Minimum gap (px) kept between a nested popover and the viewport edges.
+ * Shared with popover-desktop, which re-expresses the right-edge clamp as a
+ * CSS right-pin while the below-placement popover's width changes live.
+ */
+export const NESTED_POPOVER_VIEWPORT_MARGIN = 8;
+
+/**
  * Input for resolving the position of a nested popover that opens below its
  * parent popover (e.g. the inline toolbar's link field) instead of beside it.
  * All coordinates are in viewport space.
@@ -133,7 +140,7 @@ export function resolveNestedPopoverBelowPlacement(input: NestedPopoverBelowPlac
     viewportWidth,
     viewportHeight,
     gap = 4,
-    margin = 8,
+    margin = NESTED_POPOVER_VIEWPORT_MARGIN,
   } = input;
 
   const maxLeft = viewportWidth - nestedWidth - margin;

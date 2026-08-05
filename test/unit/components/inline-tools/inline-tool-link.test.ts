@@ -231,6 +231,92 @@ describe('LinkInlineTool', () => {
     expect(input.className).not.toMatch(/(^|\s)w-\[200px\]/);
   });
 
+  describe('content-driven input width', () => {
+    type MeasurableTool = {
+      measureTextWidth(text: string): number | null;
+      openActions(needFocus?: boolean): void;
+      closeActions(clearSavedSelection?: boolean): void;
+    };
+
+    it('opens at the narrow default width instead of the old full width', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+
+      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(60);
+
+      (tool as unknown as MeasurableTool).openActions();
+
+      expect(input.style.width).toBe('220px');
+    });
+
+    it('grows the input with the measured link text up to the 320px cap', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+      const measureSpy = vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth');
+
+      measureSpy.mockReturnValue(250);
+      input.value = 'https://a-medium-length-link.example.com';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // 250px of text + 28px input chrome (padding, borders, caret slack).
+      expect(input.style.width).toBe('278px');
+
+      measureSpy.mockReturnValue(400);
+      input.value = 'https://a-very-long-link.example.com/with/a/deep/path?and=query';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(input.style.width).toBe('320px');
+    });
+
+    it('leaves the class-based width untouched when text cannot be measured', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+
+      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(null);
+
+      (tool as unknown as MeasurableTool).openActions();
+
+      expect(input.style.width).toBe('');
+    });
+
+    it('clears the inline width when the popover closes', () => {
+      const { tool } = createTool();
+      const renderResult = tool.render() as unknown as LinkToolRenderResult;
+      const input = getInputFromWrapper(renderResult.children.items[0].element);
+
+      vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(300);
+      (tool as unknown as MeasurableTool).openActions();
+      expect(input.style.width).toBe('320px');
+
+      (tool as unknown as MeasurableTool).closeActions();
+
+      expect(input.style.width).toBe('');
+    });
+
+    it('keeps the fluid full-width behavior on mobile screens', () => {
+      const matchMediaStub = vi.fn().mockReturnValue({ matches: true });
+
+      vi.stubGlobal('matchMedia', matchMediaStub);
+
+      try {
+        const { tool } = createTool();
+        const renderResult = tool.render() as unknown as LinkToolRenderResult;
+        const input = getInputFromWrapper(renderResult.children.items[0].element);
+
+        vi.spyOn(tool as unknown as MeasurableTool, 'measureTextWidth').mockReturnValue(300);
+
+        (tool as unknown as MeasurableTool).openActions();
+
+        expect(input.style.width).toBe('');
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
+
   it('renders actions input and invokes enter handler when Enter key is pressed', () => {
     const { tool } = createTool();
     const enterSpy = vi.spyOn(tool as unknown as { enterPressed(event: KeyboardEvent): void }, 'enterPressed');

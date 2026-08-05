@@ -12,6 +12,11 @@ const SUP_SUB_BUTTON_SELECTOR = `${INLINE_TOOLBAR_SELECTOR} [data-blok-item-name
 const SUPERSCRIPT_ITEM_SELECTOR = '[data-blok-item-name="superscript"]';
 const SUBSCRIPT_ITEM_SELECTOR = '[data-blok-item-name="subscript"]';
 
+// eslint-disable-next-line internal-playwright/no-css-selectors -- <sup> has no data-blok hook
+const supInParagraph = (page: Page): Locator => page.locator(`${PARAGRAPH_SELECTOR} sup`);
+// eslint-disable-next-line internal-playwright/no-css-selectors -- <sub> has no data-blok hook
+const subInParagraph = (page: Page): Locator => page.locator(`${PARAGRAPH_SELECTOR} sub`);
+
 /**
  * Reset the blok holder and destroy any existing instance
  * @param page - The Playwright page object
@@ -182,7 +187,7 @@ test.describe('inline tool sup-sub', () => {
     await openSupSubPopover(page, 'E = mc2');
     await page.locator(SUPERSCRIPT_ITEM_SELECTOR).click();
 
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveText('E = mc2');
+    await expect(supInParagraph(page)).toHaveText('E = mc2');
 
     const saved = await page.evaluate(() => window.blokInstance?.save());
 
@@ -193,19 +198,19 @@ test.describe('inline tool sup-sub', () => {
     await openSupSubPopover(page, 'E = mc2');
     await page.locator(SUBSCRIPT_ITEM_SELECTOR).click();
 
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sub`)).toHaveText('E = mc2');
+    await expect(subInParagraph(page)).toHaveText('E = mc2');
   });
 
   test('activating subscript over superscripted text swaps the mark', async ({ page }) => {
     await openSupSubPopover(page, 'E = mc2');
     await page.locator(SUPERSCRIPT_ITEM_SELECTOR).click();
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveCount(1);
+    await expect(supInParagraph(page)).toHaveCount(1);
 
     await openSupSubPopover(page, 'E = mc2');
     await page.locator(SUBSCRIPT_ITEM_SELECTOR).click();
 
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sub`)).toHaveCount(1);
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveCount(0);
+    await expect(subInParagraph(page)).toHaveCount(1);
+    await expect(supInParagraph(page)).toHaveCount(0);
   });
 
   test('shortcuts toggle superscript and subscript without the popover', async ({ page }) => {
@@ -214,12 +219,12 @@ test.describe('inline tool sup-sub', () => {
 
     await selectText(paragraph, 'E = mc2');
     await page.keyboard.press(`${modifier}+.`);
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveCount(1);
+    await expect(supInParagraph(page)).toHaveCount(1);
 
     await selectText(paragraph, 'E = mc2');
     await page.keyboard.press(`${modifier}+,`);
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sub`)).toHaveCount(1);
-    await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveCount(0);
+    await expect(subInParagraph(page)).toHaveCount(1);
+    await expect(supInParagraph(page)).toHaveCount(0);
   });
 
   test('pasted <sup>/<sub> markup survives sanitization', async ({ page }) => {
@@ -244,8 +249,10 @@ test.describe('inline tool sup-sub', () => {
     const pastedText = page.locator(PARAGRAPH_SELECTOR).first();
 
     if ((await pastedText.textContent())?.includes('H2O')) {
-      await expect(page.locator(`${PARAGRAPH_SELECTOR} sub`)).toHaveCount(1);
-      await expect(page.locator(`${PARAGRAPH_SELECTOR} sup`)).toHaveCount(1);
+      // eslint-disable-next-line playwright/no-conditional-expect -- synthetic paste is engine-dependent; assert only when it lands
+      await expect(subInParagraph(page)).toHaveCount(1);
+      // eslint-disable-next-line playwright/no-conditional-expect -- synthetic paste is engine-dependent; assert only when it lands
+      await expect(supInParagraph(page)).toHaveCount(1);
     }
   });
 });

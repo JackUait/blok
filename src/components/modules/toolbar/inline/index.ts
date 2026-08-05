@@ -9,6 +9,7 @@ import type { InlineToolAdapter } from '../../../tools/inline';
 import { isMobileScreen } from '../../../utils';
 import type { Popover, PopoverItemParams } from '../../../utils/popover';
 import { PopoverInline } from '../../../utils/popover/popover-inline';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { twMerge } from '../../../utils/tw';
 
 /**
@@ -420,11 +421,15 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     this.initialize();
     this.opened = true;
 
-    // Cleanup existing popover
+    // Cleanup existing popover. Detach the reference first so the Closed
+    // handler subscribed below (bound to the old instance) sees the identity
+    // mismatch and does not tear down this very open() call.
     if (this.popover) {
-      this.popover.hide?.();
-      this.popover.destroy?.();
+      const previousPopover = this.popover;
+
       this.popover = null;
+      previousPopover.hide?.();
+      previousPopover.destroy?.();
     }
 
     this.createToolsInstances();
@@ -456,6 +461,22 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
         search: this.Blok.I18n.t('popover.search'),
         actions: this.Blok.I18n.t('popover.actions'),
       },
+    });
+
+    /**
+     * A nested closeOnActivate item (e.g. superscript/subscript) hides this
+     * popover directly, bypassing the module. Without syncing here, `opened`
+     * stays true and the selection controller refuses to reopen the toolbar
+     * until the selection collapses. The identity guard skips events from a
+     * popover this module has already replaced or detached; close() is
+     * re-entrancy-safe because it flips `opened` before hiding.
+     */
+    const createdPopover = this.popover;
+
+    createdPopover.on?.(PopoverEvent.Closed, () => {
+      if (this.popover === createdPopover) {
+        this.close();
+      }
     });
 
     // Get popover element and calculate position

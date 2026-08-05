@@ -135,11 +135,16 @@ export interface BlockAPI {
    * delegating to core's `insertInsideParent`. `position` places it among the
    * existing children (default 'end' = appended past the whole subtree).
    *
-   * @param childData - data for the new child (defaults to an empty paragraph)
+   * @param childData - data for the new child. Defaults to `{ text: '' }` for
+   *   the default block tool, and to `{}` (letting the tool apply its own
+   *   defaults) when `toolName` names a different tool.
    * @param position - where among the children to insert (default 'end')
-   * @return the created child, or null when unavailable (virtual block)
+   * @param toolName - block tool to create (defaults to `config.defaultBlock`).
+   *   A tool restricted inside table cells is demoted to the default block when
+   *   the new child would land inside one.
+   * @return the created child
    */
-  insertChild(childData?: BlockToolData, position?: BlockChildPosition): BlockAPI | null;
+  insertChild(childData?: BlockToolData, position?: BlockChildPosition, toolName?: string): BlockAPI;
 
   /**
    * Move a direct child by `delta` positions among its siblings (clamped to the

@@ -481,14 +481,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
       items.push(...copyLinkItems);
 
-      if (currentBlock.lastEditedAt !== undefined) {
-        items.push({ type: PopoverItemType.Separator });
-        items.push({
-          type: PopoverItemType.Html,
-          element: this.createEditMetadataFooter(currentBlock),
-          name: 'edit-metadata',
-        });
-      }
+      items.push({ type: PopoverItemType.Separator });
+      items.push({
+        type: PopoverItemType.Html,
+        element: this.createEditMetadataFooter(currentBlock),
+        name: 'edit-metadata',
+      });
 
       return items;
     }
@@ -510,10 +508,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
      */
     const convertibleTools = hasMultipleBlocksSelected
       ? await getConvertibleToolsForBlocks(
-          selectedBlocks.map((block) => new BlockAPI(block)),
+          selectedBlocks.map((block) => new BlockAPI(block, this.Blok.API)),
           allBlockTools
         )
-      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock), allBlockTools);
+      : await getConvertibleToolsForBlock(new BlockAPI(currentBlock, this.Blok.API), allBlockTools);
 
     const convertToItems = buildConvertMenuEntries(convertibleTools, this.Blok.I18n)
       .map<PopoverItemParams>((entry) => ({
@@ -705,16 +703,14 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       });
     }
 
-    if (currentBlock.lastEditedAt !== undefined) {
-      items.push({
-        type: PopoverItemType.Separator,
-      });
-      items.push({
-        type: PopoverItemType.Html,
-        element: this.createEditMetadataFooter(currentBlock),
-        name: 'edit-metadata',
-      });
-    }
+    items.push({
+      type: PopoverItemType.Separator,
+    });
+    items.push({
+      type: PopoverItemType.Html,
+      element: this.createEditMetadataFooter(currentBlock),
+      name: 'edit-metadata',
+    });
 
     return items;
   }
@@ -750,36 +746,40 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     container.appendChild(label);
 
-    if (block.lastEditedAt !== undefined) {
-      const dateEl = document.createElement('div');
+    const dateEl = document.createElement('div');
 
-      dateEl.classList.add('mt-1');
-      const locale = this.Blok.I18n.getLocale();
-      const date = new Date(block.lastEditedAt);
+    dateEl.classList.add('mt-1');
+    const locale = this.Blok.I18n.getLocale();
+    /**
+     * A block that has never been edited carries no persisted stamp (a load is
+     * not an edit — see Block.lastEditedAt), so fall back to when this Block
+     * instance was created, which is what the footer used to show.
+     */
+    const timestamp = block.lastEditedAt ?? block.createdAt;
+    const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.now());
 
-      const dateParts = new Intl.DateTimeFormat(locale, {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).formatToParts(date);
+    const dateParts = new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(date);
 
-      /**
-       * Strip trailing literal parts that are abbreviations (contain a period),
-       * e.g. " г." in Russian or " р." in Ukrainian, while preserving essential
-       * trailing literals like "日" in Japanese/Chinese.
-       */
-      while (dateParts.length > 0
-        && dateParts[dateParts.length - 1].type === 'literal'
-        && dateParts[dateParts.length - 1].value.includes('.')) {
-        dateParts.pop();
-      }
-
-      const dateStr = dateParts.map(p => p.value).join('');
-      const timeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
-
-      dateEl.textContent = `${dateStr}, ${timeStr}`;
-      container.appendChild(dateEl);
+    /**
+     * Strip trailing literal parts that are abbreviations (contain a period),
+     * e.g. " г." in Russian or " р." in Ukrainian, while preserving essential
+     * trailing literals like "日" in Japanese/Chinese.
+     */
+    while (dateParts.length > 0
+      && dateParts[dateParts.length - 1].type === 'literal'
+      && dateParts[dateParts.length - 1].value.includes('.')) {
+      dateParts.pop();
     }
+
+    const dateStr = dateParts.map(p => p.value).join('');
+    const timeStr = new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date);
+
+    dateEl.textContent = `${dateStr}, ${timeStr}`;
+    container.appendChild(dateEl);
 
     return container;
   }
@@ -1010,9 +1010,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       ? targetTool.conversionConfig.import(combinedContent, targetTool.settings)
       : { [targetTool.conversionConfig?.import as string]: combinedContent };
 
-    const newBlockData = toolboxData
-      ? Object.assign(importedData, toolboxData)
-      : importedData;
+    /**
+     * `importedData` belongs to the target tool's `import()` — it may be frozen,
+     * so merge into a fresh object instead of writing into it.
+     */
+    const newBlockData = { ...importedData,
+      ...toolboxData };
 
     /**
      * Replace the first block with the new merged block
@@ -1178,9 +1181,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         ? conversionImport(content, targetTool?.settings)
         : { [conversionImport]: content };
 
-      const newBlockData = toolboxData
-        ? Object.assign(importedData, toolboxData)
-        : importedData;
+      /**
+       * `importedData` belongs to the target tool's `import()` — it may be
+       * frozen, so merge into a fresh object instead of writing into it.
+       */
+      const newBlockData = { ...importedData,
+        ...toolboxData };
 
       return BlockManager.insert({
         tool: targetToolName,

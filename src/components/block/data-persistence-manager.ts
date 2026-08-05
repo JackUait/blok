@@ -25,6 +25,30 @@ type BlockSaveResult = Omit<SavedData, 'data'> & {
 type SafeBlockToolData = Record<string, unknown>;
 
 /**
+ * Shallow-copies whatever a tool returned from `save()`.
+ *
+ * That value belongs to the TOOL — framework adapters hand back a FROZEN
+ * mirror of their props — so core must never expose it directly: consumers
+ * merge into saved data (the toolbox `data` channel does) and writing into a
+ * frozen object throws "object is not extensible".
+ *
+ * Non-object results are passed through untouched: spreading them would
+ * reshape the value (`{...'ab'}` -> `{0:'a',1:'b'}`, `{...null}` -> `{}`).
+ * @param extracted - raw value returned by the tool's save()
+ */
+const copyToolOwnedData = (extracted: unknown): unknown => {
+  if (extracted === null || typeof extracted !== 'object') {
+    return extracted;
+  }
+
+  if (Array.isArray(extracted)) {
+    return [ ...(extracted as unknown[]) ];
+  }
+
+  return { ...(extracted as Record<string, unknown>) };
+};
+
+/**
  * Handles all data extraction, caching, and in-place updates for a Block.
  * Manages the save/setData/validate lifecycle and preserves last saved data.
  */
@@ -227,10 +251,10 @@ export class DataPersistenceManager {
       // then narrow it properly for type safety
       const extracted = await this.toolInstance.save(pluginsContent) as unknown;
 
-      // If the block is not empty, return the extracted data as-is
+      // If the block is not empty, return a copy of the extracted data
       // (it could be string, number, etc. for non-object types)
       if (!this.getIsEmpty()) {
-        return extracted as SafeBlockToolData;
+        return copyToolOwnedData(extracted) as SafeBlockToolData;
       }
 
       // For empty blocks, skip further processing for null/undefined

@@ -1,4 +1,5 @@
 import type { BlokFontSizeConfig } from '../../../types/configs/blok-config';
+import type { BlokFontSizeTokens } from '../../../types/font-size-tokens';
 
 /**
  * The `style.fontSize` contract: one entry per text scenario, mapping the
@@ -39,6 +40,36 @@ const FONT_SIZE_SPEC: ReadonlyArray<readonly [path: readonly string[], token: st
   [['bookmark', 'description'], '--blok-bookmark-description-font-size'],
   [['bookmark', 'link'], '--blok-bookmark-link-font-size'],
 ];
+
+/**
+ * The custom property each `style.fontSize` scenario writes, shaped exactly
+ * like the config itself.
+ *
+ * Published as part of the public API (see `types/font-size-tokens.d.ts`)
+ * because `style.fontSize` is not the only channel to these tokens: a host
+ * scoping typography per region writes them in its own stylesheet, and
+ * `editor.tokens.set()` writes them at runtime. Both need the NAMES, and a
+ * hand-copied string drifts silently the moment one is renamed here.
+ *
+ * Derived from {@link FONT_SIZE_SPEC} rather than written out again, so the
+ * mapping stays single-source.
+ */
+export const BLOK_FONT_SIZE_TOKENS: BlokFontSizeTokens = FONT_SIZE_SPEC.reduce<Record<string, unknown>>(
+  (tokens, [ path, token ]) => {
+    const group = path.slice(0, -1).reduce<Record<string, unknown>>((node, key) => {
+      const branch = node;
+
+      branch[key] ??= {};
+
+      return branch[key] as Record<string, unknown>;
+    }, tokens);
+
+    group[path[path.length - 1]] = token;
+
+    return tokens;
+  },
+  {}
+) as unknown as BlokFontSizeTokens;
 
 /**
  * Read a `style.fontSize` path, tolerating the missing intermediate objects a

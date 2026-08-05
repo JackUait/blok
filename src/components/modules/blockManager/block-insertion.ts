@@ -523,7 +523,7 @@ export class BlockInsertion {
   }
 
   /**
-   * Insert a new paragraph block as a child of the given parent, atomically.
+   * Insert a new block as a child of the given parent, atomically.
    *
    * Wraps the Yjs addBlock call and DOM insert inside a single
    * `withAtomicOperation` + `YjsManager.transact` so that the block
@@ -537,9 +537,16 @@ export class BlockInsertion {
    * @param insertIndex - flat block index where the new block should appear
    * @param blocksStore - The blocks store to modify
    * @param childData - optional data for the new child block
+   * @param toolName - optional tool to create; defaults to `config.defaultBlock`
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number, blocksStore: BlocksStore, childData?: BlockToolData): Block {
+  public insertInsideParent(
+    parentId: string,
+    insertIndex: number,
+    blocksStore: BlocksStore,
+    childData?: BlockToolData,
+    toolName?: string
+  ): Block {
     const parentBlock = this.repository.getBlockById(parentId);
 
     if (parentBlock === undefined) {
@@ -548,14 +555,41 @@ export class BlockInsertion {
 
     const newBlockId = generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
-    const resolvedChildData = childData ?? { text: '' };
+    /**
+     * Resolve the tool name ONCE, BEFORE the Yjs write. `ctx.insert()` runs its
+     * own table-cell demotion against the block the new one lands after;
+     * deferring to it would let the CRDT record `type: 'header'` while the DOM
+     * composes a paragraph — a divergence that only surfaces after a reload or
+     * a remote sync. So the check here has to cover BOTH anchors: the parent
+     * (semantic containment) and that same insert-slot neighbour.
+     */
+    const requestedTool = toolName ?? defaultBlockTool;
+    const slotNeighbour = this.repository.getBlockByIndex(insertIndex > 0 ? insertIndex - 1 : 0);
+    const landsInsideTableCell = isInsideTableCell(parentBlock) || isInsideTableCell(slotNeighbour);
+    const resolvedTool = landsInsideTableCell && isRestrictedInTableCell(requestedTool)
+      ? defaultBlockTool
+      : requestedTool;
+    /**
+     * `{ text: '' }` is the empty-paragraph seed; handing it to a tool that has
+     * no `text` field would write junk into the saved document. An explicitly
+     * requested tool starts from `{}` so its own defaults / propSchema apply.
+     */
+    const resolvedChildData = childData ?? (toolName === undefined ? { text: '' } : {});
+
+    // Validate the requested tool BEFORE any mutation runs, mirroring
+    // splitBlockWithData: the Yjs write below happens before the DOM insert, so
+    // an unregistered tool would otherwise commit a phantom CRDT block and only
+    // then surface the error from composeBlock.
+    if (toolName !== undefined && this.factory.getTool(resolvedTool) === undefined) {
+      throw new ToolNotFoundError(resolvedTool, `Could not insert child Block. Tool «${resolvedTool}» not found.`);
+    }
 
     return this.yjsSync.withAtomicOperation(() => {
       // Atomic Yjs transaction: add new block with parent (single undo entry)
       this.dependencies.YjsManager.transact(() => {
         this.dependencies.YjsManager.addBlock({
           id: newBlockId,
-          type: defaultBlockTool,
+          type: resolvedTool,
           data: resolvedChildData,
           parent: parentId,
         }, insertIndex);
@@ -564,7 +598,7 @@ export class BlockInsertion {
       // Insert DOM block (skip Yjs sync — already done above)
       const newBlock = this.ctx.insert({
         id: newBlockId,
-        tool: defaultBlockTool,
+        tool: resolvedTool,
         data: resolvedChildData,
         index: insertIndex,
         needToFocus: false,

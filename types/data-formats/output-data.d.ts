@@ -131,11 +131,12 @@ export interface OutputData {
  * Backend DTOs — especially Editor.js-era APIs — commonly serialize absent
  * values as `null` rather than omitting them. The editor normalizes these at
  * the boundary: a `null`/missing `data` becomes `{}`, a `null`/empty `id` is
- * replaced with a generated one. Saved OUTPUT is always the strict
- * {@link OutputData} shape.
+ * replaced with a generated one, and `null` hierarchy references are dropped so
+ * the block is treated as root-level/childless. Saved OUTPUT is always the
+ * strict {@link OutputData} shape.
  */
 export type LooseOutputBlockData<Type extends string = string, Data extends object = Record<string, unknown>> =
-  Omit<OutputBlockData<Type, Data>, 'id' | 'data'> & {
+  Omit<OutputBlockData<Type, Data>, 'id' | 'data' | 'parent' | 'content'> & {
     /**
      * Unique Id of the block. `null` and `''` are treated as "absent":
      * a fresh id is generated on render/insert.
@@ -146,6 +147,18 @@ export type LooseOutputBlockData<Type extends string = string, Data extends obje
      * Saved Block data. `null` and `undefined` are normalized to `{}`.
      */
     data?: BlockToolData<Data> | null;
+
+    /**
+     * Parent block id. `null` and `''` are treated as absent — the block is
+     * root-level.
+     */
+    parent?: BlockId | null;
+
+    /**
+     * Array of child block ids. `null` and `[]` are treated as absent — the
+     * block has no children.
+     */
+    content?: BlockId[] | null;
   };
 
 /**

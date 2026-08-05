@@ -1,11 +1,18 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   unwrapColumnListIfCollapsed,
   resizeColumnGrow,
   resetColumnsToEvenWidth,
   buildColumnResizers,
+  COLUMNS_ATTR,
+  COLUMN_ATTR,
   COLUMN_RESIZER_ATTR,
+  COLUMNS_STATIC_GUTTER_ATTR,
 } from '../../../src/tools/columns-shared';
+import { DATA_ATTR } from '../../../src/components/constants/data-attributes';
 import type { API } from '../../../types';
 
 beforeEach(() => vi.clearAllMocks());
@@ -327,6 +334,87 @@ describe('column resizer keyboard resize + aria', () => {
   });
 });
 
+describe('column resize honours the CSS shrink floor', () => {
+  // `--blok-column-min-width` is a CSS token, but the drag maths used to clamp
+  // against a hardcoded 0. A host that raised the floor got a handle that
+  // "sticks": the drag computed grows the layout refused to honour, and the
+  // widthRatio persisted by Column.save() diverged from what was rendered.
+  const stubWidth = (el: HTMLElement, width: number): void => {
+    Object.defineProperty(el, 'getBoundingClientRect', {
+      configurable: true,
+      value: () =>
+        ({ width, height: 10, top: 0, left: 0, right: width, bottom: 10, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect,
+    });
+  };
+
+  const build = (minWidth: string): { resizer: HTMLElement; left: HTMLElement; right: HTMLElement } => {
+    const left = document.createElement('div');
+    const right = document.createElement('div');
+
+    for (const el of [ left, right ]) {
+      el.style.flexGrow = '1';
+      // Stands in for the columns.css declaration — jsdom applies no external
+      // stylesheet, but getComputedStyle resolves inline styles, which is the
+      // same channel the resize maths reads.
+      el.style.minWidth = minWidth;
+      stubWidth(el, 200);
+    }
+
+    const container = document.createElement('div');
+
+    container.append(left, right);
+    document.body.appendChild(container);
+
+    const columns = [ left, right ].map((holder, i) => ({ id: `c${i}`, holder, dispatchChange: vi.fn() }));
+    const api = {
+      blocks: { getChildren: vi.fn().mockReturnValue(columns) },
+      i18n: { t: vi.fn().mockReturnValue('Resize columns') },
+    } as unknown as API;
+
+    buildColumnResizers(container, [ left, right ], false, api, 'cl-1');
+
+    const resizer = container.querySelector(`[${COLUMN_RESIZER_ATTR}]`);
+
+    if (!(resizer instanceof HTMLElement)) {
+      throw new Error('resizer not built');
+    }
+
+    Object.defineProperty(resizer, 'setPointerCapture', { configurable: true, value: (): void => {} });
+    Object.defineProperty(resizer, 'releasePointerCapture', { configurable: true, value: (): void => {} });
+
+    return { resizer, left, right };
+  };
+
+  it('stops a keyboard resize at the resolved floor instead of collapsing the column', () => {
+    const { resizer, left, right } = build('120px');
+
+    // Home drags the separator all the way to the left edge of the pair.
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+    // Pair is 400px wide with grow sum 2 → a 120px floor means grow 0.6.
+    expect(Number(left.style.flexGrow)).toBeCloseTo(0.6, 5);
+    expect(Number(right.style.flexGrow)).toBeCloseTo(1.4, 5);
+  });
+
+  it('stops a pointer drag at the resolved floor', () => {
+    const { resizer, left } = build('120px');
+
+    resizer.dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: 200, bubbles: true }));
+    resizer.dispatchEvent(new PointerEvent('pointermove', { clientX: -400, bubbles: true }));
+    resizer.dispatchEvent(new PointerEvent('pointerup', { clientX: -400, bubbles: true }));
+
+    expect(Number(left.style.flexGrow)).toBeCloseTo(0.6, 5);
+  });
+
+  it('still lets a column collapse fully when no floor is declared', () => {
+    const { resizer, left } = build('');
+
+    resizer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+    expect(Number(left.style.flexGrow)).toBe(0);
+  });
+});
+
 describe('column resize persists widthRatio to Yjs (dispatchChange)', () => {
   // The resizer mutates each column holder's flex-grow directly. The holder
   // lives OUTSIDE the column tool's observed subtree, so the MutationObserver
@@ -449,5 +537,32 @@ describe('column resizer dblclick equalizes widths', () => {
     expect(getChildren).toHaveBeenCalledWith('cl-1');
     expect(left.style.flexGrow).toBe('1');
     expect(right.style.flexGrow).toBe('1');
+  });
+});
+
+describe('column layout attributes are part of the published contract', () => {
+  /**
+   * The columns row, the columns themselves, the resize separators and the
+   * read-only static-gutter marker are the hooks a host needs to style a
+   * published document (a read-only row has no resizers, so its gutter comes
+   * from the container instead). They existed only as module-private constants
+   * in src/tools/columns-shared.ts — a host had to read Blok's source to learn
+   * the names, with no versioned contract and no rename signal.
+   */
+  const publishedDeclaration = readFileSync(
+    resolve(__dirname, '../../../types/data-attributes.d.ts'),
+    'utf-8'
+  );
+
+  it.each([
+    [ 'columns', COLUMNS_ATTR, 'data-blok-columns' ],
+    [ 'column', COLUMN_ATTR, 'data-blok-column' ],
+    [ 'columnResizer', COLUMN_RESIZER_ATTR, 'data-blok-column-resizer' ],
+    [ 'columnsStaticGutter', COLUMNS_STATIC_GUTTER_ATTR, 'data-blok-columns-static-gutter' ],
+  ])('DATA_ATTR.%s is the single source of the attribute name and is published', (key, toolConstant, expected) => {
+    expect(DATA_ATTR[key as keyof typeof DATA_ATTR]).toBe(expected);
+    // The tool constants must READ from DATA_ATTR, not restate the string.
+    expect(toolConstant).toBe(DATA_ATTR[key as keyof typeof DATA_ATTR]);
+    expect(publishedDeclaration).toContain(`readonly ${key}: '${expected}';`);
   });
 });

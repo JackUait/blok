@@ -229,16 +229,22 @@ export interface Blocks {
   ): BlockAPI;
 
   /**
-   * Insert a new paragraph block as a child of the given parent block, atomically.
+   * Insert a new block as a child of the given parent block, atomically.
    * The block creation and parent assignment are grouped into a single undo entry,
    * so a single CMD+Z removes the new block completely.
    *
    * @param parentId - id of the parent block
    * @param insertIndex - flat block index where the new block should appear
-   * @param childData - optional data override for the child block (default: empty paragraph)
+   * @param childData - optional data override for the child block. Defaults to
+   *   `{ text: '' }` for the default block tool, and to `{}` (so the tool applies
+   *   its own defaults) when `toolName` names a different tool.
+   * @param toolName - optional block tool to create. Defaults to
+   *   `config.defaultBlock`. A tool restricted inside table cells is demoted to
+   *   the default block when the new child would land inside one; an
+   *   unregistered tool name throws before anything is written.
    * @returns BlockAPI for the newly created child block
    */
-  insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): BlockAPI;
+  insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData, toolName?: string): BlockAPI;
 
   /**
    * Execute a function within a transaction.

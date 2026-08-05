@@ -81,6 +81,14 @@ interface UINodes extends Record<string, unknown> {
  */
 const themeTokenStyleTagCounter = { value: 0 };
 
+/**
+ * Monotonically increasing per-editor id, stamped on the wrapper as
+ * `data-blok-instance`. Injected stylesheets are page-level (they must also
+ * reach body-mounted popovers), so this is the only handle that distinguishes
+ * one editor's rules from another's.
+ */
+const instanceCounter = { value: 0 };
+
 export class UI extends Module<UINodes> {
   /**
    * Controllers for UI state management
@@ -104,6 +112,9 @@ export class UI extends Module<UINodes> {
    */
   private documentClickedHandler: ((event: MouseEvent) => void) | null = null;
   private redactorTouchHandler: ((event: Event) => void) | null = null;
+
+  /** This editor's `data-blok-instance` value — see {@link instanceCounter}. */
+  private readonly instanceId = String(instanceCounter.value++);
 
   /** Unique style tag ID for this instance's font override, derived from the holder element */
   private fontStyleTagId: string | null = null;
@@ -670,9 +681,15 @@ export class UI extends Module<UINodes> {
       'box-border',
       'z-1',
       'data-[blok-dragging=true]:cursor-grabbing',
-      // SVG defaults
+      // SVG defaults.
+      //
+      // NOTE: no ambient `stroke: currentColor` here. Broadcasting it over the
+      // whole subtree also hits HOST-authored glyphs rendered inside blocks —
+      // author CSS beats an SVG presentation attribute, so a solid icon's own
+      // `stroke="none"` lost and the glyph came out rimmed and fattened. Every
+      // Blok icon declares its own stroke instead (guarded by
+      // test/unit/architecture/icon-self-stroke-law.test.ts).
       '[&_svg]:max-h-full',
-      '[&_path]:stroke-current',
       // Native selection color (omitted when the host opts out via style.nativeSelection)
       ...(this.config.style?.nativeSelection === true ? [] : [ '[&_::selection]:bg-selection-inline' ]),
       // Hide placeholder when toolbox is opened
@@ -681,6 +698,7 @@ export class UI extends Module<UINodes> {
     ]);
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute(DATA_ATTR.editor, '');
+    this.nodes.wrapper.setAttribute(DATA_ATTR.instance, this.instanceId);
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     this.nodes.wrapper.setAttribute(DATA_ATTR.contentAlign, this.config.style?.contentAlign ?? 'left');
     if (this.isRtl) {
@@ -808,14 +826,21 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    /**
+     * The tag id carries the instance id, not just the holder id: two id-less
+     * holders resolve to the same holder id, and the old "already injected?"
+     * early-out then discarded the SECOND editor's whole font config (and its
+     * destroy() removed the FIRST editor's tag).
+     */
     const holderId = this.nodes.holder.id !== '' ? this.nodes.holder.id : (this.nodes.wrapper.dataset['blokInterface'] ?? 'default');
-    const styleTagId = `blok-font-${holderId}`;
+    const styleTagId = `blok-font-${holderId}-${this.instanceId}`;
 
+    /**
+     * Re-injecting replaces this instance's own tag, so calling twice never
+     * stacks duplicates.
+     */
+    $.get(styleTagId)?.remove();
     this.fontStyleTagId = styleTagId;
-
-    if ($.get(styleTagId)) {
-      return;
-    }
 
     const varLines: string[] = [];
 
@@ -830,8 +855,21 @@ export class UI extends Module<UINodes> {
     }
 
     const vars = varLines.join('\n');
+    /**
+     * The editor scope is narrowed to THIS instance, so a second editor on the
+     * page keeps its own typography instead of inheriting the first one's. The
+     * instance selector rides inside `:where()` so it adds no specificity —
+     * the rule stays at (0,1,0), exactly where it was, and a runtime
+     * `tokens.set()` (same specificity, injected later in <head>) can still
+     * override it.
+     *
+     * The tooltip/popover scopes stay page-level on purpose: that UI mounts to
+     * document.body, outside every editor's subtree, so there is nothing to
+     * scope it to. With several editors configuring different fonts, the
+     * popover rules follow <head> order.
+     */
     const css = [
-      `[data-blok-interface=blok], [data-blok-interface=tooltip] {`,
+      `[data-blok-interface=blok]:where([data-blok-instance="${this.instanceId}"]), [data-blok-interface=tooltip] {`,
       vars,
       `}`,
       `[data-blok-popover]:not([data-blok-popover-inline]) {`,
@@ -978,7 +1016,20 @@ export class UI extends Module<UINodes> {
       tag.setAttribute('nonce', this.config.style.nonce);
     }
 
-    $.prepend(document.head, tag);
+    /**
+     * Sit directly AFTER this instance's font sheet when there is one. Both
+     * sheets declare custom properties at equal specificity, so document order
+     * decides — and prepending unconditionally put the token sheet first,
+     * making every size declared by `style.fontSize` unbeatable at runtime.
+     * `tokens.set()` is the reactive channel; it has to be able to win.
+     */
+    const fontTag = this.fontStyleTagId !== null ? $.get(this.fontStyleTagId) : null;
+
+    if (fontTag !== null && fontTag.parentNode === document.head) {
+      fontTag.after(tag);
+    } else {
+      $.prepend(document.head, tag);
+    }
 
     this.themeTokenStyleTagId = styleTagId;
   }

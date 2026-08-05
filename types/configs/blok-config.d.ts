@@ -677,11 +677,17 @@ export interface BlokMountOptions {
      * Per-tool size config still wins where it exists (`tools.paragraph`'s
      * `styles.size`, the list's `itemSize`) — those are inline styles.
      *
-     * Read once at construction, and NOT reactive: the injected stylesheet
-     * outranks `editor.tokens.set()` for the scenarios it declares, so a size
-     * that must change after mount belongs in `style.tokens` /
-     * `editor.tokens.set()` and must be left out of here. Like `style.tokens`,
-     * the sheet is page-global — it retypes every Blok editor on the page.
+     * Read once at construction. To change a size AFTER mount, write the same
+     * token through `editor.tokens.set()`: the theme-token sheet is injected
+     * after this one at equal specificity, so it wins. The token NAMES are
+     * published as {@link BLOK_FONT_SIZE_TOKENS}, so they never have to be
+     * hand-copied.
+     *
+     * The sheet is scoped to this editor (its wrapper carries
+     * `data-blok-instance`), so a second editor on the page keeps its own
+     * typography. The one exception is body-mounted UI — popovers and tooltips
+     * live outside every editor's subtree, so those rules stay page-level and
+     * follow `<head>` order when instances disagree.
      *
      * Callout body text is a child paragraph block: it follows `callout` and
      * falls back to `paragraph` when `callout` is unset.
@@ -713,6 +719,27 @@ export interface BlokMountOptions {
      * host stylesheet scoped to the wrapper cannot reach.
      * Keys must be `--blok-*` custom property names; invalid entries are
      * skipped with a warning.
+     *
+     * Layout hooks worth knowing by name (all read with a fallback and never
+     * declared by Blok, so they also inherit from any ancestor CSS rule):
+     * - `--blok-block-padding-top` / `--blok-block-padding-bottom` /
+     *   `--blok-block-padding-inline` — the padding of every block wrapper.
+     *   Fall back to each tool's historical value (7px/7px/2px for most,
+     *   0.2em vertical for quotes), so one override retunes block rhythm
+     *   everywhere at once.
+     * - `--blok-column-gutter` — the gap between columns (default
+     *   `min(2rem, 4vw)`); in edit mode the resize separators carry it.
+     * - `--blok-column-min-width` — how far a column may be squeezed, both by
+     *   layout and by a resizer drag (default `0`: a column can be dragged all
+     *   the way to collapse).
+     * - `--blok-block-indent-step` — the indent a nested block gets per level
+     *   of nesting (default `24px`; `0px` switches nesting indentation off).
+     *   Blok zeroes it inside every `[data-blok-nested-blocks]` child slot, so
+     *   a container tool's own children are never indented on top of the
+     *   layout it already gives them; declare it on your slot to opt back in.
+     *
+     * Per-block text sizes have their own names — see
+     * {@link BlokFontSizeTokens} / `BLOK_FONT_SIZE_TOKENS`.
      * @example { '--blok-selection': 'rgba(35, 131, 226, 0.28)' }
      */
     tokens?: Record<string, string>;

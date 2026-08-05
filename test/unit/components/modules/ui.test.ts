@@ -336,6 +336,21 @@ describe("UI module", () => {
       expect(bindSpy).toHaveBeenCalledTimes(1);
     });
 
+    it("does not broadcast a stroke onto every <path> in the editor subtree", () => {
+      // `[&_path]:stroke-current` compiled to `… path:where(…) { stroke: currentColor }`,
+      // which outranks a host icon's own `stroke="none"` (author CSS always beats an
+      // SVG presentation attribute) and rims every solid host glyph rendered inside a
+      // block. Blok's own icons declare their stroke themselves (guarded by
+      // test/unit/architecture/icon-self-stroke-law.test.ts), so nothing needs it.
+      const { ui } = createUI({ attachNodes: false });
+
+      (ui as unknown as { make: () => void }).make();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+
+      expect(nodes.wrapper.className).not.toContain("[&_path]:stroke-current");
+    });
+
     it("creates bottomZone element as sibling of redactor in wrapper", () => {
       const { ui } = createUI({ attachNodes: false });
 
@@ -1504,6 +1519,80 @@ describe("UI module", () => {
   });
 
   describe("loadFontStyles", () => {
+    /** Every font-override stylesheet currently injected into <head>. */
+    const fontStyleTags = (): HTMLStyleElement[] =>
+      Array.from(document.head.querySelectorAll("style")).filter((tag) =>
+        tag.id.startsWith("blok-font-"),
+      );
+
+    it("gives each editor its own sheet when neither holder carries an id", () => {
+      // The tag id used to fall back to a page-wide constant for an id-less
+      // holder, and loadFontStyles() bailed out when a tag with that id already
+      // existed — so the SECOND editor's whole font config was silently dropped.
+      const first = createUI({
+        attachNodes: false,
+        configOverrides: { style: { fontSize: { paragraph: "17px" } } },
+      });
+      const second = createUI({
+        attachNodes: false,
+        configOverrides: { style: { fontSize: { paragraph: "21px" } } },
+      });
+
+      for (const { ui } of [first, second]) {
+        (ui as unknown as { make: () => void }).make();
+        (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+      }
+
+      const css = fontStyleTags()
+        .map((tag) => tag.textContent ?? "")
+        .join("\n");
+
+      expect(css).toContain("--blok-paragraph-font-size: 17px;");
+      expect(css).toContain("--blok-paragraph-font-size: 21px;");
+    });
+
+    it("scopes the injected sheet to the wrapper of the instance that configured it", () => {
+      const { ui } = createUI({
+        attachNodes: false,
+        configOverrides: { style: { fontSize: { paragraph: "17px" } } },
+      });
+
+      (ui as unknown as { make: () => void }).make();
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+
+      const nodes = (ui as { nodes: UI["nodes"] }).nodes;
+      const instance = nodes.wrapper.getAttribute(DATA_ATTR.instance);
+
+      expect(instance).not.toBeNull();
+      expect(fontStyleTags()[0]?.textContent).toContain(
+        `[data-blok-instance="${instance}"]`,
+      );
+    });
+
+    it("lets a runtime tokens.set() override a size declared by style.fontSize", () => {
+      // Both sheets declare the same custom property at equal specificity, so
+      // whichever lands LATER in <head> wins. The theme-token sheet used to be
+      // prepended above the font sheet, which made `style.fontSize` unbeatable
+      // at runtime — the editor's only reactive typography channel.
+      const { ui } = createUI({
+        attachNodes: false,
+        configOverrides: { style: { fontSize: { paragraph: "17px" } } },
+      });
+
+      (ui as unknown as { make: () => void }).make();
+      (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
+      ui.setThemeTokens({ "--blok-paragraph-font-size": "21px" });
+
+      const tags = Array.from(document.head.querySelectorAll("style"));
+      const fontIndex = tags.findIndex((tag) => tag.id.startsWith("blok-font-"));
+      const tokenIndex = tags.findIndex((tag) =>
+        tag.id.startsWith("blok-theme-tokens-"),
+      );
+
+      expect(fontIndex).toBeGreaterThanOrEqual(0);
+      expect(tokenIndex).toBeGreaterThan(fontIndex);
+    });
+
     it("does not inject a style tag when config.style.fontFamily is not set", () => {
       const { ui } = createUI({ configOverrides: { style: {} } });
 
@@ -1553,7 +1642,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-test-editor-font-size");
+      const tag = fontStyleTags()[0];
 
       expect(tag?.textContent).toContain("--blok-paragraph-font-size: 17px;");
       expect(tag?.textContent).toContain("--blok-heading-1-font-size: 2.25rem;");
@@ -1604,7 +1693,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-my-editor");
+      const tag = fontStyleTags()[0];
       expect(tag).not.toBeNull();
       expect(tag?.tagName.toLowerCase()).toBe("style");
     });
@@ -1640,7 +1729,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-test-editor-font");
+      const tag = fontStyleTags()[0];
       expect(tag?.textContent).toContain("--blok-font-family: Roboto, sans-serif");
     });
 
@@ -1675,7 +1764,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-test-editor-selectors");
+      const tag = fontStyleTags()[0];
       const css = tag?.textContent ?? "";
       expect(css).toContain("[data-blok-interface=blok]");
       expect(css).toContain("[data-blok-popover]:not([data-blok-popover-inline])");
@@ -1713,7 +1802,7 @@ describe("UI module", () => {
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tags = document.querySelectorAll("#blok-font-idempotent-editor");
+      const tags = fontStyleTags();
       expect(tags).toHaveLength(1);
     });
 
@@ -1748,7 +1837,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-nonce-editor");
+      const tag = fontStyleTags()[0];
       expect(tag?.getAttribute("nonce")).toBe("abc-nonce-123");
     });
 
@@ -1784,12 +1873,12 @@ describe("UI module", () => {
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
       // Verify tag exists before destroy
-      expect(document.getElementById("blok-font-destroy-editor")).not.toBeNull();
+      expect(fontStyleTags()).toHaveLength(1);
 
       ui.destroy();
 
       // Verify tag is removed after destroy
-      expect(document.getElementById("blok-font-destroy-editor")).toBeNull();
+      expect(fontStyleTags()).toHaveLength(0);
     });
 
     it("injects --blok-font-sans when config.style.fontFamilySans is set", () => {
@@ -1818,7 +1907,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-font-sans-editor");
+      const tag = fontStyleTags()[0];
       expect(tag?.textContent).toContain("--blok-font-sans: 'Roboto', sans-serif");
     });
 
@@ -1848,7 +1937,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-font-serif-editor");
+      const tag = fontStyleTags()[0];
       expect(tag?.textContent).toContain("--blok-font-serif: 'Merriweather', serif");
     });
 
@@ -1878,7 +1967,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-font-mono-editor");
+      const tag = fontStyleTags()[0];
       expect(tag?.textContent).toContain("--blok-font-mono: 'Fira Code', monospace");
     });
 
@@ -1908,7 +1997,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-font-hw-editor");
+      const tag = fontStyleTags()[0];
       expect(tag?.textContent).toContain("--blok-font-handwriting: 'Caveat', cursive");
     });
 
@@ -1944,7 +2033,7 @@ describe("UI module", () => {
 
       (ui as unknown as { loadFontStyles: () => void }).loadFontStyles();
 
-      const tag = document.getElementById("blok-font-font-multi-editor");
+      const tag = fontStyleTags()[0];
       const css = tag?.textContent ?? "";
       expect(css).toContain("--blok-font-family: Times New Roman, serif");
       expect(css).toContain("--blok-font-sans: 'Roboto', sans-serif");

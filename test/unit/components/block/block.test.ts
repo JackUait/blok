@@ -1406,14 +1406,23 @@ describe('Block', () => {
       expect(block.lastEditedBy).toBe('Jack Uait');
     });
 
-    it('should default lastEditedAt to Date.now() and lastEditedBy to null when not provided', () => {
+    it('should leave lastEditedAt undefined when not provided — a load is not an edit', () => {
+      // Minting a timestamp here made save() emit a key the loaded document
+      // never had, so a merely-loaded document never compared equal to its
+      // saved echo. The "Last edited" footer falls back to `createdAt` instead.
+      const { block } = createBlock();
+
+      expect(block.lastEditedAt).toBeUndefined();
+      expect(block.lastEditedBy).toBeNull();
+    });
+
+    it('should stamp a non-persisted createdAt so the settings footer always has a date', () => {
       const before = Date.now();
       const { block } = createBlock();
       const after = Date.now();
 
-      expect(block.lastEditedAt).toBeGreaterThanOrEqual(before);
-      expect(block.lastEditedAt).toBeLessThanOrEqual(after);
-      expect(block.lastEditedBy).toBeNull();
+      expect(block.createdAt).toBeGreaterThanOrEqual(before);
+      expect(block.createdAt).toBeLessThanOrEqual(after);
     });
   });
 });

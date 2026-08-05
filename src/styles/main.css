@@ -410,6 +410,30 @@
   --blok-editor-gutter-end: 0px;
 }
 
+/*
+ * Block nesting indent. BlockHierarchy writes only the MULTIPLIER (the inline
+ * --_blok-block-depth) and the cascade turns it into the margin; it used to
+ * stamp the margin itself, which a container tool could only decline with
+ * `!important`. Multiplier x step, because the STEP inherits: the reset below
+ * reaches a holder the moment it is mounted into a child slot, however late
+ * that is (a framework adapter commits its slot a render after core inserts the
+ * child, and nothing re-indents afterwards) — a JS `closest()` check cannot.
+ * Physical `margin-left` keeps the pre-token behaviour and dodges the
+ * lightningcss logical-property lowering trap noted in the gutter comment.
+ * --blok-block-indent-step is public: declare it on your own slot to opt
+ * indentation back IN, or on any ancestor to rescale nesting.
+ */
+:where([data-blok-element]) {
+  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px));
+}
+
+/* Every child slot — first-party containers (toggle, callout, header toggle,
+ * column, column_list, table cell) and every adapter's child slot carry this
+ * marker — positions its own children, so depth must not add margin on top. */
+:where([data-blok-nested-blocks]) {
+  --blok-block-indent-step: 0px;
+}
+
 /**
  * Multi-block drag visual feedback
  * Makes selected blocks semi-transparent during multi-block drag operation

@@ -22,6 +22,11 @@ export const DATA_ATTR = {
   elementContent: 'data-blok-element-content',
   /** Editor wrapper container */
   editor: 'data-blok-editor',
+  /** Per-instance discriminator on the editor wrapper (a monotonic counter, as a
+   *  string). Two editors on one page share every other scope attribute, so this
+   *  is what lets a page-level stylesheet — Blok's own injected `style.fontSize`
+   *  sheet, or a host rule — address ONE editor. Public styling hook. */
+  instance: 'data-blok-instance',
   /** Redactor zone */
   redactor: 'data-blok-redactor',
   /** Present on the editor wrapper once a `blocks.render()` batch has finished
@@ -260,6 +265,26 @@ export const DATA_ATTR = {
   placeholder: 'data-blok-placeholder',
   /** Active placeholder text */
   placeholderActive: 'data-blok-placeholder-active',
+
+  // ============================================
+  // Columns Layout
+  // ============================================
+
+  /** The columns row rendered by the column_list tool (the flex container).
+   *  Public styling hook — its direct `[data-blok-element]` children are the
+   *  column holders, whose shrink floor reads `--blok-column-min-width` and
+   *  whose gutter reads `--blok-column-gutter`. */
+  columns: 'data-blok-columns',
+  /** A single column inside a columns row. */
+  column: 'data-blok-column',
+  /** Drag-to-resize separator between two adjacent columns. Present only in
+   *  edit mode — the separators ARE the gutter there. */
+  columnResizer: 'data-blok-column-resizer',
+  /** Present on a columns row whose gutter comes from the container's own
+   *  column-gap instead of from resizer elements. Set in read-only mode, where
+   *  no resizers are built — the discriminator between an editable row and a
+   *  published one. */
+  columnsStaticGutter: 'data-blok-columns-static-gutter',
 
   // ============================================
   // Nested Blocks

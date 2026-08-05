@@ -120,6 +120,14 @@ const createMockBlock = (): {
   };
 };
 
+/**
+ * The editor API is now a REQUIRED constructor argument (a BlockAPI built
+ * without it silently answered [] from getChildren and no-op'd on mutations).
+ * Tests that only exercise the block-facing surface pass this inert stub; the
+ * hierarchy suite below builds a real one via `makeApi`.
+ */
+const apiStub = { methods: { blocks: {} } } as unknown as ApiModules;
+
 describe('BlockAPI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,7 +135,7 @@ describe('BlockAPI', () => {
 
   it('exposes block metadata and state properties', () => {
     const { block, config, holder, shape } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     expect(blockAPI.id).toBe(shape.id);
     expect(blockAPI.name).toBe(shape.name);
@@ -141,7 +149,7 @@ describe('BlockAPI', () => {
 
   it('updates stretch state through setter and reflects changes', () => {
     const { block, shape, mocks } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     blockAPI.stretched = true;
 
@@ -152,7 +160,7 @@ describe('BlockAPI', () => {
 
   it('delegates method calls to the underlying block', async () => {
     const { block, mocks, savedData, toolboxEntry } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
     const callParams = { value: 123 };
     const methodName = 'method';
     const validationData = { text: 'validate' } as BlockToolData;
@@ -181,21 +189,21 @@ describe('BlockAPI', () => {
 
   it('returns the block preservedData for synchronous access to cached tool data', () => {
     const { block, preservedData } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     expect(blockAPI.preservedData).toBe(preservedData);
   });
 
   it('returns the block preservedTunes for synchronous access to cached tune data', () => {
     const { block, preservedTunes } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     expect(blockAPI.preservedTunes).toBe(preservedTunes);
   });
 
   it('creates BlockAPI instances compatible with BlockAPIInterface', () => {
     const { block } = createMockBlock();
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     const apiInterface: BlockAPIInterface = blockAPI;
 
@@ -206,12 +214,12 @@ describe('BlockAPI', () => {
   it('exposes parentId from the underlying block', () => {
     const { block, shape } = createMockBlock();
     shape.parentId = 'parent-block-id';
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     expect(blockAPI.parentId).toBe('parent-block-id');
 
     shape.parentId = null;
-    const blockAPINull = new BlockAPIConstructor(block);
+    const blockAPINull = new BlockAPIConstructor(block, apiStub);
 
     expect(blockAPINull.parentId).toBeNull();
   });
@@ -219,7 +227,7 @@ describe('BlockAPI', () => {
   it('BlockAPI.parentId is included in the BlockAPIInterface type', () => {
     const { block, shape } = createMockBlock();
     shape.parentId = 'parent-block-id';
-    const blockAPI = new BlockAPIConstructor(block);
+    const blockAPI = new BlockAPIConstructor(block, apiStub);
 
     const apiInterface: BlockAPIInterface = blockAPI;
 
@@ -317,7 +325,7 @@ describe('BlockAPI', () => {
       const result = blockAPI.insertChild(data);
 
       // p(0) a(1) b(2) → subtree ends at 2 → append at flat index 3.
-      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data);
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, undefined);
       expect(result?.id).toBe('new-child');
     });
 
@@ -333,7 +341,22 @@ describe('BlockAPI', () => {
       blockAPI.insertChild(data, 'start');
 
       // first child 'a' sits at flat index 1.
-      expect(insertInsideParent).toHaveBeenCalledWith('p', 1, data);
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 1, data, undefined);
+    });
+
+    it('insertChild forwards an explicit tool name so a typed child is ONE operation', () => {
+      const { api, insertInsideParent } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+        { id: 'b', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+      const data = { level: 2,
+        text: 'Heading' } as BlockToolData;
+
+      blockAPI.insertChild(data, 'end', 'header');
+
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, 'header');
     });
 
     it('moveChild clamps a delta and delegates to editor move', () => {

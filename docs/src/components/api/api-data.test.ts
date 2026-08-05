@@ -206,6 +206,7 @@ describe("API_SECTIONS", () => {
       expect(example).toContain("--blok-list-padding-start");
       expect(example).toContain("--blok-checklist-padding-start");
       expect(example).toContain("--blok-list-gap");
+      expect(example).toContain("--blok-block-indent-step");
       expect(example).toContain("--blok-search-input-placeholder");
       expect(example).toContain("--blok-heading-1-font-size");
       expect(example).toContain("--blok-heading-font-weight");
@@ -262,6 +263,31 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("--blok-block-padding-top");
       // Non-default padding shifts derived geometry (toggle-heading arrow).
       expect(description).toContain("toggle-heading arrow");
+    });
+
+    it("documents the column layout hooks (attributes and both tokens)", () => {
+      const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
+      expect(stylesSection).toBeDefined();
+
+      // The columns row, the read-only static-gutter marker and the resizer
+      // existed only as internal constants; a host styling a published document
+      // had to read Blok's source. --blok-column-min-width is honored by the
+      // resizer drag too, which is what makes raising it safe in edit mode.
+      const description = stylesSection!.description ?? "";
+      expect(description).toContain("data-blok-columns-static-gutter");
+      expect(description).toContain("--blok-column-gutter");
+      expect(description).toContain("--blok-column-min-width");
+    });
+
+    it("documents BLOK_FONT_SIZE_TOKENS as a named root export", () => {
+      const core = API_SECTIONS.find((s) => s.id === "core");
+      expect(core).toBeDefined();
+
+      // Without the exported map a host scoping typography by CSS hand-copies
+      // nine-plus custom property strings, with no compile error on a rename.
+      const entry = core!.properties?.find((p) => p.name === "BLOK_FONT_SIZE_TOKENS");
+      expect(entry).toBeDefined();
+      expect(entry!.description).toContain("style.fontSize");
     });
 
     it("documents the callout panel inset as its own token, outside block rhythm", () => {
@@ -372,27 +398,29 @@ describe("API_SECTIONS", () => {
       expect(description).toContain("itemSize");
     });
 
-    it("documents that a size set via style.fontSize cannot be changed later by editor.tokens.set() (runtime-verified against the built bundle)", () => {
+    it("documents that editor.tokens.set() overrides a size declared by style.fontSize, and names the exported token map", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();
 
-      // Verified in a browser: with style.fontSize.paragraph = '30px',
-      // tokens.set({ '--blok-paragraph-font-size': '12px' }) left the paragraph
-      // at 30px — the fontSize sheet sits later in <head> at equal specificity.
-      // A host that needs runtime resizing must use one channel, not both.
+      // The theme-token sheet is now injected directly AFTER the fontSize sheet
+      // at equal specificity, so tokens.set() wins — that is the runtime channel
+      // for a density/zoom/accessibility toggle. And the token NAMES ship as
+      // BLOK_FONT_SIZE_TOKENS, so hosts stop hand-copying the strings.
       const description = stylesSection!.description ?? "";
-      expect(description).toContain("leave that scenario out of `style.fontSize`");
+      expect(description).toContain("editor.tokens.set()");
+      expect(description).toContain("BLOK_FONT_SIZE_TOKENS");
     });
 
-    it("documents that style.fontSize retypes every editor on the page, and that callout text falls back to the paragraph size", () => {
+    it("documents that the style.fontSize sheet is scoped to its own editor, and that callout text falls back to the paragraph size", () => {
       const stylesSection = API_SECTIONS.find((s) => s.id === "styles-api");
       expect(stylesSection).toBeDefined();
 
-      // Both runtime-verified: a second, unconfigured editor on the same page
-      // rendered at the configured 30px, and a callout whose own size was unset
-      // followed fontSize.paragraph (callout renders its text as a child block).
+      // The sheet is keyed to the wrapper's data-blok-instance, so a second,
+      // unconfigured editor on the same page keeps Blok's built-in sizes. A
+      // callout whose own size is unset still follows fontSize.paragraph
+      // (callout renders its text as a child block).
       const description = stylesSection!.description ?? "";
-      expect(description).toContain("every Blok editor on the page");
+      expect(description).toContain("data-blok-instance");
       expect(description).toContain("`fontSize.callout`");
     });
 

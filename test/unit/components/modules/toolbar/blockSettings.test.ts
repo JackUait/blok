@@ -165,6 +165,9 @@ const createBlock = (): Block => ({
   name: 'paragraph',
   holder: document.createElement('div'),
   pluginsContent: document.createElement('div'),
+  // Every real Block stamps this at construction; the footer falls back to it
+  // when the block has never been edited.
+  createdAt: Date.now(),
 } as unknown as Block);
 
 type BlokMock = {
@@ -928,13 +931,13 @@ describe('BlockSettings', () => {
     }
 
     /**
-     * Last item should be the common tune (delete)
+     * The last NAMED tune should be the common one (delete) — the menu always
+     * ends with the edit-metadata footer and its separator.
      */
-    const lastItem = items.at(-1);
+    const namedItems = items.filter((item): item is PopoverItemParams & { name: string } => 'name' in item);
+    const lastTune = namedItems.filter((item) => item.name !== 'edit-metadata').at(-1);
 
-    if (lastItem && 'name' in lastItem) {
-      expect(lastItem.name).toBe('delete');
-    }
+    expect(lastTune?.name).toBe('delete');
     // The single-block path now wraps the current block in a BlockAPI (matching
     // the multi-block path) so it satisfies getConvertibleToolsForBlock's
     // BlockAPI parameter; assert the wrapper proxies the same underlying block.
@@ -966,8 +969,13 @@ describe('BlockSettings', () => {
       getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
     }).getTunesItems(block, commonTunes);
 
-    expect(items).toHaveLength(2);
-    expect(items.every((item) => item.type !== PopoverItemType.Separator)).toBe(true);
+    // The two common tunes, plus the always-present edit-metadata footer and
+    // the separator that introduces it.
+    const tuneNames = items
+      .filter((item): item is PopoverItemParams & { name: string } => 'name' in item)
+      .map((item) => item.name);
+
+    expect(tuneNames).toEqual(['move-up', 'move-down', 'edit-metadata']);
   });
 
   it('forwards popover close event to block settings close', () => {
@@ -1553,11 +1561,14 @@ describe('BlockSettings', () => {
       expect(dateText).not.toMatch(/г\./);
     });
 
-    it('should not show footer when lastEditedAt is undefined', async () => {
+    it('falls back to the block creation time when it has never been edited', async () => {
+      // A merely-loaded block carries no persisted lastEditedAt any more (a load
+      // is not an edit), but the footer is still shown — using createdAt.
       const block = createBlock();
 
       block.lastEditedAt = undefined;
       block.lastEditedBy = null;
+      (block as unknown as { createdAt: number }).createdAt = 1712700720000;
 
       getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
 
@@ -1565,10 +1576,37 @@ describe('BlockSettings', () => {
         getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
       }).getTunesItems(block, []);
 
-      // Check no edit-metadata item exists
       const metadataItem = items.find((item: PopoverItemParams) => 'name' in item && item.name === 'edit-metadata');
 
-      expect(metadataItem).toBeUndefined();
+      expect(metadataItem).toBeDefined();
+
+      const element = (metadataItem as PopoverItemParams & { element: HTMLElement }).element;
+
+      expect(element.textContent).toContain('2024');
+    });
+
+    it('renders the footer without throwing when the block carries no timestamp at all', async () => {
+      // Intl.DateTimeFormat throws RangeError on an invalid date, which would
+      // take down the whole settings menu over a display-only footer.
+      const block = createBlock();
+
+      block.lastEditedAt = undefined;
+      block.lastEditedBy = null;
+      (block as unknown as { createdAt: number | undefined }).createdAt = undefined;
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const metadataItem = items.find((item: PopoverItemParams) => 'name' in item && item.name === 'edit-metadata');
+
+      expect(metadataItem).toBeDefined();
+
+      const element = (metadataItem as PopoverItemParams & { element: HTMLElement }).element;
+
+      expect(element.textContent).not.toBe('');
     });
   });
 

@@ -2,6 +2,7 @@
  * Contains keyboard and mouse events bound on each Block by Block Manager
  */
 import { Module } from '../../__module';
+import { Dom as $ } from '../../dom';
 import { keyCodes } from '../../utils';
 import { YjsManager } from '../yjs';
 
@@ -121,18 +122,41 @@ export class BlockEvents extends Module {
     }
 
     /**
+     * A native form control a tool renders (<input>, <textarea>) owns its own
+     * keyboard — the block's structural keys are not ours to claim there. Blok's
+     * Enter/Backspace/Delete handling is contenteditable-shaped: it would insert a
+     * paragraph beside the block, run the merge/remove cascade against the previous
+     * block, or (mid-field) split the block and truncate `input.value` into a new
+     * one — all while preventDefault() swallows the keystroke the field expected.
+     * "/" would likewise open the toolbox instead of typing a slash.
+     *
+     * Everything else stays handled: Escape (navigation mode), arrows, Tab and the
+     * Cmd shortcuts are how a user leaves a field, not how they edit inside one.
+     */
+    const isInNativeInput = $.isNativeInput(event.target);
+
+    /**
      * Fire keydown processor by normalized keyboard code
      */
     switch (keyCode) {
       case keyCodes.BACKSPACE:
+        if (isInNativeInput) {
+          break;
+        }
         this.keyboardNavigation.handleBackspace(event);
         break;
 
       case keyCodes.DELETE:
+        if (isInNativeInput) {
+          break;
+        }
         this.keyboardNavigation.handleDelete(event);
         break;
 
       case keyCodes.ENTER:
+        if (isInNativeInput) {
+          break;
+        }
         /**
          * Cmd/Ctrl+Enter toggles the checkbox of every selected to-do item
          * (Notion parity). The handler self-guards on the modifier and on the
@@ -179,7 +203,7 @@ export class BlockEvents extends Module {
      * We check for "key" here since on different keyboard layouts "/" can be typed as "Shift + 7" etc
      * @todo probably using "beforeInput" event would be better here
      */
-    if (event.key === '/' && !event.ctrlKey && !event.metaKey) {
+    if (event.key === '/' && !event.ctrlKey && !event.metaKey && !isInNativeInput) {
       this.slashPressed(event);
     }
 

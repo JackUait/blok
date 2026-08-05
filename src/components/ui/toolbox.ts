@@ -1251,8 +1251,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     const hasBlockDataOverrides = blockDataOverrides !== undefined && Object.keys(blockDataOverrides).length > 0;
 
+    /**
+     * Merge into a FRESH object: the composed data comes from the tool's own
+     * save(), which adapter-authored tools return frozen. Assigning into it
+     * throws "object is not extensible" and no block gets inserted at all.
+     */
     const blockData: BlockToolData | undefined = hasBlockDataOverrides
-      ? Object.assign(await this.api.blocks.composeBlockData(toolName), blockDataOverrides)
+      ? { ...(await this.api.blocks.composeBlockData(toolName)),
+        ...blockDataOverrides }
       : undefined;
 
     /**

@@ -11,6 +11,14 @@ export const DATA_ATTR: {
   readonly elementContent: 'data-blok-element-content';
   readonly editor: 'data-blok-editor';
   readonly redactor: 'data-blok-redactor';
+  /**
+   * Per-instance discriminator on the editor wrapper (a monotonic counter, as a
+   * string). Two editors on one page share every other scope attribute, so this
+   * is what lets a page-level stylesheet address ONE editor:
+   * `[data-blok-interface=blok][data-blok-instance="1"] { … }`. Blok's own
+   * `style.fontSize` sheet is scoped with it.
+   */
+  readonly instance: 'data-blok-instance';
 
   // Block Identifiers
   readonly id: 'data-blok-id';
@@ -89,6 +97,29 @@ export const DATA_ATTR: {
   readonly overlayHidden: 'data-blok-overlay-hidden';
   readonly fakeCursor: 'data-blok-fake-cursor';
   readonly fakeBackground: 'data-blok-fake-background';
+
+  // Columns Layout
+  /**
+   * The columns row rendered by the column_list tool (the flex container).
+   * Its direct `[data-blok-element]` children are the column holders: their
+   * shrink floor reads `--blok-column-min-width` (default 0) and their gutter
+   * reads `--blok-column-gutter`.
+   */
+  readonly columns: 'data-blok-columns';
+  /** A single column inside a columns row. */
+  readonly column: 'data-blok-column';
+  /**
+   * Drag-to-resize separator between two adjacent columns. Present only in
+   * edit mode — the separators ARE the gutter there.
+   */
+  readonly columnResizer: 'data-blok-column-resizer';
+  /**
+   * Present on a columns row whose gutter comes from the container's own
+   * column-gap instead of from resizer elements. Set in read-only mode, where
+   * no resizers are built — the discriminator between an editable row and a
+   * published one.
+   */
+  readonly columnsStaticGutter: 'data-blok-columns-static-gutter';
 
   // Scroll
   readonly scrollZone: 'data-blok-scroll-zone';

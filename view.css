@@ -1152,6 +1152,12 @@
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;
 }
+:where([data-blok-element]) {
+  margin-left: calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px));
+}
+:where([data-blok-nested-blocks]) {
+  --blok-block-indent-step: 0px;
+}
 [data-list-style] {
   --_blok-list-pad: var(--blok-list-padding-start, 0px);
 }

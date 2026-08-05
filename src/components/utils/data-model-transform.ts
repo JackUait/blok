@@ -118,10 +118,15 @@ const isObjectWithItems = (data: unknown): data is { items: unknown } & Record<s
 };
 
 /**
- * Check if block has hierarchical references
+ * Check if block has hierarchical references.
+ *
+ * Nullish-checked, not undefined-checked: `config.onBeforeRender` runs after the
+ * input boundary normalized the document, so a wire DTO's `parent: null` /
+ * `content: null` can still reach this — `null.length` would throw out of
+ * `analyzeDataFormat` and kill the whole render.
  */
 const hasHierarchicalRefs = (block: OutputBlockData): boolean => {
-  return block.parent !== undefined || (block.content !== undefined && block.content.length > 0);
+  return block.parent != null || (Array.isArray(block.content) && block.content.length > 0);
 };
 
 /**

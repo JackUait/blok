@@ -7,7 +7,7 @@
  * declaration is wrong.
  */
 
-import type { defaultBlockTools, Columns, Embed, Bookmark, Image, File, Audio, Video, ClearFormat } from '../../../types/tools-entry';
+import type { defaultBlockTools, Columns, Embed, Bookmark, Image, File, Audio, Video, ClearFormat, mountChildBlocks } from '../../../types/tools-entry';
 import type {
   ImageData, ImageConfig, ImageUploader,
   FileData, FileConfig, FileUploader,
@@ -49,6 +49,12 @@ const _videoTypes: [VideoData, VideoConfig, VideoUploader] = [] as never;
 // exist in the published types or `import { ClearFormat }` won't typecheck.
 const _clearFormat: typeof ClearFormat = {} as typeof ClearFormat;
 
+// mountChildBlocks is exported from the runtime tools entry so third-party
+// container tools can reconcile their children the way the built-in ones do —
+// its declaration must exist in the published types or `import
+// { mountChildBlocks }` won't typecheck for consumers.
+const _mountChildBlocks: typeof mountChildBlocks = () => undefined;
+
 // defaultBlockTools must include the 'file', 'audio', and 'video' entries the runtime emits
 const _fileDefault: typeof defaultBlockTools.file = {} as const;
 const _audioDefault: typeof defaultBlockTools.audio = {} as const;
@@ -71,6 +77,7 @@ void _fileTypes;
 void _audioTypes;
 void _videoTypes;
 void _clearFormat;
+void _mountChildBlocks;
 void _fileDefault;
 void _audioDefault;
 void _videoDefault;

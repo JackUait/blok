@@ -50,6 +50,51 @@ const createRepositoryWithBlocks = (
   return repository;
 };
 
+/**
+ * Assert the flat block array is still a valid DFS pre-order of the parentId
+ * tree: every block's parent sits earlier in the array, and everything between
+ * a block and its parent descends from that parent — i.e. every subtree is one
+ * contiguous run. `resolveInsertIndex(parent, 'end')` depends on that property
+ * (it walks forward while blocks stay descendants), so a DOM fix that reordered
+ * the flat array to make placement work would silently break every later
+ * `{ after: sibling }`, move and relocate.
+ * @param blocks - the flat block array to validate
+ */
+const expectDfsContiguous = (blocks: Block[]): void => {
+  const indexById = new Map(blocks.map((block, index) => [block.id, index]));
+
+  const descendsFrom = (id: string, ancestorId: string): boolean => {
+    const index = indexById.get(id);
+    const parentId = index === undefined ? null : blocks[index].parentId;
+
+    if (parentId === null) {
+      return false;
+    }
+
+    return parentId === ancestorId || descendsFrom(parentId, ancestorId);
+  };
+
+  blocks.forEach((block, index) => {
+    const { parentId } = block;
+
+    if (parentId === null) {
+      return;
+    }
+
+    const parentIndex = indexById.get(parentId);
+
+    if (parentIndex === undefined) {
+      throw new Error(`Flat array is missing parent "${parentId}" of block "${block.id}"`);
+    }
+
+    expect(parentIndex).toBeLessThan(index);
+
+    const between = blocks.slice(parentIndex + 1, index);
+
+    expect(between.every((sibling) => descendsFrom(sibling.id, parentId))).toBe(true);
+  });
+};
+
 describe('BlockHierarchy', () => {
   let repository: BlockRepository;
   let hierarchy: BlockHierarchy;
@@ -677,34 +722,37 @@ describe('BlockHierarchy', () => {
       hierarchy = new BlockHierarchy(repository);
     });
 
-    it('sets no margin for root-level blocks (depth 0)', () => {
+    // The margin itself is `calc(--_blok-block-depth * --blok-block-indent-step)`
+    // in main.css (pinned by test/unit/styles/host-customization-tokens.test.ts);
+    // core's half of the contract is the multiplier asserted here.
+    it('sets a zero multiplier for root-level blocks (depth 0)', () => {
       const block = requireBlock('root');
 
       hierarchy.updateBlockIndentation(block);
 
-      expect(block.holder.style.marginLeft).toBe('');
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(block.holder).toHaveAttribute('data-blok-depth', '0');
     });
 
-    it('sets 24px margin for depth 1', () => {
+    it('sets a multiplier of 1 for depth 1', () => {
       const block = requireBlock('child');
 
       hierarchy.updateBlockIndentation(block);
 
-      expect(block.holder.style.marginLeft).toBe('24px');
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('1');
       expect(block.holder).toHaveAttribute('data-blok-depth', '1');
     });
 
-    it('sets 48px margin for depth 2', () => {
+    it('sets a multiplier of 2 for depth 2', () => {
       const block = requireBlock('grandchild');
 
       hierarchy.updateBlockIndentation(block);
 
-      expect(block.holder.style.marginLeft).toBe('48px');
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('2');
       expect(block.holder).toHaveAttribute('data-blok-depth', '2');
     });
 
-    it('uses 24px per level of depth', () => {
+    it('tracks one multiplier step per level of depth', () => {
       // Create a deeply nested structure
       repository = createRepositoryWithBlocks([
         { id: 'l0', parentId: null },
@@ -718,13 +766,13 @@ describe('BlockHierarchy', () => {
       const l4Block = requireBlock('l4');
       hierarchy.updateBlockIndentation(l4Block);
 
-      expect(blockAtDepth(4)).toBe('96px');
+      expect(blockAtDepth(4)).toBe('4');
     });
 
     const blockAtDepth = (depth: number): string => {
       const block = repository.blocks[depth];
       hierarchy.updateBlockIndentation(block);
-      return block.holder.style.marginLeft;
+      return block.holder.style.getPropertyValue('--_blok-block-depth');
     }
 
     it('skips visual indentation for blocks inside table cells', () => {
@@ -737,22 +785,24 @@ describe('BlockHierarchy', () => {
 
       hierarchy.updateBlockIndentation(cellBlock);
 
+      expect(cellBlock.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(cellBlock.holder.style.marginLeft).toBe('');
       expect(cellBlock.holder).toHaveAttribute('data-blok-depth', '0');
     });
 
-    it('does NOT apply margin-left when block.holder is inside [data-blok-toggle-children]', () => {
-      // child has parentId = 'root', so depth = 1, which would normally yield 24px.
-      // But because its holder is physically inside a toggle-children container it
-      // should receive '' instead.
+    it('does NOT indent when block.holder is inside [data-blok-toggle-children]', () => {
+      // child has parentId = 'root', so depth = 1, which would normally yield a
+      // multiplier of 1. But because its holder is physically inside a
+      // toggle-children container the multiplier must be 0.
       const toggleContainer = document.createElement('div');
       toggleContainer.setAttribute('data-blok-toggle-children', '');
 
-      const block = requireBlock('child'); // depth 1 normally → 24px
+      const block = requireBlock('child'); // depth 1 normally → multiplier 1
       toggleContainer.appendChild(block.holder);
 
       hierarchy.updateBlockIndentation(block);
 
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(block.holder.style.marginLeft).toBe('');
     });
 
@@ -762,22 +812,24 @@ describe('BlockHierarchy', () => {
       const columnsContainer = document.createElement('div');
       columnsContainer.setAttribute('data-blok-columns', '');
 
-      const block = requireBlock('grandchild'); // depth 2 normally → 48px
+      const block = requireBlock('grandchild'); // depth 2 normally → multiplier 2
       columnsContainer.appendChild(block.holder);
 
       hierarchy.updateBlockIndentation(block);
 
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(block.holder.style.marginLeft).toBe('');
       expect(block.holder).toHaveAttribute('data-blok-depth', '0');
     });
 
     it('skips visual indentation for a column_list block itself', () => {
-      const block = requireBlock('child'); // depth 1 normally → 24px
+      const block = requireBlock('child'); // depth 1 normally → multiplier 1
 
       (block as unknown as { name: string }).name = 'column_list';
 
       hierarchy.updateBlockIndentation(block);
 
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(block.holder.style.marginLeft).toBe('');
       expect(block.holder).toHaveAttribute('data-blok-depth', '0');
     });
@@ -799,13 +851,115 @@ describe('BlockHierarchy', () => {
       (requireBlock('list') as unknown as { name: string }).name = 'column_list';
       (requireBlock('col') as unknown as { name: string }).name = 'column';
 
-      const para = requireBlock('para'); // depth 2 normally → 48px
+      const para = requireBlock('para'); // depth 2 normally → multiplier 2
 
       // Holder deliberately NOT appended into any [data-blok-columns] container.
       hierarchy.updateBlockIndentation(para);
 
+      expect(para.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
       expect(para.holder.style.marginLeft).toBe('');
       expect(para.holder).toHaveAttribute('data-blok-depth', '0');
+    });
+  });
+
+  describe('updateBlockIndentation — the indent is a cascade token, not a frozen inline margin', () => {
+    /**
+     * A container tool that is not one of the four hardcoded exemptions
+     * (table cell / list / toggle-children / columns) used to get an inline
+     * `margin-left: depth * 24px` stamped on every child holder, INSIDE a slot
+     * the container already positions. An inline declaration can only be
+     * beaten with `!important`, so hosts shipped `!important` overrides.
+     *
+     * Core now writes only the DEPTH (`--_blok-block-depth`) and main.css
+     * multiplies it by the inherited `--blok-block-indent-step`, which every
+     * `[data-blok-nested-blocks]` slot zeroes. Two properties follow, and both
+     * are asserted here: nothing is frozen into `style.marginLeft`, and the
+     * exempt cases still resolve to zero indent because their multiplier is 0.
+     */
+    const nestedSlot = (): HTMLElement => {
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      workingArea.appendChild(slot);
+
+      return slot;
+    };
+
+    beforeEach(() => {
+      repository = createRepositoryWithBlocks([
+        { id: 'root', parentId: null },
+        { id: 'child', parentId: 'root' },
+        { id: 'grandchild', parentId: 'child' },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+    });
+
+    it('never writes an inline margin, so a host container tool can decline the indent from plain CSS', () => {
+      const block = requireBlock('grandchild'); // depth 2 → used to be inline 48px
+
+      nestedSlot().appendChild(block.holder);
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.marginLeft).toBe('');
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('2');
+    });
+
+    it('defers the decision to the cascade, so a slot that commits AFTER the indent still wins', () => {
+      // The load path (blockManager.insertMany) indents every parented block
+      // immediately, but a React/Vue/Angular container's child slot only exists
+      // one commit later — nothing re-indents after the holder is mounted into
+      // it. A DOM `closest()` exemption cannot see the slot at this point; an
+      // inherited token does not have to.
+      const block = requireBlock('grandchild');
+
+      hierarchy.updateBlockIndentation(block);
+
+      nestedSlot().appendChild(block.holder);
+
+      expect(block.holder.style.marginLeft).toBe('');
+    });
+
+    it('keeps the multiplier at 0 for list blocks (they indent their own [role="listitem"])', () => {
+      const block = requireBlock('grandchild');
+
+      (block as unknown as { name: string }).name = 'list';
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
+      // The STRUCTURAL depth still ships on the attribute — the list tool and
+      // the drag depth heuristics read it.
+      expect(block.holder).toHaveAttribute('data-blok-depth', '2');
+    });
+
+    it('keeps the multiplier at 0 for callout children', () => {
+      // The callout's body slot carries BOTH markers (dom-builder.ts) — the
+      // toggle-children one it shares with toggle/header, and the generic
+      // nested-blocks one every container renders.
+      const calloutBody = document.createElement('div');
+
+      calloutBody.setAttribute('data-blok-toggle-children', '');
+      calloutBody.setAttribute('data-blok-nested-blocks', '');
+      workingArea.appendChild(calloutBody);
+
+      const block = requireBlock('grandchild');
+
+      calloutBody.appendChild(block.holder);
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('0');
+    });
+
+    it('still indents a plain nested block that lives in no container at all (Tab-nesting at root)', () => {
+      const block = requireBlock('grandchild');
+
+      workingArea.appendChild(block.holder);
+
+      hierarchy.updateBlockIndentation(block);
+
+      expect(block.holder.style.getPropertyValue('--_blok-block-depth')).toBe('2');
     });
   });
 
@@ -1381,6 +1535,224 @@ describe('BlockHierarchy', () => {
       expect(tc.holder.parentElement).toBe(toggleContainer);
       expect(c2Container.contains(toggle.holder)).toBe(true);
       expect(tc.parentId).toBe('toggle');
+    });
+
+    /**
+     * Ancestor-strand regression (Enter at the end of a nested container's child).
+     *
+     * Blocks.insert anchors a new holder 'beforebegin' its flat successor when
+     * that successor's container ENCLOSES the predecessor's. So pressing Enter
+     * at the end of a callout child, when the callout has a following sibling
+     * in the same outer container, drops the new holder into the OUTER
+     * container. Every insert path then repairs the link with
+     * setBlockParent(newBlock, callout) — and the anti-stealing guard used to
+     * veto that repair, because the outer container is "another" connected
+     * nested container. A container that ENCLOSES the destination can never be
+     * a legitimate claim: that is model/DOM divergence by definition, and the
+     * block stayed permanently outside its parent while the model (and the
+     * save output) said it was inside.
+     */
+    it('relocates a holder stranded in an ANCESTOR nested container into the target container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'outer', parentId: null, contentIds: ['callout'] },
+        { id: 'callout', parentId: 'outer', contentIds: [] },
+        { id: 'stranded', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const outer = requireBlock('outer');
+      const callout = requireBlock('callout');
+      const stranded = requireBlock('stranded');
+
+      // outer holder > [data-blok-nested-blocks] slot > callout holder > callout container
+      const outerSlot = document.createElement('div');
+      outerSlot.setAttribute('data-blok-nested-blocks', '');
+      outer.holder.appendChild(outerSlot);
+
+      const calloutContainer = document.createElement('div');
+      calloutContainer.setAttribute('data-blok-toggle-children', '');
+      calloutContainer.setAttribute('data-blok-nested-blocks', '');
+      callout.holder.appendChild(calloutContainer);
+      outerSlot.appendChild(callout.holder);
+
+      // The strand: the new holder landed in the OUTER slot, beside the callout.
+      outerSlot.appendChild(stranded.holder);
+      workingArea.appendChild(outer.holder);
+
+      hierarchy.setBlockParent(stranded, 'callout');
+
+      expect(stranded.holder.parentElement).toBe(calloutContainer);
+      expect(outerSlot.contains(stranded.holder)).toBe(true);
+      expect(stranded.parentId).toBe('callout');
+    });
+
+    /**
+     * Companion negative test for the ancestor clause above: the loosening must
+     * stay scoped to a container that ENCLOSES the destination. Two SIBLING
+     * nested containers are the corrupted-multi-reference case the guard exists
+     * for (a table cell vs a toggle), and the holder must stay put.
+     */
+    it('still refuses to steal a holder claimed by a SIBLING nested container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'owner', parentId: null, contentIds: ['claimed'] },
+        { id: 'claimed', parentId: 'owner', contentIds: [] },
+        { id: 'target', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const owner = requireBlock('owner');
+      const claimed = requireBlock('claimed');
+      const target = requireBlock('target');
+
+      const ownerContainer = document.createElement('div');
+      ownerContainer.setAttribute('data-blok-nested-blocks', '');
+      owner.holder.appendChild(ownerContainer);
+      ownerContainer.appendChild(claimed.holder);
+
+      const targetContainer = document.createElement('div');
+      targetContainer.setAttribute('data-blok-nested-blocks', '');
+      target.holder.appendChild(targetContainer);
+
+      // Both containers are live siblings under the working area — neither
+      // encloses the other.
+      workingArea.appendChild(owner.holder);
+      workingArea.appendChild(target.holder);
+
+      hierarchy.setBlockParent(claimed, 'target');
+
+      expect(claimed.holder.parentElement).toBe(ownerContainer);
+      expect(targetContainer.contains(claimed.holder)).toBe(false);
+    });
+
+    /**
+     * DOM-safety guard for the ancestor clause. When corrupted DOM puts the
+     * declared parent's holder INSIDE the moving block's own holder, mounting
+     * would insert an ancestor into its own descendant — a DOMException that
+     * takes down the whole insert/drag pipeline. Skip the move instead.
+     */
+    it('does not throw when the destination container lives inside the moving holder', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'mover', parentId: null, contentIds: [] },
+        { id: 'inner', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const mover = requireBlock('mover');
+      const inner = requireBlock('inner');
+
+      const outerSlot = document.createElement('div');
+      outerSlot.setAttribute('data-blok-nested-blocks', '');
+      workingArea.appendChild(outerSlot);
+      outerSlot.appendChild(mover.holder);
+
+      // Corrupted DOM: `inner` (the declared new parent) sits inside `mover`.
+      const moverContainer = document.createElement('div');
+      moverContainer.setAttribute('data-blok-nested-blocks', '');
+      mover.holder.appendChild(moverContainer);
+      moverContainer.appendChild(inner.holder);
+
+      const innerContainer = document.createElement('div');
+      innerContainer.setAttribute('data-blok-nested-blocks', '');
+      inner.holder.appendChild(innerContainer);
+
+      expect(() => hierarchy.setBlockParent(mover, 'inner')).not.toThrow();
+      expect(innerContainer.contains(mover.holder)).toBe(false);
+    });
+
+    /**
+     * Descendant-strand regression — the mirror of the ancestor case above.
+     *
+     * `insertChild(data, 'end')` resolves to the flat index PAST the parent's
+     * last DESCENDANT, so when the parent's last child has children of its own
+     * the new block's flat predecessor is that grandchild. Blocks.insert anchors
+     * the holder 'afterend' the predecessor, dropping it inside the FIRST
+     * child's own slot — one level too deep. setBlockParent is the chokepoint
+     * that must repair it, but the anti-stealing guard treated a slot that is a
+     * DESCENDANT of the destination as a rightful claim, so the appended
+     * sibling stayed nested inside its predecessor for good.
+     */
+    it('relocates a holder stranded in a DESCENDANT nested container into the target container', () => {
+      repository = createRepositoryWithBlocks([
+        { id: 'container', parentId: null, contentIds: ['first-child'] },
+        { id: 'first-child', parentId: 'container', contentIds: ['grandchild'] },
+        { id: 'grandchild', parentId: 'first-child', contentIds: [] },
+        { id: 'appended', parentId: null, contentIds: [] },
+      ]);
+      hierarchy = new BlockHierarchy(repository);
+
+      const container = requireBlock('container');
+      const firstChild = requireBlock('first-child');
+      const grandchild = requireBlock('grandchild');
+      const appended = requireBlock('appended');
+
+      const containerSlot = document.createElement('div');
+      containerSlot.setAttribute('data-blok-nested-blocks', '');
+      container.holder.appendChild(containerSlot);
+      containerSlot.appendChild(firstChild.holder);
+
+      const firstChildSlot = document.createElement('div');
+      firstChildSlot.setAttribute('data-blok-nested-blocks', '');
+      firstChild.holder.appendChild(firstChildSlot);
+      firstChildSlot.appendChild(grandchild.holder);
+
+      // The strand: the appended holder landed beside the grandchild, inside
+      // the first child's own slot.
+      firstChildSlot.appendChild(appended.holder);
+      workingArea.appendChild(container.holder);
+
+      hierarchy.setBlockParent(appended, 'container');
+
+      expect(appended.holder.parentElement).toBe(containerSlot);
+      expect(firstChildSlot.contains(appended.holder)).toBe(false);
+      expect(Array.from(containerSlot.children)).toEqual([firstChild.holder, appended.holder]);
+      expect(appended.parentId).toBe('container');
+    });
+
+    /**
+     * The same defect through the real chain the public `insertChild(data,
+     * 'end')` walks: Blocks.insert places the holder from the flat predecessor,
+     * then setBlockParent asserts the declared parent. Both halves must agree —
+     * the holder ends up in the container's OWN slot, and the flat array stays
+     * a contiguous DFS pre-order (the property `resolveInsertIndex` relies on).
+     */
+    it('appends a second child beside its sibling when Blocks.insert anchored it inside the sibling subtree', () => {
+      const blocksStore = new Blocks(workingArea);
+      const chainRepository = new BlockRepository();
+
+      chainRepository.initialize(blocksStore as BlocksStore);
+
+      const container = createMockBlock({ id: 'container', parentId: null, contentIds: ['first-child'] });
+      const firstChild = createMockBlock({ id: 'first-child',
+        parentId: 'container',
+        contentIds: ['grandchild'] });
+      const grandchild = createMockBlock({ id: 'grandchild', parentId: 'first-child' });
+
+      blocksStore.push(container);
+      blocksStore.push(firstChild);
+      blocksStore.push(grandchild);
+
+      const containerSlot = document.createElement('div');
+      containerSlot.setAttribute('data-blok-nested-blocks', '');
+      container.holder.appendChild(containerSlot);
+      containerSlot.appendChild(firstChild.holder);
+
+      const firstChildSlot = document.createElement('div');
+      firstChildSlot.setAttribute('data-blok-nested-blocks', '');
+      firstChild.holder.appendChild(firstChildSlot);
+      firstChildSlot.appendChild(grandchild.holder);
+
+      const chainHierarchy = new BlockHierarchy(chainRepository);
+      const appended = createMockBlock({ id: 'appended', parentId: null });
+
+      // Index 3 is what resolveInsertIndex(container, 'end') yields: past the
+      // parent's last DESCENDANT, not after its last direct child.
+      blocksStore.insert(3, appended);
+      chainHierarchy.setBlockParent(appended, 'container');
+
+      expect(appended.holder.parentElement).toBe(containerSlot);
+      expect(firstChildSlot.contains(appended.holder)).toBe(false);
+      expect(appended.parentId).toBe('container');
+      expectDfsContiguous(chainRepository.blocks);
     });
   });
 

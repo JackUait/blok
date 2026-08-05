@@ -36,6 +36,13 @@ export { DATA_ATTR } from './components/constants/data-attributes';
 export { TEST_ID } from './components/constants/test-ids';
 
 /**
+ * Re-export the per-block font-size token names, so a host that scopes
+ * typography from CSS (or from `editor.tokens.set()`) never has to hand-copy
+ * the custom property strings
+ */
+export { BLOK_FONT_SIZE_TOKENS } from './components/utils/font-size-tokens';
+
+/**
  * Blok
  * @license Apache-2.0
  */

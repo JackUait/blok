@@ -11,6 +11,23 @@ import { moveElementAfter, moveElementBefore, moveElementToEnd } from '../../uti
 import type { BlockRepository } from './repository';
 
 /**
+ * Inline channel for a block's indentation multiplier. main.css renders the
+ * indent as `calc(var(--_blok-block-depth, 0) * var(--blok-block-indent-step, 24px))`
+ * on every `[data-blok-element]`, and every `[data-blok-nested-blocks]` slot
+ * zeroes the (inherited) step.
+ *
+ * Writing the multiplier instead of `style.marginLeft` is what lets a container
+ * tool decline the indent: an inline `margin-left` could only be beaten with
+ * `!important`, and — because it is computed at insert time — it also survived
+ * the holder later landing inside a slot that had not been created yet (a
+ * framework adapter commits its child slot a render after core inserts the
+ * child). Inheritance re-resolves at that moment; a DOM check cannot.
+ *
+ * Internal (`--_blok-` prefix): core owns it. The public knob is the step.
+ */
+const DEPTH_MULTIPLIER_PROPERTY = '--_blok-block-depth';
+
+/**
  * BlockHierarchy manages hierarchical relationships between blocks
  */
 export class BlockHierarchy {
@@ -324,16 +341,43 @@ export class BlockHierarchy {
       // sibling instead of placing it beside it in the row.
       const isColumnsRow = (container: Element | null): boolean =>
         container?.matches('[data-blok-columns]') === true;
-      // A block whose model parent is a column but whose holder is currently
-      // stranded in the column_list's flex row (the columns row) must be
-      // relocated INTO the target column's child container. This is the
-      // Enter/split-in-column strand: the split insert anchors the new holder
-      // 'beforebegin' the sibling column in the row, so its nearest nested
-      // container resolves to the columns row, not a real column. Allow the
-      // move when the holder sits in the row and the destination is a genuine
-      // column child container — it was never legitimately "claimed" by the row.
-      const strandedInColumnsRow =
-        isColumnsRow(currentNestedContainer) && isColumnContainer(newContainer);
+      // A container that ENCLOSES the destination never legitimately claims a
+      // block bound for it — that is model/DOM divergence by definition. This
+      // is the ancestor strand: Blocks.insert anchors a new holder
+      // 'beforebegin' its flat successor whenever the successor's container
+      // encloses the predecessor's, so pressing Enter at the end of a nested
+      // container's child (a callout inside a column, a toggle inside a
+      // callout, any adapter container) drops the new holder one level OUT, in
+      // the enclosing container. Every insert path then repairs the link via
+      // setBlockParent — and without this allowance the guard below vetoed the
+      // repair, leaving the block permanently outside the parent the model (and
+      // the save output) claims it lives in.
+      //
+      // Subsumes the Enter/split-in-column strand: the [data-blok-columns] row
+      // always encloses the column wrapper that holds a column's own container.
+      const strandedInAncestorContainer =
+        currentNestedContainer !== null &&
+        newContainer !== null &&
+        currentNestedContainer !== newContainer &&
+        currentNestedContainer.contains(newContainer);
+      // The mirror strand: a container INSIDE the destination is just as
+      // impossible a claim. Appending a child at the end of a container
+      // resolves to the flat index past the parent's last DESCENDANT, so when
+      // the parent's last child has children of its own the new block's flat
+      // predecessor is that grandchild — and Blocks.insert anchors the holder
+      // 'afterend' it, i.e. inside the SIBLING's own slot, one level too deep.
+      // Vetoing the repair here left every appended sibling permanently nested
+      // inside its predecessor (public insertChild(data, 'end') and the
+      // adapters' useBlocks().insert({ parentId, position: 'end' }) alike).
+      //
+      // Only DISJOINT containers keep the anti-stealing veto — sibling table
+      // cells and sibling toggles, the corrupted multi-reference case the guard
+      // was written for. Neither encloses the other, so neither is loosened.
+      const strandedInDescendantContainer =
+        currentNestedContainer !== null &&
+        newContainer !== null &&
+        currentNestedContainer !== newContainer &&
+        newContainer.contains(currentNestedContainer);
       // A DISCONNECTED container can never legitimately claim a block. When
       // replace() swaps out a container block (e.g. toggle heading → toggle
       // heading of another level), the children holders leave the document
@@ -349,9 +393,18 @@ export class BlockHierarchy {
         currentNestedContainer !== newContainer &&
         !(isColumnContainer(currentNestedContainer) && isColumnContainer(newContainer)) &&
         !isColumnsRow(newContainer) &&
-        !strandedInColumnsRow;
+        !strandedInAncestorContainer &&
+        !strandedInDescendantContainer;
 
-      if (newContainer && !claimedByOtherContainer) {
+      // Circular-DOM guard (same one the table carries): if corrupted DOM puts
+      // the declared parent's holder INSIDE this block's holder, mounting would
+      // insert an ancestor into its own descendant and insertBefore throws a
+      // HierarchyRequestError, taking the whole insert/drag pipeline down. The
+      // ancestor allowance above is a new way to reach that state, so refuse
+      // the move instead.
+      const wouldNestInsideItself = newContainer !== null && block.holder.contains(newContainer);
+
+      if (newContainer && !claimedByOtherContainer && !wouldNestInsideItself) {
         const allBlocks = this.repository.blocks;
         const blockIdx = allBlocks.indexOf(block);
         const nextSiblingHolder = allBlocks.slice(blockIdx + 1).find(
@@ -482,6 +535,13 @@ export class BlockHierarchy {
 
   /**
    * Updates the visual indentation of a block based on its depth in the hierarchy.
+   *
+   * Only the multiplier is written ({@link DEPTH_MULTIPLIER_PROPERTY}); main.css
+   * turns it into the actual margin. The exemptions below stay because they are
+   * NOT container cases the stylesheet can spot on its own — a list holder is
+   * flush while its inner [role="listitem"] carries the indent, and a
+   * column-tree block must be flush from the first frame, before its holder is
+   * mounted into the columns DOM at all.
    * @param block - the block to update indentation for
    */
   public updateBlockIndentation(block: Block): void {
@@ -490,7 +550,7 @@ export class BlockHierarchy {
     // Blocks inside table cells should not receive visual indentation.
     // The parent-child relationship is semantic (data tracking), not visual.
     if (holder.closest('[data-blok-table-cell-blocks]')) {
-      holder.style.marginLeft = '';
+      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', '0');
 
       return;
@@ -502,7 +562,7 @@ export class BlockHierarchy {
     // margin to the holder too would double the indent. Keep the holder flush
     // and still expose the structural depth via data-blok-depth.
     if (block.name === 'list') {
-      holder.style.marginLeft = '';
+      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
 
       return;
@@ -511,7 +571,7 @@ export class BlockHierarchy {
     // Blocks inside toggle child containers should not receive parentId-depth
     // margin (the container indents them).
     if (holder.closest('[data-blok-toggle-children]')) {
-      holder.style.marginLeft = '';
+      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', String(this.getBlockDepth(block)));
 
       return;
@@ -532,7 +592,7 @@ export class BlockHierarchy {
       holder.closest('[data-blok-columns]') ||
       this.hasColumnAncestor(block)
     ) {
-      holder.style.marginLeft = '';
+      holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, '0');
       holder.setAttribute('data-blok-depth', '0');
 
       return;
@@ -540,7 +600,7 @@ export class BlockHierarchy {
 
     const depth = this.getBlockDepth(block);
 
-    holder.style.marginLeft = depth > 0 ? `${depth * 24}px` : ''; // 24px per parentId level
+    holder.style.setProperty(DEPTH_MULTIPLIER_PROPERTY, depth.toString());
     holder.setAttribute('data-blok-depth', depth.toString());
   }
 }

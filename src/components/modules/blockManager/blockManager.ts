@@ -975,16 +975,18 @@ export class BlockManager extends Module {
   }
 
   /**
-   * Insert a new paragraph block as a child of the given parent, atomically.
+   * Insert a new block as a child of the given parent, atomically.
    * Block creation and parent assignment are grouped into a single undo entry.
    *
    * @param parentId - id of the parent block
    * @param insertIndex - flat block index where the new block should appear
+   * @param childData - optional data for the new child block
+   * @param toolName - optional tool to create; defaults to `config.defaultBlock`
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData): Block {
+  public insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData, toolName?: string): Block {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData);
+    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     return result;
   }
@@ -1649,7 +1651,7 @@ export class BlockManager extends Module {
     detailData: BlockMutationEventDetailWithoutTarget<Type>
   ): Block {
     const eventDetail = {
-      target: new BlockAPI(block),
+      target: new BlockAPI(block, this.Blok.API),
       ...detailData,
     };
 

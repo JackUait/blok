@@ -911,6 +911,69 @@ describe('Toolbox', () => {
       expect(mocks.api.blocks.composeBlockData).toHaveBeenCalledWith('testTool');
       expect(mocks.api.blocks.insert).toHaveBeenCalled();
     });
+
+    /**
+     * Adapter-authored tools (React/Vue/Angular) return a frozen data mirror from
+     * save(), so composeBlockData hands back a frozen object. Merging the toolbox
+     * entry's `data` into it in place threw "object is not extensible" and no
+     * block was inserted at all.
+     */
+    it('merges toolbox data over a FROZEN composed data without mutating it', async () => {
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(mocks.blockAPI);
+
+      const frozenComposed = Object.freeze({ text: '' });
+
+      vi.mocked(mocks.api.blocks.composeBlockData).mockResolvedValue(frozenComposed);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await expect(toolbox.toolButtonActivated('testTool', { seedDefaults: true })).resolves.toBeUndefined();
+
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        { text: '',
+          seedDefaults: true },
+        undefined,
+        0,
+        undefined,
+        true
+      );
+      expect(frozenComposed).toEqual({ text: '' });
+    });
+
+    it('overrides an EXISTING key of a FROZEN composed data', async () => {
+      vi.mocked(mocks.api.blocks.getCurrentBlockIndex).mockReturnValue(0);
+      vi.mocked(mocks.api.blocks.getBlockByIndex).mockReturnValue(mocks.blockAPI);
+
+      const frozenComposed = Object.freeze({ text: '' });
+
+      vi.mocked(mocks.api.blocks.composeBlockData).mockResolvedValue(frozenComposed);
+
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+      });
+
+      await expect(toolbox.toolButtonActivated('testTool', { text: 'preset' })).resolves.toBeUndefined();
+
+      expect(mocks.api.blocks.insert).toHaveBeenCalledWith(
+        'testTool',
+        { text: 'preset' },
+        undefined,
+        0,
+        undefined,
+        true
+      );
+      expect(frozenComposed).toEqual({ text: '' });
+    });
   });
 
   describe('handleMobileLayoutToggle', () => {

@@ -9,8 +9,8 @@
  * - emptiness, to decide whether a document carries any user content
  *   (placeholder states, "save" button gating, skipping empty submissions).
  *
- * Both accept the loose wire shape (`data: null`, `id: null`, nullish
- * documents) so backend DTOs can be passed as-is.
+ * Both accept the loose wire shape (`data: null`, `id: null`, `parent: null`,
+ * `content: null`, nullish documents) so backend DTOs can be passed as-is.
  */
 import { deepEqual } from './deep-equal';
 
@@ -19,10 +19,37 @@ import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData
 type AnyOutputData = OutputData | LooseOutputData | null | undefined;
 
 /**
- * Compares two blocks structurally. The `id` participates only when BOTH
- * blocks carry one: the editor mints a fresh id whenever content arrives
- * without one (see {@link normalizeOutputBlocks}), so an id-less origin
+ * Normalizes one block from the loose wire shape into the strict saved shape.
+ * The single definition of how the wire spells "absent": `null`/`''` ids and
+ * parents, `null`/`[]` content, `null`/missing data. Shared by
+ * {@link normalizeOutputBlocks} and {@link equalsOutputBlock} so a DTO and its
+ * saved echo are judged under the same rules.
+ * @param block - a block in either the strict or the loose wire shape
+ * @returns the block in the strict saved shape
+ */
+function normalizeOutputBlock(block: OutputBlockData | LooseOutputBlockData): OutputBlockData {
+  const { id, data, parent, content, ...rest } = block;
+
+  return {
+    ...rest,
+    ...(typeof id === 'string' && id !== '' ? { id } : {}),
+    ...(typeof parent === 'string' && parent !== '' ? { parent } : {}),
+    ...(Array.isArray(content) && content.length > 0 ? { content } : {}),
+    data: data ?? {},
+  };
+}
+
+/**
+ * Compares two blocks structurally. Both sides are normalized first
+ * ({@link normalizeOutputBlock}), so the loose wire spellings of "absent"
+ * (`parent: null`, `content: null`, `data: null`) equal the saved shape that
+ * omits them. The `id` participates only when BOTH blocks carry one: the editor
+ * mints a fresh id whenever content arrives without one, so an id-less origin
  * document must still compare equal to its saved echo.
+ *
+ * Edit metadata (`lastEditedAt`/`lastEditedBy`) never participates: it records
+ * WHO touched the block and WHEN, not what it says, so a document whose only
+ * delta is a stamp is not a content change.
  * @param a - first block to compare
  * @param b - second block to compare
  * @returns true when the blocks are structurally equal
@@ -31,8 +58,8 @@ function equalsOutputBlock(
   a: OutputBlockData | LooseOutputBlockData,
   b: OutputBlockData | LooseOutputBlockData
 ): boolean {
-  const { id: idA, ...restA } = a;
-  const { id: idB, ...restB } = b;
+  const { id: idA, lastEditedAt: _editedAtA, lastEditedBy: _editedByA, ...restA } = normalizeOutputBlock(a);
+  const { id: idB, lastEditedAt: _editedAtB, lastEditedBy: _editedByB, ...restB } = normalizeOutputBlock(b);
 
   const hasIdA = typeof idA === 'string' && idA !== '';
   const hasIdB = typeof idB === 'string' && idB !== '';
@@ -105,7 +132,9 @@ function comparableBlocks(
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids are compared only when both sides carry one — the editor mints fresh
  * ids for id-less content, so a legacy document still equals its saved echo.
- * Nullish documents compare equal to `{ blocks: [] }`.
+ * Edit metadata (`lastEditedAt`/`lastEditedBy`) is ignored for the same reason:
+ * it records who touched a block and when, not what it says. Nullish documents
+ * compare equal to `{ blocks: [] }`.
  *
  * Pass `{ ignoreEmptyDefaultBlocks: true }` for dirty-vs-baseline checks so a
  * pristine editor (one empty default paragraph) equals a saved-empty baseline —
@@ -192,21 +221,16 @@ export function toRenderableData(data: OutputData | LooseOutputData | null): Out
 /**
  * Normalizes blocks from the loose wire shape into the strict saved shape at
  * the editor's input boundaries: a `null`/missing `data` becomes `{}`, a
- * `null`/empty `id` is dropped so the block factory generates a fresh one.
- * Idempotent — strict blocks pass through unchanged (shallow-copied).
+ * `null`/empty `id` is dropped so the block factory generates a fresh one, and
+ * nullish/empty hierarchy references (`parent`, `content`) are dropped so a
+ * root-level, childless block is spelled the one way the editor and `save()`
+ * both spell it — absent. Idempotent — strict blocks pass through unchanged
+ * (shallow-copied).
  * @param blocks - blocks in either the strict or the loose wire shape
  * @returns blocks in the strict saved shape
  */
 export function normalizeOutputBlocks(blocks: Array<OutputBlockData | LooseOutputBlockData>): OutputBlockData[] {
-  return blocks.map((block) => {
-    const { id, data, ...rest } = block;
-
-    return {
-      ...rest,
-      ...(typeof id === 'string' && id !== '' ? { id } : {}),
-      data: data ?? {},
-    };
-  });
+  return blocks.map(normalizeOutputBlock);
 }
 
 /**
@@ -214,13 +238,14 @@ export function normalizeOutputBlocks(blocks: Array<OutputBlockData | LooseOutpu
  * {@link OutputData} shape at an input boundary. A nullish document becomes
  * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each
  * block is passed through {@link normalizeOutputBlocks}, so `null`/missing
- * `data` becomes `{}` and `null`/empty ids are dropped for regeneration.
+ * `data` becomes `{}`, `null`/empty ids are dropped for regeneration and
+ * nullish/empty `parent`/`content` references are dropped as absent.
  *
  * Unlike a hand-written `blocks.map(...)` mapper, this preserves every block
- * passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata —
- * so a backend DTO can be turned into strict `OutputData` without silently
- * losing hierarchy or tunes. Idempotent: a strict document passes through
- * unchanged (shallow-copied).
+ * passthrough field — `tunes`, real `parent`/`content` references, `indent`,
+ * edit metadata — so a backend DTO can be turned into strict `OutputData`
+ * without silently losing hierarchy or tunes. Idempotent: a strict document
+ * passes through unchanged (shallow-copied).
  * @param data - a document in the strict or loose wire shape, or nullish
  * @returns the document in the strict saved shape
  */

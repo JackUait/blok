@@ -461,8 +461,22 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // rendered when an embed origin isn't trusted (~2.3KB, landed in
     // feat(embed) 217a3234 without its ledger entry). Bumps the multiplier
     // to 1.428.
+    // 2026-08-05: link field reveal — the [data-link-suggestion] /
+    // [data-blok-link-tool-error] reveal animation and its blok-link-reveal
+    // keyframes (~0.4KB) landed without their ledger entry, which is why this
+    // budget and both golden snapshots were already red before the entry below.
+    // 2026-08-05: column shrink floor — columns.css declares
+    // `min-width: var(--blok-column-min-width, 0)` on the column holders (plus
+    // the comment explaining why the floor moved off the inline style and why
+    // no default is declared on the row container), ~0.6KB. Together these bump
+    // the multiplier to 1.430.
+    // 2026-08-05: block nesting indent moved off the inline style — main.css
+    // gained the `:where([data-blok-element])` margin rule (multiplier x step)
+    // and the `:where([data-blok-nested-blocks])` step reset, plus the comment
+    // explaining why the step has to inherit rather than be decided in JS
+    // (~1.2KB). Bumps the multiplier to 1.434.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.428);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.434);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

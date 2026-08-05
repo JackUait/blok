@@ -246,15 +246,22 @@ export class BlockOperations implements OperationsContext {
   }
 
   /**
-   * Insert a new paragraph block as a child of the given parent, atomically.
+   * Insert a new block as a child of the given parent, atomically.
    * @param parentId - id of the parent block
    * @param insertIndex - flat block index where the new block should appear
    * @param blocksStore - The blocks store to modify
    * @param childData - optional data for the new child block
+   * @param toolName - optional tool to create; defaults to `config.defaultBlock`
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number, blocksStore: BlocksStore, childData?: BlockToolData): Block {
-    return this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData);
+  public insertInsideParent(
+    parentId: string,
+    insertIndex: number,
+    blocksStore: BlocksStore,
+    childData?: BlockToolData,
+    toolName?: string
+  ): Block {
+    return this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData, toolName);
   }
 
   /**

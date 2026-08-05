@@ -143,7 +143,9 @@ test.describe('Block settings edit metadata footer', () => {
 
     /**
      * Click the block to focus it but do NOT type anything.
-     * The footer should still appear because lastEditedAt defaults to Date.now() on block creation.
+     * The footer should still appear: a never-edited block carries no persisted
+     * lastEditedAt (a load is not an edit), so the footer falls back to the
+     * block's non-persisted createdAt.
      */
     await block.click();
 

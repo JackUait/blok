@@ -26,6 +26,7 @@ import { BlockChangedMutationType } from '../../../../../types/events/block/Bloc
 import { BlockMovedMutationType } from '../../../../../types/events/block/BlockMoved';
 import { BlockRemovedMutationType } from '../../../../../types/events/block/BlockRemoved';
 import { validateHierarchy } from '../../../../../src/components/utils/hierarchy-invariant';
+import { ToolNotFoundError } from '../../../../../src/components/errors/tool-not-found';
 import type { OutputBlockData } from '@/types';
 
 /**
@@ -252,6 +253,11 @@ const createMockBlockFactory = (): BlockFactory => {
   // Add toggle tool (needed for hierarchy-aware replace tests)
   const toggleAdapter = createMockBlockToolAdapter('toggle');
   mockTools.set('toggle', toggleAdapter);
+
+  // Add header tool (a tool restricted inside table cells, used by the typed
+  // child-insert tests)
+  const headerAdapter = createMockBlockToolAdapter('header');
+  mockTools.set('header', headerAdapter);
 
   const bindBlockEvents = vi.fn();
 
@@ -2777,6 +2783,99 @@ describe('BlockOperations', () => {
       operations.insertInsideParent('block-1', 1, blocksStore);
 
       expect(operations.currentBlockIndexValue).toBe(1);
+    });
+
+    /**
+     * The Yjs `addBlock` payload recorded for a given block id — the CRDT half
+     * of the insert, which must agree with the composed DOM block.
+     * @param blockId - id of the inserted block
+     * @returns the payload, or undefined when the block was never written
+     */
+    const yjsPayloadFor = (blockId: string): { type?: string; data?: BlockToolData } | undefined => {
+      const calls = (dependencies.YjsManager.addBlock as ReturnType<typeof vi.fn>).mock.calls;
+      const match = calls.find((call: unknown[]) => (call[0] as { id?: string })?.id === blockId);
+
+      return match?.[0] as { type?: string; data?: BlockToolData } | undefined;
+    };
+
+    it('creates the requested tool instead of the default block', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore, { level: 2,
+        text: 'x' }, 'header');
+
+      expect(newBlock.name).toBe('header');
+      // The CRDT type must be resolved from the SAME name the DOM block was
+      // composed from, otherwise the divergence only surfaces after a reload.
+      expect(yjsPayloadFor(newBlock.id)?.type).toBe('header');
+    });
+
+    it('demotes a restricted requested tool inside a table cell but honours an unrestricted one', () => {
+      const parentBlock = repository.getBlockById('block-1');
+
+      if (parentBlock === undefined) {
+        throw new Error('Test setup failed: block-1 not found');
+      }
+
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell-blocks', '');
+      parentBlock.holder.replaceWith(cell);
+      cell.appendChild(parentBlock.holder);
+
+      const demoted = operations.insertInsideParent('block-1', 1, blocksStore, {}, 'header');
+
+      expect(demoted.name).toBe('paragraph');
+      expect(yjsPayloadFor(demoted.id)?.type).toBe('paragraph');
+
+      const kept = operations.insertInsideParent('block-1', 1, blocksStore, {}, 'toggle');
+
+      expect(kept.name).toBe('toggle');
+      expect(yjsPayloadFor(kept.id)?.type).toBe('toggle');
+    });
+
+    it('does not seed a non-default tool with the paragraph { text: "" } blob', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore, undefined, 'header');
+
+      expect(yjsPayloadFor(newBlock.id)?.data).toEqual({});
+    });
+
+    it('keeps the Yjs type and the composed block in agreement when the insert slot sits in a table cell', () => {
+      // The parent itself is NOT in a cell, but the block the new child lands
+      // after IS — which is the neighbour `insert()` runs its own demotion
+      // against. Resolving only from the parent would write `type: 'header'` to
+      // the CRDT while the DOM composes a paragraph, and the divergence would
+      // only surface after a reload or a remote sync.
+      const neighbour = repository.getBlockByIndex(1);
+
+      if (neighbour === undefined) {
+        throw new Error('Test setup failed: block-2 not found');
+      }
+
+      const cell = document.createElement('div');
+
+      cell.setAttribute('data-blok-table-cell-blocks', '');
+      neighbour.holder.replaceWith(cell);
+      cell.appendChild(neighbour.holder);
+
+      const newBlock = operations.insertInsideParent('block-1', 2, blocksStore, {}, 'header');
+
+      expect(newBlock.name).toBe('paragraph');
+      expect(yjsPayloadFor(newBlock.id)?.type).toBe(newBlock.name);
+    });
+
+    it('rejects an unregistered requested tool BEFORE anything is written to Yjs', () => {
+      expect(() => {
+        operations.insertInsideParent('block-1', 1, blocksStore, {}, 'not-a-registered-tool');
+      }).toThrow(ToolNotFoundError);
+
+      // A Yjs write that lands before the DOM insert throws would leave a
+      // phantom block in the CRDT with no counterpart in the document.
+      expect(dependencies.YjsManager.addBlock).not.toHaveBeenCalled();
+    });
+
+    it('still seeds the default block with { text: "" } when no tool is requested', () => {
+      const newBlock = operations.insertInsideParent('block-1', 1, blocksStore);
+
+      expect(yjsPayloadFor(newBlock.id)?.data).toEqual({ text: '' });
     });
   });
 

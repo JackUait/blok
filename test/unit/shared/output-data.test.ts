@@ -92,6 +92,53 @@ describe('equalsOutputData', () => {
     expect(equalsOutputData(a, b)).toBe(false);
   });
 
+  it('treats the loose wire spellings of "absent" as absent (null parent/content/data)', () => {
+    // A backend DTO passed in as-is must equal the document the editor saves
+    // back, which omits root-level/childless hierarchy keys entirely.
+    const dto = {
+      blocks: [{ id: 'a1', type: 'paragraph', data: { text: 'Hello' }, parent: null, content: null }],
+    };
+    const saved = doc([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+    expect(equalsOutputData(dto, saved)).toBe(true);
+    expect(equalsOutputData(saved, dto)).toBe(true);
+  });
+
+  it('still detects a real parent reference against a root-level block', () => {
+    const child = { blocks: [{ id: 'a1', type: 'paragraph', data: { text: 'Hello' }, parent: 'p1' }] };
+    const root = doc([{ id: 'a1', type: 'paragraph', data: { text: 'Hello' } }]);
+
+    expect(equalsOutputData(child, root)).toBe(false);
+  });
+
+  describe('edit metadata', () => {
+    it('ignores lastEditedAt/lastEditedBy — a load is not an edit', () => {
+      // A document persisted before edit metadata existed (or by a DTO that
+      // strips it) must still equal its saved echo once the editor stamps it.
+      const loaded = doc([{ id: 'a1', type: 'paragraph', data: { text: 'x' } }]);
+      const saved = doc([
+        { id: 'a1', type: 'paragraph', data: { text: 'x' }, lastEditedAt: 1712880000000, lastEditedBy: 'u1' },
+      ]);
+
+      expect(equalsOutputData(loaded, saved)).toBe(true);
+      expect(equalsOutputData(saved, loaded)).toBe(true);
+    });
+
+    it('ignores a differing timestamp on both sides', () => {
+      const a = doc([{ id: 'a1', type: 'paragraph', data: { text: 'x' }, lastEditedAt: 1 }]);
+      const b = doc([{ id: 'a1', type: 'paragraph', data: { text: 'x' }, lastEditedAt: 2 }]);
+
+      expect(equalsOutputData(a, b)).toBe(true);
+    });
+
+    it('still detects content changes when both sides carry edit metadata', () => {
+      const a = doc([{ id: 'a1', type: 'paragraph', data: { text: 'x' }, lastEditedAt: 1 }]);
+      const b = doc([{ id: 'a1', type: 'paragraph', data: { text: 'changed' }, lastEditedAt: 1 }]);
+
+      expect(equalsOutputData(a, b)).toBe(false);
+    });
+  });
+
   describe('with { ignoreEmptyDefaultBlocks: true }', () => {
     const emptyPara = { id: 'p0', type: 'paragraph', data: { text: '' } };
 
@@ -149,6 +196,38 @@ describe('normalizeOutputBlocks', () => {
 
     expect(normalized).toEqual([
       { id: 'b1', type: 'table', data: { content: [] }, parent: 'p1', tunes: { align: 'center' } },
+    ]);
+  });
+
+  it('drops nullish hierarchy fields the same way it drops a null id', () => {
+    // Backend DTOs serialize absent `parent`/`content` as null; carried through
+    // verbatim they crash the renderer (`[...null]`) and break round-trip equality.
+    const normalized = normalizeOutputBlocks([
+      { id: 'b1', type: 'paragraph', data: null, parent: null, content: null },
+    ]);
+
+    expect(normalized).toEqual([{ id: 'b1', type: 'paragraph', data: {} }]);
+    expect('parent' in normalized[0]).toBe(false);
+    expect('content' in normalized[0]).toBe(false);
+  });
+
+  it('drops an empty content array, matching what save() emits', () => {
+    const normalized = normalizeOutputBlocks([
+      { id: 'b1', type: 'paragraph', data: { text: 'x' }, content: [] },
+    ]);
+
+    expect('content' in normalized[0]).toBe(false);
+  });
+
+  it('keeps real parent/content references', () => {
+    const normalized = normalizeOutputBlocks([
+      { id: 'p1', type: 'callout', data: {}, content: ['c1'] },
+      { id: 'c1', type: 'paragraph', data: { text: 'child' }, parent: 'p1' },
+    ]);
+
+    expect(normalized).toEqual([
+      { id: 'p1', type: 'callout', data: {}, content: ['c1'] },
+      { id: 'c1', type: 'paragraph', data: { text: 'child' }, parent: 'p1' },
     ]);
   });
 });

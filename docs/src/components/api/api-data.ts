@@ -251,6 +251,12 @@ class Callout {
           "Named export of the package root (`import { DATA_ATTR } from '@bloklabs/core'`), not a property of the editor instance — the stable `data-blok-*` attribute names Blok writes on its DOM. This is the supported way to query editor DOM and write host tests, instead of matching internal class names. The `DataAttrKey` / `DataAttrValue` types and the `createSelector()` helper are exported alongside it.",
       },
       {
+        name: "BLOK_FONT_SIZE_TOKENS",
+        type: "BlokFontSizeTokens",
+        description:
+          "Named export of the package root (`import { BLOK_FONT_SIZE_TOKENS } from '@bloklabs/core'`), not a property of the editor instance — the CSS custom property each `style.fontSize` scenario writes, in a map shaped exactly like the config itself (`BLOK_FONT_SIZE_TOKENS.paragraph`, `.heading[1]`, `.list.checklist`, `.bookmark.link`, …). Use it wherever typography is driven by a channel other than the constructor config — a per-region CSS rule, or `editor.tokens.set({ [BLOK_FONT_SIZE_TOKENS.paragraph]: '18px' })` at runtime — so the custom property names never have to be hand-copied and a rename is a compile error instead of a silent no-op.",
+      },
+      {
         name: "version",
         type: "string",
         description:
@@ -812,15 +818,23 @@ editor.blocks.setBlockParent('child-block-id', 'parent-block-id');
 editor.blocks.setBlockParent('child-block-id', null);`,
       },
       {
-        name: "blocks.insertInsideParent(parentId, insertIndex, childData?)",
+        name: "blocks.insertInsideParent(parentId, insertIndex, childData?, toolName?)",
         returnType: "BlockAPI",
         description:
-          "Insert a block as a child of `parentId` atomically: the creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely (preferable to `insert()` followed by a reparent, which is two). `insertIndex` is the FLAT document index where the child should appear; `childData` defaults to an empty paragraph.",
+          "Insert a block as a child of `parentId` atomically: the creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely (preferable to `insert()` followed by a reparent, which is two). `insertIndex` is the FLAT document index where the child should appear. `toolName` picks the child's block tool and defaults to `config.defaultBlock`; a tool that is restricted inside table cells is demoted to the default block when the new child would land inside one, and an unregistered name throws before anything is written. `childData` defaults to `{ text: '' }` for the default block, and to `{}` — letting the tool apply its own defaults — whenever `toolName` names a different tool.",
         example: `const parentIndex = editor.blocks.getBlockIndex('parent-block-id') ?? 0;
 const child = editor.blocks.insertInsideParent(
   'parent-block-id',
   parentIndex + 1,
   { text: 'Nested content' },
+);
+
+// A TYPED child in the same single undo entry — no insert-then-reparent
+editor.blocks.insertInsideParent(
+  'parent-block-id',
+  parentIndex + 1,
+  { text: 'Nested heading', level: 2 },
+  'header',
 );`,
       },
       {
@@ -1232,7 +1246,7 @@ if (entry) {
         name: "block.getChildren()",
         returnType: "BlockAPI[]",
         description:
-          "This block's direct children as BlockAPI objects, in order. Returns an empty array when the block has no editor API attached (a virtual block).",
+          "This block's direct children as BlockAPI objects, in order. Every BlockAPI the editor hands out is live, so the children it returns can be walked recursively (`child.getChildren()`) and mutated (`child.setParent(...)`, `child.insertChild(...)`).",
         example: `const block = editor.blocks.getById('toggle-123');
 block?.getChildren().forEach((child) => console.log(child.id));`,
       },
@@ -1248,23 +1262,27 @@ block?.setParent('parent-block-id');
 block?.setParent(null);`,
       },
       {
-        name: "block.insertChild(childData?, position?)",
-        returnType: "BlockAPI | null",
+        name: "block.insertChild(childData?, position?, toolName?)",
+        returnType: "BlockAPI",
         description:
-          "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `childData` defaults to an empty paragraph. Returns null when the block has no editor API attached (a virtual block).",
+          "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `toolName` picks the child's block tool and defaults to `config.defaultBlock`, so a TYPED child is one operation instead of insert-then-reparent; a tool restricted inside table cells is demoted to the default block when the new child would land inside one. `childData` defaults to `{ text: '' }` for the default block and to `{}` when `toolName` names a different tool.",
         example: `const block = editor.blocks.getById('toggle-123');
 const child = block?.insertChild({ text: 'Hidden content' });
 
 // Place it among the existing children instead of appending
 block?.insertChild({ text: 'First' }, 'start');
-block?.insertChild({ text: 'After that one' }, { after: 'child-id' });`,
+block?.insertChild({ text: 'After that one' }, { after: 'child-id' });
+
+// A typed child, in a single undo entry
+block?.insertChild({ text: 'Section', level: 3 }, 'end', 'header');`,
         params: [
           {
             name: "childData",
             type: "BlockToolData",
             required: false,
-            default: "empty paragraph",
-            description: "Data for the new child block.",
+            default: "{ text: '' } / {}",
+            description:
+              "Data for the new child block. Defaults to an empty paragraph blob for the default block tool, and to {} — letting the tool apply its own defaults — when toolName is given.",
           },
           {
             name: "position",
@@ -1273,6 +1291,14 @@ block?.insertChild({ text: 'After that one' }, { after: 'child-id' });`,
             default: "'end'",
             description:
               "Where among the existing children to insert: 'start', 'end', { before: childId } or { after: childId }.",
+          },
+          {
+            name: "toolName",
+            type: "string",
+            required: false,
+            default: "config.defaultBlock",
+            description:
+              "Block tool to create for the child. Demoted to the default block when it is restricted inside table cells and the new child would land inside one.",
           },
         ],
       },
@@ -1890,7 +1916,7 @@ const nowApplied = editor.marks.toggle(highlight);`,
     badge: "Styles",
     title: "Styles API",
     description:
-      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are static per application — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. They are not, however, frozen at construction: `editor.tokens.set(tokens)` rewrites the injected stylesheet at runtime, which is what a host light/dark toggle needs — without it, flipping a token meant recreating the editor or hand-writing a global stylesheet targeting the portal scopes yourself. `set()` takes the complete token set (replace, not merge), mirroring `style.tokens`, so tokens omitted from the new palette stop applying and `{}` removes the stylesheet; `editor.tokens.get()` returns what is currently applied. The API is available synchronously after construction (calls before `isReady` are buffered and replayed), and the React/Vue/Angular adapters drive it reactively — pass `style={{ tokens }}` (React/Vue) or `[styleTokens]` (Angular) and changes sync in place without recreating the editor. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active. Plain read-only KEEPS the gutter — the block-hover copy-link control lives there, and `readOnly.set()` flips modes in place, so collapsing it would shift the document sideways on every toggle. The gutter collapses to 0 automatically only when it is genuinely dead space: chromeless read-only (`readOnly: { hideControls: true }`, wrapper carries `data-blok-controls-hidden`) and `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The gutter override contract is guaranteed, not incidental: Blok declares the gutter default and both state collapses at zero specificity via `:where()` (enforced by a unit contract test), so a host declaration of the gutter tokens at any positive specificity always wins the cascade. Declare them on the wrapper element itself (e.g. `[data-blok-interface] { --blok-editor-gutter-start: 16px }`), not only on an ancestor — the controls-hidden and toolbar-hidden collapses re-declare the tokens on the wrapper, and custom properties resolve from the nearest declaration, so an ancestor-level value loses to the collapse while a wrapper-level one survives it. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config. Blok also repaints native text selection inside the editor with `--blok-selection-inline` — override that token to recolor it, or pass `style.nativeSelection: true` (default `false`) to opt out entirely and fall back to the browser/host-defined selection colors (a token override cannot express CSS-wide keywords like `revert`, so reverting needs this flag). With the flag on, the wrapper carries `data-blok-native-selection`, Blok's `::selection` rules skip the editor, and the fake-background highlight (shown while a menu input holds focus) follows the UA `Highlight` color; popovers keep Blok's selection color. Background surfaces are public tokens too: most hover/light UI surfaces follow `--blok-bg-light`, media empty-state cards use `--blok-bg-secondary` (bordered by `--blok-border-secondary`), and the image/file loading skeletons and upload placeholders use `--blok-bg-tertiary`, which defaults to `--blok-bg-light` so it tracks the theme — recoloring the skeleton surface means overriding `--blok-bg-tertiary` directly, not overloading `--blok-bg-light` and dragging every other surface along with it. Like all palette-backed color tokens, the surface tokens are re-declared by Blok on the editor wrapper at zero specificity, so apply overrides via `style.tokens` / `editor.tokens.set()` or a CSS selector matching the wrapper (`[data-blok-interface]`) itself — a custom-property declaration on an ancestor container is shadowed by the wrapper's own declaration and silently does nothing (layout hooks such as `--blok-content-max-width` and the list, heading, embed, block-padding and placeholder-color tokens are instead read with fallbacks and never declared by Blok, which is why those DO inherit from any ancestor; the gutter tokens and `--blok-search-input-placeholder` are wrapper-declared like the palette, so they too need a wrapper-level rule). Also note the injected token stylesheets target Blok's scope attributes globally: with several editor instances on one page, each instance's `style.tokens` / `tokens.set()` stylesheet applies to ALL Blok UI on the page, not just its own instance (each is removed when its own instance is destroyed; where sets conflict between instances the stylesheet order in `<head>` — not application recency — decides, so give every instance one shared set instead of relying on conflict order) — scope per-instance differences with a CSS rule on each editor's own wrapper instead (body-mounted popover UI always follows the page-wide sheets). The sheets are injected at the start of `<head>`, so a host stylesheet rule of equal specificity — a plain `[data-blok-interface] { … }` — still beats `style.tokens` for the tokens it declares. Block rhythm is public too: `--blok-block-padding-top`, `--blok-block-padding-bottom` and `--blok-block-padding-inline` drive the padding of every block tool wrapper (paragraph, heading, list, toggle, quote). Each tool keeps its historical value as the fallback — 7px/7px/2px for most blocks, 0.2em vertical for quotes — so one override retunes all blocks at once, which is exactly what a read-only host needs for tight inline-style rendering (previously only possible by overriding `[data-blok-tool]` internals). The callout panel is the deliberate exception: its card inset is `--blok-callout-padding-block` (default 5px), NOT the rhythm tokens, so tightening rhythm cannot collapse the callout card onto its text — while the emoji stays on the first text line because its button follows `--blok-block-padding-top` together with the child text. Note that non-default padding slightly shifts derived geometry such as the toggle-heading arrow offset, which follows `--blok-block-padding-top`. Text size is public per block AND per scenario through `style.fontSize` — the supported alternative to targeting Blok's internal class names. Every key writes one public token: `fontSize.paragraph` → `--blok-paragraph-font-size`, `fontSize.heading[1]` → `--blok-heading-1-font-size` (headings reuse the pre-existing heading tokens rather than minting parallel ones), `fontSize.list.checklist` → `--blok-checklist-font-size`, and likewise for both quote variants, callout, code, toggle, the two table densities (`compact` / `comfortable`), every media caption (image, video, audio, file, embed) and the three bookmark parts (title, description, link). Omitted keys keep Blok's built-in size, so an editor renders exactly as before everywhere it does not opt in. Per-tool size settings still outrank it: a paragraph tool configured with `styles.size`, or a list with `itemSize`, writes that size as an inline style on the block, which no token can override — so scenarios you want to drive from `style.fontSize` must not also carry a per-tool size. Values may be absolute or relative (`px`, `rem`, `em`, `%`): every ornament sitting beside sized text — list bullet, checkbox, callout emoji, toggle arrow — derives its own metrics from the same token, so it stays optically aligned at any scale with no extra CSS. Because these tokens are read with fallbacks and never declared by Blok on its own, an editor that does NOT configure `style.fontSize` also accepts them from a plain CSS rule on any ancestor or from `style.tokens` / `editor.tokens.set()` — but the channels are not interchangeable, and `style.fontSize` is the strongest of the three: configuring a scenario injects a stylesheet that lands later in `<head>` than the theme-token sheet at equal specificity, so a subsequent `editor.tokens.set({ '--blok-paragraph-font-size': … })` (or an ancestor CSS rule) for that same scenario silently loses to it. So if a size must change after mount — a density, zoom or accessibility toggle — drive it through `style.tokens` / `editor.tokens.set()` and leave that scenario out of `style.fontSize` entirely; `style.fontSize` itself is read once at construction and is not reactive. Like `style.tokens`, the injected sheet is page-global rather than per-instance: it retypes every Blok editor on the page, including instances constructed with no `style.fontSize` of their own, so per-instance differences belong in a CSS rule on each editor's own wrapper. One nesting rule is worth knowing: a callout renders its body text as a child paragraph block, so callout text follows `fontSize.callout` and falls back to `fontSize.paragraph` when that key is unset — setting only `paragraph` resizes callout bodies along with body text, and making the two differ means setting `fontSize.callout` explicitly. Finally, the view renderer (`@bloklabs/core/view`) emits semantic HTML and its stylesheet carries only the class-based scenarios: paragraph, headings, list, checklist, both quote sizes, callout, code and toggle respond in view output, while the caption, table-cell and bookmark sizes are editor-only.",
+      "Access CSS class names for styling custom tools and UI elements, and customize the editor's layout and chrome via public CSS custom properties. The primary way to override theme tokens is `style.tokens` in the Blok constructor config — pass `--blok-*` keys and values and Blok injects a per-instance stylesheet that reaches the editor AND UI portaled to `document.body` (popovers, tooltips, top-layer elements) automatically; invalid keys are skipped with a warning, and the stylesheet is removed on destroy. Injected `style.tokens` values are static per application — they apply identically in light and dark themes and across read-only state, so state-dependent tokens like the editor gutter belong in CSS instead; `style.tokens` ignores `--blok-editor-gutter-*` keys with a warning. They are not, however, frozen at construction: `editor.tokens.set(tokens)` rewrites the injected stylesheet at runtime, which is what a host light/dark toggle needs — without it, flipping a token meant recreating the editor or hand-writing a global stylesheet targeting the portal scopes yourself. `set()` takes the complete token set (replace, not merge), mirroring `style.tokens`, so tokens omitted from the new palette stop applying and `{}` removes the stylesheet; `editor.tokens.get()` returns what is currently applied. The API is available synchronously after construction (calls before `isReady` are buffered and replayed), and the React/Vue/Angular adapters drive it reactively — pass `style={{ tokens }}` (React/Vue) or `[styleTokens]` (Angular) and changes sync in place without recreating the editor. As a CSS-only alternative, Blok's own palette is declared at zero specificity via `:where()`, so a single plain selector like `[data-blok-interface] { --blok-popover-bg: … }` wins regardless of stylesheet order — but since popovers portal to `document.body`, that global stylesheet must also target `[data-blok-popover], [data-blok-top-layer]` to reach them. `--blok-content-max-width` stays authoritative in both width modes — `width='full'` only swaps its fallback to `none`. Blok reserves 56px of gutter automatically in edit mode for the floating +/⠿ block controls, and the wrapper carries `data-blok-readonly` while read-only is active. Plain read-only KEEPS the gutter — the block-hover copy-link control lives there, and `readOnly.set()` flips modes in place, so collapsing it would shift the document sideways on every toggle. The gutter collapses to 0 automatically only when it is genuinely dead space: chromeless read-only (`readOnly: { hideControls: true }`, wrapper carries `data-blok-controls-hidden`) and `hideToolbar: true` in the constructor config — the hover toolbar never opens and the wrapper carries `data-blok-toolbar-hidden`, so no gutter space is reserved. `--blok-editor-gutter-start` is an override hook, not a required incantation — set it to any value (including `0px` to remove the gutter) to change the default. The gutter override contract is guaranteed, not incidental: Blok declares the gutter default and both state collapses at zero specificity via `:where()` (enforced by a unit contract test), so a host declaration of the gutter tokens at any positive specificity always wins the cascade. Declare them on the wrapper element itself (e.g. `[data-blok-interface] { --blok-editor-gutter-start: 16px }`), not only on an ancestor — the controls-hidden and toolbar-hidden collapses re-declare the tokens on the wrapper, and custom properties resolve from the nearest declaration, so an ancestor-level value loses to the collapse while a wrapper-level one survives it. The content column's horizontal position is also configurable at the API level via `style.contentAlign?: 'left' | 'center' | 'right'` (default `'left'`) in the Blok constructor config. Blok also repaints native text selection inside the editor with `--blok-selection-inline` — override that token to recolor it, or pass `style.nativeSelection: true` (default `false`) to opt out entirely and fall back to the browser/host-defined selection colors (a token override cannot express CSS-wide keywords like `revert`, so reverting needs this flag). With the flag on, the wrapper carries `data-blok-native-selection`, Blok's `::selection` rules skip the editor, and the fake-background highlight (shown while a menu input holds focus) follows the UA `Highlight` color; popovers keep Blok's selection color. Background surfaces are public tokens too: most hover/light UI surfaces follow `--blok-bg-light`, media empty-state cards use `--blok-bg-secondary` (bordered by `--blok-border-secondary`), and the image/file loading skeletons and upload placeholders use `--blok-bg-tertiary`, which defaults to `--blok-bg-light` so it tracks the theme — recoloring the skeleton surface means overriding `--blok-bg-tertiary` directly, not overloading `--blok-bg-light` and dragging every other surface along with it. Like all palette-backed color tokens, the surface tokens are re-declared by Blok on the editor wrapper at zero specificity, so apply overrides via `style.tokens` / `editor.tokens.set()` or a CSS selector matching the wrapper (`[data-blok-interface]`) itself — a custom-property declaration on an ancestor container is shadowed by the wrapper's own declaration and silently does nothing (layout hooks such as `--blok-content-max-width` and the list, heading, embed, block-padding and placeholder-color tokens are instead read with fallbacks and never declared by Blok, which is why those DO inherit from any ancestor; the gutter tokens and `--blok-search-input-placeholder` are wrapper-declared like the palette, so they too need a wrapper-level rule). Also note the injected token stylesheets target Blok's scope attributes globally: with several editor instances on one page, each instance's `style.tokens` / `tokens.set()` stylesheet applies to ALL Blok UI on the page, not just its own instance (each is removed when its own instance is destroyed; where sets conflict between instances the stylesheet order in `<head>` — not application recency — decides, so give every instance one shared set instead of relying on conflict order) — scope per-instance differences with a CSS rule on each editor's own wrapper instead (body-mounted popover UI always follows the page-wide sheets). The sheets are injected at the start of `<head>`, so a host stylesheet rule of equal specificity — a plain `[data-blok-interface] { … }` — still beats `style.tokens` for the tokens it declares. Block rhythm is public too: `--blok-block-padding-top`, `--blok-block-padding-bottom` and `--blok-block-padding-inline` drive the padding of every block tool wrapper (paragraph, heading, list, toggle, quote). Each tool keeps its historical value as the fallback — 7px/7px/2px for most blocks, 0.2em vertical for quotes — so one override retunes all blocks at once, which is exactly what a read-only host needs for tight inline-style rendering (previously only possible by overriding `[data-blok-tool]` internals). The callout panel is the deliberate exception: its card inset is `--blok-callout-padding-block` (default 5px), NOT the rhythm tokens, so tightening rhythm cannot collapse the callout card onto its text — while the emoji stays on the first text line because its button follows `--blok-block-padding-top` together with the child text. Note that non-default padding slightly shifts derived geometry such as the toggle-heading arrow offset, which follows `--blok-block-padding-top`. Column layout is public in the same way: a columns row is `[data-blok-columns]` and each column holder is one of its direct `[data-blok-element]` children (a read-only row also carries `data-blok-columns-static-gutter`, since published rows take their gutter from the container instead of from the `[data-blok-column-resizer]` separators that only exist while editing). `--blok-column-gutter` sets the gap (default `min(2rem, 4vw)`) and `--blok-column-min-width` sets how far a column may be squeezed (default `0`, i.e. a column can be dragged all the way to collapse). The floor is honored by BOTH layout and the resizer drag — the drag reads the resolved value back at pointer-down — so raising it stops the handle at the floor instead of persisting a width the layout refuses to render. Block nesting is public the same way: a block nested under another (Tab at root level) is indented by `--blok-block-indent-step` per level (default `24px`), and it is real CSS rather than an inline style, so a plain host rule retunes or removes it with no `!important`. Blok zeroes the step inside every `[data-blok-nested-blocks]` child slot — the marker every container tool renders for its children, first-party and third-party alike — so blocks a container already positions are never pushed sideways by their depth on top of it; a container that DOES want the indent declares the step back on its own slot. The reset rides on inheritance rather than on a JS check precisely so it also holds for a slot that is created after the child was inserted, which is what a framework adapter's portal does. Text size is public per block AND per scenario through `style.fontSize` — the supported alternative to targeting Blok's internal class names. Every key writes one public token: `fontSize.paragraph` → `--blok-paragraph-font-size`, `fontSize.heading[1]` → `--blok-heading-1-font-size` (headings reuse the pre-existing heading tokens rather than minting parallel ones), `fontSize.list.checklist` → `--blok-checklist-font-size`, and likewise for both quote variants, callout, code, toggle, the two table densities (`compact` / `comfortable`), every media caption (image, video, audio, file, embed) and the three bookmark parts (title, description, link). Omitted keys keep Blok's built-in size, so an editor renders exactly as before everywhere it does not opt in. Per-tool size settings still outrank it: a paragraph tool configured with `styles.size`, or a list with `itemSize`, writes that size as an inline style on the block, which no token can override — so scenarios you want to drive from `style.fontSize` must not also carry a per-tool size. Values may be absolute or relative (`px`, `rem`, `em`, `%`): every ornament sitting beside sized text — list bullet, checkbox, callout emoji, toggle arrow — derives its own metrics from the same token, so it stays optically aligned at any scale with no extra CSS. Because these tokens are read with fallbacks and never declared by Blok on its own, an editor that does NOT configure `style.fontSize` also accepts them from a plain CSS rule on any ancestor or from `style.tokens` / `editor.tokens.set()`. The token NAMES ship as a constant — `import { BLOK_FONT_SIZE_TOKENS } from '@dodopizza/blok'` gives you a map shaped exactly like the config (`BLOK_FONT_SIZE_TOKENS.paragraph`, `BLOK_FONT_SIZE_TOKENS.heading[1]`, `BLOK_FONT_SIZE_TOKENS.bookmark.link`…), so a host that scopes typography from CSS never hand-copies the strings and a rename becomes a compile error rather than a silent no-op. The channels compose: `style.fontSize` is the construction-time value, and `editor.tokens.set({ [BLOK_FONT_SIZE_TOKENS.paragraph]: '18px' })` overrides it at runtime — the theme-token sheet is injected directly after the fontSize sheet at equal specificity, so it wins. That is the channel for a size that must change after mount (a density, zoom or accessibility toggle); `style.fontSize` itself is read once at construction. Unlike `style.tokens`, the injected fontSize sheet is scoped to its own editor: the wrapper carries `data-blok-instance` and the sheet's editor selector is keyed to it, so a second editor on the page keeps Blok's built-in sizes (or its own config) instead of inheriting the first one's. The one part that stays page-wide is body-mounted UI — popovers and tooltips render outside every editor's subtree, so those rules follow `<head>` order when instances disagree. One nesting rule is worth knowing: a callout renders its body text as a child paragraph block, so callout text follows `fontSize.callout` and falls back to `fontSize.paragraph` when that key is unset — setting only `paragraph` resizes callout bodies along with body text, and making the two differ means setting `fontSize.callout` explicitly. Finally, the view renderer (`@bloklabs/core/view`) emits semantic HTML and its stylesheet carries only the class-based scenarios: paragraph, headings, list, checklist, both quote sizes, callout, code and toggle respond in view output, while the caption, table-cell and bookmark sizes are editor-only.",
     example: `// Customize the editor from your host app via CSS custom properties —
 // no need to target Blok's internal test IDs or data attributes.
 // The hooks below are read with fallbacks and never declared by Blok, so
@@ -1908,6 +1934,10 @@ const nowApplied = editor.marks.toggle(highlight);`,
 
   /* Gap between a list marker/checkbox and its content (default: 0px) */
   --blok-list-gap: 6px;
+
+  /* Indent applied per nesting level to blocks nested with Tab
+     (default: 24px). Set it to 0px to switch nesting indentation off. */
+  --blok-block-indent-step: 24px;
 
   /* Padding of every block tool wrapper. Fallbacks keep each tool's own
      default (7px/7px/2px for most blocks; quotes fall back to 0.2em
@@ -1932,6 +1962,15 @@ const nowApplied = editor.marks.toggle(highlight);`,
 
   /* Space above embed blocks (default: 8px) */
   --blok-embed-margin-top: 16px;
+}
+
+// Container tools decline the nesting indent automatically: Blok zeroes the
+// step inside every [data-blok-nested-blocks] child slot, so blocks your
+// container positions itself are never also pushed by their depth. The indent
+// is plain CSS, so opting it back IN inside your container is a declaration,
+// not an !important fight:
+.my-container-tool [data-blok-nested-blocks] {
+  --blok-block-indent-step: 24px;
 }
 
 // Primary way to override theme tokens: style.tokens in the constructor
@@ -3012,6 +3051,48 @@ new Blok({
   },
 });`,
       },
+      {
+        name: "mountChildBlocks(container, children)",
+        returnType: "void",
+        description:
+          "The child-holder reconciler for container blocks, exported from `@bloklabs/core/tools`. Call it from your tool's `rendered()` hook — it is what the built-in toggle, callout and column tools use, and what the React/Vue/Angular block adapters run on every commit. It is idempotent and cheap, so run it on every render. Per child it: leaves a holder already inside `container` alone; RECLAIMS a holder stranded in a nested container that ENCLOSES `container`, inserting it at its model position rather than appending it last; leaves holders sitting in any OTHER nested container alone, so two containers can never steal each other's blocks; and mounts everything else at its model position. The reclaim is what makes a container survive the insert ordering: core anchors a newly inserted first child as the container block's DOM sibling, so without it a child of a nested container renders one level out — permanently, when your container's child slot had not been created yet at insert time (a framework portal commits a render after core inserts). Mark `container` with `data-blok-nested-blocks` so the rest of the editor recognises it as a container.",
+        params: [
+          {
+            name: "container",
+            type: "HTMLElement",
+            required: true,
+            description:
+              "The element child holders belong in — the element carrying `data-blok-nested-blocks`.",
+          },
+          {
+            name: "children",
+            type: "{ holder: HTMLElement }[]",
+            required: true,
+            description:
+              "The block's children in model order, normally `api.blocks.getChildren(blockId)`.",
+          },
+        ],
+        example: `import { mountChildBlocks } from '@bloklabs/core/tools';
+
+class CardTool {
+  constructor({ api, block }) {
+    this.api = api;
+    this.blockId = block.id;
+  }
+
+  render() {
+    this.slot = document.createElement('div');
+    this.slot.setAttribute('data-blok-nested-blocks', '');
+
+    return this.slot;
+  }
+
+  // Runs after the holder is in the document, and on every re-render
+  rendered() {
+    mountChildBlocks(this.slot, this.api.blocks.getChildren(this.blockId));
+  }
+}`,
+      },
     ],
   },
   {
@@ -3061,7 +3142,7 @@ const { url } = await this.api.uploader.uploadByFile(file, {
     badge: "Data",
     title: "OutputData",
     description:
-      "The data structure returned by the save() method. Input positions — the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()` — also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`, where block `data`, `id`, and `time` may be `null`: a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one. Saved output is always the strict shape.",
+      "The data structure returned by the save() method. Input positions — the `data` config option, `render()`, `blocks.render()`, and `blocks.insertMany()` — also accept the loose wire variants `LooseOutputData` / `LooseOutputBlockData`, where block `data`, `id`, `parent`, `content`, and `time` may be `null`: a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one, and a `null` `parent` / `null`-or-empty `content` is treated as absent (root-level, childless). Saved output is always the strict shape.",
     example: `// Save editor content
 const data = await editor.save();
 
@@ -3114,7 +3195,7 @@ interface OutputData {
         name: "equalsOutputData(a, b, options?)",
         returnType: "boolean",
         description:
-          "Structural equality for saved documents, exported from the main entry. Compares the `blocks` arrays deeply; the volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo. Block ids participate only when BOTH sides carry one: the editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo — no id-stripping wrapper needed on the consumer side. Nullish documents and loose wire shapes are accepted — `null`/`undefined` compares equal to `{ blocks: [] }`. The third argument is `EqualsOutputDataOptions` (also exported from the main entry): `ignoreEmptyDefaultBlocks` (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing, so a pristine editor holding one empty paragraph equals a saved-empty baseline — the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
+          "Structural equality for saved documents, exported from the main entry. Compares the `blocks` arrays deeply; the volatile `time` and `version` envelope fields are ignored, so a document round-tripped through save() compares equal to its echo. Block ids participate only when BOTH sides carry one: the editor mints fresh ids for id-less content, so a legacy document (or a backend that strips ids) still compares equal to its saved echo — no id-stripping wrapper needed on the consumer side. Edit metadata (`lastEditedAt` / `lastEditedBy`) never participates either: it records who touched a block and when, not what it says, so a document whose only delta is a stamp counts as unchanged. Nullish documents and loose wire shapes are accepted — `null`/`undefined` compares equal to `{ blocks: [] }`, and a DTO's `parent: null` / `content: null` equals the saved shape that omits them. The third argument is `EqualsOutputDataOptions` (also exported from the main entry): `ignoreEmptyDefaultBlocks` (default `false`) drops empty blocks of the DEFAULT block tool from both sides before comparing, so a pristine editor holding one empty paragraph equals a saved-empty baseline — the flag to use for dirty-vs-baseline checks. Empty NON-default blocks (a content-less divider, an empty image) are kept.",
         example: `import { equalsOutputData } from '@bloklabs/core';
 
 const saved = await editor.save();
@@ -3137,7 +3218,7 @@ submitButton.disabled = isEmptyOutputData(data);
         name: "normalizeOutputData(data)",
         returnType: "OutputData",
         description:
-          "Normalizes a whole loose backend DTO into the strict saved OutputData shape, exported from the main entry. A nullish document becomes `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each block is normalized so `null`/missing `data` becomes `{}` and `null`/empty ids are dropped for regeneration. Unlike a hand-written `blocks.map(...)` mapper it preserves every passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata — so hierarchy and tunes are never silently lost. Idempotent: a strict document passes through unchanged.",
+          "Normalizes a whole loose backend DTO into the strict saved OutputData shape, exported from the main entry. A nullish document becomes `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each block is normalized so `null`/missing `data` becomes `{}`, `null`/empty ids are dropped for regeneration, and nullish/empty hierarchy references (`parent: null`, `content: null`, `content: []`) are dropped as absent. Unlike a hand-written `blocks.map(...)` mapper it preserves every passthrough field — `tunes`, real `parent`/`content` references, `indent`, edit metadata — so hierarchy and tunes are never silently lost. Idempotent: a strict document passes through unchanged.",
         example: `import { normalizeOutputData } from '@bloklabs/core';
 
 // A loose Editor.js-era DTO (data: null, id: null) from your backend
@@ -3148,7 +3229,7 @@ const strict = normalizeOutputData(dtoFromApi);
         name: "normalizeOutputBlocks(blocks)",
         returnType: "OutputBlockData[]",
         description:
-          "Block-level counterpart of normalizeOutputData, exported from the main entry: normalizes an array of loose wire blocks into the strict saved shape (`null`/missing `data` → `{}`, `null`/empty `id` dropped for regeneration) while passing every other field through untouched. Use normalizeOutputData when you hold the whole document envelope.",
+          "Block-level counterpart of normalizeOutputData, exported from the main entry: normalizes an array of loose wire blocks into the strict saved shape (`null`/missing `data` → `{}`, `null`/empty `id` dropped for regeneration, nullish/empty `parent`/`content` dropped as absent) while passing every other field through untouched. Use normalizeOutputData when you hold the whole document envelope.",
         example: `import { normalizeOutputBlocks } from '@bloklabs/core';
 
 const blocks = normalizeOutputBlocks(looseBlocksFromApi);
@@ -3396,7 +3477,7 @@ interface OutputBlockData {
   parent?: string;    // Id of the parent block (flat-with-references nesting)
   content?: string[]; // Ids of child blocks (flat-with-references nesting)
   indent?: number;    // Nesting/indent level
-  lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit to this block
+  lastEditedAt?: number; // Timestamp (ms since epoch) of the last edit — omitted until the block is actually edited
   lastEditedBy?: string; // Id of the user who last edited this block (from user.id config)
 }
 
@@ -3452,13 +3533,15 @@ const listItemBlock: OutputBlockData = {
         option: "parent",
         type: "string (optional)",
         default: "—",
-        description: "Id of the parent block (flat-with-references nesting)",
+        description:
+          "Id of the parent block (flat-with-references nesting). On input the loose wire shape also accepts `null`, which is treated as absent — a root-level block.",
       },
       {
         option: "content",
         type: "string[] (optional)",
         default: "—",
-        description: "Ids of child blocks (flat-with-references nesting)",
+        description:
+          "Ids of child blocks (flat-with-references nesting). On input the loose wire shape also accepts `null` or `[]`, both treated as absent — a childless block.",
       },
       {
         option: "indent",
@@ -3470,7 +3553,8 @@ const listItemBlock: OutputBlockData = {
         option: "lastEditedAt",
         type: "number (optional)",
         default: "—",
-        description: "Timestamp (ms since epoch) of the last edit to this block",
+        description:
+          "Timestamp (ms since epoch) of the last edit to this block. Only present once the block's content actually changes — loading a document is not an edit, so a merely-rendered document saves back exactly what it loaded. equalsOutputData ignores this field.",
       },
       {
         option: "lastEditedBy",

@@ -115,7 +115,7 @@ export class BlocksAPI extends Module {
       return;
     }
 
-    return new BlockAPI(block);
+    return new BlockAPI(block, this.Blok.API);
   }
 
   /**
@@ -131,7 +131,7 @@ export class BlocksAPI extends Module {
       return null;
     }
 
-    return new BlockAPI(block);
+    return new BlockAPI(block, this.Blok.API);
   }
 
   /**
@@ -147,7 +147,7 @@ export class BlocksAPI extends Module {
       return;
     }
 
-    return new BlockAPI(block);
+    return new BlockAPI(block, this.Blok.API);
   }
 
   /**
@@ -159,7 +159,7 @@ export class BlocksAPI extends Module {
       (block) => block.parentId === parentId
     );
 
-    return children.map((block) => new BlockAPI(block));
+    return children.map((block) => new BlockAPI(block, this.Blok.API));
   }
 
 
@@ -416,7 +416,7 @@ export class BlocksAPI extends Module {
       tunes,
     });
 
-    return new BlockAPI(insertedBlock);
+    return new BlockAPI(insertedBlock, this.Blok.API);
   };
 
   /**
@@ -457,7 +457,7 @@ export class BlocksAPI extends Module {
 
     const updatedBlock = await BlockManager.update(block, data, tunes);
 
-    return new BlockAPI(updatedBlock);
+    return new BlockAPI(updatedBlock, this.Blok.API);
   };
 
   /**
@@ -488,7 +488,7 @@ export class BlocksAPI extends Module {
     if (originalBlockConvertable && targetBlockConvertable) {
       const newBlock = await BlockManager.convert(blockToConvert, newType, dataOverrides);
 
-      return new BlockAPI(newBlock);
+      return new BlockAPI(newBlock, this.Blok.API);
     } else {
       const unsupportedBlockTypes = [
         !originalBlockConvertable ? capitalize(blockToConvert.name) : false,
@@ -544,19 +544,26 @@ export class BlocksAPI extends Module {
     // and calls BlockManager.insertMany directly, so initial render stays silent.
     this.Blok.BlockManager.insertMany(blocksToInsert, index, { notify: true });
 
-    return blocksToInsert.map((block) => new BlockAPI(block));
+    return blocksToInsert.map((block) => new BlockAPI(block, this.Blok.API));
   };
 
   /**
-   * Insert a new paragraph block as a child of the given parent block, atomically.
+   * Insert a new block as a child of the given parent block, atomically.
    * The block creation and parent assignment are grouped into a single undo entry,
    * so a single CMD+Z removes the new block completely.
    *
    * @param parentId - id of the parent block
    * @param insertIndex - flat block index where the new block should appear
+   * @param childData - optional data for the new child block
+   * @param toolName - optional tool to create; defaults to `config.defaultBlock`
    * @returns BlockAPI for the newly created child block
    */
-  private insertInsideParent = (parentId: string, insertIndex: number, childData?: BlockToolData): BlockAPIInterface => {
+  private insertInsideParent = (
+    parentId: string,
+    insertIndex: number,
+    childData?: BlockToolData,
+    toolName?: string
+  ): BlockAPIInterface => {
     // Force new undo group so this insertion is separate from previous typing,
     // UNLESS an enclosing atomic operation (e.g. tool conversion) has asked the
     // block manager to suppress stopCapturing so everything merges into a
@@ -565,7 +572,7 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     }
 
-    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData);
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. The operations layer
     // uses extendThroughRAF on its atomic wrapper to keep isSyncingFromYjs true
@@ -574,7 +581,7 @@ export class BlocksAPI extends Module {
     // those late writes into a SEPARATE undo group, splitting the insertion
     // across two CMD+Z pops.
 
-    return new BlockAPI(newBlock);
+    return new BlockAPI(newBlock, this.Blok.API);
   };
 
   /**
@@ -655,7 +662,7 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     });
 
-    return new BlockAPI(newBlock);
+    return new BlockAPI(newBlock, this.Blok.API);
   };
 
   /**

@@ -1110,6 +1110,49 @@ describe('BlockManager', () => {
     expect(Object.prototype.propertyIsEnumerable.call(payload.event, 'detail')).toBe(true);
   });
 
+  it('hands out a LIVE BlockAPI as the mutation event target', () => {
+    const parentBlock = createBlockStub({ id: 'parent' });
+    const childApi = { id: 'child', name: 'paragraph' };
+    const getChildren = vi.fn(() => [ childApi ]);
+    const { blockManager, eventsDispatcher } = createBlockManager({
+      initialBlocks: [ parentBlock ],
+      blokOverrides: {
+        API: {
+          methods: { blocks: { getChildren } },
+        } as unknown as BlokModules['API'],
+      },
+    });
+
+    const emitSpy = vi.spyOn(eventsDispatcher, 'emit');
+
+    (blockManager as unknown as BlockManagerInternalAccess).blockDidMutated(
+      BlockAddedMutationType,
+      parentBlock,
+      { index: 0 }
+    );
+
+    const [, payload] = emitSpy.mock.calls[0] as [string, { event: CustomEvent<BlockMutationEventDetail> }];
+
+    // A host's onChange handler must be able to walk the subtree from the
+    // event target; a detached BlockAPI silently answers [] instead.
+    expect(payload.event.detail.target.getChildren().map((child) => child.id)).toEqual(['child']);
+    expect(getChildren).toHaveBeenCalledWith('parent');
+  });
+
+  it('forwards the requested child tool name to the operations layer', () => {
+    const parentBlock = createBlockStub({ id: 'parent' });
+    const childBlock = createBlockStub({ id: 'child' });
+    const { blockManager } = createBlockManager({ initialBlocks: [ parentBlock ] });
+    const { operations } = blockManager as unknown as {
+      operations: { insertInsideParent: (...args: unknown[]) => Block };
+    };
+    const insertSpy = vi.spyOn(operations, 'insertInsideParent').mockReturnValue(childBlock);
+
+    blockManager.insertInsideParent('parent', 1, { level: 2 }, 'header');
+
+    expect(insertSpy).toHaveBeenCalledWith('parent', 1, expect.anything(), { level: 2 }, 'header');
+  });
+
   describe('hierarchy preservation', () => {
     it('removeBlock promotes children to root level when parent is removed', async () => {
       const parentBlock = createBlockStub({ id: 'parent' });

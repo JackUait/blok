@@ -1,25 +1,51 @@
 import type { API } from '../../types';
+import { DATA_ATTR } from '../components/constants/data-attributes';
 
 export const COLUMN_LIST_TOOL = 'column_list';
 export const COLUMN_TOOL = 'column';
-export const COLUMNS_ATTR = 'data-blok-columns';
-export const COLUMN_ATTR = 'data-blok-column';
-export const COLUMN_RESIZER_ATTR = 'data-blok-column-resizer';
+/**
+ * The column layout attributes are published hooks (see
+ * types/data-attributes.d.ts), so they are read from DATA_ATTR rather than
+ * restated here — two copies of a name are two things to keep in sync.
+ */
+export const COLUMNS_ATTR = DATA_ATTR.columns;
+export const COLUMN_ATTR = DATA_ATTR.column;
+export const COLUMN_RESIZER_ATTR = DATA_ATTR.columnResizer;
 /**
  * Marks a column_list whose gutter must come from the container's own
  * horizontal gap rather than from resizer elements. Set only in read-only
  * mode, where resizers are not built — without it, columns would render flush
  * with no gutter (the resizers ARE the gutter in editing mode).
  */
-export const COLUMNS_STATIC_GUTTER_ATTR = 'data-blok-columns-static-gutter';
+export const COLUMNS_STATIC_GUTTER_ATTR = DATA_ATTR.columnsStaticGutter;
 
 /**
- * Smallest width (px) a column may be squeezed to while dragging a resizer.
- * Zero means no min-width restriction — a column can be dragged all the way
- * to collapse. The resize math still clamps to [0, pairWidth] so widths never
- * go negative or overflow the pair.
+ * Fallback smallest width (px) a column may be squeezed to while dragging a
+ * resizer, used when the stylesheet resolves no floor of its own. Zero means
+ * no min-width restriction — a column can be dragged all the way to collapse.
+ * The resize math still clamps to [0, pairWidth] so widths never go negative
+ * or overflow the pair.
  */
 export const COLUMN_MIN_WIDTH = 0;
+
+/**
+ * Smallest width the layout will actually give this pair of columns, read back
+ * from the cascade (`--blok-column-min-width`, see src/styles/columns.css).
+ *
+ * The drag maths used to clamp against the constant above, so a host that
+ * raised the floor got a handle that "sticks": the computed flex-grow implied
+ * a width the layout refused to honour, and the widthRatio Column.save()
+ * persisted diverged from what was rendered. Resolved once per gesture — a
+ * getComputedStyle read per pointerdown/keypress, never per pointermove.
+ * @param holders - the two column holders being resized
+ * @returns the floor in px, or {@link COLUMN_MIN_WIDTH} when none resolves
+ */
+const resolvePairMinWidth = (holders: HTMLElement[]): number =>
+  holders.reduce((floor, holder) => {
+    const resolved = Number.parseFloat(getComputedStyle(holder).minWidth);
+
+    return Number.isFinite(resolved) ? Math.max(floor, resolved) : floor;
+  }, COLUMN_MIN_WIDTH);
 
 /**
  * Redistribute the flex-grow of two adjacent columns as their shared separator
@@ -88,7 +114,7 @@ const applyResizeDelta = (
     leftGrow: Number(leftEl.style.flexGrow) || 1,
     rightGrow: Number(rightEl.style.flexGrow) || 1,
     delta,
-    minWidth: COLUMN_MIN_WIDTH,
+    minWidth: resolvePairMinWidth([ leftEl, rightEl ]),
   });
 
   leftEl.style.flexGrow = String(next.leftGrow);
@@ -183,6 +209,7 @@ const startColumnResize = (
   const rightWidth = rightEl.getBoundingClientRect().width;
   const leftGrow = Number(leftEl.style.flexGrow) || 1;
   const rightGrow = Number(rightEl.style.flexGrow) || 1;
+  const minWidth = resolvePairMinWidth([ leftEl, rightEl ]);
 
   resizer.setPointerCapture(event.pointerId);
   resizer.setAttribute('data-dragging', '');
@@ -194,7 +221,7 @@ const startColumnResize = (
       leftGrow,
       rightGrow,
       delta: moveEvent.clientX - startX,
-      minWidth: COLUMN_MIN_WIDTH,
+      minWidth,
     });
 
     leftEl.style.flexGrow = String(next.leftGrow);

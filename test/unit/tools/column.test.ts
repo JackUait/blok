@@ -69,6 +69,29 @@ describe('Column tool', () => {
     expect(options.block.holder.style.flexGrow).toBe('2');
   });
 
+  it('leaves the shrink floor to CSS instead of writing it inline on the holder', () => {
+    // A flex item defaults to min-width:auto, so the floor has to be declared
+    // somewhere — but writing it INLINE made it unbeatable by any host rule
+    // short of !important, and rendered() re-fires on every child mount so it
+    // was rewritten continuously. columns.css declares
+    // `min-width: var(--blok-column-min-width, 0)` on the same elements, which
+    // keeps the 0 default and gives hosts a token to raise it.
+    const api = createMockAPI({
+      blocks: {
+        getChildren: vi.fn().mockReturnValue([{ id: 'p', holder: document.createElement('div') }]),
+        getBlockIndex: vi.fn().mockReturnValue(0),
+        insertInsideParent: vi.fn(),
+      },
+    } as unknown as Partial<API>);
+    const options = createColumnOptions({}, api);
+    const column = new Column(options);
+
+    column.render();
+    column.rendered();
+
+    expect(options.block.holder.style.minWidth).toBe('');
+  });
+
   it('saves widthRatio when set, empty object otherwise', () => {
     const withRatio = new Column(createColumnOptions({ widthRatio: 0.4 }));
     withRatio.render();

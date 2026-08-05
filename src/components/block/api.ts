@@ -35,14 +35,16 @@ const readerFor = (api: ApiModules): IndexReader => {
  * Constructs new BlockAPI object
  * @class
  * @param {Block} block - Block to expose
- * @param {ApiModules} [api] - editor API module, enabling the connection
- *   methods (insertChild/setParent/moveChild/getChildren). A "virtual" block
- *   (e.g. composeBlockData) may omit it; the connection methods then no-op.
+ * @param {ApiModules} api - editor API module backing the connection methods
+ *   (getChildren/setParent/insertChild/moveChild). REQUIRED: an instance built
+ *   without it answers `[]` from getChildren() and no-ops on every mutation,
+ *   silently orphaning content. Keeping it mandatory makes tsc — not vigilance
+ *   — reject a new detached construction site.
  */
 const BlockAPIConstructor = function BlockAPI(
   this: BlockAPIInterface,
   block: Block,
-  api?: ApiModules
+  api: ApiModules
 ): BlockAPIInterface {
   const blockAPI: BlockAPIInterface = {
     /**
@@ -195,10 +197,6 @@ const BlockAPIConstructor = function BlockAPI(
      * @returns {BlockAPIInterface[]}
      */
     getChildren(): BlockAPIInterface[] {
-      if (api === undefined) {
-        return [];
-      }
-
       return api.methods.blocks.getChildren(block.id);
     },
 
@@ -209,7 +207,7 @@ const BlockAPIConstructor = function BlockAPI(
      * @param {string | null} parentId - new parent id, or null for root level
      */
     setParent(parentId: string | null): void {
-      api?.methods.blocks.setBlockParent(block.id, parentId);
+      api.methods.blocks.setBlockParent(block.id, parentId);
     },
 
     /**
@@ -221,17 +219,17 @@ const BlockAPIConstructor = function BlockAPI(
      * descendants are handled correctly.
      * @param {BlockToolData} [childData] - data for the new child
      * @param {InsertPosition} [position] - where among children (default 'end')
-     * @returns {BlockAPIInterface | null} the created child, or null when no
-     *   editor API is available (virtual block)
+     * @param {string} [toolName] - tool to create (default `config.defaultBlock`)
+     * @returns {BlockAPIInterface} the created child
      */
-    insertChild(childData?: BlockToolData, position: InsertPosition = 'end'): BlockAPIInterface | null {
-      if (api === undefined) {
-        return null;
-      }
-
+    insertChild(
+      childData?: BlockToolData,
+      position: InsertPosition = 'end',
+      toolName?: string
+    ): BlockAPIInterface {
       const insertIndex = resolveInsertIndex(readerFor(api), block.id, position);
 
-      return api.methods.blocks.insertInsideParent(block.id, insertIndex, childData);
+      return api.methods.blocks.insertInsideParent(block.id, insertIndex, childData, toolName);
     },
 
     /**
@@ -243,7 +241,7 @@ const BlockAPIConstructor = function BlockAPI(
      * @param {number} delta - signed step (negative = up, positive = down)
      */
     moveChild(childId: string, delta: number): void {
-      if (api === undefined || delta === 0) {
+      if (delta === 0) {
         return;
       }
 
@@ -301,5 +299,5 @@ const BlockAPIConstructor = function BlockAPI(
 
 // Export BlockAPI with proper constructor type
 export const BlockAPI = BlockAPIConstructor as unknown as {
-  new (block: Block, api?: ApiModules): BlockAPIInterface;
+  new (block: Block, api: ApiModules): BlockAPIInterface;
 };

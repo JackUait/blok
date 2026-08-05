@@ -272,6 +272,11 @@ const DANGLING_VAR_ALLOWLIST = new Set([
   // Consumer-supplied end-side editor gutter; falls back to 0px. (The start
   // side is declared in main.css with a 56px default.)
   '--blok-editor-gutter-end',
+  // Consumer-supplied column shrink floor; falls back to 0 (a column may be
+  // dragged all the way to collapse). Deliberately NOT declared on the
+  // [data-blok-columns] container the way --blok-column-gutter is — a
+  // container declaration would shadow a host setting it on an outer wrapper.
+  '--blok-column-min-width',
   // Consumer-supplied heading typography; fall back to the HEADER_LEVELS Tailwind defaults.
   '--blok-heading-1-font-size',
   '--blok-heading-2-font-size',

@@ -233,6 +233,10 @@ import { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector } from './data-at
 
 export { DATA_ATTR, DataAttrKey, DataAttrValue, createSelector };
 
+import { BLOK_FONT_SIZE_TOKENS, BlokFontSizeTokens } from './font-size-tokens';
+
+export { BLOK_FONT_SIZE_TOKENS, BlokFontSizeTokens };
+
 /**
  * Blok version string
  */
@@ -261,8 +265,10 @@ export interface EqualsOutputDataOptions {
  * document round-tripped through `save()` compares equal to its echo. Block
  * ids participate only when BOTH sides carry one — the editor mints fresh ids
  * for id-less content, so a legacy document still compares equal to its saved
- * echo. Nullish documents compare equal to `{ blocks: [] }`. Accepts the
- * loose wire shape ({@link LooseOutputData}) as-is.
+ * echo. Edit metadata (`lastEditedAt`/`lastEditedBy`) never participates: it
+ * records who touched a block and when, not what it says, so a document whose
+ * only delta is a stamp counts as unchanged. Nullish documents compare equal to
+ * `{ blocks: [] }`. Accepts the loose wire shape ({@link LooseOutputData}) as-is.
  *
  * Pass `{ ignoreEmptyDefaultBlocks: true }` for dirty-vs-baseline checks so a
  * pristine editor (one empty default paragraph) equals a saved-empty baseline.
@@ -292,13 +298,14 @@ export function isEmptyOutputData(data: OutputData | LooseOutputData | null | un
  * {@link OutputData} shape at an input boundary. A nullish document becomes
  * `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each
  * block is normalized (see {@link normalizeOutputBlocks}), so `null`/missing
- * `data` becomes `{}` and `null`/empty ids are dropped for regeneration.
+ * `data` becomes `{}`, `null`/empty ids are dropped for regeneration and
+ * nullish/empty `parent`/`content` references are dropped as absent.
  *
  * Unlike a hand-written `blocks.map(...)` mapper, this preserves every block
- * passthrough field — `tunes`, `parent`, `content`, `indent`, edit metadata —
- * so a backend DTO can be turned into strict `OutputData` without silently
- * losing hierarchy or tunes. Idempotent: a strict document passes through
- * unchanged (shallow-copied).
+ * passthrough field — `tunes`, real `parent`/`content` references, `indent`,
+ * edit metadata — so a backend DTO can be turned into strict `OutputData`
+ * without silently losing hierarchy or tunes. Idempotent: a strict document
+ * passes through unchanged (shallow-copied).
  * @param data - a document in the strict or loose wire shape, or nullish
  */
 export function normalizeOutputData(data: OutputData | LooseOutputData | null | undefined): OutputData;
@@ -306,8 +313,10 @@ export function normalizeOutputData(data: OutputData | LooseOutputData | null | 
 /**
  * Normalizes blocks from the loose wire shape into the strict saved shape: a
  * `null`/missing `data` becomes `{}`, a `null`/empty `id` is dropped so the
- * block factory generates a fresh one. All other fields
- * (`tunes`/`parent`/`content`/`indent`/edit metadata) pass through untouched.
+ * block factory generates a fresh one, and nullish/empty hierarchy references
+ * (`parent: null`, `content: null`, `content: []`) are dropped so a root-level,
+ * childless block is spelled the way `save()` spells it — absent. All other
+ * fields (`tunes`/`indent`/edit metadata) pass through untouched.
  * Idempotent — strict blocks pass through unchanged (shallow-copied). Use
  * {@link normalizeOutputData} to normalize a whole document envelope.
  * @param blocks - blocks in either the strict or the loose wire shape

@@ -701,9 +701,14 @@ export class BlockMutation {
      */
     const baseBlockData = convertStringToBlockData(cleanData, replacingTool.conversionConfig, replacingTool.settings);
 
-    const newBlockData = blockDataOverrides
-      ? Object.assign(baseBlockData, blockDataOverrides)
-      : baseBlockData;
+    /**
+     * `baseBlockData` is whatever the target tool's `conversionConfig.import()`
+     * returned — the tool owns it and may return a frozen object. Build a fresh
+     * object so neither the merge below nor the color/checked carry-overs write
+     * into it ("object is not extensible" would abort the whole convert).
+     */
+    const newBlockData = { ...baseBlockData,
+      ...blockDataOverrides };
 
     /**
      * Block-level color (textColor / backgroundColor) is a separate data field

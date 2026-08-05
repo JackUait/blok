@@ -144,8 +144,20 @@ export class Block extends EventsDispatcher<BlockEvents> {
    */
   public contentIds: string[];
 
-  /** Timestamp of the last edit (ms since epoch). Updated by BlockManager on mutation. */
+  /**
+   * Timestamp of the last edit (ms since epoch). Updated by BlockManager on
+   * mutation. Stays `undefined` for a block that was only loaded or created but
+   * never edited — a load is not an edit, and minting a stamp here made every
+   * save() emit a key the loaded document never had.
+   */
   public lastEditedAt: number | undefined;
+
+  /**
+   * Timestamp of this Block instance's construction (ms since epoch). Never
+   * persisted — it exists so the block-settings "Last edited" footer still has
+   * a date for a block that has not been edited yet.
+   */
+  public readonly createdAt: number = Date.now();
 
   /** ID of the user who last edited. Updated by BlockManager on mutation. */
   public lastEditedBy: string | null;
@@ -290,9 +302,11 @@ export class Block extends EventsDispatcher<BlockEvents> {
     this.id = validatedId;
     this.parentId = parentId ?? null;
     // Copy: contentIds is mutated in place (push/splice) by hierarchy ops and
-    // must never alias a caller-owned (possibly frozen) array.
-    this.contentIds = contentIds !== undefined ? [ ...contentIds ] : [];
-    this.lastEditedAt = lastEditedAt ?? Date.now();
+    // must never alias a caller-owned (possibly frozen) array. Array-checked
+    // rather than undefined-checked: wire DTOs serialize an absent `content` as
+    // `null`, and spreading that throws.
+    this.contentIds = Array.isArray(contentIds) ? [ ...contentIds ] : [];
+    this.lastEditedAt = lastEditedAt;
     this.lastEditedBy = lastEditedBy ?? null;
     this.settings = tool.settings;
     this.config = this.settings;

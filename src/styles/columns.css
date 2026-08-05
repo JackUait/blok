@@ -18,6 +18,14 @@
 [data-blok-columns] > [data-blok-element] {
   flex-basis: 100%;
   flex-shrink: 0;
+  /* A flex item defaults to min-width:auto (min-content), which would hold a
+   * column open at its widest word. Public hook, declared here rather than
+   * inline on the holder: an inline value outranked every host rule. The
+   * FALLBACK is the default — no default on the container, which would shadow
+   * a host setting the token on an outer wrapper. The drag maths reads the
+   * resolved value back (see resolvePairMinWidth), so a raised floor clamps
+   * the resize instead of desynchronising from it. */
+  min-width: var(--blok-column-min-width, 0);
 }
 
 @media (min-width: 651px) {

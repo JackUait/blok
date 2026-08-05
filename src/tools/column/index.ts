@@ -63,10 +63,10 @@ export class Column implements BlockTool {
     // holder only exists once the block is composed (post-render). Grow it so
     // sibling columns split the row evenly; widthRatio biases the split.
     this.block.holder.style.flexGrow = String(this._data.widthRatio ?? 1);
-    // A flex item defaults to min-width:auto (its min-content), which would
-    // floor the column at the width of its widest content. Allow it to shrink
-    // freely so the resizer has no min-width restriction.
-    this.block.holder.style.minWidth = '0';
+    // The shrink floor is NOT written here: columns.css declares
+    // `min-width: var(--blok-column-min-width, 0)` on these same holders.
+    // Inline styles outrank every author rule, so writing it here left a host
+    // no way to raise the floor short of !important.
 
     // Columns stretch to the tallest sibling, so a short column has dead space
     // under its content. That space belongs to the holder (the flex item), not

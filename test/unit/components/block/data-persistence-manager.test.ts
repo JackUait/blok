@@ -113,6 +113,52 @@ describe('DataPersistenceManager', () => {
 
       expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'saved content' });
     });
+
+    /**
+     * The tool owns whatever save() returns — framework adapters hand back a
+     * frozen mirror of their props. Core must never expose that object itself,
+     * or any consumer merging data into it (e.g. the toolbox `data` channel)
+     * throws "object is not extensible".
+     */
+    it('returns a mutable copy of a frozen object save result', async () => {
+      const frozen = Object.freeze({ text: 'saved content' });
+
+      vi.mocked(toolInstance.save).mockResolvedValue(frozen);
+
+      const result = await dataPersistenceManager.save();
+
+      expect(result?.data).toEqual({ text: 'saved content' });
+      expect(result?.data).not.toBe(frozen);
+      expect(Object.isExtensible(result?.data)).toBe(true);
+    });
+
+    it('copies a frozen array save result without reshaping it into an object', async () => {
+      const frozen = Object.freeze(['a', 'b']);
+
+      vi.mocked(toolInstance.save).mockResolvedValue(frozen as unknown as BlockToolData);
+
+      const result = await dataPersistenceManager.save();
+
+      expect(Array.isArray(result?.data)).toBe(true);
+      expect(result?.data).toEqual(['a', 'b']);
+      expect(result?.data).not.toBe(frozen);
+    });
+
+    it('passes a non-object save result of a non-empty block through untouched', async () => {
+      vi.mocked(toolInstance.save).mockResolvedValue('abc' as unknown as BlockToolData);
+
+      const result = await dataPersistenceManager.save();
+
+      expect(result?.data).toBe('abc');
+    });
+
+    it('passes a null save result of a non-empty block through untouched', async () => {
+      vi.mocked(toolInstance.save).mockResolvedValue(null as unknown as BlockToolData);
+
+      const result = await dataPersistenceManager.save();
+
+      expect(result?.data).toBeNull();
+    });
   });
 
   describe('validate', () => {

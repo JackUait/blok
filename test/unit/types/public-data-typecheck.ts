@@ -23,8 +23,9 @@ const _assertDataNotAny: _DataNotAny = true;
 
 void _assertDataNotAny;
 
-// Backend wire DTOs (Editor.js-style APIs) may carry `data: null`, `id: null`
-// and `time: null`. Every INPUT position — the `data` config option and the
+// Backend wire DTOs (Editor.js-style APIs) may carry `data: null`, `id: null`,
+// `time: null` and — for a root-level, childless block — `parent: null` /
+// `content: null`. Every INPUT position — the `data` config option and the
 // render() methods — must accept that loose shape as-is, so consumers never
 // need `?? {}` / null→undefined shims at the boundary. Saved OUTPUT stays
 // strict (OutputData).
@@ -35,6 +36,7 @@ const dtoFromBackend: LooseOutputData = {
     { id: null, type: 'paragraph', data: null },
     { id: 'a1', type: 'header', data: { text: 'Title', level: 2 } },
     { type: 'paragraph', data: { text: 'no id at all' } },
+    { id: 'a2', type: 'paragraph', data: { text: 'flat row' }, parent: null, content: null },
   ],
 };
 

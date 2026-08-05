@@ -96,6 +96,7 @@ type BlockManagerMock = {
   update: ReturnType<typeof vi.fn>;
   convert: ReturnType<typeof vi.fn>;
   splitBlockWithData: ReturnType<typeof vi.fn>;
+  insertInsideParent: ReturnType<typeof vi.fn>;
   isPointerDragActive: boolean;
 };
 
@@ -237,6 +238,7 @@ const createBlockManagerMock = (initialBlocks: BlockStub[] = [ createBlockStub()
 
       return newBlock;
     }) as ReturnType<typeof vi.fn>,
+    insertInsideParent: vi.fn((parentId: string) => createBlockStub({ id: `child-of-${parentId}` })) as ReturnType<typeof vi.fn>,
     isPointerDragActive: false,
   };
 
@@ -484,14 +486,16 @@ describe('BlocksAPI', () => {
       logSpy.mockRestore();
     });
 
-    it('wraps block by index into BlockAPI instance', () => {
+    it('wraps block by index into a LIVE BlockAPI instance', () => {
       const block = createBlockStub({ id: 'b-1' });
-      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
       const result = blocksApi.getBlockByIndex(0);
 
       expect(blockManager.getBlockByIndex).toHaveBeenCalledWith(0);
-      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block);
+      // The editor API module must be handed over, otherwise the returned
+      // BlockAPI's connection methods silently answer [] / no-op.
+      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block, blok.API);
       expect(result).toEqual({ wrappedBlock: block });
     });
 
@@ -507,14 +511,14 @@ describe('BlocksAPI', () => {
       logSpy.mockRestore();
     });
 
-    it('wraps block by id into BlockAPI instance', () => {
+    it('wraps block by id into a LIVE BlockAPI instance', () => {
       const block = createBlockStub({ id: 'block-id' });
-      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
       const result = blocksApi.getById('block-id');
 
       expect(blockManager.getBlockById).toHaveBeenCalledWith('block-id');
-      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block);
+      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block, blok.API);
       expect(result).toEqual({ wrappedBlock: block });
     });
 
@@ -530,16 +534,16 @@ describe('BlocksAPI', () => {
       logSpy.mockRestore();
     });
 
-    it('wraps block by element into BlockAPI instance', () => {
+    it('wraps block by element into a LIVE BlockAPI instance', () => {
       const block = createBlockStub();
-      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ block ] });
+      const { blocksApi, blockManager, blok } = createBlocksApi({ blocks: [ block ] });
 
       blockManager.getBlock.mockReturnValueOnce(block);
 
       const result = blocksApi.getBlockByElement(block.holder);
 
       expect(blockManager.getBlock).toHaveBeenCalledWith(block.holder);
-      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block);
+      expect(blockAPIConstructorSpy).toHaveBeenCalledWith(block, blok.API);
       expect(result).toEqual({ wrappedBlock: block });
     });
 
@@ -1444,6 +1448,26 @@ describe('BlocksAPI', () => {
 
       // After microtask flush: the deferred boundary stopCapturing fires as well
       expect(blok.YjsManager.stopCapturing).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('insertInsideParent', () => {
+    it('forwards the requested child tool name to BlockManager', () => {
+      const parent = createBlockStub({ id: 'toggle-1', name: 'toggle' });
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ parent ] });
+
+      blocksApi.methods.insertInsideParent('toggle-1', 1, { level: 2 }, 'header');
+
+      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, { level: 2 }, 'header');
+    });
+
+    it('leaves the tool name undefined when the caller does not ask for one', () => {
+      const parent = createBlockStub({ id: 'toggle-1', name: 'toggle' });
+      const { blocksApi, blockManager } = createBlocksApi({ blocks: [ parent ] });
+
+      blocksApi.methods.insertInsideParent('toggle-1', 1);
+
+      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, undefined, undefined);
     });
   });
 

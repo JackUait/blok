@@ -8,7 +8,49 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildFontSizeVarLines } from '../../../../src/components/utils/font-size-tokens';
+import { BLOK_FONT_SIZE_TOKENS, buildFontSizeVarLines } from '../../../../src/components/utils/font-size-tokens';
+
+/** A node of the exported token map: a token name, or a nested group of them. */
+type TokenTree = string | { [key: string]: TokenTree };
+
+/**
+ * Flatten the exported token map into `[configPath, tokenName]` pairs, in
+ * declaration order.
+ * @param node - the token map (or a nested group inside it)
+ * @param path - config path accumulated so far
+ * @returns every leaf as its config path plus the custom property it writes
+ */
+const flattenTokens = (node: TokenTree, path: string[] = []): Array<[string[], string]> => {
+  if (typeof node === 'string') {
+    return [ [ path, node ] ];
+  }
+
+  return Object.entries(node).flatMap(([ key, child ]) => flattenTokens(child, [ ...path, key ]));
+};
+
+/**
+ * Build a `style.fontSize` config that sets EVERY scenario the token map knows
+ * about, so the map and the emitter can be cross-checked against each other.
+ * @param paths - config paths to populate
+ * @param value - size to write at every leaf
+ * @returns a fully populated `style.fontSize` object
+ */
+const configForPaths = (paths: string[][], value: string): Record<string, unknown> => {
+  const config: Record<string, unknown> = {};
+
+  for (const path of paths) {
+    let node = config;
+
+    for (const key of path.slice(0, -1)) {
+      node[key] ??= {};
+      node = node[key] as Record<string, unknown>;
+    }
+
+    node[path[path.length - 1]] = value;
+  }
+
+  return config;
+};
 
 describe('buildFontSizeVarLines', () => {
   it('returns no lines when nothing is configured', () => {
@@ -78,5 +120,29 @@ describe('buildFontSizeVarLines', () => {
     const b = buildFontSizeVarLines({ paragraph: '17px', code: '13px' });
 
     expect(a).toEqual(b);
+  });
+});
+
+/**
+ * The token NAMES are the contract a host needs when it scopes typography from
+ * CSS instead of from `style.fontSize` (a per-region rule, a runtime
+ * `tokens.set()`). They used to exist only inside this module, so a host had to
+ * hand-copy the strings with no compile error when Blok renamed one.
+ */
+describe('BLOK_FONT_SIZE_TOKENS', () => {
+  it('mirrors the style.fontSize config shape', () => {
+    expect(BLOK_FONT_SIZE_TOKENS.paragraph).toBe('--blok-paragraph-font-size');
+    expect(BLOK_FONT_SIZE_TOKENS.heading[1]).toBe('--blok-heading-1-font-size');
+    expect(BLOK_FONT_SIZE_TOKENS.list.checklist).toBe('--blok-checklist-font-size');
+    expect(BLOK_FONT_SIZE_TOKENS.quote.large).toBe('--blok-quote-large-font-size');
+    expect(BLOK_FONT_SIZE_TOKENS.table.comfortable).toBe('--blok-table-comfortable-font-size');
+    expect(BLOK_FONT_SIZE_TOKENS.bookmark.link).toBe('--blok-bookmark-link-font-size');
+  });
+
+  it('covers exactly the scenarios the emitter writes, with the same names and order', () => {
+    const entries = flattenTokens(BLOK_FONT_SIZE_TOKENS as unknown as TokenTree);
+    const config = configForPaths(entries.map(([ path ]) => path), '1px');
+
+    expect(buildFontSizeVarLines(config)).toEqual(entries.map(([ , token ]) => `${token}: 1px;`));
   });
 });

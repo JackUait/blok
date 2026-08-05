@@ -169,6 +169,55 @@ describe('Host customization tokens (public --blok-* contract)', () => {
     });
   });
 
+  describe('block depth indentation', () => {
+    /**
+     * Nesting indent used to be an inline `margin-left` stamped on the holder
+     * by BlockHierarchy, with a hardcoded list of built-in containers exempted
+     * from it. A container tool outside that list could only decline the indent
+     * with `!important`. The indent is now CSS: core writes the depth, the
+     * cascade multiplies it by a step token, and any child slot zeroes the step.
+     */
+    it('derives the indent from the depth core writes times a public step token', () => {
+      const body = findRuleBody(css, ':where([data-blok-element])');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(
+        /margin-left:\s*calc\(var\(--_blok-block-depth,\s*0\)\s*\*\s*var\(--blok-block-indent-step,\s*24px\)\)/
+      );
+    });
+
+    it('zeroes the step inside every nested-blocks slot so a container tool opts out without !important', () => {
+      // The reset rides on the INHERITED step rather than on margin-left: the
+      // holder may be mounted into the slot long after its depth was computed
+      // (a framework adapter's slot commits a render later than core inserts),
+      // and inheritance re-resolves at that moment while a JS DOM check cannot.
+      const body = findRuleBody(css, ':where([data-blok-nested-blocks])');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/--blok-block-indent-step:\s*0px/);
+    });
+
+    it('keeps the step at zero specificity so a host re-enables the indent on its own slot', () => {
+      const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      const declaringSelectors: string[] = [];
+
+      for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const [, selector, body] = match;
+
+        if (/--blok-block-indent-step\s*:/.test(body)) {
+          declaringSelectors.push(selector.trim());
+        }
+      }
+
+      expect(declaringSelectors.length).toBeGreaterThan(0);
+      for (const selector of declaringSelectors) {
+        expect(selector, `indent step declared with a non-zero-specificity selector: "${selector}"`).toMatch(
+          /^:where\(.*\)$/
+        );
+      }
+    });
+  });
+
   describe('block placeholder color', () => {
     it('maps a Tailwind color to the --blok-placeholder-color token with a gray-text fallback', () => {
       expect(css).toMatch(
@@ -478,5 +527,30 @@ describe('Host customization tokens (public --blok-* contract)', () => {
 
       expect(optOutIndex).toBeGreaterThan(lastDarkIndex);
     });
+  });
+});
+
+/**
+ * A `--blok-*` hook only counts as public if a host can FIND it. These are
+ * consumed with `var(…, fallback)` in the stylesheet and never declared by
+ * Blok, so nothing in the published type surface named them — a host had to
+ * read src/styles to learn they exist, with no rename signal when they change.
+ */
+describe('layout hooks are named in the published type surface', () => {
+  const publishedTypes = [
+    'types/configs/blok-config.d.ts',
+    'types/data-attributes.d.ts',
+  ]
+    .map((relPath) => readFileSync(resolve(__dirname, '../../..', relPath), 'utf-8'))
+    .join('\n');
+
+  it.each([
+    [ '--blok-block-padding-top' ],
+    [ '--blok-block-padding-bottom' ],
+    [ '--blok-block-padding-inline' ],
+    [ '--blok-column-gutter' ],
+    [ '--blok-column-min-width' ],
+  ])('%s is documented in types/', (token) => {
+    expect(publishedTypes).toContain(token);
   });
 });

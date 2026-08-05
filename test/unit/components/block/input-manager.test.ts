@@ -9,6 +9,7 @@ describe('InputManager', () => {
   let inputManager: InputManager;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     holder = document.createElement('div');
     document.body.appendChild(holder);
     onInputEvent = vi.fn();
@@ -127,6 +128,51 @@ describe('InputManager', () => {
       // Now there's only one input, index should be adjusted
       expect(inputManager.inputs).toHaveLength(1);
       expect(inputManager.currentInputIndex).toBe(0);
+    });
+  });
+
+  /**
+   * `data-blok-mutation-free` marks a DECORATION that holds no caret — it is an
+   * element-level marker, never an ownership claim over everything underneath.
+   * Toggle/callout/toggle-heading child containers and the React/Vue/Angular
+   * block hosts all carry it while being ANCESTORS of nested blocks' holders, so
+   * filtering input discovery by `closest('[data-blok-mutation-free]')` would
+   * leave every block nested in one of those with zero inputs: no currentInput,
+   * no caret, and a split() that appends `undefined`.
+   */
+  describe('input discovery ignores mutation-free ANCESTORS', () => {
+    /**
+     * Rebuild the holder inside a mutation-free container, mirroring a paragraph
+     * nested in a toggle (or inside a React block host).
+     */
+    const nestHolderUnderMutationFreeContainer = (): void => {
+      const container = document.createElement('div');
+
+      container.setAttribute('data-blok-mutation-free', 'true');
+      document.body.appendChild(container);
+      container.appendChild(holder);
+    };
+
+    it('still finds the contenteditable of a block nested in a mutation-free container', () => {
+      const contentEditable = createContentEditable();
+
+      holder.appendChild(contentEditable);
+      nestHolderUnderMutationFreeContainer();
+      createInputManager();
+
+      expect(inputManager.inputs).toContain(contentEditable);
+      expect(inputManager.currentInput).toBe(contentEditable);
+      expect(inputManager.firstInput).toBe(contentEditable);
+    });
+
+    it('still finds a native input of a block nested in a mutation-free container', () => {
+      const input = createNativeInput();
+
+      holder.appendChild(input);
+      nestHolderUnderMutationFreeContainer();
+      createInputManager();
+
+      expect(inputManager.inputs).toContain(input);
     });
   });
 

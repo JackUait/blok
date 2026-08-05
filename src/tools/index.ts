@@ -44,6 +44,7 @@ export { Bookmark } from './link/bookmark';
 
 // Tool-authoring helpers
 export { defineTool } from './define-tool';
+export { mountChildBlocks } from './nested-blocks';
 export { isBlockType } from './is-block-type';
 export { blocksOfType } from './blocks-of-type';
 
@@ -58,6 +59,7 @@ export { StrikethroughInlineTool as Strikethrough } from '../components/inline-t
 export { CodeInlineTool as InlineCode } from '../components/inline-tools/inline-tool-code';
 export { EquationInlineTool as Equation } from '../components/inline-tools/inline-tool-equation';
 export { ClearFormatInlineTool as ClearFormat } from '../components/inline-tools/inline-tool-clear-format';
+export { SupSubInlineTool as SupSub } from '../components/inline-tools/inline-tool-sup-sub';
 
 // Default tools configuration for convenience
 // Note: inlineToolbar defaults to true, so it doesn't need to be specified
@@ -86,7 +88,7 @@ export const defaultBlockTools = {
 
 export const defaultInlineTools = {
   // Grid toolbar order: row 1 = color, bold, italic, underline, clear format;
-  // row 2 = link, strikethrough, inline code, equation.
+  // row 2 = link, strikethrough, inline code, equation, superscript/subscript.
   marker: {},
   bold: {},
   italic: {},
@@ -96,4 +98,5 @@ export const defaultInlineTools = {
   strikethrough: {},
   inlineCode: {},
   equation: {},
+  supSub: {},
 } as const;

@@ -9,6 +9,42 @@ import { InlineToolConstructable } from './tools/inline-tool';
 // Tool-authoring helpers: bind a tool class to a type-checked settings object.
 export { defineTool, ExtractToolConfig } from './tools/define-tool';
 
+/**
+ * Reconciles a container block's child holders into its own child container.
+ *
+ * This is the reconciler every first-party container tool (toggle, callout,
+ * column, column_list) and every framework block adapter runs from `rendered()`
+ * — call it from your own container tool so nested children behave identically.
+ * It is idempotent and cheap: run it on every render.
+ *
+ * What it does per child, in order:
+ * - already a direct child of `container` — left alone;
+ * - stranded in a nested container that ENCLOSES `container` — reclaimed, and
+ *   inserted at its model position rather than appended last. Core anchors a
+ *   newly inserted first child as the container block's DOM *sibling*, so
+ *   without this the child renders one level out — permanently, when the
+ *   container's slot had not been created yet at insert time;
+ * - inside any other nested container (a sibling container, or deeper inside
+ *   this one) — left alone, so containers never steal each other's holders;
+ * - anywhere else (detached, or at the document root) — mounted at its model
+ *   position.
+ * @example
+ * class MyCard {
+ *   rendered() {
+ *     mountChildBlocks(this.slot, this.api.blocks.getChildren(this.blockId));
+ *   }
+ * }
+ * @param container - the element child holders belong in. Mark it with
+ *   `data-blok-nested-blocks` so the rest of the editor treats it as a
+ *   container.
+ * @param children - the container block's children in model order, e.g. from
+ *   `api.blocks.getChildren(blockId)`.
+ */
+export function mountChildBlocks(
+  container: HTMLElement,
+  children: { holder: HTMLElement }[],
+): void;
+
 // Block tools published as declare-classes: each name is both the runtime
 // value and the instance type, with a single construct signature so
 // `class Custom extends Tool {}` compiles (no TS2510).
@@ -181,6 +217,7 @@ export const Underline: InlineToolConstructable;
 export const InlineCode: InlineToolConstructable;
 export const Equation: InlineToolConstructable;
 export const ClearFormat: InlineToolConstructable;
+export const SupSub: InlineToolConstructable;
 
 /**
  * Default block tools configuration
@@ -220,4 +257,5 @@ export const defaultInlineTools: {
   readonly underline: {};
   readonly inlineCode: {};
   readonly equation: {};
+  readonly supSub: {};
 };

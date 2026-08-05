@@ -19,6 +19,7 @@ export {
   Link,
   Marker,
   Convert,
+  SupSub,
   defaultBlockTools,
   defaultInlineTools,
   HeaderData,

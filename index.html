@@ -1150,7 +1150,7 @@
     // `data-blok-tool` on its blocks — an unscoped import would double-style the
     // editor. Scoping keeps the sheet affecting only the Blok View render.
     import viewCssText from './view.css?raw';
-    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat } from './src/tools/index.ts';
+    import { Paragraph, Header, List, Table, Toggle, Callout, Database, DatabaseRow, Divider, Spacer, Quote, Code, Image, File as FileBlock, Video, Audio, ColumnList, Column, Embed, Bookmark, Bold, Italic, Link, Marker, Underline, Strikethrough, InlineCode, Equation, ClearFormat, SupSub } from './src/tools/index.ts';
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
@@ -2083,6 +2083,7 @@
         strikethrough: Strikethrough,
         inlineCode: InlineCode,
         equation: Equation,
+        supSub: SupSub,
       };
       if (state.tools.paragraph) tools.paragraph = { class: Paragraph, preserveBlank: true };
       if (state.tools.header) tools.header = { class: Header };
@@ -3489,6 +3490,7 @@
           strikethrough: Strikethrough,
           inlineCode: InlineCode,
           equation: Equation,
+          supSub: SupSub,
       };
 
       // Per-segment tool config overrides (e.g. `sources: 'url'`) merge on

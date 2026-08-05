@@ -13,7 +13,7 @@
 <body>
   <script type="module">
     import { Blok, DATA_ATTR, version } from '/dist/blok.mjs?_v=1';
-    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image, Video, Audio, File, Divider, Spacer, ColumnList, Column, Columns, Embed, Bookmark } from '/dist/tools.mjs?_v=1';
+    import { Header, Paragraph, List, Table, Toggle, Callout, Quote, Code, Bold, Italic, Link, Convert, Marker, Underline, Strikethrough, InlineCode, Database, DatabaseRow, Image, Video, Audio, File, Divider, Spacer, ColumnList, Column, Columns, Embed, Bookmark, SupSub } from '/dist/tools.mjs?_v=1';
 
     // Create default tools configuration (mimics pre-modular behavior)
     // Block tools with inlineToolbar enabled
@@ -146,6 +146,7 @@
     window.BlokToggle = Toggle;
     window.BlokCallout = Callout;
     window.BlokMarker = Marker;
+    window.BlokSupSub = SupSub;
     window.BlokUnderline = Underline;
     window.BlokStrikethrough = Strikethrough;
     window.BlokImage = Image;
@@ -173,6 +174,7 @@
     BlokWithDefaults.Convert = Convert;
     BlokWithDefaults.Toggle = Toggle;
     BlokWithDefaults.Marker = Marker;
+    BlokWithDefaults.SupSub = SupSub;
     BlokWithDefaults.Underline = Underline;
     BlokWithDefaults.Strikethrough = Strikethrough;
   </script>

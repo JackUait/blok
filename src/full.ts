@@ -24,6 +24,7 @@ import { StrikethroughInlineTool as Strikethrough } from './components/inline-to
 import { CodeInlineTool as InlineCode } from './components/inline-tools/inline-tool-code';
 import { EquationInlineTool as Equation } from './components/inline-tools/inline-tool-equation';
 import { ClearFormatInlineTool as ClearFormat } from './components/inline-tools/inline-tool-clear-format';
+import { SupSubInlineTool as SupSub } from './components/inline-tools/inline-tool-sup-sub';
 import { Header } from './tools/header';
 import { ListItem as List } from './tools/list';
 import { Paragraph } from './tools/paragraph';
@@ -49,6 +50,7 @@ export {
   InlineCode,
   Equation,
   ClearFormat,
+  SupSub,
   defaultBlockTools,
   defaultInlineTools,
 } from './tools';
@@ -93,4 +95,5 @@ export const allTools = {
   strikethrough: { class: Strikethrough },
   inlineCode: { class: InlineCode },
   equation: { class: Equation },
+  supSub: { class: SupSub },
 } as const;

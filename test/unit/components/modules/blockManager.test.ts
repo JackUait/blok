@@ -526,7 +526,12 @@ describe('BlockManager', () => {
     expect(result).toBe(defaultBlock);
     expect(blockManager.blocks[0]).toBe(defaultBlock);
     expect(blockManager.currentBlockIndex).toBe(1);
-    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph', bindEventsImmediately: true });
+    // `insertDefaultBlockAtIndex` is only ever reached from a direct editing
+    // gesture (Enter, the plus button, a markdown shortcut), so it declares the
+    // `user` origin on the tool contract.
+    expect(composeBlockSpy).toHaveBeenCalledWith({ tool: 'paragraph',
+      bindEventsImmediately: true,
+      origin: 'user' });
     // Verify block-added event was dispatched
     const addedCalls = emitSpy.mock.calls.filter((call: unknown[]) => call[0] === BlockChanged);
     expect(addedCalls.some((call: unknown[]) => {

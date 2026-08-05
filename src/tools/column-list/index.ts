@@ -1,5 +1,6 @@
 import type {
   API,
+  BlockOrigin,
   BlockTool,
   BlockToolConstructorOptions,
   ToolboxConfig,
@@ -18,6 +19,20 @@ import { buildIconColumnsCount } from '../../components/icons';
 import type { ColumnListData } from './types';
 
 /**
+ * Origins that mean "the author just made this block" — the only ones allowed to
+ * seed default children. Written as an allow-list so a future origin fails
+ * CLOSED (never seeds) instead of silently opting in. `undefined` is included
+ * because core always supplies an origin: an absent one means a host hand-built
+ * the constructor options, which is an explicit creation.
+ */
+const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
+  undefined,
+  'user',
+  'api',
+  'convert',
+]);
+
+/**
  * ColumnList block — horizontal container that hosts column children.
  * Created via slash-menu presets carrying a transient `columnCount` seed.
  */
@@ -28,12 +43,22 @@ export class ColumnList implements BlockTool {
   private readOnly: boolean;
   private container: HTMLElement | null = null;
   private evictionScheduled = false;
+  /**
+   * True when this instance is a genuine CREATION (a slash-menu preset, a
+   * programmatic insert, a turn-into) rather than a re-materialisation of a list
+   * the document already describes. Only a creation may seed columns.
+   *
+   * An absent origin means a host hand-built the constructor options, which is
+   * an explicit creation — same default core applies.
+   */
+  private readonly isCreation: boolean;
 
-  constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<ColumnListData>) {
+  constructor({ data, api, block, readOnly, origin }: BlockToolConstructorOptions<ColumnListData>) {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
     this.readOnly = readOnly;
+    this.isCreation = CREATION_ORIGINS.has(origin);
   }
 
   public render(): HTMLElement {
@@ -66,17 +91,18 @@ export class ColumnList implements BlockTool {
     const children = this.api.blocks.getChildren(this.blockId);
 
     if (children.length === 0) {
-      // NEVER seed while the editor is replaying Yjs history (undo/redo) or
-      // applying a remote change. During replay a re-added column_list fires
-      // rendered() BEFORE its restored columns' own add events land, so
-      // getChildren() is only TRANSIENTLY empty here — seeding now fabricates
-      // phantom columns AND displaces the real ones (which then arrive orphaned
-      // at root), the "2 columns silently became 4" corruption. Seeding is a
-      // one-shot CREATION action; only a genuine, local user creation may seed.
-      // The restored columns re-mount via their own setBlockParent during the
-      // replay. (Column solves the analogous re-seed hazard with its `populated`
-      // latch; a re-added list gets a fresh instance, so it needs this check.)
-      if (this.api.blocks.isSyncingFromYjs) {
+      // Seeding is a one-shot CREATION action, so it keys off WHY this instance
+      // exists — not off editor state at render time. Every re-materialisation
+      // (a document load, an undo/redo or remote replay, a paste that brings its
+      // own columns, the off-tree probe `composeBlockData` builds) fires
+      // rendered() BEFORE the restored columns' own add events land, so
+      // getChildren() is only TRANSIENTLY empty here; seeding then fabricates
+      // phantom columns AND displaces the real ones, which arrive orphaned at
+      // root — the "2 columns silently became 4" corruption. The restored
+      // columns re-mount via their own setBlockParent. (Column solves the
+      // analogous re-seed hazard with its `populated` latch; a re-added list
+      // gets a fresh instance, so it needs this check.)
+      if (!this.isCreation) {
         return;
       }
 
@@ -256,6 +282,14 @@ export class ColumnList implements BlockTool {
    * that is not a `column`, so core must never let a user gesture adopt one.
    */
   public static get ownsChildren(): boolean {
+    return true;
+  }
+
+  /**
+   * The row is layout, not a text container: Enter inside it must never unwrap
+   * the row and strand the line beside the columns.
+   */
+  public static get keepsChildrenOnEnter(): boolean {
     return true;
   }
 }

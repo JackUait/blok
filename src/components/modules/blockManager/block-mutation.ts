@@ -96,10 +96,52 @@ export class BlockMutation {
       return block;
     }
 
+    const mergedData = Object.assign({}, existingData, data ?? {});
+
+    /**
+     * Prefer the Tool's own in-place update over recomposing the Block.
+     *
+     * Recomposing means a NEW Block: a new tool instance, a new holder, and the
+     * old instance destroyed right after. Every piece of state the tool holds
+     * outside its data dies with it — for an adapter-authored block (React /
+     * Vue / Angular) that is the mounted component and its portal, so a host
+     * calling `api.blocks.update()` per keystroke was left with a permanently
+     * empty holder. Keeping the Block alive also keeps its children attached
+     * and the caret where the user put it.
+     *
+     * Tunes stay on the recompose path: they are instantiated during Block
+     * construction, so there is nothing to update in place (same reasoning as
+     * the Yjs replay path in yjs-sync.ts).
+     *
+     * The gate is the TOOL's declaration (`setData` on its prototype), never
+     * `block.setData` — every Block has that method, and its innerHTML fallback
+     * would silently swallow updates for tools that implement nothing.
+     */
+    if (tunes === undefined && block.tool.supportsInPlaceSetData && await block.setData(mergedData)) {
+      /**
+       * `await block.setData` runs TOOL code, so it reopens the stale-source
+       * window the guard above closes: re-read the index and abort silently
+       * when the block was removed while the Tool applied the data.
+       */
+      const currentIndex = this.repository.getBlockIndex(block);
+
+      if (currentIndex === -1) {
+        return block;
+      }
+
+      this.blockDidMutated(BlockChangedMutationType, block, {
+        index: currentIndex,
+      });
+
+      this.syncDataToYjs(block.id, data);
+
+      return block;
+    }
+
     const newBlock = this.factory.composeBlock({
       id: block.id,
       tool: block.name,
-      data: Object.assign({}, existingData, data ?? {}),
+      data: mergedData,
       tunes: tunes ?? block.preservedTunes,
       parentId: block.parentId ?? undefined,
       contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
@@ -112,12 +154,7 @@ export class BlockMutation {
       index: blockIndex,
     });
 
-    // Sync changed data to Yjs (`!= null` — callers may pass a literal null)
-    if (data != null) {
-      for (const [key, value] of Object.entries(data)) {
-        this.dependencies.YjsManager.updateBlockData(block.id, key, value);
-      }
-    }
+    this.syncDataToYjs(block.id, data);
 
     // Sync changed tunes to Yjs (`!= null` — callers may pass a literal null)
     if (tunes != null) {
@@ -127,6 +164,22 @@ export class BlockMutation {
     }
 
     return newBlock;
+  }
+
+  /**
+   * Sync the caller's data patch to Yjs, key by key. Shared by both update
+   * paths (in-place and recompose) so they stay in step.
+   * @param blockId - id of the updated block
+   * @param data - the patch the caller passed (`!= null` — callers may pass a literal null)
+   */
+  private syncDataToYjs(blockId: string, data?: Partial<BlockToolData>): void {
+    if (data == null) {
+      return;
+    }
+
+    for (const [key, value] of Object.entries(data)) {
+      this.dependencies.YjsManager.updateBlockData(blockId, key, value);
+    }
   }
 
   /**
@@ -193,6 +246,10 @@ export class BlockMutation {
       index: blockIndex,
       replace: true,
       skipYjsSync: true,
+      // A turn-into IS a creation of the target tool — but the replaced block's
+      // children are re-homed onto it right below, so a container tool sees
+      // them and never reaches its seed path.
+      origin: 'convert',
     }, blocksStore);
 
     // Transfer hierarchy to new block.

@@ -10,9 +10,15 @@ import {
   type BlockPortalRegistry,
 } from './block-portal-registry';
 import { setRegistry, removeRegistry } from './registry-map';
+import { setContentBaseline, removeContentBaseline } from './content-baseline-map';
 import { bindLiveToolConfigFunctions, buildLiveBlockConfig } from './live-tool-config';
-import { createEmittedEchoWindow, normalizeReadOnlyConfig, toRenderableData } from '@bloklabs/core/adapters';
-import type { Blok } from '@/types';
+import {
+  createEmittedEchoWindow,
+  equalsOutputData,
+  normalizeReadOnlyConfig,
+  toRenderableData,
+} from '@bloklabs/core/adapters';
+import type { Blok, LiveHandlers } from '@/types';
 import type { UseBlokConfig } from './types';
 
 interface EditorInstanceState {
@@ -135,12 +141,15 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   const depsToken = useMemo(() => ({}), deps ?? []);
 
   // Tracks the data the editor currently reflects — set when content is seeded
-  // or rendered (the reactive `data` effect below) AND when the editor emits its
-  // own serialized content via `onSave`. The latter is what makes a controlled
-  // `onSave -> setData -> data` round-trip a no-op: the echoed payload deep-equals
-  // this baseline, so the data effect skips the redundant render() (which would
-  // otherwise reset the caret). Declared here so the `onSave` wrapper below can
-  // update it before the consumer's setState re-runs the data effect.
+  // or rendered (the reactive `data` effect below), when the editor emits its
+  // own serialized content via `onSave`, and when an IMPERATIVE call changed the
+  // content out of band (the content-baseline channel registered below). The
+  // `onSave` writer is what makes a controlled `onSave -> setData -> data`
+  // round-trip a no-op: the echoed payload content-equals this baseline, so the
+  // data effect skips the redundant render() (which would otherwise reset the
+  // caret). Declared here so the `onSave` wrapper below can update it before the
+  // consumer's setState re-runs the data effect. `undefined` means "nothing
+  // recorded yet" — never an empty document.
   const lastRenderedDataRef = useRef(config.data);
   // Window of recently emitted `onSave` payloads. The baseline above only
   // remembers the LAST one, but a host that persists on save and refetches can
@@ -172,6 +181,19 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // Last-applied tool-level `toolbox` setting per tool name (dedupe baseline for
   // the reactive toolbox effect below). Seeded from the construction-time tools.
   const appliedToolboxRef = useRef<Map<string, unknown>>(new Map());
+  // Live callback channel (see the handler-presence effect below): the current
+  // editor's stable per-handler wrappers (each forwards to the LATEST render's
+  // prop through `configRef`, so their identity never changes) and the presence
+  // actually installed on that editor — the dedupe baseline.
+  const handlerWrappersRef = useRef<LiveHandlers | null>(null);
+  const appliedHandlerPresenceRef = useRef<Record<keyof LiveHandlers, boolean>>({
+    onChange: false,
+    onSave: false,
+    onEnter: false,
+    onSubmit: false,
+    onBeforeRender: false,
+    onAfterRender: false,
+  });
 
   // Main lifecycle effect
   useEffect(() => {
@@ -212,6 +234,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     if (state.editor !== null && !state.isDestroyed) {
       removeHolder(state.editor);
       removeRegistry(state.editor);
+      removeContentBaseline(state.editor);
       try {
         state.editor.destroy();
       } catch {
@@ -259,6 +282,55 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       ])
     );
 
+    // Stable per-editor wrappers for the live callback config. Each forwards to
+    // the LATEST render's prop through `configRef`, so a consumer never has to
+    // freeze callback identities — and, because identity is fixed for the
+    // editor's life, only PRESENCE has to be synced afterwards (below).
+    const handlerWrappers: LiveHandlers = {
+      onChange: (...args: Parameters<NonNullable<UseBlokConfig['onChange']>>): void => {
+        configRef.current.onChange?.(...args);
+      },
+      onSave: (...args: Parameters<NonNullable<UseBlokConfig['onSave']>>): void => {
+        // Record the editor's own serialized output as the rendered baseline so a
+        // controlled consumer echoing it straight back into `data` is a no-op —
+        // no redundant render(), no caret reset, no round-trip recursion.
+        lastRenderedDataRef.current = args[0];
+        echoWindowRef.current.record(args[0]);
+        configRef.current.onSave?.(...args);
+      },
+      // Forward the return value: it is the "handled" signal the core acts on.
+      onEnter: (...args: Parameters<NonNullable<UseBlokConfig['onEnter']>>): boolean | void =>
+        configRef.current.onEnter?.(...args),
+      onSubmit: (...args: Parameters<NonNullable<UseBlokConfig['onSubmit']>>): void => {
+        configRef.current.onSubmit?.(...args);
+      },
+      onBeforeRender: (
+        ...args: Parameters<NonNullable<UseBlokConfig['onBeforeRender']>>
+      ): ReturnType<NonNullable<UseBlokConfig['onBeforeRender']>> =>
+        configRef.current.onBeforeRender?.(...args) ?? args[0],
+      onAfterRender: (...args: Parameters<NonNullable<UseBlokConfig['onAfterRender']>>): void => {
+        configRef.current.onAfterRender?.(...args);
+      },
+    };
+
+    handlerWrappersRef.current = handlerWrappers;
+
+    // Handler PRESENCE is load-bearing in core — an `onSubmit` turns Enter into
+    // serialize-and-submit, an `onSave` arms the change pipeline — so an absent
+    // prop must leave the key absent. Attach only the wrappers whose prop the
+    // consumer actually passed, and record what was installed so the effect
+    // below can push later presence flips instead of recreating the editor.
+    const handlerPresence: Record<keyof LiveHandlers, boolean> = {
+      onChange: currentConfig.onChange !== undefined,
+      onSave: currentConfig.onSave !== undefined,
+      onEnter: currentConfig.onEnter !== undefined,
+      onSubmit: currentConfig.onSubmit !== undefined,
+      onBeforeRender: currentConfig.onBeforeRender !== undefined,
+      onAfterRender: currentConfig.onAfterRender !== undefined,
+    };
+
+    appliedHandlerPresenceRef.current = handlerPresence;
+
     const blokConfig = {
       ...currentConfig,
       ...(liveTools === undefined ? {} : { tools: liveTools as UseBlokConfig['tools'] }),
@@ -266,53 +338,13 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       onReady: (...args: Parameters<NonNullable<UseBlokConfig['onReady']>>): void => {
         configRef.current.onReady?.(...args);
       },
-      onChange: (...args: Parameters<NonNullable<UseBlokConfig['onChange']>>): void => {
-        configRef.current.onChange?.(...args);
-      },
-      // Forward the return value: it is the "handled" signal the core acts on.
-      onEnter: (...args: Parameters<NonNullable<UseBlokConfig['onEnter']>>): boolean | void =>
-        configRef.current.onEnter?.(...args),
+      ...(handlerPresence.onChange ? { onChange: handlerWrappers.onChange } : {}),
+      ...(handlerPresence.onSave ? { onSave: handlerWrappers.onSave } : {}),
+      ...(handlerPresence.onEnter ? { onEnter: handlerWrappers.onEnter } : {}),
+      ...(handlerPresence.onSubmit ? { onSubmit: handlerWrappers.onSubmit } : {}),
+      ...(handlerPresence.onBeforeRender ? { onBeforeRender: handlerWrappers.onBeforeRender } : {}),
+      ...(handlerPresence.onAfterRender ? { onAfterRender: handlerWrappers.onAfterRender } : {}),
     };
-
-    // Only attach onSubmit when the consumer opted in: its mere presence makes
-    // Enter serialize-and-submit instead of splitting a block, so an absent prop
-    // must stay absent. The wrapper reads through the ref so the latest callback
-    // is always used without recreating the editor.
-    if (currentConfig.onSubmit) {
-      blokConfig.onSubmit = (...args: Parameters<NonNullable<UseBlokConfig['onSubmit']>>): void => {
-        configRef.current.onSubmit?.(...args);
-      };
-    }
-
-    // Only attach onSave when the consumer opted in: its mere presence makes the
-    // core serialize on every change batch, so an absent prop must stay absent.
-    // The wrapper reads through the ref so the latest callback is always used.
-    if (currentConfig.onSave) {
-      blokConfig.onSave = (...args: Parameters<NonNullable<UseBlokConfig['onSave']>>): void => {
-        // Record the editor's own serialized output as the rendered baseline so a
-        // controlled consumer echoing it straight back into `data` is a no-op —
-        // no redundant render(), no caret reset, no round-trip recursion.
-        lastRenderedDataRef.current = args[0];
-        echoWindowRef.current.record(args[0]);
-        configRef.current.onSave?.(...args);
-      };
-    }
-
-    // onBeforeRender / onAfterRender are opt-in (absent prop must stay absent so
-    // the core skips them). When present, route through the ref so the latest
-    // callback is always used without recreating the editor.
-    if (currentConfig.onBeforeRender) {
-      blokConfig.onBeforeRender = (
-        ...args: Parameters<NonNullable<UseBlokConfig['onBeforeRender']>>
-      ): ReturnType<NonNullable<UseBlokConfig['onBeforeRender']>> =>
-        configRef.current.onBeforeRender?.(...args) ?? args[0];
-    }
-
-    if (currentConfig.onAfterRender) {
-      blokConfig.onAfterRender = (...args: Parameters<NonNullable<UseBlokConfig['onAfterRender']>>): void => {
-        configRef.current.onAfterRender?.(...args);
-      };
-    }
 
     const blok = new BlokRuntime(blokConfig);
     state.editor = blok;
@@ -321,6 +353,19 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     constructedDataRef.current = currentConfig.data;
     setHolder(blok, holder);
     setRegistry(blok, registry);
+    // Imperative-content channel: `useBlokHandle().clear()` / `.render()` change
+    // the content OUT OF BAND of the reactive `data` effect below. They report
+    // the new content here so the dedupe baseline and the emitted-echo window
+    // (both read by that effect) describe the editor as it actually is —
+    // otherwise restoring a document the editor itself emitted is dismissed as
+    // an echo and never rendered.
+    setContentBaseline(blok, {
+      markRendered: (content): void => {
+        echoWindowRef.current.clear();
+        lastRenderedDataRef.current = content;
+        pendingDataRef.current = undefined;
+      },
+    });
 
     void blok.isReady
       .then(() => {
@@ -333,6 +378,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
         if (state.editor === blok && !state.isDestroyed) {
           removeHolder(blok);
           removeRegistry(blok);
+          removeContentBaseline(blok);
           try {
             blok.destroy();
           } catch {
@@ -442,6 +488,74 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
       (state.editor as unknown as {
         tools?: { update: (toolName: string, config: Record<string, unknown>) => void };
       }).tools?.update(name, { toolbox: latest });
+    }
+  });
+
+  // Reactive: onChange
+  // Reactive: onSave
+  // Reactive: onEnter
+  // Reactive: onSubmit
+  // Reactive: onBeforeRender
+  // Reactive: onAfterRender
+  //
+  // Callback PRESENCE was frozen at construction, and in core the presence of a
+  // handler IS the semantics: an `onSubmit` makes Enter serialize-and-submit
+  // instead of splitting the block, an `onSave` arms the whole change-observation
+  // pipeline. A host whose "Enter sends" toggle (or `onSave` subscription) lives
+  // in React state therefore had to bump `deps` and destroy/rebuild the editor,
+  // losing caret and undo history. Instead, diff each handler's presence against
+  // what is installed and push genuine flips through the runtime `handlers.set`
+  // API — passing `undefined` for a prop that disappeared, which is what makes
+  // the change reversible rather than a one-way latch. Identity never changes
+  // (the wrappers forward through `configRef`), so only presence is diffed.
+  // Applies once the editor is ready — module APIs attach at isReady — and the
+  // ready transition re-renders, so a flip made earlier is not lost.
+  useEffect(() => {
+    const state = stateRef.current;
+    const wrappers = handlerWrappersRef.current;
+
+    if (state.editor === null || state.isDestroyed || !state.isEditorReady || wrappers === null) {
+      return;
+    }
+
+    const latest = configRef.current;
+    const applied = appliedHandlerPresenceRef.current;
+    const diff: LiveHandlers = {};
+    const changed: { value: boolean } = { value: false };
+
+    const sync = <K extends keyof LiveHandlers>(key: K, write: (value: LiveHandlers[K]) => void): void => {
+      const present = latest[key] !== undefined;
+
+      if (present === applied[key]) {
+        return;
+      }
+
+      applied[key] = present;
+      changed.value = true;
+      write(present ? wrappers[key] : undefined);
+    };
+
+    sync('onChange', (value) => {
+      diff.onChange = value;
+    });
+    sync('onSave', (value) => {
+      diff.onSave = value;
+    });
+    sync('onEnter', (value) => {
+      diff.onEnter = value;
+    });
+    sync('onSubmit', (value) => {
+      diff.onSubmit = value;
+    });
+    sync('onBeforeRender', (value) => {
+      diff.onBeforeRender = value;
+    });
+    sync('onAfterRender', (value) => {
+      diff.onAfterRender = value;
+    });
+
+    if (changed.value) {
+      state.editor.handlers.set(diff);
     }
   });
 
@@ -597,11 +711,12 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   //
   // `data` seeds the editor at construction. Afterwards, changing the prop to
   // new *content* re-renders the editor via the public render() API — no
-  // recreation. Updates are deep-equal–deduped against the editor's current
-  // content baseline (`lastRenderedDataRef`, declared above and also updated by
-  // the `onSave` wrapper) so a new reference with the same content — including
-  // the editor's own serialized output echoed back — is a no-op and won't
-  // clobber the caret. Renders are serialized so rapid changes can't overlap.
+  // recreation. Updates are content-deduped against the editor's current
+  // baseline (`lastRenderedDataRef`, declared above and also updated by the
+  // `onSave` wrapper and the imperative content-baseline channel) so a new
+  // reference with the same content — including the editor's own serialized
+  // output echoed back, however the host reshaped it in transit — is a no-op and
+  // won't clobber the caret. Renders are serialized so rapid changes can't overlap.
   const { data } = config;
   useEffect(() => {
     if (editor === null || data === undefined) {
@@ -644,7 +759,20 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // Skip when the editor already reflects this content (last SUCCESSFUL render)
     // OR a render of the same content is already queued/in-flight — re-rendering
     // identical content would needlessly reset the caret.
-    if (deepEqual(data, lastRenderedDataRef.current) || deepEqual(data, pendingDataRef.current)) {
+    //
+    // Compared with the SAME structural lens the echo window uses
+    // (`equalsOutputData`, not a raw deep-equal): a host that persists the
+    // editor's own document and hands back a stripped copy — fresh `time`,
+    // dropped ids, no `lastEditedAt` stamp — is still echoing content the editor
+    // already shows. `undefined` means "nothing recorded yet", which is NOT an
+    // empty document, so it must never match.
+    const baseline = lastRenderedDataRef.current;
+    const inFlight = pendingDataRef.current;
+
+    if (
+      (baseline !== undefined && equalsOutputData(data, baseline)) ||
+      (inFlight !== undefined && equalsOutputData(data, inFlight))
+    ) {
       return;
     }
 
@@ -701,6 +829,7 @@ function deferDestroy(
     if (state.editor !== null) {
       removeHolder(state.editor);
       removeRegistry(state.editor);
+      removeContentBaseline(state.editor);
       try {
         state.editor.destroy();
       } catch {

@@ -1,4 +1,6 @@
 import { useRef, useMemo, type RefCallback } from 'react';
+import { EMPTY_OUTPUT_DATA } from '@bloklabs/core/adapters';
+import { getContentBaseline } from './content-baseline-map';
 import type { Blok, OutputData, LooseOutputData } from '@/types';
 
 /**
@@ -32,12 +34,22 @@ export interface BlokEditorHandle {
    * @param atEnd - place the caret at the end of the focused block
    */
   focus(atEnd?: boolean): boolean;
-  /** Clear all content. Resolves immediately (no-op) before ready. */
+  /**
+   * Clear all content. Resolves immediately (no-op) before ready.
+   *
+   * Safe to mix with a controlled `data` prop: the adapter's content baseline is
+   * updated once the clear lands, so setting `data` back to the document the
+   * editor itself emitted re-renders it instead of being dismissed as an echo.
+   */
   clear(): Promise<void>;
   /** Serialize the current content, or resolve to `null` before ready. */
   save(): Promise<OutputData | null>;
   /**
    * Render new content in place. Resolves immediately (no-op) before ready.
+   *
+   * Safe to mix with a controlled `data` prop: the rendered document becomes the
+   * adapter's content baseline, so a later `data` change back to the previous
+   * document still re-renders.
    * @param data - the document to render
    */
   render(data: OutputData | LooseOutputData): Promise<void>;
@@ -81,11 +93,35 @@ export function useBlokHandle(): BlokEditorHandle {
       return instanceRef.current !== null;
     },
     focus: (atEnd?: boolean): boolean => instanceRef.current?.focus(atEnd) ?? false,
-    clear: (): Promise<void> => instanceRef.current?.clear() ?? Promise.resolve(),
+    // clear/render change the content OUT OF BAND of the controlled `data`
+    // effect, so they report the result to the adapter's content baseline (see
+    // content-baseline-map). Reported only once the call RESOLVES: a failed one
+    // leaves the editor on its previous content, and a baseline pointing at
+    // content the editor never showed would dedupe away the correcting update.
+    clear: (): Promise<void> => {
+      const instance = instanceRef.current;
+
+      if (instance === null) {
+        return Promise.resolve();
+      }
+
+      return instance.clear().then(() => {
+        getContentBaseline(instance)?.markRendered(EMPTY_OUTPUT_DATA);
+      });
+    },
     save: (): Promise<OutputData | null> =>
       instanceRef.current !== null ? instanceRef.current.save() : Promise.resolve(null),
-    render: (data: OutputData | LooseOutputData): Promise<void> =>
-      instanceRef.current?.render(data) ?? Promise.resolve(),
+    render: (data: OutputData | LooseOutputData): Promise<void> => {
+      const instance = instanceRef.current;
+
+      if (instance === null) {
+        return Promise.resolve();
+      }
+
+      return instance.render(data).then(() => {
+        getContentBaseline(instance)?.markRendered(data);
+      });
+    },
     setReadOnly: (state?: boolean): Promise<boolean> => {
       const instance = instanceRef.current;
 

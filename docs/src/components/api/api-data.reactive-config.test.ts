@@ -76,6 +76,61 @@ describe("configuration section: mount options vs live state", () => {
   });
 });
 
+describe("handlers.set: the live callback config", () => {
+  const config = findSection("config");
+  const core = findSection("core");
+
+  const LIVE_CALLBACKS = [
+    "onChange",
+    "onSave",
+    "onEnter",
+    "onSubmit",
+    "onBeforeRender",
+    "onAfterRender",
+  ] as const;
+
+  it("documents handlers.set on the Blok class, including the unset direction", () => {
+    const method = core!.methods!.find((m) => m.name === "handlers.set(handlers)");
+    expect(method).toBeDefined();
+    expect(method!.returnType).toBe("void");
+    // The setter's whole point: callback PRESENCE is load-bearing in core.
+    expect(method!.description).toContain("onSubmit");
+    expect(method!.description).toContain("onSave");
+    // Clearing must be documented — without it the change is a one-way latch.
+    expect(method!.description).toContain("undefined");
+    expect(method!.description.toLowerCase()).toContain("recreat");
+    expect(method!.example).toContain("handlers.set(");
+    expect(method!.example).toContain("undefined");
+    expect(method!.params!.map((p) => p.name)).toEqual(["handlers"]);
+  });
+
+  it("the configuration section names the live callbacks and their runtime setter", () => {
+    const description = config!.description ?? "";
+    expect(description).toContain("handlers.set");
+    expect(description).toContain("onSubmit");
+  });
+
+  it("every live callback option names handlers.set (source + EN overlay + RU)", () => {
+    for (const option of LIVE_CALLBACKS) {
+      const row = config!.table!.find((r) => r.option === option);
+      expect(row, `config table has no row for ${option}`).toBeDefined();
+      expect(row!.description).toContain("handlers.set");
+
+      const enRow = (en.api.configuration.table as Record<string, { description: string }>)[option];
+      const ruRow = (ru.api.configuration.table as Record<string, { description: string }>)[option];
+      expect(enRow.description).toBe(row!.description);
+      expect(ruRow.description).toContain("handlers.set");
+    }
+  });
+
+  it("handlers.set has EN + RU i18n copy", () => {
+    expect(en.api.blokClass.methods.handlers.set.description.length).toBeGreaterThan(0);
+    expect(en.api.blokClass.methods.handlers.set.note.length).toBeGreaterThan(0);
+    expect(ru.api.blokClass.methods.handlers.set.description.length).toBeGreaterThan(0);
+    expect(ru.api.blokClass.methods.handlers.set.note.length).toBeGreaterThan(0);
+  });
+});
+
 describe("readonly-api: in-place toggling", () => {
   const section = findSection("readonly-api");
 

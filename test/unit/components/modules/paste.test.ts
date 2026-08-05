@@ -1213,11 +1213,13 @@ describe('Paste module', () => {
           tool: 'image',
           data: { src: 'image.png' },
           replace: true,
+          origin: 'paste',
         },
         {
           tool: 'paragraph',
           data: { text: 'Hello' },
           replace: false,
+          origin: 'paste',
         },
       ]);
       expect(mocks.Caret.setToBlock).toHaveBeenNthCalledWith(1, { id: 'image-id' }, mocks.Caret.positions.END);
@@ -1346,6 +1348,7 @@ describe('Paste module', () => {
         tool: 'paragraph',
         data: { text: 'Hello world' },
         replace: true,
+        origin: 'paste',
       });
     });
 
@@ -1420,11 +1423,13 @@ describe('Paste module', () => {
         tool: 'paragraph',
         data: { text: 'First block' },
         replace: true,
+        origin: 'paste',
       });
       expect(secondCall).toEqual({
         tool: 'paragraph',
         data: { text: 'Second block' },
         replace: false,
+        origin: 'paste',
       });
 
       expect(mocks.Caret.setToBlock).toHaveBeenCalledWith({ id: 'block-id' }, mocks.Caret.positions.END);

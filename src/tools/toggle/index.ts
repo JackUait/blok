@@ -467,6 +467,16 @@ export class ToggleItem implements BlockTool {
   public static get isReadOnlySupported(): boolean {
     return true;
   }
+
+  /**
+   * Enter on a toggle's empty last child adds another line to the toggle body
+   * instead of escaping it. Declared rather than inferred from the
+   * `data-blok-toggle-open` marker this tool renders, so the rule is the same
+   * one a host container opts into.
+   */
+  public static get keepsChildrenOnEnter(): boolean {
+    return true;
+  }
 }
 
 export type { ToggleItemConfig, ToggleItemData };

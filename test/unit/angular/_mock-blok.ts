@@ -24,6 +24,7 @@ export interface MockBlokRecord {
   readOnly: { set: ReturnType<typeof vi.fn>; togglesInPlace: true };
   toolbar: { setHidden: ReturnType<typeof vi.fn> };
   tools: { setInlineToolbar: ReturnType<typeof vi.fn> };
+  handlers: { set: ReturnType<typeof vi.fn> };
   theme: { set: ReturnType<typeof vi.fn> };
   width: { set: ReturnType<typeof vi.fn> };
   placeholder: { set: ReturnType<typeof vi.fn> };
@@ -53,6 +54,7 @@ export class MockBlok {
   public readOnly = { set: vi.fn().mockResolvedValue(false), togglesInPlace: true as const };
   public toolbar = { setHidden: vi.fn() };
   public tools = { setInlineToolbar: vi.fn() };
+  public handlers = { set: vi.fn() };
   public theme = { set: vi.fn() };
   public width = { set: vi.fn() };
   public placeholder = { set: vi.fn() };
@@ -84,6 +86,7 @@ export class MockBlok {
       readOnly: this.readOnly,
       toolbar: this.toolbar,
       tools: this.tools,
+      handlers: this.handlers,
       theme: this.theme,
       width: this.width,
       placeholder: this.placeholder,

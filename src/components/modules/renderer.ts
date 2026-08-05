@@ -150,7 +150,10 @@ export class Renderer extends Module {
       : hookedBlocks;
 
     if (sourceBlocks.length === 0) {
-      BlockManager.insert();
+      // Still a document render, not an authoring gesture: the default block is
+      // what an empty document IS, so a container tool must not treat it as
+      // "the author just made me".
+      BlockManager.insert({ origin: 'load' });
 
       return 1;
     }
@@ -251,6 +254,9 @@ export class Renderer extends Module {
             contentIds: content,
             lastEditedAt,
             lastEditedBy,
+            // Restoring a stored document: whatever children the data declares
+            // are authoritative, so container tools must not seed defaults.
+            origin: 'load',
           });
         } catch (error) {
           log(`Block «${tool}» skipped because of plugins error`, 'error', {
@@ -272,6 +278,7 @@ export class Renderer extends Module {
             contentIds: content,
             lastEditedAt,
             lastEditedBy,
+            origin: 'load',
           });
         }
       };

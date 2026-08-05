@@ -121,12 +121,52 @@ export interface BlockTool extends BaseTool {
 export type AssetKind = 'image' | 'video' | 'audio' | 'file';
 
 /**
+ * Where a Block instance came from — the create-vs-restore signal on the Tool
+ * contract.
+ *
+ * A container Tool that seeds default children (a `column_list` that starts with
+ * two columns, a layout block that starts with a heading) can only do that once,
+ * at creation. Every other time the Tool is constructed the document already
+ * says what its children are — and during a restore those children commonly land
+ * a tick AFTER `rendered()` runs, so an empty `api.blocks.getChildren()` there is
+ * transient. Seeding on that empty read fabricates phantom children beside the
+ * real ones.
+ *
+ * CREATION origins — the author just made this block, so seeding is correct:
+ * - `user`    — a direct editing gesture: Enter, the plus button, the slash /
+ *               plus toolbox, block settings, a markdown shortcut
+ * - `api`     — a programmatic `blocks.insert` / `insertMany` / `insertInsideParent`
+ * - `convert` — a turn-into that replaces an existing block with another Tool
+ *
+ * RESTORE origins — the block is being re-materialised, so whatever children the
+ * document holds are authoritative and the Tool must never seed:
+ * - `load`   — a document render (`blocks.render`, the editor's initial content)
+ * - `replay` — an undo/redo replay or a remote collaborative update
+ * - `paste`  — pasted content that brings its own children
+ * - `probe`  — an OFF-TREE instance built only to read a Tool's default data
+ *              (`blocks.composeBlockData`). It is never inserted into the
+ *              document, yet it still runs `render()` and `rendered()`, so it
+ *              must not touch the block tree at all.
+ */
+export type BlockOrigin = 'user' | 'api' | 'convert' | 'load' | 'replay' | 'paste' | 'probe';
+
+/**
  * Describe constructor parameters
  */
 export interface BlockToolConstructorOptions<D extends object = any, C extends object = any> extends BaseToolConstructorOptions<C> {
   data: BlockToolData<D>;
   block: BlockAPI;
   readOnly: boolean;
+
+  /**
+   * Why this Block instance is being constructed — see {@link BlockOrigin}.
+   *
+   * Blok always supplies it. It is optional only so a host can hand-build the
+   * options object in a unit test; treat an absent value as `'api'`, the same
+   * default Blok applies, so an un-updated caller is never mistaken for a user
+   * gesture.
+   */
+  readonly origin?: BlockOrigin;
 }
 
 export interface BlockToolConstructable extends BaseToolConstructable {
@@ -161,6 +201,30 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * plain user content (toggle, callout, a nestable paragraph).
    */
   ownsChildren?: boolean;
+
+  /**
+   * Set to true when Enter on this container's empty LAST child must create the
+   * new line INSIDE the container instead of leaving it.
+   *
+   * By default Blok treats an empty trailing line as the author's way out of a
+   * container: with siblings present that line is outdented to the container's
+   * own parent, and as a sole child a fresh block is inserted after the whole
+   * container (Notion's callout behaviour). A layout container — a column, a
+   * card, a `steps` block whose children ARE its steps — wants the opposite: the
+   * new line belongs to it, and escaping strands content beside the container.
+   *
+   * This is per-tool POLICY and cannot be derived from the DOM: a callout
+   * renders the very same `data-blok-nested-blocks` slot as a column, yet
+   * deliberately lets Enter leave. Declare it and the same rule Blok's own
+   * `column` / `column_list` / `toggle` follow applies to your Tool — no
+   * editor-global `config.onEnter` workaround re-deriving containment.
+   *
+   * Core also reads it for the symmetric "remove one indent level" gesture
+   * (Enter/Backspace on a block nested under a PLAIN parent): a Tool that keeps
+   * its children is a container, never a plain structural parent, so its
+   * children never stepwise-outdent out of it.
+   */
+  keepsChildrenOnEnter?: boolean;
 
   /**
    * Declares that this Tool stores a host-uploaded asset URL at `data.url`.

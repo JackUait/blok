@@ -127,17 +127,10 @@ export class DataPersistenceManager {
    */
   public async setData(newData: SafeBlockToolData): Promise<boolean> {
     // Check if tool supports setData method
-    const toolSetData = (this.toolInstance as { setData?: (data: SafeBlockToolData) => void | Promise<void> }).setData;
+    const toolSetData = (this.toolInstance as { setData?: (data: SafeBlockToolData) => unknown }).setData;
 
     if (typeof toolSetData === 'function') {
-      try {
-        await toolSetData.call(this.toolInstance, newData);
-        this.lastSavedDataInternal = newData;
-        return true;
-      } catch (e) {
-        log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
-        return false;
-      }
+      return this.applyToolSetData(toolSetData, newData);
     }
 
     // For tools without setData, try to update innerHTML directly for simple text-based tools
@@ -167,6 +160,39 @@ export class DataPersistenceManager {
 
     // For other tools, fall back to full re-render
     return false;
+  }
+
+  /**
+   * Hands the new data to the Tool's own setData.
+   *
+   * A Tool may report that it could NOT apply the data in place — the list tool
+   * returns false for a style change, which needs a different DOM shape — and
+   * the caller must then re-render instead of believing the block is current.
+   * Only an explicit `false` counts as a refusal, so the many tools whose
+   * setData returns nothing keep succeeding.
+   * @param toolSetData - the Tool's own setData method
+   * @param newData - the new data to apply
+   * @returns true when the Tool applied it in place
+   */
+  private async applyToolSetData(
+    toolSetData: (data: SafeBlockToolData) => unknown,
+    newData: SafeBlockToolData
+  ): Promise<boolean> {
+    try {
+      const applied = await toolSetData.call(this.toolInstance, newData);
+
+      if (applied === false) {
+        return false;
+      }
+
+      this.lastSavedDataInternal = newData;
+
+      return true;
+    } catch (e) {
+      log(`Tool ${this.name} setData failed: ${e instanceof Error ? e.message : String(e)}`, 'warn');
+
+      return false;
+    }
   }
 
   /**

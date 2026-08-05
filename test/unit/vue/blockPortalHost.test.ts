@@ -77,6 +77,48 @@ describe('BlockPortalHost + registry (Vue)', () => {
     wrapper.unmount();
   });
 
+  /**
+   * C2: core composes the REPLACEMENT block (which registers under the same id)
+   * BEFORE it destroys the old one, so the superseded tool's
+   * `removed()`/`destroy()` teardown arrives AFTER the new entry is in the
+   * registry. An unconditional delete there wipes the live entry.
+   */
+  it('a late teardown from a superseded owner cannot clobber a same-id re-register', async () => {
+    const registry = createBlockPortalRegistry();
+    const wrapper = mount(BlockPortalHost, { props: { registry } });
+    const first = makeHost();
+    const second = makeHost();
+
+    registry.register('b1', { hostEl: first, component: LabelBlock, props: reactive({ label: 'old' }) });
+    registry.register('b1', { hostEl: second, component: LabelBlock, props: reactive({ label: 'new' }) });
+    // The superseded owner tears itself down, twice (removed() + destroy()).
+    registry.unregister('b1', first);
+    registry.unregister('b1', first);
+    await nextTick();
+
+    expect(registry.entries.get('b1')?.hostEl).toBe(second);
+    expect(second.querySelector('.label')?.textContent).toBe('new');
+
+    wrapper.unmount();
+  });
+
+  it('the live owner can still unregister itself', async () => {
+    const registry = createBlockPortalRegistry();
+    const wrapper = mount(BlockPortalHost, { props: { registry } });
+    const host = makeHost();
+
+    registry.register('b1', { hostEl: host, component: LabelBlock, props: reactive({ label: 'x' }) });
+    await nextTick();
+
+    registry.unregister('b1', host);
+    await nextTick();
+
+    expect(registry.entries.has('b1')).toBe(false);
+    expect(host.querySelector('.label')).toBeNull();
+
+    wrapper.unmount();
+  });
+
   it('renders many blocks through ONE host into their own targets', async () => {
     const registry = createBlockPortalRegistry();
     const wrapper = mount(BlockPortalHost, { props: { registry } });

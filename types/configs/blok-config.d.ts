@@ -225,6 +225,129 @@ export interface BlokState {
    * tools for every block tool and recomposes paste-time sanitization.
    */
   inlineToolbar?: string[]|boolean;
+
+  /**
+   * Fires when something changed in DOM.
+   *
+   * Never fires while the editor is in read-only mode — read-only is honored at
+   * delivery time, so a change queued just before read-only is toggled on is
+   * dropped too. You do not need to guard the handler with
+   * `api.readOnly.isEnabled`.
+   *
+   * Its PRESENCE is load-bearing: with neither `onChange` nor `onSave` set, the
+   * change-observation pipeline stays disarmed entirely.
+   *
+   * Runtime setter: `handlers.set({ onChange })` — pass `undefined` to unset it.
+   *
+   * @param api - blok.js api
+   * @param event - custom event describing mutation. If several mutations happened at once, they will be batched and you'll get an array of events here.
+   */
+  onChange?(api: API, event: BlockMutationEvent | BlockMutationEvent[]): void;
+
+  /**
+   * Fires with the full serialized {@link OutputData} whenever the content
+   * changes. This is the "output half" of a controlled editor: pair it with the
+   * `data` config (or the React `data` prop) to mirror the editor state into your
+   * own store with a single callback instead of calling `saver.save()` by hand.
+   *
+   * Serialization is debounced through the same change-batching window as
+   * `onChange`, so a burst of edits produces a single `onSave` call. Only
+   * user-driven content changes trigger it — programmatic `render()` does not
+   * (the change observer is disabled during render), so a controlled
+   * `data → render → onSave → setData` round-trip won't recurse.
+   *
+   * Never fires while the editor is in read-only mode (honored at delivery
+   * time), so the handler needs no `api.readOnly.isEnabled` guard.
+   *
+   * Its PRESENCE is load-bearing: setting it makes blok serialize the whole
+   * document once per change batch.
+   *
+   * Runtime setter: `handlers.set({ onSave })` — pass `undefined` to unset it.
+   *
+   * @param data - the full serialized output of the editor
+   * @param api - blok.js api
+   */
+  onSave?(data: OutputData, api: API): void;
+
+  /**
+   * Fires when the user presses Enter inside a block, right before blok would
+   * split the block or create a new one. Return `true` to mark the event as
+   * handled — blok then suppresses its default block split/create (it still
+   * calls `preventDefault()` so the browser doesn't insert a native newline).
+   * Return `false`/`undefined` to keep the default behavior.
+   *
+   * Designed for chat-input-style consumers ("Enter sends the message") — pair
+   * it with a single-block setup instead of subclassing Paragraph. It never
+   * fires for tools with `enableLineBreaks` (e.g. code) or while a
+   * popover/toolbar flipper owns the Enter key. It also does not fire for a
+   * soft-line-break Shift+Enter — except on iOS, where Safari reports a
+   * Shift+Enter for a sentence-ending ". " and blok creates a block instead,
+   * so the hook fires there just as it would for a plain Enter.
+   *
+   * Runtime setter: `handlers.set({ onEnter })` — pass `undefined` to unset it.
+   *
+   * @param event - the original keydown event
+   * @param api - blok.js api
+   * @returns true when the event was handled and the default split/create should be suppressed
+   */
+  onEnter?(event: KeyboardEvent, api: API): boolean | void;
+
+  /**
+   * Fires with the full serialized {@link OutputData} when the user presses the
+   * Enter that would otherwise create or split a block — the "Enter sends"
+   * gesture for chat-input-style consumers. Blok serializes the document for you
+   * and suppresses its default block split/create, so you get the current
+   * content without wiring `saver.save()` into `onEnter` by hand.
+   *
+   * It fires on exactly the same Enter as {@link onEnter} (after all the built-in
+   * escapes: `enableLineBreaks` tools, an open toolbar flipper, and the
+   * soft-line-break Shift+Enter — which is normalized for iOS just like
+   * `onEnter`, so you never need a hand-written `event.shiftKey` guard). When
+   * both hooks are set, a handled `onEnter` (one returning `true`) takes
+   * precedence and suppresses `onSubmit`.
+   *
+   * Its PRESENCE is load-bearing: setting it is what turns Enter from
+   * "split the block" into "serialize and submit". Unset it (rather than
+   * pointing it at a no-op function) to restore the default Enter.
+   *
+   * Runtime setter: `handlers.set({ onSubmit })` — pass `undefined` to unset it.
+   *
+   * @param data - the full serialized output of the editor
+   * @param api - blok.js api
+   */
+  onSubmit?(data: OutputData, api: API): void;
+
+  /**
+   * Transforms the blocks array just before it is rendered, on every render
+   * (the initial render and every `blocks.render()` call). Use it to run
+   * app-specific data migrations inside Blok instead of pre-processing the
+   * data before handing it to the editor.
+   *
+   * Receives the raw saved blocks (the exact array passed to render, before any
+   * format analysis or hierarchical expansion) and must return the blocks to
+   * render. Returning an empty array renders an empty document; returning blocks
+   * for an empty input injects them.
+   *
+   * Runtime setter: `handlers.set({ onBeforeRender })` — pass `undefined` to
+   * unset it.
+   *
+   * @param blocks - the blocks about to be rendered
+   * @returns the blocks to actually render
+   */
+  onBeforeRender?(blocks: OutputBlockData[]): OutputBlockData[];
+
+  /**
+   * Fires after a render completes and the blocks are in the DOM — on the
+   * initial render and on every `blocks.render()` call. Use it for post-render
+   * side effects (scroll restoration, attaching observers, …). Distinct from
+   * `onReady`, which fires once when the editor first becomes ready.
+   *
+   * Runtime setter: `handlers.set({ onAfterRender })` — pass `undefined` to
+   * unset it.
+   *
+   * @param api - blok.js api
+   */
+  onAfterRender?(api: API): void;
 }
 
 /**
@@ -513,39 +636,6 @@ export interface BlokMountOptions {
   onReady?(blok?: Blok): void;
 
   /**
-   * Fires when something changed in DOM.
-   *
-   * Never fires while the editor is in read-only mode — read-only is honored at
-   * delivery time, so a change queued just before read-only is toggled on is
-   * dropped too. You do not need to guard the handler with
-   * `api.readOnly.isEnabled`.
-   *
-   * @param api - blok.js api
-   * @param event - custom event describing mutation. If several mutations happened at once, they will be batched and you'll get an array of events here.
-   */
-  onChange?(api: API, event: BlockMutationEvent | BlockMutationEvent[]): void;
-
-  /**
-   * Fires with the full serialized {@link OutputData} whenever the content
-   * changes. This is the "output half" of a controlled editor: pair it with the
-   * `data` config (or the React `data` prop) to mirror the editor state into your
-   * own store with a single callback instead of calling `saver.save()` by hand.
-   *
-   * Serialization is debounced through the same change-batching window as
-   * `onChange`, so a burst of edits produces a single `onSave` call. Only
-   * user-driven content changes trigger it — programmatic `render()` does not
-   * (the change observer is disabled during render), so a controlled
-   * `data → render → onSave → setData` round-trip won't recurse.
-   *
-   * Never fires while the editor is in read-only mode (honored at delivery
-   * time), so the handler needs no `api.readOnly.isEnabled` guard.
-   *
-   * @param data - the full serialized output of the editor
-   * @param api - blok.js api
-   */
-  onSave?(data: OutputData, api: API): void;
-
-  /**
    * Fires when an editor operation fails in a way blok would otherwise only
    * log. Today the sole source is serialization: when the debounced auto-save
    * (or an explicit `save()`) throws, blok reports the error here instead of
@@ -556,72 +646,6 @@ export interface BlokMountOptions {
    * @param context - where the error originated (see {@link BlokErrorContext})
    */
   onError?(error: Error, context: BlokErrorContext): void;
-
-  /**
-   * Fires when the user presses Enter inside a block, right before blok would
-   * split the block or create a new one. Return `true` to mark the event as
-   * handled — blok then suppresses its default block split/create (it still
-   * calls `preventDefault()` so the browser doesn't insert a native newline).
-   * Return `false`/`undefined` to keep the default behavior.
-   *
-   * Designed for chat-input-style consumers ("Enter sends the message") — pair
-   * it with a single-block setup instead of subclassing Paragraph. It never
-   * fires for tools with `enableLineBreaks` (e.g. code) or while a
-   * popover/toolbar flipper owns the Enter key. It also does not fire for a
-   * soft-line-break Shift+Enter — except on iOS, where Safari reports a
-   * Shift+Enter for a sentence-ending ". " and blok creates a block instead,
-   * so the hook fires there just as it would for a plain Enter.
-   *
-   * @param event - the original keydown event
-   * @param api - blok.js api
-   * @returns true when the event was handled and the default split/create should be suppressed
-   */
-  onEnter?(event: KeyboardEvent, api: API): boolean | void;
-
-  /**
-   * Fires with the full serialized {@link OutputData} when the user presses the
-   * Enter that would otherwise create or split a block — the "Enter sends"
-   * gesture for chat-input-style consumers. Blok serializes the document for you
-   * and suppresses its default block split/create, so you get the current
-   * content without wiring `saver.save()` into `onEnter` by hand.
-   *
-   * It fires on exactly the same Enter as {@link onEnter} (after all the built-in
-   * escapes: `enableLineBreaks` tools, an open toolbar flipper, and the
-   * soft-line-break Shift+Enter — which is normalized for iOS just like
-   * `onEnter`, so you never need a hand-written `event.shiftKey` guard). When
-   * both hooks are set, a handled `onEnter` (one returning `true`) takes
-   * precedence and suppresses `onSubmit`.
-   *
-   * @param data - the full serialized output of the editor
-   * @param api - blok.js api
-   */
-  onSubmit?(data: OutputData, api: API): void;
-
-  /**
-   * Transforms the blocks array just before it is rendered, on every render
-   * (the initial render and every `blocks.render()` call). Use it to run
-   * app-specific data migrations inside Blok instead of pre-processing the
-   * data before handing it to the editor.
-   *
-   * Receives the raw saved blocks (the exact array passed to render, before any
-   * format analysis or hierarchical expansion) and must return the blocks to
-   * render. Returning an empty array renders an empty document; returning blocks
-   * for an empty input injects them.
-   *
-   * @param blocks - the blocks about to be rendered
-   * @returns the blocks to actually render
-   */
-  onBeforeRender?(blocks: OutputBlockData[]): OutputBlockData[];
-
-  /**
-   * Fires after a render completes and the blocks are in the DOM — on the
-   * initial render and on every `blocks.render()` call. Use it for post-render
-   * side effects (scroll restoration, attaching observers, …). Distinct from
-   * `onReady`, which fires once when the editor first becomes ready.
-   *
-   * @param api - blok.js api
-   */
-  onAfterRender?(api: API): void;
 
   /**
    * Common Block Tunes list. Will be added to all the blocks which do not specify their own 'tunes' set
@@ -845,20 +869,20 @@ export interface BlokConfig extends BlokMountOptions, BlokState {}
 
 /** {@link BlokMountOptions.onReady} handler. */
 export type OnReadyHandler = NonNullable<BlokMountOptions['onReady']>;
-/** {@link BlokMountOptions.onChange} handler. */
-export type OnChangeHandler = NonNullable<BlokMountOptions['onChange']>;
-/** {@link BlokMountOptions.onSave} handler. */
-export type OnSaveHandler = NonNullable<BlokMountOptions['onSave']>;
+/** {@link BlokState.onChange} handler. */
+export type OnChangeHandler = NonNullable<BlokState['onChange']>;
+/** {@link BlokState.onSave} handler. */
+export type OnSaveHandler = NonNullable<BlokState['onSave']>;
 /** {@link BlokMountOptions.onError} handler. */
 export type OnErrorHandler = NonNullable<BlokMountOptions['onError']>;
-/** {@link BlokMountOptions.onEnter} handler. */
-export type OnEnterHandler = NonNullable<BlokMountOptions['onEnter']>;
-/** {@link BlokMountOptions.onSubmit} handler. */
-export type OnSubmitHandler = NonNullable<BlokMountOptions['onSubmit']>;
-/** {@link BlokMountOptions.onBeforeRender} handler. */
-export type OnBeforeRenderHandler = NonNullable<BlokMountOptions['onBeforeRender']>;
-/** {@link BlokMountOptions.onAfterRender} handler. */
-export type OnAfterRenderHandler = NonNullable<BlokMountOptions['onAfterRender']>;
+/** {@link BlokState.onEnter} handler. */
+export type OnEnterHandler = NonNullable<BlokState['onEnter']>;
+/** {@link BlokState.onSubmit} handler. */
+export type OnSubmitHandler = NonNullable<BlokState['onSubmit']>;
+/** {@link BlokState.onBeforeRender} handler. */
+export type OnBeforeRenderHandler = NonNullable<BlokState['onBeforeRender']>;
+/** {@link BlokState.onAfterRender} handler. */
+export type OnAfterRenderHandler = NonNullable<BlokState['onAfterRender']>;
 /** {@link BlokMountOptions.onThemeChange} handler. */
 export type OnThemeChangeHandler = NonNullable<BlokMountOptions['onThemeChange']>;
 /** {@link BlokMountOptions.onBeforePaste} handler. */

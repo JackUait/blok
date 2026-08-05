@@ -30,7 +30,7 @@ import { BlockHierarchy } from './hierarchy';
 import { BlockOperations } from './operations';
 import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
-import type { BlocksStore, BlockMutationEventDetailWithoutTarget } from './types';
+import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, InsertBlockOptions } from './types';
 import { BlockYjsSync } from './yjs-sync';
 
 type BlocksStoreProxy = BlocksStore & {
@@ -528,19 +528,10 @@ export class BlockManager extends Module {
    * @param {BlockToolData} [options.data] - constructor params
    * @param {string} [options.parentId] - parent block id for hierarchical structure
    * @param {string[]} [options.contentIds] - array of child block ids
+   * @param [options.origin] - why the Block is being composed (creation vs restore); defaults to 'api'
    * @returns {Block}
    */
-  public composeBlock(options: {
-    tool: string;
-    id?: string;
-    data?: BlockToolData;
-    tunes?: { [name: string]: BlockTuneData };
-    parentId?: string;
-    contentIds?: string[];
-    bindEventsImmediately?: boolean;
-    lastEditedAt?: number;
-    lastEditedBy?: string | null;
-  }): Block {
+  public composeBlock(options: ComposeBlockOptions): Block {
     return this.factory.composeBlock(options);
   }
 
@@ -554,18 +545,10 @@ export class BlockManager extends Module {
    * @param {boolean} [options.needToFocus] - flag shows if needed to update current Block index
    * @param {boolean} [options.replace] - flag shows if block by passed index should be replaced with inserted one
    * @param {boolean} [options.skipYjsSync] - if true, skip syncing to Yjs (caller handles sync separately)
+   * @param [options.origin] - why the Block is being created (creation vs restore); defaults to 'api'
    * @returns {Block}
    */
-  public insert(options: {
-    id?: string;
-    tool?: string;
-    data?: BlockToolData;
-    index?: number;
-    needToFocus?: boolean;
-    replace?: boolean;
-    tunes?: { [name: string]: BlockTuneData };
-    skipYjsSync?: boolean;
-  } = {}): Block {
+  public insert(options: InsertBlockOptions = {}): Block {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     const result = this.operations.insert(options, this.blocksStore);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;

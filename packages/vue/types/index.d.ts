@@ -4,6 +4,7 @@ import type {
   Blok,
   BlockAPI,
   BlockMutationEvent,
+  BlockOrigin,
   BlockToolConstructable,
   BlockToolData,
   BlokConfig,
@@ -40,6 +41,13 @@ import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
  *   forwarded — it only affects the initial locale resolution.
  * - `data` — re-renders via `editor.render(value)` when content changes
  *   (deep-equal–deduped and serialized; seeds the initial content at creation)
+ * - `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender`,
+ *   `onAfterRender` — calls `editor.handlers.set({ ... })` when a callback
+ *   APPEARS or DISAPPEARS. Callback presence is load-bearing in core (an
+ *   `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the
+ *   change pipeline), so dropping the prop UNSETS the handler rather than
+ *   leaving a stale one behind. Callback IDENTITY is always live — the adapter
+ *   forwards to the latest render, so you never need to memoize them.
  *
  * All other config is consumed once at editor creation.
  */
@@ -117,7 +125,16 @@ export interface BlokEditorExposed {
   save(): Promise<OutputData> | undefined;
   /** Move the caret into the editor. */
   focus(atEnd?: boolean): void;
-  /** Replace the editor content (undefined until ready). */
+  /**
+   * Replace the editor content (undefined until ready).
+   *
+   * Safe to mix with a controlled `data` prop: the rendered document becomes
+   * the adapter's content baseline once the call lands, so a later `data`
+   * change back to the previous document still re-renders instead of being
+   * deduped against a baseline the editor no longer reflects. Recorded only on
+   * the resolved path — a failed render leaves the editor on its previous
+   * content.
+   */
   render(data: OutputData): Promise<void> | undefined;
 }
 
@@ -156,6 +173,21 @@ export declare function provideBlok(defaults: Partial<UseBlokConfig>): void;
  * Mirrors React's `useBlokDefaults`. Call inside `setup`.
  */
 export declare function useBlokDefaults(): Partial<UseBlokConfig>;
+
+/**
+ * Injection key carrying the LIVE editor instance down to everything
+ * `BlokContent` renders — including every `createVueBlock` block, because
+ * `<Teleport>` preserves the component render context.
+ */
+export declare const BLOK_EDITOR_INSTANCE: InjectionKey<Readonly<ShallowRef<Blok | null>>>;
+
+/**
+ * The live Blok instance a component is rendered inside, as a ref (null before
+ * it exists). Inside a `createVueBlock` block this is the block's OWN editor, so
+ * `useBlocks(useBlokInstance())` works with no host plumbing — and makes a
+ * container block reactive to its own child tree. Call it inside `setup`.
+ */
+export declare function useBlokInstance(): Readonly<ShallowRef<Blok | null>>;
 
 /**
  * A plain, serializable view of one block in the tree. Snapshot-volatile: every
@@ -502,6 +534,23 @@ export interface PropSchemaEntry {
  */
 export type PropSchema = Record<string, PropSchemaEntry>;
 
+/**
+ * One child's decoration: attribute name -> value. `null`/`undefined` removes
+ * the attribute; a boolean or number is stringified (so `false` writes
+ * `data-active="false"`, which CSS can select, rather than dropping the hook).
+ */
+export type ChildAttributes = Record<string, string | number | boolean | null | undefined>;
+
+/** The `BlockChildren` per-child decorator (see {@link VueBlockRenderProps.BlockChildren}). */
+export type ChildAttributesFn = (child: BlockAPI, index: number) => ChildAttributes;
+
+/**
+ * Every STATIC member of core's block-tool contract a Vue block may declare for
+ * itself. `toolbox` and `isReadOnlySupported` are excluded — the factory owns
+ * them.
+ */
+export type BlockToolStatics = Omit<BlockToolConstructable, 'toolbox' | 'isReadOnlySupported'>;
+
 /** Context handed to a Vue block's `setup` (the only data write path is `commit`). */
 export interface VueBlockRenderProps<Data> {
   /** Reactive, frozen snapshot of the block data. Read `data.value`; never mutate. */
@@ -511,13 +560,25 @@ export interface VueBlockRenderProps<Data> {
   /** This block's per-block API. */
   block: BlockAPI;
   /**
+   * The EDITOR-level API this block belongs to (`api.blocks`, `api.caret`…) —
+   * the same object a vanilla tool receives. For a reactive view of the tree
+   * pair `useBlocks` with `useBlokInstance()` instead; the api is not reactive.
+   */
+  api: API;
+  /**
    * Reactive read-only flag. Read `readOnly.value` in render to disable editing.
    * Toggled IN PLACE by core's read-only switch (no remount, ephemeral state
    * survives). Honor it — a block that ignores it stays interactive when the
    * editor is read-only.
    */
   readOnly: Readonly<ShallowRef<boolean>>;
-  /** Engine-owned child slot — render `h(BlockChildren)` for a container block. */
+  /**
+   * Engine-owned child slot — render `h(BlockChildren)` for a container block.
+   * Accepts one optional prop, `childAttributes: ChildAttributesFn`, applied to
+   * each child's HOLDER after mounting (named hooks instead of positional
+   * `:nth-child()` CSS). Holders stay DIRECT children of the slot; attributes
+   * the callback stops producing are removed on the next pass.
+   */
   BlockChildren: Component;
 }
 
@@ -527,9 +588,85 @@ export interface CreateVueBlockSpec<Data extends BlockToolData = BlockToolData> 
   toolbox?: ToolboxConfig;
   propSchema: PropSchema;
   setup: (props: VueBlockRenderProps<Data>) => () => unknown;
+  /**
+   * Static members of core's tool contract, forwarded verbatim onto the
+   * generated tool class (`ownsChildren`, `keepsChildrenOnEnter`,
+   * `conversionConfig`, `pasteConfig`, `sanitize`, `shortcut`, `upgradeData`…).
+   *
+   * `keepsChildrenOnEnter` is the per-tool Enter policy: declare it and Enter on
+   * this container's empty LAST child creates the new line INSIDE it instead of
+   * escaping to the container's parent (Blok's default, which is Notion's
+   * callout behaviour). It is policy the DOM cannot express — a callout renders
+   * the same nested-blocks slot as a column yet wants the escape — so a layout
+   * container (a card, a `steps` block) had to hijack the editor-global
+   * `config.onEnter` before it existed.
+   */
+  statics?: BlockToolStatics;
+  /**
+   * The element the +/drag toolbar should vertically center on — core's
+   * `getToolbarAnchorElement` hook, resolved against the block's host on every
+   * call. Return `null`/`undefined` to keep core's default positioning.
+   */
+  getToolbarAnchorElement?: (host: HTMLElement, block: BlockAPI) => HTMLElement | null | undefined;
   onRendered?: (block: BlockAPI) => void;
+  /**
+   * Fired ONCE per block instance, after the teleport's FIRST commit — the
+   * first moment this block's rendered DOM exists (and, for a container, the
+   * moment `BlockChildren` has adopted the child holders). `onRendered` cannot
+   * mean that: core calls `rendered()` in the same tick as `render()`, before
+   * Vue has drawn anything.
+   *
+   * It is also the create-vs-restore signal: `context.origin` says whether the
+   * author just made this block (`user`/`api`/`convert`) or the document is
+   * being re-materialised (`load`/`replay`/`paste`), so a container can seed its
+   * default children here exactly once.
+   *
+   * To observe OTHER blocks settling — e.g. before placing the caret in a child
+   * you just inserted — listen for the `block:childrenMounted` editor event
+   * instead: `api.events.on('block:childrenMounted', ({ blockId, childIds }) => …)`.
+   */
+  onMounted?: (block: BlockAPI, context: VueBlockMountedContext) => void;
+  /**
+   * The SEEDING hook: `onMounted`, narrowed to a genuine creation. Fired ONCE
+   * per block instance, after the teleport's first commit, and only when the
+   * author just made this block (`origin` of `user`, `api` or `convert`) —
+   * never for a `load`/`replay`/`paste` restore, and never for the off-tree
+   * `probe` instance core builds to read a tool's default data.
+   *
+   * Prefer it over hand-testing `context.origin` in `onMounted`: the intuitive
+   * `origin === 'user'` check is wrong — it drops `api.blocks.insert(...)` and
+   * turn-into, so the container comes up empty for every path except a
+   * keystroke.
+   * @example
+   * ```ts
+   * onCreated: (block, { api }) => {
+   *   if (block.getChildren().length === 0) {
+   *     api.blocks.insertInsideParent(block.id);
+   *   }
+   * }
+   * ```
+   */
+  onCreated?: (block: BlockAPI, context: VueBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;
+}
+
+/**
+ * Second argument of {@link CreateVueBlockSpec.onMounted} and
+ * {@link CreateVueBlockSpec.onCreated}.
+ */
+export interface VueBlockMountedContext {
+  /**
+   * Why this block instance was constructed. CREATION origins (`user`, `api`,
+   * `convert`) mean the author just made it, so seeding default children is
+   * correct; RESTORE origins (`load`, `replay`, `paste`) mean the document
+   * already says what the children are. `probe` is an off-tree instance built
+   * only to read a tool's default data and must not touch the block tree.
+   * Defaults to `'api'`.
+   */
+  origin: BlockOrigin;
+  /** The editor-level API (`api.blocks`, `api.caret`, `api.events`…). */
+  api: API;
 }
 
 /**

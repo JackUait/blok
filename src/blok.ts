@@ -776,7 +776,7 @@ export { markSanitizerConfig } from './components/marks/mark-engine';
  * `blok.events.on(...)`. Prefer these over raw strings to avoid typos and
  * get typed payloads (see {@link BlokEditorEventMap}).
  */
-export { BlockRendered, BlocksRendered } from './components/events';
+export { BlockRendered, BlocksRendered, BlockChildrenMounted } from './components/events';
 
 /**
  * Structural comparison and emptiness predicates for saved documents, the

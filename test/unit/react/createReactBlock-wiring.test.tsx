@@ -116,10 +116,15 @@ describe('createReactBlock end-to-end wiring', () => {
     await flushReady();
 
     const tools = constructorConfigs[0].tools as Record<string, { toolbox?: unknown }>;
-    const toolbox = tools.localized.toolbox as Array<{ titleEl?: unknown }> | undefined;
+    const toolbox = tools.localized.toolbox as { titleEl?: unknown } | undefined;
 
     expect(toolbox).toBeDefined();
-    expect(toolbox?.[0]?.titleEl).toBeInstanceOf(HTMLElement);
+    // The authored SHAPE is preserved (single entry in, single entry out):
+    // core replaces a single tool entry wholesale when the user setting is an
+    // array, and merges it key-by-key when it is an object — only the merge
+    // lets the tool-level icon survive an override that carries just `titleEl`.
+    expect(Array.isArray(toolbox)).toBe(false);
+    expect(toolbox?.titleEl).toBeInstanceOf(HTMLElement);
 
     unmount();
   });

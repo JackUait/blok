@@ -90,6 +90,74 @@ describe('HowToCustomToolContent', () => {
     });
   });
 
+  describe('container-block section (framework adapters)', () => {
+    it('is absent for vanilla — the container hooks live on the adapter specs', () => {
+      renderHowTo();
+      expect(screen.queryByText('Container blocks')).toBeNull();
+    });
+
+    it.each([
+      ['react', 'useBlokInstance', 'childAttributes'],
+      ['vue', 'useBlokInstance', 'childAttributes'],
+      ['angular', 'injectBlokInstance', 'mountChildren'],
+    ])('documents the container surface for %s', (framework, instanceHook, childHook) => {
+      const { container } = renderHowTo(framework);
+      expect(screen.getByText('Container blocks')).toBeInTheDocument();
+      const code = container.textContent ?? '';
+      // The general statics channel and the toolbar anchor, plus the editor
+      // instance and the per-child decoration hook.
+      expect(code).toContain('statics:');
+      expect(code).toContain('ownsChildren');
+      expect(code).toContain('getToolbarAnchorElement');
+      expect(code).toContain(instanceHook);
+      expect(code).toContain(childHook);
+    });
+
+    it.each(['react', 'vue', 'angular'])(
+      'shows %s containers how to keep Enter inside the container',
+      (framework) => {
+        const { container } = renderHowTo(framework);
+        const code = container.textContent ?? '';
+        expect(code).toContain('keepsChildrenOnEnter');
+      }
+    );
+
+    it.each(['react', 'vue', 'angular'])(
+      'shows %s containers the post-mount seeding hook',
+      (framework) => {
+        const { container } = renderHowTo(framework);
+        const code = container.textContent ?? '';
+        // rendered() runs BEFORE the adapter's first commit, so seeding (and
+        // caret work) belongs after it — and `onCreated` is the narrowed form
+        // that only fires for a genuine creation, so a load/undo/paste replay
+        // never fabricates children.
+        expect(code).toContain('onCreated');
+      }
+    );
+
+    it.each(['react', 'vue', 'angular'])(
+      'never shows %s containers the origin === user seeding gate',
+      (framework) => {
+        const { container } = renderHowTo(framework);
+        const code = container.textContent ?? '';
+        /*
+         * The intuitive gate is WRONG and must not be modelled: `user` is only
+         * the keystroke path, so a container seeded that way stays empty for
+         * `api.blocks.insert(...)` and for a turn-into. `onCreated` covers the
+         * whole creation set (`user`, `api`, `convert`) instead.
+         */
+        expect(code).not.toContain("origin === 'user'");
+      }
+    );
+
+    it('states the holder-write guarantee and where it stops', () => {
+      const { container } = renderHowTo('react');
+      const code = container.textContent ?? '';
+      expect(code).toContain('DIRECT children of the nested slot');
+      expect(code).toContain('tool root');
+    });
+  });
+
   describe('inline tool authoring section (react only)', () => {
     it('is absent for vanilla — there is no inline-tool factory to show', () => {
       renderHowTo();

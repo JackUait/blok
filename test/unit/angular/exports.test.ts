@@ -15,4 +15,9 @@ describe('@bloklabs/angular exports', () => {
     expect(typeof AngularApi.injectBlokReady).toBe('function');
     expect(AngularApi.BLOK_BLOCK_CONTEXT).toBeDefined();
   });
+
+  it('exports the editor-instance injection surface', () => {
+    expect(typeof AngularApi.injectBlokInstance).toBe('function');
+    expect(AngularApi.BLOK_EDITOR_INSTANCE).toBeDefined();
+  });
 });

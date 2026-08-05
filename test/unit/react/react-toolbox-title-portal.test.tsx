@@ -10,7 +10,7 @@
  * BlockPortalHost — picking up the host's i18n context. `useBlok` injects the
  * result as a per-editor `toolbox` settings override.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, act } from '@testing-library/react';
 
@@ -20,6 +20,9 @@ import {
   type BlockPortalRegistry,
 } from '../../../packages/react/src/block-portal-registry';
 import { BlockPortalHost } from '../../../packages/react/src/BlockPortalHost';
+import { BlockToolAdapter } from '../../../src/components/tools/block';
+import type { API } from '../../../types';
+import type { ToolboxConfig, ToolboxConfigEntry } from '../../../types/tools';
 
 const makeQuote = (): ReturnType<typeof createReactBlock> =>
   createReactBlock({
@@ -115,5 +118,115 @@ describe('createReactBlock ReactNode toolbox title', () => {
     };
 
     expect(Plain.__buildPortalToolbox(registry, 'plain')).toBeUndefined();
+  });
+});
+
+/**
+ * D6: an element ICON combined with an element TITLE. `useBlok` builds the
+ * portal toolbox from inside a passive effect, where React refuses to flush a
+ * nested `flushSync` — so icon serialization is deferred, and the raw
+ * ReactElement used to be baked into the entry core renders through
+ * `insertAdjacentHTML`, i.e. as the literal string `[object Object]`.
+ */
+describe('createReactBlock ReactNode toolbox icon', () => {
+  let registry: BlockPortalRegistry;
+  let unmountHost: () => void;
+
+  const makeQuoteWithElementIcon = (): ReturnType<typeof createReactBlock> =>
+    createReactBlock({
+      type: 'quote',
+      propSchema: {},
+      toolbox: {
+        icon: <svg data-testid="quote-icon" />,
+        title: <span data-testid="live-title">Цитата</span>,
+        titleKey: 'quote',
+      },
+      component: () => <blockquote />,
+    });
+
+  /**
+   * Build the override exactly the way `useBlok` does: from inside a passive
+   * effect (React's commit phase), where `flushSync` cannot flush.
+   * @param Tool - the generated tool class
+   * @param toolName - name the tool is registered under
+   */
+  const buildInPassiveEffect = (
+    Tool: { __buildPortalToolbox: (r: BlockPortalRegistry, name: string) => unknown },
+    toolName: string
+  ): unknown => {
+    const built: { value: unknown } = { value: undefined };
+
+    const Probe = (): null => {
+      useEffect(() => {
+        built.value = Tool.__buildPortalToolbox(registry, toolName);
+      }, []);
+
+      return null;
+    };
+
+    const view = render(<Probe />);
+
+    view.unmount();
+
+    return built.value;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registry = createBlockPortalRegistry();
+    const host = render(<BlockPortalHost registry={registry} />);
+
+    unmountHost = host.unmount;
+  });
+
+  afterEach(() => {
+    unmountHost();
+    vi.restoreAllMocks();
+  });
+
+  it('never hands core an unserialized ReactElement icon', () => {
+    const Quote = makeQuoteWithElementIcon() as unknown as {
+      __buildPortalToolbox: (r: BlockPortalRegistry, name: string) => unknown;
+    };
+
+    const entry = firstEntry(buildInPassiveEffect(Quote, 'quote'));
+
+    // A ReactElement reaches the popover's insertAdjacentHTML sink as
+    // '[object Object]'; core icons are markup strings only.
+    expect(React.isValidElement(entry.icon)).toBe(false);
+    expect(entry.icon === undefined || typeof entry.icon === 'string').toBe(true);
+  });
+
+  it('keeps the entry icon-bearing once core merges it over the tool toolbox', () => {
+    const Quote = makeQuoteWithElementIcon();
+    const override = buildInPassiveEffect(Quote, 'quote');
+
+    const adapter = new BlockToolAdapter({
+      name: 'quote',
+      constructable: Quote,
+      config: {
+        config: {},
+        toolbox: override as ToolboxConfig,
+      },
+      api: {} as API,
+      isDefault: false,
+      isInternal: false,
+      defaultPlaceholder: '',
+    });
+
+    let entries: ToolboxConfigEntry[] | undefined;
+
+    // The static toolbox getter serializes the element icon with a throwaway
+    // root — outside React's commit phase, where the flush succeeds.
+    act(() => {
+      entries = adapter.toolbox;
+    });
+
+    expect(entries).toHaveLength(1);
+    // An icon-less entry is filtered out of the convert menu and block
+    // settings, so dropping the deferred icon is only safe while the
+    // tool-level toolbox still supplies one through core's merge.
+    expect(typeof entries?.[0].icon).toBe('string');
+    expect(entries?.[0].titleEl).toBeInstanceOf(HTMLElement);
   });
 });

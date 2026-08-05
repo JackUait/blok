@@ -8,6 +8,7 @@ export { BlokEditor } from './BlokEditor';
 export { useBlokHandle } from './useBlokHandle';
 export type { BlokEditorHandle } from './useBlokHandle';
 export { BlokProvider, useBlokDefaults } from './provide-blok';
+export { useBlokInstance } from './blok-instance-context';
 export type { UseBlokConfig, BlokContentProps } from './types';
 export type { BlokEditorProps } from './BlokEditor';
 export { useBlocks } from './useBlocks';
@@ -18,7 +19,11 @@ export type { BlokViewProps } from './BlokView';
 export { useBlokView } from './useBlokView';
 export { createReactBlock } from './createReactBlock';
 export type {
+  BlockChildrenProps,
+  BlockToolStatics,
+  ChildAttributes,
   CreateReactBlockSpec,
+  ReactBlockMountedContext,
   ReactBlockRenderProps,
   ReactBlockViewProps,
   ReactToolboxConfig,

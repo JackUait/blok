@@ -93,6 +93,7 @@ export class BlockInsertion {
       skipYjsSync = false,
       appendToWorkingArea = false,
       forceTopLevel = false,
+      origin = 'api',
     } = options;
 
     const targetIndex = index ?? this.ctx.rawCurrentBlockIndex + (replace ? 0 : 1);
@@ -147,6 +148,7 @@ export class BlockInsertion {
     const block = this.factory.composeBlock({
       tool: resolvedToolName,
       bindEventsImmediately: true,
+      origin,
       ...(id !== undefined && { id }),
       ...(data !== undefined && { data }),
       ...(tunes !== undefined && { tunes }),
@@ -325,6 +327,9 @@ export class BlockInsertion {
       needToFocus,
       skipYjsSync,
       forceTopLevel,
+      // Every caller is a direct editing gesture: Enter, the plus button, a
+      // markdown shortcut, a click in the editor's bottom zone.
+      origin: 'user',
     }, blocksStore);
   }
 
@@ -346,6 +351,9 @@ export class BlockInsertion {
     return this.ctx.insert({
       appendToWorkingArea: true,
       forceTopLevel: true,
+      // Only reached from a click in the editor's bottom zone / the toolbar's
+      // "add block below the document" affordance.
+      origin: 'user',
     }, blocksStore);
   }
 
@@ -420,6 +428,8 @@ export class BlockInsertion {
         data: newBlockData,
         needToFocus: false,
         skipYjsSync: true,
+        // Only reachable from the Enter key handler.
+        origin: 'user',
       }, blocksStore);
 
       // Update currentBlockIndex AFTER insert (and handleBlockMutation) completes.
@@ -681,6 +691,9 @@ export class BlockInsertion {
         replace,
         needToFocus: false,
         skipYjsSync: true,
+        // Pasted content brings its own children (they are parented right after
+        // this insert), so a container Tool must never seed its defaults here.
+        origin: 'paste',
       }, blocksStore);
     }, { extendThroughRAF: true });
 

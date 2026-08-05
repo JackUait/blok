@@ -17,3 +17,6 @@ export * from './shared/output-data';
 export * from './shared/prop-schema';
 export * from './tools/nested-blocks';
 export { DATA_ATTR } from './components/constants/data-attributes';
+// The settle signal every adapter emits after mounting a container's child
+// holders — single-sourced here so the three adapters cannot drift on the name.
+export { BlockChildrenMounted } from './components/events/BlockChildrenMounted';

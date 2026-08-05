@@ -17,6 +17,7 @@ export * from './i18n';
 export * from './ui';
 export * from './tools';
 export * from './uploader';
+export * from './handlers';
 
 export * from './theme';
 export * from './width';

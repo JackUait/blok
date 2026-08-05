@@ -117,6 +117,49 @@ describe('BlockPortalHost + registry (React)', () => {
     expect(target.querySelector('.probe')).toBeNull();
   });
 
+  /**
+   * C2: core composes the REPLACEMENT block (which registers under the same id)
+   * BEFORE it destroys the old one, so the old tool's `removed()`/`destroy()`
+   * teardown arrives AFTER the new entry is in the registry. An unconditional
+   * delete there wipes the live entry and the holder stays empty forever.
+   */
+  it('a late teardown from a superseded owner cannot clobber a same-id re-register', () => {
+    const registry = createBlockPortalRegistry();
+    const first = makeHost();
+    const second = makeHost();
+
+    render(<BlockPortalHost registry={registry} />);
+
+    act(() => {
+      registry.register('a', { hostEl: first, component: Probe, props: { suffix: '-1' } });
+      registry.register('a', { hostEl: second, component: Probe, props: { suffix: '-2' } });
+      // The superseded owner tears itself down, twice (removed() + destroy()).
+      registry.unregister('a', first);
+      registry.unregister('a', first);
+    });
+
+    expect(registry.getSnapshot().get('a')?.hostEl).toBe(second);
+    expect(second.querySelector('.probe')?.textContent).toBe('default-2');
+  });
+
+  it('the live owner can still unregister itself', () => {
+    const registry = createBlockPortalRegistry();
+    const target = makeHost();
+
+    render(<BlockPortalHost registry={registry} />);
+
+    act(() => {
+      registry.register('a', { hostEl: target, component: Probe, props: {} });
+    });
+    expect(target.querySelector('.probe')).not.toBeNull();
+
+    act(() => {
+      registry.unregister('a', target);
+    });
+    expect(registry.getSnapshot().has('a')).toBe(false);
+    expect(target.querySelector('.probe')).toBeNull();
+  });
+
   it('portaled blocks inherit React context from the tree ABOVE the host', () => {
     const registry = createBlockPortalRegistry();
     const target = makeHost();

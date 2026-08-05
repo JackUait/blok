@@ -140,6 +140,9 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
         tool: type,
         data: blockData,
         parentId: parent,
+        // Markdown import materialises a document the caller already wrote —
+        // its containers arrive with their children, so none may self-seed.
+        origin: 'paste',
       }),
       hasParent: parent !== undefined && parent !== null,
     }));

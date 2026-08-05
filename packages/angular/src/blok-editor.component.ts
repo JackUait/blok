@@ -12,11 +12,13 @@ import {
   inject,
   signal,
   type AfterViewInit,
+  type DoCheck,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, type ControlValueAccessor } from '@angular/forms';
 import { BlokContentDirective } from './blok-content.directive';
 import { BLOK_DEFAULT_CONFIG } from './provide-blok';
 import { deepEqual } from '@bloklabs/core/adapters';
+import { equalsOutputData } from '@bloklabs/core/adapters';
 import { normalizeReadOnlyConfig } from '@bloklabs/core/adapters';
 import { toRenderableData } from '@bloklabs/core/adapters';
 import type {
@@ -27,6 +29,7 @@ import type {
   BlocksRenderedPayload,
   BlokConfig,
   EditorWidth,
+  LiveHandlers,
   LooseOutputData,
   OutputBlockData,
   OutputData,
@@ -48,8 +51,8 @@ import type { BlokAngularConfig } from './types';
  * `styleTokens` through `editor.tokens.set()` (replace semantics),
  * `i18n` through `editor.i18n.update()` (deep-equal–deduped; seeded at
  * construction so the locale resolves during boot) and `data`
- * through `editor.render()` (deep-equal–deduped); everything else seeds
- * construction.
+ * through `editor.render()` (content-deduped via `equalsOutputData`); everything
+ * else seeds construction.
  *
  * Implementation note: classic `@Input()`/`@ViewChild()` decorators are used
  * (not signal `input()`/`viewChild()`) for JIT compatibility — see
@@ -71,7 +74,7 @@ import type { BlokAngularConfig } from './types';
     },
   ],
 })
-export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor {
+export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValueAccessor {
   private readonly ngZone = inject(NgZone);
   /** App-wide defaults from `provideBlok()`; merged UNDER per-instance inputs. */
   private readonly defaults = inject(BLOK_DEFAULT_CONFIG, { optional: true }) ?? {};
@@ -215,9 +218,12 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
   @Input() recreateKey: unknown;
 
   /**
-   * Content the editor currently reflects. Set when seeded or rendered (the data
-   * effect below). A controlled `data` echo that deep-equals this baseline is a
-   * no-op, so it won't clobber the caret. Renders are serialized via `renderChain`.
+   * Content the editor currently reflects. Set when seeded, when the data effect
+   * renders, when the editor emits its own output (`coreOnSave`) and when the
+   * imperative `render()` facade lands. A controlled `data` echo that
+   * content-equals this baseline is a no-op, so it won't clobber the caret.
+   * Renders are serialized via `renderChain`. `undefined` means "nothing recorded
+   * yet" — never an empty document.
    */
   private lastRenderedData?: OutputData | LooseOutputData | null;
 
@@ -242,16 +248,115 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
    * it straight back into `data` deep-equals the baseline and is deduped to a
    * no-op (no redundant render, no caret reset). Re-enters the Angular zone since
    * the editor runs outside it.
+   *
+   * Falls back to an escape-hatch `[config]` callback when nothing Angular-side
+   * consumes the save — the baseline is recorded either way, so the controlled
+   * `data` dedupe works on both paths.
    */
-  private readonly coreOnSave = (data: OutputData): void => {
+  private readonly coreOnSave = (data: OutputData, api: API): void => {
     this.lastRenderedData = data;
-    this.ngZone.run(() => {
-      this.dataChange.emit(data);
-      this.save.emit(data);
-      this.cvaOnChange?.(data);
-      this.cvaOnTouched?.();
-    });
+
+    if (this.hasSaveConsumer()) {
+      this.ngZone.run(() => {
+        this.dataChange.emit(data);
+        this.save.emit(data);
+        this.cvaOnChange?.(data);
+        this.cvaOnTouched?.();
+      });
+
+      return;
+    }
+
+    this.escapeHatchConfig().onSave?.(data, api);
   };
+
+  /**
+   * Stable wrappers for the remaining live callbacks. Each resolves its target
+   * at call time (an observed output, else the `[config]` escape hatch), so a
+   * pushed handler never goes stale and only PRESENCE has to be synced.
+   */
+  private readonly coreOnChange = (
+    api: API,
+    event: BlockMutationEvent | BlockMutationEvent[]
+  ): void => {
+    if (this.change.observed) {
+      this.ngZone.run(() => this.change.emit({ api, event }));
+
+      return;
+    }
+
+    this.escapeHatchConfig().onChange?.(api, event);
+  };
+
+  private readonly coreOnAfterRender = (api: API): void => {
+    if (this.afterRender.observed) {
+      this.ngZone.run(() => this.afterRender.emit(api));
+
+      return;
+    }
+
+    this.escapeHatchConfig().onAfterRender?.(api);
+  };
+
+  /*
+   * Transforms run synchronously inside core's render pipeline and must return a
+   * value — never wrap them in ngZone.run.
+   */
+  private readonly coreOnBeforeRender = (blocks: OutputBlockData[]): OutputBlockData[] => {
+    const transform = this.onBeforeRender ?? this.escapeHatchConfig().onBeforeRender;
+
+    return transform?.(blocks) ?? blocks;
+  };
+
+  private readonly coreOnEnter = (event: KeyboardEvent, api: API): boolean | void =>
+    this.escapeHatchConfig().onEnter?.(event, api);
+
+  private readonly coreOnSubmit = (data: OutputData, api: API): void => {
+    this.escapeHatchConfig().onSubmit?.(data, api);
+  };
+
+  /** provideBlok defaults merged under the `[config]` escape hatch. */
+  private escapeHatchConfig(): Partial<BlokAngularConfig> {
+    return { ...this.defaults, ...this.config };
+  }
+
+  /** True when an output, a two-way binding or Angular forms consumes `onSave`. */
+  private hasSaveConsumer(): boolean {
+    return this.dataChange.observed || this.save.observed || this.cvaOnChange !== undefined;
+  }
+
+  /**
+   * The live callbacks this component currently wires into core, keyed by
+   * handler name — `undefined` for the ones nothing consumes.
+   *
+   * PRESENCE is the semantics in core (an `onSubmit` turns Enter into
+   * serialize-and-submit, an `onSave` arms the change-observation pipeline), so
+   * an unconsumed callback must stay absent. One source of truth for both the
+   * construction config and the runtime sync in `ngDoCheck`, so the two cannot
+   * drift.
+   * @returns the wrappers to install, `undefined` where nothing is wired
+   */
+  private liveHandlers(): LiveHandlers {
+    const cfg = this.escapeHatchConfig();
+
+    return {
+      onChange: this.change.observed || cfg.onChange !== undefined ? this.coreOnChange : undefined,
+      onSave: this.hasSaveConsumer() || cfg.onSave !== undefined ? this.coreOnSave : undefined,
+      onEnter: cfg.onEnter !== undefined ? this.coreOnEnter : undefined,
+      onSubmit: cfg.onSubmit !== undefined ? this.coreOnSubmit : undefined,
+      onBeforeRender:
+        this.onBeforeRender !== undefined || cfg.onBeforeRender !== undefined
+          ? this.coreOnBeforeRender
+          : undefined,
+      onAfterRender:
+        this.afterRender.observed || cfg.onAfterRender !== undefined
+          ? this.coreOnAfterRender
+          : undefined,
+    };
+  }
+
+  /** Handler presence installed on the live editor (the sync dedupe baseline). */
+  private appliedHandlers: LiveHandlers = {};
 
   /** Live Blok instance, or null until `isReady` resolves / after destroy. */
   readonly instance = computed<Blok | null>(() => this.content()?.instance() ?? null);
@@ -336,35 +441,29 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
       cfg.i18n = i18n;
     }
 
-    // Opt-in: only attach each core callback when the consumer actually consumes
-    // it (an observed output, a registered forms hook, or a provided transform).
-    // Their mere presence makes the core serialize / run hooks on every change.
-    if (this.dataChange.observed || this.save.observed || this.cvaOnChange !== undefined) {
-      cfg.onSave = this.coreOnSave;
-    }
+    // Opt-in: only attach each live callback when the consumer actually consumes
+    // it (an observed output, a registered forms hook, a provided transform or an
+    // escape-hatch config callback). Their mere presence makes the core serialize
+    // / run hooks on every change. The same map drives the runtime sync in
+    // `ngDoCheck`, so construction and post-mount can never disagree.
+    const handlers = this.liveHandlers();
 
-    if (this.change.observed) {
-      cfg.onChange = (api: API, event: BlockMutationEvent | BlockMutationEvent[]): void =>
-        this.ngZone.run(() => this.change.emit({ api, event }));
-    }
+    cfg.onChange = handlers.onChange;
+    cfg.onSave = handlers.onSave;
+    cfg.onEnter = handlers.onEnter;
+    cfg.onSubmit = handlers.onSubmit;
+    cfg.onBeforeRender = handlers.onBeforeRender;
+    cfg.onAfterRender = handlers.onAfterRender;
 
-    if (this.afterRender.observed) {
-      cfg.onAfterRender = (api: API): void => this.ngZone.run(() => this.afterRender.emit(api));
-    }
+    this.appliedHandlers = handlers;
 
     if (this.themeChange.observed) {
       cfg.onThemeChange = (resolved: ResolvedTheme): void =>
         this.ngZone.run(() => this.themeChange.emit(resolved));
     }
 
-    // Transforms run synchronously inside core's render/paste pipeline and must
-    // return a value — never wrap them in ngZone.run.
-    const beforeRender = this.onBeforeRender;
-
-    if (beforeRender !== undefined) {
-      cfg.onBeforeRender = (blocks: OutputBlockData[]): OutputBlockData[] => beforeRender(blocks);
-    }
-
+    // Transforms run synchronously inside core's paste pipeline and must return a
+    // value — never wrap them in ngZone.run.
     const beforePaste = this.onBeforePaste;
 
     if (beforePaste !== undefined) {
@@ -384,6 +483,69 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     this.content.set(this.contentQuery ?? null);
   }
 
+  /**
+   * Reactive callback presence.
+   *
+   * Callback wiring was decided once, at construction, and in core the presence
+   * of a handler IS the semantics: an `onSubmit` makes Enter serialize-and-submit
+   * instead of splitting the block, an `onSave` arms the whole change-observation
+   * pipeline. A `[config]` swap, an `*ngIf`-gated `(save)` output or a
+   * `registerOnChange` from Angular forms arriving after mount therefore needed a
+   * `recreateKey` bump — destroying the editor and losing caret and undo history.
+   *
+   * Diff the wired handlers against what is installed and push genuine flips
+   * through the runtime `handlers.set` API, writing `undefined` for a handler
+   * that lost its consumer so the change stays reversible. `ngDoCheck` (not an
+   * `effect`) because `EventEmitter.observed` and the plain `@Input` transforms
+   * are not signals; the comparison is six identity checks against stable
+   * wrappers, so an unchanged cycle pushes nothing.
+   */
+  ngDoCheck(): void {
+    const editor = this.instance();
+
+    if (editor === null) {
+      return;
+    }
+
+    const desired = this.liveHandlers();
+    const applied = this.appliedHandlers;
+    const diff: LiveHandlers = {};
+    const changed: { value: boolean } = { value: false };
+
+    const sync = <K extends keyof LiveHandlers>(key: K, write: (value: LiveHandlers[K]) => void): void => {
+      if (desired[key] === applied[key]) {
+        return;
+      }
+
+      applied[key] = desired[key];
+      changed.value = true;
+      write(desired[key]);
+    };
+
+    sync('onChange', (value) => {
+      diff.onChange = value;
+    });
+    sync('onSave', (value) => {
+      diff.onSave = value;
+    });
+    sync('onEnter', (value) => {
+      diff.onEnter = value;
+    });
+    sync('onSubmit', (value) => {
+      diff.onSubmit = value;
+    });
+    sync('onBeforeRender', (value) => {
+      diff.onBeforeRender = value;
+    });
+    sync('onAfterRender', (value) => {
+      diff.onAfterRender = value;
+    });
+
+    if (changed.value) {
+      editor.handlers.set(diff);
+    }
+  }
+
   // ---- Curated imperative facade (delegates to the live instance; no-ops until ready) ----
 
   /** Serialize the current content. Resolves undefined until the editor is ready. */
@@ -396,9 +558,26 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
     this.instance()?.focus(atEnd);
   }
 
-  /** Replace the editor content. Resolves undefined until the editor is ready. */
+  /**
+   * Replace the editor content. Resolves undefined until the editor is ready.
+   *
+   * Safe to mix with a controlled `[data]` input: the rendered document becomes
+   * the content baseline once the call lands, so a later `[data]` change back to
+   * the previous document still re-renders instead of being deduped against a
+   * baseline the editor no longer reflects. Recorded only on the resolved path —
+   * a failed render leaves the editor on its previous content.
+   * @param data - the document to render
+   */
   render(data: OutputData | LooseOutputData): Promise<void> | undefined {
-    return this.instance()?.render(data);
+    const editor = this.instance();
+
+    if (editor === null) {
+      return undefined;
+    }
+
+    return editor.render(data).then(() => {
+      this.lastRenderedData = data;
+    });
   }
 
   constructor() {
@@ -552,7 +731,15 @@ export class BlokEditorComponent implements AfterViewInit, ControlValueAccessor 
         return;
       }
 
-      if (deepEqual(data, this.lastRenderedData)) {
+      // Structural comparison (`equalsOutputData`, not a raw deep-equal): a host
+      // that persists the editor's own document and hands back a stripped copy —
+      // fresh `time`, dropped ids, no `lastEditedAt` stamp — is still echoing
+      // content the editor already shows, and re-rendering it would reset the
+      // caret for zero visual change. `undefined` means "nothing recorded yet",
+      // which is NOT an empty document, so it must never match.
+      const baseline = this.lastRenderedData;
+
+      if (baseline !== undefined && equalsOutputData(data, baseline)) {
         return;
       }
 

@@ -381,6 +381,19 @@ describe('BlockToolAdapter', () => {
 
       expect(tool.assetKind).toBeUndefined();
     });
+
+    it('reports the Enter-containment declaration when the tool declares one', () => {
+      const constructable = createConstructable({ keepsChildrenOnEnter: true });
+      const { tool } = createBlockTool({ constructable });
+
+      expect(tool.keepsChildrenOnEnter).toBe(true);
+    });
+
+    it('reports false Enter-containment for a tool that declares nothing', () => {
+      const { tool } = createBlockTool();
+
+      expect(tool.keepsChildrenOnEnter).toBe(false);
+    });
   });
 
   describe('data upgrade hook', () => {

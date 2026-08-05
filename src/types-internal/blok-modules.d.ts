@@ -39,6 +39,7 @@ import { Renderer } from '../components/modules/renderer';
 import { Saver } from '../components/modules/saver';
 import { Tools } from '../components/modules/tools';
 import { UI } from '../components/modules/ui';
+import { HandlersAPI } from '../components/modules/api/handlers';
 import { ToolsAPI } from '../components/modules/api/tools';
 import { UploaderAPI } from '../components/modules/api/uploader';
 import { I18n } from '../components/modules/i18n';
@@ -50,6 +51,7 @@ export interface BlokModules {
   // API Modules
   BlocksAPI: BlocksAPI,
   CaretAPI: CaretAPI,
+  HandlersAPI: HandlersAPI,
   ToolsAPI: ToolsAPI,
   UploaderAPI: UploaderAPI,
   EventsAPI: EventsAPI,

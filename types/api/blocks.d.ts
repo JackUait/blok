@@ -1,5 +1,5 @@
 import {LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData} from '../data-formats/output-data';
-import {BlockToolData, ToolConfig} from '../tools';
+import {BlockOrigin, BlockToolData, ToolConfig} from '../tools';
 import {BlockAPI} from './block';
 import {BlockTuneData} from '../block-tunes/block-tune-data';
 import {MarkdownImportConfig} from '../data-formats/markdown-import-config';
@@ -143,6 +143,11 @@ export interface Blocks {
    * @param {boolean?} replace - should the existed Block on that index be replaced or not
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
    * @param tunes — optional block tune data to apply at creation, keyed by tune name
+   * @param origin — why the block is being created, handed to the Tool constructor
+   *   as `origin`. Defaults to `'api'`. Pass `'user'` when the insert comes from
+   *   your own insertion UI (a custom toolbar, slash menu or keyboard shortcut)
+   *   so a container Tool can tell the gesture from a programmatic refetch and
+   *   seed its default children only for the former.
    */
   insert(
     type?: string,
@@ -153,6 +158,7 @@ export interface Blocks {
     replace?: boolean,
     id?: string,
     tunes?: { [name: string]: BlockTuneData },
+    origin?: BlockOrigin,
   ): BlockAPI;
 
   /**

@@ -533,6 +533,65 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.replaceBlock).toHaveBeenCalledWith(1, newBlock);
       });
 
+      /**
+       * C3: every Block the Yjs reconciler rebuilds is a RE-MATERIALISATION —
+       * an undo/redo replay or a remote peer's change — never a creation. It
+       * must say so on the tool contract: a container tool whose restored
+       * children have not landed yet sees a transiently empty getChildren() and
+       * would otherwise seed phantom children beside the real ones.
+       */
+      it('stamps a rebuilt block with the «replay» origin', async () => {
+        const block = createMockBlock({
+          id: 'test-block',
+          data: { content: [] },
+          tunes: {},
+        });
+
+        (block as unknown as Record<string, unknown>).name = 'table';
+        (block.setData as ReturnType<typeof vi.fn>).mockReturnValue(Promise.resolve(false));
+
+        const newBlocksStore = createBlocksStore([block]);
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+          type: 'table',
+          data: createMockYMap({ content: [['a']] }),
+          tunes: createMockYMap({}),
+        }));
+
+        const composeBlockSpy = vi.spyOn(factory, 'composeBlock')
+          .mockReturnValue(createMockBlock({ id: 'test-block' }));
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+
+        callback({ blockId: 'test-block',
+          type: 'update',
+          origin: 'undo' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(composeBlockSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ origin: 'replay' })
+        );
+      });
+
       it('does not recreate block when setData returns true', async () => {
         const block = createMockBlock({
           id: 'test-block',

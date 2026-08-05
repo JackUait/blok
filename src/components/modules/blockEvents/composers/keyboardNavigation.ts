@@ -452,6 +452,22 @@ export class KeyboardNavigation extends BlockEventComposer {
     return parent !== undefined && parent.holder.querySelector('[data-blok-toggle-open]') !== null;
   }
 
+  /**
+   * True when `container` declares — via its Tool's `keepsChildrenOnEnter` —
+   * that Enter on its empty LAST child must create the new line INSIDE it.
+   *
+   * This replaced a hardcoded `name === 'column' || name === 'column_list'`
+   * comparison that no host Tool could ever join: a custom container was forced
+   * onto the editor-global `config.onEnter` to re-derive containment core
+   * already knows. The decision cannot be a DOM probe either — a callout
+   * renders the same `[data-blok-nested-blocks]` slot as a column, yet Notion
+   * parity says Enter LEAVES a callout.
+   * @param container - the parent block being asked
+   */
+  private keepsChildrenOnEnter(container: Block): boolean {
+    return container.tool.keepsChildrenOnEnter;
+  }
+
   private shouldOutdentNestedBlock(block: Block): boolean {
     if (block.parentId == null || block.name === LIST_TOOL_NAME || this.isCurrentBlockInsideTableCell) {
       return false;
@@ -473,7 +489,7 @@ export class KeyboardNavigation extends BlockEventComposer {
       '[data-blok-toggle-open], [data-blok-toggle-children], [data-blok-nested-blocks]'
     ) !== null;
 
-    if (hasNestedBlocksContainer || parent.name === 'column' || parent.name === 'column_list') {
+    if (hasNestedBlocksContainer || this.keepsChildrenOnEnter(parent)) {
       return false;
     }
 
@@ -483,8 +499,9 @@ export class KeyboardNavigation extends BlockEventComposer {
   /**
    * Enter on the empty LAST child of a container: hands back the block the
    * caret should land in outside that container, or null when the container
-   * keeps the caret inside (toggles, columns) and the caller should fall
-   * through to the normal "new sibling below" path.
+   * keeps the caret inside — because its Tool declares `keepsChildrenOnEnter`
+   * (column, column_list, toggle, any host container) or it is a toggle heading
+   * — and the caller should fall through to the normal "new sibling below" path.
    * @param currentBlock - the block where Enter was pressed
    */
   private promoteLastEmptyToggleChild(currentBlock: Block): Block | null {
@@ -500,28 +517,33 @@ export class KeyboardNavigation extends BlockEventComposer {
       return null;
     }
 
-    const isToggleParent = parentBlock.holder.querySelector('[data-blok-toggle-open]') !== null;
-
-    if (isToggleParent) {
-      /**
-       * Toggle children should never be promoted out — pressing Enter on an
-       * empty last child creates a new sibling inside the toggle instead.
-       * The caller (createBlockOnEnter) handles this via the normal Case 2
-       * path: insertDefaultBlockAtIndex + setBlockParent to inherit the parent.
-       */
+    /**
+     * Per-tool policy first. A container whose Tool declares
+     * `keepsChildrenOnEnter` — Blok's own column, column_list and toggle, and
+     * any host container that says so — never lets Enter unwrap it: promoting
+     * the empty child past the container would strand the new line beside it
+     * (for a column, at the document root, holder and all). Returning null
+     * falls through to the normal Case 2 path, which re-parents the new sibling
+     * into the same container.
+     *
+     * This used to be `parentBlock.name === 'column' || 'column_list'` — a
+     * registry only Blok's own tools could ever be in, which is why a host
+     * container had to re-derive containment in an editor-global
+     * `config.onEnter` running on every Enter in the document.
+     */
+    if (this.keepsChildrenOnEnter(parentBlock)) {
       return null;
     }
 
     /**
-     * Columns must never be unwrapped by Enter. A 'column' is a single-child
-     * non-toggle container whose own parent is a 'column_list'. Promoting its
-     * empty sole child after the parent index would insert a new block at the
-     * document root (parentId=null), escaping the column and stranding the
-     * holder at the workingArea root. Returning null falls through to the
-     * normal Case 2 path, which re-parents the new sibling into the same
-     * column and leaves the column_list intact.
+     * Toggle HEADINGS stay on the DOM marker. The `header` tool renders
+     * `data-blok-toggle-open` only for blocks whose `isToggleable` is set, so
+     * its toggle-ness is per-BLOCK state that a class-level declaration cannot
+     * express — declaring the flag on `header` would also trap Enter inside a
+     * plain h2 that merely has Tab-nested children. The toggle TOOL itself
+     * declares `keepsChildrenOnEnter` and is handled above.
      */
-    if (parentBlock.name === 'column' || parentBlock.name === 'column_list') {
+    if (parentBlock.holder.querySelector('[data-blok-toggle-open]') !== null) {
       return null;
     }
 

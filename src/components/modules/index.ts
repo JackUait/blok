@@ -1,6 +1,7 @@
 import { BlocksAPI } from './api/blocks';
 import { CaretAPI } from './api/caret';
 import { EventsAPI } from './api/events';
+import { HandlersAPI } from './api/handlers';
 import { HistoryAPI } from './api/history';
 import { I18nAPI } from './api/i18n';
 import { API } from './api/index';
@@ -50,6 +51,7 @@ export const Modules = {
   BlocksAPI,
   CaretAPI,
   EventsAPI,
+  HandlersAPI,
   HistoryAPI,
   I18nAPI,
   API,

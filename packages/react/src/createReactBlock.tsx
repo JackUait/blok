@@ -1,14 +1,29 @@
 import { isValidElement, useEffect, useRef, type ComponentType, type ReactElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import { DATA_ATTR, deepEqual, fillDefaults, mountChildBlocks, type PropSchema } from '@bloklabs/core/adapters';
+import {
+  BlockChildrenMounted,
+  DATA_ATTR,
+  deepEqual,
+  fillDefaults,
+  mountChildBlocks,
+  type PropSchema,
+} from '@bloklabs/core/adapters';
 import {
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
   BLOK_TOOL_NAME_CONFIG_KEY,
   type BlockPortalRegistry,
 } from './block-portal-registry';
+import type { API } from '@/types';
 import type { BlockAPI } from '@/types/api';
-import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig, ToolboxConfigEntry } from '@/types/tools';
+import type {
+  BlockOrigin,
+  BlockToolConstructable,
+  BlockToolConstructorOptions,
+  BlockToolData,
+  ToolboxConfig,
+  ToolboxConfigEntry,
+} from '@/types/tools';
 
 export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 
@@ -16,6 +31,116 @@ export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 const INTERNAL_CONFIG_KEYS: readonly string[] = [
   BLOK_PORTAL_REGISTRY_CONFIG_KEY,
   BLOK_TOOL_NAME_CONFIG_KEY,
+];
+
+/**
+ * Every STATIC member of core's block-tool contract a React block may declare
+ * for itself — `ownsChildren`, `keepsChildrenOnEnter`, `conversionConfig`,
+ * `pasteConfig`, `sanitize`, `shortcut`, `upgradeData`, and whatever core adds
+ * next. Derived from
+ * `BlockToolConstructable` rather than enumerated, so a new core static needs no
+ * adapter change to become reachable.
+ *
+ * `toolbox` and `isReadOnlySupported` are excluded because the factory owns
+ * them: `toolbox` is authored as {@link CreateReactBlockSpec.toolbox} (React
+ * elements and all), and in-place read-only support is unconditional.
+ */
+export type BlockToolStatics = Omit<BlockToolConstructable, 'toolbox' | 'isReadOnlySupported'>;
+
+/** What the previous decoration pass wrote for one child, so it can be undone. */
+interface StampedChild {
+  holder: HTMLElement;
+  names: string[];
+}
+
+/**
+ * Apply one pass of per-child holder attributes and clear the previous pass's
+ * leftovers — including on a child that has since left the container, which
+ * would otherwise keep a dead index forever.
+ * @param stamped - the slot's ledger of what the last pass wrote (mutated)
+ * @param children - the container's model children, in model order
+ * @param decorate - the authored per-child decorator, if any
+ */
+const applyChildAttributes = (
+  stamped: Map<string, StampedChild>,
+  children: BlockAPI[],
+  decorate: BlockChildrenProps['childAttributes']
+): void => {
+  const next = new Map<string, StampedChild>();
+
+  children.forEach((child, index) => {
+    const names: string[] = [];
+
+    for (const [name, value] of Object.entries(decorate?.(child, index) ?? {})) {
+      if (value === null || value === undefined) {
+        child.holder.removeAttribute(name);
+        continue;
+      }
+
+      child.holder.setAttribute(name, String(value));
+      names.push(name);
+    }
+
+    next.set(child.id, { holder: child.holder, names });
+  });
+
+  for (const [id, previous] of stamped) {
+    const current = next.get(id);
+
+    previous.names
+      .filter(name => current === undefined || !current.names.includes(name))
+      .forEach(name => previous.holder.removeAttribute(name));
+  }
+
+  stamped.clear();
+  next.forEach((entry, id) => stamped.set(id, entry));
+};
+
+/**
+ * Announce that a container's child holders have settled in its slot — the
+ * signal a host waits on before putting the caret into a freshly inserted
+ * child, since the portal commits a frame after core's `rendered()`.
+ *
+ * Optional-chained: the editor always supplies `events`, but a host unit test
+ * may hand a block a partial `api`, and an observability signal must never be
+ * able to break a render.
+ * @param api - the editor-level API
+ * @param blockId - the container block's id
+ * @param children - the container's model children, in model order
+ */
+const emitChildrenMounted = (api: API, blockId: string, children: BlockAPI[]): void => {
+  api?.events?.emit(BlockChildrenMounted, {
+    blockId,
+    childIds: children.map(child => child.id),
+  });
+};
+
+/**
+ * Origins that mean "the author just made this block" — the only ones that fire
+ * {@link CreateReactBlockSpec.onCreated}. Written as an allow-list so a future
+ * core origin fails CLOSED (no creation signal) instead of silently opting in.
+ *
+ * `undefined` is included because core always supplies an origin: an absent one
+ * means a host hand-built the constructor options, which is an explicit
+ * creation — the same reading core's own container tools apply.
+ *
+ * Note what is NOT the axis here: `origin === 'user'`. A container gated on that
+ * alone would refuse to seed for `api.blocks.insert('steps')` and for a
+ * turn-into, leaving an empty, unusable container.
+ */
+const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
+  undefined,
+  'user',
+  'api',
+  'convert',
+]);
+
+/** Statics the generated class owns; an authored `statics` bag can never take them over. */
+const RESERVED_STATICS: readonly string[] = [
+  'toolbox',
+  'isReadOnlySupported',
+  '__isBlokReactBlock',
+  '__buildPortalToolbox',
 ];
 
 /** Props handed to a React block's `component` (the only data write path is `commit`). */
@@ -31,6 +156,18 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   commit: (patch: Partial<Data>) => void;
   /** This block's per-block API (id, connection methods, dispatchChange…). */
   block: BlockAPI;
+  /**
+   * The EDITOR-level API this block belongs to (`api.blocks`, `api.caret`,
+   * `api.toolbar`…) — the same object a vanilla tool receives in its
+   * constructor. Reach for it when a block has to drive the document around it
+   * (insert a sibling, move the caret, open the toolbox) instead of routing
+   * everything through `block.call()` string dispatch.
+   *
+   * For the reactive, id/parentId-relative view of the tree (and to re-render
+   * when your own children change), pair `useBlocks` with `useBlokInstance()`
+   * instead — the api handle itself is not reactive.
+   */
+  api: API;
   /**
    * Read-only flag. Render disabled/inert UI when true (e.g. drop
    * `contentEditable`, hide controls). Toggled IN PLACE by core's read-only
@@ -49,7 +186,42 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
    */
   config: Readonly<Partial<Config>>;
   /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
-  BlockChildren: ComponentType;
+  BlockChildren: ComponentType<BlockChildrenProps>;
+}
+
+/**
+ * One child's decoration: attribute name → value. `null`/`undefined` removes the
+ * attribute; a boolean or number is stringified (so `false` writes
+ * `data-active="false"`, which CSS can select, rather than dropping the hook).
+ */
+export type ChildAttributes = Record<string, string | number | boolean | null | undefined>;
+
+/** Props of the engine-owned {@link ReactBlockRenderProps.BlockChildren} slot. */
+export interface BlockChildrenProps {
+  /**
+   * Per-child decoration, applied to each child's HOLDER after the holders are
+   * mounted. Named hooks (`data-step-index`, `data-active`…) replace positional
+   * `:nth-child()` CSS over Blok's holders, which silently breaks the moment a
+   * child is inserted, removed or reordered.
+   *
+   * The holders themselves stay DIRECT children of the slot — core requires that
+   * (hierarchy reparenting looks for the next sibling whose
+   * `holder.parentElement` IS the container, and caret navigation decides
+   * "same container" by that identity), so decoration is expressed as attributes
+   * rather than as wrapper elements. Attributes the callback stops producing are
+   * removed on the next pass, so a reordered child never keeps a dead index.
+   *
+   * Writing on a child's holder is inert by design: core's mutation filter drops
+   * a holder-targeted attribute record for the child block (the holder is the
+   * child tool element's ANCESTOR, not its descendant) and suppresses it for the
+   * container (whose own host is the nearest `data-blok-mutation-free` ancestor).
+   * The guarantee stops at the holder and its `[data-blok-element-content]`
+   * wrapper — writing AT or BELOW a child's tool root DOES score as that child's
+   * edit.
+   * @param child - the child block's API
+   * @param index - the child's position in the container's model children
+   */
+  childAttributes?: (child: BlockAPI, index: number) => ChildAttributes;
 }
 
 /**
@@ -87,6 +259,25 @@ export type ReactToolboxConfigEntry = Omit<ToolboxConfigEntry, 'icon' | 'title'>
 /** Toolbox config for React blocks: single entry or several variants. */
 export type ReactToolboxConfig = ReactToolboxConfigEntry | ReactToolboxConfigEntry[];
 
+/**
+ * Second argument of {@link CreateReactBlockSpec.onMounted} and
+ * {@link CreateReactBlockSpec.onCreated} — everything the block cannot read off
+ * its own `BlockAPI`.
+ */
+export interface ReactBlockMountedContext {
+  /**
+   * Why this block instance was constructed: a CREATION origin (`user`, `api`,
+   * `convert`) means the author just made it, so seeding default children is
+   * correct; a RESTORE origin (`load`, `replay`, `paste`) means the document
+   * already says what the children are. `probe` is an off-tree instance built
+   * only to read a tool's default data — it must not touch the block tree at
+   * all. Defaults to `'api'` when the constructor was handed no origin.
+   */
+  origin: BlockOrigin;
+  /** The editor-level API (`api.blocks`, `api.caret`, `api.events`…). */
+  api: API;
+}
+
 /** Spec for {@link createReactBlock}. */
 export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<string, unknown>> {
   /** Tool type name (registered key). */
@@ -106,8 +297,95 @@ export interface CreateReactBlockSpec<Data = BlockToolData, Config = Record<stri
    * `viewComponent` to keep the single-component in-place toggle instead.
    */
   viewComponent?: ComponentType<ReactBlockViewProps<Data, Config>>;
+  /**
+   * Static members of core's tool contract, forwarded verbatim onto the
+   * generated tool class — the single channel for everything core reads off the
+   * CLASS rather than the instance (`ownsChildren`, `keepsChildrenOnEnter`,
+   * `conversionConfig`, `pasteConfig`, `sanitize`, `shortcut`, `upgradeData`…).
+   * Without it the only way to declare one was to subclass the generated class.
+   *
+   * `keepsChildrenOnEnter` is the per-tool Enter POLICY: declare it and Enter on
+   * this container's empty LAST child creates the new line INSIDE the container
+   * instead of escaping to the container's parent (Blok's default, which is
+   * Notion's callout behaviour). Core cannot read that off the DOM — a callout
+   * renders the same `data-blok-nested-blocks` slot as a column yet wants the
+   * escape — so before it existed a layout container (a card, a `steps` block)
+   * had to hijack the editor-global `config.onEnter` and re-derive containment.
+   *
+   * `toolbox` and `isReadOnlySupported` are owned by the factory and cannot be
+   * overridden here (see {@link BlockToolStatics}).
+   * @example
+   * ```ts
+   * statics: { ownsChildren: true, conversionConfig: { export: 'text', import: 'text' } }
+   * ```
+   */
+  statics?: BlockToolStatics;
+  /**
+   * The element the +/drag toolbar should vertically center on — core's
+   * `getToolbarAnchorElement` hook, resolved against this block's host element
+   * on every call (never cached, so it tracks re-renders).
+   *
+   * A container block whose own chrome is not editable needs it: with no anchor,
+   * core centers the toolbar on the first `[contenteditable]` it finds under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down the block, beside content that has a toolbar of its
+   * own. Return `null`/`undefined` (or omit the field) to keep core's default.
+   * @param host - this block's mutation-free host element
+   * @param block - this block's per-block API
+   */
+  getToolbarAnchorElement?: (host: HTMLElement, block: BlockAPI) => HTMLElement | null | undefined;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
+  /**
+   * Fired ONCE per block instance, after the portal's FIRST commit — the first
+   * moment this block's rendered DOM exists (and, for a container, the moment
+   * `<BlockChildren />` has adopted the child holders). `onRendered` cannot
+   * mean that: core calls `rendered()` in the same tick as `render()`, a commit
+   * BEFORE React has drawn anything, which is why hosts ended up setting the
+   * caret twice around a `requestAnimationFrame`.
+   *
+   * It is also the create-vs-restore signal: `context.origin` says whether the
+   * author just made this block (`user`/`api`/`convert`) or the document is
+   * being re-materialised (`load`/`replay`/`paste`) — so a container can seed
+   * its default children here exactly once, without the "children are
+   * transiently empty during a replay" trap.
+   * @example
+   * ```ts
+   * onMounted: (block, { origin, api }) => {
+   *   if (origin === 'user' && block.getChildren().length === 0) {
+   *     api.blocks.insertInsideParent(block.id);
+   *   }
+   * }
+   * ```
+   */
+  onMounted?: (block: BlockAPI, context: ReactBlockMountedContext) => void;
+  /**
+   * The SEEDING hook: `onMounted`, narrowed to a genuine creation. Fired ONCE
+   * per block instance, after the portal's first commit, and only when this
+   * instance is the author making a new block (`origin` of `user`, `api` or
+   * `convert`) — never for a `load`/`replay`/`paste` restore, and never for the
+   * off-tree `probe` instance core builds to read a tool's default data.
+   *
+   * That predicate is why the hook exists rather than leaving every block to
+   * read `context.origin` in `onMounted`: the intuitive `origin === 'user'` test
+   * is wrong. It drops `api.blocks.insert('steps')` and turn-into, so a
+   * container seeded that way comes up empty for every path except a keystroke.
+   * Core refused to ship that axis into its own `column`/`column_list`; this
+   * encodes the correct one once, here.
+   *
+   * The `context` is the same object {@link CreateReactBlockSpec.onMounted}
+   * receives, so a block that only seeds can read `origin` for finer decisions
+   * (e.g. seed a different default for a turn-into).
+   * @example
+   * ```ts
+   * onCreated: (block, { api }) => {
+   *   if (block.getChildren().length === 0) {
+   *     api.blocks.insertInsideParent(block.id);
+   *   }
+   * }
+   * ```
+   */
+  onCreated?: (block: BlockAPI, context: ReactBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;
 }
@@ -137,11 +415,12 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
   save(): BlockToolData;
   setData(newData: BlockToolData): Promise<boolean>;
   setReadOnly(state: boolean): void;
+  getToolbarAnchorElement(): HTMLElement | undefined;
   rendered(): void;
   moved(): void;
   removed(): void;
   destroy(): void;
-}) & {
+}) & BlockToolStatics & {
   readonly __isBlokReactBlock: true;
   readonly toolbox: ToolboxConfig | undefined;
   /**
@@ -248,6 +527,17 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
    * Returns undefined when no entry has a ReactElement title (nothing to
    * override; the static string/`toolNames.*` path already covers it).
    *
+   * The override carries only what it uniquely owns. `useBlok` calls this from
+   * a passive effect, i.e. inside React's commit phase, where `flushSync`
+   * cannot flush — so an element ICON never serializes here. Such an icon is
+   * OMITTED rather than shipped raw (core `insertAdjacentHTML`s it, writing the
+   * literal `[object Object]`); core then merges this override OVER the static
+   * toolbox, which serializes the same element successfully later, outside
+   * React's commit. That merge is also why the authored SHAPE is preserved: a
+   * single-object spec must stay a single object, or core replaces the tool
+   * entry wholesale instead of merging and the entry ends up icon-less — which
+   * silently drops it from the convert menu and block settings.
+   *
    * @param registry - the editor's portal registry (from `useBlok`)
    * @param toolName - the name the tool is registered under
    */
@@ -267,8 +557,14 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       return undefined;
     }
 
-    return entries.map((entry, index): ToolboxConfigEntry => {
-      const { entry: core } = toCoreEntry(entry);
+    const overrides = entries.map((entry, index): ToolboxConfigEntry => {
+      const { entry: core, deferred } = toCoreEntry(entry);
+
+      if (deferred) {
+        // Omit the key entirely: an explicit `icon: undefined` would still
+        // shadow the tool entry's icon in core's spread merge.
+        delete core.icon;
+      }
 
       if (!isValidElement(entry.title)) {
         return core;
@@ -294,6 +590,9 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
       return { ...core, titleEl: host };
     });
+
+    // Keep the authored shape (see the merge note above).
+    return Array.isArray(spec.toolbox) ? overrides : overrides[0];
   };
 
   /** Lazily-computed core-compatible toolbox (React element icons serialized once). */
@@ -342,7 +641,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
   const entryComponent: ComponentType<ReactBlockRenderProps<Data, Config>> =
     spec.viewComponent === undefined ? spec.component : ReadOnlySwitch;
 
-  return class ReactBlockTool {
+  const ReactBlockTool = class ReactBlockTool {
     /** Marker so `useBlok` can detect react-block tools and inject the registry. */
     public static readonly __isBlokReactBlock = true as const;
 
@@ -372,13 +671,21 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
     }
 
     private readonly blockApi: BlockAPI;
+    /** The editor-level API, handed to the component as the `api` prop. */
+    private readonly api: API;
     private readonly registry: BlockPortalRegistry | undefined;
     /** Name this tool is registered under in the consumer's `tools` map. */
     private readonly toolName: string | undefined;
     /** The consumer's tool config with adapter-internal keys stripped. */
     private readonly toolConfig: Readonly<Partial<Config>>;
     private readonly pointerDrag: () => boolean;
-    private readonly childrenComponent: ComponentType;
+    private readonly childrenComponent: ComponentType<BlockChildrenProps>;
+    /** Why core built this instance — gates `onCreated`, handed to `onMounted`. */
+    private readonly origin: BlockOrigin;
+    /** The component registered with the portal (the post-mount gate, if any). */
+    private readonly entryComponent: ComponentType<ReactBlockRenderProps<Data, Config>>;
+    /** True once the post-mount hooks fired; keeps a StrictMode remount from re-firing them. */
+    private mountSignalled = false;
     private mirror: Readonly<Data>;
     /** Dedup baseline: skip a redundant render of identical data. */
     private lastRendered: Readonly<Data>;
@@ -407,33 +714,99 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       }
       this.toolConfig = Object.freeze(publicConfig) as Readonly<Partial<Config>>;
 
+      this.api = options.api;
+
       // Read the LIVE pointer-drag flag so a mid-drag commit can be deferred
       // (core silently drops a dispatchChange while a drag is active).
-      const api = options.api as unknown as { blocks?: { isPointerDragActive?: boolean } } | undefined;
+      const drag = options.api as unknown as { blocks?: { isPointerDragActive?: boolean } } | undefined;
 
-      this.pointerDrag = (): boolean => api?.blocks?.isPointerDragActive === true;
+      this.pointerDrag = (): boolean => drag?.blocks?.isPointerDragActive === true;
 
       this.mirror = fillDefaults<Data>(spec.propSchema, (options.data ?? {}) as Record<string, unknown>);
       this.lastRendered = this.mirror;
       this.readOnly = options.readOnly;
+      // Absent origin means a caller that predates the signal; 'api' is core's
+      // own default, so it is never mistaken for a user gesture.
+      this.origin = options.origin ?? 'api';
 
       const blockApi = this.blockApi;
+      const api = this.api;
 
       // Per-instance child slot: a childless ref'd div Blok owns; mountChildBlocks
       // appends the real child holders imperatively (React never reconciles them).
-      this.childrenComponent = function BlockChildren(): ReactElement {
+      this.childrenComponent = function BlockChildren({
+        childAttributes,
+      }: BlockChildrenProps): ReactElement {
         const slotRef = useRef<HTMLDivElement | null>(null);
+        // What the last decoration pass wrote, so a dropped key is cleaned up.
+        const stampedRef = useRef(new Map<string, StampedChild>());
 
         // No dep array: re-adopt children after EVERY render (mirrors the Vue
         // adapter's onMounted + onUpdated pair).
         useEffect(() => {
-          if (slotRef.current !== null) {
-            mountChildBlocks(slotRef.current, blockApi.getChildren());
+          if (slotRef.current === null) {
+            return;
           }
+
+          const children = blockApi.getChildren();
+
+          mountChildBlocks(slotRef.current, children);
+          applyChildAttributes(stampedRef.current, children, childAttributes);
+          emitChildrenMounted(api, blockApi.id, children);
         });
 
         return <div ref={slotRef} {...{ [DATA_ATTR.nestedBlocks]: '' }} />;
       };
+
+      this.entryComponent = this.buildEntryComponent();
+    }
+
+    /**
+     * The component actually registered with the portal. Without a post-mount
+     * hook it is the shared per-TYPE component; with one it is a thin
+     * per-INSTANCE gate whose mount effect fires the hooks after React's first
+     * commit — children first, since React runs effects bottom-up, so the child
+     * holders are already in the slot by then.
+     */
+    private buildEntryComponent(): ComponentType<ReactBlockRenderProps<Data, Config>> {
+      const onMounted = spec.onMounted;
+      const onCreated = spec.onCreated;
+
+      if (onMounted === undefined && onCreated === undefined) {
+        return entryComponent;
+      }
+
+      const Entry = entryComponent;
+      const fire = (): void => {
+        // Once per block instance: React StrictMode double-invokes mount
+        // effects, and a second "the author just created me" signal would seed
+        // a container's default children twice.
+        if (this.mountSignalled) {
+          return;
+        }
+
+        this.mountSignalled = true;
+
+        const context = { origin: this.origin, api: this.api };
+
+        onMounted?.(this.blockApi, context);
+
+        // Creation-only, and after onMounted: a seeding hook must see whatever
+        // the mount hook already put in place.
+        if (CREATION_ORIGINS.has(this.origin)) {
+          onCreated?.(this.blockApi, context);
+        }
+      };
+
+      const MountGate = (props: ReactBlockRenderProps<Data, Config>): ReactElement => {
+        useEffect(fire, []);
+
+        return <Entry {...props} />;
+      };
+
+      MountGate.displayName = `BlokBlockMount(${spec.type})`;
+
+      return MountGate;
     }
 
     public render(): HTMLElement {
@@ -447,7 +820,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
 
       this.registry?.register(this.blockApi.id, {
         hostEl: host,
-        component: entryComponent as unknown as ComponentType<Record<string, unknown>>,
+        component: this.entryComponent as unknown as ComponentType<Record<string, unknown>>,
         props: this.buildProps(),
         toolName: this.toolName,
       });
@@ -497,19 +870,40 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       this.pushProps({ readOnly: state });
     }
 
+    /**
+     * Core's toolbar-anchor hook. Always defined so the delegation is one
+     * `typeof … === 'function'` probe away, and always resolved fresh against
+     * the LIVE host — the anchor element is React-rendered, so it does not exist
+     * yet when the tool is constructed and may be replaced on any re-render. A
+     * spec without a resolver returns undefined, which is exactly what core's
+     * default positioning already assumes.
+     */
+    public getToolbarAnchorElement(): HTMLElement | undefined {
+      const host = this.hostEl;
+
+      if (host === null || spec.getToolbarAnchorElement === undefined) {
+        return undefined;
+      }
+
+      return spec.getToolbarAnchorElement(host, this.blockApi) ?? undefined;
+    }
+
     public moved(): void {
       // No remount: Blok relocates the host element; the portal follows it.
       spec.onMoved?.(this.blockApi);
     }
 
     public removed(): void {
-      this.registry?.unregister(this.blockApi.id);
+      // Ownership-scoped: core composes a REPLACEMENT block (which registers
+      // under the SAME id) before it tears this one down, so an unqualified
+      // unregister here would delete the live entry and blank the block.
+      this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
       spec.onRemoved?.(this.blockApi);
     }
 
     public destroy(): void {
       // Idempotent with removed(); unregister is safe when already absent.
-      this.registry?.unregister(this.blockApi.id);
+      this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
     }
 
     /** The full entry props handed to the component on (re-)register. */
@@ -518,6 +912,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
         data: this.mirror,
         commit: this.commit,
         block: this.blockApi,
+        api: this.api,
         readOnly: this.readOnly,
         config: this.toolConfig,
         BlockChildren: this.childrenComponent,
@@ -600,4 +995,24 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       requestAnimationFrame(retry);
     }
   };
+
+  // Forward the authored statics onto the generated class. `defineProperty`
+  // (not assignment) because `toolbox`/`isReadOnlySupported` are accessors on
+  // the prototype chain and a plain write would throw in strict mode; the
+  // reserved list keeps a stray bag from taking those — or the adapter's own
+  // markers — over.
+  for (const [key, value] of Object.entries(spec.statics ?? {})) {
+    if (RESERVED_STATICS.includes(key)) {
+      continue;
+    }
+
+    Object.defineProperty(ReactBlockTool, key, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
+  return ReactBlockTool;
 }

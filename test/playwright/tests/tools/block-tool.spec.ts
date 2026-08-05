@@ -147,6 +147,7 @@ const createApiStub = (): API => ({
   blocks: {} as API['blocks'],
   caret: {} as API['caret'],
   tools: {} as API['tools'],
+  handlers: {} as API['handlers'],
   uploader: {} as API['uploader'],
   events: {} as API['events'],
   history: {} as API['history'],

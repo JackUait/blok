@@ -17,13 +17,15 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
 const createColumnOptions = (
   data: Partial<ColumnData> = {},
   api: API = createMockAPI(),
-  readOnly = false
+  readOnly = false,
+  origin?: BlockToolConstructorOptions<ColumnData>['origin']
 ): BlockToolConstructorOptions<ColumnData> => ({
   data: { ...data },
   config: {},
   api,
   readOnly,
   block: { id: 'col-1', holder: document.createElement('div') } as never,
+  ...(origin !== undefined && { origin }),
 });
 
 describe('Column tool', () => {
@@ -488,6 +490,91 @@ describe('Column tool', () => {
 
       expect(() => column.setReadOnly(true)).not.toThrow();
       expect(() => column.setReadOnly(false)).not.toThrow();
+    });
+  });
+
+  /**
+   * C3: the seed decision is fixed at construction, so it belongs on `origin`,
+   * not on "is the editor mid-replay right now?". A re-applied column renders as
+   * a FRESH instance whose restored children's add events land AFTER this
+   * rendered() call, so an empty getChildren() there is only transient — seeding
+   * fabricates the pasted-columns trailing ghost.
+   */
+  describe('seeds only for a genuine creation (origin)', () => {
+    const seedProbe = (): { insertInsideParent: ReturnType<typeof vi.fn>; api: API } => {
+      const insertInsideParent = vi.fn().mockReturnValue({ id: 'p', holder: document.createElement('div') });
+      const api = createMockAPI({
+        blocks: {
+          getChildren: vi.fn().mockReturnValue([]),
+          getBlockIndex: vi.fn().mockReturnValue(3),
+          // Deliberately settled: the guard must not depend on this flag.
+          isSyncingFromYjs: false,
+          insertInsideParent,
+        },
+        caret: { setToBlock: vi.fn() },
+      } as unknown as Partial<API>);
+
+      return {
+        insertInsideParent,
+        api,
+      };
+    };
+
+    it.each(['load', 'replay', 'paste', 'probe'] as const)(
+      'does NOT seed a paragraph when re-materialised with origin «%s»',
+      (origin) => {
+        const { insertInsideParent, api } = seedProbe();
+        const column = new Column(createColumnOptions({}, api, false, origin));
+
+        column.render();
+        column.rendered();
+
+        expect(insertInsideParent).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each(['user', 'api', 'convert'] as const)(
+      'seeds a paragraph when created with origin «%s»',
+      (origin) => {
+        const { insertInsideParent, api } = seedProbe();
+        const column = new Column(createColumnOptions({}, api, false, origin));
+
+        column.render();
+        column.rendered();
+
+        expect(insertInsideParent).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it('still defers the drag-out self-delete while the editor replays history', async () => {
+      // `origin` cannot cover this one: emptiness AFTER the column has held
+      // content is a later-in-life decision, and during an undo/redo replay the
+      // children are only transiently gone. That part of the isSyncingFromYjs
+      // guard has to stay.
+      const deleteBlock = vi.fn().mockResolvedValue(undefined);
+      const getChildren = vi.fn()
+        .mockReturnValueOnce([{ id: 'child',
+          holder: document.createElement('div') }])
+        .mockReturnValue([]);
+      const api = createMockAPI({
+        blocks: {
+          getChildren,
+          getBlockIndex: vi.fn().mockReturnValue(7),
+          isSyncingFromYjs: true,
+          insertInsideParent: vi.fn(),
+          delete: deleteBlock,
+        },
+        caret: { setToBlock: vi.fn() },
+      } as unknown as Partial<API>);
+
+      const column = new Column(createColumnOptions({}, api, false, 'user'));
+
+      column.render();
+      column.rendered();
+      column.rendered();
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(deleteBlock).not.toHaveBeenCalled();
     });
   });
 });

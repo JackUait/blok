@@ -57,6 +57,12 @@ export declare class Toggle implements BlockTool {
    */
   static isReadOnlySupported?: boolean;
 
+  /**
+   * Enter on the toggle's empty last child adds another line to the toggle
+   * body instead of escaping it
+   */
+  static keepsChildrenOnEnter?: boolean;
+
   constructor(options: ToggleConstructorOptions);
 
   /**

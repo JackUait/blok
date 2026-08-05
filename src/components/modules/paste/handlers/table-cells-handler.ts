@@ -142,6 +142,7 @@ export class TableCellsHandler extends BasePasteHandler implements PasteHandler 
       tool: 'table',
       data: tableData,
       replace: canReplace,
+      origin: 'paste',
     });
 
     Caret.setToBlock(block, Caret.positions.END);

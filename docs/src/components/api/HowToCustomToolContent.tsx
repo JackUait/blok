@@ -195,6 +195,188 @@ export const CalloutTool = createAngularBlock<{ text: string }>({
   },
 };
 
+// Container blocks: the parts of the core tool contract a component-authored
+// block reaches through the adapter — class statics, the toolbar anchor, the
+// editor api/instance, and per-child decoration of the mounted holders.
+const CONTAINER_AUTHORING_CODE: Partial<Record<string, { code: string; language: string }>> = {
+  react: {
+    language: 'tsx',
+    code: `import { createReactBlock, useBlocks, useBlokInstance } from '@bloklabs/react';
+
+export const StepsTool = createReactBlock<{ title: string }>({
+  type: 'steps',
+  propSchema: { title: { default: '' } },
+  // Everything core reads off the tool CLASS goes in one place, under the same
+  // names a vanilla tool uses: ownsChildren, keepsChildrenOnEnter,
+  // conversionConfig, pasteConfig, sanitize, shortcut, upgradeData…
+  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // container; without it that line escapes to the container's parent.
+  statics: { ownsChildren: true, keepsChildrenOnEnter: true },
+  // A container's own chrome usually isn't editable. Without an anchor the
+  // toolbar centers on the first [contenteditable] under the host — which is
+  // your FIRST CHILD BLOCK — parking +/drag halfway down the block.
+  getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
+  // The seeding hook. Fires ONCE, after the portal's first commit — the first
+  // tick at which this block's DOM (and its adopted child holders) exists;
+  // rendered() runs BEFORE that commit, which is why hosts used to set the
+  // caret twice around a rAF. It only fires for a genuine CREATION (the author
+  // used a keystroke, \`api.blocks.insert\`, or a turn-into), never on a
+  // load/undo/paste replay — where the children arrive a tick later and an
+  // empty read is transient. Do not hand-roll it in \`onMounted\` by
+  // accepting only the keystroke origin: that gate drops the api and turn-into
+  // paths, so the container comes up empty for everything but a keypress. Read
+  // \`context.origin\` here only for finer decisions.
+  onCreated: (block, { api }) => {
+    if (block.getChildren().length === 0) {
+      api.blocks.insertInsideParent(block.id);
+    }
+  },
+  component: ({ data, block, api, BlockChildren }) => {
+    // The block's own editor, straight from context — no host plumbing. This
+    // is also what makes the block re-render when its children change:
+    // useBlocks refreshes on every structural mutation, including children the
+    // adapter never sees (a pasted paragraph, a Tab-indent).
+    const blocks = useBlocks(useBlokInstance());
+    const steps = blocks.getChildren(block.id);
+
+    return (
+      <section>
+        <header data-steps-header>{data.title} — {steps.length} steps</header>
+        {/* Named per-child hooks instead of positional :nth-child() CSS, which
+            breaks the moment a step is inserted, removed or reordered. They are
+            written on each child's HOLDER; the holders stay direct children of
+            the slot, so nesting and caret navigation are untouched. */}
+        <BlockChildren
+          childAttributes={(child, index) => ({
+            'data-step-index': String(index + 1),
+            'data-step-last': String(index === steps.length - 1),
+          })}
+        />
+        <button
+          onClick={() => api.blocks.insertInsideParent(block.id, steps.length)}
+        >
+          Add step
+        </button>
+      </section>
+    );
+  },
+});`,
+  },
+  vue: {
+    language: 'typescript',
+    code: `import { computed, h } from 'vue';
+import { createVueBlock, useBlocks, useBlokInstance } from '@bloklabs/vue';
+
+export const StepsTool = createVueBlock<{ title: string }>({
+  type: 'steps',
+  propSchema: { title: { default: '' } },
+  // Everything core reads off the tool CLASS, under the vanilla names.
+  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // container; without it that line escapes to the container's parent.
+  statics: { ownsChildren: true, keepsChildrenOnEnter: true },
+  // Without an anchor the toolbar centers on the first [contenteditable] under
+  // the host — which for a container is its FIRST CHILD BLOCK.
+  getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
+  // The seeding hook. Fires ONCE, after the teleport's first commit — the first
+  // tick at which this block's DOM (and its adopted child holders) exists — and
+  // only for a genuine CREATION (a keystroke, \`api.blocks.insert\`, a
+  // turn-into), never on a load/undo/paste replay. Do not hand-roll it in
+  // \`onMounted\` by accepting only the keystroke origin: that gate drops the
+  // api and turn-into paths.
+  onCreated: (block, { api }) => {
+    if (block.getChildren().length === 0) {
+      api.blocks.insertInsideParent(block.id);
+    }
+  },
+  setup({ data, block, api, BlockChildren }) {
+    // The block's own editor, straight from inject() — no host plumbing.
+    const blocks = useBlocks(useBlokInstance());
+    const steps = computed(() => blocks.getChildren(block.id));
+
+    return () =>
+      h('section', [
+        h('header', { 'data-steps-header': '' }, \`\${data.value.title} — \${steps.value.length}\`),
+        // Named per-child hooks instead of positional :nth-child() CSS. They are
+        // written on each child's HOLDER, which stays a direct child of the slot.
+        h(BlockChildren, {
+          childAttributes: (child, index: number) => ({
+            'data-step-index': String(index + 1),
+            'data-step-last': String(index === steps.value.length - 1),
+          }),
+        }),
+        h(
+          'button',
+          { onClick: () => api.blocks.insertInsideParent(block.id, steps.value.length) },
+          'Add step'
+        ),
+      ]);
+  },
+});`,
+  },
+  angular: {
+    language: 'typescript',
+    code: `import { Component, ElementRef, inject, viewChild, type AfterViewInit } from '@angular/core';
+import {
+  createAngularBlock,
+  injectBlocks,
+  injectBlokInstance,
+  BLOK_BLOCK_CONTEXT,
+  type AngularBlockRenderContext,
+} from '@bloklabs/angular';
+
+@Component({
+  standalone: true,
+  template: \`
+    <header data-steps-header>{{ ctx.data().title }} — {{ steps().length }}</header>
+    <div #slot></div>
+    <button (click)="add()">Add step</button>
+  \`,
+})
+export class StepsComponent implements AfterViewInit {
+  readonly ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<{ title: string }>;
+  // The block's own editor, straight from DI — no host plumbing.
+  private readonly blocks = injectBlocks(injectBlokInstance());
+  private readonly slot = viewChild.required<ElementRef<HTMLElement>>('slot');
+
+  steps = () => this.blocks.getChildren(this.ctx.block.id);
+
+  ngAfterViewInit() {
+    // Named per-child hooks instead of positional :nth-child() CSS. The
+    // decorator is remembered and re-applied on every remount.
+    this.ctx.mountChildren(this.slot().nativeElement, (child, index) => ({
+      'data-step-index': String(index + 1),
+    }));
+  }
+
+  add() {
+    this.ctx.api.blocks.insertInsideParent(this.ctx.block.id, this.steps().length);
+  }
+}
+
+export const StepsTool = createAngularBlock<{ title: string }>({
+  type: 'steps',
+  propSchema: { title: { default: '' } },
+  component: StepsComponent,
+  // Everything core reads off the tool CLASS, under the vanilla names.
+  // keepsChildrenOnEnter keeps Enter on the empty LAST step INSIDE the
+  // container; without it that line escapes to the container's parent.
+  statics: { ownsChildren: true, keepsChildrenOnEnter: true },
+  // Without an anchor the toolbar centers on the FIRST CHILD BLOCK.
+  getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
+  // The seeding hook. Fires ONCE, once the mounted component's DOM (and its
+  // adopted child holders) exists — and only for a genuine CREATION (a
+  // keystroke, \`api.blocks.insert\`, a turn-into), never on a load/undo/paste
+  // replay. Do not hand-roll it in \`onMounted\` by accepting only the
+  // keystroke origin: that gate drops the api and turn-into paths.
+  onCreated: (block, { api }) => {
+    if (block.getChildren().length === 0) {
+      api.blocks.insertInsideParent(block.id);
+    }
+  },
+});`,
+  },
+};
+
 // React-only: inline (selection) tools authored as components. Other adapters
 // don't ship an inline-tool factory yet, so the section renders only for react.
 const INLINE_TOOL_AUTHORING_CODE = `import { createReactInlineTool, useInlineTool } from '@bloklabs/react';
@@ -327,6 +509,28 @@ export const HowToCustomToolContent: React.FC = () => {
             <CodeBlock code={snippet.code} language={snippet.language} />
             <p className={proseClass}>
               {renderInline(t('api.howToCustomTool.component.registerNote'))}
+            </p>
+          </div>
+        );
+      })()}
+
+      {/* Container blocks — adapter frameworks only */}
+      {(() => {
+        const snippet = CONTAINER_AUTHORING_CODE[framework];
+        if (snippet === undefined) {
+          return null;
+        }
+        return (
+          <div className="flex flex-col gap-4 border-t border-border pt-8">
+            <h2 className={headingClass}>
+              <Typo>{t('api.howToCustomTool.container.title')}</Typo>
+            </h2>
+            <p className={proseClass}>
+              {renderInline(t(`api.howToCustomTool.container.body.${framework}`))}
+            </p>
+            <CodeBlock code={snippet.code} language={snippet.language} />
+            <p className={proseClass}>
+              {renderInline(t('api.howToCustomTool.container.holderNote'))}
             </p>
           </div>
         );

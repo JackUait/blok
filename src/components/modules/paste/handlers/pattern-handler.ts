@@ -263,6 +263,7 @@ export class PatternHandler extends BasePasteHandler implements PasteHandler {
       data: { text: this.buildAnchor(url).outerHTML },
       replace: true,
       needToFocus: true,
+      origin: 'paste',
     });
   }
 

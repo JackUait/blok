@@ -887,7 +887,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
     });
 
@@ -942,7 +945,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
       expect(frozenComposed).toEqual({ text: '' });
     });
@@ -970,7 +976,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
       expect(frozenComposed).toEqual({ text: '' });
     });
@@ -1372,7 +1381,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
     });
 
@@ -1400,7 +1412,10 @@ describe('Toolbox', () => {
         undefined,
         1,
         undefined,
-        false
+        false,
+        undefined,
+        undefined,
+        'user'
       );
     });
 
@@ -1571,7 +1586,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
     });
 
@@ -1653,7 +1671,10 @@ describe('Toolbox', () => {
         undefined,
         0,
         undefined,
-        true
+        true,
+        undefined,
+        undefined,
+        'user'
       );
     });
 
@@ -1884,7 +1905,10 @@ describe('Toolbox', () => {
         undefined,
         1,
         undefined,
-        false
+        false,
+        undefined,
+        undefined,
+        'user'
       );
 
       // The "/embed" query is stripped regardless of which path runs.
@@ -2393,7 +2417,10 @@ describe('Toolbox', () => {
           undefined,
           0,
           undefined,
-          true
+          true,
+          undefined,
+          undefined,
+          'user'
         );
         expect(event.preventDefault).toHaveBeenCalled();
       }

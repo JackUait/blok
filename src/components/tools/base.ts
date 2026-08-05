@@ -92,6 +92,12 @@ export enum InternalBlockToolSettings {
    */
   OwnsChildren = 'ownsChildren',
   /**
+   * Enter on this Tool's empty LAST child stays INSIDE the container instead of
+   * escaping it (a column, a card) — per-tool policy the DOM cannot express,
+   * since a callout renders the same nested-blocks slot yet wants the escape
+   */
+  KeepsChildrenOnEnter = 'keepsChildrenOnEnter',
+  /**
    * Tool stores a host-uploaded asset URL at `data.url` (image, video, audio,
    * file). Lets consumers discover the media-bearing tool set for orphaned-CDN
    * cleanup without hardcoding each tool's data shape.

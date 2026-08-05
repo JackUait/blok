@@ -1,6 +1,7 @@
-import { computed, defineComponent, getCurrentInstance, h, watch, type PropType } from 'vue';
+import { computed, defineComponent, getCurrentInstance, h, onUpdated, ref, watch, type PropType } from 'vue';
 import { useBlok } from './useBlok';
 import { BlokContent } from './BlokContent';
+import { getContentBaseline } from './content-baseline-map';
 import { BLOK_EDITOR_CONFIG_KEYS } from './config-keys';
 import type {
   API,
@@ -93,12 +94,55 @@ export const BlokEditor = defineComponent({
   setup(props, { emit, expose, attrs }) {
     const instance = getCurrentInstance();
 
-    /** Listener presence (the Vue analog of Angular's `output.observed`). */
-    const hasListener = (handlerKey: string): boolean => {
+    /**
+     * The `onXxx` keys currently on the component's vnode, as a sorted, stable
+     * string. Emit-mapped listeners (`@change`, `@save`, `v-model:data`,
+     * `@after-render`, …) are not declared props, so `vnode.props` is the only
+     * place they exist.
+     */
+    const readListenerKeys = (): string => {
       const vnodeProps = instance?.vnode.props;
 
-      return vnodeProps != null && handlerKey in vnodeProps;
+      if (vnodeProps == null) {
+        return '';
+      }
+
+      return Object.keys(vnodeProps)
+        .filter((key) => key.startsWith('on'))
+        .sort()
+        .join('|');
     };
+
+    /**
+     * Reactive mirror of `readListenerKeys()`. `vnode.props` is a plain object
+     * Vue swaps out on each patch — reading it tracks nothing, so a host that
+     * added or removed a listener WITHOUT also changing a reactive prop never
+     * re-ran the config snapshot and the flip was silently lost (core reads
+     * callback PRESENCE as intent: `onSave` arms the change pipeline).
+     *
+     * This ref is the missing reactive source. It is READ by `hasListener` (so
+     * every watcher that snapshots the config depends on it) and WRITTEN only
+     * from `onUpdated` — never from the snapshot itself, which would make the
+     * read its own write and self-trigger an endless update loop. Storing the
+     * key set rather than a counter makes "bump only on a genuine presence
+     * change" structural: re-assigning an equal string is inert.
+     *
+     * One case stays out of reach, and it is Vue's, not the ref's:
+     * `hasPropsChanged` skips keys that name a declared emit, so REPLACING one
+     * emit listener with a different one while the vnode's prop count and every
+     * other prop stay identical (`@change` out, `@save` in, nothing else moving)
+     * skips the child update entirely — no hook fires anywhere. Anything that
+     * also changes the prop count, including plain add/remove, updates.
+     */
+    const listenerKeys = ref(readListenerKeys());
+
+    onUpdated(() => {
+      listenerKeys.value = readListenerKeys();
+    });
+
+    /** Listener presence (the Vue analog of Angular's `output.observed`). */
+    const hasListener = (handlerKey: string): boolean =>
+      listenerKeys.value.split('|').includes(handlerKey);
 
     /**
      * Snapshot the props + gated emit-callbacks into a `UseBlokConfig`. App-wide
@@ -154,8 +198,11 @@ export const BlokEditor = defineComponent({
 
     // Subscribe to the editor's rendered-lifecycle events once it exists (gated
     // on the emits being listened). `onCleanup` unsubscribes when the instance is
-    // replaced or the component unmounts.
-    watch(editor, (ed, _previous, onCleanup) => {
+    // replaced or the component unmounts. `listenerKeys` is a source too, so a
+    // listener added after mount subscribes instead of waiting for a recreate —
+    // presence is re-read from scratch each run, and the cleanup keeps the
+    // subscriptions balanced.
+    watch([editor, listenerKeys], ([ed], _previous, onCleanup) => {
       if (ed === null) {
         return;
       }
@@ -204,8 +251,29 @@ export const BlokEditor = defineComponent({
       focus: (atEnd?: boolean): void => {
         editor.value?.focus(atEnd);
       },
-      render: (data: OutputData): ReturnType<NonNullable<typeof editor.value>['render']> | undefined =>
-        editor.value?.render(data),
+      /**
+       * Replace the editor content.
+       *
+       * Safe to mix with a controlled `data` prop: the rendered document
+       * becomes the adapter's content baseline once the call lands, so a later
+       * `data` change back to the previous document still re-renders instead of
+       * being deduped against a baseline the editor no longer reflects.
+       * Recorded only on the RESOLVED path — a failed render leaves the editor
+       * on its previous content, and a baseline naming content it never showed
+       * would dedupe away the correcting update.
+       * @param data - the document to render
+       */
+      render: (data: OutputData): Promise<void> | undefined => {
+        const ed = editor.value;
+
+        if (ed === null) {
+          return undefined;
+        }
+
+        return ed.render(data).then(() => {
+          getContentBaseline(ed)?.markRendered(data);
+        });
+      },
     });
 
     return () => h(BlokContent, { editor: editor.value, ...attrs });

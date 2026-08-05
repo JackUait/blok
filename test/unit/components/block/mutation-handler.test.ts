@@ -580,3 +580,108 @@ describe('MutationHandler', () => {
     });
   });
 });
+
+/**
+ * The guarantee the framework adapters' `<BlockChildren childAttributes>`
+ * channel rests on: a CONTAINER block may write attributes onto its children's
+ * HOLDERS without either block scoring a user edit. Two independent gates
+ * enforce it, at two different layers — which is why this suite drives the real
+ * `watch()` path for the child (the filter) and `handleMutation` for the
+ * container (the mutation-free suppression), rather than one of them for both.
+ */
+describe('MutationHandler — parent writes on a child holder', () => {
+  let eventBus: EventsDispatcher<BlokEventMap>;
+  let onMutation: (mutations: MutationRecord[] | undefined) => void;
+  let handler: MutationHandler;
+  /** containerHost > slot > holder > content > childTool */
+  let containerHost: HTMLElement;
+  let holder: HTMLElement;
+  let childTool: HTMLElement;
+
+  const attributeRecord = (target: Node): MutationRecord => ({
+    type: 'attributes',
+    target,
+    addedNodes: [] as unknown as NodeList,
+    removedNodes: [] as unknown as NodeList,
+    previousSibling: null,
+    nextSibling: null,
+    attributeName: 'data-step-index',
+    attributeNamespace: null,
+    oldValue: null,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    containerHost = document.createElement('div');
+    containerHost.setAttribute('data-blok-mutation-free', 'true');
+
+    const slot = document.createElement('div');
+
+    slot.setAttribute('data-blok-nested-blocks', '');
+
+    holder = document.createElement('div');
+
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-element-content', '');
+    childTool = document.createElement('div');
+
+    content.appendChild(childTool);
+    holder.appendChild(content);
+    slot.appendChild(holder);
+    containerHost.appendChild(slot);
+    document.body.appendChild(containerHost);
+
+    eventBus = new EventsDispatcher<BlokEventMap>();
+    onMutation = vi.fn();
+  });
+
+  afterEach(() => {
+    handler?.destroy();
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('never reaches the CHILD block — the holder is its tool element ancestor', () => {
+    handler = new MutationHandler(() => childTool, eventBus, onMutation);
+    handler.watch();
+
+    eventBus.emit(RedactorDomChanged, { mutations: [attributeRecord(holder)] });
+
+    expect(onMutation).not.toHaveBeenCalled();
+  });
+
+  it('never scores an edit on the CONTAINER — its own host is the mutation-free ancestor', () => {
+    handler = new MutationHandler(() => containerHost, eventBus, onMutation);
+    handler.watch();
+
+    // The record DOES belong to the container (its host contains the holder)…
+    eventBus.emit(RedactorDomChanged, { mutations: [attributeRecord(holder)] });
+    expect(onMutation).toHaveBeenCalledTimes(1);
+
+    // …but it is scored as mutation-free, so no update is fired.
+    expect(handler.handleMutation([attributeRecord(holder)]).shouldFireUpdate).toBe(false);
+  });
+
+  it('is equally inert on the child content wrapper', () => {
+    const content = holder.firstElementChild as HTMLElement;
+
+    handler = new MutationHandler(() => childTool, eventBus, onMutation);
+    handler.watch();
+
+    eventBus.emit(RedactorDomChanged, { mutations: [attributeRecord(content)] });
+
+    expect(onMutation).not.toHaveBeenCalled();
+  });
+
+  it('DOES score an edit once the write lands on the child tool root — the boundary', () => {
+    handler = new MutationHandler(() => childTool, eventBus, onMutation);
+    handler.watch();
+
+    eventBus.emit(RedactorDomChanged, { mutations: [attributeRecord(childTool)] });
+
+    expect(onMutation).toHaveBeenCalledTimes(1);
+    expect(handler.handleMutation([attributeRecord(childTool)]).shouldFireUpdate).toBe(true);
+  });
+});

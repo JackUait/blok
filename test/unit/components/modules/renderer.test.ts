@@ -225,6 +225,7 @@ describe('Renderer module', () => {
       tool: 'paragraph',
       data: blockData.data,
       tunes: blockData.tunes,
+      origin: 'load',
     });
     expect(blockManager.insertMany).toHaveBeenCalledWith(
       [
@@ -238,6 +239,38 @@ describe('Renderer module', () => {
       { skipYjsSync: false }
     );
     expect(blockManager.insert).not.toHaveBeenCalled();
+  });
+
+  /**
+   * C3: rendering a stored document is a RESTORE, not a creation. Container
+   * tools keyed off "am I empty?" must be able to see that, so every Block the
+   * Renderer builds — including the default block of an empty document — is
+   * stamped `origin: 'load'`.
+   */
+  it('stamps every composed block with the «load» origin', async () => {
+    const { renderer, blockManager, tools } = createRenderer();
+
+    tools.available.set('paragraph', {});
+
+    await renderer.render([ {
+      id: 'block-1',
+      type: 'paragraph',
+      data: { text: 'Hello' },
+    } ]);
+
+    expect(blockManager.composeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: 'load' })
+    );
+  });
+
+  it('stamps the empty-document default block with the «load» origin', async () => {
+    const { renderer, blockManager } = createRenderer();
+
+    await renderer.render([]);
+
+    expect(blockManager.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ origin: 'load' })
+    );
   });
 
   it('sanitizes stored block data with the tool sanitize config before composing', async () => {

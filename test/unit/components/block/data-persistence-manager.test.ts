@@ -201,6 +201,34 @@ describe('DataPersistenceManager', () => {
       expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'new text' });
     });
 
+    /**
+     * A Tool's `setData` may report that it could NOT apply the data in place
+     * (the list tool returns false for a style change, which needs a different
+     * DOM shape). Swallowing that answer makes core believe the block is
+     * up to date while the DOM still shows the old data — the caller must be
+     * told to re-render instead.
+     */
+    it('returns false when the tool reports it could not update in place', async () => {
+      const setData = vi.fn(() => false);
+
+      (toolInstance as { setData?: unknown }).setData = setData;
+
+      const result = await dataPersistenceManager.setData({ text: 'new text' });
+
+      expect(result).toBe(false);
+      expect(dataPersistenceManager.lastSavedData).toEqual({ text: 'initial text' });
+    });
+
+    it('returns true when the tool reports a successful in-place update', async () => {
+      const setData = vi.fn(() => true);
+
+      (toolInstance as { setData?: unknown }).setData = setData;
+
+      const result = await dataPersistenceManager.setData({ text: 'new text' });
+
+      expect(result).toBe(true);
+    });
+
     it('returns false when tool setData throws', async () => {
       const setData = vi.fn(() => Promise.reject(new Error('Set data failed')));
       (toolInstance as { setData?: unknown }).setData = setData;

@@ -180,6 +180,29 @@ await editor.clear();`,
 editor.destroy();`,
       },
       {
+        name: "handlers.set(handlers)",
+        returnType: "void",
+        description:
+          "Installs, replaces or removes the live editor callbacks — `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender`, `onAfterRender` — in place, so caret, selection, scroll and undo history all survive. Only the keys you pass are touched; a key whose value is `undefined` UNSETS that handler. That matters because callback presence is itself the semantics: an `onSubmit` makes Enter serialize-and-submit instead of splitting the block, and an `onSave` arms the change-observation pipeline. Use it to make a callback reactive without recreating the editor — the React, Vue and Angular adapters drive this setter for you when a prop, listener or `[config]` callback appears or disappears.",
+        params: [
+          {
+            name: "handlers",
+            type: "LiveHandlers",
+            required: true,
+            description:
+              "Partial map of live callbacks. Omitted keys are left as they are; a key set to `undefined` unsets that handler.",
+          },
+        ],
+        example: `// "Enter sends" while composing, default Enter while editing a draft
+editor.handlers.set({
+  onSubmit: sendsOnEnter ? (data) => send(data) : undefined,
+});
+
+// Start mirroring content into your store, later stop again
+editor.handlers.set({ onSave: (data) => store.set(data) });
+editor.handlers.set({ onSave: undefined });`,
+      },
+      {
         name: "whenAllReady(options?)",
         returnType: "Promise<void>",
         description:
@@ -362,7 +385,7 @@ class Callout {
     id: "config",
     title: "Configuration",
     description:
-      "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, callbacks, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, and `inlineToolbar`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
+      "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, `inlineToolbar`, and the editor callbacks `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender` and `onAfterRender`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`, `handlers.set`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. Callback PRESENCE is itself load-bearing (an `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the change pipeline), which is why `handlers.set` also accepts `undefined` to unset one. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
     example: `import { Blok, type BlokConfig } from '@bloklabs/core';
 import { Paragraph, Header } from '@bloklabs/core/tools';
 
@@ -468,14 +491,14 @@ const editor = new Blok(config);`,
         type: "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
         default: "undefined",
         description:
-          "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once)",
+          "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once). Live: install, replace or unset it at runtime via `handlers.set({ onChange })` — its presence (together with `onSave`) is what arms Blok's change-observation pipeline at all.",
       },
       {
         option: "onSave",
         type: "(data: OutputData, api: API) => void",
         default: "undefined",
         description:
-          "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand.",
+          "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand. Live: install, replace or unset it at runtime via `handlers.set({ onSave })` — its mere presence makes Blok serialize the document once per change batch.",
       },
       {
         option: "onReady",
@@ -489,14 +512,14 @@ const editor = new Blok(config);`,
         type: "(event: KeyboardEvent, api: API) => boolean | void",
         default: "undefined",
         description:
-          "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for tools with enableLineBreaks or while a popover/toolbar owns Enter, and not for a soft-line-break Shift+Enter — except on iOS, where Safari reports Shift+Enter for a sentence-ending '. ' and Blok creates a block, so the hook fires there too. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph.",
+          "Fires when Enter is pressed in a block, before Blok splits it or creates a new one. Return true to mark it handled — Blok suppresses its default block split/create (the native newline is still prevented). Never fires for tools with enableLineBreaks or while a popover/toolbar owns Enter, and not for a soft-line-break Shift+Enter — except on iOS, where Safari reports Shift+Enter for a sentence-ending '. ' and Blok creates a block, so the hook fires there too. Ideal for chat inputs (\"Enter sends\") — pair with the paragraph tool's preserveBlank config instead of subclassing Paragraph. Live: install, replace or unset it at runtime via `handlers.set({ onEnter })`.",
       },
       {
         option: "onSubmit",
         type: "(data: OutputData, api: API) => void",
         default: "undefined",
         description:
-          "Fires with the full serialized OutputData on the Enter that would otherwise create or split a block — the \"Enter sends\" gesture. Blok serializes the document and suppresses the default split, so you don't wire save() into onEnter by hand. It inherits every onEnter escape; when both are set, an onEnter that returns true takes precedence and suppresses onSubmit.",
+          "Fires with the full serialized OutputData on the Enter that would otherwise create or split a block — the \"Enter sends\" gesture. Blok serializes the document and suppresses the default split, so you don't wire save() into onEnter by hand. It inherits every onEnter escape; when both are set, an onEnter that returns true takes precedence and suppresses onSubmit. Live: install, replace or unset it at runtime via `handlers.set({ onSubmit })` — pass `undefined` to restore Blok's default Enter (split the block) without recreating the editor.",
       },
       {
         option: "onError",
@@ -517,14 +540,14 @@ const editor = new Blok(config);`,
         type: "(blocks: OutputBlockData[]) => OutputBlockData[]",
         default: "undefined",
         description:
-          "Transforms the blocks array just before it is rendered — on the initial render, on every `blocks.render()` call, and on the repaints Blok performs itself (a runtime `i18n.update()`, and the read-only fallback re-render). Receives the raw saved blocks (before format analysis or hierarchical expansion) and returns the blocks to render, so app-specific data migrations run inside Blok instead of ahead of it. It must therefore be idempotent: those repaints feed it blocks it has already transformed.",
+          "Transforms the blocks array just before it is rendered — on the initial render, on every `blocks.render()` call, and on the repaints Blok performs itself (a runtime `i18n.update()`, and the read-only fallback re-render). Receives the raw saved blocks (before format analysis or hierarchical expansion) and returns the blocks to render, so app-specific data migrations run inside Blok instead of ahead of it. It must therefore be idempotent: those repaints feed it blocks it has already transformed. Live: install, replace or unset it at runtime via `handlers.set({ onBeforeRender })`.",
       },
       {
         option: "onAfterRender",
         type: "(api: API) => void",
         default: "undefined",
         description:
-          "Fires after each render batch lands in the DOM: the initial render, every `blocks.render()`, and the repaints Blok performs itself — a runtime `i18n.update()` locale/messages change, and a `readOnly.set()` toggle that falls back to a full re-render because a mounted tool does not support in-place read-only. Use it for post-render side effects (scroll restoration, attaching observers), keeping in mind those extra triggers if you count renders. Distinct from onReady, which fires once when the editor first becomes ready.",
+          "Fires after each render batch lands in the DOM: the initial render, every `blocks.render()`, and the repaints Blok performs itself — a runtime `i18n.update()` locale/messages change, and a `readOnly.set()` toggle that falls back to a full re-render because a mounted tool does not support in-place read-only. Use it for post-render side effects (scroll restoration, attaching observers), keeping in mind those extra triggers if you count renders. Distinct from onReady, which fires once when the editor first becomes ready. Live: install, replace or unset it at runtime via `handlers.set({ onAfterRender })`.",
       },
       {
         option: "autofocus",
@@ -845,7 +868,7 @@ editor.blocks.insertInsideParent(
 console.log('Total blocks:', count);`,
       },
       {
-        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
+        name: "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
         returnType: "BlockAPI",
         description:
           "Insert a new block with full control over its properties and position.",
@@ -857,7 +880,11 @@ const block = editor.blocks.insert();
 const block = editor.blocks.insert('paragraph', { text: 'Hello' }, undefined, 0);
 
 // Insert with custom ID
-const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undefined, undefined, undefined, 'custom-id');`,
+const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undefined, undefined, undefined, 'custom-id');
+
+// From your own slash menu / toolbar: declare the user gesture so a container
+// tool seeds its default children (see BlockOrigin on the tool contract)
+const block = editor.blocks.insert('column_list', undefined, undefined, index, undefined, undefined, undefined, undefined, 'user');`,
         params: [
           {
             name: "type",
@@ -915,6 +942,14 @@ const block = editor.blocks.insert('header', { text: 'Title' }, undefined, undef
             required: false,
             default: "undefined",
             description: "Optional tune data applied at creation, keyed by tune name.",
+          },
+          {
+            name: "origin",
+            type: "BlockOrigin",
+            required: false,
+            default: "'api'",
+            description:
+              "Why the block is being created. Handed to the tool constructor as `origin`, which is how a container tool tells a genuine creation (seed default children) from a re-materialisation such as a document load, an undo/redo replay or a paste (never seed). Pass `'user'` when the insert comes from your own insertion UI — a custom toolbar, slash menu or keyboard shortcut — so Blok's own containers (`column_list`, `column`) and your own behave the same as they do for the built-in menu. Leave it out for programmatic inserts and refetches: the `'api'` default is still a creation, but it is never mistaken for a user gesture.",
           },
         ],
         errors: [
@@ -988,7 +1023,8 @@ console.log('Inserted:', inserted.length, 'blocks');`,
       {
         name: "blocks.update(id, data?, tunes?)",
         returnType: "Promise<BlockAPI>",
-        description: "Update a block's data and/or tunes.",
+        description:
+          "Update a block's data and/or tunes. When the block's tool implements `setData(newData)` on its prototype — every React/Vue/Angular block does, as do the built-in header, list, code, toggle and table tools — the data update is applied IN PLACE: the same block instance, the same DOM holder, the same mounted component keep living, so ephemeral tool state, adopted child blocks and the caret all survive. That is what makes `update()` safe to call on every keystroke (renaming a card while the user types). Tools without `setData`, a tool whose `setData` returns `false` (it needs a different DOM shape), and any call that passes `tunes` fall back to recomposing the block: a fresh tool instance replaces the old one, which is destroyed.",
         example: `// Update block data
 const block = await editor.blocks.update('block-123', { text: 'New text' });
 
@@ -1509,6 +1545,19 @@ editor.on('block changed', ({ event }) => {
 // Listen for individual block renders
 editor.on('block:rendered', ({ blockId }) => {
   console.log('Rendered block:', blockId);
+});
+
+// Wait for a container block's child holders to settle before touching them.
+// A React/Vue/Angular block renders through a portal that commits AFTER
+// block:rendered, so a caret set in that window is dropped; this event fires
+// once the holders are in the container's slot (it repeats on every later
+// reconciliation pass — it is a settle signal, not a change signal).
+const child = editor.blocks.insertInsideParent(containerId);
+
+editor.on('block:childrenMounted', ({ blockId, childIds }) => {
+  if (blockId === containerId && childIds.includes(child.id)) {
+    editor.caret.setToBlock(child.id);
+  }
 });
 
 // To react to content changes with access to the API, use the
@@ -3093,6 +3142,100 @@ class CardTool {
   }
 }`,
       },
+      {
+        name: "BlockToolConstructorOptions.origin",
+        returnType: "BlockOrigin",
+        description:
+          "The create-vs-restore signal on the tool contract, handed to every block tool's constructor alongside `data`, `block` and `readOnly`. A container tool that seeds default children — a two-column row, a card that starts with a heading — may only do that once, at creation. Every other time the tool is constructed the document already says what its children are, and during a restore those children commonly land a tick AFTER `rendered()` runs, so an empty `api.blocks.getChildren()` there is only transient: seeding on that read fabricates phantom children beside the real ones. CREATION values — seed: `'user'` (a direct editing gesture: Enter, the plus button, the slash menu, block settings, a markdown shortcut), `'api'` (a programmatic `blocks.insert` / `insertMany` / `insertInsideParent`), `'convert'` (a turn-into). RESTORE values — never seed: `'load'` (a document render), `'replay'` (an undo/redo replay or a remote collaborative update), `'paste'` (pasted content that brings its own children), `'probe'` (the OFF-TREE instance `blocks.composeBlockData()` builds to read a tool's default data — it is never inserted, yet it still runs `render()` and `rendered()`, so it must not touch the block tree at all). Blok always supplies it; treat an absent value as `'api'`, and write the check as an allow-list of creation values so a future origin fails closed. Pair it with `blocks.insert(..., origin)` if you drive insertion from your own UI. On the React/Vue/Angular adapters you rarely read it by hand: the block spec's `onCreated` hook already encodes this allow-list, and it fires after the adapter's first commit — the tick at which the block's DOM and its adopted child holders actually exist.",
+        example: `class TwoColumnCard {
+  constructor({ api, block, origin }) {
+    this.api = api;
+    this.blockId = block.id;
+    // Allow-list, so a future origin never silently opts into seeding.
+    this.isCreation = ['user', 'api', 'convert', undefined].includes(origin);
+  }
+
+  render() {
+    this.slot = document.createElement('div');
+    this.slot.setAttribute('data-blok-nested-blocks', '');
+
+    return this.slot;
+  }
+
+  rendered() {
+    const children = this.api.blocks.getChildren(this.blockId);
+
+    if (children.length > 0) {
+      mountChildBlocks(this.slot, children);
+
+      return;
+    }
+
+    // Empty on a load / undo-redo replay / paste / probe means "my children
+    // have not arrived yet", NOT "I am brand new". Only a creation may seed.
+    if (!this.isCreation) {
+      return;
+    }
+
+    this.seedColumns();
+  }
+}`,
+      },
+      {
+        name: "BlockToolConstructable.keepsChildrenOnEnter",
+        returnType: "boolean",
+        description:
+          "A static on your tool CLASS that decides where Enter goes on the container's empty LAST child. By default Blok reads that empty trailing line as the author's way out: with siblings present the line is outdented to the container's own parent, and as a sole child a fresh block is inserted after the whole container — Notion's callout behaviour. A layout container whose children ARE its content (a column, a card, a `steps` block) wants the opposite, and without the declaration the escape strands the new line beside the container. Set it to `true` and the new line stays inside, the same rule the built-in `column`, `column_list` and `toggle` follow. It cannot be inferred from the DOM: a callout renders the very same `data-blok-nested-blocks` slot as a column and deliberately keeps the escape, so this is per-tool policy. Core reads it for the symmetric \"remove one indent level\" gesture too (Enter/Backspace on a block nested under a PLAIN parent), so a declaring tool is treated as a container there as well and its children never stepwise-outdent out of it. On the React/Vue/Angular adapters, declare it in the block spec's `statics` bag like any other class static.",
+        example: `class StepsTool {
+  static keepsChildrenOnEnter = true;
+
+  render() {
+    this.slot = document.createElement('div');
+    this.slot.setAttribute('data-blok-nested-blocks', '');
+
+    return this.slot;
+  }
+
+  rendered() {
+    mountChildBlocks(this.slot, this.api.blocks.getChildren(this.blockId));
+  }
+}
+
+// Framework adapters forward it through \`statics\`:
+export const StepsTool = createReactBlock({
+  type: 'steps',
+  statics: { ownsChildren: true, keepsChildrenOnEnter: true },
+  component: StepsCard,
+});`,
+      },
+      {
+        name: "setData(newData)",
+        returnType: "boolean | void | Promise<boolean | void>",
+        description:
+          "An optional method on your tool that applies new data to the LIVE instance. Declare it and `blocks.update()`, undo/redo and remote collaborative edits all reuse the block you already rendered instead of recomposing it — no new tool instance, no new holder, so ephemeral state (an open menu, a scroll position, a framework component's local state), the adopted child holders and the caret survive. Without it core destroys the block and builds a replacement, which is why a host that called `blocks.update()` per keystroke used to watch a component-backed block go blank. Return `false` when you cannot apply the data in place — the list tool does that for a style change, which needs a different DOM shape — and core falls back to the full recompose; returning `true` or nothing means it was applied. Throwing has the same effect as `false` (logged, then recomposed). The React/Vue/Angular block factories implement it for you, so adapter blocks are on the in-place path automatically.",
+        example: `class CalloutTool {
+  setData(newData) {
+    if (newData.variant !== this.data.variant) {
+      // A different variant renders a different DOM shape — let core rebuild.
+      return false;
+    }
+
+    this.data = newData;
+    this.box.textContent = newData.text ?? '';
+
+    return true;
+  }
+}`,
+        params: [
+          {
+            name: "newData",
+            type: "BlockToolData",
+            required: true,
+            description:
+              "The block's full data after the update — the existing data merged with the caller's patch, not the patch alone.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -3658,7 +3801,7 @@ bootstrapApplication(AppComponent, {
         type: "OutputData | LooseOutputData | null",
         default: "—",
         description:
-          "Editor content (reactive). Seeds the initial document; after mount, new content — including transitions to and from empty content — re-renders in place on the same instance (never recreates the editor). Updates are deep-equal–deduped, so echoing the editor's own output back never clobbers the caret. A whole-document `null` is the controlled \"clear to empty\" value (route it through `toRenderableData` when you call render() yourself), and loose backend DTOs are accepted as-is. Angular widens it to `… | undefined`; Vue's prop is declared `PropType<OutputData>` and is the narrow outlier.",
+          "Editor content (reactive). Seeds the initial document; after mount, new content — including transitions to and from empty content — re-renders in place on the same instance (never recreates the editor). Updates are deduped with the same structural lens as equalsOutputData, so echoing the editor's own output back never clobbers the caret — even after a persistence layer strips it (fresh `time`/`version`, dropped ids, no `lastEditedAt` stamp still count as unchanged). Imperative content calls stay in the same world: React's useBlokHandle().clear() / .render() and Angular's BlokEditorComponent.render() update that baseline once they land, so setting `data` back to a document the editor itself emitted re-renders it instead of being dismissed as an echo. A whole-document `null` is the controlled \"clear to empty\" value (route it through `toRenderableData` when you call render() yourself), and loose backend DTOs are accepted as-is. Angular widens it to `… | undefined`; Vue's prop is declared `PropType<OutputData>` and is the narrow outlier.",
       },
       {
         option: "onSave",
@@ -3764,7 +3907,7 @@ bootstrapApplication(AppComponent, {
         type: "Ref<Blok | null>",
         default: "—",
         description:
-          "Forwarded to the live Blok instance for imperative calls (save, render, blocks, caret, …). Null until the editor mounts, so calls must guard on ref.current. For the common shortcuts without the guards, @bloklabs/react's useBlokHandle() returns a stable, null-safe handle — attach it via ref={handle.ref} and call handle.focus()/save()/clear()/render()/setReadOnly() directly (each safely no-ops until ready); handle.current is the escape hatch to the full instance.",
+          "Forwarded to the live Blok instance for imperative calls (save, render, blocks, caret, …). Null until the editor mounts, so calls must guard on ref.current. For the common shortcuts without the guards, @bloklabs/react's useBlokHandle() returns a stable, null-safe handle — attach it via ref={handle.ref} and call handle.focus()/save()/clear()/render()/setReadOnly() directly (each safely no-ops until ready); handle.current is the escape hatch to the full instance. When you also drive content through the `data` prop, prefer the handle for clear()/render(): it updates the controlled baseline, while a raw ref.current.render()/clear() changes the content behind the adapter's back and a later `data` value equal to what the editor emitted before is then deduped away.",
       },
       {
         option: "className, id, …",

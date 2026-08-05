@@ -5,10 +5,19 @@ export { createAngularBlock } from './createAngularBlock';
 export { injectBlocks } from './useBlocks';
 export { injectBlokReady } from './useBlokReady';
 export { BLOK_BLOCK_CONTEXT } from './block-context';
+export { injectBlokInstance, BLOK_EDITOR_INSTANCE } from './blok-instance';
 export type { BlokAngularConfig } from './types';
 export type { InjectBlokReadyOptions, BlokReadyScope } from './useBlokReady';
-export type { AngularBlockRenderContext } from './block-context';
-export type { CreateAngularBlockSpec } from './createAngularBlock';
+export type {
+  AngularBlockRenderContext,
+  ChildAttributes,
+  ChildAttributesFn,
+} from './block-context';
+export type {
+  AngularBlockMountedContext,
+  BlockToolStatics,
+  CreateAngularBlockSpec,
+} from './createAngularBlock';
 export type { PropSchema, PropSchemaEntry } from '@bloklabs/core/adapters';
 export type {
   UseBlocksApi,

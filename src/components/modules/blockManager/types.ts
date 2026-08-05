@@ -2,7 +2,7 @@
  * Shared types for BlockManager modules
  */
 
-import type { BlockToolData } from '../../../../types';
+import type { BlockOrigin, BlockToolData } from '../../../../types';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationType, BlockMutationEventMap } from '../../../../types/events/block';
 import type { Block } from '../../block';
@@ -30,6 +30,14 @@ export interface ComposeBlockOptions {
   lastEditedAt?: number;
   /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
+  /**
+   * Why this Block is being composed — a creation the author just made, or a
+   * re-materialisation of a block the document already describes. Handed to the
+   * Tool constructor so container Tools can seed default children on creation
+   * only. Defaults to `'api'`; a caller that forgets it is never mistaken for a
+   * user gesture.
+   */
+  origin?: BlockOrigin;
 }
 
 /**
@@ -60,6 +68,11 @@ export interface InsertBlockOptions {
    * a top-level insertion would otherwise land inside a nested container.
    */
   forceTopLevel?: boolean;
+  /**
+   * Why this Block is being created — see {@link ComposeBlockOptions.origin}.
+   * Defaults to `'api'`.
+   */
+  origin?: BlockOrigin;
 }
 
 /**

@@ -1,11 +1,23 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ApplicationRef,
+  ChangeDetectionStrategy,
+  Component,
+  EnvironmentInjector,
+  ErrorHandler,
+  inject,
+  signal,
+} from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { createAngularBlock } from '../../../packages/angular/src/createAngularBlock';
+import { createAngularBlock, type BlockToolStatics } from '../../../packages/angular/src/createAngularBlock';
 import { BLOK_BLOCK_CONTEXT, type AngularBlockRenderContext } from '../../../packages/angular/src/block-context';
-import type { BlockPortalRegistry } from '../../../packages/angular/src/block-portal-registry';
+import {
+  createBlockPortalRegistry,
+  type BlockPortalRegistry,
+} from '../../../packages/angular/src/block-portal-registry';
 import type { BlockAPI } from '../../../types/api';
-import type { API, BlockToolConstructorOptions, BlockToolData } from '../../../types';
+import type { API, BlockToolConstructable, BlockToolConstructorOptions, BlockToolData } from '../../../types';
 
 const REGISTRY_CONFIG_KEY = '__blokAngularPortalRegistry';
 
@@ -16,6 +28,16 @@ interface CounterData {
 
 @Component({ standalone: true, template: '', changeDetection: ChangeDetectionStrategy.Default })
 class CounterComponent {
+  readonly ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<CounterData>;
+}
+
+/** Same as CounterComponent, but renders its data so a real mount is observable. */
+@Component({
+  standalone: true,
+  template: `<span class="view">{{ ctx.data().count }}</span>`,
+  changeDetection: ChangeDetectionStrategy.Default,
+})
+class CounterViewComponent {
   readonly ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<CounterData>;
 }
 
@@ -162,6 +184,78 @@ describe('createAngularBlock — factory contract', () => {
   });
 });
 
+/**
+ * C2 half (b), driven through a REAL portal registry: core composes the
+ * REPLACEMENT block — which mounts under the SAME block id — BEFORE it calls
+ * REMOVED + destroy() on the block it replaces (`Blocks.insert(index, block,
+ * replace = true)`). The superseded instance's teardown therefore lands on a
+ * mount it no longer owns; without passing its own host it destroys the live
+ * componentRef and clears the live host, leaving a permanently blank block.
+ */
+describe('createAngularBlock — portal ownership on teardown', () => {
+  let envInjector: EnvironmentInjector;
+  let appRef: ApplicationRef;
+  let errorHandler: ErrorHandler;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    TestBed.configureTestingModule({});
+    envInjector = TestBed.inject(EnvironmentInjector);
+    appRef = TestBed.inject(ApplicationRef);
+    errorHandler = TestBed.inject(ErrorHandler);
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  const makeViewTool = (
+    count: number,
+    registry: BlockPortalRegistry
+  ): { render(): HTMLElement; removed(): void; destroy(): void } => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterViewComponent,
+    });
+
+    return new Tool({
+      data: { count } as BlockToolData,
+      block: makeBlockApi('blk-same'),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    } as BlockToolConstructorOptions);
+  };
+
+  it('a superseded instance cannot unregister the mount that replaced it', () => {
+    const registry = createBlockPortalRegistry(envInjector, appRef, errorHandler);
+    const superseded = makeViewTool(1, registry);
+
+    superseded.render();
+
+    // Core composes the replacement first — same id, new host.
+    const replacement = makeViewTool(2, registry);
+    const replacementHost = replacement.render();
+
+    // …and only then tears the old block down (REMOVED, then destroy()).
+    superseded.removed();
+    superseded.destroy();
+
+    expect(replacementHost.querySelector('.view')?.textContent).toBe('2');
+  });
+
+  it('the live instance can still tear its own mount down', () => {
+    const registry = createBlockPortalRegistry(envInjector, appRef, errorHandler);
+    const tool = makeViewTool(1, registry);
+    const host = tool.render();
+
+    expect(host.querySelector('.view')?.textContent).toBe('1');
+
+    tool.removed();
+
+    expect(host.querySelector('.view')).toBeNull();
+  });
+});
+
 describe('createAngularBlock — commit + drag-deferred dispatch', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -245,5 +339,200 @@ describe('createAngularBlock — commit + drag-deferred dispatch', () => {
 
     // Dispatch is deferred to a later frame while dragging.
     expect(block.dispatchChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('createAngularBlock — core tool-contract passthrough', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('resolves getToolbarAnchorElement against the rendered host, at call time', () => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      getToolbarAnchorElement: host => host.querySelector<HTMLElement>('[data-anchor]'),
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+
+    const host = tool.render();
+
+    // The anchor only exists once the component has rendered into the host —
+    // the resolver must run at CALL time, not at construction.
+    expect(tool.getToolbarAnchorElement()).toBeUndefined();
+
+    const anchor = document.createElement('div');
+
+    anchor.setAttribute('data-anchor', '');
+    host.appendChild(anchor);
+
+    expect(tool.getToolbarAnchorElement()).toBe(anchor);
+  });
+
+  it('reports no anchor when the spec declares none (core keeps its default positioning)', () => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: makeRegistry() },
+    } as BlockToolConstructorOptions);
+
+    tool.render();
+
+    expect(tool.getToolbarAnchorElement()).toBeUndefined();
+  });
+
+  it('forwards authored statics onto the generated tool class', () => {
+    const conversionConfig = { export: 'text', import: 'text' };
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      statics: { ownsChildren: true, conversionConfig, shortcut: 'CMD+SHIFT+K' },
+    });
+
+    const asCoreTool = Tool as unknown as BlockToolConstructable;
+
+    expect(asCoreTool.ownsChildren).toBe(true);
+    expect(asCoreTool.conversionConfig).toBe(conversionConfig);
+    expect(asCoreTool.shortcut).toBe('CMD+SHIFT+K');
+  });
+
+  it('never lets authored statics clobber the members the adapter owns', () => {
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      toolbox: { title: 'Counter', icon: '<svg></svg>' },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      statics: { toolbox: undefined, isReadOnlySupported: false } as BlockToolStatics,
+    });
+
+    expect(Tool.toolbox).toEqual({ title: 'Counter', icon: '<svg></svg>' });
+    expect(Tool.isReadOnlySupported).toBe(true);
+    expect(Tool.__isBlokAngularBlock).toBe(true);
+  });
+});
+
+describe('createAngularBlock — editor api and per-child decoration', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.restoreAllMocks());
+
+  /** A fake child block: just the id + holder `mountChildBlocks` moves around. */
+  const makeChild = (id: string): BlockAPI => {
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-id', id);
+
+    return { id, holder } as unknown as BlockAPI;
+  };
+
+  const makeContainerApi = (children: BlockAPI[]): BlockAPI =>
+    ({
+      id: 'container',
+      contentIds: children.map(child => child.id),
+      getChildren: () => children,
+      dispatchChange: vi.fn(),
+    } as unknown as BlockAPI);
+
+  const renderWithChildren = (
+    children: BlockAPI[]
+  ): {
+    ctx: AngularBlockRenderContext<CounterData>;
+    tool: { setData(d: BlockToolData): Promise<boolean> };
+    slot: HTMLElement;
+  } => {
+    const registry = makeRegistry();
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const tool = new Tool({
+      data: { count: 0 } as BlockToolData,
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    } as BlockToolConstructorOptions);
+
+    const host = tool.render();
+    const ctx = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .context as AngularBlockRenderContext<CounterData>;
+    const slot = document.createElement('div');
+
+    host.appendChild(slot);
+
+    return { ctx, tool, slot };
+  };
+
+  it('hands the editor api to the block context', () => {
+    const registry = makeRegistry();
+    const api = makeApi();
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+    });
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api,
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    } as BlockToolConstructorOptions);
+
+    tool.render();
+
+    const ctx = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .context as AngularBlockRenderContext<CounterData>;
+
+    expect(ctx.api).toBe(api);
+  });
+
+  it('stamps per-child attributes on the holders, which stay DIRECT slot children', () => {
+    const children = [makeChild('a'), makeChild('b')];
+    const { ctx, slot } = renderWithChildren(children);
+
+    ctx.mountChildren(slot, (child, index) => ({
+      'data-step-index': String(index),
+      'data-child-id': child.id,
+    }));
+
+    expect(children[0].holder.getAttribute('data-step-index')).toBe('0');
+    expect(children[0].holder.getAttribute('data-child-id')).toBe('a');
+    expect(children[1].holder.getAttribute('data-step-index')).toBe('1');
+    // Anti-wrapper guard: holders must remain DIRECT children of the slot.
+    expect(children[0].holder.parentElement).toBe(slot);
+    expect(children[1].holder.parentElement).toBe(slot);
+  });
+
+  it('drops the attributes the callback stopped producing on the next mount', async () => {
+    const children = [makeChild('a')];
+    const { ctx, tool, slot } = renderWithChildren(children);
+
+    ctx.mountChildren(slot, () => ({ 'data-active': 'true', 'data-legacy': 'x' }));
+    expect(children[0].holder.getAttribute('data-legacy')).toBe('x');
+
+    ctx.mountChildren(slot, () => ({ 'data-active': 'false' }));
+
+    expect(children[0].holder.getAttribute('data-active')).toBe('false');
+    expect(children[0].holder.hasAttribute('data-legacy')).toBe(false);
+
+    // The decorator is retained across the factory's own remounts (data change).
+    await tool.setData({ count: 1, label: 'n' } as BlockToolData);
+
+    expect(children[0].holder.getAttribute('data-active')).toBe('false');
   });
 });

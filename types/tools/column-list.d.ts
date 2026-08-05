@@ -43,6 +43,11 @@ export declare class ColumnList implements BlockTool {
    */
   static ownsChildren?: boolean;
 
+  /**
+   * Enter inside the row never unwraps it — the new line stays in its column
+   */
+  static keepsChildrenOnEnter?: boolean;
+
   constructor(options: ColumnListConstructorOptions);
 
   /**

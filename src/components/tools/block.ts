@@ -10,6 +10,7 @@ import type { BlockTuneAdapter } from './tune';
 import type {
   AssetKind,
   BlockAPI,
+  BlockOrigin,
   BlockTool as IBlockTool,
   BlockToolData,
   BlockToolConstructable,
@@ -54,12 +55,16 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    * @param data - Tool data
    * @param block - BlockAPI for current Block
    * @param readOnly - True if Blok is in read-only mode
+   * @param origin - why this instance is being constructed (creation vs restore).
+   *   Defaults to `'api'` so a construction path that has not been updated can
+   *   never be mistaken for a user gesture.
    */
-  public create(data: BlockToolData, block: BlockAPI, readOnly: boolean): IBlockTool {
+  public create(data: BlockToolData, block: BlockAPI, readOnly: boolean, origin: BlockOrigin = 'api'): IBlockTool {
     return new this.constructable({
       data,
       block,
       readOnly,
+      origin,
       api: this.api,
       config: this.settings,
     }) as IBlockTool;
@@ -83,6 +88,20 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
   }
 
   /**
+   * Returns true if the Tool's prototype has a setData method, enabling the
+   * in-place data update path (no recompose of the Block).
+   *
+   * Probes the PROTOTYPE, not a live Block: every Block exposes `setData`, but
+   * `DataPersistenceManager` falls back to writing innerHTML for tools that do
+   * not implement it — a fallback that must never stand in for a real update.
+   */
+  public get supportsInPlaceSetData(): boolean {
+    const prototype = (this.constructable as unknown as { prototype?: { setData?: unknown } })?.prototype;
+
+    return typeof prototype?.setData === 'function';
+  }
+
+  /**
    * Returns true when the Tool exclusively manages its own child blocks, so the
    * user may never nest an arbitrary block into it.
    *
@@ -94,6 +113,21 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get ownsChildren(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.OwnsChildren] === true;
+  }
+
+  /**
+   * Returns true when Enter on this container's empty LAST child must create
+   * the new line INSIDE the container rather than escaping it.
+   *
+   * The escape is Blok's default (Notion's callout behaviour), so a layout
+   * container that owns its trailing line — a column, a column_list, a toggle,
+   * a host's card — opts out by declaring the flag. It is per-tool policy, not
+   * something core can read off the DOM: a callout renders the same
+   * `data-blok-nested-blocks` slot as a column and deliberately keeps the
+   * escape.
+   */
+  public get keepsChildrenOnEnter(): boolean {
+    return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.KeepsChildrenOnEnter] === true;
   }
 
   /**

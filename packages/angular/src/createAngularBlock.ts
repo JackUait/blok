@@ -1,15 +1,146 @@
 // packages/angular/src/createAngularBlock.ts
 import { signal, type Type, type WritableSignal } from '@angular/core';
 
+import type { API } from '@/types';
 import type { BlockAPI } from '@/types/api';
-import type { BlockToolConstructorOptions, BlockToolData, ToolboxConfig } from '@/types/tools';
-import { DATA_ATTR } from '@bloklabs/core/adapters';
+import type {
+  BlockOrigin,
+  BlockToolConstructable,
+  BlockToolConstructorOptions,
+  BlockToolData,
+  ToolboxConfig,
+} from '@/types/tools';
+import { BlockChildrenMounted, DATA_ATTR } from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
 import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 import { mountChildBlocks } from '@bloklabs/core/adapters';
 
-import type { AngularBlockRenderContext } from './block-context';
+import type { AngularBlockRenderContext, ChildAttributesFn } from './block-context';
 import { BLOK_PORTAL_REGISTRY_CONFIG_KEY, type BlockPortalRegistry } from './block-portal-registry';
+
+/**
+ * Every STATIC member of core's block-tool contract an Angular block may declare
+ * for itself — `ownsChildren`, `keepsChildrenOnEnter`, `conversionConfig`,
+ * `pasteConfig`, `sanitize`, `shortcut`, `upgradeData`, and whatever core adds
+ * next. Derived from
+ * `BlockToolConstructable` rather than enumerated, so a new core static needs no
+ * adapter change to become reachable.
+ *
+ * `toolbox` and `isReadOnlySupported` are excluded because the factory owns
+ * them: `toolbox` is authored as {@link CreateAngularBlockSpec.toolbox}, and
+ * in-place read-only support is unconditional.
+ */
+export type BlockToolStatics = Omit<BlockToolConstructable, 'toolbox' | 'isReadOnlySupported'>;
+
+/** Statics the generated class owns; an authored `statics` bag can never take them over. */
+const RESERVED_STATICS: readonly string[] = ['toolbox', 'isReadOnlySupported', '__isBlokAngularBlock'];
+
+/**
+ * Origins that mean "the author just made this block" — the only ones that fire
+ * {@link CreateAngularBlockSpec.onCreated}. Written as an allow-list so a future
+ * core origin fails CLOSED (no creation signal) instead of silently opting in.
+ *
+ * `undefined` is included because core always supplies an origin: an absent one
+ * means a host hand-built the constructor options, which is an explicit
+ * creation — the same reading core's own container tools apply.
+ *
+ * Note what is NOT the axis here: `origin === 'user'`. A container gated on that
+ * alone would refuse to seed for `api.blocks.insert('steps')` and for a
+ * turn-into, leaving an empty, unusable container.
+ */
+const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
+  undefined,
+  'user',
+  'api',
+  'convert',
+]);
+
+/** What the previous decoration pass wrote for one child, so it can be undone. */
+interface StampedChild {
+  holder: HTMLElement;
+  names: string[];
+}
+
+/**
+ * Apply one pass of per-child holder attributes and clear the previous pass's
+ * leftovers — including on a child that has since left the container, which
+ * would otherwise keep a dead index forever.
+ * @param stamped - the container's ledger of what the last pass wrote (mutated)
+ * @param children - the container's model children, in model order
+ * @param decorate - the authored per-child decorator, if any
+ */
+const applyChildAttributes = (
+  stamped: Map<string, StampedChild>,
+  children: BlockAPI[],
+  decorate: ChildAttributesFn | undefined
+): void => {
+  const next = new Map<string, StampedChild>();
+
+  children.forEach((child, index) => {
+    const names: string[] = [];
+
+    for (const [name, value] of Object.entries(decorate?.(child, index) ?? {})) {
+      if (value === null || value === undefined) {
+        child.holder.removeAttribute(name);
+        continue;
+      }
+
+      child.holder.setAttribute(name, String(value));
+      names.push(name);
+    }
+
+    next.set(child.id, { holder: child.holder, names });
+  });
+
+  for (const [id, previous] of stamped) {
+    const current = next.get(id);
+
+    previous.names
+      .filter(name => current === undefined || !current.names.includes(name))
+      .forEach(name => previous.holder.removeAttribute(name));
+  }
+
+  stamped.clear();
+  next.forEach((entry, id) => stamped.set(id, entry));
+};
+
+/**
+ * Announce that a container's child holders have settled in its slot — the
+ * signal a host waits on before putting the caret into a freshly inserted
+ * child.
+ *
+ * Optional-chained: the editor always supplies `events`, but a host unit test
+ * may hand a block a partial `api`, and an observability signal must never be
+ * able to break a render.
+ * @param api - the editor-level API
+ * @param blockId - the container block's id
+ * @param children - the container's model children, in model order
+ */
+const emitChildrenMounted = (api: API, blockId: string, children: BlockAPI[]): void => {
+  api?.events?.emit(BlockChildrenMounted, {
+    blockId,
+    childIds: children.map(child => child.id),
+  });
+};
+
+/**
+ * Second argument of {@link CreateAngularBlockSpec.onMounted} and
+ * {@link CreateAngularBlockSpec.onCreated} — everything the block cannot read
+ * off its own `BlockAPI`.
+ */
+export interface AngularBlockMountedContext {
+  /**
+   * Why this block instance was constructed: a CREATION origin (`user`, `api`,
+   * `convert`) means the author just made it, so seeding default children is
+   * correct; a RESTORE origin (`load`, `replay`, `paste`) means the document
+   * already says what the children are. `probe` is an off-tree instance built
+   * only to read a tool's default data — it must not touch the block tree at
+   * all. Defaults to `'api'` when the constructor was handed no origin.
+   */
+  origin: BlockOrigin;
+  /** The editor-level API (`api.blocks`, `api.caret`, `api.events`…). */
+  api: API;
+}
 
 /** Spec for {@link createAngularBlock}. Authored as a standalone component. */
 export interface CreateAngularBlockSpec<Data = BlockToolData> {
@@ -24,8 +155,90 @@ export interface CreateAngularBlockSpec<Data = BlockToolData> {
    * per-block context via `inject(BLOK_BLOCK_CONTEXT)`.
    */
   component: Type<unknown>;
+  /**
+   * Static members of core's tool contract, forwarded verbatim onto the
+   * generated tool class — the single channel for everything core reads off the
+   * CLASS rather than the instance (`ownsChildren`, `keepsChildrenOnEnter`,
+   * `conversionConfig`, `pasteConfig`, `sanitize`, `shortcut`, `upgradeData`…).
+   * Without it the only way to declare one was to subclass the generated class.
+   *
+   * `keepsChildrenOnEnter` is the per-tool Enter POLICY: declare it and Enter on
+   * this container's empty LAST child creates the new line INSIDE the container
+   * instead of escaping to the container's parent (Blok's default, which is
+   * Notion's callout behaviour). Core cannot read that off the DOM — a callout
+   * renders the same `data-blok-nested-blocks` slot as a column yet wants the
+   * escape — so before it existed a layout container (a card, a `steps` block)
+   * had to hijack the editor-global `config.onEnter` and re-derive containment.
+   *
+   * `toolbox` and `isReadOnlySupported` are owned by the factory and cannot be
+   * overridden here (see {@link BlockToolStatics}).
+   */
+  statics?: BlockToolStatics;
+  /**
+   * The element the +/drag toolbar should vertically center on — core's
+   * `getToolbarAnchorElement` hook, resolved against this block's host element
+   * on every call (never cached, so it tracks re-renders).
+   *
+   * A container block whose own chrome is not editable needs it: with no anchor,
+   * core centers the toolbar on the first `[contenteditable]` under the host,
+   * which for a container is its FIRST CHILD BLOCK. Return `null`/`undefined`
+   * (or omit the field) to keep core's default.
+   * @param host - this block's mutation-free host element
+   * @param block - this block's per-block API
+   */
+  getToolbarAnchorElement?: (host: HTMLElement, block: BlockAPI) => HTMLElement | null | undefined;
   /** Optional lifecycle callbacks mapped from Blok's block hooks. */
   onRendered?: (block: BlockAPI) => void;
+  /**
+   * Fired ONCE per block instance, once the component's DOM (and, for a
+   * container, the child holders its `ctx.mountChildren` adopted) exists.
+   * Angular mounts the block synchronously while core is still inside
+   * `render()`, so this lands with `rendered()` — the first hook at which the
+   * host is also in the document. The React and Vue adapters spell the same
+   * contract; there it is genuinely LATER than `onRendered`, because their
+   * portals commit a frame after core returns.
+   *
+   * It is also the create-vs-restore signal: `context.origin` says whether the
+   * author just made this block (`user`/`api`/`convert`) or the document is
+   * being re-materialised (`load`/`replay`/`paste`) — so a container can seed
+   * its default children here exactly once, without the "children are
+   * transiently empty during a replay" trap.
+   * @example
+   * ```ts
+   * onMounted: (block, { origin, api }) => {
+   *   if (origin === 'user' && block.getChildren().length === 0) {
+   *     api.blocks.insertInsideParent(block.id);
+   *   }
+   * }
+   * ```
+   */
+  onMounted?: (block: BlockAPI, context: AngularBlockMountedContext) => void;
+  /**
+   * The SEEDING hook: `onMounted`, narrowed to a genuine creation. Fired ONCE
+   * per block instance, once the component's DOM exists, and only when this
+   * instance is the author making a new block (`origin` of `user`, `api` or
+   * `convert`) — never for a `load`/`replay`/`paste` restore, and never for the
+   * off-tree `probe` instance core builds to read a tool's default data.
+   *
+   * That predicate is why the hook exists rather than leaving every block to
+   * read `context.origin` in `onMounted`: the intuitive `origin === 'user'` test
+   * is wrong. It drops `api.blocks.insert('steps')` and turn-into, so a
+   * container seeded that way comes up empty for every path except a keystroke.
+   * Core refused to ship that axis into its own `column`/`column_list`; this
+   * encodes the correct one once, here.
+   *
+   * The `context` is the same object {@link CreateAngularBlockSpec.onMounted}
+   * receives, so a block that only seeds can read `origin` for finer decisions.
+   * @example
+   * ```ts
+   * onCreated: (block, { api }) => {
+   *   if (block.getChildren().length === 0) {
+   *     api.blocks.insertInsideParent(block.id);
+   *   }
+   * }
+   * ```
+   */
+  onCreated?: (block: BlockAPI, context: AngularBlockMountedContext) => void;
   onMoved?: (block: BlockAPI) => void;
   onRemoved?: (block: BlockAPI) => void;
 }
@@ -53,16 +266,17 @@ export function createAngularBlock<Data = BlockToolData>(
   save(): BlockToolData;
   setData(newData: BlockToolData): Promise<boolean>;
   setReadOnly(state: boolean): void;
+  getToolbarAnchorElement(): HTMLElement | undefined;
   rendered(): void;
   moved(): void;
   removed(): void;
   destroy(): void;
-}) & {
+}) & BlockToolStatics & {
   readonly __isBlokAngularBlock: true;
   readonly toolbox: ToolboxConfig | undefined;
   readonly isReadOnlySupported: boolean;
 } {
-  return class AngularBlockTool {
+  const AngularBlockTool = class AngularBlockTool {
     /** Marker so the directive can detect Angular-block tools and inject the registry. */
     public static readonly __isBlokAngularBlock = true as const;
 
@@ -81,6 +295,8 @@ export function createAngularBlock<Data = BlockToolData>(
     }
 
     private readonly blockApi: BlockAPI;
+    /** The editor-level API, handed to the component as `ctx.api`. */
+    private readonly api: API;
     private readonly registry: BlockPortalRegistry | undefined;
     private readonly pointerDrag: () => boolean;
     private readonly dataSig: WritableSignal<Readonly<Data>>;
@@ -92,6 +308,14 @@ export function createAngularBlock<Data = BlockToolData>(
     private hostEl: HTMLElement | null = null;
     /** Last host passed to ctx.mountChildren, re-mounted on each data change. */
     private childHost: HTMLElement | null = null;
+    /** Last per-child decorator passed to ctx.mountChildren; re-applied on each remount. */
+    private childAttributes: ChildAttributesFn | undefined;
+    /** What the last decoration pass wrote, so a dropped key is cleaned up. */
+    private readonly stampedChildren = new Map<string, StampedChild>();
+    /** Why core built this instance — gates `onCreated`, handed to `onMounted`. */
+    private readonly origin: BlockOrigin;
+    /** True once the post-mount hooks fired; a repeated rendered() must not re-fire them. */
+    private mountSignalled = false;
     /** True while a pointer drag suppresses dispatchChange. */
     private pendingDispatch = false;
 
@@ -102,21 +326,27 @@ export function createAngularBlock<Data = BlockToolData>(
 
       this.registry = config[BLOK_PORTAL_REGISTRY_CONFIG_KEY] as BlockPortalRegistry | undefined;
 
+      this.api = options.api;
+
       // Read the LIVE pointer-drag flag so a mid-drag commit can be deferred
       // (core silently drops a dispatchChange while a drag is active).
-      const api = options.api as unknown as { blocks?: { isPointerDragActive?: boolean } } | undefined;
+      const drag = options.api as unknown as { blocks?: { isPointerDragActive?: boolean } } | undefined;
 
-      this.pointerDrag = (): boolean => api?.blocks?.isPointerDragActive === true;
+      this.pointerDrag = (): boolean => drag?.blocks?.isPointerDragActive === true;
 
       this.mirror = fillDefaults<Data>(spec.propSchema, (options.data ?? {}) as Record<string, unknown>);
       this.lastRendered = this.mirror;
       this.dataSig = signal(this.mirror);
       this.readOnlySig = signal(options.readOnly);
+      // Absent origin means a caller that predates the signal; 'api' is core's
+      // own default, so it is never mistaken for a user gesture.
+      this.origin = options.origin ?? 'api';
 
       this.ctx = {
         data: this.dataSig.asReadonly(),
         commit: this.commit,
         block: this.blockApi,
+        api: this.api,
         readOnly: this.readOnlySig.asReadonly(),
         mountChildren: this.mountChildren,
       };
@@ -141,6 +371,30 @@ export function createAngularBlock<Data = BlockToolData>(
 
     public rendered(): void {
       spec.onRendered?.(this.blockApi);
+
+      // register() mounted the component and ran its first change detection
+      // synchronously inside render(), and core has now put the host in the
+      // document — so this is the settled moment. Once per instance: core
+      // re-runs rendered() for a re-materialised block, and a repeated creation
+      // signal would seed a container's default children twice. With no
+      // registry (vanilla core, no directive) nothing was ever mounted, so
+      // there is no settle to report — matching React/Vue, where the signal
+      // originates in the component itself.
+      if (this.registry === undefined || this.mountSignalled) {
+        return;
+      }
+
+      this.mountSignalled = true;
+
+      const context = { origin: this.origin, api: this.api };
+
+      spec.onMounted?.(this.blockApi, context);
+
+      // Creation-only, and after onMounted: a seeding hook must see whatever
+      // the mount hook already put in place.
+      if (CREATION_ORIGINS.has(this.origin)) {
+        spec.onCreated?.(this.blockApi, context);
+      }
     }
 
     public save(): BlockToolData {
@@ -183,6 +437,24 @@ export function createAngularBlock<Data = BlockToolData>(
       this.registry?.flush(this.blockApi.id);
     }
 
+    /**
+     * Core's toolbar-anchor hook. Always defined so the delegation is one
+     * `typeof … === 'function'` probe away, and always resolved fresh against
+     * the LIVE host — the anchor element is Angular-rendered, so it does not
+     * exist yet when the tool is constructed and may be replaced on any change
+     * detection pass. A spec without a resolver returns undefined, which is
+     * exactly what core's default positioning already assumes.
+     */
+    public getToolbarAnchorElement(): HTMLElement | undefined {
+      const host = this.hostEl;
+
+      if (host === null || spec.getToolbarAnchorElement === undefined) {
+        return undefined;
+      }
+
+      return spec.getToolbarAnchorElement(host, this.blockApi) ?? undefined;
+    }
+
     public moved(): void {
       // No remount: core relocates the host element; the mounted view rides along
       // as its DOM children.
@@ -190,26 +462,42 @@ export function createAngularBlock<Data = BlockToolData>(
     }
 
     public removed(): void {
-      this.registry?.unregister(this.blockApi.id);
+      // Ownership-scoped: core composes a REPLACEMENT block (which mounts under
+      // the SAME id) before it tears this one down, so an unqualified unregister
+      // here would destroy the live componentRef and blank the block.
+      this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
       spec.onRemoved?.(this.blockApi);
     }
 
     public destroy(): void {
       // Idempotent with removed(); unregister is safe when already absent.
-      this.registry?.unregister(this.blockApi.id);
+      this.registry?.unregister(this.blockApi.id, this.hostEl ?? undefined);
     }
 
-    /** Container blocks: remember the host and (re)mount the real child holders. */
-    private readonly mountChildren = (host: HTMLElement): void => {
+    /**
+     * Container blocks: remember the host (and any per-child decorator) and
+     * (re)mount the real child holders.
+     */
+    private readonly mountChildren = (
+      host: HTMLElement,
+      childAttributes?: ChildAttributesFn
+    ): void => {
       this.childHost = host;
+      this.childAttributes = childAttributes;
       host.setAttribute(DATA_ATTR.nestedBlocks, '');
       this.remountChildren();
     };
 
     private remountChildren(): void {
-      if (this.childHost !== null) {
-        mountChildBlocks(this.childHost, this.blockApi.getChildren());
+      if (this.childHost === null) {
+        return;
       }
+
+      const children = this.blockApi.getChildren();
+
+      mountChildBlocks(this.childHost, children);
+      applyChildAttributes(this.stampedChildren, children, this.childAttributes);
+      emitChildrenMounted(this.api, this.blockApi.id, children);
     }
 
     /**
@@ -268,4 +556,23 @@ export function createAngularBlock<Data = BlockToolData>(
       requestAnimationFrame(retry);
     }
   };
+
+  // Forward the authored statics onto the generated class. `defineProperty`
+  // (not assignment) because `toolbox`/`isReadOnlySupported` are accessors and a
+  // plain write would throw in strict mode; the reserved list keeps a stray bag
+  // from taking those — or the adapter's own marker — over.
+  for (const [key, value] of Object.entries(spec.statics ?? {})) {
+    if (RESERVED_STATICS.includes(key)) {
+      continue;
+    }
+
+    Object.defineProperty(AngularBlockTool, key, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
+
+  return AngularBlockTool;
 }

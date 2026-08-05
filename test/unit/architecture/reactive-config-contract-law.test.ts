@@ -45,6 +45,44 @@ const REACTIVE_CONTRACT: Record<string, {
     adapterCall: /\.tools\.setInlineToolbar\(/,
     assert: (api) => expect(typeof api.tools.setInlineToolbar).toBe('function'),
   },
+  /*
+   * The live callback config. One setter services all six: they are the
+   * handlers core re-reads from the config per keypress / change batch /
+   * render, and for several the PRESENCE of the function is the semantics
+   * (`onSubmit` turns Enter into serialize-and-submit, `onSave` arms the change
+   * pipeline) — so an adapter that decides presence once at construction forces
+   * a destroy/recreate to change it.
+   */
+  onChange: {
+    setter: 'handlers.set({ onChange })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
+  onSave: {
+    setter: 'handlers.set({ onSave })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
+  onEnter: {
+    setter: 'handlers.set({ onEnter })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
+  onSubmit: {
+    setter: 'handlers.set({ onSubmit })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
+  onBeforeRender: {
+    setter: 'handlers.set({ onBeforeRender })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
+  onAfterRender: {
+    setter: 'handlers.set({ onAfterRender })',
+    adapterCall: /\.handlers\.set\(/,
+    assert: (api) => expect(typeof api.handlers.set).toBe('function'),
+  },
 };
 
 /**
@@ -71,7 +109,9 @@ const stripComments = (source: string): string =>
 
 /**
  * Extracts the top-level optional field names declared in the BlokState
- * interface of the published config types.
+ * interface of the published config types. Matches both property members
+ * (`readOnly?: …`) and method members (`onSubmit?(data, api): void`) — the
+ * callback half of the live config is declared with method syntax.
  * @returns declared BlokState keys, in declaration order
  */
 const readBlokStateKeys = (): string[] => {
@@ -88,7 +128,7 @@ const readBlokStateKeys = (): string[] => {
 
   const body = interfaceMatch[1];
 
-  return Array.from(body.matchAll(/^ {2}([a-zA-Z0-9_]+)\?:/gm)).map((match) => match[1]);
+  return Array.from(body.matchAll(/^ {2}([a-zA-Z0-9_]+)\?[:(]/gm)).map((match) => match[1]);
 };
 
 /**

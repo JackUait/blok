@@ -9,7 +9,7 @@ import { ToolboxConfigEntry } from '../tool-settings';
 import { ConversionConfig } from '../../configs/conversion-config';
 import { PasteConfig } from '../../configs/paste-config';
 import { SanitizerConfig } from '../../configs/sanitizer-config';
-import { AssetKind } from '../block-tool';
+import { AssetKind, BlockOrigin } from '../block-tool';
 import { BaseToolAdapter } from './base-tool-adapter';
 
 interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
@@ -28,8 +28,10 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
    * @param data - Tool data
    * @param block - BlockAPI for current Block
    * @param readOnly - True if Blok is in read-only mode
+   * @param origin - why this instance is being constructed (creation vs restore);
+   *   defaults to `'api'`
    */
-  create(data: BlockToolData, block: BlockAPI, readOnly: boolean): BlockTool;
+  create(data: BlockToolData, block: BlockAPI, readOnly: boolean, origin?: BlockOrigin): BlockTool;
 
   /**
    * Returns true if read-only mode is supported by Tool
@@ -41,6 +43,13 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
    * enabling the in-place read-only toggle path (no save/clear/render cycle).
    */
   supportsInPlaceReadOnly: boolean;
+
+  /**
+   * Returns true if the Tool's prototype has a setData method, enabling the
+   * in-place data update path (`api.blocks.update` mutates the existing Block
+   * instead of recomposing it).
+   */
+  supportsInPlaceSetData: boolean;
 
   /**
    * Returns true if Tool supports linebreaks

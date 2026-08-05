@@ -158,6 +158,12 @@ The law applies to **tags and downstream parsing too**, not just attributes:
 
 **Drag & Drop**: Pointer-based (not HTML5 drag API) from ☰ icon. See `src/components/modules/dragManager.ts`.
 
+**Child-holder decoration law**: a container block MAY write attributes/classes/styles onto a child's **holder** and onto the child's `[data-blok-element-content]` wrapper. It MUST NOT write at or below the child's **tool root**, and it MUST NOT wrap a child holder in an element of its own.
+
+- *Why the writes are inert* (two independent gates, at two different layers): for the CHILD block, `isMutationBelongsToElement` (`src/components/utils/mutations.ts`) drops an `attributes` record whose target is the holder — the holder is the child tool element's ANCESTOR, and the childList escape hatch does not apply — so `MutationHandler.watch()` never even calls `onMutation`. For the CONTAINER, the record does pass that filter, but `shouldFireUpdate` (`src/components/block/mutation-handler.ts`) finds the container's own `data-blok-mutation-free` host as the nearest such ancestor and `contains(self)` is true, so it is scored mutation-free. Core relies on this itself: `reindentSubtree` writes `style.marginLeft` + `data-blok-depth` on every nested holder on every reparent. Pinned by `test/unit/components/block/mutation-handler.test.ts` → `MutationHandler — parent writes on a child holder`, which drives the event bus for the child (the filter) and `handleMutation` for the container (the suppression) — calling `handleMutation` for BOTH would "prove" the opposite, because the child-side guarantee does not live in `shouldFireUpdate`.
+- *Why no wrappers*: `hierarchy.setBlockParent` finds a holder's next sibling with `b.holder.parentElement === newContainer` and otherwise appends at the container's end, `mountChildBlocks` assumes the same, and `caret.ts` decides "same DOM container" by comparing sibling `holder.parentElement` by identity. A per-child wrapper corrupts reparent ordering and makes every sibling pair look cross-container.
+- This is what the framework adapters' declarative per-child channel is built on — `<BlockChildren childAttributes>` (React/Vue) and `ctx.mountChildren(host, childAttributes)` (Angular).
+
 ## Code Conventions
 
 ### Avoid Over-Engineering

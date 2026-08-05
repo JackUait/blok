@@ -128,7 +128,16 @@ export class BlokContentDirective implements OnDestroy {
 
     // Create the editor-scoped portal registry and thread it into every
     // Angular-block tool's config (vanilla tools pass through untouched).
-    const registry = createBlockPortalRegistry(this.envInjector, this.appRef, this.errorHandler);
+    // `this.instance` is handed over at creation: it is a SIGNAL, so blocks
+    // mounted during boot read null and re-read the real editor once isReady
+    // resolves — no ordering problem, and `injectBlokInstance()` inside a block
+    // component tracks the swap.
+    const registry = createBlockPortalRegistry(
+      this.envInjector,
+      this.appRef,
+      this.errorHandler,
+      this.instance
+    );
 
     this.registry = registry;
     merged.tools = injectPortalRegistry(merged.tools, registry);

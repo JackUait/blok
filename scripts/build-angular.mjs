@@ -152,6 +152,15 @@ const rewriteTypeImports = (filePath) => {
     src = `import type { ${unique.join(', ')} } from '@bloklabs/core';\n` + src;
   }
 
+  // 1b. `export type { … } from '…/types/…'` → re-point at the staged alias.
+  //     Kept as an export rather than folded into the hoisted `import type`
+  //     above, which would silently DROP the re-export (this is how
+  //     components/events/BlockChildrenMounted.ts re-exports its payload type).
+  src = src.replace(
+    /^(export type \{[^}]+\} from )['"](?:(?:\.\.\/)*types(?:\/[^'"]+)?|@\/types(?:\/[^'"]+)?|(?:\.\.\/)*markdown\/types)['"];?$/gm,
+    `$1'@bloklabs/core';`
+  );
+
   // 2. Dynamic `import('…/markdown/index')` → `import('@bloklabs/core/markdown')`
   //    so the path is resolvable under the staging tsconfig's `paths` aliases.
   src = src.replace(
@@ -197,6 +206,8 @@ copyAndRewrite('src/components/utils/blocks-api.ts',          'components/utils/
 })();
 copyAndRewrite('src/components/errors/tool-not-found.ts',     'components/errors/tool-not-found.ts');
 copyAndRewrite('src/components/constants/data-attributes.ts', 'components/constants/data-attributes.ts');
+copyAndRewrite('src/components/events/BlockChildrenMounted.ts', 'components/events/BlockChildrenMounted.ts');
+copyAndRewrite('src/components/utils/html.ts',                'components/utils/html.ts');
 copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-blocks.ts');
 
 // The adapter sources import shared core utilities via the public
@@ -204,32 +215,101 @@ copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-bloc
 // externalize that bare specifier, but the utils are meant to be bundled here
 // (mirroring the staged copies above), so rewrite the specifier to a staged
 // contract module that re-exports the staged copies.
+//
+// The contract is DERIVED from src/adapters.ts rather than hand-copied: the
+// staging tree mirrors the `src/` layout, so every relative re-export line in
+// that file is valid verbatim here. A hand-maintained duplicate drifts the
+// moment core adds a re-export — `export { BlockChildrenMounted }` broke the
+// ng-packagr build with TS2305 exactly that way.
+//
+// Modules deliberately left OUT of the staged contract. ng-packagr flattens the
+// FESM WITHOUT tree-shaking, so every staged module ships whole: mark-engine
+// plus the formatting-range-utils it pulls in add ~33KB that no Angular adapter
+// file calls. Dropping one is only safe when the symbols it contributes are
+// enumerable — hence the two guards below, which refuse a star re-export and
+// refuse any adapter file that actually imports a dropped symbol.
+const CONTRACT_EXCLUDED_MODULES = new Set(['./components/marks/mark-engine']);
+
+const adaptersEntry = readFileSync(path.resolve(root, 'src/adapters.ts'), 'utf8');
+const contractStatements = [...adaptersEntry.matchAll(/^export\s+(?:\*|\{[^}]*\})\s*from\s*'(\.[^']+)';$/gm)];
+const relativeSpecifierCount = [...adaptersEntry.matchAll(/from\s*'\.[^']+'/g)].length;
+
+if (contractStatements.length === 0 || contractStatements.length !== relativeSpecifierCount) {
+  throw new Error(
+    `[build-angular] adapters-contract derivation matched ${contractStatements.length} of ` +
+    `${relativeSpecifierCount} relative re-exports in src/adapters.ts. Every re-export there must ` +
+    `be a plain 'export * from' / 'export { … } from' statement so it can be staged verbatim.`
+  );
+}
+
+const excludedStatements = contractStatements.filter(([, specifier]) => CONTRACT_EXCLUDED_MODULES.has(specifier));
+
+if (excludedStatements.length !== CONTRACT_EXCLUDED_MODULES.size) {
+  throw new Error(
+    `[build-angular] CONTRACT_EXCLUDED_MODULES names ${CONTRACT_EXCLUDED_MODULES.size} module(s) but ` +
+    `only ${excludedStatements.length} matched a re-export in src/adapters.ts. Drop the stale entry — ` +
+    `an exclusion that matches nothing hides the next one that should have been staged.`
+  );
+}
+
+/** Every symbol the excluded modules would have contributed to the contract. */
+const excludedSymbols = new Set();
+
+for (const [statement, specifier] of excludedStatements) {
+  const named = /^export\s+\{([^}]*)\}/.exec(statement);
+
+  if (named === null) {
+    throw new Error(
+      `[build-angular] '${specifier}' is excluded from the staged adapters contract but src/adapters.ts ` +
+      `re-exports it with 'export *'. A star re-export's symbols cannot be enumerated, so there is no ` +
+      `way to prove the adapter does not use them — stage the module instead of excluding it.`
+    );
+  }
+  for (const clause of named[1].split(',')) {
+    const local = clause.trim().split(/\s+as\s+/).pop();
+
+    if (local) excludedSymbols.add(local);
+  }
+}
+
 writeFileSync(
   path.resolve(stagingDir, 'adapters-contract.ts'),
-  [
-    `export * from './components/utils/blocks-api';`,
-    `export * from './components/utils/blocks-tree';`,
-    `export * from './components/utils/readonly-config';`,
-    `export * from './shared/deep-equal';`,
-    `export * from './shared/output-data';`,
-    `export * from './shared/prop-schema';`,
-    `export * from './tools/nested-blocks';`,
-    `export { DATA_ATTR } from './components/constants/data-attributes';`,
-  ].join('\n') + '\n',
+  contractStatements
+    .filter(([, specifier]) => !CONTRACT_EXCLUDED_MODULES.has(specifier))
+    .map(([statement]) => statement)
+    .join('\n') + '\n',
   'utf8'
 );
 for (const entry of readdirSync(path.resolve(stagingDir, 'angular'), { withFileTypes: true })) {
   if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
   const staged = path.resolve(stagingDir, 'angular', entry.name);
   const src = readFileSync(staged, 'utf8');
-  writeFileSync(staged, src.replace(/from '@bloklabs\/core\/adapters'/g, `from '../adapters-contract'`), 'utf8');
+  const contractSpecifier = `from '../adapters-contract'`;
+  const rewritten = src.replace(/from '@bloklabs\/core\/adapters'/g, contractSpecifier);
+
+  // The exclusion is only sound while nothing imports what it drops; without
+  // this the adapter would fail at ng-packagr time with a bare TS2305.
+  for (const [, clauses] of rewritten.matchAll(/(?:import|export)[^;]*?\{([^}]*)\}[^;]*?from '\.\.\/adapters-contract'/g)) {
+    for (const clause of clauses.split(',')) {
+      const imported = clause.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0];
+
+      if (excludedSymbols.has(imported)) {
+        throw new Error(
+          `[build-angular] angular/${entry.name} imports '${imported}' from '@bloklabs/core/adapters', but ` +
+          `its module is in CONTRACT_EXCLUDED_MODULES so the staged contract does not re-export it. ` +
+          `Remove the exclusion and add a copyAndRewrite() entry for that module.`
+        );
+      }
+    }
+  }
+
+  writeFileSync(staged, rewritten, 'utf8');
+  // Every adapter file, not a hand-picked few: adapter sources reach repo-root
+  // types through the `@/types` alias, and one that is missed keeps an import
+  // ng-packagr cannot resolve (TS2307). blok-instance.ts and
+  // block-portal-registry.ts each broke the build by being added and not listed.
+  rewriteTypeImports(staged);
 }
-// Also rewrite staged angular/ files that import from '../../types/...'.
-rewriteTypeImports(path.resolve(stagingDir, 'angular/useBlocks.ts'));
-rewriteTypeImports(path.resolve(stagingDir, 'angular/block-context.ts'));
-rewriteTypeImports(path.resolve(stagingDir, 'angular/createAngularBlock.ts'));
-rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-editor.component.ts'));
-rewriteTypeImports(path.resolve(stagingDir, 'angular/blok-content.directive.ts'));
 // Also rewrite staged shared/ files that import from '../../types'.
 for (const entry of readdirSync(path.resolve(stagingDir, 'shared'), { withFileTypes: true })) {
   if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
@@ -256,11 +336,14 @@ const gatherTsSourceFiles = (dir) => {
 for (const tsFile of gatherTsSourceFiles(stagingDir)) {
   const src = readFileSync(tsFile, 'utf8');
   // Match any 'from' clause with a relative specifier that goes UP at least one
-  // directory level (starts with ../).  Specifiers that only descend (./foo) are
-  // intra-staging and are fine (e.g. './types' → angular/types.ts is staged).
-  // No staging directory is named 'types', so any UP-going path containing
-  // '/types' is a leaked reference that should have been rewritten to '@bloklabs/core'.
-  const re = /from\s+['"]((?:\.\.\/)+[^'"]+)['"]/g;
+  // directory level (starts with ../), or one using the repo's '@/' alias.
+  // Specifiers that only descend (./foo) are intra-staging and are fine (e.g.
+  // './types' → angular/types.ts is staged). No staging directory is named
+  // 'types', so any such path containing '/types' is a leaked reference that
+  // should have been rewritten to '@bloklabs/core'. The '@/' arm matters because
+  // the staging tsconfig has no '@/*' mapping: an unrewritten '@/types' import
+  // is a straight TS2307, which is how blok-instance.ts broke the build.
+  const re = /from\s+['"]((?:\.\.\/)+[^'"]+|@\/[^'"]+)['"]/g;
   let m;
   while ((m = re.exec(src)) !== null) {
     const spec = m[1];

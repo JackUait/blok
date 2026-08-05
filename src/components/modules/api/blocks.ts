@@ -1,4 +1,4 @@
-import type { BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
+import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
 import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
@@ -370,6 +370,9 @@ export class BlocksAPI extends Module {
    * @param replace - pass true to replace the Block existed under passed index
    * @param {string} id — An optional id for the new block. If omitted then the new id will be generated
    * @param tunes — optional block tune data to apply at creation, keyed by tune name
+   * @param origin — why the block is being created; defaults to `'api'`. Pass
+   *   `'user'` from your own insertion UI (a custom toolbar or slash menu) so a
+   *   container tool can tell the gesture from a programmatic refetch.
    */
   public insert = (
     type?: string,
@@ -379,7 +382,8 @@ export class BlocksAPI extends Module {
     needToFocus?: boolean,
     replace?: boolean,
     id?: string,
-    tunes?: { [name: string]: BlockTuneData }
+    tunes?: { [name: string]: BlockTuneData },
+    origin: BlockOrigin = 'api'
   ): BlockAPIInterface => {
     const defaultTool = type ?? (this.config.defaultBlock);
     const tool = (() => {
@@ -414,6 +418,7 @@ export class BlocksAPI extends Module {
       needToFocus,
       replace,
       tunes,
+      origin,
     });
 
     return new BlockAPI(insertedBlock, this.Blok.API);
@@ -436,6 +441,11 @@ export class BlocksAPI extends Module {
       readOnly: true,
       data: {},
       tunesData: {},
+      // OFF-TREE probe: this Block is never inserted, never destroyed, yet it
+      // still runs render() and (a frame later) rendered(). Labelling it lets a
+      // container tool bail instead of seeding children into a document its
+      // block is not even part of.
+      origin: 'probe',
     });
 
     return block.data;
@@ -535,6 +545,7 @@ export class BlocksAPI extends Module {
         contentIds: content,
         lastEditedAt,
         lastEditedBy,
+        origin: 'api',
       });
     });
     

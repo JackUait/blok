@@ -1,5 +1,6 @@
 import type {
   BlockAPI as BlockAPIInterface,
+  BlockOrigin,
   BlockTool as IBlockTool,
   BlockToolData,
   SanitizerConfig,
@@ -91,6 +92,15 @@ interface BlockConstructorOptions {
 
   /** ID of the user who last edited this block */
   lastEditedBy?: string | null;
+
+  /**
+   * Why this Block is being constructed — a creation the author just made, or a
+   * re-materialisation of a block the document already describes. Handed
+   * straight to the Tool constructor so container Tools can tell a genuine
+   * creation (seed default children) from a load / undo-redo replay / paste /
+   * off-tree probe (never seed). Defaults to `'api'`, never `'user'`.
+   */
+  origin?: BlockOrigin;
 }
 
 /**
@@ -275,6 +285,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @param options.readOnly - Read-Only flag
    * @param [options.parentId] - parent block id for hierarchical structure
    * @param [options.contentIds] - array of child block ids
+   * @param [options.origin] - why the Block is being constructed (creation vs restore); defaults to 'api'
    * @param [eventBus] - Blok common event bus. Allows to subscribe on some Blok events. Could be omitted when "virtual" Block is created. See BlocksAPI@composeBlockData.
    */
    constructor({
@@ -289,6 +300,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
     bindMutationWatchersImmediately = false,
     lastEditedAt,
     lastEditedBy,
+    origin = 'api',
   }: BlockConstructorOptions, eventBus?: EventsDispatcher<BlokEventMap>) {
     super();
 
@@ -315,7 +327,7 @@ export class Block extends EventsDispatcher<BlockEvents> {
 
     this.readOnly = readOnly;
     this.tool = tool;
-    this.toolInstance = tool.create(data, this.blockAPI, readOnly);
+    this.toolInstance = tool.create(data, this.blockAPI, readOnly, origin);
     this.tunes = tool.tunes;
 
     // Initialize tunes manager (needed by ToolRenderer)

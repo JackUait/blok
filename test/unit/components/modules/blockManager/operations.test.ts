@@ -55,6 +55,10 @@ const createMockBlock = (options: {
   tunes?: Record<string, unknown>;
   mergeable?: boolean;
   isEmpty?: boolean;
+  /** Mirrors BlockToolAdapter.supportsInPlaceSetData (tool prototype has setData). */
+  supportsInPlaceSetData?: boolean;
+  /** Stub for Block.setData — resolves true when the tool applied it in place. */
+  setData?: (data: BlockToolData) => Promise<boolean>;
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
@@ -86,6 +90,7 @@ const createMockBlock = (options: {
     call: vi.fn(),
     refreshToolRootElement: vi.fn(),
     destroy: vi.fn(),
+    setData: options.setData ?? vi.fn().mockResolvedValue(false),
     tool: {
       name: options.name ?? 'paragraph',
       sanitizeConfig: {},
@@ -94,6 +99,7 @@ const createMockBlock = (options: {
         export: 'text',
       },
       settings: {},
+      supportsInPlaceSetData: options.supportsInPlaceSetData ?? false,
     },
     tunes,
   } as unknown as Block;
@@ -1371,6 +1377,105 @@ describe('BlockOperations', () => {
       );
     });
 
+    /**
+     * C2 regression. `api.blocks.update()` used to ALWAYS recompose the Block:
+     * a brand-new Block (and therefore a brand-new tool instance) was rendered
+     * and the old one destroyed. For an adapter-authored block that destroys the
+     * mounted portal, so a host that calls update() per keystroke (renaming a
+     * tab) ends up with a permanently empty holder. When the Tool can apply the
+     * data itself, the Block must survive.
+     */
+    it('applies the update through the tool when the tool supports in-place setData', async () => {
+      const setData = vi.fn().mockResolvedValue(true);
+      const block = createMockBlock({
+        id: 'V1StGXR8_A',
+        name: 'paragraph',
+        data: { title: 'old' },
+        supportsInPlaceSetData: true,
+        setData,
+      });
+      const store = createBlocksStore([block, ...blocksStore.array]);
+
+      repository.initialize(store);
+
+      const holderBefore = block.holder;
+      const result = await operations.update(block, store, { title: 'new' });
+
+      expect(setData).toHaveBeenCalledWith({ title: 'new' });
+      expect(result).toBe(block);
+      expect(repository.getBlockById('V1StGXR8_A')).toBe(block);
+      expect(block.holder).toBe(holderBefore);
+      expect(block.destroy).not.toHaveBeenCalled();
+      expect(dependencies.YjsManager.updateBlockData).toHaveBeenCalledWith('V1StGXR8_A', 'title', 'new');
+      expect(blockDidMutatedSpy).toHaveBeenCalledWith(
+        BlockChangedMutationType,
+        block,
+        expect.any(Object)
+      );
+    });
+
+    it('survives repeated in-place updates without ever recomposing', async () => {
+      const setData = vi.fn().mockResolvedValue(true);
+      const block = createMockBlock({
+        id: 'V1StGXR8_B',
+        name: 'paragraph',
+        data: { title: '' },
+        supportsInPlaceSetData: true,
+        setData,
+      });
+      const store = createBlocksStore([block, ...blocksStore.array]);
+
+      repository.initialize(store);
+
+      for (const title of ['T', 'Ta', 'Tab']) {
+        const result = await operations.update(block, store, { title });
+
+        expect(result).toBe(block);
+      }
+
+      expect(setData).toHaveBeenCalledTimes(3);
+      expect(repository.getBlockById('V1StGXR8_B')).toBe(block);
+    });
+
+    it('recomposes when the tool declines the in-place update', async () => {
+      const setData = vi.fn().mockResolvedValue(false);
+      const block = createMockBlock({
+        id: 'V1StGXR8_C',
+        name: 'paragraph',
+        data: { text: 'old' },
+        supportsInPlaceSetData: true,
+        setData,
+      });
+      const store = createBlocksStore([block, ...blocksStore.array]);
+
+      repository.initialize(store);
+
+      const result = await operations.update(block, store, { text: 'new' });
+
+      expect(setData).toHaveBeenCalled();
+      expect(result).not.toBe(block);
+      expect(repository.getBlockById('V1StGXR8_C')).toBe(result);
+    });
+
+    it('recomposes when tunes are updated even if the tool supports setData', async () => {
+      const setData = vi.fn().mockResolvedValue(true);
+      const block = createMockBlock({
+        id: 'V1StGXR8_D',
+        name: 'paragraph',
+        data: { text: 'old' },
+        supportsInPlaceSetData: true,
+        setData,
+      });
+      const store = createBlocksStore([block, ...blocksStore.array]);
+
+      repository.initialize(store);
+
+      const result = await operations.update(block, store, undefined, { alignment: 'center' });
+
+      expect(setData).not.toHaveBeenCalled();
+      expect(result).not.toBe(block);
+    });
+
     it('replaces block in blocksStore', async () => {
       // 'block-1' is not a valid nanoid, so use a block with a valid nanoid id
       // to verify that update() preserves the original id in the new block.
@@ -1417,6 +1522,45 @@ describe('BlockOperations', () => {
       );
       expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
       expect(dependencies.YjsManager.updateBlockTune).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Same Layer 16 guard for the in-place path: `await block.setData()` runs
+     * TOOL code, so the block can be removed (remote delete, undo) while it
+     * resolves. A block that is gone must emit no mutation and write nothing
+     * to Yjs.
+     */
+    it('aborts cleanly when the block is removed while the tool applies the data', async () => {
+      const block = createMockBlock({
+        id: 'V1StGXR8_E',
+        name: 'paragraph',
+        data: { text: 'old' },
+        supportsInPlaceSetData: true,
+      });
+      const store = createBlocksStore([block, ...blocksStore.array]);
+
+      repository.initialize(store);
+
+      // Resolves true, but the block is evicted from the store first — the
+      // remote-delete-during-await shape.
+      Object.defineProperty(block, 'setData', {
+        value: vi.fn().mockImplementation(async () => {
+          store.remove(0);
+          repository.initialize(store);
+
+          return Promise.resolve(true);
+        }),
+      });
+
+      const result = await operations.update(block, store, { text: 'new' });
+
+      expect(result).toBe(block);
+      expect(blockDidMutatedSpy).not.toHaveBeenCalledWith(
+        BlockChangedMutationType,
+        expect.any(Object),
+        expect.any(Object)
+      );
+      expect(dependencies.YjsManager.updateBlockData).not.toHaveBeenCalled();
     });
   });
 

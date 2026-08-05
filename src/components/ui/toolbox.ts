@@ -1277,7 +1277,13 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
         undefined,
         index,
         undefined,
-        shouldReplaceBlock
+        shouldReplaceBlock,
+        undefined,
+        undefined,
+        // The slash menu / plus menu IS the user gesture: a container tool has
+        // to seed its default children here (a column_list its columns), which
+        // it must not do for a load, a replay or a programmatic refetch.
+        'user'
       );
 
       if (currentBlockParentId !== null) {

@@ -484,6 +484,17 @@ export class BlockYjsSync {
         contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
         parentId: block.parentId ?? undefined,
         bindEventsImmediately: true,
+        /**
+         * Everything this reconciler builds is a RE-MATERIALISATION — an
+         * undo/redo replay or a remote peer's change — never a creation. A
+         * restored container's children arrive through their OWN add events,
+         * which land after its rendered() hook runs, so it sees a transiently
+         * empty getChildren(); without this signal it seeds phantom children
+         * beside the real ones ("2 columns silently became 4"). Every
+         * TransactionOrigin the observer classifies (undo/redo/remote/load/move)
+         * collapses to the same answer here: do not seed.
+         */
+        origin: 'replay',
         lastEditedAt,
         lastEditedBy,
       });
@@ -520,6 +531,7 @@ export class BlockYjsSync {
         contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
         parentId: block.parentId ?? undefined,
         bindEventsImmediately: true,
+        origin: 'replay',
         lastEditedAt,
         lastEditedBy,
       });
@@ -553,6 +565,7 @@ export class BlockYjsSync {
             contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
             parentId: block.parentId ?? undefined,
             bindEventsImmediately: true,
+            origin: 'replay',
             lastEditedAt,
             lastEditedBy,
           });
@@ -609,6 +622,7 @@ export class BlockYjsSync {
         data,
         parentId: parentId ?? undefined,
         bindEventsImmediately: true,
+        origin: 'replay',
         lastEditedAt,
         lastEditedBy,
       });
@@ -741,6 +755,7 @@ export class BlockYjsSync {
           data: entry.data,
           parentId: entry.parentId,
           bindEventsImmediately: true,
+          origin: 'replay',
           lastEditedAt: entry.lastEditedAt,
           lastEditedBy: entry.lastEditedBy,
         });

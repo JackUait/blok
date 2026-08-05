@@ -1124,6 +1124,7 @@ describe('BlocksAPI', () => {
         index: 0,
         needToFocus: true,
         replace: false,
+        origin: 'api',
       });
       expect(blockAPIConstructorSpy).toHaveBeenCalled();
       expect(result).toEqual({ wrappedBlock: expect.objectContaining({ id: 'custom' }) as unknown });
@@ -1148,6 +1149,41 @@ describe('BlocksAPI', () => {
       expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({
         tool: 'header',
       }));
+    });
+
+    /**
+     * C3: the create-vs-restore signal. A programmatic insert is a creation
+     * (`api`), never a user gesture — unless the caller says so — and
+     * `composeBlockData` builds an OFF-TREE probe Block that runs render() and
+     * rendered() for a block that will never exist, so it must be labelled
+     * `probe` or a container tool will seed children into a document it is not
+     * even part of.
+     */
+    it('labels a programmatic insert with the «api» origin', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blocksApi.insert('paragraph', { text: 'x' });
+
+      expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({ origin: 'api' }));
+    });
+
+    it('forwards an explicit origin so a host insertion UI can declare a user gesture', () => {
+      const { blocksApi, blockManager } = createBlocksApi();
+
+      blocksApi.insert('paragraph', { text: 'x' }, {}, 0, true, false, undefined, undefined, 'user');
+
+      expect(blockManager.insert).toHaveBeenCalledWith(expect.objectContaining({ origin: 'user' }));
+    });
+
+    it('labels the throwaway composeBlockData block with the «probe» origin', async () => {
+      const toolName = 'probe-tool';
+      const { blocksApi, blok } = createBlocksApi();
+
+      blok.Tools.blockTools.set(toolName, { name: toolName } as never);
+
+      await blocksApi.composeBlockData(toolName);
+
+      expect(blockConstructorSpy).toHaveBeenCalledWith(expect.objectContaining({ origin: 'probe' }));
     });
 
     it('composes block data through Block constructor', async () => {
@@ -1507,6 +1543,7 @@ describe('BlocksAPI', () => {
         index: 0,
         needToFocus: undefined,
         replace: undefined,
+        origin: 'api',
       });
 
       cellBlocks.remove();
@@ -1547,6 +1584,7 @@ describe('BlocksAPI', () => {
         index: 0,
         needToFocus: undefined,
         replace: undefined,
+        origin: 'api',
       });
 
       cellBlocks.remove();
@@ -1583,6 +1621,7 @@ describe('BlocksAPI', () => {
         index: 0,
         needToFocus: undefined,
         replace: undefined,
+        origin: 'api',
       });
 
       holder.remove();

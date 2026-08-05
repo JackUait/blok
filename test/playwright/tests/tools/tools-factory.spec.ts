@@ -39,6 +39,7 @@ const apiMethodsStub: ToolApiMethods = {
   blocks: {} as ToolApiMethods['blocks'],
   caret: {} as ToolApiMethods['caret'],
   tools: {} as ToolApiMethods['tools'],
+  handlers: {} as ToolApiMethods['handlers'],
   uploader: {} as ToolApiMethods['uploader'],
   events: {} as ToolApiMethods['events'],
   history: {} as ToolApiMethods['history'],

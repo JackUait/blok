@@ -43,6 +43,7 @@ import {
   Placeholder,
   Tokens,
   EditorI18n,
+  Handlers,
 } from './api';
 
 import { LooseOutputData, LooseOutputBlockData, OutputData, OutputBlockData } from './data-formats';
@@ -51,7 +52,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, I18nChangedPayload } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -66,6 +67,7 @@ export {
   BlockToolConstructorOptions,
   BlockTool,
   BlockToolData,
+  BlockOrigin,
   AssetKind,
   Tool,
   ToolConstructable,
@@ -172,6 +174,8 @@ export {
   EditorWidth,
   Placeholder,
   Tokens,
+  Handlers,
+  LiveHandlers,
 } from './api';
 export {
   BlockMutationType,
@@ -188,6 +192,7 @@ export {
   BlokEditorEventMap,
   BlockRenderedPayload,
   BlocksRenderedPayload,
+  BlockChildrenMountedPayload,
   I18nChangedPayload,
 }
 
@@ -218,6 +223,8 @@ export interface API {
   readOnly: ReadOnly;
   ui: Ui;
   theme: Theme;
+  /** Runtime setter for the live callback config (see {@link Handlers}). */
+  handlers: Handlers;
   /** Read-only view of selected editor configuration. */
   config: Readonly<Pick<BlokConfig, 'linkPaste' | 'link'>>;
   rectangleSelection: {

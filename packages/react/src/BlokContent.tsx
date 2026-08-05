@@ -2,6 +2,7 @@ import { useEffect, useRef, forwardRef } from 'react';
 import { getHolder } from './holder-map';
 import { getRegistry } from './registry-map';
 import { BlockPortalHost } from './BlockPortalHost';
+import { BlokInstanceContext } from './blok-instance-context';
 import type { Blok } from '@/types';
 import type { BlokContentProps } from './types';
 
@@ -91,11 +92,20 @@ export const BlokContent = forwardRef<HTMLDivElement, BlokContentProps>(
     // component tree (via createPortal into each Blok-owned host element), so
     // app-level React context flows into block tools with no bridge. It emits
     // no DOM at this position, leaving the imperatively-adopted holder alone.
+    //
+    // The instance provider rides along for the same reason: this is the one
+    // place that holds BOTH the live editor and the portal host, so publishing
+    // it here is what lets a block component call `useBlocks(useBlokInstance())`
+    // without the host prop-drilling the instance into every block.
     const registry = editor === null ? undefined : getRegistry(editor);
 
     return (
       <div ref={setRefs} {...divProps}>
-        {registry === undefined ? null : <BlockPortalHost registry={registry} />}
+        {registry === undefined ? null : (
+          <BlokInstanceContext.Provider value={editor}>
+            <BlockPortalHost registry={registry} />
+          </BlokInstanceContext.Provider>
+        )}
       </div>
     );
   }

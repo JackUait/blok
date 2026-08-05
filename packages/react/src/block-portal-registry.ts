@@ -47,8 +47,17 @@ export interface BlockPortalRegistry {
    * for the same id replaces the entry rather than mounting a duplicate.
    */
   register(id: string, entry: BlockPortalEntry): void;
-  /** Remove the entry for `id`. Safe (no-op) when absent. */
-  unregister(id: string): void;
+  /**
+   * Remove the entry for `id`. Safe (no-op) when absent.
+   *
+   * Pass the caller's own `hostEl` to make the removal OWNERSHIP-CHECKED: the
+   * entry is deleted only when it is still the one that host registered. Core
+   * composes a replacement block (which registers under the SAME id) BEFORE it
+   * destroys the block it replaces, so a superseded tool's `removed()`/
+   * `destroy()` teardown arrives after the live entry is already in place —
+   * without the check it deletes that live entry and the holder stays empty.
+   */
+  unregister(id: string, hostEl?: HTMLElement): void;
   /** Merge `props` into the entry's props (in-place update, no remount). */
   setProps(id: string, props: Record<string, unknown>): void;
   /**
@@ -92,8 +101,15 @@ export const createBlockPortalRegistry = (): BlockPortalRegistry => {
       );
       commit(next);
     },
-    unregister(id: string): void {
-      if (!state.snapshot.has(id)) {
+    unregister(id: string, hostEl?: HTMLElement): void {
+      const current = state.snapshot.get(id);
+
+      if (current === undefined) {
+        return;
+      }
+
+      // A superseded owner may not evict the entry that replaced it.
+      if (hostEl !== undefined && current.hostEl !== hostEl) {
         return;
       }
 

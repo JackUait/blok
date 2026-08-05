@@ -36,6 +36,12 @@ export declare class Column implements BlockTool {
    */
   static isReadOnlySupported?: boolean;
 
+  /**
+   * Enter on a column's empty last line adds another line to the column
+   * instead of unwrapping it
+   */
+  static keepsChildrenOnEnter?: boolean;
+
   constructor(options: ColumnConstructorOptions);
 
   /**

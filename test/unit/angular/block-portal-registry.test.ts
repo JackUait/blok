@@ -93,6 +93,37 @@ describe('createBlockPortalRegistry', () => {
     expect(host.querySelector('.view')).toBeNull();
   });
 
+  /**
+   * C2: core composes the REPLACEMENT block (which registers under the same id)
+   * BEFORE it destroys the old one, so the superseded tool's
+   * `removed()`/`destroy()` teardown arrives AFTER the new mount exists. An
+   * unconditional teardown there destroys the LIVE componentRef and clears the
+   * live host, leaving a permanently blank block.
+   */
+  it('a late teardown from a superseded owner cannot destroy a same-id re-mount', () => {
+    const registry = createBlockPortalRegistry(envInjector, appRef, errorHandler);
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+
+    registry.register('b1', { hostEl: first, component: CounterProbe, context: makeCtx(signal({ count: 1 })) });
+    registry.register('b1', { hostEl: second, component: CounterProbe, context: makeCtx(signal({ count: 2 })) });
+    // The superseded owner tears itself down, twice (removed() + destroy()).
+    registry.unregister('b1', first);
+    registry.unregister('b1', first);
+
+    expect(second.querySelector('.view')?.textContent).toBe('2');
+  });
+
+  it('the live owner can still unregister itself', () => {
+    const registry = createBlockPortalRegistry(envInjector, appRef, errorHandler);
+    const host = document.createElement('div');
+
+    registry.register('b1', { hostEl: host, component: CounterProbe, context: makeCtx(signal({ count: 1 })) });
+    registry.unregister('b1', host);
+
+    expect(host.querySelector('.view')).toBeNull();
+  });
+
   it('routes a throwing component render to the ErrorHandler instead of propagating', () => {
     const spy = vi.spyOn(errorHandler, 'handleError').mockImplementation(() => undefined);
     const registry = createBlockPortalRegistry(envInjector, appRef, errorHandler);

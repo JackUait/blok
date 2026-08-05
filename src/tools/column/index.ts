@@ -1,5 +1,6 @@
 import type {
   API,
+  BlockOrigin,
   BlockTool,
   BlockToolConstructorOptions,
 } from '../../../types';
@@ -8,6 +9,19 @@ import { mountChildBlocks } from '../nested-blocks';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { twMerge } from '../../components/utils/tw';
 import type { ColumnData } from './types';
+
+/**
+ * Origins that mean "the author just made this block" — the only ones allowed to
+ * seed default children. Allow-list so a future origin fails CLOSED. `undefined`
+ * means a host hand-built the constructor options (core always supplies one),
+ * which is an explicit creation.
+ */
+const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
+  undefined,
+  'user',
+  'api',
+  'convert',
+]);
 
 /**
  * Column block — a single vertical column inside a column_list.
@@ -26,13 +40,20 @@ export class Column implements BlockTool {
   // Distinguishes a fresh empty column (first render → seed) from one emptied
   // later by a drag-out (re-render → self-delete).
   private populated = false;
+  /**
+   * True when this instance is a genuine CREATION rather than a
+   * re-materialisation of a column the document already describes. Only a
+   * creation may seed its paragraph.
+   */
+  private readonly isCreation: boolean;
 
-  constructor({ data, api, block, readOnly }: BlockToolConstructorOptions<ColumnData>) {
+  constructor({ data, api, block, readOnly, origin }: BlockToolConstructorOptions<ColumnData>) {
     this.api = api;
     this._data = { ...data };
     this.blockId = block.id;
     this.block = block;
     this.readOnly = readOnly;
+    this.isCreation = CREATION_ORIGINS.has(origin);
   }
 
   public render(): HTMLElement {
@@ -86,29 +107,37 @@ export class Column implements BlockTool {
       return;
     }
 
-    // NEVER seed (or self-delete) while the editor is replaying Yjs history or
-    // applying a remote/echo update. A re-applied column renders as a FRESH
-    // instance — `populated` reset, `noSeed` absent from its synced data — and
-    // its restored children's add events land AFTER this rendered() call, so
-    // getChildren() is only TRANSIENTLY empty here. Seeding now fabricates a
-    // phantom empty paragraph inside the column (the pasted-columns trailing
-    // ghost). Mirrors the identical guard in ColumnList.rendered().
-    if (this.api.blocks.isSyncingFromYjs) {
-      return;
-    }
-
     // Empty AFTER having held content: the column's last block was dragged out,
     // which re-fires rendered(). A column is pure layout, never standalone — so
     // it removes itself rather than lingering as a dead, uninteractable box.
+    //
+    // `origin` cannot cover this branch: emptiness that happens LATER in the
+    // instance's life is not a construction-time fact. During a Yjs replay the
+    // children are only transiently gone (their remove/add events straddle this
+    // hook), so self-deleting there would drop a column the user still has —
+    // that half of the old isSyncingFromYjs guard has to stay.
     if (this.populated) {
-      this.deleteSelf();
+      if (!this.api.blocks.isSyncingFromYjs) {
+        this.deleteSelf();
+      }
 
       return;
     }
 
-    // Empty on the FIRST render. noSeed is a one-shot creation hint: a column-list
-    // wrap / add-column fills the column explicitly right afterwards, so suppress
-    // the seed this once and let the follow-up render mount the moved-in blocks.
+    // Empty on the FIRST render. Seed only for a genuine creation: a re-applied
+    // column renders as a FRESH instance — `populated` reset, `noSeed` absent
+    // from its synced data — and its restored children's add events land AFTER
+    // this call, so getChildren() is only TRANSIENTLY empty. Seeding then
+    // fabricates a phantom empty paragraph inside the column (the
+    // pasted-columns trailing ghost). Mirrors ColumnList.rendered().
+    if (!this.isCreation) {
+      return;
+    }
+
+    // noSeed is a one-shot creation hint for the creations that fill the column
+    // THEMSELVES: a column-list wrap / add-column moves blocks in right
+    // afterwards, so suppress the seed this once and let the follow-up render
+    // mount them.
     if (this._data.noSeed === true) {
       this._data.noSeed = false;
 
@@ -280,6 +309,16 @@ export class Column implements BlockTool {
   }
 
   public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  /**
+   * A column is pure layout: Enter on its empty last line adds another line to
+   * the column, it never unwraps it. Without the declaration core would promote
+   * that line past the column — to the document ROOT, holder and all, since a
+   * column's own parent is the column_list.
+   */
+  public static get keepsChildrenOnEnter(): boolean {
     return true;
   }
 }

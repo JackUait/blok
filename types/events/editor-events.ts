@@ -30,6 +30,22 @@ export interface BlocksRenderedPayload {
 }
 
 /**
+ * Payload for the `block:childrenMounted` event.
+ */
+export interface BlockChildrenMountedPayload {
+  /**
+   * Id of the CONTAINER block whose child slot has just been reconciled.
+   */
+  blockId: string;
+
+  /**
+   * Ids of that container's children, in model order — the blocks whose
+   * holders now live inside the slot.
+   */
+  childIds: string[];
+}
+
+/**
  * Payload for the `i18n:changed` event.
  */
 export interface I18nChangedPayload {
@@ -53,5 +69,6 @@ export interface I18nChangedPayload {
 export interface BlokEditorEventMap {
   'block:rendered': BlockRenderedPayload;
   'blocks:rendered': BlocksRenderedPayload;
+  'block:childrenMounted': BlockChildrenMountedPayload;
   'i18n:changed': I18nChangedPayload;
 }

@@ -8,7 +8,9 @@ import {
   type BlockPortalRegistry,
 } from '../../../packages/react/src/block-portal-registry';
 import { BlockPortalHost } from '../../../packages/react/src/BlockPortalHost';
+import type { BlockToolStatics } from '../../../packages/react/src/createReactBlock';
 import type { BlockAPI } from '../../../types/api';
+import type { BlockToolConstructable } from '../../../types/tools';
 import type { API } from '../../../types';
 
 const REGISTRY_CONFIG_KEY = '__blokPortalRegistry';
@@ -360,6 +362,57 @@ describe('createReactBlock (React authoring factory)', () => {
       tool.removed();
     });
     expect(host.querySelector('.view')).toBeNull();
+
+    unmount();
+  });
+
+  /**
+   * C2 half (b): core composes the REPLACEMENT block — which registers a portal
+   * under the SAME block id — BEFORE it calls REMOVED + destroy() on the block
+   * it replaces (`Blocks.insert(index, block, replace = true)`). The superseded
+   * instance's teardown therefore lands on an entry it no longer owns; without
+   * passing its own host it deletes the live one and the holder stays empty.
+   */
+  it('a superseded instance cannot unregister the entry that replaced it', () => {
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data }: ReactBlockRenderProps<CounterData>) => <span className="view">{data.count}</span>,
+    });
+
+    const superseded = new Tool({
+      data: { count: 1 },
+      block: makeBlockApi('blk-same'),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+    const supersededHost = renderTool(superseded);
+
+    document.body.appendChild(supersededHost);
+
+    // Core composes the replacement first — same id, new host.
+    const replacement = new Tool({
+      data: { count: 2 },
+      block: makeBlockApi('blk-same'),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+    const replacementHost = renderTool(replacement);
+
+    document.body.appendChild(replacementHost);
+
+    // …and only then tears the old block down (REMOVED, then destroy()).
+    act(() => {
+      superseded.removed();
+      superseded.destroy();
+    });
+
+    expect(registry.getSnapshot().get('blk-same')?.hostEl).toBe(replacementHost);
+    expect(replacementHost.querySelector('.view')?.textContent).toBe('2');
 
     unmount();
   });
@@ -788,6 +841,302 @@ describe('createReactBlock (React authoring factory)', () => {
 
     rafSpy.mockRestore();
     vi.useRealTimers();
+    unmount();
+  });
+});
+
+describe('createReactBlock — core tool-contract passthrough', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('resolves getToolbarAnchorElement against the rendered host, at call time', () => {
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => (
+        <div>
+          <div className="chrome">head</div>
+          <div data-anchor="" className="anchor" />
+        </div>
+      ),
+      getToolbarAnchorElement: host => host.querySelector<HTMLElement>('[data-anchor]'),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    // Resolved lazily: the element only exists after the portal has flushed.
+    expect(tool.getToolbarAnchorElement()).toBe(host.querySelector('.anchor'));
+
+    unmount();
+  });
+
+  it('reports no anchor when the spec declares none (core keeps its default positioning)', () => {
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div className="view" />,
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(renderTool(tool));
+
+    expect(tool.getToolbarAnchorElement()).toBeUndefined();
+
+    unmount();
+  });
+
+  it('forwards authored statics onto the generated tool class', () => {
+    const conversionConfig = { export: 'text', import: 'text' };
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+      statics: { ownsChildren: true, conversionConfig, shortcut: 'CMD+SHIFT+K' },
+    });
+
+    const asCoreTool = Tool as unknown as BlockToolConstructable;
+
+    expect(asCoreTool.ownsChildren).toBe(true);
+    expect(asCoreTool.conversionConfig).toBe(conversionConfig);
+    expect(asCoreTool.shortcut).toBe('CMD+SHIFT+K');
+  });
+
+  it('never lets authored statics clobber the members the adapter owns', () => {
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      toolbox: { title: 'Counter', icon: '<svg/>' },
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: () => <div />,
+      // A spec that (accidentally) tries to take over the adapter's own statics.
+      statics: { toolbox: undefined, isReadOnlySupported: false } as BlockToolStatics,
+    });
+
+    expect(Tool.toolbox).toEqual({ title: 'Counter', icon: '<svg/>' });
+    expect(Tool.isReadOnlySupported).toBe(true);
+    expect(Tool.__isBlokReactBlock).toBe(true);
+  });
+});
+
+describe('createReactBlock — editor api on the entry props', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('hands the editor api to the component (and to a viewComponent)', () => {
+    const { registry, unmount } = mountHost();
+    const api = makeApi();
+    const seen: (API | undefined)[] = [];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: props => {
+        seen.push(props.api);
+
+        return <span className="view" />;
+      },
+      viewComponent: props => {
+        seen.push(props.api);
+
+        return <span className="display" />;
+      },
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api,
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(renderTool(tool));
+
+    expect(seen.at(-1)).toBe(api);
+
+    act(() => {
+      tool.setReadOnly(true);
+    });
+
+    // The read-only renderer keeps the api too — a display renderer may read it.
+    expect(seen.at(-1)).toBe(api);
+
+    unmount();
+  });
+});
+
+describe('BlockChildren — per-child decoration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  /** A fake child block: just the id + holder `mountChildBlocks` moves around. */
+  const makeChild = (id: string): BlockAPI => {
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-id', id);
+
+    return { id, holder } as unknown as BlockAPI;
+  };
+
+  /** A container BlockAPI whose children the test controls. */
+  const makeContainerApi = (children: BlockAPI[]): BlockAPI =>
+    ({
+      id: 'container',
+      contentIds: children.map(child => child.id),
+      getChildren: () => children,
+      dispatchChange: vi.fn(),
+    } as unknown as BlockAPI);
+
+  it('stamps per-child attributes on the holders, which stay DIRECT slot children', () => {
+    const { registry, unmount } = mountHost();
+    const children = [makeChild('a'), makeChild('b')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren
+          childAttributes={(child, index) => ({
+            'data-step-index': String(index),
+            'data-child-id': child.id,
+          })}
+        />
+      ),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    const slot = host.querySelector('[data-blok-nested-blocks]');
+
+    expect(children[0].holder.getAttribute('data-step-index')).toBe('0');
+    expect(children[0].holder.getAttribute('data-child-id')).toBe('a');
+    expect(children[1].holder.getAttribute('data-step-index')).toBe('1');
+
+    // Anti-wrapper guard: core requires child holders to be DIRECT children of
+    // the nested container (hierarchy reparenting and caret sibling checks both
+    // compare `holder.parentElement` by identity), so decoration must never
+    // introduce a per-child element.
+    expect(children[0].holder.parentElement).toBe(slot);
+    expect(children[1].holder.parentElement).toBe(slot);
+
+    unmount();
+  });
+
+  it('drops the attributes the callback stopped producing', async () => {
+    const { registry, unmount } = mountHost();
+    const children = [makeChild('a')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data, BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren
+          childAttributes={() =>
+            data.count === 0 ? { 'data-active': 'true', 'data-legacy': 'x' } : { 'data-active': 'false' }
+          }
+        />
+      ),
+    });
+
+    const tool = new Tool({
+      data: { count: 0 },
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(renderTool(tool));
+
+    expect(children[0].holder.getAttribute('data-legacy')).toBe('x');
+
+    await act(async () => {
+      await tool.setData({ count: 1, label: 'n' });
+    });
+
+    expect(children[0].holder.getAttribute('data-active')).toBe('false');
+    expect(children[0].holder.hasAttribute('data-legacy')).toBe(false);
+
+    unmount();
+  });
+
+  it('renders the bare slot when no decorator is passed', () => {
+    const { registry, unmount } = mountHost();
+    const children = [makeChild('a')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ BlockChildren }: ReactBlockRenderProps<CounterData>) => <BlockChildren />,
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    expect(children[0].holder.parentElement).toBe(host.querySelector('[data-blok-nested-blocks]'));
+    expect(children[0].holder.attributes.length).toBe(1);
+
     unmount();
   });
 });

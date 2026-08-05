@@ -79,6 +79,9 @@ const createMockAPIMethods = (): APIInterface => ({
     setInlineToolbar: vi.fn(),
     isInstalled: vi.fn(() => false),
   },
+  handlers: {
+    set: vi.fn(),
+  },
   uploader: {
     uploadByFile: vi.fn(async (file: File) => ({ url: `blob:${file.name}` })),
     uploadByUrl: vi.fn(async (url: string) => ({ url })),
@@ -217,6 +220,13 @@ const createMockAPI = (): API => {
 };
 
 /**
+ * Every option object handed to a mock Tool's constructor, newest last.
+ * Lets a test assert what the Tool actually received (e.g. `origin`) without
+ * reaching into Block internals.
+ */
+const constructedToolOptions: BlockToolConstructorOptions<BlockToolData, Record<string, unknown>>[] = [];
+
+/**
  * Create a mock BlockToolConstructable class
  * Direct return without type assertion - the class implements BlockTool
  * and has the required constructor signature
@@ -239,6 +249,7 @@ const createMockConstructable = (): BlockToolConstructable => {
       this.readOnly = options.readOnly;
       this.api = options.api;
       this.config = options.config;
+      constructedToolOptions.push(options);
     }
 
     render(): HTMLElement {
@@ -318,11 +329,48 @@ describe('BlockFactory', () => {
   let bindBlockEventsFn: (block: Block) => void;
 
   beforeEach(() => {
+    constructedToolOptions.length = 0;
     dependencies = createMockDependencies();
     // Create a mock function compatible with the expected type
     const mockFn = vi.fn((_block: Block) => {});
     bindBlockEventsFn = mockFn;
     factory = new BlockFactory(dependencies, bindBlockEventsFn);
+  });
+
+  /**
+   * C3: create-vs-restore signal on the tool contract. A container Tool that
+   * seeds default children has to tell "the author just made me" from "I am
+   * being re-materialised" (document load, undo/redo replay, paste, the
+   * off-tree probe) — otherwise it fabricates phantom children while the real
+   * ones are still in flight.
+   */
+  describe('block origin', () => {
+    it('hands the caller-declared origin to the Tool constructor', () => {
+      factory.composeBlock({
+        tool: 'paragraph',
+        origin: 'load',
+      });
+
+      expect(constructedToolOptions.at(-1)?.origin).toBe('load');
+    });
+
+    it.each(['user', 'api', 'convert', 'paste', 'replay', 'probe'] as const)(
+      'hands through the «%s» origin verbatim',
+      (origin) => {
+        factory.composeBlock({
+          tool: 'paragraph',
+          origin,
+        });
+
+        expect(constructedToolOptions.at(-1)?.origin).toBe(origin);
+      }
+    );
+
+    it('defaults an un-updated call site to «api», never to a user gesture', () => {
+      factory.composeBlock({ tool: 'paragraph' });
+
+      expect(constructedToolOptions.at(-1)?.origin).toBe('api');
+    });
   });
 
   describe('composeBlock', () => {

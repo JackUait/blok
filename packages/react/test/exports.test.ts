@@ -17,6 +17,10 @@ describe('@bloklabs/react exports', () => {
     expect(typeof ReactApi.useBlokDefaults).toBe('function');
   });
 
+  it('exports useBlokInstance (the live editor inside a block component)', () => {
+    expect(typeof ReactApi.useBlokInstance).toBe('function');
+  });
+
   it('exports useBlocks', () => {
     expect(typeof ReactApi.useBlocks).toBe('function');
   });

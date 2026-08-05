@@ -866,17 +866,321 @@ describe('KeyboardNavigation', () => {
       isCaretAtEndOfInputSpy.mockRestore();
     });
 
+    /**
+     * A HOST container (a `steps` block from an app, a React `<BlockChildren>`
+     * slot) must be able to keep Enter inside itself the same way Blok's own
+     * column does — by declaring `static keepsChildrenOnEnter`, not by being
+     * named in a core if-chain. Without the declaration being consulted, the
+     * empty trailing line escapes: with siblings present it is outdented to the
+     * grandparent, so it renders as a bare line beside the container.
+     */
+    it('keeps the new line inside a container that declares keepsChildrenOnEnter (with siblings)', () => {
+      const containerId = 'steps-1';
+      const firstChildId = 'step-a';
+      const lastChildId = 'step-b';
+
+      const containerHolder = document.createElement('div');
+      const childSlot = document.createElement('div');
+
+      childSlot.setAttribute('data-blok-nested-blocks', '');
+      containerHolder.appendChild(childSlot);
+
+      const container = createBlock({
+        id: containerId,
+        name: 'steps',
+        contentIds: [firstChildId, lastChildId],
+        holder: containerHolder,
+        parentId: null,
+        tool: { name: 'steps', keepsChildrenOnEnter: true } as unknown as Block['tool'],
+      });
+
+      const firstChild = createBlock({ id: firstChildId, parentId: containerId });
+      const emptyLastChild = createBlock({
+        id: lastChildId,
+        isEmpty: true,
+        parentId: containerId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+
+          input.contentEditable = 'true';
+
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const move = vi.fn();
+      const removeBlock = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === container) return 0;
+        if (block === firstChild) return 1;
+        if (block === emptyLastChild) return 2;
+
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === containerId) return container;
+        if (id === firstChildId) return firstChild;
+        if (id === lastChildId) return emptyLastChild;
+
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyLastChild,
+          currentBlockIndex: 2,
+          blocks: [container, firstChild, emptyLastChild],
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move,
+          removeBlock,
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // A new sibling is created right below, INSIDE the container.
+      expect(insertDefaultBlockAtIndex.mock.calls[0][0]).toBe(3);
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, containerId);
+      // The empty line the user was on must not be promoted out.
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyLastChild, null);
+      expect(move).not.toHaveBeenCalled();
+      expect(removeBlock).not.toHaveBeenCalled();
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    /**
+     * Same declaration, the only-child case: without it the empty sole line is
+     * left behind and a fresh block is stamped AFTER the container.
+     */
+    it('keeps the new line inside a container that declares keepsChildrenOnEnter (sole child)', () => {
+      const containerId = 'steps-1';
+      const childBlockId = 'step-a';
+
+      const containerHolder = document.createElement('div');
+      const childSlot = document.createElement('div');
+
+      childSlot.setAttribute('data-blok-nested-blocks', '');
+      containerHolder.appendChild(childSlot);
+
+      const container = createBlock({
+        id: containerId,
+        name: 'steps',
+        contentIds: [childBlockId],
+        holder: containerHolder,
+        parentId: null,
+        tool: { name: 'steps', keepsChildrenOnEnter: true } as unknown as Block['tool'],
+      });
+
+      const emptyChild = createBlock({
+        id: childBlockId,
+        isEmpty: true,
+        parentId: containerId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+
+          input.contentEditable = 'true';
+
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === container) return 0;
+        if (block === emptyChild) return 1;
+
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === containerId) return container;
+        if (id === childBlockId) return emptyChild;
+
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyChild,
+          currentBlockIndex: 1,
+          blocks: [container, emptyChild],
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move: vi.fn(),
+          removeBlock: vi.fn(),
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      // The new line is a sibling INSIDE the container, never anchored at root.
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, containerId);
+      expect(insertDefaultBlockAtIndex).toHaveBeenCalledWith(2, false, false, false);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
+    /**
+     * The stepwise-outdent gate runs BEFORE the container-escape gate, and it
+     * used to exempt containers by DOM marker plus the same 'column' name list.
+     * A declaring container that mounts its children through its own slot (no
+     * `data-blok-nested-blocks`) must be exempt too, or Enter shifts the empty
+     * line up one structural level before the escape rule is ever consulted.
+     */
+    it('does not stepwise-outdent out of a container that declares keepsChildrenOnEnter without the nested-blocks marker', () => {
+      const containerId = 'card-1';
+      const firstChildId = 'line-a';
+      const lastChildId = 'line-b';
+
+      const container = createBlock({
+        id: containerId,
+        name: 'card',
+        contentIds: [firstChildId, lastChildId],
+        holder: document.createElement('div'),
+        parentId: null,
+        tool: { name: 'card', keepsChildrenOnEnter: true } as unknown as Block['tool'],
+      });
+
+      const firstChild = createBlock({ id: firstChildId, parentId: containerId });
+      const emptyLastChild = createBlock({
+        id: lastChildId,
+        isEmpty: true,
+        parentId: containerId,
+        currentInput: (() => {
+          const input = document.createElement('div');
+
+          input.contentEditable = 'true';
+
+          return input;
+        })(),
+      });
+
+      const newBlock = createBlock({ id: 'new-block' });
+      const setBlockParent = vi.fn();
+      const insertDefaultBlockAtIndex = vi.fn((_index: number, ..._rest: boolean[]): Block => newBlock);
+      const getBlockIndex = vi.fn((block: Block) => {
+        if (block === container) return 0;
+        if (block === firstChild) return 1;
+        if (block === emptyLastChild) return 2;
+
+        return -1;
+      });
+      const getBlockById = vi.fn((id: string) => {
+        if (id === containerId) return container;
+        if (id === firstChildId) return firstChild;
+        if (id === lastChildId) return emptyLastChild;
+
+        return undefined;
+      });
+
+      const blok = createBlokModules({
+        BlockManager: {
+          currentBlock: emptyLastChild,
+          currentBlockIndex: 2,
+          blocks: [container, firstChild, emptyLastChild],
+          insertDefaultBlockAtIndex,
+          split: vi.fn(),
+          setBlockParent,
+          move: vi.fn(),
+          removeBlock: vi.fn(),
+          getBlockIndex,
+          getBlockById,
+          transactForTool: vi.fn((fn: () => void) => fn()),
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          setToBlock: vi.fn(),
+          positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          moveAndOpen: vi.fn(),
+        } as unknown as BlokModules['Toolbar'],
+        YjsManager: {
+          stopCapturing: vi.fn(),
+          markCaretBeforeChange: vi.fn(),
+          updateLastCaretAfterPosition: vi.fn(),
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      const keyboardNavigation = new KeyboardNavigation(blok);
+      const event = createKeyboardEvent({ key: 'Enter' });
+
+      const isCaretAtStartOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtStartOfInput').mockReturnValue(false);
+      const isCaretAtEndOfInputSpy = vi.spyOn(caretUtils, 'isCaretAtEndOfInput').mockReturnValue(true);
+
+      keyboardNavigation.handleEnter(event);
+
+      expect(setBlockParent).not.toHaveBeenCalledWith(emptyLastChild, null);
+      expect(setBlockParent).toHaveBeenCalledWith(newBlock, containerId);
+
+      isCaretAtStartOfInputSpy.mockRestore();
+      isCaretAtEndOfInputSpy.mockRestore();
+    });
+
     it('does not promote the empty sole child of a column out to root — re-parents the new block into the same column', () => {
       const columnId = 'c1';
       const childBlockId = 'p1';
 
       const columnHolder = document.createElement('div');
-      // A column is NOT a toggle: no data-blok-toggle-open marker.
+      // A column is NOT a toggle: no data-blok-toggle-open marker. It keeps its
+      // children on Enter through the tool declaration, not through its name.
       const column = createBlock({
         id: columnId,
         name: 'column',
         contentIds: [childBlockId],
         holder: columnHolder,
+        tool: { name: 'column', keepsChildrenOnEnter: true } as unknown as Block['tool'],
       });
 
       const emptyChild = createBlock({

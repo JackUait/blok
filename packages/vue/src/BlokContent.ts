@@ -1,7 +1,19 @@
-import { defineComponent, h, onMounted, onBeforeUnmount, ref, toRaw, watch, type PropType } from 'vue';
+import {
+  computed,
+  defineComponent,
+  h,
+  onMounted,
+  onBeforeUnmount,
+  provide,
+  ref,
+  toRaw,
+  watch,
+  type PropType,
+} from 'vue';
 import { getHolder } from './holder-map';
 import { getRegistry } from './registry-map';
 import { BlockPortalHost } from './BlockPortalHost';
+import { BLOK_EDITOR_INSTANCE } from './blok-instance';
 import type { Blok } from '@/types';
 
 /**
@@ -26,6 +38,17 @@ export const BlokContent = defineComponent({
   },
   setup(props) {
     const container = ref<HTMLDivElement | null>(null);
+
+    // Publish the live instance to everything rendered beneath — including every
+    // `createVueBlock` block, because <Teleport> preserves the COMPONENT render
+    // context. That is what lets a block call `useBlocks(useBlokInstance())`
+    // without the host prop-drilling the instance into it. `toRaw` for the same
+    // reason the holder lookup uses it (Risk R0): the prop may arrive behind a
+    // reactive proxy, and consumers compare the instance BY IDENTITY.
+    provide(
+      BLOK_EDITOR_INSTANCE,
+      computed(() => (props.editor === null ? null : toRaw(props.editor)))
+    );
 
     const adopt = (editor: Blok | null): void => {
       if (container.value === null || editor === null) {

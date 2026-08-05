@@ -17,13 +17,15 @@ const createMockAPI = (overrides: Partial<API> = {}): API => ({
 
 const createColumnListOptions = (
   data: Partial<ColumnListData> = {},
-  api: API = createMockAPI()
+  api: API = createMockAPI(),
+  origin?: BlockToolConstructorOptions<ColumnListData>['origin']
 ): BlockToolConstructorOptions<ColumnListData> => ({
   data: { ...data },
   config: {},
   api,
   readOnly: false,
   block: { id: 'cl-1' } as never,
+  ...(origin !== undefined && { origin }),
 });
 
 describe('ColumnList tool', () => {
@@ -371,6 +373,77 @@ describe('ColumnList tool', () => {
 
       list.setReadOnly(false);
       expect(container).not.toHaveAttribute('data-blok-columns-static-gutter');
+    });
+  });
+
+  /**
+   * C3: seeding is a one-shot CREATION action. Before `origin` existed the tool
+   * could only guess by asking "is the editor mid-Yjs-replay right now?", which
+   * is both overloaded (core elevates the same flag around the RENDERED hook)
+   * and time-dependent — a replayed list whose rendered() lands after the atomic
+   * wrapper expires sees a settled editor and an empty getChildren(), then
+   * fabricates phantom columns beside the real ones that arrive a tick later
+   * ("2 columns silently became 4"). `origin` is fixed at construction and says
+   * it outright.
+   */
+  describe('seeds only for a genuine creation (origin)', () => {
+    const seedProbe = (): { insert: ReturnType<typeof vi.fn>; api: API } => {
+      const insert = vi.fn().mockImplementation(() => ({ id: 'c', holder: document.createElement('div') }));
+      const api = createMockAPI({
+        blocks: {
+          getChildren: vi.fn().mockReturnValue([]),
+          getBlockIndex: vi.fn().mockReturnValue(0),
+          // Deliberately settled: the guard must not depend on this flag.
+          isSyncingFromYjs: false,
+          insert,
+          setBlockParent: vi.fn(),
+        },
+        caret: { setToBlock: vi.fn() },
+      } as unknown as Partial<API>);
+
+      return {
+        insert,
+        api,
+      };
+    };
+
+    it.each(['load', 'replay', 'paste', 'probe'] as const)(
+      'does NOT seed columns when re-materialised with origin «%s»',
+      (origin) => {
+        const { insert, api } = seedProbe();
+        const list = new ColumnList(createColumnListOptions({ columnCount: 2 }, api, origin));
+
+        list.render();
+        list.rendered();
+
+        expect(insert).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each(['user', 'api', 'convert'] as const)(
+      'seeds columns when created with origin «%s»',
+      (origin) => {
+        const { insert, api } = seedProbe();
+        const list = new ColumnList(createColumnListOptions({ columnCount: 2 }, api, origin));
+
+        list.render();
+        list.rendered();
+
+        expect(insert).toHaveBeenCalledTimes(2);
+      }
+    );
+
+    it('still honours the transient noSeed hint for a creation that fills itself', () => {
+      // column-drop inserts the list and then moves the dragged blocks into
+      // explicit columns, so it opts out even though it IS a creation.
+      const { insert, api } = seedProbe();
+      const list = new ColumnList(createColumnListOptions({ columnCount: 2,
+        noSeed: true }, api, 'api'));
+
+      list.render();
+      list.rendered();
+
+      expect(insert).not.toHaveBeenCalled();
     });
   });
 });

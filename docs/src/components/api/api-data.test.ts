@@ -457,7 +457,7 @@ describe("API_SECTIONS", () => {
         "blocks.getBlockByElement(element)",
         "blocks.getChildren(parentId)",
         "blocks.getBlocksCount()",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
         "blocks.insertMany(blocks, index?)",
         "blocks.composeBlockData(toolName)",
         "blocks.update(id, data?, tunes?)",
@@ -552,6 +552,20 @@ describe("API_SECTIONS", () => {
         expect(method.example!.trim().length).toBeGreaterThan(0);
         expect(method.example).toMatch(/editor\.selection\./);
       });
+    });
+  });
+
+  describe("Events API", () => {
+    it("documents block:childrenMounted as the container settle signal", () => {
+      const eventsSection = API_SECTIONS.find((s) => s.id === "events-api");
+      expect(eventsSection).toBeDefined();
+
+      const on = eventsSection!.methods!.find((m) => m.name.startsWith("on("));
+      expect(on).toBeDefined();
+      // A framework block's portal commits AFTER block:rendered, so hosts need
+      // a documented signal for "the child holders are in the slot".
+      expect(on!.example).toContain("block:childrenMounted");
+      expect(on!.example).toContain("childIds");
     });
   });
 
@@ -819,7 +833,7 @@ describe("API_SECTIONS", () => {
     it("blocks.insert example shows the inserted block's id as output", () => {
       const method = findMethod(
         "blocks-api",
-        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?)",
+        "blocks.insert(type?, data?, config?, index?, needToFocus?, replace?, id?, tunes?, origin?)",
       );
       expect(method?.example).toMatch(/\/\/\s*→/);
     });

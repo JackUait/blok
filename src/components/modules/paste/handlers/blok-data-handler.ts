@@ -237,7 +237,9 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
       // Pass 1: insert table cells first so they exist with new IDs before the
       // owning table block is inserted with its (remapped) content references.
       tableCells.forEach(({ sanitized, original }) => {
-        const block = BlockManager.insert({ tool: sanitized.tool, data: sanitized.data });
+        const block = BlockManager.insert({ tool: sanitized.tool,
+          data: sanitized.data,
+          origin: 'paste' });
 
         oldIdToEntry.set(original.id, { newBlock: block, original });
         Caret.setToBlock(block, Caret.positions.END);
@@ -263,6 +265,7 @@ export class BlokDataHandler extends BasePasteHandler implements PasteHandler {
           tool: sanitized.tool,
           data: remappedData,
           replace: idx === 0 && shouldReplaceFirst && tableCells.length === 0,
+          origin: 'paste',
         });
 
         /**

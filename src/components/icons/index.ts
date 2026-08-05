@@ -70,19 +70,21 @@ export const IconEquation = `
 </svg>
 `;
 
-// Superscript icon (x with raised small 2)
+// Superscript icon (× on the y16 baseline, raised 2 hanging from the y4 cap line;
+// the 2 is IconH2's digit skeleton affine-mapped — see icon-inline-unity.test.ts)
 export const IconSuperscript = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4 9.25l6.25 6.25M10.25 9.25 4 15.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16.5 9.75h-3.33c0-1.25.37-1.67 1.25-2.08.88-.42 2.08-1.25 2.08-2.09a1.67 1.67 0 0 0-3.33 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 9.5 10.5 16M10.5 9.5 4 16" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13.38 4.97C13.51 4.38 14.02 4 14.69 4C15.49 4 16 4.46 16 5.18C16 5.81 15.62 6.32 14.82 7.07L13.3 8.8H16.08" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
-// Subscript icon (x with lowered small 2)
+// Subscript icon (× hanging from the y4 cap line, lowered 2 sitting on the y16
+// baseline; same digit skeleton as IconSuperscript, translated down 7.2)
 export const IconSubscript = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4 4.5l6.25 6.25M10.25 4.5 4 10.75" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M16.5 15.75h-3.33c0-1.25.37-1.67 1.25-2.08.88-.42 2.08-1.25 2.08-2.09a1.67 1.67 0 0 0-3.33 0" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 4 10.5 10.5M10.5 4 4 10.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+  <path d="M13.38 12.17C13.51 11.58 14.02 11.2 14.69 11.2C15.49 11.2 16 11.66 16 12.38C16 13.01 15.62 13.52 14.82 14.27L13.3 16H16.08" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

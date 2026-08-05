@@ -282,21 +282,21 @@ describe('resolveNestedPopoverBelowPlacement', () => {
         expect(top, `${label}: popover touches screen top`).toBeGreaterThanOrEqual(margin);
         expect(top + nested.height, `${label}: popover touches screen bottom`).toBeLessThanOrEqual(viewport.height - margin);
 
-        // 2. BELOW-FIRST — room below → exactly gap below the parent.
+        // 2. BELOW-FIRST — room below → exactly gap below the parent;
+        // otherwise, if the flipped position is fully on-screen → exactly
+        // gap above it (the GAP invariant wins over attachment when the
+        // parent itself hangs past a viewport edge).
         const belowTop = parentRect.bottom + gap;
         const fitsBelow = belowTop >= margin && belowTop + nested.height <= viewport.height - margin;
+        const aboveTop = parentRect.top - gap - nested.height;
+        const fitsAbove = aboveTop >= margin && aboveTop + nested.height <= viewport.height - margin;
 
         if (fitsBelow) {
           expect(side, `${label}: should open below`).toBe('bottom');
           expect(top, `${label}: not attached below the parent`).toBe(belowTop);
-        } else {
-          const aboveTop = parentRect.top - gap - nested.height;
-          const fitsAbove = aboveTop >= margin && aboveTop + nested.height <= viewport.height - margin;
-
-          if (fitsAbove) {
-            expect(side, `${label}: should flip above`).toBe('top');
-            expect(top, `${label}: not attached above the parent`).toBe(aboveTop);
-          }
+        } else if (fitsAbove) {
+          expect(side, `${label}: should flip above`).toBe('top');
+          expect(top, `${label}: not attached above the parent`).toBe(aboveTop);
         }
       }
     });

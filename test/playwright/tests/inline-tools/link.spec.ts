@@ -914,6 +914,112 @@ test.describe('inline tool link', () => {
     await expect(paragraph.getByRole('link')).toHaveCount(0);
     await expect(page.getByText('Invalid link')).toBeVisible();
   });
+
+  test.describe('link field placement', () => {
+    /**
+     * Viewport-relative rects of the toolbar card and the opened link field,
+     * plus the nested popover's resolved side stamp.
+     */
+    const readPlacementGeometry = async (page: Page): Promise<{
+      side: string | null;
+      toolbar: { left: number; top: number; bottom: number };
+      field: { left: number; top: number; bottom: number };
+      viewportHeight: number;
+    }> => {
+      return page.evaluate(({ toolbarSelector }) => {
+        const input = document.querySelector('[data-blok-testid="inline-tool-input"]');
+        const toolbar = document.querySelector(`${toolbarSelector} [data-blok-popover-container]`);
+        const nestedPopover = input?.closest('[data-blok-popover]');
+        const nestedContainer = input?.closest('[data-blok-popover-container]');
+
+        if (!toolbar || !nestedPopover || !nestedContainer) {
+          throw new Error('Link field geometry is not available');
+        }
+
+        const toolbarRect = toolbar.getBoundingClientRect();
+        const fieldRect = nestedContainer.getBoundingClientRect();
+
+        return {
+          side: nestedPopover.getAttribute('data-side'),
+          toolbar: { left: toolbarRect.left, top: toolbarRect.top, bottom: toolbarRect.bottom },
+          field: { left: fieldRect.left, top: fieldRect.top, bottom: fieldRect.bottom },
+          viewportHeight: window.innerHeight,
+        };
+      }, { toolbarSelector: INLINE_TOOLBAR_SELECTOR });
+    };
+
+    test('opens the link field below the toolbar card with left edges aligned', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Place the link field below the toolbar',
+          },
+        },
+      ]);
+
+      const paragraph = getParagraphByText(page, 'Place the link field below the toolbar');
+
+      await selectText(paragraph, 'link field');
+      await ensureLinkInputOpen(page);
+
+      const { side, toolbar, field } = await readPlacementGeometry(page);
+
+      expect(side).toBe('bottom');
+      expect(field.top).toBeGreaterThan(toolbar.bottom);
+      expect(Math.abs(field.left - toolbar.left)).toBeLessThanOrEqual(1);
+    });
+
+    // Placement bugs cluster at viewport extremes (see the LAW sweep in
+    // test/unit/utils/popover-nested-position.test.ts) — with the selection at
+    // the very bottom of the screen the toolbar card itself hangs past the
+    // viewport edge, and the field must flip above it rather than open
+    // offscreen. Locator clicks auto-scroll the target into view and would
+    // silently undo the extreme position, so the field is opened
+    // programmatically.
+    test('keeps the link field inside the viewport when the selection sits at the bottom edge', async ({ page }) => {
+      await createBlokWithBlocks(page, [
+        {
+          type: 'paragraph',
+          data: {
+            text: 'Selection parked at the bottom edge of the screen',
+          },
+        },
+      ]);
+
+      await page.evaluate(({ holder }) => {
+        const container = document.getElementById(holder);
+
+        if (!container) {
+          throw new Error('Holder is not available');
+        }
+
+        container.style.marginTop = '1500px';
+        container.style.marginBottom = '300px';
+      }, { holder: HOLDER_ID });
+
+      const paragraph = getParagraphByText(page, 'Selection parked at the bottom edge of the screen');
+
+      await paragraph.evaluate((element) => {
+        element.scrollIntoView();
+        window.scrollBy(0, element.getBoundingClientRect().top - (window.innerHeight - 40));
+      });
+
+      await selectText(paragraph, 'bottom edge');
+      await expect(page.locator(INLINE_TOOLBAR_SELECTOR)).toBeAttached();
+
+      await page.locator(LINK_BUTTON_SELECTOR).evaluate((button) => {
+        (button as HTMLElement).click();
+      });
+
+      await expect(page.locator(LINK_INPUT_SELECTOR)).toBeVisible();
+
+      const { field, viewportHeight } = await readPlacementGeometry(page);
+
+      expect(field.top).toBeGreaterThanOrEqual(0);
+      expect(field.bottom).toBeLessThanOrEqual(viewportHeight);
+    });
+  });
 });
 
 declare global {

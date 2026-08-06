@@ -535,6 +535,9 @@ describe('CodeTool', () => {
       expect(gutter.children).toHaveLength(3);
 
       el.remove();
+      // The paste listener's deferred refresh scheduled a real 600ms detection
+      // debounce; cancel it so it can't straggle into a later test.
+      tool.removed();
     });
   });
 
@@ -1016,6 +1019,8 @@ describe('CodeTool', () => {
       expect(gutter.children[1].textContent).toBe('2');
 
       el.remove();
+      // A handled Enter keydown also schedules the 600ms detection debounce.
+      tool.removed();
     });
 
     it('appends trailing BR when Enter creates a trailing newline', async () => {
@@ -1043,6 +1048,8 @@ describe('CodeTool', () => {
       expect(codeEl.textContent).toBe('hello\n');
 
       el.remove();
+      // A handled Enter keydown also schedules the 600ms detection debounce.
+      tool.removed();
     });
 
     it('does not append BR when Enter is pressed in the middle of text', async () => {
@@ -1068,6 +1075,8 @@ describe('CodeTool', () => {
       expect(codeEl.textContent).toBe('hello\nworld');
 
       el.remove();
+      // A handled Enter keydown also schedules the 600ms detection debounce.
+      tool.removed();
     });
 
     it('removes trailing BR when input makes content no longer end with newline', async () => {
@@ -1126,6 +1135,8 @@ describe('CodeTool', () => {
       expect(data.code).toBe('hello\n');
 
       el.remove();
+      // A handled Enter keydown also schedules the 600ms detection debounce.
+      tool.removed();
     });
 
     it('save() includes lineNumbers field', async () => {

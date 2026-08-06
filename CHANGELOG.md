@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0](https://github.com/JackUait/blok/compare/v1.7.0...v1.8.0) (2026-08-06)
+
+### Features
+
+- **Superscript / subscript** — A new inline tool takes the tenth slot in the inline toolbar, bound to ⌘/Ctrl+Period and ⌘/Ctrl+Comma. The two modes are mutually exclusive, so applying one clears the other. Shipped with glyphs drawn into the shared inline-toolbar type system, translations in all 69 locales, and docs.
+- **Toolbox** — Slash-menu entries are grouped under labeled sections, so a long tool list is scannable instead of a flat run of items. Each entry declares its own section.
+- **Tool contract** — Blocks carry creation provenance (`user`/`load`/`api`/`paste`/`convert`/`replay`/`probe`), so a container can tell an author's gesture apart from a document load, a refetch or an undo replay. Enter's container-escape became a per-tool declaration instead of a hardcoded list of Blok's own tool names, so a custom container keeps Enter inside itself without an editor-global `onEnter` hook. `insertInsideParent` and `BlockAPI.insertChild` take an optional tool name, making an appended typed child one atomic operation and one undo entry.
+- **Framework adapters** — The React, Vue and Angular block spec gained a general statics passthrough (toolbar anchor, `ownsChildren`, `conversionConfig`, the new Enter policy), an api handle, child-tree reactivity, per-child decoration, and an `onMounted` signal backed by a `block:childrenMounted` event. Handler presence is runtime-settable through `api.handlers.set()`, so passing `onEnter` at all no longer permanently decides Enter's semantics.
+- **Editor** — A new opt-in `captureClicksBelowEditor` places the caret in the last block when the host clicks empty space below the editor. Off by default; registered as a config key in the React and Vue adapters too.
+- **Link** — The link field sizes itself to its content, capped at the previous fixed width, and its create, error and edit states were polished.
+
+### Bug Fixes
+
+- **Nesting** — `setBlockParent` no longer lets a container on the block's own ancestor or descendant chain veto a reparent; an enclosing container claiming a holder used to leave model and DOM permanently divergent (Enter inside a callout nested in another container), and a descendant doing the same nested every appended child inside its predecessor. `mountChildBlocks` now reclaims a holder stranded in any ancestor container, re-mounts it at its model position rather than last, and preserves the caret across the adoption. Depth indentation moved from an inline margin with a hardcoded exemption list to a depth multiplier resolved through `--blok-block-indent-step`, so a container tool declines the indent with ordinary CSS and no `!important`.
+- **Block API** — Every handed-out `BlockAPI` is live, so `getChildren()` can no longer answer `[]` for a populated container and `setParent`/`insertChild`/`moveChild` can no longer silently no-op. `api.blocks.update()` prefers a tool's in-place `setData` when there are no tunes to apply, so it stops composing a replacement block that destroyed the previous one's portal and left the holder permanently empty.
+- **Inline toolbar** — `destroy()` threw and aborted `blok.destroy()`, leaking listeners in every module torn down after it: `hide()` emits `Closed` synchronously, the handler then ran `close()`, which nulled the popover mid-teardown. The reference is now detached before hiding.
+- **Popover** — Control-less HTML items (the new toolbox section headers) are no longer keyboard focus stops, so a `role="presentation"` header can't steal initial focus, shift every Arrow/Tab, or be pointed at by `aria-activedescendant`. Sibling active states refresh after an item is activated, and clicking the item that opened a popover now does nothing instead of reopening it.
+- **List** — Tab/Shift+Tab moved the model but not the render: both handlers wrote depth into the tool's live data before calling `api.blocks.update`, whose in-place diff then saw no change, so `save()` and the DOM silently disagreed.
+- **Events and data** — Keydown from a native form control a tool renders is no longer claimed by the editor. The toolbox merge and the `save()` extraction stop mutating tool-owned objects, so a toolbox entry carrying data no longer throws on a frozen `save()` result. A load is not an edit: a block arriving without a timestamp is no longer stamped at construction, so a save round-trip equals the document it came from.
+- **Adapters** — The portal registries reject a teardown from a superseded instance, so a same-id re-register survives a late destroy; Vue additionally defined one wrapper component per tool *type*, so a re-register patched the superseded instance and rendered stale data — the wrapper is now per block instance. A React element toolbox icon serializes instead of rendering as `[object Object]`, and the imperative handle keeps the controlled baseline in sync so restoring a draft after `clear()` is no longer swallowed as an echo.
+- **Styles** — The icon stroke is scoped to Blok's own icon markup instead of every path in the subtree. The column floor moved to `--blok-column-min-width` in CSS, and the static-gutter attribute plus the block-padding tokens are now declared.
+
+### Maintenance
+
+- **Build** — `scripts/build-angular.mjs` derived its adapters contract from a hand-copied list that silently drifted whenever a staged module gained an import; it now derives it from `src/adapters.ts`, and the staging law test walks the same graph so drift fails at test time instead of build time.
+- **Tests** — 23 red e2e tests were root-caused rather than weakened: three were real product bugs (fixed above) and four were stale specs asserting behaviour that later commits deliberately changed. A leaked 600ms language-detection debounce in the code-tool unit tests was also cancelled, removing a load-dependent flake.
+
 ## [1.7.0](https://github.com/JackUait/blok/compare/v1.6.2...v1.7.0) (2026-08-04)
 
 ### Features

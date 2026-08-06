@@ -30,7 +30,7 @@ import { BlockHierarchy } from './hierarchy';
 import { BlockOperations } from './operations';
 import { BlockRepository } from './repository';
 import { BlockShortcuts } from './shortcuts';
-import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, InsertBlockOptions } from './types';
+import type { BlocksStore, BlockMutationEventDetailWithoutTarget, ComposeBlockOptions, InsertBlockOptions, InsertInsideParentOptions } from './types';
 import { BlockYjsSync } from './yjs-sync';
 
 type BlocksStoreProxy = BlocksStore & {
@@ -967,9 +967,15 @@ export class BlockManager extends Module {
    * @param toolName - optional tool to create; defaults to `config.defaultBlock`
    * @returns the newly created child block
    */
-  public insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData, toolName?: string): Block {
+  public insertInsideParent(
+    parentId: string,
+    insertIndex: number,
+    childData?: BlockToolData,
+    toolName?: string,
+    options?: InsertInsideParentOptions
+  ): Block {
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
-    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName);
+    const result = this.operations.insertInsideParent(parentId, insertIndex, this.blocksStore, childData, toolName, options);
     this._currentBlockIndex = this.operations.currentBlockIndexValue;
     return result;
   }

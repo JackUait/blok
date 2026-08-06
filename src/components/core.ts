@@ -191,7 +191,22 @@ export class Core {
 
     this.config.onReady = this.config.onReady || ((): void => {});
 
-    this.config.onChange = this.config.onChange || ((): void => {});
+    /**
+     * `onChange` is deliberately NOT defaulted to a no-op.
+     *
+     * Its PRESENCE (together with `onSave`'s) is the arming signal for the whole
+     * change-observation pipeline — `ModificationsObserver.particularBlockChanged`
+     * bails when neither is a function, and all three framework adapters omit the
+     * key entirely when their host passes no handler so an unobserved editor stays
+     * disarmed. Injecting a no-op here satisfied that gate for EVERY editor, which
+     * made the gate dead code and the published `BlokConfig.onChange` contract a
+     * lie — and pushed hosts into passing an always-truthy dummy handler (often an
+     * `onSave` one, which additionally forces a full document serialization per
+     * change batch) to "arm the pipeline" it was already arming for them.
+     *
+     * Every read of `config.onChange` is `isFunction`-guarded, so leaving it
+     * undefined is safe.
+     */
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 
     /**

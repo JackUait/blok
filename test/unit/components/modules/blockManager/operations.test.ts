@@ -59,6 +59,8 @@ const createMockBlock = (options: {
   supportsInPlaceSetData?: boolean;
   /** Stub for Block.setData — resolves true when the tool applied it in place. */
   setData?: (data: BlockToolData) => Promise<boolean>;
+  /** Mirrors BlockToolAdapter.childTools (the per-container child allowlist). */
+  childTools?: { allow?: string[]; deny?: string[] };
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
@@ -100,6 +102,7 @@ const createMockBlock = (options: {
       },
       settings: {},
       supportsInPlaceSetData: options.supportsInPlaceSetData ?? false,
+      childTools: options.childTools,
     },
     tunes,
   } as unknown as Block;
@@ -175,7 +178,10 @@ const createMockDependencies = (): BlockOperationsDependencies => {
 /**
  * Create a properly typed mock BlockToolAdapter for testing
  */
-const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
+const createMockBlockToolAdapter = (
+  name: string,
+  childTools?: { allow?: string[]; deny?: string[] }
+): BlockToolAdapter => {
   // Create a mock BlockTool constructable class
   const MockBlockTool = class implements BlockTool {
     render = vi.fn(() => {
@@ -223,6 +229,7 @@ const createMockBlockToolAdapter = (name: string): BlockToolAdapter => {
     isReadOnlySupported: false,
     isLineBreaksEnabled: false,
     baseSanitizeConfig: {},
+    childTools,
   };
 
   // Cast to BlockToolAdapter with proper method signatures
@@ -264,6 +271,11 @@ const createMockBlockFactory = (): BlockFactory => {
   // child-insert tests)
   const headerAdapter = createMockBlockToolAdapter('header');
   mockTools.set('header', headerAdapter);
+
+  // A container declaring a per-child allowlist, plus the tool it allows —
+  // the generic counterpart of the table's cell restrictions.
+  mockTools.set('segment-item', createMockBlockToolAdapter('segment-item'));
+  mockTools.set('segments', createMockBlockToolAdapter('segments', { allow: ['segment-item'] }));
 
   const bindBlockEvents = vi.fn();
 
@@ -2842,6 +2854,106 @@ describe('BlockOperations', () => {
       );
 
       expect(splitAddCall).toBeDefined();
+    });
+  });
+
+  /**
+   * Per-container child-tool restrictions. Before this, the ONLY such mechanism
+   * was the Table tool's `restrictedTools` config, whose enforcement is hard-wired
+   * to "is this inside a table cell?" — so no other container could declare what
+   * may be its child, and a container tool had to defend itself by filtering
+   * `child.name` in render, styling around a foreign child, and migrating strays.
+   * `ownsChildren` clamps MOVES only, never inserts.
+   */
+  describe('childTools (per-container child allowlist)', () => {
+    /**
+     * A `segments` container plus, optionally, one existing `segment-item` child.
+     * contentIds/parentId are wired both ways so the hierarchy invariant holds.
+     */
+    const withSegmentsContainer = (childIds: string[] = []): { container: Block; children: Block[] } => {
+      const container = createMockBlock({
+        id: 'segments-1',
+        name: 'segments',
+        contentIds: [...childIds],
+        childTools: { allow: ['segment-item'] },
+      });
+
+      blocksStore.push(container);
+
+      const children = childIds.map((childId) => {
+        const child = createMockBlock({
+          id: childId,
+          name: 'segment-item',
+          parentId: container.id,
+        });
+
+        blocksStore.push(child);
+
+        return child;
+      });
+
+      repository.initialize(blocksStore);
+
+      return { container,
+        children };
+    };
+
+    it('demotes a disallowed child insert to the container\u2019s allowed tool', () => {
+      const { container } = withSegmentsContainer();
+      const index = repository.getBlockIndex(container) + 1;
+
+      const child = operations.insertInsideParent(container.id, index, blocksStore, {}, 'header');
+
+      expect(child.name).toBe('segment-item');
+    });
+
+    it('leaves an allowed child insert alone', () => {
+      const { container } = withSegmentsContainer();
+      const index = repository.getBlockIndex(container) + 1;
+
+      const child = operations.insertInsideParent(container.id, index, blocksStore, {}, 'segment-item');
+
+      expect(child.name).toBe('segment-item');
+    });
+
+    it('demotes the default block created beside an existing child', () => {
+      // Enter at the end of a segment-item creates a sibling with the editor's
+      // DEFAULT tool. Without the restriction that lands a stray paragraph among
+      // the segments \u2014 the foreign child the container then has to filter out.
+      const { children } = withSegmentsContainer(['segment-a']);
+
+      const inserted = operations.insert(
+        { index: repository.getBlockIndex(children[0]) + 1 },
+        blocksStore
+      );
+
+      expect(inserted.name).toBe('segment-item');
+    });
+
+    it('leaves a root-level insert alone when it is explicitly top-level', () => {
+      const { children } = withSegmentsContainer(['segment-a']);
+
+      const inserted = operations.insert(
+        {
+          index: repository.getBlockIndex(children[0]) + 1,
+          forceTopLevel: true,
+        },
+        blocksStore
+      );
+
+      expect(inserted.name).toBe('paragraph');
+    });
+
+    it('refuses to move a disallowed block into the container', () => {
+      const { children } = withSegmentsContainer(['segment-a']);
+
+      const outsider = repository.getBlockById('block-1') as Block;
+      const fromIndex = repository.getBlockIndex(outsider);
+      const toIndex = repository.getBlockIndex(children[0]);
+
+      operations.move(toIndex, fromIndex, false, blocksStore);
+
+      expect(repository.getBlockIndex(outsider)).toBe(fromIndex);
     });
   });
 

@@ -171,6 +171,21 @@ describe('ModificationsObserver', () => {
     expect(onChange).toHaveBeenCalledWith(apiMethods, blockEvent2);
   });
 
+  it('stays disarmed when the host configured neither onChange nor onSave', () => {
+    /**
+     * The arming contract: with no handler to deliver to, an enabled observer must
+     * not even queue the mutation or schedule a batch. Core used to default
+     * `onChange` to a no-op, which satisfied this gate for every editor and made
+     * it unreachable — see core.ts's `onChange` note.
+     */
+    const { observer, eventsDispatcher } = createObserver({ onChange: undefined });
+
+    observer.enable();
+    eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('does not deliver onChange until enable() has run (mount-time bookkeeping is silent)', () => {
     // A freshly constructed observer is inert: block mutations fired during the
     // editor's own mount (before core calls enable() post-render) must NOT reach

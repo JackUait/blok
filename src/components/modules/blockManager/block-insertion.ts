@@ -12,11 +12,12 @@ import { Dom as $ } from '../../dom';
 import { generateBlockId } from '../../utils';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
+import { resolveChildTool } from '../../utils/child-tools';
 import type { BlockFactory } from './factory';
 import type { BlockHierarchy } from './hierarchy';
 import type { BlockRepository } from './repository';
 import type { BlockDidMutated, BlockOperationsDependencies, OperationsContext } from './operations-context';
-import type { InsertBlockOptions, BlocksStore } from './types';
+import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 /**
@@ -139,6 +140,28 @@ export class BlockInsertion {
 
       if (neighborBlock !== undefined && isInsideTableCell(neighborBlock) && isRestrictedInTableCell(name)) {
         return this.dependencies.config.defaultBlock ?? 'paragraph';
+      }
+
+      /**
+       * Generic per-container child restrictions (`static childTools`) — the
+       * table rule above is the hard-wired special case of this.
+       *
+       * The container is derived from the SAME neighbour: the new block joins
+       * its parent (for a replace, it takes the replaced block's place; for an
+       * insert, it lands beside the predecessor and inherits its container).
+       * `forceTopLevel` is the explicit "this belongs at root" signal, so it
+       * opts out — that is what keeps Enter-at-the-end-of-a-top-level-block from
+       * being read as "append to whatever container ends above me".
+       *
+       * A disallowed tool is demoted, never refused: this path runs for the
+       * Enter key and the toolbox, which must always produce a block.
+       */
+      if (!forceTopLevel && neighborBlock !== undefined && neighborBlock.parentId !== null) {
+        return resolveChildTool(
+          this.repository.getBlockById(neighborBlock.parentId),
+          name,
+          this.dependencies.config.defaultBlock ?? 'paragraph'
+        );
       }
 
       return name;
@@ -555,7 +578,8 @@ export class BlockInsertion {
     insertIndex: number,
     blocksStore: BlocksStore,
     childData?: BlockToolData,
-    toolName?: string
+    toolName?: string,
+    options: InsertInsideParentOptions = {}
   ): Block {
     const parentBlock = this.repository.getBlockById(parentId);
 
@@ -563,7 +587,8 @@ export class BlockInsertion {
       throw new Error(`Parent block with id "${parentId}" not found`);
     }
 
-    const newBlockId = generateBlockId();
+    const { id: requestedId, tunes, focus = false } = options;
+    const newBlockId = requestedId ?? generateBlockId();
     const defaultBlockTool = this.dependencies.config.defaultBlock ?? 'paragraph';
     /**
      * Resolve the tool name ONCE, BEFORE the Yjs write. `ctx.insert()` runs its
@@ -576,9 +601,16 @@ export class BlockInsertion {
     const requestedTool = toolName ?? defaultBlockTool;
     const slotNeighbour = this.repository.getBlockByIndex(insertIndex > 0 ? insertIndex - 1 : 0);
     const landsInsideTableCell = isInsideTableCell(parentBlock) || isInsideTableCell(slotNeighbour);
+    /**
+     * The parent is EXPLICIT here, so the generic per-container child
+     * restrictions (`static childTools`) apply without any neighbour guesswork:
+     * a tool the container does not permit is demoted to its first `allow`
+     * entry. Layered after the table rule so a table cell keeps its own
+     * (differently-scoped, ancestor-based) demotion.
+     */
     const resolvedTool = landsInsideTableCell && isRestrictedInTableCell(requestedTool)
       ? defaultBlockTool
-      : requestedTool;
+      : resolveChildTool(parentBlock, requestedTool, defaultBlockTool);
     /**
      * `{ text: '' }` is the empty-paragraph seed; handing it to a tool that has
      * no `text` field would write junk into the saved document. An explicitly
@@ -611,8 +643,9 @@ export class BlockInsertion {
         tool: resolvedTool,
         data: resolvedChildData,
         index: insertIndex,
-        needToFocus: false,
+        needToFocus: focus,
         skipYjsSync: true,
+        ...(tunes !== undefined && { tunes }),
       }, blocksStore);
 
       // Update currentBlockIndex AFTER insert so blockDidMutated sees original as current

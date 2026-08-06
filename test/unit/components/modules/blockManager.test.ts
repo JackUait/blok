@@ -1155,7 +1155,7 @@ describe('BlockManager', () => {
 
     blockManager.insertInsideParent('parent', 1, { level: 2 }, 'header');
 
-    expect(insertSpy).toHaveBeenCalledWith('parent', 1, expect.anything(), { level: 2 }, 'header');
+    expect(insertSpy).toHaveBeenCalledWith('parent', 1, expect.anything(), { level: 2 }, 'header', undefined);
   });
 
   describe('hierarchy preservation', () => {

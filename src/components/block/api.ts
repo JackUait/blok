@@ -1,4 +1,4 @@
-import type { BlockAPI as BlockAPIInterface } from '../../../types/api';
+import type { BlockAPI as BlockAPIInterface, InsertChildOptions } from '../../../types/api';
 import type { SavedData } from '../../../types/data-formats';
 import type { BlockTuneData } from '../../../types/block-tunes/block-tune-data';
 import type { BlockToolData, ToolConfig, ToolboxConfigEntry } from '../../../types/tools';
@@ -29,6 +29,21 @@ const readerFor = (api: ApiModules): IndexReader => {
     },
     getBlockIndex: (id: string) => blocks.getBlockIndex(id),
   };
+};
+
+/**
+ * Flat index of a block by id, without `blocks.getBlockIndex`'s `warn` for an
+ * unknown id — used by the insert-if-absent probe, where "absent" is the
+ * expected happy path.
+ * @param reader - flat-array reader over the live block list
+ * @param id - block id to look for
+ * @returns the flat index, or undefined when no block carries that id
+ */
+const findFlatIndexById = (reader: IndexReader, id: string): number | undefined => {
+  const index = Array.from({ length: reader.getBlocksCount() }, (_unused, i) => i)
+    .find((i) => reader.getBlockByIndex(i)?.id === id);
+
+  return index;
 };
 
 /**
@@ -217,19 +232,114 @@ const BlockAPIConstructor = function BlockAPI(
      * { after }); it defaults to 'end' (append past the whole subtree). The
      * flat insert index is resolved by the shared tree helper, so nested
      * descendants are handled correctly.
+     *
+     * `options` carries the same `{ focus, caret, id, tunes, replace }` the
+     * framework adapters' rich `insert` spec does, so a container tool inserting
+     * THROUGH its own block gets the same power as one inserting at a flat index
+     * — no hand-rolled caret placement, no follow-up `update` to apply tunes.
      * @param {BlockToolData} [childData] - data for the new child
      * @param {InsertPosition} [position] - where among children (default 'end')
      * @param {string} [toolName] - tool to create (default `config.defaultBlock`)
-     * @returns {BlockAPIInterface} the created child
+     * @param {InsertChildOptions} [options] - focus/caret/id/tunes/replace
+     * @returns {BlockAPIInterface} the created child (or, for an `id` that already
+     *   exists, that existing child — nothing is inserted)
      */
     insertChild(
       childData?: BlockToolData,
       position: InsertPosition = 'end',
-      toolName?: string
+      toolName?: string,
+      options: InsertChildOptions = {}
     ): BlockAPIInterface {
-      const insertIndex = resolveInsertIndex(readerFor(api), block.id, position);
+      const { focus = false, caret, id, tunes, replace = false } = options;
+      const blocks = api.methods.blocks;
+      const reader = readerFor(api);
 
-      return api.methods.blocks.insertInsideParent(block.id, insertIndex, childData, toolName);
+      /**
+       * Insert-if-absent, matching the adapters' `insert({ id })`: a stable id
+       * that already exists returns the existing child and creates nothing, so a
+       * container tool re-running its seeding logic can't duplicate rows. Probed
+       * by scanning the flat array rather than `getBlockIndex`, which logs a
+       * `warn` for an unknown id — noise on this expected-absent happy path.
+       * Skipped under `replace`, which is an explicit overwrite.
+       */
+      if (id !== undefined && !replace) {
+        const existingIndex = findFlatIndexById(reader, id);
+
+        if (existingIndex !== undefined) {
+          return blocks.getBlockByIndex(existingIndex) as BlockAPIInterface;
+        }
+      }
+
+      /**
+       * A replace overwrites the child named by an object `position` — with
+       * 'start'/'end' there is no target, and silently overwriting whatever
+       * happens to occupy the resolved slot would be a data-loss footgun.
+       */
+      if (replace && typeof position !== 'object') {
+        throw new Error(
+          'Could not replace child Block: `replace` needs a position naming the child to overwrite, ' +
+            'e.g. { before: childId }.'
+        );
+      }
+
+      const insertIndex = resolveInsertIndex(reader, block.id, position, replace);
+
+      const runInsert = (): BlockAPIInterface => {
+        if (!replace) {
+          return blocks.insertInsideParent(block.id, insertIndex, childData, toolName, {
+            ...(focus && { focus }),
+            ...(id !== undefined && { id }),
+            ...(tunes !== undefined && { tunes }),
+          });
+        }
+
+        /**
+         * Route the replace through the generic flat-index insert, which already
+         * owns the whole overwrite choreography (parent-link transfer, re-homing
+         * the replaced block's children, Yjs). `insertInsideParent` writes to Yjs
+         * BEFORE the DOM insert and has no removal counterpart, so teaching IT to
+         * replace would mean a second, divergent implementation of that dance.
+         * Re-assert the parent afterwards so the replacement stays in this
+         * container.
+         */
+        const created = blocks.insert(
+          toolName,
+          childData ?? (toolName === undefined ? { text: '' } : {}),
+          {},
+          insertIndex,
+          focus,
+          true,
+          id,
+          tunes
+        );
+
+        blocks.setBlockParent(created.id, block.id);
+
+        return created;
+      };
+
+      /**
+       * The replace path is two operations (insert + reparent); group them so one
+       * CMD+Z reverses the whole swap. A plain insert is already atomic inside
+       * `insertInsideParent`, so it opens no extra transaction.
+       */
+      const child = replace && typeof blocks.transact === 'function'
+        ? ((): BlockAPIInterface => {
+            const out: { child: BlockAPIInterface | null } = { child: null };
+
+            blocks.transact(() => {
+              out.child = runInsert();
+            });
+
+            return out.child as unknown as BlockAPIInterface;
+          })()
+        : runInsert();
+
+      if (caret !== undefined) {
+        api.methods.caret.setToBlock(child.id, caret.position ?? 'default', caret.offset ?? 0);
+      }
+
+      return child;
     },
 
     /**

@@ -1,4 +1,19 @@
+import { DATA_ATTR } from '../../../constants';
 import { KEYBOARD_EVENT_KEY_TO_KEY_CODE_MAP, PRINTABLE_SPECIAL_KEYS } from '../constants';
+
+/**
+ * True when a keyboard event originated inside a subtree a Tool claimed with
+ * `data-blok-keyboard-owner` — the declarative "this field owns its keyboard"
+ * opt-out. Callers must stand their handling down entirely for such an event.
+ * @param target - the event target to test (`event.target`)
+ */
+export const isInsideKeyboardOwner = (target: EventTarget | null): boolean => {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return target.closest(`[${DATA_ATTR.keyboardOwner}]`) !== null;
+};
 
 /**
  * Convert KeyboardEvent.key or code to the legacy numeric keyCode

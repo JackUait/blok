@@ -3,10 +3,13 @@
  */
 
 import type { BlockOrigin, BlockToolData } from '../../../../types';
+import type { InsertInsideParentOptions } from '../../../../types/api/blocks';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import type { BlockMutationType, BlockMutationEventMap } from '../../../../types/events/block';
 import type { Block } from '../../block';
 import type { Blocks } from '../../blocks';
+
+export type { InsertInsideParentOptions };
 
 /**
  * Block creation options

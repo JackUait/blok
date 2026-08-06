@@ -6,6 +6,7 @@ import type { BlockToolAdapter } from '../tools/block';
 import type { ToolsCollection } from '../tools/collection';
 import { beautifyShortcut, isMobileScreen } from '../utils';
 import { getCaretOffset } from '../utils/caret/selection';
+import { restrictedChildToolNames } from '../utils/child-tools';
 import { EventsDispatcher } from '../utils/events';
 import { Listeners } from '../utils/listeners';
 import type { Popover } from '../utils/popover';
@@ -249,10 +250,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private currentContentEditable: Element | null = null;
 
   /**
-   * Whether the toolbox was opened inside a table cell.
-   * Used to restore restricted tool visibility on close.
+   * Tool names hidden for the duration of this opening because the block being
+   * inserted would land somewhere that does not permit them — a table cell
+   * (the Table tool's `restrictedTools`) or a container declaring
+   * `static childTools`. Kept so close() restores exactly what open() hid.
    */
-  private isInsideTableCell = false;
+  private restrictedToolNames: string[] = [];
 
   /**
    * Id of the block whose mutation watching was stopped on open, so it can be
@@ -465,13 +468,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     this.mutationWatchStoppedBlockId = currentBlock?.id ?? null;
 
     /**
-     * Hide restricted tools (headers, tables) when the caret is inside a table cell.
+     * Hide tools the insertion target does not permit: the Table tool's
+     * cell restrictions (headers, nested tables) and any container's own
+     * `static childTools` allow/deny list.
      */
-    this.isInsideTableCell = currentBlock !== undefined
-      && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+    this.restrictedToolNames = this.resolveRestrictedToolNames(currentBlock);
 
-    if (this.isInsideTableCell) {
-      this.toggleRestrictedToolsHidden(true);
+    if (this.restrictedToolNames.length > 0) {
+      this.toggleRestrictedToolsHidden(this.restrictedToolNames, true);
     }
 
     /**
@@ -548,9 +552,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
    * Close Toolbox
    */
   public close(): void {
-    if (this.isInsideTableCell) {
-      this.toggleRestrictedToolsHidden(false);
-      this.isInsideTableCell = false;
+    if (this.restrictedToolNames.length > 0) {
+      this.toggleRestrictedToolsHidden(this.restrictedToolNames, false);
+      this.restrictedToolNames = [];
     }
 
     this.restoreBlockMutationWatching();
@@ -681,9 +685,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
       return;
     }
 
-    if (this.isInsideTableCell) {
-      this.toggleRestrictedToolsHidden(false);
-      this.isInsideTableCell = false;
+    if (this.restrictedToolNames.length > 0) {
+      this.toggleRestrictedToolsHidden(this.restrictedToolNames, false);
+      this.restrictedToolNames = [];
     }
 
     this.restoreBlockMutationWatching();
@@ -708,14 +712,44 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   }
 
   /**
+   * Tool names the block about to be inserted may not use, given where it would
+   * land. Two independent sources, unioned:
+   *
+   * - the Table tool's `restrictedTools` registry, scoped by the ANCESTOR test
+   *   `isInsideTableCell` (a cell's content is nested arbitrarily deep);
+   * - the DIRECT parent container's own `static childTools` allow/deny list —
+   *   the generic mechanism any tool can declare.
+   * @param currentBlock - the block the toolbox was opened on
+   */
+  private resolveRestrictedToolNames(currentBlock: BlockAPI | undefined): string[] {
+    const insideTableCell = currentBlock !== undefined
+      && currentBlock.holder.closest('[data-blok-table-cell-blocks]') !== null;
+
+    const fromTableCell = insideTableCell ? getRestrictedTools() : [];
+
+    const parentId = currentBlock?.parentId ?? null;
+    const parentName = parentId === null ? undefined : this.api.blocks.getById(parentId)?.name;
+    const parentAdapter = parentName === undefined
+      ? undefined
+      : this.api.tools.getBlockTools().find((tool) => tool.name === parentName);
+
+    const fromContainer = restrictedChildToolNames(
+      parentAdapter?.childTools,
+      this.toolsToBeDisplayed.map((tool) => tool.name)
+    );
+
+    return [...new Set([...fromTableCell, ...fromContainer])];
+  }
+
+  /**
    * Toggles hidden state for all popover items belonging to restricted tools.
    * Matches by tool registration name so that tools with custom entry names
    * (e.g., list tool with entries named bulleted-list, numbered-list, check-list)
    * are correctly restricted.
+   * @param restrictedTools - tool names to toggle
+   * @param isHidden - true to hide their toolbox entries, false to show them
    */
-  private toggleRestrictedToolsHidden(isHidden: boolean): void {
-    const restrictedTools = getRestrictedTools();
-
+  private toggleRestrictedToolsHidden(restrictedTools: string[], isHidden: boolean): void {
     for (const tool of this.toolsToBeDisplayed) {
       if (!restrictedTools.includes(tool.name)) {
         continue;

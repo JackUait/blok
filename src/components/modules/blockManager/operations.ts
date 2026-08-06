@@ -24,7 +24,7 @@ import type {
   OperationsContext,
 } from './operations-context';
 import type { BlockRepository } from './repository';
-import type { InsertBlockOptions, BlocksStore } from './types';
+import type { InsertBlockOptions, InsertInsideParentOptions, BlocksStore } from './types';
 import type { BlockYjsSync } from './yjs-sync';
 
 export type { BlockOperationsDependencies, BlockDidMutated } from './operations-context';
@@ -252,6 +252,7 @@ export class BlockOperations implements OperationsContext {
    * @param blocksStore - The blocks store to modify
    * @param childData - optional data for the new child block
    * @param toolName - optional tool to create; defaults to `config.defaultBlock`
+   * @param options - optional id / tunes / focus for the new child
    * @returns the newly created child block
    */
   public insertInsideParent(
@@ -259,9 +260,10 @@ export class BlockOperations implements OperationsContext {
     insertIndex: number,
     blocksStore: BlocksStore,
     childData?: BlockToolData,
-    toolName?: string
+    toolName?: string,
+    options?: InsertInsideParentOptions
   ): Block {
-    return this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData, toolName);
+    return this.insertion.insertInsideParent(parentId, insertIndex, blocksStore, childData, toolName, options);
   }
 
   /**

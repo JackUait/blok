@@ -10,7 +10,7 @@ import { BlockSelectionKeys } from './composers/blockSelectionKeys';
 import { KeyboardNavigation } from './composers/keyboardNavigation';
 import { MarkdownShortcuts } from './composers/markdownShortcuts';
 import { NavigationMode } from './composers/navigationMode';
-import { isPrintableKeyEvent, keyCodeFromEvent } from './utils/keyboard';
+import { isPrintableKeyEvent, isInsideKeyboardOwner, keyCodeFromEvent } from './utils/keyboard';
 
 /**
  * All keydowns on Block
@@ -74,6 +74,18 @@ export class BlockEvents extends Module {
    * @param {KeyboardEvent} event - keydown
    */
   public keydown(event: KeyboardEvent): void {
+    /**
+     * A Tool can claim the whole keyboard for a subtree it renders (a field with
+     * its own Tab/Escape/arrow semantics) by marking it
+     * `data-blok-keyboard-owner`. Blok's block-level pipeline stands down
+     * entirely there — see the attribute's note in constants/data-attributes.
+     * Checked before ANY handler so navigation mode, the structural keys, "/",
+     * the block shortcuts and the caret navigation are all skipped in one place.
+     */
+    if (isInsideKeyboardOwner(event.target)) {
+      return;
+    }
+
     /**
      * Handle navigation mode keys first
      */
@@ -254,6 +266,16 @@ export class BlockEvents extends Module {
    * @param {InputEvent} event - input event
    */
   public input(event: InputEvent): void {
+    /**
+     * Same stand-down as keydown: inside a `data-blok-keyboard-owner` subtree the
+     * Tool owns typing too, so the markdown auto-convert must not read "# " typed
+     * into a Tool's field as a request to turn the surrounding BLOCK into a
+     * heading.
+     */
+    if (isInsideKeyboardOwner(event.target)) {
+      return;
+    }
+
     /**
      * Ensure currentBlock is set from the input target.
      * The debounced selectionchange handler may not have fired yet,

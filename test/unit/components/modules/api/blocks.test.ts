@@ -1494,7 +1494,7 @@ describe('BlocksAPI', () => {
 
       blocksApi.methods.insertInsideParent('toggle-1', 1, { level: 2 }, 'header');
 
-      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, { level: 2 }, 'header');
+      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, { level: 2 }, 'header', undefined);
     });
 
     it('leaves the tool name undefined when the caller does not ask for one', () => {
@@ -1503,7 +1503,7 @@ describe('BlocksAPI', () => {
 
       blocksApi.methods.insertInsideParent('toggle-1', 1);
 
-      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, undefined, undefined);
+      expect(blockManager.insertInsideParent).toHaveBeenCalledWith('toggle-1', 1, undefined, undefined, undefined);
     });
   });
 

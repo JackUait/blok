@@ -153,7 +153,7 @@ describe('handed-out BlockAPI is live', () => {
     const created = blocksApi.getById('p')?.insertChild({ text: 'nested' });
 
     // p(0) a(1) a1(2) b(3) → the subtree ends at 3, so 'end' appends at flat index 4.
-    expect(insertInsideParent).toHaveBeenCalledWith('p', 4, { text: 'nested' }, undefined);
+    expect(insertInsideParent).toHaveBeenCalledWith('p', 4, { text: 'nested' }, undefined, {});
     expect(created).not.toBeNull();
     expect(created?.id).toBe('created-4');
   });

@@ -514,6 +514,159 @@ describe('BlockEvents', () => {
     });
   });
 
+  /**
+   * Blok's block-level keyboard is contenteditable-shaped, and its native-input
+   * exemption is a FIXED subset (Enter/Backspace/Delete//) — Escape, Tab and the
+   * arrows stay Blok's on the theory that they are "how a user leaves a field".
+   * That is a fine default but was not overridable, so any tool rendering a field
+   * with its own keyboard semantics had to re-implement the exemption itself with
+   * a stopPropagation/preventDefault handler per key. `data-blok-keyboard-owner`
+   * is the declarative opt-out: inside it, the whole block-level pipeline stands
+   * down.
+   */
+  describe('data-blok-keyboard-owner', () => {
+    const ownedField = (tag: 'input' | 'div' = 'input'): HTMLElement => {
+      const host = document.createElement('div');
+
+      host.setAttribute(DATA_ATTR.keyboardOwner, '');
+
+      const field = document.createElement(tag);
+
+      host.appendChild(field);
+      document.body.appendChild(host);
+
+      return field;
+    };
+
+    it('leaves Escape to the field instead of entering navigation mode', () => {
+      const enableNavigationMode = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          enableNavigationMode,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      blockEvents.keydown(createKeyboardEvent({ key: 'Escape',
+        target: ownedField() }));
+
+      expect(enableNavigationMode).not.toHaveBeenCalled();
+    });
+
+    it('still enters navigation mode on Escape outside an owned field', () => {
+      const enableNavigationMode = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockSelection: {
+          enableNavigationMode,
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      blockEvents.keydown(createKeyboardEvent({ key: 'Escape',
+        target: document.createElement('div') }));
+
+      expect(enableNavigationMode).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not resolve the current block from an owned field on Enter', () => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+      });
+
+      blockEvents.keydown(createKeyboardEvent({ keyCode: keyCodes.ENTER,
+        target: ownedField() }));
+
+      expect(setCurrentBlockByChildNode).not.toHaveBeenCalled();
+    });
+
+    it('does not open the toolbox when "/" is typed inside an owned field', () => {
+      // A non-input owned element: the existing native-input exemption would not
+      // cover this, so only the ownership opt-out can keep the slash out of the
+      // toolbox. The host has to sit INSIDE the editor wrapper — slashPressed
+      // ignores targets outside it, which would make this pass for the wrong
+      // reason.
+      const wrapper = document.createElement('div');
+      const host = document.createElement('div');
+      const target = document.createElement('div');
+
+      host.setAttribute(DATA_ATTR.keyboardOwner, '');
+      host.appendChild(target);
+      wrapper.appendChild(host);
+      document.body.appendChild(wrapper);
+
+      const toolboxOpen = vi.fn();
+      const insertContentAtCaretPosition = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock: { isEmpty: true } as unknown as Block,
+          setCurrentBlockByChildNode: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        UI: {
+          nodes: { wrapper },
+        } as unknown as BlokModules['UI'],
+        Caret: {
+          insertContentAtCaretPosition,
+        } as unknown as BlokModules['Caret'],
+        Toolbar: {
+          opened: false,
+          hideBlockActions: vi.fn(),
+          moveAndOpen: vi.fn(),
+          discardPlusContext: vi.fn(),
+          toolbox: { open: toolboxOpen },
+        } as unknown as BlokModules['Toolbar'],
+      });
+
+      blockEvents.keydown(createKeyboardEvent({ keyCode: keyCodes.SLASH,
+        key: '/',
+        target }));
+
+      expect(toolboxOpen).not.toHaveBeenCalled();
+      expect(insertContentAtCaretPosition).not.toHaveBeenCalled();
+
+      wrapper.remove();
+    });
+
+    it('does not run markdown auto-convert for typing inside an owned field', () => {
+      const setCurrentBlockByChildNode = vi.fn();
+      const resetGoalColumn = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          setCurrentBlockByChildNode,
+        } as unknown as BlokModules['BlockManager'],
+        Caret: {
+          resetGoalColumn,
+        } as unknown as BlokModules['Caret'],
+      });
+
+      blockEvents.input({ inputType: 'insertText',
+        data: ' ',
+        target: ownedField() } as unknown as InputEvent);
+
+      expect(setCurrentBlockByChildNode).not.toHaveBeenCalled();
+      expect(resetGoalColumn).not.toHaveBeenCalled();
+    });
+
+    it('leaves Tab to the field instead of indenting the block', () => {
+      const target = ownedField();
+      const transactMoves = vi.fn();
+      const blockEvents = createBlockEvents({
+        BlockManager: {
+          currentBlock: { id: 'b1' } as unknown as Block,
+          setCurrentBlockByChildNode: vi.fn(),
+        } as unknown as BlokModules['BlockManager'],
+        YjsManager: {
+          transactMoves,
+        } as unknown as BlokModules['YjsManager'],
+      });
+
+      blockEvents.keydown(createKeyboardEvent({ keyCode: keyCodes.TAB,
+        target }));
+
+      expect(transactMoves).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Shift+F10 context menu', () => {
     it('opens BlockSettings anchored to the current block holder rect', () => {
       let blockSettingsOpened = false;

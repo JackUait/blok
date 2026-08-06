@@ -1,5 +1,5 @@
 import type { BlockOrigin, BlockToolData, LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, ToolConfig } from '../../../../types';
-import type { BlockAPI as BlockAPIInterface, Blocks } from '../../../../types/api';
+import type { BlockAPI as BlockAPIInterface, Blocks, InsertInsideParentOptions } from '../../../../types/api';
 import type { BlockTuneData } from '../../../../types/block-tunes/block-tune-data';
 import { blocksToMarkdown } from '../../../markdown/blocks-to-markdown';
 import type { MarkdownImportConfig } from '../../../markdown/types';
@@ -573,7 +573,8 @@ export class BlocksAPI extends Module {
     parentId: string,
     insertIndex: number,
     childData?: BlockToolData,
-    toolName?: string
+    toolName?: string,
+    options?: InsertInsideParentOptions
   ): BlockAPIInterface => {
     // Force new undo group so this insertion is separate from previous typing,
     // UNLESS an enclosing atomic operation (e.g. tool conversion) has asked the
@@ -583,7 +584,7 @@ export class BlocksAPI extends Module {
       this.Blok.YjsManager.stopCapturing();
     }
 
-    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName);
+    const newBlock = this.Blok.BlockManager.insertInsideParent(parentId, insertIndex, childData, toolName, options);
 
     // NOTE: Do NOT call stopCapturing in a trailing microtask. The operations layer
     // uses extendThroughRAF on its atomic wrapper to keep isSyncingFromYjs true

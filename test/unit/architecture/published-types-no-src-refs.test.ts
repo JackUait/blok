@@ -42,6 +42,8 @@ const ICONS_SOURCE = join(SRC_DIR, 'components', 'icons', 'index.ts');
 const ICONS_DTS = join(TYPES_DIR, 'icons.d.ts');
 const MESSAGES_SOURCE = join(SRC_DIR, 'components', 'i18n', 'locales', 'en.json');
 const MESSAGE_KEYS_DTS = join(TYPES_DIR, 'message-keys.d.ts');
+const DATA_ATTR_SOURCE = join(SRC_DIR, 'components', 'constants', 'data-attributes.ts');
+const DATA_ATTR_DTS = join(TYPES_DIR, 'data-attributes.d.ts');
 
 /** Recursively collect every `.d.ts` file under `types/`. */
 function collectDeclarationFiles(dir: string): string[] {
@@ -94,6 +96,23 @@ function extractExportedConstNames(source: string): string[] {
   }
 
   return names;
+}
+
+/**
+ * Every `key: 'data-blok-…'` pair declared by a DATA_ATTR source or declaration
+ * file. The source writes `key: 'value',`; the declaration writes
+ * `readonly key: 'value';` — one shape covers both.
+ */
+function extractDataAttrPairs(source: string): Record<string, string> {
+  const pairs: Record<string, string> = {};
+  const pattern = /^\s*(?:readonly\s+)?([A-Za-z_$][\w$]*)\s*:\s*'(data-blok-[^']*)'/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(source)) !== null) {
+    pairs[match[1]] = match[2];
+  }
+
+  return pairs;
 }
 
 /** `types/` directories of every workspace package under `packages/`. */
@@ -170,6 +189,25 @@ describe('types/icons.d.ts stays in sync with src icon exports', () => {
       'types/icons.d.ts drifted from src/components/icons/index.ts. ' +
         'Run `node scripts/generate-icons-dts.mjs` to regenerate it.',
     ).toEqual({ missing: [], stale: [] });
+  });
+});
+
+describe('types/data-attributes.d.ts stays in sync with src DATA_ATTR', () => {
+  it('declares exactly the attributes the runtime DATA_ATTR ships', () => {
+    const sourcePairs = extractDataAttrPairs(readFileSync(DATA_ATTR_SOURCE, 'utf-8'));
+    const declaredPairs = extractDataAttrPairs(readFileSync(DATA_ATTR_DTS, 'utf-8'));
+
+    const missing = Object.keys(sourcePairs).filter((key) => !(key in declaredPairs)).sort();
+    const stale = Object.keys(declaredPairs).filter((key) => !(key in sourcePairs)).sort();
+    const mismatched = Object.keys(sourcePairs)
+      .filter((key) => key in declaredPairs && declaredPairs[key] !== sourcePairs[key])
+      .sort();
+
+    expect(
+      { missing, stale, mismatched },
+      'types/data-attributes.d.ts drifted from src/components/constants/data-attributes.ts. ' +
+        'Run `node scripts/generate-data-attributes-dts.mjs` to regenerate it.',
+    ).toEqual({ missing: [], stale: [], mismatched: [] });
   });
 });
 

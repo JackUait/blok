@@ -92,6 +92,13 @@ export enum InternalBlockToolSettings {
    */
   OwnsChildren = 'ownsChildren',
   /**
+   * Which block tools may be DIRECT children of this Tool's block
+   * (`{ allow?, deny? }`). The generic form of the Table tool's cell
+   * restrictions: any container can declare it, and core enforces it on insert,
+   * move and in the toolbox.
+   */
+  ChildTools = 'childTools',
+  /**
    * Enter on this Tool's empty LAST child stays INSIDE the container instead of
    * escaping it (a column, a card) — per-tool policy the DOM cannot express,
    * since a callout renders the same nested-blocks slot yet wants the escape

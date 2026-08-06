@@ -1298,10 +1298,10 @@ block?.setParent('parent-block-id');
 block?.setParent(null);`,
       },
       {
-        name: "block.insertChild(childData?, position?, toolName?)",
+        name: "block.insertChild(childData?, position?, toolName?, options?)",
         returnType: "BlockAPI",
         description:
-          "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `toolName` picks the child's block tool and defaults to `config.defaultBlock`, so a TYPED child is one operation instead of insert-then-reparent; a tool restricted inside table cells is demoted to the default block when the new child would land inside one. `childData` defaults to `{ text: '' }` for the default block and to `{}` when `toolName` names a different tool.",
+          "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `toolName` picks the child's block tool and defaults to `config.defaultBlock`, so a TYPED child is one operation instead of insert-then-reparent; a tool restricted inside table cells is demoted to the default block when the new child would land inside one. `childData` defaults to `{ text: '' }` for the default block and to `{}` when `toolName` names a different tool. `options` carries the same `{ focus, caret, id, tunes, replace }` vocabulary the framework adapters' rich `insert` spec uses, so a container tool never has to hand-roll caret placement or follow up with an `update` to apply tunes.",
         example: `const block = editor.blocks.getById('toggle-123');
 const child = block?.insertChild({ text: 'Hidden content' });
 
@@ -1310,7 +1310,16 @@ block?.insertChild({ text: 'First' }, 'start');
 block?.insertChild({ text: 'After that one' }, { after: 'child-id' });
 
 // A typed child, in a single undo entry
-block?.insertChild({ text: 'Section', level: 3 }, 'end', 'header');`,
+block?.insertChild({ text: 'Section', level: 3 }, 'end', 'header');
+
+// Drop the caret into the new child at a specific offset
+block?.insertChild({ text: 'Draft' }, 'end', undefined, { caret: { offset: 5 } });
+
+// Idempotent: a re-running effect cannot duplicate this child
+block?.insertChild({ text: 'Intro' }, 'start', undefined, { id: 'intro-row' });
+
+// Child-level "turn into" — overwrite an existing child, keeping it parented
+block?.insertChild({ text: 'Now a heading', level: 3 }, { before: 'child-id' }, 'header', { replace: true });`,
         params: [
           {
             name: "childData",
@@ -1335,6 +1344,14 @@ block?.insertChild({ text: 'Section', level: 3 }, 'end', 'header');`,
             default: "config.defaultBlock",
             description:
               "Block tool to create for the child. Demoted to the default block when it is restricted inside table cells and the new child would land inside one.",
+          },
+          {
+            name: "options",
+            type: "InsertChildOptions",
+            required: false,
+            default: "{}",
+            description:
+              "focus — make the new child the current block. caret — place the caret inside it ({ position?, offset? }), applied only when a child is actually created. id — explicit id; an id that already exists is insert-if-absent (that child is returned, nothing is created). tunes — block tune data applied at creation. replace — overwrite the child named by an object position instead of inserting beside it; with 'start'/'end' there is nothing to overwrite and the call throws.",
           },
         ],
       },
@@ -3206,6 +3223,36 @@ export const StepsTool = createReactBlock({
   type: 'steps',
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
   component: StepsCard,
+});`,
+      },
+      {
+        name: "BlockToolConstructable.childTools",
+        returnType: "{ allow?: string[]; deny?: string[] }",
+        description:
+          "A static on your tool CLASS declaring which block tools may be DIRECT children of its block — and core enforces it everywhere for you. On INSERT a disallowed tool is demoted (never refused, because Enter must always produce a block): the target is the first entry of `allow`, so `allow: ['segment-item']` makes \"Enter at the end of a segment\" produce another segment instead of a stray paragraph. On MOVE a drag or keyboard reorder that would carry a disallowed block across the container boundary is refused. In the TOOLBOX the disallowed tools are hidden while the caret sits in a child. `deny` wins over `allow` for a tool named in both, and empty lists read as \"no restriction\". This is the selective, insert-aware counterpart to `ownsChildren`, which is all-or-nothing and clamps moves only — and the generic form of the Table tool's `restrictedTools`, whose enforcement is hard-wired to table cells. Without it a container tool has to defend itself downstream: filtering `child.name` in render, keeping its CSS robust against a foreign child, and migrating strays out of stored documents. On the React/Vue/Angular adapters, declare it in the block spec's `statics` bag like any other class static.",
+        example: `class Segments {
+  static get childTools() {
+    return { allow: ['segment-item'] };
+  }
+
+  render() {
+    this.slot = document.createElement('div');
+    this.slot.setAttribute('data-blok-nested-blocks', '');
+
+    return this.slot;
+  }
+}
+
+// Only forbid a few tools, accept everything else
+class Callout {
+  static childTools = { deny: ['table', 'column_list'] };
+}
+
+// Framework adapters forward it through \`statics\`:
+export const Segments = createReactBlock({
+  type: 'segments',
+  statics: { childTools: { allow: ['segment-item'] } },
+  component: SegmentsCard,
 });`,
       },
       {

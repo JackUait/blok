@@ -6,6 +6,7 @@ import { getCaretOffset } from '../../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
 import { HEADER_TOOL_NAME, LIST_TOOL_NAME } from '../../blockEvents/constants';
+import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
 import { KEYS_REQUIRING_CARET_CAPTURE } from '../constants';
 
 import { Controller } from './_base';
@@ -216,6 +217,17 @@ export class KeyboardController extends Controller {
 
     const target = event.target;
     const key = event.key ?? '';
+
+    /**
+     * A Tool can claim the whole keyboard for a subtree it renders by marking it
+     * `data-blok-keyboard-owner`; the editor-level handling stands down there
+     * too, not just the block-level pipeline. The input/textarea skip below only
+     * covers NATIVE form controls — a Tool's field is often a contenteditable
+     * sub-region or a custom widget, which this attribute covers tag-agnostically.
+     */
+    if (isInsideKeyboardOwner(target)) {
+      return;
+    }
 
     /**
      * Skip input/textarea targets for most keys to avoid intercepting normal

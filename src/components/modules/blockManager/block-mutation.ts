@@ -12,6 +12,7 @@ import type { BlockToolAdapter } from '../../tools/block';
 import { isEmpty, isObject, isString, log } from '../../utils';
 import { announce } from '../../utils/announcer';
 import { convertStringToBlockData, isBlockConvertable } from '../../utils/blocks';
+import { isChildToolAllowed } from '../../utils/child-tools';
 import { sanitizeBlocks, clean, composeSanitizerConfig } from '../../utils/sanitizer';
 import { isInsideTableCell, isRestrictedInTableCell } from '../../../tools/table/table-restrictions';
 import { ToolNotFoundError } from '../../errors/tool-not-found';
@@ -458,8 +459,17 @@ export class BlockMutation {
         && (destinationParent.name === 'column'
           || destinationParent.name === 'column_list'
           || destinationParent.tool.ownsChildren);
+      /**
+       * Selective counterpart of `ownsChildren`: a container that declares
+       * `static childTools` accepts SOME children, so the clamp fires only for a
+       * block whose tool it does not permit. A demotion is impossible here — the
+       * block already exists with its own data — so the reorder is refused, the
+       * same resolution the table's cell restrictions use on this path.
+       */
+      const entersRestrictedContainer =
+        !isChildToolAllowed(destinationParent, movingBlock.name);
 
-      if (exitsColumnStructure || entersOwnedStructure) {
+      if (exitsColumnStructure || entersOwnedStructure || entersRestrictedContainer) {
         return;
       }
     }

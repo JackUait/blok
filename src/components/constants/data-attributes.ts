@@ -304,6 +304,25 @@ export const DATA_ATTR = {
   mutationFree: 'data-blok-mutation-free',
 
   // ============================================
+  // Keyboard Ownership
+  // ============================================
+
+  /** Marks a subtree whose keyboard belongs to the Tool that rendered it, not to
+   *  the editor. Blok's block-level keydown/keyup handling stands down entirely
+   *  for events originating inside it — Escape, Tab, the arrows, "/" and the
+   *  Enter/Backspace/Delete structural keys all reach the element untouched.
+   *
+   *  Blok already exempts native `<input>`/`<textarea>` from the STRUCTURAL keys
+   *  (Enter/Backspace/Delete and "/") because those are contenteditable-shaped
+   *  and would splice the document around a form field. Escape/Tab/arrows are
+   *  deliberately NOT exempt — they are how a user leaves a field. That default
+   *  is right for a one-line title input and wrong for a field with its own
+   *  keyboard semantics (Tab between sub-fields, Escape to cancel an edit, arrows
+   *  to walk a suggestion list), which is exactly what this attribute is for.
+   *  Public authoring hook. */
+  keyboardOwner: 'data-blok-keyboard-owner',
+
+  // ============================================
   // Navigation
   // ============================================
 

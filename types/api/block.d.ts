@@ -9,6 +9,52 @@ import {SavedData} from '../data-formats';
 export type BlockChildPosition = 'start' | 'end' | { before: string } | { after: string };
 
 /**
+ * Where to drop the caret inside a freshly-created child.
+ */
+export interface BlockChildCaretTarget {
+  position?: 'start' | 'end' | 'default';
+  offset?: number;
+}
+
+/**
+ * Extra options for {@link BlockAPI.insertChild} — the same
+ * `{ focus, caret, id, tunes, replace }` vocabulary the framework adapters'
+ * rich `insert` spec uses, so a container tool inserting THROUGH its own block
+ * is not weaker than one inserting at a flat index.
+ */
+export interface InsertChildOptions {
+  /**
+   * Make the new child the editor's current block. Moves the current-block index
+   * only — pass `caret` when you want the caret itself placed inside it.
+   */
+  focus?: boolean;
+  /**
+   * Place the caret inside the new child (e.g. `{ offset: 3 }`). Applied only
+   * when a child is actually created, so an insert-if-absent hit never moves the
+   * caret. This is what removes the need to hand-roll caret placement after a
+   * child insert.
+   */
+  caret?: BlockChildCaretTarget;
+  /**
+   * Explicit id for the new child (generated when omitted). Insert-if-absent: an
+   * id that already exists returns that child and creates nothing, so a tool
+   * that re-runs its seeding logic cannot duplicate children.
+   */
+  id?: string;
+  /** Block tune data to apply at creation, keyed by tune name. */
+  tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Overwrite the child named by an object `position` instead of inserting
+   * beside it — the child-level "turn into". Requires `{ before }`/`{ after }`
+   * naming the child to replace; with 'start'/'end' there is nothing to
+   * overwrite and the call throws rather than clobbering the resolved slot.
+   * The replacement keeps this block as its parent and adopts the replaced
+   * child's own children.
+   */
+  replace?: boolean;
+}
+
+/**
  * @interface BlockAPI Describes Block API methods and properties
  */
 export interface BlockAPI {
@@ -142,9 +188,19 @@ export interface BlockAPI {
    * @param toolName - block tool to create (defaults to `config.defaultBlock`).
    *   A tool restricted inside table cells is demoted to the default block when
    *   the new child would land inside one.
-   * @return the created child
+   * @param options - focus / caret / id / tunes / replace, the same vocabulary
+   *   the framework adapters' rich `insert` spec uses. Without these a container
+   *   tool had to fall back to `blocks.insert` at a hand-computed flat index and
+   *   place the caret itself.
+   * @return the created child — or, for an `id` that already exists, that
+   *   existing child (nothing is inserted)
    */
-  insertChild(childData?: BlockToolData, position?: BlockChildPosition, toolName?: string): BlockAPI;
+  insertChild(
+    childData?: BlockToolData,
+    position?: BlockChildPosition,
+    toolName?: string,
+    options?: InsertChildOptions
+  ): BlockAPI;
 
   /**
    * Move a direct child by `delta` positions among its siblings (clamped to the

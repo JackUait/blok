@@ -4,6 +4,7 @@ import { log } from '../utils/logger';
 
 import { BaseToolAdapter,  InternalBlockToolSettings, UserSettings  } from './base';
 import { ToolsCollection } from './collection';
+import type { ChildToolRestrictions } from '../../../types/tools';
 import type { InlineToolAdapter } from './inline';
 import type { BlockTuneAdapter } from './tune';
 
@@ -113,6 +114,22 @@ export class BlockToolAdapter extends BaseToolAdapter<ToolType.Block, IBlockTool
    */
   public get ownsChildren(): boolean {
     return (this.constructable as unknown as Record<string, boolean | undefined>)[InternalBlockToolSettings.OwnsChildren] === true;
+  }
+
+  /**
+   * Which block tools may be DIRECT children of this Tool's block, or undefined
+   * when it accepts any child.
+   *
+   * `ownsChildren` is all-or-nothing and clamps MOVES only; this is the
+   * selective, insert-aware counterpart, and the generic form of the Table
+   * tool's `restrictedTools` (whose enforcement is hard-wired to table cells).
+   * A container that declares it no longer has to defend itself downstream by
+   * filtering `child.name` in render and styling around a foreign child.
+   */
+  public get childTools(): ChildToolRestrictions | undefined {
+    return (this.constructable as unknown as Record<string, ChildToolRestrictions | undefined>)[
+      InternalBlockToolSettings.ChildTools
+    ];
   }
 
   /**

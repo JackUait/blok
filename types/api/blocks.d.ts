@@ -5,6 +5,28 @@ import {BlockTuneData} from '../block-tunes/block-tune-data';
 import {MarkdownImportConfig} from '../data-formats/markdown-import-config';
 
 /**
+ * Extra options for a child insert.
+ *
+ * The child-insert path used to generate the id itself and hard-code "no tunes,
+ * no focus", so a container tool that needed any of them had to abandon it for a
+ * flat-index `blocks.insert` and re-parent the result by hand. These mirror the
+ * same-named fields of the framework adapters' rich `insert` spec, so the two
+ * insert APIs mean the same thing by the same names.
+ */
+export interface InsertInsideParentOptions {
+  /** Explicit id for the new child (generated when omitted). */
+  id?: string;
+  /** Block tune data to apply at creation, keyed by tune name. */
+  tunes?: { [name: string]: BlockTuneData };
+  /**
+   * Make the new child the editor's current block. As with the adapters'
+   * `insert({ focus })` this moves the current-block index only — to place the
+   * caret itself use the caret API, or `BlockAPI.insertChild`'s `caret` option.
+   */
+  focus?: boolean;
+}
+
+/**
  * Describes methods to manipulate with Blok`s blocks
  */
 export interface Blocks {
@@ -248,9 +270,17 @@ export interface Blocks {
    *   `config.defaultBlock`. A tool restricted inside table cells is demoted to
    *   the default block when the new child would land inside one; an
    *   unregistered tool name throws before anything is written.
+   * @param options - optional id / tunes / focus for the new child, mirroring the
+   *   framework adapters' rich `insert` spec.
    * @returns BlockAPI for the newly created child block
    */
-  insertInsideParent(parentId: string, insertIndex: number, childData?: BlockToolData, toolName?: string): BlockAPI;
+  insertInsideParent(
+    parentId: string,
+    insertIndex: number,
+    childData?: BlockToolData,
+    toolName?: string,
+    options?: InsertInsideParentOptions
+  ): BlockAPI;
 
   /**
    * Execute a function within a transaction.

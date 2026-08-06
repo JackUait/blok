@@ -248,12 +248,18 @@ describe('BlockAPI', () => {
       setBlockParent: ReturnType<typeof vi.fn>;
       move: ReturnType<typeof vi.fn>;
       getChildren: ReturnType<typeof vi.fn>;
+      insert: ReturnType<typeof vi.fn>;
+      transact: ReturnType<typeof vi.fn>;
+      setToBlock: ReturnType<typeof vi.fn>;
     } => {
       const created: BlockAPIInterface = { id: 'new-child', name: 'paragraph', parentId: 'p' } as unknown as BlockAPIInterface;
       const insertInsideParent = vi.fn(() => created);
       const setBlockParent = vi.fn();
       const move = vi.fn();
       const getChildren = vi.fn((parentId: string) => flat.filter((b) => b.parentId === parentId));
+      const insert = vi.fn(() => created);
+      const transact = vi.fn((fn: () => void) => fn());
+      const setToBlock = vi.fn();
 
       const blocks = {
         getBlocksCount: (): number => flat.length,
@@ -267,14 +273,20 @@ describe('BlockAPI', () => {
         insertInsideParent,
         setBlockParent,
         move,
+        insert,
+        transact,
       };
 
       return {
-        api: { methods: { blocks } } as unknown as ApiModules,
+        api: { methods: { blocks,
+          caret: { setToBlock } } } as unknown as ApiModules,
         insertInsideParent,
         setBlockParent,
         move,
         getChildren,
+        insert,
+        transact,
+        setToBlock,
       };
     };
 
@@ -325,7 +337,7 @@ describe('BlockAPI', () => {
       const result = blockAPI.insertChild(data);
 
       // p(0) a(1) b(2) → subtree ends at 2 → append at flat index 3.
-      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, undefined);
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, undefined, {});
       expect(result?.id).toBe('new-child');
     });
 
@@ -341,7 +353,7 @@ describe('BlockAPI', () => {
       blockAPI.insertChild(data, 'start');
 
       // first child 'a' sits at flat index 1.
-      expect(insertInsideParent).toHaveBeenCalledWith('p', 1, data, undefined);
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 1, data, undefined, {});
     });
 
     it('insertChild forwards an explicit tool name so a typed child is ONE operation', () => {
@@ -356,7 +368,92 @@ describe('BlockAPI', () => {
 
       blockAPI.insertChild(data, 'end', 'header');
 
-      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, 'header');
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 3, data, 'header', {});
+    });
+
+    /**
+     * Parity with the rich `insert({ focus, caret, id, tunes, replace })` the
+     * framework adapters expose: a container tool must not have to hand-roll
+     * caret placement (or a second insert call to apply tunes) just because it
+     * inserts THROUGH its own block instead of at a flat index.
+     */
+    it('insertChild forwards focus, an explicit id and tunes to the child insert', () => {
+      const { api, insertInsideParent } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+      const data = { text: 'z' } as BlockToolData;
+      const tunes = { align: { alignment: 'center' } } as unknown as Record<string, BlockTuneData>;
+
+      blockAPI.insertChild(data, 'end', 'paragraph', { focus: true,
+        id: 'fresh',
+        tunes });
+
+      expect(insertInsideParent).toHaveBeenCalledWith('p', 2, data, 'paragraph', {
+        focus: true,
+        id: 'fresh',
+        tunes,
+      });
+    });
+
+    it('insertChild places the caret inside the new child at the requested offset', () => {
+      const { api, setToBlock } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+      blockAPI.insertChild({ text: 'hello' }, 'end', undefined, {
+        caret: { offset: 3 },
+      });
+
+      expect(setToBlock).toHaveBeenCalledWith('new-child', 'default', 3);
+    });
+
+    it('insertChild with an id that already exists creates nothing and returns it', () => {
+      const { api, insertInsideParent } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+      const result = blockAPI.insertChild({ text: 'again' }, 'end', undefined, { id: 'a' });
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+      expect(result?.id).toBe('a');
+    });
+
+    it('insertChild with replace overwrites the referenced child and keeps it parented', () => {
+      const { api, insert, setBlockParent, insertInsideParent, transact } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+        { id: 'b', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+      const data = { level: 3,
+        text: 'Swapped' } as BlockToolData;
+
+      blockAPI.insertChild(data, { before: 'b' }, 'header', { replace: true });
+
+      expect(insertInsideParent).not.toHaveBeenCalled();
+      // 'b' sits at flat index 2 — a replace targets the ref itself.
+      expect(insert).toHaveBeenCalledWith('header', data, {}, 2, false, true, undefined, undefined);
+      // The replacement must stay inside the container, not pop out to root.
+      expect(setBlockParent).toHaveBeenCalledWith('new-child', 'p');
+      // Insert + reparent land as ONE undo entry.
+      expect(transact).toHaveBeenCalledTimes(1);
+    });
+
+    it('insertChild rejects a replace that names no child to overwrite', () => {
+      const { api } = makeApi([
+        { id: 'p', name: 'toggle', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+      ]);
+      const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+      expect(() => blockAPI.insertChild({ text: 'x' }, 'end', undefined, { replace: true }))
+        .toThrow(/replace/i);
     });
 
     it('moveChild clamps a delta and delegates to editor move', () => {

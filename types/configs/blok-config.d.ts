@@ -235,7 +235,13 @@ export interface BlokState {
    * `api.readOnly.isEnabled`.
    *
    * Its PRESENCE is load-bearing: with neither `onChange` nor `onSave` set, the
-   * change-observation pipeline stays disarmed entirely.
+   * change-observation pipeline stays disarmed entirely. `onChange` alone arms
+   * it — you never need a dummy `onSave` for that, and passing one is actively
+   * expensive (it serializes the whole document once per change batch).
+   *
+   * Presence is re-read live, so it is also fine to start with no handler and
+   * attach one later via the runtime setter below; nothing has to be registered
+   * up front to keep the option open.
    *
    * Runtime setter: `handlers.set({ onChange })` — pass `undefined` to unset it.
    *
@@ -260,7 +266,10 @@ export interface BlokState {
    * time), so the handler needs no `api.readOnly.isEnabled` guard.
    *
    * Its PRESENCE is load-bearing: setting it makes blok serialize the whole
-   * document once per change batch.
+   * document once per change batch. Set it only when you consume the output —
+   * wrapping an optional host callback in an always-truthy arrow (`onSave={(d) =>
+   * maybeSave?.(d)}`) buys nothing and pays for a full serialization on every
+   * change. If you only need the change pipeline armed, use `onChange`.
    *
    * Runtime setter: `handlers.set({ onSave })` — pass `undefined` to unset it.
    *

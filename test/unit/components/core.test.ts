@@ -280,6 +280,23 @@ describe('Core', () => {
       expect(core.configuration.i18n?.direction).toBe('rtl');
       expect(core.configuration.i18n?.messages).toEqual({ 'toolNames.text': 'Paragraph' });
     });
+
+    it('does not synthesize an onChange handler when the host configured none', async () => {
+      /**
+       * The PRESENCE of `onChange`/`onSave` is the arming signal for the whole
+       * change-observation pipeline (`ModificationsObserver.particularBlockChanged`
+       * bails when neither is a function), and all three framework adapters go out
+       * of their way to omit the key when their host passes no handler.
+       *
+       * Defaulting `onChange` to a no-op here would silently satisfy that gate for
+       * EVERY editor, turning the gate into dead code and making the published
+       * contract on `BlokConfig.onChange` a lie — which is exactly what pushes
+       * hosts into passing an always-truthy dummy handler "to arm the pipeline".
+       */
+      const core = await createReadyCore({ holder: 'holder' });
+
+      expect(core.configuration.onChange).toBeUndefined();
+    });
   });
 
   describe('validate', () => {

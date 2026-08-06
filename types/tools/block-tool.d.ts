@@ -8,6 +8,25 @@ import { MoveEvent } from './hook-events';
 import { MenuConfig } from './menu-config';
 
 /**
+ * Which block tools may be direct children of a container block.
+ *
+ * `deny` wins over `allow` for a tool named in both. Empty (or omitted) lists
+ * read as "no restriction", so a Tool computing these at runtime cannot
+ * accidentally lock its container down.
+ *
+ * @see BlockToolConstructable.childTools
+ */
+export interface ChildToolRestrictions {
+  /**
+   * Only these tool names may be direct children. Anything else is demoted on
+   * insert (to `allow[0]`) and refused on move. Omit for "anything but `deny`".
+   */
+  allow?: string[];
+  /** These tool names may never be direct children. */
+  deny?: string[];
+}
+
+/**
  * Describe Block Tool object
  * @see {@link docs/tools.md}
  */
@@ -201,6 +220,37 @@ export interface BlockToolConstructable extends BaseToolConstructable {
    * plain user content (toggle, callout, a nestable paragraph).
    */
   ownsChildren?: boolean;
+
+  /**
+   * Which block tools may be DIRECT children of this Tool's block. Declare it
+   * and core enforces the rule for you, at every entry point:
+   *
+   * - **Insert** — a disallowed tool is DEMOTED, never refused (an Enter
+   *   keypress must always produce a block). The demotion target is the first
+   *   entry of `allow`, so `allow: ['segment-item']` makes "Enter at the end of
+   *   a segment" produce another segment instead of a stray paragraph. With only
+   *   a `deny` list the target is the editor's `defaultBlock`.
+   * - **Move** — a drag or keyboard reorder that would carry a disallowed block
+   *   across the container boundary is refused.
+   * - **Toolbox** — disallowed tools are hidden while the caret is in a child.
+   *
+   * `deny` wins over `allow` for a tool named in both; empty lists read as "no
+   * restriction". Leaving this unset accepts any child.
+   *
+   * This is the selective, insert-aware counterpart to {@link ownsChildren},
+   * which is all-or-nothing and clamps moves only. Without it a container Tool
+   * has to defend itself downstream — filtering `child.name` in render, keeping
+   * its CSS robust against a foreign child, migrating strays out of stored
+   * documents.
+   *
+   * @example
+   * class Segments {
+   *   static get childTools() {
+   *     return { allow: ['segment-item'] };
+   *   }
+   * }
+   */
+  childTools?: ChildToolRestrictions;
 
   /**
    * Set to true when Enter on this container's empty LAST child must create the

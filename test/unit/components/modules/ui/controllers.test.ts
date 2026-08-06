@@ -199,6 +199,59 @@ describe('KeyboardController', () => {
     });
   });
 
+  /**
+   * The editor-level keyboard controller already skips native `<input>`/
+   * `<textarea>` targets, but a Tool's field is not always one of those (a
+   * contenteditable sub-region, a custom combobox). `data-blok-keyboard-owner`
+   * is the tag-agnostic opt-out — see constants/data-attributes.
+   */
+  describe('data-blok-keyboard-owner', () => {
+    const ownedTargetInside = (wrapper: HTMLElement): HTMLElement => {
+      const host = document.createElement('div');
+
+      host.setAttribute('data-blok-keyboard-owner', '');
+
+      const field = document.createElement('div');
+
+      host.appendChild(field);
+      wrapper.appendChild(host);
+
+      return field;
+    };
+
+    it('leaves Escape to a tool-owned field instead of exiting navigation mode', () => {
+      const { controller, blok, wrapper } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+      Object.assign(blok.BlockSelection, { navigationModeEnabled: true });
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      Object.defineProperty(event, 'target', { value: ownedTargetInside(wrapper) });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockSelection.disableNavigationMode).not.toHaveBeenCalled();
+    });
+
+    it('still handles Escape outside an owned field', () => {
+      const { controller, blok, wrapper } = createKeyboardController();
+
+      (controller as unknown as { enable: () => void }).enable();
+      Object.assign(blok.BlockSelection, { navigationModeEnabled: true });
+
+      const plain = document.createElement('div');
+
+      wrapper.appendChild(plain);
+
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+
+      Object.defineProperty(event, 'target', { value: plain });
+      document.dispatchEvent(event);
+
+      expect(blok.BlockSelection.disableNavigationMode).toHaveBeenCalledWith(false);
+    });
+  });
+
   describe('Enter key handling', () => {
     it('skips handling when any toolbar opened', () => {
       const { controller } = createKeyboardController({

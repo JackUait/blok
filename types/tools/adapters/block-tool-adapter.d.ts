@@ -9,7 +9,7 @@ import { ToolboxConfigEntry } from '../tool-settings';
 import { ConversionConfig } from '../../configs/conversion-config';
 import { PasteConfig } from '../../configs/paste-config';
 import { SanitizerConfig } from '../../configs/sanitizer-config';
-import { AssetKind, BlockOrigin } from '../block-tool';
+import { AssetKind, BlockOrigin, ChildToolRestrictions } from '../block-tool';
 import { BaseToolAdapter } from './base-tool-adapter';
 
 interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
@@ -50,6 +50,13 @@ interface BlockToolAdapter extends BaseToolAdapter<ToolType.Block, BlockTool>{
    * instead of recomposing it).
    */
   supportsInPlaceSetData: boolean;
+
+  /**
+   * Which block tools this Tool permits as DIRECT children of its block, or
+   * undefined when it accepts any child. Declared by the Tool as
+   * `static childTools` — see {@link BlockToolConstructable.childTools}.
+   */
+  childTools: ChildToolRestrictions | undefined;
 
   /**
    * Returns true if Tool supports linebreaks

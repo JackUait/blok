@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0](https://github.com/JackUait/blok/compare/v1.8.0...v1.9.0) (2026-08-06)
+
+### Features
+
+- **Container tools** — Five things a container block used to hand-roll are now declared. `static childTools = { allow?, deny? }` lets any container state which tools may be its direct children, enforced by core on insert (a disallowed tool is demoted to `allow[0]`, so Enter always produces a block), on a cross-boundary move (refused) and in the toolbox (hidden) — the selective, insert-aware counterpart to `ownsChildren`, and the generic form of the Table-only `restrictedTools`. `data-blok-keyboard-owner` marks a subtree whose keyboard belongs to the tool: block-level and editor-level keydown/input handling stand down inside it, tag-agnostically, replacing per-key `stopPropagation` handlers. `BlockAPI.insertChild` gained an `options` argument with the same vocabulary as the adapters' `useBlocks` insert (focus, caret, id, tunes, replace), threaded through `insertInsideParent`.
+- **Inline tools** — `InlineToolConstructable.hydrate(root)` is a declared contract, called by `Block` after render, after an in-place `setData` and after `onPaste`. Whatever a hook writes is marked `data-blok-mutation-free`, so re-rendering derived markup is not an edit.
+- **View** — `blocksToHtml` and `<BlokView>` accept `inlineRenderers`: tag-keyed, post-sanitize, output inserted verbatim — the inline counterpart of `renderers`. A DOM-free render can plug in `katex.renderToString` or a mention chip without Blok shipping either.
+- **Block tree** — `{ blocks: [...] }` is now a spec node (`BlockRunSpec`), valid at the root or as a child of a tree node. A migration holding an already-flat saved document can splice it verbatim: ids are kept, only un-parented blocks are re-parented onto the enclosing node, and only those join its `content`. Passing a pre-flat block as a tree node throws instead of silently dropping its parent/content links.
+
+### Bug Fixes
+
+- **Inline equations** — A KaTeX span's markup is derived from `data-latex`, and the sanitizer dropped its tags while keeping their text, so `E=mc^2` was persisted as `E=mc2E=mc^2E=mc2`. What was supposed to hide that — re-rendering on load — never ran: `EquationInlineTool.hydrate()` had zero call sites repo-wide, so equations went inert on every reload, in the editor and not just in the view. The sanitizer rule now rewrites an equation span's content back to its source on both the DOM and the parse5 pipeline, so new saves are clean and a load heals documents that already carry residue. `htmlTextContent` reads a mark's source, so previews, outline and search stop reading rendered fragments.
+- **`onChange` arming** — The documented "handler presence arms the change pipeline" contract was false: core defaulted `onChange` to a no-op unconditionally, so the gate could never disarm and all three adapters' careful handler-presence omission was pointless. Hosts were passing dummy handlers to arm a pipeline that was already armed — and an `onSave` one also forces a full serialization per change batch. The injection is gone, so the contract holds as written.
+- **Published types** — `types/data-attributes.d.ts` was hand-transcribed and had drifted: 17 attributes missing (including `nestedBlocks`, the container slot every nesting tool's stylesheet targets) and one phantom key the runtime never had. It is now generated from source and any drift fails an architecture test. The React `BlokViewProps` was also missing `classes`.
+
+### Maintenance
+
+- **Dependencies** — postcss, brace-expansion, fast-uri, ip-address and undici bumped across the root and docs workspaces.
+
 ## [1.8.0](https://github.com/JackUait/blok/compare/v1.7.0...v1.8.0) (2026-08-06)
 
 ### Features

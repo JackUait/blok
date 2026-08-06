@@ -55,6 +55,33 @@ describe('inline-content-sanitize', () => {
       expect(result).toContain('plain');
       expect(result.match(/<span/g) ?? []).toHaveLength(1);
     });
+
+    /**
+     * ROOT CAUSE this fixes: the KaTeX markup inside an equation span is
+     * DERIVED from `data-latex`. The sanitizer dropped its tags but kept their
+     * text, so what got persisted was the MathML layer's text plus the
+     * annotation plus the HTML layer's text — `E=mc2E=mc^2E=mc2`. Every
+     * consumer that does not re-render KaTeX (the view renderer, plain-text
+     * extraction, search indexing, the editor itself on reload) showed that
+     * concatenation verbatim.
+     */
+    it('replaces rendered KaTeX markup with the LaTeX source (derived content is never persisted)', () => {
+      const rendered =
+        '<span data-latex="E=mc^2">'
+        + '<span class="katex"><span class="katex-mathml">E=mc2E=mc^2</span>'
+        + '<span class="katex-html" aria-hidden="true">E=mc2</span></span>'
+        + '</span>';
+
+      expect(clean(rendered, INLINE_TEXT_SANITIZE)).toBe('<span data-latex="E=mc^2">E=mc^2</span>');
+    });
+
+    it('escapes a LaTeX source carrying markup characters', () => {
+      const rendered = '<span data-latex="a &lt; b &amp; c">rendered junk</span>';
+      const result = clean(rendered, INLINE_TEXT_SANITIZE);
+
+      // `<` needs no escape inside an attribute value, but does in text.
+      expect(result).toBe('<span data-latex="a < b &amp; c">a &lt; b &amp; c</span>');
+    });
   });
 
   describe('preserveColorStyles', () => {
@@ -93,6 +120,18 @@ describe('inline-content-sanitize', () => {
       const el = document.createElement('span');
 
       expect(preserveEquationSpan(el)).toBe(false);
+    });
+
+    it('normalizes the span content to the LaTeX source in place', () => {
+      const el = document.createElement('span');
+
+      el.setAttribute('data-latex', 'a+b');
+      el.innerHTML = '<span class="katex">a+ba+b</span>';
+
+      preserveEquationSpan(el);
+
+      expect(el.textContent).toBe('a+b');
+      expect(el.querySelector('span')).toBeNull();
     });
   });
 });

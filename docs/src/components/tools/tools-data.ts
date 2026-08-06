@@ -1442,21 +1442,26 @@ const editor = new Blok({
     type: 'inline',
     title: 'Equation',
     description:
-      'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The LaTeX source is kept in the `data-latex` attribute so the formula round-trips through save/load, while the rendered KaTeX markup is regenerated on load.',
+      'Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex="...">`. The `data-latex` attribute is the formula: the KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo). Read-only surfaces that never mount an editor — `blocksToHtml` / `<BlokView>` — display the source instead; pass an `inlineRenderers` entry to render the math there too.',
     importExample: `import { Equation } from '@bloklabs/core/tools';`,
     configOptions: [],
-    saveDataShape: `// Stored as HTML inside the block's text field.
-// The LaTeX source lives in the data-latex attribute. The span is not empty:
-// sanitization keeps only that attribute and unwraps the nested KaTeX elements,
-// so their text collapses into the span. That text is a non-authoritative
-// artefact — it is discarded and re-rendered from data-latex on load.
-// '<span data-latex="E = mc^2">…flattened KaTeX text…</span>'`,
-    saveDataExample: `// KaTeX emits both a MathML and an HTML rendering, so the flattened text
-// repeats the formula (and its LaTeX annotation). Only data-latex matters.
+    saveDataShape: `// Stored as HTML inside the block's text field. The data-latex attribute is
+// the formula; the span's text is normalized to that same source on save, so
+// nothing derived from KaTeX's rendering is persisted (which is why plain-text
+// previews and search indexes read the formula, not its rendered fragments).
+// '<span data-latex="E = mc^2">E = mc^2</span>'`,
+    saveDataExample: `// Render the math on a DOM-free view surface by plugging KaTeX in:
+//   blocksToHtml(data, {
+//     inlineRenderers: {
+//       span: ({ attrs }) => attrs['data-latex'] === undefined
+//         ? undefined
+//         : katex.renderToString(attrs['data-latex'], { throwOnError: false }),
+//     },
+//   })
 {
   "type": "paragraph",
   "data": {
-    "text": "Einstein wrote <span data-latex=\\"E = mc^2\\">E=mc2E = mc^2E=mc2</span>"
+    "text": "Einstein wrote <span data-latex=\\"E = mc^2\\">E = mc^2</span>"
   }
 }`,
     usageExample: `import { Blok } from '@bloklabs/core';

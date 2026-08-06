@@ -26,6 +26,20 @@ describe('blocksToPlainText', () => {
     expect(blocksToPlainText(doc([{ type: 'paragraph', data: { text: 'Hello <b>world</b>' } }]))).toBe('Hello world');
   });
 
+  /**
+   * An equation span's children are a rendering cache of its `data-latex`
+   * source. Legacy documents carry the text KaTeX's MathML and HTML layers left
+   * behind, so a preview or search index built from this text used to read
+   * `E=mc2E=mc^2E=mc2`. The source is authoritative on every read path.
+   */
+  it('reads an inline equation as its LaTeX source, not the rendered residue', () => {
+    const text = blocksToPlainText(doc([
+      { type: 'paragraph', data: { text: 'mass: <span data-latex="E=mc^2">E=mc2E=mc^2E=mc2</span>' } },
+    ]));
+
+    expect(text).toBe('mass: E=mc^2');
+  });
+
   it('separates top-level blocks with a blank line', () => {
     const text = blocksToPlainText(doc([
       { type: 'header', data: { text: 'Title', level: 1 } },

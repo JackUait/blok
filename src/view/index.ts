@@ -14,6 +14,7 @@ export type {
   ViewUrlContext,
   ViewUrlTransform,
 } from './blocks-to-html';
+export type { ViewInlineElement, ViewInlineRenderer } from './inline-renderers';
 export { blocksToPlainText } from './blocks-to-plain-text';
 export { htmlTextContent } from './html-text';
 export { outlineFromOutputData } from './outline';

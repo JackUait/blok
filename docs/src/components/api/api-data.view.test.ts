@@ -133,6 +133,7 @@ describe("view renderer section", () => {
       "toolAttributes",
       "blockIds",
       "transformUrl",
+      "inlineRenderers",
       // `classes` is the only BlokView prop whose default is ON (`classes ?? true`
       // in packages/react/src/BlokView.tsx) — it must be enumerated so readers can
       // explain the class attributes in the output and discover `classes={false}`.

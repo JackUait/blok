@@ -266,7 +266,24 @@ describe('view sanitizeHtmlFragment', () => {
         config
       );
 
-      expect(result).toBe('<span data-latex="a^2">a²</span>');
+      // The span's content is DERIVED from the source, so it is normalized back
+      // to the source rather than carried through (see the DOM-side rule).
+      expect(result).toBe('<span data-latex="a^2">a^2</span>');
+    });
+
+    /**
+     * Documents saved before the write-side fix carry the concatenated text of
+     * KaTeX's MathML + HTML layers inside the span. The view renderer is a READ
+     * path over that existing data, so it heals it the same way instead of
+     * displaying the concatenation.
+     */
+    it('heals legacy KaTeX residue persisted inside an equation span', () => {
+      const result = sanitizeHtmlFragment(
+        '<span data-latex="E=mc^2">E=mc2E=mc^2E=mc2</span>',
+        config
+      );
+
+      expect(result).toBe('<span data-latex="E=mc^2">E=mc^2</span>');
     });
 
     it('preserveEquationSpan unwraps spans without data-latex', () => {

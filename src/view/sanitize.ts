@@ -360,6 +360,22 @@ const createElementFacade = (node: P5Element): Element => {
     get textContent(): string {
       return collectText(node);
     },
+    /**
+     * Mirrors the DOM setter: every child is replaced with one text node. A
+     * rule that rewrites derived content (the equation mark's KaTeX cache)
+     * must behave identically on both sanitizers, and this is the mechanic the
+     * DOM one uses. Runs BEFORE the walk recurses into the children, so what
+     * is written here is what gets sanitized.
+     */
+    set textContent(value: string) {
+      const textNode: P5TextNode = {
+        nodeName: '#text',
+        value,
+        parentNode: node,
+      };
+
+      node.childNodes.splice(0, node.childNodes.length, textNode);
+    },
     style: createStyleFacade(node),
     classList: createClassListFacade(node),
   };

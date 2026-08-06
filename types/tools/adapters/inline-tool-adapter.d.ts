@@ -28,4 +28,10 @@ interface InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, InlineTool>
    * collapsed caret (Bold, Italic).
    */
   nativeCaretShortcut: boolean;
+
+  /**
+   * The tool's DOM hydration hook, bound to its constructable — `undefined`
+   * when the tool declares none. See `InlineToolConstructable.hydrate`.
+   */
+  hydrate: ((root: HTMLElement) => void | Promise<void>) | undefined;
 }

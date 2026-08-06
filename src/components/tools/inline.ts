@@ -95,4 +95,17 @@ export class InlineToolAdapter extends BaseToolAdapter<ToolType.Inline, IInlineT
 
     return constructable?.nativeCaretShortcut ?? false;
   }
+
+  /**
+   * The tool's DOM hydration hook, when it declares one — see
+   * `InlineToolConstructable.hydrate`. Bound to the constructable so callers
+   * can invoke it without re-deriving the class.
+   */
+  public get hydrate(): ((root: HTMLElement) => void | Promise<void>) | undefined {
+    const constructable = this.constructable as InlineToolConstructable | undefined;
+
+    return typeof constructable?.hydrate === 'function'
+      ? constructable.hydrate.bind(constructable)
+      : undefined;
+  }
 }

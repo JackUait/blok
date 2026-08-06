@@ -5,6 +5,7 @@ import type {
 } from '../../../types';
 import type { I18n, InlineToolbar } from '../../../types/api';
 import type { MenuConfig } from '../../../types/tools';
+import { DATA_ATTR } from '../constants/data-attributes';
 import { IconEquation } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
@@ -66,9 +67,11 @@ export class EquationInlineTool implements InlineTool {
   }
 
   /**
-   * Re-render every equation span inside a root element. Used on load so that
-   * persisted `data-latex` sources are turned back into KaTeX markup.
-   * @param root - element to search for equation spans
+   * Re-render every equation span inside a freshly rendered block — the
+   * `InlineToolConstructable.hydrate` hook. Saving keeps only the `data-latex`
+   * source (the KaTeX markup is derived), so without this step a loaded,
+   * pasted or undone document shows the source as inert text.
+   * @param root - the block's rendered tool element
    */
   public static async hydrate(root: HTMLElement): Promise<void> {
     const spans = Array.from(root.querySelectorAll<HTMLElement>(`span[${EQUATION_ATTR}]`));
@@ -76,7 +79,13 @@ export class EquationInlineTool implements InlineTool {
     await Promise.all(spans.map(async (span) => {
       const latex = span.getAttribute(EQUATION_ATTR);
 
-      if (latex) {
+      /**
+       * A span holding element children is already rendered — the source is
+       * stored as TEXT, so an unrendered one has no element child. Skipping
+       * keeps the hook cheap on the paths that re-run it after every in-place
+       * data update (undo/redo, a controlled host typing).
+       */
+      if (latex && span.firstElementChild === null) {
         await EquationInlineTool.renderInto(span, latex);
       }
     }));
@@ -90,6 +99,15 @@ export class EquationInlineTool implements InlineTool {
    */
   private static async renderInto(span: HTMLElement, latex: string): Promise<void> {
     span.setAttribute(EQUATION_ATTR, latex);
+
+    /**
+     * The markup below is REGENERATED from `data-latex` on every render and is
+     * dropped again on save, so writing it must not count as an edit: marking
+     * the span mutation-free keeps the block-level observer (and with it
+     * `onChange` / the "document modified" state) out of it. Set BEFORE the
+     * children change so the batched mutation records already see it.
+     */
+    span.setAttribute(DATA_ATTR.mutationFree, 'true');
 
     const html = await renderLatex(latex, { displayMode: false });
 

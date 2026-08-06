@@ -405,6 +405,47 @@ export class Block extends EventsDispatcher<BlockEvents> {
         window.requestIdleCallback(bindEvents);
       }
     }
+
+    void this.ready.then(() => this.hydrateInlineTools());
+  }
+
+  /**
+   * Rebuild the derived DOM of every inline tool that declares a `hydrate`
+   * hook, over this block's rendered tool element.
+   *
+   * A mark whose display is GENERATED from a source it persists (the equation's
+   * KaTeX, rendered from `data-latex`) only ever shows that source as text
+   * unless something regenerates it after a render — the sanitizer deliberately
+   * drops the generated markup, since it is derived. This is that step, and it
+   * runs on every path that builds a block, so a document reads the same whether
+   * it was just typed, loaded, pasted or restored by undo.
+   *
+   * Hooks own their own mutation contract (`data-blok-mutation-free`), so
+   * regenerating is not reported as an edit. A throwing or rejecting hook is
+   * logged and ignored: a mark that cannot render must not break the block.
+   */
+  private hydrateInlineTools(): void {
+    const root = this.toolRenderer.toolRenderedElement;
+
+    if (root === null) {
+      return;
+    }
+
+    for (const inlineTool of this.tool.inlineTools.values()) {
+      const hydrate = inlineTool.hydrate;
+
+      if (hydrate === undefined) {
+        continue;
+      }
+
+      try {
+        Promise.resolve(hydrate(root)).catch((error: unknown) => {
+          log(`${inlineTool.name}: hydrate() failed: %o`, 'warn', error);
+        });
+      } catch (error) {
+        log(`${inlineTool.name}: hydrate() threw: %o`, 'warn', error);
+      }
+    }
   }
 
   /**
@@ -566,7 +607,18 @@ export class Block extends EventsDispatcher<BlockEvents> {
    * @returns true if the update was performed in-place, false if a full re-render is needed
    */
   public async setData(newData: BlockToolData): Promise<boolean> {
-    return this.dataPersistenceManager.setData(newData);
+    const applied = await this.dataPersistenceManager.setData(newData);
+
+    if (applied) {
+      // The Tool just rewrote its own DOM from the new data, so anything a mark
+      // derives from that data (an equation's rendering) is gone with the old
+      // markup. Same reason the constructor hydrates — this is the in-place
+      // update path (undo/redo, a controlled host, api.blocks.update), which
+      // deliberately does NOT recompose the Block.
+      this.hydrateInlineTools();
+    }
+
+    return applied;
   }
 
   /**
@@ -963,6 +1015,9 @@ export class Block extends EventsDispatcher<BlockEvents> {
   public refreshToolRootElement(): void {
     this.toolRenderer.refreshToolRootElement(this.holder);
     this.inputManager.dropCache();
+    // The tool just replaced or rewrote its element (this is the post-onPaste
+    // hook), so marks with derived DOM have to be rebuilt over what it wrote.
+    this.hydrateInlineTools();
   }
 
   /**

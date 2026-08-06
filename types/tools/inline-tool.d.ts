@@ -61,4 +61,23 @@ export interface InlineToolConstructable extends BaseToolConstructable {
    * race-free, cross-engine "toggle then type" behaviour).
    */
   nativeCaretShortcut?: boolean;
+
+  /**
+   * Rebuild this mark's DERIVED DOM inside a freshly rendered block.
+   *
+   * Some marks display something that is generated from a source they persist
+   * on an attribute — an equation renders KaTeX from its `data-latex`, and only
+   * the source survives sanitization. Blok calls `hydrate` with the block's
+   * rendered tool element once the block is in the DOM, on every path that
+   * creates one (initial render, insert, paste, undo), so the mark's display is
+   * rebuilt instead of showing whatever text the last save left behind.
+   *
+   * The hook owns the mutation contract for what it writes: mark the elements
+   * it rebuilds `data-blok-mutation-free="true"` so regenerating them does not
+   * register as a user edit. Errors are caught and logged — a failing hydrate
+   * must never break a block's render.
+   *
+   * @param root - the block's rendered tool element
+   */
+  hydrate?(root: HTMLElement): void | Promise<void>;
 }

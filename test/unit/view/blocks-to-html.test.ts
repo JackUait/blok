@@ -45,6 +45,105 @@ describe('blocksToHtml', () => {
     });
   });
 
+  /**
+   * ROOT CAUSE these cover: an equation span's content is DERIVED from its
+   * `data-latex` source. Documents in the wild carry the text KaTeX's MathML and
+   * HTML layers left behind when the sanitizer unwrapped their tags, so a
+   * DOM-free renderer — which cannot re-run KaTeX — printed
+   * `E=mc2E=mc^2E=mc2`. The view heals the residue back to the source.
+   */
+  describe('inline equations', () => {
+    const withEquation = (text: string): OutputData => doc([{ type: 'paragraph', data: { text } }]);
+
+    it('renders the LaTeX source instead of persisted KaTeX residue', () => {
+      const html = blocksToHtml(withEquation('a <span data-latex="E=mc^2">E=mc2E=mc^2E=mc2</span> b'));
+
+      expect(html).toBe('<p>a <span data-latex="E=mc^2">E=mc^2</span> b</p>');
+    });
+
+    it('keeps the source addressable for client-side hydration', () => {
+      const nodes = blocksToViewNodes(withEquation('<span data-latex="x^2">x2</span>'));
+
+      expect(JSON.stringify(nodes)).toContain('"data-latex":"x^2"');
+    });
+  });
+
+  /**
+   * ROOT CAUSE these cover: `renderers` is keyed by BLOCK tool, so a consumer
+   * had no way to render an inline mark — an equation, a mention — in a
+   * DOM-free pass. The only remaining option was to re-implement the whole
+   * renderer, or to give up on server rendering and hydrate in the browser.
+   */
+  describe('inlineRenderers', () => {
+    const equationText = 'E is <span data-latex="E=mc^2">E=mc^2</span>.';
+    const withText = (text: string): OutputData => doc([{ type: 'paragraph', data: { text } }]);
+
+    /** Stand-in for `katex.renderToString` — markup the inline allowlist would strip. */
+    const renderEquation = (element: { attrs: Record<string, string> }): string | undefined =>
+      element.attrs['data-latex'] === undefined
+        ? undefined
+        : `<span class="katex" data-latex="${element.attrs['data-latex']}">math</span>`;
+
+    it('replaces a matching inline element with the renderer output, verbatim', () => {
+      const html = blocksToHtml(withText(equationText), { inlineRenderers: { span: renderEquation } });
+
+      expect(html).toBe('<p>E is <span class="katex" data-latex="E=mc^2">math</span>.</p>');
+    });
+
+    it('hands the renderer the element tag, sanitized attributes and text', () => {
+      const seen: Array<Record<string, unknown>> = [];
+
+      blocksToHtml(withText('<a href="https://x.y" target="_blank">go</a>'), {
+        inlineRenderers: {
+          a: (element) => {
+            seen.push({ ...element });
+
+            return undefined;
+          },
+        },
+      });
+
+      expect(seen).toEqual([
+        {
+          tag: 'a',
+          attrs: { href: 'https://x.y', target: '_blank' },
+          html: 'go',
+          text: 'go',
+        },
+      ]);
+    });
+
+    it('leaves the element as sanitized when the renderer returns undefined', () => {
+      const html = blocksToHtml(withText(equationText), { inlineRenderers: { span: () => undefined } });
+
+      expect(html).toBe('<p>E is <span data-latex="E=mc^2">E=mc^2</span>.</p>');
+    });
+
+    it('drops the element when the renderer returns an empty string', () => {
+      const html = blocksToHtml(withText(equationText), { inlineRenderers: { span: () => '' } });
+
+      expect(html).toBe('<p>E is .</p>');
+    });
+
+    it('never sees an element the sanitizer removed', () => {
+      const renderer = vi.fn(() => '<b>replaced</b>');
+
+      // A span without data-latex is unwrapped by the inline allowlist.
+      const html = blocksToHtml(withText('<span class="decor">plain</span>'), {
+        inlineRenderers: { span: renderer },
+      });
+
+      expect(renderer).not.toHaveBeenCalled();
+      expect(html).toBe('<p>plain</p>');
+    });
+
+    it('flows through the view-node tree as real nodes', () => {
+      const nodes = blocksToViewNodes(withText(equationText), { inlineRenderers: { span: renderEquation } });
+
+      expect(JSON.stringify(nodes)).toContain('"class":"katex"');
+    });
+  });
+
   describe('header', () => {
     it('respects the stored level', () => {
       expect(blocksToHtml(doc([{ type: 'header', data: { text: 'Title', level: 3 } }]))).toBe('<h3>Title</h3>');

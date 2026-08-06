@@ -17,6 +17,8 @@ import type { DocumentModel, ViewBlock } from './document-model';
 import { builtinEmitters, renderListRun } from './emitters';
 import type { EmitterEnv } from './emitters';
 import { htmlTextContent } from './html-text';
+import { applyInlineRenderers } from './inline-renderers';
+import type { ViewInlineRenderer } from './inline-renderers';
 import { escapeHtml, sanitizeHtmlFragment } from './sanitize';
 
 import type { LooseOutputBlockData, LooseOutputData, OutputBlockData, OutputData, SanitizerConfig } from '../../types';
@@ -72,6 +74,30 @@ export interface BlocksToHtmlOptions {
   schema?: BlokViewSchema;
   /** Custom per-tool renderers; win over built-ins. */
   renderers?: Record<string, ViewBlockRenderer>;
+  /**
+   * Custom renderers for inline elements, keyed by lowercase TAG name — the
+   * inline counterpart of {@link BlocksToHtmlOptions.renderers}, for marks whose
+   * display is not their stored markup: an equation stores only its LaTeX
+   * source, a mention only an id.
+   *
+   * Each runs after sanitization, over the elements that survived it, and
+   * REPLACES the element with what it returns (`undefined` keeps the element;
+   * `''` drops it). The returned markup is inserted as-is — it is NOT
+   * re-sanitized, the same trust contract as a block renderer's output — so it
+   * can carry markup the inline allowlist would otherwise strip.
+   *
+   * Applies to rendered HTML only; `blocksToPlainText` reads a mark's stored
+   * source, not its rendering.
+   * @example
+   * blocksToHtml(data, {
+   *   inlineRenderers: {
+   *     span: ({ attrs }) => attrs['data-latex'] === undefined
+   *       ? undefined
+   *       : katex.renderToString(attrs['data-latex'], { throwOnError: false }),
+   *   },
+   * });
+   */
+  inlineRenderers?: Record<string, ViewInlineRenderer>;
   /** Unknown-tool policy (default 'skip'). */
   onUnknownBlock?: 'skip' | 'comment';
   /**
@@ -240,8 +266,20 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
     ? undefined
     : (url: string, attr: 'href' | 'src'): string => transformUrl(url, { attr, blockType: undefined });
 
+  /**
+   * Inline renderers run on the SANITIZED fragment, so a renderer can only see
+   * what the allowlist kept. Skipped entirely when none are configured — the
+   * pass costs a parse/serialize round trip per inline field.
+   */
+  const inlineRenderers = options.inlineRenderers ?? {};
+  const hasInlineRenderers = Object.keys(inlineRenderers).length > 0;
+
   const env: EmitterEnv = {
-    inline: (value) => sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform),
+    inline: (value) => {
+      const sanitized = sanitizeHtmlFragment(typeof value === 'string' ? value : '', inlineConfig, inlineUrlTransform);
+
+      return hasInlineRenderers ? applyInlineRenderers(sanitized, inlineRenderers) : sanitized;
+    },
     escape: (value) => escapeHtml(typeof value === 'string' ? value : ''),
     childrenOf: (id) => model.childrenOf(id),
     blocksById: (ids) => {

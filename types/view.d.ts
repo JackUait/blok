@@ -34,6 +34,28 @@ export interface ViewRenderContext {
 export type ViewBlockRenderer = (data: Record<string, unknown>, ctx: ViewRenderContext) => string;
 
 /**
+ * One sanitized inline element, as handed to a {@link ViewInlineRenderer}.
+ */
+export interface ViewInlineElement {
+  /** Lowercase tag name. */
+  tag: string;
+  /** Attributes that survived sanitization. */
+  attrs: Record<string, string>;
+  /** The element's sanitized inner HTML. */
+  html: string;
+  /** The element's plain text (entity-decoded). */
+  text: string;
+}
+
+/**
+ * A custom renderer for one inline tag: `(element) => html`. Return `undefined`
+ * to leave the element as sanitized, a string to REPLACE it (an empty string
+ * drops it). The returned markup is inserted as-is — it is not re-sanitized, so
+ * treat it the way you treat a block renderer's output.
+ */
+export type ViewInlineRenderer = (element: ViewInlineElement) => string | undefined | null;
+
+/**
  * Context handed to {@link ViewUrlTransform} for one URL occurrence.
  */
 export interface ViewUrlContext {
@@ -63,6 +85,30 @@ export interface BlocksToHtmlOptions {
   schema?: BlokViewSchema;
   /** Custom per-tool renderers; win over built-ins. */
   renderers?: Record<string, ViewBlockRenderer>;
+  /**
+   * Custom renderers for inline elements, keyed by lowercase TAG name — the
+   * inline counterpart of {@link BlocksToHtmlOptions.renderers}, for marks whose
+   * display is not their stored markup: an equation stores only its LaTeX
+   * source, a mention only an id.
+   *
+   * Each runs after sanitization, over the elements that survived it, and
+   * REPLACES the element with what it returns (`undefined` keeps the element;
+   * `''` drops it). The returned markup is inserted as-is — it is NOT
+   * re-sanitized, the same trust contract as a block renderer's output.
+   *
+   * Applies to rendered HTML only; {@link blocksToPlainText} reads a mark's
+   * stored source, not its rendering.
+   *
+   * @example
+   * blocksToHtml(data, {
+   *   inlineRenderers: {
+   *     span: ({ attrs }) => attrs['data-latex'] === undefined
+   *       ? undefined
+   *       : katex.renderToString(attrs['data-latex'], { throwOnError: false }),
+   *   },
+   * });
+   */
+  inlineRenderers?: Record<string, ViewInlineRenderer>;
   /** Unknown-tool policy (default 'skip'). */
   onUnknownBlock?: 'skip' | 'comment';
   /**

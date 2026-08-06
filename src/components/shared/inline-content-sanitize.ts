@@ -9,6 +9,7 @@
  * tool spreads {@link INLINE_TEXT_SANITIZE} into its `text` sanitize config.
  */
 import type { SanitizerConfig } from '../../../types';
+import { EQUATION_SOURCE_ATTR } from '../../shared/equation-mark';
 
 /**
  * CSS properties that may remain on color-bearing inline elements (<mark>).
@@ -38,9 +39,16 @@ export const preserveColorStyles = (node: Element): { [attr: string]: boolean | 
 };
 
 /**
- * Function rule preserving inline equation spans. The LaTeX source lives in the
- * `data-latex` attribute and is re-rendered on load, so only that attribute is
- * kept; any rendered KaTeX markup inside is regenerated and need not survive.
+ * Function rule preserving inline equation spans: `data-latex` is kept, and the
+ * span's children are REPLACED with that source.
+ *
+ * Rewriting the children is the load-bearing half. Stripping the KaTeX tags is
+ * not enough — HTMLJanitor unwraps a rejected tag and keeps its text, so the
+ * MathML layer, the `<annotation>` and the hidden HTML layer all collapse into
+ * one run of text (`E=mc^2` persists as `E=mc2E=mc^2E=mc2`). See the law in
+ * `src/shared/equation-mark.ts`. The node handed to a rule belongs to
+ * HTMLJanitor's detached sandbox document, never to the live editor, so this
+ * mutates a copy — the same way {@link preserveColorStyles} prunes styles.
  *
  * Decorative / unknown spans return `false` rather than `{}`: HTMLJanitor only
  * unwraps a node when its rule is `false`/`undefined`. Returning `{}` keeps the
@@ -51,7 +59,17 @@ export const preserveColorStyles = (node: Element): { [attr: string]: boolean | 
  * @returns attribute config keeping `data-latex` when present, else `false` to drop the tag
  */
 export const preserveEquationSpan = (node: Element): { [attr: string]: boolean | string } | false => {
-  return node.getAttribute('data-latex') !== null ? { 'data-latex': true } : false;
+  const latex = node.getAttribute(EQUATION_SOURCE_ATTR);
+
+  if (latex === null) {
+    return false;
+  }
+
+  if (node.textContent !== latex) {
+    node.textContent = latex;
+  }
+
+  return { [EQUATION_SOURCE_ATTR]: true };
 };
 
 /**

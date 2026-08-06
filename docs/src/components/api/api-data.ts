@@ -3443,7 +3443,7 @@ const block: OutputBlockData<'task', BlokData<TaskData>> = {
         name: "flattenTree(spec, options?)",
         returnType: "Array<OutputBlockData & { id: string }>",
         description:
-          "Turns an ergonomic nested spec into the flat DFS pre-order `OutputBlockData[]` Blok stores, wiring every `parent`/`content` link for you, exported from the main entry alongside its `BlockTreeSpec` and `FlattenTreeOptions` types. A spec node is `{ type?, data?, tunes?, id?, children? }`; the pure counterpart of the live `blocks.insertTree()` mutation — the same DFS without an editor — so nested content (columns, tables, a whole document) can be seeded without hand-authoring `parent`/`content` id arrays. Every returned block has a resolved `id` (generated when the spec omitted one), so the array is safe to reference by id; leaves omit the empty `content` array. `options` takes `parentId` (the `parent` assigned to the root node(s)) and `generateId` (id generator for nodes without an explicit `id` — pass a deterministic one for reproducible output). Reusing an explicit `id` within the spec throws.",
+          "Turns an ergonomic nested spec into the flat DFS pre-order `OutputBlockData[]` Blok stores, wiring every `parent`/`content` link for you, exported from the main entry alongside its `BlockTreeSpec`, `BlockRunSpec`, `BlockTreeNode` and `FlattenTreeOptions` types. A spec node is `{ type?, data?, tunes?, id?, children? }`; the pure counterpart of the live `blocks.insertTree()` mutation — the same DFS without an editor — so nested content (columns, tables, a whole document) can be seeded without hand-authoring `parent`/`content` id arrays. Every returned block has a resolved `id` (generated when the spec omitted one), so the array is safe to reference by id; leaves omit the empty `content` array. Content that is already flat — a stored Blok document a migration is splicing into a page — goes in as a **run node**, `{ blocks: [...] }`, at the root or as a child: the run is spliced verbatim (ids, `data`, `tunes` and existing `parent`/`content` links are kept) and only the blocks it left un-parented are re-parented onto the enclosing node, the same rule `blocks.insertMarkdown()` applies to a converted run. Because nothing is re-derived, ids stay stable, so a migration can run in batches without duplicating blocks it already wrote. `options` takes `parentId` (the `parent` assigned to the root node(s)) and `generateId` (id generator for nodes without an explicit `id` — pass a deterministic one for reproducible output). Reusing an explicit `id` within the spec throws, and so does passing a pre-flat block as a tree node (its `parent`/`content` links would be dropped silently).",
         example: `import { flattenTree } from '@bloklabs/core';
 
 // A two-column layout, written as a tree instead of parent/content id arrays
@@ -3458,7 +3458,14 @@ const blocks = flattenTree([
 ]);
 
 // Ready to hand to the \`data\` config option, render() or blocks.insertMany()
-console.log(blocks); // flat, DFS pre-order, every parent/content link wired`,
+console.log(blocks); // flat, DFS pre-order, every parent/content link wired
+
+// An already-flat saved document goes in as a run node — spliced verbatim,
+// ids kept, only its top-level blocks re-parented under the column
+const migrated = flattenTree({
+  type: 'column',
+  children: [{ blocks: legacyPage.blocks }],
+});`,
       },
       {
         name: "isBlockType(block, type)",
@@ -4351,6 +4358,13 @@ const preview = blocksToPlainText(savedData).slice(0, 160);`,
               "Custom per-tool renderers; a renderer wins over the built-in emitter for its tool name. ctx provides sanitizeInline (sanitize an inline-HTML string), renderBlocks (render an arbitrary block array), plainText (plain text of an HTML string), and renderChildren (render the current block's structural children) so custom output composes safely with the rest of the document.",
           },
           {
+            name: "options.inlineRenderers",
+            type: "Record<string, (element) => string | undefined>",
+            required: false,
+            description:
+              "Custom renderers for INLINE elements, keyed by lowercase tag name — the inline counterpart of renderers, for marks whose display is not their stored markup (an inline equation stores only its LaTeX source; a mention only an id). Each runs after sanitization, over the elements that survived it, and REPLACES the element with what it returns: undefined keeps the element as sanitized, '' drops it. The returned markup is inserted as-is — it is NOT re-sanitized, the same trust contract as a block renderer's output — so it may carry markup the inline allowlist would strip (KaTeX spans, for instance). element is { tag, attrs, html, text }. Rendered HTML only: blocksToPlainText reads a mark's stored source, not its rendering.",
+          },
+          {
             name: "options.onUnknownBlock",
             type: "'skip' | 'comment'",
             required: false,
@@ -4546,6 +4560,12 @@ const nodes = blocksToViewNodes(savedData);
             type: "(url, ctx) => string",
             required: false,
             description: "URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml.",
+          },
+          {
+            name: "inlineRenderers",
+            type: "Record<string, (element) => string | undefined>",
+            required: false,
+            description: "Per-tag renderers for INLINE elements — server-render an equation's LaTeX with KaTeX, turn a mention span into a chip. Forwards to blocksToHtml.",
           },
           {
             name: "classes",

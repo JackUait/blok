@@ -1141,6 +1141,15 @@ export interface BlokViewProps extends Omit<React.HTMLAttributes<HTMLDivElement>
   blockIds?: BlocksToHtmlOptions['blockIds'];
   /** Pure URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. */
   transformUrl?: BlocksToHtmlOptions['transformUrl'];
+  /** Custom renderers for inline elements, keyed by lowercase tag name (equations, mentions). */
+  inlineRenderers?: BlocksToHtmlOptions['inlineRenderers'];
+  /**
+   * Render with the editor's presentational classes and per-block scaffolding
+   * so the output matches a read-only editor render (default `true`). Needs
+   * `@bloklabs/core/view.css` imported to paint. Set `false` for unstyled
+   * semantic markup.
+   */
+  classes?: BlocksToHtmlOptions['classes'];
 }
 
 /**

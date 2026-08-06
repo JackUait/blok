@@ -87,6 +87,15 @@ describe('view sanitizeHtmlFragment parity with the DOM sanitizer pipeline', () 
     expectParity(input, INLINE_TEXT_SANITIZE);
   });
 
+  it('matches when an equation span is normalized back to its source', () => {
+    // The rule REWRITES the span's children (the KaTeX cache) — both sanitizers
+    // must produce the same bytes, escaping included.
+    expectParity(
+      '<span data-latex="a &lt; b &amp; c"><span class="katex">a&lt;b&amp;c junk</span></span>',
+      INLINE_TEXT_SANITIZE
+    );
+  });
+
   it('matches on `true` rules (safe attributes only) and unwrapping', () => {
     const input = '<p class="c" data-x="1" aria-label="l" onclick="y()" style="color:red">a<b>b</b></p>'
       + '<div>unwrapped <i>kept text</i></div>';

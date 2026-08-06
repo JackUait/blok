@@ -122,7 +122,7 @@ export {
 export * from './utils/popover';
 
 export { OutputData, OutputBlockData, LooseOutputData, LooseOutputBlockData, BlokData} from './data-formats/output-data';
-export { flattenTree, BlockTreeSpec, FlattenTreeOptions } from './data-formats/block-tree';
+export { flattenTree, BlockTreeSpec, BlockRunSpec, BlockTreeNode, FlattenTreeOptions } from './data-formats/block-tree';
 export {
   PropertyType,
   SelectOption,

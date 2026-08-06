@@ -10,6 +10,8 @@
 import { parseFragment } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 
+import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
+
 type P5ChildNode = DefaultTreeAdapterMap['childNode'];
 
 /**
@@ -24,6 +26,20 @@ const collect = (nodes: P5ChildNode[]): string => {
 
     if (node.nodeName === 'br') {
       return '\n';
+    }
+
+    /**
+     * An inline equation reads as its SOURCE, never as its children: those are
+     * a KaTeX rendering cache, and documents saved before that cache was
+     * stripped hold the concatenated text of KaTeX's MathML, annotation and
+     * HTML layers. See the law in `src/shared/equation-mark.ts`.
+     */
+    if ('attrs' in node) {
+      const source = node.attrs.find((attr) => attr.name === EQUATION_SOURCE_ATTR);
+
+      if (source !== undefined) {
+        return source.value;
+      }
     }
 
     return 'childNodes' in node ? collect(node.childNodes) : '';

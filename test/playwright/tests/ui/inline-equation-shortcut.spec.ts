@@ -66,6 +66,14 @@ const createBlokWithEquation = async (page: Page, blocks: OutputData['blocks']):
   );
 };
 
+/**
+ * How many equation spans currently hold KaTeX's rendered MathML.
+ * @param page - page under test
+ */
+const countRenderedFormulas = async (page: Page): Promise<number> => {
+  return page.evaluate(() => document.querySelectorAll('span[data-latex] math').length);
+};
+
 const selectAllInFirstEditable = async (page: Page): Promise<void> => {
   await page.evaluate((holder) => {
     const wrapper = document.getElementById(holder);
@@ -231,5 +239,41 @@ test.describe('Inline equation shortcut', () => {
     // The menu must still be open and usable after the debounce settled.
     await expect(input).toBeVisible();
     await expect(input).toBeFocused();
+  });
+
+  /**
+   * REGRESSION: the equation's whole persistence contract is "save the source,
+   * regenerate the rendering on load" — and nothing regenerated it. The tool's
+   * `hydrate()` had no call site, so a reloaded document showed inert text, and
+   * this suite never caught it because every test asserted what `save()`
+   * produced, never what a LOAD renders.
+   */
+  test('a saved formula is re-rendered as math when the document loads', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: 'mass: <span data-latex="E=mc^2">E=mc^2</span>' } },
+    ]);
+
+    // KaTeX emits a MathML layer — its presence means the source was rendered,
+    // not printed. Queried in-page: the rendered markup is third-party, so
+    // there is no test id or role to locate it by.
+    await expect.poll(() => countRenderedFormulas(page)).toBeGreaterThan(0);
+  });
+
+  test('re-saving a loaded formula stores the source, not the rendered markup', async ({ page }) => {
+    await createBlokWithEquation(page, [
+      { type: 'paragraph', data: { text: '<span data-latex="E=mc^2">E=mc^2</span>' } },
+    ]);
+
+    await expect.poll(() => countRenderedFormulas(page)).toBeGreaterThan(0);
+
+    const savedText = await page.evaluate(async () => {
+      const data = await window.blokInstance?.save();
+      const block = data?.blocks?.[0] as { data?: { text?: string } } | undefined;
+
+      return block?.data?.text ?? '';
+    });
+
+    // The rendering is derived: it must not accumulate in the document.
+    expect(savedText).toBe('<span data-latex="E=mc^2">E=mc^2</span>');
   });
 });

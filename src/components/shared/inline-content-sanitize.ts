@@ -66,6 +66,7 @@ export const preserveEquationSpan = (node: Element): { [attr: string]: boolean |
   }
 
   if (node.textContent !== latex) {
+    // eslint-disable-next-line no-param-reassign -- intentional: rewrites HTMLJanitor's detached sandbox node, never the live editor
     node.textContent = latex;
   }
 

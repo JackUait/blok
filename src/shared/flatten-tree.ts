@@ -139,7 +139,7 @@ export function flattenTree(
         // `null`/`[]` content means "no children" — omitted, like a tree leaf.
         ...(Array.isArray(incomingContent) && incomingContent.length > 0 ? { content: incomingContent } : {}),
         ...(resolvedParent !== undefined ? { parent: resolvedParent } : {}),
-      } as FlattenedBlock);
+      });
 
       if (isRunRoot) {
         rootIds.push(id);

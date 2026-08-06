@@ -16,6 +16,9 @@ export * from './shared/deep-equal';
 export * from './shared/output-data';
 export * from './shared/prop-schema';
 export * from './tools/nested-blocks';
+// One implementation of the per-child decoration pass behind all three adapters'
+// `childAttributes` / `childContentAttributes` channels.
+export * from './tools/child-decoration';
 export { DATA_ATTR } from './components/constants/data-attributes';
 // The settle signal every adapter emits after mounting a container's child
 // holders — single-sourced here so the three adapters cannot drift on the name.

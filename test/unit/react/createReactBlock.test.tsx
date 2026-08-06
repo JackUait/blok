@@ -889,6 +889,85 @@ describe('createReactBlock — core tool-contract passthrough', () => {
     unmount();
   });
 
+  it('takes the toolbar anchor from a ref the component attaches', () => {
+    // The spec hook is (host, block) => Element, resolved OUTSIDE the component
+    // tree — so the React-idiomatic "point at this element" was unavailable and
+    // authors round-tripped through a self-invented data attribute plus
+    // querySelector. The ref prop is that channel.
+    const { registry, unmount } = mountHost();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ toolbarAnchorRef }) => (
+        <div>
+          <div className="chrome">head</div>
+          <div ref={toolbarAnchorRef} className="anchor" />
+        </div>
+      ),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    expect(tool.getToolbarAnchorElement()).toBe(host.querySelector('.anchor'));
+
+    unmount();
+  });
+
+  it('prefers the ref over the spec hook, and falls back when the ref detaches', () => {
+    const { registry, unmount } = mountHost();
+    const attached = { current: true };
+    const blockApi = makeBlockApi();
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ toolbarAnchorRef }) => (
+        <div>
+          <div data-anchor="" className="declared" />
+          {attached.current ? <div ref={toolbarAnchorRef} className="anchor" /> : null}
+        </div>
+      ),
+      getToolbarAnchorElement: host => host.querySelector<HTMLElement>('[data-anchor]'),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: blockApi,
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    const host = renderTool(tool);
+
+    document.body.appendChild(host);
+
+    // The ref names a live element, so it outranks the host-scoped resolver.
+    expect(tool.getToolbarAnchorElement()).toBe(host.querySelector('.anchor'));
+
+    // Once that element unmounts, a stale detached node must not be handed to
+    // the toolbar — the declared resolver takes over again.
+    attached.current = false;
+    act(() => {
+      registry.setProps(blockApi.id, { readOnly: false });
+    });
+
+    expect(tool.getToolbarAnchorElement()).toBe(host.querySelector('.declared'));
+
+    unmount();
+  });
+
   it('reports no anchor when the spec declares none (core keeps its default positioning)', () => {
     const { registry, unmount } = mountHost();
 
@@ -1070,6 +1149,131 @@ describe('BlockChildren — per-child decoration', () => {
     // introduce a per-child element.
     expect(children[0].holder.parentElement).toBe(slot);
     expect(children[1].holder.parentElement).toBe(slot);
+
+    unmount();
+  });
+
+  /** A child whose holder carries core's real wrapper chain (holder → content). */
+  const makeWrappedChild = (id: string): BlockAPI => {
+    const holder = document.createElement('div');
+    const content = document.createElement('div');
+
+    holder.setAttribute('data-blok-id', id);
+    content.setAttribute('data-blok-element-content', '');
+    holder.appendChild(content);
+
+    return { id, holder } as unknown as BlockAPI;
+  };
+
+  it('stamps per-child attributes on the content wrapper too', () => {
+    // Core's child-holder decoration law blesses BOTH the holder and the child's
+    // [data-blok-element-content] wrapper, but only the holder half was reachable
+    // — so a container styling anything relative to a child's CONTENT box had to
+    // hard-code core's wrapper chain in its own CSS (`[data-step] >
+    // [data-blok-element-content] > …`), which silently breaks whenever that
+    // chain changes.
+    const { registry, unmount } = mountHost();
+    const children = [makeWrappedChild('a'), makeWrappedChild('b')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren
+          childAttributes={(_child, index) => ({ 'data-step-index': String(index) })}
+          childContentAttributes={(_child, index) => ({ 'data-step-body': String(index) })}
+        />
+      ),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(renderTool(tool));
+
+    const contentOf = (child: BlockAPI): Element | null =>
+      child.holder.querySelector('[data-blok-element-content]');
+
+    expect(children[0].holder.getAttribute('data-step-index')).toBe('0');
+    expect(contentOf(children[0])?.getAttribute('data-step-body')).toBe('0');
+    expect(contentOf(children[1])?.getAttribute('data-step-body')).toBe('1');
+
+    // The hooks must land on DIFFERENT elements — a content hook written onto
+    // the holder would collapse the two levels the law distinguishes.
+    expect(children[0].holder.hasAttribute('data-step-body')).toBe(false);
+
+    unmount();
+  });
+
+  it('drops content-wrapper attributes the callback stopped producing', async () => {
+    const { registry, unmount } = mountHost();
+    const children = [makeWrappedChild('a')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ data, BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren
+          childContentAttributes={() =>
+            data.count === 0 ? { 'data-tone': 'warn', 'data-legacy': 'x' } : { 'data-tone': 'ok' }
+          }
+        />
+      ),
+    });
+
+    const tool = new Tool({
+      data: { count: 0 },
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(renderTool(tool));
+
+    const content = children[0].holder.querySelector('[data-blok-element-content]');
+
+    expect(content?.getAttribute('data-legacy')).toBe('x');
+
+    await act(async () => {
+      await tool.setData({ count: 1, label: 'n' });
+    });
+
+    expect(content?.getAttribute('data-tone')).toBe('ok');
+    expect(content?.hasAttribute('data-legacy')).toBe(false);
+
+    unmount();
+  });
+
+  it('skips the content hook for a child whose content wrapper does not exist yet', () => {
+    // A portal-rendered child commits its DOM a frame later, so the wrapper can
+    // be absent on the first pass. That must not throw — the next pass stamps it.
+    const { registry, unmount } = mountHost();
+    const children = [makeChild('a')];
+
+    const Tool = createReactBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: ({ BlockChildren }: ReactBlockRenderProps<CounterData>) => (
+        <BlockChildren childContentAttributes={() => ({ 'data-tone': 'ok' })} />
+      ),
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    expect(() => document.body.appendChild(renderTool(tool))).not.toThrow();
+    expect(children[0].holder.hasAttribute('data-tone')).toBe(false);
 
     unmount();
   });

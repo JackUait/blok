@@ -12,6 +12,7 @@ export { useBlokInstance } from './blok-instance-context';
 export type { UseBlokConfig, BlokContentProps } from './types';
 export type { BlokEditorProps } from './BlokEditor';
 export { useBlocks } from './useBlocks';
+export type { UseBlocksOptions } from './useBlocks';
 export { useBlokReady } from './useBlokReady';
 export type { UseBlokReadyOptions } from './useBlokReady';
 export { BlokView } from './BlokView';

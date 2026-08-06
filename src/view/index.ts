@@ -26,5 +26,13 @@ export type { OutlineItem } from './outline';
 export { blocksToViewNodes } from './view-nodes';
 export type { ViewNode, ViewElementNode, ViewTextNode } from './view-nodes';
 export { sanitizeHtmlFragment } from './sanitize';
+/**
+ * The KaTeX renderer blok already bundles, hardened for untrusted input — so a
+ * `ViewInlineRenderer` for equations reuses it instead of adding katex as a
+ * second dependency. `createLatexRenderer` is the one to reach for inside
+ * `inlineRenderers`, which is synchronous (see their own docs).
+ */
+export { renderLatex, createLatexRenderer } from '../shared/katex';
+export type { LatexRenderOptions } from '../shared/katex';
 export { defineBlokSchema, composeBaseSanitizeConfig } from '../shared/sanitize-schema';
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from '../shared/sanitize-schema';

@@ -2,11 +2,31 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import type { Blok } from '@/types';
-import { createBlocksApiForEditor, EMPTY_API } from '@bloklabs/core/adapters';
+import { changeTouchesSubtree, createBlocksApiForEditor, EMPTY_API } from '@bloklabs/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 
 const BLOCK_CHANGED_EVENT = 'block changed';
+
+/** Options for {@link useBlocks}. */
+export interface UseBlocksOptions {
+  /**
+   * Re-render only for changes inside the subtree rooted at this block id (the
+   * block itself or any descendant). Omit — or pass `null` — for the
+   * document-wide default.
+   *
+   * This bounds REACTIVITY, not reads: the returned API still sees the whole
+   * tree, so a scoped consumer can still `getById` anything. Reach for it in a
+   * container block that renders only its own children — unscoped, such a block
+   * re-renders on every keystroke anywhere in the document, and a page of N
+   * containers turns one keystroke into N re-renders.
+   *
+   * A change whose block cannot be placed in the tree (a removal that emits
+   * after the block is gone) counts as in-scope: skipping it would leave a
+   * container rendering a child that no longer exists.
+   */
+  within?: string | null;
+}
 
 /**
  * React hook exposing an id/parentId-relative, reactive view of the block tree.
@@ -42,8 +62,12 @@ const BLOCK_CHANGED_EVENT = 'block changed';
  * result (or the api handle) in a `useMemo`/`useEffect` dependency array
  * expecting it to change identity per mutation; depend on the node `id`s instead.
  * @param editor - the Blok instance from useBlok, or null before it is ready
+ * @param options - reactivity options; see {@link UseBlocksOptions.within} to
+ *   scope re-renders to one block's subtree
  */
-export function useBlocks(editor: Blok | null): UseBlocksApi {
+export function useBlocks(editor: Blok | null, options: UseBlocksOptions = {}): UseBlocksApi {
+  const within = options.within ?? null;
+
   // Monotonic version bumped on every 'block changed'; drives useSyncExternalStore.
   const versionRef = useRef(0);
 
@@ -65,7 +89,11 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
         return () => undefined;
       }
 
-      const handler = (): void => {
+      const handler = (payload?: unknown): void => {
+        if (within !== null && !changeTouchesSubtree(editor, payload, within)) {
+          return;
+        }
+
         versionRef.current += 1;
         onStoreChange();
       };
@@ -74,7 +102,7 @@ export function useBlocks(editor: Blok | null): UseBlocksApi {
 
       return () => editor.off(BLOCK_CHANGED_EVENT, handler);
     },
-    [editor]
+    [editor, within]
   );
 
   const getSnapshot = useCallback((): number => versionRef.current, []);

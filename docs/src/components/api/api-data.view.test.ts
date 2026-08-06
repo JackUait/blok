@@ -45,9 +45,31 @@ describe("view renderer section", () => {
       "defineBlokSchema(config)",
       "composeBaseSanitizeConfig(configs)",
       "blocksToViewNodes(data, options?)",
+      "renderLatex(latex, options?)",
+      "createLatexRenderer()",
       "BlokView",
       "useBlokView(data, options?)",
     ]);
+  });
+
+  /**
+   * The view entry bundles KaTeX already. Before it was exported, the
+   * inlineRenderers docs told hosts to call katex.renderToString themselves —
+   * which is a second copy of katex and a second, unaudited option set — so the
+   * docs have to name the exported renderer and say why it is the one to use.
+   */
+  it("points equation rendering at the bundled KaTeX, not a host katex dependency", () => {
+    const latex = section!.methods!.find((m) => m.name === "createLatexRenderer()");
+
+    expect(latex).toBeDefined();
+    expect(latex!.description).toContain("inlineRenderers");
+    expect(latex!.description).toContain("synchronous");
+    expect(latex!.example).toContain("createLatexRenderer");
+
+    const async_ = section!.methods!.find((m) => m.name === "renderLatex(latex, options?)");
+
+    expect(async_!.description).toContain("trust");
+    expect(async_!.returnType).toBe("Promise<string>");
   });
 
   it("has a non-empty example on every method", () => {

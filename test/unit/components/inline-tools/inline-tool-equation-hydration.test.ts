@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  * Mock the lazy KaTeX loader so the test stays deterministic and offline —
  * `renderLatex` echoes a predictable rendered string instead of loading KaTeX.
  */
-vi.mock('../../../../src/tools/code/katex-loader', () => ({
+vi.mock('../../../../src/shared/katex', () => ({
   renderLatex: vi.fn(async (latex: string) => `<span class="katex">rendered:${latex}</span>`),
 }));
 

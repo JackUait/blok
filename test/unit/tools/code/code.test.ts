@@ -3,7 +3,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CodeData } from '../../../../types/tools/code';
 import { simulateInput, simulateKeydown } from '../../../helpers/simulate';
 
-vi.mock('../../../../src/tools/code/katex-loader', () => ({
+vi.mock('../../../../src/shared/katex', () => ({
   renderLatex: vi.fn().mockResolvedValue('<span class="katex">rendered</span>'),
 }));
 
@@ -744,7 +744,7 @@ describe('CodeTool', () => {
 
     it('calls renderMermaid (not renderLatex) for mermaid language', async () => {
       const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
-      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { renderLatex } = await import('../../../../src/shared/katex');
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'graph TD; A-->B;', language: 'mermaid' }));
       tool.render();
@@ -758,7 +758,7 @@ describe('CodeTool', () => {
 
     it('calls renderLatex (not renderMermaid) for latex language', async () => {
       const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
-      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { renderLatex } = await import('../../../../src/shared/katex');
       const { CodeTool } = await import('../../../../src/tools/code');
       const tool = new CodeTool(createOptions({ code: 'E = mc^2', language: 'latex' }));
       tool.render();
@@ -780,7 +780,7 @@ describe('CodeTool', () => {
     });
 
     it('does not throw when language switches away before renderPreview resolves', async () => {
-      const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+      const { renderLatex } = await import('../../../../src/shared/katex');
       // Hold the render promise so we can switch language before it resolves
       let resolveRender!: (v: string) => void;
       vi.mocked(renderLatex).mockReturnValueOnce(new Promise<string>((res) => { resolveRender = res; }));

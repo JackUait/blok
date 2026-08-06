@@ -209,6 +209,7 @@ copyAndRewrite('src/components/constants/data-attributes.ts', 'components/consta
 copyAndRewrite('src/components/events/BlockChildrenMounted.ts', 'components/events/BlockChildrenMounted.ts');
 copyAndRewrite('src/components/utils/html.ts',                'components/utils/html.ts');
 copyAndRewrite('src/tools/nested-blocks.ts',                  'tools/nested-blocks.ts');
+copyAndRewrite('src/tools/child-decoration.ts',               'tools/child-decoration.ts');
 
 // The adapter sources import shared core utilities via the public
 // `@bloklabs/core/adapters` specifier (see src/adapters.ts). ng-packagr would

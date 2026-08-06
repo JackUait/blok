@@ -10,7 +10,7 @@ const makeFakeEditor = (
   rows: Array<{ id: string; name?: string; parentId?: string | null }>
 ) => {
   let list = rows.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
-  const listeners = new Set<() => void>();
+  const listeners = new Set<(payload?: unknown) => void>();
   const editor = {
     blocks: {
       getBlocksCount: () => list.length,
@@ -96,17 +96,29 @@ const makeFakeEditor = (
     caret: {
       setToBlock: vi.fn((_idOrIndex: unknown, _position?: string, _offset?: number) => true),
     },
-    on: (_name: string, cb: () => void) => listeners.add(cb),
-    off: (_name: string, cb: () => void) => listeners.delete(cb),
+    on: (_name: string, cb: (payload?: unknown) => void) => listeners.add(cb),
+    off: (_name: string, cb: (payload?: unknown) => void) => listeners.delete(cb),
   };
   return {
     editor: editor as unknown as Blok,
     /** Live count of 'block changed' subscribers — asserts subscribe/cleanup. */
     listenerCount: (): number => listeners.size,
-    /** Mutate the underlying list and fire 'block changed'. */
-    emitChange: (next: Array<{ id: string; name?: string; parentId?: string | null }>) => {
+    /**
+     * Mutate the underlying list and fire 'block changed'. `targetId` fills in
+     * the mutation payload core actually emits (`{ event: { detail: { target } } }`),
+     * which is what a subtree-scoped subscription filters on.
+     */
+    emitChange: (
+      next: Array<{ id: string; name?: string; parentId?: string | null }>,
+      targetId?: string
+    ) => {
       list = next.map((r) => ({ id: r.id, name: r.name ?? 'paragraph', parentId: r.parentId ?? null }));
-      listeners.forEach((cb) => cb());
+
+      const payload = targetId === undefined
+        ? undefined
+        : { event: { detail: { target: { id: targetId } } } };
+
+      listeners.forEach((cb) => cb(payload));
     },
   };
 };
@@ -140,6 +152,93 @@ describe('useBlocks reads', () => {
 
     act(() => emitChange([{ id: 'a' }, { id: 'b' }]));
     expect(result.current.getChildren(null).map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  describe('within: subtree-scoped reactivity', () => {
+    /** card → step, plus an unrelated root block with its own child. */
+    const tree = (): Array<{ id: string; name?: string; parentId?: string | null }> => [
+      { id: 'card', name: 'card' },
+      { id: 'step', parentId: 'card' },
+      { id: 'elsewhere' },
+      { id: 'elsewhere-child', parentId: 'elsewhere' },
+    ];
+
+    it('re-renders for a change inside the scope', () => {
+      const { editor, emitChange } = makeFakeEditor(tree());
+      let renders = 0;
+      const { result } = renderHook(() => {
+        renders += 1;
+
+        return useBlocks(editor, { within: 'card' });
+      });
+      const before = renders;
+
+      act(() => emitChange([...tree(), { id: 'step-2', parentId: 'card' }], 'step'));
+
+      expect(renders).toBeGreaterThan(before);
+      expect(result.current.getChildren('card').map((n) => n.id)).toEqual(['step', 'step-2']);
+    });
+
+    it('does NOT re-render for a change in an unrelated subtree', () => {
+      const { editor, emitChange } = makeFakeEditor(tree());
+      let renders = 0;
+
+      renderHook(() => {
+        renders += 1;
+
+        return useBlocks(editor, { within: 'card' });
+      });
+      const before = renders;
+
+      // Typing in a block the scoped consumer does not render is the hot path
+      // an unscoped hook re-rendered on: every keystroke, document-wide.
+      act(() => emitChange(tree(), 'elsewhere-child'));
+
+      expect(renders).toBe(before);
+    });
+
+    it('still re-renders every consumer when no scope is given', () => {
+      const { editor, emitChange } = makeFakeEditor(tree());
+      let renders = 0;
+
+      renderHook(() => {
+        renders += 1;
+
+        return useBlocks(editor);
+      });
+      const before = renders;
+
+      act(() => emitChange(tree(), 'elsewhere-child'));
+
+      expect(renders).toBeGreaterThan(before);
+    });
+
+    it('re-subscribes when the scope id changes', () => {
+      const { editor, emitChange } = makeFakeEditor(tree());
+      let renders = 0;
+      const { rerender } = renderHook(
+        ({ within }: { within: string }) => {
+          renders += 1;
+
+          return useBlocks(editor, { within });
+        },
+        { initialProps: { within: 'card' } }
+      );
+
+      rerender({ within: 'elsewhere' });
+      const before = renders;
+
+      act(() => emitChange(tree(), 'elsewhere-child'));
+
+      expect(renders).toBeGreaterThan(before);
+    });
+
+    it('reads stay document-wide — scoping bounds re-renders, not the tree', () => {
+      const { editor } = makeFakeEditor(tree());
+      const { result } = renderHook(() => useBlocks(editor, { within: 'card' }));
+
+      expect(result.current.getById('elsewhere-child')).toMatchObject({ id: 'elsewhere-child' });
+    });
   });
 
   it('reads from and stays reactive to a swapped-in second editor instance', () => {

@@ -113,6 +113,39 @@ describe('HowToCustomToolContent', () => {
       expect(code).toContain(childHook);
     });
 
+    /**
+     * Blok's decoration law blesses the child holder AND the child's
+     * `[data-blok-element-content]` wrapper. Documenting only the holder half is
+     * what pushed containers into hard-coding the engine's wrapper chain in their
+     * own CSS to reach a child's content box.
+     */
+    it.each([
+      ['react', 'childContentAttributes'],
+      ['vue', 'childContentAttributes'],
+      ['angular', 'childContentAttributes'],
+    ])('shows %s containers the content-wrapper decoration hook', (framework, hook) => {
+      const { container } = renderHowTo(framework);
+      const code = container.textContent ?? '';
+
+      expect(code).toContain(hook);
+    });
+
+    /**
+     * The anchor hook is resolved OUTSIDE the component, so without the
+     * ref/setter channel an author has to invent a data attribute and
+     * querySelector for it — which is exactly what the older example showed.
+     */
+    it.each([
+      ['react', 'toolbarAnchorRef'],
+      ['vue', 'toolbarAnchorRef'],
+      ['angular', 'setToolbarAnchor'],
+    ])('shows %s containers how to name the toolbar anchor from inside', (framework, member) => {
+      const { container } = renderHowTo(framework);
+      const code = container.textContent ?? '';
+
+      expect(code).toContain(member);
+    });
+
     it.each(['react', 'vue', 'angular'])(
       'shows %s containers how to keep Enter inside the container',
       (framework) => {

@@ -11,6 +11,7 @@ import {
 } from '../utils/blocks-tree';
 
 import type { Block } from './index';
+import { placeCaretInInsertedChild } from './insert-caret';
 
 /**
  * Adapt the editor-level blocks API to the IndexReader the shared tree helpers
@@ -336,7 +337,12 @@ const BlockAPIConstructor = function BlockAPI(
         : runInsert();
 
       if (caret !== undefined) {
-        api.methods.caret.setToBlock(child.id, caret.position ?? 'default', caret.offset ?? 0);
+        placeCaretInInsertedChild(
+          api.methods.caret.setToBlock,
+          child,
+          caret.position ?? 'default',
+          caret.offset ?? 0
+        );
       }
 
       return child;

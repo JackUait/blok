@@ -214,8 +214,9 @@ export const StepsTool = createReactBlock<{ title: string }>({
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
   // A container's own chrome usually isn't editable. Without an anchor the
   // toolbar centers on the first [contenteditable] under the host — which is
-  // your FIRST CHILD BLOCK — parking +/drag halfway down the block.
-  getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
+  // your FIRST CHILD BLOCK — parking +/drag halfway down the block. Point at the
+  // element with \`toolbarAnchorRef\` (below); this host-scoped hook is the
+  // fallback for an anchor you can't reach with a ref.
   // The seeding hook. Fires ONCE, after the portal's first commit — the first
   // tick at which this block's DOM (and its adopted child holders) exists;
   // rendered() runs BEFORE that commit, which is why hosts used to set the
@@ -231,25 +232,39 @@ export const StepsTool = createReactBlock<{ title: string }>({
       api.blocks.insertInsideParent(block.id);
     }
   },
-  component: ({ data, block, api, BlockChildren }) => {
+  component: ({ data, block, api, BlockChildren, toolbarAnchorRef }) => {
     // The block's own editor, straight from context — no host plumbing. This
     // is also what makes the block re-render when its children change:
     // useBlocks refreshes on every structural mutation, including children the
     // adapter never sees (a pasted paragraph, a Tab-indent).
-    const blocks = useBlocks(useBlokInstance());
+    //
+    // \`within\` scopes that reactivity to THIS subtree. Unscoped, the container
+    // re-renders on every keystroke anywhere in the document.
+    const blocks = useBlocks(useBlokInstance(), { within: block.id });
     const steps = blocks.getChildren(block.id);
 
     return (
       <section>
-        <header data-steps-header>{data.title} — {steps.length} steps</header>
+        {/* Name the toolbar anchor from inside the tree — no self-invented data
+            attribute to querySelector for. */}
+        <header ref={toolbarAnchorRef} data-steps-header>
+          {data.title} — {steps.length} steps
+        </header>
         {/* Named per-child hooks instead of positional :nth-child() CSS, which
             breaks the moment a step is inserted, removed or reordered. They are
             written on each child's HOLDER; the holders stay direct children of
-            the slot, so nesting and caret navigation are untouched. */}
+            the slot, so nesting and caret navigation are untouched.
+            childContentAttributes writes one level in — on each child's
+            [data-blok-element-content] wrapper, where the child's own text box
+            begins — so a numbered rail aligns to the text without your CSS
+            hard-coding Blok's wrapper chain. */}
         <BlockChildren
           childAttributes={(child, index) => ({
             'data-step-index': String(index + 1),
             'data-step-last': String(index === steps.length - 1),
+          })}
+          childContentAttributes={(child, index) => ({
+            'data-step-body': String(index + 1),
           })}
         />
         <button
@@ -275,8 +290,9 @@ export const StepsTool = createVueBlock<{ title: string }>({
   // container; without it that line escapes to the container's parent.
   statics: { ownsChildren: true, keepsChildrenOnEnter: true },
   // Without an anchor the toolbar centers on the first [contenteditable] under
-  // the host — which for a container is its FIRST CHILD BLOCK.
-  getToolbarAnchorElement: (host) => host.querySelector('[data-steps-header]'),
+  // the host — which for a container is its FIRST CHILD BLOCK. Point at the
+  // element with \`ctx.toolbarAnchorRef\` (below); this host-scoped hook is the
+  // fallback for an anchor you can't reach with a ref.
   // The seeding hook. Fires ONCE, after the teleport's first commit — the first
   // tick at which this block's DOM (and its adopted child holders) exists — and
   // only for a genuine CREATION (a keystroke, \`api.blocks.insert\`, a
@@ -288,20 +304,34 @@ export const StepsTool = createVueBlock<{ title: string }>({
       api.blocks.insertInsideParent(block.id);
     }
   },
-  setup({ data, block, api, BlockChildren }) {
+  setup({ data, block, api, BlockChildren, toolbarAnchorRef }) {
     // The block's own editor, straight from inject() — no host plumbing.
-    const blocks = useBlocks(useBlokInstance());
+    // \`within\` scopes reactivity to THIS subtree; unscoped, the container
+    // re-renders on every keystroke anywhere in the document.
+    const blocks = useBlocks(useBlokInstance(), { within: () => block.id });
     const steps = computed(() => blocks.getChildren(block.id));
 
     return () =>
       h('section', [
-        h('header', { 'data-steps-header': '' }, \`\${data.value.title} — \${steps.value.length}\`),
+        // Name the toolbar anchor from inside the tree — no self-invented data
+        // attribute to querySelector for.
+        h(
+          'header',
+          { ref: toolbarAnchorRef, 'data-steps-header': '' },
+          \`\${data.value.title} — \${steps.value.length}\`
+        ),
         // Named per-child hooks instead of positional :nth-child() CSS. They are
         // written on each child's HOLDER, which stays a direct child of the slot.
+        // childContentAttributes writes one level in — on each child's
+        // [data-blok-element-content] wrapper — so a rail aligns to the child's
+        // text box without your CSS hard-coding Blok's wrapper chain.
         h(BlockChildren, {
           childAttributes: (child, index: number) => ({
             'data-step-index': String(index + 1),
             'data-step-last': String(index === steps.value.length - 1),
+          }),
+          childContentAttributes: (child, index: number) => ({
+            'data-step-body': String(index + 1),
           }),
         }),
         h(
@@ -327,25 +357,39 @@ import {
 @Component({
   standalone: true,
   template: \`
-    <header data-steps-header>{{ ctx.data().title }} — {{ steps().length }}</header>
+    <header #head data-steps-header>{{ ctx.data().title }} — {{ steps().length }}</header>
     <div #slot></div>
     <button (click)="add()">Add step</button>
   \`,
 })
 export class StepsComponent implements AfterViewInit {
   readonly ctx = inject(BLOK_BLOCK_CONTEXT) as AngularBlockRenderContext<{ title: string }>;
-  // The block's own editor, straight from DI — no host plumbing.
-  private readonly blocks = injectBlocks(injectBlokInstance());
+  // The block's own editor, straight from DI — no host plumbing. \`within\`
+  // scopes reactivity to THIS subtree; unscoped, the container invalidates on
+  // every keystroke anywhere in the document.
+  private readonly blocks = injectBlocks(injectBlokInstance(), {
+    within: this.ctx.block.id,
+  });
   private readonly slot = viewChild.required<ElementRef<HTMLElement>>('slot');
+  private readonly head = viewChild.required<ElementRef<HTMLElement>>('head');
 
   steps = () => this.blocks.getChildren(this.ctx.block.id);
 
   ngAfterViewInit() {
-    // Named per-child hooks instead of positional :nth-child() CSS. The
-    // decorator is remembered and re-applied on every remount.
-    this.ctx.mountChildren(this.slot().nativeElement, (child, index) => ({
-      'data-step-index': String(index + 1),
-    }));
+    // Name the toolbar anchor from inside the component — no self-invented data
+    // attribute to querySelector for. Without an anchor the toolbar centers on
+    // the first [contenteditable] under the host, i.e. your FIRST CHILD BLOCK.
+    this.ctx.setToolbarAnchor(this.head().nativeElement);
+    // Named per-child hooks instead of positional :nth-child() CSS. Both
+    // decorators are remembered and re-applied on every remount. The second one
+    // (childContentAttributes) writes one level in — on each child's
+    // [data-blok-element-content] wrapper — so a rail aligns to the child's text
+    // box without your CSS hard-coding Blok's wrapper chain.
+    this.ctx.mountChildren(
+      this.slot().nativeElement,
+      (child, index) => ({ 'data-step-index': String(index + 1) }),
+      (child, index) => ({ 'data-step-body': String(index + 1) })
+    );
   }
 
   add() {

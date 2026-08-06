@@ -631,8 +631,33 @@ export interface UseBlocksApi {
  * expecting it to change identity per mutation; depend on the node `id`s instead.
  *
  * @param editor - the Blok instance from useBlok, or null before it is ready
+ * @param options - reactivity options; see {@link UseBlocksOptions.within}
  */
-export declare function useBlocks(editor: Blok | null): UseBlocksApi;
+export declare function useBlocks(editor: Blok | null, options?: UseBlocksOptions): UseBlocksApi;
+
+/** Options for {@link useBlocks}. */
+export interface UseBlocksOptions {
+  /**
+   * Re-render only for changes inside the subtree rooted at this block id (the
+   * block itself or any descendant). Omit — or pass `null` — for the
+   * document-wide default.
+   *
+   * This bounds REACTIVITY, not reads: the returned API still sees the whole
+   * tree, so a scoped consumer can still `getById` anything. Reach for it in a
+   * container block that renders only its own children — unscoped, such a block
+   * re-renders on every keystroke anywhere in the document, and a page of N
+   * containers turns one keystroke into N re-renders.
+   *
+   * A change whose block cannot be placed in the tree (a removal that emits
+   * after the block is gone) counts as in-scope: skipping it would leave a
+   * container rendering a child that no longer exists.
+   *
+   * @example
+   * // A container block re-rendering only for its own subtree.
+   * const blocks = useBlocks(useBlokInstance(), { within: block.id });
+   */
+  within?: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // Scoped readiness (useBlokReady)
@@ -723,6 +748,25 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   config: Readonly<Partial<Config>>;
   /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
   BlockChildren: React.ComponentType<BlockChildrenProps>;
+  /**
+   * Attach this to the element the +/drag toolbar should vertically center on:
+   * `<div ref={toolbarAnchorRef}>`. The React-native way to answer core's
+   * `getToolbarAnchorElement`, which is otherwise a `(host, block) => Element`
+   * hook resolved OUTSIDE the component tree — so pointing at an element you
+   * render meant inventing a data attribute and `querySelector`-ing for it.
+   *
+   * A container block whose own chrome is not editable needs an anchor: with
+   * none, core centers the toolbar on the first `[contenteditable]` under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down, beside content that has a toolbar of its own.
+   *
+   * The ref is stable across renders and outranks the spec's
+   * `getToolbarAnchorElement` while it holds a MOUNTED element; once the element
+   * unmounts or detaches, the declared hook takes over again, so the toolbar is
+   * never positioned against a stale node. Leave it unattached to keep core's
+   * default positioning.
+   */
+  toolbarAnchorRef: (element: HTMLElement | null) => void;
 }
 
 /**
@@ -748,6 +792,24 @@ export interface BlockChildrenProps {
    * child's tool root DOES score as that child's edit.
    */
   childAttributes?: (child: BlockAPI, index: number) => ChildAttributes;
+  /**
+   * The same per-child decoration, applied one level IN: on each child's
+   * `[data-blok-element-content]` wrapper instead of its holder. Core's
+   * child-holder decoration law blesses both, and a container needs both — the
+   * holder is the child's outer box (rails, indices, hover states), while the
+   * content wrapper is where the child's own text box begins, which is what a
+   * numbered rail or a connector line has to align to.
+   *
+   * Reach for it instead of walking Blok's wrapper chain from a holder hook
+   * (`[data-step] > [data-blok-element-content] > …`): those selectors encode
+   * engine DOM structure in host CSS and break the moment that structure changes.
+   * With a named hook the selector is one flat attribute.
+   *
+   * Same cleanup and same inertness as `childAttributes`. A child whose DOM has
+   * not committed yet (a portal-rendered block, on the first pass) has no wrapper
+   * to write to and is stamped on the next pass.
+   */
+  childContentAttributes?: (child: BlockAPI, index: number) => ChildAttributes;
 }
 
 /**

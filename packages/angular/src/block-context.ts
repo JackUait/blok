@@ -61,13 +61,48 @@ export interface AngularBlockRenderContext<Data> {
    * by identity), so decoration is attributes, never wrapper elements.
    * Attributes the callback stops producing are removed on the next pass.
    *
+   * `childContentAttributes` is the same decoration applied one level IN — on
+   * each child's `[data-blok-element-content]` wrapper instead of its holder —
+   * and is remembered the same way. Core's decoration law blesses both, and a
+   * container needs both: the holder is the child's outer box (rails, indices,
+   * hover states), the content wrapper is where the child's own text box begins,
+   * which is what a numbered rail or a connector line has to align to. Reach for
+   * it instead of walking core's wrapper chain from a holder hook (`[data-step] >
+   * [data-blok-element-content] > …`) — those selectors encode engine DOM in host
+   * CSS and break when that structure changes. A child whose DOM has not
+   * committed yet has no wrapper to write to and is stamped on the next pass.
+   *
    * Writing on a child's holder is inert by design: core's mutation filter drops
    * a holder-targeted attribute record for the child block and suppresses it for
    * the container. The guarantee stops at the holder and its
    * `[data-blok-element-content]` wrapper — writing AT or BELOW a child's tool
    * root DOES score as that child's edit.
    */
-  mountChildren: (host: HTMLElement, childAttributes?: ChildAttributesFn) => void;
+  mountChildren: (
+    host: HTMLElement,
+    childAttributes?: ChildAttributesFn,
+    childContentAttributes?: ChildAttributesFn
+  ) => void;
+  /**
+   * Name the element the +/drag toolbar should vertically center on, from inside
+   * the component: `ctx.setToolbarAnchor(this.head().nativeElement)` in
+   * `ngAfterViewInit`. The Angular counterpart of React's/Vue's
+   * `toolbarAnchorRef` — core's `getToolbarAnchorElement` is otherwise a
+   * `(host, block) => Element` hook resolved OUTSIDE the component, so pointing
+   * at an element the template renders meant inventing a data attribute and
+   * `querySelector`-ing for it from
+   * `CreateAngularBlockSpec.getToolbarAnchorElement`.
+   *
+   * A container block whose own chrome is not editable needs an anchor: with
+   * none, core centers the toolbar on the first `[contenteditable]` under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down, beside content that has a toolbar of its own.
+   *
+   * The element set here outranks the declared hook while it is MOUNTED; once it
+   * detaches (or `null` is passed) the hook takes over again, so the toolbar is
+   * never positioned against a stale node. Never calling it keeps core's default.
+   */
+  setToolbarAnchor: (element: HTMLElement | null) => void;
 }
 
 /** DI token carrying the per-block render context into the authored component. */

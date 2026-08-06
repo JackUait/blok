@@ -9,11 +9,34 @@ import {
 } from 'vue';
 
 import type { Blok } from '@/types';
-import { createBlocksApiForEditor, EMPTY_API } from '@bloklabs/core/adapters';
+import { changeTouchesSubtree, createBlocksApiForEditor, EMPTY_API } from '@bloklabs/core/adapters';
 
 import type { UseBlocksApi } from './blocks-snapshot';
 
 const BLOCK_CHANGED_EVENT = 'block changed';
+
+/** Options for {@link useBlocks}. */
+export interface UseBlocksOptions {
+  /**
+   * Re-render only for changes inside the subtree rooted at this block id (the
+   * block itself or any descendant). Omit — or pass `null` — for the
+   * document-wide default.
+   *
+   * This bounds REACTIVITY, not reads: the returned API still sees the whole
+   * tree, so a scoped consumer can still `getById` anything. Reach for it in a
+   * container block that renders only its own children — unscoped, such a block
+   * invalidates on every keystroke anywhere in the document, and a page of N
+   * containers turns one keystroke into N re-renders.
+   *
+   * Accepted as a value, ref or getter (like `editor`) and read at EMIT time, so
+   * changing it takes effect immediately with no re-subscription.
+   *
+   * A change whose block cannot be placed in the tree (a removal that emits
+   * after the block is gone) counts as in-scope: skipping it would leave a
+   * container rendering a child that no longer exists.
+   */
+  within?: MaybeRefOrGetter<string | null>;
+}
 
 /**
  * Vue composable exposing an id/parentId-relative, reactive view of the block
@@ -43,8 +66,13 @@ const BLOCK_CHANGED_EVENT = 'block changed';
  * `transact`/`transactWithoutCapture`, which still run their callback.
  *
  * @param editor - the Blok instance (or ref/getter of it), or null pre-ready
+ * @param options - reactivity options; see {@link UseBlocksOptions.within} to
+ *   scope invalidation to one block's subtree
  */
-export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
+export function useBlocks(
+  editor: MaybeRefOrGetter<Blok | null>,
+  options: UseBlocksOptions = {}
+): UseBlocksApi {
   // Bumped on every `block changed`; the shared API's read methods touch it
   // (via the onRead seam below) so template/computed reads stay reactive.
   const version = shallowRef(0);
@@ -68,7 +96,7 @@ export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
 
   // Manage the `block changed` subscription, re-binding when the editor changes.
   // Held in one object (no `let` reassignment) — the same pattern useBlok uses.
-  const sub: { editor: Blok | null; handler: (() => void) | null } = { editor: null, handler: null };
+  const sub: { editor: Blok | null; handler: ((payload?: unknown) => void) | null } = { editor: null, handler: null };
 
   const unsubscribe = (): void => {
     if (sub.editor !== null && sub.handler !== null) {
@@ -91,7 +119,14 @@ export function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi {
         return;
       }
 
-      const handler = (): void => {
+      const handler = (payload?: unknown): void => {
+        // Resolved per emission, so a reactive `within` needs no re-subscription.
+        const within = toValue(options.within) ?? null;
+
+        if (within !== null && !changeTouchesSubtree(ed, payload, within)) {
+          return;
+        }
+
         version.value += 1;
       };
 

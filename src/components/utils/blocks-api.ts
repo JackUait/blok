@@ -80,6 +80,90 @@ export const EMPTY_API: UseBlocksApi = {
 };
 
 /**
+ * Read the changed block's id out of a `block changed` payload, tolerating any
+ * shape that is not core's `{ event: { detail: { target } } }`.
+ * @param payload - whatever the dispatcher handed the listener
+ * @returns the target block id, or null when the payload does not carry one
+ */
+const changedBlockId = (payload: unknown): string | null => {
+  const detail = (payload as { event?: { detail?: { target?: { id?: unknown } } } } | undefined)
+    ?.event?.detail?.target?.id;
+
+  return typeof detail === 'string' ? detail : null;
+};
+
+/**
+ * Does a `block changed` event touch the subtree rooted at `withinId`?
+ *
+ * The reactivity filter behind `useBlocks(editor, { within })` in all three
+ * adapters. Without it every consumer of `useBlocks` re-renders on every change
+ * anywhere in the document — so a container block that only renders its own
+ * children still re-rendered on each keystroke in an unrelated block, and a page
+ * of N such containers turned one keystroke into N re-renders.
+ *
+ * INDETERMINATE READS AS "TOUCHED". The walk resolves ancestry through the LIVE
+ * tree, and a removal commonly emits after the block is already gone, so its
+ * parent chain cannot be read. Answering `false` there would leave a container
+ * rendering a child that no longer exists; answering `true` costs one extra
+ * render pass. Same for a payload with no readable target.
+ *
+ * Ancestry is walked UPWARD one `getById` at a time rather than snapshotted with
+ * `parentMap`: this runs on every emission — i.e. on every keystroke — so it must
+ * cost O(depth), not O(document).
+ * @param editor - the live Blok instance
+ * @param payload - the `block changed` payload
+ * @param withinId - id of the block whose subtree is the scope
+ * @returns true when the change is inside the scope (or cannot be placed)
+ */
+export const changeTouchesSubtree = (
+  editor: Blok,
+  payload: unknown,
+  withinId: string
+): boolean => {
+  const targetId = changedBlockId(payload);
+
+  if (targetId === null) {
+    return true;
+  }
+
+  /** Ids already visited on this walk — one Set for the whole climb. */
+  const seen = new Set<string>();
+
+  /**
+   * Walk one link up the parentId chain.
+   * @param id - the block to test, or null once the root is passed
+   * @returns true when `withinId` is `id` or one of its ancestors
+   */
+  const climbs = (id: string | null): boolean => {
+    if (id === null) {
+      return false;
+    }
+
+    if (id === withinId) {
+      return true;
+    }
+
+    // A parentId cycle is a corrupt tree, not a scope hit — bail rather than spin.
+    if (seen.has(id)) {
+      return false;
+    }
+
+    seen.add(id);
+
+    const node = editor.blocks.getById(id);
+
+    // The target (or one of its ancestors) is no longer in the tree.
+    if (node === null || node === undefined) {
+      return true;
+    }
+
+    return climbs(node.parentId);
+  };
+
+  return climbs(targetId);
+};
+
+/**
  * Build the framework-agnostic, id/parentId-relative block-tree API over a LIVE
  * editor. Mutators route through the editor-level `blocks` API (core's
  * chokepoints), so undo/redo and Yjs sync are inherited rather than

@@ -1,4 +1,4 @@
-import type { Component, DefineComponent, InjectionKey, MaybeRefOrGetter, Ref, ShallowRef } from 'vue';
+import type { Component, ComponentPublicInstance, DefineComponent, InjectionKey, MaybeRefOrGetter, Ref, ShallowRef } from 'vue';
 import type {
   API,
   Blok,
@@ -467,6 +467,7 @@ export interface UseBlocksApi {
  * block" tree, manipulated without flat-index math. Mirrors React's `useBlocks`.
  *
  * @param editor - the Blok instance (value/ref/getter), or null before ready
+ * @param options - reactivity options; see {@link UseBlocksOptions.within}
  *
  * @example
  * ```ts
@@ -478,7 +479,39 @@ export interface UseBlocksApi {
  * });
  * ```
  */
-export declare function useBlocks(editor: MaybeRefOrGetter<Blok | null>): UseBlocksApi;
+export declare function useBlocks(
+  editor: MaybeRefOrGetter<Blok | null>,
+  options?: UseBlocksOptions
+): UseBlocksApi;
+
+/** Options for {@link useBlocks}. */
+export interface UseBlocksOptions {
+  /**
+   * Invalidate reads only for changes inside the subtree rooted at this block id
+   * (the block itself or any descendant). Omit — or pass `null` — for the
+   * document-wide default.
+   *
+   * This bounds REACTIVITY, not reads: the returned API still sees the whole
+   * tree, so a scoped consumer can still `getById` anything. Reach for it in a
+   * container block that renders only its own children — unscoped, such a block
+   * invalidates on every keystroke anywhere in the document, and a page of N
+   * containers turns one keystroke into N re-renders.
+   *
+   * Accepted as a value, ref or getter (like `editor`) and read at EMIT time, so
+   * changing it takes effect immediately with no re-subscription.
+   *
+   * A change whose block cannot be placed in the tree (a removal that emits
+   * after the block is gone) counts as in-scope: skipping it would leave a
+   * container rendering a child that no longer exists.
+   *
+   * @example
+   * ```ts
+   * // A container block invalidating only for its own subtree.
+   * const blocks = useBlocks(useBlokInstance(), { within: () => block.id });
+   * ```
+   */
+  within?: MaybeRefOrGetter<string | null>;
+}
 
 /** Options accepted by {@link useBlokReady}. */
 export interface UseBlokReadyOptions {
@@ -578,8 +611,40 @@ export interface VueBlockRenderProps<Data> {
    * each child's HOLDER after mounting (named hooks instead of positional
    * `:nth-child()` CSS). Holders stay DIRECT children of the slot; attributes
    * the callback stops producing are removed on the next pass.
+   *
+   * A second prop, `childContentAttributes: ChildAttributesFn`, is the same
+   * decoration applied one level IN — on each child's
+   * `[data-blok-element-content]` wrapper instead of its holder. Blok's
+   * decoration law blesses both, and a container needs both: the holder is the
+   * child's outer box (rails, indices, hover states), the content wrapper is
+   * where the child's own text box begins, which is what a numbered rail or a
+   * connector line has to align to. Reach for it instead of walking Blok's
+   * wrapper chain from a holder hook (`[data-step] >
+   * [data-blok-element-content] > …`) — those selectors encode engine DOM in host
+   * CSS and break when that structure changes. A child whose DOM has not
+   * committed yet is stamped on the next pass.
    */
   BlockChildren: Component;
+  /**
+   * Attach this to the element the +/drag toolbar should vertically center on:
+   * `h('div', { ref: ctx.toolbarAnchorRef })`. The Vue-native way to answer
+   * core's `getToolbarAnchorElement`, which is otherwise a
+   * `(host, block) => Element` hook resolved OUTSIDE the render tree — so
+   * pointing at an element you render meant inventing a data attribute and
+   * `querySelector`-ing for it.
+   *
+   * A container block whose own chrome is not editable needs an anchor: with
+   * none, core centers the toolbar on the first `[contenteditable]` under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down, beside content that has a toolbar of its own.
+   *
+   * The ref is stable across renders and outranks the spec's
+   * `getToolbarAnchorElement` while it holds a MOUNTED element; once the element
+   * unmounts or detaches, the declared hook takes over again, so the toolbar is
+   * never positioned against a stale node. A ref placed on a child COMPONENT is
+   * resolved through its `$el`. Leave it unattached to keep core's default.
+   */
+  toolbarAnchorRef: (element: Element | ComponentPublicInstance | null) => void;
 }
 
 /** Spec for {@link createVueBlock}. Authored as a `.ts` render function (no SFC). */

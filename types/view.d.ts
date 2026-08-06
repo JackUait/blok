@@ -99,12 +99,18 @@ export interface BlocksToHtmlOptions {
    * Applies to rendered HTML only; {@link blocksToPlainText} reads a mark's
    * stored source, not its rendering.
    *
+   * For equations use {@link createLatexRenderer}: it hands back a synchronous
+   * renderer over the KaTeX build Blok already bundles, with Blok's own
+   * untrusted-input hardening, so a host needs no `katex` dependency of its own.
+   *
    * @example
+   * const renderLatexSync = await createLatexRenderer();
+   *
    * blocksToHtml(data, {
    *   inlineRenderers: {
    *     span: ({ attrs }) => attrs['data-latex'] === undefined
    *       ? undefined
-   *       : katex.renderToString(attrs['data-latex'], { throwOnError: false }),
+   *       : renderLatexSync(attrs['data-latex'], { displayMode: false }),
    *   },
    * });
    */
@@ -284,6 +290,61 @@ export declare function blocksToViewNodes(
  * @returns sanitized HTML string
  */
 export declare function sanitizeHtmlFragment(html: string, config: SanitizerConfig | PlaintextRule): string;
+
+/** Options for {@link renderLatex} and the renderer {@link createLatexRenderer} returns. */
+export interface LatexRenderOptions {
+  /** Block-level math (the default) vs inline. */
+  displayMode?: boolean;
+}
+
+/**
+ * Render a LaTeX string to HTML with the KaTeX build Blok already bundles.
+ *
+ * The options are hardened for untrusted input: `trust: false` forbids the
+ * markup-injecting commands (`\href`, `\includegraphics`, `\html*`), `maxExpand`
+ * caps macro expansion, `maxSize` caps element sizing, and `throwOnError: false`
+ * renders malformed math as escaped source instead of failing the document.
+ * Reach for this instead of adding `katex` as your own dependency: the chunk is
+ * already in Blok's bundle (its code tool, equation inline tool and markdown
+ * importer all use it) and these are the options Blok itself trusts.
+ *
+ * KaTeX is imported lazily on the first call. With no `document` present (SSR,
+ * workers) the stylesheet injection is skipped and the host includes
+ * `katex.min.css` itself; the returned markup is identical.
+ *
+ * For {@link BlocksToHtmlOptions.inlineRenderers}, which is synchronous, use
+ * {@link createLatexRenderer} — a promise there would stringify as
+ * `[object Promise]`.
+ *
+ * @param latex - the LaTeX source
+ * @param options - render options
+ * @returns the rendered HTML, or a message span for unrenderable input
+ */
+export declare function renderLatex(latex: string, options?: LatexRenderOptions): Promise<string>;
+
+/**
+ * Load KaTeX once and get back a SYNCHRONOUS LaTeX renderer — the form
+ * {@link BlocksToHtmlOptions.inlineRenderers} needs.
+ *
+ * Shaped as "await the loader, get the renderer" so there is no call order to
+ * get wrong: the renderer cannot exist before KaTeX is ready. It applies the same
+ * hardened options as {@link renderLatex}.
+ *
+ * @returns a synchronous `(latex, options) => html` renderer
+ * @example
+ * const renderLatexSync = await createLatexRenderer();
+ *
+ * blocksToHtml(data, {
+ *   inlineRenderers: {
+ *     span: ({ attrs }) => attrs['data-latex'] === undefined
+ *       ? undefined
+ *       : renderLatexSync(attrs['data-latex'], { displayMode: false }),
+ *   },
+ * });
+ */
+export declare function createLatexRenderer(): Promise<
+  (latex: string, options?: LatexRenderOptions) => string
+>;
 
 export { defineBlokSchema, composeBaseSanitizeConfig } from './index';
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from './index';

@@ -211,6 +211,41 @@ describe('types/data-attributes.d.ts stays in sync with src DATA_ATTR', () => {
   });
 });
 
+describe('types/view.d.ts declares every value the ./view entry exports', () => {
+  /**
+   * The published `.d.ts` files are hand-authored, so a runtime export can ship
+   * with no declaration and stay invisible: `renderLatex` did exactly that —
+   * bundled into a 259 KB katex chunk, reachable at runtime, absent from
+   * `types/view.d.ts`, so `types/view.d.ts` told consumers to call
+   * `katex.renderToString` themselves and every one of them booted a full
+   * read-only editor to render an equation instead.
+   */
+  it('has a declaration for each value export of src/view/index.ts', () => {
+    const entry = readFileSync(join(SRC_DIR, 'view', 'index.ts'), 'utf-8');
+    // `export { a, b } from '…'`, but never `export type { … }`.
+    const runtimeNames = [...entry.matchAll(/^export\s+\{([^}]+)\}/gm)]
+      .flatMap((match) => match[1].split(','))
+      .map((name) => name.trim().split(/\s+as\s+/).pop()?.trim() ?? '')
+      .filter((name) => name.length > 0);
+
+    const declaration = readFileSync(join(TYPES_DIR, 'view.d.ts'), 'utf-8');
+    const declaredNames = new Set([
+      ...[...declaration.matchAll(/^export\s+declare\s+(?:function|const)\s+(\w+)/gm)].map((m) => m[1]),
+      ...[...declaration.matchAll(/^export\s+\{([^}]+)\}/gm)]
+        .flatMap((m) => m[1].split(','))
+        .map((name) => name.trim().split(/\s+as\s+/).pop()?.trim() ?? ''),
+    ]);
+
+    const missing = runtimeNames.filter((name) => !declaredNames.has(name)).sort();
+
+    expect(
+      missing,
+      'src/view/index.ts exports these values with no declaration in types/view.d.ts, ' +
+        'so consumers cannot reach them: ' + missing.join(', '),
+    ).toEqual([]);
+  });
+});
+
 describe('types/message-keys.d.ts stays in sync with en.json', () => {
   it('declares exactly the built-in translation keys shipped in en.json', () => {
     const parsed = JSON.parse(readFileSync(MESSAGES_SOURCE, 'utf-8')) as Record<string, string>;

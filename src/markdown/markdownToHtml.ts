@@ -10,7 +10,7 @@ import type {
 import { isSamePageLink } from '../tools/link/registry';
 import { isHighlightable, tokenizePrism } from '../tools/code/prism-loader';
 import { extToPrismLang } from '../tools/file/code-languages';
-import { renderLatex } from '../tools/code/katex-loader';
+import { renderLatex } from '../shared/katex';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { sanitizeBlockHtml } from './sanitize-html';
 

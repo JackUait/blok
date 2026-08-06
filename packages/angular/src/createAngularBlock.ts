@@ -10,7 +10,12 @@ import type {
   BlockToolData,
   ToolboxConfig,
 } from '@/types/tools';
-import { BlockChildrenMounted, DATA_ATTR } from '@bloklabs/core/adapters';
+import {
+  applyChildDecoration,
+  BlockChildrenMounted,
+  createChildDecorationLedger,
+  DATA_ATTR,
+} from '@bloklabs/core/adapters';
 import { deepEqual } from '@bloklabs/core/adapters';
 import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 import { mountChildBlocks } from '@bloklabs/core/adapters';
@@ -54,55 +59,6 @@ const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrig
   'api',
   'convert',
 ]);
-
-/** What the previous decoration pass wrote for one child, so it can be undone. */
-interface StampedChild {
-  holder: HTMLElement;
-  names: string[];
-}
-
-/**
- * Apply one pass of per-child holder attributes and clear the previous pass's
- * leftovers — including on a child that has since left the container, which
- * would otherwise keep a dead index forever.
- * @param stamped - the container's ledger of what the last pass wrote (mutated)
- * @param children - the container's model children, in model order
- * @param decorate - the authored per-child decorator, if any
- */
-const applyChildAttributes = (
-  stamped: Map<string, StampedChild>,
-  children: BlockAPI[],
-  decorate: ChildAttributesFn | undefined
-): void => {
-  const next = new Map<string, StampedChild>();
-
-  children.forEach((child, index) => {
-    const names: string[] = [];
-
-    for (const [name, value] of Object.entries(decorate?.(child, index) ?? {})) {
-      if (value === null || value === undefined) {
-        child.holder.removeAttribute(name);
-        continue;
-      }
-
-      child.holder.setAttribute(name, String(value));
-      names.push(name);
-    }
-
-    next.set(child.id, { holder: child.holder, names });
-  });
-
-  for (const [id, previous] of stamped) {
-    const current = next.get(id);
-
-    previous.names
-      .filter(name => current === undefined || !current.names.includes(name))
-      .forEach(name => previous.holder.removeAttribute(name));
-  }
-
-  stamped.clear();
-  next.forEach((entry, id) => stamped.set(id, entry));
-};
 
 /**
  * Announce that a container's child holders have settled in its slot — the
@@ -308,10 +264,17 @@ export function createAngularBlock<Data = BlockToolData>(
     private hostEl: HTMLElement | null = null;
     /** Last host passed to ctx.mountChildren, re-mounted on each data change. */
     private childHost: HTMLElement | null = null;
-    /** Last per-child decorator passed to ctx.mountChildren; re-applied on each remount. */
+    /** Element the component handed to ctx.setToolbarAnchor, if any. */
+    private anchorEl: HTMLElement | null = null;
+    /**
+     * Last per-child decorators passed to ctx.mountChildren; BOTH re-applied on
+     * every remount (the author calls mountChildren once, the factory re-runs the
+     * mount on each data change).
+     */
     private childAttributes: ChildAttributesFn | undefined;
+    private childContentAttributes: ChildAttributesFn | undefined;
     /** What the last decoration pass wrote, so a dropped key is cleaned up. */
-    private readonly stampedChildren = new Map<string, StampedChild>();
+    private readonly childLedger = createChildDecorationLedger();
     /** Why core built this instance — gates `onCreated`, handed to `onMounted`. */
     private readonly origin: BlockOrigin;
     /** True once the post-mount hooks fired; a repeated rendered() must not re-fire them. */
@@ -349,6 +312,7 @@ export function createAngularBlock<Data = BlockToolData>(
         api: this.api,
         readOnly: this.readOnlySig.asReadonly(),
         mountChildren: this.mountChildren,
+        setToolbarAnchor: this.setToolbarAnchor,
       };
     }
 
@@ -446,6 +410,18 @@ export function createAngularBlock<Data = BlockToolData>(
      * exactly what core's default positioning already assumes.
      */
     public getToolbarAnchorElement(): HTMLElement | undefined {
+      /**
+       * An element the component handed over wins — it is the exact node, chosen
+       * from inside the template. `isConnected` is the guard that matters: a
+       * component that re-renders its anchor can leave a detached node here, and
+       * positioning the toolbar against one silently parks it at 0,0.
+       */
+      const declared = this.anchorEl;
+
+      if (declared !== null && declared.isConnected) {
+        return declared;
+      }
+
       const host = this.hostEl;
 
       if (host === null || spec.getToolbarAnchorElement === undefined) {
@@ -454,6 +430,15 @@ export function createAngularBlock<Data = BlockToolData>(
 
       return spec.getToolbarAnchorElement(host, this.blockApi) ?? undefined;
     }
+
+    /**
+     * `ctx.setToolbarAnchor`. A bound field so the context object handed through
+     * DI keeps a stable identity.
+     * @param element - the anchor element, or null to fall back to the spec hook
+     */
+    private readonly setToolbarAnchor = (element: HTMLElement | null): void => {
+      this.anchorEl = element;
+    };
 
     public moved(): void {
       // No remount: core relocates the host element; the mounted view rides along
@@ -480,10 +465,12 @@ export function createAngularBlock<Data = BlockToolData>(
      */
     private readonly mountChildren = (
       host: HTMLElement,
-      childAttributes?: ChildAttributesFn
+      childAttributes?: ChildAttributesFn,
+      childContentAttributes?: ChildAttributesFn
     ): void => {
       this.childHost = host;
       this.childAttributes = childAttributes;
+      this.childContentAttributes = childContentAttributes;
       host.setAttribute(DATA_ATTR.nestedBlocks, '');
       this.remountChildren();
     };
@@ -496,7 +483,10 @@ export function createAngularBlock<Data = BlockToolData>(
       const children = this.blockApi.getChildren();
 
       mountChildBlocks(this.childHost, children);
-      applyChildAttributes(this.stampedChildren, children, this.childAttributes);
+      applyChildDecoration(this.childLedger, children, {
+        childAttributes: this.childAttributes,
+        childContentAttributes: this.childContentAttributes,
+      });
       emitChildrenMounted(this.api, this.blockApi.id, children);
     }
 

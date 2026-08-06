@@ -9,6 +9,7 @@ import {
   shallowRef,
   toRaw,
   type Component,
+  type ComponentPublicInstance,
   type PropType,
   type ShallowRef,
   type VNodeChild,
@@ -23,7 +24,14 @@ import type {
   BlockToolData,
   ToolboxConfig,
 } from '@/types/tools';
-import { BlockChildrenMounted, DATA_ATTR , deepEqual , mountChildBlocks } from '@bloklabs/core/adapters';
+import {
+  applyChildDecoration,
+  BlockChildrenMounted,
+  createChildDecorationLedger,
+  DATA_ATTR,
+  deepEqual,
+  mountChildBlocks,
+} from '@bloklabs/core/adapters';
 import { fillDefaults, type PropSchema } from '@bloklabs/core/adapters';
 
 import {
@@ -79,55 +87,6 @@ export type ChildAttributes = Record<string, string | number | boolean | null | 
 
 /** The `BlockChildren` per-child decorator (see {@link VueBlockRenderProps.BlockChildren}). */
 export type ChildAttributesFn = (child: BlockAPI, index: number) => ChildAttributes;
-
-/** What the previous decoration pass wrote for one child, so it can be undone. */
-interface StampedChild {
-  holder: HTMLElement;
-  names: string[];
-}
-
-/**
- * Apply one pass of per-child holder attributes and clear the previous pass's
- * leftovers — including on a child that has since left the container, which
- * would otherwise keep a dead index forever.
- * @param stamped - the slot's ledger of what the last pass wrote (mutated)
- * @param children - the container's model children, in model order
- * @param decorate - the authored per-child decorator, if any
- */
-const applyChildAttributes = (
-  stamped: Map<string, StampedChild>,
-  children: BlockAPI[],
-  decorate: ChildAttributesFn | undefined
-): void => {
-  const next = new Map<string, StampedChild>();
-
-  children.forEach((child, index) => {
-    const names: string[] = [];
-
-    for (const [name, value] of Object.entries(decorate?.(child, index) ?? {})) {
-      if (value === null || value === undefined) {
-        child.holder.removeAttribute(name);
-        continue;
-      }
-
-      child.holder.setAttribute(name, String(value));
-      names.push(name);
-    }
-
-    next.set(child.id, { holder: child.holder, names });
-  });
-
-  for (const [id, previous] of stamped) {
-    const current = next.get(id);
-
-    previous.names
-      .filter(name => current === undefined || !current.names.includes(name))
-      .forEach(name => previous.holder.removeAttribute(name));
-  }
-
-  stamped.clear();
-  next.forEach((entry, id) => stamped.set(id, entry));
-};
 
 /**
  * Announce that a container's child holders have settled in its slot — the
@@ -187,6 +146,17 @@ export interface VueBlockRenderProps<Data> {
    * by identity), so decoration is attributes, never wrapper elements. Attributes
    * the callback stops producing are removed on the next pass.
    *
+   * A second prop, `childContentAttributes`, is the same decoration applied one
+   * level IN — on each child's `[data-blok-element-content]` wrapper instead of
+   * its holder. Core's decoration law blesses both, and a container needs both:
+   * the holder is the child's outer box (rails, indices, hover states), the
+   * content wrapper is where the child's own text box begins, which is what a
+   * numbered rail or a connector line has to align to. Reach for it instead of
+   * walking core's wrapper chain from a holder hook (`[data-step] >
+   * [data-blok-element-content] > …`) — those selectors encode engine DOM in host
+   * CSS and break when that structure changes. A child whose DOM has not
+   * committed yet has no wrapper to write to and is stamped on the next pass.
+   *
    * Writing on a child's holder is inert by design: core's mutation filter drops
    * a holder-targeted attribute record for the child block and suppresses it for
    * the container. The guarantee stops at the holder and its
@@ -194,6 +164,27 @@ export interface VueBlockRenderProps<Data> {
    * root DOES score as that child's edit.
    */
   BlockChildren: Component;
+  /**
+   * Attach this to the element the +/drag toolbar should vertically center on:
+   * `h('div', { ref: ctx.toolbarAnchorRef })`, or `:ref="ctx.toolbarAnchorRef"`
+   * in a template. The Vue-native way to answer core's
+   * `getToolbarAnchorElement`, which is otherwise a `(host, block) => Element`
+   * hook resolved OUTSIDE the render tree — so pointing at an element you render
+   * meant inventing a data attribute and `querySelector`-ing for it from
+   * {@link CreateVueBlockSpec.getToolbarAnchorElement}.
+   *
+   * A container block whose own chrome is not editable needs an anchor: with
+   * none, core centers the toolbar on the first `[contenteditable]` under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down, beside content that has a toolbar of its own.
+   *
+   * The ref is stable across renders and outranks
+   * {@link CreateVueBlockSpec.getToolbarAnchorElement} while it holds a MOUNTED
+   * element; when the element unmounts (Vue calls the ref with null, or it is
+   * detached) the declared hook takes over again, so the toolbar is never
+   * positioned against a stale node. Leave it unattached to keep core's default.
+   */
+  toolbarAnchorRef: (element: Element | ComponentPublicInstance | null) => void;
 }
 
 /**
@@ -421,6 +412,25 @@ export function createVueBlock<Data = BlockToolData>(
     private hostEl: HTMLElement | null = null;
     /** Latest patch queued while a pointer drag suppresses dispatchChange. */
     private pendingDispatch = false;
+    /** Element the block pointed `toolbarAnchorRef` at, if any. */
+    private anchorEl: HTMLElement | null = null;
+    /**
+     * The `toolbarAnchorRef` context member. A bound field so its identity is
+     * STABLE across renders — a fresh function ref each render would make Vue
+     * detach (null) and re-attach it on every patch.
+     * @param element - what Vue attached: an element, a component instance, or
+     *   null on detach
+     */
+    private readonly toolbarAnchorRef = (
+      element: Element | ComponentPublicInstance | null
+    ): void => {
+      // A ref placed on a child COMPONENT hands over its instance, not its DOM.
+      const resolved = element === null || element instanceof Element
+        ? element
+        : (element.$el as unknown);
+
+      this.anchorEl = resolved instanceof HTMLElement ? resolved : null;
+    };
 
     public constructor(options: BlockToolConstructorOptions) {
       this.blockApi = options.block;
@@ -457,11 +467,15 @@ export function createVueBlock<Data = BlockToolData>(
             type: Function as PropType<ChildAttributesFn>,
             default: undefined,
           },
+          childContentAttributes: {
+            type: Function as PropType<ChildAttributesFn>,
+            default: undefined,
+          },
         },
         setup(props) {
           const slot = ref<HTMLElement | null>(null);
           // What the last decoration pass wrote, so a dropped key is cleaned up.
-          const stamped = new Map<string, StampedChild>();
+          const ledger = createChildDecorationLedger();
           const mountKids = (): void => {
             if (slot.value === null) {
               return;
@@ -470,7 +484,10 @@ export function createVueBlock<Data = BlockToolData>(
             const children = blockApi.getChildren();
 
             mountChildBlocks(slot.value, children);
-            applyChildAttributes(stamped, children, props.childAttributes);
+            applyChildDecoration(ledger, children, {
+              childAttributes: props.childAttributes,
+              childContentAttributes: props.childContentAttributes,
+            });
             emitChildrenMounted(api, blockApi.id, children);
           };
 
@@ -498,6 +515,7 @@ export function createVueBlock<Data = BlockToolData>(
         api: this.api,
         readOnly: this.readOnlyRef,
         BlockChildren: this.childrenComponent,
+        toolbarAnchorRef: this.toolbarAnchorRef,
       };
 
       this.registry?.register(this.blockApi.id, {
@@ -584,6 +602,19 @@ export function createVueBlock<Data = BlockToolData>(
      * default positioning already assumes.
      */
     public getToolbarAnchorElement(): HTMLElement | undefined {
+      /**
+       * A ref the block attached wins — it names the exact element, chosen from
+       * inside the render tree. `isConnected` is the guard that matters: Vue
+       * nulls the ref on unmount, but a block that re-parents its anchor can
+       * leave a detached node here, and positioning the toolbar against one
+       * silently parks it at 0,0.
+       */
+      const fromRef = this.anchorEl;
+
+      if (fromRef !== null && fromRef.isConnected) {
+        return fromRef;
+      }
+
       const host = this.hostEl;
 
       if (host === null || spec.getToolbarAnchorElement === undefined) {

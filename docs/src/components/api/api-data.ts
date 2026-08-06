@@ -3976,9 +3976,9 @@ bootstrapApplication(AppComponent, {
     id: "use-blocks",
     badge: "Adapters",
     title: "useBlocks",
-    lastUpdated: "2026-07-17",
+    lastUpdated: "2026-08-07",
     description:
-      "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor) hook in @bloklabs/react, the useBlocks(editor) composable in @bloklabs/vue, and `injectBlocks(editor)` in @bloklabs/angular — pass the `instance` signal of BlokEditorComponent/BlokContentDirective, and call it from an injection context (a field initializer or the constructor). Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays.",
+      "A reactive snapshot of the block tree plus a full manipulation API, from the framework adapters: the useBlocks(editor, options?) hook in @bloklabs/react, the useBlocks(editor, options?) composable in @bloklabs/vue, and `injectBlocks(editor, options?)` in @bloklabs/angular — pass the `instance` signal of BlokEditorComponent/BlokContentDirective, and call it from an injection context (a field initializer or the constructor). Reads re-render reactively as the document changes; writers are atomic (one undo step) and safe to call before the editor is ready (they no-op). Returned BlockNode objects ({ id, type, parentId, contentIds }) are fresh-snapshot volatile — read them now, don't stash them in dep arrays. Reactivity is document-wide by default: pass `{ within: blockId }` to re-render only for changes inside that block's subtree (the block itself or any descendant). Reach for it in a container block that renders only its own children — unscoped, such a block re-renders on every keystroke anywhere in the document, and a page of N containers turns one keystroke into N re-renders. The scope bounds re-renders, not reads: a scoped handle still sees the whole tree, so getById/getChildren keep working on anything. In Vue the scope also accepts a ref/getter and in Angular a signal, read at emit time so changing it needs no re-subscription.",
     example: `import { useBlok, BlokContent, useBlocks } from '@bloklabs/react';
 
 export function Outline() {
@@ -3994,6 +3994,15 @@ export function Outline() {
       <ol>{rootBlocks.map((b) => <li key={b.id}>{b.type}</li>)}</ol>
     </>
   );
+}
+
+// Inside a container block: re-render only for its OWN subtree, so typing in an
+// unrelated block elsewhere in the document costs this component nothing.
+function Steps({ block }) {
+  const blocks = useBlocks(useBlokInstance(), { within: block.id });
+  const steps = blocks.getChildren(block.id);
+
+  return <ol>{steps.map((s) => <li key={s.id}>{s.type}</li>)}</ol>;
 }`,
     methods: [
       {
@@ -4311,7 +4320,7 @@ export function Comments({ comments }) {
     id: "view-api",
     badge: "Core",
     title: "View renderer",
-    lastUpdated: "2026-07-24",
+    lastUpdated: "2026-08-07",
     description:
       "Display saved documents without paying for an editor. The @bloklabs/core/view subpath renders OutputData to semantic HTML or plain text synchronously and DOM-free — it runs in Node, workers, and React Server Components — so display-only surfaces (published pages, previews, search indexing, emails) no longer need an editor instance, its bundle, or its async ready latch. Every inline-content field is sanitized against the composed allowlist before interpolation, with a URL scheme policy identical to the editor's; pair the functions with defineBlokSchema and documents are displayed under the same sanitize composition that produced them (if you later change the inline-tool set at runtime via tools.setInlineToolbar, recompose the schema so the view keeps up). For React, <BlokView> (and the wrapper-free useBlokView) is the obvious read-only path — reach for it instead of <BlokEditor readOnly>, which ships the full editing runtime (toolbar, history, mutation machinery) to every viewer. Output is unstyled by default: opt into classes + root together with the opt-in @bloklabs/core/view.css for editor parity, or toolAttributes alone with that stylesheet for the classless baseline that reproduces the editor's block spacing from the same --blok-block-padding-* tokens; enable blockIds for copy-link-to-block deep links, and pass transformUrl to rewrite hrefs / CDN image URLs.",
     example: `// schema.ts — pure and module-scope-safe; share it between editor and server
@@ -4509,6 +4518,32 @@ const baseSanitize = composeBaseSanitizeConfig([
 
 const nodes = blocksToViewNodes(savedData);
 // → [{ tag: 'p', attrs: {}, children: [{ text: 'Hello' }] }]`,
+      },
+      {
+        name: "renderLatex(latex, options?)",
+        returnType: "Promise<string>",
+        description:
+          "Render a LaTeX string to HTML with the KaTeX build Blok already bundles (its code tool, equation inline tool and markdown importer all use it), hardened for untrusted input: trust: false forbids the markup-injecting commands (\\href, \\includegraphics, \\html*), maxExpand caps macro expansion, maxSize caps element sizing, and throwOnError: false renders malformed math as escaped source instead of failing the document. Reach for it instead of adding katex as your own dependency — that is a second copy of the library and a second, unaudited option set. KaTeX is imported lazily on the first call; with no document present (SSR, workers) the stylesheet injection is skipped and you include katex.min.css yourself, and the markup is identical. Use createLatexRenderer for inlineRenderers, which is synchronous.",
+        example: `import { renderLatex } from '@bloklabs/core/view';
+
+const html = await renderLatex('c = \\\\pm\\\\sqrt{a^2 + b^2}', { displayMode: false });`,
+      },
+      {
+        name: "createLatexRenderer()",
+        returnType: "Promise<(latex: string, options?: LatexRenderOptions) => string>",
+        description:
+          "Load KaTeX once and get back a synchronous LaTeX renderer — the form inlineRenderers needs, since it replaces an element with the string it returns and a promise there stringifies as [object Promise]. Shaped as \"await the loader, get the renderer\" so there is no call order to get wrong: the renderer cannot exist before KaTeX is ready. Same hardened options as renderLatex. This is what lets a display surface render equations through blocksToHtml/BlokView instead of booting a read-only editor for them.",
+        example: `import { blocksToHtml, createLatexRenderer } from '@bloklabs/core/view';
+
+const renderLatexSync = await createLatexRenderer();
+
+const html = blocksToHtml(savedData, {
+  inlineRenderers: {
+    span: ({ attrs }) => attrs['data-latex'] === undefined
+      ? undefined
+      : renderLatexSync(attrs['data-latex'], { displayMode: false }),
+  },
+});`,
       },
       {
         name: "BlokView",

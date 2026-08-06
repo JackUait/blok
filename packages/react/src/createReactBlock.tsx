@@ -2,7 +2,9 @@ import { isValidElement, useEffect, useRef, type ComponentType, type ReactElemen
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
+  applyChildDecoration,
   BlockChildrenMounted,
+  createChildDecorationLedger,
   DATA_ATTR,
   deepEqual,
   fillDefaults,
@@ -46,55 +48,6 @@ const INTERNAL_CONFIG_KEYS: readonly string[] = [
  * elements and all), and in-place read-only support is unconditional.
  */
 export type BlockToolStatics = Omit<BlockToolConstructable, 'toolbox' | 'isReadOnlySupported'>;
-
-/** What the previous decoration pass wrote for one child, so it can be undone. */
-interface StampedChild {
-  holder: HTMLElement;
-  names: string[];
-}
-
-/**
- * Apply one pass of per-child holder attributes and clear the previous pass's
- * leftovers — including on a child that has since left the container, which
- * would otherwise keep a dead index forever.
- * @param stamped - the slot's ledger of what the last pass wrote (mutated)
- * @param children - the container's model children, in model order
- * @param decorate - the authored per-child decorator, if any
- */
-const applyChildAttributes = (
-  stamped: Map<string, StampedChild>,
-  children: BlockAPI[],
-  decorate: BlockChildrenProps['childAttributes']
-): void => {
-  const next = new Map<string, StampedChild>();
-
-  children.forEach((child, index) => {
-    const names: string[] = [];
-
-    for (const [name, value] of Object.entries(decorate?.(child, index) ?? {})) {
-      if (value === null || value === undefined) {
-        child.holder.removeAttribute(name);
-        continue;
-      }
-
-      child.holder.setAttribute(name, String(value));
-      names.push(name);
-    }
-
-    next.set(child.id, { holder: child.holder, names });
-  });
-
-  for (const [id, previous] of stamped) {
-    const current = next.get(id);
-
-    previous.names
-      .filter(name => current === undefined || !current.names.includes(name))
-      .forEach(name => previous.holder.removeAttribute(name));
-  }
-
-  stamped.clear();
-  next.forEach((entry, id) => stamped.set(id, entry));
-};
 
 /**
  * Announce that a container's child holders have settled in its slot — the
@@ -187,6 +140,27 @@ export interface ReactBlockRenderProps<Data, Config = Record<string, unknown>> {
   config: Readonly<Partial<Config>>;
   /** Engine-owned child slot — render `<BlockChildren />` for a container block. */
   BlockChildren: ComponentType<BlockChildrenProps>;
+  /**
+   * Attach this to the element the +/drag toolbar should vertically center on:
+   * `<div ref={toolbarAnchorRef}>`. The React-native way to answer core's
+   * `getToolbarAnchorElement`, which is otherwise a `(host, block) => Element`
+   * hook resolved OUTSIDE the component tree — so pointing at an element you
+   * render meant inventing a data attribute and `querySelector`-ing for it from
+   * {@link CreateReactBlockSpec.getToolbarAnchorElement}.
+   *
+   * A container block whose own chrome is not editable needs an anchor: with
+   * none, core centers the toolbar on the first `[contenteditable]` under the
+   * host, which for a container is its FIRST CHILD BLOCK — parking the +/drag
+   * handles halfway down, beside content that has a toolbar of its own.
+   *
+   * The ref is stable across renders and outranks
+   * {@link CreateReactBlockSpec.getToolbarAnchorElement} while it holds a
+   * MOUNTED element; when the element unmounts (React calls the ref with null,
+   * or it is detached) the declared hook takes over again, so the toolbar is
+   * never positioned against a stale node. Leave it unattached to keep core's
+   * default.
+   */
+  toolbarAnchorRef: (element: HTMLElement | null) => void;
 }
 
 /**
@@ -222,6 +196,28 @@ export interface BlockChildrenProps {
    * @param index - the child's position in the container's model children
    */
   childAttributes?: (child: BlockAPI, index: number) => ChildAttributes;
+  /**
+   * The same per-child decoration, applied one level IN: on each child's
+   * `[data-blok-element-content]` wrapper instead of its holder. Core's
+   * child-holder decoration law blesses both, and a container needs both — the
+   * holder is the child's outer box (rails, indices, hover states), while the
+   * content wrapper is where the child's own text box begins, which is what a
+   * numbered rail or a connector line has to align to.
+   *
+   * Reach for it instead of walking core's wrapper chain from a holder hook
+   * (`[data-step] > [data-blok-element-content] > …`): those selectors encode
+   * engine DOM structure in host CSS and break the moment that structure changes.
+   * With a named hook the selector is one flat attribute.
+   *
+   * Same cleanup and same inertness as {@link BlockChildrenProps.childAttributes}
+   * — attributes the callback stops producing are removed on the next pass, and
+   * writes here are still not the child's edit. A child whose DOM has not
+   * committed yet (a portal-rendered block, on the first pass) has no wrapper to
+   * write to and is skipped, then stamped on the next pass.
+   * @param child - the child block's API
+   * @param index - the child's position in the container's model children
+   */
+  childContentAttributes?: (child: BlockAPI, index: number) => ChildAttributes;
 }
 
 /**
@@ -694,6 +690,17 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
     private hostEl: HTMLElement | null = null;
     /** True while a deferred dispatch is waiting for a pointer drag to end. */
     private pendingDispatch = false;
+    /** Element the component pointed `toolbarAnchorRef` at, if any. */
+    private anchorEl: HTMLElement | null = null;
+    /**
+     * The `toolbarAnchorRef` prop. A bound field so its identity is STABLE
+     * across renders — a fresh callback ref each render would make React detach
+     * (null) and re-attach it on every commit.
+     * @param element - the element React attached, or null on detach
+     */
+    private readonly toolbarAnchorRef = (element: HTMLElement | null): void => {
+      this.anchorEl = element;
+    };
 
     public constructor(options: BlockToolConstructorOptions) {
       this.blockApi = options.block;
@@ -736,10 +743,11 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
       // appends the real child holders imperatively (React never reconciles them).
       this.childrenComponent = function BlockChildren({
         childAttributes,
+        childContentAttributes,
       }: BlockChildrenProps): ReactElement {
         const slotRef = useRef<HTMLDivElement | null>(null);
         // What the last decoration pass wrote, so a dropped key is cleaned up.
-        const stampedRef = useRef(new Map<string, StampedChild>());
+        const ledgerRef = useRef(createChildDecorationLedger());
 
         // No dep array: re-adopt children after EVERY render (mirrors the Vue
         // adapter's onMounted + onUpdated pair).
@@ -751,7 +759,8 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
           const children = blockApi.getChildren();
 
           mountChildBlocks(slotRef.current, children);
-          applyChildAttributes(stampedRef.current, children, childAttributes);
+          applyChildDecoration(ledgerRef.current, children, { childAttributes,
+            childContentAttributes });
           emitChildrenMounted(api, blockApi.id, children);
         });
 
@@ -879,6 +888,19 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
      * default positioning already assumes.
      */
     public getToolbarAnchorElement(): HTMLElement | undefined {
+      /**
+       * A ref the component attached wins — it names the exact element, chosen
+       * from inside the tree. `isConnected` is the guard that matters: React
+       * nulls the ref on unmount, but a component that re-parents its anchor can
+       * leave a detached node here, and positioning the toolbar against one
+       * silently parks it at 0,0.
+       */
+      const fromRef = this.anchorEl;
+
+      if (fromRef !== null && fromRef.isConnected) {
+        return fromRef;
+      }
+
       const host = this.hostEl;
 
       if (host === null || spec.getToolbarAnchorElement === undefined) {
@@ -916,6 +938,7 @@ export function createReactBlock<Data = BlockToolData, Config = Record<string, u
         readOnly: this.readOnly,
         config: this.toolConfig,
         BlockChildren: this.childrenComponent,
+        toolbarAnchorRef: this.toolbarAnchorRef,
       };
 
       return props as unknown as Record<string, unknown>;

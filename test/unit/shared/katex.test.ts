@@ -9,7 +9,7 @@ vi.mock('katex', () => ({
   },
 }));
 
-describe('katex-loader', () => {
+describe('shared katex renderer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.querySelectorAll('link[data-katex-css]').forEach((el) => el.remove());
@@ -22,7 +22,7 @@ describe('katex-loader', () => {
   });
 
   it('renders LaTeX to HTML string', async () => {
-    const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+    const { renderLatex } = await import('../../../src/shared/katex');
     const html = await renderLatex('E = mc^2');
 
     expect(mockRenderToString).toHaveBeenCalledWith('E = mc^2', expect.objectContaining({ throwOnError: false }));
@@ -30,7 +30,7 @@ describe('katex-loader', () => {
   });
 
   it('injects KaTeX CSS link into document head on first call', async () => {
-    const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+    const { renderLatex } = await import('../../../src/shared/katex');
 
     expect(document.querySelector('link[data-katex-css]')).toBeNull();
 
@@ -44,7 +44,7 @@ describe('katex-loader', () => {
   });
 
   it('does not inject CSS link twice on subsequent calls', async () => {
-    const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+    const { renderLatex } = await import('../../../src/shared/katex');
 
     await renderLatex('x^2');
     await renderLatex('y^2');
@@ -59,7 +59,7 @@ describe('katex-loader', () => {
       throw new Error('KaTeX parse error');
     });
 
-    const { renderLatex } = await import('../../../../src/tools/code/katex-loader');
+    const { renderLatex } = await import('../../../src/shared/katex');
     const html = await renderLatex('\\invalid');
 
     expect(html).toContain('KaTeX parse error');

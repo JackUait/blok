@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  * renderLatex() normally dynamic-imports katex + injects CSS; here it just
  * echoes a predictable rendered string.
  */
-vi.mock('../../../../src/tools/code/katex-loader', () => ({
+vi.mock('../../../../src/shared/katex', () => ({
   renderLatex: vi.fn(
     async (latex: string) => `<span class="katex">rendered:${latex}</span>`
   ),
@@ -13,7 +13,7 @@ vi.mock('../../../../src/tools/code/katex-loader', () => ({
 
 import { IconEquation } from '../../../../src/components/icons';
 import { EquationInlineTool } from '../../../../src/components/inline-tools/inline-tool-equation';
-import { renderLatex } from '../../../../src/tools/code/katex-loader';
+import { renderLatex } from '../../../../src/shared/katex';
 import { PopoverItemType } from '../../../../src/components/utils/popover';
 import type { PopoverItemHtmlParams, WithChildren } from '../../../../types/utils/popover';
 

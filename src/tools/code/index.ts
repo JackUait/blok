@@ -41,7 +41,7 @@ import {
   SPLIT_CONTAINER_SPLIT_STYLES,
 } from './constants';
 import type { CodeViewMode } from './constants';
-import { renderLatex } from './katex-loader';
+import { renderLatex } from '../../shared/katex';
 import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
 import { applyPrismHighlight, disposePrismStyles } from './prism-applier';

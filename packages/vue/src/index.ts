@@ -1,5 +1,6 @@
 export { useBlok } from './useBlok';
 export { useBlocks } from './useBlocks';
+export type { UseBlocksOptions } from './useBlocks';
 export { useBlokReady } from './useBlokReady';
 export { BlokContent } from './BlokContent';
 export { BlokEditor } from './BlokEditor';

@@ -219,6 +219,14 @@ describe('Table onPaste merged cells (colspan/rowspan)', () => {
     cleanup();
   });
 
+  /**
+   * Explicit timeout: `colspan="99"` is a deliberate stress input, and the
+   * occupancy parser walks the whole declared span before clamping it. The test
+   * costs ~300ms alone, but a worker starved of CPU by a full parallel suite has
+   * measured >5s — so the default budget made this the first test to go red
+   * whenever the suite grew, with nothing wrong in the table code. The ceiling
+   * does not slow a healthy run.
+   */
   it('clamps spans that overflow the actual grid', () => {
     const { saved, cleanup } = pasteAndSave([
       '<tr><td colspan="99">Wide</td><td>B</td></tr>',
@@ -240,7 +248,7 @@ describe('Table onPaste merged cells (colspan/rowspan)', () => {
     });
 
     cleanup();
-  });
+  }, 20000);
 
   it('pastes span-free tables exactly as before (no merge metadata)', () => {
     const { saved, wrapper, cleanup } = pasteAndSave(

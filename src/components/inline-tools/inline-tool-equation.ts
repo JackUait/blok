@@ -9,7 +9,7 @@ import { DATA_ATTR } from '../constants/data-attributes';
 import { IconEquation } from '../icons';
 import { SelectionUtils } from '../selection/index';
 import { PopoverItemType } from '../utils/popover';
-import { renderLatex } from '../../tools/code/katex-loader';
+import { renderLatex } from '../../shared/katex';
 
 /**
  * Marks a rendered inline equation. The original LaTeX source is kept in the

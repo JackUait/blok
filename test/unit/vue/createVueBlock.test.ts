@@ -416,6 +416,41 @@ describe('createVueBlock — core tool-contract passthrough', () => {
     unmount();
   });
 
+  it('takes the toolbar anchor from a ref the block attaches', async () => {
+    // The spec hook is (host, block) => Element, resolved OUTSIDE the render
+    // tree, so pointing at an element the block renders meant inventing a data
+    // attribute and querySelector-ing for it. `toolbarAnchorRef` is a Vue
+    // function ref, the idiomatic channel.
+    const { registry, unmount } = mountHost();
+
+    const Tool = createVueBlock<CounterData>({
+      type: 'counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      setup(ctx) {
+        return () => h('div', [
+          h('div', { class: 'chrome' }),
+          h('div', { ref: ctx.toolbarAnchorRef, class: 'anchor' }),
+        ]);
+      },
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+    const host = tool.render();
+
+    document.body.appendChild(host);
+    await nextTick();
+
+    expect(tool.getToolbarAnchorElement()).toBe(host.querySelector('.anchor'));
+
+    unmount();
+  });
+
   it('reports no anchor when the spec declares none (core keeps its default positioning)', async () => {
     const { registry, unmount } = mountHost();
 
@@ -576,6 +611,62 @@ describe('createVueBlock — editor api and per-child decoration', () => {
     // Anti-wrapper guard: holders must remain DIRECT children of the slot.
     expect(children[0].holder.parentElement).toBe(slot);
     expect(children[1].holder.parentElement).toBe(slot);
+
+    unmount();
+  });
+
+  it('stamps per-child attributes on the content wrapper too', async () => {
+    // Core's child-holder decoration law blesses BOTH the holder and the child's
+    // [data-blok-element-content] wrapper, but only the holder half was reachable
+    // — so a container aligning anything to a child's CONTENT box had to encode
+    // core's wrapper chain in its own CSS.
+    const { registry, unmount } = mountHost();
+    const withContent = (id: string): BlockAPI => {
+      const child = makeChild(id);
+      const content = document.createElement('div');
+
+      content.setAttribute('data-blok-element-content', '');
+      child.holder.appendChild(content);
+
+      return child;
+    };
+    const children = [withContent('a'), withContent('b')];
+
+    const Tool = createVueBlock<CounterData>({
+      type: 'container',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      setup({ BlockChildren }) {
+        return () =>
+          h(BlockChildren, {
+            childAttributes: (_child: BlockAPI, index: number) => ({
+              'data-step-index': String(index),
+            }),
+            childContentAttributes: (_child: BlockAPI, index: number) => ({
+              'data-step-body': String(index),
+            }),
+          });
+      },
+    });
+
+    const tool = new Tool({
+      data: {},
+      block: makeContainerApi(children),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    });
+
+    document.body.appendChild(tool.render());
+    await nextTick();
+
+    const contentOf = (child: BlockAPI): Element | null =>
+      child.holder.querySelector('[data-blok-element-content]');
+
+    expect(children[0].holder.getAttribute('data-step-index')).toBe('0');
+    expect(contentOf(children[0])?.getAttribute('data-step-body')).toBe('0');
+    expect(contentOf(children[1])?.getAttribute('data-step-body')).toBe('1');
+    // The two hooks must land on DIFFERENT elements.
+    expect(children[0].holder.hasAttribute('data-step-body')).toBe(false);
 
     unmount();
   });

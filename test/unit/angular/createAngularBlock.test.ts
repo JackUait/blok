@@ -375,6 +375,65 @@ describe('createAngularBlock — core tool-contract passthrough', () => {
     expect(tool.getToolbarAnchorElement()).toBe(anchor);
   });
 
+  it('takes the toolbar anchor from an element the block hands to setToolbarAnchor', () => {
+    // The spec hook is (host, block) => Element, resolved OUTSIDE the component,
+    // so pointing at an element the component renders meant inventing a data
+    // attribute and querySelector-ing for it. `ctx.setToolbarAnchor` is the
+    // direct channel — the Angular counterpart of React's ref prop.
+    const Tool = createAngularBlock<CounterData>({
+      type: 'ng-counter',
+      propSchema: { count: { default: 0 }, label: { default: 'n' } },
+      component: CounterComponent,
+      getToolbarAnchorElement: host => host.querySelector<HTMLElement>('[data-anchor]'),
+    });
+    const registry = makeRegistry();
+    const tool = new Tool({
+      data: {} as BlockToolData,
+      block: makeBlockApi(),
+      api: makeApi(),
+      readOnly: false,
+      config: { [REGISTRY_CONFIG_KEY]: registry },
+    } as BlockToolConstructorOptions);
+
+    const host = tool.render();
+
+    // The host must be IN the document: a detached anchor is refused (the
+    // toolbar would be positioned against a node with a zero rect).
+    document.body.appendChild(host);
+
+    const declared = document.createElement('div');
+
+    declared.setAttribute('data-anchor', '');
+    host.appendChild(declared);
+
+    const anchor = document.createElement('div');
+
+    host.appendChild(anchor);
+
+    // The context the authored component receives via DI — captured off the
+    // registry, which is where the factory hands it over.
+    const ctx = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0][1]
+      .context as AngularBlockRenderContext<CounterData>;
+
+    ctx.setToolbarAnchor(anchor);
+
+    // A live element handed over from inside the component outranks the
+    // host-scoped resolver.
+    expect(tool.getToolbarAnchorElement()).toBe(anchor);
+
+    // A detached anchor must not be handed to the toolbar — positioning against
+    // one silently parks it at 0,0; the declared resolver takes over again.
+    anchor.remove();
+    expect(tool.getToolbarAnchorElement()).toBe(declared);
+
+    // Clearing it explicitly falls back too.
+    host.appendChild(anchor);
+    ctx.setToolbarAnchor(null);
+    expect(tool.getToolbarAnchorElement()).toBe(declared);
+
+    host.remove();
+  });
+
   it('reports no anchor when the spec declares none (core keeps its default positioning)', () => {
     const Tool = createAngularBlock<CounterData>({
       type: 'ng-counter',
@@ -516,6 +575,60 @@ describe('createAngularBlock — editor api and per-child decoration', () => {
     // Anti-wrapper guard: holders must remain DIRECT children of the slot.
     expect(children[0].holder.parentElement).toBe(slot);
     expect(children[1].holder.parentElement).toBe(slot);
+  });
+
+  it('stamps per-child attributes on the content wrapper too', () => {
+    // Core's child-holder decoration law blesses BOTH the holder and the child's
+    // [data-blok-element-content] wrapper, but only the holder half was reachable
+    // — so a container aligning anything to a child's CONTENT box had to encode
+    // core's wrapper chain in its own CSS.
+    const withContent = (id: string): BlockAPI => {
+      const child = makeChild(id);
+      const content = document.createElement('div');
+
+      content.setAttribute('data-blok-element-content', '');
+      child.holder.appendChild(content);
+
+      return child;
+    };
+    const children = [withContent('a'), withContent('b')];
+    const { ctx, slot } = renderWithChildren(children);
+
+    ctx.mountChildren(
+      slot,
+      (_child, index) => ({ 'data-step-index': String(index) }),
+      (_child, index) => ({ 'data-step-body': String(index) })
+    );
+
+    const contentOf = (child: BlockAPI): Element | null =>
+      child.holder.querySelector('[data-blok-element-content]');
+
+    expect(children[0].holder.getAttribute('data-step-index')).toBe('0');
+    expect(contentOf(children[0])?.getAttribute('data-step-body')).toBe('0');
+    expect(contentOf(children[1])?.getAttribute('data-step-body')).toBe('1');
+    // The two hooks must land on DIFFERENT elements.
+    expect(children[0].holder.hasAttribute('data-step-body')).toBe(false);
+  });
+
+  it('re-applies the remembered content decorator on a later remount', () => {
+    // mountChildren is called once by the author; the factory re-runs the same
+    // mount on every data change, so BOTH decorators have to be remembered — a
+    // forgotten content decorator silently drops its hooks on the next change.
+    const child = makeChild('a');
+    const content = document.createElement('div');
+
+    content.setAttribute('data-blok-element-content', '');
+    child.holder.appendChild(content);
+
+    const { ctx, tool, slot } = renderWithChildren([child]);
+
+    ctx.mountChildren(slot, undefined, () => ({ 'data-tone': 'warn' }));
+    expect(content.getAttribute('data-tone')).toBe('warn');
+
+    content.removeAttribute('data-tone');
+    void tool.setData({ count: 9, label: 'n' } as BlockToolData);
+
+    expect(content.getAttribute('data-tone')).toBe('warn');
   });
 
   it('drops the attributes the callback stopped producing on the next mount', async () => {

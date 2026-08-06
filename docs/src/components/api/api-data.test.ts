@@ -811,6 +811,24 @@ describe("API_SECTIONS", () => {
       });
     });
 
+    /**
+     * The hook subscribes to the editor's document-wide 'block changed', so
+     * without the `within` scope a container block that renders only its own
+     * children still re-renders on every keystroke anywhere in the document.
+     * The escape hatch is worthless if nobody knows it exists.
+     */
+    it("documents the within scope for subtree-only reactivity", () => {
+      const section = API_SECTIONS.find((s) => s.id === "use-blocks");
+      const description = section!.description ?? "";
+
+      expect(description).toContain("within");
+      expect(description).toContain("subtree");
+      // Scoping bounds re-renders, NOT what the api can read — a reader who
+      // assumes otherwise will scope it and then wonder why getById still works.
+      expect(description.toLowerCase()).toContain("not reads");
+      expect(section!.example).toContain("within");
+    });
+
     it("every useBlocks method example calls the hook's api handle", () => {
       const section = API_SECTIONS.find((s) => s.id === "use-blocks");
       section!.methods!.forEach((method) => {

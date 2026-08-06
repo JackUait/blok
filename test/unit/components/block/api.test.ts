@@ -242,7 +242,7 @@ describe('BlockAPI', () => {
      * in-memory FLAT list, so `resolveInsertIndex` runs against real positions
      * (this exercises flat-index CORRECTNESS, not just delegation).
      */
-    const makeApi = (flat: FakeRecord[]): {
+    const makeApi = (flat: FakeRecord[], childHolder?: HTMLElement): {
       api: ApiModules;
       insertInsideParent: ReturnType<typeof vi.fn>;
       setBlockParent: ReturnType<typeof vi.fn>;
@@ -252,7 +252,24 @@ describe('BlockAPI', () => {
       transact: ReturnType<typeof vi.fn>;
       setToBlock: ReturnType<typeof vi.fn>;
     } => {
-      const created: BlockAPIInterface = { id: 'new-child', name: 'paragraph', parentId: 'p' } as unknown as BlockAPIInterface;
+      const created: BlockAPIInterface = { id: 'new-child',
+        name: 'paragraph',
+        parentId: 'p' } as unknown as BlockAPIInterface;
+
+      /**
+       * With `childHolder` the created child answers `holder`/`focusable` the way
+       * a real BlockAPI does — as a LIVE getter over its DOM — so a suite can
+       * model a child whose content only shows up after the insert (a
+       * portal-rendered block). Defined rather than spread: spreading would
+       * evaluate the getter once and freeze the answer.
+       */
+      if (childHolder !== undefined) {
+        Object.defineProperties(created, {
+          holder: { get: () => childHolder },
+          focusable: { get: () => childHolder.querySelector('[contenteditable]') !== null },
+        });
+      }
+
       const insertInsideParent = vi.fn(() => created);
       const setBlockParent = vi.fn();
       const move = vi.fn();
@@ -409,6 +426,99 @@ describe('BlockAPI', () => {
       });
 
       expect(setToBlock).toHaveBeenCalledWith('new-child', 'default', 3);
+    });
+
+    describe('insertChild caret on a child whose DOM commits later', () => {
+      const flat = (): FakeRecord[] => [
+        { id: 'p', name: 'card', parentId: null },
+        { id: 'a', name: 'paragraph', parentId: 'p' },
+      ];
+
+      /** Lets jsdom deliver the MutationObserver batch for the DOM writes above. */
+      const flushMutations = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+      /**
+       * An editable element core would count as an input. Written as the
+       * ATTRIBUTE: jsdom does not reflect the `contentEditable` property, and
+       * core's input search selects on the attribute.
+       */
+      const editable = (): HTMLElement => {
+        const element = document.createElement('div');
+
+        element.setAttribute('contenteditable', 'true');
+
+        return element;
+      };
+
+      it('re-applies the caret once the child produces an input', async () => {
+        const holder = document.createElement('div');
+
+        document.body.appendChild(holder);
+
+        const { api, setToBlock } = makeApi(flat(), holder);
+        const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+        blockAPI.insertChild({ text: '' }, 'end', undefined, { caret: { position: 'start' } });
+
+        // The synchronous placement lands on a block with no inputs — all core can
+        // do there is highlight it, which is the bug the re-application answers.
+        expect(setToBlock).toHaveBeenCalledTimes(1);
+
+        // The framework portal commits: the real editable finally exists.
+        holder.appendChild(editable());
+
+        await flushMutations();
+
+        expect(setToBlock).toHaveBeenCalledTimes(2);
+        expect(setToBlock).toHaveBeenLastCalledWith('new-child', 'start', 0);
+
+        holder.remove();
+      });
+
+      it('leaves a child that never becomes focusable alone', async () => {
+        const holder = document.createElement('div');
+
+        document.body.appendChild(holder);
+
+        const { api, setToBlock } = makeApi(flat(), holder);
+        const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+        blockAPI.insertChild({}, 'end', 'delimiter', { caret: {} });
+
+        // A delimiter renders content but no input: highlighting it IS the answer,
+        // so the watch must not turn into a second placement.
+        holder.appendChild(document.createElement('hr'));
+
+        await flushMutations();
+
+        expect(setToBlock).toHaveBeenCalledTimes(1);
+
+        holder.remove();
+      });
+
+      it('drops the re-application when focus has moved elsewhere in the meantime', async () => {
+        const holder = document.createElement('div');
+        const elsewhere = editable();
+
+        document.body.append(holder, elsewhere);
+
+        const { api, setToBlock } = makeApi(flat(), holder);
+        const blockAPI = new BlockAPIConstructor(containerBlock(), api);
+
+        blockAPI.insertChild({ text: '' }, 'end', undefined, { caret: {} });
+
+        // The author clicked into another block before the portal committed —
+        // stealing focus back would yank the caret out from under them.
+        elsewhere.focus();
+        holder.appendChild(editable());
+
+        await flushMutations();
+
+        expect(setToBlock).toHaveBeenCalledTimes(1);
+
+        holder.remove();
+        elsewhere.remove();
+      });
     });
 
     it('insertChild with an id that already exists creates nothing and returns it', () => {

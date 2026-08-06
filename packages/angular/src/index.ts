@@ -3,6 +3,7 @@ export { BlokContentDirective } from './blok-content.directive';
 export { provideBlok, BLOK_DEFAULT_CONFIG } from './provide-blok';
 export { createAngularBlock } from './createAngularBlock';
 export { injectBlocks } from './useBlocks';
+export type { InjectBlocksOptions } from './useBlocks';
 export { injectBlokReady } from './useBlokReady';
 export { BLOK_BLOCK_CONTEXT } from './block-context';
 export { injectBlokInstance, BLOK_EDITOR_INSTANCE } from './blok-instance';

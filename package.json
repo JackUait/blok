@@ -266,7 +266,7 @@
     "ng-packagr": "22.0.1",
     "parse5": "^8.0.0",
     "playwright": "1.61.1",
-    "postcss": "8.5.20",
+    "postcss": "8.5.23",
     "postcss-selector-parser": "7.1.1",
     "prismjs": "^1.30.0",
     "react": "^19.2.7",

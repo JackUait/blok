@@ -1132,14 +1132,23 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      // Wait for a call that has the expected toolsConfig.tools reference
+      /*
+       * Wait for a call that has the expected toolsConfig.tools reference.
+       *
+       * Explicit timeout: `vi.waitFor` defaults to 1s and, unlike a test's own
+       * budget, is NOT raised by preflight's `--testTimeout`. The drawer builds
+       * its nested editor across a dynamic import and an animation frame, which
+       * costs ~300ms here but has measured >5s on a worker starved by a full
+       * parallel suite — so the default made this describe go red whenever the
+       * suite grew, with nothing wrong in the drawer. Does not slow a healthy run.
+       */
       await vi.waitFor(() => {
         const callWithTools = mockBlokConstructor.mock.calls.find(
           ([cfg]) => cfg.tools === toolsConfig.tools,
         );
 
         expect(callWithTools).toBeDefined();
-      });
+      }, { timeout: 20000 });
 
       const callWithTools = mockBlokConstructor.mock.calls.find(
         ([cfg]) => cfg.tools === toolsConfig.tools,
@@ -1175,7 +1184,8 @@ describe('DatabaseCardDrawer', () => {
 
       drawer.open(row);
 
-      // Wait for a call originating from this drawer's editor holder
+      // Wait for a call originating from this drawer's editor holder.
+      // Explicit timeout for the same reason as its sibling above.
       await vi.waitFor(() => {
         const editorHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
         const matchingCall = mockBlokConstructor.mock.calls.find(
@@ -1183,7 +1193,7 @@ describe('DatabaseCardDrawer', () => {
         );
 
         expect(matchingCall).toBeDefined();
-      });
+      }, { timeout: 20000 });
 
       const editorHolder = options.wrapper.querySelector('[data-blok-database-drawer-editor]');
       const matchingCall = mockBlokConstructor.mock.calls.find(

@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0](https://github.com/JackUait/blok/compare/v1.9.0...v1.10.0) (2026-08-07)
+
+### Features
+
+- **Framework adapters** — `useBlocks` takes `{ within: blockId }` in React, Vue and Angular, so a container block re-renders only for changes inside its own subtree; unscoped, a page of N containers turned one keystroke into N re-renders. It bounds reactivity, not reads — the returned API still sees the whole tree — and a change whose block can no longer be placed (a removal emitting after the fact) counts as in-scope, so a container can never be left rendering a dead child. `childContentAttributes` applies per-child decoration one level in, on each child's `[data-blok-element-content]` wrapper, which is where a numbered rail or connector line has to align; core's decoration law always blessed it, but only the holder was reachable, so containers hard-coded Blok's wrapper chain in their own CSS. `toolbarAnchorRef` (React/Vue) and `ctx.setToolbarAnchor` (Angular) answer `getToolbarAnchorElement` from inside the component tree instead of forcing a self-invented data attribute and a `querySelector`; the ref outranks the declared hook only while it holds a mounted element, so the toolbar is never positioned against a detached node.
+- **View** — `renderLatex` and `createLatexRenderer` are exported from `@bloklabs/core/view`. The KaTeX chunk was already in the bundle — the code tool, the equation inline tool and the markdown importer all use it — but no entry exported the renderer, so `types/view.d.ts` told hosts to add `katex` as a second dependency of their own. Both apply the options Blok itself trusts for untrusted input (`trust: false`, capped `maxExpand`/`maxSize`, no throw on malformed math), and the CSS injection is skipped where there is no `document`, so SSR and workers get identical markup. `inlineRenderers` is synchronous, so `createLatexRenderer()` awaits the load once and hands back a sync renderer — the async function alone would stringify as `[object Promise]`.
+
+### Bug Fixes
+
+- **`insertChild({ caret })`** — The caret was lost for a portal-rendered child. Placement ran synchronously after the insert, but a React/Vue/Angular child's `render()` returns an empty host and commits its editable a frame later, so the block was not yet focusable and `Caret.setToBlock` took its only other branch: clear the selection, blur, highlight the block. It was permanent, because nothing re-ran the placement. It now re-applies once the child's holder produces an input, one-shot, and stands down if focus moved away in the meantime.
+
+### Maintenance
+
+- **Adapter parity** — The per-child decoration pass was triplicated across the three adapters and is now one implementation. Three architecture laws pin the new surface (`child-decoration`, `toolbar-anchor-ref`, `useblocks-scope`), and the view entry gained an export ↔ declaration drift check — the guard whose absence let `renderLatex` ship undeclared.
+
 ## [1.9.0](https://github.com/JackUait/blok/compare/v1.8.0...v1.9.0) (2026-08-06)
 
 ### Features

@@ -49,6 +49,15 @@ function toSafeEmbedSrc(value: string | undefined): string {
   return value !== undefined && isHttpsUrl(value) ? value : '';
 }
 
+/** Host of a stored URL, or '' when it cannot be parsed. */
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Resolves the URL a STORED block may put into a live sink, re-establishing the
  * tool's invariant ("only registry-matched URLs are ever embedded") at render
@@ -500,20 +509,12 @@ export class Embed implements BlockTool {
     glyph.innerHTML = IconGlobe;
     anchor.appendChild(glyph);
 
-    // Unparsable sources never reach the link mode, but keep the card
-    // resilient: the full URL below still identifies the target.
-    const hostname = ((): string => {
-      try {
-        return new URL(source).hostname;
-      } catch {
-        return '';
-      }
-    })();
-
     const host = document.createElement('span');
 
     host.className = 'blok-embed-linkcard__host';
-    host.textContent = hostname;
+    // Unparsable sources never reach the link mode, but keep the card
+    // resilient: the full URL below still identifies the target.
+    host.textContent = hostnameOf(source);
     anchor.appendChild(host);
 
     const url = document.createElement('span');
@@ -760,10 +761,26 @@ export class Embed implements BlockTool {
     return figure;
   }
 
+  /**
+   * Accessible name for the sandboxed frame — without one a screen reader
+   * announces a bare "frame". The provider's registry `title` is its official
+   * consumer-facing brand name (not translatable copy); a generic embed falls
+   * back to the host it frames.
+   */
+  private frameTitle(): string {
+    const label = this.api.i18n.t('toolNames.embed');
+    const service = this.data.service ?? '';
+    const registered = EMBED_SERVICES[service];
+    const provider = registered !== undefined ? registered.title : hostnameOf(this.data.source ?? '');
+
+    return provider === '' ? label : `${label}: ${provider}`;
+  }
+
   private buildIframe(): HTMLIFrameElement {
     const iframe = document.createElement('iframe');
 
     iframe.setAttribute('data-blok-testid', 'embed-frame');
+    iframe.setAttribute('title', this.frameTitle());
     iframe.src = this.embedSrc();
     iframe.style.width = '100%';
     iframe.style.height = '100%';
@@ -860,15 +877,23 @@ export class Embed implements BlockTool {
     }
 
     const value = this.data.caption ?? '';
+    const placeholder = this.api.i18n.t('tools.embed.captionPlaceholder');
     const caption = document.createElement('div');
 
     caption.setAttribute('data-role', 'embed-caption');
-    caption.setAttribute('role', 'textbox');
     caption.setAttribute('contenteditable', this.readOnly ? 'false' : 'true');
-    caption.setAttribute('data-placeholder', this.api.i18n.t('tools.embed.captionPlaceholder'));
+    caption.setAttribute('data-placeholder', placeholder);
     caption.textContent = value;
 
+    // The textbox contract is only declared while the field is editable: in
+    // read-only the caption is static text, and `aria-multiline` is invalid
+    // without the role. `data-placeholder` is not an accessible name, so the
+    // (already localized) placeholder copy doubles as the aria-label.
     if (!this.readOnly) {
+      caption.setAttribute('role', 'textbox');
+      caption.setAttribute('aria-multiline', 'true');
+      caption.setAttribute('aria-label', placeholder);
+
       caption.addEventListener('blur', () => {
         const next = caption.textContent ?? '';
 

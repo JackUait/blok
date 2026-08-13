@@ -309,6 +309,16 @@ export class PopoverItemDefault extends PopoverItem {
 
       root.appendChild(titleEl);
       this.nodes.titleEl = titleEl;
+    } else if (params.hint?.title !== undefined) {
+      /**
+       * An icon-only item (the whole inline toolbar renders this way) has no
+       * text of its own and its icon is aria-hidden, so its accessible name
+       * would be empty. The hint is wired through aria-describedby, which
+       * DESCRIBES a control and never NAMES one — so the hint title is
+       * promoted to aria-label here. Set regardless of `hint.enabled`: that
+       * flag only suppresses the hover tooltip, not the need for a name.
+       */
+      root.setAttribute('aria-label', params.hint.title);
     }
 
     // Secondary label

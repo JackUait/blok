@@ -260,9 +260,13 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
 
       const swatch = document.createElement('button');
       const swatchColor = entry.field === 'text' ? preset.text : preset.bg;
+      const label = formatSwatchLabel(i18n, mode.labelKey, entry.name);
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-recent-${entry.field}-${entry.name}`);
       swatch.className = swatchClassName;
+      // No aria-pressed here: recents never render the active ring, and this section is
+      // not re-rendered by setActiveColor, so a pressed state written here would go stale.
+      swatch.setAttribute('aria-label', label);
       swatch.textContent = entry.field === 'text' ? 'A' : '';
 
       if (entry.field === 'text') {
@@ -278,7 +282,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
       });
-      onHover(swatch, formatSwatchLabel(i18n, mode.labelKey, entry.name), { placement: 'top' });
+      onHover(swatch, label, { placement: 'top' });
       grid.appendChild(swatch);
     }
 
@@ -328,9 +332,15 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     // Default swatch (first position) — clears the active color for this section
     const defaultSwatch = document.createElement('button');
     const isDefaultActive = activeColorForSection === null;
+    const defaultLabel = formatSwatchLabel(i18n, mode.labelKey, null);
 
     defaultSwatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-default`);
     defaultSwatch.className = twMerge(swatchClassName, isDefaultActive && 'ring-2 ring-swatch-ring-hover');
+    // The name has to be authored: a background swatch has no text at all, and every text
+    // swatch renders the same 'A', so textContent cannot tell one colour from another.
+    defaultSwatch.setAttribute('aria-label', defaultLabel);
+    // The applied colour is otherwise signalled only by the ring class (WCAG 1.4.1).
+    defaultSwatch.setAttribute('aria-pressed', String(isDefaultActive));
     defaultSwatch.textContent = mode.presetField === 'text' ? 'A' : '';
 
     if (mode.presetField === 'text') {
@@ -342,16 +352,19 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     defaultSwatch.addEventListener('click', () => {
       onColorSelect(null, mode.key);
     });
-    onHover(defaultSwatch, formatSwatchLabel(i18n, mode.labelKey, null), { placement: 'top' });
+    onHover(defaultSwatch, defaultLabel, { placement: 'top' });
     grid.appendChild(defaultSwatch);
 
     for (const preset of presets) {
       const swatch = document.createElement('button');
       const swatchColor = mode.presetField === 'text' ? preset.text : preset.bg;
       const isActive = activeColorForSection !== null && colorsEqual(swatchColor, activeColorForSection);
+      const label = formatSwatchLabel(i18n, mode.labelKey, preset.name);
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-${preset.name}`);
       swatch.className = twMerge(swatchClassName, isActive && 'ring-2 ring-swatch-ring-hover');
+      swatch.setAttribute('aria-label', label);
+      swatch.setAttribute('aria-pressed', String(isActive));
       swatch.textContent = mode.presetField === 'text' ? 'A' : '';
 
       if (mode.presetField === 'text') {
@@ -367,7 +380,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
       });
-      onHover(swatch, formatSwatchLabel(i18n, mode.labelKey, preset.name), { placement: 'top' });
+      onHover(swatch, label, { placement: 'top' });
       grid.appendChild(swatch);
     }
   };

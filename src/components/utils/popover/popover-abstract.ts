@@ -989,8 +989,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     items.className = css.items;
     items.setAttribute(DATA_ATTR.popoverItems, '');
     items.setAttribute('data-blok-testid', 'popover-items');
-    // Expose the container as a listbox (search/combobox surfaces) or a menu.
-    items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+    // Expose the container as a listbox (search/combobox surfaces) or a menu —
+    // but ONLY when it actually owns selectable items. A popover built purely
+    // from custom HTML (the inline link tool's edit form) has none, and both
+    // roles require option/menuitem children, so stamping one there declares a
+    // menu with zero menuitems (axe: aria-required-children). Left role-less it
+    // is a plain container for the form it wraps.
+    if (this.itemsDefault.length > 0) {
+      items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+    }
     if (this.params.listboxId !== undefined) {
       items.id = this.params.listboxId;
     }

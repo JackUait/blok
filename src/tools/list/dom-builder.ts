@@ -188,6 +188,13 @@ export const buildWrapper = (context: DOMBuilderContext): HTMLElement => {
   const wrapper = document.createElement('div');
   wrapper.className = BASE_STYLES;
   wrapper.setAttribute(DATA_ATTR.tool, TOOL_NAME);
+  // Parent for the role="listitem" this wrapper always contains — without it every
+  // list item in the editor is an orphan (axe aria-required-parent). Each item is
+  // its own block with its own wrapper, so a run of items announces as N one-item
+  // lists rather than one N-item list. That is the accepted ceiling: one role="list"
+  // spanning consecutive item blocks would need an element wrapping their holders,
+  // which the child-holder decoration law forbids.
+  wrapper.setAttribute('role', 'list');
   wrapper.setAttribute('data-list-style', data.style);
   wrapper.setAttribute('data-list-depth', String(data.depth ?? 0));
 
@@ -352,11 +359,19 @@ export const buildSemanticListHtml = (items: SemanticListItem[]): HTMLElement =>
 
       checkbox.type = 'checkbox';
       checkbox.checked = Boolean(item.checked);
-      li.appendChild(checkbox);
 
-      const label = document.createElement('span');
+      const text = document.createElement('span');
 
-      label.innerHTML = item.text;
+      text.innerHTML = item.text;
+
+      // Implicit labelling (wrapping <label>) rather than id + for/aria-labelledby:
+      // this markup is pasted into a FOREIGN document where our ids can collide with
+      // the host's, and id-stripping sanitizers are common — both break an id-based
+      // pairing silently, while the nesting survives as long as the <label> does.
+      const label = document.createElement('label');
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
       li.appendChild(label);
     } else {
       li.innerHTML = item.text;

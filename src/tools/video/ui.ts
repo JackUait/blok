@@ -67,9 +67,17 @@ export function renderCaptionRow(opts: CaptionRowOptions): HTMLElement {
   const caption = document.createElement('div');
   caption.className = 'blok-video-caption';
   caption.setAttribute('data-role', 'video-caption');
-  caption.setAttribute('role', 'textbox');
   caption.setAttribute('contenteditable', opts.readOnly ? 'false' : 'true');
   caption.setAttribute('data-placeholder', opts.placeholder);
+  // The textbox contract is only declared while the field is editable: in
+  // read-only the caption is static text, and `aria-multiline` is invalid
+  // without the role. `data-placeholder` is not an accessible name, so the
+  // (already localized) placeholder copy doubles as the aria-label.
+  if (!opts.readOnly) {
+    caption.setAttribute('role', 'textbox');
+    caption.setAttribute('aria-multiline', 'true');
+    caption.setAttribute('aria-label', opts.placeholder);
+  }
   caption.textContent = opts.value;
   caption.style.outline = 'none';
   caption.style.textAlign = 'left';

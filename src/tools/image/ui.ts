@@ -127,9 +127,17 @@ export interface CaptionOptions {
 export function renderCaption(opts: CaptionOptions): HTMLElement {
   const el = document.createElement('div');
   el.className = 'blok-image-caption';
-  el.setAttribute('role', 'textbox');
   el.setAttribute('contenteditable', opts.readOnly ? 'false' : 'true');
   el.setAttribute('data-placeholder', opts.placeholder);
+  // The textbox contract is only declared while the field is editable: in
+  // read-only the caption is static text, and `aria-multiline` is invalid
+  // without the role. `data-placeholder` is not an accessible name, so the
+  // (already localized) placeholder copy doubles as the aria-label.
+  if (!opts.readOnly) {
+    el.setAttribute('role', 'textbox');
+    el.setAttribute('aria-multiline', 'true');
+    el.setAttribute('aria-label', opts.placeholder);
+  }
   el.textContent = opts.value;
   el.style.outline = 'none';
   el.style.textAlign = 'left';

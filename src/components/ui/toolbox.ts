@@ -1111,7 +1111,14 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
 
     // Same visual language as the search-time group labels in PopoverDesktop.
     element.className = `pl-2 pr-3 ${isFirst ? 'pt-0.5' : 'pt-2.5'} pb-1 text-xs font-medium text-gray-text/50 cursor-default`;
-    element.setAttribute('role', 'separator');
+    // The toolbox popover renders its items container as role="listbox", which
+    // may only own `option` and `group` — a role="separator" header is an
+    // invalid owned child (axe: aria-required-children). role="presentation"
+    // makes the header transparent to that ownership walk while its text stays
+    // readable; the label cannot become a real `group` instead, because search
+    // re-ranking (PopoverDesktop#reorderItemsByRank) reparents every option
+    // straight back into the flat items container.
+    element.setAttribute('role', 'presentation');
     element.setAttribute('data-blok-testid', 'toolbox-section-title');
     element.textContent = this.i18n.t(Toolbox.SECTION_TITLE_KEYS[section]);
 

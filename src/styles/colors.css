@@ -83,17 +83,29 @@
   --blok-selection-inline: #d4ecff;
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
-  --blok-gray-text: #707684;
+  /*
+    Secondary text grey. The previous #707684 measured 4.55:1 on white — it
+    cleared AA by 0.05 and therefore failed on every tinted light surface Blok
+    paints it on: 4.28:1 on --blok-bg-secondary (#f7f8fa, code language label)
+    and 3.95:1 under the 8% --blok-item-hover-bg tint (bookmark description on
+    hover). #646a79 measures 5.41 / 5.09 / 4.70 on those three. The dark-theme
+    #a39e98 below already clears 5.7:1 everywhere and is unchanged.
+  */
+  --blok-gray-text: #646a79;
   --blok-dark: #1d202b;
   --blok-active-icon: #2383e2;
-  --blok-link: #2383e2;
+  /* 4.5:1 on white for link TEXT; #2383e2 measured 3.88:1. Icon-only blues
+     (--blok-active-icon / --blok-icon-active-text) stay, they answer the 3:1
+     non-text bar. */
+  --blok-link: #1b6fc2;
   --blok-line-gray: #eff0f1;
   --blok-tooltip-bg: #1d202b;
   --blok-tooltip-font: #cdd1e0;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.14);
   --blok-icon-active-text: #2383e2;
   --blok-text-primary: black;
-  --blok-text-secondary: #707684;
+  /* Tracks --blok-gray-text; see the contrast note there. */
+  --blok-text-secondary: #646a79;
   --blok-popover-border: rgba(55, 53, 47, 0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
@@ -147,7 +159,7 @@
   --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
   --blok-database-card-colored-border: var(--blok-database-card-border);
   --blok-database-column-bg: rgba(0, 0, 0, 0.04);
-  --blok-database-add-text: rgba(55, 53, 47, 0.5);
+  --blok-database-add-text: #646a79;
   --blok-database-add-border: rgba(55, 53, 47, 0.25);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
@@ -156,7 +168,7 @@
   --blok-database-tab-bg: transparent;
   --blok-database-tab-bg-active: rgba(0, 0, 0, 0.06);
   --blok-database-tab-bg-hover: rgba(0, 0, 0, 0.04);
-  --blok-database-tab-text: rgba(55, 53, 47, 0.5);
+  --blok-database-tab-text: rgba(55, 53, 47, 0.7);
   --blok-database-tab-text-active: #37352f;
   --blok-database-popover-bg: #fff;
   --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -258,6 +270,14 @@
   --blok-color-red-text: #d44c47;
   --blok-color-red-bg: #fdebec;
   --blok-inline-code-bg: rgba(135, 131, 120, 0.15);
+  /*
+    Inline code needs its OWN red, not --blok-color-red-text: that token is the
+    Marker tool's palette value (persisted into saved documents as
+    `color: #d44c47`, pinned by the table clipboard tests) and it measures only
+    3.62:1 against --blok-inline-code-bg. #b93a35 measures 4.80:1 on the same
+    chip while staying the same hue.
+  */
+  --blok-inline-code-text: #b93a35;
 
   /*
     Table UI chrome — grip handles and add-row/col pills. The light theme
@@ -539,7 +559,7 @@
     --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
     --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
     --blok-database-column-bg: rgba(255, 255, 255, 0.05);
-    --blok-database-add-text: rgba(255, 255, 255, 0.4);
+    --blok-database-add-text: #a39e98;
     --blok-database-add-border: rgba(255, 255, 255, 0.2);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
@@ -548,7 +568,7 @@
     --blok-database-tab-bg: transparent;
     --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
     --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
-    --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+    --blok-database-tab-text: rgba(255, 255, 255, 0.6);
     --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
     --blok-database-popover-bg: #2d2d2c;
     --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -623,6 +643,9 @@
     --blok-color-pink-bg: #4b1b33;
     --blok-color-red-text: #dd5e5a;
     --blok-color-red-bg: #4e1a18;
+    /* 5.63:1 on the editor body, 4.87:1 on the popover surface; the light
+       theme's #b93a35 measures 1.5:1 there. */
+    --blok-inline-code-text: #ea8480;
 
     --blok-table-grip-bg: #4a4a4a;
     --blok-table-grip-hover-bg: #555554;
@@ -712,7 +735,7 @@
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
   --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
   --blok-database-column-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-add-text: rgba(255, 255, 255, 0.4);
+  --blok-database-add-text: #a39e98;
   --blok-database-add-border: rgba(255, 255, 255, 0.2);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
   --blok-database-delete-text: rgba(255, 255, 255, 0.3);
@@ -721,7 +744,7 @@
   --blok-database-tab-bg: transparent;
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
   --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
-  --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+  --blok-database-tab-text: rgba(255, 255, 255, 0.6);
   --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
   --blok-database-popover-bg: #2d2d2c;
   --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -796,6 +819,9 @@
   --blok-color-pink-bg: #4b1b33;
   --blok-color-red-text: #dd5e5a;
   --blok-color-red-bg: #4e1a18;
+  /* 5.63:1 on the editor body, 4.87:1 on the popover surface; the light
+     theme's #b93a35 measures 1.5:1 there. */
+  --blok-inline-code-text: #ea8480;
 
   --blok-table-grip-bg: #4a4a4a;
   --blok-table-grip-hover-bg: #555554;

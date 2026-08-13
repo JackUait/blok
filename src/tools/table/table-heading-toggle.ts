@@ -6,6 +6,10 @@ import { twMerge } from '../../components/utils/tw';
 const TOGGLE_ROW_CLASSES = [
   'flex',
   'items-center',
+  // A <button> shrinks to fit-content and centres its text under the UA
+  // stylesheet; the row must keep filling the popover like the <div> it replaced.
+  'w-full',
+  'text-left',
   'select-none',
   'border-none',
   'bg-transparent',
@@ -15,6 +19,9 @@ const TOGGLE_ROW_CLASSES = [
   'mb-px',
   'cursor-pointer',
   'can-hover:hover:bg-item-hover-bg',
+  // Now a real focus stop in the popover's Flipper, so it needs the same
+  // keyboard highlight every other popover item carries.
+  'data-[blok-focused="true"]:bg-item-focus-bg',
 ];
 
 /**
@@ -76,14 +83,20 @@ interface HeadingToggleOptions {
 /**
  * Creates a toggle switch element for heading row/column controls.
  * Returns an HTML element suitable for use as a PopoverItemType.Html item.
+ *
+ * It is a <button>, not a styled <div>: PopoverItemHtml.getControls() collects
+ * `button, input` only, so anything else contributes ZERO focus stops and is
+ * unreachable by keyboard inside the popover.
  */
 export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement => {
   const { icon, label, isActive, onToggle } = options;
 
   const state = { active: isActive };
 
-  const row = document.createElement('div');
+  const row = document.createElement('button');
 
+  row.type = 'button';
+  row.setAttribute('role', 'switch');
   row.className = twMerge(TOGGLE_ROW_CLASSES);
 
   // Icon
@@ -112,6 +125,7 @@ export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement 
   row.appendChild(track);
 
   const applyState = (): void => {
+    row.setAttribute('aria-checked', String(state.active));
     track.style.backgroundColor = state.active ? 'var(--blok-toggle-on-bg)' : 'var(--blok-toggle-off-bg)';
     thumb.style.left = state.active ? '14px' : '2px';
     thumb.style.backgroundColor = state.active ? 'var(--blok-toggle-thumb-on-bg)' : '';
@@ -122,11 +136,28 @@ export const createHeadingToggle = (options: HeadingToggleOptions): HTMLElement 
 
   applyState();
 
-  row.addEventListener('click', (e) => {
-    e.stopPropagation();
+  const toggle = (): void => {
     state.active = !state.active;
     applyState();
     onToggle(state.active);
+  };
+
+  row.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggle();
+  });
+
+  // Enter is consumed by the popover Flipper's capture-phase listener, which
+  // re-dispatches it as a click; Space reaches the button and is handled here.
+  // preventDefault() keeps the native button activation from toggling twice.
+  row.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
   });
 
   return row;

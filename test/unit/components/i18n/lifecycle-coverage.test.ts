@@ -268,8 +268,11 @@ describe('current English catalog lifecycle coverage', () => {
 
     expect(lifecycle.size).toBe(563);
     expect(counts).toEqual({
-      'executable-literal': 413,
-      'finite-dynamic': 123,
+      // tools.callout.editIcon moved finite-dynamic -> executable-literal when
+      // the callout emoji button stopped being named by the emoji glyph and
+      // started composing its label from that key at a literal call site.
+      'executable-literal': 414,
+      'finite-dynamic': 122,
       'registered-namespace-compatible': 25,
       'catalog-only': 2,
     });

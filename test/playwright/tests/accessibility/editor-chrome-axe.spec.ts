@@ -293,10 +293,6 @@ test.describe('editor chrome accessibility', () => {
     });
 
     test('opened with the + button marks the trigger expanded', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe aria-required-children (critical) + color-contrast (serious): same unfiltered toolbox listbox defects as the slash-opened case'
-      );
 
       await createBlok(page, { data: singleParagraph('Hello world') });
 
@@ -359,11 +355,6 @@ test.describe('editor chrome accessibility', () => {
 
   test.describe('block settings menu', () => {
     test('opened from the settings toggler is a named menu', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe color-contrast (serious): [data-blok-testid="popover-context-label"] ("Text") and [data-edit-meta-label] ("Last edited") '
-        + 'render text-gray-text/50 on bg-popover-bg'
-      );
 
       await createBlok(page, { data: singleParagraph('Some text') });
 
@@ -419,11 +410,6 @@ test.describe('editor chrome accessibility', () => {
 
   test.describe('nested popovers', () => {
     test('convert-to submenu opened from the block settings menu', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe scrollable-region-focusable (serious): the submenu\'s [data-blok-testid="popover-items"] scroll container (overflow-y-auto, role="menu") '
-        + 'has no tabindex, so its overflowing options are unreachable by keyboard-only scrolling'
-      );
 
       await createBlok(page, { data: singleParagraph('Some text') });
 
@@ -454,10 +440,6 @@ test.describe('editor chrome accessibility', () => {
     });
 
     test('convert-to submenu opened from the inline toolbar', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe scrollable-region-focusable (serious): same untabbable [data-blok-testid="popover-items"] scroll container as the block-settings submenu'
-      );
 
       await createBlok(page, { data: singleParagraph('Some text to convert') });
 
@@ -483,11 +465,6 @@ test.describe('editor chrome accessibility', () => {
     });
 
     test('block color picker submenu', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe button-name (critical): every [data-blok-testid="block-color-swatch-backgroundColor-*"] swatch is an empty <button> — '
-        + 'createColorPicker only wires a hover tooltip (aria-describedby), never an accessible name'
-      );
 
       await createBlok(page, { data: singleParagraph('Some text') });
 
@@ -515,11 +492,6 @@ test.describe('editor chrome accessibility', () => {
 
   test.describe('inline toolbar', () => {
     test('shown on a text selection with named, checkable tools', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe button-name (critical): EVERY inline tool button (bold, italic, link, marker, underline, strikethrough, inlineCode) is icon-only '
-        + 'with no accessible name — PopoverInline strips the title element and never substitutes an aria-label'
-      );
 
       await createBlok(page, { data: singleParagraph('Some text to select') });
 
@@ -547,11 +519,6 @@ test.describe('editor chrome accessibility', () => {
     });
 
     test('link editing field opened from the link tool', async ({ page }) => {
-      test.fixme(
-        true,
-        'axe aria-required-children (critical): the link field\'s nested popover keeps role="menu" on [data-blok-testid="popover-items"] while its only '
-        + 'child is the role="presentation" form wrapper — a menu with zero menuitems'
-      );
 
       await createBlok(page, { data: singleParagraph('<a href="https://google.com">Edit this link</a>') });
 

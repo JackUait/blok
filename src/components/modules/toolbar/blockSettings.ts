@@ -724,9 +724,12 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private createEditMetadataFooter(block: Block): HTMLElement {
     const container = document.createElement('div');
 
+    // --popover-text-secondary was never declared anywhere in the palette, so
+    // this always resolved to the #888 fallback: 3.54:1 on the light popover.
+    // text-gray-text is the real, theme-aware token (5.41:1 / 5.77:1).
     container.classList.add(
       'px-3', 'py-2', 'text-xs', 'leading-snug',
-      'text-[color:var(--popover-text-secondary,_#888)]',
+      'text-gray-text',
       'select-none'
     );
 

@@ -10,10 +10,31 @@ import {
 } from '../../components/utils/popover/anchored-position';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import { startInlineRename } from '../../components/utils/inline-rename';
+import { rovingRadioGroup, type RovingRadioGroup } from '../../components/utils/roving-radio-group';
+import { DATA_ATTR } from '../../components/constants/data-attributes';
 import type { API } from '../../../types';
 import type { DatabaseViewConfig, ViewType } from './types';
 
 const DRAG_THRESHOLD = 10;
+
+/**
+ * Set when a tab is activated from the keyboard. Switching views makes the
+ * database tool destroy and replace the whole bar, which drops DOM focus to
+ * `<body>` mid-keystroke; the freshly rendered bar consumes this to put focus
+ * back on the tab the user just moved to, so arrow navigation can continue.
+ */
+const tabFocusHandoff = { pending: false };
+
+/** The bar's controls are `<div>`s (the CSS keys off attributes), so no click arrives from Enter/Space. */
+function activateOnEnterOrSpace(element: HTMLElement, action: () => void): void {
+  element.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    event.preventDefault();
+    action();
+  });
+}
 
 const VIEW_ICONS: Record<string, string> = {
   board: IconBoard,
@@ -43,6 +64,7 @@ export class DatabaseTabBar {
   private readOnly: boolean;
   private viewPopover: DatabaseViewPopover | null = null;
   private contextPopover: PopoverDesktop | null = null;
+  private roving: RovingRadioGroup | null = null;
 
   private overflowDropdownEl: HTMLElement | null = null;
   private overflowPositionTracker: PositionTracker | null = null;
@@ -75,17 +97,33 @@ export class DatabaseTabBar {
   render(): HTMLElement {
     const bar = document.createElement('div');
     bar.setAttribute('data-blok-database-tab-bar', '');
+    bar.setAttribute('role', 'tablist');
+    // Arrow/Home/End roving and Enter/Space activation are the bar's own; Blok's
+    // block- and editor-level keyboard handling stands down inside the subtree.
+    bar.setAttribute(DATA_ATTR.keyboardOwner, '');
     this.barEl = bar;
     this.element = bar;
 
     const sorted = [...this.options.views].sort((a, b) => (a.position < b.position ? -1 : 1));
+    const tabEls = sorted.map((view) => this.createTab(view));
 
-    for (const view of sorted) {
-      bar.appendChild(this.createTab(view));
+    for (const tab of tabEls) {
+      bar.appendChild(tab);
     }
+
+    const activeIndex = sorted.findIndex((view) => view.id === this.options.activeViewId);
+
+    this.roving = rovingRadioGroup({
+      radios: tabEls,
+      getSelectedIndex: () => activeIndex,
+      onSelect: (index) => {
+        this.activateTab(sorted[index].id, true);
+      },
+    });
 
     const addBtn = document.createElement('button');
     addBtn.setAttribute('data-blok-database-add-view', '');
+    addBtn.setAttribute('aria-label', this.t('tools.database.addView', 'Add view'));
     addBtn.innerHTML = IconPlus;
     addBtn.addEventListener('click', () => {
       this.openViewPopover(addBtn);
@@ -105,10 +143,7 @@ export class DatabaseTabBar {
       if (viewId === null) {
         return;
       }
-      if (tab.hasAttribute('data-active')) {
-        return;
-      }
-      this.options.onTabClick(viewId);
+      this.activateTab(viewId, false);
     });
 
     bar.addEventListener('contextmenu', (e: MouseEvent) => {
@@ -184,16 +219,52 @@ export class DatabaseTabBar {
       ro.observe(bar);
     }
 
+    const restoreFocus = tabFocusHandoff.pending;
+
+    tabFocusHandoff.pending = false;
+
+    if (restoreFocus && activeIndex >= 0) {
+      const activeTab = tabEls[activeIndex];
+
+      // The bar is still detached here — the tool swaps it in right after
+      // render() returns, so the focus call waits for that to happen.
+      queueMicrotask(() => {
+        activeTab.focus();
+      });
+    }
+
     return bar;
+  }
+
+  private t(key: string, fallback: string): string {
+    return this.options.api?.i18n.t(key) ?? fallback;
+  }
+
+  /**
+   * Switches to a view. `viaKeyboard` arms the focus hand-off across the tab-bar
+   * rebuild the switch triggers.
+   */
+  private activateTab(viewId: string, viaKeyboard: boolean): void {
+    if (viewId === this.options.activeViewId) {
+      return;
+    }
+
+    tabFocusHandoff.pending = viaKeyboard;
+    this.options.onTabClick(viewId);
   }
 
   private createTab(view: DatabaseViewConfig): HTMLElement {
     const tab = document.createElement('div');
+    const isActive = view.id === this.options.activeViewId;
+
     tab.setAttribute('data-blok-database-tab', '');
     tab.setAttribute('data-view-id', view.id);
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
 
-    if (view.id === this.options.activeViewId) {
+    if (isActive) {
       tab.setAttribute('data-active', '');
+      tab.setAttribute('aria-current', 'true');
     }
 
     const iconSpan = document.createElement('span');
@@ -205,6 +276,10 @@ export class DatabaseTabBar {
     nameSpan.textContent = view.name;
     tab.appendChild(nameSpan);
 
+    activateOnEnterOrSpace(tab, () => {
+      this.activateTab(view.id, true);
+    });
+
     return tab;
   }
 
@@ -212,9 +287,7 @@ export class DatabaseTabBar {
     this.closeContextPopover();
 
     const canDelete = this.options.views.length > 1;
-
-    const t = (key: string, fallback: string): string =>
-      this.options.api?.i18n.t(key) ?? fallback;
+    const t = this.t.bind(this);
 
     const baseItems = [
       {
@@ -347,11 +420,16 @@ export class DatabaseTabBar {
     // Add the localized overflow-count button before the + button.
     const moreBtn = document.createElement('div');
     moreBtn.setAttribute('data-blok-database-tab-more', '');
+    moreBtn.setAttribute('role', 'button');
+    moreBtn.setAttribute('tabindex', '0');
     moreBtn.textContent = this.options.api?.i18n.has('tools.database.moreViews')
       ? this.options.api.i18n.t('tools.database.moreViews', { count: hiddenCount })
       : `${hiddenCount} more…`;
     moreBtn.style.cursor = 'pointer';
     moreBtn.addEventListener('click', () => {
+      this.openOverflowDropdown(moreBtn);
+    });
+    activateOnEnterOrSpace(moreBtn, () => {
       this.openOverflowDropdown(moreBtn);
     });
 
@@ -370,6 +448,7 @@ export class DatabaseTabBar {
     const dropdown = document.createElement('div');
     dropdown.setAttribute('data-blok-popover', '');
     dropdown.setAttribute('data-blok-database-tab-overflow-dropdown', '');
+    dropdown.setAttribute(DATA_ATTR.keyboardOwner, '');
     dropdown.style.zIndex = '1000';
 
     const orderedViews = [...this.views].sort((a, b) => (a.position < b.position ? -1 : 1));
@@ -407,14 +486,19 @@ export class DatabaseTabBar {
 
     const addBtn = this.element?.querySelector<HTMLElement>('[data-blok-database-add-view]');
     const newViewBtn = document.createElement('div');
-    newViewBtn.setAttribute('data-blok-database-tab-overflow-new', '');
-    newViewBtn.textContent = '+ New view';
-    newViewBtn.addEventListener('click', () => {
+    const openNewViewPopover = (): void => {
       this.closeOverflowDropdown();
       if (addBtn !== null && addBtn !== undefined) {
         this.openViewPopover(addBtn);
       }
-    });
+    };
+
+    newViewBtn.setAttribute('data-blok-database-tab-overflow-new', '');
+    newViewBtn.setAttribute('role', 'button');
+    newViewBtn.setAttribute('tabindex', '0');
+    newViewBtn.textContent = '+ New view';
+    newViewBtn.addEventListener('click', openNewViewPopover);
+    activateOnEnterOrSpace(newViewBtn, openNewViewPopover);
     dropdown.appendChild(newViewBtn);
 
     document.body.appendChild(dropdown);
@@ -557,6 +641,8 @@ export class DatabaseTabBar {
     this.cleanupDrag();
     this.closeContextPopover();
     this.closeOverflowDropdown();
+    this.roving?.destroy();
+    this.roving = null;
     if (this.viewPopover !== null) {
       this.viewPopover.destroy();
       this.viewPopover = null;

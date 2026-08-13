@@ -118,12 +118,7 @@ const INDIRECTLY_NAMED: Record<string, string> = {
  * Elements that take a role-gated ARIA state attribute while carrying no role.
  * Key: `<file> » <variable> » <attribute>`.
  */
-const EXEMPT_STATE_WITHOUT_ROLE: Record<string, string> = {
-  'tools/table/table-row-col-controls.ts » grip » aria-disabled':
-    'KNOWN VIOLATION — the row/column grip is a role-less <div> that takes aria-disabled ' +
-    'when a merge locks its row/column, which axe reports as aria-allowed-attr; the grip is ' +
-    'click-activated and opens a menu, so it wants role="button" + an aria-label; see triage',
-};
+const EXEMPT_STATE_WITHOUT_ROLE: Record<string, string> = {};
 
 /**
  * `role="dialog"` elements that are deliberately non-modal. The reason must

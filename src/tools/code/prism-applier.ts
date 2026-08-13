@@ -19,23 +19,23 @@ export const LIGHT_RULES = `
 .blok-code .token.string,
 .blok-code .token.attr-value,
 .blok-code .token.char,
-.blok-code .token.regex { color: #059669; }
+.blok-code .token.regex { color: #047857; }
 
 .blok-code .token.number,
 .blok-code .token.boolean,
 .blok-code .token.constant,
-.blok-code .token.symbol { color: #d97706; }
+.blok-code .token.symbol { color: #b45309; }
 
 .blok-code .token.function,
 .blok-code .token.class-name { color: #2563eb; }
 
 .blok-code .token.builtin,
 .blok-code .token.tag,
-.blok-code .token.selector { color: #db2777; }
+.blok-code .token.selector { color: #be185d; }
 
 .blok-code .token.attr-name,
 .blok-code .token.property,
-.blok-code .token.variable { color: #ea580c; }
+.blok-code .token.variable { color: #c2410c; }
 
 .blok-code .token.punctuation { color: #374151; }
 
@@ -51,7 +51,7 @@ export const LIGHT_RULES = `
 .blok-code .token.regex-literal,
 .blok-code .token.import,
 .blok-code .token.url,
-.blok-code .token.code { color: #059669; }
+.blok-code .token.code { color: #047857; }
 
 /* function / class-name family (blue) — namespaces, definitions, code structures, types */
 .blok-code .token.namespace,
@@ -65,7 +65,7 @@ export const LIGHT_RULES = `
 /* builtin family (pink) — decorators, package markers, markup entities */
 .blok-code .token.decorator,
 .blok-code .token.entity,
-.blok-code .token.package { color: #db2777; }
+.blok-code .token.package { color: #be185d; }
 
 /* attr-name / property family (orange) — interpolation, parameters, attributes, mapping keys */
 .blok-code .token.interpolation,
@@ -73,7 +73,7 @@ export const LIGHT_RULES = `
 .blok-code .token.attribute,
 .blok-code .token.atrule,
 .blok-code .token.key,
-.blok-code .token.property-query { color: #ea580c; }
+.blok-code .token.property-query { color: #c2410c; }
 
 /* keyword family (purple) — generics, at-rules, instructions, emphasis */
 .blok-code .token.generics,
@@ -88,15 +88,15 @@ export const LIGHT_RULES = `
 
 /* Mermaid-specific tokens — scoped to lang-mermaid to avoid polluting other languages.
  * Colors use Atom One Light palette:
- *   @hue-1 = #0184bc  (cyan)
- *   @hue-6-2 = #c18401 (amber/gold — node IDs)
- *   @hue-4 = #50a14f  (green — edge labels)
+ *   @hue-1 = #0369a1  (cyan)
+ *   @hue-6-2 = #8a5d01 (amber/gold — node IDs)
+ *   @hue-4 = #417a40  (green — edge labels)
  */
-.blok-code.lang-mermaid .token.diagram-name { color: #0184bc; }
-.blok-code.lang-mermaid .token.node-bracket { color: #0184bc; }
-.blok-code.lang-mermaid .token.edge-delimiter { color: #0184bc; }
-.blok-code.lang-mermaid .token.edge-label { color: #50a14f; }
-.blok-code.lang-mermaid .token.variable { color: #c18401; }
+.blok-code.lang-mermaid .token.diagram-name { color: #0369a1; }
+.blok-code.lang-mermaid .token.node-bracket { color: #0369a1; }
+.blok-code.lang-mermaid .token.edge-delimiter { color: #0369a1; }
+.blok-code.lang-mermaid .token.edge-label { color: #417a40; }
+.blok-code.lang-mermaid .token.variable { color: #8a5d01; }
 .blok-code.lang-mermaid .token.keyword,
 .blok-code.lang-mermaid .token.operator,
 .blok-code.lang-mermaid .token.string { color: inherit; }
@@ -196,11 +196,28 @@ export const DARK_RULES = `
 .dark .blok-code.lang-mermaid .token.string { color: inherit; }
 `;
 
+/**
+ * Re-gate the dark palette onto the selectors Blok actually uses.
+ *
+ * `DARK_RULES` is authored against `.dark`, but nothing in Blok ever adds that
+ * class — theming runs through `[data-blok-theme]` and `prefers-color-scheme`
+ * (see `src/styles/colors.css`). Every dark rule was therefore inert and dark
+ * code blocks rendered the LIGHT palette, bottoming out at 1.54:1 for
+ * punctuation. Emitted under both gates so an explicit theme choice beats the
+ * media query, matching how colors.css orders them.
+ */
+const applyDarkThemeGates = (rules: string): string => {
+  const mediaScoped = rules.split('.dark ').join(':root:not([data-blok-theme="light"]) ');
+  const attributeScoped = rules.split('.dark ').join('[data-blok-theme="dark"] ');
+
+  return `@media (prefers-color-scheme: dark) {\n${mediaScoped}\n}\n${attributeScoped}`;
+};
+
 /** Adopt the Prism token-color stylesheet (idempotent). */
 export function ensurePrismStyles(): void {
   if (stylesheet) return;
   stylesheet = new CSSStyleSheet();
-  stylesheet.replaceSync(LIGHT_RULES + DARK_RULES);
+  stylesheet.replaceSync(LIGHT_RULES + applyDarkThemeGates(DARK_RULES));
   const existing = document.adoptedStyleSheets ?? [];
   document.adoptedStyleSheets = [...existing, stylesheet];
 }

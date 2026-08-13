@@ -136,6 +136,7 @@ export function buildCodeDOM(options: BuildCodeDOMOptions): CodeDOMRefs {
     languageButton.tabIndex = -1;
   } else {
     languageButton.setAttribute('aria-haspopup', 'listbox');
+    languageButton.setAttribute('aria-expanded', 'false');
   }
 
   const langText = document.createElement('span');

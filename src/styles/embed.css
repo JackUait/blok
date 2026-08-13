@@ -303,7 +303,9 @@
   gap: var(--blok-space-2);
   padding: var(--blok-space-2-5) var(--blok-space-3);
   font-size: 13px;
-  color: var(--blok-text-tertiary);
+  /* Same tier correction as .blok-embed-linkcard__url — this is the only text
+     a read-only viewer gets for a missing embed. */
+  color: var(--blok-text-secondary);
   background: var(--blok-bg-secondary);
   border: 1px solid var(--blok-border-subtle);
   border-radius: var(--blok-radius-md);
@@ -382,7 +384,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--blok-text-tertiary);
+  /* Secondary, not tertiary: --blok-text-tertiary measures 2.53:1 light /
+     3.29:1 dark and is a decorative tier (glyphs, disabled chrome). This is
+     body text. */
+  color: var(--blok-text-secondary);
 }
 
 .blok-embed-linkcard__open {

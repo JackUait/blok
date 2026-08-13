@@ -475,8 +475,20 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the `:where([data-blok-nested-blocks])` step reset, plus the comment
     // explaining why the step has to inherit rather than be decided in JS
     // (~1.2KB). Bumps the multiplier to 1.434.
+    // 2026-08-13: WCAG AA contrast pass — the grey text token darkened to
+    // #646a79 (it measured 4.55:1 on white, so it failed on every TINTED
+    // surface: 4.28:1 on bg-secondary, 3.95:1 under the 8% hover tint), a
+    // dedicated `--blok-inline-code-text` declared across all three theme
+    // blocks so inline code stops borrowing the Marker red that is persisted
+    // into saved documents, `--blok-link` darkened to #1b6fc2, and embed.css
+    // moved its two TEXT consumers off the decorative `--blok-text-tertiary`
+    // tier (~1.3KB), and the database column pill + add affordance opt out of the
+    // Marker palette onto a dedicated on-pill colour (every light
+    // --blok-color-*-text fails AA on its own --blok-color-*-bg, from yellow at
+    // 2.30:1 to purple at 4.09:1, and that palette is persisted into saved
+    // documents so it cannot be retuned). Bumps the multiplier to 1.439.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.434);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.439);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

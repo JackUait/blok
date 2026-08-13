@@ -1110,7 +1110,9 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     const element = document.createElement('div');
 
     // Same visual language as the search-time group labels in PopoverDesktop.
-    element.className = `pl-2 pr-3 ${isFirst ? 'pt-0.5' : 'pt-2.5'} pb-1 text-xs font-medium text-gray-text/50 cursor-default`;
+    // No /50 opacity modifier: it drops --blok-gray-text to 2.2:1 on the
+    // popover surface. Full strength measures 5.41:1 light / 5.77:1 dark.
+    element.className = `pl-2 pr-3 ${isFirst ? 'pt-0.5' : 'pt-2.5'} pb-1 text-xs font-medium text-gray-text cursor-default`;
     // The toolbox popover renders its items container as role="listbox", which
     // may only own `option` and `group` — a role="separator" header is an
     // invalid owned child (axe: aria-required-children). role="presentation"

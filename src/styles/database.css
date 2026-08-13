@@ -216,6 +216,15 @@
   background-color: color-mix(in srgb, currentColor 8%, transparent);
 }
 
+/**
+ * Inside a coloured column the add affordance sits on the column's tint, where
+ * the neutral grey it uses elsewhere drops below AA. Reuse the on-pill colour,
+ * which is chosen to carry text over exactly these tints.
+ */
+[data-blok-database-column][data-color] [data-blok-database-add-card] {
+  color: var(--blok-database-column-pill-text);
+}
+
 [data-blok-database-add-column] {
   white-space: nowrap;
   align-self: flex-start;
@@ -266,16 +275,14 @@
 }
 
 /**
- * In dark theme, colored pills use white text for legibility over the
- * saturated background (overrides the inline color set by JS).
+ * Colored pills take a dedicated on-pill text colour in BOTH themes, overriding
+ * the inline colour JS sets from the Marker palette. That palette is persisted
+ * into saved documents, and every one of its light `--blok-color-*-text` values
+ * fails AA on its own `--blok-color-*-bg` (yellow 2.30:1, orange 2.83:1, teal
+ * 3.05:1 … purple 4.09:1), so the pill has to opt out rather than the palette be
+ * retuned. The token itself flips per theme, so one rule covers both.
  */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-blok-theme="light"]) [data-blok-database-column][data-color] [data-blok-database-column-pill] {
-    color: var(--blok-database-column-pill-text) !important;
-  }
-}
-
-[data-blok-theme="dark"] [data-blok-database-column][data-color] [data-blok-database-column-pill] {
+[data-blok-database-column][data-color] [data-blok-database-column-pill] {
   color: var(--blok-database-column-pill-text) !important;
 }
 

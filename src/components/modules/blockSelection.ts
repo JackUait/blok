@@ -786,6 +786,7 @@ export class BlockSelection extends Module {
      */
     if (focusedBlock) {
       focusedBlock.holder.removeAttribute('data-blok-navigation-focused');
+      focusedBlock.holder.removeAttribute('aria-current');
     }
 
     this._navigationModeEnabled = false;
@@ -873,6 +874,7 @@ export class BlockSelection extends Module {
 
     if (previousBlock) {
       previousBlock.holder.removeAttribute('data-blok-navigation-focused');
+      previousBlock.holder.removeAttribute('aria-current');
     }
 
     /**
@@ -908,6 +910,13 @@ export class BlockSelection extends Module {
     this.navigationFocusIndex = index;
     BlockManager.currentBlockIndex = index;
     block.holder.setAttribute('data-blok-navigation-focused', 'true');
+    /**
+     * The only assistive-tech-visible marker of which block navigation mode is
+     * on. `aria-current` is a global state, so it needs no role on the holder —
+     * unlike `aria-selected`, whose every permitted role (option/tab/row/…)
+     * would force a composite container role onto the editable region.
+     */
+    block.holder.setAttribute('aria-current', 'true');
     block.selected = true;
     this.clearCache();
 

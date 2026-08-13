@@ -137,23 +137,23 @@ describe('prism-applier', () => {
       expect(darkRules).toContain('#97c279');
     });
 
-    // One Light: @hue-1 = #0184bc (cyan)
-    it('light mode diagram-name uses One Light cyan #0184bc', () => {
+    // One Light's own @hue-1/@hue-6-2/@hue-4 (#0184bc / #c18401 / #50a14f) all
+    // land between 3.0:1 and 3.9:1 on the #f7f8fa code surface, below the 4.5:1
+    // AA floor for normal text. These are the same hues darkened until they pass.
+    it('light mode diagram-name uses a cyan that clears AA on the code surface', () => {
       expect(lightRules).toContain('lang-mermaid');
       expect(lightRules).toContain('diagram-name');
-      expect(lightRules).toContain('#0184bc');
+      expect(lightRules).toContain('#0369a1');
     });
 
-    // One Light: @hue-6-2 = #c18401 (amber/gold)
-    it('light mode variable uses One Light amber #c18401', () => {
+    it('light mode variable uses an amber that clears AA on the code surface', () => {
       expect(lightRules).toContain('lang-mermaid');
-      expect(lightRules).toContain('#c18401');
+      expect(lightRules).toContain('#8a5d01');
     });
 
-    // One Light: @hue-4 = #50a14f (green)
-    it('light mode edge-label uses One Light green #50a14f', () => {
+    it('light mode edge-label uses a green that clears AA on the code surface', () => {
       expect(lightRules).toContain('edge-label');
-      expect(lightRules).toContain('#50a14f');
+      expect(lightRules).toContain('#417a40');
     });
   });
 

@@ -704,6 +704,46 @@ export const enableScrollOverflow = (element: HTMLDivElement | null): void => {
 
 // ─── Heading styles ─────────────────────────────────────────────────
 
+const HEADING_ROW_ATTR = 'data-blok-table-heading';
+const HEADING_COL_ATTR = 'data-blok-table-heading-col';
+
+const headerCellRole = (cell: Element, isInHeadingRow: boolean): string | null => {
+  // The corner cell of a table that has BOTH headers reads as a column header,
+  // the same choice `<th scope="col">` encodes: it heads the column of row
+  // headers below it.
+  if (isInHeadingRow) {
+    return 'columnheader';
+  }
+
+  return cell.hasAttribute(HEADING_COL_ATTR) ? 'rowheader' : null;
+};
+
+/**
+ * Expose heading cells to assistive tech, derived from the two marker
+ * attributes so it stays correct no matter which updater ran last.
+ *
+ * The roles are stamped on the existing `<td>`s rather than rendered as real
+ * `<th>`s: both heading toggles flip at runtime WITHOUT rebuilding the grid
+ * (see executeRowColAction's toggle-heading cases), and a tag swap would mean
+ * replacing cell elements that already host mounted child blocks and are held
+ * by reference in selection, merge and resize state.
+ */
+const applyHeaderCellRoles = (gridEl: HTMLElement): void => {
+  gridEl.querySelectorAll(`[${ROW_ATTR}]`).forEach(row => {
+    const isInHeadingRow = row.hasAttribute(HEADING_ROW_ATTR);
+
+    row.querySelectorAll(`[${CELL_ATTR}]`).forEach(cell => {
+      const role = headerCellRole(cell, isInHeadingRow);
+
+      if (role === null) {
+        cell.removeAttribute('role');
+      } else {
+        cell.setAttribute('role', role);
+      }
+    });
+  });
+};
+
 export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: boolean): void => {
   if (!gridEl) {
     return;
@@ -712,12 +752,14 @@ export const updateHeadingStyles = (gridEl: HTMLElement | null, withHeadings: bo
   const rows = gridEl.querySelectorAll(`[${ROW_ATTR}]`);
 
   rows.forEach(row => {
-    row.removeAttribute('data-blok-table-heading');
+    row.removeAttribute(HEADING_ROW_ATTR);
   });
 
   if (withHeadings && rows.length > 0) {
-    rows[0].setAttribute('data-blok-table-heading', '');
+    rows[0].setAttribute(HEADING_ROW_ATTR, '');
   }
+
+  applyHeaderCellRoles(gridEl);
 };
 
 /**
@@ -806,7 +848,7 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
   const allCells = gridEl.querySelectorAll(`[${CELL_ATTR}]`);
 
   allCells.forEach(cell => {
-    cell.removeAttribute('data-blok-table-heading-col');
+    cell.removeAttribute(HEADING_COL_ATTR);
   });
 
   if (withHeadingColumn) {
@@ -821,8 +863,10 @@ export const updateHeadingColumnStyles = (gridEl: HTMLElement | null, withHeadin
       const firstCell = row.querySelector(`[${CELL_COL_ATTR}="0"]`);
 
       if (firstCell) {
-        firstCell.setAttribute('data-blok-table-heading-col', '');
+        firstCell.setAttribute(HEADING_COL_ATTR, '');
       }
     });
   }
+
+  applyHeaderCellRoles(gridEl);
 };

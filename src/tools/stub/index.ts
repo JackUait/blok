@@ -111,6 +111,9 @@ export class Stub implements BlockTool {
 
     wrapper.setAttribute(DATA_ATTR.tool, 'stub');
     wrapper.setAttribute(DATA_ATTR.stub, '');
+    // "This block cannot be displayed" is information, not an interruption, so
+    // the placeholder is a polite status rather than an alert.
+    wrapper.setAttribute('role', 'status');
     infoContainer.setAttribute(DATA_ATTR.stubInfo, '');
     title.setAttribute(DATA_ATTR.stubTitle, '');
     subtitle.setAttribute(DATA_ATTR.stubSubtitle, '');

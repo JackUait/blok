@@ -124,5 +124,5 @@ export const CODE_BODY_STYLES = 'flex overflow-hidden';
  * and line height match — so it reads the same host hook
  * (`config.style.fontSize.code`) with the same `text-sm` fallback.
  */
-export const GUTTER_STYLES = 'select-none text-right pl-4 pr-3 py-3 font-mono text-[length:var(--blok-code-font-size,0.875rem)] leading-relaxed text-gray-text/40 shrink-0';
+export const GUTTER_STYLES = 'select-none text-right pl-4 pr-3 py-3 font-mono text-[length:var(--blok-code-font-size,0.875rem)] leading-relaxed text-gray-text shrink-0';
 export const GUTTER_LINE_STYLES = 'leading-relaxed cursor-text';

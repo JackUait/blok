@@ -19,6 +19,7 @@ import { PLAINTEXT } from '../../components/utils/sanitizer';
 import { onHover as tooltipOnHover } from '../../components/utils/tooltip';
 import type { PopoverItemParams } from '@/types/utils/popover/popover-item';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
+import { PopoverEvent } from '@/types/utils/popover/popover-event';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
@@ -223,6 +224,7 @@ export class CodeTool implements BlockTool {
         this._picker.hide();
       } else {
         this._picker?.show();
+        this.setLanguagePickerExpanded(true);
       }
     });
 
@@ -327,12 +329,14 @@ export class CodeTool implements BlockTool {
       this._dom.codeElement.removeAttribute('spellcheck');
       this._picker?.hide();
       this._dom.languageButton.removeAttribute('aria-haspopup');
+      this._dom.languageButton.removeAttribute('aria-expanded');
       this._dom.languageButton.className = LANGUAGE_LABEL_STYLES;
       this._dom.languageButton.tabIndex = -1;
     } else {
       this._dom.codeElement.setAttribute('contenteditable', 'plaintext-only');
       this._dom.codeElement.setAttribute('spellcheck', 'false');
       this._dom.languageButton.setAttribute('aria-haspopup', 'listbox');
+      this._dom.languageButton.setAttribute('aria-expanded', 'false');
       this._dom.languageButton.className = LANGUAGE_BUTTON_STYLES;
       this._dom.languageButton.removeAttribute('tabindex');
     }
@@ -606,7 +610,7 @@ export class CodeTool implements BlockTool {
    * Creates a new PopoverDesktop instance for the language picker.
    */
   private buildLanguagePicker(trigger: HTMLElement, leftAlignElement: HTMLElement): PopoverDesktop {
-    return new PopoverDesktop({
+    const picker = new PopoverDesktop({
       items: this.buildLanguagePickerItems(),
       trigger,
       leftAlignElement,
@@ -621,6 +625,26 @@ export class CodeTool implements BlockTool {
         searchResults: this.api.i18n.t('a11y.searchResults'),
       },
     });
+
+    // Covers every close path the trigger's own click handler cannot see:
+    // outside click, Escape, and picking a language.
+    picker.on(PopoverEvent.Closed, () => this.setLanguagePickerExpanded(false));
+
+    this.setLanguagePickerExpanded(false);
+
+    return picker;
+  }
+
+  /**
+   * Mirrors the picker's open state onto the trigger. Read-only strips the
+   * popup contract entirely, so the state has nothing to attach to there.
+   */
+  private setLanguagePickerExpanded(expanded: boolean): void {
+    if (this.readOnly || !this._dom) {
+      return;
+    }
+
+    this._dom.languageButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
   }
 
   private getLanguageName(id: string): string {

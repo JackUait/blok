@@ -1616,7 +1616,9 @@ export class PopoverDesktop extends PopoverAbstract {
 
     el.setAttribute(attr, '');
     el.setAttribute('role', 'separator');
-    el.className = 'pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text/50 cursor-default';
+    // Same no-/50 contrast rule as Toolbox#buildSectionHeaderItem, whose visual
+    // language this shares.
+    el.className = 'pl-2 pr-3 pt-2.5 pb-1 text-xs font-medium text-gray-text cursor-default';
     el.textContent = label;
 
     return el;

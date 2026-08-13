@@ -438,7 +438,7 @@
   }
   :where([data-blok-interface], [data-blok-popover]) code:not(pre code) {
     background-color: var(--blok-inline-code-bg);
-    color: var(--blok-color-red-text);
+    color: var(--blok-inline-code-text);
     padding: var(--blok-space-0-5) var(--blok-space-1);
     border-radius: 0.25em;
     font-size: 0.875em;
@@ -525,17 +525,17 @@
   --blok-selection-inline: #d4ecff;
   --blok-selection-highlight: rgba(46, 170, 220, 0.2);
   --blok-bg-light: #eff2f5;
-  --blok-gray-text: #707684;
+  --blok-gray-text: #646a79;
   --blok-dark: #1d202b;
   --blok-active-icon: #2383e2;
-  --blok-link: #2383e2;
+  --blok-link: #1b6fc2;
   --blok-line-gray: #eff0f1;
   --blok-tooltip-bg: #1d202b;
   --blok-tooltip-font: #cdd1e0;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.14);
   --blok-icon-active-text: #2383e2;
   --blok-text-primary: black;
-  --blok-text-secondary: #707684;
+  --blok-text-secondary: #646a79;
   --blok-popover-border: rgba(55, 53, 47, 0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
@@ -583,7 +583,7 @@
   --blok-database-card-colored-overlay-hover: var(--blok-database-card-bg-hover);
   --blok-database-card-colored-border: var(--blok-database-card-border);
   --blok-database-column-bg: rgba(0, 0, 0, 0.04);
-  --blok-database-add-text: rgba(55, 53, 47, 0.5);
+  --blok-database-add-text: #646a79;
   --blok-database-add-border: rgba(55, 53, 47, 0.25);
   --blok-database-add-hover-bg: rgba(55, 53, 47, 0.06);
   --blok-database-delete-text: rgba(55, 53, 47, 0.35);
@@ -592,7 +592,7 @@
   --blok-database-tab-bg: transparent;
   --blok-database-tab-bg-active: rgba(0, 0, 0, 0.06);
   --blok-database-tab-bg-hover: rgba(0, 0, 0, 0.04);
-  --blok-database-tab-text: rgba(55, 53, 47, 0.5);
+  --blok-database-tab-text: rgba(55, 53, 47, 0.7);
   --blok-database-tab-text-active: #37352f;
   --blok-database-popover-bg: #fff;
   --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
@@ -663,6 +663,7 @@
   --blok-color-red-text: #d44c47;
   --blok-color-red-bg: #fdebec;
   --blok-inline-code-bg: rgba(135, 131, 120, 0.15);
+  --blok-inline-code-text: #b93a35;
   --blok-table-grip-bg: transparent;
   --blok-table-grip-hover-bg: transparent;
   --blok-table-grip-dot: currentColor;
@@ -870,7 +871,7 @@
     --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
     --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
     --blok-database-column-bg: rgba(255, 255, 255, 0.05);
-    --blok-database-add-text: rgba(255, 255, 255, 0.4);
+    --blok-database-add-text: #a39e98;
     --blok-database-add-border: rgba(255, 255, 255, 0.2);
     --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
     --blok-database-delete-text: rgba(255, 255, 255, 0.3);
@@ -879,7 +880,7 @@
     --blok-database-tab-bg: transparent;
     --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
     --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
-    --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+    --blok-database-tab-text: rgba(255, 255, 255, 0.6);
     --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
     --blok-database-popover-bg: #2d2d2c;
     --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -937,6 +938,7 @@
     --blok-color-pink-bg: #4b1b33;
     --blok-color-red-text: #dd5e5a;
     --blok-color-red-bg: #4e1a18;
+    --blok-inline-code-text: #ea8480;
     --blok-table-grip-bg: #4a4a4a;
     --blok-table-grip-hover-bg: #555554;
     --blok-table-grip-dot: #ffffff;
@@ -1014,7 +1016,7 @@
   --blok-database-card-colored-overlay-hover: rgba(255, 255, 255, 0.11);
   --blok-database-card-colored-border: rgba(255, 255, 255, 0.07);
   --blok-database-column-bg: rgba(255, 255, 255, 0.03);
-  --blok-database-add-text: rgba(255, 255, 255, 0.4);
+  --blok-database-add-text: #a39e98;
   --blok-database-add-border: rgba(255, 255, 255, 0.2);
   --blok-database-add-hover-bg: rgba(255, 255, 255, 0.06);
   --blok-database-delete-text: rgba(255, 255, 255, 0.3);
@@ -1023,7 +1025,7 @@
   --blok-database-tab-bg: transparent;
   --blok-database-tab-bg-active: rgba(255, 255, 255, 0.08);
   --blok-database-tab-bg-hover: rgba(255, 255, 255, 0.04);
-  --blok-database-tab-text: rgba(255, 255, 255, 0.45);
+  --blok-database-tab-text: rgba(255, 255, 255, 0.6);
   --blok-database-tab-text-active: rgba(255, 255, 255, 0.9);
   --blok-database-popover-bg: #2d2d2c;
   --blok-database-popover-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -1081,6 +1083,7 @@
   --blok-color-pink-bg: #4b1b33;
   --blok-color-red-text: #dd5e5a;
   --blok-color-red-bg: #4e1a18;
+  --blok-inline-code-text: #ea8480;
   --blok-table-grip-bg: #4a4a4a;
   --blok-table-grip-hover-bg: #555554;
   --blok-table-grip-dot: #ffffff;

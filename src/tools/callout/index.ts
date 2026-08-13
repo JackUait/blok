@@ -13,7 +13,7 @@ import type {
 import type { MenuConfig } from '../../../types/tools/menu-config';
 import { PopoverItemType } from '../../components/utils/popover';
 import type { CalloutData, CalloutConfig } from './types';
-import { buildCalloutDOM, type CalloutDOMRefs } from './dom-builder';
+import { buildCalloutDOM, calloutEmojiButtonLabel, type CalloutDOMRefs } from './dom-builder';
 import { saveCallout } from './block-operations';
 import { handleCalloutFirstChildBackspace } from './callout-keyboard';
 import { mountChildBlocks } from '../nested-blocks';
@@ -137,6 +137,7 @@ export class CalloutTool implements BlockTool {
       emoji: this._data.emoji,
       readOnly: this.readOnly,
       addEmojiLabel: this.api.i18n.t(ADD_EMOJI_KEY),
+      editEmojiLabel: this.api.i18n.t(EDIT_ICON_KEY),
     });
 
     this._dom = dom;
@@ -445,7 +446,11 @@ export class CalloutTool implements BlockTool {
     this._dom.emojiFace.textContent = native;
     this._dom.emojiButton.setAttribute(
       'aria-label',
-      native !== '' ? native : this.api.i18n.t(ADD_EMOJI_KEY)
+      calloutEmojiButtonLabel(
+        native,
+        this.api.i18n.t(ADD_EMOJI_KEY),
+        this.api.i18n.t(EDIT_ICON_KEY)
+      )
     );
   }
 

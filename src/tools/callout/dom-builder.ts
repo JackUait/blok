@@ -20,10 +20,25 @@ export interface BuildCalloutDOMOptions {
   emoji: string;
   readOnly: boolean;
   addEmojiLabel: string;
+  /** Name for the trigger once an emoji is set; falls back to `addEmojiLabel`. */
+  editEmojiLabel?: string;
+}
+
+/**
+ * The trigger is named by what activating it does; the emoji trails the action
+ * as supplementary detail, so the button never announces as just "light bulb".
+ */
+export function calloutEmojiButtonLabel(
+  emoji: string,
+  addEmojiLabel: string,
+  editEmojiLabel: string
+): string {
+  return emoji === '' ? addEmojiLabel : `${editEmojiLabel} ${emoji}`;
 }
 
 export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs {
   const { emoji, readOnly, addEmojiLabel } = options;
+  const editEmojiLabel = options.editEmojiLabel ?? addEmojiLabel;
 
   // Wrapper — flex row: emoji | children
   const wrapper = document.createElement('div');
@@ -42,8 +57,7 @@ export function buildCalloutDOM(options: BuildCalloutDOMOptions): CalloutDOMRefs
   emojiFace.setAttribute('data-blok-testid', 'callout-emoji-face');
   emojiButton.appendChild(emojiFace);
 
-  emojiButton.setAttribute('aria-label', emoji !== '' ? emoji : addEmojiLabel);
-  emojiButton.setAttribute('tabindex', '0');
+  emojiButton.setAttribute('aria-label', calloutEmojiButtonLabel(emoji, addEmojiLabel, editEmojiLabel));
   emojiButton.setAttribute('data-blok-testid', 'callout-emoji-btn');
 
   if (readOnly) {

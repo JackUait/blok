@@ -248,7 +248,7 @@ test.describe('semantic contracts', () => {
   test.describe('table', () => {
     // Defect 1: table-core.ts builds every cell as <td>; withHeadings only
     // paints data-blok-table-heading, so header semantics are CSS-only.
-    test.fixme('a table with withHeadings exposes its first row as column headers', async ({ page }) => {
+    test('a table with withHeadings exposes its first row as column headers', async ({ page }) => {
       await createBlok(page, { data: tableData(true) });
 
       const table = page.locator(TABLE_SELECTOR).getByRole('table');
@@ -258,7 +258,7 @@ test.describe('semantic contracts', () => {
     });
 
     // Defect 1: withHeadingColumn is the same CSS-only treatment on column 0.
-    test.fixme('a table with withHeadingColumn exposes its first column as row headers', async ({ page }) => {
+    test('a table with withHeadingColumn exposes its first column as row headers', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -283,7 +283,7 @@ test.describe('semantic contracts', () => {
     // Defect 2: table-heading-toggle.ts builds a div track+thumb with no role,
     // no aria-checked, no tabindex and no keydown, inside a presentational
     // PopoverItemType.Html wrapper.
-    test.fixme('the header-row toggle in the row grip menu is an operable switch', async ({ page }) => {
+    test('the header-row toggle in the row grip menu is an operable switch', async ({ page }) => {
       await createBlok(page, { data: tableData(false) });
       await openRowGripMenu(page, 0);
 
@@ -303,7 +303,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 3: table-add-controls.ts renders contenteditable=false divs named
     // only by a hover tooltip, with no role and no keyboard path.
-    test.fixme('the add-row affordance is a named, focusable button', async ({ page }) => {
+    test('the add-row affordance is a named, focusable button', async ({ page }) => {
       await createBlok(page, { data: tableData(false) });
       await getCell(page, 0, 0).click();
       await hoverTableEdge(page, 'bottom');
@@ -317,7 +317,7 @@ test.describe('semantic contracts', () => {
     });
 
     // Defect 3, column axis.
-    test.fixme('the add-column affordance is a named, focusable button', async ({ page }) => {
+    test('the add-column affordance is a named, focusable button', async ({ page }) => {
       await createBlok(page, { data: tableData(false) });
       await getCell(page, 0, 0).click();
       await hoverTableEdge(page, 'right');
@@ -332,7 +332,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 4: table-row-col-controls.ts grips are pointer-only divs — no
     // role, no accessible name, no tab stop.
-    test.fixme('row and column grips are named, focusable controls', async ({ page }) => {
+    test('row and column grips are named, focusable controls', async ({ page }) => {
       await createBlok(page, { data: tableData(false) });
       await getCell(page, 0, 0).click();
 
@@ -351,7 +351,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 4: a grip locked by a merge is given aria-disabled while still
     // having no role at all, so the state hangs off a plain generic element.
-    test.fixme('a merge-locked grip states its disabled state on an element with a role', async ({ page }) => {
+    test('a merge-locked grip states its disabled state on an element with a role', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -388,7 +388,7 @@ test.describe('semantic contracts', () => {
   test.describe('colour picker', () => {
     // Defect 5: color-picker.ts names swatches only through a hover tooltip
     // (aria-describedby), so background swatches have no accessible name.
-    test.fixme('every colour swatch has an accessible name', async ({ page }) => {
+    test('every colour swatch has an accessible name', async ({ page }) => {
       await createBlok(page, { data: { blocks: [{ type: 'paragraph', data: { text: 'Colour me' } }] } });
       await openBlockColorPicker(page);
 
@@ -403,7 +403,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 5: text-mode swatches all carry the literal glyph "A" as their
     // only text, so a screen reader's control list reads a column of "A".
-    test.fixme('colour swatches are not all named by the same placeholder glyph', async ({ page }) => {
+    test('colour swatches are not all named by the same placeholder glyph', async ({ page }) => {
       await createBlok(page, { data: { blocks: [{ type: 'paragraph', data: { text: 'Colour me' } }] } });
       await openBlockColorPicker(page);
 
@@ -415,7 +415,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 5: the applied colour is signalled by a ring class only — nothing
     // in the a11y tree says which swatch is currently in effect.
-    test.fixme('the applied colour swatch exposes its pressed state', async ({ page }) => {
+    test('the applied colour swatch exposes its pressed state', async ({ page }) => {
       await createBlok(page, {
         data: { blocks: [{ type: 'paragraph', data: { text: 'Colour me', textColor: 'red' } }] },
       });
@@ -431,7 +431,7 @@ test.describe('semantic contracts', () => {
   test.describe('database view tabs', () => {
     // Defect 6: database-tab-bar.ts marks the active view with a data attribute
     // and styling; there is no tablist/tab/aria-selected anywhere.
-    test.fixme('view tabs expose tablist semantics and the selected view', async ({ page }) => {
+    test('view tabs expose tablist semantics and the selected view', async ({ page }) => {
       await createBlok(page, { data: databaseData() });
 
       const tabBar = page.locator(TAB_BAR_SELECTOR);
@@ -444,7 +444,7 @@ test.describe('semantic contracts', () => {
     });
 
     // Defect 6: the add-view button's only child is an aria-hidden icon.
-    test.fixme('the add-view button has an accessible name', async ({ page }) => {
+    test('the add-view button has an accessible name', async ({ page }) => {
       await createBlok(page, { data: databaseData() });
 
       const addView = page.locator(`${TAB_BAR_SELECTOR} [data-blok-database-add-view]`);
@@ -460,7 +460,7 @@ test.describe('semantic contracts', () => {
   test.describe('file card and media captions', () => {
     // Defect 7: file/ui.ts puts a contenteditable role=textbox filename inside
     // the card body, which is itself a <button> (or a download <a>).
-    test.fixme('the file card does not nest an editable textbox inside its button', async ({ page }) => {
+    test('the file card does not nest an editable textbox inside its button', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -480,7 +480,7 @@ test.describe('semantic contracts', () => {
 
     // Defect 8: file/image/video captions are role=textbox with no aria-label,
     // aria-labelledby or aria-multiline.
-    test.fixme('media captions are named multiline textboxes', async ({ page }) => {
+    test('media captions are named multiline textboxes', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -505,7 +505,7 @@ test.describe('semantic contracts', () => {
     });
 
     // Defect 8: link/embed/index.ts builds its caption from the same template.
-    test.fixme('the embed caption is a named textbox', async ({ page }) => {
+    test('the embed caption is a named textbox', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -541,7 +541,7 @@ test.describe('semantic contracts', () => {
   test.describe('code block', () => {
     // Defect 11: code/dom-builder.ts declares aria-haspopup="listbox" but the
     // button never reports whether the picker is open.
-    test.fixme('the language button reports its popup state', async ({ page }) => {
+    test('the language button reports its popup state', async ({ page }) => {
       await createBlok(page, {
         data: { blocks: [{ type: 'code', data: { code: 'hello world', language: 'plain text' } }] },
       });
@@ -562,7 +562,7 @@ test.describe('semantic contracts', () => {
     // <input type="checkbox"> next to an unassociated <span>, so a checklist
     // pasted into another app arrives with unlabelled checkboxes. The editable
     // render path (buildChecklistContent) wires aria-labelledby correctly.
-    test.fixme('exported checklist HTML labels every checkbox', async ({ page }) => {
+    test('exported checklist HTML labels every checkbox', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -602,7 +602,7 @@ test.describe('semantic contracts', () => {
   test.describe('callout', () => {
     // Defect 13: callout/dom-builder.ts sets aria-label to the raw emoji, so
     // the button announces as "light bulb" instead of naming its action.
-    test.fixme('the icon button is named by its action, not by the emoji', async ({ page }) => {
+    test('the icon button is named by its action, not by the emoji', async ({ page }) => {
       await createBlok(page, {
         data: { blocks: [{ type: 'callout', data: { emoji: '💡', color: 'default' } }] },
       });
@@ -621,6 +621,16 @@ test.describe('semantic contracts', () => {
     // aria-activedescendant/aria-selected is written, so nothing in the a11y
     // tree answers "which block is focused".
     test.fixme('the navigation-focused block is exposed through the a11y tree', async ({ page }) => {
+      /**
+       * DELIBERATELY NOT FIXED. The block now carries aria-current="true", so
+       * "which block is focused" IS queryable — but this asserts role +
+       * aria-selected. aria-selected is aria-allowed-attr gated, and every role
+       * permitting it (option/tab/row/gridcell/treeitem) requires a composite
+       * container role on the redactor, which would wrap contenteditable text in
+       * a listbox/grid and change how AT reads every block. aria-activedescendant
+       * is no alternative either: setNavigationFocus blurs to document.body by
+       * design, so no host holds focus to carry it.
+       */
       await createBlok(page, {
         data: {
           blocks: [
@@ -644,7 +654,7 @@ test.describe('semantic contracts', () => {
   test.describe('unknown-tool stub', () => {
     // Defect 17: stub/index.ts renders title + subtitle as plain text, so the
     // "block cannot be displayed" notice never reaches assistive tech.
-    test.fixme('the stub announces itself as a status message', async ({ page }) => {
+    test('the stub announces itself as a status message', async ({ page }) => {
       await createBlok(page, {
         data: { blocks: [{ type: 'unknown-tool-type', data: {} }] },
       });

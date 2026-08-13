@@ -141,11 +141,7 @@ interface ToolCase {
    * declares the test `fixme` — the fixture stays in the file, and the rule id
    * stays visible, instead of the finding being waived into a green run.
    */
-  knownViolations?: { edit?: readonly string[]; readOnly?: readonly string[] };
 }
-
-const knownFor = (toolCase: ToolCase, mode: 'edit' | 'readOnly'): readonly string[] =>
-  (mode === 'edit' ? toolCase.knownViolations?.edit : toolCase.knownViolations?.readOnly) ?? [];
 
 const DATABASE_BLOCKS: OutputData['blocks'] = [
   {
@@ -247,7 +243,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'paragraph (inline code and link)',
     tool: 'paragraph',
     count: 1,
-    knownViolations: { edit: ['color-contrast'], readOnly: ['color-contrast'] },
     blocks: [
       { type: 'paragraph', data: { text: CODE_AND_LINK_TEXT } },
     ],
@@ -273,7 +268,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'list (unordered, ordered, checklist, nested)',
     tool: 'list',
     count: 6,
-    knownViolations: { edit: ['aria-required-parent'], readOnly: ['aria-required-parent'] },
     blocks: [
       { type: 'list', data: { text: 'Unordered one', style: 'unordered' } },
       { type: 'list', data: { text: 'Unordered nested', style: 'unordered' }, indent: 1 },
@@ -317,10 +311,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'database',
     tool: 'database',
     count: 1,
-    knownViolations: {
-      edit: ['button-name', 'color-contrast'],
-      readOnly: ['color-contrast'],
-    },
     blocks: DATABASE_BLOCKS,
   },
   {
@@ -336,7 +326,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'code',
     tool: 'code',
     count: 1,
-    knownViolations: { edit: ['color-contrast'], readOnly: ['color-contrast'] },
     blocks: [
       {
         type: 'code',
@@ -353,7 +342,6 @@ const TOOL_CASES: ToolCase[] = [
     count: 1,
     // The caption textbox is rendered for EVERY image, captioned or not, so
     // there is no caption-free variant of this tool that could pass today.
-    knownViolations: { edit: ['aria-input-field-name'], readOnly: ['aria-input-field-name'] },
     blocks: [
       {
         type: 'image',
@@ -371,7 +359,6 @@ const TOOL_CASES: ToolCase[] = [
     tool: 'video',
     count: 1,
     // As with image, the caption textbox is unconditional.
-    knownViolations: { edit: ['aria-input-field-name'], readOnly: ['aria-input-field-name'] },
     blocks: [
       {
         type: 'video',
@@ -409,7 +396,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'file (previewable)',
     tool: 'file',
     count: 1,
-    knownViolations: { edit: ['aria-input-field-name'], readOnly: ['aria-input-field-name'] },
     blocks: [
       {
         type: 'file',
@@ -429,7 +415,6 @@ const TOOL_CASES: ToolCase[] = [
     tool: 'file',
     count: 1,
     // Read-only drops the filename's `role="textbox"`, so only edit mode fails.
-    knownViolations: { edit: ['aria-input-field-name'] },
     blocks: [
       {
         type: 'file',
@@ -478,7 +463,6 @@ const TOOL_CASES: ToolCase[] = [
     name: 'embed (link card)',
     tool: 'embed',
     count: 1,
-    knownViolations: { edit: ['color-contrast'], readOnly: ['color-contrast'] },
     blocks: [
       {
         type: 'embed',
@@ -498,7 +482,6 @@ const TOOL_CASES: ToolCase[] = [
     tool: 'embed',
     count: 1,
     config: FRAMED_EMBED_CONFIG,
-    knownViolations: { edit: ['frame-title'], readOnly: ['frame-title'] },
     blocks: [
       {
         type: 'embed',
@@ -518,7 +501,6 @@ const TOOL_CASES: ToolCase[] = [
     tool: 'bookmark',
     count: 1,
     // The description is only painted in the editable card, so read-only is clean.
-    knownViolations: { edit: ['color-contrast'] },
     blocks: [
       {
         type: 'bookmark',
@@ -665,10 +647,6 @@ test.describe('block tools — axe-core coverage', () => {
     const scope = blocksOf(toolCase.tool);
 
     test(`${toolCase.name} has no critical or serious axe violations in edit mode`, async ({ page }) => {
-      const known = knownFor(toolCase, 'edit');
-
-      test.fixme(known.length > 0, `open axe findings: ${known.join(', ')}`);
-
       await createBlok(page, { data: { blocks: toolCase.blocks }, config: toolCase.config });
 
       const blocks = page.locator(scope);
@@ -683,10 +661,6 @@ test.describe('block tools — axe-core coverage', () => {
     });
 
     test(`${toolCase.name} has no critical or serious axe violations in read-only mode`, async ({ page }) => {
-      const known = knownFor(toolCase, 'readOnly');
-
-      test.fixme(known.length > 0, `open axe findings: ${known.join(', ')}`);
-
       await createBlok(page, {
         data: { blocks: toolCase.blocks },
         config: { ...READ_ONLY_CONFIG, ...toolCase.config },
@@ -742,7 +716,7 @@ test.describe('block tools — axe-core coverage', () => {
   // Open findings: aria-required-parent (list), aria-input-field-name (media
   // captions), button-name (database "add view"), color-contrast (inline code,
   // links, code tokens, database pills, embed link card, bookmark description).
-  test.fixme('a document containing every tool has no critical or serious axe violations in edit mode', async ({ page }) => {
+  test('a document containing every tool has no critical or serious axe violations in edit mode', async ({ page }) => {
     await createBlok(page, { data: { blocks: KITCHEN_SINK_BLOCKS } });
 
     const redactor = page.locator(REDACTOR_SELECTOR);
@@ -755,7 +729,7 @@ test.describe('block tools — axe-core coverage', () => {
   });
 
   // Same open findings as the edit-mode scan, minus button-name.
-  test.fixme('a document containing every tool has no critical or serious axe violations in read-only mode', async ({ page }) => {
+  test('a document containing every tool has no critical or serious axe violations in read-only mode', async ({ page }) => {
     await createBlok(page, { data: { blocks: KITCHEN_SINK_BLOCKS }, config: READ_ONLY_CONFIG });
 
     const redactor = page.locator(REDACTOR_SELECTOR);
@@ -768,7 +742,7 @@ test.describe('block tools — axe-core coverage', () => {
   });
 
   // Open finding: aria-required-parent — the toggle's nested list items.
-  test.fixme('nested containers have no critical or serious axe violations in edit mode', async ({ page }) => {
+  test('nested containers have no critical or serious axe violations in edit mode', async ({ page }) => {
     await createBlok(page, { data: { blocks: NESTED_CONTAINER_BLOCKS } });
 
     await expect(page.locator(blocksOf('column'))).toHaveCount(2);
@@ -780,7 +754,7 @@ test.describe('block tools — axe-core coverage', () => {
   });
 
   // Open finding: aria-required-parent — the toggle's nested list items.
-  test.fixme('nested containers have no critical or serious axe violations in read-only mode', async ({ page }) => {
+  test('nested containers have no critical or serious axe violations in read-only mode', async ({ page }) => {
     await createBlok(page, { data: { blocks: NESTED_CONTAINER_BLOCKS }, config: READ_ONLY_CONFIG });
 
     await expect(page.locator(blocksOf('column'))).toHaveCount(2);

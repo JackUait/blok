@@ -357,17 +357,28 @@ export class TableRowColControls {
 
   private createGripElement(type: 'row' | 'col', index: number): HTMLElement {
     const grip = document.createElement('div');
+    const isDragLocked = this.canDrag !== undefined && !this.canDrag(type, index);
 
     grip.className = twMerge(GRIP_CAPSULE_CLASSES, GRIP_IDLE_CLASSES);
     grip.setAttribute(GRIP_ATTR, '');
     grip.setAttribute(type === 'col' ? GRIP_COL_ATTR : GRIP_ROW_ATTR, String(index));
     grip.setAttribute('contenteditable', 'false');
+    grip.setAttribute('role', 'button');
+    grip.setAttribute('tabindex', '0');
+    grip.setAttribute('aria-haspopup', 'menu');
+    // A locked grip advertises only the half of its contract that still works.
+    grip.setAttribute(
+      'aria-label',
+      isDragLocked
+        ? this.i18n.t('blockSettings.clickToOpenMenu')
+        : `${this.i18n.t('blockSettings.dragToMove')}. ${this.i18n.t('blockSettings.clickToOpenMenu')}`
+    );
 
     // A row/column locked inside a merge cannot be reordered. Mark it so the
     // drag affordance reads as disabled (not-allowed cursor) rather than
     // inviting a drag that would snap back with no explanation. The grip still
     // opens its menu on click — insert/delete remain valid there.
-    if (this.canDrag && !this.canDrag(type, index)) {
+    if (isDragLocked) {
       grip.setAttribute(GRIP_DRAG_DISABLED_ATTR, '');
       grip.setAttribute('aria-disabled', 'true');
       grip.style.cursor = 'not-allowed';
@@ -401,6 +412,41 @@ export class TableRowColControls {
       if (this.overlay) {
         this.scheduleHideAll();
       }
+    });
+
+    // Grips are revealed by hovering their row/column, so keyboard focus has to
+    // reveal them too — otherwise the tab stop lands on something at opacity 0.
+    grip.addEventListener('focus', () => {
+      this.clearHideTimeout();
+
+      if (type === 'col') {
+        this.showColGrip(index);
+      } else {
+        this.showRowGrip(index);
+      }
+
+      if (!this.isGripInteractionLocked()) {
+        expandGrip(grip, type);
+      }
+    });
+    grip.addEventListener('blur', () => {
+      if (this.isGripInteractionLocked()) {
+        return;
+      }
+      collapseGrip(grip, type, pillSize);
+      this.scheduleHideAll();
+    });
+
+    // The grip lives inside the block's contenteditable subtree: an unswallowed
+    // Enter splits the block and Space types into it.
+    grip.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      this.openPopover(type, index);
     });
 
     return grip;

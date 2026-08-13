@@ -613,12 +613,67 @@ export class TableAddControls {
     }
   }
 
+  /**
+   * Enter/Space on a focused add affordance adds one row/column, the same as a
+   * click. Both keys must be swallowed: the affordance sits inside the block's
+   * contenteditable subtree, where Enter would otherwise split the block and
+   * Space would type into it.
+   */
+  private handleAddKeydown(axis: 'row' | 'col', e: KeyboardEvent): void {
+    if (e.key !== 'Enter' && e.key !== ' ') {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!this.interactive) {
+      return;
+    }
+
+    if (axis === 'row') {
+      this.boundAddRowClick();
+    } else {
+      this.boundAddColClick();
+    }
+  }
+
+  /**
+   * The affordances are revealed by cursor proximity, so a keyboard user would
+   * otherwise focus something painted at opacity 0.
+   */
+  private attachKeyboardAffordance(btn: HTMLElement, axis: 'row' | 'col'): void {
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('tabindex', '0');
+    btn.setAttribute(
+      'aria-label',
+      this.i18n.t(axis === 'row' ? 'tools.table.clickToAddRow' : 'tools.table.clickToAddColumn')
+    );
+
+    btn.addEventListener('keydown', (e: KeyboardEvent) => this.handleAddKeydown(axis, e));
+    btn.addEventListener('focus', () => {
+      if (axis === 'row') {
+        this.showRow();
+      } else {
+        this.showCol();
+      }
+    });
+    btn.addEventListener('blur', () => {
+      if (axis === 'row') {
+        this.scheduleHideRow();
+      } else {
+        this.scheduleHideCol();
+      }
+    });
+  }
+
   private createAddRowButton(): HTMLElement {
     const btn = document.createElement('div');
 
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'items-start', 'cursor-row-resize');
     btn.setAttribute(ADD_ROW_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    this.attachKeyboardAffordance(btn, 'row');
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';
@@ -650,6 +705,7 @@ export class TableAddControls {
     btn.className = twMerge(HIT_AREA_CLASSES, 'group/add', 'justify-start', 'cursor-col-resize');
     btn.setAttribute(ADD_COL_ATTR, '');
     btn.setAttribute('contenteditable', 'false');
+    this.attachKeyboardAffordance(btn, 'col');
     btn.style.opacity = '0';
     btn.style.pointerEvents = 'none';
     btn.style.position = 'absolute';

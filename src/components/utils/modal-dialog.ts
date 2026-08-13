@@ -24,8 +24,9 @@
  *      that `src/tools/video/controls.ts` uses on its parked menu pane);
  *   3. traps Tab focus with a complete tabbable selector and pulls focus back
  *      via a capture-phase `focusin` guard;
- *   4. captures `document.activeElement` on open and restores it on close only
- *      when the node is still connected;
+ *   4. captures `document.activeElement` on open — falling back to the control
+ *      the opening press landed on, since WebKit leaves `<body>` focused after
+ *      a click on a button — and restores it on close when still connected;
  *   5. registers Escape / outside-pointer dismissal through the shared
  *      dismissable-layer stack instead of a bespoke listener;
  *   6. runs one shared exit-animation settle before teardown.
@@ -62,6 +63,48 @@ const TABBABLE_SELECTOR = [
 
 /** Time budget for the close animation before forcing teardown (ms). */
 const CLOSE_ANIMATION_FALLBACK_MS = 260;
+
+/**
+ * Element the user last pressed on, used to recover the dialog's opener when
+ * `document.activeElement` cannot name it: WebKit does not focus a `<button>`
+ * on click, so for every pointer-opened dialog there the captured
+ * `activeElement` is `<body>` and restoring to it strands focus on close.
+ *
+ * The listener is installed at import rather than on the first
+ * {@link openModalDialog} call because the press that opens the FIRST dialog
+ * happens before any such call.
+ */
+const lastPointerPress: { target: HTMLElement | null } = { target: null };
+
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'pointerdown',
+    (event: PointerEvent) => {
+      lastPointerPress.target = event.target instanceof HTMLElement ? event.target : null;
+    },
+    true
+  );
+}
+
+/**
+ * Resolves the control a press landed on: the pressed element itself or its
+ * nearest tabbable ancestor (a press on a button's icon targets the icon).
+ * @param pressed - element the pointer press landed on
+ * @returns the control focus can be handed back to, or null when the press was not on one
+ */
+const focusableOpener = (pressed: HTMLElement | null): HTMLElement | null =>
+  pressed?.closest<HTMLElement>(TABBABLE_SELECTOR) ?? null;
+
+/**
+ * Whether an element is a real place to hand focus back to. `<body>` means
+ * focus was nowhere (see {@link lastPointerPress}) and focusing it is a no-op,
+ * so it must not win over the opener fallback; a node detached while the dialog
+ * was open cannot take focus at all.
+ * @param candidate - element considered for focus restore
+ * @returns whether focus should be handed back to it
+ */
+const isRestorableFocusTarget = (candidate: Element | null): candidate is HTMLElement =>
+  candidate instanceof HTMLElement && candidate !== document.body && candidate.isConnected;
 
 /**
  * Options accepted by {@link openModalDialog}.
@@ -260,6 +303,8 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
   }
 
   const previouslyFocused = document.activeElement;
+  // Resolved at open time: presses inside the dialog overwrite the tracker.
+  const pointerOpener = focusableOpener(lastPointerPress.target);
 
   if (container !== null) {
     container.appendChild(content);
@@ -406,8 +451,10 @@ export const openModalDialog = (options: OpenModalDialogOptions): ModalDialogHan
 
     content.remove();
 
-    if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
-      previouslyFocused.focus();
+    const restoreTarget = isRestorableFocusTarget(previouslyFocused) ? previouslyFocused : pointerOpener;
+
+    if (isRestorableFocusTarget(restoreTarget)) {
+      restoreTarget.focus();
     }
 
     options.onClose?.();

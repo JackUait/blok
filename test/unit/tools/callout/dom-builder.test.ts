@@ -62,11 +62,26 @@ describe('buildCalloutDOM', () => {
     expect(emojiButton.getAttribute('aria-label')).toBe('Add emoji');
   });
 
-  it('emoji button aria-label = emoji char when emoji is set', async () => {
+  it('emoji button aria-label names the action, with the emoji as trailing detail', async () => {
+    const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
+    const { emojiButton } = buildCalloutDOM({
+      emoji: '💡',
+      readOnly: false,
+      addEmojiLabel: 'Add emoji',
+      editEmojiLabel: 'Edit icon',
+    });
+
+    // Naming it "💡" announced the button as "light bulb" — the glyph, never the
+    // action. Screen reader and voice-control users got no way to know it opens
+    // the icon picker.
+    expect(emojiButton.getAttribute('aria-label')).toBe('Edit icon 💡');
+  });
+
+  it('emoji button falls back to the add label when no edit label is supplied', async () => {
     const { buildCalloutDOM } = await import('../../../../src/tools/callout/dom-builder');
     const { emojiButton } = buildCalloutDOM({ emoji: '💡', readOnly: false, addEmojiLabel: 'Add emoji' });
 
-    expect(emojiButton.getAttribute('aria-label')).toBe('💡');
+    expect(emojiButton.getAttribute('aria-label')).toBe('Add emoji 💡');
   });
 
   it('emoji button sizes the emoji relative to the callout text, not at a fixed 24px', async () => {

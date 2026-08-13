@@ -251,8 +251,10 @@ export class DatabaseBoardView implements DatabaseViewRenderer {
       addCardBtn.appendChild(labelEl);
 
       if (option.color !== undefined) {
+        // Border only. The label's colour is left to database.css: tinting it
+        // with the Marker palette put "New page" at ~2.8:1 on the column tint,
+        // and an inline style would outrank any stylesheet fix.
         addCardBtn.style.borderColor = `color-mix(in srgb, var(--blok-color-${option.color}-text) 30%, transparent)`;
-        addCardBtn.style.color = `var(--blok-color-${option.color}-text)`;
       }
 
       columnEl.appendChild(addCardBtn);

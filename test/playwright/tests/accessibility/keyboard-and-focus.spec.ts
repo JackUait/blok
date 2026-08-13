@@ -199,7 +199,7 @@ test.describe('keyboard operability and focus management', () => {
       await page.keyboard.press('ArrowLeft');
       await expect(plusButton).toBeFocused();
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
 
     /**
@@ -212,7 +212,7 @@ test.describe('keyboard operability and focus management', () => {
      * the document CAPTURE phase — so Toolbar's own bubble-phase Escape handler
      * (`returnFocusToBlock`) never runs and the caret is never restored.
      */
-    test.fixme('escape from the toolbar hands focus back to the editor', async ({ page }) => {
+    test('escape from the toolbar hands focus back to the editor', async ({ page }) => {
       await paragraphBlok(page, [ 'First block' ]);
 
       const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
@@ -223,7 +223,7 @@ test.describe('keyboard operability and focus management', () => {
 
       await page.keyboard.press('Escape');
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
       expect(await isFocusWithin(page.getByTestId(HOLDER_ID))).toBe(true);
     });
   });
@@ -354,18 +354,14 @@ test.describe('keyboard operability and focus management', () => {
       await expect(dialog).toHaveCount(0);
     });
 
-    test('escape closes the dialog, clears inert and restores focus to the opener', async ({ page, browserName }) => {
+    test('escape closes the dialog, clears inert and restores focus to the opener', async ({ page }) => {
       /**
-       * DEFECT (WebKit only): closing the dialog strands focus on document.body,
-       * so a VoiceOver user loses their place in the document.
-       *
-       * ModalDialog restores focus to whatever was `document.activeElement` when
-       * it opened. WebKit does not focus a <button> on click, so it captures
-       * document.body and faithfully restores focus to nothing. The fix is a
-       * fallback to the triggering element rather than trusting activeElement.
+       * Regression guard for a WebKit-only focus loss. ModalDialog restored
+       * focus to whatever was `document.activeElement` at open time, but WebKit
+       * does not focus a <button> on click — so it captured document.body and
+       * faithfully restored focus to nothing, losing a VoiceOver user's place on
+       * every close. It now falls back to the element that opened the dialog.
        */
-      test.fixme(browserName === 'webkit', 'focus is restored to document.body');
-
       await fileBlok(page);
 
       const trigger = page.locator(FILE_PREVIEW_TRIGGER_SELECTOR);
@@ -387,7 +383,7 @@ test.describe('keyboard operability and focus management', () => {
       // swallowed by Blok's structural-key handling inside the redactor, and
       // WebKit does not leave a <button> focused after a click, so the dialog
       // captures document.body as the element to restore to.
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
   });
 
@@ -409,7 +405,7 @@ test.describe('keyboard operability and focus management', () => {
       await page.keyboard.press('Escape');
       await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeHidden();
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
 
     test('closing block settings never leaves focus on document.body', async ({ page }) => {
@@ -422,7 +418,7 @@ test.describe('keyboard operability and focus management', () => {
       await page.keyboard.press('Escape');
       await expect(page.locator(BLOCK_TUNES_CONTAINER_SELECTOR)).toBeHidden();
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
 
     /**
@@ -438,6 +434,14 @@ test.describe('keyboard operability and focus management', () => {
      * `InlineToolbar.opened === false` and enables navigation mode.
      */
     test.fixme('closing the inline toolbar never leaves focus on document.body', async ({ page }) => {
+      /**
+       * PARTIALLY FIXED, still intermittent (~1 run in 4, chromium and webkit).
+       * handleEscape now stops propagation on the InlineToolbar branch, which
+       * killed the deterministic failure — one Escape no longer both closes the
+       * toolbar AND enters navigation mode. A residual race remains where focus
+       * still reaches document.body; polling the assertion does not recover it,
+       * so focus is genuinely lost rather than late.
+       */
       await paragraphBlok(page, [ 'Some text to select' ]);
 
       const paragraph = page.locator(PARAGRAPH_SELECTOR).first();
@@ -447,7 +451,7 @@ test.describe('keyboard operability and focus management', () => {
       await page.keyboard.press('Escape');
       await expect(page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR)).toBeHidden();
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
   });
 
@@ -474,7 +478,7 @@ test.describe('keyboard operability and focus management', () => {
       await expect(page.locator(INLINE_TOOLBAR_CONTAINER_SELECTOR)).toBeVisible();
       await expect(convertTo).toHaveAttribute('data-blok-focused', 'true');
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
   });
 
@@ -589,7 +593,7 @@ test.describe('keyboard operability and focus management', () => {
 
       // The Link panel pulls focus into its URL field on render, so focus lands
       // there rather than on the tab — it must still be somewhere real.
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
 
       await tabs.nth(1).focus();
       await page.keyboard.press('ArrowLeft');
@@ -630,7 +634,7 @@ test.describe('keyboard operability and focus management', () => {
       await expect(previewMode).toHaveAttribute('aria-pressed', 'false');
       await expect(splitMode).toHaveAttribute('aria-pressed', 'false');
 
-      expect(await readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
+      await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
   });
 });

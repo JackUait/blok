@@ -997,6 +997,11 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // is a plain container for the form it wraps.
     if (this.itemsDefault.length > 0) {
       items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+      // The container scrolls (overflow-y-auto) but its items are all
+      // tabindex="-1" — arrow keys are the Flipper's, not the browser's — so
+      // without a tab stop of its own a keyboard-only user cannot reach the
+      // overflowing options at all (axe: scrollable-region-focusable).
+      items.setAttribute('tabindex', '0');
     }
     if (this.params.listboxId !== undefined) {
       items.id = this.params.listboxId;
@@ -1023,7 +1028,8 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
       ? (() => {
         const el = document.createElement('div');
 
-        el.className = 'shrink-0 pl-2 pr-3 pt-2 pb-1.5 text-xs font-medium text-gray-text/50 cursor-default bg-popover-bg';
+        // Same no-/50 contrast rule as the toolbox section headers.
+        el.className = 'shrink-0 pl-2 pr-3 pt-2 pb-1.5 text-xs font-medium text-gray-text cursor-default bg-popover-bg';
         el.setAttribute('role', 'status');
         el.setAttribute('data-blok-testid', 'popover-context-label');
         el.textContent = this.params.contextLabel;

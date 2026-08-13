@@ -1,4 +1,5 @@
 import type { Block } from '../../../block';
+import { createSelector, DATA_ATTR } from '../../../constants';
 import { SelectionUtils as Selection } from '../../../selection/index';
 import { isIosDevice } from '../../../utils/browser';
 import { deliverOnSubmit } from '../../../utils/on-submit';
@@ -732,8 +733,33 @@ export class KeyboardController extends Controller {
     }
 
     if (this.Blok.InlineToolbar.opened) {
+      /**
+       * Same hazard the toolbox branch above documents: `close()` flips
+       * `InlineToolbar.opened` synchronously, so an Escape that keeps
+       * propagating reaches the block holder's bubble handler, where
+       * navigationMode.handleEscape sees every toolbar closed, enables
+       * navigation mode and blurs the caret to <body>. One Escape dismisses
+       * exactly one layer.
+       */
+      event.stopPropagation();
       this.Blok.InlineToolbar.close();
 
+      return;
+    }
+
+    const target = event.target;
+    const isTargetElement = target instanceof HTMLElement;
+
+    /**
+     * An Escape raised from inside the Toolbar's own UI belongs to the Toolbar:
+     * its bubble-phase handler returns the caret to the block the user entered
+     * from via Alt+F10. The toolbar is mounted INSIDE the redactor (and, while
+     * open, inside the target block's holder), so without this guard the
+     * navigation-mode branch below claims the Escape, blurs the focused toolbar
+     * button to <body>, and stops propagation while still in the document
+     * CAPTURE phase — so that handler never runs.
+     */
+    if (isTargetElement && target.closest(createSelector(DATA_ATTR.toolbar)) !== null) {
       return;
     }
 
@@ -749,8 +775,6 @@ export class KeyboardController extends Controller {
      * mode enabled and call event.stopPropagation(), preventing DragController
      * from ever receiving the event.
      */
-    const target = event.target;
-    const isTargetElement = target instanceof HTMLElement;
     const isInsideRedactor = this.redactorElement && isTargetElement && this.redactorElement.contains(target);
     const hasCurrentBlock = this.Blok.BlockManager.currentBlock !== undefined;
 

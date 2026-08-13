@@ -204,11 +204,14 @@ interface ExpectedDynamicReads {
 const EXPECTED_DYNAMIC_READS: ExpectedDynamicReads[] = [
   {
     file: 'src/tools/table/table-operations.ts',
-    count: 2,
+    count: 4,
     pastedAttrs: ['colspan', 'rowspan'],
     reason:
       'getCellPosition reads CELL_COL_ATTR from the rendered grid (own DOM); ' +
-      'parseSpan reads colspan/rowspan from pasted cells via parsePastedTable',
+      'parseSpan reads colspan/rowspan from pasted cells via parsePastedTable; ' +
+      'applyHeaderCellRoles reads HEADING_COL_ATTR/HEADING_ROW_ATTR to derive ' +
+      'columnheader/rowheader roles — both are stamped by the tool on its own ' +
+      'rendered grid, never read off pasted DOM',
   },
   {
     file: 'src/components/modules/paste/handlers/html-handler.ts',

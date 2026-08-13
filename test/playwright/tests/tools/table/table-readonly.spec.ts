@@ -2,9 +2,9 @@
 // seed: test/playwright/tests/tools/table-readonly.spec.ts
 
 import type { Page } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 
 import type { Blok, OutputData } from '@/types';
+import { expectNoA11yViolations } from '../../helpers/a11y';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
@@ -131,19 +131,6 @@ const waitForReadOnlyState = async (page: Page, expected: boolean): Promise<void
   await page.waitForFunction(({ expectedState }) => {
     return window.blokInstance?.readOnly.isEnabled === expectedState;
   }, { expectedState: expected });
-};
-
-const assertNoCriticalOrSeriousTableA11yViolations = async (page: Page): Promise<void> => {
-  const { violations } = await new AxeBuilder({ page })
-    .include(TABLE_SELECTOR)
-    .analyze();
-
-  const highImpactViolations = violations.filter(({ impact }) => impact === 'critical' || impact === 'serious');
-  const violationSummary = highImpactViolations
-    .map(({ id, impact, help }) => `${impact ?? 'unknown'}: ${id} - ${help}`)
-    .join('\n');
-
-  expect(highImpactViolations, violationSummary).toStrictEqual([]);
 };
 
 /**
@@ -307,7 +294,7 @@ test.describe('Read-Only Mode', () => {
     await expect(table).toHaveAttribute('data-blok-table-readonly', '');
     await expect(page.locator(CELL_SELECTOR)).toHaveCount(4);
 
-    await assertNoCriticalOrSeriousTableA11yViolations(page);
+    await expectNoA11yViolations(page, { include: TABLE_SELECTOR, label: 'table' });
   });
 
   test('Heading column is displayed in read-only mode', async ({ page }) => {

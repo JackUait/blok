@@ -561,6 +561,33 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     }));
   });
 
+  it('extends the replay atomic window through RAF so deferred container echoes cannot clear the redo stack', () => {
+    // Regression: undoing a reparent OUT of a toggle heading makes the toggle
+    // re-render its empty state on a deferred DOM callback. Without the RAF
+    // extension that callback fires syncBlockDataToYjs with 'local' origin
+    // AFTER the replay window closed — a fresh tracked undo item that clears
+    // the caret redo stack, so the reparent's move entry can never be redone.
+    // Same window the block-removal replay already uses.
+    const harness = createHarness([
+      { id: 'parent-a', parentId: null, contentIds: [] },
+      { id: 'child', parentId: 'parent-a', contentIds: [] },
+    ]);
+    const child = harness.repository.getBlockById('child');
+
+    if (child === undefined) {
+      throw new Error('child block missing');
+    }
+
+    const priv = harness.blockManager as unknown as {
+      yjsSync: { withAtomicOperation: (fn: () => void, options?: { extendThroughRAF?: boolean }) => void };
+    };
+    const atomicSpy = vi.spyOn(priv.yjsSync, 'withAtomicOperation');
+
+    harness.blockManager.reparentFromHistoryReplay(child, null);
+
+    expect(atomicSpy).toHaveBeenCalledWith(expect.any(Function), { extendThroughRAF: true });
+  });
+
   it('does NOT fire MOVED when the parent does not actually change (no-op reparent)', () => {
     const harness = createHarness([
       { id: 'parent-a', parentId: null, contentIds: ['child'] },

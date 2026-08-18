@@ -103,7 +103,7 @@ const editor = new Blok({
     type: 'block',
     title: 'Header',
     description:
-      'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) at every level — the toolbox lists "Toggle heading 1" through "Toggle heading 6", reachable with the markdown shortcuts `>#` through `>######`.',
+      'Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) at every level — the toolbox lists "Toggle heading 1" through "Toggle heading 6", reachable with the markdown shortcuts `>#` through `>######`. Converting an existing block into a toggle heading (via "Turn into" or `blocks.convert` with `isToggleable: true`) adopts its section — every following sibling until the next heading of the same or higher rank becomes a child of the new toggle, matching Notion.',
     importExample: `import { Header } from '@bloklabs/core/tools';`,
     configOptions: [
       {

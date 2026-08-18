@@ -1052,8 +1052,13 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     const { BlockManager } = this.Blok;
     const convertedBlocks: Block[] = [];
 
+    // A multi-select "turn into toggle heading" makes each block its OWN
+    // toggle heading; letting every conversion adopt its following section
+    // would nest the later selected blocks under the earlier ones.
+    const skipSectionAdoption = blocks.length > 1;
+
     for (const block of blocks) {
-      const convertedBlock = await this.convertBlockSafely(BlockManager, block, targetToolName, toolboxData);
+      const convertedBlock = await this.convertBlockSafely(BlockManager, block, targetToolName, toolboxData, skipSectionAdoption);
 
       if (convertedBlock) {
         convertedBlocks.push(convertedBlock);
@@ -1077,10 +1082,11 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     blockManager: typeof this.Blok.BlockManager,
     block: Block,
     targetToolName: string,
-    toolboxData?: Record<string, unknown>
+    toolboxData?: Record<string, unknown>,
+    skipSectionAdoption = false
   ): Promise<Block | null> {
     try {
-      return await blockManager.convert(block, targetToolName, toolboxData);
+      return await blockManager.convert(block, targetToolName, toolboxData, { skipSectionAdoption });
     } catch (e) {
       console.warn(`Failed to convert block ${block.id}:`, e);
 

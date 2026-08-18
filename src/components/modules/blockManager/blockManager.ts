@@ -1209,6 +1209,14 @@ export class BlockManager extends Module {
     //   - `onParentChanged` → `scheduleParentSync` → a fresh Yjs write that
     //     would land on Y.UndoManager (polluting the undo stack)
     //   - any DOM mutation observer write-back into Yjs
+    //
+    // extendThroughRAF: reparenting a block out of (or into) a container makes
+    // the container re-render its empty/placeholder state on a DEFERRED DOM
+    // callback. Without the RAF extension that callback fires
+    // syncBlockDataToYjs with 'local' origin after this window closed — a
+    // fresh TRACKED undo item that clears the caret redo stack, so the move
+    // entry being replayed here could never be redone. Same window the
+    // block-removal replay uses (yjs-sync removeBlockForUndoRedo).
     this.yjsSync.withAtomicOperation(() => {
       this.hierarchy.setBlockParent(block, newParentId);
 
@@ -1232,7 +1240,7 @@ export class BlockManager extends Module {
         // instance that lost its "was nested" flag.
         structural: true,
       });
-    });
+    }, { extendThroughRAF: true });
   }
 
   /**
@@ -1381,8 +1389,20 @@ export class BlockManager extends Module {
 
   /**
    * Converts passed Block to the new Tool
+   * @param block - Block to convert
+   * @param targetToolName - Tool to convert to
+   * @param blockDataOverrides - optional new Block data overrides
+   * @param options - options.skipSectionAdoption disables the toggle-heading
+   *   section adoption; the multi-select convert loop passes it so each block
+   *   in the selection becomes its OWN toggle heading instead of the earlier
+   *   conversions swallowing the later ones.
    */
-  public async convert(block: Block, targetToolName: string, blockDataOverrides?: BlockToolData): Promise<Block> {
+  public async convert(
+    block: Block,
+    targetToolName: string,
+    blockDataOverrides?: BlockToolData,
+    options: { skipSectionAdoption?: boolean } = {}
+  ): Promise<Block> {
     /**
      * Notion parity: turning a TOGGLE HEADING into a non-toggle target via the
      * "Turn into" menu must RELEASE its children as following siblings — exactly
@@ -1409,7 +1429,112 @@ export class BlockManager extends Module {
       this.releaseChildrenToRoot(block);
     }
 
-    return this.operations.convert(block, targetToolName, this.blocksStore, blockDataOverrides);
+    const newBlock = await this.operations.convert(block, targetToolName, this.blocksStore, blockDataOverrides);
+
+    /**
+     * Notion parity, the ON direction: turning a NON-toggle block into a toggle
+     * heading adopts its whole section — every following sibling until the next
+     * heading of the same or higher rank — as children ("all of the content
+     * within those headings will now be collapsible"). Sources that are already
+     * a toggle (toggle heading level change, toggle list) keep exactly the
+     * children they had and adopt nothing new.
+     */
+    if (targetIsToggleHeader && !sourceIsToggle && options.skipSectionAdoption !== true) {
+      this.adoptFollowingSectionIntoToggleHeading(newBlock);
+    }
+
+    return newBlock;
+  }
+
+  /**
+   * Move every following sibling of `toggleHeading` — up to, but not including,
+   * the next heading of the same or higher rank — inside it, in document order.
+   *
+   * Siblings are the flat-array followers sharing the heading's `parentId`, so
+   * a heading inside a column adopts only within that column. A descendant of
+   * an adopted sibling (or a child the convert already re-nested onto the new
+   * heading) rides along with its container and is never reparented directly.
+   * @param toggleHeading - the freshly converted toggle heading block
+   */
+  private adoptFollowingSectionIntoToggleHeading(toggleHeading: Block): void {
+    const level = this.resolveHeadingLevel(toggleHeading);
+
+    if (level === null) {
+      return;
+    }
+
+    const flat = this.blocks;
+    const startIndex = flat.indexOf(toggleHeading);
+
+    if (startIndex === -1) {
+      return;
+    }
+
+    const sectionParentId = toggleHeading.parentId ?? null;
+    const sectionIds = new Set<string>([toggleHeading.id]);
+    const siblingsToAdopt: Block[] = [];
+
+    for (const candidate of flat.slice(startIndex + 1)) {
+      const candidateParentId = candidate.parentId ?? null;
+
+      if (candidateParentId !== null && sectionIds.has(candidateParentId)) {
+        sectionIds.add(candidate.id);
+        continue;
+      }
+
+      if (candidateParentId !== sectionParentId) {
+        break;
+      }
+
+      const candidateLevel = this.resolveHeadingLevel(candidate);
+
+      if (candidateLevel !== null && candidateLevel <= level) {
+        break;
+      }
+
+      siblingsToAdopt.push(candidate);
+      sectionIds.add(candidate.id);
+    }
+
+    if (siblingsToAdopt.length === 0) {
+      return;
+    }
+
+    /**
+     * A bare setBlockParent loop splits across two history stacks (the move
+     * stack plus the parentId/contentIds writes on Y.UndoManager), so undoing
+     * the convert would leave the section nested under a PLAIN heading.
+     * transactMoves attaches the parent writes to one atomic move entry —
+     * same wrapper Tab-indent and drag-drop use.
+     */
+    const { YjsManager } = this.Blok;
+    const applyAdoption = (): void => {
+      for (const sibling of siblingsToAdopt) {
+        this.setBlockParent(sibling, toggleHeading.id);
+      }
+    };
+
+    if (typeof YjsManager?.transactMoves === 'function') {
+      YjsManager.transactMoves(applyAdoption);
+    } else {
+      applyAdoption();
+    }
+  }
+
+  /**
+   * Read a header block's level from its rendered <hN> tag. The block's own
+   * heading element always precedes any child header's in document order, so
+   * the first match is the block's own. Returns null for non-header blocks.
+   * @param block - block whose heading level to read
+   */
+  private resolveHeadingLevel(block: Block): number | null {
+    if (block.name !== 'header') {
+      return null;
+    }
+
+    const heading = block.holder.querySelector('h1, h2, h3, h4, h5, h6');
+
+    return heading !== null ? Number(heading.tagName.charAt(1)) : null;
   }
 
   /**

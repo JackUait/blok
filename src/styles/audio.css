@@ -383,7 +383,9 @@
   font-size: var(--blok-font-size-body);
   font-weight: var(--blok-font-weight-semibold);
   color: var(--blok-text-primary);
-  line-height: var(--blok-line-height-tight);
+  /* `text-overflow: ellipsis` forces `overflow: hidden`, which clips at the
+   * padding box — a 1.0 line-height would shear descenders and the caret. */
+  line-height: var(--blok-line-height-option);
   letter-spacing: -0.01em;
   outline: none;
   white-space: nowrap;
@@ -401,7 +403,7 @@
   font-size: var(--blok-font-size-ui-label);
   font-weight: var(--blok-font-weight-regular);
   color: var(--blok-text-secondary);
-  line-height: var(--blok-line-height-tight);
+  line-height: var(--blok-line-height-option);
   outline: none;
   white-space: nowrap;
   overflow: hidden;

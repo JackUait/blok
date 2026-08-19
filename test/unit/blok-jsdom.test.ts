@@ -93,6 +93,9 @@ describe('Blok jsdom compatibility', () => {
         paragraph: Paragraph,
       },
     });
+
+    editor = instance;
+
     await instance.isReady;
     const root = holder?.querySelector('[data-blok-testid="blok-editor"]');
     expect(root?.getAttribute('data-blok-version')).toBe(version);

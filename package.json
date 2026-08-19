@@ -146,6 +146,7 @@
     "i18n:check": "node scripts/i18n/check-translations.mjs",
     "i18n:check:docs": "node scripts/i18n/check-docs-translations.mjs",
     "typography:check": "node scripts/typography-finder/cli.mjs",
+    "override:sync": "node scripts/override/sync.mjs",
     "e2e": "playwright test",
     "e2e:smoke": "playwright test --project=chromium --grep=\"@smoke\"",
     "e2e:chrome": "playwright test --project=chromium",

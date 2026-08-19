@@ -312,13 +312,22 @@ describe('view bundle isolation (parse5 stays out of editor bundles)', () => {
   // that survive minification.
   const PARSE5_FINGERPRINT = 'control-character-in-input-stream'
 
+  // Published entries are now thin override wrappers (scripts/override/generate-override-entries.mjs)
+  // that re-export from a `*-impl` sibling — the real bundled code, and thus
+  // this fingerprint, lives there. Fall back to the bundle itself for outputs
+  // the wrapper never touches (blok.iife.js, blok.umd.js read src directly).
+  const contentBearingPath = (bundle: string): string => {
+    const implPath = resolve(dist, bundle.replace(/(\.[a-z]+)$/, '-impl$1'))
+    return existsSync(implPath) ? implPath : resolve(dist, bundle)
+  }
+
   it('view.mjs actually contains parse5 (fingerprint non-vacuity)', () => {
-    expect(readFileSync(resolve(dist, 'view.mjs'), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(true)
+    expect(readFileSync(contentBearingPath('view.mjs'), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(true)
   })
 
   for (const bundle of ['blok.mjs', 'full.mjs', 'tools.mjs', 'adapters.mjs', 'blok.cjs', 'blok.iife.js', 'blok.umd.js']) {
     it(`${bundle} ships no parse5`, () => {
-      expect(readFileSync(resolve(dist, bundle), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(false)
+      expect(readFileSync(contentBearingPath(bundle), 'utf-8').includes(PARSE5_FINGERPRINT)).toBe(false)
     })
   }
 })

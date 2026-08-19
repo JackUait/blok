@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Blok override seam fixture</title>
+</head>
+<body>
+  <main>
+    <div id="editor"></div>
+  </main>
+  <script type="module">
+    import { Blok, version } from '/dist/blok.mjs';
+
+    window.__blokVersion = version;
+    const editor = new Blok({ holder: 'editor' });
+    editor.isReady.then(() => {
+      document.body.setAttribute('data-fixture-ready', 'true');
+    });
+  </script>
+</body>
+</html>

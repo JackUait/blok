@@ -19,6 +19,7 @@ export const REQUIRED_TEST_ARTIFACTS: string[] = [
   'test/playwright/fixtures/vendor/react.mjs',
   'test/playwright/fixtures/vendor/vue.mjs',
   'test/playwright/fixtures/vendor/angular/app.mjs',
+  'override-extension/payload/current.json',
 ];
 
 /**

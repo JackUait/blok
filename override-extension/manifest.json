@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Blok Version Override (dev)",
+  "version": "0.1.0",
+  "description": "Swap a page's bundled Blok for a locally built one. Dev-only, load unpacked.",
+  "minimum_chrome_version": "120",
+  "background": { "service_worker": "sw.mjs", "type": "module" },
+  "action": { "default_popup": "popup/popup.html", "default_title": "Blok Version Override" },
+  "permissions": ["scripting", "storage", "alarms", "tabs", "declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"]
+}

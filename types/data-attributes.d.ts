@@ -32,6 +32,9 @@ export const DATA_ATTR: {
    *  inserting blocks into the DOM; removed while a re-render is in flight.
    *  Acts as a stable render-readiness gate for consumers (e.g. E2E waits). */
   readonly rendered: 'data-blok-rendered';
+  /** Blok version number stamped on the editor wrapper (e.g. '1.10.0', 'dev').
+   *  Consumed by browser extensions to identify the running version. */
+  readonly version: 'data-blok-version';
 
   // Block Identifiers
 

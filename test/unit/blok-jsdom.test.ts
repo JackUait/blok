@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Paragraph } from '../../src/tools/paragraph';
+import { version } from '../../src/blok';
 
 /**
  * The runtime class from src/blok and the published Blok type don't unify
@@ -82,4 +83,18 @@ describe('Blok jsdom compatibility', () => {
 
     await expect(instance.isReady).resolves.toBe(instance);
   }, 120_000);
+
+  it('stamps the running blok version on the editor root', async () => {
+    const { Blok } = await import('../../src/blok');
+
+    const instance = new Blok({
+      holder,
+      tools: {
+        paragraph: Paragraph,
+      },
+    });
+    await instance.isReady;
+    const root = holder?.querySelector('[data-blok-testid="blok-editor"]');
+    expect(root?.getAttribute('data-blok-version')).toBe(version);
+  });
 });

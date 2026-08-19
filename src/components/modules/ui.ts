@@ -14,7 +14,7 @@ import { Dom as $, toggleEmptyMark } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { Flipper } from '../flipper';
 import { SelectionUtils as Selection } from '../selection/index';
-import { debounce, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
+import { debounce, getBlokVersion, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
@@ -699,6 +699,7 @@ export class UI extends Module<UINodes> {
     this.nodes.wrapper.setAttribute(DATA_ATTR.interface, BLOK_INTERFACE_VALUE);
     this.nodes.wrapper.setAttribute(DATA_ATTR.editor, '');
     this.nodes.wrapper.setAttribute(DATA_ATTR.instance, this.instanceId);
+    this.nodes.wrapper.setAttribute(DATA_ATTR.version, getBlokVersion());
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     this.nodes.wrapper.setAttribute(DATA_ATTR.contentAlign, this.config.style?.contentAlign ?? 'left');
     if (this.isRtl) {

@@ -1,6 +1,7 @@
 import type { Block } from '../../../block';
 import { BlockHovered } from '../../../events/BlockHovered';
 import { throttle } from '../../../utils';
+import { resolveHoveredBlockWrapper } from '../hovered-block-resolution';
 
 import { Controller } from './_base';
 
@@ -136,40 +137,28 @@ export class BlockHoverController extends Controller {
       }
 
       /**
-       * When the cursor is in the gap between children inside a [data-blok-child-toolbar]
-       * container, the closest block-wrapper is the parent — not a child.
-       * Skip the event so the toolbar stays on the previous child block.
+       * The toolbar is what the pointer is traveling toward. Re-resolving from
+       * under its icons is how the menu escapes the cursor, so hover detection
+       * stands down entirely while the pointer is over it.
        */
-      const targetChildToolbar = (event.target as Element | null)?.closest('[data-blok-child-toolbar]');
-
-      if (targetChildToolbar && closestBlockWrapper && !targetChildToolbar.contains(closestBlockWrapper)) {
+      if ((event.target as Element | null)?.closest('[data-blok-testid="toolbar"]')) {
         return;
       }
 
-      /**
-       * If the hovered block is inside a table cell or toggle-children container,
-       * resolve to the parent block instead.
-       * Without this, the toolbar targets nested child blocks and the parent's
-       * block tune settings become inaccessible.
-       *
-       * Containers with [data-blok-child-toolbar] opt out of parent resolution,
-       * allowing non-first children to have independent toolbars (e.g. callout blocks).
-       * The first child still resolves to parent so the container's own controls display.
-       */
-      const alwaysResolveContainer = closestBlockWrapper?.closest(
-        '[data-blok-table-cell-blocks], [data-blok-toggle-children]:not([data-blok-child-toolbar])'
-      );
-      const childToolbarContainer = !alwaysResolveContainer
-        ? closestBlockWrapper?.closest('[data-blok-child-toolbar]') ?? null
-        : null;
-      const isFirstChildOfContainer = childToolbarContainer !== null
-        && childToolbarContainer.querySelector(':scope > [data-blok-testid="block-wrapper"]') === closestBlockWrapper;
+      const resolution = resolveHoveredBlockWrapper(event.target as Element | null, {
+        x: event.clientX,
+        y: event.clientY,
+      });
 
-      const nestedContainer = alwaysResolveContainer
-        ?? (isFirstChildOfContainer ? childToolbarContainer : null);
-      const hoveredBlockElement = nestedContainer
-        ? nestedContainer.closest('[data-blok-testid="block-wrapper"]') ?? null
-        : closestBlockWrapper;
+      /**
+       * Pointer is in a container's own chrome with no block on that line —
+       * the toolbar stays where it is.
+       */
+      if (resolution.kind === 'keep') {
+        return;
+      }
+
+      const hoveredBlockElement = resolution.kind === 'block' ? resolution.wrapper : null;
 
       /**
        * If no block element found directly, find the nearest block by Y distance
@@ -241,10 +230,11 @@ export class BlockHoverController extends Controller {
   /**
    * Finds and emits a BlockHovered event for the nearest block by Y distance.
    * Deduplicates by lastHoveredBlockId to avoid redundant events.
+   * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
    */
-  private emitNearestBlockHovered(clientY: number): void {
-    const nearestBlock = this.findNearestBlock(clientY);
+  private emitNearestBlockHovered(clientX: number, clientY: number): void {
+    const nearestBlock = this.findNearestBlock(clientX, clientY);
 
     if (nearestBlock === null || this.blockHoveredState.lastHoveredBlockId === nearestBlock.id) {
       return;
@@ -277,6 +267,11 @@ export class BlockHoverController extends Controller {
    */
   private emitNearestBlockHoveredInZone(clientX: number, clientY: number): void {
     const blocks = this.Blok.BlockManager.blocks;
+    /**
+     * Only the ZONE ANCHOR must be a top-level block — its content element
+     * spans the full editor column, while a nested child's is indented and
+     * would shrink the zone. findNearestBlock itself considers nested blocks.
+     */
     const topLevelBlocks = blocks.filter(block =>
       !BlockHoverController.isColumnContainer(block)
       && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
@@ -289,7 +284,7 @@ export class BlockHoverController extends Controller {
     const contentEl = topLevelBlocks[0].holder.querySelector<HTMLElement>('[data-blok-element-content]');
 
     if (!contentEl) {
-      this.emitNearestBlockHovered(clientY);
+      this.emitNearestBlockHovered(clientX, clientY);
 
       return;
     }
@@ -306,49 +301,81 @@ export class BlockHoverController extends Controller {
       && clientX <= contentRect.right + BlockHoverController.HOVER_ZONE_SIZE;
 
     if (withinZone) {
-      this.emitNearestBlockHovered(clientY);
+      this.emitNearestBlockHovered(clientX, clientY);
     }
   }
 
   /**
-   * Finds the nearest block by vertical distance to cursor position.
-   * Returns the block whose vertical center is closest to the cursor Y position.
-   * If cursor is above all blocks, returns the first block.
-   * If cursor is below all blocks, returns the last block.
+   * Finds the block whose line the cursor is on, resolved to the deepest
+   * candidate — a container's holder spans all of its children, so depth is
+   * what tells the specific line apart from the whole section. When no block's
+   * band contains the cursor, falls back to the vertically nearest edge.
+   * @param clientX - Cursor X position
    * @param clientY - Cursor Y position
    * @returns Nearest block, or null if no blocks exist
    */
-  private findNearestBlock(clientY: number): Block | null {
+  private findNearestBlock(clientX: number, clientY: number): Block | null {
     const blocks = this.Blok.BlockManager.blocks;
 
-    if (blocks.length === 0) {
-      return null;
-    }
-
     /**
-     * Filter out blocks whose holders are inside a table cell or toggle-children container.
-     * Nested child blocks should not participate in nearest-block detection —
-     * the parent block should be found instead.
-     * This matches the direct-hit path which also resolves nested blocks to their parent.
+     * Column wrappers are structural, cell blocks anchor their table (which is
+     * itself a candidate), and hidden blocks (collapsed toggle children) have
+     * zero-size rects that would otherwise win near the viewport origin.
      */
-    const topLevelBlocks = blocks.filter(block =>
-      !BlockHoverController.isColumnContainer(block)
-      && block.holder.closest('[data-blok-table-cell-blocks], [data-blok-toggle-children]') === null
-    );
+    const candidates = blocks
+      .map(block => ({ block, rect: block.holder.getBoundingClientRect() }))
+      .filter(({ block, rect }) =>
+        !BlockHoverController.isColumnContainer(block)
+        && block.holder.closest('[data-blok-table-cell-blocks]') === null
+        && rect.width > 0
+        && rect.height > 0
+      );
 
-    if (topLevelBlocks.length === 0) {
+    if (candidates.length === 0) {
       return null;
     }
 
-    const result = topLevelBlocks.reduce<{ block: Block; distance: number }>((nearest, block) => {
-      const rect = block.holder.getBoundingClientRect();
-      const centerY = (rect.top + rect.bottom) / 2;
-      const distance = Math.abs(clientY - centerY);
+    const containing = candidates.filter(({ rect }) => rect.top <= clientY && clientY <= rect.bottom);
 
-      return distance < nearest.distance ? { block, distance } : nearest;
-    }, { block: topLevelBlocks[0], distance: Infinity });
+    if (containing.length > 0) {
+      const best = containing.reduce((nearest, candidate) => {
+        const depthDelta = BlockHoverController.wrapperDepth(candidate.block.holder)
+          - BlockHoverController.wrapperDepth(nearest.block.holder);
+
+        if (depthDelta !== 0) {
+          return depthDelta > 0 ? candidate : nearest;
+        }
+
+        /**
+         * Equally deep blocks on the same line sit in side-by-side columns —
+         * the horizontally nearest one owns the margin hover.
+         */
+        const horizontalDistance = (rect: DOMRect): number =>
+          Math.max(rect.left - clientX, 0, clientX - rect.right);
+
+        return horizontalDistance(candidate.rect) < horizontalDistance(nearest.rect) ? candidate : nearest;
+      });
+
+      return best.block;
+    }
+
+    const result = candidates.reduce((nearest, candidate) => {
+      const edgeDistance = (rect: DOMRect): number => Math.max(rect.top - clientY, 0, clientY - rect.bottom);
+
+      return edgeDistance(candidate.rect) < edgeDistance(nearest.rect) ? candidate : nearest;
+    });
 
     return result.block;
+  }
+
+  /**
+   * How many block wrappers sit above this holder — 0 for a top-level block.
+   * @param holder - the block's holder element
+   */
+  private static wrapperDepth(holder: Element): number {
+    const ancestor = holder.parentElement?.closest('[data-blok-testid="block-wrapper"]') ?? null;
+
+    return ancestor === null ? 0 : 1 + BlockHoverController.wrapperDepth(ancestor);
   }
 
   /**

@@ -799,13 +799,16 @@ describe('BlockHoverController', () => {
       expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
 
-    it('still resolves to parent when toggle-children does NOT have data-blok-child-toolbar', () => {
+    it('emits BlockHovered for a toggle child block itself (children own their menus)', () => {
       /**
-       * Toggle blocks use data-blok-toggle-children but do NOT have data-blok-child-toolbar.
-       * Hovering over a toggle child should still resolve to the parent toggle block.
+       * Toggle children (toggle list / toggle heading sections) each own their
+       * block menu, like in Notion. Hovering a child must anchor the toolbar to
+       * the CHILD, never bounce it up to the toggle parent — otherwise the
+       * child's menu is uncatchable (it jumps away as the pointer approaches).
        */
       const { controller, blok, eventsDispatcher } = createBlockHoverController();
       const toggleBlock = createMockBlock('toggle-block', 100, 400);
+      const childBlock = createMockBlock('toggle-child', 200, 250);
 
       const toggleWrapper = toggleBlock.holder;
 
@@ -814,10 +817,11 @@ describe('BlockHoverController', () => {
       const childrenContainer = document.createElement('div');
 
       childrenContainer.setAttribute('data-blok-toggle-children', '');
+      childrenContainer.setAttribute('data-blok-nested-blocks', '');
       // NO data-blok-child-toolbar attribute
       toggleWrapper.appendChild(childrenContainer);
 
-      const nestedWrapper = document.createElement('div');
+      const nestedWrapper = childBlock.holder;
 
       nestedWrapper.setAttribute('data-blok-testid', 'block-wrapper');
       childrenContainer.appendChild(nestedWrapper);
@@ -831,8 +835,10 @@ describe('BlockHoverController', () => {
 
       (controller as unknown as { enable: () => void }).enable();
 
-      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock];
-      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(toggleBlock);
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, childBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(
+        (node) => (node === nestedWrapper ? childBlock : toggleBlock)
+      );
 
       const event = new MouseEvent('mousemove', {
         clientX: 400,
@@ -846,12 +852,350 @@ describe('BlockHoverController', () => {
       vi.runAllTimers();
 
       expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
-        block: toggleBlock,
+        block: childBlock,
         target: paragraphContent,
       });
 
-      // Verify resolution went to the parent wrapper
-      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(toggleWrapper);
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(nestedWrapper);
+    });
+  });
+
+  describe('nested block hover (toggle sections)', () => {
+    /**
+     * Builds toggleWrapper > childrenContainer(+attrs of a real toggle/header
+     * container) and returns both. Children are appended by each test.
+     */
+    const createToggleDom = (toggleBlock: Block): HTMLElement => {
+      const toggleWrapper = toggleBlock.holder;
+
+      toggleWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const childrenContainer = document.createElement('div');
+
+      childrenContainer.setAttribute('data-blok-toggle-children', '');
+      childrenContainer.setAttribute('data-blok-nested-blocks', '');
+      toggleWrapper.appendChild(childrenContainer);
+      document.body.appendChild(toggleWrapper);
+
+      return childrenContainer;
+    };
+
+    const mockRect = (element: Element, rect: { top: number; bottom: number; left: number; right: number }): void => {
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+        ...rect,
+        width: rect.right - rect.left,
+        height: rect.bottom - rect.top,
+        x: rect.left,
+        y: rect.top,
+        toJSON: () => ({}),
+      });
+    };
+
+    const dispatchMove = (target: Element, clientX: number, clientY: number): void => {
+      const event = new MouseEvent('mousemove', {
+        clientX,
+        clientY,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: target });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+    };
+
+    it('resolves table chrome inside a toggle container to the table block, not the toggle parent', () => {
+      /**
+       * The pointer over a table's own chrome (td padding, borders, grabbers)
+       * targets the table wrapper. That must anchor the toolbar to the TABLE —
+       * bouncing to the toggle parent makes the table's menu flicker away
+       * exactly while the user reaches for it.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 100, 400);
+      const tableBlock = createMockBlock('table-block', 150, 250);
+      const childrenContainer = createToggleDom(toggleBlock);
+
+      const tableWrapper = tableBlock.holder;
+
+      tableWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(tableWrapper);
+
+      const td = document.createElement('td');
+      const tr = document.createElement('tr');
+      const table = document.createElement('table');
+
+      tr.appendChild(td);
+      table.appendChild(tr);
+      tableWrapper.appendChild(table);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, tableBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(
+        (node) => (node === tableWrapper ? tableBlock : toggleBlock)
+      );
+
+      dispatchMove(td, 170, 200);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: tableBlock,
+        target: td,
+      });
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(tableWrapper);
+    });
+
+    it('descends from the toggle gutter strip to the child block on that line', () => {
+      /**
+       * The toggle container's own padding (the gutter strip where the child's
+       * plus/drag icons render) lies left of every child wrapper. Hovering it
+       * at a child's line must anchor that child, like Notion's margin hover.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 100, 400);
+      const childBlock = createMockBlock('toggle-child', 200, 240);
+      const childrenContainer = createToggleDom(toggleBlock);
+
+      const childWrapper = childBlock.holder;
+
+      childWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(childWrapper);
+      mockRect(childWrapper, { top: 200, bottom: 240, left: 160, right: 700 });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, childBlock];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(
+        (node) => (node === childWrapper ? childBlock : toggleBlock)
+      );
+
+      dispatchMove(childrenContainer, 130, 220);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: childBlock,
+        target: childrenContainer,
+      });
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(childWrapper);
+    });
+
+    it('keeps the previous anchor when the pointer is in a vertical gap between toggle children', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 100, 400);
+      const firstChild = createMockBlock('child-1', 120, 160);
+      const secondChild = createMockBlock('child-2', 200, 240);
+      const childrenContainer = createToggleDom(toggleBlock);
+
+      for (const child of [firstChild, secondChild]) {
+        child.holder.setAttribute('data-blok-testid', 'block-wrapper');
+        childrenContainer.appendChild(child.holder);
+      }
+      mockRect(firstChild.holder, { top: 120, bottom: 160, left: 160, right: 700 });
+      mockRect(secondChild.holder, { top: 200, bottom: 240, left: 160, right: 700 });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, firstChild, secondChild];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(toggleBlock);
+
+      dispatchMove(childrenContainer, 130, 180);
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
+    });
+
+    it('descends through nested toggles to the deepest child on the hovered line', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const outerToggle = createMockBlock('outer-toggle', 100, 400);
+      const innerToggle = createMockBlock('inner-toggle', 120, 300);
+      const innerChild = createMockBlock('inner-child', 180, 220);
+      const outerContainer = createToggleDom(outerToggle);
+
+      const innerWrapper = innerToggle.holder;
+
+      innerWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      outerContainer.appendChild(innerWrapper);
+      mockRect(innerWrapper, { top: 120, bottom: 300, left: 160, right: 700 });
+
+      const innerContainer = document.createElement('div');
+
+      innerContainer.setAttribute('data-blok-toggle-children', '');
+      innerContainer.setAttribute('data-blok-nested-blocks', '');
+      innerWrapper.appendChild(innerContainer);
+
+      const innerChildWrapper = innerChild.holder;
+
+      innerChildWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      innerContainer.appendChild(innerChildWrapper);
+      mockRect(innerChildWrapper, { top: 180, bottom: 220, left: 190, right: 700 });
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [outerToggle, innerToggle, innerChild];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(
+        (node) => {
+          if (node === innerChildWrapper) {
+            return innerChild;
+          }
+
+          return node === innerWrapper ? innerToggle : outerToggle;
+        }
+      );
+
+      dispatchMove(outerContainer, 130, 200);
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: innerChild,
+        target: outerContainer,
+      });
+      expect(blok.BlockManager.getBlockByChildNode).toHaveBeenCalledWith(innerChildWrapper);
+    });
+
+    it('margin hover at a toggle child line anchors the child, not the section holder', () => {
+      /**
+       * The pointer in the page margin beside a toggle section: the section
+       * holder spans the whole section, so its band contains every line. The
+       * DEEPEST block whose band contains the pointer line must win —
+       * otherwise the margin next to a nested table summons the heading's
+       * menu instead of the table's.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 336, 500);
+      const childBlock = createMockBlock('nested-table', 389, 421);
+      const childrenContainer = createToggleDom(toggleBlock);
+
+      const childWrapper = childBlock.holder;
+
+      childWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(childWrapper);
+      mockRect(childWrapper, { top: 389, bottom: 421, left: 160, right: 700 });
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, childBlock];
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 50,
+        clientY: 405,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: childBlock,
+        target: childWrapper,
+      });
+    });
+
+    it('margin hover skips collapsed (hidden) toggle children', () => {
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const toggleBlock = createMockBlock('toggle-block', 336, 380);
+      const hiddenChild = createMockBlock('hidden-child', 0, 0);
+      const childrenContainer = createToggleDom(toggleBlock);
+
+      const childWrapper = hiddenChild.holder;
+
+      childWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+      childrenContainer.appendChild(childWrapper);
+      mockRect(childWrapper, { top: 0, bottom: 0, left: 0, right: 0 });
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [toggleBlock, hiddenChild];
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 50,
+        clientY: 350,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: toggleBlock,
+        target: toggleBlock.holder,
+      });
+    });
+
+    it('margin hover ties between side-by-side blocks break by horizontal distance', () => {
+      /**
+       * Two blocks in side-by-side columns share the same line. The margin
+       * hover must anchor the horizontally nearest one, not whichever happens
+       * to come first in the flat block order.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const rightChild = createMockBlock('right-child', 140, 200);
+      const leftChild = createMockBlock('left-child', 140, 200);
+
+      mockRect(rightChild.holder, { top: 140, bottom: 200, left: 410, right: 700 });
+      mockRect(leftChild.holder, { top: 140, bottom: 200, left: 100, right: 390 });
+
+      const nonBlockElement = document.createElement('div');
+
+      document.body.appendChild(nonBlockElement);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [rightChild, leftChild];
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 50,
+        clientY: 170,
+        bubbles: true,
+      });
+
+      Object.defineProperty(event, 'target', { value: nonBlockElement });
+      document.dispatchEvent(event);
+      vi.runAllTimers();
+
+      expect(eventsDispatcher.emit).toHaveBeenCalledWith(BlockHovered, {
+        block: leftChild,
+        target: leftChild.holder,
+      });
+    });
+
+    it('never re-anchors while the pointer is over the block toolbar itself', () => {
+      /**
+       * The toolbar (plus button, drag handle) is what the user is aiming for.
+       * Once the pointer is over it, hover resolution must stand down entirely —
+       * re-resolving from under the icons is how the menu escapes the cursor.
+       */
+      const { controller, blok, eventsDispatcher } = createBlockHoverController();
+      const block = createMockBlock('block-a', 100, 200);
+
+      const wrapper = block.holder;
+
+      wrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+      const toolbar = document.createElement('div');
+
+      toolbar.setAttribute('data-blok-testid', 'toolbar');
+      wrapper.appendChild(toolbar);
+
+      const toggler = document.createElement('span');
+
+      toggler.setAttribute('data-blok-testid', 'settings-toggler');
+      toolbar.appendChild(toggler);
+      document.body.appendChild(wrapper);
+
+      (controller as unknown as { enable: () => void }).enable();
+
+      (blok.BlockManager as { blocks: typeof blok.BlockManager.blocks }).blocks = [block];
+      vi.mocked(blok.BlockManager.getBlockByChildNode).mockReturnValue(block);
+
+      dispatchMove(toggler, 130, 150);
+
+      expect(eventsDispatcher.emit).not.toHaveBeenCalled();
     });
   });
 

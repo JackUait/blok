@@ -619,6 +619,56 @@ describe('Touch Handler', () => {
         expect(moveAndOpenCall[0]).toBe(tableBlock);
       });
 
+      it('should pass the toggle CHILD block to moveAndOpen when clicking inside a toggle child', () => {
+        /**
+         * Children of toggles own their block menus (Notion parity). Clicking
+         * a toggle child must anchor the toolbar to the child itself, not
+         * bounce it up to the toggle parent.
+         */
+        const toggleWrapper = document.createElement('div');
+
+        toggleWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+
+        const childrenContainer = document.createElement('div');
+
+        childrenContainer.setAttribute('data-blok-toggle-children', '');
+        childrenContainer.setAttribute('data-blok-nested-blocks', '');
+        toggleWrapper.appendChild(childrenContainer);
+
+        const childWrapper = document.createElement('div');
+
+        childWrapper.setAttribute('data-blok-testid', 'block-wrapper');
+        childrenContainer.appendChild(childWrapper);
+
+        const contentEditable = document.createElement('div');
+
+        contentEditable.setAttribute('contenteditable', 'true');
+        childWrapper.appendChild(contentEditable);
+        redactorElement.appendChild(toggleWrapper);
+
+        const childBlock = { id: 'toggle-child-1', holder: childWrapper };
+        const toggleBlock = { id: 'toggle-1', holder: toggleWrapper };
+
+        vi.mocked(blok.BlockManager.getBlockByChildNode).mockImplementation(
+          (node) => (node === childWrapper ? childBlock : toggleBlock) as ReturnType<typeof blok.BlockManager.getBlockByChildNode>
+        );
+
+        const handler = createRedactorTouchHandler({
+          Blok: blok,
+          redactorElement,
+        });
+
+        const event = new MouseEvent('mousedown', { bubbles: true });
+
+        Object.defineProperty(event, 'target', { value: contentEditable });
+
+        handler(event);
+
+        const moveAndOpenCall = vi.mocked(blok.Toolbar.moveAndOpen).mock.calls[0];
+
+        expect(moveAndOpenCall[0]).toBe(childBlock);
+      });
+
       it('should still pass undefined for non-table-cell blocks', () => {
         const target = document.createElement('div');
 

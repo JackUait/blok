@@ -1,4 +1,5 @@
 import { PopoverRegistry } from '../../../utils/popover/popover-registry';
+import { getPointFromPointerEvent, resolveHoveredBlockWrapper } from '../hovered-block-resolution';
 
 import type { BlokModules } from '../../../../types-internal/blok-modules';
 
@@ -84,27 +85,14 @@ export const createRedactorTouchHandler = (
      */
     if (!deps.Blok.ReadOnly.isEnabled && !deps.Blok.Toolbar.contains(initialTarget)) {
       /**
-       * When the clicked node is inside a table cell or toggle-children container,
-       * resolve to the parent block so moveAndOpen receives the correct parent block.
-       * Without this, moveAndOpen falls back to currentBlock (the nested child),
-       * and the parent's block tune settings become inaccessible.
-       *
-       * For child-toolbar containers (e.g. callout), the first child still resolves
-       * to the parent so the container's own controls (settings, drag) are accessible.
-       * Non-first children keep their own toolbar via the block argument being undefined.
+       * Same pointer→block rules as the hover path (cell blocks anchor the
+       * table, a callout's first child anchors the callout, toggle children
+       * anchor themselves) so a click never anchors the toolbar differently
+       * from the hover that preceded it.
        */
-      const alwaysResolve = clickedNode.closest?.('[data-blok-table-cell-blocks], [data-blok-toggle-children]:not([data-blok-child-toolbar])');
-      const childToolbar = !alwaysResolve
-        ? clickedNode.closest?.('[data-blok-child-toolbar]') ?? null
-        : null;
-      const closestBlockWrapper = clickedNode.closest?.('[data-blok-testid="block-wrapper"]') ?? null;
-      const isFirstChild = childToolbar !== null
-        && closestBlockWrapper !== null
-        && childToolbar.querySelector(':scope > [data-blok-testid="block-wrapper"]') === closestBlockWrapper;
-      const nestedContainer = alwaysResolve ?? (isFirstChild ? childToolbar : null);
-      const parentBlockWrapper = nestedContainer?.closest('[data-blok-testid="block-wrapper"]');
-      const resolvedBlock = parentBlockWrapper
-        ? deps.Blok.BlockManager.getBlockByChildNode(parentBlockWrapper)
+      const resolution = resolveHoveredBlockWrapper(clickedNode, getPointFromPointerEvent(event));
+      const resolvedBlock = resolution.kind === 'block'
+        ? deps.Blok.BlockManager.getBlockByChildNode(resolution.wrapper) ?? undefined
         : undefined;
 
       deps.Blok.Toolbar.moveAndOpen(resolvedBlock, clickedNode);

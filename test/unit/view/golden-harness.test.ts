@@ -411,10 +411,12 @@ const EDITOR_ONLY_CLASSES = new Set([
   /**
    * Tailwind `group` markers. They paint nothing themselves — they only enable
    * `group-hover/*:` rules on edit chrome (the code block's copy button, the
-   * spacer's resize grips), none of which a static view renders.
+   * spacer's resize grips, the toggle arrow's row-hover pill), none of which a
+   * static view renders — its `<summary>` uses the native disclosure marker.
    */
   'group/code',
   'group/spacer',
+  'group/toggle-row',
 ]);
 
 /**

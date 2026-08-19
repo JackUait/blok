@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { DATA_ATTR } from '../../../../src/components/constants';
 import {
@@ -6,7 +7,8 @@ import {
   TOOL_NAME,
 } from '../../../../src/tools/toggle/constants';
 import { buildToggleItem, buildArrow } from '../../../../src/tools/toggle/dom-builder';
-import type { ToggleDOMBuilderContext } from '../../../../src/tools/toggle/dom-builder';
+import type { ArrowTooltip, ToggleDOMBuilderContext } from '../../../../src/tools/toggle/dom-builder';
+import { updateArrowState } from '../../../../src/tools/toggle/toggle-lifecycle';
 
 const createDefaultContext = (overrides: Partial<ToggleDOMBuilderContext> = {}): ToggleDOMBuilderContext => ({
   data: { text: 'Hello toggle' },
@@ -427,6 +429,92 @@ describe('Toggle DOM Builder', () => {
       const arrow = buildArrow(false, vi.fn());
 
       expect(arrow.getAttribute('data-blok-mutation-free')).toBe('true');
+    });
+  });
+
+  describe('arrow clickability affordance', () => {
+    it('scales the chevron with the arrow font size via an em-based clamp', () => {
+      const arrow = buildArrow(false, vi.fn());
+
+      expect(arrow.className).toContain('[&>svg]:w-[clamp(0.75rem,0.75em,1.375rem)]');
+      expect(arrow.className).toContain('[&>svg]:h-[clamp(0.75rem,0.75em,1.375rem)]');
+    });
+
+    it('reveals the hover pill when the pointer is anywhere over the title row', () => {
+      const arrow = buildArrow(false, vi.fn());
+
+      expect(arrow.className).toContain('can-hover:group-hover/toggle-row:bg-item-hover-bg');
+    });
+
+    it('marks the header row as the hover group for the arrow reveal', () => {
+      const result = buildToggleItem(createDefaultContext());
+      const headerRow = result.arrowElement.parentElement;
+
+      expect(headerRow?.className).toContain('group/toggle-row');
+    });
+
+    describe('tooltip', () => {
+      const createTooltip = (): { show: Mock<ArrowTooltip['show']>; hide: Mock<ArrowTooltip['hide']> } => ({
+        show: vi.fn<ArrowTooltip['show']>(),
+        hide: vi.fn<ArrowTooltip['hide']>(),
+      });
+
+      it('shows the current aria-label on mouseenter', () => {
+        const tooltip = createTooltip();
+        const arrow = buildArrow(false, vi.fn(), { tooltip });
+
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+
+        expect(tooltip.show).toHaveBeenCalledWith(arrow, 'Expand');
+      });
+
+      it('shows the updated label after the toggle state changes', () => {
+        const tooltip = createTooltip();
+        const arrow = buildArrow(false, vi.fn(), { tooltip });
+
+        updateArrowState(arrow, document.createElement('div'), true);
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+
+        expect(tooltip.show).toHaveBeenCalledWith(arrow, 'Collapse');
+      });
+
+      it('hides on mouseleave', () => {
+        const tooltip = createTooltip();
+        const arrow = buildArrow(false, vi.fn(), { tooltip });
+
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+        arrow.dispatchEvent(new MouseEvent('mouseleave'));
+
+        expect(tooltip.hide).toHaveBeenCalled();
+      });
+
+      it('hides when the arrow is clicked', () => {
+        const tooltip = createTooltip();
+        const arrow = buildArrow(false, vi.fn(), { tooltip });
+
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+        arrow.dispatchEvent(new MouseEvent('click'));
+
+        expect(tooltip.hide).toHaveBeenCalled();
+      });
+
+      it('does not wire the tooltip when the arrow is inert (no onArrowClick)', () => {
+        const tooltip = createTooltip();
+        const arrow = buildArrow(false, null, { tooltip });
+
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+
+        expect(tooltip.show).not.toHaveBeenCalled();
+      });
+
+      it('threads the tooltip from the buildToggleItem context', () => {
+        const tooltip = createTooltip();
+        const result = buildToggleItem(createDefaultContext({ tooltip }));
+
+        result.arrowElement.dispatchEvent(new MouseEvent('mouseenter'));
+
+        expect(tooltip.show).toHaveBeenCalledWith(result.arrowElement, 'Expand');
+      });
     });
   });
 });

@@ -9,9 +9,20 @@ import type { API } from '../../../types';
 import { mountChildBlocks } from '../nested-blocks';
 import { setupPlaceholder } from '../../components/utils/placeholder';
 
+import { hide as hideTooltip, show as showTooltip } from '../../components/utils/tooltip';
+
 import { TOGGLE_ATTR } from './constants';
 import { buildToggleItem } from './dom-builder';
-import type { ToggleDOMBuilderContext } from './dom-builder';
+import type { ArrowTooltip, ToggleDOMBuilderContext } from './dom-builder';
+
+/**
+ * Tooltip callbacks for the disclosure arrow. delay 500 matches the editor's
+ * other chrome controls (plus button, settings toggler).
+ */
+export const createArrowTooltip = (): ArrowTooltip => ({
+  show: (element, content) => showTooltip(element, content, { delay: 500 }),
+  hide: hideTooltip,
+});
 
 /**
  * Sync the wrapper's data-blok-toggle-empty attribute to reflect whether the

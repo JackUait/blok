@@ -55,7 +55,12 @@ export const CONTENT_STYLES = ['outline-hidden', ...TOGGLE_CONTENT_CLASSES].join
  * arrow down to the vertical middle of the whole block; items-start plus a
  * one-line-tall arrow box (see ARROW_STYLES h-[1.5em]) keeps it on the first line.
  */
-export const TOGGLE_WRAPPER_STYLES = TOGGLE_HEADER_ROW_CLASSES.join(' ');
+/**
+ * group/toggle-row is editor-only chrome (drives the arrow's row-hover reveal) and
+ * must NOT move into the shared TOGGLE_HEADER_ROW_CLASSES — the view emitter stamps
+ * those on the static <summary>, which has no arrow pill to reveal.
+ */
+export const TOGGLE_WRAPPER_STYLES = [...TOGGLE_HEADER_ROW_CLASSES, 'group/toggle-row'].join(' ');
 
 /**
  * Styles for the toggle arrow button
@@ -69,8 +74,20 @@ export const TOGGLE_WRAPPER_STYLES = TOGGLE_HEADER_ROW_CLASSES.join(' ');
  * line's center (0.75em = half of leading-[1.5]; 14px = half of h-7). em resolves
  * against the shared block font-size, so this stays correct if the font changes.
  * The 28px width keeps children (pl-7) aligned under the title text.
+ *
+ * The chevron INSIDE the pill does scale: clamp(0.75rem, 0.75em, 1.375rem).
+ * em resolves against the arrow's OWN font-size — the header copies the level's
+ * text-size class onto the arrow, so a toggle heading's chevron grows with its
+ * level, while a toggle list inherits the body size and lands on the 0.75rem
+ * floor (the icon's historical 12px). The 1.375rem ceiling keeps the chevron
+ * inside the fixed 28px pill.
+ *
+ * group-hover/toggle-row tints the pill as soon as the pointer is anywhere over
+ * the title row (the group class is stamped on the header row by the toggle's
+ * dom-builder and the header tool) — without it users read the bare chevron as
+ * decoration and never discover it is clickable.
  */
-export const ARROW_STYLES = 'flex-shrink-0 w-7 h-7 mt-[calc(0.75em_-_14px)] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text';
+export const ARROW_STYLES = 'flex-shrink-0 w-7 h-7 mt-[calc(0.75em_-_14px)] flex items-center justify-center cursor-pointer select-none rounded can-hover:hover:bg-item-hover-bg can-hover:group-hover/toggle-row:bg-item-hover-bg transition-colors duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none in-data-[blok-toggle-empty=true]:text-gray-text [&>svg]:w-[clamp(0.75rem,0.75em,1.375rem)] [&>svg]:h-[clamp(0.75rem,0.75em,1.375rem)]';
 
 /**
  * SVG icon for the toggle arrow

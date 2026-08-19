@@ -27,7 +27,7 @@ import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-san
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
-import { updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
+import { createArrowTooltip, updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
 import { handleHeaderToggleEnter, handleHeaderToggleBackspace } from './header-toggle-keyboard';
 
 /**
@@ -967,7 +967,7 @@ export class Header implements BlockTool {
    * @returns The arrow element
    */
   private buildArrow(): HTMLElement {
-    const arrow = buildArrow(this._isOpen, () => this.toggleOpen(), {}, {
+    const arrow = buildArrow(this._isOpen, () => this.toggleOpen(), { tooltip: createArrowTooltip() }, {
       collapse: this.api.i18n.t('tools.toggle.ariaLabelCollapse'),
       expand: this.api.i18n.t('tools.toggle.ariaLabelExpand'),
     });
@@ -991,7 +991,7 @@ export class Header implements BlockTool {
 
     // Inner row: positioning context for the arrow (only heading height, not children).
     const headerRow = document.createElement('div');
-    headerRow.className = 'relative';
+    headerRow.className = 'relative group/toggle-row';
     this._headerRow = headerRow;
 
     const arrow = this.buildArrow();

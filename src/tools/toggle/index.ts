@@ -28,7 +28,7 @@ import {
 import { clean } from '../../components/utils/sanitizer';
 import { ARIA_LABEL_COLLAPSE_KEY, ARIA_LABEL_EXPAND_KEY, BODY_PLACEHOLDER_KEY, PLACEHOLDER_KEY, TOOL_NAME } from './constants';
 import { IconToggleList } from '../../components/icons';
-import { renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility, updateToggleEmptyState } from './toggle-lifecycle';
+import { createArrowTooltip, renderToggleItem, updateArrowState, updateChildrenVisibility, updateBodyPlaceholderVisibility, updateToggleEmptyState } from './toggle-lifecycle';
 import { handleToggleEnter, handleToggleBackspace } from './toggle-keyboard';
 import type { ToggleItemData, ToggleItemConfig } from './types';
 
@@ -123,6 +123,7 @@ export class ToggleItem implements BlockTool {
         collapse: this.api.i18n.t(ARIA_LABEL_COLLAPSE_KEY),
         expand: this.api.i18n.t(ARIA_LABEL_EXPAND_KEY),
       },
+      tooltip: createArrowTooltip(),
     });
 
     this._element = result.wrapper;

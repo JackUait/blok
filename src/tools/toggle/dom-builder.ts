@@ -42,6 +42,18 @@ export interface ToggleDOMBuilderContext {
   bodyPlaceholderText: string;
   /** Translated aria labels for the toggle arrow */
   ariaLabels: { collapse: string; expand: string };
+  /** Tooltip callbacks for the arrow (see createArrowTooltip); omit to render without a tooltip */
+  tooltip?: ArrowTooltip;
+}
+
+/**
+ * Tooltip callbacks the arrow wires on hover. Content is read from the arrow's
+ * aria-label at mouseenter time, so the text stays correct after open/close
+ * without re-registration.
+ */
+export interface ArrowTooltip {
+  show: (element: HTMLElement, content: string) => void;
+  hide: () => void;
 }
 
 /**
@@ -84,7 +96,7 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
   const headerRow = document.createElement('div');
   headerRow.className = TOGGLE_WRAPPER_STYLES;
 
-  const arrowElement = buildArrow(isOpen, onArrowClick, {}, context.ariaLabels);
+  const arrowElement = buildArrow(isOpen, onArrowClick, { tooltip: context.tooltip }, context.ariaLabels);
   const contentElement = buildContent(data, readOnly, keydownHandler);
 
   headerRow.appendChild(arrowElement);
@@ -117,6 +129,8 @@ export const buildToggleItem = (context: ToggleDOMBuilderContext): ToggleBuildRe
 export interface BuildArrowOptions {
   /** Set contentEditable="false" on the arrow (used by Header to prevent caret entering arrow) */
   contentEditableFalse?: boolean;
+  /** Tooltip callbacks; only wired when the arrow is interactive (onArrowClick present) */
+  tooltip?: ArrowTooltip;
 }
 
 /**
@@ -159,8 +173,11 @@ export const buildArrow = (
   }
 
   if (onArrowClick) {
+    const tooltip = options.tooltip;
+
     arrow.addEventListener('click', (event: MouseEvent) => {
       event.stopPropagation();
+      tooltip?.hide();
       onArrowClick();
     });
 
@@ -171,6 +188,15 @@ export const buildArrow = (
         onArrowClick();
       }
     });
+
+    if (tooltip) {
+      arrow.addEventListener('mouseenter', () => {
+        tooltip.show(arrow, arrow.getAttribute('aria-label') ?? '');
+      });
+      arrow.addEventListener('mouseleave', () => {
+        tooltip.hide();
+      });
+    }
   }
 
   return arrow;

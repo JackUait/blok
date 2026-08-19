@@ -3,8 +3,16 @@ import { Header, type HeaderConfig, type HeaderData } from '../../../src/tools/h
 import { IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../../src/components/icons';
 import { TOGGLE_ATTR } from '../../../src/tools/toggle/constants';
 import { clean } from '../../../src/components/utils/sanitizer';
+import { show as tooltipShow } from '../../../src/components/utils/tooltip';
 import type { API, BlockToolConstructorOptions, SanitizerConfig } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+
+vi.mock('../../../src/components/utils/tooltip', () => ({
+  show: vi.fn(),
+  hide: vi.fn(),
+  onHover: vi.fn(),
+  destroy: vi.fn(),
+}));
 
 const createMockAPI = (): API => ({
   styles: {
@@ -446,6 +454,40 @@ describe('Header Tool - Custom Configurations', () => {
         const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
 
         expect(arrow).not.toBeNull();
+      });
+
+      it('marks the heading row as the hover group for the arrow reveal', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+        expect(arrow?.parentElement?.className).toContain('group/toggle-row');
+      });
+
+      it('scales the chevron with the heading font size via an em-based clamp', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+        expect(arrow?.className).toContain('[&>svg]:w-[clamp(0.75rem,0.75em,1.375rem)]');
+        expect(arrow?.className).toMatch(/\btext-(?:xs|sm|base|lg|xl|\dxl)\b/);
+      });
+
+      it('wires an Expand/Collapse tooltip on the arrow', () => {
+        const options = createHeaderOptions({ text: 'Toggle Heading', level: 2, isToggleable: true });
+        const header = new Header(options);
+        const element = header.render();
+        const arrow = element.querySelector(`[${TOGGLE_ATTR.toggleArrow}]`);
+
+        if (!(arrow instanceof HTMLElement)) {
+          throw new Error('arrow not rendered');
+        }
+
+        arrow.dispatchEvent(new MouseEvent('mouseenter'));
+
+        expect(tooltipShow).toHaveBeenCalledWith(arrow, arrow.getAttribute('aria-label'), expect.anything());
       });
 
       it('does NOT render a toggle arrow when isToggleable is false', () => {

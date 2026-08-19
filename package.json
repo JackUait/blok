@@ -233,6 +233,7 @@
     "cldr-annotations-full": "^48.2.0",
     "docx-preview": "0.4.0",
     "dompurify": "^3.4.12",
+    "es-module-lexer": "^1.5.4",
     "esbuild": "0.28.1",
     "eslint": "10.7.0",
     "eslint-plugin-import": "2.32.0",

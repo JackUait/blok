@@ -4,6 +4,7 @@ import { ApiMethodCard } from "./ApiMethodCard";
 import { ConceptsContent } from "./ConceptsContent";
 import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
+import { DevOverrideSeamContent } from "./DevOverrideSeamContent";
 import { EditorAccessNote } from "./EditorAccessNote";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Typo } from "../common/Typo";
@@ -47,6 +48,7 @@ const EDIT_PATH_BY_CUSTOM_TYPE: Record<NonNullable<ApiSectionType["customType"]>
   tutorial: "docs/src/components/api/TutorialContent.tsx",
   concepts: "docs/src/components/api/ConceptsContent.tsx",
   "how-to-custom-tool": "docs/src/components/api/HowToCustomToolContent.tsx",
+  "dev-override-seam": "docs/src/components/api/DevOverrideSeamContent.tsx",
 };
 
 const getEditPath = (section: ApiSectionType): string =>
@@ -315,6 +317,19 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
           <SectionHeader section={section} />
         </div>
         <HowToCustomToolContent />
+      </section>
+    );
+  }
+
+  // Render the dev override seam threat-model disclosure specially
+  if (section.customType === "dev-override-seam") {
+    return (
+      <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
+        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
+        <div className="mb-10">
+          <SectionHeader section={section} />
+        </div>
+        <DevOverrideSeamContent />
       </section>
     );
   }

@@ -75,7 +75,7 @@ export interface ApiSection {
     default: string;
     description: string;
   }[];
-  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool";
+  customType?: "quick-start" | "tutorial" | "concepts" | "how-to-custom-tool" | "dev-override-seam";
   example?: string;
 }
 
@@ -4646,6 +4646,15 @@ function RowLabel({ saved }: { saved: OutputData }) {
 }`,
       },
     ],
+  },
+  {
+    id: "dev-override-seam",
+    badge: "Security",
+    title: "Dev override seam",
+    description:
+      "A development seam every published entry ships with — how it works, why it's safe, and how to remove it from your bundle.",
+    lastUpdated: "2026-08-20",
+    customType: "dev-override-seam",
   },
 ];
 

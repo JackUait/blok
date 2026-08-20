@@ -12,44 +12,6 @@ import { useI18n } from '../contexts/I18nContext';
 import { splitLocalePath } from '../seo/locales';
 import { NAV_LINKS } from '../utils/constants';
 
-/**
- * Audit-optics documentation for the dev override seam shipped in every
- * published entry (see docs/plans/2026-08-19-blok-version-override-extension-design.md,
- * gitignored/local). Not wired into api-data.ts / SIDEBAR_GROUPS / locales —
- * it isn't an API reference module, it's a standalone security disclosure
- * reachable at /docs/dev-override-seam for anyone auditing the dist output.
- */
-const DevOverrideSeamSection: React.FC = () => (
-  <article data-blok-testid="dev-override-seam">
-    <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-      Dev override seam
-    </h1>
-    <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-      Every published entry of <code>@bloklabs/core</code> first consults{' '}
-      <code>globalThis.__BLOK_DEV_OVERRIDE__</code> and falls back to the bundled
-      implementation. This is a development seam for Blok&apos;s own tooling: it
-      lets a local build be injected into a running app by a browser extension.
-    </p>
-    <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-      It is a <strong>passive, in-realm read</strong> — blok never fetches,
-      evals, or resolves a URL, and the seam never reads localStorage, meta
-      tags, URL parameters, or DOM attributes, so it grants nothing to an
-      attacker who cannot already execute script in your origin (payloads that
-      are DOM nodes are rejected, which closes DOM clobbering).
-    </p>
-    <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-      If you want the branch gone from your bundle entirely, alias each entry
-      to its implementation module — one line in your bundler config, e.g.
-      Vite:{' '}
-      <code>
-        resolve: {'{'} alias: {'{'} &apos;@bloklabs/core&apos;:
-        &apos;@bloklabs/core/dist/blok-impl.mjs&apos; {'}'} {'}'}
-      </code>
-      .
-    </p>
-  </article>
-);
-
 /** The API documentation body — sidebar + per-module content — without page chrome. */
 export const ApiContent: React.FC = () => {
   const { locale } = useI18n();
@@ -103,7 +65,6 @@ export const ApiContent: React.FC = () => {
         <div className="mx-auto max-w-3xl" data-blok-testid="api-main">
           <Routes>
             <Route index element={<ApiIndexRedirect />} />
-            <Route path="dev-override-seam" element={<DevOverrideSeamSection />} />
             <Route path=":moduleId" element={<ApiModuleBody />} />
           </Routes>
         </div>

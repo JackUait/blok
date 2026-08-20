@@ -281,6 +281,12 @@ const MODULE_COPY: Record<string, Copy> = {
       'Supply translations for tool names, toolbar labels, and the accessibility strings Blok renders.',
     h1: "i18n API: translate Blok's interface",
   },
+  'dev-override-seam': {
+    title: 'Blok Dev Override Seam — Threat Model & Opt-Out',
+    description:
+      'Why every published entry checks globalThis.__BLOK_DEV_OVERRIDE__ before falling back to the bundled code, and how to disable it.',
+    h1: 'Dev override seam: threat model and opt-out',
+  },
   'output-data': {
     title: 'Blok OutputData — Saved JSON Format Reference',
     description:

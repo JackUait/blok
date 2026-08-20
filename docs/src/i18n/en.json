@@ -89,6 +89,7 @@
       "listeners": "Listeners",
       "tools": "Tools",
       "uploader": "Uploader",
+      "devOverrideSeam": "Dev override seam",
       "outputData": "OutputData",
       "blockData": "BlockData",
       "everythingIsABlock": "Everything is a block",
@@ -813,6 +814,23 @@
             "note": "Switches locale and host message overrides at runtime, relabelling the editor in place — a language switcher no longer has to recreate the editor and throw away caret, focus and undo history."
           }
         }
+      }
+    },
+    "devOverrideSeam": {
+      "title": "Dev override seam",
+      "badge": "Security",
+      "description": "A development seam every published entry ships with — how it works, why it's safe, and how to remove it from your bundle.",
+      "whatItIs": {
+        "title": "What it is",
+        "body": "Every published entry of `@bloklabs/core` first consults `globalThis.__BLOK_DEV_OVERRIDE__` and falls back to the bundled implementation. This is a development seam for Blok's own tooling: it lets a local build be injected into a running app by a browser extension."
+      },
+      "whySafe": {
+        "title": "Why it's safe",
+        "body": "It is a passive, in-realm read — blok never fetches, evals, or resolves a URL, and the seam never reads localStorage, meta tags, URL parameters, or DOM attributes, so it grants nothing to an attacker who cannot already execute script in your origin. Payloads that are DOM nodes are rejected, which closes DOM clobbering."
+      },
+      "optOut": {
+        "title": "Opt out",
+        "body": "If you want the branch gone from your bundle entirely, alias each entry to its implementation module — one line in your bundler config, e.g. Vite: `resolve: { alias: { '@bloklabs/core': '@bloklabs/core/dist/blok-impl.mjs' } }`."
       }
     },
     "uiApi": {

@@ -230,6 +230,12 @@ export const RU_COPY: Record<string, RouteCopy> = {
       'Передача переводов для названий инструментов, подписей тулбара и строк доступности, которые рисует Blok.',
     h1: 'i18n API: перевод интерфейса Blok',
   },
+  '/docs/dev-override-seam': {
+    title: 'Dev override seam — модель угроз и отключение',
+    description:
+      'Как Blok проверяет globalThis.__BLOK_DEV_OVERRIDE__ перед откатом на встроенный код и как убрать эту ветку из сборки.',
+    h1: 'Dev override seam: модель угроз и отключение',
+  },
   '/docs/output-data': {
     title: 'OutputData — формат сохранённого JSON Blok',
     description:

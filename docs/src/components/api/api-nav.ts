@@ -5,7 +5,7 @@ export const SIDEBAR_GROUPS: ReadonlyArray<{ key: string; moduleIds: string[] }>
   { key: 'core', moduleIds: ['core', 'config', 'blocks-api', 'block-api', 'saver-api', 'view-api'] },
   { key: 'editing', moduleIds: ['caret-api', 'selection-api', 'marks-api', 'styles-api', 'history-api'] },
   { key: 'interface', moduleIds: ['toolbar-api', 'inline-toolbar-api', 'ui-api', 'notifier-api', 'tooltip-api', 'theme-api', 'width-api', 'placeholder-api'] },
-  { key: 'extending', moduleIds: ['tools-api', 'uploader-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api'] },
+  { key: 'extending', moduleIds: ['tools-api', 'uploader-api', 'events-api', 'listeners-api', 'sanitizer-api', 'readonly-api', 'i18n-api', 'dev-override-seam'] },
   { key: 'dataTypes', moduleIds: ['output-data', 'block-data'] },
   { key: 'adapters', moduleIds: ['blok-editor', 'use-blocks', 'use-blok-ready'] },
 ];
@@ -53,6 +53,7 @@ export const MODULE_LABELS_EN: Record<string, string> = {
   'i18n-api': 'I18n',
   'saver-api': 'Saver',
   'view-api': 'View renderer',
+  'dev-override-seam': 'Dev override seam',
   'output-data': 'OutputData',
   'block-data': 'BlockData',
   'blok-editor': 'BlokEditor component',

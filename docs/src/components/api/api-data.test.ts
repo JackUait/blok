@@ -107,6 +107,7 @@ describe("API_SECTIONS", () => {
       "use-blocks",
       "use-blok-ready",
       "view-api",
+      "dev-override-seam",
     ];
 
     const actualIds = API_SECTIONS.map((s) => s.id);

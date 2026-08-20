@@ -418,3 +418,46 @@ export const pointAtInputBoundary = (
   return { node: range.startContainer,
     offset: range.startOffset };
 };
+
+/**
+ * Which end of a block a drag focus should snap to when the caret hit test
+ * found no character under the pointer.
+ *
+ * The choice has to come from GEOMETRY, not from the drag's direction. A
+ * direction-derived edge is always the block's FAR one, and the pointer reaches
+ * a block through its NEAR one: the sliver between two stacked hosts belongs to
+ * neither, so a downward drag crossing it resolves to the block below and would
+ * jump the focus to that block's end — the whole block flashes selected for the
+ * one move that lands in the sliver, then snaps back. `MouseEvent.clientY` is an
+ * integer while hit testing is not, so that sliver is exactly one pixel tall
+ * wherever a block boundary falls on a whole pixel.
+ *
+ * Direction still decides when the pointer is BESIDE the block — level with its
+ * text but off to one side — where neither edge is nearer.
+ * @param first - the block's first editing host
+ * @param last - the block's last editing host
+ * @param pointerY - the pointer's viewport y
+ * @param fallbackToEnd - the direction-derived edge, used only beside the block
+ */
+export const focusEdgeForPointer = (
+  first: HTMLElement,
+  last: HTMLElement,
+  pointerY: number,
+  fallbackToEnd: boolean
+): { input: HTMLElement; atEnd: boolean } => {
+  if (pointerY < first.getBoundingClientRect().top) {
+    return { input: first,
+      atEnd: false };
+  }
+
+  if (pointerY > last.getBoundingClientRect().bottom) {
+    return { input: last,
+      atEnd: true };
+  }
+
+  return fallbackToEnd
+    ? { input: last,
+      atEnd: true }
+    : { input: first,
+      atEnd: false };
+};

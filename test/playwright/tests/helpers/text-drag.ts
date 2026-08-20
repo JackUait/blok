@@ -147,3 +147,26 @@ export const readTextSelectionState = async (
     };
   }, blockSelector);
 };
+
+/**
+ * The band of y values straddling the boundary between two stacked editing
+ * hosts, padded on both sides.
+ *
+ * Neither host owns every pixel of that boundary: sub-pixel layout leaves a
+ * sliver where the caret hit test finds no character, and the drag has to
+ * resolve a focus from geometry alone. Fuzzing across the whole band is the
+ * only way to catch a focus that jumps to the wrong edge, because which
+ * fractional y lands in the sliver depends on the layout.
+ * @param above - the editing host on top
+ * @param below - the editing host underneath
+ */
+export const seamBetweenInputs = async (
+  above: Locator,
+  below: Locator
+): Promise<{ from: number; to: number }> => {
+  const from = await above.evaluate((element) => element.getBoundingClientRect().bottom);
+  const to = await below.evaluate((element) => element.getBoundingClientRect().top);
+
+  return { from: from - 2,
+    to: to + 2 };
+};

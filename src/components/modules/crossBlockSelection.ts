@@ -6,6 +6,7 @@ import {
   applySpanningSelection,
   blocksBetween,
   caretPointFromCoords,
+  focusEdgeForPointer,
   getEditingHost,
   hasEditableContent,
   pointAtInputBoundary,
@@ -1035,10 +1036,12 @@ export class CrossBlockSelection extends Module {
   }
 
   /**
-   * Where the drag currently points. Falls back to the hovered block's nearest
-   * edge when the hit test lands outside any editing host — a pointer in a
-   * block's padding or in the gap between two blocks must still move the
-   * selection, not freeze it at the last character it passed over.
+   * Where the drag currently points. Falls back to the edge of the hovered block
+   * the pointer actually reached when the hit test lands outside any editing
+   * host — a pointer in a block's padding or in the sliver between two blocks
+   * must still move the selection, not freeze it at the last character it
+   * passed over. See {@link focusEdgeForPointer} for why the edge is chosen
+   * from geometry rather than from the drag's direction.
    * @param event - the mouse move event
    * @param anchorHost - the editing host the gesture started in
    */
@@ -1060,8 +1063,14 @@ export class CrossBlockSelection extends Module {
     }
 
     const anchorIsBefore = (anchorHost.compareDocumentPosition(hoveredInput) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const edge = focusEdgeForPointer(
+      hoveredInput,
+      hoveredBlock.lastInput ?? hoveredInput,
+      event.clientY,
+      anchorIsBefore
+    );
 
-    return pointAtInputBoundary(anchorIsBefore ? hoveredBlock.lastInput ?? hoveredInput : hoveredInput, anchorIsBefore);
+    return pointAtInputBoundary(edge.input, edge.atEnd);
   }
 
   /**

@@ -4,6 +4,7 @@ import type { Block } from '../../../../src/components/block';
 import {
   blocksBetween,
   collectCrossBlockSubRanges,
+  focusEdgeForPointer,
   getEditingHost,
   hasCrossHostSelectionWithin,
   resolveCrossBlockTextSelection,
@@ -221,6 +222,55 @@ describe('cross-block-range', () => {
       selectRange(rangeAcross(fixture.hosts[0], 2, fixture.hosts[0], 2));
 
       expect(hasCrossHostSelectionWithin(fixture.root)).toBe(false);
+    });
+  });
+
+  describe('focusEdgeForPointer', () => {
+    /**
+     * jsdom lays nothing out, so every box is stated outright.
+     * @param top - the box's top edge
+     * @param bottom - the box's bottom edge
+     */
+    const inputSpanning = (top: number, bottom: number): HTMLElement => {
+      const input = document.createElement('div');
+
+      input.getBoundingClientRect = (): DOMRect => new DOMRect(0, top, 200, bottom - top);
+
+      return input;
+    };
+
+    it('snaps to the start when the pointer is above the block', () => {
+      const first = inputSpanning(100, 130);
+      const last = inputSpanning(140, 170);
+
+      expect(focusEdgeForPointer(first, last, 99, true)).toStrictEqual({ input: first,
+        atEnd: false });
+    });
+
+    it('snaps to the end when the pointer is below the block', () => {
+      const first = inputSpanning(100, 130);
+      const last = inputSpanning(140, 170);
+
+      expect(focusEdgeForPointer(first, last, 171, false)).toStrictEqual({ input: last,
+        atEnd: true });
+    });
+
+    it('ignores the drag direction whenever the pointer is outside the block', () => {
+      const first = inputSpanning(100, 130);
+      const last = inputSpanning(140, 170);
+
+      expect(focusEdgeForPointer(first, last, 99, false).atEnd).toBe(false);
+      expect(focusEdgeForPointer(first, last, 171, true).atEnd).toBe(true);
+    });
+
+    it('falls back to the drag direction beside the block, where no edge is nearer', () => {
+      const first = inputSpanning(100, 130);
+      const last = inputSpanning(140, 170);
+
+      expect(focusEdgeForPointer(first, last, 150, true)).toStrictEqual({ input: last,
+        atEnd: true });
+      expect(focusEdgeForPointer(first, last, 150, false)).toStrictEqual({ input: first,
+        atEnd: false });
     });
   });
 

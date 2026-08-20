@@ -4,7 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
-import { dragBetweenCharacters, readTextSelectionState } from '../helpers/text-drag';
+import { dragBetweenCharacters, pointAtCharacter, readTextSelectionState, seamBetweenInputs } from '../helpers/text-drag';
 import type { TextSelectionState } from '../helpers/text-drag';
 
 const HOLDER_ID = 'blok';
@@ -164,6 +164,58 @@ test.describe('cross-block text selection', () => {
     expect(state.startBlock).toBe(0);
     expect(state.endBlock).toBe(2);
     expect(state.blockTexts).toStrictEqual(['block text', 'Second block text', 'Third ']);
+  });
+
+  test('crossing the seam between two blocks never flashes a whole-block share', async ({ page }) => {
+    await createBlokWithBlocks(page, createParagraphs([
+      'First block text',
+      'Second block text',
+      'Third block text',
+      'Fourth block text',
+    ]));
+
+    /**
+     * Pins every block boundary to a whole pixel. `MouseEvent.clientY` is an
+     * integer, so the dead sliver between two hosts is only reachable by the
+     * caret hit test when the boundary itself sits on one — on a fractionally
+     * offset page the truncated y always lands inside a host and the sliver is
+     * unreachable, which is what makes this bug look intermittent in the wild.
+     */
+    await page.evaluate((holder) => {
+      const container = document.getElementById(holder);
+
+      if (container !== null) {
+        container.style.position = 'absolute';
+        container.style.top = '100px';
+        container.style.left = '40px';
+        container.style.width = '600px';
+      }
+    }, HOLDER_ID);
+
+    const start = await pointAtCharacter(editableByIndex(page, 0), 6);
+    const overThird = await pointAtCharacter(editableByIndex(page, 2), 6);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(overThird.x, overThird.y, { steps: 8 });
+
+    const seam = await seamBetweenInputs(editableByIndex(page, 2), editableByIndex(page, 3));
+    const leaked: { y: number; blockTexts: string[] }[] = [];
+
+    for (let y = seam.from; y <= seam.to; y += 0.25) {
+      await page.mouse.move(overThird.x, y);
+
+      const state = await readSelectionState(page);
+
+      if (state.blockTexts.length > 3) {
+        leaked.push({ y,
+          blockTexts: state.blockTexts });
+      }
+    }
+
+    await page.mouse.up();
+
+    expect(leaked).toStrictEqual([]);
   });
 
   test('the multi-block toolbar does not open for a cross-block text selection', async ({ page }) => {

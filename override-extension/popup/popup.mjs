@@ -664,10 +664,15 @@ const render = () => {
   next.append(...cards.filter(Boolean));
 
   const panels = document.getElementById('panels');
-  // The entrance stagger belongs to the first paint alone; the second render
-  // strips it so no later replace replays it.
+  // The entrance stagger belongs to the first paint alone. Add-once, then let a
+  // timer outlive the longest card delay+duration: stripping it on the next
+  // render instead would cancel the stagger mid-flight, because the helper
+  // probe re-renders within ~30ms when the dev server is up.
   renderCount += 1;
-  panels.classList.toggle('intro', renderCount === 1);
+  if (renderCount === 1) {
+    panels.classList.add('intro');
+    setTimeout(() => panels.classList.remove('intro'), 500);
+  }
   // An unchanged render must not touch the DOM: the 600ms swap poll would
   // replay every animation and collapse whatever the user had open.
   if (!panelsEqual(panels, next)) {

@@ -830,7 +830,7 @@
       },
       "optOut": {
         "title": "Opt out",
-        "body": "If you want the branch gone from your bundle entirely, alias each entry to its implementation module — one line in your bundler config, e.g. Vite: `resolve: { alias: { '@bloklabs/core': '@bloklabs/core/dist/blok-impl.mjs' } }`."
+        "body": "If you want the branch gone from your bundle entirely, alias each entry to its implementation module. Use an exact-match (regex) alias — a plain string key like `'@bloklabs/core'` also prefix-matches every subpath — e.g. Vite/Rollup: `resolve: { alias: [{ find: /^@bloklabs\\/core$/, replacement: '@bloklabs/core/dist/blok-impl.mjs' }] }`. Each subpath entry (`/tools`, `/full`, …) gets its own pair pointing at its `-impl` module."
       }
     },
     "uiApi": {

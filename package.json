@@ -80,6 +80,7 @@
     "./umd": {
       "default": "./dist/blok.umd.js"
     },
+    "./dist/*": "./dist/*",
     "./view.css": "./view.css"
   },
   "bin": {

@@ -9,12 +9,13 @@
   <main id="app" aria-busy="true">
     <header class="masthead">
       <svg class="logo" aria-hidden="true" viewBox="20 16 92 92">
-        <rect x="30" y="26" width="52" height="52" rx="12" fill="none" stroke="#9b9a97" stroke-width="8"/>
-        <rect x="50" y="50" width="52" height="52" rx="12" fill="#2383e2"/>
+        <rect class="logo-back" x="30" y="26" width="52" height="52" rx="12" fill="none" stroke="#9b9a97" stroke-width="8"/>
+        <rect class="logo-front" x="50" y="50" width="52" height="52" rx="12" fill="#2383e2"/>
       </svg>
       <h1 class="wordmark">Blok Override</h1>
       <span class="tag">Dev</span>
     </header>
+    <div class="progress" id="progress" aria-hidden="true"><span class="progress-bar"></span></div>
     <div id="panels"></div>
     <p class="visually-hidden" role="status" aria-live="polite" id="live"></p>
   </main>

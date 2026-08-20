@@ -1,6 +1,7 @@
 import { LOCAL_DIST_SENTINEL } from '../lib/dnr.mjs';
 import { summarizeDetection } from '../lib/detect.mjs';
 import { popupViewModel } from '../lib/view-model.mjs';
+import { panelsEqual, captureEphemeral, restoreEphemeral } from '../lib/render-diff.mjs';
 import { KNOWN_PACKAGES, mergeVersionCatalog, cdnPrefixFor, formatAgo, shouldRefreshCatalog } from '../lib/versions.mjs';
 
 const CATALOG_TTL = 6 * 60 * 60 * 1000;
@@ -30,6 +31,13 @@ const h = (tag, attrs = {}, ...children) => {
 
 const led = (state) => h('span', { class: `led${state ? ` led--${state}` : ''}`, 'aria-hidden': 'true' });
 
+const checkIcon = () => {
+  const icon = h('span', { class: 'check', 'aria-hidden': 'true' });
+  // pathLength=1 lets the stroke draw itself in via dashoffset.
+  icon.innerHTML = '<svg viewBox="0 0 14 14"><polyline points="2.5,7.5 5.8,10.8 11.5,3.8" pathLength="1"/></svg>';
+  return icon;
+};
+
 const announce = (text) => {
   document.getElementById('live').textContent = text;
 };
@@ -40,6 +48,7 @@ const state = {
   installedPayload: null,
   targetTabId: null,
   favIconUrl: null,
+  favIconBroken: false,
   catalog: null,
   helperOnline: null,
   building: false,
@@ -179,7 +188,11 @@ const applyFacts = (page) => {
   state.detection = next;
   state.installedPayload = page.installedPayload;
   state.targetTabId = page.tabId ?? (state.switching ? state.targetTabId : null);
-  state.favIconUrl = page.favIconUrl ?? (state.switching ? state.favIconUrl : null);
+  const favIconUrl = page.favIconUrl ?? (state.switching ? state.favIconUrl : null);
+  if (favIconUrl !== state.favIconUrl) {
+    state.favIconBroken = false;
+  }
+  state.favIconUrl = favIconUrl;
 };
 
 const refresh = async ({ probeHelper = false } = {}) => {
@@ -324,8 +337,11 @@ const copyButton = (text, label) => h('button', {
   class: 'btn btn--ghost',
   'aria-label': label,
   onclick: async (event) => {
+    // currentTarget is nulled once dispatch ends — grab it before the await.
+    const btn = event.currentTarget;
     await navigator.clipboard.writeText(text);
-    event.currentTarget.textContent = 'Copied!';
+    btn.classList.add('btn--copied');
+    btn.textContent = 'Copied!';
     setTimeout(render, 900);
   },
 }, 'Copy');
@@ -345,9 +361,14 @@ const versionText = (version) => {
 const siteIcon = (host) => {
   const tile = h('span', { class: 'site-icon', 'aria-hidden': 'true' },
     h('span', { class: 'site-letter' }, host.replace(/^www\./, '').charAt(0).toUpperCase()));
-  if (state.favIconUrl) {
+  if (state.favIconUrl && !state.favIconBroken) {
     const img = h('img', { class: 'site-favicon', src: state.favIconUrl, alt: '' });
-    img.addEventListener('error', () => img.remove());
+    // A broken favicon must land in state, not in an img.remove() — the diffing
+    // render would resurrect the img every poll and loop the error forever.
+    img.addEventListener('error', () => {
+      state.favIconBroken = true;
+      render();
+    });
     tile.append(img);
   }
   return tile;
@@ -366,17 +387,21 @@ const pageStatusLine = (page) => {
     return null;
   }
   if (page.runningYours) {
-    return h('div', { class: 'page-status' }, led('on'),
-      h('span', {}, h('b', {}, 'Running your build'), ' ', h('span', { class: 'suffix-chip' }, bundled.version)));
+    return h('div', { class: 'page-status' },
+      h('span', { class: 'pill pill--green' }, checkIcon(), h('span', {}, h('b', {}, 'Running your build'))),
+      h('span', { class: 'suffix-chip' }, bundled.version));
   }
   const isDev = (bundled.version ?? '').includes('-dev.');
   const name = isDev
     ? ['your older build ', h('span', { class: 'suffix-chip' }, bundled.version)]
     : bundled.version ? ['Blok ', h('b', {}, bundled.version)] : ['an older Blok'];
+  const dot = h('span', { class: 'dot', 'aria-hidden': 'true' });
   if (page.armed) {
-    return h('div', { class: 'page-status' }, led('warn'), h('span', {}, 'Still on ', ...name));
+    return h('div', { class: 'page-status' },
+      h('span', { class: 'pill pill--orange' }, dot, h('span', {}, 'Still on ', ...name)));
   }
-  return h('div', { class: 'page-status' }, led('on'), h('span', {}, 'Runs ', ...name));
+  return h('div', { class: 'page-status' },
+    h('span', { class: 'pill pill--gray' }, dot, h('span', {}, 'Runs ', ...name)));
 };
 
 // No button lives here on purpose: 'pending' is already being acted on, and
@@ -529,7 +554,7 @@ const renderBuildCard = (vm) => {
       h('div', { class: 'build-id' }, h('div', { class: 'version' }, ...versionText(version)), meta),
       showRebuild ? rebuildBtn : null,
     ),
-    !showRebuild ? h('details', { class: 'builder' },
+    !showRebuild ? h('details', { class: 'builder', dataset: { key: 'serve-help' } },
       h('summary', {}, 'Want a Rebuild button here?'),
       h('p', { class: 'hint' }, 'run this in the blok repo and reopen the popup — the button appears right here:'),
       commandChip(SERVE_CMD),
@@ -587,7 +612,7 @@ const renderSwapBuilder = (vm) => {
         return options.length > 0 ? h('optgroup', { label: pkg }, ...options) : null;
       }),
     );
-    body = h('details', { class: 'builder' },
+    body = h('details', { class: 'builder', dataset: { key: 'swap-builder' } },
       h('summary', {}, 'Swap out a published version'),
       h('div', { class: 'builder-body' },
         h('div', { class: 'select-wrap' }, select),
@@ -624,6 +649,8 @@ const viewModel = () => popupViewModel({
   catalogAvailable: state.catalog !== null,
 });
 
+let renderCount = 0;
+
 const render = () => {
   const vm = viewModel();
 
@@ -633,13 +660,22 @@ const render = () => {
     ? [renderPageCard(vm), renderBuildCard(vm), renderElsewhereCard(vm), renderSwapBuilder(vm)]
     : [renderBuildCard(vm), renderPageCard(vm), renderElsewhereCard(vm)];
 
+  const next = document.createElement('div');
+  next.append(...cards.filter(Boolean));
+
   const panels = document.getElementById('panels');
-  panels.textContent = '';
-  for (const card of cards) {
-    if (card) {
-      panels.appendChild(card);
-    }
+  // The entrance stagger belongs to the first paint alone; the second render
+  // strips it so no later replace replays it.
+  renderCount += 1;
+  panels.classList.toggle('intro', renderCount === 1);
+  // An unchanged render must not touch the DOM: the 600ms swap poll would
+  // replay every animation and collapse whatever the user had open.
+  if (!panelsEqual(panels, next)) {
+    const snapshot = captureEphemeral(panels);
+    panels.replaceChildren(...next.childNodes);
+    restoreEphemeral(panels, snapshot);
   }
+  document.getElementById('progress').classList.toggle('progress--active', state.switching || state.building);
   document.getElementById('app').removeAttribute('aria-busy');
 };
 

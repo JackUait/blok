@@ -31,6 +31,18 @@
     close.addEventListener('click', () => banner.remove());
     banner.append(dot, label, close);
     document.body.appendChild(banner);
+    // WAAPI ignores the page's reduced-motion CSS, so guard it by hand.
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      banner.animate(
+        [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+        { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
+      const ring = tone === 'live' ? 'rgba(68,131,97,' : 'rgba(217,115,13,';
+      dot.animate(
+        [{ boxShadow: `0 0 0 0 ${ring}0.4)` }, { boxShadow: `0 0 0 6px ${ring}0)` }],
+        { duration: 900, iterations: 2, delay: 250, easing: 'ease-out' },
+      );
+    }
   };
 
   const report = async () => {

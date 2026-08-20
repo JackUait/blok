@@ -20,6 +20,10 @@
   --red-bg: #fdebec;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.32, 1.5, 0.55, 1);
+  --t-fast: 120ms;
+  --t-med: 240ms;
 }
 
 * { box-sizing: border-box; }
@@ -46,6 +50,21 @@ main, #panels { display: flex; flex-direction: column; }
 
 .logo { width: 18px; height: 18px; flex: none; }
 
+.logo-back { animation: fade-in 200ms ease-out backwards; }
+
+.logo-front {
+  transform-box: fill-box;
+  animation: logo-settle 260ms var(--ease-out) 60ms backwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes logo-settle {
+  from { opacity: 0; transform: translate(-5px, -5px); }
+}
+
 .wordmark {
   margin: 0;
   font-size: 14px;
@@ -62,6 +81,34 @@ main, #panels { display: flex; flex-direction: column; }
   background: var(--code-bg);
   border-radius: 3px;
   padding: 1px 6px;
+}
+
+/* ---------- work-in-flight hairline ---------- */
+
+/* Zero-height so appearing never shifts layout — the bar rides the divider
+   between the masthead and the first card. */
+.progress { position: relative; height: 0; z-index: 1; }
+
+.progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 2px;
+  width: 38%;
+  border-radius: 2px;
+  background: var(--blue);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.progress--active .progress-bar {
+  opacity: 1;
+  animation: progress-slide 1.1s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes progress-slide {
+  from { transform: translateX(-105%); }
+  to { transform: translateX(270%); }
 }
 
 /* ---------- status dots ---------- */
@@ -87,6 +134,17 @@ main, #panels { display: flex; flex-direction: column; }
 
 .card--quiet { padding-top: 8px; padding-bottom: 10px; }
 
+/* Entrance choreography runs once, on the first paint only — the popup
+   re-renders while polling and replays would read as flicker. */
+#panels.intro .card { animation: card-in 280ms var(--ease-out) backwards; }
+#panels.intro .card:nth-child(2) { animation-delay: 40ms; }
+#panels.intro .card:nth-child(3) { animation-delay: 80ms; }
+#panels.intro .card:nth-child(4) { animation-delay: 120ms; }
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(5px); }
+}
+
 .card-label {
   display: flex;
   align-items: center;
@@ -103,14 +161,14 @@ main, #panels { display: flex; flex-direction: column; }
 
 /* ---------- this page ---------- */
 
-.site-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.site-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
 .site-icon {
   position: relative;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   flex: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--well);
   box-shadow: inset 0 0 0 1px var(--divider);
   display: inline-flex;
@@ -118,39 +176,105 @@ main, #panels { display: flex; flex-direction: column; }
   justify-content: center;
 }
 
-.site-letter { font-size: 11px; font-weight: 600; color: var(--text-2); }
+.site-letter { font-size: 12px; font-weight: 600; color: var(--text-2); }
 
 .site-favicon {
   position: absolute;
-  inset: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
+  inset: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   object-fit: contain;
   background: var(--bg);
+  animation: favicon-in 240ms var(--ease-spring) backwards;
+}
+
+@keyframes favicon-in {
+  from { opacity: 0; transform: scale(0.7); }
 }
 
 .origin {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The dot must hug the first line even when the label wraps. */
 .page-status {
   display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 12.5px;
-  color: var(--text-2);
-  margin-top: 7px;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
 }
 
-.page-status .led { margin-top: 6px; }
+/* ---------- status pills ---------- */
 
-.page-status b { color: var(--text); font-weight: 500; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.pill > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pill b { font-weight: 600; color: inherit; }
+
+.pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.pill--green { background: var(--green-bg); color: var(--green-text); }
+
+/* One soft ring when "Running your build" lands — the payoff moment. */
+.pill--green { animation: pill-land 500ms var(--ease-out); }
+
+@keyframes pill-land {
+  from { box-shadow: 0 0 0 0 rgba(68, 131, 97, 0.3); }
+  to { box-shadow: 0 0 0 10px rgba(68, 131, 97, 0); }
+}
+
+.pill--orange { background: var(--orange-bg); color: var(--orange-text); }
+
+.pill--gray {
+  background: var(--well);
+  color: var(--text-2);
+  box-shadow: inset 0 0 0 1px var(--divider);
+}
+
+.pill .suffix-chip { background: rgba(55, 53, 47, 0.07); color: inherit; }
+
+.check { width: 13px; height: 13px; flex: none; display: inline-flex; }
+
+.check svg { width: 100%; height: 100%; }
+
+.check polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw 340ms var(--ease-out) 100ms forwards;
+}
+
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
 
 /* ---------- switch row ---------- */
 
@@ -162,7 +286,7 @@ main, #panels { display: flex; flex-direction: column; }
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background var(--t-fast) ease;
 }
 
 .switch-row:hover:not(.switch-row--disabled) { background: var(--hover); }
@@ -187,7 +311,7 @@ main, #panels { display: flex; flex-direction: column; }
   position: relative;
   cursor: pointer;
   padding: 0;
-  transition: background 160ms ease;
+  transition: background 200ms ease;
 }
 
 .switch:disabled { opacity: 0.5; cursor: default; }
@@ -199,15 +323,20 @@ main, #panels { display: flex; flex-direction: column; }
   left: 2px;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.2);
-  transition: transform 160ms ease;
+  transition: transform 260ms var(--ease-spring), width 160ms var(--ease-out);
 }
+
+/* Pressed, the thumb squashes wide before committing — iOS-style physics. */
+.switch:active:not(:disabled)::after { width: 19px; }
 
 .switch[aria-checked='true'] { background: var(--blue); }
 
 .switch[aria-checked='true']::after { transform: translateX(14px); }
+
+.switch[aria-checked='true']:active:not(:disabled)::after { transform: translateX(11px); }
 
 /* ---------- callouts ---------- */
 
@@ -218,11 +347,11 @@ main, #panels { display: flex; flex-direction: column; }
   margin-top: 8px;
   padding: 10px 12px;
   border-radius: 8px;
-  animation: callout-in 160ms ease-out;
+  animation: callout-in 220ms var(--ease-out);
 }
 
 @keyframes callout-in {
-  from { opacity: 0; transform: translateY(-2px); }
+  from { opacity: 0; transform: translateY(-3px); }
 }
 
 .callout[data-tone='orange'] { background: var(--orange-bg); }
@@ -244,8 +373,8 @@ main, #panels { display: flex; flex-direction: column; }
 .callout .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); }
 
 .spinner {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   flex: none;
   border-radius: 50%;
   border: 2px solid rgba(217, 115, 13, 0.28);
@@ -281,7 +410,7 @@ main, #panels { display: flex; flex-direction: column; }
 
 .version-num {
   font-family: var(--mono);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
@@ -326,10 +455,13 @@ button { font: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition: background var(--t-fast) ease, color var(--t-fast) ease,
+    border-color var(--t-fast) ease, transform var(--t-fast) ease;
 }
 
 .btn:hover:not(:disabled) { background: var(--hover); }
+
+.btn:active:not(:disabled) { transform: scale(0.96); }
 
 .btn:disabled { opacity: 0.45; cursor: default; }
 
@@ -357,11 +489,18 @@ button { font: inherit; }
   padding: 3px 6px;
 }
 
+.btn--copied {
+  color: var(--green-text);
+  animation: copied-pop 240ms var(--ease-spring);
+}
+
+@keyframes copied-pop {
+  50% { transform: scale(1.1); }
+}
+
 .btn .icon { display: inline-block; line-height: 1; }
 
 .btn--busy .icon { animation: spin 0.9s linear infinite; }
-
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- code ---------- */
 
@@ -409,6 +548,7 @@ ul.rows { margin: 0; padding: 0; list-style: none; }
   margin: 0 -8px;
   border-radius: 4px;
   min-width: 0;
+  transition: background var(--t-fast) ease;
 }
 
 .row .led { margin-top: 7px; }
@@ -445,7 +585,7 @@ ul.rows { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- version swap builder ---------- */
 
-details.builder { margin-top: 2px; }
+details.builder { margin-top: 2px; interpolate-size: allow-keywords; }
 
 details.builder summary {
   cursor: pointer;
@@ -455,16 +595,39 @@ details.builder summary {
   padding: 4px 8px;
   margin: 0 -8px;
   border-radius: 4px;
-  transition: background 120ms ease;
+  transition: background var(--t-fast) ease;
 }
 
 details.builder summary::-webkit-details-marker { display: none; }
 
 details.builder summary:hover { background: var(--hover); }
 
-details.builder summary::before { content: '+ '; color: var(--text-3); }
+/* The plus rotates into a close cross when open. */
+details.builder summary::before {
+  content: '+';
+  display: inline-block;
+  width: 12px;
+  color: var(--text-3);
+  transition: transform 200ms var(--ease-out);
+}
 
-details.builder[open] summary::before { content: '− '; }
+details.builder[open] summary::before { transform: rotate(45deg); }
+
+details.builder::details-content {
+  display: block;
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  translate: 0 -2px;
+  transition: block-size var(--t-med) var(--ease-out), opacity 200ms ease,
+    translate var(--t-med) var(--ease-out), content-visibility var(--t-med) allow-discrete;
+}
+
+details.builder[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+  translate: 0 0;
+}
 
 .builder-body { display: flex; gap: 8px; margin-top: 8px; }
 
@@ -495,6 +658,7 @@ select {
   font-family: var(--mono);
   font-size: 12.5px;
   cursor: pointer;
+  transition: background var(--t-fast) ease;
 }
 
 select:hover { background: var(--well); }

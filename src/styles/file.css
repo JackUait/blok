@@ -207,12 +207,6 @@
 [data-blok-tool="file"] .blok-file-caption:empty::before {
   content: attr(data-placeholder);
   color: var(--blok-text-tertiary);
-  /* Zero inline advance: an in-flow placeholder pseudo shares the line start
-     with the caret and paints it past the placeholder text. See the
-     Placeholder Layout-Inert Law in components/utils/placeholder.ts. */
-  display: inline-block;
-  width: 0;
-  white-space: nowrap;
 }
 
 

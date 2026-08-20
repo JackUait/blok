@@ -104,6 +104,11 @@ const CROSS_BROWSER_TESTS = [
 
   // Image compression rides on each browser's own canvas encoders
   '**/tools/image-compression.spec.ts',
+
+  // Where an engine paints the caret inside an empty block is engine-specific
+  // (each one special-cases a host with no layout box), so the placeholder must
+  // be proven layout-inert on all three
+  '**/tools/placeholder-caret-position.spec.ts',
 ] as const;
 
 // Logic/API tests - browser-agnostic, run once on Chromium

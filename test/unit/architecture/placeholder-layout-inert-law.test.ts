@@ -33,12 +33,23 @@
  *    `<variant>before:inline-block`, `<variant>before:w-0` and
  *    `<variant>before:whitespace-nowrap` — same variant prefix, so a rule that
  *    only shows the placeholder in one state cannot be made inert in another.
- * 2. Leaf rules in src/**\/*.css. A `::before` rule whose declarations set
- *    `content: attr(…placeholder…)` must also declare `display: inline-block`
- *    + `width: 0` + `white-space: nowrap`, or `position: absolute`.
+ * 2. Leaf rules in src/**\/*.css that gate a placeholder on an EMPTY-MARK
+ *    attribute (`data-blok-empty` / `data-empty`, written by `toggleEmptyMark`).
+ *    Such a rule paints the placeholder next to whatever the block still holds,
+ *    so it must declare `display: inline-block` + `width: 0` +
+ *    `white-space: nowrap`, or `position: absolute`.
  *
- * `::after` placeholders (e.g. the slash-search pill) are out of scope: they
- * trail the content, so they cannot displace the caret.
+ * Two shapes are deliberately OUT of scope because they cannot displace a caret:
+ *
+ * - `::after` placeholders (e.g. the slash-search pill) trail the content.
+ * - `:empty`-ONLY rules (the media caption placeholders in image/video/audio/
+ *   file/embed). `:empty` matches only a host whose children are all
+ *   zero-length text nodes or comments — none of which generate a layout box —
+ *   so the caret always parks at the line start and the placeholder never gets
+ *   between them. Leaving those in flow is what keeps them correctly centred
+ *   inside `[data-align="center"|"right"]` media, where a zero-width box would
+ *   anchor at the alignment point and spill the text one-sided. The moment such
+ *   a host gains an empty-mark variant, this law starts covering it.
  *
  * If this test fails on your change: add the inert trio next to the `content`
  * declaration. Genuine exceptions need an entry in EXEMPTIONS with a reason.
@@ -163,11 +174,21 @@ const isZeroAdvance = (decls: string): boolean =>
   /width\s*:\s*0/.test(decls) &&
   /white-space\s*:\s*nowrap/.test(decls);
 
+/**
+ * True when the rule can show its placeholder while the host still holds a
+ * laid-out node — i.e. it is gated on the empty MARK rather than on `:empty`.
+ */
+const EMPTY_MARK_SELECTOR = /\[data-(?:blok-)?empty/;
+
 const findCssViolations = (file: string, source: string): Violation[] => {
   const violations: Violation[] = [];
 
   for (const rule of parseLeafRules(source)) {
-    if (!rule.selector.includes('::before') || !declaresPlaceholderContent(rule.decls)) {
+    const covered = rule.selector.includes('::before') &&
+      EMPTY_MARK_SELECTOR.test(rule.selector) &&
+      declaresPlaceholderContent(rule.decls);
+
+    if (!covered) {
       continue;
     }
 

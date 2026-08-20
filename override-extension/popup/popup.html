@@ -3,42 +3,18 @@
 <head>
   <meta charset="utf-8">
   <title>Blok Version Override</title>
-  <style>
-    body { font: 13px/1.5 system-ui, sans-serif; min-width: 320px; margin: 0; padding: 12px; }
-    h1 { font-size: 14px; margin: 0 0 8px; }
-    section { margin-bottom: 12px; }
-    ul { margin: 4px 0; padding-left: 0; list-style: none; }
-    li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 0; }
-    input[type="url"], input[type="text"] { width: 100%; box-sizing: border-box; padding: 4px 6px; }
-    button { cursor: pointer; }
-    .muted { color: #666; }
-    .delta { color: #b35900; font-weight: 600; }
-  </style>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h1>Blok Version Override</h1>
-  <section id="payload-status"><span class="muted">Loading payload status…</span></section>
-  <section>
-    <div id="active-tab-row"></div>
-  </section>
-  <section>
-    <label for="origin-input">Origin to arm</label>
-    <input id="origin-input" type="url" placeholder="https://kb.example.com">
-    <button id="arm-button" type="button">Arm origin</button>
-  </section>
-  <section>
-    <h2 style="font-size:13px;margin:0">Armed origins</h2>
-    <ul id="armed-list" role="list" aria-label="Armed origins"></ul>
-  </section>
-  <section>
-    <h2 style="font-size:13px;margin:0 0 4px">CDN redirects (tier 2)</h2>
-    <label for="redirect-from-input">From URL prefix</label>
-    <input id="redirect-from-input" type="url" placeholder="https://cdn.jsdelivr.net/npm/@bloklabs/core@1.8.0/dist/">
-    <label for="redirect-to-input">To URL prefix</label>
-    <input id="redirect-to-input" type="url" placeholder="http://localhost:3000/dist/">
-    <button id="add-redirect-button" type="button">Add redirect</button>
-    <ul id="redirect-list" role="list" aria-label="CDN redirects"></ul>
-  </section>
+  <main id="app" aria-busy="true">
+    <header class="masthead" style="--i:0">
+      <span class="led led--off" id="health-led"></span>
+      <h1 class="wordmark">BLOK<span class="tilt">·</span>OVERRIDE</h1>
+      <span class="tag">dev</span>
+    </header>
+    <div id="panels"></div>
+    <p class="visually-hidden" role="status" aria-live="polite" id="live"></p>
+  </main>
   <script type="module" src="popup.mjs"></script>
 </body>
 </html>

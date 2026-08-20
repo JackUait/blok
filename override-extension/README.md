@@ -8,17 +8,32 @@ including deployed apps this repo does not build. Design:
 
 1. `chrome://extensions` → enable Developer mode → **Load unpacked** → this
    directory.
-2. In the blok repo: `yarn override:sync` (or `yarn override:sync --watch`).
+2. In the blok repo: `yarn override:sync` (add `--watch` to rebuild on change,
+   or `--serve` to get a **Rebuild** button in the popup).
 
 ## Use
 
-1. Open the page, click the extension icon, arm the origin (non-localhost asks
-   for confirmation).
-2. Reload the page. The badge shows ON; the banner shows the running version.
-   `-dev.<sha>` in `data-blok-version` on the editor root = override active.
-3. Rebuild (`override:sync` again or `--watch`), reload the page. New builds
-   get a new payload filename; the extension picks it up within ~30s (or on
-   popup open) with no extension reload.
+1. Open the page and click the extension icon. The popup detects blok on the
+   active tab (bundled editors by their `data-blok-*` markers, CDN script
+   tags by URL) — when nothing is detected, overriding is disabled.
+2. Bundled blok → flip the arm switch (non-localhost asks for an inline
+   confirmation), then reload the page. The badge shows ON; the banner and the
+   popup show the running version; `-dev.<sha>` in `data-blok-version` on the
+   editor root = override active.
+3. Rebuild: with `--serve` (or `--watch`) running, hit **Rebuild** in the
+   popup; otherwise rerun `override:sync`. New builds get a new payload
+   filename; the extension picks it up within ~30s (or on popup open) with no
+   extension reload.
+
+## Tier 2: CDN / script-tag pages
+
+Pages that load blok from a CDN need no seam — the extension serves your
+`dist/` build itself (staged by `override:sync`, requires `yarn build` once):
+
+- A detected CDN script gets a one-click **→ local** route in the popup.
+- "route another CDN version" lists every published version of
+  `@bloklabs/core` and `@jackuait/blok` (jsdelivr catalog, cached 6h) and
+  intercepts that version's jsdelivr `/dist/` URLs on any page.
 
 ## Limits (by design — see the design doc)
 
@@ -26,9 +41,3 @@ including deployed apps this repo does not build. Design:
 - react/vue/angular adapter code is NOT overridden (core entries only).
 - A reload is required after arming — the registry is read at module evaluation.
 - Chrome/Chromium only.
-
-## Tier 2: CDN / dev-server pages
-
-For script-tag or dev-server pages (no seam needed), add a redirect pair in the
-popup (e.g. `https://cdn.jsdelivr.net/npm/@bloklabs/core@x/dist/` →
-`http://localhost:3000/dist/`) and serve `dist/` locally.

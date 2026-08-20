@@ -1,10 +1,10 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { hashOf, payloadFileName, stagePayload } from '../../../scripts/override/sync-core.mjs';
+import { hashOf, payloadFileName, stagePayload, stageDist } from '../../../scripts/override/sync-core.mjs';
 
 describe('override sync-core', () => {
   let dir: string;
@@ -61,5 +61,49 @@ describe('override sync-core', () => {
     const first = stagePayload(dir, 'same', meta);
     const second = stagePayload(dir, 'same', meta);
     expect(second.file).toBe(first.file);
+  });
+});
+
+describe('override dist staging', () => {
+  let payloadDir: string;
+  let distDir: string;
+
+  beforeEach(() => {
+    payloadDir = mkdtempSync(join(tmpdir(), 'blok-override-payload-'));
+    distDir = mkdtempSync(join(tmpdir(), 'blok-dist-'));
+  });
+
+  afterEach(() => {
+    rmSync(payloadDir, { recursive: true, force: true });
+    rmSync(distDir, { recursive: true, force: true });
+  });
+
+  it('copies the dist tree into payload/dist and counts the files', () => {
+    writeFileSync(join(distDir, 'blok.mjs'), 'export default 1;');
+    mkdirSync(join(distDir, 'chunks'));
+    writeFileSync(join(distDir, 'chunks', 'en.mjs'), 'export const en = 1;');
+
+    const result = stageDist(payloadDir, distDir);
+
+    expect(result).toEqual({ files: 2 });
+    expect(readFileSync(join(payloadDir, 'dist', 'blok.mjs'), 'utf8')).toBe('export default 1;');
+    expect(readFileSync(join(payloadDir, 'dist', 'chunks', 'en.mjs'), 'utf8')).toBe('export const en = 1;');
+  });
+
+  it('replaces a previously staged dist instead of merging stale files in', () => {
+    writeFileSync(join(distDir, 'old.mjs'), 'old');
+    stageDist(payloadDir, distDir);
+    rmSync(join(distDir, 'old.mjs'));
+    writeFileSync(join(distDir, 'new.mjs'), 'new');
+
+    stageDist(payloadDir, distDir);
+
+    expect(existsSync(join(payloadDir, 'dist', 'old.mjs'))).toBe(false);
+    expect(existsSync(join(payloadDir, 'dist', 'new.mjs'))).toBe(true);
+  });
+
+  it('returns null when the repo has no dist build to stage', () => {
+    expect(stageDist(payloadDir, join(distDir, 'missing'))).toBeNull();
+    expect(existsSync(join(payloadDir, 'dist'))).toBe(false);
   });
 });

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Blok CDN script-tag fixture</title>
+</head>
+<body>
+  <p>Page that loads blok from a CDN script tag.</p>
+  <!-- Tiny 404 probe on purpose: detection reads the src attribute, not the
+       response, and a real bundle would drag 30MB through every test run. -->
+  <script src="https://cdn.jsdelivr.net/npm/@bloklabs/core@1.8.0/dist/e2e-probe.js" defer></script>
+</body>
+</html>

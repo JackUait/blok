@@ -13,3 +13,12 @@ export function buildRedirectRules(redirects) {
     condition: { regexFilter: `^${escapeRegex(withSlash(r.from))}(.*)`, resourceTypes: ['script'] },
   }));
 }
+
+// Stored redirect targets must never bake in the extension origin — unpacked
+// ids change when the repo moves. The SW resolves this sentinel with
+// chrome.runtime.getURL at rule-sync time.
+export const LOCAL_DIST_SENTINEL = '<local-dist>';
+
+export function resolveRedirectTargets(redirects, distBaseUrl) {
+  return redirects.map((r) => (r.to === LOCAL_DIST_SENTINEL ? { ...r, to: distBaseUrl } : r));
+}

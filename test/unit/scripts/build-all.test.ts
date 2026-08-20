@@ -121,6 +121,16 @@ describe('buildTasks', () => {
     expect(buildTasks({ mode: 'test' })).toHaveLength(13);
   });
 
+  it('test mode stages the override payload only after every dist writer', () => {
+    // sync.mjs mirrors dist/ into the extension for tier-2 routes; running it
+    // beside the dist builds staged a half-built tree (blok.umd.js missing).
+    const tasks = byName(buildTasks({ mode: 'test' }));
+
+    for (const distWriter of ['main', 'iife', 'umd', 'locales', 'override-entries']) {
+      expect(tasks.get('override-payload')?.deps).toContain(distWriter);
+    }
+  });
+
   it('test mode orders vendor writers after react-vendor, which rm -rfs the shared vendor dir', () => {
     const tasks = byName(buildTasks({ mode: 'test' }));
 

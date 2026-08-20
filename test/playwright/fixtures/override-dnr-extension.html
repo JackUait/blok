@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Blok DNR extension-dist redirect fixture</title>
+</head>
+<body>
+  <script src="/fake-cdn-ext/blok.umd.js"></script>
+  <script>
+    // /fake-cdn-ext/ 404s without a tier-2 rule targeting the extension's
+    // staged dist. UMD global is `EditorJS` (see vite.config.umd.mjs).
+    if (window.EditorJS) {
+      document.body.setAttribute('data-umd-loaded', 'true');
+    }
+  </script>
+  <script type="module">
+    // A redirected module's base URL is the response URL, so ./blok-impl.mjs
+    // and chunks resolve inside chrome-extension:// without further rules.
+    import('/fake-cdn-ext/blok.mjs')
+      .then((mod) => {
+        if (mod.default) {
+          document.body.setAttribute('data-module-loaded', 'true');
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

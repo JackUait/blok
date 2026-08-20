@@ -4,8 +4,44 @@
   "version": "0.1.0",
   "description": "Swap a page's bundled Blok for a locally built one. Dev-only, load unpacked.",
   "minimum_chrome_version": "120",
-  "background": { "service_worker": "sw.mjs", "type": "module" },
-  "action": { "default_popup": "popup/popup.html", "default_title": "Blok Version Override" },
-  "permissions": ["scripting", "storage", "alarms", "tabs", "declarativeNetRequest"],
-  "host_permissions": ["<all_urls>"]
+  "background": {
+    "service_worker": "sw.mjs",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Blok Version Override",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": [
+    "scripting",
+    "storage",
+    "alarms",
+    "tabs",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "payload/dist/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }

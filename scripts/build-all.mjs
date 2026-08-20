@@ -62,9 +62,11 @@ export function buildTasks({ mode = 'production', withCli = false } = {}) {
       { name: 'react-vendor', cmd: 'node scripts/build-react-vendor.mjs', deps: ['fonts'] },
       { name: 'vue-vendor', cmd: 'node scripts/build-vue-vendor.mjs', deps: ['react-vendor'] },
       { name: 'angular-vendor', cmd: 'node scripts/build-angular-vendor.mjs', deps: ['react-vendor'] },
-      // The override e2e loads the unpacked extension; its payload builds
-      // straight from src (fonts is the only step that writes into src).
-      { name: 'override-payload', cmd: 'node scripts/override/sync.mjs', deps: ['fonts'] },
+      // The override e2e loads the unpacked extension. The payload builds
+      // straight from src, but sync.mjs also mirrors dist/ into the extension
+      // for tier-2 routes — every dist-writing task must be done or it stages
+      // a half-built tree.
+      { name: 'override-payload', cmd: 'node scripts/override/sync.mjs', deps: ['main', 'iife', 'umd', 'locales', 'override-entries'] },
     );
   }
 

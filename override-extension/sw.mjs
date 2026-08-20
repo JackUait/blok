@@ -1,5 +1,5 @@
 import { desiredRegistrations, registrationDelta, PAYLOAD_SCRIPT_ID, BANNER_SCRIPT_ID } from './lib/registrations.mjs';
-import { buildRedirectRules } from './lib/dnr.mjs';
+import { buildRedirectRules, resolveRedirectTargets } from './lib/dnr.mjs';
 
 const readCurrent = async () => {
   try {
@@ -47,7 +47,7 @@ const syncRedirects = async () => {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map((r) => r.id),
-    addRules: buildRedirectRules(redirects),
+    addRules: buildRedirectRules(resolveRedirectTargets(redirects, chrome.runtime.getURL('payload/dist/'))),
   });
 };
 

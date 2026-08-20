@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const hashOf = (content) => createHash('sha256').update(content).digest('hex').slice(0, 12);
@@ -36,4 +36,26 @@ export function stagePayload(payloadDir, rawCode, meta) {
     }
   }
   return { file };
+}
+
+export function stageDist(payloadDir, distDir) {
+  if (!existsSync(distDir)) {
+    return null;
+  }
+  const target = join(payloadDir, 'dist');
+  rmSync(target, { recursive: true, force: true });
+  mkdirSync(payloadDir, { recursive: true });
+  cpSync(distDir, target, { recursive: true });
+  let files = 0;
+  const count = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        count(join(dir, entry.name));
+      } else {
+        files += 1;
+      }
+    }
+  };
+  count(target);
+  return { files };
 }

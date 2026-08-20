@@ -5,6 +5,8 @@ import { test, expect, chromium, type BrowserContext, type Worker } from '@playw
 const EXTENSION_DIR = path.resolve(__dirname, '../../../../override-extension');
 const FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-seam.html';
 const DNR_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-dnr.html';
+const EXTENSION_DIST_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-dnr-extension.html';
+const CDN_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-cdn-page.html';
 
 // The bundled headless shell ignores --load-extension; channel 'chromium' is
 // the full Chrome-for-Testing build whose new headless supports extensions.
@@ -86,22 +88,75 @@ test.describe('blok version override', () => {
     }
   });
 
-  test('popup arms an origin typed into the manual field', async () => {
+  // The popup only ever arms the origin it has DETECTED blok on. In these
+  // tests the popup lives in a background tab (Playwright cannot open a real
+  // action popup) while the fixture holds the active-tab slot the detection
+  // queries; reload() re-renders the popup without stealing activation.
+  test('popup arms the origin it detects blok on', async () => {
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;
       const popup = await context.newPage();
       await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
 
-      await expect(popup.getByText(/local payload/i)).toContainText('-dev.');
-
-      await popup.getByLabel('Origin to arm').fill('http://localhost:4444');
-      await popup.getByRole('button', { name: 'Arm origin' }).click();
-      await expect(popup.getByRole('list', { name: 'Armed origins' })).toContainText('http://localhost:4444');
-
       const page = await context.newPage();
       await page.goto(FIXTURE);
-      await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+      await expect(page.locator('[data-fixture-ready]')).toHaveAttribute('data-fixture-ready', 'true');
+
+      await popup.reload();
+      await expect(popup.getByText(/-dev\./).first()).toBeVisible();
+      await expect(popup.getByText('localhost:4444')).toBeVisible();
+
+      const armSwitch = popup.getByRole('switch', { name: 'Arm http://localhost:4444' });
+      await expect(armSwitch).toHaveAttribute('aria-checked', 'false');
+      await armSwitch.click();
+      await expect(popup.getByRole('list', { name: 'Armed origins' })).toContainText('http://localhost:4444');
+      await expect(armSwitch).toHaveAttribute('aria-checked', 'true');
+
+      const swapped = await context.newPage();
+      await swapped.goto(FIXTURE);
+      await expect(swapped.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('popup disables overriding when the page has no blok', async () => {
+    const { context, sw } = await launch();
+    try {
+      const extensionId = new URL(sw.url()).host;
+      const popup = await context.newPage();
+      await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+
+      const page = await context.newPage();
+      await page.goto(DNR_FIXTURE);
+
+      await popup.reload();
+      await expect(popup.getByText('No Blok on this page')).toBeVisible();
+      await expect(popup.getByRole('switch')).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('popup routes a detected CDN script to the local build in one click', async () => {
+    const { context, sw } = await launch();
+    try {
+      const extensionId = new URL(sw.url()).host;
+      const popup = await context.newPage();
+      await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+
+      const page = await context.newPage();
+      await page.goto(CDN_FIXTURE);
+
+      await popup.reload();
+      await expect(popup.getByText('@bloklabs/core@1.8.0').first()).toBeVisible();
+      await popup.getByRole('button', { name: 'Route @bloklabs/core@1.8.0 to the local build' }).click();
+
+      const routes = popup.getByRole('list', { name: 'CDN routes' });
+      await expect(routes).toContainText('@bloklabs/core@1.8.0');
+      await expect(routes).toContainText('local build');
+      await expect(popup.getByRole('button', { name: 'Remove route for @bloklabs/core@1.8.0' })).toBeVisible();
     } finally {
       await context.close();
     }
@@ -130,6 +185,24 @@ test.describe('blok version override', () => {
       const page = await context.newPage();
       await page.goto(DNR_FIXTURE);
       await expect(page.locator('[data-umd-loaded]')).toHaveAttribute('data-umd-loaded', 'true');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('the <local-dist> sentinel serves the extension-staged dist — classic and module scripts', async () => {
+    const { context, sw } = await launch();
+    try {
+      await sw.evaluate(async () => {
+        await (globalThis as unknown as {
+          setRedirectsForTests: (redirects: { from: string, to: string }[]) => Promise<void>,
+        }).setRedirectsForTests([{ from: 'http://localhost:4444/fake-cdn-ext/', to: '<local-dist>' }]);
+      });
+
+      const page = await context.newPage();
+      await page.goto(EXTENSION_DIST_FIXTURE);
+      await expect(page.locator('[data-umd-loaded]')).toHaveAttribute('data-umd-loaded', 'true');
+      await expect(page.locator('[data-module-loaded]')).toHaveAttribute('data-module-loaded', 'true');
     } finally {
       await context.close();
     }

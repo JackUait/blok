@@ -41,9 +41,9 @@
     const editor = document.querySelector('[data-blok-version]');
     const running = editor?.getAttribute('data-blok-version') ?? null;
     if (running === status.current.version) {
-      showBanner(`blok override active — ${running}`, 'live');
+      showBanner(`Blok override is on — running ${running}`, 'live');
     } else {
-      showBanner(`blok override armed — page runs ${running ?? 'pre-seam blok'}, local is ${status.current.version}. Rebuild? Reload?`, 'skew');
+      showBanner(`Blok override is waiting — this page runs ${running ?? 'an older Blok'}, your local build is ${status.current.version}. Try reloading.`, 'skew');
     }
   };
 

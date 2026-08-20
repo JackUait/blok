@@ -155,13 +155,13 @@ const refresh = async ({ probeHelper = false } = {}) => {
 const arm = async (origin) => {
   await send({ type: 'arm', origin });
   state.confirmArm = false;
-  announce(`Armed ${origin} — reload the page to swap in the local build`);
+  announce(`Local build turned on for ${origin} — reload the page to see it`);
   await refresh();
 };
 
 const disarm = async (origin) => {
   await send({ type: 'disarm', origin });
-  announce(`Disarmed ${origin}`);
+  announce(`Local build turned off for ${origin}`);
   await refresh();
 };
 
@@ -177,15 +177,15 @@ const rebuild = async () => {
   }
   state.building = true;
   render();
-  announce('Rebuilding local payload');
+  announce('Rebuilding your local payload');
   const result = await helperFetch(helper, '/build', { method: 'POST' });
   state.building = false;
   if (result === null) {
     state.helperOnline = false;
-    announce('Rebuild helper is offline');
+    announce('The rebuild helper is offline');
     render();
   } else {
-    announce('Local build refreshed');
+    announce('Your local build is fresh again');
     await refresh();
   }
 };
@@ -197,10 +197,10 @@ const copyButton = (text, label) => h('button', {
   'aria-label': label,
   onclick: async (event) => {
     await navigator.clipboard.writeText(text);
-    event.currentTarget.textContent = 'copied';
+    event.currentTarget.textContent = 'Copied!';
     setTimeout(render, 900);
   },
-}, 'copy');
+}, 'Copy');
 
 const commandChip = (cmd) => h('div', { class: 'cmd' }, h('code', {}, cmd), copyButton(cmd, `Copy ${cmd}`));
 
@@ -212,8 +212,8 @@ const renderBuildCard = (vm) => {
     return h('section', { class: 'card' },
       label,
       h('div', { class: 'empty' },
-        h('p', { class: 'empty-title' }, 'No local build synced'),
-        h('p', { class: 'empty-sub' }, 'run this in the blok repo:'),
+        h('p', { class: 'empty-title' }, 'No local build yet'),
+        h('p', { class: 'empty-sub' }, 'run this in the blok repo to get started:'),
       ),
       commandChip(SYNC_CMD),
     );
@@ -225,7 +225,7 @@ const renderBuildCard = (vm) => {
     h('span', { class: 'sep', 'aria-hidden': 'true' }, '·'),
     dist.staged
       ? h('span', {}, `dist ${formatAgo(dist.builtAt ?? builtAt, Date.now())}`)
-      : h('span', { class: 'warn' }, 'no dist — CDN routes off'),
+      : h('span', { class: 'warn' }, 'CDN routes need a one-time yarn build'),
   );
 
   const showRebuild = helper !== null && state.helperOnline !== false;
@@ -233,7 +233,7 @@ const renderBuildCard = (vm) => {
     class: `btn${state.building ? ' btn--busy' : ''}`,
     disabled: state.building || undefined,
     onclick: rebuild,
-  }, h('span', { class: 'icon', 'aria-hidden': 'true' }, '↻'), state.building ? 'building…' : 'Rebuild');
+  }, h('span', { class: 'icon', 'aria-hidden': 'true' }, '↻'), state.building ? 'Building…' : 'Rebuild');
 
   return h('section', { class: 'card' },
     label,
@@ -242,38 +242,38 @@ const renderBuildCard = (vm) => {
       showRebuild ? rebuildBtn : null,
     ),
     !showRebuild ? h('details', { class: 'builder' },
-      h('summary', {}, 'Rebuild from the popup'),
-      h('p', { class: 'hint' }, 'run this in the blok repo, then reopen the popup — the Rebuild button appears here:'),
+      h('summary', {}, 'Want a Rebuild button here?'),
+      h('p', { class: 'hint' }, 'run this in the blok repo and reopen the popup — the button appears right here:'),
       commandChip(SERVE_CMD),
     ) : null,
   );
 };
 
-const armCopy = (page, buildVersion) => {
+const armCopy = (page) => {
   if (!page.armed) {
-    return { state: 'idle', title: 'Override off', sub: 'arm to swap this origin to your local build' };
+    return { state: 'idle', title: 'Local build off', sub: 'turn the switch on to use your build here' };
   }
   if (page.live) {
-    return { state: 'live', title: 'Live', sub: `running local build ${buildVersion}` };
+    return { state: 'live', title: 'Live', sub: 'this page is running your local build' };
   }
   if ((page.bundled.version ?? '').includes('-dev.')) {
-    return { state: 'stale', title: 'Stale build on page', sub: 'reload the page to pick up the newest payload' };
+    return { state: 'stale', title: 'New build ready', sub: 'reload the page to pick it up' };
   }
-  return { state: 'stale', title: 'Armed', sub: 'reload the page to swap in the local build' };
+  return { state: 'stale', title: 'Almost there', sub: 'reload the page to switch to your local build' };
 };
 
 const renderPageCard = (vm) => {
   const label = h('p', { class: 'card-label' },
     'This page',
     h('span', { class: 'spacer' }),
-    h('button', { class: 'btn btn--ghost', onclick: () => refresh() }, 'Rescan'),
+    h('button', { class: 'btn btn--ghost', onclick: () => refresh() }, 'Check again'),
   );
 
   if (vm.page.state === 'no-tab') {
     return h('section', { class: 'card' }, label,
       h('div', { class: 'empty' },
         h('p', { class: 'empty-title' }, 'Nothing to override here'),
-        h('p', { class: 'empty-sub' }, 'open a page that runs Blok, then reopen the popup'),
+        h('p', { class: 'empty-sub' }, 'open a page that uses Blok and try again'),
       ));
   }
 
@@ -281,19 +281,22 @@ const renderPageCard = (vm) => {
     return h('section', { class: 'card' }, label,
       h('div', { class: 'empty' },
         h('p', { class: 'empty-title' }, 'No Blok on this page'),
-        h('p', { class: 'empty-sub' }, `nothing detected on ${new URL(vm.page.origin).host} — overriding is disabled`),
+        h('p', { class: 'empty-sub' }, `we couldn’t find Blok on ${new URL(vm.page.origin).host}, so there’s nothing to override`),
       ));
   }
 
   const { origin, bundled, cdn, armed } = vm.page;
   const url = new URL(origin);
-  const copy = armCopy(vm.page, vm.build.state === 'ready' ? vm.build.version : '');
+  const copy = armCopy(vm.page);
 
   const detectedLine = bundled.present
     ? h('div', { class: 'page-status' }, led('on'),
-      h('span', {}, 'Blok ', h('b', {}, bundled.version ?? 'version unknown — pre-seam'),
-        (bundled.version ?? '').includes('-dev.') ? ' — local payload' : ' — bundled'))
-    : h('div', { class: 'page-status' }, led('on'), h('span', {}, 'Blok loads from CDN scripts below'));
+      (bundled.version ?? '').includes('-dev.')
+        ? h('span', {}, 'Runs your local build ', h('b', {}, bundled.version))
+        : bundled.version
+          ? h('span', {}, 'Runs Blok ', h('b', {}, bundled.version))
+          : h('span', {}, 'Runs Blok — ', h('b', {}, 'version unknown'), ', probably an older build'))
+    : h('div', { class: 'page-status' }, led('on'), h('span', {}, 'Loads Blok from a CDN'));
 
   const children = [
     label,
@@ -309,7 +312,7 @@ const renderPageCard = (vm) => {
       class: 'switch',
       role: 'switch',
       'aria-checked': String(armed),
-      'aria-label': `Arm ${origin}`,
+      'aria-label': `Use local build on ${origin}`,
       disabled: !vm.canArm && !armed ? true : undefined,
       onclick: () => {
         if (armed) {
@@ -327,10 +330,10 @@ const renderPageCard = (vm) => {
       switchBtn,
     ));
     if (state.confirmArm && !armed) {
-      children.push(h('div', { class: 'confirm', role: 'alertdialog', 'aria-label': `Confirm arming ${origin}` },
-        h('b', {}, `Arm ${url.host}?`), ` Every page on this origin will run your local build.`,
+      children.push(h('div', { class: 'confirm', role: 'alertdialog', 'aria-label': `Confirm using the local build on ${origin}` },
+        h('b', {}, `Use your build on ${url.host}?`), ` Every page on this site will run your local build until you turn it off.`,
         h('div', { class: 'confirm-actions' },
-          h('button', { class: 'btn btn--primary', onclick: () => void arm(origin) }, 'Arm origin'),
+          h('button', { class: 'btn btn--primary', onclick: () => void arm(origin) }, 'Yes, use it'),
           h('button', { class: 'btn', onclick: () => { state.confirmArm = false; render(); } }, 'Cancel'),
         ),
       ));
@@ -341,24 +344,24 @@ const renderPageCard = (vm) => {
     const routeLabel = `${ref.pkg}@${ref.version}`;
     children.push(h('div', { class: 'arm-row', dataset: { state: ref.routed ? 'live' : 'idle' } },
       h('div', { class: 'arm-copy' },
-        h('b', {}, ref.routed ? 'Routed to local build' : 'CDN script'),
+        h('b', {}, ref.routed ? 'Using your local build' : 'Loaded from CDN'),
         h('code', { class: 'chip' }, routeLabel),
       ),
       ref.routed
         ? h('button', {
           class: 'btn btn--danger',
-          'aria-label': `Remove route for ${routeLabel}`,
+          'aria-label': `Stop using the local build for ${routeLabel}`,
           onclick: () => void setRedirects(state.status.redirects.filter((r) => r.from !== ref.prefix)),
-        }, 'Unroute')
+        }, 'Turn off')
         : h('button', {
           class: 'btn btn--primary',
-          'aria-label': `Route ${routeLabel} to the local build`,
+          'aria-label': `Use the local build for ${routeLabel}`,
           disabled: vm.build.state !== 'ready' || !vm.build.dist.staged ? true : undefined,
           onclick: () => void setRedirects([...state.status.redirects, { from: ref.prefix, to: LOCAL_DIST_SENTINEL }]),
-        }, '→ local'),
+        }, 'Use local'),
     ));
     if (!ref.routed && vm.build.state === 'ready' && !vm.build.dist.staged) {
-      children.push(h('p', { class: 'hint hint--warn' }, 'routing needs a staged dist — run ', h('code', { class: 'chip' }, 'yarn build'), ' then ', h('code', { class: 'chip' }, SYNC_CMD)));
+      children.push(h('p', { class: 'hint hint--warn' }, 'to use your build here, run ', h('code', { class: 'chip' }, 'yarn build'), ' once, then ', h('code', { class: 'chip' }, SYNC_CMD)));
     }
   }
 
@@ -370,12 +373,12 @@ const renderArmedCard = (vm) => {
     return null;
   }
   return h('section', { class: 'card' },
-    h('p', { class: 'card-label' }, 'Armed origins', h('span', { class: 'count' }, String(vm.armedOrigins.length))),
-    h('ul', { class: 'rows', role: 'list', 'aria-label': 'Armed origins' },
+    h('p', { class: 'card-label' }, 'Sites using your build', h('span', { class: 'count' }, String(vm.armedOrigins.length))),
+    h('ul', { class: 'rows', role: 'list', 'aria-label': 'Sites using your build' },
       ...vm.armedOrigins.map((origin) => h('li', { class: 'row' },
         led('on'),
         h('div', { class: 'row-main' }, h('div', { class: 'row-title', title: origin }, origin)),
-        h('button', { class: 'btn btn--danger', 'aria-label': `Disarm ${origin}`, onclick: () => void disarm(origin) }, 'Disarm'),
+        h('button', { class: 'btn btn--danger', 'aria-label': `Turn off the local build on ${origin}`, onclick: () => void disarm(origin) }, 'Turn off'),
       )),
     ));
 };
@@ -412,7 +415,7 @@ const renderRoutesCard = (vm) => {
       }),
     );
     builder = h('details', { class: 'builder' },
-      h('summary', {}, 'Route another CDN version'),
+      h('summary', {}, 'Override another version'),
       h('div', { class: 'builder-body' },
         h('div', { class: 'select-wrap' }, select),
         h('button', {
@@ -423,16 +426,16 @@ const renderRoutesCard = (vm) => {
             if (!state.status.redirects.some((r) => r.from === from)) {
               void setRedirects([...state.status.redirects, { from, to: LOCAL_DIST_SENTINEL }]);
             }
-            announce(`Routing ${pkg}@${version} to the local build`);
+            announce(`${pkg}@${version} now points to your local build`);
           },
         }, 'Add route'),
       ),
-      h('p', { class: 'hint' }, 'intercepts that version’s jsdelivr /dist/ URLs on any page'),
+      h('p', { class: 'hint' }, 'any page loading this version from jsdelivr gets your local build instead'),
     );
   } else if (showBuilder && vm.routeBuilder.reason === 'no-dist') {
-    builder = h('p', { class: 'hint hint--warn' }, 'CDN routing needs a dist build — run ', h('code', { class: 'chip' }, 'yarn build'), ' then ', h('code', { class: 'chip' }, SYNC_CMD));
+    builder = h('p', { class: 'hint hint--warn' }, 'CDN overrides need a one-time ', h('code', { class: 'chip' }, 'yarn build'), ', then ', h('code', { class: 'chip' }, SYNC_CMD));
   } else if (showBuilder && vm.routeBuilder.reason === 'no-versions') {
-    builder = h('p', { class: 'hint hint--warn' }, 'couldn’t load the version list (offline?) — detected CDN scripts can still be routed above');
+    builder = h('p', { class: 'hint hint--warn' }, 'couldn’t load the version list — maybe offline? Anything detected above still works');
   }
 
   return h('section', { class: 'card' },

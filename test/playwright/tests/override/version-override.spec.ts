@@ -61,7 +61,7 @@ test.describe('blok version override', () => {
 
       // The banner reports the active override. The editor's live announcer is
       // also role=status, so pick the banner by its text.
-      await expect(page.getByRole('status').filter({ hasText: 'blok override active' })).toBeVisible();
+      await expect(page.getByRole('status').filter({ hasText: 'Blok override is on' })).toBeVisible();
     } finally {
       await context.close();
     }
@@ -107,10 +107,10 @@ test.describe('blok version override', () => {
       await expect(popup.getByText(/-dev\./).first()).toBeVisible();
       await expect(popup.getByText('localhost:4444')).toBeVisible();
 
-      const armSwitch = popup.getByRole('switch', { name: 'Arm http://localhost:4444' });
+      const armSwitch = popup.getByRole('switch', { name: 'Use local build on http://localhost:4444' });
       await expect(armSwitch).toHaveAttribute('aria-checked', 'false');
       await armSwitch.click();
-      await expect(popup.getByRole('list', { name: 'Armed origins' })).toContainText('http://localhost:4444');
+      await expect(popup.getByRole('list', { name: 'Sites using your build' })).toContainText('http://localhost:4444');
       await expect(armSwitch).toHaveAttribute('aria-checked', 'true');
 
       const swapped = await context.newPage();
@@ -151,12 +151,12 @@ test.describe('blok version override', () => {
 
       await popup.reload();
       await expect(popup.getByText('@bloklabs/core@1.8.0').first()).toBeVisible();
-      await popup.getByRole('button', { name: 'Route @bloklabs/core@1.8.0 to the local build' }).click();
+      await popup.getByRole('button', { name: 'Use the local build for @bloklabs/core@1.8.0' }).click();
 
       const routes = popup.getByRole('list', { name: 'CDN routes' });
       await expect(routes).toContainText('@bloklabs/core@1.8.0');
       await expect(routes).toContainText('local build');
-      await expect(popup.getByRole('button', { name: 'Remove route for @bloklabs/core@1.8.0' })).toBeVisible();
+      await expect(popup.getByRole('button', { name: 'Stop using the local build for @bloklabs/core@1.8.0' })).toBeVisible();
     } finally {
       await context.close();
     }

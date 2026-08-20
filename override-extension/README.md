@@ -16,7 +16,7 @@ including deployed apps this repo does not build. Design:
 1. Open the page and click the extension icon. The popup detects blok on the
    active tab (bundled editors by their `data-blok-*` markers, CDN script
    tags by URL) — when nothing is detected, overriding is disabled.
-2. Bundled blok → flip the arm switch (non-localhost asks for an inline
+2. Bundled blok → flip the switch (non-localhost sites ask for an inline
    confirmation), then reload the page. The badge shows ON; the banner and the
    popup show the running version; `-dev.<sha>` in `data-blok-version` on the
    editor root = override active.
@@ -30,8 +30,8 @@ including deployed apps this repo does not build. Design:
 Pages that load blok from a CDN need no seam — the extension serves your
 `dist/` build itself (staged by `override:sync`, requires `yarn build` once):
 
-- A detected CDN script gets a one-click **→ local** route in the popup.
-- "route another CDN version" lists every published version of
+- A detected CDN script gets a one-click **Use local** button in the popup.
+- "Override another version" lists every published version of
   `@bloklabs/core` and `@jackuait/blok` (jsdelivr catalog, cached 6h) and
   intercepts that version's jsdelivr `/dist/` URLs on any page.
 

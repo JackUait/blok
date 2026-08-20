@@ -104,6 +104,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       await setRedirects(message.redirects);
       sendResponse({ ok: true });
     } else if (message?.type === 'status') {
+      await syncRegistrations();
       const [armedOrigins, current] = await Promise.all([readArmed(), readCurrent()]);
       const { redirects = [] } = await chrome.storage.local.get('redirects');
       sendResponse({ armedOrigins, current, redirects });

@@ -8,28 +8,26 @@
     banner.setAttribute('role', 'status');
     banner.style.cssText = [
       'position:fixed', 'bottom:14px', 'right:14px', 'z-index:2147483647',
-      'display:flex', 'gap:10px', 'align-items:center',
-      'background:#12151b', 'color:#e8ebf0',
-      'font:11.5px/1.5 ui-monospace,"SF Mono",Menlo,Consolas,monospace',
-      'font-variant-numeric:tabular-nums',
-      'padding:9px 12px', 'border-radius:10px',
-      'border:1px solid ' + (tone === 'live' ? 'rgba(69,224,140,.5)' : 'rgba(240,180,76,.5)'),
-      'box-shadow:0 4px 18px rgba(0,0,0,.45)',
+      'display:flex', 'gap:8px', 'align-items:center',
+      'background:#ffffff', 'color:#37352f',
+      'font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif',
+      'padding:8px 12px', 'border-radius:6px',
+      'border:1px solid rgba(55,53,47,0.16)',
+      'box-shadow:rgba(15,15,15,0.05) 0 0 0 1px, rgba(15,15,15,0.1) 0 3px 6px, rgba(15,15,15,0.2) 0 9px 24px',
     ].join(';');
     const dot = document.createElement('span');
     dot.style.cssText = [
-      'width:7px', 'height:7px', 'border-radius:50%', 'flex:none',
-      'background:' + (tone === 'live' ? '#45e08c' : '#f0b44c'),
-      'box-shadow:0 0 7px ' + (tone === 'live' ? 'rgba(69,224,140,.5)' : 'rgba(240,180,76,.5)'),
+      'width:8px', 'height:8px', 'border-radius:50%', 'flex:none',
+      'background:' + (tone === 'live' ? '#448361' : '#d9730d'),
     ].join(';');
     const label = document.createElement('span');
     label.textContent = text;
     const close = document.createElement('button');
     close.textContent = '×';
     close.setAttribute('aria-label', 'Dismiss blok override banner');
-    close.style.cssText = 'background:none;border:0;color:#8a93a3;font-size:14px;cursor:pointer;padding:0;line-height:1;';
-    close.addEventListener('mouseenter', () => { close.style.color = '#e8ebf0'; });
-    close.addEventListener('mouseleave', () => { close.style.color = '#8a93a3'; });
+    close.style.cssText = 'background:none;border:0;color:#9b9a97;font-size:14px;cursor:pointer;padding:0;line-height:1;';
+    close.addEventListener('mouseenter', () => { close.style.color = '#37352f'; });
+    close.addEventListener('mouseleave', () => { close.style.color = '#9b9a97'; });
     close.addEventListener('click', () => banner.remove());
     banner.append(dot, label, close);
     document.body.appendChild(banner);

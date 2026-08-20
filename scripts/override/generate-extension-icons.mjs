@@ -11,13 +11,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const iconsDir = resolve(__dirname, '../../override-extension/icons');
 
 // Two blocks: the page's bundled build (dim outline) with the local build
-// (phosphor green) swapped in over it — the extension's whole story.
+// (blue) swapped in over it — the extension's whole story.
 const ICON_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <rect x="0" y="0" width="128" height="128" rx="30" fill="#0d1014"/>
-  <rect x="1.5" y="1.5" width="125" height="125" rx="28.5" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="3"/>
-  <rect x="30" y="26" width="52" height="52" rx="12" fill="none" stroke="#5a6272" stroke-width="8"/>
-  <rect x="50" y="50" width="52" height="52" rx="12" fill="#45e08c"/>
+  <rect x="0" y="0" width="128" height="128" rx="30" fill="#ffffff"/>
+  <rect x="1.5" y="1.5" width="125" height="125" rx="28.5" fill="none" stroke="rgba(55,53,47,0.22)" stroke-width="3"/>
+  <rect x="30" y="26" width="52" height="52" rx="12" fill="none" stroke="#9b9a97" stroke-width="8"/>
+  <rect x="50" y="50" width="52" height="52" rx="12" fill="#2383e2"/>
 </svg>`;
 
 const browser = await chromium.launch();

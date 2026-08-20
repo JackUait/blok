@@ -204,13 +204,7 @@ const copyButton = (text, label) => h('button', {
 
 const commandChip = (cmd) => h('div', { class: 'cmd' }, h('code', {}, cmd), copyButton(cmd, `Copy ${cmd}`));
 
-const versionEl = (version) => {
-  const dev = /^(.*-dev\.)([0-9a-f]+)$/.exec(version ?? '');
-  if (!dev) {
-    return h('div', { class: 'version' }, version ?? '');
-  }
-  return h('div', { class: 'version' }, dev[1], h('span', { class: 'sha' }, dev[2]));
-};
+const versionEl = (version) => h('div', { class: 'version' }, version ?? '');
 
 const renderBuildCard = (vm) => {
   const label = h('p', { class: 'card-label' }, 'Local build');
@@ -218,7 +212,6 @@ const renderBuildCard = (vm) => {
     return h('section', { class: 'card' },
       label,
       h('div', { class: 'empty' },
-        h('div', { class: 'ghost-block' }),
         h('p', { class: 'empty-title' }, 'No local build synced'),
         h('p', { class: 'empty-sub' }, 'run this in the blok repo:'),
       ),
@@ -249,7 +242,7 @@ const renderBuildCard = (vm) => {
       showRebuild ? rebuildBtn : null,
     ),
     !showRebuild ? h('details', { class: 'builder' },
-      h('summary', {}, 'rebuild from the popup'),
+      h('summary', {}, 'Rebuild from the popup'),
       h('p', { class: 'hint' }, 'run this in the blok repo, then reopen the popup — the Rebuild button appears here:'),
       commandChip(SERVE_CMD),
     ) : null,
@@ -273,13 +266,12 @@ const renderPageCard = (vm) => {
   const label = h('p', { class: 'card-label' },
     'This page',
     h('span', { class: 'spacer' }),
-    h('button', { class: 'btn btn--ghost', onclick: () => refresh() }, 'rescan'),
+    h('button', { class: 'btn btn--ghost', onclick: () => refresh() }, 'Rescan'),
   );
 
   if (vm.page.state === 'no-tab') {
     return h('section', { class: 'card' }, label,
       h('div', { class: 'empty' },
-        h('div', { class: 'ghost-block' }),
         h('p', { class: 'empty-title' }, 'Nothing to override here'),
         h('p', { class: 'empty-sub' }, 'open a page that runs Blok, then reopen the popup'),
       ));
@@ -288,7 +280,6 @@ const renderPageCard = (vm) => {
   if (vm.page.state === 'no-blok') {
     return h('section', { class: 'card' }, label,
       h('div', { class: 'empty' },
-        h('div', { class: 'ghost-block' }),
         h('p', { class: 'empty-title' }, 'No Blok on this page'),
         h('p', { class: 'empty-sub' }, `nothing detected on ${new URL(vm.page.origin).host} — overriding is disabled`),
       ));
@@ -351,7 +342,7 @@ const renderPageCard = (vm) => {
     children.push(h('div', { class: 'arm-row', dataset: { state: ref.routed ? 'live' : 'idle' } },
       h('div', { class: 'arm-copy' },
         h('b', {}, ref.routed ? 'Routed to local build' : 'CDN script'),
-        routeLabel,
+        h('code', { class: 'chip' }, routeLabel),
       ),
       ref.routed
         ? h('button', {
@@ -367,11 +358,11 @@ const renderPageCard = (vm) => {
         }, '→ local'),
     ));
     if (!ref.routed && vm.build.state === 'ready' && !vm.build.dist.staged) {
-      children.push(h('p', { class: 'hint hint--warn' }, 'routing needs a staged dist — run `yarn build`, then `yarn override:sync`'));
+      children.push(h('p', { class: 'hint hint--warn' }, 'routing needs a staged dist — run ', h('code', { class: 'chip' }, 'yarn build'), ' then ', h('code', { class: 'chip' }, SYNC_CMD)));
     }
   }
 
-  return h('section', { class: `card${armed ? ' card--hot' : ''}` }, ...children);
+  return h('section', { class: 'card' }, ...children);
 };
 
 const renderArmedCard = (vm) => {
@@ -399,7 +390,8 @@ const renderRoutesCard = (vm) => {
     ...vm.routes.map((route) => h('li', { class: 'row' },
       led(route.to === LOCAL_DIST_SENTINEL ? 'on' : 'warn'),
       h('div', { class: 'row-main' },
-        h('div', { class: 'row-title', title: route.from }, route.fromLabel),
+        h('div', { class: 'row-title', title: route.from },
+          route.fromLabel.startsWith('@') ? h('code', { class: 'chip' }, route.fromLabel) : route.fromLabel),
         h('div', { class: 'row-sub' }, h('span', { class: 'arrow', 'aria-hidden': 'true' }, '→ '), h('span', { class: 'to' }, route.toLabel)),
       ),
       h('button', {
@@ -420,7 +412,7 @@ const renderRoutesCard = (vm) => {
       }),
     );
     builder = h('details', { class: 'builder' },
-      h('summary', {}, 'route another CDN version'),
+      h('summary', {}, 'Route another CDN version'),
       h('div', { class: 'builder-body' },
         h('div', { class: 'select-wrap' }, select),
         h('button', {
@@ -438,7 +430,7 @@ const renderRoutesCard = (vm) => {
       h('p', { class: 'hint' }, 'intercepts that version’s jsdelivr /dist/ URLs on any page'),
     );
   } else if (showBuilder && vm.routeBuilder.reason === 'no-dist') {
-    builder = h('p', { class: 'hint hint--warn' }, 'CDN routing needs a dist build — run `yarn build`, then `yarn override:sync`');
+    builder = h('p', { class: 'hint hint--warn' }, 'CDN routing needs a dist build — run ', h('code', { class: 'chip' }, 'yarn build'), ' then ', h('code', { class: 'chip' }, SYNC_CMD));
   } else if (showBuilder && vm.routeBuilder.reason === 'no-versions') {
     builder = h('p', { class: 'hint hint--warn' }, 'couldn’t load the version list (offline?) — detected CDN scripts can still be routed above');
   }
@@ -459,20 +451,14 @@ const render = () => {
     catalogAvailable: state.catalog !== null,
   });
 
-  const hot = vm.page.state === 'detected' && vm.page.armed;
-  document.body.toggleAttribute('data-hot', hot);
-
   const health = document.getElementById('health-led');
-  health.className = `led ${vm.build.state === 'ready' ? 'led--on' : 'led--warn'}${hot ? ' led--pulse' : ''}`;
+  health.className = `led ${vm.build.state === 'ready' ? 'led--on' : 'led--warn'}`;
 
   const panels = document.getElementById('panels');
   panels.textContent = '';
-  let index = 1;
   for (const card of [renderBuildCard(vm), renderPageCard(vm), renderArmedCard(vm), renderRoutesCard(vm)]) {
     if (card) {
-      card.style.setProperty('--i', String(index));
       panels.appendChild(card);
-      index += 1;
     }
   }
   document.getElementById('app').removeAttribute('aria-busy');

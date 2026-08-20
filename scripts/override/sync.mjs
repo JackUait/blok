@@ -49,6 +49,15 @@ const stage = (outDir, version, builtAt, helper = null) => {
   }
 };
 
+// A stale helper from a dead session can still hold the port; syncing must
+// keep working without the rebuild trigger rather than crash on EADDRINUSE.
+const listenSafely = (server) => {
+  server.on('error', (error) => {
+    console.warn(`rebuild trigger disabled — port ${helperPort} unavailable (${error.code ?? error.message})`);
+  });
+  server.listen(helperPort, '127.0.0.1');
+};
+
 const watchMode = process.argv.includes('--watch');
 const serveMode = process.argv.includes('--serve');
 
@@ -74,11 +83,11 @@ if (watchMode) {
   });
   // Watch keeps the payload fresh on its own; a popup-triggered "build" only
   // needs to wait out whatever rebuild is already in flight.
-  createHelperServer({
+  listenSafely(createHelperServer({
     token: helperToken,
     runBuild: () => inflight,
     readCurrent: () => JSON.parse(readFileSync(join(payloadDir, 'current.json'), 'utf8')),
-  }).listen(helperPort, '127.0.0.1');
+  }));
   console.log(`watching src/ — payload re-syncs on change; rebuild trigger on 127.0.0.1:${helperPort}; Ctrl-C to stop`);
 } else if (serveMode) {
   const helper = { port: helperPort, token: helperToken };
@@ -87,11 +96,11 @@ if (watchMode) {
     stage(outDir, version, builtAt, helper);
   };
   await rebuild();
-  createHelperServer({
+  listenSafely(createHelperServer({
     token: helperToken,
     runBuild: rebuild,
     readCurrent: () => JSON.parse(readFileSync(join(payloadDir, 'current.json'), 'utf8')),
-  }).listen(helperPort, '127.0.0.1');
+  }));
   console.log(`serving rebuild trigger on 127.0.0.1:${helperPort} — the extension popup's Rebuild button uses it; Ctrl-C to stop`);
 } else {
   const { outDir, version, builtAt } = await buildPayload();

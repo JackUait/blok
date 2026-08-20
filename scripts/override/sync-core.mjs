@@ -29,7 +29,10 @@ export function stagePayload(payloadDir, rawCode, meta) {
   const hash = hashOf(code);
   const file = payloadFileName(hash);
   writeFileSync(join(payloadDir, file), code);
-  writeFileSync(join(payloadDir, 'current.json'), `${JSON.stringify({ file, hash, ...meta }, null, 2)}\n`);
+  // builtAt is stamped HERE, not by callers: watch mode restages on every
+  // rebuild with metadata captured when the watcher started, so a caller-side
+  // timestamp would freeze "Built Xh ago" for the whole watch session.
+  writeFileSync(join(payloadDir, 'current.json'), `${JSON.stringify({ file, hash, ...meta, builtAt: new Date().toISOString() }, null, 2)}\n`);
   for (const stale of readdirSync(payloadDir)) {
     if (stale.startsWith('blok-override.') && stale !== file) {
       rmSync(join(payloadDir, stale));

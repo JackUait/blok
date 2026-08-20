@@ -26,15 +26,31 @@ describe('override sync-core', () => {
   });
 
   it('stages the payload under a hashed name and writes current.json', () => {
-    const meta = { version: '1.11.0-dev.abc1234', builtAt: '2026-08-20T00:00:00Z' };
+    const meta = { version: '1.11.0-dev.abc1234' };
     const { file } = stagePayload(dir, 'globalThis.x=1;', meta);
     expect(file).toBe(payloadFileName(hashOf('globalThis.x=1;')));
     expect(readFileSync(join(dir, file), 'utf8')).toBe('globalThis.x=1;');
-    expect(JSON.parse(readFileSync(join(dir, 'current.json'), 'utf8'))).toEqual({ file, hash: hashOf('globalThis.x=1;'), ...meta });
+    expect(JSON.parse(readFileSync(join(dir, 'current.json'), 'utf8'))).toEqual({
+      file,
+      hash: hashOf('globalThis.x=1;'),
+      builtAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      ...meta,
+    });
+  });
+
+  // Watch mode restages on every rebuild with metadata captured when the
+  // watcher STARTED — the staging moment is the only truthful build time.
+  it('stamps builtAt at staging time, overriding any caller-passed value', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-20T15:00:00Z'));
+    stagePayload(dir, 'globalThis.x=1;', { version: 'v', builtAt: '2026-08-20T00:00:00Z' });
+    const current = JSON.parse(readFileSync(join(dir, 'current.json'), 'utf8'));
+    expect(current.builtAt).toBe('2026-08-20T15:00:00.000Z');
+    vi.useRealTimers();
   });
 
   it('prunes stale payloads, keeping only the current one', () => {
-    const meta = { version: 'v', builtAt: 't' };
+    const meta = { version: 'v' };
     stagePayload(dir, 'old build', meta);
     stagePayload(dir, 'new build', meta);
     const payloads = readdirSync(dir).filter((f) => f.startsWith('blok-override.'));
@@ -42,7 +58,7 @@ describe('override sync-core', () => {
   });
 
   it('escapes Unicode noncharacters Chrome refuses in content-script files', () => {
-    const meta = { version: 'v', builtAt: 't' };
+    const meta = { version: 'v' };
     const code = 'const eof=`￿`;const probe="﷐￾";const astral="\u{1FFFE}";const keep="\u{1F3FE}é";';
     const { file } = stagePayload(dir, code, meta);
     const staged = readFileSync(join(dir, file), 'utf8');
@@ -57,7 +73,7 @@ describe('override sync-core', () => {
   });
 
   it('a rebuild with identical content keeps the same filename (no churn)', () => {
-    const meta = { version: 'v', builtAt: 't' };
+    const meta = { version: 'v' };
     const first = stagePayload(dir, 'same', meta);
     const second = stagePayload(dir, 'same', meta);
     expect(second.file).toBe(first.file);

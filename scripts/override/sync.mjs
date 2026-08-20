@@ -35,14 +35,14 @@ const distMeta = () => {
   return { staged: true, builtAt: statSync(existsSync(src) ? src : staged).mtime.toISOString() };
 };
 
-const stage = (outDir, version, builtAt, helper = null) => {
+const stage = (outDir, version, helper = null) => {
   const code = readFileSync(join(outDir, 'blok-override.js'), 'utf8');
   if (distIsStale()) {
     const result = stageDist(payloadDir, distDir);
     console.log(`dist staged for tier-2 routes (${result.files} files)`);
   }
   const dist = distMeta();
-  const { file } = stagePayload(payloadDir, code, { version, builtAt, dist, ...(helper ? { helper } : {}) });
+  const { file } = stagePayload(payloadDir, code, { version, dist, ...(helper ? { helper } : {}) });
   console.log(`payload synced: ${file} (${version})`);
   if (!dist.staged) {
     console.log('no dist/ build found — tier-2 CDN routes stay disabled until `yarn build` runs once');
@@ -63,7 +63,7 @@ const serveMode = process.argv.includes('--serve');
 
 if (watchMode) {
   const helper = { port: helperPort, token: helperToken };
-  const { result, outDir, version, builtAt } = await buildPayload({ watch: {} });
+  const { result, outDir, version } = await buildPayload({ watch: {} });
   let inflight = Promise.resolve();
   let settle = null;
   result.on('event', (event) => {
@@ -73,7 +73,7 @@ if (watchMode) {
       });
     }
     if (event.code === 'END') {
-      stage(outDir, version, builtAt, helper);
+      stage(outDir, version, helper);
       settle?.();
     }
     if (event.code === 'ERROR') {
@@ -92,8 +92,8 @@ if (watchMode) {
 } else if (serveMode) {
   const helper = { port: helperPort, token: helperToken };
   const rebuild = async () => {
-    const { outDir, version, builtAt } = await buildPayload();
-    stage(outDir, version, builtAt, helper);
+    const { outDir, version } = await buildPayload();
+    stage(outDir, version, helper);
   };
   await rebuild();
   listenSafely(createHelperServer({
@@ -103,6 +103,6 @@ if (watchMode) {
   }));
   console.log(`serving rebuild trigger on 127.0.0.1:${helperPort} — the extension popup's Rebuild button uses it; Ctrl-C to stop`);
 } else {
-  const { outDir, version, builtAt } = await buildPayload();
-  stage(outDir, version, builtAt);
+  const { outDir, version } = await buildPayload();
+  stage(outDir, version);
 }

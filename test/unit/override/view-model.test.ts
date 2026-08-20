@@ -70,7 +70,79 @@ describe('popup view model', () => {
 
   it('flags version skew when armed but the page still runs another build', () => {
     const vm = popupViewModel({ current: CURRENT, armedOrigins: ['https://kb.example'], redirects: [], detection: DETECTED, catalogAvailable: true });
-    expect(vm.page).toMatchObject({ armed: true, live: false, skew: true });
+    expect(vm.page).toMatchObject({ armed: true, live: false, swap: 'pending' });
+  });
+
+  // The swap state is what makes the extension act on its own: 'pending' means
+  // a reload lands the build, 'blocked' means no reload ever will.
+  it('reports the swap as off until the origin is armed or a CDN reference is routed', () => {
+    const idle = popupViewModel({ current: CURRENT, armedOrigins: [], redirects: [], detection: DETECTED, catalogAvailable: true });
+    expect(idle.page.swap).toBe('off');
+  });
+
+  it('reports the swap as pending while the armed page carries no payload yet', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [],
+      detection: DETECTED,
+      installedPayload: null,
+      catalogAvailable: true,
+    });
+    expect(vm.page.swap).toBe('pending');
+  });
+
+  it('reports the swap as pending when the page carries an older payload than the current build', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [],
+      detection: DETECTED,
+      installedPayload: { version: '1.10.1-dev.deadbeef' },
+      catalogAvailable: true,
+    });
+    expect(vm.page.swap).toBe('pending');
+  });
+
+  // Payload installed, current, and the editor still reports the app's own
+  // version: the page's blok predates the seam. Reloading changes nothing, so
+  // the popup must stop reloading and say so.
+  it('reports the swap as blocked when the current payload is installed and ignored', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [],
+      detection: DETECTED,
+      installedPayload: { version: CURRENT.version },
+      catalogAvailable: true,
+    });
+    expect(vm.page.swap).toBe('blocked');
+  });
+
+  it('reports the swap as live once the page runs your build', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [],
+      detection: { ...DETECTED, bundled: { present: true, version: CURRENT.version } },
+      installedPayload: { version: CURRENT.version },
+      catalogAvailable: true,
+    });
+    expect(vm.page).toMatchObject({ swap: 'live', live: true });
+  });
+
+  // A CDN page has no bundled editor to swap in place, so the swap story is
+  // told by its per-reference rows — never by a callout that can never clear.
+  it('keeps the swap off for a routed CDN page with no bundled editor', () => {
+    const prefix = 'https://cdn.jsdelivr.net/npm/@bloklabs/core@1.8.0/dist/';
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: [],
+      redirects: [{ from: prefix, to: LOCAL_DIST_SENTINEL }],
+      detection: { ...DETECTED, bundled: { present: false, version: null }, cdn: [{ pkg: '@bloklabs/core', version: '1.8.0', prefix }] },
+      catalogAvailable: true,
+    });
+    expect(vm.page.swap).toBe('off');
   });
 
   it('marks detected CDN references as routed when a matching route exists', () => {

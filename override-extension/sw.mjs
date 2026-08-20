@@ -1,5 +1,6 @@
 import { desiredRegistrations, registrationDelta, PAYLOAD_SCRIPT_ID, BANNER_SCRIPT_ID } from './lib/registrations.mjs';
 import { buildRedirectRules, resolveRedirectTargets } from './lib/dnr.mjs';
+import { tabsToReload, shouldReloadForPayload } from './lib/reload-targets.mjs';
 
 const readCurrent = async () => {
   try {
@@ -15,9 +16,26 @@ const readArmed = async () => {
   return armedOrigins;
 };
 
+// Nobody presses Reload in this extension: the payload is read at module
+// evaluation, so every state change that should be visible on a live page is
+// followed by the worker reloading that page itself.
+const reloadTabs = async (tabIds) => {
+  await Promise.all(tabIds.map((id) => chrome.tabs.reload(id).catch(() => {
+    // the tab closed or navigated away mid-flight — nothing to swap there
+  })));
+};
+
+const reloadOrigins = async (origins) => {
+  if (origins.length === 0) {
+    return;
+  }
+  await reloadTabs(tabsToReload(await chrome.tabs.query({}), origins));
+};
+
 const syncRegistrations = async () => {
   const [armedOrigins, current] = await Promise.all([readArmed(), readCurrent()]);
-  const desired = desiredRegistrations(armedOrigins, current?.file ?? null);
+  const payloadFile = current?.file ?? null;
+  const desired = desiredRegistrations(armedOrigins, payloadFile);
   const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [PAYLOAD_SCRIPT_ID, BANNER_SCRIPT_ID] });
   const { toUnregister, toRegister } = registrationDelta(existing, desired);
   if (toUnregister.length > 0) {
@@ -26,6 +44,22 @@ const syncRegistrations = async () => {
   if (toRegister.length > 0) {
     await chrome.scripting.registerContentScripts(toRegister);
   }
+  await propagateRebuild(armedOrigins, payloadFile);
+};
+
+// `yarn override:sync --watch` restages the payload under a new filename; armed
+// pages pick it up on their own from here. The baseline is written BEFORE the
+// reloads because the alarm and a popup `status` message can run this
+// concurrently — a late write would make the second caller reload again.
+const propagateRebuild = async (armedOrigins, payloadFile) => {
+  const { payloadBaseline = null } = await chrome.storage.session.get('payloadBaseline');
+  const rebuilt = shouldReloadForPayload(payloadBaseline, payloadFile);
+  if (payloadBaseline !== payloadFile) {
+    await chrome.storage.session.set({ payloadBaseline: payloadFile });
+  }
+  if (rebuilt) {
+    await reloadOrigins(armedOrigins);
+  }
 };
 
 const arm = async (origin) => {
@@ -33,13 +67,17 @@ const arm = async (origin) => {
   if (!armedOrigins.includes(origin)) {
     await chrome.storage.local.set({ armedOrigins: [...armedOrigins, origin] });
   }
+  // Registration must land before the reload — the payload has to be there at
+  // document_start of the very load this triggers.
   await syncRegistrations();
+  await reloadOrigins([origin]);
 };
 
 const disarm = async (origin) => {
   const armedOrigins = (await readArmed()).filter((o) => o !== origin);
   await chrome.storage.local.set({ armedOrigins });
   await syncRegistrations();
+  await reloadOrigins([origin]);
 };
 
 const syncRedirects = async () => {
@@ -51,9 +89,12 @@ const syncRedirects = async () => {
   });
 };
 
-const setRedirects = async (redirects) => {
+const setRedirects = async (redirects, tabId = null) => {
   await chrome.storage.local.set({ redirects });
   await syncRedirects();
+  if (tabId !== null) {
+    await reloadTabs([tabId]);
+  }
 };
 
 const updateBadge = async (tabId, url) => {
@@ -101,7 +142,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       await disarm(message.origin);
       sendResponse({ ok: true });
     } else if (message?.type === 'setRedirects') {
-      await setRedirects(message.redirects);
+      await setRedirects(message.redirects, message.tabId ?? null);
+      sendResponse({ ok: true });
+    } else if (message?.type === 'reloadTab') {
+      await reloadTabs([message.tabId]);
       sendResponse({ ok: true });
     } else if (message?.type === 'status') {
       await syncRegistrations();

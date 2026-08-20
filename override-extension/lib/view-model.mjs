@@ -9,7 +9,23 @@ export function describeRedirect(redirect) {
   };
 }
 
-export function popupViewModel({ current, armedOrigins = [], redirects = [], detection, catalogAvailable = false }) {
+/**
+ * Drives everything the extension does on its own: 'pending' is the only state
+ * a reload can fix, so it is the only one that earns one. 'blocked' means the
+ * payload IS in the realm and the page's blok ignored it — it predates the
+ * seam, and reloading forever would be a loop with no exit.
+ */
+function swapState({ page, engaged, runningYours, current, installedPayload }) {
+  if (!page.bundled.present || !engaged) {
+    return 'off';
+  }
+  if (runningYours) {
+    return 'live';
+  }
+  return installedPayload !== null && installedPayload.version === current?.version ? 'blocked' : 'pending';
+}
+
+export function popupViewModel({ current, armedOrigins = [], redirects = [], detection, catalogAvailable = false, installedPayload = null }) {
   const build = current
     ? { state: 'ready', version: current.version, builtAt: current.builtAt, helper: current.helper ?? null, dist: current.dist ?? { staged: false } }
     : { state: 'missing' };
@@ -17,16 +33,11 @@ export function popupViewModel({ current, armedOrigins = [], redirects = [], det
   let page = detection ?? { state: 'no-tab' };
   if (page.state === 'detected') {
     const armed = armedOrigins.includes(page.origin);
+    const cdn = page.cdn.map((ref) => ({ ...ref, routed: redirects.some((r) => r.from === ref.prefix) }));
+    const engaged = armed || cdn.some((ref) => ref.routed);
     const runningYours = page.bundled.version !== null && page.bundled.version === current?.version;
-    const live = armed && runningYours;
-    page = {
-      ...page,
-      armed,
-      runningYours,
-      live,
-      skew: armed && !live,
-      cdn: page.cdn.map((ref) => ({ ...ref, routed: redirects.some((r) => r.from === ref.prefix) })),
-    };
+    const live = engaged && runningYours;
+    page = { ...page, armed, runningYours, live, swap: swapState({ page, engaged, runningYours, current, installedPayload }), cdn };
   }
 
   const distStaged = build.state === 'ready' && build.dist.staged === true;

@@ -243,6 +243,20 @@ main, #panels { display: flex; flex-direction: column; }
 
 .callout .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); }
 
+.spinner {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(217, 115, 13, 0.28);
+  border-top-color: var(--orange-text);
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ---------- CDN rows on the page card ---------- */
 
 .cdn-row {

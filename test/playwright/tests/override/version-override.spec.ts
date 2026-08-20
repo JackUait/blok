@@ -7,6 +7,7 @@ const FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-seam.ht
 const DNR_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-dnr.html';
 const EXTENSION_DIST_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-dnr-extension.html';
 const CDN_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-cdn-page.html';
+const PRE_SEAM_FIXTURE = 'http://localhost:4444/test/playwright/fixtures/override-pre-seam.html';
 
 // The bundled headless shell ignores --load-extension; channel 'chromium' is
 // the full Chrome-for-Testing build whose new headless supports extensions.
@@ -28,6 +29,9 @@ const launch = async (): Promise<{ context: BrowserContext, sw: Worker }> => {
 
 test.describe('blok version override', () => {
   test('arming an origin swaps the page blok for the local payload', async () => {
+    // Two full loads of a multi-MB module graph (the fixture's dist build, then
+    // the dev payload) — legitimately heavier than the default budget.
+    test.slow();
     const { context, sw } = await launch();
     try {
       const page = await context.newPage();
@@ -38,11 +42,10 @@ test.describe('blok version override', () => {
       await expect(editor).toHaveAttribute('data-blok-version', /^(?!.*-dev\.).+/);
       const bundledVersion = await editor.getAttribute('data-blok-version');
 
+      // No page.reload() anywhere in this test: arming reloads the tab itself.
       await sw.evaluate(async () => {
         await (globalThis as unknown as { armOriginForTests: (o: string) => Promise<void> }).armOriginForTests('http://localhost:4444');
       });
-      await page.reload();
-      await expect(page.locator('[data-fixture-ready]')).toHaveAttribute('data-fixture-ready', 'true');
 
       await expect(editor).toHaveAttribute('data-blok-version', /-dev\./);
       await expect(editor).not.toHaveAttribute('data-blok-version', bundledVersion ?? '');
@@ -68,6 +71,7 @@ test.describe('blok version override', () => {
   });
 
   test('disarming restores the bundled blok', async () => {
+    test.slow();
     const { context, sw } = await launch();
     try {
       await sw.evaluate(async () => {
@@ -80,8 +84,7 @@ test.describe('blok version override', () => {
       await sw.evaluate(async () => {
         await (globalThis as unknown as { disarmOriginForTests: (o: string) => Promise<void> }).disarmOriginForTests('http://localhost:4444');
       });
-      await page.reload();
-      await expect(page.locator('[data-fixture-ready]')).toHaveAttribute('data-fixture-ready', 'true');
+      // Disarming reloads the tab too, so the page falls back on its own.
       await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /^(?!.*-dev\.).+/);
     } finally {
       await context.close();
@@ -114,9 +117,12 @@ test.describe('blok version override', () => {
       await expect(armSwitch).toHaveAttribute('aria-checked', 'false');
       await armSwitch.click();
       await expect(armSwitch).toHaveAttribute('aria-checked', 'true');
-      // The page has not reloaded yet, so the popup offers to do it.
-      await expect(popup.getByText('Almost there')).toBeVisible();
-      await expect(popup.getByRole('button', { name: 'Reload' })).toBeVisible();
+
+      // Flipping the switch is the whole interaction: the extension reloads
+      // the page itself and the popup catches up with no button to press.
+      await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+      await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);
+      await expect(popup.getByText('Running your build')).toBeVisible();
 
       // Origins armed elsewhere are listed; the current page's own row is not
       // repeated below its switch.
@@ -131,6 +137,41 @@ test.describe('blok version override', () => {
       const swapped = await context.newPage();
       await swapped.goto(FIXTURE);
       await expect(swapped.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+    } finally {
+      await context.close();
+    }
+  });
+
+  // The one page the extension must NOT keep reloading: the payload is in the
+  // realm and this blok predates the seam, so no reload will ever swap it.
+  test('a page whose blok predates the seam is reported, never reloaded in circles', async () => {
+    const { context, sw } = await launch();
+    try {
+      const extensionId = new URL(sw.url()).host;
+      const popup = await context.newPage();
+      await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+
+      const page = await context.newPage();
+      await page.goto(PRE_SEAM_FIXTURE);
+
+      let loads = 0;
+
+      page.on('load', () => {
+        loads += 1;
+      });
+
+      await sw.evaluate(async () => {
+        await (globalThis as unknown as { armOriginForTests: (o: string) => Promise<void> }).armOriginForTests('http://localhost:4444');
+      });
+      // Arming reloads once — at that point the payload was not in the realm yet,
+      // so a reload was the right call.
+      await expect(page.getByRole('status').filter({ hasText: 'too old to swap' })).toBeVisible();
+      expect(loads).toBe(1);
+
+      await popup.reload();
+      await expect(popup.getByText('This page can’t be switched')).toBeVisible();
+      await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);
+      expect(loads).toBe(1);
     } finally {
       await context.close();
     }

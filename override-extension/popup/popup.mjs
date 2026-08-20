@@ -37,12 +37,13 @@ const announce = (text) => {
 const state = {
   status: { armedOrigins: [], current: null, redirects: [] },
   detection: { state: 'no-tab' },
+  installedPayload: null,
   targetTabId: null,
   favIconUrl: null,
   catalog: null,
   helperOnline: null,
   building: false,
-  reloading: false,
+  switching: false,
 };
 
 /* ---------- data gathering ---------- */
@@ -61,10 +62,13 @@ const getTargetTab = async () => {
 const collectFacts = async () => {
   const tab = await getTargetTab();
   if (!tab?.id || !/^https?:/.test(tab.url ?? '')) {
-    return { facts: null, tabId: null, favIconUrl: null };
+    return { facts: null, tabId: null, favIconUrl: null, installedPayload: null };
   }
   try {
     const results = await chrome.scripting.executeScript({
+      // MAIN world: the payload registry is a page-realm global, and whether it
+      // is there is what separates "a reload fixes this" from "nothing will".
+      world: 'MAIN',
       target: { tabId: tab.id, allFrames: true },
       func: () => {
         // Marker union spans every published version: data-blok-editor since
@@ -76,14 +80,25 @@ const collectFacts = async () => {
         } catch {
           // script-tag scan still covers CDN detection
         }
-        return { hasEditor: root !== null, version: root?.getAttribute('data-blok-version') ?? null, urls };
+        let payloadVersion = null;
+        try {
+          const registry = globalThis.__BLOK_DEV_OVERRIDE__;
+          // A DOM-clobbered global carries no string version — treat it as absent
+          // rather than as a payload that failed, or the popup would never settle.
+          payloadVersion = typeof registry?.version === 'string' ? registry.version : null;
+        } catch {
+          // a cross-origin WindowProxy named like the registry throws on access
+        }
+        return { hasEditor: root !== null, version: root?.getAttribute('data-blok-version') ?? null, urls, payloadVersion };
       },
     });
     const frames = results.map((r) => r.result).filter(Boolean);
     const withEditor = frames.find((f) => f.hasEditor) ?? null;
+    const withPayload = frames.find((f) => f.payloadVersion !== null) ?? null;
     return {
       tabId: tab.id,
       favIconUrl: tab.favIconUrl ?? null,
+      installedPayload: withPayload === null ? null : { version: withPayload.payloadVersion },
       facts: {
         origin: new URL(tab.url).origin,
         hasEditor: withEditor !== null,
@@ -92,7 +107,7 @@ const collectFacts = async () => {
       },
     };
   } catch {
-    return { facts: null, tabId: null, favIconUrl: null };
+    return { facts: null, tabId: null, favIconUrl: null, installedPayload: null };
   }
 };
 
@@ -152,12 +167,25 @@ const helperFetch = async (helper, path, init = {}, timeoutMs = null) => {
   }
 };
 
+const applyFacts = (page) => {
+  const next = summarizeDetection(page.facts);
+  // Mid-reload the tab is a blank document: the scan either fails outright or
+  // succeeds against an empty page. Neither is news, and taking either would
+  // flash "No Blok here" at the exact moment the swap is happening — so while
+  // switching, only a fresh detection replaces the card.
+  if (state.switching && next.state !== 'detected' && state.detection.state === 'detected') {
+    return;
+  }
+  state.detection = next;
+  state.installedPayload = page.installedPayload;
+  state.targetTabId = page.tabId ?? (state.switching ? state.targetTabId : null);
+  state.favIconUrl = page.favIconUrl ?? (state.switching ? state.favIconUrl : null);
+};
+
 const refresh = async ({ probeHelper = false } = {}) => {
   const [status, page, catalog] = await Promise.all([send({ type: 'status' }), collectFacts(), readCachedCatalog()]);
   state.status = status;
-  state.detection = summarizeDetection(page.facts);
-  state.targetTabId = page.tabId;
-  state.favIconUrl = page.favIconUrl;
+  applyFacts(page);
   state.catalog = catalog;
   render();
   refreshCatalogInBackground();
@@ -171,54 +199,91 @@ const refresh = async ({ probeHelper = false } = {}) => {
 
 /* ---------- actions ---------- */
 
-const arm = async (origin) => {
-  await send({ type: 'arm', origin });
-  announce(`Your build is on for ${origin} — reload the page to see it`);
-  await refresh();
-};
-
-const disarm = async (origin) => {
-  await send({ type: 'disarm', origin });
-  announce(`Your build is off for ${origin}`);
-  await refresh();
-};
-
-const setRedirects = async (redirects) => {
-  await send({ type: 'setRedirects', redirects });
-  await refresh();
-};
-
 const pageRunsYours = () => state.detection.state === 'detected'
   && state.detection.bundled.version !== null
   && state.detection.bundled.version === state.status.current?.version;
 
-const reloadPage = async () => {
-  if (state.targetTabId === null || state.reloading) {
-    return;
-  }
-  state.reloading = true;
+const swapState = () => (viewModel().page.swap ?? 'off');
+
+// The worker reloads the page as part of arming; the popup only watches. The
+// budget is generous because the dev payload is multi-MB — a page that is
+// merely slow must not be mistaken for one that cannot swap.
+const SWAP_POLLS = 20;
+
+// Toggling again mid-swap starts a second watcher; the older one must go quiet
+// rather than clear `switching` out from under the live one.
+let swapWatch = 0;
+
+const watchSwap = async (wantYours = true) => {
+  const generation = ++swapWatch;
+  state.switching = true;
   render();
-  announce('Reloading the page');
-  await chrome.tabs.reload(state.targetTabId);
-  // Poll until the fresh page reports in; while the tab is mid-load the
-  // injected scan fails and facts come back null — keep the last good
-  // detection instead of collapsing the card.
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  const settled = () => (wantYours ? pageRunsYours() || swapState() === 'blocked' : !pageRunsYours());
+  for (let attempt = 0; attempt < SWAP_POLLS; attempt += 1) {
     await sleep(600);
-    const { facts, tabId, favIconUrl } = await collectFacts();
-    if (!facts) {
-      continue;
+    if (generation !== swapWatch) {
+      return;
     }
-    state.detection = summarizeDetection(facts);
-    state.targetTabId = tabId ?? state.targetTabId;
-    state.favIconUrl = favIconUrl ?? state.favIconUrl;
-    if (pageRunsYours()) {
+    applyFacts(await collectFacts());
+    render();
+    if (settled()) {
       break;
     }
   }
-  state.reloading = false;
+  state.switching = false;
   render();
-  announce(pageRunsYours() ? 'Your build is live on this page' : 'Page reloaded');
+  if (!wantYours) {
+    announce('This page is back on its own Blok');
+  } else {
+    announce(pageRunsYours() ? 'Your build is live on this page' : 'This page has not switched to your build');
+  }
+};
+
+const arm = async (origin) => {
+  state.switching = true;
+  render();
+  announce(`Switching ${new URL(origin).host} to your build`);
+  await send({ type: 'arm', origin });
+  await refresh();
+  await watchSwap();
+};
+
+const disarm = async (origin) => {
+  state.switching = true;
+  render();
+  announce(`Putting ${new URL(origin).host} back on its own Blok`);
+  await send({ type: 'disarm', origin });
+  await refresh();
+  await watchSwap(false);
+};
+
+const setRedirects = async (redirects, { reloadPage: reload = false } = {}) => {
+  await send({ type: 'setRedirects', redirects, tabId: reload ? state.targetTabId : null });
+  if (reload) {
+    state.switching = true;
+  }
+  await refresh();
+  if (reload) {
+    await watchSwap();
+  }
+};
+
+// A page armed before this build was staged (or before the popup opened) is one
+// reload away from correct — take it, once, without asking. 'blocked' is the
+// state this must never touch: the payload is already in the realm and the
+// page's blok ignored it, so reloading would loop forever.
+let autoSwapped = false;
+const autoSwapStalePage = async () => {
+  const { page } = viewModel();
+  if (autoSwapped || state.targetTabId === null || page.state !== 'detected' || !page.armed || page.swap !== 'pending') {
+    return;
+  }
+  autoSwapped = true;
+  announce('Switching this page to your build');
+  state.switching = true;
+  render();
+  await send({ type: 'reloadTab', tabId: state.targetTabId });
+  await watchSwap();
 };
 
 const rebuild = async () => {
@@ -237,12 +302,13 @@ const rebuild = async () => {
     render();
     return;
   }
-  // The status round-trip re-registers the new payload hash — reloading
-  // before it would load the stale payload and land right back on skew.
+  // The status round-trip re-registers the new payload hash AND hands the
+  // worker the rebuild it propagates to every armed tab — so by the time this
+  // resolves the reload is already under way and the popup only has to watch.
   await refresh();
   const onArmedPage = state.detection.state === 'detected' && state.status.armedOrigins.includes(state.detection.origin);
   if (onArmedPage && !pageRunsYours()) {
-    await reloadPage();
+    await watchSwap();
   } else {
     announce('Your local build is fresh again');
   }
@@ -309,13 +375,22 @@ const pageStatusLine = (page) => {
   return h('div', { class: 'page-status' }, led('on'), h('span', {}, 'Runs ', ...name));
 };
 
-const reloadCallout = (title, sub) => h('div', { class: 'callout', dataset: { tone: 'orange' } },
-  h('div', { class: 'callout-copy' }, h('b', {}, title), sub),
-  h('button', {
-    class: 'btn btn--primary',
-    disabled: state.reloading || undefined,
-    onclick: () => void reloadPage(),
-  }, state.reloading ? 'Reloading…' : 'Reload'));
+// No button lives here on purpose: 'pending' is already being acted on, and
+// 'blocked' is a state no amount of reloading would move.
+const swapCallout = (vm) => {
+  if (vm.page.swap === 'pending') {
+    return h('div', { class: 'callout', dataset: { tone: 'orange' } },
+      h('span', { class: 'spinner', 'aria-hidden': 'true' }),
+      h('div', { class: 'callout-copy' }, h('b', {}, 'Switching to your build'), 'reloading the page for you…'));
+  }
+  if (vm.page.swap === 'blocked') {
+    return h('div', { class: 'callout', dataset: { tone: 'orange' } },
+      h('div', { class: 'callout-copy' },
+        h('b', {}, 'This page can’t be switched'),
+        'its Blok is older than the swap needs — the site has to ship a newer release once'));
+  }
+  return null;
+};
 
 const renderSwitchRow = (vm) => {
   const { origin, armed } = vm.page;
@@ -367,7 +442,7 @@ const renderPageCard = (vm) => {
       emptyState('No Blok here', `${new URL(vm.page.origin).host} doesn’t seem to use Blok`));
   }
 
-  const { origin, bundled, cdn, armed } = vm.page;
+  const { origin, bundled, cdn } = vm.page;
   const url = new URL(origin);
 
   const children = [
@@ -394,13 +469,13 @@ const renderPageCard = (vm) => {
         ? h('button', {
           class: 'btn btn--danger',
           'aria-label': `Stop using your build for ${refLabel}`,
-          onclick: () => void setRedirects(state.status.redirects.filter((r) => r.from !== ref.prefix)),
+          onclick: () => void setRedirects(state.status.redirects.filter((r) => r.from !== ref.prefix), { reloadPage: true }),
         }, 'Stop')
         : h('button', {
           class: 'btn btn--primary',
           'aria-label': `Use your build for ${refLabel}`,
           disabled: vm.build.state !== 'ready' || !vm.build.dist.staged ? true : undefined,
-          onclick: () => void setRedirects([...state.status.redirects, { from: ref.prefix, to: LOCAL_DIST_SENTINEL }]),
+          onclick: () => void setRedirects([...state.status.redirects, { from: ref.prefix, to: LOCAL_DIST_SENTINEL }], { reloadPage: true }),
         }, 'Use your build'),
     ));
     if (!ref.routed && vm.build.state === 'ready' && !vm.build.dist.staged) {
@@ -410,11 +485,9 @@ const renderPageCard = (vm) => {
 
   // Below the rows it explains — after arming it sits under the switch, after
   // a CDN swap under that row.
-  const needsReload = bundled.present && !vm.page.runningYours && (armed || cdn.some((ref) => ref.routed));
-  if (needsReload) {
-    children.push((bundled.version ?? '').includes('-dev.')
-      ? reloadCallout('New build ready', 'reload the page to pick it up')
-      : reloadCallout('Almost there', 'reload the page to switch to your build'));
+  const callout = swapCallout(vm);
+  if (callout) {
+    children.push(callout);
   }
 
   return h('section', { class: 'card' }, ...children);
@@ -538,14 +611,17 @@ const renderSwapBuilder = (vm) => {
   return h('section', { class: 'card card--quiet' }, body);
 };
 
+const viewModel = () => popupViewModel({
+  current: state.status.current,
+  armedOrigins: state.status.armedOrigins,
+  redirects: state.status.redirects,
+  detection: state.detection,
+  installedPayload: state.installedPayload,
+  catalogAvailable: state.catalog !== null,
+});
+
 const render = () => {
-  const vm = popupViewModel({
-    current: state.status.current,
-    armedOrigins: state.status.armedOrigins,
-    redirects: state.status.redirects,
-    detection: state.detection,
-    catalogAvailable: state.catalog !== null,
-  });
+  const vm = viewModel();
 
   // With no build yet the popup's story is onboarding; with one, the page
   // you're looking at comes first.
@@ -563,4 +639,7 @@ const render = () => {
   document.getElementById('app').removeAttribute('aria-busy');
 };
 
-void refresh({ probeHelper: true });
+void (async () => {
+  await refresh({ probeHelper: true });
+  await autoSwapStalePage();
+})();

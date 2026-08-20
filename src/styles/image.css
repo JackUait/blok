@@ -70,6 +70,12 @@
 [data-blok-tool="image"] .blok-image-caption[contenteditable="true"]:empty::before {
   content: attr(data-placeholder);
   color: var(--blok-text-tertiary);
+  /* Zero inline advance: an in-flow placeholder pseudo shares the line start
+     with the caret and paints it past the placeholder text. See the
+     Placeholder Layout-Inert Law in components/utils/placeholder.ts. */
+  display: inline-block;
+  width: 0;
+  white-space: nowrap;
 }
 [data-blok-tool="image"][data-caption="off"] .blok-image-caption { display: none; }
 

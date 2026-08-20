@@ -118,6 +118,35 @@ describe('caret/focus', () => {
       expect(div.childNodes[0]).toBeInstanceOf(Text);
     });
 
+    it('should land the caret inside the created text node when contenteditable is empty', () => {
+      const div = document.createElement('div');
+
+      div.contentEditable = 'true';
+      getContainer().appendChild(div);
+
+      focus(div, true);
+
+      const caret = getCaretPosition();
+
+      expect(caret.node).toBe(div.childNodes[0]);
+      expect(caret.offset).toBe(0);
+    });
+
+    it('should land the caret inside the created text node when there is no text to focus', () => {
+      const div = document.createElement('div');
+
+      div.contentEditable = 'true';
+      div.appendChild(document.createElement('span'));
+      getContainer().appendChild(div);
+
+      focus(div, true);
+
+      const caret = getCaretPosition();
+
+      expect(div.contains(caret.node)).toBe(true);
+      expect(caret.node).toBeInstanceOf(Text);
+    });
+
     it('should handle nested elements correctly when atStart is true', () => {
       const div = document.createElement('div');
 

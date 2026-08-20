@@ -10,6 +10,19 @@
  */
 
 /**
+ * Every array below pairs its `before:content-[attr(…)]` with
+ * `before:inline-block` + `before:w-0` + `before:whitespace-nowrap`. The
+ * placeholder pseudo shares the start of the first line box with the caret, so
+ * an in-flow one consumes real inline advance and the caret is painted past the
+ * placeholder text whenever its anchor owns a layout box — a block holding the
+ * mark engine's pending-format `​` still reads as empty (Dom.isNodeEmpty
+ * strips it), still shows the placeholder, and put the caret at the end of it in
+ * Chromium, Firefox and WebKit alike. Zero width keeps the text painted (it
+ * overflows the box) while claiming no advance.
+ * Enforced by test/unit/architecture/placeholder-layout-inert-law.test.ts.
+ */
+
+/**
  * Placeholder styling classes using Tailwind arbitrary variants.
  * Applied to ::before pseudo-element only when element is empty.
  * Uses data-placeholder attribute for the placeholder text.
@@ -19,10 +32,16 @@ export const PLACEHOLDER_CLASSES: string[] = [
   'empty:before:text-block-placeholder',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-placeholder)]',
+  'empty:before:inline-block',
+  'empty:before:w-0',
+  'empty:before:whitespace-nowrap',
   'data-[blok-empty=true]:before:pointer-events-none',
   'data-[blok-empty=true]:before:text-block-placeholder',
   'data-[blok-empty=true]:before:cursor-text',
   'data-[blok-empty=true]:before:content-[attr(data-placeholder)]',
+  'data-[blok-empty=true]:before:inline-block',
+  'data-[blok-empty=true]:before:w-0',
+  'data-[blok-empty=true]:before:whitespace-nowrap',
 ];
 
 /**
@@ -34,10 +53,16 @@ export const PLACEHOLDER_ACTIVE_CLASSES: string[] = [
   'empty:before:text-block-placeholder',
   'empty:before:cursor-text',
   'empty:before:content-[attr(data-blok-placeholder-active)]',
+  'empty:before:inline-block',
+  'empty:before:w-0',
+  'empty:before:whitespace-nowrap',
   'data-[empty=true]:before:pointer-events-none',
   'data-[empty=true]:before:text-block-placeholder',
   'data-[empty=true]:before:cursor-text',
   'data-[empty=true]:before:content-[attr(data-blok-placeholder-active)]',
+  'data-[empty=true]:before:inline-block',
+  'data-[empty=true]:before:w-0',
+  'data-[empty=true]:before:whitespace-nowrap',
 ];
 
 /**
@@ -50,10 +75,16 @@ export const PLACEHOLDER_FOCUS_ONLY_CLASSES: string[] = [
   'empty:focus:before:text-block-placeholder',
   'empty:focus:before:cursor-text',
   'empty:focus:before:content-[attr(data-blok-placeholder-active)]',
+  'empty:focus:before:inline-block',
+  'empty:focus:before:w-0',
+  'empty:focus:before:whitespace-nowrap',
   '[&[data-empty=true]:focus]:before:pointer-events-none',
   '[&[data-empty=true]:focus]:before:text-block-placeholder',
   '[&[data-empty=true]:focus]:before:cursor-text',
   '[&[data-empty=true]:focus]:before:content-[attr(data-blok-placeholder-active)]',
+  '[&[data-empty=true]:focus]:before:inline-block',
+  '[&[data-empty=true]:focus]:before:w-0',
+  '[&[data-empty=true]:focus]:before:whitespace-nowrap',
 ];
 
 /**

@@ -333,6 +333,12 @@
   content: attr(data-placeholder);
   color: var(--blok-text-tertiary, #9b9a97);
   pointer-events: none;
+  /* Zero inline advance: an in-flow placeholder pseudo shares the line start
+     with the caret and paints it past the placeholder text. See the
+     Placeholder Layout-Inert Law in components/utils/placeholder.ts. */
+  display: inline-block;
+  width: 0;
+  white-space: nowrap;
 }
 
 /* Link card — safe fallback for generic embeds the host hasn't allowed to be

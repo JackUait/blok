@@ -143,12 +143,13 @@ export const focus = (element: HTMLElement, atStart = true): void => {
   const nodeToFocus = findTextNode(initialNode, atStart);
 
   /**
-   * If the element is empty, create a text node and place the caret at the start
+   * If the element is empty, create a text node and place the caret at the start.
+   * createAndFocusTextNode owns the selection — adding `range` here would replace
+   * it with a still-unset range, which spans (document, 0) and drops the caret
+   * out of the element entirely.
    */
   if (initialNode === null) {
     createAndFocusTextNode(element);
-    selection.removeAllRanges();
-    selection.addRange(range);
 
     return;
   }
@@ -158,8 +159,6 @@ export const focus = (element: HTMLElement, atStart = true): void => {
    */
   if (nodeToFocus === null || nodeToFocus.nodeType !== Node.TEXT_NODE) {
     createAndFocusTextNode(element, atStart);
-    selection.removeAllRanges();
-    selection.addRange(range);
 
     return;
   }

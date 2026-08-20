@@ -234,16 +234,25 @@ export class ToolRenderer {
       return;
     }
 
-    // Placeholder styling classes using Tailwind arbitrary variants
+    // Placeholder styling classes using Tailwind arbitrary variants.
+    // The inline-block/w-0/whitespace-nowrap trio keeps the pseudo out of the
+    // inline advance so it cannot push the caret — see the Placeholder
+    // Layout-Inert Law in components/utils/placeholder.ts.
     const placeholderClasses = [
       'empty:before:pointer-events-none',
       'empty:before:text-block-placeholder',
       'empty:before:cursor-text',
       'empty:before:content-[attr(data-blok-placeholder)]',
+      'empty:before:inline-block',
+      'empty:before:w-0',
+      'empty:before:whitespace-nowrap',
       'data-[blok-empty=true]:before:pointer-events-none',
       'data-[blok-empty=true]:before:text-block-placeholder',
       'data-[blok-empty=true]:before:cursor-text',
       'data-[blok-empty=true]:before:content-[attr(data-blok-placeholder)]',
+      'data-[blok-empty=true]:before:inline-block',
+      'data-[blok-empty=true]:before:w-0',
+      'data-[blok-empty=true]:before:whitespace-nowrap',
     ];
 
     if (placeholderText.length > 0) {

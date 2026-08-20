@@ -75,6 +75,19 @@ describe('resolveOverrideEntry', () => {
     expect(console.warn).toHaveBeenCalledTimes(1);
   });
 
+  it('returns null and warns when registry property access throws (cross-origin WindowProxy)', () => {
+    g.__BLOK_DEV_OVERRIDE__ = new Proxy({}, {
+      get() {
+        throw new DOMException('Blocked', 'SecurityError');
+      },
+      getPrototypeOf() {
+        return null;
+      },
+    });
+    expect(resolveOverrideEntry('core', ['Blok'])).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('registry access threw'));
+  });
+
   it('never reads localStorage, meta tags, URL params, or DOM attributes', () => {
     const getItem = vi.spyOn(Storage.prototype, 'getItem');
     const querySelector = vi.spyOn(document, 'querySelector');

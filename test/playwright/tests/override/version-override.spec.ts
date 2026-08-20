@@ -84,4 +84,25 @@ test.describe('blok version override', () => {
       await context.close();
     }
   });
+
+  test('popup arms an origin typed into the manual field', async () => {
+    const { context, sw } = await launch();
+    try {
+      const extensionId = new URL(sw.url()).host;
+      const popup = await context.newPage();
+      await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+
+      await expect(popup.getByText(/local payload/i)).toContainText('-dev.');
+
+      await popup.getByLabel('Origin to arm').fill('http://localhost:4444');
+      await popup.getByRole('button', { name: 'Arm origin' }).click();
+      await expect(popup.getByRole('list', { name: 'Armed origins' })).toContainText('http://localhost:4444');
+
+      const page = await context.newPage();
+      await page.goto(FIXTURE);
+      await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+    } finally {
+      await context.close();
+    }
+  });
 });

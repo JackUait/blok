@@ -73,7 +73,8 @@ describe('buildTasks', () => {
     expect(cmds).toContain('node scripts/build-angular.mjs');
     expect(cmds).toContain('yarn workspace @bloklabs/react build');
     expect(cmds).toContain('yarn workspace @bloklabs/vue build');
-    expect(cmds).toHaveLength(8);
+    expect(cmds).toContain('node scripts/override/generate-override-entries.mjs');
+    expect(cmds).toHaveLength(9);
   });
 
   it('orders dist/ writers after the main build (which empties dist/) and everything after fonts', () => {
@@ -115,7 +116,9 @@ describe('buildTasks', () => {
     expect(tasks.get('react-vendor')?.cmd).toBe('node scripts/build-react-vendor.mjs');
     expect(tasks.get('vue-vendor')?.cmd).toBe('node scripts/build-vue-vendor.mjs');
     expect(tasks.get('angular-vendor')?.cmd).toBe('node scripts/build-angular-vendor.mjs');
-    expect(buildTasks({ mode: 'test' })).toHaveLength(11);
+    expect(tasks.get('override-entries')?.cmd).toBe('node scripts/override/generate-override-entries.mjs');
+    expect(tasks.get('override-payload')?.cmd).toBe('node scripts/override/sync.mjs');
+    expect(buildTasks({ mode: 'test' })).toHaveLength(13);
   });
 
   it('test mode orders vendor writers after react-vendor, which rm -rfs the shared vendor dir', () => {

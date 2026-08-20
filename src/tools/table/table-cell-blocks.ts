@@ -1,5 +1,6 @@
 import type { API, BlockAPI } from '../../../types';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
+import { hasCrossHostSelectionWithin } from '../../components/selection/cross-block-range';
 import {
   isCaretAtStartOfInput,
   isCaretAtEndOfInput,
@@ -1743,9 +1744,14 @@ export class TableCellBlocks {
      * of the mousedown/mouseup targets). That is NOT a blank-space click:
      * stealing the caret here would run Caret.setToBlock →
      * BlockSelection.clearSelection() and wipe the just-created multi-line
-     * selection. Skip while any block inside this grid is selected.
+     * selection. Skip while the user has a selection of their own inside this
+     * grid — either block-level, or the cross-line TEXT range the same gesture
+     * produces (which carries no data-blok-selected marker at all).
      */
-    if (this.gridElement.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null) {
+    if (
+      this.gridElement.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null ||
+      hasCrossHostSelectionWithin(this.gridElement)
+    ) {
       return;
     }
 

@@ -1390,7 +1390,8 @@ block?.moveChild('child-id', 1);  // one position toward the end`,
       {
         name: "selected",
         type: "boolean",
-        description: "True if block is selected with Cross-Block selection",
+        description:
+          "True if the block is part of a BLOCK-level selection (rubber-band drag, Shift+Click, Shift+Arrow, Cmd/Ctrl+A). A drag across the text of several blocks makes a character-level selection instead, which marks no block as selected — read that one from the document's own Selection.",
       },
       {
         name: "focusable",

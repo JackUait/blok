@@ -88,6 +88,10 @@ const createBlokModules = (overrides: Partial<BlokModules> = {}): BlokModules =>
       opened: false,
       contains: vi.fn(() => false),
     } as unknown as BlokModules['BlockSettings'],
+    CrossBlockSelection: {
+      textSelection: null,
+      clearTextSelection: vi.fn(),
+    } as unknown as BlokModules['CrossBlockSelection'],
     Caret: {
       positions: { START: 'start', END: 'end', DEFAULT: 'default' },
       setToBlock: vi.fn(),

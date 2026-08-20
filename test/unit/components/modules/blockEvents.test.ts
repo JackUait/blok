@@ -92,6 +92,7 @@ const createBlockEvents = (overrides: Partial<BlokModules> = {}): BlockEvents =>
     } as unknown as BlokModules['BlockSettings'],
     CrossBlockSelection: {
       toggleBlockSelectedState: vi.fn(),
+      textSelection: null,
     } as unknown as BlokModules['CrossBlockSelection'],
     Tools: {
       blockTools: new Map(),
@@ -154,6 +155,7 @@ const createKeyboardEvent = (options: Partial<KeyboardEvent>): KeyboardEvent => 
     altKey: false,
     shiftKey: false,
     preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
     target: document.createElement('div'),
     ...options,
   } as KeyboardEvent;

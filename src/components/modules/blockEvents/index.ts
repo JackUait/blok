@@ -101,6 +101,16 @@ export class BlockEvents extends Module {
     }
 
     /**
+     * A cross-block TEXT selection spans two editing hosts, which no engine will
+     * edit natively — the keystroke has to replace the range itself. Checked
+     * before beforeKeydownProcessing so the printable-key path here wins over the
+     * block-selection one, which reads a different selection unit entirely.
+     */
+    if (this.blockSelectionKeys.handleTextSelectionEditKey(event)) {
+      return;
+    }
+
+    /**
      * Run common method for all keydown events
      */
     this.beforeKeydownProcessing(event);
@@ -313,6 +323,24 @@ export class BlockEvents extends Module {
    */
   public handleCommandX(event: ClipboardEvent): void {
     this.blockSelectionKeys.handleCut(event);
+  }
+
+  /**
+   * Delete a cross-block TEXT selection so an incoming paste replaces exactly the
+   * selected characters. No-op when the selection is not cross-block — a
+   * single-block range is the Paste module's own business.
+   * @returns true when a selection was deleted
+   */
+  public async clearCrossBlockTextSelectionForPaste(): Promise<boolean> {
+    const selection = this.Blok.CrossBlockSelection.textSelection;
+
+    if (selection === null) {
+      return false;
+    }
+
+    await this.blockSelectionKeys.replaceCrossBlockTextSelection(selection);
+
+    return true;
   }
 
   /**

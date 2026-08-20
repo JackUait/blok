@@ -1,5 +1,6 @@
 import type { SanitizerConfig } from '../../../types';
 import type { MarkSnapshot, MarkSpec, MarkValue } from '../../../types/api';
+import { splitRangeByEditingHost } from '../selection/cross-block-range';
 import {
   collectFormattingAncestors,
   extendRangeToTrailingWhitespace,
@@ -116,7 +117,7 @@ const matchesMarkFamily = <State>(spec: MarkSpec<State>, element: Element): bool
  * @param spec - mark description
  * @param range - range to check
  */
-export const hasMark = <State>(spec: MarkSpec<State>, range: Range): boolean => {
+const hasMarkWithinHost = <State>(spec: MarkSpec<State>, range: Range): boolean => {
   return isRangeFormatted(range, (element) => matchesMarkSpec(spec, element), { ignoreWhitespace: true });
 };
 
@@ -491,7 +492,7 @@ const splitWrapperAroundRange = <State>(
  * @param state - state for function-form values
  * @param range - range to format
  */
-export const applyMark = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): HTMLElement[] => {
+const applyMarkWithinHost = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): HTMLElement[] => {
   if (range.collapsed) {
     return [];
   }
@@ -630,7 +631,7 @@ const restoreSelectionByText = (selection: Selection, parent: HTMLElement | null
  * @param spec - mark description
  * @param range - range to deformat
  */
-export const removeMark = <State>(spec: MarkSpec<State>, range: Range): HTMLElement[] => {
+const removeMarkWithinHost = <State>(spec: MarkSpec<State>, range: Range): HTMLElement[] => {
   const selection = window.getSelection();
   const familyOf = (element: Element): boolean => matchesMarkFamily(spec, element);
 
@@ -727,6 +728,113 @@ const restoreSelectionFromAnchors = (
  * @param state - state for function-form values
  * @param range - range to toggle
  */
+/**
+ * Split a range across editing hosts, or return null when it lies within one.
+ *
+ * Every public mark operation goes through this. A cross-block text selection
+ * hands the mark engine a range spanning two contenteditable hosts, and the
+ * surround/extract surgery below only makes sense inside a single one — run
+ * whole, it DELETES the selected content instead of marking it.
+ * @param range - the range a mark operation was asked to act on
+ */
+const hostSlicesOf = (range: Range): Range[] | null => {
+  /**
+   * Zero-length shares (a selection ending at offset 0 of the next block) carry
+   * no characters to mark, and the surgery below assumes there are some.
+   */
+  const slices = splitRangeByEditingHost(range)
+    .map((slice) => slice.range)
+    .filter((slice) => slice.toString().length > 0);
+
+  return slices.length > 1 ? slices : null;
+};
+
+/**
+ * Re-select a range spanning the given per-host slices.
+ *
+ * Ranges are live, so the slices still point at the marked content after the
+ * DOM surgery — without this the selection would be left wherever the last
+ * slice's own bookkeeping put it, and the user's selection would vanish on a
+ * cross-block Cmd+B.
+ * @param slices - the per-host slices that were just operated on
+ */
+const reselectAcrossHosts = (slices: Range[]): void => {
+  const selection = window.getSelection();
+  const first = slices[0];
+  const last = slices[slices.length - 1];
+
+  if (!selection || first === undefined || last === undefined) {
+    return;
+  }
+
+  const spanning = document.createRange();
+
+  try {
+    spanning.setStart(first.startContainer, first.startOffset);
+    spanning.setEnd(last.endContainer, last.endOffset);
+  } catch {
+    return;
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(spanning);
+};
+
+/**
+ * Whether every part of the range carries the mark.
+ *
+ * `every`, not `some`, so a cross-block selection that is only PARTLY marked
+ * toggles ON (matching how a partly-bold selection behaves within one block).
+ * @param spec - mark description
+ * @param range - range to test
+ */
+export const hasMark = <State>(spec: MarkSpec<State>, range: Range): boolean => {
+  const slices = hostSlicesOf(range);
+
+  return slices === null
+    ? hasMarkWithinHost(spec, range)
+    : slices.every((slice) => hasMarkWithinHost(spec, slice));
+};
+
+/**
+ * Apply the mark to the range, one editing host at a time.
+ * @param spec - mark description
+ * @param state - state for function-form values
+ * @param range - range to mark
+ */
+export const applyMark = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): HTMLElement[] => {
+  const slices = hostSlicesOf(range);
+
+  if (slices === null) {
+    return applyMarkWithinHost(spec, state, range);
+  }
+
+  const applied = slices.flatMap((slice) => applyMarkWithinHost(spec, state, slice));
+
+  reselectAcrossHosts(slices);
+
+  return applied;
+};
+
+/**
+ * Remove the mark from the range, one editing host at a time.
+ * @param spec - mark description
+ * @param range - range to unmark
+ */
+export const removeMark = <State>(spec: MarkSpec<State>, range: Range): HTMLElement[] => {
+  const slices = hostSlicesOf(range);
+
+  if (slices === null) {
+    return removeMarkWithinHost(spec, range);
+  }
+
+  const removed = slices.flatMap((slice) => removeMarkWithinHost(spec, slice));
+
+  reselectAcrossHosts(slices);
+
+  return removed;
+};
+
 export const toggleMark = <State>(spec: MarkSpec<State>, state: State | undefined, range: Range): boolean => {
   if (hasMark(spec, range)) {
     removeMark(spec, range);

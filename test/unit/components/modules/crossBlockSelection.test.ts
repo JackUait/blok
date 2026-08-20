@@ -210,8 +210,12 @@ describe('CrossBlockSelection', () => {
       );
       let capturedHandler: ((event: MouseEvent) => void) | undefined;
 
-      onSpy.mockImplementation((_element, _event, handler) => {
-        capturedHandler = handler;
+      onSpy.mockImplementation((_element, eventName, handler) => {
+        // prepare() also subscribes to selectionchange (cross-block highlight),
+        // so the handler has to be picked by event name, not by call order.
+        if (eventName === 'mousedown') {
+          capturedHandler = handler;
+        }
 
         return 'listener-id';
       });

@@ -487,8 +487,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // --blok-color-*-text fails AA on its own --blok-color-*-bg, from yellow at
     // 2.30:1 to purple at 4.09:1, and that palette is persisted into saved
     // documents so it cannot be retuned). Bumps the multiplier to 1.439.
+    // 2026-08-20: cross-block text selection — main.css gained the
+    // `[data-blok-cross-selection] ::selection` suppression and the
+    // `::highlight(blok-cross-block-selection)` colour, plus the comment
+    // recording why they are unlayered and why the native paint has to be
+    // switched off at all (~0.7KB). Bumps the multiplier to 1.441.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.439);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.441);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -764,6 +764,20 @@ export class KeyboardController extends Controller {
     }
 
     /**
+     * A cross-block TEXT selection becomes a selection of the same BLOCKS
+     * (Notion parity) rather than falling through to navigation mode, which
+     * would blur the caret and drop the selection entirely. This sits after the
+     * toolbar branches on purpose: one Escape dismisses exactly one layer, so
+     * the formatting toolbar the selection opened goes first.
+     */
+    if (this.Blok.CrossBlockSelection.selectBlocksOfTextSelection()) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      return;
+    }
+
+    /**
      * If focus is inside editor content and no toolbars are open,
      * enable navigation mode for keyboard-based block navigation.
      *

@@ -1144,6 +1144,9 @@
 [data-drop-indicator="top"], [data-drop-indicator="bottom"] {
   --drop-line-start: calc(var(--drop-indicator-side-left, 0px) + var(--drop-indicator-depth, 0) * var(--blok-space-3));
 }
+[data-blok-interface] ::highlight(blok-cross-block-selection) {
+  background-color: var(--blok-selection-inline);
+}
 :where([data-blok-interface]) {
   --blok-editor-gutter-start: 56px;
 }

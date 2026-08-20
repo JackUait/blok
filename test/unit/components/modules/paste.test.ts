@@ -201,7 +201,12 @@ const createPaste = (options?: CreatePasteOptions): { paste: Paste; mocks: Paste
     stopCapturing: vi.fn(),
   };
 
+  const blockEvents = {
+    clearCrossBlockTextSelectionForPaste: vi.fn(() => Promise.resolve(false)),
+  };
+
   const blokState = {
+    BlockEvents: blockEvents,
     BlockManager: blockManager,
     Caret: caret,
     Tools: tools,

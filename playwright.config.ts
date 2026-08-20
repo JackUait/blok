@@ -56,6 +56,9 @@ const CROSS_BROWSER_TESTS = [
   // Hit testing on the seam between blocks — pointer/rect rounding is engine-specific
   '**/drag-indicator-stability.spec.ts',
   '**/copy-paste.spec.ts',
+  // Cross-block text selection is built on engine-specific Selection/Range and
+  // CSS Custom Highlight behaviour — it must be proven on all three engines
+  '**/modules/cross-block-text-selection.spec.ts',
   '**/tools/link-paste.spec.ts',
   '**/tools/code-block-paste.spec.ts',
   '**/tools/code-block-enter.spec.ts',

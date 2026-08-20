@@ -1,5 +1,9 @@
 import type { Block } from '../../../block';
+import { blocksBetween } from '../../../selection/cross-block-range';
+import type { CrossBlockTextSelection } from '../../../selection/cross-block-range';
 import { SelectionUtils } from '../../../selection/index';
+import { areBlocksMergeable } from '../../../utils/blocks';
+import { focus } from '../../../utils/caret/index';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../../utils/nested-container-caret';
 import { LIST_TOOL_NAME } from '../constants';
 
@@ -487,12 +491,156 @@ export class BlockSelectionKeys extends BlockEventComposer {
   }
 
   /**
+   * Handle a key that EDITS OVER a cross-block text selection — Backspace,
+   * Delete, Enter, or a printable character.
+   *
+   * The browser cannot do this itself: a range spanning two editing hosts is not
+   * something any engine will edit, so without this the keystroke either does
+   * nothing or mangles one end of the selection while leaving the rest behind.
+   * @param event - the keydown event
+   * @returns true when the event was consumed
+   */
+  public handleTextSelectionEditKey(event: KeyboardEvent): boolean {
+    const { BlockManager, Caret, CrossBlockSelection } = this.Blok;
+
+    if (event.isComposing || event.metaKey || event.ctrlKey || event.altKey) {
+      return false;
+    }
+
+    const isRemoveKey = event.key === 'Backspace' || event.key === 'Delete';
+    const isEnter = event.key === 'Enter';
+    /** Single-character `key` values are the printable ones; named keys are longer. */
+    const isPrintable = event.key.length === 1;
+
+    if (!isRemoveKey && !isEnter && !isPrintable) {
+      return false;
+    }
+
+    const selection = CrossBlockSelection.textSelection;
+
+    if (selection === null) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const typedCharacter = isPrintable ? event.key : null;
+
+    void this.replaceCrossBlockTextSelection(selection).then((block) => {
+      if (block === undefined) {
+        return;
+      }
+
+      if (isEnter) {
+        Caret.setToBlock(BlockManager.split(), Caret.positions.START);
+
+        return;
+      }
+
+      if (typedCharacter !== null) {
+        Caret.insertContentAtCaretPosition(typedCharacter);
+      }
+    });
+
+    return true;
+  }
+
+  /**
+   * Replace a cross-block TEXT selection with nothing: delete exactly the
+   * selected characters and join what remains into one block.
+   *
+   * Done as DOM surgery on the two end hosts plus the existing block merge,
+   * rather than a bespoke data splice: `Block.data` re-runs the tool's `save()`
+   * against the live DOM, so truncating the hosts IS the data edit, and
+   * `BlockManager.mergeBlocks` already owns the conversion/hierarchy rules for
+   * joining two blocks.
+   *
+   * Yjs groups transactions inside its capture window, so the removals and the
+   * merge land as ONE undo entry.
+   * @param selection - the cross-block text selection to delete
+   * @returns the block the remaining content ended up in, or undefined
+   */
+  public async replaceCrossBlockTextSelection(selection: CrossBlockTextSelection): Promise<Block | undefined> {
+    const { BlockManager, Caret, CrossBlockSelection } = this.Blok;
+    const first = selection.subRanges[0];
+    const last = selection.subRanges[selection.subRanges.length - 1];
+
+    /**
+     * Two hosts of the SAME block (a multi-input tool) are that tool's business,
+     * and a merge across containers is refused downstream anyway.
+     */
+    if (first.block === last.block || first.block.parentId !== last.block.parentId) {
+      return undefined;
+    }
+
+    const doomed = blocksBetween(BlockManager.blocks, first.block, last.block);
+
+    first.range.deleteContents();
+    last.range.deleteContents();
+
+    /**
+     * What survives in the first host now ends exactly where the selection began
+     * — that character offset is the join point, and it must be read BEFORE the
+     * merge appends the tail after it.
+     */
+    const joinOffset = first.input.textContent?.length ?? 0;
+
+    CrossBlockSelection.clearTextSelection();
+
+    for (const block of [...doomed].reverse()) {
+      await BlockManager.removeBlock(block);
+    }
+
+    /**
+     * Everything left of the selection now ENDS the first host, so its end is the
+     * join point — the same anchor the Backspace-at-block-start merge uses.
+     */
+    if (first.block.lastInput !== undefined) {
+      focus(first.block.lastInput, false);
+    }
+
+    if (areBlocksMergeable(first.block, last.block)) {
+      await BlockManager.mergeBlocks(first.block, last.block);
+    } else if (last.block.isEmpty) {
+      await BlockManager.removeBlock(last.block);
+    }
+
+    /**
+     * Re-anchored by OFFSET, not by END: the merge appends the tail after the
+     * join point, so "end of block" is the wrong place, and a tool's merge() may
+     * rebuild its DOM and drop the pre-merge caret entirely.
+     */
+    const survivingInput = first.input.isConnected ? first.input : first.block.firstInput;
+
+    if (survivingInput !== undefined) {
+      /**
+       * The caret moved into a block that may not be the one the gesture left
+       * `currentBlock` pointing at, and setToInput alone does not re-point it —
+       * whatever runs next (a paste, the next keystroke) would target the wrong
+       * block.
+       */
+      BlockManager.setCurrentBlockByChildNode(survivingInput);
+      Caret.setToInput(survivingInput, Caret.positions.DEFAULT, joinOffset);
+    }
+
+    return first.block;
+  }
+
+  /**
    * Copying selected blocks.
    * Before putting to the clipboard we sanitize all blocks and then copy to the clipboard.
    * @param event - clipboard event
    */
   public handleCopy(event: ClipboardEvent): void {
-    const { BlockSelection } = this.Blok;
+    const { BlockSelection, CrossBlockSelection } = this.Blok;
+    const textSelection = CrossBlockSelection.textSelection;
+
+    if (textSelection !== null) {
+      BlockSelection.copyCrossBlockTextSelection(event, textSelection);
+
+      return;
+    }
 
     if (!BlockSelection.anyBlockSelected) {
       return;
@@ -506,7 +654,15 @@ export class BlockSelectionKeys extends BlockEventComposer {
    * @param event - clipboard event
    */
   public handleCut(event: ClipboardEvent): void {
-    const { BlockSelection, BlockManager, Caret } = this.Blok;
+    const { BlockSelection, BlockManager, Caret, CrossBlockSelection } = this.Blok;
+    const textSelection = CrossBlockSelection.textSelection;
+
+    if (textSelection !== null) {
+      BlockSelection.copyCrossBlockTextSelection(event, textSelection);
+      void this.replaceCrossBlockTextSelection(textSelection);
+
+      return;
+    }
 
     if (!BlockSelection.anyBlockSelected) {
       return;

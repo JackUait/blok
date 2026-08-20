@@ -1,6 +1,17 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
+import { clearCrossBlockHighlight, isCrossBlockHighlightSupported, paintCrossBlockHighlight } from '../selection/cross-block-highlight';
+import {
+  applySpanningSelection,
+  blocksBetween,
+  caretPointFromCoords,
+  getEditingHost,
+  hasEditableContent,
+  pointAtInputBoundary,
+  resolveCrossBlockTextSelection
+} from '../selection/cross-block-range';
+import type { CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { mouseButtons } from '../utils';
@@ -48,6 +59,46 @@ export class CrossBlockSelection extends Module {
   private nestedRangeDragActive = false;
 
   /**
+   * Where the current pointer gesture started, as a DOM position. Captured
+   * lazily on the first mousemove — a mousedown handler runs BEFORE the browser
+   * has placed the caret, so reading the selection there yields the previous one.
+   */
+  private textDragAnchor: { node: Node; offset: number } | null = null;
+
+  /**
+   * Viewport point of the mousedown, used to recover the drag anchor when the
+   * browser has not placed a caret we can read (e.g. the press landed on
+   * padding rather than on text).
+   */
+  private textDragOrigin: { x: number; y: number } | null = null;
+
+  /**
+   * Whether the current gesture has produced a cross-block TEXT selection. While
+   * true the block-level drag path stands down: the two are alternative readings
+   * of the same gesture and must never both run.
+   */
+  private textDragActive = false;
+
+  /**
+   * The spanning range the drag last asked for, plus a one-shot permit to
+   * re-assert it.
+   *
+   * Firefox performs its own (host-clamped) selection update as the mousemove's
+   * DEFAULT action — i.e. AFTER our handler has run — so the range applied
+   * during the handler is overwritten before it is ever painted. Re-asserting
+   * from `selectionchange` fixes it on every engine without sniffing any of
+   * them: whenever something else rewrites the selection mid-drag, we put ours
+   * back. The permit is consumed per mousemove so an engine that clamped in
+   * RESPONSE to our write could not drive an endless ping-pong.
+   */
+  private textDragIntent: {
+    anchor: { node: Node; offset: number };
+    focus: { node: Node; offset: number };
+    applied: { startContainer: Node; startOffset: number; endContainer: Node; endOffset: number };
+    reassertAllowed: boolean;
+  } | null = null;
+
+  /**
    * Module preparation
    * @returns {Promise}
    */
@@ -55,6 +106,130 @@ export class CrossBlockSelection extends Module {
     this.listeners.on(document, 'mousedown', (event: Event) => {
       this.enableCrossBlockSelection(event as MouseEvent);
     });
+
+    /**
+     * Undebounced on purpose: this repaints the cross-block selection, so any
+     * delay would show the range moving a frame behind the pointer. The handler
+     * bails on the first cheap check for every ordinary (single-host) selection.
+     */
+    this.listeners.on(document, 'selectionchange', () => {
+      this.reassertTextDragSelection();
+      this.syncTextSelectionHighlight();
+    });
+  }
+
+  /**
+   * Release the document-global highlight registry entry on the way out — it
+   * outlives this editor otherwise, leaving a painted selection over content
+   * that is no longer there.
+   */
+  public override markDestroyed(): void {
+    clearCrossBlockHighlight(this);
+    this.Blok.UI?.nodes?.wrapper?.removeAttribute(DATA_ATTR.crossSelection);
+
+    super.markDestroyed();
+  }
+
+  /**
+   * The current cross-block TEXT selection, or null when the document selection
+   * is collapsed, empty, single-block, or outside this editor.
+   */
+  public get textSelection(): CrossBlockTextSelection | null {
+    const redactor = this.Blok.UI.nodes.redactor;
+
+    if (!redactor) {
+      return null;
+    }
+
+    return resolveCrossBlockTextSelection(
+      redactor,
+      (node) => this.Blok.BlockManager.getBlockByChildNode(node)
+    );
+  }
+
+  /**
+   * Promote a cross-block TEXT selection to a block-level selection of the same
+   * blocks — what Escape does in Notion, and the way a user moves from "these
+   * characters" to "these blocks" without re-dragging.
+   * @returns true when there was a text selection to promote
+   */
+  public selectBlocksOfTextSelection(): boolean {
+    const { BlockManager } = this.Blok;
+    const selection = this.textSelection;
+
+    if (selection === null) {
+      return false;
+    }
+
+    const anchor = BlockManager.resolveToSelectableBlock(selection.startBlock);
+    const target = BlockManager.resolveToSelectableBlock(selection.endBlock);
+
+    if (!this.applySelectionRange(anchor, target)) {
+      return false;
+    }
+
+    this.firstSelectedBlock = anchor;
+    this.lastSelectedBlock = target;
+
+    /** applySelectionRange dropped the range; drop the paint that went with it. */
+    this.syncTextSelectionHighlight();
+
+    this.Blok.InlineToolbar.close();
+    this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+    this.announceSelectionCount();
+
+    return true;
+  }
+
+  /**
+   * Drop a cross-block text selection outright: the document range goes, and so
+   * does the paint. Used before editing over the selection, so the stale range
+   * cannot be re-read once the DOM under it has changed.
+   */
+  public clearTextSelection(): void {
+    SelectionUtils.get()?.removeAllRanges();
+    this.syncTextSelectionHighlight();
+  }
+
+  /**
+   * Repaint (or drop) the cross-block selection highlight to match the document
+   * selection, and stamp the wrapper so the engine's own ::selection paint is
+   * suppressed exactly while ours is up.
+   */
+  public syncTextSelectionHighlight(): void {
+    if (this.isDestroyed) {
+      return;
+    }
+
+    const wrapper = this.Blok.UI.nodes.wrapper;
+    const selection = this.textSelection;
+
+    /**
+     * Written only on an actual transition: this runs on EVERY selectionchange,
+     * and an attribute touch on the wrapper is a DOM mutation like any other.
+     */
+    const marked = wrapper !== undefined && wrapper.hasAttribute(DATA_ATTR.crossSelection);
+
+    if (selection === null) {
+      clearCrossBlockHighlight(this);
+
+      if (marked) {
+        wrapper?.removeAttribute(DATA_ATTR.crossSelection);
+      }
+
+      return;
+    }
+
+    paintCrossBlockHighlight(this, selection.subRanges.map((sub) => sub.range));
+
+    /**
+     * Only suppress the native paint when ours actually replaced it — on an
+     * engine without the Custom Highlight API the selection would otherwise
+     * become invisible.
+     */
+    if (!marked && isCrossBlockHighlightSupported()) {
+      wrapper?.setAttribute(DATA_ATTR.crossSelection, '');
+    }
   }
 
   /**
@@ -77,8 +252,14 @@ export class CrossBlockSelection extends Module {
     this.firstSelectedBlock = block;
     this.lastSelectedBlock = block;
     this.nestedRangeDragActive = false;
+    this.textDragActive = false;
+    this.textDragAnchor = null;
+    this.textDragIntent = null;
+    this.textDragOrigin = { x: event.clientX,
+      y: event.clientY };
 
     this.listeners.on(document, 'mouseover', this.onMouseOver);
+    this.listeners.on(document, 'mousemove', this.onMouseMove);
     this.listeners.on(document, 'mouseup', this.onMouseUp);
   }
 
@@ -591,9 +772,29 @@ export class CrossBlockSelection extends Module {
    */
   private onMouseUp = (): void => {
     this.listeners.off(document, 'mouseover', this.onMouseOver);
+    this.listeners.off(document, 'mousemove', this.onMouseMove);
     this.listeners.off(document, 'mouseup', this.onMouseUp);
 
     this.nestedRangeDragActive = false;
+
+    /**
+     * A text drag never selected blocks, so there is no multi-block toolbar to
+     * open — and re-asserting the range one last time undoes the re-clamp the
+     * engine performs on the mouseup itself.
+     */
+    if (this.textDragActive) {
+      this.textDragActive = false;
+      this.textDragAnchor = null;
+      this.textDragOrigin = null;
+      this.textDragIntent = null;
+      this.syncTextSelectionHighlight();
+
+      return;
+    }
+
+    this.textDragAnchor = null;
+    this.textDragOrigin = null;
+    this.textDragIntent = null;
 
     /**
      * Show toolbar for multi-block selection after mouse up
@@ -614,6 +815,292 @@ export class CrossBlockSelection extends Module {
   };
 
   /**
+   * Mouse move handler for a left-button drag: the cross-block TEXT selection.
+   *
+   * Runs on mousemove rather than mouseover because the focus must follow the
+   * pointer character by character, and because every engine RE-CLAMPS the
+   * selection to the anchor's editing host on each native move — the spanning
+   * range has to be re-asserted per move or it survives only until the next one.
+   * @param event - mouse move event
+   */
+  private onMouseMove = (event: Event): void => {
+    const mouseEvent = event as MouseEvent;
+    const { BlockManager, DragManager, RectangleSelection, UI } = this.Blok;
+
+    /**
+     * `textDragOrigin`, not `firstSelectedBlock`, marks a live gesture: entering
+     * text mode deselects blocks, and BlockSelection.clearSelection calls this
+     * module's own clear(), which nulls firstSelectedBlock — gating on it froze
+     * the focus at the first block the drag reached.
+     */
+    if (
+      this.textDragOrigin === null ||
+      DragManager.isDragging ||
+      RectangleSelection.isRectActivated() ||
+      UI.someToolbarOpened
+    ) {
+      return;
+    }
+
+    /**
+     * The button was released outside the window: mouseup never arrived, so the
+     * gesture is over even though the listeners are still attached.
+     */
+    if ((mouseEvent.buttons & 1) === 0) {
+      return;
+    }
+
+    const anchor = this.resolveTextDragAnchor();
+
+    if (anchor === null) {
+      return;
+    }
+
+    const anchorHost = getEditingHost(anchor.node);
+    const anchorBlock = anchorHost === null ? undefined : BlockManager.getBlockByChildNode(anchorHost);
+
+    if (anchorHost === null || anchorBlock === undefined) {
+      return;
+    }
+
+    const focus = this.resolveTextDragFocus(mouseEvent, anchorHost);
+    const focusHost = focus === null ? null : getEditingHost(focus.node);
+
+    if (focus === null || focusHost === null) {
+      return;
+    }
+
+    const focusBlock = BlockManager.getBlockByChildNode(focusHost);
+
+    /**
+     * The pointer is back inside the block it started in. The engine's own
+     * within-host update is now the CORRECT selection, so the standing intent is
+     * dropped — left armed, the re-assert would keep restoring the wider
+     * cross-block range and the selection could never shrink back. `textDragActive`
+     * stays set so the block-level path remains stood down; re-crossing re-arms
+     * the intent on the next apply.
+     */
+    if (focusHost === anchorHost || focusBlock === anchorBlock) {
+      this.textDragIntent = null;
+
+      return;
+    }
+
+    if (focusBlock === undefined) {
+      return;
+    }
+
+    /**
+     * The drag left the territory a text selection may cover (another table cell,
+     * a different container, a block with no text). Hand the gesture back: the
+     * intent stops being re-asserted and the block-level path is re-enabled, so
+     * whichever subsystem owns that drag — the table's cell selection, the
+     * block-range path — can take it.
+     */
+    if (!this.canSelectTextAcross(anchorBlock, focusBlock)) {
+      const wasTextDrag = this.textDragActive;
+
+      this.textDragIntent = null;
+      this.textDragActive = false;
+
+      /**
+       * Only take over when a text range was actually standing: mouseover fires
+       * on boundary CROSSINGS, and the gesture has already crossed into this
+       * block while the block path was stood down — so nothing else would
+       * replace the now-illegal range before mouseup.
+       */
+      if (wasTextDrag) {
+        this.takeOverWithBlockRange(anchorBlock, focusBlock);
+      }
+
+      return;
+    }
+
+    const applied = applySpanningSelection(anchor, focus);
+
+    if (applied === null) {
+      return;
+    }
+
+    this.textDragIntent = {
+      anchor,
+      focus,
+      applied: {
+        startContainer: applied.startContainer,
+        startOffset: applied.startOffset,
+        endContainer: applied.endContainer,
+        endOffset: applied.endOffset,
+      },
+      reassertAllowed: true,
+    };
+
+    if (!this.textDragActive) {
+      this.textDragActive = true;
+      this.deselectAllBlocks();
+      this.Blok.InlineToolbar.close();
+      this.Blok.Toolbar.close();
+    }
+
+    this.syncTextSelectionHighlight();
+  };
+
+  /**
+   * Replace a standing cross-block text range with the block-level range the
+   * same gesture describes, for a drag that has left the territory a text
+   * selection may cover.
+   * @param anchorBlock - block the gesture started in
+   * @param targetBlock - block the pointer is over
+   */
+  private takeOverWithBlockRange(anchorBlock: Block, targetBlock: Block): void {
+    const { BlockManager } = this.Blok;
+    const anchor = BlockManager.resolveToSelectableBlock(this.firstSelectedBlock ?? anchorBlock);
+    const target = BlockManager.resolveToSelectableBlock(targetBlock);
+
+    if (anchor === target) {
+      return;
+    }
+
+    this.clearNestedBlockSelection();
+
+    if (!this.applySelectionRange(anchor, target)) {
+      return;
+    }
+
+    this.lastSelectedBlock = target;
+
+    this.Blok.InlineToolbar.close();
+    this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Put the drag's spanning range back when something else has rewritten the
+   * selection mid-drag. See {@link textDragIntent} for why this is needed.
+   */
+  private reassertTextDragSelection(): void {
+    const intent = this.textDragIntent;
+
+    if (!this.textDragActive || intent === null || !intent.reassertAllowed) {
+      return;
+    }
+
+    const selection = SelectionUtils.get();
+    const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const matches = range !== null &&
+      range.startContainer === intent.applied.startContainer &&
+      range.startOffset === intent.applied.startOffset &&
+      range.endContainer === intent.applied.endContainer &&
+      range.endOffset === intent.applied.endOffset;
+
+    if (matches) {
+      return;
+    }
+
+    intent.reassertAllowed = false;
+    applySpanningSelection(intent.anchor, intent.focus);
+  }
+
+  /**
+   * The gesture's anchor position, captured once and reused for the rest of the
+   * drag.
+   *
+   * It cannot be read in the mousedown handler: the browser places the caret as
+   * the mousedown's DEFAULT action, so at handler time the selection still holds
+   * the previous one. By the first mousemove it is correct, and caching it there
+   * also survives our own spanning range replacing the selection (for a backwards
+   * drag the range's START is the focus, not the anchor).
+   */
+  private resolveTextDragAnchor(): { node: Node; offset: number } | null {
+    if (this.textDragAnchor !== null) {
+      return this.textDragAnchor;
+    }
+
+    const selection = SelectionUtils.get();
+    const anchorNode = selection?.anchorNode ?? null;
+    const anchorHost = getEditingHost(anchorNode);
+
+    const insideRedactor = anchorHost !== null && this.Blok.UI.nodes.redactor?.contains(anchorHost);
+
+    if (anchorNode !== null && anchorHost !== null && insideRedactor) {
+      this.textDragAnchor = { node: anchorNode,
+        offset: selection?.anchorOffset ?? 0 };
+
+      return this.textDragAnchor;
+    }
+
+    const origin = this.textDragOrigin;
+
+    this.textDragAnchor = origin === null ? null : caretPointFromCoords(origin.x, origin.y, document);
+
+    return this.textDragAnchor;
+  }
+
+  /**
+   * Where the drag currently points. Falls back to the hovered block's nearest
+   * edge when the hit test lands outside any editing host — a pointer in a
+   * block's padding or in the gap between two blocks must still move the
+   * selection, not freeze it at the last character it passed over.
+   * @param event - the mouse move event
+   * @param anchorHost - the editing host the gesture started in
+   */
+  private resolveTextDragFocus(
+    event: MouseEvent,
+    anchorHost: HTMLElement
+  ): { node: Node; offset: number } | null {
+    const point = caretPointFromCoords(event.clientX, event.clientY, document);
+
+    if (point !== null && getEditingHost(point.node) !== null) {
+      return point;
+    }
+
+    const hoveredBlock = this.Blok.BlockManager.getBlockByChildNode(event.target as Node);
+    const hoveredInput = hoveredBlock?.firstInput;
+
+    if (hoveredBlock === undefined || hoveredInput === undefined) {
+      return null;
+    }
+
+    const anchorIsBefore = (anchorHost.compareDocumentPosition(hoveredInput) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+    return pointAtInputBoundary(anchorIsBefore ? hoveredBlock.lastInput ?? hoveredInput : hoveredInput, anchorIsBefore);
+  }
+
+  /**
+   * Whether a drag between these two blocks should read as a TEXT selection
+   * rather than a block-level one.
+   *
+   * Both endpoints must sit in the same nested-blocks container (both `null` for
+   * top-level blocks) — a drag that leaves its container is a structural gesture
+   * belonging to the block-level path, and merging across containers is refused
+   * downstream anyway. Subtrees a tool claimed with `data-blok-keyboard-owner`
+   * are excluded outright: their keyboard, and so their editing model, is not
+   * Blok's to drive.
+   * @param anchorBlock - block the gesture started in
+   * @param targetBlock - block the pointer is over
+   */
+  private canSelectTextAcross(anchorBlock: Block, targetBlock: Block): boolean {
+    const ownsKeyboard = (block: Block): boolean => {
+      return block.holder.closest(`[${DATA_ATTR.keyboardOwner}]`) !== null;
+    };
+
+    if (ownsKeyboard(anchorBlock) || ownsKeyboard(targetBlock)) {
+      return false;
+    }
+
+    if (this.getNestedBlocksContainer(anchorBlock) !== this.getNestedBlocksContainer(targetBlock)) {
+      return false;
+    }
+
+    /**
+     * A block with no editable host in between — an image, a divider — has no
+     * text to take a share of the range, so a text selection would paint AROUND
+     * it while still being deleted with it. Such a drag stays a block-level
+     * gesture, which is also what it already looked like to the user.
+     */
+    return blocksBetween(this.Blok.BlockManager.blocks, anchorBlock, targetBlock)
+      .every((block) => hasEditableContent(block.holder));
+  }
+
+  /**
    * Mouse over event handler
    * Gets target and related blocks and change selected state for blocks in between
    * @param {Event} event - mouse over event
@@ -621,6 +1108,14 @@ export class CrossBlockSelection extends Module {
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
     const { BlockManager, DragManager } = this.Blok;
+
+    /**
+     * The gesture is already reading as a cross-block TEXT selection; the
+     * block-level range would wipe the very range that path just applied.
+     */
+    if (this.textDragActive) {
+      return;
+    }
 
     /**
      * Skip cross-block selection when a drag operation is in progress
@@ -718,7 +1213,11 @@ export class CrossBlockSelection extends Module {
    * the same root block. When the gesture started on a child block and the
    * hovered block is a DIFFERENT child of the SAME nested-blocks container
    * (several "lines" inside one table cell), select the child-block range
-   * between them. When the hover leaves that container (e.g. crosses into
+   * between them.
+   *
+   * Residual trigger: a same-container drag the TEXT path declined — a line with
+   * no editable host (an image line inside a cell), or a subtree a tool claimed
+   * with `data-blok-keyboard-owner`. Ordinary text lines take the text path now. When the hover leaves that container (e.g. crosses into
    * another cell, where the table's own rectangle selection takes over), drop
    * any child-block selection this path created.
    * @param rawTargetBlock - the (unresolved) block currently hovered
@@ -801,6 +1300,25 @@ export class CrossBlockSelection extends Module {
 
     this.Blok.InlineToolbar.close();
     this.Blok.Toolbar.close();
+  }
+
+  /**
+   * Drop every block-level selection, without going through
+   * BlockSelection.clearSelection — that also calls this module's clear(), which
+   * would tear down the gesture state the in-progress drag still needs.
+   */
+  private deselectAllBlocks(): void {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    if (!BlockSelection.anyBlockSelected) {
+      return;
+    }
+
+    BlockManager.blocks.forEach((_, index) => {
+      BlockManager.blocks[index].selected = false;
+    });
+
+    BlockSelection.clearCache();
   }
 
   /**

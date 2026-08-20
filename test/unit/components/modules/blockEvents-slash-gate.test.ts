@@ -63,6 +63,10 @@ const createBlockEvents = (currentBlock: Block | undefined, overrides: {
       open: vi.fn(),
       contains: vi.fn(() => false),
     } as unknown as BlokModules['BlockSettings'],
+    CrossBlockSelection: {
+      textSelection: null,
+      clearTextSelection: vi.fn(),
+    } as unknown as BlokModules['CrossBlockSelection'],
     YjsManager: {
       stopCapturing: vi.fn(),
       markBoundary: vi.fn(),

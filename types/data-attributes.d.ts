@@ -95,6 +95,11 @@ export const DATA_ATTR: {
    *  and re-points the fake-background highlight at the UA Highlight color
    *  (colors.css), so selection falls back to native/host-defined colors. */
   readonly nativeSelection: 'data-blok-native-selection';
+  /** Present on the editor wrapper while a cross-block TEXT selection is painted.
+   *  Suppresses the engine's own ::selection paint (main.css) so the
+   *  ::highlight() sub-ranges are the only thing drawn — Chromium and Firefox
+   *  paint such a range natively too and would otherwise double it up. */
+  readonly crossSelection: 'data-blok-cross-selection';
 
   // Drag and Drop
 

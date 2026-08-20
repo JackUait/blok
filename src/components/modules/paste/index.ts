@@ -582,9 +582,25 @@ export class Paste extends Module {
       return;
     }
 
-    const { BlockManager, Toolbar } = this.Blok;
+    const { BlockManager, BlockEvents, Toolbar } = this.Blok;
 
-    const currentBlock = BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);
+    /**
+     * A paste over a cross-block text selection replaces it. The range spans two
+     * editing hosts, so nothing deletes it on its own — left in place, the
+     * pasted content would be inserted BESIDE the still-selected text.
+     *
+     * Afterwards `event.target` may be detached (the merge can rebuild the host
+     * it pointed at), so the destination is re-read from the caret the deletion
+     * left behind rather than from the event.
+     */
+    const replacedTextSelection = await BlockEvents.clearCrossBlockTextSelectionForPaste();
+
+    if (replacedTextSelection) {
+      event.preventDefault();
+    }
+
+    const currentBlock = (replacedTextSelection ? BlockManager.currentBlock : undefined) ??
+      BlockManager.setCurrentBlockByChildNode(event.target as HTMLElement);
 
     if (
       !currentBlock ||
@@ -600,7 +616,8 @@ export class Paste extends Module {
     event.preventDefault();
 
     if (event.clipboardData) {
-      const pasteTarget = event.target instanceof Element ? event.target : undefined;
+      const eventTarget = event.target instanceof Element ? event.target : undefined;
+      const pasteTarget = replacedTextSelection ? currentBlock.currentInput : eventTarget;
 
       // Cmd/Ctrl+Shift+V (paste without formatting): insert the clipboard's
       // raw text/plain payload, skipping the markdown/HTML→blocks conversion

@@ -6,6 +6,7 @@ import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover'
 import { twMerge } from '../../components/utils/tw';
 
 import { isCaretAtEndOfInput, isCaretAtStartOfInput } from '../../components/utils/caret';
+import { hasCrossHostSelectionWithin } from '../../components/selection/cross-block-range';
 
 import { CELL_ATTR, CELL_COL_ATTR, CELL_ROW_ATTR, ROW_ATTR } from './table-core';
 import { CELL_BLOCKS_ATTR } from './table-cell-blocks';
@@ -575,17 +576,20 @@ export class TableCellSelection {
       // interaction's pointerdown triggering the clear handler.
       document.addEventListener('pointerdown', this.boundClearSelection);
     } else if (this.anchorCell) {
-      // A whole-cell rectangle must not coexist with line blocks selected
-      // INSIDE the cell (a cross-block drag within one cell) — that block
+      // A whole-cell rectangle must not coexist with a selection the user made
+      // INSIDE the cell (a drag across several lines of one cell) — that inner
       // selection is the meaningful one, the rectangle would be misleading.
-      const hasBlockSelectionInGrid = this.grid.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null;
+      // Both shapes count: the block-level one, and the cross-line TEXT range
+      // that the same gesture produces now.
+      const hasInnerSelection = this.grid.querySelector(`[${DATA_ATTR.selected}="true"]`) !== null ||
+        hasCrossHostSelectionWithin(this.grid);
 
-      if (this.hasSelection && hasBlockSelectionInGrid) {
+      if (this.hasSelection && hasInnerSelection) {
         this.clearSelection();
       } else if (this.hasSelection) {
         // Already selected (same single cell) — just re-register clear handler
         document.addEventListener('pointerdown', this.boundClearSelection);
-      } else if (!hasBlockSelectionInGrid) {
+      } else if (!hasInnerSelection) {
         // Single click without drag — select the clicked cell
         this.showProgrammaticSelection(
           this.anchorCell.row,

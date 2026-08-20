@@ -354,7 +354,13 @@ test.describe('modules/selection', () => {
     }
   });
 
-  test('cross-block selection selects contiguous blocks when dragging across content', async ({ page }) => {
+  /**
+   * A drag across plain text is a TEXT selection now (see
+   * modules/cross-block-text-selection.spec.ts) — but a block with no editable
+   * content cannot take a share of a character range, so a drag spanning one
+   * stays the block-level gesture it always was.
+   */
+  test('dragging across a block with no editable content selects whole blocks', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -363,10 +369,8 @@ test.describe('modules/selection', () => {
         },
       },
       {
-        type: 'paragraph',
-        data: {
-          text: 'Second block',
-        },
+        type: 'divider',
+        data: {},
       },
       {
         type: 'paragraph',
@@ -383,10 +387,10 @@ test.describe('modules/selection', () => {
     ]);
 
     const firstParagraph = getParagraphByIndex(page, 0);
-    const thirdParagraph = getParagraphByIndex(page, 2);
+    const thirdBlock = getBlockByIndex(page, 2);
 
     const firstCenter = await getElementCenter(firstParagraph);
-    const thirdCenter = await getElementCenter(thirdParagraph);
+    const thirdCenter = await getElementCenter(thirdBlock);
 
     await page.mouse.move(firstCenter.x, firstCenter.y);
     await page.mouse.down();

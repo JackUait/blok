@@ -1851,6 +1851,14 @@
   margin-right: 0;
 }
 
+[data-blok-cross-selection] ::selection {
+  background-color: transparent;
+}
+
+[data-blok-interface] ::highlight(blok-cross-block-selection) {
+  background-color: var(--blok-selection-inline);
+}
+
 [data-blok-width="full"] [data-blok-element-content] {
   max-width: var(--blok-content-max-width, none);
 }

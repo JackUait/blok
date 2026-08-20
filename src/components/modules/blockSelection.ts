@@ -9,6 +9,7 @@ import { Module } from '../__module';
 import type { Block } from '../block';
 import { Dom as $ } from '../dom';
 import { blocksToMarkdown } from '../../markdown/blocks-to-markdown';
+import type { CrossBlockSubRange, CrossBlockTextSelection } from '../selection/cross-block-range';
 import { SelectionUtils } from '../selection/index';
 import { delay } from '../utils';
 import { clean, composeSanitizerConfig } from '../utils/sanitizer';
@@ -475,6 +476,109 @@ export class BlockSelection extends Module {
         console.warn('Failed to set custom clipboard data:', error.message);
       }
     }
+  }
+
+  /**
+   * Write a cross-block TEXT selection to the clipboard: exactly the selected
+   * characters, not the blocks they live in.
+   *
+   * The engines cannot be left to do this themselves — `Selection.toString()`
+   * clamps to the anchor's editing host in Chromium and WebKit, so a native copy
+   * silently drops every block after the first. The per-host sub-ranges carry the
+   * real content.
+   * @param event - the copy/cut clipboard event
+   * @param selection - the cross-block text selection to serialize
+   */
+  public copyCrossBlockTextSelection(event: ClipboardEvent, selection: CrossBlockTextSelection): void {
+    event.preventDefault();
+
+    const clipboardData = event.clipboardData;
+
+    if (!clipboardData) {
+      return;
+    }
+
+    const fakeClipboard = $.make('div');
+
+    /** A host the range only touches contributes no characters to copy. */
+    const written = selection.subRanges.filter((sub) => sub.range.toString().length > 0);
+
+    /**
+     * A block whose content is selected IN FULL is serialized as that block, so
+     * a fully-covered heading stays a heading and a run of fully-covered list
+     * items stays one semantic list (the same treatment whole-block copy gives
+     * them). Only the partially-covered ends fall back to a paragraph — there is
+     * no half a heading.
+     */
+    this.groupCrossBlockSegments(written).forEach((segment) => {
+      if (segment.type === 'partial') {
+        this.appendPartialRange(segment.range, fakeClipboard);
+
+        return;
+      }
+
+      this.groupBlocksForClipboard(segment.blocks).forEach((blockSegment) => {
+        if (blockSegment.type === 'list') {
+          this.appendSemanticList(blockSegment.items, fakeClipboard);
+        } else {
+          this.appendNonListBlock(blockSegment.block, fakeClipboard);
+        }
+      });
+    });
+
+    clipboardData.setData('text/plain', written.map((sub) => sub.range.toString()).join('\n\n'));
+    clipboardData.setData('text/html', fakeClipboard.innerHTML);
+  }
+
+  /**
+   * Fold per-host sub-ranges into clipboard segments, coalescing consecutive
+   * fully-covered blocks into one run so list grouping can see them together.
+   * @param subRanges - the selection's per-host sub-ranges, in DOM order
+   */
+  private groupCrossBlockSegments(
+    subRanges: CrossBlockSubRange[]
+  ): Array<{ type: 'whole'; blocks: Block[] } | { type: 'partial'; range: Range }> {
+    return subRanges.reduce<Array<{ type: 'whole'; blocks: Block[] } | { type: 'partial'; range: Range }>>(
+      (segments, sub) => {
+        /**
+         * A multi-input block (a table) is never "wholly" covered by one of its
+         * hosts, so it stays on the partial path.
+         */
+        if (!sub.coversWholeInput || sub.block.inputs.length > 1) {
+          return [...segments, { type: 'partial',
+            range: sub.range }];
+        }
+
+        const last = segments[segments.length - 1];
+
+        if (last?.type === 'whole') {
+          last.blocks.push(sub.block);
+
+          return segments;
+        }
+
+        return [...segments, { type: 'whole',
+          blocks: [sub.block] }];
+      },
+      []
+    );
+  }
+
+  /**
+   * Append a partially-selected block's content as a paragraph, preserving the
+   * inline markup inside the range.
+   * @param range - the sub-range covering part of one editing host
+   * @param fakeClipboard - the container receiving the paragraph
+   */
+  private appendPartialRange(range: Range, fakeClipboard: HTMLElement): void {
+    const holder = $.make('div');
+
+    holder.appendChild(range.cloneContents());
+
+    const paragraph = $.make('p');
+
+    paragraph.innerHTML = clean(holder.innerHTML, this.sanitizerConfig);
+    fakeClipboard.appendChild(paragraph);
   }
 
   /**

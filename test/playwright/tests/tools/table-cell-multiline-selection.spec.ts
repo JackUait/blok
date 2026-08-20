@@ -4,6 +4,7 @@ import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
+import { dragBetweenCharacters, pointAtCharacter, readTextSelectionState } from '../helpers/text-drag';
 
 type SerializableToolConfig = {
   className?: string;
@@ -170,6 +171,27 @@ const createTableWithMultilineCell = async (page: Page): Promise<void> => {
   await page.getByRole('heading', { name: 'Blok test page' }).click();
 };
 
+const BLOCK_WRAPPER_SELECTOR = '[data-blok-testid="block-wrapper"]';
+
+const editableOf = (line: ReturnType<Page['locator']>): ReturnType<Page['locator']> =>
+  line.locator('[contenteditable="true"]');
+
+/** Drag from the start of one cell line to `toOffset` characters into another. */
+const dragAcrossLines = async (
+  page: Page,
+  from: ReturnType<Page['locator']>,
+  to: ReturnType<Page['locator']>,
+  toOffset: number
+): Promise<void> => {
+  await dragBetweenCharacters(
+    page,
+    { editable: editableOf(from),
+      offset: 0 },
+    { editable: editableOf(to),
+      offset: toOffset }
+  );
+};
+
 /**
  * Drag the mouse from the center of one locator to the center of another.
  */
@@ -197,35 +219,36 @@ test.describe('table cell — selecting several lines inside one cell', () => {
     await resetBlok(page);
   });
 
-  test('dragging from one line to another selects both line blocks', async ({ page }) => {
+  test('dragging from one line to another selects the text across both lines', async ({ page }) => {
     await createTableWithMultilineCell(page);
 
     const cell = getCell(page, 0, 0);
     const lineOne = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line one' });
     const lineTwo = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line two' });
 
-    await dragBetween(page, lineOne, lineTwo);
+    await dragAcrossLines(page, lineOne, lineTwo, 'Line two'.length);
 
-    // Both dragged-over line blocks are selected...
-    await expect(lineOne).toHaveAttribute('data-blok-selected', 'true');
-    await expect(lineTwo).toHaveAttribute('data-blok-selected', 'true');
+    const state = await readTextSelectionState(page, BLOCK_WRAPPER_SELECTOR);
 
-    // ...but not the line that was not part of the drag, and not the whole table
-    await expect(cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line three' }))
-      .not.toHaveAttribute('data-blok-selected', 'true');
+    // Exactly the dragged characters, and no BLOCK-level selection anywhere
+    expect(state.blockTexts).toStrictEqual([ 'Line one', 'Line two' ]);
+    expect(state.selectedBlockCount).toBe(0);
     await expect(page.locator(TABLE_SELECTOR)).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
-  test('dragging across all three lines selects all of them', async ({ page }) => {
+  test('dragging across all three lines selects the text of all of them', async ({ page }) => {
     await createTableWithMultilineCell(page);
 
     const cell = getCell(page, 0, 0);
     const lineOne = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line one' });
     const lineThree = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line three' });
 
-    await dragBetween(page, lineOne, lineThree);
+    await dragAcrossLines(page, lineOne, lineThree, 'Line three'.length);
 
-    await expect(cell.locator('[data-blok-selected="true"]')).toHaveCount(3);
+    const state = await readTextSelectionState(page, BLOCK_WRAPPER_SELECTOR);
+
+    expect(state.blockTexts).toStrictEqual([ 'Line one', 'Line two', 'Line three' ]);
+    expect(state.selectedBlockCount).toBe(0);
   });
 
   test('dragging back to the anchor line shrinks the selection again', async ({ page }) => {
@@ -236,37 +259,39 @@ test.describe('table cell — selecting several lines inside one cell', () => {
     const lineTwo = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line two' });
     const lineThree = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line three' });
 
-    const oneBox = assertBoundingBox(await lineOne.boundingBox(), 'line one');
-    const threeBox = assertBoundingBox(await lineThree.boundingBox(), 'line three');
-    const twoBox = assertBoundingBox(await lineTwo.boundingBox(), 'line two');
+    const start = await pointAtCharacter(editableOf(lineOne), 0);
+    const far = await pointAtCharacter(editableOf(lineThree), 'Line three'.length);
+    const back = await pointAtCharacter(editableOf(lineTwo), 'Line two'.length);
 
-    await page.mouse.move(oneBox.x + oneBox.width / 2, oneBox.y + oneBox.height / 2);
+    await page.mouse.move(start.x, start.y);
     await page.mouse.down();
-    await page.mouse.move(threeBox.x + threeBox.width / 2, threeBox.y + threeBox.height / 2, { steps: 12 });
-    await page.mouse.move(twoBox.x + twoBox.width / 2, twoBox.y + twoBox.height / 2, { steps: 12 });
+    await page.mouse.move(far.x, far.y, { steps: 12 });
+    await page.mouse.move(back.x, back.y, { steps: 12 });
     await page.mouse.up();
 
-    await expect(lineOne).toHaveAttribute('data-blok-selected', 'true');
-    await expect(lineTwo).toHaveAttribute('data-blok-selected', 'true');
-    await expect(lineThree).not.toHaveAttribute('data-blok-selected', 'true');
+    const state = await readTextSelectionState(page, BLOCK_WRAPPER_SELECTOR);
+
+    expect(state.blockTexts).toStrictEqual([ 'Line one', 'Line two' ]);
+    expect(state.selectedBlockCount).toBe(0);
   });
 
-  test('pressing Delete removes the selected lines but keeps the cell editable', async ({ page }) => {
+  test('pressing Delete removes the selected text but keeps the cell editable', async ({ page }) => {
     await createTableWithMultilineCell(page);
 
     const cell = getCell(page, 0, 0);
     const lineOne = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line one' });
     const lineTwo = cell.locator('[data-blok-component="paragraph"]', { hasText: 'Line two' });
 
-    await dragBetween(page, lineOne, lineTwo);
-    await expect(cell.locator('[data-blok-selected="true"]')).toHaveCount(2);
+    await dragAcrossLines(page, lineOne, lineTwo, 'Line two'.length);
+    await expect(cell.locator('[data-blok-selected="true"]')).toHaveCount(0);
 
     await page.keyboard.press('Delete');
 
-    // The selected lines are gone, the remaining line survives
-    await expect(cell.locator('[data-blok-component="paragraph"]')).toHaveCount(1);
+    // The selected lines collapse into one empty line; the untouched line survives
+    await expect(cell.locator('[data-blok-component="paragraph"]')).toHaveCount(2);
     await expect(cell).toContainText('Line three');
     await expect(cell).not.toContainText('Line one');
+    await expect(cell).not.toContainText('Line two');
   });
 
   test('text drag inside a single-line cell keeps the native text selection even when the pointer strays into cell padding', async ({ page }) => {

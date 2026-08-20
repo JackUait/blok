@@ -333,6 +333,26 @@
 }
 
 /**
+ * Cross-block TEXT selection paint. A range spanning two blocks crosses two
+ * contenteditable hosts; WebKit paints only the anchor host's part of it, and so
+ * does a single-range ::highlight(). One ::highlight() range PER HOST is the
+ * form all three engines paint, so cross-block-highlight.ts registers those and
+ * stamps the wrapper — Chromium and Firefox DO paint the range natively and
+ * would otherwise draw it twice, at double opacity.
+ *
+ * Unlayered on purpose: the colour overridden here is the
+ * `[&_::selection]:bg-selection-inline` utility UI.make puts on the wrapper,
+ * which sits in @layer utilities and would win on layer order alone.
+ */
+[data-blok-cross-selection] ::selection {
+  background-color: transparent;
+}
+
+[data-blok-interface] ::highlight(blok-cross-block-selection) {
+  background-color: var(--blok-selection-inline);
+}
+
+/**
  * Content width mode
  * 'full' (data-blok-width="full" on the editor wrapper) removes the
  * --max-width-content constraint so content fills its container. The default

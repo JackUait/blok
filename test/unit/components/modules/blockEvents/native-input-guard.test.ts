@@ -194,6 +194,10 @@ const createHarness = (input: HTMLElement): Harness => {
       open: vi.fn(),
       contains: vi.fn(() => false),
     } as unknown as BlokModules['BlockSettings'],
+    CrossBlockSelection: {
+      textSelection: null,
+      clearTextSelection: vi.fn(),
+    } as unknown as BlokModules['CrossBlockSelection'],
     BlockSelection: {
       anyBlockSelected: false,
       navigationModeEnabled: false,

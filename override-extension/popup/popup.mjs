@@ -246,7 +246,6 @@ const rebuild = async () => {
   await refresh();
   const onArmedPage = state.detection.state === 'detected' && state.status.armedOrigins.includes(state.detection.origin);
   if (onArmedPage && !pageRunsYours()) {
-    announce('Fresh build — reloading the page');
     await reloadPage();
   } else {
     announce('Your local build is fresh again');

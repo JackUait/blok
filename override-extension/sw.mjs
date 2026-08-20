@@ -1,4 +1,5 @@
 import { desiredRegistrations, registrationDelta, PAYLOAD_SCRIPT_ID, BANNER_SCRIPT_ID } from './lib/registrations.mjs';
+import { buildRedirectRules } from './lib/dnr.mjs';
 
 const readCurrent = async () => {
   try {
@@ -41,6 +42,20 @@ const disarm = async (origin) => {
   await syncRegistrations();
 };
 
+const syncRedirects = async () => {
+  const { redirects = [] } = await chrome.storage.local.get('redirects');
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: existing.map((r) => r.id),
+    addRules: buildRedirectRules(redirects),
+  });
+};
+
+const setRedirects = async (redirects) => {
+  await chrome.storage.local.set({ redirects });
+  await syncRedirects();
+};
+
 const updateBadge = async (tabId, url) => {
   if (!url || !/^https?:/.test(url)) {
     return;
@@ -55,9 +70,13 @@ const updateBadge = async (tabId, url) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   void syncRegistrations();
+  void syncRedirects();
   void chrome.alarms.create('blok-override-poll', { periodInMinutes: 0.5 });
 });
-chrome.runtime.onStartup.addListener(() => void syncRegistrations());
+chrome.runtime.onStartup.addListener(() => {
+  void syncRegistrations();
+  void syncRedirects();
+});
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'blok-override-poll') {
     void syncRegistrations();
@@ -81,9 +100,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     } else if (message?.type === 'disarm') {
       await disarm(message.origin);
       sendResponse({ ok: true });
+    } else if (message?.type === 'setRedirects') {
+      await setRedirects(message.redirects);
+      sendResponse({ ok: true });
     } else if (message?.type === 'status') {
       const [armedOrigins, current] = await Promise.all([readArmed(), readCurrent()]);
-      sendResponse({ armedOrigins, current });
+      const { redirects = [] } = await chrome.storage.local.get('redirects');
+      sendResponse({ armedOrigins, current, redirects });
     } else {
       sendResponse({ ok: false });
     }
@@ -95,3 +118,4 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // the popup uses (worker.evaluate cannot post runtime messages to itself).
 globalThis.armOriginForTests = arm;
 globalThis.disarmOriginForTests = disarm;
+globalThis.setRedirectsForTests = setRedirects;

@@ -30,6 +30,15 @@
     <h2 style="font-size:13px;margin:0">Armed origins</h2>
     <ul id="armed-list" role="list" aria-label="Armed origins"></ul>
   </section>
+  <section>
+    <h2 style="font-size:13px;margin:0 0 4px">CDN redirects (tier 2)</h2>
+    <label for="redirect-from-input">From URL prefix</label>
+    <input id="redirect-from-input" type="url" placeholder="https://cdn.jsdelivr.net/npm/@bloklabs/core@1.8.0/dist/">
+    <label for="redirect-to-input">To URL prefix</label>
+    <input id="redirect-to-input" type="url" placeholder="http://localhost:3000/dist/">
+    <button id="add-redirect-button" type="button">Add redirect</button>
+    <ul id="redirect-list" role="list" aria-label="CDN redirects"></ul>
+  </section>
   <script type="module" src="popup.mjs"></script>
 </body>
 </html>

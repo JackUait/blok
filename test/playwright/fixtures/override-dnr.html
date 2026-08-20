@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Blok DNR redirect fixture</title>
+</head>
+<body>
+  <script src="/fake-cdn/blok.umd.js"></script>
+  <script>
+    // /fake-cdn/blok.umd.js 404s without a tier-2 redirect rule; the UMD
+    // bundle's global is `EditorJS` (window.EditorJS === Blok, the class —
+    // see vite.config.umd.mjs), not `Blok`.
+    if (window.EditorJS) {
+      document.body.setAttribute('data-umd-loaded', 'true');
+    }
+  </script>
+</body>
+</html>

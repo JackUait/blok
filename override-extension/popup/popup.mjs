@@ -6,7 +6,7 @@ const confirmIfRemote = (origin) =>
   isLocalhost(origin) || window.confirm(`Arm NON-LOCAL origin ${origin}?\n\nEvery page on it will run your local blok build.`);
 
 const render = async () => {
-  const { armedOrigins, current } = await send({ type: 'status' });
+  const { armedOrigins, current, redirects } = await send({ type: 'status' });
 
   const status = document.getElementById('payload-status');
   status.textContent = current
@@ -28,6 +28,23 @@ const render = async () => {
     });
     item.append(label, remove);
     list.appendChild(item);
+  }
+
+  const redirectList = document.getElementById('redirect-list');
+  redirectList.textContent = '';
+  for (const redirect of redirects) {
+    const item = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = `${redirect.from} → ${redirect.to}`;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Remove';
+    remove.addEventListener('click', async () => {
+      await send({ type: 'setRedirects', redirects: redirects.filter((r) => r !== redirect) });
+      await render();
+    });
+    item.append(label, remove);
+    redirectList.appendChild(item);
   }
 
   const tabRow = document.getElementById('active-tab-row');
@@ -66,6 +83,21 @@ document.getElementById('arm-button').addEventListener('click', async () => {
     input.value = '';
     await render();
   }
+});
+
+document.getElementById('add-redirect-button').addEventListener('click', async () => {
+  const fromInput = document.getElementById('redirect-from-input');
+  const toInput = document.getElementById('redirect-to-input');
+  if (!fromInput.value || !toInput.value) {
+    fromInput.reportValidity();
+    toInput.reportValidity();
+    return;
+  }
+  const { redirects } = await send({ type: 'status' });
+  await send({ type: 'setRedirects', redirects: [...redirects, { from: fromInput.value, to: toInput.value }] });
+  fromInput.value = '';
+  toInput.value = '';
+  await render();
 });
 
 void render();

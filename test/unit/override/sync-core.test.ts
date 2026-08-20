@@ -41,6 +41,21 @@ describe('override sync-core', () => {
     expect(payloads).toEqual([payloadFileName(hashOf('new build'))]);
   });
 
+  it('escapes Unicode noncharacters Chrome refuses in content-script files', () => {
+    const meta = { version: 'v', builtAt: 't' };
+    const code = 'const eof=`￿`;const probe="﷐￾";const astral="\u{1FFFE}";const keep="\u{1F3FE}é";';
+    const { file } = stagePayload(dir, code, meta);
+    const staged = readFileSync(join(dir, file), 'utf8');
+
+    expect(staged).not.toMatch(/[﷐-﷯￾￿]/);
+    expect(staged).toContain('\\uFFFF');
+    expect(staged).toContain('\\uFDD0');
+    expect(staged).toContain('\\uFFFE');
+    expect(staged).toContain('\\uD83F\\uDFFE');
+    expect(staged).toContain('"\u{1F3FE}é"');
+    expect(file).toBe(payloadFileName(hashOf(staged)));
+  });
+
   it('a rebuild with identical content keeps the same filename (no churn)', () => {
     const meta = { version: 'v', builtAt: 't' };
     const first = stagePayload(dir, 'same', meta);

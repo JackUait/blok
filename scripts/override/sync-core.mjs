@@ -6,8 +6,26 @@ export const hashOf = (content) => createHash('sha256').update(content).digest('
 
 export const payloadFileName = (hash) => `blok-override.${hash}.js`;
 
-export function stagePayload(payloadDir, code, meta) {
+// Chrome loads content-script files through base::IsStringUTF8, which rejects
+// Unicode noncharacters (U+FDD0–U+FDEF, U+nFFFE/U+nFFFF) that minifiers emit
+// raw inside string/regex literals (e.g. a parser's `￿` EOF sentinel) —
+// registration then fails with "It isn't UTF-8 encoded". Escaping is
+// semantics-preserving: these code points are only legal inside literals,
+// where the \u sequence denotes the identical character. The astral branch
+// matches any surrogate pair ending in DFFE/DFFF and re-checks the code point,
+// because those low surrogates also terminate ordinary characters.
+const NONCHARACTERS = /[﷐-﷯￾￿]|[\uD800-\uDBFF][\uDFFE\uDFFF]/g;
+const escapeUnit = (ch) => `\\u${ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+const escapeNoncharacters = (code) => code.replace(NONCHARACTERS, (match) => {
+  if (match.length === 2 && ((match.codePointAt(0) & 0xFFFE) !== 0xFFFE)) {
+    return match;
+  }
+  return match.split('').map(escapeUnit).join('');
+});
+
+export function stagePayload(payloadDir, rawCode, meta) {
   mkdirSync(payloadDir, { recursive: true });
+  const code = escapeNoncharacters(rawCode);
   const hash = hashOf(code);
   const file = payloadFileName(hash);
   writeFileSync(join(payloadDir, file), code);

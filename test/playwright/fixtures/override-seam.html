@@ -10,9 +10,10 @@
   </main>
   <script type="module">
     import { Blok, version } from '/dist/blok.mjs';
+    import { Paragraph } from '/dist/tools.mjs';
 
     window.__blokVersion = version;
-    const editor = new Blok({ holder: 'editor' });
+    const editor = new Blok({ holder: 'editor', tools: { paragraph: { class: Paragraph } } });
     editor.isReady.then(() => {
       document.body.setAttribute('data-fixture-ready', 'true');
     });

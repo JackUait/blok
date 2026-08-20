@@ -302,14 +302,18 @@ const rebuild = async () => {
     render();
     return;
   }
-  // The status round-trip re-registers the new payload hash AND hands the
-  // worker the rebuild it propagates to every armed tab — so by the time this
-  // resolves the reload is already under way and the popup only has to watch.
+  // The status round-trip re-registers the new payload hash AND hands the worker
+  // the rebuild it propagates to every armed tab — so the reload is already
+  // under way while refresh's own scan runs. Claim `switching` before it, or
+  // that scan lands on the blank document and collapses the card.
+  state.switching = true;
   await refresh();
   const onArmedPage = state.detection.state === 'detected' && state.status.armedOrigins.includes(state.detection.origin);
   if (onArmedPage && !pageRunsYours()) {
     await watchSwap();
   } else {
+    state.switching = false;
+    render();
     announce('Your local build is fresh again');
   }
 };

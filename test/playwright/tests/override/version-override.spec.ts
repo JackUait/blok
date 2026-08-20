@@ -93,6 +93,9 @@ test.describe('blok version override', () => {
   // action popup) while the fixture holds the active-tab slot the detection
   // queries; reload() re-renders the popup without stealing activation.
   test('popup arms the origin it detects blok on', async () => {
+    // Two popup render cycles plus a fresh tab that evaluates the multi-MB
+    // dev payload — legitimately heavier than the default budget.
+    test.slow();
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;
@@ -105,13 +108,25 @@ test.describe('blok version override', () => {
 
       await popup.reload();
       await expect(popup.getByText(/-dev\./).first()).toBeVisible();
-      await expect(popup.getByText('localhost:4444')).toBeVisible();
+      await expect(popup.getByText('localhost:4444').first()).toBeVisible();
 
-      const armSwitch = popup.getByRole('switch', { name: 'Use local build on http://localhost:4444' });
+      const armSwitch = popup.getByRole('switch', { name: 'Use your build on http://localhost:4444' });
       await expect(armSwitch).toHaveAttribute('aria-checked', 'false');
       await armSwitch.click();
-      await expect(popup.getByRole('list', { name: 'Sites using your build' })).toContainText('http://localhost:4444');
       await expect(armSwitch).toHaveAttribute('aria-checked', 'true');
+      // The page has not reloaded yet, so the popup offers to do it.
+      await expect(popup.getByText('Almost there')).toBeVisible();
+      await expect(popup.getByRole('button', { name: 'Reload' })).toBeVisible();
+
+      // Origins armed elsewhere are listed; the current page's own row is not
+      // repeated below its switch.
+      await sw.evaluate(async () => {
+        await (globalThis as unknown as { armOriginForTests: (o: string) => Promise<void> }).armOriginForTests('https://elsewhere.example');
+      });
+      await popup.reload();
+      const elsewhere = popup.getByRole('list', { name: 'Also using your build' });
+      await expect(elsewhere).toContainText('elsewhere.example');
+      await expect(elsewhere).not.toContainText('localhost:4444');
 
       const swapped = await context.newPage();
       await swapped.goto(FIXTURE);
@@ -132,7 +147,7 @@ test.describe('blok version override', () => {
       await page.goto(DNR_FIXTURE);
 
       await popup.reload();
-      await expect(popup.getByText('No Blok on this page')).toBeVisible();
+      await expect(popup.getByText('No Blok here')).toBeVisible();
       await expect(popup.getByRole('switch')).toHaveCount(0);
     } finally {
       await context.close();
@@ -151,12 +166,12 @@ test.describe('blok version override', () => {
 
       await popup.reload();
       await expect(popup.getByText('@bloklabs/core@1.8.0').first()).toBeVisible();
-      await popup.getByRole('button', { name: 'Use the local build for @bloklabs/core@1.8.0' }).click();
+      await popup.getByRole('button', { name: 'Use your build for @bloklabs/core@1.8.0' }).click();
 
-      const routes = popup.getByRole('list', { name: 'CDN routes' });
-      await expect(routes).toContainText('@bloklabs/core@1.8.0');
-      await expect(routes).toContainText('local build');
-      await expect(popup.getByRole('button', { name: 'Stop using the local build for @bloklabs/core@1.8.0' })).toBeVisible();
+      await expect(popup.getByText('Using your build', { exact: true })).toBeVisible();
+      await expect(popup.getByRole('button', { name: 'Stop using your build for @bloklabs/core@1.8.0' })).toBeVisible();
+      // The routed version lives on the page card alone, not in the elsewhere list.
+      await expect(popup.getByRole('list', { name: 'Also using your build' })).toHaveCount(0);
     } finally {
       await context.close();
     }

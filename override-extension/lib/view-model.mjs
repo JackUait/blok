@@ -17,10 +17,12 @@ export function popupViewModel({ current, armedOrigins = [], redirects = [], det
   let page = detection ?? { state: 'no-tab' };
   if (page.state === 'detected') {
     const armed = armedOrigins.includes(page.origin);
-    const live = armed && page.bundled.version !== null && page.bundled.version === current?.version;
+    const runningYours = page.bundled.version !== null && page.bundled.version === current?.version;
+    const live = armed && runningYours;
     page = {
       ...page,
       armed,
+      runningYours,
       live,
       skew: armed && !live,
       cdn: page.cdn.map((ref) => ({ ...ref, routed: redirects.some((r) => r.from === ref.prefix) })),
@@ -39,12 +41,21 @@ export function popupViewModel({ current, armedOrigins = [], redirects = [], det
       : null;
   }
 
+  const routes = redirects.map((redirect) => ({ ...redirect, ...describeRedirect(redirect) }));
+  // The page card owns rows for the detected origin and its CDN prefixes; the
+  // elsewhere list must not repeat them — but only when the page card can
+  // actually show them, or an armed no-blok origin becomes impossible to
+  // turn off.
+  const pageCdnPrefixes = new Set(blokDetected ? page.cdn.map((ref) => ref.prefix) : []);
+
   return {
     build,
     page,
     canArm: build.state === 'ready' && blokDetected,
     routeBuilder,
     armedOrigins,
-    routes: redirects.map((redirect) => ({ ...redirect, ...describeRedirect(redirect) })),
+    otherArmedOrigins: armedOrigins.filter((origin) => !(blokDetected && origin === page.origin)),
+    routes,
+    otherRoutes: routes.filter((route) => !pageCdnPrefixes.has(route.from)),
   };
 }

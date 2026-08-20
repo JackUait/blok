@@ -54,6 +54,20 @@ describe('popup view model', () => {
     expect(vm.page).toMatchObject({ state: 'detected', origin: 'https://kb.example', armed: true, live: true });
   });
 
+  it('recognizes the page running your exact build even without arming (CDN swaps)', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: [],
+      redirects: [],
+      detection: { ...DETECTED, bundled: { present: true, version: '1.10.1-dev.93be8995' } },
+      catalogAvailable: true,
+    });
+    expect(vm.page).toMatchObject({ runningYours: true, live: false });
+
+    const other = popupViewModel({ current: CURRENT, armedOrigins: [], redirects: [], detection: DETECTED, catalogAvailable: true });
+    expect(other.page).toMatchObject({ runningYours: false });
+  });
+
   it('flags version skew when armed but the page still runs another build', () => {
     const vm = popupViewModel({ current: CURRENT, armedOrigins: ['https://kb.example'], redirects: [], detection: DETECTED, catalogAvailable: true });
     expect(vm.page).toMatchObject({ armed: true, live: false, skew: true });
@@ -86,6 +100,49 @@ describe('popup view model', () => {
 
     const ok = popupViewModel({ current: CURRENT, armedOrigins: [], redirects: [], detection: DETECTED, catalogAvailable: true });
     expect(ok.routeBuilder).toEqual({ enabled: true, reason: null });
+  });
+});
+
+describe('popup dedupe between the page card and the elsewhere list', () => {
+  const prefix = 'https://cdn.jsdelivr.net/npm/@bloklabs/core@1.8.0/dist/';
+
+  it('excludes the detected page origin and its routed CDN prefixes from the elsewhere lists', () => {
+    const vm = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example', 'https://other.example'],
+      redirects: [
+        { from: prefix, to: LOCAL_DIST_SENTINEL },
+        { from: 'https://cdn.jsdelivr.net/npm/@bloklabs/core@1.9.0/dist/', to: LOCAL_DIST_SENTINEL },
+      ],
+      detection: { ...DETECTED, cdn: [{ pkg: '@bloklabs/core', version: '1.8.0', prefix }] },
+      catalogAvailable: true,
+    });
+    expect(vm.otherArmedOrigins).toEqual(['https://other.example']);
+    expect(vm.otherRoutes.map((r: { fromLabel: string }) => r.fromLabel)).toEqual(['@bloklabs/core@1.9.0']);
+  });
+
+  // A no-blok page on an armed origin renders no switch, so the elsewhere
+  // list is the only place left to turn that origin off.
+  it('keeps every armed origin and route when the page card cannot show them', () => {
+    const noBlok = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [{ from: prefix, to: LOCAL_DIST_SENTINEL }],
+      detection: { state: 'no-blok', origin: 'https://kb.example' },
+      catalogAvailable: true,
+    });
+    expect(noBlok.otherArmedOrigins).toEqual(['https://kb.example']);
+    expect(noBlok.otherRoutes.map((r: { fromLabel: string }) => r.fromLabel)).toEqual(['@bloklabs/core@1.8.0']);
+
+    const noTab = popupViewModel({
+      current: CURRENT,
+      armedOrigins: ['https://kb.example'],
+      redirects: [{ from: prefix, to: LOCAL_DIST_SENTINEL }],
+      detection: { state: 'no-tab' },
+      catalogAvailable: true,
+    });
+    expect(noTab.otherArmedOrigins).toEqual(['https://kb.example']);
+    expect(noTab.otherRoutes).toHaveLength(1);
   });
 });
 

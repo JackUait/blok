@@ -22,6 +22,19 @@
     ].join(';');
     const label = document.createElement('span');
     label.textContent = text;
+    let reload = null;
+    if (tone !== 'live') {
+      reload = document.createElement('button');
+      reload.textContent = 'Reload';
+      reload.style.cssText = [
+        'font:inherit', 'font-weight:500', 'color:#37352f', 'background:#ffffff',
+        'border:1px solid rgba(55,53,47,0.16)', 'border-radius:5px',
+        'padding:2px 8px', 'cursor:pointer', 'flex:none',
+      ].join(';');
+      reload.addEventListener('mouseenter', () => { reload.style.background = 'rgba(55,53,47,0.06)'; });
+      reload.addEventListener('mouseleave', () => { reload.style.background = '#ffffff'; });
+      reload.addEventListener('click', () => location.reload());
+    }
     const close = document.createElement('button');
     close.textContent = '×';
     close.setAttribute('aria-label', 'Dismiss blok override banner');
@@ -29,7 +42,11 @@
     close.addEventListener('mouseenter', () => { close.style.color = '#37352f'; });
     close.addEventListener('mouseleave', () => { close.style.color = '#9b9a97'; });
     close.addEventListener('click', () => banner.remove());
-    banner.append(dot, label, close);
+    banner.append(dot, label);
+    if (reload) {
+      banner.append(reload);
+    }
+    banner.append(close);
     document.body.appendChild(banner);
   };
 
@@ -43,7 +60,7 @@
     if (running === status.current.version) {
       showBanner(`Blok override is on — running ${running}`, 'live');
     } else {
-      showBanner(`Blok override is waiting — this page runs ${running ?? 'an older Blok'}, your local build is ${status.current.version}. Try reloading.`, 'skew');
+      showBanner(`Blok override is waiting — this page runs ${running ?? 'an older Blok'}, your build is ${status.current.version}.`, 'skew');
     }
   };
 

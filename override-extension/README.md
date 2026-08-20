@@ -17,11 +17,12 @@ including deployed apps this repo does not build. Design:
    active tab (bundled editors by their `data-blok-*` markers, CDN script
    tags by URL) — when nothing is detected, overriding is disabled.
 2. Bundled blok → flip the switch (non-localhost sites ask for an inline
-   confirmation), then reload the page. The badge shows ON; the banner and the
+   confirmation), then hit **Reload** in the popup. The badge shows ON; the banner and the
    popup show the running version; `-dev.<sha>` in `data-blok-version` on the
    editor root = override active.
 3. Rebuild: with `--serve` (or `--watch`) running, hit **Rebuild** in the
-   popup; otherwise rerun `override:sync`. New builds get a new payload
+   popup — it rebuilds and, when the page is armed, reloads it for you;
+   otherwise rerun `override:sync`. New builds get a new payload
    filename; the extension picks it up within ~30s (or on popup open) with no
    extension reload.
 
@@ -30,8 +31,8 @@ including deployed apps this repo does not build. Design:
 Pages that load blok from a CDN need no seam — the extension serves your
 `dist/` build itself (staged by `override:sync`, requires `yarn build` once):
 
-- A detected CDN script gets a one-click **Use local** button in the popup.
-- "Override another version" lists every published version of
+- A detected CDN script gets a one-click **Use your build** button in the popup.
+- "Swap out a published version" lists every published version of
   `@bloklabs/core` and `@jackuait/blok` (jsdelivr catalog, cached 6h) and
   intercepts that version's jsdelivr `/dist/` URLs on any page.
 

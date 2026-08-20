@@ -237,6 +237,162 @@ export class BlockRepository {
   }
 
   /**
+   * The block a selection gesture aimed at `block` actually targets.
+   *
+   * The model twin of the toolbar's pointer→block resolution
+   * (`resolveHoveredBlockWrapper`, src/components/modules/uiControllers/
+   * hovered-block-resolution.ts): the DEEPEST block owns the row, except that a
+   * block living inside a tool-owned container is represented by that container.
+   * `tool.ownsChildren` names exactly those containers — a table's `contentIds`
+   * ARE its cell blocks — while a toggle's, callout's or column's children are
+   * plain user content and stay first-class.
+   *
+   * This is NOT {@link resolveToRootBlock}: a table nested in a toggle heading
+   * resolves to the TABLE, not to the heading. Resolving to the top-level
+   * ancestor is what made a lasso beside a table select the whole toggle
+   * section, while the ⠿ handle on the same row pointed at the table.
+   *
+   * Column layout is the exception: `column_list` owns its columns, but a
+   * column's children are the selectable units, so the walk stops there (and
+   * {@link isSelectionUnit} rejects the two containers outright).
+   * @param block - the block a gesture landed on
+   * @returns {Block} the block that owns the gesture
+   */
+  public resolveToSelectableBlock(block: Block): Block {
+    if (block.parentId === null) {
+      return block;
+    }
+
+    const parent = this.getBlockById(block.parentId);
+
+    if (parent === undefined || !parent.tool.ownsChildren || BlockRepository.isColumnLayout(parent)) {
+      return block;
+    }
+
+    return this.resolveToSelectableBlock(parent);
+  }
+
+  /**
+   * Whether the block is a unit a selection gesture may target on its own.
+   * @param block - the block to test
+   * @returns {boolean}
+   */
+  public isSelectionUnit(block: Block): boolean {
+    return this.resolveToSelectableBlock(block) === block && !BlockRepository.isColumnLayout(block);
+  }
+
+  /**
+   * The blocks a range gesture (Shift+Click, cross-block drag, Shift+Arrow)
+   * spanning `anchor`→`target` selects.
+   *
+   * Both endpoints are resolved to selection units and then lifted to SIBLINGS
+   * under their lowest common ancestor, and the run between those siblings is
+   * returned. Walking the flat array between two indices instead selects every
+   * block stored in between — which, for a range that crosses a container,
+   * means the container AND its children, so Duplicate duplicates the subtree
+   * twice and Delete removes blocks the user never highlighted.
+   *
+   * When one endpoint contains the other, the container alone is returned: it
+   * already represents its whole subtree.
+   * @param anchor - the block the gesture started on
+   * @param target - the block the gesture currently reaches
+   * @returns {Block[]} the blocks to select, in document order
+   */
+  public getSelectionSiblingRange(anchor: Block, target: Block): Block[] {
+    const from = this.resolveToSelectableBlock(anchor);
+    const to = this.resolveToSelectableBlock(target);
+
+    if (from === to) {
+      return this.expandToSelectionUnits(from);
+    }
+
+    const fromChain = this.ancestorChain(from);
+    const toChain = this.ancestorChain(to);
+
+    if (toChain.includes(from)) {
+      return this.expandToSelectionUnits(from);
+    }
+
+    if (fromChain.includes(to)) {
+      return this.expandToSelectionUnits(to);
+    }
+
+    const toIds = new Set(toChain.map((block) => block.id));
+    const commonAncestor = fromChain.find((block) => toIds.has(block.id)) ?? null;
+
+    const fromSibling = BlockRepository.siblingUnder(fromChain, commonAncestor);
+    const toSibling = BlockRepository.siblingUnder(toChain, commonAncestor);
+    const siblings = this.blocks.filter((block) => block.parentId === (commonAncestor?.id ?? null));
+
+    const fromIndex = siblings.indexOf(fromSibling);
+    const toIndex = siblings.indexOf(toSibling);
+
+    if (fromIndex === -1 || toIndex === -1) {
+      return [...this.expandToSelectionUnits(from), ...this.expandToSelectionUnits(to)];
+    }
+
+    return siblings
+      .slice(Math.min(fromIndex, toIndex), Math.max(fromIndex, toIndex) + 1)
+      .flatMap((block) => this.expandToSelectionUnits(block));
+  }
+
+  /**
+   * The block on `chain` that is a direct child of `commonAncestor` (or the
+   * chain's outermost block when the two endpoints share no ancestor).
+   * @param chain - a block's ancestor chain, innermost first
+   * @param commonAncestor - the lowest ancestor both endpoints share, or null for the document root
+   */
+  private static siblingUnder(chain: Block[], commonAncestor: Block | null): Block {
+    if (commonAncestor === null) {
+      return chain[chain.length - 1];
+    }
+
+    return chain[chain.indexOf(commonAncestor) - 1];
+  }
+
+  /**
+   * The block itself when it is a selection unit, otherwise the units it holds
+   * — a column layout container is never selected, its blocks are.
+   * @param block - the block to expand
+   */
+  private expandToSelectionUnits(block: Block): Block[] {
+    if (this.isSelectionUnit(block)) {
+      return [block];
+    }
+
+    return this.blocks
+      .filter((candidate) => candidate.parentId === block.id)
+      .flatMap((candidate) => this.expandToSelectionUnits(candidate));
+  }
+
+  /**
+   * A block and its ancestors, innermost first. Guards against a corrupted
+   * parentId cycle by never visiting a block twice.
+   * @param block - the block to walk up from
+   */
+  private ancestorChain(block: Block, seen: Set<string> = new Set<string>()): Block[] {
+    if (seen.has(block.id)) {
+      return [];
+    }
+
+    seen.add(block.id);
+
+    const parent = block.parentId === null ? undefined : this.getBlockById(block.parentId);
+
+    return parent === undefined ? [block] : [block, ...this.ancestorChain(parent, seen)];
+  }
+
+  /**
+   * Column layout containers, which never own a toolbar, a drag handle or a
+   * selection — only the blocks inside a column do. Mirrors
+   * `BlockHoverController.isColumnContainer`.
+   * @param block - the block to test
+   */
+  private static isColumnLayout(block: Block): boolean {
+    return block.name === 'column' || block.name === 'column_list';
+  }
+
+  /**
    * Get block at a specific index from the blocks store nodes array
    * @param index - the index
    * @returns {Block | undefined}

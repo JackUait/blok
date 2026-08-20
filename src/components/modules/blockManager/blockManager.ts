@@ -1046,6 +1046,38 @@ export class BlockManager extends Module {
   }
 
   /**
+   * The block a selection gesture aimed at `block` actually targets — the same
+   * unit the block toolbar anchors to. See
+   * {@link BlockRepository.resolveToSelectableBlock}.
+   * @param block - the block a gesture landed on
+   * @returns {Block} the block that owns the gesture
+   */
+  public resolveToSelectableBlock(block: Block): Block {
+    return this.repository.resolveToSelectableBlock(block);
+  }
+
+  /**
+   * Whether the block is a unit a selection gesture may target on its own.
+   * See {@link BlockRepository.isSelectionUnit}.
+   * @param block - the block to test
+   * @returns {boolean}
+   */
+  public isSelectionUnit(block: Block): boolean {
+    return this.repository.isSelectionUnit(block);
+  }
+
+  /**
+   * The blocks a range gesture spanning `anchor`→`target` selects. See
+   * {@link BlockRepository.getSelectionSiblingRange}.
+   * @param anchor - the block the gesture started on
+   * @param target - the block the gesture currently reaches
+   * @returns {Block[]} the blocks to select, in document order
+   */
+  public getSelectionSiblingRange(anchor: Block, target: Block): Block[] {
+    return this.repository.getSelectionSiblingRange(anchor, target);
+  }
+
+  /**
    * Returns the depth (nesting level) of a block in the hierarchy.
    * @param block - the block to get depth for
    * @returns {number} - depth level (0 for root, 1 for first level children, etc.)

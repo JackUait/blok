@@ -203,6 +203,46 @@ describe('BlockEventBinder', () => {
       expect(dependencies.blockEvents.input).toHaveBeenCalledWith(event);
     });
 
+    /**
+     * A nested block's holder sits INSIDE its container's holder, so one
+     * keystroke bubbles through every ancestor block's listener. Running the
+     * block-event pipeline once per nesting level made Shift+ArrowDown inside a
+     * toggle extend the selection by two rows per press.
+     */
+    it('runs the pipeline once for a keystroke inside a nested block', () => {
+      const container = createMockBlock('container');
+      const child = createMockBlock('child');
+
+      container.holder.appendChild(child.holder);
+      document.body.appendChild(container.holder);
+
+      binder.bindBlockEvents(container);
+      binder.bindBlockEvents(child);
+
+      child.holder.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+      expect(dependencies.blockEvents.keydown).toHaveBeenCalledTimes(1);
+
+      container.holder.remove();
+    });
+
+    it('runs the keyup pipeline once for a keystroke inside a nested block', () => {
+      const container = createMockBlock('container');
+      const child = createMockBlock('child');
+
+      container.holder.appendChild(child.holder);
+      document.body.appendChild(container.holder);
+
+      binder.bindBlockEvents(container);
+      binder.bindBlockEvents(child);
+
+      child.holder.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown', bubbles: true }));
+
+      expect(dependencies.blockEvents.keyup).toHaveBeenCalledTimes(1);
+
+      container.holder.remove();
+    });
+
     it('does not bind non-KeyboardEvent to keydown handler', () => {
       const block = createMockBlock();
       binder.bindBlockEvents(block);

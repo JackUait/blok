@@ -221,15 +221,24 @@ describe('top-level block enumeration law', () => {
     ).toMatch(/forceTopLevel:\s*true/);
   });
 
-  it('LAW D: the lasso enumerates top-level blocks only', () => {
+  it('LAW D: the lasso enumerates selection units, and never a unit together with its descendants', () => {
     const source = readFileSync(RECTANGLE_FILE, 'utf8');
     const trySelectNextBlock = extractMember(source, 'private trySelectNextBlock(');
 
     expect(
       trySelectNextBlock,
-      'RectangleSelection.trySelectNextBlock must skip nested blocks (parentId !== null). ' +
-      'A child holder is mounted INSIDE its root holder, so a band that reaches a cell ' +
-      'also overlaps the table — selecting both makes Duplicate duplicate the cells twice.'
-    ).toMatch(/parentId\s*!==\s*null/);
+      'RectangleSelection.trySelectNextBlock must enumerate SELECTION UNITS ' +
+      '(BlockManager.isSelectionUnit) — the same blocks the block toolbar anchors to. ' +
+      'Filtering on parentId === null instead makes every toggle/callout child ' +
+      'unreachable, so a band beside a nested table selects the whole section.'
+    ).toMatch(/isSelectionUnit/);
+
+    expect(
+      trySelectNextBlock,
+      'RectangleSelection.trySelectNextBlock must run the crossed units through ' +
+      'dropRepresentedUnits. A child holder is mounted INSIDE its container holder, so a ' +
+      'band that reaches a cell also overlaps the table — selecting both makes Duplicate ' +
+      'duplicate the cells twice.'
+    ).toMatch(/dropRepresentedUnits/);
   });
 });

@@ -162,7 +162,15 @@ test.describe('nested containers — selecting several lines inside one containe
     await expect(lineLocator(page, 'Right block')).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
-  test('dragging from one column into another does not leave line blocks selected', async ({ page }) => {
+  /**
+   * A column and its row are structural containers, never selection units
+   * (BlockHoverController.isColumnContainer: "only the blocks inside a column
+   * are selectable"). A drag that leaves the column therefore selects the
+   * document-order run of blocks it spans across both columns — it used to
+   * select nothing at all, because both endpoints resolved up to the same
+   * column_list root and the gesture was discarded.
+   */
+  test('dragging from one column into another selects the run it spans', async ({ page }) => {
     await createBlok(page, {
       blocks: [
         { id: 'cl1', type: 'column_list', data: {}, content: ['c1', 'c2'] },
@@ -181,8 +189,13 @@ test.describe('nested containers — selecting several lines inside one containe
 
     await dragBetween(page, lineOne, rightBlock);
 
-    // Intra-column line selection must not linger after the drag left the column
-    await expect(page.locator('[data-blok-component="paragraph"][data-blok-selected="true"]')).toHaveCount(0);
+    await expect(lineOne).toHaveAttribute('data-blok-selected', 'true');
+    await expect(lineLocator(page, 'Line two')).toHaveAttribute('data-blok-selected', 'true');
+    await expect(rightBlock).toHaveAttribute('data-blok-selected', 'true');
+
+    // The layout containers themselves are never part of the selection
+    await expect(page.locator('[data-blok-component="column"][data-blok-selected="true"]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-component="column_list"][data-blok-selected="true"]')).toHaveCount(0);
   });
 
   test('pressing Delete removes the selected callout lines but keeps the callout', async ({ page }) => {

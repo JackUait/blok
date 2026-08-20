@@ -67,6 +67,20 @@ export class BlockEventBinder {
   private readonly dependencies: BlockEventBinderDependencies;
 
   /**
+   * Events whose block-level pipeline has already run this dispatch.
+   *
+   * Every block holder carries its own listener, and a NESTED block's holder
+   * sits inside its container's, so one keystroke bubbles through a listener
+   * per nesting level. The handlers ignore which block they were bound to —
+   * BlockEvents resolves the current block from the caret — so the extra runs
+   * were pure duplication: Shift+ArrowDown inside a toggle extended the
+   * selection by one row per ANCESTOR, not per press. The innermost listener
+   * fires first (bubble phase), so first-one-wins keeps the deepest block's
+   * dispatch.
+   */
+  private readonly dispatchedEvents = new WeakSet<Event>();
+
+  /**
    * @param dependencies - Required dependencies
    */
   constructor(dependencies: BlockEventBinderDependencies) {
@@ -85,7 +99,9 @@ export class BlockEventBinder {
         if (shouldHandleEvent && !shouldHandleEvent(event)) {
           return;
         }
-        blockEvents.keydown(event);
+        if (this.claimDispatch(event)) {
+          blockEvents.keydown(event);
+        }
       }
     });
 
@@ -94,7 +110,9 @@ export class BlockEventBinder {
         if (shouldHandleEvent && !shouldHandleEvent(event)) {
           return;
         }
-        blockEvents.keyup(event);
+        if (this.claimDispatch(event)) {
+          blockEvents.keyup(event);
+        }
       }
     });
 
@@ -103,7 +121,9 @@ export class BlockEventBinder {
         if (shouldHandleEvent && !shouldHandleEvent(event)) {
           return;
         }
-        blockEvents.input(event);
+        if (this.claimDispatch(event)) {
+          blockEvents.input(event);
+        }
       }
     });
 
@@ -112,6 +132,21 @@ export class BlockEventBinder {
         index: getBlockIndex(affectedBlock),
       });
     });
+  }
+
+  /**
+   * Claim this event for the block-level pipeline, returning false when an
+   * inner block's listener already ran it. See {@link dispatchedEvents}.
+   * @param event - the bubbling DOM event
+   */
+  private claimDispatch(event: Event): boolean {
+    if (this.dispatchedEvents.has(event)) {
+      return false;
+    }
+
+    this.dispatchedEvents.add(event);
+
+    return true;
   }
 
   /**

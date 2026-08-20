@@ -790,6 +790,101 @@ test.describe('modules/selection', () => {
     await expect(getBlockByIndex(page, 2)).not.toHaveAttribute('data-blok-selected', 'true');
   });
 
+  test.describe('rubber band selection over nested rows', () => {
+    /**
+     * A toggle heading whose children are a table, a paragraph and a callout —
+     * the shape where a lasso beside the table used to select the whole toggle
+     * section, because only TOP-LEVEL blocks were lasso-selectable and the
+     * heading's holder spans its entire subtree.
+     */
+    const createToggleSection = async (page: Page): Promise<void> => {
+      await createBlokWithBlocks(page, [
+        {
+          id: 'above',
+          type: 'paragraph',
+          data: { text: 'Above the toggle' },
+        },
+        {
+          id: 'toggle',
+          type: 'header',
+          data: {
+            text: 'Toggle heading',
+            level: 2,
+            isToggleable: true,
+            isOpen: true,
+          },
+          content: ['nested-table', 'nested-paragraph'],
+        },
+        {
+          id: 'nested-table',
+          type: 'table',
+          data: {
+            withHeadings: false,
+            content: [['a', 'b'], ['c', 'd']],
+          },
+          parent: 'toggle',
+        },
+        {
+          id: 'nested-paragraph',
+          type: 'paragraph',
+          data: { text: 'Nested paragraph' },
+          parent: 'toggle',
+        },
+      ]);
+
+      await expect(page.locator('[data-blok-id="nested-table"]')).toBeVisible();
+    };
+
+    /**
+     * Drag a band in the editor's left gutter across the given row.
+     */
+    const lassoRow = async (page: Page, row: Locator): Promise<void> => {
+      const box = await getRequiredBoundingBox(row);
+
+      await page.mouse.move(10, box.y + 2);
+      await page.mouse.down();
+      await page.mouse.move(10, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.move(10, box.y + box.height - 2, { steps: 5 });
+      await page.mouse.up();
+    };
+
+    test('selects the nested table, not the toggle heading, when the band crosses the table row', async ({ page }) => {
+      await createToggleSection(page);
+
+      await lassoRow(page, page.locator('[data-blok-id="nested-table"]'));
+
+      await expect(page.locator('[data-blok-id="nested-table"]')).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="toggle"]')).not.toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="above"]')).not.toHaveAttribute('data-blok-selected', 'true');
+    });
+
+    test('selects a plain toggle child when the band crosses only that child', async ({ page }) => {
+      await createToggleSection(page);
+
+      await lassoRow(page, page.locator('[data-blok-id="nested-paragraph"]'));
+
+      await expect(page.locator('[data-blok-id="nested-paragraph"]')).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="toggle"]')).not.toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="nested-table"]')).not.toHaveAttribute('data-blok-selected', 'true');
+    });
+
+    test('selects the toggle heading alone when the band crosses its own title line', async ({ page }) => {
+      await createToggleSection(page);
+
+      const toggleBox = await getRequiredBoundingBox(page.locator('[data-blok-id="toggle"]'));
+      const tableBox = await getRequiredBoundingBox(page.locator('[data-blok-id="nested-table"]'));
+
+      await page.mouse.move(10, toggleBox.y + 2);
+      await page.mouse.down();
+      await page.mouse.move(10, tableBox.y + tableBox.height / 2, { steps: 10 });
+      await page.mouse.up();
+
+      await expect(page.locator('[data-blok-id="toggle"]')).toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="nested-table"]')).not.toHaveAttribute('data-blok-selected', 'true');
+      await expect(page.locator('[data-blok-id="nested-paragraph"]')).not.toHaveAttribute('data-blok-selected', 'true');
+    });
+  });
+
   test('shift+drag adds to existing selection instead of replacing', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {

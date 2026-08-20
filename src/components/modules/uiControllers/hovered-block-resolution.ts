@@ -14,8 +14,19 @@ const BLOCK_WRAPPER_SELECTOR = '[data-blok-testid="block-wrapper"]';
  * [data-blok-nested-blocks] too and are told apart via CELL_BLOCKS_SELECTOR.
  */
 const NESTED_CONTAINER_SELECTOR = '[data-blok-nested-blocks], [data-blok-toggle-children]';
-const CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
-const CHILD_TOOLBAR_SELECTOR = '[data-blok-child-toolbar]';
+
+/**
+ * A table cell's blocks container. Exported so every module that has to tell a
+ * tool-owned slot apart from a plain nested-children slot reads the same
+ * selector — the lasso and the toolbar must never disagree on that.
+ */
+export const CELL_BLOCKS_SELECTOR = '[data-blok-table-cell-blocks]';
+
+/**
+ * A container whose FIRST child block is the container's own visual line (the
+ * callout's text). Exported for the same reason as {@link CELL_BLOCKS_SELECTOR}.
+ */
+export const CHILD_TOOLBAR_SELECTOR = '[data-blok-child-toolbar]';
 
 /**
  * Depth cap for descending through nested containers. Nesting deeper than

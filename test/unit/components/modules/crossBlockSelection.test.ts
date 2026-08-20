@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { CrossBlockSelection } from '../../../../src/components/modules/crossBlockSelection';
+import { BlockRepository } from '../../../../src/components/modules/blockManager/repository';
+import type { BlocksStore } from '../../../../src/components/modules/blockManager/types';
 import * as _ from '../../../../src/components/utils';
 import type { Block } from '../../../../src/components/block';
 import type { Listeners } from '../../../../src/components/utils/listeners';
@@ -30,14 +32,22 @@ const setPrivate = <T>(instance: CrossBlockSelection, key: string, value: T): vo
   (instance as unknown as Record<string, T>)[key] = value;
 };
 
-const createBlockStub = (): BlockWithSelection => {
+let stubCounter = 0;
+
+const createBlockStub = (options: { id?: string; name?: string; parentId?: string | null; ownsChildren?: boolean } = {}): BlockWithSelection => {
   const holder = document.createElement('div');
 
   holder.scrollIntoView = vi.fn();
   let selected = false;
 
+  stubCounter += 1;
+
   const stub = {
     holder,
+    id: options.id ?? `stub-${stubCounter}`,
+    name: options.name ?? 'paragraph',
+    parentId: options.parentId ?? null,
+    tool: { ownsChildren: options.ownsChildren ?? false },
   } as Record<string, unknown>;
 
   Object.defineProperty(stub, 'selected', {
@@ -97,12 +107,26 @@ describe('CrossBlockSelection', () => {
       );
     };
 
+    /**
+     * Real BlockRepository over the same stub array, so the selection-unit and
+     * sibling-range rules under test are the shipped ones, not a re-statement.
+     */
+    const repository = new BlockRepository();
+
+    repository.initialize({ array: blocks } as unknown as BlocksStore);
+
     const blockManager = {
       blocks,
       currentBlock: blocks[0],
       getBlock: vi.fn((element: HTMLElement) => findBlockByNode(element)),
       getBlockByChildNode: vi.fn((node: Node) => findBlockByNode(node)),
-      resolveToRootBlock: vi.fn((block: Block) => block),
+      getBlockById: vi.fn((id: string) => repository.getBlockById(id)),
+      resolveToRootBlock: vi.fn((block: Block) => repository.resolveToRootBlock(block)),
+      resolveToSelectableBlock: vi.fn((block: Block) => repository.resolveToSelectableBlock(block)),
+      isSelectionUnit: vi.fn((block: Block) => repository.isSelectionUnit(block)),
+      getSelectionSiblingRange: vi.fn(
+        (anchor: Block, target: Block) => repository.getSelectionSiblingRange(anchor, target)
+      ),
     };
 
     crossBlockSelection.state = {
@@ -278,18 +302,63 @@ describe('CrossBlockSelection', () => {
       expect(blocks[1].holder.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
     });
 
-    it('deselects the previous block when shrinking the selection', () => {
+    it('drops the far end when the opposite arrow shrinks the selection', () => {
       setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[1]);
-      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[1]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[3]);
       blocks[1].selected = true;
       blocks[2].selected = true;
+      blocks[3].selected = true;
+
+      crossBlockSelection.toggleBlockSelectedState(false);
+
+      expect(blocks[1].selected).toBe(true);
+      expect(blocks[2].selected).toBe(true);
+      expect(blocks[3].selected).toBe(false);
+      expect(blockSelectionClearCache).toHaveBeenCalled();
+      expect(toolbarClose).toHaveBeenCalled();
+    });
+
+    it('extends by exactly one sibling per press inside a container', () => {
+      const toggle = createBlockStub({ id: 'toggle', name: 'header' });
+      const table = createBlockStub({ id: 'table', name: 'table', parentId: 'toggle', ownsChildren: true });
+      const cell = createBlockStub({ id: 'cell', parentId: 'table' });
+      const first = createBlockStub({ id: 'first-child', parentId: 'toggle' });
+      const callout = createBlockStub({ id: 'callout', name: 'callout', parentId: 'toggle' });
+      const calloutLine = createBlockStub({ id: 'callout-line', parentId: 'callout' });
+      const last = createBlockStub({ id: 'last-child', parentId: 'toggle' });
+
+      blocks.length = 0;
+      blocks.push(toggle, table, cell, first, callout, calloutLine, last);
+
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', first);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', first);
 
       crossBlockSelection.toggleBlockSelectedState(true);
 
-      expect(blocks[1].selected).toBe(false);
-      expect(blocks[2].selected).toBe(true);
-      expect(blockSelectionClearCache).toHaveBeenCalled();
-      expect(toolbarClose).toHaveBeenCalled();
+      expect(blocks.filter((block) => block.selected).map((block) => block.id)).toEqual(['first-child', 'callout']);
+    });
+
+    /**
+     * Stepping by flat index walked INTO the next container: from a toggle
+     * heading the first Shift+Down landed on its own child, then on a table
+     * cell, so the visible selection never moved past the section.
+     */
+    it('steps over a container instead of into it', () => {
+      const toggle = createBlockStub({ id: 'toggle', name: 'header' });
+      const toggleChild = createBlockStub({ id: 'toggle-child', parentId: 'toggle' });
+      const after = createBlockStub({ id: 'after' });
+
+      blocks.length = 0;
+      blocks.push(toggle, toggleChild, after);
+
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', toggle);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', toggle);
+
+      crossBlockSelection.toggleBlockSelectedState(true);
+
+      expect(toggle.selected).toBe(true);
+      expect(after.selected).toBe(true);
+      expect(toggleChild.selected).toBe(false);
     });
 
     it('announces the selected block count as the keyboard selection grows (H9)', () => {
@@ -698,7 +767,10 @@ describe('CrossBlockSelection', () => {
       expect(blockSelectionClearCache).toHaveBeenCalled();
     });
 
-    it('deselects blocks when returning to the first selected block', () => {
+    it('collapses to the anchor when the drag returns to the first selected block', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
+      setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[1]);
+
       const event = {
         relatedTarget: blocks[1].holder,
         target: blocks[0].holder,
@@ -709,7 +781,7 @@ describe('CrossBlockSelection', () => {
 
       accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-      expect(blocks[0].selected).toBe(false);
+      expect(blocks[0].selected).toBe(true);
       expect(blocks[1].selected).toBe(false);
       expect(blockSelectionClearCache).toHaveBeenCalled();
     });
@@ -747,19 +819,14 @@ describe('CrossBlockSelection', () => {
 
       accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-      expect(blocks[0].selected).toBe(false);
+      expect(blocks[0].selected).toBe(true);
       expect(blocks[1].selected).toBe(false);
       expect(blocks[2].selected).toBe(false);
       expect(blocks[3].selected).toBe(false);
     });
 
-    it('delegates range toggling to toggleBlocksSelectedState for intermediate blocks', () => {
-      const toggleSpy = vi.spyOn(
-        crossBlockSelection as unknown as {
-          toggleBlocksSelectedState: (firstBlock: Block, lastBlock: Block) => void;
-        },
-        'toggleBlocksSelectedState'
-      );
+    it('selects the whole run between the anchor and the hovered block', () => {
+      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
 
       const event = {
         relatedTarget: blocks[1].holder,
@@ -769,7 +836,7 @@ describe('CrossBlockSelection', () => {
       accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
       expect(inlineToolbarClose).toHaveBeenCalled();
-      expect(toggleSpy).toHaveBeenCalledWith(blocks[1], blocks[2]);
+      expect(blocks.map((block) => block.selected)).toEqual([true, true, true, false]);
       expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[2]);
     });
 
@@ -792,103 +859,60 @@ describe('CrossBlockSelection', () => {
       expect(blocks[1].selected).toBe(false);
     });
 
-    describe('resolveToRootBlock integration', () => {
-      let childBlock: BlockWithSelection;
+    /**
+     * A block inside a table cell is not a selection unit — the table is (its
+     * contentIds ARE the cell blocks). A drag reaching a cell must therefore
+     * select the table, and a drag BETWEEN two cells of the same table must
+     * not turn into a block-range selection at all.
+     */
+    describe('nested blocks resolve to their selection unit', () => {
+      let table: BlockWithSelection;
+      let cell: BlockWithSelection;
 
       beforeEach(() => {
-        childBlock = createBlockStub();
-        /**
-         * The child block lives inside a table cell, so its holder is
-         * inside the parent (blocks[2]) holder in the DOM.
-         */
-        blocks[2].holder.appendChild(childBlock.holder);
+        table = createBlockStub({ id: 'table', name: 'table', ownsChildren: true });
+        cell = createBlockStub({ id: 'cell', parentId: 'table' });
 
-        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-        const blockManager = blokState.BlockManager;
-
-        /**
-         * getBlockByChildNode may return the child block when the mouse
-         * target is inside a table cell.
-         */
-        (blockManager.getBlockByChildNode as ReturnType<typeof vi.fn>).mockImplementation((node: Node) => {
-          if (node === childBlock.holder || childBlock.holder.contains(node)) {
-            return childBlock;
-          }
-
-          return blocks.find((b) => b.holder === node || b.holder.contains(node)) ?? null;
-        });
-
-        /**
-         * resolveToRootBlock walks up the parentId chain.
-         * For the child it returns the parent table block (blocks[2]);
-         * for any root-level block it returns itself.
-         */
-        (blockManager as unknown as Record<string, unknown>).resolveToRootBlock = vi.fn((block: Block) => {
-          if (block === (childBlock as unknown as Block)) {
-            return blocks[2];
-          }
-
-          return block;
-        });
+        blocks.splice(2, 1, table);
+        redactor.appendChild(table.holder);
+        table.holder.appendChild(cell.holder);
+        blocks.push(cell);
       });
 
-      it('resolves a child block inside a table to the parent table block for selection', () => {
+      it('selects the table, not the cell block, when the drag reaches into a cell', () => {
         setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
         setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
 
-        blocks[0].selected = false;
-
         const event = {
           relatedTarget: blocks[0].holder,
-          target: childBlock.holder,
+          target: cell.holder,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-        const blockManager = blokState.BlockManager;
-
-        expect(blockManager.getBlockByChildNode).toHaveBeenCalledWith(childBlock.holder);
-        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
-
-        /**
-         * Selection should land on the root table block (blocks[2]),
-         * NOT on the child block.
-         */
-        expect(blocks[2].selected).toBe(true);
-        expect(childBlock.selected).toBe(false);
+        expect(table.selected).toBe(true);
+        expect(cell.selected).toBe(false);
       });
 
-      it('resolves a child block used as relatedTarget to the parent table block', () => {
+      it('resolves a cell used as relatedTarget to its table', () => {
         setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
-        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
-        blocks[0].selected = true;
-        blocks[2].selected = true;
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', table);
 
-        /**
-         * Mouse moves from the child (inside table) to blocks[3].
-         * relatedTarget is the child — should resolve to blocks[2].
-         */
         const event = {
-          relatedTarget: childBlock.holder,
+          relatedTarget: cell.holder,
           target: blocks[3].holder,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-        const blockManager = blokState.BlockManager;
-
-        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
         expect(accessPrivate<Block>(crossBlockSelection, 'lastSelectedBlock')).toBe(blocks[3]);
+        expect(blocks.slice(0, 4).map((block) => block.selected)).toEqual([true, true, true, true]);
+        expect(cell.selected).toBe(false);
       });
 
-      it('does not change behavior for root-level blocks (parentId is null)', () => {
+      it('leaves root-level drags untouched', () => {
         setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
         setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[0]);
-
-        blocks[0].selected = false;
-        blocks[1].selected = false;
 
         const event = {
           relatedTarget: blocks[0].holder,
@@ -897,115 +921,31 @@ describe('CrossBlockSelection', () => {
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-        const blockManager = blokState.BlockManager;
-
-        /**
-         * resolveToRootBlock should be called but return the same
-         * block since these are root-level blocks.
-         */
-        expect((blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock).toHaveBeenCalled();
-
         expect(blocks[0].selected).toBe(true);
         expect(blocks[1].selected).toBe(true);
-        expect(childBlock.selected).toBe(false);
+        expect(cell.selected).toBe(false);
       });
 
-      it('skips selection when both target and relatedTarget resolve to the same root block', () => {
-        setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
-        setPrivate(crossBlockSelection, 'lastSelectedBlock', blocks[2]);
+      it('does not start a block selection while the drag stays inside one table', () => {
+        const secondCell = createBlockStub({ id: 'cell-2', parentId: 'table' });
 
-        /**
-         * Create a second child that also resolves to blocks[2].
-         */
-        const secondChild = createBlockStub();
+        table.holder.appendChild(secondCell.holder);
+        blocks.push(secondCell);
 
-        blocks[2].holder.appendChild(secondChild.holder);
-
-        const blokState = accessPrivate<CrossBlockSelection['Blok']>(crossBlockSelection, 'Blok');
-        const blockManager = blokState.BlockManager;
-
-        (blockManager.getBlockByChildNode as ReturnType<typeof vi.fn>).mockImplementation((node: Node) => {
-          if (node === childBlock.holder || childBlock.holder.contains(node)) {
-            return childBlock;
-          }
-          if (node === secondChild.holder || secondChild.holder.contains(node)) {
-            return secondChild;
-          }
-
-          return blocks.find((b) => b.holder === node || b.holder.contains(node)) ?? null;
-        });
-
-        (blockManager as unknown as Record<string, ReturnType<typeof vi.fn>>).resolveToRootBlock.mockImplementation(
-          (block: Block) => {
-            if (block === (childBlock as unknown as Block) || block === (secondChild as unknown as Block)) {
-              return blocks[2];
-            }
-
-            return block;
-          }
-        );
-
-        blocks[0].selected = true;
-        blocks[2].selected = true;
+        setPrivate(crossBlockSelection, 'firstSelectedBlock', cell);
+        setPrivate(crossBlockSelection, 'lastSelectedBlock', cell);
 
         const event = {
-          relatedTarget: childBlock.holder,
-          target: secondChild.holder,
+          relatedTarget: cell.holder,
+          target: secondCell.holder,
         } as unknown as MouseEvent;
 
         accessPrivate<(event: MouseEvent) => void>(crossBlockSelection, 'onMouseOver')(event);
 
-        /**
-         * Both children resolve to the same root block (blocks[2]),
-         * so the early `targetBlock === relatedBlock` guard should
-         * prevent any selection change.
-         */
-        expect(blocks[0].selected).toBe(true);
-        expect(blocks[2].selected).toBe(true);
-        expect(childBlock.selected).toBe(false);
-        expect(secondChild.selected).toBe(false);
+        expect(table.selected).toBe(false);
+        expect(cell.selected).toBe(false);
+        expect(secondCell.selected).toBe(false);
       });
-    });
-  });
-
-  describe('toggleBlocksSelectedState', () => {
-    it('toggles intermediate blocks when edges have different selection state', () => {
-      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
-
-      blocks[1].selected = false;
-      blocks[2].selected = false;
-      blocks[3].selected = true;
-
-      const toggleBlocksSelectedState = accessPrivate<
-        (firstBlock: Block, lastBlock: Block) => void
-          >(crossBlockSelection, 'toggleBlocksSelectedState');
-
-      toggleBlocksSelectedState.call(crossBlockSelection, blocks[1], blocks[3]);
-
-      expect(blocks[1].selected).toBe(false);
-      expect(blocks[2].selected).toBe(true);
-      expect(blocks[3].selected).toBe(false);
-      expect(blockSelectionClearCache).toHaveBeenCalledTimes(2);
-      expect(toolbarClose).toHaveBeenCalled();
-    });
-
-    it('does not toggle the last block when edges have identical selection state', () => {
-      setPrivate(crossBlockSelection, 'firstSelectedBlock', blocks[0]);
-
-      blocks[1].selected = false;
-      blocks[2].selected = false;
-
-      const toggleBlocksSelectedState = accessPrivate<
-        (firstBlock: Block, lastBlock: Block) => void
-          >(crossBlockSelection, 'toggleBlocksSelectedState');
-
-      toggleBlocksSelectedState.call(crossBlockSelection, blocks[1], blocks[2]);
-
-      expect(blocks[1].selected).toBe(true);
-      expect(blocks[2].selected).toBe(false);
-      expect(blockSelectionClearCache).toHaveBeenCalledTimes(1);
-      expect(toolbarClose).toHaveBeenCalled();
     });
   });
 });

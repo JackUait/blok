@@ -5,6 +5,7 @@
  * @version 1.0.0
  */
 import { Module } from '../__module';
+import type { Block } from '../block';
 import {
   INLINE_TOOLBAR_INTERFACE_SELECTOR,
   DATA_ATTR,
@@ -14,6 +15,8 @@ import { Dom as $ } from '../dom';
 import { SelectionUtils } from '../selection/index';
 import { announce } from '../utils/announcer';
 import { throttle } from '../utils';
+
+import { CELL_BLOCKS_SELECTOR, CHILD_TOOLBAR_SELECTOR } from './uiControllers/hovered-block-resolution';
 
 /**
  *
@@ -110,11 +113,6 @@ export class RectangleSelection extends Module {
   private rectCrossesBlocks = false;
 
   /**
-   * The block index where selection started (anchor point for geometry-based selection)
-   */
-  private anchorBlockIndex: number | null = null;
-
-  /**
    * Selection rectangle
    */
   private overlayRectangle: HTMLDivElement | null = null;
@@ -191,7 +189,6 @@ export class RectangleSelection extends Module {
       this.Blok.BlockSelection.disableNavigationMode();
       this.clearSelection();
       this.stackOfSelected = [];
-      this.anchorBlockIndex = null;
     }
 
     const selectorsToAvoid = [
@@ -254,7 +251,6 @@ export class RectangleSelection extends Module {
     this.pendingToolbarClose = false;
     this.startX = 0;
     this.startY = 0;
-    this.anchorBlockIndex = null;
     this.stackOfSelected = [];
     if (this.overlayRectangle !== null) {
       this.overlayRectangle.style.display = 'none';
@@ -580,7 +576,7 @@ export class RectangleSelection extends Module {
     this.rectCrossesBlocks = false;
     const block = index !== undefined ? this.Blok.BlockManager.getBlockByIndex(index) : undefined;
     const rootBlock = block !== undefined
-      ? this.Blok.BlockManager.resolveToRootBlock(block)
+      ? this.Blok.BlockManager.resolveToSelectableBlock(block)
       : undefined;
 
     if (rootBlock) {
@@ -619,7 +615,7 @@ export class RectangleSelection extends Module {
       return;
     }
 
-    this.trySelectNextBlock(index);
+    this.trySelectNextBlock();
     // For case, when rect is out from blocks
     this.inverseSelection();
 
@@ -797,69 +793,58 @@ export class RectangleSelection extends Module {
   }
 
   /**
-   * Adds a block to the selection and determines which blocks should be selected.
-   * Uses geometry-based approach: tracks an anchor block index and computes the
-   * expected range [min(anchor, current), max(anchor, current)] on each call.
-   * @param {number} index - index of new block in the reactor
+   * Selects exactly the SELECTION UNITS the rubber band covers, dropping any
+   * unit that another selected unit already represents.
    */
-  private trySelectNextBlock(index: number): void {
-    if (this.anchorBlockIndex === null) {
-      this.anchorBlockIndex = index;
-    }
-
+  private trySelectNextBlock(): void {
     const blocks = this.Blok.BlockManager.blocks;
-    const anchorBlock = blocks[this.anchorBlockIndex];
-    const currentBlock = blocks[index];
-
-    if (!anchorBlock || !currentBlock) {
-      return;
-    }
-
-    const anchorRect = anchorBlock.holder.getBoundingClientRect();
-    const currentRect = currentBlock.holder.getBoundingClientRect();
 
     /**
-     * Constrain the selection range to the actual rubber band coordinates.
-     * Without this, the range extends to the full bounding box of the anchor/current blocks,
-     * which can select blocks that are visually outside the rubber band rectangle.
+     * The drawn rectangle IS the selection. Clamping it further to the holders
+     * of the anchor and current blocks only ever shrinks it, and the anchor is
+     * whatever sat under the pointer on the first THROTTLED mousemove — so a
+     * fast drag used to drop every row above that block while the overlay still
+     * covered them.
      */
     const scrollTop = this.getScrollTop();
-    const rubberBandMinY = Math.min(this.startY, this.mouseY) - scrollTop;
-    const rubberBandMaxY = Math.max(this.startY, this.mouseY) - scrollTop;
-
-    const minY = Math.max(Math.min(anchorRect.top, currentRect.top), rubberBandMinY);
-    const maxY = Math.min(Math.max(anchorRect.bottom, currentRect.bottom), rubberBandMaxY);
+    const minY = Math.min(this.startY, this.mouseY) - scrollTop;
+    const maxY = Math.max(this.startY, this.mouseY) - scrollTop;
 
     const scrollLeft = this.getScrollLeft();
     const rubberBandMinX = Math.min(this.startX, this.mouseX) - scrollLeft;
     const rubberBandMaxX = Math.max(this.startX, this.mouseX) - scrollLeft;
 
-    const expectedIndices = new Set<number>();
+    const crossedIndices = new Set<number>();
 
     blocks.forEach((block, i) => {
       /**
-       * Only TOP-LEVEL blocks are lasso-selectable. Nested-block children (table
-       * cells, column children, toggle children) share the same flat array and
-       * their holders sit INSIDE their root's holder, so a band crossing a 3x3
-       * table used to select the table plus all nine cell paragraphs — and
-       * "Duplicate" then duplicated the table AND its cells again. The root
-       * block represents its whole subtree.
+       * Only SELECTION UNITS are lasso-selectable — the same blocks the ⠿
+       * handle anchors to (see BlockRepository.isSelectionUnit, the model twin
+       * of resolveHoveredBlockWrapper). Table cells and column layout
+       * containers are not units; a toggle's, callout's or column's plain
+       * children are.
        */
-      if (block.parentId !== null) {
+      if (!this.Blok.BlockManager.isSelectionUnit(block)) {
         return;
       }
 
       const blockRect = block.holder.getBoundingClientRect();
       const blockContentEl = block.holder.querySelector<HTMLElement>('[data-blok-element-content]');
       const blockContentRect = (blockContentEl ?? block.holder).getBoundingClientRect();
+      const rowBounds = this.rowHitBounds(block);
 
-      const xOverlaps = rubberBandMinX === rubberBandMaxX || (blockContentRect.right > rubberBandMinX && blockContentRect.left < rubberBandMaxX);
+      const hitLeft = rowBounds === null ? blockContentRect.left : Math.min(blockContentRect.left, rowBounds.left);
+      const hitRight = rowBounds === null ? blockContentRect.right : Math.max(blockContentRect.right, rowBounds.right);
+
+      const xOverlaps = rubberBandMinX === rubberBandMaxX || (hitRight > rubberBandMinX && hitLeft < rubberBandMaxX);
 
       // Include blocks that have visual height and overlap the selection range
       if (blockRect.height > 0 && blockRect.bottom > minY && blockRect.top < maxY && xOverlaps) {
-        expectedIndices.add(i);
+        crossedIndices.add(i);
       }
     });
+
+    const expectedIndices = this.dropRepresentedUnits(crossedIndices, minY, maxY);
 
     const previousStack = new Set(this.stackOfSelected);
 
@@ -879,5 +864,166 @@ export class RectangleSelection extends Module {
 
     // Replace stack with the visually selected indices
     this.stackOfSelected = Array.from(expectedIndices).sort((a, b) => a - b);
+  }
+
+  /**
+   * Horizontal bounds of the ROW a block occupies, which is wider than the
+   * block's own content column: the redactor's gutter (the
+   * --blok-editor-gutter-* padding housing the floating +/⠿ controls) belongs
+   * to the row beside it, exactly as `rectCrossesBlocks` already assumes. A
+   * nested row's content starts further right than its container's, so
+   * measuring only the content box left every nested row unreachable from the
+   * gutter and the lasso matched the container instead.
+   *
+   * The row stops early inside a tool-owned layout: a column does NOT own the
+   * space beside it, so blocks in the left column stay distinguishable from
+   * those in the right one.
+   * @param block - the block whose row to measure
+   */
+  private rowHitBounds(block: Block): { left: number; right: number } | null {
+    const parent = block.parentId === null ? undefined : this.Blok.BlockManager.getBlockById(block.parentId);
+
+    if (parent !== undefined && parent.tool.ownsChildren) {
+      return block.holder.getBoundingClientRect();
+    }
+
+    if (parent !== undefined) {
+      return this.rowHitBounds(parent);
+    }
+
+    const redactor = this.Blok.UI.nodes.redactor;
+
+    /**
+     * Only the redactor's OWN box may widen a row — the page margin outside the
+     * editor must never select. With no redactor to measure, the content column
+     * is the row.
+     */
+    return redactor ? redactor.getBoundingClientRect() : null;
+  }
+
+  /**
+   * A container's holder spans its whole subtree, so a band reaching any child
+   * crosses the container too. Selecting both means "Duplicate" duplicates the
+   * container AND its children again, so exactly one of them must survive:
+   *
+   * - the band crosses the container's OWN line → the container represents its
+   *   whole subtree, drop the descendants;
+   * - the band only reaches rows the container merely hosts → the child on that
+   *   line owns the row, drop the container.
+   *
+   * Resolved outermost-first so a chain (toggle → callout → paragraph) collapses
+   * to the shallowest container whose own line the band actually touches.
+   * @param crossedIndices - indices of selection units the band intersects
+   * @param minY - top of the effective band, in client coordinates
+   * @param maxY - bottom of the effective band, in client coordinates
+   */
+  private dropRepresentedUnits(crossedIndices: Set<number>, minY: number, maxY: number): Set<number> {
+    const blocks = this.Blok.BlockManager.blocks;
+    const survivors = new Set(crossedIndices);
+
+    const outermostFirst = Array.from(crossedIndices)
+      .sort((a, b) => this.Blok.BlockManager.getBlockDepth(blocks[a]) - this.Blok.BlockManager.getBlockDepth(blocks[b]));
+
+    for (const index of outermostFirst) {
+      if (!survivors.has(index)) {
+        continue;
+      }
+
+      const container = blocks[index];
+      const represented = Array.from(survivors)
+        .filter((candidate) => candidate !== index && this.isDescendantOf(blocks[candidate], container));
+
+      if (represented.length === 0) {
+        continue;
+      }
+
+      const ownLine = this.ownLineBounds(container);
+
+      if (ownLine.bottom > minY && ownLine.top < maxY) {
+        represented.forEach((candidate) => survivors.delete(candidate));
+      } else {
+        survivors.delete(index);
+      }
+    }
+
+    return survivors;
+  }
+
+  /**
+   * Vertical bounds of the rows a block renders ITSELF, i.e. its holder minus
+   * the slot its child blocks are mounted into. A toggle heading's own line is
+   * its title; a callout's own line IS its first child (the callout's text —
+   * same rule resolveHoveredBlockWrapper applies via [data-blok-child-toolbar]);
+   * a table's cell slots are its own machinery, so its whole holder counts.
+   * @param block - the container block to measure
+   */
+  private ownLineBounds(block: Block): { top: number; bottom: number } {
+    const holderRect = block.holder.getBoundingClientRect();
+    const ownSlot = this.ownChildrenSlot(block);
+
+    if (ownSlot === null) {
+      return { top: holderRect.top, bottom: holderRect.bottom };
+    }
+
+    if (ownSlot.matches(CHILD_TOOLBAR_SELECTOR)) {
+      const firstChild = ownSlot.querySelector<HTMLElement>(`:scope > ${createSelector(DATA_ATTR.element)}`);
+      const firstChildRect = firstChild?.getBoundingClientRect();
+
+      if (firstChildRect !== undefined && firstChildRect.height > 0) {
+        return { top: firstChildRect.top, bottom: firstChildRect.bottom };
+      }
+    }
+
+    const slotRect = ownSlot.getBoundingClientRect();
+
+    if (slotRect.height <= 0) {
+      return { top: holderRect.top, bottom: holderRect.bottom };
+    }
+
+    return { top: holderRect.top, bottom: Math.max(holderRect.top, slotRect.top) };
+  }
+
+  /**
+   * The nested-blocks slot this block mounts its OWN children into — not a
+   * table cell's (cells are the table's machinery) and not a descendant
+   * block's.
+   * @param block - the container block
+   */
+  private ownChildrenSlot(block: Block): HTMLElement | null {
+    const slots = block.holder.querySelectorAll<HTMLElement>(createSelector(DATA_ATTR.nestedBlocks));
+
+    for (const slot of slots) {
+      if (slot.matches(CELL_BLOCKS_SELECTOR)) {
+        continue;
+      }
+
+      if (slot.closest(createSelector(DATA_ATTR.element)) === block.holder) {
+        return slot;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Whether `block` sits anywhere below `ancestor` in the parentId tree.
+   * @param block - the candidate descendant
+   * @param ancestor - the candidate ancestor
+   * @param seen - ids already walked, guarding a malformed parent cycle
+   */
+  private isDescendantOf(block: Block, ancestor: Block, seen: Set<string> = new Set<string>()): boolean {
+    if (block.parentId === null || seen.has(block.id)) {
+      return false;
+    }
+
+    if (block.parentId === ancestor.id) {
+      return true;
+    }
+
+    seen.add(block.id);
+
+    const parent = this.Blok.BlockManager.getBlockById(block.parentId);
+
+    return parent === undefined ? false : this.isDescendantOf(parent, ancestor, seen);
   }
 }

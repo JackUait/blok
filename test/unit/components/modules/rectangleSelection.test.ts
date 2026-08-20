@@ -14,6 +14,8 @@ vi.mock('../../../../src/components/utils/announcer', () => ({
 
 type PartialModules = Partial<BlokModules>;
 
+const isColumnLayout = (block: BlockType): boolean => block.name === 'column' || block.name === 'column_list';
+
 type ToolbarModuleMock = {
   close: Mock<() => void>;
   moveAndOpenForMultipleBlocks: Mock<() => void>;
@@ -37,6 +39,9 @@ type BlockManagerModuleMock = {
   getBlockByIndex: Mock<(index: number) => BlockType | undefined>;
   getBlockById: Mock<(id: string) => BlockType | undefined>;
   resolveToRootBlock: Mock<(block: BlockType) => BlockType>;
+  resolveToSelectableBlock: Mock<(block: BlockType) => BlockType>;
+  isSelectionUnit: Mock<(block: BlockType) => boolean>;
+  getBlockDepth: Mock<(block: BlockType) => number>;
   lastBlock: { holder: HTMLElement };
 };
 
@@ -96,12 +101,43 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
     selectedBlocks: [],
   };
 
+  /**
+   * Faithful stand-in for BlockRepository.resolveToSelectableBlock so the
+   * lasso's unit filter is exercised for real rather than stubbed away.
+   */
+  const resolveToSelectableBlock = (block: BlockType): BlockType => {
+    let current = block;
+
+    for (;;) {
+      const parentId = current.parentId;
+      const parent = parentId === null ? undefined : blocks.find((candidate) => candidate.id === parentId);
+
+      if (parent === undefined || !parent.tool?.ownsChildren || isColumnLayout(parent)) {
+        return current;
+      }
+
+      current = parent;
+    }
+  };
+
   const blockManagerMock: BlockManagerModuleMock = {
     blocks,
     getBlockByChildNode: vi.fn<(node: Node) => BlockType | undefined>(),
     getBlockByIndex: vi.fn<(index: number) => BlockType | undefined>((index: number) => blocks[index]),
-    getBlockById: vi.fn<(id: string) => BlockType | undefined>(),
+    getBlockById: vi.fn<(id: string) => BlockType | undefined>(
+      (id: string) => blocks.find((block) => block.id === id)
+    ),
     resolveToRootBlock: vi.fn<(block: BlockType) => BlockType>((block: BlockType) => block),
+    resolveToSelectableBlock: vi.fn<(block: BlockType) => BlockType>(resolveToSelectableBlock),
+    isSelectionUnit: vi.fn<(block: BlockType) => boolean>(
+      (block: BlockType) => resolveToSelectableBlock(block) === block && !isColumnLayout(block)
+    ),
+    getBlockDepth: vi.fn<(block: BlockType) => number>((block: BlockType) => {
+      const parentId = block.parentId;
+      const parent = parentId === null ? undefined : blocks.find((candidate) => candidate.id === parentId);
+
+      return parent === undefined ? 0 : 1 + blockManagerMock.getBlockDepth(parent);
+    }),
     lastBlock: {
       holder: lastBlockHolder,
     },
@@ -893,7 +929,7 @@ describe('RectangleSelection', () => {
     expect(internal.isRectSelectionActivated).toBe(true);
     expect(internal.overlayRectangle.style.display).toBe('block');
     expect(toolbar.close).toHaveBeenCalled();
-    expect(trySelectSpy).toHaveBeenCalledWith(1);
+    expect(trySelectSpy).toHaveBeenCalledWith();
     expect(inverseSpy).toHaveBeenCalled();
     expect(selectionRemove).toHaveBeenCalled();
 
@@ -1688,8 +1724,10 @@ describe('RectangleSelection', () => {
 
       return {
         id,
+        name: 'paragraph',
         holder,
         parentId,
+        tool: { ownsChildren: false },
       } as unknown as BlockType;
     };
 
@@ -1716,14 +1754,18 @@ describe('RectangleSelection', () => {
 
         const toggleBlock = {
           id: 'toggle-1',
+          name: 'header',
           holder: toggleHolder,
           parentId: null,
+          tool: { ownsChildren: false },
         } as unknown as BlockType;
 
         const childBlock = {
           id: 'child-1',
+          name: 'paragraph',
           holder: childHolder,
           parentId: 'toggle-1',
+          tool: { ownsChildren: false },
         } as unknown as BlockType;
 
         blockManager.blocks.push(toggleBlock, childBlock);
@@ -1838,22 +1880,33 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
       });
 
-      it('selects only the column_list root when the band crosses a column layout', () => {
+      /**
+       * Column layout mirrors BlockHoverController.isColumnContainer: neither a
+       * column nor its row ever owns a toolbar, so the lasso selects the blocks
+       * INSIDE the columns and never the two containers.
+       */
+      it('selects the blocks inside a column layout, never the layout containers', () => {
         const {
           rectangleSelection,
           blockManager,
           blockSelection,
         } = createRectangleSelection();
 
-        const columnList = createBlockWithPosition('column_list', 0, 120);
-        const column = createBlockWithPosition('column', 0, 120, 'column_list');
+        const columnList = Object.assign(
+          createBlockWithPosition('column_list', 0, 120),
+          { name: 'column_list', tool: { ownsChildren: true } }
+        );
+        const column = Object.assign(
+          createBlockWithPosition('column', 0, 120, 'column_list'),
+          { name: 'column', tool: { ownsChildren: false } }
+        );
         const columnChild = createBlockWithPosition('column-child', 10, 40, 'column');
 
         blockManager.blocks.push(columnList, column, columnChild);
 
         const internal = rectangleSelection as unknown as {
           rectCrossesBlocks: boolean;
-          trySelectNextBlock: (index: number) => void;
+          trySelectNextBlock: () => void;
           stackOfSelected: number[];
           startY: number;
           mouseY: number;
@@ -1863,13 +1916,13 @@ describe('RectangleSelection', () => {
 
         internal.startY = 5;
         internal.mouseY = 5;
-        internal.trySelectNextBlock(0);
+        internal.trySelectNextBlock();
         internal.mouseY = 115;
-        internal.trySelectNextBlock(0);
+        internal.trySelectNextBlock();
 
-        expect(internal.stackOfSelected).toEqual([0]);
+        expect(internal.stackOfSelected).toEqual([2]);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
-        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
       });
 
       it('selects the root table even when the lasso is anchored on a cell block', () => {
@@ -2000,6 +2053,233 @@ describe('RectangleSelection', () => {
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(3);
         // Block 4 is outside the visual range
         expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+    });
+
+    /**
+     * A container's holder spans its whole subtree, so a band crossing only a
+     * CHILD's row also crosses the container. Which one the lasso selects must
+     * match what the ⠿ handle on that row points at (resolveHoveredBlockWrapper):
+     * the container only owns the rows it renders ITSELF — everything below its
+     * nested-children slot belongs to the child on that line.
+     */
+    describe('a band inside a container selects the child on that line', () => {
+      /**
+       * Toggle heading whose own title line is `top..childrenTop` and whose
+       * children live in a real [data-blok-nested-blocks] slot below it.
+       */
+      const createContainerWithChildrenSlot = (
+        id: string,
+        top: number,
+        height: number,
+        childrenTop: number,
+        options: { name?: string; parentId?: string | null; ownsChildren?: boolean } = {}
+      ): BlockType => {
+        const block = createBlockWithPosition(id, top, height, options.parentId ?? null);
+        const slot = document.createElement('div');
+
+        block.holder.setAttribute('data-blok-element', '');
+
+        slot.setAttribute('data-blok-nested-blocks', '');
+        slot.getBoundingClientRect = vi.fn(() => ({
+          top: childrenTop,
+          bottom: top + height,
+          left: 100,
+          right: 700,
+          width: 600,
+          height: top + height - childrenTop,
+          x: 100,
+          y: childrenTop,
+          toJSON: () => ({}),
+        }));
+        block.holder.appendChild(slot);
+
+        return Object.assign(block, {
+          name: options.name ?? 'header',
+          tool: { ownsChildren: options.ownsChildren ?? false },
+        });
+      };
+
+      /**
+       * Toggle heading (50-300, title 50-80) containing a table (80-130) whose
+       * own cell blocks (85-125) are tool-owned, then a plain child paragraph.
+       */
+      const seedToggleWithTable = (blockManager: BlockManagerModuleMock): void => {
+        const paragraphAbove = createBlockWithPosition('paragraph-1', 0, 50);
+        const toggle = createContainerWithChildrenSlot('toggle-1', 50, 250, 80);
+        const table = Object.assign(
+          createBlockWithPosition('table-1', 80, 50, 'toggle-1'),
+          { name: 'table', tool: { ownsChildren: true } }
+        );
+        const cell = createBlockWithPosition('cell-1', 85, 40, 'table-1');
+        const childParagraph = createBlockWithPosition('child-1', 130, 50, 'toggle-1');
+        const paragraphBelow = createBlockWithPosition('paragraph-2', 300, 50);
+
+        blockManager.blocks.push(paragraphAbove, toggle, table, cell, childParagraph, paragraphBelow);
+      };
+
+      const dragBand = (rectangleSelection: RectangleSelection, from: number, to: number, index: number): void => {
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          trySelectNextBlock: (index: number) => void;
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+        internal.startY = from;
+        internal.mouseY = from;
+        internal.trySelectNextBlock(index);
+        internal.mouseY = to;
+        internal.trySelectNextBlock(index);
+      };
+
+      it('selects the nested table, not the toggle heading, when the band only crosses the table row', () => {
+        const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+
+        seedToggleWithTable(blockManager);
+
+        // genInfoForMouseSelection hands back the CELL index (3) for a point in the table.
+        dragBand(rectangleSelection, 95, 100, 3);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(3);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+
+      it('selects a plain toggle child, not the toggle heading, when the band only crosses that child', () => {
+        const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+
+        seedToggleWithTable(blockManager);
+
+        dragBand(rectangleSelection, 145, 150, 4);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(4);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+      });
+
+      it('still selects the toggle heading alone when the band crosses its own title line', () => {
+        const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+
+        seedToggleWithTable(blockManager);
+
+        dragBand(rectangleSelection, 60, 150, 1);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(4);
+      });
+
+      /**
+       * The gutter (the redactor's own inline padding, where the +/⠿ controls
+       * float) belongs to the row beside it. A NESTED row's content column
+       * starts further right than its container's, so measuring only the
+       * content box made every nested row horizontally unreachable from the
+       * gutter — the lasso then matched the container alone.
+       */
+      it('reaches a nested row from a band drawn entirely in the gutter', () => {
+        const { rectangleSelection, blockManager, blockSelection, blokWrapper, modules } = createRectangleSelection();
+
+        if (modules.UI) {
+          modules.UI.nodes.redactor = blokWrapper;
+        }
+
+        vi.spyOn(blokWrapper, 'getBoundingClientRect').mockReturnValue({
+          top: 0, bottom: 500, left: 40, right: 760, width: 720, height: 500,
+          x: 40, y: 0, toJSON: () => ({}),
+        });
+
+        seedToggleWithTable(blockManager);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          trySelectNextBlock: (index: number) => void;
+          startX: number;
+          mouseX: number;
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+        // Band drawn in the gutter only: x 50..90, left of every block's content (100..700).
+        internal.startX = 50;
+        internal.mouseX = 90;
+        internal.startY = 95;
+        internal.mouseY = 95;
+        internal.trySelectNextBlock(3);
+        internal.mouseY = 100;
+        internal.trySelectNextBlock(3);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+      });
+
+      /**
+       * Column layout mirrors BlockHoverController.isColumnContainer: neither a
+       * column nor its row is ever a selection unit, so a band crossing them
+       * selects the blocks INSIDE the columns.
+       */
+      it('selects the blocks inside a column, never the column or its row', () => {
+        const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+
+        const row = Object.assign(
+          createBlockWithPosition('row-1', 0, 100),
+          { name: 'column_list', tool: { ownsChildren: true } }
+        );
+        const column = Object.assign(
+          createBlockWithPosition('column-1', 0, 100, 'row-1'),
+          { name: 'column', tool: { ownsChildren: false } }
+        );
+        const inner = createBlockWithPosition('inner-1', 10, 40, 'column-1');
+
+        blockManager.blocks.push(row, column, inner);
+
+        dragBand(rectangleSelection, 20, 40, 2);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).not.toHaveBeenCalledWith(1);
+      });
+    });
+
+    /**
+     * The lasso is throttled, so the first mousemove it PROCESSES can already be
+     * far from where the band started — the anchor block is whatever sits under
+     * the pointer then. Clamping the selected range to the anchor/current
+     * holders on top of the band therefore made a fast drag select a different
+     * set than the rectangle it drew: rows above the anchor were silently
+     * dropped. The drawn rectangle is the selection.
+     */
+    describe('the selection matches the drawn rectangle regardless of the anchor', () => {
+      it('selects every row the band covers even when the first processed move is far from the start', () => {
+        const { rectangleSelection, blockManager, blockSelection } = createRectangleSelection();
+
+        const block0 = createBlockWithPosition('b0', 0, 50);
+        const block1 = createBlockWithPosition('b1', 50, 50);
+        const block2 = createBlockWithPosition('b2', 100, 50);
+        const block3 = createBlockWithPosition('b3', 150, 50);
+
+        blockManager.blocks.push(block0, block1, block2, block3);
+
+        const internal = rectangleSelection as unknown as {
+          rectCrossesBlocks: boolean;
+          trySelectNextBlock: (index: number) => void;
+          startY: number;
+          mouseY: number;
+        };
+
+        internal.rectCrossesBlocks = true;
+        internal.startY = 25;
+        // The throttled first move already sits on block 3 — the band still spans 25..175.
+        internal.mouseY = 175;
+        internal.trySelectNextBlock(3);
+
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(0);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(1);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(2);
+        expect(blockSelection.selectBlockByIndex).toHaveBeenCalledWith(3);
       });
     });
 
@@ -2204,8 +2484,8 @@ describe('RectangleSelection', () => {
       });
     });
 
-    describe('changingRectangle uses root block holder for rectCrossesBlocks', () => {
-      it('resolves to root block holder for horizontal intersection check', () => {
+    describe('changingRectangle uses the selection unit holder for rectCrossesBlocks', () => {
+      it('resolves to the selection unit holder for horizontal intersection check', () => {
         const {
           rectangleSelection,
           blockManager,
@@ -2237,19 +2517,23 @@ describe('RectangleSelection', () => {
 
         const rootBlock = {
           id: 'toggle-1',
+          name: 'header',
           holder: rootHolder,
           parentId: null,
+          tool: { ownsChildren: false },
         } as unknown as BlockType;
 
         const childBlock = {
           id: 'child-1',
+          name: 'paragraph',
           holder: childHolder,
           parentId: 'toggle-1',
+          tool: { ownsChildren: false },
         } as unknown as BlockType;
 
         blockManager.blocks.push(rootBlock, childBlock);
         blockManager.getBlockByChildNode.mockReturnValue(childBlock);
-        blockManager.resolveToRootBlock.mockReturnValue(rootBlock);
+        blockManager.resolveToSelectableBlock.mockReturnValue(rootBlock);
 
         const internal = rectangleSelection as unknown as {
           mousedown: boolean;
@@ -2281,9 +2565,9 @@ describe('RectangleSelection', () => {
 
         internal.changingRectangle(mouseEvent);
 
-        // The rectCrossesBlocks check should use the root block holder (wide: 100-700),
+        // The rectCrossesBlocks check should use the resolved unit's holder (wide: 100-700),
         // not the child block holder (narrow: 200-400)
-        expect(blockManager.resolveToRootBlock).toHaveBeenCalledWith(childBlock);
+        expect(blockManager.resolveToSelectableBlock).toHaveBeenCalledWith(childBlock);
         expect(internal.rectCrossesBlocks).toBe(true);
 
         elementFromPointSpy.mockRestore();

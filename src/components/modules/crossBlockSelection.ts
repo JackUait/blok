@@ -101,7 +101,7 @@ export class CrossBlockSelection extends Module {
       return false;
     }
 
-    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+    const targetBlock = BlockManager.resolveToSelectableBlock(clickedBlock);
 
     const anchorCandidate = this.firstSelectedBlock ?? BlockManager.currentBlock ?? null;
 
@@ -109,7 +109,7 @@ export class CrossBlockSelection extends Module {
       return false;
     }
 
-    const anchorBlock = BlockManager.resolveToRootBlock(anchorCandidate);
+    const anchorBlock = BlockManager.resolveToSelectableBlock(anchorCandidate);
 
     /**
      * Prevent the native caret placement / text-selection extend so the gesture
@@ -168,25 +168,27 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    const hoverBlock = BlockManager.resolveToRootBlock(rawHover);
-    const anchorIndex = BlockManager.blocks.indexOf(this.shiftDragClickedBlock);
-    const hoverIndex = BlockManager.blocks.indexOf(hoverBlock);
+    const hoverBlock = BlockManager.resolveToSelectableBlock(rawHover);
 
-    if (anchorIndex === -1 || hoverIndex === -1 || anchorIndex === hoverIndex) {
+    if (hoverBlock === this.shiftDragClickedBlock) {
       return;
     }
 
-    const start = Math.min(anchorIndex, hoverIndex);
-    const end = Math.max(anchorIndex, hoverIndex);
+    const draggedRange = BlockManager.getSelectionSiblingRange(this.shiftDragClickedBlock, hoverBlock);
+
+    if (draggedRange.length === 0) {
+      return;
+    }
+
+    const draggedIds = new Set(draggedRange.map((block) => block.id));
 
     this.shiftDragActive = true;
     SelectionUtils.get()?.removeAllRanges();
 
     BlockManager.blocks.forEach((block, index) => {
-      const inDraggedRange = index >= start && index <= end;
       const inBaseSelection = this.shiftDragBaseSelected?.has(block.id) ?? false;
 
-      BlockManager.blocks[index].selected = inDraggedRange || inBaseSelection;
+      BlockManager.blocks[index].selected = draggedIds.has(block.id) || inBaseSelection;
     });
 
     BlockSelection.clearCache();
@@ -239,7 +241,7 @@ export class CrossBlockSelection extends Module {
       return false;
     }
 
-    const targetBlock = BlockManager.resolveToRootBlock(clickedBlock);
+    const targetBlock = BlockManager.resolveToSelectableBlock(clickedBlock);
 
     /**
      * Prevent native caret placement / text-selection extend so the gesture
@@ -288,35 +290,54 @@ export class CrossBlockSelection extends Module {
    * @param targetBlock - the block the range ends at
    */
   private selectBlockRange(anchorBlock: Block, targetBlock: Block): void {
-    const { BlockManager, BlockSelection } = this.Blok;
-
-    const fIndex = BlockManager.blocks.indexOf(anchorBlock);
-    const lIndex = BlockManager.blocks.indexOf(targetBlock);
-
-    if (fIndex === -1 || lIndex === -1) {
+    if (!this.applySelectionRange(anchorBlock, targetBlock)) {
       return;
     }
-
-    SelectionUtils.get()?.removeAllRanges();
-
-    const start = Math.min(fIndex, lIndex);
-    const end = Math.max(fIndex, lIndex);
-
-    for (const block of BlockManager.blocks) {
-      block.selected = false;
-    }
-
-    for (const i of Array.from({ length: end - start + 1 }, (_unused, idx) => start + idx)) {
-      BlockManager.blocks[i].selected = true;
-    }
-
-    BlockSelection.clearCache();
 
     this.firstSelectedBlock = anchorBlock;
     this.lastSelectedBlock = targetBlock;
 
     this.Blok.InlineToolbar.close();
     this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
+  }
+
+  /**
+   * Select exactly the blocks a range gesture from `anchorBlock` to
+   * `targetBlock` covers, deselecting everything else.
+   *
+   * The range comes from BlockManager.getSelectionSiblingRange, which lifts both
+   * endpoints to siblings under their lowest common ancestor. Walking flat
+   * indices between the endpoints instead selected every block STORED in
+   * between — for a range crossing a toggle or callout that is the container
+   * AND its children, so Duplicate duplicated the subtree twice.
+   *
+   * Assigning (rather than toggling) makes the call idempotent, so a drag that
+   * reverses direction, jumps rows, or re-fires on the same row always ends up
+   * with the selection its rectangle describes.
+   * @param anchorBlock - the block the gesture started on
+   * @param targetBlock - the block the gesture currently reaches
+   * @returns true when a range was applied
+   */
+  private applySelectionRange(anchorBlock: Block, targetBlock: Block): boolean {
+    const { BlockManager, BlockSelection } = this.Blok;
+
+    const range = BlockManager.getSelectionSiblingRange(anchorBlock, targetBlock);
+
+    if (range.length === 0) {
+      return false;
+    }
+
+    SelectionUtils.get()?.removeAllRanges();
+
+    const selectedIds = new Set(range.map((block) => block.id));
+
+    for (const block of BlockManager.blocks) {
+      block.selected = selectedIds.has(block.id);
+    }
+
+    BlockSelection.clearCache();
+
+    return true;
   }
 
   /**
@@ -333,57 +354,44 @@ export class CrossBlockSelection extends Module {
    * @param {boolean} next - if true, toggle next block. Previous otherwise
    */
   public toggleBlockSelectedState(next = true): void {
-    const { BlockManager, BlockSelection } = this.Blok;
+    const { BlockManager } = this.Blok;
 
-    const currentBlock = BlockManager.currentBlock;
+    const anchorCandidate = this.lastSelectedBlock ?? BlockManager.currentBlock;
 
-    if (!this.lastSelectedBlock && !currentBlock) {
+    if (!anchorCandidate) {
       return;
-    }
-
-    if (!this.lastSelectedBlock && currentBlock) {
-      this.lastSelectedBlock = this.firstSelectedBlock = currentBlock;
-    }
-
-    if (this.firstSelectedBlock === this.lastSelectedBlock && this.firstSelectedBlock) {
-      this.firstSelectedBlock.selected = true;
-
-      BlockSelection.clearCache();
-      SelectionUtils.get()?.removeAllRanges();
-
-      /**
-       * Hide the Toolbar when cross-block selection starts.
-       */
-      this.Blok.Toolbar.close();
     }
 
     if (!this.lastSelectedBlock) {
+      this.lastSelectedBlock = this.firstSelectedBlock = anchorCandidate;
+    }
+
+    const anchorBlock = this.firstSelectedBlock;
+    const movingEnd = this.lastSelectedBlock;
+
+    if (anchorBlock === null || movingEnd === null) {
       return;
     }
 
-    const nextBlockIndex = BlockManager.blocks.indexOf(this.lastSelectedBlock) + (next ? 1 : -1);
-    const nextBlock = BlockManager.blocks[nextBlockIndex];
+    const nextBlock = this.siblingStep(movingEnd, next);
 
-    if (!nextBlock) {
+    if (nextBlock === null) {
       return;
     }
 
-    if (this.lastSelectedBlock.selected !== nextBlock.selected) {
-      nextBlock.selected = true;
-
-      BlockSelection.clearCache();
-      this.Blok.Toolbar.close();
-    } else {
-      this.lastSelectedBlock.selected = false;
-
-      BlockSelection.clearCache();
-      this.Blok.Toolbar.close();
+    if (!this.applySelectionRange(anchorBlock, nextBlock)) {
+      return;
     }
 
     this.lastSelectedBlock = nextBlock;
 
     /** close InlineToolbar when Blocks selected */
     this.Blok.InlineToolbar.close();
+
+    /**
+     * Hide the Toolbar while the keyboard selection is growing.
+     */
+    this.Blok.Toolbar.close();
 
     nextBlock.holder.scrollIntoView({
       block: 'nearest',
@@ -400,6 +408,32 @@ export class CrossBlockSelection extends Module {
      * Announce the selection size as it grows via Shift+Arrow.
      */
     this.announceSelectionCount();
+  }
+
+  /**
+   * The block one step before/after `block` at ITS OWN level, climbing out of
+   * the container when there is no sibling left.
+   *
+   * Stepping by flat index instead walks INTO the next container: Shift+Down on
+   * a toggle heading landed on its first child, then on a table cell, so the
+   * selection appeared frozen while the user pressed the key.
+   * @param block - the moving end of the keyboard selection
+   * @param next - true to step forward, false to step back
+   */
+  private siblingStep(block: Block, next: boolean): Block | null {
+    const { BlockManager } = this.Blok;
+
+    const cursor = BlockManager.resolveToSelectableBlock(block);
+    const siblings = BlockManager.blocks.filter((candidate) => candidate.parentId === cursor.parentId);
+    const step = siblings[siblings.indexOf(cursor) + (next ? 1 : -1)];
+
+    if (step !== undefined) {
+      return step;
+    }
+
+    const parent = cursor.parentId === null ? undefined : BlockManager.getBlockById(cursor.parentId);
+
+    return parent === undefined ? null : this.siblingStep(parent, next);
   }
 
   /**
@@ -586,7 +620,7 @@ export class CrossBlockSelection extends Module {
    */
   private onMouseOver = (event: Event): void => {
     const mouseEvent = event as MouseEvent;
-    const { BlockManager, BlockSelection, DragManager } = this.Blok;
+    const { BlockManager, DragManager } = this.Blok;
 
     /**
      * Skip cross-block selection when a drag operation is in progress
@@ -605,7 +639,7 @@ export class CrossBlockSelection extends Module {
     /**
      * Skip cross-block selection when rectangle selection is active.
      * Both modules listen for mouse events during drag; without this guard
-     * toggleBlocksSelectedState fights with trySelectNextBlock, causing
+     * the drag range fights with trySelectNextBlock, causing
      * unpredictable skipped/deselected blocks.
      */
     if (this.Blok.RectangleSelection.isRectActivated()) {
@@ -631,8 +665,8 @@ export class CrossBlockSelection extends Module {
      * Without this, dragging across a table would select individual cell blocks
      * from the flat blocks array instead of treating the table as a single unit.
      */
-    const relatedBlock = BlockManager.resolveToRootBlock(rawRelatedBlock);
-    const targetBlock = BlockManager.resolveToRootBlock(rawTargetBlock);
+    const relatedBlock = BlockManager.resolveToSelectableBlock(rawRelatedBlock);
+    const targetBlock = BlockManager.resolveToSelectableBlock(rawTargetBlock);
 
     if (targetBlock === relatedBlock) {
       /**
@@ -649,42 +683,24 @@ export class CrossBlockSelection extends Module {
       return;
     }
 
-    if (this.firstSelectedBlock && relatedBlock === this.firstSelectedBlock) {
-      SelectionUtils.get()?.removeAllRanges();
-
-      relatedBlock.selected = true;
-      targetBlock.selected = true;
-
-      BlockSelection.clearCache();
-
-      return;
-    }
-
-    if (this.firstSelectedBlock && targetBlock === this.firstSelectedBlock) {
-      const rIndex = BlockManager.blocks.indexOf(relatedBlock);
-      const tIndex = BlockManager.blocks.indexOf(targetBlock);
-      const start = Math.min(rIndex, tIndex);
-      const end = Math.max(rIndex, tIndex);
-
-      for (const i of Array.from({ length: end - start + 1 }, (_, idx) => start + idx)) {
-        BlockManager.blocks[i].selected = false;
-      }
-
-      BlockSelection.clearCache();
-
-      return;
-    }
-
     this.Blok.InlineToolbar.close();
 
     /**
      * A drag that started inside a nested container (table cell) may have
      * selected child blocks before leaving the container's root — drop those
-     * so the root-level range selection below is the only selection.
+     * so the range selection below is the only selection.
      */
     this.clearNestedBlockSelection();
 
-    this.toggleBlocksSelectedState(relatedBlock, targetBlock);
+    /**
+     * Recomputed from the drag's own anchor on every hover rather than toggled
+     * incrementally: a mouseover can fire out of order, skip rows, or repeat on
+     * the same row, and a toggle then leaves holes and stale edges behind.
+     */
+    this.applySelectionRange(this.firstSelectedBlock ?? relatedBlock, targetBlock);
+
+    this.Blok.Toolbar.close();
+
     this.lastSelectedBlock = targetBlock;
   };
 
@@ -805,44 +821,5 @@ export class CrossBlockSelection extends Module {
     });
 
     BlockSelection.clearCache();
-  }
-
-  /**
-   * Change blocks selection state between passed two blocks.
-   * @param {Block} firstBlock - first block in range
-   * @param {Block} lastBlock - last block in range
-   */
-  private toggleBlocksSelectedState(firstBlock: Block, lastBlock: Block): void {
-    const { BlockManager, BlockSelection } = this.Blok;
-    const fIndex = BlockManager.blocks.indexOf(firstBlock);
-    const lIndex = BlockManager.blocks.indexOf(lastBlock);
-
-    /**
-     * If first and last block have the different selection state
-     * it means we should't toggle selection of the first selected block.
-     * In the other case we shouldn't toggle the last selected block.
-     */
-    const shouldntSelectFirstBlock = firstBlock.selected !== lastBlock.selected;
-
-    const startIndex = Math.min(fIndex, lIndex);
-    const endIndex = Math.max(fIndex, lIndex);
-
-    for (const i of Array.from({ length: endIndex - startIndex + 1 }, (unused, idx) => startIndex + idx)) {
-      const block = BlockManager.blocks[i];
-
-      if (
-        block !== this.firstSelectedBlock &&
-        block !== (shouldntSelectFirstBlock ? firstBlock : lastBlock)
-      ) {
-        BlockManager.blocks[i].selected = !BlockManager.blocks[i].selected;
-
-        BlockSelection.clearCache();
-      }
-    }
-
-    /**
-     * Do not keep the Toolbar visible while range selection is active.
-     */
-    this.Blok.Toolbar.close();
   }
 }

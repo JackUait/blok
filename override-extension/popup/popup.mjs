@@ -291,7 +291,7 @@ const renderPageCard = (vm) => {
 
   const detectedLine = bundled.present
     ? h('div', { class: 'page-status' }, led('on'),
-      h('span', {}, 'Blok ', h('b', {}, bundled.version ?? 'version unknown (pre-seam build)'),
+      h('span', {}, 'Blok ', h('b', {}, bundled.version ?? 'version unknown — pre-seam'),
         (bundled.version ?? '').includes('-dev.') ? ' — local payload' : ' — bundled'))
     : h('div', { class: 'page-status' }, led('on'), h('span', {}, 'Blok loads from CDN scripts below'));
 

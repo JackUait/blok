@@ -327,11 +327,31 @@ test.describe('onChange callback', () => {
     await page.keyboard.press('Enter');
 
     await waitForOnChangeCallCount(page, 1);
+    // Let the batch window close so the trailing delivery lands too.
+    await waitForDelay(page, WAIT_FOR_BATCH);
 
-    const [ firstCall ] = await getOnChangeCalls(page);
-    const events = ensureSerializedBlockMutationEvents(firstCall);
+    const calls = await getOnChangeCalls(page);
 
-    expect(events).toStrictEqual([
+    /**
+     * Seven mutations (six keystrokes plus Enter) reach the host in two calls,
+     * never one per mutation. The first change of an idle document leads the
+     * batch window so a host can react to "document is dirty" without waiting
+     * the window out; everything typed afterwards rides the trailing edge.
+     */
+    expect(calls).toHaveLength(2);
+
+    const leadingEvent = ensureSerializedBlockMutationEvent(calls[0]);
+
+    expect(leadingEvent).toStrictEqual(expect.objectContaining({
+      type: BlockChangedMutationType,
+      detail: expect.objectContaining({
+        index: 0,
+      }),
+    }));
+
+    const trailingEvents = ensureSerializedBlockMutationEvents(calls[1]);
+
+    expect(trailingEvents).toStrictEqual([
       expect.objectContaining({
         type: BlockChangedMutationType,
         detail: expect.objectContaining({

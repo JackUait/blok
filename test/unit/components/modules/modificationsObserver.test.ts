@@ -343,6 +343,129 @@ describe('ModificationsObserver', () => {
     expect(instance?.observe).toHaveBeenCalledTimes(2);
   });
 
+  /**
+   * Delivery timing is a consumer-facing contract: hosts drive UI off onChange
+   * ("document is dirty" → reveal the Save button), so a change that sits in a
+   * queue is indistinguishable from no change at all.
+   */
+  describe('delivery latency', () => {
+    it('delivers the first change of an idle document without waiting out the batch window', async () => {
+      const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
+
+      observer.enable();
+
+      const event = createBlockMutationEvent('block-1');
+
+      eventsDispatcher.emit(BlockChanged, { event });
+
+      // Flush microtasks only — not a single millisecond of the batch window.
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(apiMethods, event);
+    });
+
+    it('keeps delivering during sustained typing instead of waiting for the user to pause', async () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      observer.enable();
+
+      // Inter-keystroke gap shorter than the batch window — roughly 45 WPM.
+      const typingGap = Math.round(modificationsObserverBatchTimeout * 0.75);
+
+      for (let index = 0; index < 5; index += 1) {
+        eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent(`block-${index}`) });
+        await vi.advanceTimersByTimeAsync(typingGap);
+      }
+
+      // 5 * 300ms of typing spans ~3 batch windows; no change may wait longer
+      // than one window, so at least one delivery must land per window.
+      expect(onChange.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('does not redeliver a change that already went out on the leading edge', async () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('coalesces changes arriving inside an open window into a single trailing call', async () => {
+      const { observer, eventsDispatcher, onChange, apiMethods } = createObserver();
+
+      observer.enable();
+
+      const leading = createBlockMutationEvent('block-1');
+
+      eventsDispatcher.emit(BlockChanged, { event: leading });
+      await vi.advanceTimersByTimeAsync(0);
+
+      const second = createBlockMutationEvent('block-2');
+      const third = createBlockMutationEvent('block-3');
+
+      eventsDispatcher.emit(BlockChanged, { event: second });
+      await vi.advanceTimersByTimeAsync(Math.round(modificationsObserverBatchTimeout / 4));
+      eventsDispatcher.emit(BlockChanged, { event: third });
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenNthCalledWith(1, apiMethods, leading);
+      expect(onChange).toHaveBeenNthCalledWith(2, apiMethods, [second, third]);
+    });
+
+    it('opens a fresh window per burst — the window is never extended by later changes', async () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Queued mid-window, so it rides the trailing edge of the window already open.
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout / 2);
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-2') });
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout / 2);
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+
+      // Window closed: the next change opens a new one and leads it again.
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-3') });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onChange).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not deliver the leading change when read-only is toggled on before it lands', async () => {
+      const { observer, eventsDispatcher, onChange, readOnly } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      readOnly.isEnabled = true;
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('does not deliver the leading change after destroy', async () => {
+      const { observer, eventsDispatcher, onChange } = createObserver();
+
+      observer.enable();
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+      observer.destroy();
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe('onSave (serialized output callback)', () => {
     const sampleOutput: OutputData = {
       time: 1,
@@ -393,6 +516,28 @@ describe('ModificationsObserver', () => {
       eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-2') });
       await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout);
 
+      expect(saverSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it('never serializes on the leading edge, and still serializes once the window closes', async () => {
+      /**
+       * onChange leads the window so hosts can react instantly; onSave does not,
+       * because it serializes the whole document. The trailing serialization must
+       * still happen even though the leading onChange already drained the queue.
+       */
+      const onSave = vi.fn();
+      const { observer, eventsDispatcher, saverSave } = createObserver({ onSave });
+
+      observer.enable();
+      saverSave.mockResolvedValue(sampleOutput);
+
+      eventsDispatcher.emit(BlockChanged, { event: createBlockMutationEvent('block-1') });
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(saverSave).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(modificationsObserverBatchTimeout + 1);
       expect(saverSave).toHaveBeenCalledTimes(1);
       expect(onSave).toHaveBeenCalledTimes(1);
     });

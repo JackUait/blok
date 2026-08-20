@@ -491,14 +491,14 @@ const editor = new Blok(config);`,
         type: "(api: API, event: BlockMutationEvent | BlockMutationEvent[]) => void",
         default: "undefined",
         description:
-          "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once). Live: install, replace or unset it at runtime via `handlers.set({ onChange })` — its presence (together with `onSave`) is what arms Blok's change-observation pipeline at all.",
+          "Change callback function; the event argument carries the mutation(s) that occurred (batched into an array when several fire at once). Latency is bounded, so it is safe to drive UI from: the first change of an idle document arrives on the next microtask — the same frame the user typed in — and the changes after it are coalesced into one further call at the end of a short batch window that later changes never extend. Live: install, replace or unset it at runtime via `handlers.set({ onChange })` — its presence (together with `onSave`) is what arms Blok's change-observation pipeline at all.",
       },
       {
         option: "onSave",
         type: "(data: OutputData, api: API) => void",
         default: "undefined",
         description:
-          "Reactive save callback — fires automatically with the full serialized content on every debounced content change, so you don't have to call save() by hand. Live: install, replace or unset it at runtime via `handlers.set({ onSave })` — its mere presence makes Blok serialize the document once per change batch.",
+          "Reactive save callback — fires automatically with the full serialized content on every batched content change, so you don't have to call save() by hand. It rides the trailing edge of the batch window only — unlike onChange it never leads it, because serializing the whole document is too expensive to front-run the batch with. Live: install, replace or unset it at runtime via `handlers.set({ onSave })` — its mere presence makes Blok serialize the document once per change batch.",
       },
       {
         option: "onReady",

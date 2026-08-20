@@ -229,6 +229,14 @@ export interface BlokState {
   /**
    * Fires when something changed in DOM.
    *
+   * Delivery latency is bounded, so this is safe to drive UI from ("document is
+   * dirty" -> reveal the Save button). The first change of an idle document is
+   * delivered on the next microtask — the same frame the user typed in — and
+   * changes arriving after it are coalesced into one further call at the end of
+   * a short batch window that later changes never extend. Sustained typing keeps
+   * delivering at most one window apart instead of going silent until the user
+   * pauses.
+   *
    * Never fires while the editor is in read-only mode — read-only is honored at
    * delivery time, so a change queued just before read-only is toggled on is
    * dropped too. You do not need to guard the handler with
@@ -256,8 +264,10 @@ export interface BlokState {
    * `data` config (or the React `data` prop) to mirror the editor state into your
    * own store with a single callback instead of calling `saver.save()` by hand.
    *
-   * Serialization is debounced through the same change-batching window as
-   * `onChange`, so a burst of edits produces a single `onSave` call. Only
+   * Serialization rides the trailing edge of the same change-batching window as
+   * `onChange`, so a burst of edits costs at most one serialization per window.
+   * Unlike `onChange` it has no leading-edge delivery — serializing the whole
+   * document is too expensive to front-run the batch with. Only
    * user-driven content changes trigger it — programmatic `render()` does not
    * (the change observer is disabled during render), so a controlled
    * `data → render → onSave → setData` round-trip won't recurse.

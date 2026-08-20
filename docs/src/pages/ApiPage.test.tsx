@@ -154,6 +154,16 @@ describe('ApiPage in the Russian tree', () => {
   });
 });
 
+describe('ApiPage dev override seam documentation', () => {
+  it('documents the dev override seam and its opt-out', () => {
+    renderAt('/docs/dev-override-seam');
+
+    expect(screen.getByRole('heading', { name: /dev override seam/i })).toBeInTheDocument();
+    expect(screen.getByText(/__BLOK_DEV_OVERRIDE__/)).toBeInTheDocument();
+    expect(screen.getByText(/blok-impl/)).toBeInTheDocument();
+  });
+});
+
 describe('ApiPage on-this-page fallback', () => {
   it('renders a TOC dropdown affordance for the lg breakpoint range instead of hiding it entirely', () => {
     renderAt('/docs/caret-api');

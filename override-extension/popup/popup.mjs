@@ -476,12 +476,12 @@ const renderPageCard = (vm) => {
 
   const children = [
     label,
-    h('div', { class: 'site-row' }, siteIcon(url.host), h('div', { class: 'origin', title: origin }, url.host)),
+    h('div', { class: 'site-row' },
+      siteIcon(url.host),
+      h('div', { class: 'site-main' },
+        h('div', { class: 'origin', title: origin }, url.host),
+        pageStatusLine(vm.page))),
   ];
-  const status = pageStatusLine(vm.page);
-  if (status) {
-    children.push(status);
-  }
 
   if (bundled.present) {
     children.push(renderSwitchRow(vm));

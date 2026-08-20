@@ -34,8 +34,6 @@ const announce = (text) => {
   document.getElementById('live').textContent = text;
 };
 
-const isLocalhost = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(origin);
-
 const state = {
   status: { armedOrigins: [], current: null, redirects: [] },
   detection: { state: 'no-tab' },
@@ -45,7 +43,6 @@ const state = {
   helperOnline: null,
   building: false,
   reloading: false,
-  confirmArm: false,
 };
 
 /* ---------- data gathering ---------- */
@@ -176,7 +173,6 @@ const refresh = async ({ probeHelper = false } = {}) => {
 
 const arm = async (origin) => {
   await send({ type: 'arm', origin });
-  state.confirmArm = false;
   announce(`Your build is on for ${origin} — reload the page to see it`);
   await refresh();
 };
@@ -333,11 +329,8 @@ const renderSwitchRow = (vm) => {
     onclick: () => {
       if (armed) {
         void disarm(origin);
-      } else if (isLocalhost(origin)) {
-        void arm(origin);
       } else {
-        state.confirmArm = true;
-        render();
+        void arm(origin);
       }
     },
   });
@@ -388,16 +381,6 @@ const renderPageCard = (vm) => {
 
   if (bundled.present) {
     children.push(renderSwitchRow(vm));
-
-    if (state.confirmArm && !armed) {
-      children.push(h('div', { class: 'confirm', role: 'alertdialog', 'aria-label': `Confirm using your build on ${origin}` },
-        h('b', {}, `Use your build on ${url.host}?`), ' Every page on this site will run your local build until you turn it off.',
-        h('div', { class: 'confirm-actions' },
-          h('button', { class: 'btn btn--primary', onclick: () => void arm(origin) }, 'Yes, use it'),
-          h('button', { class: 'btn', onclick: () => { state.confirmArm = false; render(); } }, 'Cancel'),
-        ),
-      ));
-    }
   }
 
   for (const ref of cdn) {

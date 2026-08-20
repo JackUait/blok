@@ -243,21 +243,6 @@ main, #panels { display: flex; flex-direction: column; }
 
 .callout .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.7); }
 
-/* inline confirm for non-localhost origins */
-.confirm {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--orange-bg);
-  font-size: 12px;
-  color: var(--orange-body);
-  animation: callout-in 160ms ease-out;
-}
-
-.confirm b { color: var(--orange-text); font-weight: 600; }
-
-.confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
-
 /* ---------- CDN rows on the page card ---------- */
 
 .cdn-row {

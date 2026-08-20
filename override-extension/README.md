@@ -16,8 +16,7 @@ including deployed apps this repo does not build. Design:
 1. Open the page and click the extension icon. The popup detects blok on the
    active tab (bundled editors by their `data-blok-*` markers, CDN script
    tags by URL) — when nothing is detected, overriding is disabled.
-2. Bundled blok → flip the switch (non-localhost sites ask for an inline
-   confirmation), then hit **Reload** in the popup. The badge shows ON; the banner and the
+2. Bundled blok → flip the switch, then hit **Reload** in the popup. The badge shows ON; the banner and the
    popup show the running version; `-dev.<sha>` in `data-blok-version` on the
    editor root = override active.
 3. Rebuild: with `--serve` (or `--watch`) running, hit **Rebuild** in the

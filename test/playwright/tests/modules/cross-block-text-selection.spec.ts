@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
-import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
+import { BLOK_INTERFACE_SELECTOR, DATA_ATTR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
 import { dragBetweenCharacters, pointAtCharacter, readTextSelectionState, seamBetweenInputs } from '../helpers/text-drag';
@@ -11,11 +11,68 @@ const HOLDER_ID = 'blok';
 const MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control';
 const BLOCK_WRAPPER_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="block-wrapper"]`;
 
+type EnginePaintProbe = {
+  samples: { spans: boolean }[];
+  reset: () => void;
+  hostOf: (node: Node | null) => Element | null;
+};
+
 declare global {
   interface Window {
     blokInstance?: Blok;
+    enginePaintProbe?: EnginePaintProbe;
   }
 }
+
+/**
+ * Records the document selection as the ENGINE leaves it, from a listener
+ * registered before the editor's own so it sees the raw state rather than the
+ * one the module has already put back. Deliberately built from nothing but DOM
+ * APIs: it is the oracle the editor's paint decision is checked against, so
+ * sharing production code would make the assertion circular.
+ * @param page - the page to install the probe on
+ */
+const installEnginePaintProbe = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    if (window.enginePaintProbe !== undefined) {
+      window.enginePaintProbe.reset();
+
+      return;
+    }
+
+    const hostOf = (node: Node | null): Element | null => {
+      if (node === null) {
+        return null;
+      }
+
+      const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
+
+      return element?.closest('[contenteditable="true"]') ?? null;
+    };
+
+    const probe: EnginePaintProbe = {
+      samples: [],
+      reset: (): void => {
+        probe.samples = [];
+      },
+      hostOf,
+    };
+
+    document.addEventListener('selectionchange', () => {
+      const selection = document.getSelection();
+
+      if (selection === null || selection.rangeCount === 0) {
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+
+      probe.samples.push({ spans: hostOf(range.startContainer) !== hostOf(range.endContainer) });
+    });
+
+    window.enginePaintProbe = probe;
+  });
+};
 
 const resetBlok = async (page: Page): Promise<void> => {
   await page.evaluate(async ({ holder }) => {
@@ -216,6 +273,52 @@ test.describe('cross-block text selection', () => {
     await page.mouse.up();
 
     expect(leaked).toStrictEqual([]);
+  });
+
+  test('the selection paint is only taken over from engines that cannot paint the range', async ({ page }) => {
+    await installEnginePaintProbe(page);
+    await createBlokWithBlocks(page, createParagraphs([
+      'First block text',
+      'Second block text',
+      'Third block text',
+    ]));
+
+    await page.evaluate(() => window.enginePaintProbe?.reset());
+
+    const start = await pointAtCharacter(editableByIndex(page, 0), 6);
+    const end = await pointAtCharacter(editableByIndex(page, 2), 6);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 12 });
+    await page.mouse.up();
+
+    const verdict = await page.evaluate((attribute) => {
+      const selection = document.getSelection();
+      const range = selection !== null && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const hostOf = window.enginePaintProbe?.hostOf ?? ((): Element | null => null);
+      const samples = window.enginePaintProbe?.samples ?? [];
+      const firstSpanning = samples.findIndex((sample) => sample.spans);
+
+      return {
+        spans: range !== null && hostOf(range.startContainer) !== hostOf(range.endContainer),
+        /** WebKit reports both ends in the anchor host — and paints what it reports. */
+        reportsOneHost: selection !== null && hostOf(selection.anchorNode) === hostOf(selection.focusNode),
+        /** Firefox rewrites the range back to one host on every move of the drag. */
+        engineRewrote: firstSpanning >= 0 && samples.slice(firstSpanning).some((sample) => !sample.spans),
+        substituted: document.querySelector(`[${attribute}]`) !== null,
+      };
+    }, DATA_ATTR.crossSelection);
+
+    expect(verdict.spans).toBe(true);
+
+    /**
+     * Substituting our own paint for the engine's is not free: an engine may
+     * draw ::selection over the whole line box and a custom highlight over the
+     * text box alone (Chromium does), so taking over where it was not needed
+     * changes the height of the band the moment a drag leaves its first block.
+     */
+    expect(verdict.substituted).toBe(verdict.reportsOneHost || verdict.engineRewrote);
   });
 
   test('the multi-block toolbar does not open for a cross-block text selection', async ({ page }) => {

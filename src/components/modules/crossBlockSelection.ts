@@ -1,7 +1,7 @@
 import { Module } from '../__module';
 import type { Block } from '../block';
 import { DATA_ATTR } from '../constants';
-import { clearCrossBlockHighlight, isCrossBlockHighlightSupported, paintCrossBlockHighlight } from '../selection/cross-block-highlight';
+import { clearCrossBlockHighlight, isCrossBlockHighlightSupported, isNativeCrossHostPaintTrusted, paintCrossBlockHighlight } from '../selection/cross-block-highlight';
 import {
   applySpanningSelection,
   blocksBetween,
@@ -98,6 +98,16 @@ export class CrossBlockSelection extends Module {
     applied: { startContainer: Node; startOffset: number; endContainer: Node; endOffset: number };
     reassertAllowed: boolean;
   } | null = null;
+
+  /**
+   * Whether this engine has been caught collapsing the drag's spanning range
+   * back into a single editing host. Latched for the editor's lifetime — the
+   * engine will not change its mind — and it decides who paints the selection:
+   * an engine that rewrites the range paints the rewritten state before
+   * {@link reassertTextDragSelection} can put ours back, so from the first time
+   * it is seen doing so we paint the selection ourselves instead.
+   */
+  private engineClampsDragRange = false;
 
   /**
    * Module preparation
@@ -211,7 +221,17 @@ export class CrossBlockSelection extends Module {
      */
     const marked = wrapper !== undefined && wrapper.hasAttribute(DATA_ATTR.crossSelection);
 
-    if (selection === null) {
+    /**
+     * Only take the paint over from an engine that cannot do it — see
+     * {@link isNativeCrossHostPaintTrusted}. And only where there is something
+     * to take over WITH: on an engine without the Custom Highlight API,
+     * suppressing the native paint would leave the selection invisible.
+     */
+    const substitute = selection !== null &&
+      isCrossBlockHighlightSupported() &&
+      !this.enginePaintsCrossHostRange();
+
+    if (!substitute) {
       clearCrossBlockHighlight(this);
 
       if (marked) {
@@ -223,14 +243,23 @@ export class CrossBlockSelection extends Module {
 
     paintCrossBlockHighlight(this, selection.subRanges.map((sub) => sub.range));
 
-    /**
-     * Only suppress the native paint when ours actually replaced it — on an
-     * engine without the Custom Highlight API the selection would otherwise
-     * become invisible.
-     */
-    if (!marked && isCrossBlockHighlightSupported()) {
+    if (!marked) {
       wrapper?.setAttribute(DATA_ATTR.crossSelection, '');
     }
+  }
+
+  /**
+   * Whether the engine can be left to paint the live cross-host selection
+   * itself, read from what it reports about that very selection.
+   */
+  private enginePaintsCrossHostRange(): boolean {
+    const selection = SelectionUtils.get();
+
+    return isNativeCrossHostPaintTrusted(
+      getEditingHost(selection?.anchorNode),
+      getEditingHost(selection?.focusNode),
+      this.engineClampsDragRange
+    );
   }
 
   /**
@@ -994,6 +1023,19 @@ export class CrossBlockSelection extends Module {
 
     if (matches) {
       return;
+    }
+
+    /**
+     * A rewrite that also COLLAPSED the range into one host is the engine
+     * clamping, not some other writer — and its own paint showed that collapsed
+     * state for a frame before this repair. See {@link engineClampsDragRange}.
+     */
+    const intendedToSpan = getEditingHost(intent.anchor.node) !== getEditingHost(intent.focus.node);
+    const stillSpans = range !== null &&
+      getEditingHost(range.startContainer) !== getEditingHost(range.endContainer);
+
+    if (intendedToSpan && !stillSpans) {
+      this.engineClampsDragRange = true;
     }
 
     intent.reassertAllowed = false;

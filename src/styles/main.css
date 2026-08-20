@@ -337,8 +337,9 @@
  * contenteditable hosts; WebKit paints only the anchor host's part of it, and so
  * does a single-range ::highlight(). One ::highlight() range PER HOST is the
  * form all three engines paint, so cross-block-highlight.ts registers those and
- * stamps the wrapper — Chromium and Firefox DO paint the range natively and
- * would otherwise draw it twice, at double opacity.
+ * stamps the wrapper — but only where needed: Firefox rewrites the range
+ * mid-drag and would draw both at double opacity. Chromium paints ::selection
+ * over the line box and a highlight over the text box, so it is left alone.
  *
  * Unlayered on purpose: the colour overridden here is the
  * `[&_::selection]:bg-selection-inline` utility UI.make puts on the wrapper,

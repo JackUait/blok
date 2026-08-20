@@ -53,6 +53,7 @@ const state = {
   helperOnline: null,
   building: false,
   switching: false,
+  swapChoice: null,
 };
 
 /* ---------- data gathering ---------- */
@@ -597,6 +598,158 @@ const renderElsewhereCard = (vm) => {
 
 /* ---------- swap a published version ---------- */
 
+// The chosen version is module state so consecutive renders serialize
+// identically and the poll's skip path leaves an open list untouched; the
+// ephemeral rest (expansion, query, active option) lives only in the live DOM
+// and rides through replaces via render-diff's combobox carry.
+const versionCombobox = (entries, chosenKey) => {
+  const options = [];
+  const rows = [];
+  for (const pkg of KNOWN_PACKAGES) {
+    const group = entries.filter((entry) => entry.pkg === pkg);
+    if (group.length === 0) {
+      continue;
+    }
+    rows.push(h('li', { class: 'combo-group', role: 'presentation', dataset: { pkg } }, pkg));
+    for (const entry of group) {
+      const opt = h('li', {
+        class: 'combo-opt',
+        role: 'option',
+        id: `combo-opt-${options.length}`,
+        'aria-selected': String(entry.key === chosenKey),
+        dataset: { value: entry.key, pkg },
+      }, entry.version);
+      options.push(opt);
+      rows.push(opt);
+    }
+  }
+
+  const setActive = (opt) => {
+    for (const el of options) {
+      if (el !== opt) {
+        el.removeAttribute('data-active');
+      }
+    }
+    if (opt) {
+      opt.setAttribute('data-active', '');
+      input.setAttribute('aria-activedescendant', opt.id);
+      opt.scrollIntoView({ block: 'nearest' });
+    } else {
+      input.removeAttribute('aria-activedescendant');
+    }
+  };
+
+  const visible = () => options.filter((opt) => !opt.hidden);
+
+  const applyFilter = (query) => {
+    const q = query.trim().toLowerCase();
+    for (const opt of options) {
+      opt.hidden = !`${opt.dataset.pkg}@${opt.textContent}`.toLowerCase().includes(q);
+    }
+    for (const group of list.querySelectorAll('.combo-group')) {
+      group.hidden = !options.some((opt) => !opt.hidden && opt.dataset.pkg === group.dataset.pkg);
+    }
+    const open = visible();
+    empty.hidden = open.length > 0;
+    setActive(open.find((opt) => opt.hasAttribute('data-active')) ?? open[0] ?? null);
+  };
+
+  const openPanel = () => {
+    panel.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    setActive(visible().find((opt) => opt.dataset.value === chosenKey) ?? visible()[0] ?? null);
+    input.focus();
+  };
+
+  const closePanel = () => {
+    panel.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    input.value = '';
+    applyFilter('');
+  };
+
+  const choose = (key) => {
+    closePanel();
+    trigger.focus();
+    state.swapChoice = key;
+    render();
+  };
+
+  const trigger = h('button', {
+    class: 'combo-trigger',
+    type: 'button',
+    'aria-haspopup': 'listbox',
+    'aria-expanded': 'false',
+    'aria-label': 'Published version to swap out',
+    onclick: () => (panel.hidden ? openPanel() : closePanel()),
+    onkeydown: (event) => {
+      if (event.key === 'ArrowDown' && panel.hidden) {
+        event.preventDefault();
+        openPanel();
+      }
+    },
+  }, chosenKey ? chosenKey.replace('|', '@') : 'No versions');
+
+  const input = h('input', {
+    class: 'combo-search',
+    type: 'text',
+    'aria-label': 'Search versions',
+    'aria-controls': 'combo-list',
+    placeholder: 'Search versions…',
+    autocomplete: 'off',
+    spellcheck: 'false',
+    oninput: () => applyFilter(input.value),
+    onkeydown: (event) => {
+      const open = visible();
+      const at = open.findIndex((opt) => opt.hasAttribute('data-active'));
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next = event.key === 'ArrowDown' ? Math.min(at + 1, open.length - 1) : Math.max(at - 1, 0);
+        setActive(open[next] ?? null);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        const active = open[at];
+        if (active) {
+          choose(active.dataset.value);
+        }
+      } else if (event.key === 'Escape') {
+        closePanel();
+        trigger.focus();
+      }
+    },
+  });
+
+  const list = h('ul', {
+    class: 'combo-list',
+    id: 'combo-list',
+    role: 'listbox',
+    'aria-label': 'Published versions',
+    // Options are not focusable; without this an option click blurs the
+    // search input first and the focusout below closes the panel mid-click.
+    onmousedown: (event) => event.preventDefault(),
+    onclick: (event) => {
+      const opt = event.target.closest('.combo-opt');
+      if (opt) {
+        choose(opt.dataset.value);
+      }
+    },
+  }, ...rows);
+
+  const empty = h('p', { class: 'combo-empty', hidden: true }, 'No versions match');
+  const panel = h('div', { class: 'combo-panel', 'data-combobox-panel': '', hidden: true }, input, list, empty);
+
+  return h('div', {
+    class: 'combo',
+    'data-combobox': '',
+    dataset: { key: 'swap-version' },
+    onfocusout: (event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        closePanel();
+      }
+    },
+  }, trigger, panel);
+};
+
 const renderSwapBuilder = (vm) => {
   if (vm.page.state !== 'detected') {
     return null;
@@ -605,21 +758,17 @@ const renderSwapBuilder = (vm) => {
   let body = null;
   if (vm.routeBuilder.enabled) {
     const merged = mergeVersionCatalog(state.catalog.byPackage);
-    const select = h('select', { id: 'swap-version', 'aria-label': 'Published version to swap out' },
-      ...KNOWN_PACKAGES.map((pkg) => {
-        const options = merged.filter((entry) => entry.pkg === pkg)
-          .map((entry) => h('option', { value: `${entry.pkg}|${entry.version}` }, entry.version));
-        return options.length > 0 ? h('optgroup', { label: pkg }, ...options) : null;
-      }),
-    );
+    const entries = merged.map((entry) => ({ ...entry, key: `${entry.pkg}|${entry.version}` }));
+    const chosenKey = entries.some((entry) => entry.key === state.swapChoice) ? state.swapChoice : entries[0]?.key ?? null;
     body = h('details', { class: 'builder', dataset: { key: 'swap-builder' } },
       h('summary', {}, 'Swap out a published version'),
       h('div', { class: 'builder-body' },
-        h('div', { class: 'select-wrap' }, select),
+        versionCombobox(entries, chosenKey),
         h('button', {
           class: 'btn btn--primary',
+          disabled: chosenKey === null ? true : undefined,
           onclick: () => {
-            const [pkg, version] = select.value.split('|');
+            const [pkg, version] = chosenKey.split('|');
             const from = cdnPrefixFor(pkg, version);
             if (!state.status.redirects.some((r) => r.from === from)) {
               void setRedirects([...state.status.redirects, { from, to: LOCAL_DIST_SENTINEL }]);

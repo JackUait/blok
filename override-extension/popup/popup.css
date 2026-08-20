@@ -660,11 +660,33 @@ details.builder[open]::details-content {
   translate: 0 0;
 }
 
-.builder-body { display: flex; gap: 8px; margin-top: 10px; }
+.builder-body { display: flex; gap: 8px; margin-top: 10px; align-items: flex-start; }
 
-.select-wrap { position: relative; flex: 1; min-width: 0; }
+/* ---------- searchable version combobox ---------- */
 
-.select-wrap::after {
+.combo { flex: 1; min-width: 0; }
+
+.combo-trigger {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 6px 27px 6px 10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color var(--t-fast) ease;
+}
+
+.combo-trigger:hover { border-color: var(--ink); }
+
+.combo-trigger::after {
   content: '';
   position: absolute;
   right: 12px;
@@ -674,25 +696,97 @@ details.builder[open]::details-content {
   border-right: 1.5px solid var(--faint);
   border-bottom: 1.5px solid var(--faint);
   transform: translateY(-65%) rotate(45deg);
-  pointer-events: none;
+  transition: transform 160ms var(--ease-out);
 }
 
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 100%;
+.combo-trigger[aria-expanded='true']::after { transform: translateY(-25%) rotate(225deg); }
+
+.combo-panel {
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 20px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+  animation: combo-in 160ms var(--ease-out);
+}
+
+@keyframes combo-in {
+  from { opacity: 0; transform: translateY(-3px); }
+}
+
+.combo-search {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 8px 11px;
+  font: 500 12.5px/1.5 var(--sans);
   color: var(--ink);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  padding: 6px 27px 6px 10px;
+}
+
+.combo-search::placeholder { color: var(--faint); }
+
+/* One focus indicator per input: the hairline underneath, not a ring. */
+.combo-search:focus-visible {
+  outline: none;
+  border-bottom-color: var(--ink);
+}
+
+.combo-list {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 176px;
+  overflow-y: auto;
+}
+
+.combo-group {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--faint);
+  padding: 6px 8px 2px;
+}
+
+.combo-group:not(:first-child) { margin-top: 2px; }
+
+/* display:flex is an author rule and silently beats the UA's [hidden] rule. */
+.combo-opt[hidden] { display: none; }
+
+.combo-opt {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   font-family: var(--mono);
   font-size: 12.5px;
+  color: var(--ink);
+  padding: 5px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: border-color var(--t-fast) ease;
 }
 
-select:hover { border-color: var(--ink); }
+.combo-opt::before {
+  content: '✓';
+  width: 16px;
+  flex: none;
+  font-family: var(--sans);
+  font-weight: 650;
+  visibility: hidden;
+}
+
+.combo-opt[aria-selected='true']::before { visibility: visible; }
+
+.combo-opt:hover,
+.combo-opt[data-active] { background: var(--hover); }
+
+.combo-empty {
+  font-size: 12px;
+  color: var(--faint);
+  text-align: center;
+  margin: 0;
+  padding: 12px 8px;
+}
 
 /* ---------- a11y ---------- */
 

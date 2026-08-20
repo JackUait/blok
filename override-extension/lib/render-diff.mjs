@@ -15,6 +15,26 @@ const normalized = (root) => {
   for (const details of clone.querySelectorAll('details[open]')) {
     details.removeAttribute('open');
   }
+  // Combobox ephemera (expansion, search filtering, keyboard-active option)
+  // are user-held state, not render output — normalize to the closed default
+  // so a background poll doesn't replace the DOM out from under an open list.
+  for (const combo of clone.querySelectorAll('[data-combobox]')) {
+    for (const el of combo.querySelectorAll('[aria-expanded]')) {
+      el.setAttribute('aria-expanded', 'false');
+    }
+    for (const el of combo.querySelectorAll('[aria-activedescendant]')) {
+      el.removeAttribute('aria-activedescendant');
+    }
+    for (const panel of combo.querySelectorAll('[data-combobox-panel]')) {
+      panel.setAttribute('hidden', '');
+      for (const el of panel.querySelectorAll('[hidden]')) {
+        el.removeAttribute('hidden');
+      }
+      for (const el of panel.querySelectorAll('[data-active]')) {
+        el.removeAttribute('data-active');
+      }
+    }
+  }
   return clone.innerHTML;
 };
 
@@ -23,6 +43,13 @@ export const captureEphemeral = (root) => {
   return {
     open: [...root.querySelectorAll('details[open][data-key]')].map((d) => d.dataset.key),
     selects: Object.fromEntries([...root.querySelectorAll('select[id]')].map((s) => [s.id, s.value])),
+    combos: Object.fromEntries([...root.querySelectorAll('[data-combobox][data-key]')].map((combo) => [
+      combo.dataset.key,
+      {
+        open: !(combo.querySelector('[data-combobox-panel]')?.hidden ?? true),
+        query: combo.querySelector('input')?.value ?? '',
+      },
+    ])),
     focus: active && root.contains(active) ? active.getAttribute('aria-label') ?? active.id ?? null : null,
   };
 };
@@ -38,6 +65,23 @@ export const restoreEphemeral = (root, snapshot) => {
     const select = root.querySelector(`select[id="${id}"]`);
     if (select && [...select.options].some((o) => o.value === value)) {
       select.value = value;
+    }
+  }
+  // The fresh DOM carries fresh listeners — replay the user's state through
+  // them (an input event re-filters, a trigger click re-opens) instead of
+  // reaching into widget internals render-diff knows nothing about.
+  for (const [key, combo] of Object.entries(snapshot.combos ?? {})) {
+    const host = root.querySelector(`[data-combobox][data-key="${key}"]`);
+    if (!host) {
+      continue;
+    }
+    const input = host.querySelector('input');
+    if (input && combo.query !== '') {
+      input.value = combo.query;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (combo.open) {
+      host.querySelector('button')?.click();
     }
   }
   if (snapshot.focus) {

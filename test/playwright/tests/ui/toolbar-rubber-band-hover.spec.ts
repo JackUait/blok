@@ -76,15 +76,9 @@ const RUBBER_BAND_X = 10;
 /**
  * Lasso every block whose row the band spans, then release.
  *
- * The pointer is re-nudged until the band has actually reached `endBlock`, and
- * only then released. RectangleSelection handles mousemove through a 10ms
- * throttle whose trailing invocation is not guaranteed: a move arriving inside
- * `wait` of a completed trailing invoke stores its args without arming a timer,
- * so the last move of a two-event synthetic tail can be dropped outright and no
- * amount of waiting brings it back. A real drag emits a continuous stream, so
- * re-dispatching is the faithful gesture, not a workaround. The y alternates so
- * no engine can coalesce two identical positions; both stay inside the end
- * block's row because `toY` is its centre.
+ * The band must have reached `endBlock` BEFORE the release: mouseup ends the
+ * selection, and `changingRectangle` bails on `!mousedown`, so a throttled move
+ * still in flight at that moment can no longer grow the band.
  * @param page - page under test
  * @param fromY - viewport y the band starts at
  * @param toY - viewport y the band ends at
@@ -100,15 +94,7 @@ const rubberBandSelect = async (
   await page.mouse.down();
   await page.mouse.move(RUBBER_BAND_X, toY, { steps: 10 });
 
-  let nudge = 0;
-
-  await expect.poll(async () => {
-    nudge = nudge === 1 ? 2 : 1;
-
-    await page.mouse.move(RUBBER_BAND_X, toY + nudge);
-
-    return endBlock.getAttribute('data-blok-selected');
-  }).toBe('true');
+  await expect(endBlock).toHaveAttribute('data-blok-selected', 'true');
 
   await page.mouse.up();
 };

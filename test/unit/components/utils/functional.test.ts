@@ -280,5 +280,96 @@ describe('functional', () => {
       expect(receivedArgs).toHaveLength(2);
       expect(receivedArgs[1]).toBe(9);
     });
+
+    it('should deliver a call arriving right after a trailing invocation', () => {
+      const receivedArgs: unknown[] = [];
+      const fn = (arg: unknown): void => {
+        receivedArgs.push(arg);
+      };
+      const throttledFn = throttle(fn, 10);
+
+      throttledFn('leading');
+      expect(receivedArgs).toEqual([ 'leading' ]);
+
+      vi.advanceTimersByTime(5);
+      throttledFn('trailing');
+
+      vi.advanceTimersByTime(5);
+      expect(receivedArgs).toEqual([ 'leading', 'trailing' ]);
+
+      /**
+       * Arrives inside `wait` of the trailing invoke: nothing is pending, so
+       * this call only ever runs if it arms a timer of its own.
+       */
+      vi.advanceTimersByTime(2);
+      throttledFn('after-trailing');
+
+      vi.advanceTimersByTime(1000);
+      expect(receivedArgs).toEqual([ 'leading', 'trailing', 'after-trailing' ]);
+    });
+
+    it('should keep the leading edge suppressed with leading: false when a call arrives after a trailing invocation', () => {
+      const receivedArgs: unknown[] = [];
+      const fn = (arg: unknown): void => {
+        receivedArgs.push(arg);
+      };
+      const throttledFn = throttle(fn, 10, { leading: false });
+
+      throttledFn('first');
+      expect(receivedArgs).toEqual([]);
+
+      vi.advanceTimersByTime(5);
+      throttledFn('second');
+
+      vi.advanceTimersByTime(5);
+      expect(receivedArgs).toEqual([ 'second' ]);
+
+      vi.advanceTimersByTime(2);
+      throttledFn('third');
+      expect(receivedArgs).toEqual([ 'second' ]);
+
+      vi.advanceTimersByTime(1000);
+      expect(receivedArgs).toEqual([ 'second', 'third' ]);
+    });
+
+    it('should never invoke on the trailing edge with trailing: false', () => {
+      const receivedArgs: unknown[] = [];
+      const fn = (arg: unknown): void => {
+        receivedArgs.push(arg);
+      };
+      const throttledFn = throttle(fn, 10, { trailing: false });
+
+      throttledFn('leading');
+      vi.advanceTimersByTime(5);
+      throttledFn('within-window');
+
+      vi.advanceTimersByTime(5);
+      expect(receivedArgs).toEqual([ 'leading' ]);
+
+      vi.advanceTimersByTime(2);
+      throttledFn('next-window');
+      expect(receivedArgs).toEqual([ 'leading', 'next-window' ]);
+
+      vi.advanceTimersByTime(1000);
+      expect(receivedArgs).toEqual([ 'leading', 'next-window' ]);
+    });
+
+    it('should invoke at most once per wait during a sustained burst', () => {
+      let callCount = 0;
+      const fn = (): void => {
+        callCount++;
+      };
+      const throttledFn = throttle(fn, 10);
+
+      for (let i = 0; i < 200; i++) {
+        throttledFn(i);
+        vi.advanceTimersByTime(1);
+      }
+      vi.advanceTimersByTime(10);
+
+      // 200ms of calls at a 10ms window: one per window plus the trailing flush
+      expect(callCount).toBeLessThanOrEqual(22);
+      expect(callCount).toBeGreaterThan(1);
+    });
   });
 });

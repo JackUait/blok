@@ -138,6 +138,16 @@ export const throttle = (
     const canStartTimer = isInvoking && state.timerId === undefined;
 
     if (!canStartTimer) {
+      /**
+       * A call that is not invoking still needs a timer when the slot is empty,
+       * otherwise its args sit in `lastArgs` with nothing left to consume them
+       * and the call is dropped forever. This is the state `timerExpired` leaves
+       * behind after a trailing invoke.
+       */
+      if (state.timerId === undefined) {
+        state.timerId = setTimeout(timerExpired, wait);
+      }
+
       return undefined;
     }
 

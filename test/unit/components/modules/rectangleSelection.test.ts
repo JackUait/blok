@@ -152,6 +152,8 @@ const createRectangleSelection = (overrides: PartialModules = {}): RectangleSele
         blokWrapper: '',
       },
       contentRect: blockContent.getBoundingClientRect(),
+      disableHoverForCooldown: vi.fn(),
+      resetBlockHoverState: vi.fn(),
     } as unknown as BlokModules['UI'],
     Toolbar: toolbarMock as unknown as BlokModules['Toolbar'],
     InlineToolbar: inlineToolbarMock as unknown as BlokModules['InlineToolbar'],
@@ -266,6 +268,38 @@ describe('RectangleSelection', () => {
 
       expect(modules.I18n?.t).toHaveBeenCalledWith('a11y.blocksSelected', { count: 3 });
       expect(announce).toHaveBeenCalledWith('a11y.blocksSelected', { politeness: 'polite' });
+    });
+
+    it('stands the block hover down before anchoring the multi-block toolbar', () => {
+      const { rectangleSelection, modules } = createRectangleSelection({
+        BlockSelection: {
+          selectedBlocks: [
+            {} as BlockType,
+            {} as BlockType,
+          ],
+        } as unknown as BlokModules['BlockSelection'],
+      });
+
+      rectangleSelection.prepare();
+
+      (rectangleSelection as unknown as { processMouseUp: () => void }).processMouseUp();
+
+      const disableHover = modules.UI?.disableHoverForCooldown as ReturnType<typeof vi.fn>;
+      const resetHover = modules.UI?.resetBlockHoverState as ReturnType<typeof vi.fn>;
+      const anchorToolbar = modules.Toolbar?.moveAndOpenForMultipleBlocks as ReturnType<typeof vi.fn>;
+
+      expect(disableHover).toHaveBeenCalled();
+      expect(resetHover).toHaveBeenCalled();
+
+      /**
+       * Order is the whole point: the lasso drags through the rows it selects,
+       * so a hover queued for the last of them would otherwise land after the
+       * toolbar is anchored and drag it off the first selected block.
+       */
+      expect(disableHover.mock.invocationCallOrder[0])
+        .toBeLessThan(anchorToolbar.mock.invocationCallOrder[0]);
+      expect(resetHover.mock.invocationCallOrder[0])
+        .toBeLessThan(anchorToolbar.mock.invocationCallOrder[0]);
     });
 
     it('does not announce a count when a single block is selected', () => {

@@ -427,6 +427,17 @@ export class RectangleSelection extends Module {
     const selectedBlocks = this.Blok.BlockSelection.selectedBlocks;
 
     if (selectedBlocks.length > 1) {
+      /**
+       * The lasso drags THROUGH the rows it selects, so by mouseup the hover
+       * controller's last-hovered block is the one under the pointer and a
+       * throttled mousemove for it may still be queued. Without this the
+       * toolbar the line below anchors at the first selected block is yanked
+       * onto that block a frame later, and the user's first deliberate hover of
+       * it is then swallowed as a duplicate. Mirrors CrossBlockSelection.onMouseUp.
+       */
+      this.Blok.UI.disableHoverForCooldown();
+      this.Blok.UI.resetBlockHoverState();
+
       this.Blok.Toolbar.moveAndOpenForMultipleBlocks();
 
       /**

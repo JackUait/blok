@@ -61,6 +61,58 @@ const createBlokWithBlocks = async (
   });
 };
 
+/**
+ * The x of the rubber band, in the page margin left of the block holders.
+ *
+ * The lasso MUST be anchored outside editable content. A drag anchored inside a
+ * block's text is a cross-block TEXT selection and never marks blocks
+ * `data-blok-selected` — `RectangleSelection.processMouseDown` arms only when
+ * the mousedown target is not an input, and `startSelection` bails when it lands
+ * inside `[data-blok-element-content]`. The redactor's gutter still counts as
+ * the row of the block beside it, so a band drawn here selects those rows.
+ */
+const RUBBER_BAND_X = 10;
+
+/**
+ * Lasso every block whose row the band spans, then release.
+ *
+ * The pointer is re-nudged until the band has actually reached `endBlock`, and
+ * only then released. RectangleSelection handles mousemove through a 10ms
+ * throttle whose trailing invocation is not guaranteed: a move arriving inside
+ * `wait` of a completed trailing invoke stores its args without arming a timer,
+ * so the last move of a two-event synthetic tail can be dropped outright and no
+ * amount of waiting brings it back. A real drag emits a continuous stream, so
+ * re-dispatching is the faithful gesture, not a workaround. The y alternates so
+ * no engine can coalesce two identical positions; both stay inside the end
+ * block's row because `toY` is its centre.
+ * @param page - page under test
+ * @param fromY - viewport y the band starts at
+ * @param toY - viewport y the band ends at
+ * @param endBlock - the last block the band must cover before the release
+ */
+const rubberBandSelect = async (
+  page: Page,
+  fromY: number,
+  toY: number,
+  endBlock: Locator
+): Promise<void> => {
+  await page.mouse.move(RUBBER_BAND_X, fromY);
+  await page.mouse.down();
+  await page.mouse.move(RUBBER_BAND_X, toY, { steps: 10 });
+
+  let nudge = 0;
+
+  await expect.poll(async () => {
+    nudge = nudge === 1 ? 2 : 1;
+
+    await page.mouse.move(RUBBER_BAND_X, toY + nudge);
+
+    return endBlock.getAttribute('data-blok-selected');
+  }).toBe('true');
+
+  await page.mouse.up();
+};
+
 const getRequiredBoundingBox = async (locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> => {
   const box = await locator.boundingBox();
 
@@ -117,14 +169,7 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     const firstBox = await getRequiredBoundingBox(firstBlock);
     const fourthBox = await getRequiredBoundingBox(fourthBlock);
 
-    // Perform cross-block selection by dragging from center of first to center of fourth
-    const firstCenter = { x: firstBox.x + firstBox.width / 2, y: firstBox.y + firstBox.height / 2 };
-    const fourthCenter = { x: fourthBox.x + fourthBox.width / 2, y: fourthBox.y + fourthBox.height / 2 };
-
-    await page.mouse.move(firstCenter.x, firstCenter.y);
-    await page.mouse.down();
-    await page.mouse.move(fourthCenter.x, fourthCenter.y, { steps: 10 });
-    await page.mouse.up();
+    await rubberBandSelect(page, firstBox.y + firstBox.height / 2, fourthBox.y + fourthBox.height / 2, fourthBlock);
 
     // Verify all blocks are selected
     await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');
@@ -140,7 +185,8 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     // Using a position well below the fourth block to ensure hover zone doesn't find any block
     await page.mouse.move(fourthBox.x + fourthBox.width / 2, fourthBox.y + fourthBox.height + 100);
 
-    // Wait for hover cooldown (50ms) to expire after cross-block selection
+    // Outlast the 50ms HOVER_COOLDOWN_MS the lasso's mouseup arms — a hover
+    // inside it is ignored, so shortening this wait breaks the hover below
     // eslint-disable-next-line playwright/no-wait-for-timeout
     await page.waitForTimeout(100);
 
@@ -233,14 +279,7 @@ test.describe('ui.toolbar-rubber-band-hover', () => {
     const firstBox = await getRequiredBoundingBox(firstBlock);
     const thirdBox = await getRequiredBoundingBox(thirdBlock);
 
-    // Perform cross-block selection by dragging from center of first to center of third
-    const firstCenter = { x: firstBox.x + firstBox.width / 2, y: firstBox.y + firstBox.height / 2 };
-    const thirdCenter = { x: thirdBox.x + thirdBox.width / 2, y: thirdBox.y + thirdBox.height / 2 };
-
-    await page.mouse.move(firstCenter.x, firstCenter.y);
-    await page.mouse.down();
-    await page.mouse.move(thirdCenter.x, thirdCenter.y, { steps: 10 });
-    await page.mouse.up();
+    await rubberBandSelect(page, firstBox.y + firstBox.height / 2, thirdBox.y + thirdBox.height / 2, thirdBlock);
 
     // Verify all blocks are selected
     await expect(getBlockByIndex(page, 0)).toHaveAttribute('data-blok-selected', 'true');

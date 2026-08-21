@@ -209,6 +209,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
           onChange={value => patch({ width: value as EditorSettings['width'] })}
         />
         <Segmented
+          label={t('demo.settings.controlsSideLabel')}
+          value={settings.toolbarPosition}
+          options={[
+            { value: 'left', label: t('demo.settings.controlsSideLeft') },
+            { value: 'right', label: t('demo.settings.controlsSideRight') },
+          ]}
+          onChange={value => patch({ toolbarPosition: value as EditorSettings['toolbarPosition'] })}
+        />
+        <Segmented
           label={t('demo.settings.alignLabel')}
           value={settings.contentAlign}
           options={[

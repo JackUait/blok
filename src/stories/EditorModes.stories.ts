@@ -290,6 +290,96 @@ export const RTLMode: Story = {
 };
 
 /**
+ * Block controls docked to the inline-end gutter (config.toolbarPosition: 'right').
+ * The +/⠿ controls and the space reserved for them both move to the right of
+ * the content column.
+ */
+export const ControlsOnTheRight: Story = {
+  args: {
+    data: sampleData,
+    readOnly: false,
+    toolbarPosition: 'right',
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Reserve the gutter on the end side', async () => {
+      await waitFor(
+        () => {
+          const editor = canvasElement.querySelector('[data-blok-testid="blok-editor"][data-blok-toolbar-position="right"]');
+
+          expect(editor).toBeTruthy();
+        },
+        TIMEOUT_INIT
+      );
+    });
+
+    await step('Dock the controls past the content column', async () => {
+      await waitForToolbar(canvasElement);
+
+      const block = canvasElement.querySelector(BLOCK_TESTID);
+
+      if (block) {
+        simulateClick(block);
+      }
+
+      await waitFor(
+        () => {
+          const actions = canvasElement.querySelector(ACTIONS_TESTID);
+          const content = canvasElement.querySelector('[data-blok-element-content]');
+
+          if (actions === null || content === null) {
+            throw new Error('Expected the actions bar and the block content to be laid out');
+          }
+
+          expect(actions.getBoundingClientRect().left)
+            .toBeGreaterThanOrEqual(content.getBoundingClientRect().right - 1);
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};
+
+/**
+ * All block controls hidden (config.hideToolbar). Conversion and formatting stay
+ * available through the inline toolbar; the gutter reserved for the controls
+ * collapses so no dead space is left behind.
+ */
+export const ControlsHidden: Story = {
+  args: {
+    data: sampleData,
+    readOnly: false,
+    hideToolbar: true,
+  },
+  play: async ({ canvasElement, step }) => {
+    await step('Collapse the gutter and keep the controls closed on hover', async () => {
+      await waitFor(
+        () => {
+          const editor = canvasElement.querySelector('[data-blok-testid="blok-editor"][data-blok-toolbar-hidden]');
+
+          expect(editor).toBeTruthy();
+        },
+        TIMEOUT_INIT
+      );
+
+      const block = canvasElement.querySelector(BLOCK_TESTID);
+
+      if (block) {
+        simulateClick(block);
+      }
+
+      await waitFor(
+        () => {
+          const plusButton = canvasElement.querySelector(PLUS_BUTTON_TESTID);
+
+          expect(plusButton === null || plusButton.getBoundingClientRect().width === 0).toBe(true);
+        },
+        TIMEOUT_ACTION
+      );
+    });
+  },
+};
+
+/**
  * Dragging state - visual feedback when a block is being dragged.
  * Shows grabbing cursor across the editor and demonstrates block reordering.
  */

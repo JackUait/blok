@@ -134,6 +134,25 @@ describe('Host customization tokens (public --blok-* contract)', () => {
       expect(body).toMatch(/--blok-editor-gutter-end:\s*0px/);
     });
 
+    it('moves the gutter to the inline-end side for toolbarPosition: right', () => {
+      const body = findRuleBody(css, ':where([data-blok-toolbar-position="right"])');
+
+      expect(body).not.toBeNull();
+      expect(body).toMatch(/--blok-editor-gutter-start:\s*0px/);
+      expect(body).toMatch(/--blok-editor-gutter-end:\s*56px/);
+    });
+
+    it('keeps the right-gutter swap ahead of the collapse rules, so a hidden toolbar still reserves nothing', () => {
+      const swapAt = css.indexOf(':where([data-blok-toolbar-position="right"])');
+      const defaultAt = css.indexOf(':where([data-blok-interface])');
+      const toolbarHiddenAt = css.indexOf(':where([data-blok-toolbar-hidden])');
+      const controlsHiddenAt = css.indexOf(':where([data-blok-controls-hidden])');
+
+      expect(swapAt).toBeGreaterThan(defaultAt);
+      expect(swapAt).toBeLessThan(toolbarHiddenAt);
+      expect(swapAt).toBeLessThan(controlsHiddenAt);
+    });
+
     it('declares the default gutter width at zero specificity', () => {
       const body = findRuleBody(css, ':where([data-blok-interface])');
 

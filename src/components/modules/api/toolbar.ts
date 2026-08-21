@@ -1,4 +1,5 @@
 import type { Toolbar, ToolbarBlockSettingsOptions, ToolbarCloseOptions } from '../../../../types/api';
+import type { BlockControlsPosition } from '../../../../types/configs/blok-config';
 import { Module } from '../../__module';
 
 import { logLabeled } from './../../utils';
@@ -18,6 +19,7 @@ export class ToolbarAPI extends Module {
       toggleBlockSettings: (openingState?: boolean, trigger?: HTMLElement, options?: ToolbarBlockSettingsOptions): void => this.toggleBlockSettings(openingState, trigger, options),
       toggleToolbox: (openingState?: boolean): void => this.toggleToolbox(openingState),
       setHidden: (hidden: boolean): void => this.setHidden(hidden),
+      setPosition: (position: BlockControlsPosition): void => this.setPosition(position),
     };
   }
 
@@ -28,6 +30,15 @@ export class ToolbarAPI extends Module {
    */
   public setHidden(hidden: boolean): void {
     this.Blok.Toolbar.setHidden(hidden);
+  }
+
+  /**
+   * Runtime setter for `config.toolbarPosition`: moves the floating block
+   * controls between the editor's inline-start and inline-end gutters.
+   * @param position - 'left' for the inline-start gutter, 'right' for inline-end
+   */
+  public setPosition(position: BlockControlsPosition): void {
+    this.Blok.Toolbar.setPosition(position);
   }
 
   /**

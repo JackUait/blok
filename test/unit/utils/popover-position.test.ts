@@ -369,6 +369,59 @@ describe('resolvePosition', () => {
       expect(result.top).toBe(0);
     });
 
+    describe("asideSide: 'right' (toolbarPosition: 'right')", () => {
+      it('places the popover to the right of the anchor, vertically centered', () => {
+        const result = resolvePosition({
+          anchor: rect({ top: 100, bottom: 140, left: 600, right: 640 }),
+          popoverSize: { width: 250, height: 100 },
+          scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+          viewportSize: { width: 1024, height: 768 },
+          scrollOffset: { x: 0, y: 0 },
+          offset: 8,
+          placeLeftOfAnchor: true,
+          asideSide: 'right',
+        });
+
+        // horizontal: popover.left = anchor.right + offset → 640 + 8
+        expect(result.left).toBe(648);
+        // vertical: centered on the anchor — anchor center 120, popover half-height 50
+        expect(result.top).toBe(70);
+        expect(result.openLeft).toBe(false);
+      });
+
+      it('falls back to opening below when the popover cannot fully fit on the right', () => {
+        const result = resolvePosition({
+          anchor: rect({ top: 100, bottom: 140, left: 900, right: 940 }),
+          popoverSize: { width: 300, height: 100 },
+          scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+          viewportSize: { width: 1024, height: 768 },
+          scrollOffset: { x: 0, y: 0 },
+          offset: 8,
+          placeLeftOfAnchor: true,
+          asideSide: 'right',
+        });
+
+        // space right of the anchor = 1000 - 940 - 8 = 52 < 300 → below the anchor
+        expect(result.top).toBe(148);
+        expect(result.openTop).toBe(false);
+      });
+
+      it('keeps the historical left placement when asideSide is omitted', () => {
+        const result = resolvePosition({
+          anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),
+          popoverSize: { width: 250, height: 100 },
+          scopeBounds: rect({ top: 0, bottom: 800, left: 0, right: 1000 }),
+          viewportSize: { width: 1024, height: 768 },
+          scrollOffset: { x: 0, y: 0 },
+          offset: 8,
+          placeLeftOfAnchor: true,
+        });
+
+        expect(result.left).toBe(142);
+        expect(result.openLeft).toBe(true);
+      });
+    });
+
     it('respects scrollOffset when placeLeftOfAnchor is true', () => {
       const result = resolvePosition({
         anchor: rect({ top: 100, bottom: 140, left: 400, right: 440 }),

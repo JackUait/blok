@@ -40,6 +40,11 @@ const REACTIVE_CONTRACT: Record<string, {
     adapterCall: /\.toolbar\.setHidden\(/,
     assert: (api) => expect(typeof api.toolbar.setHidden).toBe('function'),
   },
+  toolbarPosition: {
+    setter: 'toolbar.setPosition(position)',
+    adapterCall: /\.toolbar\.setPosition\(/,
+    assert: (api) => expect(typeof api.toolbar.setPosition).toBe('function'),
+  },
   inlineToolbar: {
     setter: 'tools.setInlineToolbar(config)',
     adapterCall: /\.tools\.setInlineToolbar\(/,

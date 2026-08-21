@@ -702,6 +702,7 @@ export class UI extends Module<UINodes> {
     this.nodes.wrapper.setAttribute(DATA_ATTR.version, getBlokVersion());
     this.nodes.wrapper.setAttribute('data-blok-testid', 'blok-editor');
     this.nodes.wrapper.setAttribute(DATA_ATTR.contentAlign, this.config.style?.contentAlign ?? 'left');
+    this.nodes.wrapper.setAttribute(DATA_ATTR.toolbarPosition, this.config.toolbarPosition ?? 'left');
     if (this.isRtl) {
       this.nodes.wrapper.setAttribute(DATA_ATTR.rtl, 'true');
     }

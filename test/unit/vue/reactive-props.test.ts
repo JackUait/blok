@@ -101,6 +101,25 @@ describe('useBlok reactive props', () => {
     expect(blokRegistry.instances).toHaveLength(1);
   });
 
+  it('syncs toolbarPosition via toolbar.setPosition without recreation', async () => {
+    const { config } = await mountReady({ toolbarPosition: 'right' as const });
+    const instance = blokRegistry.last!;
+
+    expect(instance.toolbar.setPosition).toHaveBeenLastCalledWith('right');
+
+    config.toolbarPosition = 'left';
+    await nextTick();
+    expect(instance.toolbar.setPosition).toHaveBeenLastCalledWith('left');
+
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
+  it('leaves toolbarPosition alone while the prop is unset', async () => {
+    await mountReady({});
+
+    expect(blokRegistry.last!.toolbar.setPosition).not.toHaveBeenCalled();
+  });
+
   it('syncs inlineToolbar via tools.setInlineToolbar, deduping same-content arrays, without recreation', async () => {
     const { config } = await mountReady({ inlineToolbar: ['bold'] });
     const instance = blokRegistry.last!;

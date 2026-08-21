@@ -88,6 +88,7 @@ export {
 } from './tools';
 export {BlockTune, BlockTuneConstructable, BlockTuneRenderContext} from './block-tunes';
 export {
+  BlockControlsPosition,
   BlokConfig,
   BlokErrorContext,
   BlokMountOptions,

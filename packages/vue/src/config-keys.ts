@@ -20,6 +20,7 @@ export const BLOK_EDITOR_CONFIG_KEYS = [
   'placeholder',
   'sanitizer',
   'hideToolbar',
+  'toolbarPosition',
   'maxHistoryLength',
   'historyDebounceTime',
   'newGroupDelay',

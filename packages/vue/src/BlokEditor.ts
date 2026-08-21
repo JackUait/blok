@@ -38,6 +38,7 @@ export const BlokEditor = defineComponent({
     placeholder: { type: [String, Boolean] as PropType<string | false>, default: undefined },
     sanitizer: { type: Object as PropType<BlokConfig['sanitizer']>, default: undefined },
     hideToolbar: { type: Boolean as PropType<boolean | undefined>, default: undefined },
+    toolbarPosition: { type: String as PropType<BlokConfig['toolbarPosition']>, default: undefined },
     maxHistoryLength: { type: Number, default: undefined },
     historyDebounceTime: { type: Number, default: undefined },
     newGroupDelay: { type: Number, default: undefined },

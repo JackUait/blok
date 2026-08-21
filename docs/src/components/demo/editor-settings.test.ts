@@ -23,6 +23,15 @@ describe('buildEditorSettingsProps', () => {
     expect('hideToolbar' in props).toBe(false);
   });
 
+  it('passes the block-controls side through as a reactive prop', () => {
+    const { props } = buildEditorSettingsProps(
+      { ...DEFAULT_EDITOR_SETTINGS, toolbarPosition: 'right' },
+      'light'
+    );
+
+    expect(props.toolbarPosition).toBe('right');
+  });
+
   it('always follows the site theme', () => {
     const { props } = buildEditorSettingsProps(DEFAULT_EDITOR_SETTINGS, 'dark');
 
@@ -110,6 +119,7 @@ describe('buildEditorSettingsProps', () => {
           contentAlign: 'right',
           autofocus: true,
           hideToolbar: true,
+          toolbarPosition: 'right',
         },
         'dark'
       );

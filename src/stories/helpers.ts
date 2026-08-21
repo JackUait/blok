@@ -65,6 +65,10 @@ export interface EditorFactoryOptions {
   tools?: { [toolName: string]: ToolConstructable | ToolSettings };
   /** i18n configuration (e.g., for RTL support) */
   i18n?: I18nConfig;
+  /** Which gutter the floating block controls occupy */
+  toolbarPosition?: BlokConfig['toolbarPosition'];
+  /** Hide the hover block controls entirely */
+  hideToolbar?: boolean;
 }
 
 /**
@@ -97,6 +101,8 @@ export const createEditorContainer = (options: EditorFactoryOptions = {}): HTMLE
     autofocus = false,
     tools,
     i18n,
+    toolbarPosition,
+    hideToolbar,
   } = options;
 
   const container = document.createElement('div') as EditorContainer;
@@ -128,6 +134,8 @@ export const createEditorContainer = (options: EditorFactoryOptions = {}): HTMLE
     placeholder,
     tools: mergedTools,
     i18n,
+    toolbarPosition,
+    hideToolbar,
   };
 
   // Clean up and initialize editor after DOM is ready

@@ -1,3 +1,4 @@
+import type { BlockControlsPosition } from '../../../../types/configs/blok-config';
 import type { ToolbarCloseOptions } from '../../../../types/api/toolbar';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
@@ -499,6 +500,47 @@ export class Toolbar extends Module<ToolbarNodes> {
   }
 
   /**
+   * True while the floating block controls live in the editor's inline-END
+   * gutter (`config.toolbarPosition === 'right'`).
+   *
+   * Read by the layout paths that CSS cannot mirror on its own: the content
+   * clamp in `syncContentToBlock`, the nested-content offset, the left-edge
+   * overlap suppression, and the block-settings popover's aside placement.
+   */
+  public get isPositionedRight(): boolean {
+    return this.config.toolbarPosition === 'right';
+  }
+
+  /**
+   * Runtime setter for `config.toolbarPosition` (reactive contract).
+   *
+   * Mirrors `setHidden`: the wrapper's `DATA_ATTR.toolbarPosition` attribute is
+   * snapshotted once at construction (ui.ts) and drives every CSS hook (gutter
+   * side, actions-bar side), while the JS layout paths read the config live —
+   * so a complete runtime move must write both. An open toolbar is re-laid out
+   * in place rather than closed: the side is a layout property, not a
+   * visibility one, and closing would drop the hover the user is still holding.
+   * @param position - 'left' for the inline-start gutter, 'right' for inline-end
+   */
+  public setPosition(position: BlockControlsPosition): void {
+    if (this.config.toolbarPosition === position) {
+      return;
+    }
+
+    this.config.toolbarPosition = position;
+
+    const editorWrapper = this.Blok.UI.nodes.wrapper;
+
+    if (editorWrapper instanceof HTMLElement) {
+      editorWrapper.setAttribute(DATA_ATTR.toolbarPosition, position);
+    }
+
+    if (this.opened && this.hoveredBlock) {
+      this.moveAndOpen(this.hoveredBlock, this.positioner.target);
+    }
+  }
+
+  /**
    * Move Toolbar to the passed (or current) Block
    * @param block - block to move Toolbar near it
    * @param target - optional target element that was hovered (for content offset calculation)
@@ -623,7 +665,7 @@ export class Toolbar extends Module<ToolbarNodes> {
      * setupDraggable() to drag the parent table, so hiding it would leave the
      * whole table undraggable while the user edits cell text.
      */
-    const isCalloutFirstChild = this.isFirstChildOfCallout(targetBlock);
+    const isCalloutFirstChild = this.overlapsCalloutEmoji(targetBlock);
     const hidePlusButton = isCalloutFirstChild || this.Blok.ReadOnly.isEnabled;
 
     plusButton.style.display = hidePlusButton ? 'none' : '';
@@ -688,7 +730,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Apply content offset for nested elements (e.g., nested list items)
      */
-    this.positioner.applyContentOffset(this.nodes, targetBlock);
+    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight);
 
     /**
      * Keep the toolbar aligned with the block's current bounds while its size
@@ -720,9 +762,10 @@ export class Toolbar extends Module<ToolbarNodes> {
      */
     const isToggleHeader = targetBlock.name === 'header'
       && targetBlock.holder.querySelector('[data-blok-toggle-arrow]') !== null;
-    const hasLeftEdgeInteraction = targetBlock.name === 'callout'
-      || targetBlock.name === 'toggle'
-      || isToggleHeader;
+    const hasLeftEdgeInteraction = !this.isPositionedRight
+      && (targetBlock.name === 'callout'
+        || targetBlock.name === 'toggle'
+        || isToggleHeader);
 
     if (hasLeftEdgeInteraction && this.nodes.actions) {
       /**
@@ -752,11 +795,8 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Align the toolbar's inner content wrapper with the block's visible content column.
    * See `content-alignment.ts` for the two-case reasoning (non-stretched vs stretched).
    *
-   * `Math.max` with `actionsWidth - holderLeft` guarantees the actions bar
-   * (positioned at `right:100%`) never extends past the viewport's left edge,
-   * which would make the drag handle unreachable by pointer events. For nested
-   * blocks already offset from the viewport, `holderLeft` px-of-slack relax the
-   * minimum so buttons aren't pushed into the text content.
+   * The offset is then clamped so the actions bar cannot leave the viewport on
+   * whichever side it docks to — see the two clamp helpers below.
    * @param targetBlockHolder - Block holder element
    * @param blockContentElement - `[data-blok-element-content]` element inside the holder
    */
@@ -769,13 +809,61 @@ export class Toolbar extends Module<ToolbarNodes> {
     const contentRect = blockContentElement.getBoundingClientRect();
     const visualOffset = computeVisualContentOffset(targetBlockHolder, contentRect, wrapperRect);
     const actionsWidth = this.nodes.actions?.offsetWidth ?? 0;
-    const holderLeft = wrapperRect ? Math.max(0, wrapperRect.left) : 0;
-    const minMarginLeft = Math.max(0, actionsWidth - holderLeft);
-    const effectiveOffset = Math.max(visualOffset, minMarginLeft);
     const contentWidth = resolveVisualContentWidth(targetBlockHolder, contentRect, wrapperRect);
+    const effectiveOffset = this.isPositionedRight
+      ? this.clampOffsetForEndDock(visualOffset, contentWidth, actionsWidth, wrapperRect)
+      : this.clampOffsetForStartDock(visualOffset, actionsWidth, wrapperRect);
 
     this.nodes.content.style.marginLeft = `${effectiveOffset}px`;
     this.nodes.content.style.maxWidth = `${contentWidth}px`;
+  }
+
+  /**
+   * Floor for the toolbar content's left margin while the actions bar is docked
+   * at `right:100%` — it grows leftwards, so the margin must leave at least its
+   * own width of room or the drag handle lands off-screen and stops receiving
+   * pointer events. Space to the left of the editor wrapper counts as slack, so
+   * a nested (already indented) block is not pushed into its own text.
+   * @param visualOffset - the alignment offset the block's content column asks for
+   * @param actionsWidth - measured width of the actions bar
+   * @param wrapperRect - bounding rect of the toolbar wrapper (co-located with the holder)
+   */
+  private clampOffsetForStartDock(
+    visualOffset: number,
+    actionsWidth: number,
+    wrapperRect: DOMRect | undefined
+  ): number {
+    const slackLeft = wrapperRect ? Math.max(0, wrapperRect.left) : 0;
+
+    return Math.max(visualOffset, Math.max(0, actionsWidth - slackLeft));
+  }
+
+  /**
+   * Mirror of {@link clampOffsetForStartDock} for `toolbarPosition: 'right'`,
+   * where the bar is docked at `left:100%` and grows rightwards: the ceiling is
+   * on the offset, not the floor, and the slack is whatever lies between the
+   * editor wrapper's right edge and the viewport's.
+   * @param visualOffset - the alignment offset the block's content column asks for
+   * @param contentWidth - resolved width of the visible content column
+   * @param actionsWidth - measured width of the actions bar
+   * @param wrapperRect - bounding rect of the toolbar wrapper (co-located with the holder)
+   */
+  private clampOffsetForEndDock(
+    visualOffset: number,
+    contentWidth: number,
+    actionsWidth: number,
+    wrapperRect: DOMRect | undefined
+  ): number {
+    if (wrapperRect === undefined) {
+      return visualOffset;
+    }
+
+    const viewportWidth = window.innerWidth;
+    const slackRight = Math.max(0, viewportWidth - wrapperRect.right);
+    const overhang = Math.max(0, actionsWidth - slackRight);
+    const maxOffset = wrapperRect.width - contentWidth - overhang;
+
+    return Math.max(0, Math.min(visualOffset, maxOffset));
   }
 
   /**
@@ -900,7 +988,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     /**
      * Reset content offset for multi-block selection
      */
-    this.positioner.applyContentOffset(this.nodes, targetBlock);
+    this.positioner.applyContentOffset(this.nodes, targetBlock, this.isPositionedRight);
 
     /**
      * Always show the settings toggler for multi-block selection
@@ -1048,6 +1136,24 @@ export class Toolbar extends Module<ToolbarNodes> {
    * Checks whether the given block is the first child of a callout block.
    * Used to hide the plus button and prevent it from overlapping the callout emoji icon.
    */
+  /**
+   * Whether the controls would collide with the callout's emoji button.
+   *
+   * The emoji sits at the callout's LEFT edge, which is exactly where the
+   * actions bar lands for a callout's first child — hence the buttons are
+   * hidden there. Docked to the opposite gutter (`toolbarPosition: 'right'`)
+   * they have nothing to collide with, so they stay visible (and, sitting over
+   * the callout's own surface now, take its background adaptation instead).
+   * @param block - the block the toolbar is being positioned at
+   */
+  private overlapsCalloutEmoji(block: Block | null): boolean {
+    if (block === null || this.isPositionedRight) {
+      return false;
+    }
+
+    return this.isFirstChildOfCallout(block);
+  }
+
   private isFirstChildOfCallout(block: Block): boolean {
     if (!block.parentId) {
       return false;
@@ -1126,7 +1232,7 @@ export class Toolbar extends Module<ToolbarNodes> {
       return;
     }
 
-    const isCalloutFirstChild = this.hoveredBlock !== null && this.isFirstChildOfCallout(this.hoveredBlock);
+    const isCalloutFirstChild = this.overlapsCalloutEmoji(this.hoveredBlock);
     const hidePlusButton = isCalloutFirstChild || this.Blok.ReadOnly.isEnabled;
 
     plusButton.style.display = hidePlusButton ? 'none' : '';
@@ -1260,6 +1366,7 @@ export class Toolbar extends Module<ToolbarNodes> {
     this.nodes.content = content;
 
     this.nodes.actions = actions;
+    actions.setAttribute(DATA_ATTR.toolbarActions, '');
     actions.setAttribute('data-blok-testid', 'toolbar-actions');
 
     /**
@@ -1789,6 +1896,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         targetBlock: this.hoveredBlock,
         hoveredTarget: this.positioner.target,
         isMobile: this.Blok.UI.isMobile,
+        dockedToEnd: this.isPositionedRight,
       },
       this.nodes.plusButton
     );

@@ -59,6 +59,7 @@ interface CreateOptions {
   containerStyle?: Record<string, string>;
   styleTokens?: Record<string, string>;
   hideToolbar?: boolean;
+  toolbarPosition?: 'left' | 'right';
   placeholder?: string;
 }
 
@@ -79,20 +80,21 @@ const createBlok = async (page: Page, options: CreateOptions = {}): Promise<void
   }
 
   await page.evaluate(
-    async ({ holder, initialData, readOnly, styleTokens, hideToolbar, placeholder }) => {
+    async ({ holder, initialData, readOnly, styleTokens, hideToolbar, toolbarPosition, placeholder }) => {
       const blok = new window.Blok({
         holder,
         ...(initialData ? { data: initialData } : {}),
         ...(readOnly !== undefined ? { readOnly } : {}),
         ...(styleTokens ? { style: { tokens: styleTokens } } : {}),
         ...(hideToolbar !== undefined ? { hideToolbar } : {}),
+        ...(toolbarPosition !== undefined ? { toolbarPosition } : {}),
         ...(placeholder !== undefined ? { placeholder } : {}),
       });
 
       window.blokInstance = blok;
       await blok.isReady;
     },
-    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly, styleTokens: options.styleTokens, hideToolbar: options.hideToolbar, placeholder: options.placeholder }
+    { holder: HOLDER_ID, initialData: options.data ?? null, readOnly: options.readOnly, styleTokens: options.styleTokens, hideToolbar: options.hideToolbar, toolbarPosition: options.toolbarPosition, placeholder: options.placeholder }
   );
 };
 
@@ -471,4 +473,62 @@ test('--blok-placeholder-color drives the empty-paragraph placeholder color in p
   const placeholderColor = await editable.evaluate((el) => getComputedStyle(el, '::before').color);
 
   expect(placeholderColor).toBe('rgb(255, 0, 0)');
+});
+
+test('toolbarPosition: right moves the gutter and the block controls to the inline-end side in production', async ({ page }) => {
+  await createBlok(page, {
+    toolbarPosition: 'right',
+    data: { blocks: [{ type: 'paragraph', data: { text: 'Controls on the right' } }] },
+  });
+
+  const wrapper = page.locator(BLOK_INTERFACE_SELECTOR);
+
+  await expect(wrapper).toHaveAttribute('data-blok-toolbar-position', 'right');
+
+  const redactor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-redactor]`);
+
+  await expect(redactor).toHaveCSS('padding-inline-start', '0px');
+  await expect(redactor).toHaveCSS('padding-inline-end', '56px');
+
+  const paragraph = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-tool="paragraph"]`);
+
+  await paragraph.hover();
+
+  const actions = page.locator('[data-blok-toolbar-actions]');
+  const content = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-element-content]`).first();
+
+  await expect(actions).toBeVisible();
+
+  const actionsBox = await actions.boundingBox();
+  const contentBox = await content.boundingBox();
+  const viewport = page.viewportSize();
+
+  if (actionsBox === null || contentBox === null || viewport === null) {
+    throw new Error('Expected both the actions bar and the block content to be laid out');
+  }
+
+  // Docked past the content column's far edge, and still inside the viewport.
+  expect(actionsBox.x).toBeGreaterThanOrEqual(contentBox.x + contentBox.width - 1);
+  expect(actionsBox.x + actionsBox.width).toBeLessThanOrEqual(viewport.width);
+});
+
+test('toolbar.setPosition moves the gutter at runtime in production', async ({ page }) => {
+  await createBlok(page, {
+    data: { blocks: [{ type: 'paragraph', data: { text: 'Runtime side swap' } }] },
+  });
+
+  const redactor = page.locator(`${BLOK_INTERFACE_SELECTOR} [data-blok-redactor]`);
+
+  await expect(redactor).toHaveCSS('padding-inline-start', '56px');
+
+  await page.evaluate(() => {
+    const blok = window.blokInstance ?? (() => {
+      throw new Error('Blok instance not found');
+    })();
+
+    blok.toolbar.setPosition('right');
+  });
+
+  await expect(redactor).toHaveCSS('padding-inline-start', '0px');
+  await expect(redactor).toHaveCSS('padding-inline-end', '56px');
 });

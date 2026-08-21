@@ -149,6 +149,15 @@ export interface PopoverParamsBase {
   placeLeftOfAnchor?: boolean;
 
   /**
+   * Which side of the trigger the `placeLeftOfAnchor` placement uses.
+   * Defaults to `'left'`. `'right'` mirrors it — used when the block controls
+   * are docked to the editor's inline-end gutter
+   * (`config.toolbarPosition: 'right'`), where the block content lies to the
+   * trigger's left and a left-side menu would cover it.
+   */
+  asideSide?: 'left' | 'right';
+
+  /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only together with placeLeftOfAnchor. Keeps the popover fully
    * inside the viewport — shifting it vertically when centered placement would

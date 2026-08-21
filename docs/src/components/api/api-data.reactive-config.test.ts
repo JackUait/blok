@@ -25,6 +25,7 @@ describe("configuration section: mount options vs live state", () => {
     // Every live field and the compatibility equation must be stated.
     expect(description).toContain("readOnly");
     expect(description).toContain("hideToolbar");
+    expect(description).toContain("toolbarPosition");
     expect(description).toContain("inlineToolbar");
     expect(description).toContain("BlokConfig = BlokMountOptions & BlokState");
     // The point of the contract: no editor recreation.
@@ -52,6 +53,19 @@ describe("configuration section: mount options vs live state", () => {
     const ruRow = (ru.api.configuration.table as Record<string, { description: string }>)["hideToolbar"];
     expect(enRow.description).toBe(row!.description);
     expect(ruRow.description).toContain("toolbar.setHidden");
+  });
+
+  it("documents the toolbarPosition option with its runtime setter", () => {
+    const row = config!.table!.find((r) => r.option === "toolbarPosition");
+    expect(row).toBeDefined();
+    expect(row!.type).toBe("'left' | 'right'");
+    expect(row!.default).toBe("'left'");
+    expect(row!.description).toContain("toolbar.setPosition");
+    expect(row!.description.toLowerCase()).toContain("gutter");
+    const enRow = (en.api.configuration.table as Record<string, { description: string }>)["toolbarPosition"];
+    const ruRow = (ru.api.configuration.table as Record<string, { description: string }>)["toolbarPosition"];
+    expect(enRow.description).toBe(row!.description);
+    expect(ruRow.description).toContain("toolbar.setPosition");
   });
 
   it("readOnly option documents the object form and the live setter", () => {
@@ -193,6 +207,27 @@ describe("toolbar-api: setHidden", () => {
     expect(method!.example).toContain("toolbar.setHidden(true)");
     const paramNames = method!.params!.map((p) => p.name);
     expect(paramNames).toEqual(["hidden"]);
+  });
+});
+
+describe("toolbar-api: setPosition", () => {
+  const section = findSection("toolbar-api");
+
+  it("documents toolbar.setPosition as the runtime half of toolbarPosition", () => {
+    const method = section!.methods!.find((m) => m.name === "toolbar.setPosition(position)");
+    expect(method).toBeDefined();
+    expect(method!.returnType).toBe("void");
+    expect(method!.description).toContain("toolbarPosition");
+    expect(method!.description).toContain("data-blok-toolbar-position");
+    expect(method!.example).toContain("toolbar.setPosition('right')");
+    expect(method!.params!.map((p) => p.name)).toEqual(["position"]);
+  });
+
+  it("has EN + RU i18n copy", () => {
+    expect(en.api.toolbarApi.methods.toolbar.setPosition.description.length).toBeGreaterThan(0);
+    expect(en.api.toolbarApi.methods.toolbar.setPosition.note.length).toBeGreaterThan(0);
+    expect(ru.api.toolbarApi.methods.toolbar.setPosition.description.length).toBeGreaterThan(0);
+    expect(ru.api.toolbarApi.methods.toolbar.setPosition.note.length).toBeGreaterThan(0);
   });
 });
 

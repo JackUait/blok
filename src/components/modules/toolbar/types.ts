@@ -31,6 +31,11 @@ export interface PositioningOptions {
    * Whether the current view is mobile
    */
   isMobile: boolean;
+  /**
+   * Whether the actions bar is docked past the content column's far edge
+   * (`config.toolbarPosition: 'right'`)
+   */
+  dockedToEnd?: boolean;
 }
 
 /**

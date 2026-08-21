@@ -1150,6 +1150,10 @@
 :where([data-blok-interface]) {
   --blok-editor-gutter-start: 56px;
 }
+:where([data-blok-toolbar-position="right"]) {
+  --blok-editor-gutter-start: 0px;
+  --blok-editor-gutter-end: 56px;
+}
 :where([data-blok-controls-hidden]) {
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;

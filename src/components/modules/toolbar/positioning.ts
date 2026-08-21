@@ -201,7 +201,7 @@ export class ToolbarPositioner {
       wrapper.style.top = `${newToolbarY}px`;
     }
 
-    this.applyContentOffset(nodes, options.targetBlock);
+    this.applyContentOffset(nodes, options.targetBlock, options.dockedToEnd === true);
 
     return positionChanged;
   }
@@ -211,16 +211,21 @@ export class ToolbarPositioner {
    * This positions the toolbar closer to nested content like list items.
    * @param nodes - Toolbar nodes
    * @param targetBlock - The block to get the content offset from
+   * @param dockedToEnd - true while the actions bar is docked past the content
+   *   column's far edge (`toolbarPosition: 'right'`). Nested content is indented
+   *   from the START edge only — a list item's right edge is the block's right
+   *   edge — so the nudge that closes the gap on the left would open one there.
    */
-  public applyContentOffset(nodes: ToolbarNodes, targetBlock: Block): void {
+  public applyContentOffset(nodes: ToolbarNodes, targetBlock: Block, dockedToEnd = false): void {
     const { actions } = nodes;
 
     if (!actions) {
       return;
     }
 
-    if (!this.hoveredTarget) {
+    if (!this.hoveredTarget || dockedToEnd) {
       actions.style.transform = '';
+
       return;
     }
 

@@ -120,6 +120,29 @@ describe('BlokEditorComponent reactive inputs', () => {
     expect(blokRegistry.last.config.inlineToolbar).toEqual(['bold']);
   });
 
+  it('syncs toolbarPosition changes to editor.toolbar.setPosition without recreating', async () => {
+    const fixture = await mountAndReady({ toolbarPosition: 'left' });
+    const editor = blokRegistry.last;
+
+    fixture.componentRef.setInput('toolbarPosition', 'right');
+    fixture.detectChanges();
+
+    expect(editor.toolbar.setPosition).toHaveBeenLastCalledWith('right');
+    expect(blokRegistry.instances).toHaveLength(1);
+  });
+
+  it('does not call toolbar.setPosition while toolbarPosition is undefined', async () => {
+    await mountAndReady();
+
+    expect(blokRegistry.last.toolbar.setPosition).not.toHaveBeenCalled();
+  });
+
+  it('seeds toolbarPosition into the construction config', async () => {
+    await mountAndReady({ toolbarPosition: 'right' });
+
+    expect(blokRegistry.last.config.toolbarPosition).toBe('right');
+  });
+
   it('syncs inlineToolbar changes to editor.tools.setInlineToolbar without recreating', async () => {
     const fixture = await mountAndReady({ inlineToolbar: true });
     const editor = blokRegistry.last;

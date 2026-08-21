@@ -389,6 +389,39 @@
 }
 
 /*
+ * config.toolbarPosition: 'right' — the +/⠿ controls and the width reserved
+ * for them both move to the inline-END gutter: the start gutter collapses and
+ * an equal one opens at the end, so the text reclaims the space the controls
+ * used to occupy. Logical tokens, so RTL mirrors for free.
+ *
+ * Source order matters twice: AFTER the default above (both (0,0,0) on the same
+ * wrapper, later wins) and BEFORE the read-only / hidden-toolbar collapses,
+ * which must still zero BOTH gutters when there are no controls to house.
+ */
+:where([data-blok-toolbar-position="right"]) {
+  --blok-editor-gutter-start: 0px;
+  --blok-editor-gutter-end: 56px;
+}
+
+/*
+ * ...and the bar itself follows. Physical properties, because the default is a
+ * physical `right:100%` Tailwind utility and unlayered physical overrides beat
+ * it without the lightningcss logical-lowering trap noted above.
+ *
+ * LTR only: an RTL editor already docks this bar to the physical left, which IS
+ * the mirrored side once the gutter above moves. Mobile is excluded because
+ * below 650px the buttons are free-standing overlay pills, not a gutter bar.
+ */
+@media (min-width: 651px) {
+  [data-blok-toolbar-position="right"]:not([data-blok-rtl="true"]) [data-blok-toolbar-actions] {
+    right: auto;
+    left: 100%;
+    padding-right: 0;
+    padding-left: 5px;
+  }
+}
+
+/*
  * The gutter exists solely to house the edit-mode +/⠿ controls, so it
  * collapses automatically in read-only mode. This redeclares the gutter
  * tokens (rather than overriding padding-inline directly) because

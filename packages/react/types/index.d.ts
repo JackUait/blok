@@ -21,6 +21,7 @@ export { getDirection, normalizeLocale } from '@bloklabs/core/locales';
  * - `readOnly` — calls `editor.readOnly.set(value)`; the object form also
  *   syncs `hideControls` via `editor.readOnly.set(enabled, { hideControls })`
  * - `hideToolbar` — calls `editor.toolbar.setHidden(value)`
+ * - `toolbarPosition` — calls `editor.toolbar.setPosition(value)`
  * - `inlineToolbar` — calls `editor.tools.setInlineToolbar(value)` (arrays
  *   are compared by content, so a re-created literal is a no-op)
  * - `autofocus` — calls `editor.focus()` when changed to true

@@ -141,6 +141,7 @@ const createMockAPIMethods = (): APIInterface => ({
     toggleBlockSettings: vi.fn(),
     toggleToolbox: vi.fn(),
     setHidden: vi.fn(),
+    setPosition: vi.fn(),
   },
   inlineToolbar: {
     close: vi.fn(),

@@ -24,6 +24,15 @@ export interface PositionInput {
    */
   placeLeftOfAnchor?: boolean;
   /**
+   * Which side of the anchor the `placeLeftOfAnchor` placement uses.
+   * Defaults to `'left'` — correct while the six-dots handle sits in the
+   * editor's start gutter, with the block content to its right. With the block
+   * controls docked to the opposite gutter (`config.toolbarPosition: 'right'`)
+   * that geometry mirrors: the content is now LEFT of the handle, so a
+   * left-side menu would cover the very block it belongs to.
+   */
+  asideSide?: 'left' | 'right';
+  /**
    * Minimum distance (in pixels) between the popover and the viewport top/bottom
    * edges. Applied only when placeLeftOfAnchor is true. Keeps the popover
    * within the viewport — shifting it vertically when centered placement would
@@ -76,6 +85,7 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
     offset = 8,
     leftAlignRect,
     placeLeftOfAnchor = false,
+    asideSide = 'left',
     viewportMargin = 0,
   } = input;
 
@@ -85,15 +95,21 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
   const boundaryLeft = Math.max(0, scopeBounds.left);
   const scopeTopInDocCoords = scopeBounds.top + scrollOffset.y;
 
-  // Placement mode: left of the anchor, vertically centered on the anchor
+  // Placement mode: beside the anchor, vertically centered on the anchor
   // (the six-dots handle), shifted up/down only as far as needed to stay
-  // inside the viewport/scope. Used only when the popover fully fits left of
-  // the anchor: a clamped partial fit would slide the menu over its own
-  // trigger (the six-dots handle must stay visible), and the anchor's right
-  // side is the block content. When it does not fit, fall through to the
-  // standard below/above placement — the handle stays clear and the menu
-  // covers only content below, matching the context-menu behavior.
-  if (placeLeftOfAnchor && popoverSize.width <= anchor.left - offset - boundaryLeft) {
+  // inside the viewport/scope. `asideSide` names the side, mirroring with the
+  // gutter the handle lives in. Used only when the popover fully fits there: a
+  // clamped partial fit would slide the menu over its own trigger (the
+  // six-dots handle must stay visible), and the anchor's other side is the
+  // block content. When it does not fit, fall through to the standard
+  // below/above placement — the handle stays clear and the menu covers only
+  // content below, matching the context-menu behavior.
+  const asideOnRight = asideSide === 'right';
+  const asideSpace = asideOnRight
+    ? boundaryRight - anchor.right - offset
+    : anchor.left - offset - boundaryLeft;
+
+  if (placeLeftOfAnchor && popoverSize.width <= asideSpace) {
     const anchorCenterInDocCoords = (anchor.top + anchor.bottom) / 2 + scrollOffset.y;
     const scopeBottomInDocCoords = scopeBounds.bottom + scrollOffset.y;
     // The viewport margin is an unconditional aesthetic gap: the menu must
@@ -115,15 +131,19 @@ export function resolvePosition(input: PositionInput): ResolvedPosition {
       ? topFloor
       : Math.max(topFloor, Math.min(desiredTop, maxTop));
 
-    // The menu sits left of the anchor, clamped to the boundary when it does
-    // not fully fit. Never flip to the anchor's right side: the block content
-    // always lies right of the dots button, so a right-side placement would
-    // cover the very content the menu belongs to, while clamping merely
-    // compresses the gap between menu and anchor.
-    const rawLeft = anchor.left - offset - popoverSize.width + scrollOffset.x;
-    const left = Math.max(boundaryLeft + scrollOffset.x, rawLeft);
+    // The menu sits on `asideSide` of the anchor, clamped to that boundary when
+    // it does not fully fit. Never flip to the opposite side: the block content
+    // always lies there, so flipping would cover the very content the menu
+    // belongs to, while clamping merely compresses the gap between menu and
+    // anchor.
+    const rawLeft = asideOnRight
+      ? anchor.right + offset + scrollOffset.x
+      : anchor.left - offset - popoverSize.width + scrollOffset.x;
+    const left = asideOnRight
+      ? Math.min(boundaryRight + scrollOffset.x - popoverSize.width, rawLeft)
+      : Math.max(boundaryLeft + scrollOffset.x, rawLeft);
 
-    return { top, left, openTop: false, openLeft: true };
+    return { top, left, openTop: false, openLeft: !asideOnRight };
   }
 
   // --- Vertical ---

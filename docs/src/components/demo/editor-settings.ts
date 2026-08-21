@@ -8,6 +8,7 @@ export interface EditorSettings {
   contentAlign: 'left' | 'center' | 'right';
   autofocus: boolean;
   hideToolbar: boolean;
+  toolbarPosition: 'left' | 'right';
 }
 
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
@@ -17,6 +18,7 @@ export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   contentAlign: 'left',
   autofocus: false,
   hideToolbar: false,
+  toolbarPosition: 'left',
 };
 
 interface EditorSettingsProps {
@@ -25,6 +27,7 @@ interface EditorSettingsProps {
   width: 'narrow' | 'full';
   placeholder?: string;
   autofocus: boolean;
+  toolbarPosition: EditorSettings['toolbarPosition'];
   style: { contentAlign: EditorSettings['contentAlign'] };
 }
 
@@ -34,10 +37,12 @@ interface EditorSettingsProps {
  * autofocus are creation-time config here, but changing them never recreates
  * the editor (deps stays empty — recreation flashes the content): EditorWrapper
  * re-applies alignment on the live DOM, and autofocus naturally applies on the
- * next load. hideToolbar is creation-time config in the core (the toolbar gate
- * and the data-blok-toolbar-hidden gutter collapse are set at init), so passing
- * it here couldn't follow live panel toggles — EditorWrapper hides the toolbar
- * with a CSS host class instead. The editor's theme always mirrors the site
+ * next load. hideToolbar is deliberately NOT passed as a prop: the core option
+ * also collapses the gutter, which would slide the whole document sideways on
+ * every panel toggle, so EditorWrapper hides the controls with a CSS host class
+ * that leaves the layout alone. toolbarPosition IS passed through — moving the
+ * gutter is the point there — and syncs in place via
+ * `editor.toolbar.setPosition()`. The editor's theme always mirrors the site
  * theme.
  */
 export function buildEditorSettingsProps(
@@ -51,6 +56,7 @@ export function buildEditorSettingsProps(
       width: settings.width,
       placeholder: settings.placeholder.trim() === '' ? undefined : settings.placeholder,
       autofocus: settings.autofocus,
+      toolbarPosition: settings.toolbarPosition,
       style: { contentAlign: settings.contentAlign },
     },
     deps: [],
@@ -92,6 +98,9 @@ export function loadEditorSettings(): EditorSettings {
       : DEFAULT_EDITOR_SETTINGS.contentAlign,
     autofocus: typeof stored.autofocus === 'boolean' ? stored.autofocus : DEFAULT_EDITOR_SETTINGS.autofocus,
     hideToolbar: typeof stored.hideToolbar === 'boolean' ? stored.hideToolbar : DEFAULT_EDITOR_SETTINGS.hideToolbar,
+    toolbarPosition: isOneOf(stored.toolbarPosition, ['left', 'right'])
+      ? stored.toolbarPosition
+      : DEFAULT_EDITOR_SETTINGS.toolbarPosition,
   };
 }
 

@@ -172,6 +172,7 @@ export class Core {
     this.config.sanitizer = this.config.sanitizer ?? {};
 
     this.config.hideToolbar = this.config.hideToolbar ?? false;
+    this.config.toolbarPosition = this.config.toolbarPosition ?? 'left';
     this.config.tools = this.config.tools || {};
     this.config.i18n = this.config.i18n || {};
     this.config.data = this.config.data || { blocks: [] };

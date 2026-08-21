@@ -1872,6 +1872,18 @@
   --blok-editor-gutter-start: 56px;
 }
 
+:where([data-blok-toolbar-position="right"]) {
+  --blok-editor-gutter-start: 0px;
+  --blok-editor-gutter-end: 56px;
+}
+
+[@media (min-width: 651px)] [data-blok-toolbar-position="right"]:not([data-blok-rtl="true"]) [data-blok-toolbar-actions] {
+  right: auto;
+  left: 100%;
+  padding-right: 0;
+  padding-left: 5px;
+}
+
 :where([data-blok-controls-hidden]) {
   --blok-editor-gutter-start: 0px;
   --blok-editor-gutter-end: 0px;

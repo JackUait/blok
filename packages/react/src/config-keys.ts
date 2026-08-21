@@ -15,6 +15,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'placeholder',
   'sanitizer',
   'hideToolbar',
+  'toolbarPosition',
   'maxHistoryLength',
   'historyDebounceTime',
   'newGroupDelay',

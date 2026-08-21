@@ -307,6 +307,19 @@ export function useBlok(
     { immediate: true }
   );
 
+  // toolbarPosition moves the controls between the start/end gutters in place.
+  // Unset stays unset (no call), so an app that never passes the prop keeps
+  // core's own default rather than having it re-asserted on every boot.
+  watch(
+    [editor, () => mergedConfig().toolbarPosition],
+    ([ed, toolbarPosition]) => {
+      if (ed && toolbarPosition !== undefined) {
+        ed.toolbar.setPosition(toolbarPosition);
+      }
+    },
+    { immediate: true }
+  );
+
   watch(
     [editor, () => mergedConfig().theme],
     ([ed, theme]) => {

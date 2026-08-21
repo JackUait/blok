@@ -214,6 +214,17 @@ describe('SettingsPanel', () => {
     });
   });
 
+  describe('block controls side', () => {
+    it('moves the block controls to the right gutter', () => {
+      const { onSettingsChange } = renderPanel();
+
+      openPanel();
+      fireEvent.click(screen.getByRole('radio', { name: 'Right gutter' }));
+
+      expect(onSettingsChange).toHaveBeenCalledWith({ ...DEFAULT_EDITOR_SETTINGS, toolbarPosition: 'right' });
+    });
+  });
+
   describe('segmented choices', () => {
     it('switches the whole documentation to the dark theme', () => {
       const { onSettingsChange } = renderPanel();

@@ -1,3 +1,5 @@
+import type { BlockControlsPosition } from '../configs/blok-config';
+
 /**
  * Options for closing the toolbar
  */
@@ -59,4 +61,15 @@ export interface Toolbar {
    * @param hidden - true to hide the hover toolbar and collapse the gutter
    */
   setHidden(hidden: boolean): void;
+
+  /**
+   * Runtime setter for `config.toolbarPosition` (reactive contract).
+   *
+   * Moves the floating block controls (plus button / drag handle) between the
+   * editor's inline-start and inline-end gutters, keeping the wrapper's
+   * `data-blok-toolbar-position` attribute — the CSS hook the gutter and the
+   * actions bar key off — in sync.
+   * @param position - `'left'` for the inline-start gutter, `'right'` for inline-end
+   */
+  setPosition(position: BlockControlsPosition): void;
 }

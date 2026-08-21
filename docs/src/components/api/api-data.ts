@@ -385,7 +385,7 @@ class Callout {
     id: "config",
     title: "Configuration",
     description:
-      "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, `inlineToolbar`, and the editor callbacks `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender` and `onAfterRender`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`, `handlers.set`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. Callback PRESENCE is itself load-bearing (an `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the change pipeline), which is why `handlers.set` also accepts `undefined` to unset one. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
+      "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, `toolbarPosition`, `inlineToolbar`, and the editor callbacks `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender` and `onAfterRender`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `toolbar.setPosition`, `tools.setInlineToolbar`, `handlers.set`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. Callback PRESENCE is itself load-bearing (an `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the change pipeline), which is why `handlers.set` also accepts `undefined` to unset one. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
     example: `import { Blok, type BlokConfig } from '@bloklabs/core';
 import { Paragraph, Header } from '@bloklabs/core/tools';
 
@@ -576,6 +576,13 @@ const editor = new Blok(config);`,
         default: "false",
         description:
           "Hide the hover block toolbar (plus button / drag handle) and collapse the editor gutter reserved for it; the keyboard \"/\" menu keeps working. Live: flip at runtime via `toolbar.setHidden(hidden)`.",
+      },
+      {
+        option: "toolbarPosition",
+        type: "'left' | 'right'",
+        default: "'left'",
+        description:
+          "Which side of the content column the floating block controls (plus button and drag/settings handle) occupy. `'right'` moves both the controls and the gutter reserved for them to the editor's inline-end side: the start gutter collapses and an equal one opens at the end, so the text reclaims the space the controls used to occupy. The values name the LTR-physical side and are applied through logical properties, so an RTL editor mirrors them. No effect while `hideToolbar` is on or in chromeless read-only \u2014 there are no controls to place. Live: move at runtime via `toolbar.setPosition(position)`.",
       },
       {
         option: "i18n",
@@ -2355,6 +2362,25 @@ editor.toolbar.setHidden(true);
 // Restore it
 editor.toolbar.setHidden(false);`,
       },
+      {
+        name: "toolbar.setPosition(position)",
+        returnType: "void",
+        description:
+          "Runtime setter for `config.toolbarPosition`: move the floating block controls between the editor's inline-start and inline-end gutters. The wrapper's `data-blok-toolbar-position` attribute is kept in sync \u2014 it drives both the gutter swap and the side the controls dock to \u2014 and the block-settings menu mirrors with them, so it never opens over the block it belongs to. An open toolbar is re-laid out in place rather than closed.",
+        params: [
+          {
+            name: "position",
+            type: "'left' | 'right'",
+            required: true,
+            description: "'left' for the inline-start gutter (the default), 'right' for inline-end.",
+          },
+        ],
+        example: `// Move the +/\u283F controls to the right of the content column
+editor.toolbar.setPosition('right');
+
+// Back to the left gutter
+editor.toolbar.setPosition('left');`,
+      },
     ],
   },
   {
@@ -3768,7 +3794,7 @@ const listItemBlock: OutputBlockData = {
     title: "BlokEditor component",
     lastUpdated: "2026-07-17",
     description:
-      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
+      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
     example: `import { useState } from 'react';
 import { BlokEditor } from '@bloklabs/react';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -3795,7 +3821,7 @@ export function Editor() {
         name: "useBlok(config, deps?)",
         returnType: "Blok | null (React) | Ref<Blok | null> (Vue)",
         description:
-          "The split mount path behind `<BlokEditor>`: create the instance yourself and hand it a mount point. `useBlok` takes the SAME options as the component — its config type is `UseBlokConfig`, which is `BlokConfig` minus `holder` (the adapter owns the mount element) plus an adapter-level `width`. The reactive-after-mount subset is documented on `UseBlokConfig` itself: `readOnly`, `hideToolbar`, `inlineToolbar`, `autofocus`, `theme`, `width`, `placeholder`, `style.tokens`, `i18n` and `data` sync in place on the same instance; every other option is consumed once at editor creation. It returns null until the editor exists (SSR, first render). React takes a `deps` dependency LIST as the second argument; Vue takes a reactive config source (ref or getter) and a SINGLE `recreateKey` as the second argument. Angular's equivalent is the `[blokContent]` directive (`BlokContentDirective`), which builds the instance into its own host element and exposes it as the `instance` signal / `(ready)` output.",
+          "The split mount path behind `<BlokEditor>`: create the instance yourself and hand it a mount point. `useBlok` takes the SAME options as the component — its config type is `UseBlokConfig`, which is `BlokConfig` minus `holder` (the adapter owns the mount element) plus an adapter-level `width`. The reactive-after-mount subset is documented on `UseBlokConfig` itself: `readOnly`, `hideToolbar`, `toolbarPosition`, `inlineToolbar`, `autofocus`, `theme`, `width`, `placeholder`, `style.tokens`, `i18n` and `data` sync in place on the same instance; every other option is consumed once at editor creation. It returns null until the editor exists (SSR, first render). React takes a `deps` dependency LIST as the second argument; Vue takes a reactive config source (ref or getter) and a SINGLE `recreateKey` as the second argument. Angular's equivalent is the `[blokContent]` directive (`BlokContentDirective`), which builds the instance into its own host element and exposes it as the `instance` signal / `(ready)` output.",
         example: `import { useBlok, BlokContent } from '@bloklabs/react';
 import { Header, Paragraph } from '@bloklabs/core/tools';
 

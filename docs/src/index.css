@@ -1754,8 +1754,8 @@
 }
 
 /* /demo settings panel: hide the block toolbar (+ button and drag handle)
-   without recreating the editor — the core's hideToolbar config is
-   creation-time only, and recreation flashes the content. */
+   without moving the text — the core's hideToolbar also collapses the gutter,
+   which would shift the document sideways on every toggle. */
 .demo-toolbar-hidden [data-blok-toolbar] {
   display: none !important;
 }

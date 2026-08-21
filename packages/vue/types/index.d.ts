@@ -27,6 +27,7 @@ import type { MarkdownImportConfig } from '@bloklabs/core/markdown';
  *   object form's `hideControls` is live too (toggles in place — see
  *   `editor.readOnly.togglesInPlace`)
  * - `hideToolbar` — calls `editor.toolbar.setHidden(value)` (undefined → false)
+ * - `toolbarPosition` — calls `editor.toolbar.setPosition(value)`
  * - `inlineToolbar` — calls `editor.tools.setInlineToolbar(value)`
  *   (content-compared, so a fresh array with the same names is a no-op)
  * - `autofocus` — calls `editor.focus()` when changed to true

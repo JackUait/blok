@@ -2,7 +2,8 @@
  * Reactive BlokState contract for the React adapter (adapters phase of the
  * 2026-07-22 reactive-config-contract design).
  *
- * The three `BlokState` fields — `readOnly`, `hideToolbar`, `inlineToolbar` —
+ * The `BlokState` fields — `readOnly`, `hideToolbar`, `toolbarPosition`,
+ * `inlineToolbar` —
  * must sync IN PLACE on a live editor: flipping the prop drives the public
  * runtime setter on the SAME instance, never a destroy/recreate cycle.
  *
@@ -141,6 +142,29 @@ describe('useBlok reactive BlokState fields (real core, in-place sync)', () => {
 
       await waitFor(() => {
         expect(container.querySelector(`[${DATA_ATTR.toolbarHidden}]`)).toBeNull();
+      });
+      expect(editors).toHaveLength(1);
+    });
+  });
+
+  describe('toolbarPosition', () => {
+    it('re-stamps the wrapper toolbar-position attribute in place when the prop flips', async () => {
+      const { container, rerender } = render(<Harness config={{ toolbarPosition: 'left' }} />);
+
+      await waitForEditor();
+      expect(container.querySelector(`[${DATA_ATTR.toolbarPosition}="left"]`)).not.toBeNull();
+
+      rerender(<Harness config={{ toolbarPosition: 'right' }} />);
+
+      await waitFor(() => {
+        expect(container.querySelector(`[${DATA_ATTR.toolbarPosition}="right"]`)).not.toBeNull();
+      });
+      expect(editors).toHaveLength(1);
+
+      rerender(<Harness config={{ toolbarPosition: 'left' }} />);
+
+      await waitFor(() => {
+        expect(container.querySelector(`[${DATA_ATTR.toolbarPosition}="left"]`)).not.toBeNull();
       });
       expect(editors).toHaveLength(1);
     });

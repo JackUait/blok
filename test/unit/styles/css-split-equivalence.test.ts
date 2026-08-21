@@ -492,8 +492,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // `::highlight(blok-cross-block-selection)` colour, plus the comment
     // recording why they are unlayered and why the native paint has to be
     // switched off at all (~0.7KB). Bumps the multiplier to 1.441.
+    // 2026-08-21: block-controls side (config.toolbarPosition) — main.css
+    // gained the `:where([data-blok-toolbar-position="right"])` gutter swap and
+    // the LTR/not-mobile rule that docks the actions bar to the content
+    // column's far edge, plus the comments recording why the swap must sit
+    // between the gutter default and the two collapse rules and why the second
+    // rule is physical rather than logical (~1.1KB). Bumps the multiplier
+    // to 1.445.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.441);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.445);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

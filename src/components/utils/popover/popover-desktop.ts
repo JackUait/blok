@@ -247,6 +247,12 @@ export class PopoverDesktop extends PopoverAbstract {
   private placeLeftOfAnchor = false;
 
   /**
+   * Which side of the trigger {@link placeLeftOfAnchor} docks to. Mirrors with
+   * the gutter the trigger lives in — see `config.toolbarPosition`.
+   */
+  private asideSide: 'left' | 'right' = 'left';
+
+  /**
    * Minimum gap (px) from viewport top/bottom when placeLeftOfAnchor is active.
    */
   private viewportMargin = 0;
@@ -339,6 +345,10 @@ export class PopoverDesktop extends PopoverAbstract {
 
     if (params.placeLeftOfAnchor === true) {
       this.placeLeftOfAnchor = true;
+    }
+
+    if (params.asideSide !== undefined) {
+      this.asideSide = params.asideSide;
     }
 
     if (typeof params.viewportMargin === 'number') {
@@ -769,6 +779,7 @@ export class PopoverDesktop extends PopoverAbstract {
       offset: 8,
       leftAlignRect,
       placeLeftOfAnchor: this.placeLeftOfAnchor,
+      asideSide: this.asideSide,
       viewportMargin: this.viewportMargin,
     });
   }

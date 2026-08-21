@@ -189,7 +189,7 @@
     },
     "configuration": {
       "title": "Configuration",
-      "description": "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, `inlineToolbar`, and the editor callbacks `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender` and `onAfterRender`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `tools.setInlineToolbar`, `handlers.set`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. Callback PRESENCE is itself load-bearing (an `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the change pipeline), which is why `handlers.set` also accepts `undefined` to unset one. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
+      "description": "The configuration object passed to the Blok constructor. It is formally split into two types: `BlokMountOptions` — options fixed for the instance's life (holder, tools, i18n, …) — and `BlokState`, the LIVE fields: `readOnly` (including `hideControls`), `hideToolbar`, `toolbarPosition`, `inlineToolbar`, and the editor callbacks `onChange`, `onSave`, `onEnter`, `onSubmit`, `onBeforeRender` and `onAfterRender`. Every `BlokState` field maps to a documented runtime setter (`readOnly.set`, `toolbar.setHidden`, `toolbar.setPosition`, `tools.setInlineToolbar`, `handlers.set`), so changing it never requires recreating the editor — and the React, Vue and Angular adapters react to these props/inputs in place. Callback PRESENCE is itself load-bearing (an `onSubmit` turns Enter into serialize-and-submit; an `onSave` arms the change pipeline), which is why `handlers.set` also accepts `undefined` to unset one. `BlokConfig = BlokMountOptions & BlokState`, so existing code compiles unchanged.",
       "table": {
         "holder": {
           "description": "Container element ID or reference"
@@ -262,6 +262,9 @@
         },
         "resolveUser": {
           "description": "Resolves the `lastEditedBy` user id Blok shows in the block settings footer. May return synchronously or asynchronously; return null for an unknown user and Blok falls back to showing the date only."
+        },
+        "toolbarPosition": {
+          "description": "Which side of the content column the floating block controls (plus button and drag/settings handle) occupy. `'right'` moves both the controls and the gutter reserved for them to the editor's inline-end side: the start gutter collapses and an equal one opens at the end, so the text reclaims the space the controls used to occupy. The values name the LTR-physical side and are applied through logical properties, so an RTL editor mirrors them. No effect while `hideToolbar` is on or in chromeless read-only — there are no controls to place. Live: move at runtime via `toolbar.setPosition(position)`."
         }
       }
     },
@@ -618,6 +621,15 @@
           },
           "setHidden": {
             "note": "The runtime half of the `hideToolbar` config option — flips both the toolbar behaviour and the reserved gutter, so no dead space is left behind."
+          },
+          "setPosition": {
+            "description": "Runtime setter for `config.toolbarPosition`: move the floating block controls between the editor's inline-start and inline-end gutters. The wrapper's `data-blok-toolbar-position` attribute is kept in sync — it drives both the gutter swap and the side the controls dock to — and the block-settings menu mirrors with them, so it never opens over the block it belongs to. An open toolbar is re-laid out in place rather than closed.",
+            "note": "The runtime half of the `toolbarPosition` config option — moves the controls and the gutter reserved for them together, and mirrors the block-settings menu so it never opens over the block.",
+            "params": {
+              "position": {
+                "description": "'left' for the inline-start gutter (the default), 'right' for inline-end."
+              }
+            }
           }
         }
       }
@@ -1426,6 +1438,9 @@
       "readOnlyLabel": "Read-only mode",
       "autofocusLabel": "Autofocus on load",
       "hideToolbarLabel": "Hide toolbar",
+      "controlsSideLabel": "Block controls",
+      "controlsSideLeft": "Left gutter",
+      "controlsSideRight": "Right gutter",
       "themeLabel": "Theme",
       "themeLight": "Light",
       "themeDark": "Dark",

@@ -1095,6 +1095,16 @@
           <input type="checkbox" id="toggle-rtl" class="peer sr-only">
           <span class="pill-toggle"></span>
         </label>
+        <label class="settings-row">
+          <span class="settings-row-label">Controls right</span>
+          <input type="checkbox" id="toggle-controls-right" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
+        <label class="settings-row">
+          <span class="settings-row-label">Hide controls</span>
+          <input type="checkbox" id="toggle-hide-toolbar" class="peer sr-only">
+          <span class="pill-toggle"></span>
+        </label>
         <div class="settings-row" style="cursor: default;">
           <span class="settings-row-label">Language</span>
           <kbd class="settings-kbd">⌥L</kbd>
@@ -1173,6 +1183,8 @@
       autofocus: true,
       locale: 'en',
       rtl: false,
+      toolbarPosition: 'left',
+      hideToolbar: false,
       notifierPosition: 'bottom-center',
       fontScale: 1,
       tools: {
@@ -2150,6 +2162,8 @@
         autofocus: state.autofocus,
         notifierPosition: state.notifierPosition,
         i18n: { locale: state.locale, direction: state.rtl ? 'rtl' : 'ltr' },
+        toolbarPosition: state.toolbarPosition,
+        hideToolbar: state.hideToolbar,
         style: { contentAlign: 'center', fontSize: buildFontScaleConfig(state.fontScale) },
         data: { blocks: structuredClone(DEFAULT_BLOCKS) },
         onChange(api, event) {
@@ -2353,6 +2367,8 @@
     const toggleDark = document.getElementById('toggle-dark');
     const toggleAutofocus = document.getElementById('toggle-autofocus');
     const toggleRtl = document.getElementById('toggle-rtl');
+    const toggleControlsRight = document.getElementById('toggle-controls-right');
+    const toggleHideToolbar = document.getElementById('toggle-hide-toolbar');
 
     /**
      * Applies or removes dark mode on the page and Blok theme.
@@ -2483,6 +2499,17 @@
       state.rtl = toggleRtl.checked;
       // Live update — no reinit needed, config.i18n.direction is reactive
       await blok.i18n.update({ direction: state.rtl ? 'rtl' : 'ltr' });
+    });
+
+    // Both are BlokState fields: live setters, no reinit.
+    toggleControlsRight.addEventListener('change', () => {
+      state.toolbarPosition = toggleControlsRight.checked ? 'right' : 'left';
+      blok.toolbar.setPosition(state.toolbarPosition);
+    });
+
+    toggleHideToolbar.addEventListener('change', () => {
+      state.hideToolbar = toggleHideToolbar.checked;
+      blok.toolbar.setHidden(state.hideToolbar);
     });
 
     /**

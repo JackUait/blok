@@ -81,6 +81,11 @@ export const DATA_ATTR: {
    *  Public styling hook — drives the gutter auto-collapse (the gutter
    *  exists solely to house the toolbar's +/⠿ controls). */
   readonly toolbarHidden: 'data-blok-toolbar-hidden';
+  /** Which gutter the floating block controls occupy: 'left' (default,
+   *  inline-start) or 'right' (inline-end). Written on the editor wrapper from
+   *  config.toolbarPosition and kept in sync by `toolbar.setPosition()`.
+   *  Public styling hook — drives the gutter swap and the actions-bar side. */
+  readonly toolbarPosition: 'data-blok-toolbar-position';
 
   // Editor Modes
 
@@ -116,6 +121,10 @@ export const DATA_ATTR: {
 
   /** Toolbar element */
   readonly toolbar: 'data-blok-toolbar';
+  /** The floating block-controls bar (plus button + drag/settings handle)
+   *  inside the toolbar. Public styling hook — the side it docks to is driven
+   *  from the wrapper's `data-blok-toolbar-position`. */
+  readonly toolbarActions: 'data-blok-toolbar-actions';
   /** Settings toggler button */
   readonly settingsToggler: 'data-blok-settings-toggler';
   /** Toolbox is open */

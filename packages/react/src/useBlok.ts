@@ -590,6 +590,20 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     editor.toolbar.setHidden(hideToolbar);
   }, [editor, hideToolbar]);
 
+  // Reactive: toolbarPosition — `toolbar.setPosition` writes
+  // `config.toolbarPosition` (read live by the layout paths CSS cannot mirror)
+  // AND re-stamps the wrapper's toolbar-position attribute (the CSS hook that
+  // swaps the gutter and the actions bar), so a prop flip moves the controls in
+  // place. Guarded on `undefined` so a consumer who never sets the prop gets no
+  // call at all (mirrors hideToolbar).
+  const { toolbarPosition } = config;
+  useEffect(() => {
+    if (editor === null || toolbarPosition === undefined) {
+      return;
+    }
+    editor.toolbar.setPosition(toolbarPosition);
+  }, [editor, toolbarPosition]);
+
   // Reactive: inlineToolbar — `tools.setInlineToolbar` re-assigns every block
   // tool's inline set and invalidates sanitize caches, so the change lands on
   // the next selection without a re-render. The dep is a content serialization

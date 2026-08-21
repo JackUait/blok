@@ -43,10 +43,11 @@ import type { BlokAngularConfig } from './types';
  * `BlokEditor`). Delegates instance lifecycle to an internal `BlokContentDirective`
  * and layers the typed reactive input/output API on top.
  *
- * Reactive inputs (`readOnly`, `hideToolbar`, `inlineToolbar`, `theme`,
- * `width`, `placeholder`, `autofocus`, `styleTokens`, `i18n`, `data`) are
- * synced in place after mount via effects — `hideToolbar` through
- * `editor.toolbar.setHidden()`, `inlineToolbar` through
+ * Reactive inputs (`readOnly`, `hideToolbar`, `toolbarPosition`,
+ * `inlineToolbar`, `theme`, `width`, `placeholder`, `autofocus`, `styleTokens`,
+ * `i18n`, `data`) are synced in place after mount via effects — `hideToolbar`
+ * through `editor.toolbar.setHidden()`, `toolbarPosition` through
+ * `editor.toolbar.setPosition()`, `inlineToolbar` through
  * `editor.tools.setInlineToolbar()` (content-compared),
  * `styleTokens` through `editor.tokens.set()` (replace semantics),
  * `i18n` through `editor.i18n.update()` (deep-equal–deduped; seeded at
@@ -147,6 +148,11 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   private readonly hideToolbar$ = signal<boolean | undefined>(undefined);
   @Input() set hideToolbar(value: boolean | undefined) {
     this.hideToolbar$.set(value);
+  }
+
+  private readonly toolbarPosition$ = signal<BlokConfig['toolbarPosition'] | undefined>(undefined);
+  @Input() set toolbarPosition(value: BlokConfig['toolbarPosition'] | undefined) {
+    this.toolbarPosition$.set(value);
   }
 
   private readonly inlineToolbar$ = signal<boolean | string[] | undefined>(undefined);
@@ -383,6 +389,12 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
       cfg.hideToolbar = hideToolbar;
     }
 
+    const toolbarPosition = this.toolbarPosition$();
+
+    if (toolbarPosition !== undefined) {
+      cfg.toolbarPosition = toolbarPosition;
+    }
+
     const inlineToolbar = this.inlineToolbar$();
 
     if (inlineToolbar !== undefined) {
@@ -606,6 +618,15 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
 
       if (editor && hideToolbar !== undefined) {
         editor.toolbar.setHidden(hideToolbar);
+      }
+    });
+
+    effect(() => {
+      const editor = this.instance();
+      const toolbarPosition = this.toolbarPosition$();
+
+      if (editor && toolbarPosition !== undefined) {
+        editor.toolbar.setPosition(toolbarPosition);
       }
     });
 

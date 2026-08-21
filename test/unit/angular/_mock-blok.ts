@@ -22,7 +22,7 @@ export interface MockBlokRecord {
   rejectReady: (reason?: unknown) => void;
   destroy: ReturnType<typeof vi.fn>;
   readOnly: { set: ReturnType<typeof vi.fn>; togglesInPlace: true };
-  toolbar: { setHidden: ReturnType<typeof vi.fn> };
+  toolbar: { setHidden: ReturnType<typeof vi.fn>; setPosition: ReturnType<typeof vi.fn> };
   tools: { setInlineToolbar: ReturnType<typeof vi.fn> };
   handlers: { set: ReturnType<typeof vi.fn> };
   theme: { set: ReturnType<typeof vi.fn> };
@@ -52,7 +52,7 @@ export class MockBlok {
   public isReady: Promise<unknown>;
   public destroy = vi.fn();
   public readOnly = { set: vi.fn().mockResolvedValue(false), togglesInPlace: true as const };
-  public toolbar = { setHidden: vi.fn() };
+  public toolbar = { setHidden: vi.fn(), setPosition: vi.fn() };
   public tools = { setInlineToolbar: vi.fn() };
   public handlers = { set: vi.fn() };
   public theme = { set: vi.fn() };

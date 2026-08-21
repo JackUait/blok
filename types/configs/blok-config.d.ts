@@ -18,6 +18,12 @@ import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptN
 export type DataModelFormat = 'legacy' | 'hierarchical' | 'auto';
 
 /**
+ * Side of the content column the floating block controls sit on.
+ * See {@link BlokState.toolbarPosition}.
+ */
+export type BlockControlsPosition = 'left' | 'right';
+
+/**
  * Per-block, per-scenario font-size overrides for {@link BlokConfig.style}.
  *
  * Every value is any valid CSS `font-size` (px, rem, em, clamp(), …) and is
@@ -203,6 +209,29 @@ export interface BlokState {
    * Runtime setter: `toolbar.setHidden(hidden)`.
    */
   hideToolbar?: boolean;
+
+  /**
+   * Which side of the content column the floating block controls (plus button
+   * and drag/settings handle) occupy.
+   *
+   * - `'left'` (default) — the controls live in the editor's inline-START
+   *   gutter, the historical placement.
+   * - `'right'` — the controls move to the inline-END gutter and the reserved
+   *   width moves with them: the start gutter collapses and an equal one opens
+   *   at the end, so the text reclaims the space the controls used to occupy.
+   *
+   * The values name the LTR-physical side and are applied through logical
+   * properties, so an RTL editor mirrors them: `'left'` keeps the controls on
+   * the physical right (RTL's inline-start), `'right'` moves them to the
+   * physical left.
+   *
+   * Has no effect while `hideToolbar` is true or in chromeless read-only —
+   * there are no controls to place.
+   *
+   * Runtime setter: `toolbar.setPosition(position)`.
+   * @default 'left'
+   */
+  toolbarPosition?: BlockControlsPosition;
 
   /**
    * Enable read-only mode.

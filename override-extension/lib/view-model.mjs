@@ -1,6 +1,93 @@
 import { LOCAL_DIST_SENTINEL } from './dnr.mjs';
 import { parseCdnBlokUrl } from './detect.mjs';
 
+/**
+ * @typedef {object} Redirect
+ * @property {string} from
+ * @property {string} to
+ */
+
+/**
+ * @typedef {object} CdnRef
+ * @property {string} pkg
+ * @property {string} version
+ * @property {string} prefix
+ */
+
+/**
+ * @typedef {CdnRef & { routed: boolean }} RoutedCdnRef
+ */
+
+/**
+ * @typedef {Redirect & { fromLabel: string, toLabel: string }} RouteView
+ */
+
+/**
+ * What `summarizeDetection` (detect.mjs) reports about the active tab.
+ * @typedef {{ state: 'no-tab' }
+ *   | { state: 'no-blok', origin: string }
+ *   | { state: 'detected', origin: string, bundled: { present: boolean, version: string | null }, cdn: CdnRef[] }} Detection
+ */
+
+/**
+ * payload/current.json, as written by `stagePayload` (scripts/override/sync-core.mjs).
+ * @typedef {object} PayloadRecord
+ * @property {string} file
+ * @property {string} [hash]
+ * @property {string} version
+ * @property {string} builtAt
+ * @property {{ port: number, token: string }} [helper]
+ * @property {{ staged: boolean, builtAt?: string }} [dist]
+ */
+
+/**
+ * @typedef {'off' | 'live' | 'blocked' | 'pending'} SwapState
+ */
+
+/**
+ * @typedef {{ state: 'missing' }
+ *   | { state: 'ready', version: string, builtAt: string, helper: { port: number, token: string } | null, dist: { staged: boolean, builtAt?: string } }} BuildView
+ */
+
+/**
+ * Every field after `state` is filled in only when `state === 'detected'` —
+ * a no-tab/no-blok page has no card to fill.
+ * @typedef {object} PageView
+ * @property {'no-tab' | 'no-blok' | 'detected'} state
+ * @property {string} [origin]
+ * @property {{ present: boolean, version: string | null }} [bundled]
+ * @property {RoutedCdnRef[]} [cdn]
+ * @property {boolean} [armed]
+ * @property {boolean} [runningYours]
+ * @property {boolean} [live]
+ * @property {SwapState} [swap]
+ */
+
+/**
+ * @typedef {object} PopupInput
+ * @property {PayloadRecord | null} current
+ * @property {string[]} [armedOrigins]
+ * @property {Redirect[]} [redirects]
+ * @property {Detection | null} [detection]
+ * @property {boolean} [catalogAvailable]
+ * @property {{ version: string } | null} [installedPayload]
+ */
+
+/**
+ * @typedef {object} PopupViewModel
+ * @property {BuildView} build
+ * @property {PageView} page
+ * @property {boolean} canArm
+ * @property {{ enabled: boolean, reason: 'no-dist' | 'no-versions' | null }} routeBuilder
+ * @property {string[]} armedOrigins
+ * @property {string[]} otherArmedOrigins
+ * @property {RouteView[]} routes
+ * @property {RouteView[]} otherRoutes
+ */
+
+/**
+ * @param {Redirect} redirect
+ */
 export function describeRedirect(redirect) {
   const ref = parseCdnBlokUrl(redirect.from);
   return {
@@ -14,6 +101,9 @@ export function describeRedirect(redirect) {
  * a reload can fix, so it is the only one that earns one. 'blocked' means the
  * payload IS in the realm and the page's blok ignored it — it predates the
  * seam, and reloading forever would be a loop with no exit.
+ *
+ * @param {{ page: { bundled: { present: boolean } }, engaged: boolean, runningYours: boolean, current: PayloadRecord | null, installedPayload: { version: string } | null }} input
+ * @returns {SwapState}
  */
 function swapState({ page, engaged, runningYours, current, installedPayload }) {
   if (!page.bundled.present || !engaged) {
@@ -25,6 +115,10 @@ function swapState({ page, engaged, runningYours, current, installedPayload }) {
   return installedPayload !== null && installedPayload.version === current?.version ? 'blocked' : 'pending';
 }
 
+/**
+ * @param {PopupInput} input
+ * @returns {PopupViewModel}
+ */
 export function popupViewModel({ current, armedOrigins = [], redirects = [], detection, catalogAvailable = false, installedPayload = null }) {
   const build = current
     ? { state: 'ready', version: current.version, builtAt: current.builtAt, helper: current.helper ?? null, dist: current.dist ?? { staged: false } }

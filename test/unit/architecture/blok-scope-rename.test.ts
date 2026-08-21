@@ -6,8 +6,14 @@ import { describe, expect, it } from 'vitest';
  * Legacy-name law: after the @bloklabs/* rebrand, the only places allowed to
  * mention the legacy personal scope are migration artifacts (the legacy
  * grammar the codemod rewrites FROM, codemod fixtures), historical
- * changelogs, and the release deprecation runbook. Everything else must use
- * the @bloklabs/* family names.
+ * changelogs, the release deprecation runbook, and the override extension's
+ * CDN-detection catalog — 0.1.1 - 1.1.0 really did ship under the legacy
+ * scope, so the extension's URL detector, its known-package list and the
+ * tests/README describing them must name it to recognize those published
+ * URLs. Everything else must use the @bloklabs/* family names.
+ *
+ * The override-extension entries are exact file paths on purpose: a directory
+ * glob would let a future file there reintroduce the legacy scope unnoticed.
  */
 const ALLOWLIST: RegExp[] = [
   /^CHANGELOG\.md$/,
@@ -17,6 +23,10 @@ const ALLOWLIST: RegExp[] = [
   /^packages\/cli\/(test\/)?fixtures\//,
   /^docs\/superpowers\//,
   /^scripts\/deprecate-legacy\.mjs$/,
+  /^override-extension\/README\.md$/,
+  /^override-extension\/lib\/versions\.mjs$/,
+  /^test\/unit\/override\/detect\.test\.ts$/,
+  /^test\/unit\/override\/versions\.test\.ts$/,
 ];
 
 describe('@blok scope rename', () => {

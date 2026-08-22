@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokUploader } from '../../../types/configs/uploader';
 import { cloudinaryStorage } from './cloudinary';
 import * as xhr from './upload-xhr';
@@ -31,6 +31,10 @@ afterEach(() => {
 const preset = { cloudName: 'demo', uploadPreset: 'blok-unsigned' };
 
 describe('cloudinaryStorage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('posts to the image endpoint for image assets', async () => {
     const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({
       status: 200,

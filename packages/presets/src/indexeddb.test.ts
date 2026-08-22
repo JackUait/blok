@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokUploader } from '../../../types/configs/uploader';
 import { indexedDBStorage, resolveBlokObjectUrl } from './indexeddb';
 
@@ -20,6 +20,10 @@ describe('indexedDBStorage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     indexedDB.deleteDatabase('blok-assets-test');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('stores the file and returns a stable blok: reference', async () => {

@@ -105,6 +105,15 @@ const publishedPackages: PublishedPackage[] = [
     requiredKeywords: [ 'block-editor', 'rich-text-editor', 'editorjs', 'migration', 'json' ],
     requiresReadme: true,
   },
+  {
+    dir: 'packages/presets',
+    packDir: 'packages/presets',
+    // Not the editor either — storage uploaders — so it carries the storage/vendor
+    // vocabulary instead of "wysiwyg"/"notion-like", same reasoning as cli above.
+    name: '@bloklabs/presets',
+    requiredKeywords: [ 'storage', 'file-upload', 'uploader', 'supabase', 's3', 'cloudinary', 'indexeddb' ],
+    requiresReadme: true,
+  },
 ];
 
 const readManifest = (dir: string): Record<string, unknown> =>

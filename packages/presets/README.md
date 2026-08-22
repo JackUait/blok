@@ -96,7 +96,7 @@ new Blok({ holder: 'editor', uploader: indexedDBStorage() });
 const displayUrl = await resolveBlokObjectUrl(asset.url);
 ```
 
-**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data — nothing is actually shared or backed up. It exists because Blok's built-in fallback (a `blob:` URL) doesn't even survive a page reload, which makes local demos and prototypes look broken before you've wired up real storage. `uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL — resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset.
+**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data — nothing is actually shared or backed up. It exists because Blok's built-in fallback (a `blob:` URL) doesn't even survive a page reload, which makes local demos and prototypes look broken before you've wired up real storage. `uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL — resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset. If you pass a custom `dbName` to `indexedDBStorage()`, pass the same `dbName` to `resolveBlokObjectUrl(url, { dbName })` — a mismatch resolves to `null` with no error, not a thrown exception.
 
 ## Docs
 

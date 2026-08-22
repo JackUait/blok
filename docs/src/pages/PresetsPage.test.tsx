@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router';
 import { PresetsPage } from './PresetsPage';
 import { I18nProvider } from '../contexts/I18nContext';
 import { presets } from '../components/presets/presets-data';
+import { getRouteMetadata } from '../seo/route-metadata';
+import { applyTypography } from '../utils/typography';
 
 const renderPage = () =>
   render(
@@ -53,5 +55,26 @@ describe('PresetsPage', () => {
     renderPage();
     const section = screen.getByTestId('presets-section-indexeddb');
     expect(within(section).getByText(/not for production/i)).toBeInTheDocument();
+  });
+
+  it('heads a ru page with the localized H1, not the hardcoded English one', () => {
+    // Regression: the page used to hardcode "Storage presets" as its <h1>
+    // regardless of locale, so /ru/presets served a Russian title/description
+    // (from route-metadata.ru.ts) under an all-English visible heading.
+    const metadata = getRouteMetadata('/ru/presets');
+
+    if (metadata === undefined) {
+      throw new Error('ru copy for /presets is missing — this test would prove nothing');
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/ru/presets']}>
+        <I18nProvider locale="ru">
+          <PresetsPage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(applyTypography(metadata.h1, 'ru'));
   });
 });

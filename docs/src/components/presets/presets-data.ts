@@ -191,6 +191,7 @@ new Blok({
     storageSetup: [
       'None — this preset needs no external service, which is the point.',
       'Wire the exported resolveBlokObjectUrl(url) helper into wherever you render an uploaded asset: uploadByFile returns a blok:asset/… reference, not a directly usable URL, and nothing resolves it back into a blob: URL for you automatically.',
+      'If you pass a custom dbName to indexedDBStorage(), pass that same dbName as resolveBlokObjectUrl(url, { dbName }) — a mismatch looks up the wrong database and resolves to null with no error, not a thrown exception.',
     ],
     usageExample: `import { indexedDBStorage, resolveBlokObjectUrl } from '@bloklabs/presets';
 

@@ -3317,7 +3317,7 @@ export const Segments = createReactBlock({
     badge: "Uploader",
     title: "Uploader API",
     description:
-      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`, which is why an audio block's cover art reaches your image pipeline instead of the audio endpoint that would reject it. Resolution order for a kind: the tool whose static `assetKind` matches (e.g. `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback \u2014 a `blob:` URL for files, the URL verbatim for links.",
+      "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`, which is why an audio block's cover art reaches your image pipeline instead of the audio endpoint that would reject it. Resolution order for a kind: the tool whose static `assetKind` matches (e.g. `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback \u2014 a `blob:` URL for files, the URL verbatim for links. See the storage presets page for ready-made `uploader` implementations \u2014 Supabase, S3-compatible storage, Cloudinary, and IndexedDB \u2014 that need no backend of your own.",
     methods: [
       {
         name: "uploader.uploadByFile(file, ctx)",

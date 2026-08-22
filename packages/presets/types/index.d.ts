@@ -107,4 +107,34 @@ export interface SupabaseStorageOptions {
  */
 export function supabaseStorage(client: SupabaseLike, options?: SupabaseStorageOptions): BlokUploader;
 
-// Remaining storage presets are re-exported here as each one ships (task 4: S3, task 5: Cloudinary, task 6: IndexedDB).
+/** What the preset asks its signer for before it can PUT a file. */
+export interface SignRequest {
+  fileName: string;
+  mimeType: string;
+  size: number;
+  kind: string;
+}
+
+/** What the signer hands back so the browser can PUT straight to the bucket. */
+export interface SignedTarget {
+  /** Short-lived URL the browser PUTs to. */
+  uploadUrl: string;
+  /** Where the object will be readable once stored. */
+  publicUrl: string;
+  /** Headers the signature covers — they must be sent verbatim or it fails. */
+  headers?: Record<string, string>;
+}
+
+export interface PresignedStorageOptions {
+  sign(request: SignRequest): Promise<SignedTarget>;
+}
+
+/**
+ * Uploader for any provider fronted by a signer — S3, R2, or anything
+ * S3-compatible. The consumer's own backend mints the signed URL, so
+ * credentials never reach the browser. Declares no `uploadByUrl`, same
+ * reasoning as {@link supabaseStorage}.
+ */
+export function presignedStorage(options: PresignedStorageOptions): BlokUploader;
+
+// Remaining storage presets are re-exported here as each one ships (task 5: Cloudinary, task 6: IndexedDB).

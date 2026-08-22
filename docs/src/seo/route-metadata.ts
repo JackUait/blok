@@ -77,6 +77,12 @@ const STATIC_COPY: Record<string, Copy> = {
       'The old tools index. Every block and inline tool now has its own page under the Blok documentation.',
     h1: 'Blok tools',
   },
+  '/presets': {
+    title: 'Blok Storage Presets — Supabase, S3, Cloudinary',
+    description:
+      'Ready-made uploaders for Blok: Supabase, S3-compatible storage, Cloudinary, and IndexedDB — no backend to write for file uploads.',
+    h1: 'Storage presets',
+  },
   '/migration': {
     title: 'Migrate to Blok — Editor.js, TipTap, Quill',
     description:

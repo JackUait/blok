@@ -38,6 +38,12 @@ export const RU_COPY: Record<string, RouteCopy> = {
       'Старый список инструментов. Теперь у каждого блочного и строчного инструмента Blok есть собственная страница в документации.',
     h1: 'Инструменты Blok',
   },
+  '/presets': {
+    title: 'Хранилища для Blok — Supabase, S3, Cloudinary',
+    description:
+      'Готовые загрузчики файлов для Blok: Supabase, S3-совместимое хранилище, Cloudinary и IndexedDB — без бэкенда для загрузок.',
+    h1: 'Хранилища для загрузок',
+  },
   '/migration': {
     title: 'Переход на Blok — Editor.js, TipTap, Quill',
     description:

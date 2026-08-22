@@ -7,6 +7,7 @@ export const STATIC_PATHS: string[] = [
   '/demo',
   '/docs',
   '/tools',
+  '/presets',
   '/migration',
   '/migration/reference',
   '/changelog',

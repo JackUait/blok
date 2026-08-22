@@ -7,6 +7,7 @@ export default [
   // sidebar/TOC chrome stays mounted across module navigation.
   route('docs/*', './routes/api.tsx'),
   route('tools', './routes/tools.tsx'),
+  route('presets', './routes/presets.tsx'),
   route('migration', './routes/migration.tsx'),
   route('migration/reference', './routes/migration-reference.tsx'),
   route('changelog', './routes/changelog.tsx'),
@@ -22,6 +23,7 @@ export default [
   route('ru/demo', './routes/demo.tsx', { id: 'ru-demo' }),
   route('ru/docs/*', './routes/api.tsx', { id: 'ru-api' }),
   route('ru/tools', './routes/tools.tsx', { id: 'ru-tools' }),
+  route('ru/presets', './routes/presets.tsx', { id: 'ru-presets' }),
   route('ru/migration', './routes/migration.tsx', { id: 'ru-migration' }),
   route('ru/migration/reference', './routes/migration-reference.tsx', {
     id: 'ru-migration-reference',

@@ -13,6 +13,7 @@ describe('PRERENDER_PATHS', () => {
       '/demo',
       '/docs',
       '/tools',
+      '/presets',
       '/migration',
       '/migration/reference',
       '/changelog',

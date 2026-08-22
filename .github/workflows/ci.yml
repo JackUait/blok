@@ -102,6 +102,14 @@ jobs:
         if: matrix.shard == '1/2'
         run: yarn workspace @bloklabs/react test
 
+      - name: Run @bloklabs/presets Unit Tests
+        # Same reason as react above: the presets package has its own vitest
+        # config, and its tests live under src/ rather than test/unit/, which
+        # the root config's "unit" project does not glob. One shard is enough
+        # — it is not sharded.
+        if: matrix.shard == '1/2'
+        run: yarn workspace @bloklabs/presets test
+
   validate-spec-coverage:
     name: Validate Spec File Coverage
     runs-on: ubuntu-latest

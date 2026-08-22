@@ -45,6 +45,16 @@ export const FAMILY = [
     manifestPath: 'packages/cli/package.json',
     packDir: 'packages/cli',
   },
+  {
+    // No peerDependency on @bloklabs/core (zero runtime deps) — same reason
+    // `cli` sits here rather than beside the framework adapters: the "core
+    // first" ordering rule above exists for peers that need a published
+    // target, and neither of these packages is one.
+    npmName: '@bloklabs/presets',
+    gprName: '@dodopizza/blok-presets',
+    manifestPath: 'packages/presets/package.json',
+    packDir: 'packages/presets',
+  },
 ];
 
 /**

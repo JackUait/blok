@@ -3,7 +3,7 @@
 ## Goal
 
 Let a Blok consumer get a fully working editor — uploads, link previews, and a
-save/load round-trip — writing as close to zero backend code as possible, while
+save/load round-trip — writing as little backend code as possible, while
 Blok itself takes on no hosting, no per-language SDK matrix, and no CVE-response
 obligation across ecosystems it cannot service.
 
@@ -16,20 +16,32 @@ Two costs are treated as first-class and weighted equally:
 
 ## Scope
 
-**In scope (tier A):** file uploads, link-preview (unfurl), document save/load
-round-trip, with the storage seams that later tiers write through.
+**In scope (first step):** file uploads, link-preview (unfurl), and the client half of
+the save/load round-trip (debounced autosave, load on mount, race handling) aimed
+at the consumer's own endpoint.
 
-**Deferred, but the architecture must not have to be rewritten for them:**
+**Explicitly not stored by us:** documents. See §3 — the service owns what passes
+through it, never the consumer's records.
 
-- **Tier B — document storage as a product**: versions, listing, per-document
-  permissions.
-- **Tier C — multiplayer**: real-time sync, cursors, presence.
+**Deferred, but the architecture must not have to be rewritten for it:**
+
+- **Multiplayer**: real-time sync, cursors, presence.
+
+The earlier notion of a middle tier — "document storage as a product", with versions,
+listing, and per-document permissions — is **dropped, not deferred.** The ownership
+line in §3 rules it out: those are the consumer's records, and shipping them would
+mean shipping a permissions model that duplicates theirs.
+
+Multiplayer is the one case where we must persist documents, because a sync server
+with nothing to persist cannot merge two people's edits. Even there the consumer's
+endpoint can remain the system of record, with our storage acting as the sync
+working set. That distinction is part of multiplayer's own design, not this one.
 
 ## Decisions already made
 
 | Decision | Rationale |
 |---|---|
-| Service implemented in **Go** | Language is invisible to the consumer in sidecar form. Go gives a single static binary, and the most mature SSRF-protection ecosystem (`doyensec/safeurl`, Stripe Smokescreen are both Go). Production-ready Yjs ports exist in Go (`reearth/ygo`, `Deln0r/ygo`), so tier C is not blocked. |
+| Service implemented in **Go** | Language is invisible to the consumer in sidecar form. Go gives a single static binary, and the most mature SSRF-protection ecosystem (`doyensec/safeurl`, Stripe Smokescreen are both Go). Production-ready Yjs ports exist in Go (`reearth/ygo`, `Deln0r/ygo`), so multiplayer is not blocked. |
 | **Sidecar-first** delivery | Removes the multi-language question entirely: a Python/PHP/Ruby shop runs a container, it does not reimplement anything. `docker run` is fewer lines than any SDK. |
 | The service is **one path, not a requirement** | Client-side presets for Supabase/S3/Cloudinary sit beside it with equal billing. Only link previews genuinely require a server. |
 | **No hosted service** | Cost, abuse, uptime obligations for other people's production, and privacy — every consumer's link URLs flowing through our infra. |
@@ -104,8 +116,8 @@ new Blok({ server: 'https://blok.myapp.com', ticket: '/api/blok-ticket' });
 ### The `server` option
 
 One config key replaces three: the uploader, the bookmark endpoint, and the
-save/load wiring. Today these are three separate config blocks with three
-separate docs pages.
+save/load wiring — the last of these aimed at the consumer's own endpoint, not at
+ours. Today these are three separate config blocks with three separate docs pages.
 
 **Precedence:** an explicit `uploader` beats `server`. A consumer may take the
 service for link previews while continuing to upload into their own S3. Paths mix
@@ -122,8 +134,6 @@ than needing bridging code.
 GET  /unfurl?url=...      link preview
 POST /upload              file upload (multipart)
 POST /upload-by-url       re-host a file from a third-party URL
-GET  /documents/:id       read a document
-PUT  /documents/:id       write a document
 GET  /health              liveness + running version
 ```
 
@@ -228,11 +238,28 @@ Two requirements follow:
 
 ## 3. Seams
 
-A seam is not reserved space. It is an interface needed today that happens to have
-one implementation instead of five.
+A seam is an interface needed today that happens to have one implementation instead
+of five. Reserved space for an interface with no implementations is not a seam — it
+is a guess, and a guess belongs in prose, not in code.
 
-There are **two** stores, and conflating them is a known way to get hurt: files
-and documents.
+### The ownership line
+
+**The service may own what passes through it. It must not own the consumer's
+records.**
+
+- A **link preview** is pure passthrough. Nothing is stored at all.
+- An **uploaded image** is a commodity blob: it joins to nothing, and teams already
+  routinely hand these to S3, Cloudinary, or Uploadcare. The service accepts the
+  bytes and writes them **where the consumer pointed it** — their directory, their
+  bucket, their credentials. It processes; it does not own.
+- A **document** is a business record. It joins to the consumer's users, teams, and
+  permissions; it belongs in their backups; it must be searchable beside their other
+  content and deletable on a data-removal request. Every one of those becomes a
+  bridge to build if the record lives in our schema, which is why teams refuse to
+  put their primary content in a third party's storage.
+
+Therefore the service stores no documents. There are no `/documents/*` routes and no
+bundled database.
 
 ### Seam 1 — BlobStore (files)
 
@@ -241,71 +268,47 @@ put(bytes, name, mimeType) -> url
 delete(url)
 ```
 
-Two drivers at launch: local directory (default, works immediately) and
-S3-compatible — which covers S3, R2, MinIO, and Spaces, since the protocol is one.
+Two drivers at launch: local directory (works immediately) and S3-compatible —
+which covers S3, R2, MinIO, and Spaces, since the protocol is one.
 
 The path-1 presets are **the same seam executed in the browser**: the Supabase
 preset performs `put` and returns a `url`. There are not two parallel upload
 systems, only one contract with implementations on either side of the network.
 This is why "service for previews, own S3 for files" needs no bridging code.
 
-### Seam 2 — DocumentStore (documents)
+### What remains of the save/load round-trip
 
-```
-load(id)        -> data
-save(id, data)
-```
+The client half — and it is the half worth shipping: debounced autosave, load on
+mount, and race handling between an in-flight save and a fresh edit. It points at
+the consumer's endpoint instead of ours. Pure client-side work, no service involved.
 
-**The load-bearing decision: what is stored is a pair — a blob plus a tag naming
-its format — not "the document's JSON".**
+The consumer writes the storage endpoint themselves. That is roughly ten lines, and
+it is code they want to own regardless, because their permission check lives in it.
 
-Today there is one format: the JSON that `save()` emits. Multiplayer's format is
-different in kind: a document is stored as a stream of small binary updates, not a
-finished snapshot, because two people typing at once must not overwrite each
-other. Hard-coding "JSON lives in this column" today makes that either a breaking
-migration or a second parallel table tomorrow.
+### DocumentStore is not a seam for this step
 
-With a format tag, existing documents keep being read as they were and new ones
-are written the new way, side by side.
+It is recorded here as a decision for when it arrives, not built now.
 
-### Default driver
+**When multiplayer lands, storage does become ours** — a sync server with nothing to
+persist cannot merge two people's edits. At that point the store must hold **a blob
+plus a tag naming its format**, never bare JSON. Multiplayer keeps a stream of small
+binary updates rather than finished snapshots, so hard-coding "JSON lives in this
+column" would force either a breaking migration or a second parallel table.
 
-The service **stores documents itself**, in a SQLite file, with no configuration.
-`docker run` plus one config key then produces a working "type — reload — it is
-still there" loop with zero consumer code. That is the minimal-lines promise
-carried to its end.
+The write shapes genuinely differ, which is why multiplayer brings its own store
+rather than inheriting one: today a write is "replace the document
+wholesale" every few seconds; under multiplayer it is "append this small change",
+tens of times per second, from several people at once. Saving each keystroke as a
+whole-document replacement collapses on the first mid-sized document.
 
-`--documents off` for consumers who keep documents themselves, as today.
+This section exists so that store is designed with the format tag from its first
+line rather than discovering the need later.
 
-Tier B then stops being new architecture and becomes another driver: Postgres,
-MySQL, whatever is asked for. The interface already exists.
+### Deliberately absent
 
-### Where the seam is honest, and where it is not
-
-**Multiplayer will add a third method.** Saying the interface already covers it
-would be a lie.
-
-Today's write is "replace the document wholesale" — the full payload every couple
-of seconds. Multiplayer's write is "append this small change", tens of times per
-second, from several people. One method cannot fake both: saving each keystroke as
-a whole-document replacement collapses on the first mid-sized document.
-
-So the honest statement of the seam is: **what survives is identity and location,
-not a method set.** A document has an id, lives in one known store, and its data
-carries a format tag. Multiplayer adds an append method; drivers that do not
-implement it simply do not support collaborative editing, while everything else
-keeps working.
-
-That is a far smaller price than relocating storage, and it is the price this
-design buys.
-
-### Deliberately absent in tier A
-
-Document versions, document listing, per-document ownership and sharing. Those
-pull in a permissions model that belongs to the consumer's own user system. Tier A
-asks exactly one question: does this pass permit touching document `id`?
-
----
+Document versions, document listing, and per-document ownership or sharing. Those
+belong to the consumer's own user system. This step asks exactly one question: does
+this pass permit uploading, or reading a preview?
 
 ## 4. Repository, build, release
 
@@ -438,12 +441,15 @@ forbid it by policy. The image covers them, but the questions will come.
   product decision with its own conversation about money, abuse, and obligations.
 - **No service implementations in other languages.** The sidecar removed the need:
   not six SDKs, one container.
-- **No document versions, listing, or per-document permissions.** Tier B.
+- **No document versions, listing, or per-document permissions.** Dropped, not
+  deferred — see §Scope.
 - **No multiplayer.** The seams exist; the feature does not.
 - **No anti-bot circumvention.** Not our business and an endless arms race.
 - **No image transforms, no CDN.** The temptation is real — "the files are already
   here, let's resize on the fly" — and it would sink a small service.
 - **We do not replace S3 or Supabase.** Presets are a peer path, not a fallback.
+- **We do not store the consumer's documents.** Not in SQLite, not anywhere. See the
+  ownership line in §3.
 
 ---
 
@@ -507,7 +513,7 @@ maintained to delegate to. This is a primary reason the sidecar wins over recipe
 - **Stripe Smokescreen** (1329★, Go, alive): SSRF protection as an egress proxy —
   language-agnostic by construction.
 
-### Tier C is not blocked by the Go choice
+### Multiplayer is not blocked by the Go choice
 
 Per the official Yjs documentation, `reearth/ygo` and `Deln0r/ygo` are
 production-ready pure-Go ports, wire-compatible with the JavaScript reference;
@@ -517,14 +523,45 @@ WASM are listed as work in progress. Python's `ypy` is archived.
 Note: Blok's document is already a `Y.Doc` internally
 (`src/components/modules/yjs/`), but `ydoc` is private by design and writes pass a
 `LocalOriginTag` type barrier. Exposing it for sync changes a load-bearing
-invariant — tier C needs its own design pass.
+invariant — multiplayer needs its own design pass.
 
 ---
 
-## Open questions
+## Resolved before planning
 
-1. Does `packages/server/` with a `package.json` (needed for the npm wrapper) but
-   Go sources sit cleanly in the yarn workspace graph under
-   `yarn install --immutable`?
-2. Does the bookmark tool's degradation path (plain link, no error) need a data
-   migration for blocks already saved in an error state?
+Both questions this design opened were answered empirically on 2026-08-22.
+
+### 1. Does a Go workspace sit cleanly in the yarn graph? — Yes
+
+Verified with a throwaway stub (`packages/server/` containing `package.json`,
+`bin/blok-server.mjs`, `go.mod`, `cmd/blok-server/main.go`), then removed.
+
+- `yarn workspaces list` picks it up as a normal workspace.
+- `yarn install --immutable` fails with **YN0028** until the lockfile carries the
+  workspace entry — an 8-line addition produced by `yarn install
+  --mode=update-lockfile`, which `scripts/release.mjs` already runs. After that,
+  `--immutable` passes. So: the lockfile change ships in the same commit, exactly as
+  for any new workspace.
+- `tsconfig.json` include is `**/*.ts|tsx|js|json` plus `vite.config*.mjs`. A
+  `bin/*.mjs` wrapper is therefore outside the type-check, and `.go` files are
+  invisible to both `tsc` and ESLint. ESLint on the stub wrapper was clean.
+- Nothing auto-iterates workspaces: `scripts/build-all.mjs`, `.github/workflows/ci.yml`,
+  and `release.mjs` all use explicit lists. Consequence: `packages/server` must be
+  added to `WORKSPACE_MANIFESTS` in `release.mjs` and to CI deliberately — nothing
+  will pick it up for us, and nothing will break if we forget.
+- The install warnings observed (YN0060 eslint/eslint-plugin-import, YN0002
+  `@vue/compiler-dom`, `playwright-core`) are pre-existing and unrelated.
+
+### 2. Do already-saved failed bookmarks need a migration? — No
+
+Read from `src/tools/link/bookmark/index.ts`:
+
+- `save()` (`:94`) writes `url` plus whatever preview fields actually arrived. The
+  `ERROR` state lives only in memory and never reaches the saved data.
+- A bookmark whose fetch failed is therefore already stored as `{ url }` —
+  indistinguishable from "a link with no preview".
+- On load (`:44`) the block is treated as rendered and does **not** re-fetch;
+  `startFetch` runs only on paste (`:81`).
+
+So existing data falls into the new "URL only — render a plain link" path by itself.
+The graceful-degradation work covers old blocks with no migration.

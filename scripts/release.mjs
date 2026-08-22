@@ -183,6 +183,7 @@ if (isDirectRun) {
     'packages/vue/package.json',
     'packages/angular/package.json',
     'packages/cli/package.json',
+    'packages/presets/package.json',
   ];
 
   for (const manifestPath of WORKSPACE_MANIFESTS) {

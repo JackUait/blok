@@ -767,6 +767,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@bloklabs/presets@workspace:packages/presets":
+  version: 0.0.0-use.local
+  resolution: "@bloklabs/presets@workspace:packages/presets"
+  languageName: unknown
+  linkType: soft
+
 "@bloklabs/react@workspace:packages/react":
   version: 0.0.0-use.local
   resolution: "@bloklabs/react@workspace:packages/react"

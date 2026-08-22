@@ -1,6 +1,9 @@
 /**
- * `BlokUploader` and its supporting types, mirrored from `types/configs/uploader.d.ts`
- * (and `AssetKind` from `types/tools/block-tool.d.ts`) rather than imported.
+ * `BlokUploader` and its supporting types below, mirrored from
+ * `types/configs/uploader.d.ts` (and `AssetKind` from
+ * `types/tools/block-tool.d.ts`) rather than imported — and deliberately not
+ * exported, since this package's public surface is only what the brief for
+ * each preset asks it to produce (`fetchStorage` here).
  *
  * A published `.d.ts` under `types/` ships as-is inside this package's own
  * tarball (`files: ["dist", "types"]`) — a relative specifier like
@@ -15,10 +18,10 @@
  */
 
 /** The kind of asset being uploaded. */
-export type AssetKind = 'image' | 'video' | 'audio' | 'file';
+type AssetKind = 'image' | 'video' | 'audio' | 'file';
 
 /** A resolved upload result. */
-export interface UploadedAsset {
+interface UploadedAsset {
   /** Public URL the asset is reachable at once stored. */
   url: string;
   /** Original filename, when the host preserved one. */
@@ -31,7 +34,7 @@ export interface UploadedAsset {
  * `kind` is the kind of asset being uploaded — NOT the tool that asked for
  * it (an audio block uploading cover art sends `kind: 'image'`).
  */
-export interface UploadContext {
+interface UploadContext {
   /** Kind of asset being uploaded. */
   kind: AssetKind;
   /** Name of the block tool that requested the upload, when known. */
@@ -44,7 +47,7 @@ export interface UploadContext {
  * Editor-level uploader, keyed by asset kind rather than by tool. Both
  * methods are optional and resolved independently.
  */
-export interface BlokUploader {
+interface BlokUploader {
   /** Store a file chosen by the user and return its public URL. */
   uploadByFile?(file: File, ctx: UploadContext): Promise<UploadedAsset>;
   /** Re-host an asset the user supplied by URL, and return the stored URL. */

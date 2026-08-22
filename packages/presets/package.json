@@ -47,5 +47,8 @@
   "scripts": {
     "build": "yarn run -T vite build --mode production",
     "test": "yarn run -T vitest run"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
   }
 }

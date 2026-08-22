@@ -152,4 +152,23 @@ export interface CloudinaryStorageOptions {
  */
 export function cloudinaryStorage(options: CloudinaryStorageOptions): BlokUploader;
 
-// Remaining storage presets are re-exported here as each one ships (task 6: IndexedDB).
+export interface IndexedDBStorageOptions {
+  dbName?: string;
+}
+
+/**
+ * Uploader backed by IndexedDB — for demos and local-first apps with no
+ * backend. Returns a `blok:asset/<id>` reference rather than a `blob:` URL:
+ * blob URLs are scoped to the page that created them, so saving one produces
+ * a broken image after a reload, which is exactly what this preset exists to
+ * avoid.
+ */
+export function indexedDBStorage(options?: IndexedDBStorageOptions): BlokUploader;
+
+/**
+ * Turns a `blok:asset/<id>` reference back into a `blob:` URL an `<img>` can
+ * display. Passes a plain `http(s)` URL through untouched, so a host can call
+ * it on every image without checking the scheme first. Resolves `null` when
+ * the reference is not (or no longer) stored.
+ */
+export function resolveBlokObjectUrl(url: string, options?: IndexedDBStorageOptions): Promise<string | null>;

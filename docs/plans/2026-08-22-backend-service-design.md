@@ -192,11 +192,18 @@ The format is standard JWT, so on Python, PHP, Ruby, and C# this is also one lin
 with a stock library. Unlike SSRF libraries (§Evidence), JWT libraries are
 maintained everywhere.
 
-### Unfurl hardening
+### Outbound-fetch hardening
 
-Two distinct threats. They are not the same problem and need separate answers.
+**Two routes fetch a consumer-supplied URL from the server: `GET /unfurl` and
+`POST /upload-by-url`.** They are the same sink and MUST share one guarded HTTP
+client — there is no second, laxer path. Re-hosting an image from a URL is exactly
+as exploitable as reading a page's metadata, and treating it as "just an upload"
+is how this class of hole ships.
 
-**1. Being used to attack the machine we run on.** A user pastes a link; the
+Two distinct threats against that shared client. They are not the same problem and
+need separate answers.
+
+**1. Being used to attack the machine we run on.** A user supplies a link; the
 service fetches it. Naively implemented, `http://169.254.169.254/…` makes the
 service read cloud credentials out of its own host. Required:
 
@@ -216,8 +223,8 @@ its address is discovered, anyone can drive requests at third-party sites from t
 consumer's IP. This is the same abuse we refused to take on by not hosting; here
 the consumer receives the complaints.
 
-Therefore, in public mode, unfurl is **contractually** bound by an origin
-allowlist and a rate limit. Without an allowlist the service refuses to start in
+Therefore, in public mode, both outbound-fetch routes are **contractually** bound
+by an origin allowlist and a rate limit. Without an allowlist the service refuses to start in
 public mode, the same way `--auth none` refuses a public bind. This is an
 interlock, not advice in the docs.
 
@@ -450,6 +457,8 @@ forbid it by policy. The image covers them, but the questions will come.
 - **We do not replace S3 or Supabase.** Presets are a peer path, not a fallback.
 - **We do not store the consumer's documents.** Not in SQLite, not anywhere. See the
   ownership line in §3.
+- **No second outbound HTTP client.** Every server-side fetch of a consumer-supplied
+  URL goes through the one guarded client, or it does not ship.
 
 ---
 

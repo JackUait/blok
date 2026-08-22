@@ -137,4 +137,19 @@ export interface PresignedStorageOptions {
  */
 export function presignedStorage(options: PresignedStorageOptions): BlokUploader;
 
-// Remaining storage presets are re-exported here as each one ships (task 5: Cloudinary, task 6: IndexedDB).
+export interface CloudinaryStorageOptions {
+  cloudName: string;
+  /** An UNSIGNED upload preset — a signed one would need a server. */
+  uploadPreset: string;
+  folder?: string;
+}
+
+/**
+ * Uploader backed by Cloudinary's unsigned upload API. Unlike the other
+ * presets, this one declares a real `uploadByUrl`: Cloudinary fetches remote
+ * URLs server-side itself, so re-hosting works without any server of the
+ * consumer's own.
+ */
+export function cloudinaryStorage(options: CloudinaryStorageOptions): BlokUploader;
+
+// Remaining storage presets are re-exported here as each one ships (task 6: IndexedDB).

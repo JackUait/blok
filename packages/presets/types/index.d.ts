@@ -2,8 +2,9 @@
  * `BlokUploader` and its supporting types below, mirrored from
  * `types/configs/uploader.d.ts` (and `AssetKind` from
  * `types/tools/block-tool.d.ts`) rather than imported — and deliberately not
- * exported, since this package's public surface is only what the brief for
- * each preset asks it to produce (`fetchStorage` here).
+ * exported, since this package's public surface is only what each preset's
+ * brief asks it to produce (`fetchStorage`, `supabaseStorage`, and so on as
+ * each ships).
  *
  * A published `.d.ts` under `types/` ships as-is inside this package's own
  * tarball (`files: ["dist", "types"]`) — a relative specifier like
@@ -73,4 +74,37 @@ export interface FetchStorageOptions {
  */
 export function fetchStorage(options: FetchStorageOptions): BlokUploader;
 
-// Remaining storage presets are re-exported here as each one ships (task 3: Supabase, task 4: S3, task 5: Cloudinary, task 6: IndexedDB).
+/**
+ * Structural shape of a Supabase JS client's storage API. Matched
+ * structurally rather than imported from `@supabase/supabase-js`, which this
+ * package never depends on — the consumer passes their own client instance,
+ * so their own auth session applies.
+ */
+export interface SupabaseLike {
+  storage: {
+    from(bucket: string): {
+      upload(
+        path: string,
+        file: File,
+        options?: { contentType?: string; upsert?: boolean }
+      ): Promise<{ data: { path: string } | null; error: { message: string } | null }>;
+      getPublicUrl(path: string): { data: { publicUrl: string } };
+    };
+  };
+}
+
+export interface SupabaseStorageOptions {
+  /** Bucket name, or a function of the asset kind for per-kind buckets. */
+  bucket?: string | ((kind: string) => string);
+  /** Object path. Defaults to a random name that keeps the original extension. */
+  path?: (file: File, ctx: UploadContext) => string;
+}
+
+/**
+ * Uploader backed by a Supabase Storage bucket. Declares no `uploadByUrl`:
+ * re-hosting a remote URL needs a server-side fetch the browser cannot do, so
+ * Blok's documented fallback (store the URL verbatim) applies instead.
+ */
+export function supabaseStorage(client: SupabaseLike, options?: SupabaseStorageOptions): BlokUploader;
+
+// Remaining storage presets are re-exported here as each one ships (task 4: S3, task 5: Cloudinary, task 6: IndexedDB).

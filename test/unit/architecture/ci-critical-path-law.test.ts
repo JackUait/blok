@@ -263,6 +263,15 @@ describe('CI critical-path law', () => {
         if: "matrix.shard == '1/2'",
         run: 'yarn workspace @bloklabs/react test',
       },
+      {
+        // Same reason as react above: the presets package has its own vitest
+        // config, and its tests live under src/ rather than test/unit/, which
+        // the root config's "unit" project does not glob — on one shard only,
+        // since it is not sharded.
+        name: 'Run @bloklabs/presets Unit Tests',
+        if: "matrix.shard == '1/2'",
+        run: 'yarn workspace @bloklabs/presets test',
+      },
     ]);
   });
 

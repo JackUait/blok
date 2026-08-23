@@ -35,7 +35,7 @@ export function fetchStorage(options: FetchStorageOptions): BlokUploader {
       });
 
       if (status < 200 || status > 299) {
-        throw new Error(`Upload failed with status ${status}`);
+        throw new Error(`Fetch endpoint upload failed with status ${status}`);
       }
 
       return parseUploadResponse(text, file.name);
@@ -44,17 +44,18 @@ export function fetchStorage(options: FetchStorageOptions): BlokUploader {
     async uploadByUrl(url: string, _ctx: UploadContext): Promise<UploadedAsset> {
       const response = await fetch(`${base}/upload-by-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await resolveHeaders()) },
+        // Content-Type is set last, same order as presigned.ts's PUT: a
+        // caller's headers must not be able to silently swap it and break
+        // this endpoint's JSON body parsing.
+        headers: { ...(await resolveHeaders()), 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
+        throw new Error(`Fetch endpoint upload failed with status ${response.status}`);
       }
 
-      const body: unknown = await response.json();
-
-      return toAsset(body);
+      return toAsset(parseJson(await response.text()));
     },
   };
 }

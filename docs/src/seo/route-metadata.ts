@@ -83,6 +83,12 @@ const STATIC_COPY: Record<string, Copy> = {
       'Ready-made uploaders for Blok: Supabase, S3-compatible storage, Cloudinary, and IndexedDB — no backend to write for file uploads.',
     h1: 'Storage presets',
   },
+  '/server': {
+    title: 'Blok Uploads & Link Previews — Three Deployment Paths',
+    description:
+      'Three ways to give Blok file uploads and link previews: storage you already have, a container beside your app, or the service on its own host.',
+    h1: 'Uploads and link previews',
+  },
   '/migration': {
     title: 'Migrate to Blok — Editor.js, TipTap, Quill',
     description:

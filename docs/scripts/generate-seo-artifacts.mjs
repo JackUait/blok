@@ -35,6 +35,7 @@ const STATIC_SOURCES = {
   '/docs': ['docs/src/components/api/DocsHub.tsx'],
   '/tools': ['docs/src/pages/ToolsPage.tsx'],
   '/presets': ['docs/src/pages/PresetsPage.tsx', 'docs/src/components/presets'],
+  '/server': ['docs/src/pages/ServerPage.tsx', 'docs/src/components/server'],
   '/migration': ['docs/src/pages/MigrationPage.tsx', 'docs/src/components/migration'],
   '/migration/reference': ['docs/src/pages/MigrationReferencePage.tsx'],
   '/changelog': ['CHANGELOG.md'],

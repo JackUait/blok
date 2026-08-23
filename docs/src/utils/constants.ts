@@ -12,6 +12,7 @@ export const BLOK_VERSION: string = rootPkg.version;
 export const NAV_LINKS: NavLink[] = [
   { href: '/docs', label: 'Docs', i18nKey: 'nav.docs' },
   { href: '/presets', label: 'Presets', i18nKey: 'nav.presets' },
+  { href: '/server', label: 'Server', i18nKey: 'nav.server' },
   { href: '/demo', label: 'Demo', i18nKey: 'nav.demo' },
   { href: '/migration', label: 'Migration', i18nKey: 'nav.migration' },
   { href: '/changelog', label: 'Changelog', i18nKey: 'nav.changelog' },

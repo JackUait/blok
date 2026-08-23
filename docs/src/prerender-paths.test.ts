@@ -14,6 +14,7 @@ describe('PRERENDER_PATHS', () => {
       '/docs',
       '/tools',
       '/presets',
+      '/server',
       '/migration',
       '/migration/reference',
       '/changelog',

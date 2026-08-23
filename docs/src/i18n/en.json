@@ -4,6 +4,7 @@
     "demo": "Demo",
     "docs": "Docs",
     "presets": "Presets",
+    "server": "Server",
     "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
@@ -1652,5 +1653,24 @@
     "reHosting": "Re-hosting a remote URL",
     "storageSetup": "Storage-side setup",
     "notForProduction": "Not for production"
+  },
+  "server": {
+    "intro": "Blok needs somewhere to put uploaded files, and something to read a pasted link's title and picture. Neither is something a browser is allowed to do on its own. There are three ways to cover them. The first runs nothing at all, so start there — find the heading that describes you and ignore the other two.",
+    "coverageLabel": "First, the honest limit on link previews",
+    "tablePath": "Your situation",
+    "tableRunsService": "Runs the service?",
+    "tableAppRoute": "Route in your app",
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "limitsHeading": "Read this before you deploy",
+    "whatToRun": "What to run",
+    "appRoute": "The one route in your app",
+    "editorConfig": "Editor config",
+    "failureModes": "When it goes wrong",
+    "failureSymptom": "What you see",
+    "failureCause": "Why",
+    "failureFix": "What to do",
+    "presetsLink": "Storage presets, set up step by step"
   }
 }

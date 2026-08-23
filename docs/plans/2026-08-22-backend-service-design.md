@@ -158,8 +158,8 @@ Two consequences come free:
 
 - A consumer who already wrote their own backend can point at our service with no
   client-side change.
-- A consumer who dislikes one of our six routes replaces that one route with their
-  own code and keeps the other five.
+- A consumer who dislikes one of our four routes replaces that one route with their
+  own code and keeps the other three.
 
 ### Access modes
 

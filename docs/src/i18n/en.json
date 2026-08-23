@@ -1647,6 +1647,8 @@
     "tablePreset": "Preset",
     "tableRehosts": "Re-hosts a remote URL?",
     "tableProduction": "Production-ready?",
+    "yes": "Yes",
+    "no": "No",
     "reHosting": "Re-hosting a remote URL",
     "storageSetup": "Storage-side setup",
     "notForProduction": "Not for production"

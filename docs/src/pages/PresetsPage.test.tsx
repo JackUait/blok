@@ -95,4 +95,34 @@ describe('PresetsPage', () => {
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(applyTypography(metadata.h1, 'ru'));
   });
+
+  it('localizes the summary table\'s yes/no answers on a ru page', () => {
+    // Regression: both answer columns rendered hardcoded 'Yes'/'No' literals, so
+    // /ru/presets served an otherwise-Russian table with English answers in it.
+    render(
+      <MemoryRouter initialEntries={['/ru/presets']}>
+        <I18nProvider locale="ru">
+          <PresetsPage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    const table = screen.getByTestId('presets-table');
+
+    for (const preset of presets) {
+      const row = within(table).getByTestId(`presets-summary-${preset.id}`);
+      const answers = within(row)
+        .getAllByRole('cell')
+        .slice(1)
+        .map((cell) => cell.textContent);
+
+      expect(answers).toEqual([
+        preset.supportsUploadByUrl ? 'Да' : 'Нет',
+        preset.productionReady ? 'Да' : 'Нет',
+      ]);
+    }
+
+    expect(within(table).queryAllByText('Yes')).toHaveLength(0);
+    expect(within(table).queryAllByText('No')).toHaveLength(0);
+  });
 });

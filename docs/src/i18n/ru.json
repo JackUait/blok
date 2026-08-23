@@ -1837,6 +1837,8 @@
     "tablePreset": "Пресет",
     "tableRehosts": "Повторно размещает файл по URL?",
     "tableProduction": "Готов к продакшену?",
+    "yes": "Да",
+    "no": "Нет",
     "reHosting": "Повторное размещение файла по URL",
     "storageSetup": "Настройка хранилища",
     "notForProduction": "Не для продакшена"

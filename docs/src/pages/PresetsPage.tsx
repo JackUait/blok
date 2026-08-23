@@ -52,10 +52,10 @@ export const PresetsContent: React.FC = () => {
                   </a>
                 </td>
                 <td className="px-4 py-3 align-top text-muted-foreground">
-                  {preset.supportsUploadByUrl ? 'Yes' : 'No'}
+                  {preset.supportsUploadByUrl ? t('presets.yes') : t('presets.no')}
                 </td>
                 <td className="px-4 py-3 align-top text-muted-foreground">
-                  {preset.productionReady ? 'Yes' : 'No'}
+                  {preset.productionReady ? t('presets.yes') : t('presets.no')}
                 </td>
               </tr>
             ))}

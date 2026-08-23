@@ -1,3 +1,4 @@
+import type { AssetKind } from '../../../types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
 import { uploadWithProgress } from './upload-xhr';
 
@@ -5,7 +6,7 @@ export interface SignRequest {
   fileName: string;
   mimeType: string;
   size: number;
-  kind: string;
+  kind: AssetKind;
 }
 
 export interface SignedTarget {
@@ -42,7 +43,7 @@ export function presignedStorage(options: PresignedStorageOptions): BlokUploader
       });
 
       if (status < 200 || status > 299) {
-        throw new Error(`Upload failed with status ${status}`);
+        throw new Error(`Presigned upload failed with status ${status}`);
       }
 
       return { url: target.publicUrl, fileName: file.name };

@@ -29,17 +29,28 @@ describe('presignedStorage', () => {
       publicUrl: 'https://cdn.example.com/key',
       headers: { 'x-amz-acl': 'private' },
     });
+    const file = new File(['xyz'], 'a.png', { type: 'image/png' });
 
-    const result = await requireUploadByFile(presignedStorage({ sign }))(
-      new File(['xyz'], 'a.png', { type: 'image/png' }),
-      { kind: 'image' }
-    );
+    const result = await requireUploadByFile(presignedStorage({ sign }))(file, { kind: 'image' });
 
     expect(sign).toHaveBeenCalledWith({ fileName: 'a.png', mimeType: 'image/png', size: 3, kind: 'image' });
     expect(spy.mock.calls[0][0].method).toBe('PUT');
     expect(spy.mock.calls[0][0].url).toBe('https://bucket.s3.example.com/key?sig=abc');
+    expect(spy.mock.calls[0][0].body).toBe(file);
     expect(spy.mock.calls[0][0].headers).toMatchObject({ 'x-amz-acl': 'private', 'Content-Type': 'image/png' });
     expect(result).toEqual({ url: 'https://cdn.example.com/key', fileName: 'a.png' });
+  });
+
+  it('falls back to application/octet-stream when the file carries no type', async () => {
+    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '' });
+    const sign = vi.fn().mockResolvedValue({
+      uploadUrl: 'https://bucket.s3.example.com/key?sig=abc',
+      publicUrl: 'https://cdn.example.com/key',
+    });
+
+    await requireUploadByFile(presignedStorage({ sign }))(new File(['xyz'], 'a.bin'), { kind: 'file' });
+
+    expect(spy.mock.calls[0][0].headers).toMatchObject({ 'Content-Type': 'application/octet-stream' });
   });
 
   it('throws when the storage rejects the PUT', async () => {
@@ -48,7 +59,7 @@ describe('presignedStorage', () => {
 
     await expect(
       requireUploadByFile(presignedStorage({ sign }))(new File(['x'], 'a.png'), { kind: 'image' })
-    ).rejects.toThrow(/403/);
+    ).rejects.toThrow('Presigned upload failed with status 403');
   });
 
   it('propagates a failure from the signer without attempting an upload', async () => {

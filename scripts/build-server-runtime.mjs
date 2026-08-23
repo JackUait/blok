@@ -22,7 +22,7 @@ export async function buildServerRuntime(outDir = defaultOutDir) {
       target: 'es2020',
       minify: 'esbuild',
       lib: {
-        entry: path.resolve(root, 'src/server-runtime/index.ts'),
+        entry: path.resolve(root, 'src/view/server-runtime.ts'),
         name: 'BlokServerRuntimeBundle',
         formats: ['iife'],
         fileName: () => 'blok-server-runtime.js',

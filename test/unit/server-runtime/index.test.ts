@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { invoke } from '../../../src/server-runtime';
+import { invoke } from '../../../src/view/server-runtime';
 
 describe('server runtime boundary', () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('server runtime boundary', () => {
   it('runs through one global boundary without DOM globals', () => {
     expect(typeof document).toBe('undefined');
     expect(typeof window).toBe('undefined');
-    expect(globalThis.blokServerInvoke).toBe(invoke);
+    expect(Reflect.get(globalThis, 'blokServerInvoke')).toBe(invoke);
   });
 
   it('converts Markdown into a serialized OutputData envelope', async () => {
@@ -54,6 +54,12 @@ describe('server runtime boundary', () => {
 
   it('refuses a document without a blocks array', async () => {
     await expect(invoke('blocksToHtml', '{"wrong":[]}')).rejects.toThrow('`blocks` array');
+  });
+
+  it('refuses malformed blocks instead of silently dropping them', async () => {
+    await expect(invoke('blocksToHtml', '{"blocks":[{"type":42,"data":{"text":"lost"}}]}')).rejects.toThrow(
+      'valid block objects'
+    );
   });
 
   it('refuses an unknown operation', async () => {

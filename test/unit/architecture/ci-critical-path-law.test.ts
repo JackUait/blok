@@ -228,7 +228,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('retains the exact Go server job contract', () => {
+  it('retains the exact server transition job contract', () => {
     const server = getJob(ci, 'server');
 
     expect(server.name).toBe('Server');
@@ -236,6 +236,7 @@ describe('CI critical-path law', () => {
     expect(server['runs-on']).toBe('ubuntu-latest');
     expectOrderedSteps('ci.server', server, [
       checkout,
+      setupNodeDependencies,
       {
         name: 'Setup Go',
         uses: 'actions/setup-go@v5',
@@ -247,9 +248,20 @@ describe('CI critical-path law', () => {
         },
       },
       {
-        name: 'Test',
+        name: 'Setup .NET',
+        uses: 'actions/setup-dotnet@v4',
+        with: {
+          'dotnet-version': '10.0.x',
+        },
+      },
+      {
+        name: 'Test Go reference',
         'working-directory': 'packages/server',
         run: 'go vet ./... && go test ./...',
+      },
+      {
+        name: 'Test .NET runtime',
+        run: 'dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj',
       },
     ]);
   });

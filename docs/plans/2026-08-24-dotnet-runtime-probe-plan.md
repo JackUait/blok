@@ -14,7 +14,7 @@
 
 - Work directly on the existing `main` branch. Do not create branches or worktrees.
 - Follow TDD for every task: add a test, run it red, implement the smallest passing change, then refactor.
-- `src/server-runtime` may import only DOM-free code. It must never import editor modules, tool classes, or DOM helpers.
+- `src/view/server-runtime.ts` stays inside the existing DOM-free view graph so editor bundles cannot pull in `parse5`. It must never import editor modules, tool classes, or DOM helpers.
 - The host boundary is exactly `blokServerInvoke(operation: string, inputJson: string): Promise<string>`.
 - Supported operations in this phase are `markdownToBlocks`, `blocksToHtml`, and `blocksToPlainText`.
 - `markdownToBlocks` accepts `{"markdown":"..."}` and returns a serialized `OutputData` envelope: `{"blocks":[...]}`.
@@ -28,7 +28,7 @@
 
 ## File structure
 
-- `src/server-runtime/index.ts` — validates JSON inputs and exposes the three DOM-free operations through the single global boundary.
+- `src/view/server-runtime.ts` — validates JSON inputs and exposes the three DOM-free operations through the single global boundary.
 - `test/unit/server-runtime/index.test.ts` — pins the operation names, wire shapes, math support, and failures before bundling.
 - `scripts/build-server-runtime.mjs` — creates one minified IIFE as a single IIFE (IIFE builds disable code splitting); accepts an output directory so tests do not write into the repository.
 - `test/unit/scripts/build-server-runtime.test.ts` — proves the artifact is one file, contains the host global, and contains no runtime `import()`.
@@ -49,7 +49,7 @@
 ### Task 1: Define the TypeScript runtime boundary
 
 **Files:**
-- Create: `src/server-runtime/index.ts`
+- Create: `src/view/server-runtime.ts`
 - Create: `test/unit/server-runtime/index.test.ts`
 
 **Interfaces:**
@@ -74,10 +74,12 @@ expect(await invoke('blocksToPlainText', '{"blocks":[{"type":"paragraph","data":
   .toBe('Hi there');
 
 await expect(invoke('blocksToHtml', '{"wrong":[]}')).rejects.toThrow('`blocks` array');
+await expect(invoke('blocksToHtml', '{"blocks":[{"type":42,"data":{}}]}'))
+  .rejects.toThrow('valid block objects');
 await expect(invoke('unknown', '{}')).rejects.toThrow('Unsupported Blok runtime operation');
 ```
 
-Also assert `globalThis.blokServerInvoke === invoke` and that `document`/`window` are undefined.
+Also assert `Reflect.get(globalThis, 'blokServerInvoke') === invoke` and that `document`/`window` are undefined.
 
 - [ ] **Step 2: Run the new suite and observe the red failure**
 
@@ -87,11 +89,11 @@ Run:
 yarn vitest run --project=unit test/unit/server-runtime/index.test.ts
 ```
 
-Expected: FAIL because `src/server-runtime/index.ts` does not exist.
+Expected: FAIL because `src/view/server-runtime.ts` does not exist.
 
 - [ ] **Step 3: Implement the minimal boundary**
 
-Implement strict parsers for the two accepted input shapes, switch on the three exact operation names, serialize Markdown blocks as `{ blocks }`, and attach the exported `invoke` function to `globalThis.blokServerInvoke`. Do not add a generic plugin registry or a public npm export.
+Implement strict parsers for the two accepted input shapes, switch on the three exact operation names, serialize Markdown blocks as `{ blocks }`, and attach the exported `invoke` function with `Reflect.set(globalThis, 'blokServerInvoke', invoke)`. Do not add a project-wide ambient global type, a generic plugin registry, or a public npm export.
 
 - [ ] **Step 4: Run the new suite and changed-file lint**
 
@@ -99,7 +101,7 @@ Run:
 
 ```bash
 yarn vitest run --project=unit test/unit/server-runtime/index.test.ts
-npx eslint src/server-runtime/index.ts test/unit/server-runtime/index.test.ts --max-warnings=0
+npx eslint src/view/server-runtime.ts test/unit/server-runtime/index.test.ts --max-warnings=0
 ```
 
 Expected: all boundary tests pass and ESLint exits 0.
@@ -107,7 +109,7 @@ Expected: all boundary tests pass and ESLint exits 0.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server-runtime/index.ts test/unit/server-runtime/index.test.ts
+git add src/view/server-runtime.ts test/unit/server-runtime/index.test.ts
 git commit -m "feat(server): define the embedded runtime boundary"
 ```
 
@@ -123,7 +125,7 @@ git commit -m "feat(server): define the embedded runtime boundary"
 - Modify: `.gitignore`
 
 **Interfaces:**
-- Consumes: `src/server-runtime/index.ts` and Vite's programmatic `build()`.
+- Consumes: `src/view/server-runtime.ts` and Vite's programmatic `build()`.
 - Produces: `buildServerRuntime(outDir?: string): Promise<string>`, returning the absolute path to `blok-server-runtime.js`.
 
 - [ ] **Step 1: Write the failing build tests**
@@ -167,7 +169,7 @@ build: {
   target: 'es2020',
   minify: 'esbuild',
   lib: {
-    entry: resolve(root, 'src/server-runtime/index.ts'),
+    entry: resolve(root, 'src/view/server-runtime.ts'),
     name: 'BlokServerRuntimeBundle',
     formats: ['iife'],
     fileName: () => 'blok-server-runtime.js',
@@ -354,7 +356,7 @@ yarn vitest run --project=unit \
   test/unit/architecture/server-release-wiring.test.ts
 dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj
 npx eslint \
-  src/server-runtime/index.ts \
+  src/view/server-runtime.ts \
   scripts/build-server-runtime.mjs \
   scripts/build-all.mjs \
   test/unit/server-runtime/index.test.ts \

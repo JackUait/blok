@@ -48,7 +48,7 @@ const EXEMPTIONS: Record<string, string> = {
     'not a class at all — it is the VALUE of the `class` key in the HTML-attribute→React-prop map in packages/react/src/view-nodes-to-react.ts, which the harvest cannot tell apart from a class list',
 };
 
-const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build']);
+const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'build', 'Generated']);
 
 /**
  * A token that is SYNTHETIC: it can never be a Tailwind utility and can never be

@@ -12,13 +12,14 @@ const createMockAPI = (): API =>
 
 const createOptions = (
   data: Partial<BookmarkData> = {},
-  config: BookmarkConfig = { endpoint: 'https://api.test/unfurl' }
+  config: BookmarkConfig = { endpoint: 'https://api.test/unfurl' },
+  readOnly = false
 ): BlockToolConstructorOptions<BookmarkData, BookmarkConfig> =>
   ({
     api: createMockAPI(),
     block: {} as never,
     config,
-    readOnly: false,
+    readOnly,
     data: data as BookmarkData,
   });
 
@@ -94,17 +95,6 @@ describe('Bookmark tool', () => {
     expect(card).not.toBeNull();
     expect(card?.textContent).toContain('Hello Title');
     expect(card?.textContent).toContain('Hello Description');
-  });
-
-  it('renders an error state when the fetch fails', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
-    const tool = new Bookmark(createOptions());
-    const root = tool.render();
-
-    tool.onPaste(patternEvent('https://example.com/article'));
-    await flush();
-
-    expect(root.querySelector('[data-blok-testid="bookmark-error"]')).not.toBeNull();
   });
 
   it('saves the stored metadata', () => {
@@ -298,18 +288,90 @@ describe('Bookmark tool', () => {
 
       expect(loading?.classList.contains('blok-bookmark__placeholder')).toBe(true);
     });
+  });
 
-    it('marks the error state with blok-bookmark__placeholder', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+  describe('a failed preview degrades to a plain link', () => {
+    const URL = 'https://example.com/article';
+
+    const renderAfterFailedFetch = async (): Promise<HTMLElement> => {
       const tool = new Bookmark(createOptions());
       const root = tool.render();
 
-      tool.onPaste(patternEvent('https://example.com/article'));
+      tool.onPaste(patternEvent(URL));
       await flush();
 
-      const error = root.querySelector('[data-blok-testid="bookmark-error"]');
+      return root;
+    };
 
-      expect(error?.classList.contains('blok-bookmark__placeholder')).toBe(true);
+    it('persists nothing but the url, so a reload cannot tell the failure happened', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+
+      const tool = new Bookmark(createOptions());
+
+      tool.render();
+      tool.onPaste(patternEvent(URL));
+      await flush();
+
+      expect(tool.save()).toEqual({ url: URL });
+    });
+
+    it('renders a clickable card pointing at the pasted url when the unfurl reports no preview data', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+
+      const root = await renderAfterFailedFetch();
+      const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+      expect(card).not.toBeNull();
+      expect(card?.tagName).toBe('A');
+      expect(card?.getAttribute('href')).toBe(URL);
+      expect(card?.querySelector('[data-role="bookmark-title"]')?.textContent).toBe('example.com');
+      expect(root.querySelector('[data-blok-testid="bookmark-error"]')).toBeNull();
+    });
+
+    it('renders the same card when the request itself rejects', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
+
+      const root = await renderAfterFailedFetch();
+      const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+      expect(card?.getAttribute('href')).toBe(URL);
+      expect(root.querySelector('[data-blok-testid="bookmark-error"]')).toBeNull();
+    });
+
+    it('renders exactly what a reload of the saved block renders', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+
+      const afterFailedPaste = await renderAfterFailedFetch();
+      const afterReload = new Bookmark(createOptions({ url: URL })).render();
+
+      expect(afterFailedPaste.innerHTML).toBe(afterReload.innerHTML);
+    });
+
+    it('keeps the link clickable in read-only mode', () => {
+      const readOnlyRoot = new Bookmark(
+        createOptions({ url: URL }, { endpoint: 'https://api.test/unfurl' }, true)
+      ).render();
+
+      const card = readOnlyRoot.querySelector<HTMLAnchorElement>(
+        '[data-blok-testid="bookmark-card"]'
+      );
+
+      expect(card?.getAttribute('href')).toBe(URL);
+    });
+
+    it('keeps the link clickable when read-only is toggled in place after the failure', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(okResponse({ success: 0 }));
+
+      const tool = new Bookmark(createOptions());
+      const root = tool.render();
+
+      tool.onPaste(patternEvent(URL));
+      await flush();
+      tool.setReadOnly(true);
+
+      const card = root.querySelector<HTMLAnchorElement>('[data-blok-testid="bookmark-card"]');
+
+      expect(card?.getAttribute('href')).toBe(URL);
     });
   });
 

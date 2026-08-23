@@ -18,7 +18,7 @@ import {
 
 export interface BookmarkData extends BookmarkMeta, BlockToolData {}
 
-type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED' | 'ERROR';
+type ToolState = 'EMPTY' | 'LOADING' | 'RENDERED';
 
 /** Generic http(s) URL — bookmark is the fallback claim for any non-embed link. */
 const URL_PATTERN = /https?:\/\/\S+/;
@@ -28,7 +28,8 @@ const URL_PATTERN = /https?:\/\/\S+/;
  *
  * Static OpenGraph card for a pasted link, like Notion's "Create bookmark".
  * Metadata is fetched from a consumer-supplied endpoint (CORS makes a backend
- * mandatory); Blok ships only the contract. Mirrors the Image tool's state machine.
+ * mandatory); Blok ships only the contract. There is no error state: a preview
+ * that cannot be read renders the link itself.
  */
 export class Bookmark implements BlockTool {
   private readonly api: API;
@@ -127,7 +128,12 @@ export class Bookmark implements BlockTool {
         this.renderState();
       })
       .catch(() => {
-        this.state = 'ERROR';
+        // Roughly a third of sites serve no preview data, so a failed fetch is
+        // ordinary, not a fault: the block keeps the `{ url }` set above and
+        // renders it as a plain link. It MUST be the same RENDERED path a
+        // reload takes — save() never persisted a failure, so a reloaded block
+        // carrying this exact data renders the card either way.
+        this.state = 'RENDERED';
         this.renderState();
       });
   }
@@ -146,8 +152,6 @@ export class Bookmark implements BlockTool {
         return this.buildLoading();
       case 'RENDERED':
         return this.buildCard();
-      case 'ERROR':
-        return this.buildError();
       case 'EMPTY':
         return this.buildEmpty();
     }
@@ -159,10 +163,6 @@ export class Bookmark implements BlockTool {
 
   private buildLoading(): HTMLElement {
     return this.buildPlaceholder('bookmark-loading', 'tools.bookmark.loading');
-  }
-
-  private buildError(): HTMLElement {
-    return this.buildPlaceholder('bookmark-error', 'tools.bookmark.error');
   }
 
   private buildPlaceholder(testId: string, i18nKey: string): HTMLElement {

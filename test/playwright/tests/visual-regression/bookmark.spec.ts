@@ -9,8 +9,8 @@ import { ensureBlokBundleBuilt, TEST_PAGE_URL } from '../helpers/ensure-build';
  *
  * Covers every visual variant of the bookmark card (full / partial metadata,
  * hostname fallback, long-content clamping, empty placeholder, read-only) plus
- * the paste-flow LOADING and ERROR states, which are made deterministic by
- * routing the unfurl endpoint.
+ * the paste-flow LOADING state and the failed-unfurl degradation, both made
+ * deterministic by routing the unfurl endpoint.
  *
  * Determinism rules:
  *   - No remote images: the cover image and favicon are inline data: URIs.
@@ -303,7 +303,7 @@ test.describe('Bookmark — visual regression', () => {
     await expect(bookmarkTool(page)).toHaveScreenshot('bookmark-loading.png', SCREENSHOT_OPTIONS);
   });
 
-  test('error state when unfurl fails', async ({ page }) => {
+  test('a failed unfurl degrades to the plain-link card', async ({ page }) => {
     await page.route('**/__unfurl*', (route) => route.fulfill({ status: 500 }));
 
     await createEmptyEditor(page);
@@ -317,8 +317,14 @@ test.describe('Bookmark — visual regression', () => {
     // bookmark — pick "Bookmark" to insert the card (then the unfurl fails).
     await page.locator('[data-blok-item-name="paste-menu-bookmark"]').click();
 
-    await expect(page.locator('[data-blok-testid="bookmark-error"]')).toBeVisible();
+    const card = page.locator(CARD_SELECTOR);
 
-    await expect(bookmarkTool(page)).toHaveScreenshot('bookmark-error.png', SCREENSHOT_OPTIONS);
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute('href', BOOKMARK_URL);
+    await expect(card.locator('[data-role="bookmark-title"]')).toHaveText('example.com');
+
+    // No screenshot on purpose: a failed unfurl leaves the block holding
+    // `{ url }`, which renders the very DOM `bookmark-minimal.png` already
+    // pins. A second baseline of the same pixels would only drift apart.
   });
 });

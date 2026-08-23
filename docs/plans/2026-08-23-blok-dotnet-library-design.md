@@ -48,7 +48,7 @@ Consumer's .NET application
      │    └── IBlokRuntime     ← the boundary: JSON string in, JSON string out
      │         ├─ A: a JS engine embedded in .NET
      │         ├─ B: the same code packaged so any language can run it
-     │         └─ C: an HTTP call to the container (always works, slowest)
+     │         └─ C: an HTTP call to a container (always works, slowest)
      │
      └── Blok.Database         C#: schema, migrations, queries against THEIR database
           │
@@ -83,8 +83,12 @@ Nothing crosses `IBlokRuntime` except text: "here is a document, give me Markdow
 This is what makes the runtime choice low-stakes. **The consumer codes against a C#
 interface; what sits behind it is our implementation detail and is replaceable without
 touching a line of their code.** If the embedded engine does not work, we swap in the
-portable package; if that fails, we swap in an HTTP call to the container — slower, but
-functional. The probe (below) therefore selects an implementation, it does not decide
+portable package; if that fails, we swap in an HTTP call — slower, but functional.
+
+**Fallback C is not "the Go binary grows conversion endpoints".** It cannot run the
+bundle. C means *the same bundle inside a minimal Node image* — no new logic, a different
+host — and that image is built only if we ever need it. Nobody should teach Go to convert
+documents. The probe (below) therefore selects an implementation, it does not decide
 whether the design lives.
 
 Practical constraints on the boundary, to be settled when it is built:
@@ -197,9 +201,20 @@ that teaches nothing.
 - A DOM-free rewrite of `blocksToMarkdown`, published under `/markdown`. Needed on
   *every* path including the container, so it is decidable now. `src/view/emitters.ts`
   is already DOM-free and was modelled on it — the traversal to copy exists in-repo.
-- A **server entry bundle**: one file exposing exactly the boundary functions, string in,
-  string out, no dynamic import, synchronous where possible. This is the real JS-side
-  deliverable, not merely an added export.
+- A **boundary bundle**: one file exposing exactly the boundary functions, string in,
+  string out, dynamic imports inlined, synchronous where possible. This is the real
+  JS-side deliverable, not merely an added export. It needs its **own build config**
+  patterned on `vite.config.iife.mjs`, not an entry added to `vite.config.mjs`: the
+  multi-entry ES build splits shared chunks, which is the opposite of what an embedded
+  single file needs — and `vite.config.mjs` is on the do-not-touch list in CLAUDE.md.
+  Add it to `scripts/build-all.mjs` as its own task. **Naming is open**: `server` is
+  already taken by the Go package, so `dist/server.mjs` beside `packages/server` would
+  confuse.
+- **Open decision: is the bundle published to npm at all?** Recommendation: initially no.
+  If it exists only as an embedded resource inside the .NET package, it needs no
+  `exports` entry and no hand-authored declaration, and the published-types law does not
+  apply. Revisit if fallback C — or another language host — ever needs it. If it is
+  published, that law applies in full.
 
 **2. An empty package in their feed.** Publishing pipeline, feed access, signing, and
 embedding the JS as a resource are their own unknowns on a stack we do not write daily.
@@ -218,7 +233,12 @@ substitute for it. This is **new Blok work**, and it is generally useful: any co
 translating documents needs it.
 
 **6. The container, in parallel with everything above.** It is built and **not released**;
-nothing can be used until it is. Then: the upload-forwarding driver (hand bytes to the
+nothing can be used until it is — and releasing it is not just `yarn release`. The npm
+artifact is a wrapper (`bin/blok-server.mjs`, `files: ["bin"]`) that downloads the Go
+binary from the GitHub release, and **`goreleaser check` has never run** — it was not
+installed while the service was written. So the container track starts with: validate
+goreleaser, get binaries onto the GitHub release, confirm the wrapper resolves them.
+Only then: the upload-forwarding driver (hand bytes to the
 consumer's existing upload endpoint instead of our own store — this is what makes
 `/upload-by-url` useful to a consumer who already has a CDN), and editor wiring plan
 tasks 1–4 as written. Task 5 (`persistence`) stays general Blok work; KB has its own save
@@ -244,3 +264,34 @@ if ever, with their own design.
   retelling of Blok rules. Blok is not growing a differ.
 - **HTML → document** (`HtmlToBlokConverter`). Its only callers are four one-off legacy
   import jobs. It dies with them; growing a Blok counterpart would be wasted work.
+
+---
+
+## What moves in Blok itself
+
+Per-asset fate of what this repository already holds.
+
+| Asset | Fate | Blocked by |
+|---|---|---|
+| `packages/server` (Go) | Scope unchanged — it *is* the dangerous half. Gains the upload-forwarding driver. | Its first release: `goreleaser` has never run, and the npm wrapper resolves binaries from the GitHub release |
+| `2026-08-23-editor-server-wiring-plan.md` | Tasks 1–3 stand, **container paths only**. Task 4 is **already done** (`f8083d54`). Task 5 (`persistence`) stays general Blok work, off KB's rails | — |
+| `src/markdown` | The largest change in Blok: `blocksToMarkdown` rewritten DOM-free and published | Nothing — needed on every path |
+| *(new)* boundary bundle | New artifact, own build config, own `build-all.mjs` task, naming open | The probe defines its exact surface |
+| `src/tools/database` | Query-shape refactor, then `queryRows`/`queryGroups` added to `DatabaseAdapter` (today a write mirror with no read path) | Comes last on purpose |
+| `packages/presets` | **Untouched.** Client-side storage presets stay path 1 | — |
+
+### Release machinery
+
+Nothing here iterates workspaces automatically — `scripts/build-all.mjs`, `.github/workflows/ci.yml`,
+and `scripts/release.mjs` all walk explicit lists. Every new artifact is added to each of
+them deliberately: the boundary bundle to the build graph, the .NET package to CI and to
+the release flow.
+
+**Open decision: where the .NET package is published.** Public registry, or mirrored into
+the consumer's own feed the way `@dodopizza/blok` is mirrored today via the GPR full-tarball
+rewrite. The mechanism exists; the choice is not made.
+
+### Documentation
+
+The docs site is canonical for public API (not the README). Both publishing
+`blocksToMarkdown` and shipping the .NET package require a docs pass.

@@ -28,6 +28,9 @@ export async function buildServerRuntime(outDir = defaultOutDir) {
         fileName: () => 'blok-server-runtime.js',
       },
     },
+    resolve: {
+      conditions: ['worker'],
+    },
     define: {
       'NODE_ENV': JSON.stringify('production'),
       'process.env.NODE_ENV': JSON.stringify('production'),

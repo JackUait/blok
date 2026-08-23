@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jint" Version="4.16.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Generated/blok-server-runtime.js"
+                      LogicalName="Blok.Server.Runtime.blok-server-runtime.js" />
+  </ItemGroup>
+
+  <Target Name="BuildBlokServerRuntime" BeforeTargets="PrepareResourceNames">
+    <Exec Command="node &quot;$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs&quot;" />
+  </Target>
+</Project>

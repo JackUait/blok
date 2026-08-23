@@ -1,6 +1,7 @@
 import type { LooseOutputData } from '../../types/data-formats/output-data';
 import { markdownToBlocks } from '../markdown';
-import { blocksToHtml, blocksToPlainText } from '../view';
+import { blocksToHtml } from '../view/blocks-to-html';
+import { blocksToPlainText } from '../view/blocks-to-plain-text';
 
 type RuntimeOperation = 'markdownToBlocks' | 'blocksToHtml' | 'blocksToPlainText';
 

@@ -20,6 +20,10 @@ describe('indexedDBStorage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     indexedDB.deleteDatabase('blok-assets-test');
+    // Separate db from the leak test below: a connection the source code
+    // fails to close (the exact bug under test) blocks a later
+    // deleteDatabase on the same name, which would hang this beforeEach.
+    indexedDB.deleteDatabase('blok-assets-test-read-fail');
   });
 
   afterEach(() => {
@@ -51,5 +55,35 @@ describe('indexedDBStorage', () => {
   it('passes through a plain http url untouched', async () => {
     expect(await resolveBlokObjectUrl('https://example.com/a.png', { dbName: 'blok-assets-test' }))
       .toBe('https://example.com/a.png');
+  });
+
+  it('closes the db handle even when the write fails, so a later deleteDatabase does not hang', async () => {
+    const closeSpy = vi.spyOn(IDBDatabase.prototype, 'close');
+
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    const uploader = indexedDBStorage({ dbName: 'blok-assets-test' });
+
+    await expect(
+      requireUploadByFile(uploader)(new File(['bytes'], 'a.png', { type: 'image/png' }), { kind: 'image' })
+    ).rejects.toThrow('QuotaExceededError');
+
+    expect(closeSpy).toHaveBeenCalled();
+  });
+
+  it('closes the db handle even when the read fails', async () => {
+    const closeSpy = vi.spyOn(IDBDatabase.prototype, 'close');
+
+    vi.spyOn(IDBObjectStore.prototype, 'get').mockImplementation(() => {
+      throw new Error('read boom');
+    });
+
+    await expect(
+      resolveBlokObjectUrl('blok:asset/whatever', { dbName: 'blok-assets-test-read-fail' })
+    ).rejects.toThrow('read boom');
+
+    expect(closeSpy).toHaveBeenCalled();
   });
 });

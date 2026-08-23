@@ -37,8 +37,11 @@ export function indexedDBStorage(options: IndexedDBStorageOptions = {}): BlokUpl
       const key = crypto.randomUUID();
       const db = await openDb(dbName);
 
-      await tx(db, 'readwrite', (store) => store.put({ blob: file, name: file.name, type: file.type }, key));
-      db.close();
+      try {
+        await tx(db, 'readwrite', (store) => store.put({ blob: file, name: file.name, type: file.type }, key));
+      } finally {
+        db.close();
+      }
 
       // A blok: reference rather than a blob: URL: blob URLs are scoped to the
       // page that made them, so saving one produces a broken image after reload.
@@ -53,15 +56,17 @@ export async function resolveBlokObjectUrl(url: string, options: IndexedDBStorag
   }
 
   const db = await openDb(options.dbName ?? DEFAULT_DB);
-  const record = await tx<{ blob: Blob } | undefined>(
+  const record = await readRecord(db, url.slice(PREFIX.length));
+
+  return record ? URL.createObjectURL(record.blob) : null;
+}
+
+function readRecord(db: IDBDatabase, key: string): Promise<{ blob: Blob } | undefined> {
+  return tx<{ blob: Blob } | undefined>(
     db,
     'readonly',
     // IDBObjectStore.get() returns IDBRequest<any> per lib.dom.d.ts — the cast
     // narrows it to what this store actually holds.
-    (store) => store.get(url.slice(PREFIX.length)) as IDBRequest<{ blob: Blob } | undefined>
-  );
-
-  db.close();
-
-  return record ? URL.createObjectURL(record.blob) : null;
+    (store) => store.get(key) as IDBRequest<{ blob: Blob } | undefined>
+  ).finally(() => db.close());
 }

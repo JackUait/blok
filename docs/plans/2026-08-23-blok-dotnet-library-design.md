@@ -1,6 +1,10 @@
 # Blok server as a .NET library and host
 
-Status: **approved direction, not implemented.**
+Status: **implementation started.** The embedded-runtime probe passed on
+2026-08-24: Jint 4.16.1 loaded the real self-contained bundle and passed Markdown
+(including math), HTML, plain-text, 64-call concurrency, and cancellation-recovery tests.
+The runtime choice is now Jint; ClearScript remains only a fallback if a later Blok
+feature exceeds Jint's compatibility.
 
 This document supersedes the Go implementation decision in
 `2026-08-22-backend-service-design.md`. The existing HTTP contracts and security
@@ -142,6 +146,12 @@ The server moves to C#. Blok's document semantics do not.
 These rules are bundled once from this repository and embedded as a resource in the
 NuGet package. They are not transcribed into C#. The same embedded resource is used by
 the standalone host, so the two delivery forms cannot drift.
+
+The bundle resolves package exports under the `worker` condition. Vite's default client
+conditions select browser implementations, and `decode-named-character-reference`
+creates a DOM element at module load. The worker condition selects its pure implementation
+and is pinned by loading the built resource in the .NET test suite. Do not replace it
+with the default Vite condition set or a DOM shim.
 
 ### Runtime boundary
 

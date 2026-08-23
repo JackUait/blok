@@ -145,13 +145,19 @@ describe('server release wiring', () => {
     ).toEqual([]);
   });
 
-  it('list 7/7 — CI runs the Go suite', () => {
-    const ci = parse(read('.github/workflows/ci.yml')) as { jobs: Record<string, { steps?: { run?: string }[] }> };
+  it('list 7/7 — CI runs both server implementations during the transition', () => {
+    const ci = parse(read('.github/workflows/ci.yml')) as {
+      jobs: Record<string, { steps?: { run?: string; uses?: string }[] }>;
+    };
+    const steps = ci.jobs.server?.steps ?? [];
+    const runs = steps.map((step) => step.run).join('\n');
+    const actions = steps.map((step) => step.uses).join('\n');
 
-    expect(ci.jobs.server, 'no `server` job in ci.yml — the Go suite would never run').toBeDefined();
-    expect(
-      (ci.jobs.server.steps ?? []).map((step) => step.run).join('\n')
-    ).toContain('go test ./...');
+    expect(ci.jobs.server, 'no `server` job in ci.yml — neither server suite would run').toBeDefined();
+    expect(actions).toContain('./.github/actions/setup-node-deps');
+    expect(actions).toContain('actions/setup-dotnet@v4');
+    expect(runs).toContain('go test ./...');
+    expect(runs).toContain('dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj');
   });
 
   it('keeps the server package on the family version', () => {

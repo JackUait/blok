@@ -74,6 +74,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -83,9 +86,17 @@ jobs:
           # every declared dependency is still unused.
           cache-dependency-path: packages/server/go.sum
 
-      - name: Test
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test Go reference
         working-directory: packages/server
         run: go vet ./... && go test ./...
+
+      - name: Test .NET runtime
+        run: dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj
 
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})

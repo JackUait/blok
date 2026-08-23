@@ -1,3 +1,4 @@
+import type { AssetKind } from '../../../types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
 
 export interface SupabaseLike {
@@ -15,13 +16,13 @@ export interface SupabaseLike {
 
 export interface SupabaseStorageOptions {
   /** Bucket name, or a function of the asset kind for per-kind buckets. */
-  bucket?: string | ((kind: string) => string);
+  bucket?: string | ((kind: AssetKind) => string);
   /** Object path. Defaults to a random name that keeps the original extension. */
   path?: (file: File, ctx: UploadContext) => string;
 }
 
 export function supabaseStorage(client: SupabaseLike, options: SupabaseStorageOptions = {}): BlokUploader {
-  const bucketFor = (kind: string): string =>
+  const bucketFor = (kind: AssetKind): string =>
     typeof options.bucket === 'function' ? options.bucket(kind) : options.bucket ?? 'blok';
 
   return {

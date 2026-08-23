@@ -34,13 +34,12 @@ describe('supabaseStorage', () => {
 
   it('uploads into the configured bucket and returns the public url', async () => {
     const { client, from, upload } = fakeClient();
+    const file = new File(['x'], 'a.png', { type: 'image/png' });
 
-    const result = await requireUploadByFile(supabaseStorage(client, { bucket: 'media' }))(
-      new File(['x'], 'a.png', { type: 'image/png' }),
-      { kind: 'image' }
-    );
+    const result = await requireUploadByFile(supabaseStorage(client, { bucket: 'media' }))(file, { kind: 'image' });
 
     expect(from).toHaveBeenCalledWith('media');
+    expect(upload.mock.calls[0][1]).toBe(file);
     expect(upload.mock.calls[0][2]).toMatchObject({ contentType: 'image/png' });
     expect(result.url).toBe('https://sb.example.com/stored/path.png');
     expect(result.fileName).toBe('a.png');

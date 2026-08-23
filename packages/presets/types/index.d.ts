@@ -95,7 +95,7 @@ export interface SupabaseLike {
 
 export interface SupabaseStorageOptions {
   /** Bucket name, or a function of the asset kind for per-kind buckets. */
-  bucket?: string | ((kind: string) => string);
+  bucket?: string | ((kind: AssetKind) => string);
   /** Object path. Defaults to a random name that keeps the original extension. */
   path?: (file: File, ctx: UploadContext) => string;
 }
@@ -112,7 +112,7 @@ export interface SignRequest {
   fileName: string;
   mimeType: string;
   size: number;
-  kind: string;
+  kind: AssetKind;
 }
 
 /** What the signer hands back so the browser can PUT straight to the bucket. */
@@ -167,8 +167,9 @@ export function indexedDBStorage(options?: IndexedDBStorageOptions): BlokUploade
 
 /**
  * Turns a `blok:asset/<id>` reference back into a `blob:` URL an `<img>` can
- * display. Passes a plain `http(s)` URL through untouched, so a host can call
- * it on every image without checking the scheme first. Resolves `null` when
- * the reference is not (or no longer) stored.
+ * display. Any value that is not a `blok:asset/` reference — `http(s)`, or
+ * anything else — is returned unchanged; validating that a URL is safe to
+ * render remains the host's job. Resolves `null` when the reference is not
+ * (or no longer) stored.
  */
 export function resolveBlokObjectUrl(url: string, options?: IndexedDBStorageOptions): Promise<string | null>;

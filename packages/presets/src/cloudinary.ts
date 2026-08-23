@@ -1,3 +1,4 @@
+import type { AssetKind } from '../../../types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
 import { uploadWithProgress } from './upload-xhr';
 
@@ -10,7 +11,7 @@ export interface CloudinaryStorageOptions {
 
 // Cloudinary picks the pipeline from the resource type in the path, so the
 // asset kind must map onto it. Audio rides the video pipeline by their design.
-const RESOURCE_TYPE: Record<string, string> = {
+const RESOURCE_TYPE: Record<AssetKind, string> = {
   image: 'image',
   video: 'video',
   audio: 'video',
@@ -18,10 +19,12 @@ const RESOURCE_TYPE: Record<string, string> = {
 };
 
 export function cloudinaryStorage(options: CloudinaryStorageOptions): BlokUploader {
-  const endpointFor = (kind: string): string =>
+  // `Record<AssetKind, string>` covers every kind the compiler knows about, so
+  // this fallback only fires for a kind an untyped JS caller invented.
+  const endpointFor = (kind: AssetKind): string =>
     `https://api.cloudinary.com/v1_1/${options.cloudName}/${RESOURCE_TYPE[kind] ?? 'raw'}/upload`;
 
-  const send = async (kind: string, filePart: File | string, onProgress?: (percent: number) => void): Promise<UploadedAsset> => {
+  const send = async (kind: AssetKind, filePart: File | string, onProgress?: (percent: number) => void): Promise<UploadedAsset> => {
     const body = new FormData();
 
     body.append('file', filePart);

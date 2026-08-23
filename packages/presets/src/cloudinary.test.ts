@@ -50,6 +50,22 @@ describe('cloudinaryStorage', () => {
     expect(result.url).toBe('https://res.cloudinary.com/demo/image/upload/v1/a.png');
   });
 
+  it('sends the upload_preset and folder in the multipart body', async () => {
+    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({
+      status: 200,
+      text: '{"secure_url":"https://res.cloudinary.com/demo/image/upload/v1/a.png"}',
+    });
+
+    await requireUploadByFile(cloudinaryStorage({ ...preset, folder: 'uploads' }))(
+      new File(['x'], 'a.png', { type: 'image/png' }),
+      { kind: 'image' }
+    );
+
+    const body = spy.mock.calls[0][0].body as FormData;
+    expect(body.get('upload_preset')).toBe('blok-unsigned');
+    expect(body.get('folder')).toBe('uploads');
+  });
+
   // Cloudinary routes by resource type in the URL, so the kind must pick it.
   it('uses the video endpoint for video and audio, and raw for files', async () => {
     const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"secure_url":"u"}' });

@@ -81,10 +81,11 @@ export async function startServer(options: StartServerOptions): Promise<RunningS
 
   return {
     baseUrl,
-    request: (method, path, requestOptions = {}) => sendRequest(method, new URL(path, baseUrl), {
-      ...requestOptions,
-      parseJson: requestOptions.parseJson ?? true,
-    }),
+    request: (method, path, requestOptions = {}) => sendRequest(
+      method,
+      new URL(path, baseUrl),
+      requestOptions,
+    ),
     stop: () => serverProcess.stop(),
   };
 }

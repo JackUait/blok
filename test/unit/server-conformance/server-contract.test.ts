@@ -16,10 +16,26 @@ it('starts a supplied server and reports its version', async () => {
   const server = await startServer({ args: ['--listen', '127.0.0.1:0', '--storage-dir', ''] });
 
   try {
-    expect(await server.request('GET', '/health')).toMatchObject({
+    expect(await server.request('GET', '/health', { parseJson: true })).toMatchObject({
       status: 200,
       headers: { 'content-type': 'application/json' },
       json: { status: 'ok', version: expect.any(String) as unknown },
+    });
+  } finally {
+    await server.stop();
+  }
+});
+
+it('returns a plain-text response without parsing JSON by default', async () => {
+  const server = await startServer({ args: ['--listen', '127.0.0.1:0', '--storage-dir', ''] });
+
+  try {
+    const response = await server.request('GET', '/missing');
+
+    expect(response).toMatchObject({
+      status: 404,
+      json: undefined,
+      text: '404 page not found\n',
     });
   } finally {
     await server.stop();

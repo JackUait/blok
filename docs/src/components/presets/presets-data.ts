@@ -55,6 +55,7 @@ export const presets: PresetSection[] = [
     storageSetup: [
       'A server that answers POST {baseUrl}/upload (multipart) and POST {baseUrl}/upload-by-url ({ url }) with { url, fileName? } JSON.',
       "Where the endpoint stores the file — S3, a disk volume, Supabase — is entirely the endpoint's decision; this preset never sees it.",
+      'The URL your /upload-by-url endpoint receives is user-supplied — validate it server-side and block internal/private addresses before fetching it, or you have built an SSRF vector.',
     ],
     usageExample: `import { fetchStorage } from '@bloklabs/presets';
 
@@ -75,7 +76,7 @@ new Blok({
     configOptions: [
       {
         option: 'bucket',
-        type: 'string | ((kind: string) => string)',
+        type: 'string | ((kind: AssetKind) => string)',
         default: '"blok"',
         description: 'Bucket name, or a function of the asset kind for per-kind buckets.',
       },

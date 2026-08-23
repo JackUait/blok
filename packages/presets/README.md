@@ -48,7 +48,7 @@ import { fetchStorage } from '@bloklabs/presets';
 new Blok({ holder: 'editor', uploader: fetchStorage({ baseUrl: 'https://api.myapp.com' }) });
 ```
 
-Your own backend does the actual storing; this preset just calls it. It must answer `POST {baseUrl}/upload` (multipart) and `POST {baseUrl}/upload-by-url` (`{ url }` JSON), both returning `{ url, fileName? }`.
+Your own backend does the actual storing; this preset just calls it. It must answer `POST {baseUrl}/upload` (multipart) and `POST {baseUrl}/upload-by-url` (`{ url }` JSON), both returning `{ url, fileName? }`. The URL you receive on `/upload-by-url` is user-supplied — validate it server-side and block requests to internal/private addresses before fetching it, or the endpoint becomes an SSRF vector.
 
 ### supabaseStorage
 
@@ -96,7 +96,7 @@ new Blok({ holder: 'editor', uploader: indexedDBStorage() });
 const displayUrl = await resolveBlokObjectUrl(asset.url);
 ```
 
-**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data — nothing is actually shared or backed up. It exists because Blok's built-in fallback (a `blob:` URL) doesn't even survive a page reload, which makes local demos and prototypes look broken before you've wired up real storage. `uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL — resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset. If you pass a custom `dbName` to `indexedDBStorage()`, pass the same `dbName` to `resolveBlokObjectUrl(url, { dbName })` — a mismatch resolves to `null` with no error, not a thrown exception.
+**Not for production.** This preset stores uploaded bytes in the visitor's own browser via IndexedDB. They are gone on another device, in another browser, or the moment the user clears site data — nothing is actually shared or backed up. It exists because Blok's built-in fallback (a `blob:` URL) doesn't even survive a page reload, which makes local demos and prototypes look broken before you've wired up real storage. `uploadByFile` returns a `blok:asset/…` reference, not a directly usable URL — resolve it with `resolveBlokObjectUrl` wherever you render an uploaded asset. If you pass a custom `dbName` to `indexedDBStorage()`, pass the same `dbName` to `resolveBlokObjectUrl(url, { dbName })` — a mismatch resolves to `null` with no error, not a thrown exception. Each call to `resolveBlokObjectUrl` mints a fresh `blob:` URL — nothing is cached, and nothing is revoked. Call `URL.revokeObjectURL()` yourself once a displayed asset is no longer needed, or a view that re-renders it repeatedly will leak memory.
 
 ## Docs
 

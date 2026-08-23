@@ -66,15 +66,15 @@ func New(opts Options) http.Handler {
 	// Never gated: a readiness probe carries neither a pass nor an Origin.
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 
-	if !opts.UnfurlDisabled {
+	// A route is registered only once its dependency exists. An unwired handler
+	// would dereference a nil interface and take the connection down on the
+	// first request, while 404 is what "this deployment does not do previews or
+	// uploads" should look like — the same shape as UnfurlDisabled, which
+	// leaves the route unregistered rather than making the handler refuse.
+	if opts.Fetcher != nil && !opts.UnfurlDisabled {
 		s.register(http.MethodGet, "/unfurl", s.handleUnfurl)
 	}
 
-	// A route is registered only once its dependency exists. An unwired handler
-	// would dereference a nil interface and take the connection down on the
-	// first request, while 404 is what "this deployment does not do uploads"
-	// should look like — the same shape as UnfurlDisabled, which leaves the
-	// route unregistered rather than making the handler refuse.
 	if opts.Store != nil {
 		s.register(http.MethodPost, "/upload", s.handleUpload)
 

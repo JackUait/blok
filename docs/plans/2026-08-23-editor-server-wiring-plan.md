@@ -1,5 +1,11 @@
 # Editor Server Wiring Implementation Plan
 
+> **Status amendment:** the wire contract remains, but the server target is the C# host
+> or in-process ASP.NET routes. Tickets apply only when requests cross into a standalone
+> host; in-process routes use the consumer's existing identity. Bookmark degradation is
+> already implemented. See
+> [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Collapse the backend wiring a consumer writes today — an uploader, a bookmark endpoint, and save/load plumbing — into one config key, and make link previews degrade to a plain link instead of an error.

@@ -1,5 +1,10 @@
 # Blok Backend Service Implementation Plan
 
+> **Status:** historical implementation record; do not continue this plan. The Go
+> service it produced is frozen as a parity oracle and will be deleted after the C#
+> replacement passes the removal gate in
+> [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship `blok-server` — a small Go sidecar that handles file uploads and link previews for Blok consumers, so they write no backend code for either.

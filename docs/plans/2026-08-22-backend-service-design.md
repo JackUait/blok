@@ -1,5 +1,10 @@
 # Blok Backend Service — Design
 
+> **Status:** superseded for implementation language and delivery shape by
+> [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
+> Its wire contracts, consumer paths, and security invariants remain inputs to the C#
+> design. Go is not a permanent implementation.
+
 ## Goal
 
 Let a Blok consumer get a fully working editor — uploads, link previews, and a

@@ -1,5 +1,10 @@
 # Database Block — Architecture for Scale
 
+> **Status amendment:** the query shape and block model remain. The remote source is
+> now implemented by Blok's C# package inside the consumer's application (or the same
+> code in the standalone host), not by consumer-written endpoints and not by Go. See
+> [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
+
 ## The question
 
 Notion-style databases are assumed to require "real" databases per collection,

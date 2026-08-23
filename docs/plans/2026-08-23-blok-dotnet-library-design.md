@@ -1,297 +1,483 @@
-# Blok's server side as a .NET library — design
+# Blok server as a .NET library and host
 
-Status: **design approved in conversation 2026-08-23, not implemented.**
-Supersedes part of `2026-08-22-backend-service-design.md` (see §Amendments).
+Status: **approved direction, not implemented.**
 
----
-
-## The goal
-
-A consumer running a .NET stack (concretely: Dodo KnowledgeBase) adds a package from
-their own NuGet feed, writes one line in `Startup`, and gets Blok's server side. They
-write no document logic, no storage code, no conversion code, and no HTTP handlers.
-
-The floor is not literal zero: they implement one authorization callback and supply one
-connection string. Everything else is ours.
-
-## Why this exists
-
-KB carries **~3800 lines of C# that re-describe Blok's document model** — Markdown in
-both directions, HTML import, text extraction for translation, block diffing, plus its
-own copies of every Blok constant (block types, list styles, colours, alignments, quote
-sizes, embed keys) and a test suite for all of it.
-
-That code drifts by construction. Its own artefacts show it: the converter README
-documents a "new flat list model" and a "legacy `items` model" side by side, and
-`ContentJsonTextExtractor` carries a `// Support both legacy format (data.text) and new
-nested format (data.items[].content)` branch. Every Blok release widens the gap silently.
-
-Blok already holds this knowledge, written once, in TypeScript. The task is to let a
-.NET consumer reach **that code**, not a retelling of it.
+This document supersedes the Go implementation decision in
+`2026-08-22-backend-service-design.md`. The existing HTTP contracts and security
+invariants remain. The Go code is now a temporary reference implementation used only
+while the C# replacement is proved.
 
 ---
 
-## The architecture
+## Goal
 
-A single package family, deliberately **not** uniform inside. Three kinds of work live
-in it and each has a different correct implementation.
+A .NET consumer such as Dodo KnowledgeBase installs a NuGet package and runs Blok's
+server code inside its existing application. It does not write routes, document
+converters, database queries, schema migrations, or storage logic for the database
+block.
 
-```
-Consumer's .NET application
-│
-└── Blok.AspNetCore            one line in Startup: DI + route mapping
-     │                         routes live INSIDE their app, so their auth,
-     │                         their antiforgery, their logging already cover them
-     │
-     ├── Blok.Documents        C# API: ToMarkdown / ToPlainText / FromMarkdown / ToHtml
-     │    │
-     │    └── IBlokRuntime     ← the boundary: JSON string in, JSON string out
-     │         ├─ A: a JS engine embedded in .NET
-     │         ├─ B: the same code packaged so any language can run it
-     │         └─ C: an HTTP call to a container (always works, slowest)
-     │
-     └── Blok.Database         C#: schema, migrations, queries against THEIR database
-          │
-          └── IBlokAuthorization  ← the only interface the consumer implements
+The same C# implementation also ships as a standalone executable and Docker image for
+consumers that do not run .NET. There is one server implementation, not a C# library
+beside a permanent Go service.
+
+The unavoidable consumer-specific inputs are configuration, not a second backend:
+
+- a database connection string;
+- a small authorization implementation that answers whether the current user may read
+  or change a document;
+- optional mapping to the consumer's document table when Blok should clean up database
+  rows after document deletion.
+
+## One implementation, two delivery forms
+
+```text
+                              Blok's TypeScript rules
+                         (embedded, self-contained bundle)
+                                        │
+                                        ▼
+                              Blok.Server (C# core)
+                         documents · databases · uploads
+                         unfurl · tickets · wire contracts
+                              │                     │
+                 ┌────────────┘                     └────────────┐
+                 ▼                                               ▼
+       Blok.Server.AspNetCore                           Blok.Server.Host
+       NuGet in an existing app                        standalone ASP.NET app
+       existing auth and logging                       config from flags and env
+                 │                                               │
+                 ▼                                               ▼
+       Dodo KnowledgeBase                         Docker / self-contained binaries
+                                                  / @bloklabs/server npm wrapper
 ```
 
-### What may go in, and what may not
+Both forms call the same feature classes and map the same handlers. The standalone host
+contains startup and configuration only. It must not fork business logic from the
+NuGet path.
 
-| Kind of work | Where it lives | Why |
-|---|---|---|
-| Document rules (what a list is, how a callout becomes Markdown, what counts as text) | Our real TypeScript, run through `IBlokRuntime` | Re-writing them in C# is exactly the trap KB is in now |
-| Talking to the consumer's database | Plain C# | No Blok knowledge is involved in running a query |
-| Fetching consumer-supplied URLs (link previews, upload-by-URL) | **Not in the package. Stays the container.** | See below |
+### .NET consumer
 
-**Outbound fetching stays a container on purpose.** A link preview means something
-fetches a URL a user pasted. Inside the consumer's own process, that makes their main
-service the thing issuing requests to arbitrary addresses from inside their network,
-with their credentials and their network position. A separate process with its own
-network policy is *better* isolation, not a workaround.
+The intended KB integration is ordinary ASP.NET registration:
 
-So the split is: **the library is the safe half (document rules and the consumer's own
-data); the container is the dangerous half (untrusted outbound traffic and file bytes).**
+```csharp
+builder.Services
+    .AddBlokServer()
+    .UseMySql(connectionString)
+    .UseAuthorization<KnowledgeBaseBlokAuthorization>();
 
----
+app.MapBlokServer("/api/blok");
+```
 
-## The four load-bearing decisions
+This registration shape is the public design contract: one server builder, one MySQL
+provider call, one authorization implementation, and one route mapping. Names may be
+polished without adding another integration concept. KB does not implement a
+`DatabaseAdapter`, controller, query builder, migration, or Blok document converter.
 
-### 1. The boundary is a JSON string, one call, no object marshalling
+The first database provider is MySQL because KB uses MySQL. We do not design a provider
+matrix before a second consumer asks for one.
 
-Nothing crosses `IBlokRuntime` except text: "here is a document, give me Markdown".
+### Non-.NET consumer
 
-This is what makes the runtime choice low-stakes. **The consumer codes against a C#
-interface; what sits behind it is our implementation detail and is replaceable without
-touching a line of their code.** If the embedded engine does not work, we swap in the
-portable package; if that fails, we swap in an HTTP call — slower, but functional.
+The standalone host keeps the current product surface:
 
-**Fallback C is not "the Go binary grows conversion endpoints".** It cannot run the
-bundle. C means *the same bundle inside a minimal Node image* — no new logic, a different
-host — and that image is built only if we ever need it. Nobody should teach Go to convert
-documents. The probe (below) therefore selects an implementation, it does not decide
-whether the design lives.
+```text
+docker run bloklabs/server ...
+# or
+npx @bloklabs/server ...
+```
 
-Practical constraints on the boundary, to be settled when it is built:
+The image name, CLI name, route paths, request bodies, response bodies, flags, and
+environment variables remain compatible with the existing Go implementation wherever
+the Go implementation already defines them. The npm package changes only which binary
+it downloads.
 
-- ASP.NET serves requests concurrently; a JS engine instance is single-threaded. A pool
-  of pre-initialised instances is required. Parsing the bundle per request is not viable.
-- `markdownToBlocks` is `async` and lazily `import()`s the math extensions. The bundle
-  must expose a synchronous entry point with math inlined, or the boundary must carry a
-  promise — decide when building, prefer the former.
-
-### 2. Routes live inside the consumer's application — which dissolves the auth problem
-
-An earlier design had the browser carry a signed pass to a separate service. With the
-library that is unnecessary: the request already passed through the consumer's own
-authentication. Passes, secrets, CORS, and a separate rate limiter all disappear from
-this path.
-
-Exactly one question remains that we cannot answer for them: *may this person read this
-document?* That is their model — spaces, roles, countries, tenants. `IBlokAuthorization`
-is that question and nothing else. It is the only code the consumer writes.
-
-### 3. The meaning of a filter is defined once — in our code, not in SQL
-
-Tempting error: since database access is C#, write "filter by status, sort by date" in
-C# too. But what a filter *means*, how sorting treats empty values, and how positions
-order rows are **Blok rules** — they already exist in the in-memory implementation in
-TypeScript. A second copy in C# would drift like KB's converters do.
-
-Therefore: our code interprets the view config and emits a **neutral query description**
-(which fields, which comparisons, which order, which page). The C# half turns that
-description into SQL. Meaning lives in one place; only the SQL dialect is C#.
-
-### 4. The bundled JS ships inside the package; there is one version number
-
-The package is built from this repository, in the same release, with our code embedded
-as a resource. There is no "library version" separate from the Blok version. Nothing can
-drift because there is no second copy.
+The standalone executable is published with `dotnet publish` as self-contained
+platform artifacts. NativeAOT is not a goal: the embedded JavaScript runtime and server
+libraries must not be distorted merely to reduce binary size.
 
 ---
 
-## What this fixes that the service design could not
+## Package boundaries
 
-- **Translations stay whole.** Once database rows live outside the document, a consumer
-  walking the document JSON stops seeing them — silently. In-process, the library can
-  return the full text of an article *including* its rows in one call, so their
-  translation pipeline never learns where rows live.
-- **Deletion becomes solvable.** Rows live in the consumer's own database under a schema
-  we ship, so cascade can be expressed in the database itself and fires on their ordinary
-  article deletion, with no code on their side.
+Start with the smallest package family that expresses the real boundaries:
 
----
+| Project | Responsibility |
+|---|---|
+| `Blok.Server` | Feature services, wire contracts, document runtime boundary, upload and database abstractions |
+| `Blok.Server.AspNetCore` | DI registration, endpoints, authentication hooks, limits, CORS, health checks |
+| `Blok.Server.AspNetCore.MySql` | MySQL schema, migrations, row queries, group counts, and document cleanup; depends on the two packages above |
+| `Blok.Server.Host` | Standalone process: reads config and composes the same packages |
 
-## Honest costs
+KB installs `Blok.Server.AspNetCore.MySql` as its one direct package; NuGet brings the
+lower layers transitively. Splitting more projects before a real dependency boundary
+appears is out of scope.
 
-- We publish and maintain a .NET package: released in lockstep with the npm package, CI
-  on a stack this team does not write daily, and support questions in a language we do
-  not use.
-- **`Blok.Database` is real C# logic that we own** — schema, migrations, query building.
-  The "no rules in C#" argument does not cover it, and should not be stretched to. It
-  does not need to: that half has no TypeScript counterpart, so there is nothing for it
-  to drift from.
-- The named risk from the service design ("security-critical code in a language the team
-  does not write daily") now applies to a second language — and the library, unlike the
-  container, runs inside the consumer's process and holds credentials to the database
-  where their business records live.
+All projects initially target `net10.0`: KB already runs .NET 10, the standalone host is
+self-contained, and speculative multi-targeting adds a test matrix without helping the
+first consumer.
 
 ---
 
-## Amendments to earlier decisions
+## What belongs in C# and what stays TypeScript
 
-`2026-08-22-backend-service-design.md` — **the ownership line is amended, not dropped.**
-It said the service must never own the consumer's records. What it protected was that
-records stay in the consumer's own store: their backups, their SQL, their deletion, their
-search. That is preserved exactly — rows live in the consumer's database. What changes is
-that the *code managing them* is ours, shipped as a library that runs inside their
-process rather than as an endpoint they write.
+The server moves to C#. Blok's document semantics do not.
 
-`2026-08-22-database-block-architecture.md` — that document says the remote answer to
-`queryRows` comes from the consumer's endpoint, "never from our Go service". Still true
-about the Go service. It is now answered by our C# half running in-process instead of by
-an endpoint they hand-write.
+### C# owns server concerns
 
-**Dead idea, so nobody builds on it:** the `Doc` claim in the access pass was going to
-scope "may read these rows". Row access is in-process now. The pass survives for the
-container paths (uploads, previews) only.
+- ASP.NET routes and dependency injection;
+- access checks and ticket verification;
+- rate limits, CORS, size limits, redirects, and timeouts;
+- guarded outbound HTTP;
+- local, S3, and MySQL persistence;
+- schema migrations and SQL generation;
+- standalone host configuration and health reporting.
 
----
+### TypeScript remains the source of truth for Blok semantics
 
-## Transition
+- Markdown conversion;
+- HTML and plain-text rendering;
+- translatable-text extraction and reinsertion;
+- database filter, sort, grouping, and position semantics;
+- validation and normalization of block-shaped data.
 
-Nothing is switched off at once. For every piece: run the library beside the existing C#,
-**compare both over real articles**, then retire the old path.
+These rules are bundled once from this repository and embedded as a resource in the
+NuGet package. They are not transcribed into C#. The same embedded resource is used by
+the standalone host, so the two delivery forms cannot drift.
 
-### Stop doing now
+### Runtime boundary
 
-- Do not write the table or gallery database views against the in-memory row array. They
-  do not exist yet; writing them now guarantees rework once the query shape lands.
-- Do not extend KB's C# converters with new features — they are scheduled to die.
+Pure document operations cross the runtime boundary as JSON strings:
 
-### Order of work
+```text
+operation name + JSON input → JSON or text output
+```
 
-**0. The probe.** Bundle the DOM-free published surfaces — `markdownToBlocks` (its async
-and dynamic `import()` are the real unknown) and `/view`'s `blocksToHtml` /
-`blocksToPlainText` — into one self-contained file and run it inside a minimal .NET host.
-Hours of work. Selects what sits behind `IBlokRuntime`. **`blocksToMarkdown` is
-deliberately excluded**: it calls `document.createElement`, so it would fail for a reason
-that teaches nothing.
+C# does not mirror every Blok data type. It validates the outer request and lets the
+Blok runtime own the document shape.
 
-**1. Make our code fit, on two tracks that do not block each other.**
-- A DOM-free rewrite of `blocksToMarkdown`, published under `/markdown`. Needed on
-  *every* path including the container, so it is decidable now. `src/view/emitters.ts`
-  is already DOM-free and was modelled on it — the traversal to copy exists in-repo.
-- A **boundary bundle**: one file exposing exactly the boundary functions, string in,
-  string out, dynamic imports inlined, synchronous where possible. This is the real
-  JS-side deliverable, not merely an added export. It needs its **own build config**
-  patterned on `vite.config.iife.mjs`, not an entry added to `vite.config.mjs`: the
-  multi-entry ES build splits shared chunks, which is the opposite of what an embedded
-  single file needs — and `vite.config.mjs` is on the do-not-touch list in CLAUDE.md.
-  Add it to `scripts/build-all.mjs` as its own task. **Naming is open**: `server` is
-  already taken by the Go package, so `dist/server.mjs` beside `packages/server` would
-  confuse.
-- **Open decision: is the bundle published to npm at all?** Recommendation: initially no.
-  If it exists only as an embedded resource inside the .NET package, it needs no
-  `exports` entry and no hand-authored declaration, and the published-types law does not
-  apply. Revisit if fallback C — or another language host — ever needs it. If it is
-  published, that law applies in full.
+Server-backed database documents need one extension to the pure boundary: C# loads
+external row blocks page by page and passes them back to the runtime as block-shaped
+JSON. The runtime decides how those blocks participate in Markdown, plain text, and
+translation. C# never learns which fields inside a block are meaningful text.
 
-**2. An empty package in their feed.** Publishing pipeline, feed access, signing, and
-embedding the JS as a resource are their own unknowns on a stack we do not write daily.
-Do not discover them while simultaneously proving the runtime boundary.
+### Runtime selection
 
-**3. Markdown → document.** The one piece that is ready today: published, DOM-free, and
-shaped identically to `MarkdownToBlokConverter`. Replaces KB's MCP `preview_content` and
-content-creation path. First real proof of the whole chain.
+The first probe uses Jint because it is managed, ships cleanly inside a NuGet package,
+and avoids per-platform native assets. It must execute the self-contained bundle and
+pass the same fixtures as the browser implementation, including math, nested blocks,
+and concurrent calls.
 
-**4. Document → Markdown.** After step 1's rewrite. Agent-facing (`get_content`), so the
-side-by-side comparison matters most here.
+If Jint fails compatibility or the concurrency/latency gate, the implementation uses
+ClearScript V8 behind the same internal interface. We do not introduce a Node service
+as a third permanent implementation. The probe selects the JavaScript engine, not the
+architecture.
 
-**5. Translatable text: extract and inject.** KB's `ContentJsonTextExtractor` is an
-ordered extract/inject pair, not a plain-text renderer — `blocksToPlainText` cannot
-substitute for it. This is **new Blok work**, and it is generally useful: any consumer
-translating documents needs it.
-
-**6. The container, in parallel with everything above.** It is built and **not released**;
-nothing can be used until it is — and releasing it is not just `yarn release`. The npm
-artifact is a wrapper (`bin/blok-server.mjs`, `files: ["bin"]`) that downloads the Go
-binary from the GitHub release, and **`goreleaser check` has never run** — it was not
-installed while the service was written. So the container track starts with: validate
-goreleaser, get binaries onto the GitHub release, confirm the wrapper resolves them.
-Only then: the upload-forwarding driver (hand bytes to the
-consumer's existing upload endpoint instead of our own store — this is what makes
-`/upload-by-url` useful to a consumer who already has a CDN), and editor wiring plan
-tasks 1–4 as written. Task 5 (`persistence`) stays general Blok work; KB has its own save
-path and does not need it.
-
-**7. The database block, last.** The query-shape refactor in TypeScript
-(`DatabaseModel` + four call sites in `src/tools/database/index.ts`), then the neutral
-query description, then the C# half against the consumer's tables. `DatabaseAdapter`
-currently exists as a **write mirror with no read path**; `queryRows` / `queryGroups`
-are added to it when the refactor lands, and `Blok.Database` is what implements it.
-
-### Explicitly not now
-
-Relations and rollups across databases. They need an index spanning documents and arrive,
-if ever, with their own design.
+ASP.NET handles requests concurrently while one JavaScript engine is single-threaded.
+The package therefore owns a bounded pool of pre-initialized runtimes. It never parses
+the bundle for every request, and request cancellation must release a rented runtime.
 
 ---
 
-## Stays with the consumer, by design
+## Outbound fetching and process isolation
 
-- **The block differ** (`ContentJsonBlockDiffer`). It is KB's own translation algorithm
-  built on top of the stable block-JSON shape — source hashes, reuse, rebuild — not a
-  retelling of Blok rules. Blok is not growing a differ.
-- **HTML → document** (`HtmlToBlokConverter`). Its only callers are four one-off legacy
-  import jobs. It dies with them; growing a Blok counterpart would be wasted work.
+Moving from Go to C# does not mean link previews should automatically run inside the
+consumer's main process.
+
+`/unfurl` and `/upload-by-url` fetch addresses supplied by users. The same C# feature is
+available in both delivery forms, but the recommended production layout is:
+
+- run document and database features in-process through NuGet;
+- run untrusted outbound fetching in `Blok.Server.Host`, with its own network policy;
+- allow in-process outbound fetching only as an explicit opt-in.
+
+The process boundary, container network, and egress policy provide isolation. Go itself
+never did.
+
+### Safe outbound HTTP invariant
+
+Every consumer-supplied URL must pass through one C# guarded client. Automatic redirects
+are disabled. For every initial URL and every redirect, the client:
+
+1. accepts only HTTP or HTTPS, without embedded credentials;
+2. checks the allowed port;
+3. resolves the host;
+4. rejects loopback, private, link-local, multicast, unspecified, documentation, and
+   cloud-metadata destinations for IPv4 and IPv6;
+5. connects to the exact validated address rather than resolving the hostname again;
+6. preserves the original hostname for HTTP `Host` and TLS SNI;
+7. enforces redirect, response-size, and time limits while streaming;
+8. refuses non-success responses before unfurling or storing bytes.
+
+In .NET this is implemented below `HttpClient` with a guarded
+`SocketsHttpHandler.ConnectCallback` and manual redirect handling. Code outside that
+component must not construct a client for consumer-supplied URLs. A static architecture
+test enforces the rule.
+
+The C# port cannot replace Go until black-box tests prove these properties, including
+DNS rebinding and redirect-to-private-address cases.
 
 ---
 
-## What moves in Blok itself
+## Database block backend
 
-Per-asset fate of what this repository already holds.
+### The block law remains
 
-| Asset | Fate | Blocked by |
-|---|---|---|
-| `packages/server` (Go) | Scope unchanged — it *is* the dangerous half. Gains the upload-forwarding driver. | Its first release: `goreleaser` has never run, and the npm wrapper resolves binaries from the GitHub release |
-| `2026-08-23-editor-server-wiring-plan.md` | Tasks 1–3 stand, **container paths only**. Task 4 is **already done** (`f8083d54`). Task 5 (`persistence`) stays general Blok work, off KB's rails | — |
-| `src/markdown` | The largest change in Blok: `blocksToMarkdown` rewritten DOM-free and published | Nothing — needed on every path |
-| *(new)* boundary bundle | New artifact, own build config, own `build-all.mjs` task, naming open | The probe defines its exact surface |
-| `src/tools/database` | Query-shape refactor, then `queryRows`/`queryGroups` added to `DatabaseAdapter` (today a write mirror with no read path) | Comes last on purpose |
-| `packages/presets` | **Untouched.** Client-side storage presets stay path 1 | — |
+A database is a block. A row is a `database-row` block. Properties are metadata on the
+row block. Server storage changes where row blocks are persisted and queried; it does
+not create a parallel entity model.
 
-### Release machinery
+For small documents, rows continue to live in the document and the in-memory source
+answers every query. For large databases, rows are loaded as block-shaped records from
+the server.
 
-Nothing here iterates workspaces automatically — `scripts/build-all.mjs`, `.github/workflows/ci.yml`,
-and `scripts/release.mjs` all walk explicit lists. Every new artifact is added to each of
-them deliberately: the boundary bundle to the build graph, the .NET package to CI and to
-the release flow.
+### Query shape
 
-**Open decision: where the .NET package is published.** Public registry, or mirrored into
-the consumer's own feed the way `@dodopizza/blok` is mirrored today via the GPR full-tarball
-rewrite. The mechanism exists; the choice is not made.
+The TypeScript refactor from
+`2026-08-22-database-block-architecture.md` remains the first database task:
 
-### Documentation
+```ts
+queryRows({ view, group?, cursor?, limit? })
+queryGroups(view)
+```
 
-The docs site is canonical for public API (not the README). Both publishing
-`blocksToMarkdown` and shipping the .NET package require a docs pass.
+Per-group cursors and group counts remain mandatory. Table and gallery views must be
+written against this shape rather than the current all-rows array.
+
+### Query semantics and SQL
+
+The embedded Blok runtime converts a view config into a small allowlisted query plan:
+
+```text
+filters + sorts + group + cursor + limit
+```
+
+The plan contains operators and typed values, never raw SQL, table names, or arbitrary
+column names. `Blok.Server.AspNetCore.MySql` translates that plan into parameterized SQL and always
+adds the document id and database-block id itself. A client cannot remove those scope
+predicates.
+
+This keeps filter and sorting meaning in TypeScript while leaving SQL and storage in C#.
+
+### Storage
+
+Blok owns tables with a `blok_` prefix inside the consumer's MySQL database. Rows are
+keyed by both document id and database-block id. The schema and its migrations ship in
+`Blok.Server.AspNetCore.MySql`; KB does not create or maintain them.
+
+The first provider is allowed to be MySQL-specific. We do not create a generic relational
+query layer until another provider is real.
+
+Migrations are applied under a database lock by an explicit deployment command from the
+same package. An opt-in apply-on-start mode is permitted for development. Production
+startup checks the schema version and fails with an actionable message rather than
+silently mutating the database from every replica.
+
+### Saving and partial materialization
+
+The current editor assumes every child block belongs in one complete document snapshot.
+Server-backed databases break that assumption: a visible page of rows is only a partial
+materialization, and saving it must not overwrite the rows that were not loaded.
+
+Before remote rows are enabled, core gains a generic externally-persisted-child contract:
+
+- queried rows are real `database-row` blocks with the database block as parent;
+- loaded rows participate in rendering, selection, and block APIs normally;
+- the document saver omits externally persisted children from the snapshot;
+- row mutations go through the database source and use optimistic versions;
+- unloading a page removes only its local materialization, never the server record.
+
+This is a core lever, not database-tool defensive code. Without it, `queryRows` alone
+would make large databases appear to work while the next article save could destroy
+unloaded data.
+
+### Authorization
+
+Every database read and write is scoped to a document id and calls the consumer's
+`IBlokAuthorization` implementation. In the NuGet form it receives the current
+`ClaimsPrincipal`; in the standalone form the same request identity comes from proxy or
+ticket authentication.
+
+The package owns no roles, spaces, tenants, or countries. Those are consumer concepts.
+
+### Document deletion
+
+A foreign-key cascade only handles hard deletion. KB uses soft deletion
+(`kb_articles.Deleted = true`), so the old design's claim that cascade solves cleanup was
+wrong.
+
+`Blok.Server.AspNetCore.MySql` accepts a document-table mapping: table name, id column, and optional
+soft-delete column. It uses that mapping for two built-in mechanisms:
+
+- a hard foreign key when the database permits it;
+- a scheduled, provider-owned cleanup query that removes Blok rows whose document is
+  absent or soft-deleted.
+
+Access is denied immediately by `IBlokAuthorization`; physical cleanup may be eventual.
+KB supplies identifiers as configuration and writes no deletion handler. Identifiers are
+validated and quoted by the provider, never interpolated from a request.
+
+---
+
+## Document services
+
+KB currently carries thousands of lines that re-describe Blok. The package replaces the
+parts that are Blok semantics, not KB business logic.
+
+### Supplied by Blok
+
+- Markdown → blocks;
+- blocks → Markdown, after the existing renderer becomes DOM-free;
+- blocks → HTML and plain text;
+- extraction of translatable slots and reinsertion of translated values.
+
+Translation slots use stable block id + field path identities rather than a bare ordered
+string list. This continues to work when database rows are loaded from server storage.
+
+### Stays in KB
+
+- `ContentJsonBlockDiffer`: source hashes, reuse, and rebuilding translated articles are
+  KB's translation policy, not Blok semantics;
+- `HtmlToBlokConverter`: its current callers are one-off legacy import jobs, so growing a
+  new public Blok surface for them would be wasted work.
+
+Each replacement is introduced beside the existing C# converter, compared over real
+article fixtures, and switched only after the outputs and documented degradations are
+accepted.
+
+---
+
+## Existing Go implementation: migration oracle, then deletion
+
+The Go service is not a second product and receives no new features. Until removal, only
+security and correctness fixes are allowed.
+
+### What it contributes to the move
+
+- exact wire responses for `/health`, `/unfurl`, `/upload`, and `/upload-by-url`;
+- CLI and environment-variable behavior;
+- auth, origin, and rate-limit ordering;
+- ticket behavior;
+- local-directory and S3 storage behavior;
+- a mature regression suite for outbound-fetch attacks and size limits.
+
+### How parity is proved
+
+Move route-level behavior into a language-independent black-box conformance suite. The
+suite starts a server binary or targets a supplied URL, then runs the same cases against
+Go and C#.
+
+The suite covers success and failure responses, headers, preflights, auth modes, rate
+limits, upload limits, redirect limits, unsafe addresses, DNS rebinding, malformed
+tickets, storage key validation, and shutdown behavior. C# also keeps focused unit tests;
+the black-box suite is the cross-language acceptance gate.
+
+### Removal gate
+
+Go is deleted only after all of the following are true:
+
+1. the C# unit and integration tests pass;
+2. the black-box suite passes against both implementations;
+3. the C# host passes Docker and self-contained-binary smoke tests on supported
+   platforms;
+4. a packed NuGet package works in a minimal .NET application and in a .NET 10 fixture
+   shaped like KB;
+5. the npm wrapper downloads and runs the C# artifact;
+6. an independent security review accepts the guarded outbound client;
+7. no public release points at the Go assets.
+
+Then remove the Go sources, modules, Go CI setup, goreleaser configuration, and Go build
+artifacts in the same change. `packages/server` remains the product directory and becomes
+the C# source, host, npm wrapper, and Docker build context.
+
+Because the Go server has not been released, this transition should happen before its
+first public release. We preserve its contract because the editor wiring and tests already
+depend on that contract, not because users need a language migration.
+
+---
+
+## What changes in the existing plans and code
+
+| Existing asset | Decision |
+|---|---|
+| `packages/server` Go code | Frozen, used for parity, then deleted |
+| `packages/server/package.json` and `bin/blok-server.mjs` | Kept; wrapper downloads the C# host artifact |
+| `packages/server/Dockerfile` | Replaced by a .NET multi-stage build using the same image name |
+| Go blob stores | Ported once to C#; interfaces and behaviors stay |
+| Go fetch guard | Replaced by the guarded C# client only after adversarial parity |
+| Go ticket and middleware | Ported to ASP.NET authentication/endpoints with the same wire behavior |
+| `packages/presets` | Unchanged; browser storage remains a peer path |
+| editor `server`/ticket wiring plan | Wire contract stays; it targets the C# host or in-process routes |
+| bookmark degradation | Already implemented in `f8083d54` |
+| editor persistence option | Remains general Blok work; KB keeps its article save path |
+| `src/markdown` | `blocksToMarkdown` becomes DOM-free and public |
+| new embedded runtime bundle | Built as one self-contained resource for the NuGet package; not initially a public npm subpath |
+| `src/tools/database` | Gains query-shaped reads and externally persisted child blocks before server storage is enabled |
+| release pipeline | Builds NuGet packages, self-contained host artifacts, Docker image, and existing npm wrapper from one version |
+| docs site | Documents NuGet integration, standalone deployment, module selection, and database storage |
+
+`2026-08-23-editor-server-wiring-plan.md` tasks 1–3 remain relevant to standalone
+host access. Ticket minting is unnecessary when routes run inside an already-authorized
+ASP.NET application. Its persistence task is independent of this server transition.
+
+---
+
+## Delivery sequence
+
+Each phase leaves one implementation path, not a permanent bridge.
+
+### 1. Prove the embedded runtime
+
+Build one self-contained bundle from the existing DOM-free Markdown import and view
+surfaces. Run it in Jint inside a minimal .NET 10 test app. Add concurrent-call and
+cancellation tests. If Jint fails the fixed gate, repeat behind ClearScript without
+changing the public C# API.
+
+### 2. Make document code server-safe
+
+Rewrite `blocksToMarkdown` without DOM APIs, expose the document operations through the
+embedded bundle, and add drift tests so the resource packed into NuGet cannot lag behind
+TypeScript source.
+
+### 3. Freeze and extract the Go contract
+
+Create the black-box conformance suite from the Go route tests. No feature work starts in
+C# until the success, failure, and security behavior to preserve is executable outside
+Go.
+
+### 4. Build the C# package and host
+
+Port health, tickets, middleware, unfurl, uploads, local storage, and S3 in small TDD
+slices. The NuGet path and host path must exercise the same handlers in every integration
+test.
+
+### 5. Replace delivery artifacts
+
+Pack NuGet, publish self-contained host binaries, rebuild the Docker image, and point
+`@bloklabs/server` at the C# assets. Run the removal gate, then delete Go before the first
+server release.
+
+### 6. Adopt document services in KB
+
+Run old and new converters side by side over real fixtures. Switch Markdown import,
+Markdown export, plain text, then translation slots. Leave the KB-specific differ and
+legacy import jobs alone.
+
+### 7. Add the database backend
+
+Refactor the editor to query rows, add the external-child persistence contract, build the
+MySQL provider and cleanup, then connect KB with configuration plus authorization only.
+Table and gallery views are written against the query source from their first commit.
+
+Relations and rollups remain a separate later design because they require an index across
+documents.
+
+---
+
+## Non-goals
+
+- Keeping Go as an alternative implementation.
+- Rewriting Blok document rules in C#.
+- A hosted Blok cloud service.
+- A database provider matrix before MySQL works for KB.
+- NativeAOT as a release requirement.
+- Relations, rollups, or multiplayer in this transition.
+- Moving KB's business authorization or translation policy into Blok.

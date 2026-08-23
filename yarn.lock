@@ -785,6 +785,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@bloklabs/server@workspace:packages/server":
+  version: 0.0.0-use.local
+  resolution: "@bloklabs/server@workspace:packages/server"
+  bin:
+    blok-server: bin/blok-server.mjs
+  languageName: unknown
+  linkType: soft
+
 "@bloklabs/vue@workspace:packages/vue":
   version: 0.0.0-use.local
   resolution: "@bloklabs/vue@workspace:packages/vue"

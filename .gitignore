@@ -7,6 +7,9 @@ Thumbs.db
 
 node_modules/*
 docs/node_modules/*
+# yarn links a workspace's `bin` into its own node_modules; the rules above are
+# anchored to the repo root and do not reach it.
+packages/*/node_modules/
 docs/.yarn/cache
 
 npm-debug.log

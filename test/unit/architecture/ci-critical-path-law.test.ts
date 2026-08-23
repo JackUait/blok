@@ -19,6 +19,7 @@ type Step = {
   run?: string;
   uses?: string;
   if?: string;
+  'working-directory'?: string;
   with?: Record<string, WorkflowValue>;
 };
 
@@ -155,6 +156,7 @@ describe('CI critical-path law', () => {
     const requiredJobs = [
       'i18n',
       'lint',
+      'server',
       'unit-tests',
       'validate-spec-coverage',
       'build',
@@ -222,6 +224,32 @@ describe('CI critical-path law', () => {
           path: lintCachePaths,
           key: '${{ steps.lint-cache.outputs.cache-primary-key }}',
         },
+      },
+    ]);
+  });
+
+  it('retains the exact Go server job contract', () => {
+    const server = getJob(ci, 'server');
+
+    expect(server.name).toBe('Server');
+    expect(server.needs).toBeUndefined();
+    expect(server['runs-on']).toBe('ubuntu-latest');
+    expectOrderedSteps('ci.server', server, [
+      checkout,
+      {
+        name: 'Setup Go',
+        uses: 'actions/setup-go@v5',
+        with: {
+          'go-version': '1.25',
+          // setup-go fails the job when this path resolves to nothing, so the
+          // module keeps a committed go.sum even with no used dependency.
+          'cache-dependency-path': 'packages/server/go.sum',
+        },
+      },
+      {
+        name: 'Test',
+        'working-directory': 'packages/server',
+        run: 'go vet ./... && go test ./...',
       },
     ]);
   });

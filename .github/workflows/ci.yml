@@ -67,6 +67,26 @@ jobs:
             node_modules/.cache/blok-lint.tsbuildinfo
           key: ${{ steps.lint-cache.outputs.cache-primary-key }}
 
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          # setup-go's cache step fails the job when this path resolves to
+          # nothing, so packages/server must keep a committed go.sum even while
+          # every declared dependency is still unused.
+          cache-dependency-path: packages/server/go.sum
+
+      - name: Test
+        working-directory: packages/server
+        run: go vet ./... && go test ./...
+
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})
     needs: [build]

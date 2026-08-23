@@ -13,7 +13,7 @@ const ENGLISH_H1 = 'Storage presets';
 
 /** The storage-presets documentation body — summary table, then one section per preset. */
 export const PresetsContent: React.FC = () => {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   // See ToolSection: the descriptive H1 lives in route-metadata.ts, keyed off
   // the locale in the path, so a /ru/presets reader gets the Russian heading
   // route-metadata.ru.ts already authors instead of a hardcoded English one.
@@ -26,10 +26,7 @@ export const PresetsContent: React.FC = () => {
           <Typo>{heading}</Typo>
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          <Typo>
-            Ready-made uploaders from @bloklabs/presets, so Blok has somewhere to put uploaded files without you
-            writing an upload handler. Each one plugs into the uploader config option directly.
-          </Typo>
+          <Typo>{t('presets.intro')}</Typo>
         </p>
       </div>
 
@@ -37,9 +34,9 @@ export const PresetsContent: React.FC = () => {
         <table className="w-full border-collapse text-left text-sm" data-blok-testid="presets-table">
           <thead>
             <tr className="border-b border-border bg-secondary/60">
-              <th className="px-4 py-3 font-semibold text-foreground">Preset</th>
-              <th className="px-4 py-3 font-semibold text-foreground">Re-hosts a remote URL?</th>
-              <th className="px-4 py-3 font-semibold text-foreground">Production-ready?</th>
+              <th className="px-4 py-3 font-semibold text-foreground">{t('presets.tablePreset')}</th>
+              <th className="px-4 py-3 font-semibold text-foreground">{t('presets.tableRehosts')}</th>
+              <th className="px-4 py-3 font-semibold text-foreground">{t('presets.tableProduction')}</th>
             </tr>
           </thead>
           <tbody>

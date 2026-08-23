@@ -49,10 +49,37 @@ describe('PresetSection', () => {
     expect(screen.getByText('Description')).toBeInTheDocument();
   });
 
-  it('keeps the preset-specific labels in English regardless of locale — they carry no translation key on purpose', () => {
+  it('localizes the section labels in Russian', () => {
     renderSection('ru');
+    // Values from docs/src/i18n/ru.json's `presets` namespace, plus the
+    // shared `tools.usageExample` key ToolSection already uses for "Usage".
+    expect(screen.getByText('Повторное размещение файла по URL')).toBeInTheDocument();
+    expect(screen.getByText('Настройка хранилища')).toBeInTheDocument();
+    expect(screen.getByText('Пример использования')).toBeInTheDocument();
+  });
+
+  it('shows the section labels in English by default', () => {
+    renderSection('en');
     expect(screen.getByText('Re-hosting a remote URL')).toBeInTheDocument();
     expect(screen.getByText('Storage-side setup')).toBeInTheDocument();
-    expect(screen.getByText('Usage')).toBeInTheDocument();
+    expect(screen.getByText('Usage Example')).toBeInTheDocument();
+  });
+
+  it('localizes the "not for production" callout label', () => {
+    const notProductionSection: PresetSectionType = {
+      ...mockSection,
+      productionReady: false,
+      productionNote: 'A test production note.',
+    };
+
+    render(
+      <MemoryRouter>
+        <I18nProvider locale="ru">
+          <PresetSection section={notProductionSection} />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Не для продакшена')).toBeInTheDocument();
   });
 });

@@ -28,7 +28,7 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-sm font-bold uppercase tracking-wide text-foreground">Re-hosting a remote URL</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-foreground">{t('presets.reHosting')}</p>
         <p className="mt-2 text-sm text-muted-foreground">
           <Typo>{section.uploadByUrlNote}</Typo>
         </p>
@@ -36,7 +36,9 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
 
       {!section.productionReady && section.productionNote && (
         <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-4">
-          <p className="text-sm font-bold uppercase tracking-wide text-destructive">Not for production</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-destructive">
+            {t('presets.notForProduction')}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             <Typo>{section.productionNote}</Typo>
           </p>
@@ -92,7 +94,9 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       )}
 
       <div className="mt-6">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">Storage-side setup</h3>
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          {t('presets.storageSetup')}
+        </h3>
         <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
           {section.storageSetup.map((step) => (
             <li key={step}>
@@ -103,7 +107,9 @@ export const PresetSection: React.FC<PresetSectionProps> = ({ section }) => {
       </div>
 
       <div className="mt-6">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">Usage</h3>
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-foreground">
+          {t('tools.usageExample')}
+        </h3>
         <CodeBlock code={section.usageExample} language="typescript" />
       </div>
     </section>

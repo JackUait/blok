@@ -3,6 +3,7 @@
     "search": "Search",
     "demo": "Demo",
     "docs": "Docs",
+    "presets": "Presets",
     "tools": "Tools",
     "migration": "Migration",
     "changelog": "Changelog",
@@ -1640,5 +1641,14 @@
       "equation": "Equation",
       "clearFormat": "Clear Format"
     }
+  },
+  "presets": {
+    "intro": "Ready-made uploaders from @bloklabs/presets, so Blok has somewhere to put uploaded files without you writing an upload handler. Each one plugs into the uploader config option directly.",
+    "tablePreset": "Preset",
+    "tableRehosts": "Re-hosts a remote URL?",
+    "tableProduction": "Production-ready?",
+    "reHosting": "Re-hosting a remote URL",
+    "storageSetup": "Storage-side setup",
+    "notForProduction": "Not for production"
   }
 }

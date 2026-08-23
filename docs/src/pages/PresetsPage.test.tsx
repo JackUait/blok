@@ -57,6 +57,24 @@ describe('PresetsPage', () => {
     expect(within(section).getByText(/not for production/i)).toBeInTheDocument();
   });
 
+  it('localizes the lede paragraph and summary-table headers on a ru page, not just the H1', () => {
+    render(
+      <MemoryRouter initialEntries={['/ru/presets']}>
+        <I18nProvider locale="ru">
+          <PresetsPage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    // Values from docs/src/i18n/ru.json's `presets` namespace.
+    expect(screen.getByText(/Готовые загрузчики из @bloklabs\/presets/)).toBeInTheDocument();
+
+    const table = screen.getByTestId('presets-table');
+    expect(within(table).getByText('Пресет')).toBeInTheDocument();
+    expect(within(table).getByText('Повторно размещает файл по URL?')).toBeInTheDocument();
+    expect(within(table).getByText('Готов к продакшену?')).toBeInTheDocument();
+  });
+
   it('heads a ru page with the localized H1, not the hardcoded English one', () => {
     // Regression: the page used to hardcode "Storage presets" as its <h1>
     // regardless of locale, so /ru/presets served a Russian title/description

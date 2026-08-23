@@ -29,6 +29,13 @@ describe('constants', () => {
       expect(migrationLink?.href).toBe('/migration');
     });
 
+    it('should have a Presets link with an i18nKey, so the page is reachable from the nav', () => {
+      const presetsLink = NAV_LINKS.find((link) => link.label === 'Presets');
+      expect(presetsLink).toBeDefined();
+      expect(presetsLink?.href).toBe('/presets');
+      expect(presetsLink?.i18nKey).toBe('nav.presets');
+    });
+
     it('should not include a GitHub link (lives as a nav icon instead)', () => {
       const githubLink = NAV_LINKS.find((link) => link.label === 'GitHub');
       expect(githubLink).toBeUndefined();

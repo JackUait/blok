@@ -24,13 +24,25 @@ export function sendRequest(
 ): Promise<HttpResponse> {
   return new Promise((resolve, reject) => {
     const transport = url.protocol === 'https:' ? requestHttps : requestHttp;
+    let deadline: NodeJS.Timeout | undefined;
+    const clearDeadline = (): void => {
+      if (deadline !== undefined) {
+        clearTimeout(deadline);
+        deadline = undefined;
+      }
+    };
     const request = transport(url, { method, headers: options.headers }, (response) => {
       const chunks: Buffer[] = [];
 
       response.on('data', (chunk: Buffer | string) => {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       });
+      response.once('error', (error) => {
+        clearDeadline();
+        reject(error);
+      });
       response.on('end', () => {
+        clearDeadline();
         const bytes = Buffer.concat(chunks);
         const text = bytes.toString('utf8');
         const rawHeaders: Record<string, string[]> = {};
@@ -61,12 +73,15 @@ export function sendRequest(
       });
     });
 
-    request.on('error', reject);
+    request.once('error', (error) => {
+      clearDeadline();
+      reject(error);
+    });
 
     if (options.timeoutMs !== undefined) {
-      request.setTimeout(options.timeoutMs, () => {
+      deadline = setTimeout(() => {
         request.destroy(new Error(`HTTP request timed out after ${options.timeoutMs} ms`));
-      });
+      }, options.timeoutMs);
     }
 
     if (options.body !== undefined) {

@@ -176,3 +176,57 @@ Tests  22 passed (22)
   would make the focused conformance gate slow.
 - The fixed compatible ticket expires in 2100; a future replacement should
   retain the same wire vector or deliberately rotate this fixture before then.
+
+## Deadline Follow-up
+
+A follow-up review found that `request.setTimeout()` measures socket inactivity,
+not the total request duration. A response that continually sends bytes could
+therefore keep the client open forever.
+
+### Red: streaming response outlasts total deadline
+
+Added a local HTTP response that writes one byte every 20 ms for 300 ms, then
+ran the focused Go conformance entry point before changing the client:
+
+```sh
+node scripts/test-server-conformance.mjs --target go
+```
+
+Observed:
+
+```text
+Test Files  1 failed (1)
+Tests  1 failed | 22 passed (23)
+AssertionError: promise resolved ... instead of rejecting
+```
+
+The regression assertion requested a 100 ms timeout. The old implementation
+resolved after 14 streamed bytes, proving that each byte reset its inactivity
+timer instead of enforcing the total deadline.
+
+### Green: independent wall-clock deadline
+
+Replaced `request.setTimeout()` in `test/unit/server-conformance/http-client.ts`
+with a `setTimeout()` wall-clock deadline that destroys the request at the
+configured duration. The deadline is cleared when the response ends, the
+response errors, or the request errors.
+
+```sh
+node scripts/test-server-conformance.mjs --target go
+```
+
+Observed:
+
+```text
+Test Files  1 passed (1)
+Tests  23 passed (23)
+[exited with code 0]
+```
+
+### Scoped lint
+
+```sh
+yarn --cwd /Users/jackuait/Packages/blok eslint test/unit/server-conformance/http-client.ts test/unit/server-conformance/server-contract.test.ts
+```
+
+Observed: exited with code 0.

@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 import { expect, it } from 'vitest';
@@ -10,6 +11,7 @@ import {
   startServer,
   type RunningServer,
 } from './run-against';
+import { sendRequest } from './http-client';
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
 const DISALLOWED_ORIGIN = 'https://evil.example.net';
@@ -92,6 +94,45 @@ function expectNoCors(headers: Record<string, string>): void {
   expect(headers['access-control-allow-origin']).toBeUndefined();
   expect(headers.vary).toBeUndefined();
 }
+
+it('applies the total request deadline while a response keeps sending bytes', async () => {
+  const server = createServer((_request, response) => {
+    const chunks = setInterval(() => response.write('.'), 20);
+    const finish = setTimeout(() => response.end(), 300);
+
+    response.once('close', () => {
+      clearInterval(chunks);
+      clearTimeout(finish);
+    });
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
+
+  const address = server.address();
+
+  if (address === null || typeof address === 'string') {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error === undefined ? resolve() : reject(error));
+    });
+    throw new Error('Could not allocate a test HTTP port');
+  }
+
+  try {
+    await expect(sendRequest('GET', new URL(`http://127.0.0.1:${address.port}`), {
+      timeoutMs: 100,
+    })).rejects.toThrow('HTTP request timed out after 100 ms');
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error === undefined ? resolve() : reject(error));
+    });
+  }
+});
 
 it('returns the exact ungated health response without CORS', async () => {
   await withServer(ticketArgs('--storage-dir', ''), async (server) => {

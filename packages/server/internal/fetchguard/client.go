@@ -53,6 +53,13 @@ type Response struct {
 	Body        []byte
 	ContentType string
 	FinalURL    string
+
+	// StatusCode is the status at the END of the redirect chain. A 404 or a 502
+	// is a successful FETCH — no transport failed — so it arrives here as a
+	// *Response and not as an error. Every caller must check it: an error page
+	// carries its own <title> and og: tags, which is how a link card ends up
+	// titled "Page not found".
+	StatusCode int
 }
 
 type Client struct {
@@ -165,6 +172,7 @@ func (c *Client) Get(ctx context.Context, rawURL string) (*Response, error) {
 		Body:        body,
 		ContentType: resp.Header.Get("Content-Type"),
 		FinalURL:    resp.Request.URL.String(),
+		StatusCode:  resp.StatusCode,
 	}, nil
 }
 

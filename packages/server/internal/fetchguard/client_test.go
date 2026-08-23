@@ -361,3 +361,66 @@ func TestAllowsAnOrdinaryPublicResponse(t *testing.T) {
 func TestClientSatisfiesGetter(t *testing.T) {
 	var _ fetchguard.Getter = newStrictClient()
 }
+
+// A 404 or a 502 is a perfectly successful fetch of an error page: no transport
+// failed, so Get returns a Response and the caller cannot tell it apart from
+// the real thing without the status. Without this field /unfurl builds a link
+// card titled "Page not found" out of the error page's own <title> and og: tags.
+func TestReportsTheStatusOfANonSuccessResponse(t *testing.T) {
+	for _, status := range []int{http.StatusNotFound, http.StatusBadGateway, http.StatusForbidden} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+				_, _ = w.Write([]byte("<html><head><title>Page not found</title></head></html>"))
+			}))
+			defer srv.Close()
+
+			resp, err := newClient(srv).Get(context.Background(), srv.URL)
+			if err != nil {
+				t.Fatalf("err = %v, want nil: an error page is a successful fetch", err)
+			}
+			if resp.StatusCode != status {
+				t.Fatalf("StatusCode = %d, want %d", resp.StatusCode, status)
+			}
+		})
+	}
+}
+
+func TestReportsTheStatusOfASuccessfulResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	resp, err := newClient(srv).Get(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("StatusCode = %d, want 200", resp.StatusCode)
+	}
+}
+
+// The status is the one at the END of the redirect chain, not the 302 that
+// started it — a redirect to a dead page must read as dead.
+func TestReportsTheStatusAtTheEndOfARedirectChain(t *testing.T) {
+	var srv *httptest.Server
+
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/gone" {
+			w.WriteHeader(http.StatusNotFound)
+
+			return
+		}
+		http.Redirect(w, r, srv.URL+"/gone", http.StatusFound)
+	}))
+	defer srv.Close()
+
+	resp, err := newClient(srv).Get(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("StatusCode = %d, want 404", resp.StatusCode)
+	}
+}

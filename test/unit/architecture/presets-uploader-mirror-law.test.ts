@@ -30,6 +30,17 @@
  * runtime must have a matching `export function` in the mirror — otherwise
  * a new preset can ship with CI green while every consumer's `tsc` fails
  * with TS2305 on the missing declaration.
+ *
+ * A third law guards the first one against its own hand-curation: every
+ * interface and type alias declared in the mirror file must appear in one of
+ * the case lists below, or in `COVERAGE_OPT_OUTS` with a reason. Without it a
+ * ninth preset's options interface ships unguarded and is free to drift
+ * forever with CI green — the same silent transcription rot that cost
+ * `types/data-attributes.d.ts` 17 keys. The case lists stay hand-written on
+ * purpose: a mirror's name cannot be resolved to its source file without
+ * guessing among the six candidates below, and a wrong guess would pair a
+ * mirror with the wrong source and check nothing. So the failure is loud and
+ * names the type; a human adds the entry with the correct source.
  */
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
@@ -56,6 +67,20 @@ const PRESIGNED_LABEL = 'packages/presets/src/presigned.ts';
 const CLOUDINARY_LABEL = 'packages/presets/src/cloudinary.ts';
 const INDEXEDDB_LABEL = 'packages/presets/src/indexeddb.ts';
 const INDEX_LABEL = 'packages/presets/src/index.ts';
+
+interface CoverageOptOut {
+  name: string;
+  reason: string;
+}
+
+/**
+ * Types the mirror file declares that mirror nothing — the presets package
+ * owns them outright, so there is no source declaration to drift from. Every
+ * entry must say WHY: opting out a type that IS copied from somewhere else
+ * silences the law instead of satisfying it. Empty today, because every type
+ * currently declared in the mirror file is a copy of one declared elsewhere.
+ */
+const COVERAGE_OPT_OUTS: readonly CoverageOptOut[] = [];
 
 interface MemberFingerprint {
   name: string;
@@ -204,15 +229,44 @@ describe('presets uploader-type mirrors stay in sync with their sources', () => 
     ).toEqual(sourceFingerprint);
   });
 
-  it('`AssetKind` mirrors its declaration in types/tools/block-tool.d.ts', () => {
-    const mirrorFingerprint = fingerprintUnion(checker, findTypeAlias(mirrorSource, 'AssetKind'));
-    const sourceFingerprint = fingerprintUnion(checker, findTypeAlias(blockToolSource, 'AssetKind'));
+  const unionCases: ReadonlyArray<readonly [ name: string, sourceLabel: string, sourceFile: ts.SourceFile ]> = [
+    [ 'AssetKind', BLOCK_TOOL_LABEL, blockToolSource ],
+  ];
+
+  it.each(unionCases)('`%s` mirrors its declaration in %s', (name, sourceLabel, sourceFile) => {
+    const mirrorFingerprint = fingerprintUnion(checker, findTypeAlias(mirrorSource, name));
+    const sourceFingerprint = fingerprintUnion(checker, findTypeAlias(sourceFile, name));
 
     expect(
       mirrorFingerprint,
-      `\`AssetKind\` in ${MIRROR_LABEL} has drifted from its source in ${BLOCK_TOOL_LABEL} — ` +
+      `\`${name}\` in ${MIRROR_LABEL} has drifted from its source in ${sourceLabel} — ` +
         'compare both copies and update the mirror to match.'
     ).toEqual(sourceFingerprint);
+  });
+
+  // Guards the two case lists above, which are hand-curated: a mirror nobody
+  // listed is a mirror nothing checks.
+  it('every type the mirror file declares is covered by a case above', () => {
+    const covered = new Set<string>([
+      ...interfaceCases.map(([ name ]) => name),
+      ...unionCases.map(([ name ]) => name),
+      ...COVERAGE_OPT_OUTS.map((optOut) => optOut.name),
+    ]);
+
+    const uncovered = mirrorSource.statements
+      .filter((stmt): stmt is ts.InterfaceDeclaration | ts.TypeAliasDeclaration =>
+        ts.isInterfaceDeclaration(stmt) || ts.isTypeAliasDeclaration(stmt)
+      )
+      .map((stmt) => stmt.name.text)
+      .filter((name) => !covered.has(name));
+
+    expect(
+      uncovered,
+      `${MIRROR_LABEL} declares ${uncovered.join(', ')}, which this law neither checks for drift nor ` +
+        'exempts. Add an entry to `interfaceCases` or `unionCases` naming the file the type is mirrored ' +
+        'FROM, or — if the presets package owns the type outright and there is no source to drift from — ' +
+        'add a `COVERAGE_OPT_OUTS` entry with a reason.'
+    ).toEqual([]);
   });
 
   it('every function exported at runtime from src/index.ts is declared in the published types, and vice versa', () => {

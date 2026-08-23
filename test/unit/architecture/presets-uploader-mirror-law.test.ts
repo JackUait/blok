@@ -3,16 +3,20 @@
  * types must not drift from their sources.
  *
  * `packages/presets/types/index.d.ts` hand-copies `AssetKind`,
- * `UploadedAsset`, `UploadContext` and `BlokUploader` instead of importing
- * them, because a published `.d.ts` may not reach outside its own tarball
- * (`files: ["dist", "types"]` — see published-types-no-src-refs.test.ts) and
- * this package declares zero runtime dependencies, so it cannot import
- * `@bloklabs/core`'s published types either. That leaves the mirror correct
- * only until someone edits the source and forgets the copy — exactly what
- * happened to `types/data-attributes.d.ts`, which silently lost 17 of its
- * ~110 attributes (plus one phantom key) through hand transcription before it
- * was caught (see the `types/data-attributes.d.ts stays in sync` describe
- * block in published-types-no-src-refs.test.ts).
+ * `UploadedAsset`, `UploadContext`, `BlokUploader`, and each preset's own
+ * option interfaces (`FetchStorageOptions`, `SupabaseLike`,
+ * `SupabaseStorageOptions`, `SignRequest`, `SignedTarget`,
+ * `PresignedStorageOptions`, `CloudinaryStorageOptions`,
+ * `IndexedDBStorageOptions`) instead of importing them, because a published
+ * `.d.ts` may not reach outside its own tarball (`files: ["dist", "types"]`
+ * — see published-types-no-src-refs.test.ts) and this package declares zero
+ * runtime dependencies, so it cannot import `@bloklabs/core`'s published
+ * types either. That leaves the mirror correct only until someone edits the
+ * source and forgets the copy — exactly what happened to
+ * `types/data-attributes.d.ts`, which silently lost 17 of its ~110
+ * attributes (plus one phantom key) through hand transcription before it was
+ * caught (see the `types/data-attributes.d.ts stays in sync` describe block
+ * in published-types-no-src-refs.test.ts).
  *
  * The law: for each mirrored declaration, its STRUCTURE — member names,
  * optionality, and member types, as checked by the TypeScript compiler
@@ -21,19 +25,37 @@
  * so reformatting a comment or reordering fields cannot fail this test —
  * only a real structural difference (a renamed/added/removed field, a
  * changed type, or a flipped `?`) can.
+ *
+ * A second law: every value `packages/presets/src/index.ts` exports at
+ * runtime must have a matching `export function` in the mirror — otherwise
+ * a new preset can ship with CI green while every consumer's `tsc` fails
+ * with TS2305 on the missing declaration.
  */
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
+const PRESETS_SRC = join(REPO_ROOT, 'packages', 'presets', 'src');
 const MIRROR_FILE = join(REPO_ROOT, 'packages', 'presets', 'types', 'index.d.ts');
 const UPLOADER_SOURCE = join(REPO_ROOT, 'types', 'configs', 'uploader.d.ts');
 const BLOCK_TOOL_SOURCE = join(REPO_ROOT, 'types', 'tools', 'block-tool.d.ts');
+const FETCH_ENDPOINT_SOURCE = join(PRESETS_SRC, 'fetch-endpoint.ts');
+const SUPABASE_SOURCE = join(PRESETS_SRC, 'supabase.ts');
+const PRESIGNED_SOURCE = join(PRESETS_SRC, 'presigned.ts');
+const CLOUDINARY_SOURCE = join(PRESETS_SRC, 'cloudinary.ts');
+const INDEXEDDB_SOURCE = join(PRESETS_SRC, 'indexeddb.ts');
+const INDEX_SOURCE = join(PRESETS_SRC, 'index.ts');
 
 const MIRROR_LABEL = 'packages/presets/types/index.d.ts';
 const UPLOADER_LABEL = 'types/configs/uploader.d.ts';
 const BLOCK_TOOL_LABEL = 'types/tools/block-tool.d.ts';
+const FETCH_ENDPOINT_LABEL = 'packages/presets/src/fetch-endpoint.ts';
+const SUPABASE_LABEL = 'packages/presets/src/supabase.ts';
+const PRESIGNED_LABEL = 'packages/presets/src/presigned.ts';
+const CLOUDINARY_LABEL = 'packages/presets/src/cloudinary.ts';
+const INDEXEDDB_LABEL = 'packages/presets/src/indexeddb.ts';
+const INDEX_LABEL = 'packages/presets/src/index.ts';
 
 interface MemberFingerprint {
   name: string;
@@ -41,7 +63,17 @@ interface MemberFingerprint {
   type: string;
 }
 
-const createProgram = (): ts.Program => ts.createProgram([ MIRROR_FILE, UPLOADER_SOURCE, BLOCK_TOOL_SOURCE ], {
+const createProgram = (): ts.Program => ts.createProgram([
+  MIRROR_FILE,
+  UPLOADER_SOURCE,
+  BLOCK_TOOL_SOURCE,
+  FETCH_ENDPOINT_SOURCE,
+  SUPABASE_SOURCE,
+  PRESIGNED_SOURCE,
+  CLOUDINARY_SOURCE,
+  INDEXEDDB_SOURCE,
+  INDEX_SOURCE,
+], {
   strict: true,
   noEmit: true,
   skipLibCheck: true,
@@ -104,7 +136,11 @@ function fingerprintInterface(checker: ts.TypeChecker, decl: ts.InterfaceDeclara
     .map((member) => ({
       name: member.getName(),
       optional: (member.flags & ts.SymbolFlags.Optional) !== 0,
-      type: checker.typeToString(checker.getTypeOfSymbol(member)),
+      // NoTruncation matters here: `SupabaseLike`'s nested callback shape is
+      // long enough that the default printer collapses its tail to `{ ... }`
+      // — both sides would still fingerprint identically with a field
+      // renamed inside that tail, which is a drift test that cannot fail.
+      type: checker.typeToString(checker.getTypeOfSymbol(member), undefined, ts.TypeFormatFlags.NoTruncation),
     }))
     // Member order in an object type carries no meaning, so sort before
     // comparing — reordering a mirror's fields must not read as drift.
@@ -134,6 +170,11 @@ describe('presets uploader-type mirrors stay in sync with their sources', () => 
   const mirrorSource = loadSource(program, MIRROR_FILE);
   const uploaderSource = loadSource(program, UPLOADER_SOURCE);
   const blockToolSource = loadSource(program, BLOCK_TOOL_SOURCE);
+  const fetchEndpointSource = loadSource(program, FETCH_ENDPOINT_SOURCE);
+  const supabaseSource = loadSource(program, SUPABASE_SOURCE);
+  const presignedSource = loadSource(program, PRESIGNED_SOURCE);
+  const cloudinarySource = loadSource(program, CLOUDINARY_SOURCE);
+  const indexeddbSource = loadSource(program, INDEXEDDB_SOURCE);
 
   // sourceLabel comes before sourceFile: it.each's `%s` title placeholders
   // consume tuple entries positionally, and a raw ts.SourceFile stringifies
@@ -142,6 +183,14 @@ describe('presets uploader-type mirrors stay in sync with their sources', () => 
     [ 'UploadedAsset', UPLOADER_LABEL, uploaderSource ],
     [ 'UploadContext', UPLOADER_LABEL, uploaderSource ],
     [ 'BlokUploader', UPLOADER_LABEL, uploaderSource ],
+    [ 'FetchStorageOptions', FETCH_ENDPOINT_LABEL, fetchEndpointSource ],
+    [ 'SupabaseLike', SUPABASE_LABEL, supabaseSource ],
+    [ 'SupabaseStorageOptions', SUPABASE_LABEL, supabaseSource ],
+    [ 'SignRequest', PRESIGNED_LABEL, presignedSource ],
+    [ 'SignedTarget', PRESIGNED_LABEL, presignedSource ],
+    [ 'PresignedStorageOptions', PRESIGNED_LABEL, presignedSource ],
+    [ 'CloudinaryStorageOptions', CLOUDINARY_LABEL, cloudinarySource ],
+    [ 'IndexedDBStorageOptions', INDEXEDDB_LABEL, indexeddbSource ],
   ];
 
   it.each(interfaceCases)('`%s` mirrors its declaration in %s', (name, sourceLabel, sourceFile) => {
@@ -164,5 +213,34 @@ describe('presets uploader-type mirrors stay in sync with their sources', () => 
       `\`AssetKind\` in ${MIRROR_LABEL} has drifted from its source in ${BLOCK_TOOL_LABEL} — ` +
         'compare both copies and update the mirror to match.'
     ).toEqual(sourceFingerprint);
+  });
+
+  it('every function exported at runtime from src/index.ts is declared in the published types, and vice versa', () => {
+    const indexSource = loadSource(program, INDEX_SOURCE);
+    const indexModule = checker.getSymbolAtLocation(indexSource);
+    const mirrorModule = checker.getSymbolAtLocation(mirrorSource);
+
+    if (indexModule === undefined) {
+      throw new Error(`${INDEX_LABEL} has no module symbol`);
+    }
+    if (mirrorModule === undefined) {
+      throw new Error(`${MIRROR_LABEL} has no module symbol`);
+    }
+
+    const runtimeExports = checker.getExportsOfModule(indexModule).map((symbol) => symbol.getName()).sort();
+
+    // Filtered to FunctionDeclaration exports: the mirror also exports the
+    // eight option interfaces, which have no runtime counterpart in
+    // src/index.ts and would otherwise break a plain set comparison.
+    const publishedFunctionExports = checker.getExportsOfModule(mirrorModule)
+      .filter((symbol) => symbol.declarations?.some((declaration) => ts.isFunctionDeclaration(declaration)) ?? false)
+      .map((symbol) => symbol.getName())
+      .sort();
+
+    expect(
+      publishedFunctionExports,
+      `${INDEX_LABEL}'s runtime exports and ${MIRROR_LABEL}'s declared functions have drifted — ` +
+        'a preset added to one and not the other leaves CI green while consumers hit TS2305.'
+    ).toEqual(runtimeExports);
   });
 });

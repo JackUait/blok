@@ -1,0 +1,49 @@
+version: 2
+project_name: blok-server
+
+# goreleaser defaults this to ./dist — the directory vite writes the editor
+# bundle into, which `goreleaser release --clean` would empty.
+dist: .goreleaser-dist
+
+builds:
+  - id: blok-server
+    # Paths below are relative to `dir`; `dir` itself is relative to this file,
+    # which sits at the repo root (a JS project's root, not the Go module's).
+    dir: packages/server
+    main: ./cmd/blok-server
+    binary: blok-server
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: blok-server
+    formats: [tar.gz]
+    # packages/server/bin/blok-server.mjs builds this exact filename to fetch the
+    # release asset. goreleaser's default template embeds the project name AND
+    # version, which the wrapper would then have to reconstruct twice.
+    name_template: 'blok-server_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  # Same reason as the archive template: the wrapper fetches this exact name, and
+  # refuses to run a binary it could not verify against this file.
+  name_template: 'checksums.txt'
+
+release:
+  # scripts/release.mjs creates the GitHub release and writes its notes before
+  # this workflow runs; goreleaser only uploads assets onto it.
+  mode: keep-existing
+
+changelog:
+  disable: true
+
+dockers:
+  - image_templates:
+      - "ghcr.io/jackuait/blok-server:{{ .Version }}"
+      - "ghcr.io/jackuait/blok-server:latest"
+    dockerfile: packages/server/Dockerfile

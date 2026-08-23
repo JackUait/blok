@@ -24,6 +24,9 @@ test-results
 
 dist/
 packages/cli/dist/
+# goreleaser output (see dist: in .goreleaser.yaml — kept out of dist/ so a
+# local `goreleaser release --clean` cannot empty the editor bundle)
+.goreleaser-dist/
 test/playwright/fixtures/vendor/
 
 coverage/

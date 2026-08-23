@@ -1,7 +1,31 @@
 {
   "name": "@bloklabs/server",
   "version": "1.10.1",
-  "description": "Blok backend service — file uploads and link previews",
+  "description": "Blok backend service — a small Go sidecar that handles file uploads and link previews, so you write no backend code for either.",
+  "license": "Apache-2.0",
+  "author": "JackUait",
+  "homepage": "https://blokeditor.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JackUait/blok.git",
+    "directory": "packages/server"
+  },
+  "bugs": {
+    "url": "https://github.com/JackUait/blok/issues"
+  },
+  "keywords": [
+    "blok",
+    "block-editor",
+    "rich-text-editor",
+    "file-upload",
+    "uploads",
+    "link-preview",
+    "unfurl",
+    "open-graph",
+    "server",
+    "sidecar",
+    "ssrf"
+  ],
   "bin": {
     "blok-server": "bin/blok-server.mjs"
   },
@@ -13,6 +37,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "license": "Apache-2.0"
+  }
 }

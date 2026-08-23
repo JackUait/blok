@@ -1,0 +1,113 @@
+name: Release server
+
+# ci.yml is branch/PR-triggered only, so the goreleaser run cannot live there.
+# It also cannot live inside scripts/release.mjs: that script runs on a
+# maintainer's laptop, and a frontend developer cutting a release has no Go
+# toolchain, no Docker daemon and no GHCR credentials. The tag scripts/release.mjs
+# pushes is the seam — this workflow picks it up from there.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release-server:
+    name: Release server
+    # mirror.yml pushes every v* tag on to dodopizza/blok, where this workflow
+    # would fire a second time against a repository with no GHCR package and no
+    # matching GitHub release.
+    if: github.repository == 'JackUait/blok'
+    runs-on: ubuntu-latest
+    permissions:
+      # contents: upload the archives and checksums onto the release.
+      # packages: push the image to GHCR.
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # The previous tag is needed to decide whether packages/server changed,
+          # and goreleaser reads tag history to resolve {{ .Version }}.
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: packages/server/go.sum
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for the GitHub release
+        # scripts/release.mjs pushes the tag and only THEN runs `gh release create`.
+        # goreleaser runs in keep-existing mode, so starting before the release
+        # exists would have it create one with an empty body and make the
+        # `gh release create` that follows fail with "release already exists".
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for _ in $(seq 1 60); do
+            if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::no GitHub release for $GITHUB_REF_NAME after 10 minutes"
+          exit 1
+
+      - name: Decide whether the image needs rebuilding
+        id: server
+        run: |
+          previous="$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)"
+          image="ghcr.io/jackuait/blok-server"
+
+          # No previous tag, server sources touched, the build config touched, or
+          # no previous image to copy — any of those means a real build.
+          if [ -z "$previous" ] \
+            || ! git diff --quiet "$previous" "$GITHUB_REF_NAME" -- packages/server .goreleaser.yaml \
+            || ! docker buildx imagetools inspect "$image:${previous#v}" >/dev/null 2>&1; then
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "previous=$previous" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release binaries and image
+        if: steps.server.outputs.rebuild == 'true'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release binaries only
+        # The binaries must exist on EVERY tag even when the server did not change:
+        # the npm wrapper is versioned in lockstep with the family, so it resolves
+        # its download from the release matching its own version. Only the image —
+        # the expensive, byte-identical half — is skipped.
+        if: steps.server.outputs.rebuild == 'false'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean --skip=docker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Re-tag the previous image
+        # imagetools create copies the manifest, so this points the new tags at the
+        # existing digest instead of pushing identical layers again.
+        if: steps.server.outputs.rebuild == 'false'
+        env:
+          PREVIOUS: ${{ steps.server.outputs.previous }}
+        run: |
+          image="ghcr.io/jackuait/blok-server"
+          docker buildx imagetools create \
+            --tag "$image:${GITHUB_REF_NAME#v}" \
+            --tag "$image:latest" \
+            "$image:${PREVIOUS#v}"

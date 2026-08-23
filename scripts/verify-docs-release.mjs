@@ -7,6 +7,8 @@ export const RELEASE_PACKAGES = [
   { name: '@bloklabs/vue', manifestPath: 'packages/vue/package.json' },
   { name: '@bloklabs/angular', manifestPath: 'packages/angular/package.json' },
   { name: '@bloklabs/cli', manifestPath: 'packages/cli/package.json' },
+  { name: '@bloklabs/presets', manifestPath: 'packages/presets/package.json' },
+  { name: '@bloklabs/server', manifestPath: 'packages/server/package.json' },
 ];
 
 const RELEASE_TAG_PATTERN = /^v(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$/;

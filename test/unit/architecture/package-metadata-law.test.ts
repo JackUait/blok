@@ -114,6 +114,15 @@ const publishedPackages: PublishedPackage[] = [
     requiredKeywords: [ 'storage', 'file-upload', 'uploader', 'supabase', 's3', 'cloudinary', 'indexeddb' ],
     requiresReadme: true,
   },
+  {
+    dir: 'packages/server',
+    packDir: 'packages/server',
+    // A backend sidecar, not the editor — so it carries the upload/link-preview
+    // vocabulary rather than the editor terms, same reasoning as cli above.
+    name: '@bloklabs/server',
+    requiredKeywords: [ 'file-upload', 'uploads', 'link-preview', 'unfurl', 'server', 'sidecar' ],
+    requiresReadme: true,
+  },
 ];
 
 const readManifest = (dir: string): Record<string, unknown> =>

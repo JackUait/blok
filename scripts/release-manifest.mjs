@@ -55,6 +55,16 @@ export const FAMILY = [
     manifestPath: 'packages/presets/package.json',
     packDir: 'packages/presets',
   },
+  {
+    // Ships only the npm wrapper (bin/) — the Go binaries and the container
+    // image come from .goreleaser.yaml, driven by the tag release.mjs pushes.
+    // No `@bloklabs/core` peer, so it sits with cli and presets rather than
+    // under the "core first" ordering rule above.
+    npmName: '@bloklabs/server',
+    gprName: '@dodopizza/blok-server',
+    manifestPath: 'packages/server/package.json',
+    packDir: 'packages/server',
+  },
 ];
 
 /**

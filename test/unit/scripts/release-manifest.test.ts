@@ -12,13 +12,15 @@ const findEntry = (npmName: string): (typeof FAMILY)[number] => {
 };
 
 describe('release family manifest', () => {
-  it('covers all five packages with correct npm + mirror names in publish order', () => {
+  it('covers every published package with correct npm + mirror names in publish order', () => {
     expect(FAMILY.map((p) => [p.npmName, p.gprName])).toEqual([
       ['@bloklabs/core', '@dodopizza/blok'],
       ['@bloklabs/react', '@dodopizza/blok-react'],
       ['@bloklabs/vue', '@dodopizza/blok-vue'],
       ['@bloklabs/angular', '@dodopizza/blok-angular'],
       ['@bloklabs/cli', '@dodopizza/blok-cli'],
+      ['@bloklabs/presets', '@dodopizza/blok-presets'],
+      ['@bloklabs/server', '@dodopizza/blok-server'],
     ]);
   });
 

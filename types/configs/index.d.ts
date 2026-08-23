@@ -6,3 +6,4 @@ export * from './log-levels';
 export * from './i18n-config';
 export * from './i18n-dictionary';
 export * from './user-info';
+export * from './uploader';

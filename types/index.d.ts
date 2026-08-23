@@ -118,6 +118,9 @@ export {
   OnBeforePasteHandler,
   BlokStyleConfig,
   BlokLinkConfig,
+  BlokUploader,
+  UploadContext,
+  UploadedAsset,
 } from './configs';
 
 export * from './utils/popover';

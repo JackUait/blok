@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 
 import { sendRequest, type HttpRequestOptions, type HttpResponse } from './http-client';
@@ -14,6 +15,27 @@ export interface RunningServer {
   readonly baseUrl: string;
   request(method: string, path: string, options?: HttpRequestOptions): Promise<HttpResponse>;
   stop(): Promise<void>;
+}
+
+export interface RunServerCommandOptions {
+  args: string[];
+  env?: NodeJS.ProcessEnv;
+}
+
+export interface ServerCommandResult {
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+  stderr: string;
+}
+
+function configuredServerCommand(): string {
+  const command = process.env.BLOK_CONFORMANCE_SERVER;
+
+  if (command === undefined || command === '') {
+    throw new Error('BLOK_CONFORMANCE_SERVER must point at a built server executable');
+  }
+
+  return command;
 }
 
 function allocateLoopbackPort(): Promise<number> {
@@ -63,13 +85,29 @@ function replaceListenPlaceholder(args: string[], port: number): string[] {
   throw new Error(`Server args must include --listen ${LOOPBACK_PLACEHOLDER}`);
 }
 
+export function runServerCommand(options: RunServerCommandOptions): Promise<ServerCommandResult> {
+  const command = configuredServerCommand();
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, options.args, {
+      env: { ...process.env, ...options.env },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    let stderr = '';
+
+    child.once('error', reject);
+    child.stderr?.setEncoding('utf8');
+    child.stderr?.on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+    child.once('close', (exitCode, signal) => {
+      resolve({ exitCode, signal, stderr });
+    });
+  });
+}
+
 export async function startServer(options: StartServerOptions): Promise<RunningServer> {
-  const command = process.env.BLOK_CONFORMANCE_SERVER;
-
-  if (command === undefined || command === '') {
-    throw new Error('BLOK_CONFORMANCE_SERVER must point at a built server executable');
-  }
-
+  const command = configuredServerCommand();
   const port = await allocateLoopbackPort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const serverProcess = await startServerProcess({

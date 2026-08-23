@@ -1,43 +1,498 @@
 // @vitest-environment node
 
-import { expect, it as baseIt } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-import { startServer } from './run-against';
+import { expect, it } from 'vitest';
 
-// These cases drive a real built executable that only
-// scripts/test-server-conformance.mjs builds and points BLOK_CONFORMANCE_SERVER at.
-// The default `unit` project globs this file too, so without the guard every
-// ordinary `yarn test` run is red.
-const it = baseIt.skipIf(
-  process.env.BLOK_CONFORMANCE_SERVER === undefined || process.env.BLOK_CONFORMANCE_SERVER === '',
-);
+import {
+  runServerCommand,
+  startServer,
+  type RunningServer,
+} from './run-against';
 
-it('starts a supplied server and reports its version', async () => {
-  const server = await startServer({ args: ['--listen', '127.0.0.1:0', '--storage-dir', ''] });
+const ALLOWED_ORIGIN = 'https://app.example.com';
+const DISALLOWED_ORIGIN = 'https://evil.example.net';
+
+interface TicketFixture {
+  compatible: string;
+  expired: string;
+  malformed: string;
+  secret: string;
+  tampered: string;
+}
+
+function isTicketFixture(value: unknown): value is TicketFixture {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const fixture = value as Record<string, unknown>;
+
+  return ['compatible', 'expired', 'malformed', 'secret', 'tampered']
+    .every((key) => typeof fixture[key] === 'string');
+}
+
+function loadTickets(): TicketFixture {
+  const fixturePath = fileURLToPath(new URL('./fixtures/tickets.json', import.meta.url));
+  const fixture: unknown = JSON.parse(readFileSync(fixturePath, 'utf8'));
+
+  if (!isTicketFixture(fixture)) {
+    throw new Error('Server ticket fixture has an invalid shape');
+  }
+
+  return fixture;
+}
+
+const tickets = loadTickets();
+
+function serverArgs(...args: string[]): string[] {
+  return ['--listen', '127.0.0.1:0', ...args];
+}
+
+function ticketArgs(...args: string[]): string[] {
+  return serverArgs(
+    '--auth',
+    'ticket',
+    '--secret',
+    tickets.secret,
+    '--allow-origin',
+    ALLOWED_ORIGIN,
+    ...args,
+  );
+}
+
+async function withServer(
+  args: string[],
+  run: (server: RunningServer) => Promise<void>,
+): Promise<void> {
+  const server = await startServer({ args });
 
   try {
-    expect(await server.request('GET', '/health', { parseJson: true })).toMatchObject({
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-      json: { status: 'ok', version: expect.any(String) as unknown },
-    });
+    await run(server);
   } finally {
     await server.stop();
   }
+}
+
+function requestHeaders(origin?: string, token?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (origin !== undefined) {
+    headers.Origin = origin;
+  }
+  if (token !== undefined) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+function expectNoCors(headers: Record<string, string>): void {
+  expect(headers['access-control-allow-origin']).toBeUndefined();
+  expect(headers.vary).toBeUndefined();
+}
+
+it('returns the exact ungated health response without CORS', async () => {
+  await withServer(ticketArgs('--storage-dir', ''), async (server) => {
+    const response = await server.request('GET', '/health', {
+      headers: requestHeaders(ALLOWED_ORIGIN),
+      parseJson: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toBe('application/json');
+    expect(response.text).toBe('{"status":"ok","version":"dev"}\n');
+    expect(response.json).toEqual({ status: 'ok', version: 'dev' });
+    expectNoCors(response.headers);
+  });
 });
 
-it('returns a plain-text response without parsing JSON by default', async () => {
-  const server = await startServer({ args: ['--listen', '127.0.0.1:0', '--storage-dir', ''] });
+it('returns the Go method and unknown-route responses', async () => {
+  await withServer(serverArgs('--storage-dir', ''), async (server) => {
+    const wrongMethod = await server.request('POST', '/health');
+    const unknownRoute = await server.request('GET', '/missing');
+    const unregisteredUpload = await server.request('POST', '/upload');
 
-  try {
-    const response = await server.request('GET', '/missing');
-
-    expect(response).toMatchObject({
+    expect(wrongMethod).toMatchObject({
+      status: 405,
+      headers: {
+        allow: 'GET, HEAD',
+        'content-type': 'text/plain; charset=utf-8',
+      },
+      text: 'Method Not Allowed\n',
+    });
+    expect(unknownRoute).toMatchObject({
       status: 404,
-      json: undefined,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
       text: '404 page not found\n',
     });
-  } finally {
-    await server.stop();
-  }
+    expect(unregisteredUpload).toMatchObject({
+      status: 404,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      text: '404 page not found\n',
+    });
+  });
+});
+
+it('unregisters both outbound routes when unfurling is disabled', async () => {
+  await withServer(serverArgs('--no-unfurl'), async (server) => {
+    const requests = await Promise.all([
+      server.request('GET', '/unfurl'),
+      server.request('OPTIONS', '/unfurl', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+      server.request('POST', '/upload-by-url'),
+      server.request('OPTIONS', '/upload-by-url', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+    ]);
+
+    for (const response of requests) {
+      expect(response).toMatchObject({
+        status: 404,
+        text: '404 page not found\n',
+      });
+    }
+  });
+});
+
+it('unregisters both upload routes when storage is absent', async () => {
+  await withServer(serverArgs('--storage-dir', ''), async (server) => {
+    const requests = await Promise.all([
+      server.request('POST', '/upload'),
+      server.request('OPTIONS', '/upload', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+      server.request('POST', '/upload-by-url'),
+      server.request('OPTIONS', '/upload-by-url', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+    ]);
+
+    for (const response of requests) {
+      expect(response).toMatchObject({
+        status: 404,
+        text: '404 page not found\n',
+      });
+    }
+  });
+});
+
+it.each([
+  {
+    name: 'none',
+    args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+    disallowedStatus: 400,
+    missingStatus: 400,
+  },
+  {
+    name: 'proxy',
+    args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+    disallowedStatus: 400,
+    missingStatus: 400,
+  },
+  {
+    name: 'ticket',
+    args: ticketArgs('--rate-limit', '0'),
+    token: tickets.compatible,
+    disallowedStatus: 403,
+    missingStatus: 403,
+  },
+])('$name mode handles allowed, disallowed, and missing origins', async (testCase) => {
+  await withServer(testCase.args, async (server) => {
+    const allowed = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, testCase.token),
+      parseJson: true,
+    });
+    const disallowed = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(DISALLOWED_ORIGIN, testCase.token),
+    });
+    const missing = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(undefined, testCase.token),
+    });
+
+    expect(allowed).toMatchObject({
+      status: 400,
+      headers: { 'access-control-allow-origin': ALLOWED_ORIGIN },
+      json: { success: 0 },
+      text: '{"success":0}\n',
+    });
+    expect(allowed.rawHeaders.vary).toEqual(['Origin']);
+    expect(disallowed.status).toBe(testCase.disallowedStatus);
+    expect(missing.status).toBe(testCase.missingStatus);
+    expectNoCors(disallowed.headers);
+    expectNoCors(missing.headers);
+  });
+});
+
+it('answers anonymous preflights with the exact CORS headers without spending a ticket limit', async () => {
+  await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
+    for (let index = 0; index < 3; index += 1) {
+      const preflight = await server.request('OPTIONS', '/unfurl', {
+        headers: {
+          ...requestHeaders(ALLOWED_ORIGIN),
+          'Access-Control-Request-Headers': 'authorization, x-tenant-id',
+          'Access-Control-Request-Method': 'GET',
+        },
+      });
+
+      expect(preflight.status).toBe(204);
+      expect(preflight.text).toBe('');
+      expect(preflight.headers).toMatchObject({
+        'access-control-allow-headers': 'authorization, x-tenant-id',
+        'access-control-allow-methods': 'GET, OPTIONS',
+        'access-control-allow-origin': ALLOWED_ORIGIN,
+        'access-control-max-age': '600',
+      });
+      expect(preflight.rawHeaders.vary).toEqual(['Access-Control-Request-Headers', 'Origin']);
+    }
+
+    const firstRequest = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      parseJson: true,
+    });
+    const limitedRequest = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    });
+
+    expect(firstRequest).toMatchObject({ status: 400, json: { success: 0 } });
+    expect(limitedRequest).toMatchObject({
+      status: 429,
+      headers: { 'access-control-allow-origin': ALLOWED_ORIGIN },
+      text: 'rate limit exceeded\n',
+    });
+  });
+});
+
+it('accepts the fixed compatible ticket and rejects malformed ticket cases', async () => {
+  await withServer(ticketArgs('--rate-limit', '0', '--storage-dir', ''), async (server) => {
+    const compatible = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      parseJson: true,
+    });
+
+    expect(compatible).toMatchObject({
+      status: 400,
+      json: { success: 0 },
+      text: '{"success":0}\n',
+    });
+
+    for (const [name, token, text] of [
+      ['missing', undefined, 'missing pass\n'],
+      ['malformed', tickets.malformed, 'invalid pass\n'],
+      ['expired', tickets.expired, 'invalid pass\n'],
+      ['tampered', tickets.tampered, 'invalid pass\n'],
+    ] as const) {
+      const response = await server.request('GET', '/unfurl', {
+        headers: requestHeaders(ALLOWED_ORIGIN, token),
+      });
+
+      expect(response).toMatchObject({
+        status: 401,
+        headers: { 'access-control-allow-origin': ALLOWED_ORIGIN },
+        text,
+      });
+      expect(response.rawHeaders.vary).toEqual(['Origin']);
+      expect(response.text, name).toBe(text);
+    }
+  });
+});
+
+it('runs origin checks before ticket checks and ticket checks before the limiter', async () => {
+  await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
+    const forbiddenOrigin = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(DISALLOWED_ORIGIN),
+    });
+    const rejectedTicket = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.malformed),
+    });
+    const allowedTicket = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      parseJson: true,
+    });
+    const limitedTicket = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    });
+
+    expect(forbiddenOrigin).toMatchObject({
+      status: 403,
+      text: 'origin not allowed\n',
+    });
+    expectNoCors(forbiddenOrigin.headers);
+    expect(rejectedTicket).toMatchObject({
+      status: 401,
+      headers: { 'access-control-allow-origin': ALLOWED_ORIGIN },
+      text: 'invalid pass\n',
+    });
+    expect(allowedTicket).toMatchObject({
+      status: 400,
+      json: { success: 0 },
+    });
+    expect(limitedTicket).toMatchObject({
+      status: 429,
+      headers: { 'access-control-allow-origin': ALLOWED_ORIGIN },
+      text: 'rate limit exceeded\n',
+    });
+  });
+});
+
+it('uses the default ticket limit of 60 and an explicit small limit', async () => {
+  await withServer(ticketArgs('--storage-dir', ''), async (server) => {
+    for (let index = 0; index < 60; index += 1) {
+      const response = await server.request('GET', '/unfurl', {
+        headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      });
+
+      expect(response.status).toBe(400);
+    }
+
+    expect(await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).toMatchObject({
+      status: 429,
+      text: 'rate limit exceeded\n',
+    });
+  });
+
+  await withServer(ticketArgs('--storage-dir', '', '--rate-limit', '2'), async (server) => {
+    for (let index = 0; index < 2; index += 1) {
+      expect((await server.request('GET', '/unfurl', {
+        headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      })).status).toBe(400);
+    }
+
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    }))).toMatchObject({
+      status: 429,
+      text: 'rate limit exceeded\n',
+    });
+  });
+});
+
+it.each([
+  {
+    name: 'help',
+    args: ['--help'],
+    exitCode: 0,
+    stderr: 'Usage of blok-server:',
+    env: undefined,
+  },
+  {
+    name: 'unknown flag',
+    args: ['--not-a-real-flag'],
+    exitCode: 2,
+    stderr: 'flag provided but not defined: -not-a-real-flag',
+    env: undefined,
+  },
+  {
+    name: 'unknown auth mode',
+    args: ['--auth', 'unknown'],
+    exitCode: 1,
+    stderr: '--auth must be none, proxy, or ticket (got "unknown")',
+    env: undefined,
+  },
+  {
+    name: 'non-loopback anonymous listener',
+    args: ['--listen', '0.0.0.0:4000'],
+    exitCode: 1,
+    stderr: '--auth none',
+    env: undefined,
+  },
+  {
+    name: 'short ticket secret',
+    args: ['--auth', 'ticket', '--secret', 'short', '--allow-origin', ALLOWED_ORIGIN],
+    exitCode: 1,
+    stderr: '--secret must be at least 32 characters (got 5)',
+    env: undefined,
+  },
+  {
+    name: 'missing ticket origin',
+    args: ['--auth', 'ticket', '--secret', tickets.secret],
+    exitCode: 1,
+    stderr: 'a public service needs --allow-origin',
+    env: undefined,
+  },
+  {
+    name: 'S3 without endpoint',
+    args: ['--s3-bucket', 'blok'],
+    exitCode: 1,
+    stderr: '--s3-bucket needs --s3-endpoint',
+    env: undefined,
+  },
+  {
+    name: 'S3 without region',
+    args: [
+      '--s3-bucket',
+      'blok',
+      '--s3-endpoint',
+      'https://s3.example.test',
+      '--s3-bucket-url',
+      'https://uploads.example.test',
+    ],
+    exitCode: 1,
+    stderr: '--s3-bucket needs --s3-region',
+    env: {
+      BLOK_S3_ACCESS_KEY: 'access-key',
+      BLOK_S3_SECRET_KEY: 'secret-key',
+    },
+  },
+  {
+    name: 'S3 without bucket URL',
+    args: [
+      '--s3-bucket',
+      'blok',
+      '--s3-endpoint',
+      'https://s3.example.test',
+      '--s3-region',
+      'eu-central-1',
+    ],
+    exitCode: 1,
+    stderr: '--s3-bucket needs --s3-bucket-url',
+    env: {
+      BLOK_S3_ACCESS_KEY: 'access-key',
+      BLOK_S3_SECRET_KEY: 'secret-key',
+    },
+  },
+  {
+    name: 'S3 without credentials',
+    args: [
+      '--s3-bucket',
+      'blok',
+      '--s3-endpoint',
+      'https://s3.example.test',
+      '--s3-region',
+      'eu-central-1',
+      '--s3-bucket-url',
+      'https://uploads.example.test',
+    ],
+    exitCode: 1,
+    stderr: 'BLOK_S3_ACCESS_KEY and BLOK_S3_SECRET_KEY',
+    env: {
+      BLOK_S3_ACCESS_KEY: '',
+      BLOK_S3_SECRET_KEY: '',
+    },
+  },
+  {
+    name: 'S3 with invalid addressing',
+    args: [
+      '--s3-bucket',
+      'blok',
+      '--s3-endpoint',
+      'https://s3.example.test',
+      '--s3-region',
+      'eu-central-1',
+      '--s3-bucket-url',
+      'https://uploads.example.test',
+      '--s3-addressing',
+      'dns',
+    ],
+    exitCode: 1,
+    stderr: '--s3-addressing must be "path" or "virtual"',
+    env: {
+      BLOK_S3_ACCESS_KEY: 'access-key',
+      BLOK_S3_SECRET_KEY: 'secret-key',
+    },
+  },
+])('exits with the contract code for $name', async (testCase) => {
+  const result = await runServerCommand({ args: testCase.args, env: testCase.env });
+
+  expect(result.exitCode).toBe(testCase.exitCode);
+  expect(result.signal).toBeNull();
+  expect(result.stderr).toContain(testCase.stderr);
 });

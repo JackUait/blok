@@ -30,7 +30,7 @@
 
 - `src/server-runtime/index.ts` — validates JSON inputs and exposes the three DOM-free operations through the single global boundary.
 - `test/unit/server-runtime/index.test.ts` — pins the operation names, wire shapes, math support, and failures before bundling.
-- `scripts/build-server-runtime.mjs` — creates one minified IIFE with `inlineDynamicImports: true`; accepts an output directory so tests do not write into the repository.
+- `scripts/build-server-runtime.mjs` — creates one minified IIFE as a single IIFE (IIFE builds disable code splitting); accepts an output directory so tests do not write into the repository.
 - `test/unit/scripts/build-server-runtime.test.ts` — proves the artifact is one file, contains the host global, and contains no runtime `import()`.
 - `scripts/build-all.mjs` — adds the independent `server-runtime` build task.
 - `test/unit/scripts/build-all.test.ts` — pins that task in production and test graphs.
@@ -172,7 +172,7 @@ build: {
     formats: ['iife'],
     fileName: () => 'blok-server-runtime.js',
   },
-  rollupOptions: { output: { inlineDynamicImports: true } },
+  // IIFE output has code splitting disabled, so dynamic imports are inlined.
 }
 ```
 
@@ -181,7 +181,7 @@ Export the function for tests and execute it only when the script is the main mo
 ```gitignore
 packages/server/dotnet/**/bin/
 packages/server/dotnet/**/obj/
-packages/server/dotnet/Blok.Server/Runtime/blok-server-runtime.js
+packages/server/dotnet/Blok.Server/Generated/blok-server-runtime.js
 ```
 
 - [ ] **Step 4: Run the affected suites, build once, and lint changed files**
@@ -273,7 +273,7 @@ Expected: FAIL because `IBlokRuntime` and `JintBlokRuntime` do not exist.
 - [ ] **Step 3: Implement the runtime and embedded-resource build hook**
 
 The library project targets `net10.0`, references Jint `4.16.1`, embeds
-`Runtime/blok-server-runtime.js` with logical name `Blok.Server.Runtime.blok-server-runtime.js`,
+`Generated/blok-server-runtime.js` with logical name `Blok.Server.Runtime.blok-server-runtime.js`,
 and runs `node ../../../../scripts/build-server-runtime.mjs` before resource preparation.
 
 `JintBlokRuntime` reads the embedded resource once, creates the requested number of

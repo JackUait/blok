@@ -91,7 +91,10 @@ async function main() {
         BLOK_CONFORMANCE_SERVER: conformanceExecutable,
       }
       : {
-        BLOK_CONFORMANCE_ORDINARY_SERVER: '',
+        BLOK_CONFORMANCE_ORDINARY_SERVER: join(
+          temporaryDirectory,
+          `Blok.Server.Host${executableSuffix}`,
+        ),
         BLOK_CONFORMANCE_SERVER: join(
           temporaryDirectory,
           `Blok.Server.Host${executableSuffix}`,

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Blok.Server.AspNetCore;
+using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
@@ -49,6 +50,29 @@ public sealed class BlokServerRegistrationTests
 
     using var provider = services.BuildServiceProvider();
     Assert.IsType<AllowAllAuthorization>(provider.GetRequiredService<IBlokAuthorization>());
+  }
+
+  [Fact]
+  public void RegistersTheSharedS3StoreWhenABucketIsConfigured()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.StorageDirectory = "/unused/local/storage";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3Addressing = "path";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<S3BlobStore>(
+        provider.GetRequiredService<IBlobStore>());
   }
 
   [Fact]

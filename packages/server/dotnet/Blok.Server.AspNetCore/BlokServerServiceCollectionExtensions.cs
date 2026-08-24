@@ -40,7 +40,23 @@ public static class BlokServerServiceCollectionExtensions
     services.TryAddSingleton<FixedWindowRateLimiter>();
     services.TryAddSingleton<BlokServerRequestGuard>();
 
-    if (options.StorageDirectory != "" && options.S3Bucket == "")
+    if (options.S3Bucket != "")
+    {
+      services.TryAddSingleton<IBlobStore>(
+          provider => new S3BlobStore(
+              new S3BlobStoreOptions(
+                  options.S3Endpoint,
+                  options.S3Region,
+                  options.S3Bucket,
+                  options.S3AccessKey,
+                  options.S3SecretKey,
+                  options.S3BucketUrl,
+                  options.S3Addressing,
+                  options.MaxUploadBytes,
+                  Path.GetTempPath()),
+              provider.GetRequiredService<TimeProvider>()));
+    }
+    else if (options.StorageDirectory != "")
     {
       services.TryAddSingleton<IBlobStore>(
           new LocalBlobStore(options.StorageDirectory, options.PublicUrl));

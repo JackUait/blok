@@ -8,6 +8,7 @@ const LOOPBACK_PLACEHOLDER = '127.0.0.1:0';
 
 export interface StartServerOptions {
   args: string[];
+  command?: string;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -107,7 +108,7 @@ export function runServerCommand(options: RunServerCommandOptions): Promise<Serv
 }
 
 export async function startServer(options: StartServerOptions): Promise<RunningServer> {
-  const command = configuredServerCommand();
+  const command = options.command ?? configuredServerCommand();
   const port = await allocateLoopbackPort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const serverProcess = await startServerProcess({

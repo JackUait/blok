@@ -84,19 +84,23 @@ func buildServer(cfg serverConfig, version string) (http.Handler, error) {
 	// UnfurlDisabled and /upload-by-url by the nil MediaFetcher, so no part of
 	// the fetch path is reachable. Plain /upload is untouched.
 	if !cfg.UnfurlDisabled {
-		opts.Fetcher = fetchguard.New(fetchguard.Config{
+		pageConfig := fetchguard.Config{
 			Timeout:      unfurlTimeout,
 			MaxBytes:     unfurlMaxBytes,
 			MaxRedirects: maxRedirects,
-		})
+		}
 		// A second INSTANCE of the same guard, never a second path. Its cap is
 		// the upload cap: re-hosting a real file through the page-sized cap
 		// above would refuse everything but the smallest images.
-		opts.MediaFetcher = fetchguard.New(fetchguard.Config{
+		mediaConfig := fetchguard.Config{
 			Timeout:      mediaFetchTimeout,
 			MaxBytes:     cfg.MaxUploadBytes,
 			MaxRedirects: maxRedirects,
-		})
+		}
+
+		applyConformanceOrigin(cfg, &pageConfig, &mediaConfig)
+		opts.Fetcher = fetchguard.New(pageConfig)
+		opts.MediaFetcher = fetchguard.New(mediaConfig)
 	}
 
 	api := httpapi.New(opts)

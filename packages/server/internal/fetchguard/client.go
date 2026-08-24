@@ -47,6 +47,7 @@ type Config struct {
 	// included. A client built with it therefore proves nothing about the
 	// production address filter — only strict clients do.
 	TestOnlyAllowedAddrs []string
+	conformanceSettings
 }
 
 type Response struct {
@@ -83,7 +84,10 @@ func New(cfg Config) *Client {
 		// safeurl copies Timeout and CheckRedirect into the inner *http.Client
 		// at construction, so they have to be set here rather than assigned on
 		// the returned wrapper.
-		SetCheckRedirect(func(_ *http.Request, via []*http.Request) error {
+		SetCheckRedirect(func(request *http.Request, via []*http.Request) error {
+			if err := validateConformanceURL(cfg, request.URL); err != nil {
+				return err
+			}
 			// via holds the requests already made, so this follows exactly
 			// MaxRedirects hops and refuses the next. Each hop is re-dialed and
 			// therefore re-checked by the address filter; this only bounds the
@@ -141,6 +145,9 @@ func (c *Client) Get(ctx context.Context, rawURL string) (*Response, error) {
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
 		return nil, fmt.Errorf("%w: %s", ErrBadScheme, parsed.Scheme)
+	}
+	if err := validateConformanceURL(c.cfg, parsed); err != nil {
+		return nil, err
 	}
 
 	// A zero Timeout deadlines immediately, which fails closed. Leave it that

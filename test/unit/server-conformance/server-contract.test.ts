@@ -1,7 +1,11 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { expect, it } from 'vitest';
@@ -11,6 +15,8 @@ import {
   startServer,
   type RunningServer,
 } from './run-against';
+import { FIXTURE_MEDIA_BODY, startFixtureOrigin } from './fixture-origin';
+import { startFakeS3 } from './fake-s3';
 import { sendRequest } from './http-client';
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
@@ -54,6 +60,16 @@ function serverArgs(...args: string[]): string[] {
   return ['--listen', '127.0.0.1:0', ...args];
 }
 
+function ordinaryServerCommand(): string {
+  const command = process.env.BLOK_CONFORMANCE_ORDINARY_SERVER;
+
+  if (command === undefined || command === '') {
+    throw new Error('BLOK_CONFORMANCE_ORDINARY_SERVER must point at the ordinary built executable');
+  }
+
+  return command;
+}
+
 function ticketArgs(...args: string[]): string[] {
   return serverArgs(
     '--auth',
@@ -95,6 +111,74 @@ function requestHeaders(origin?: string, token?: string): Record<string, string>
 function expectNoCors(headers: Record<string, string>): void {
   expect(headers['access-control-allow-origin']).toBeUndefined();
   expect(headers.vary).toBeUndefined();
+}
+
+interface MultipartUpload {
+  body: Buffer;
+  contentType: string;
+}
+
+interface UploadResponse {
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  url: string;
+}
+
+function createMultipartUpload(options: {
+  bytes: Uint8Array;
+  fieldName?: string;
+  fileName: string;
+  mimeType?: string;
+}): MultipartUpload {
+  const boundary = 'blok-server-conformance-boundary';
+  const escapedFileName = options.fileName.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+  const header = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="${options.fieldName ?? 'file'}"; filename="${escapedFileName}"`,
+    `Content-Type: ${options.mimeType ?? 'application/octet-stream'}`,
+    '',
+    '',
+  ].join('\r\n');
+  const footer = `\r\n--${boundary}--\r\n`;
+
+  return {
+    body: Buffer.concat([Buffer.from(header), Buffer.from(options.bytes), Buffer.from(footer)]),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
+function isUploadResponse(value: unknown): value is UploadResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const response = value as Record<string, unknown>;
+
+  return typeof response.url === 'string' &&
+    (response.fileName === undefined || typeof response.fileName === 'string') &&
+    (response.mimeType === undefined || typeof response.mimeType === 'string') &&
+    (response.size === undefined || typeof response.size === 'number');
+}
+
+function requireUploadResponse(value: unknown): UploadResponse {
+  if (!isUploadResponse(value)) {
+    throw new Error('Server upload response has an invalid shape');
+  }
+
+  return value;
+}
+
+async function withTemporaryDirectory(
+  run: (directory: string) => Promise<void>,
+): Promise<void> {
+  const directory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-storage-'));
+
+  try {
+    await run(directory);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
 it('applies the total request deadline while a response keeps sending bytes', async () => {
@@ -726,4 +810,584 @@ it.each([
   expect(result.exitCode).toBe(testCase.exitCode);
   expect(result.signal).toBeNull();
   expect(result.stderr).toContain(testCase.stderr);
+});
+
+it('stores multipart bytes under safe local keys and serves them as attachments', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const cases = [
+        { fileName: String.raw`C:\Users\me\PHOTO.PNG`, expectedName: 'PHOTO.PNG', expectedExtension: '.png' },
+        { fileName: '../../notes/report.txt', expectedName: 'report.txt', expectedExtension: '.txt' },
+      ];
+
+      for (const [index, testCase] of cases.entries()) {
+        const bytes = Buffer.from(`stored bytes ${index}`);
+        const upload = createMultipartUpload({
+          bytes,
+          fileName: testCase.fileName,
+          mimeType: 'text/plain; charset=utf-8',
+        });
+        const response = await server.request('POST', '/upload', {
+          body: upload.body,
+          headers: { 'Content-Type': upload.contentType },
+          parseJson: true,
+        });
+        const payload = requireUploadResponse(response.json);
+        const storedURL = new URL(payload.url);
+        const storedName = storedURL.pathname.split('/').at(-1) ?? '';
+
+        expect(response).toMatchObject({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+        expect(response.json).toEqual({
+          fileName: testCase.expectedName,
+          mimeType: 'text/plain; charset=utf-8',
+          size: bytes.byteLength,
+          url: `${server.baseUrl}/files/${storedName}`,
+        });
+        expect(storedName).toMatch(new RegExp(`^[0-9a-f]{32}\\${testCase.expectedExtension}$`));
+        expect(await readFile(join(directory, storedName))).toEqual(bytes);
+
+        const served = await server.request('GET', storedURL.pathname);
+
+        expect(served).toMatchObject({
+          status: 200,
+          headers: {
+            'content-disposition': 'attachment',
+            'x-content-type-options': 'nosniff',
+          },
+        });
+        expect(served.bytes).toEqual(bytes);
+      }
+
+      const entries = await readdir(directory);
+      const listing = await server.request('GET', '/files/');
+
+      expect(entries).toHaveLength(cases.length);
+      expect(listing).toMatchObject({ status: 404, text: '404 page not found\n' });
+      for (const entry of entries) {
+        expect(listing.text).not.toContain(entry);
+      }
+    });
+  });
+});
+
+it('omits unavailable optional multipart response metadata', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        bytes: Buffer.alloc(0),
+        fileName: '.',
+        mimeType: 'not a media type',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+      const payload = requireUploadResponse(response.json);
+      const storedName = new URL(payload.url).pathname.split('/').at(-1) ?? '';
+
+      expect(response.status).toBe(200);
+      expect(response.json).toEqual({ url: `${server.baseUrl}/files/${storedName}` });
+      expect(storedName).toMatch(/^[0-9a-f]{32}$/);
+      expect(await readFile(join(directory, storedName))).toEqual(Buffer.alloc(0));
+    });
+  });
+});
+
+it('requires a valid multipart file field named file', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const wrongField = createMultipartUpload({
+        bytes: Buffer.from('bytes'),
+        fieldName: 'asset',
+        fileName: 'photo.png',
+      });
+      const missing = await server.request('POST', '/upload', {
+        body: wrongField.body,
+        headers: { 'Content-Type': wrongField.contentType },
+      });
+      const malformed = await server.request('POST', '/upload', {
+        body: 'not a multipart body',
+        headers: { 'Content-Type': 'multipart/form-data; boundary=missing' },
+      });
+
+      expect(missing).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'missing file field\n',
+      });
+      expect(malformed).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'malformed upload\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
+
+it('applies max-upload to the complete multipart request body', async () => {
+  const upload = createMultipartUpload({
+    bytes: Buffer.from('small file'),
+    fileName: 'small.txt',
+  });
+
+  expect(upload.body.byteLength).toBeGreaterThan('small file'.length);
+
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs(
+      '--storage-dir',
+      directory,
+      '--max-upload',
+      String(upload.body.byteLength - 1),
+    ), async (server) => {
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+      });
+
+      expect(response).toMatchObject({
+        status: 413,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'file too large\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
+
+it('refuses a zero upload cap at process startup', async () => {
+  const result = await runServerCommand({
+    args: serverArgs('--storage-dir', '', '--max-upload', '0'),
+  });
+
+  expect(result).toMatchObject({ exitCode: 1, signal: null });
+  expect(result.stderr).toContain(
+    '--max-upload must be a positive number of bytes (got 0): a zero cap refuses every upload',
+  );
+});
+
+it.runIf(
+  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== undefined &&
+  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== '',
+)('accepts only an exact HTTP 127.0.0.1 origin in the tagged binary', async () => {
+  for (const origin of [
+    'https://127.0.0.1:43123',
+    'http://localhost:43123',
+    'http://127.0.0.1',
+    'http://user@127.0.0.1:43123',
+    'http://127.0.0.1:43123/',
+    'http://127.0.0.1:43123?query',
+    'http://127.0.0.1:43123#fragment',
+  ]) {
+    const result = await runServerCommand({
+      args: ['--conformance-origin', origin],
+    });
+
+    expect(result, origin).toMatchObject({ exitCode: 2, signal: null });
+    expect(result.stderr).toContain(
+      'must be exactly http://127.0.0.1:PORT with a port from 1 to 65535 and no userinfo, path, query, or fragment',
+    );
+  }
+});
+
+it.runIf(
+  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== undefined &&
+  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== '',
+)('keeps the conformance-only origin flag out of an ordinary binary', async () => {
+  await expect(startServer({
+    command: ordinaryServerCommand(),
+    args: serverArgs(
+      '--conformance-origin',
+      'http://127.0.0.1:43123',
+      '--not-a-real-flag',
+    ),
+  })).rejects.toThrow(
+    /code 2[\s\S]*flag provided but not defined: -conformance-origin/,
+  );
+});
+
+it('unfurls redirected metadata with stable precedence and resolved URLs', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withServer(serverArgs(
+      '--storage-dir',
+      '',
+      '--conformance-origin',
+      origin.baseUrl,
+    ), async (server) => {
+      const response = await server.request(
+        'GET',
+        `/unfurl?url=${encodeURIComponent(origin.metadataRedirectUrl)}`,
+        { parseJson: true },
+      );
+
+      expect(response).toMatchObject({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+      expect(response.json).toEqual({
+        success: 1,
+        link: origin.metadataFinalUrl,
+        meta: {
+          title: 'OpenGraph title',
+          description: 'OpenGraph description',
+          image: { url: origin.metadataImageUrl },
+          favicon: origin.metadataFaviconUrl,
+          domain: '127.0.0.1',
+        },
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
+it('distinguishes a missing unfurl URL from fetch and upstream failures', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withServer(serverArgs(
+      '--storage-dir',
+      '',
+      '--conformance-origin',
+      origin.baseUrl,
+    ), async (server) => {
+      const missing = await server.request('GET', '/unfurl', { parseJson: true });
+
+      expect(missing).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+        json: { success: 0 },
+        text: '{"success":0}\n',
+      });
+
+      for (const target of [origin.errorUrl, origin.oversizedUrl, 'file:///etc/passwd']) {
+        const failed = await server.request(
+          'GET',
+          `/unfurl?url=${encodeURIComponent(target)}`,
+          { parseJson: true },
+        );
+
+        expect(failed, target).toMatchObject({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          json: { success: 0 },
+          text: '{"success":0}\n',
+        });
+      }
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
+it('reports an upstream unfurl timeout as success zero', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withServer(serverArgs(
+      '--storage-dir',
+      '',
+      '--conformance-origin',
+      origin.baseUrl,
+    ), async (server) => {
+      const response = await server.request(
+        'GET',
+        `/unfurl?url=${encodeURIComponent(origin.delayedUrl)}`,
+        { parseJson: true },
+      );
+
+      expect(response).toMatchObject({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        json: { success: 0 },
+        text: '{"success":0}\n',
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
+}, 15_000);
+
+it('stores redirected upload-by-url bytes with final response metadata', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withTemporaryDirectory(async (directory) => {
+      await withServer(serverArgs(
+        '--storage-dir',
+        directory,
+        '--max-upload',
+        '64',
+        '--conformance-origin',
+        origin.baseUrl,
+      ), async (server) => {
+        const response = await server.request('POST', '/upload-by-url', {
+          body: JSON.stringify({ url: origin.mediaRedirectUrl }),
+          headers: { 'Content-Type': 'application/json' },
+          parseJson: true,
+        });
+        const payload = requireUploadResponse(response.json);
+        const storedURL = new URL(payload.url);
+        const storedName = storedURL.pathname.split('/').at(-1) ?? '';
+
+        expect(response).toMatchObject({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+        expect(response.json).toEqual({
+          fileName: 'photo.jpeg',
+          mimeType: 'image/jpeg',
+          size: Buffer.byteLength(FIXTURE_MEDIA_BODY),
+          url: `${server.baseUrl}/files/${storedName}`,
+        });
+        expect(storedName).toMatch(/^[0-9a-f]{32}\.jpeg$/);
+        expect(await readFile(join(directory, storedName), 'utf8')).toBe(FIXTURE_MEDIA_BODY);
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
+it('refuses non-success and oversized upload-by-url responses before storage', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withTemporaryDirectory(async (directory) => {
+      await withServer(serverArgs(
+        '--storage-dir',
+        directory,
+        '--max-upload',
+        '64',
+        '--conformance-origin',
+        origin.baseUrl,
+      ), async (server) => {
+        for (const target of [origin.errorUrl, origin.oversizedUrl]) {
+          const response = await server.request('POST', '/upload-by-url', {
+            body: JSON.stringify({ url: target }),
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          expect(response, target).toMatchObject({
+            status: 400,
+            headers: { 'content-type': 'text/plain; charset=utf-8' },
+            text: 'the URL could not be fetched\n',
+          });
+        }
+
+        expect(await readdir(directory)).toEqual([]);
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
+it('reports an upload-by-url storage failure as a bad gateway', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withTemporaryDirectory(async (directory) => {
+      const storageFile = join(directory, 'not-a-directory');
+
+      await writeFile(storageFile, 'occupied');
+      await withServer(serverArgs(
+        '--storage-dir',
+        storageFile,
+        '--conformance-origin',
+        origin.baseUrl,
+      ), async (server) => {
+        const response = await server.request('POST', '/upload-by-url', {
+          body: JSON.stringify({ url: origin.mediaRedirectUrl }),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        expect(response).toMatchObject({
+          status: 502,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+          text: 'upload failed\n',
+        });
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
+});
+
+it('uploads to S3 with a known length, SigV4 headers, and path addressing', async () => {
+  const fakeS3 = await startFakeS3();
+
+  try {
+    const server = await startServer({
+      command: ordinaryServerCommand(),
+      args: serverArgs(
+        '--storage-dir',
+        '',
+        '--s3-endpoint',
+        fakeS3.baseUrl,
+        '--s3-region',
+        'eu-central-1',
+        '--s3-bucket',
+        'media',
+        '--s3-bucket-url',
+        'https://cdn.example.com/media',
+        '--s3-addressing',
+        'path',
+      ),
+      env: {
+        BLOK_S3_ACCESS_KEY: 'AKIAEXAMPLE',
+        BLOK_S3_SECRET_KEY: 'conformance-secret-key',
+      },
+    });
+
+    try {
+      const bytes = Buffer.from('signed S3 bytes');
+      const upload = createMultipartUpload({
+        bytes,
+        fileName: String.raw`C:\fakepath\PHOTO.PNG`,
+        mimeType: 'image/png',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+      const payload = requireUploadResponse(response.json);
+      const storedName = new URL(payload.url).pathname.split('/').at(-1) ?? '';
+
+      expect(response).toMatchObject({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+      expect(response.json).toEqual({
+        fileName: 'PHOTO.PNG',
+        mimeType: 'image/png',
+        size: bytes.byteLength,
+        url: `https://cdn.example.com/media/${storedName}`,
+      });
+      expect(storedName).toMatch(/^[0-9a-f]{32}\.png$/);
+      expect(fakeS3.requests).toHaveLength(1);
+
+      const request = fakeS3.requests[0];
+
+      expect(request).toMatchObject({
+        method: 'PUT',
+        path: `/media/${storedName}`,
+        headers: {
+          'content-length': String(bytes.byteLength),
+          'content-type': 'image/png',
+          host: new URL(fakeS3.baseUrl).host,
+          'x-amz-content-sha256': createHash('sha256').update(bytes).digest('hex'),
+        },
+      });
+      expect(request.headers['transfer-encoding']).toBeUndefined();
+      expect(request.headers['x-amz-date']).toMatch(/^\d{8}T\d{6}Z$/);
+      expect(request.headers.authorization).toMatch(
+        /^AWS4-HMAC-SHA256 Credential=AKIAEXAMPLE\/\d{8}\/eu-central-1\/s3\/aws4_request, SignedHeaders=content-type;host;x-amz-content-sha256;x-amz-date, Signature=[0-9a-f]{64}$/,
+      );
+      expect(request.body).toEqual(bytes);
+    } finally {
+      await server.stop();
+    }
+  } finally {
+    await fakeS3.stop();
+  }
+});
+
+it('maps a configured S3 error status to an upload bad gateway', async () => {
+  const fakeS3 = await startFakeS3(403);
+
+  try {
+    const server = await startServer({
+      command: ordinaryServerCommand(),
+      args: serverArgs(
+        '--storage-dir',
+        '',
+        '--s3-endpoint',
+        fakeS3.baseUrl,
+        '--s3-region',
+        'eu-central-1',
+        '--s3-bucket',
+        'media',
+        '--s3-bucket-url',
+        'https://cdn.example.com/media',
+        '--s3-addressing',
+        'path',
+      ),
+      env: {
+        BLOK_S3_ACCESS_KEY: 'AKIAEXAMPLE',
+        BLOK_S3_SECRET_KEY: 'conformance-secret-key',
+      },
+    });
+
+    try {
+      const upload = createMultipartUpload({
+        bytes: Buffer.from('rejected'),
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+      });
+
+      expect(response).toMatchObject({
+        status: 502,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'upload failed\n',
+      });
+      expect(fakeS3.requests).toHaveLength(1);
+      expect(fakeS3.requests[0]).toMatchObject({ method: 'PUT' });
+    } finally {
+      await server.stop();
+    }
+  } finally {
+    await fakeS3.stop();
+  }
+});
+
+it('bounds and validates the upload-by-url JSON envelope', async () => {
+  const origin = await startFixtureOrigin();
+
+  try {
+    await withTemporaryDirectory(async (directory) => {
+      await withServer(serverArgs(
+        '--storage-dir',
+        directory,
+        '--conformance-origin',
+        origin.baseUrl,
+      ), async (server) => {
+        const bodies = [
+          '',
+          'not json',
+          '{}',
+          '{"url":""}',
+          `{"url":"${'x'.repeat(8 << 10)}"}`,
+        ];
+
+        for (const body of bodies) {
+          const response = await server.request('POST', '/upload-by-url', {
+            body,
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          expect(response, body.slice(0, 40)).toMatchObject({
+            status: 400,
+            headers: { 'content-type': 'text/plain; charset=utf-8' },
+            text: 'expected {"url": "..."}\n',
+          });
+        }
+
+        expect(await readdir(directory)).toEqual([]);
+      });
+    });
+  } finally {
+    await origin.stop();
+  }
 });

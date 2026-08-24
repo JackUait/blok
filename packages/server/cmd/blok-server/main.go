@@ -87,6 +87,7 @@ type serverConfig struct {
 	MaxUploadBytes     int64
 	RateLimitPerMinute int
 	S3                 s3Settings
+	conformanceSettings
 
 	// secretFromFlag records that the secret arrived on the command line, which
 	// is what main warns about. It is not a configuration value.
@@ -164,6 +165,8 @@ func newFlagSet(cfg *serverConfig) (*flag.FlagSet, *rawFlags) {
 	fs.StringVar(&cfg.S3.Bucket, "s3-bucket", "", "S3 bucket to upload into; without it, files go to --storage-dir. Credentials are read from BLOK_S3_ACCESS_KEY and BLOK_S3_SECRET_KEY")
 	fs.StringVar(&cfg.S3.PublicURL, "s3-bucket-url", "", "URL prefix the bucket's objects are reachable at; required with --s3-bucket, and the only prefix a delete is recognised under")
 	fs.StringVar(&cfg.S3.Addressing, "s3-addressing", "", "\"path\" or \"virtual\"; empty picks virtual-hosted style for AWS and path style everywhere else")
+
+	registerConformanceFlags(fs, cfg)
 
 	return fs, raw
 }

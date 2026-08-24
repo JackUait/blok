@@ -42,20 +42,29 @@ async function main() {
   selectedTarget(process.argv.slice(2));
 
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
-  const executable = join(temporaryDirectory, process.platform === 'win32' ? 'blok-server.exe' : 'blok-server');
+  const executableSuffix = process.platform === 'win32' ? '.exe' : '';
+  const ordinaryExecutable = join(temporaryDirectory, `blok-server-ordinary${executableSuffix}`);
+  const conformanceExecutable = join(temporaryDirectory, `blok-server-conformance${executableSuffix}`);
 
   try {
-    await run('go', ['build', '-o', executable, './cmd/blok-server'], {
+    await run('go', ['build', '-o', ordinaryExecutable, './cmd/blok-server'], {
       cwd: join(repositoryRoot, 'packages/server'),
     });
-    await run(process.platform === 'win32' ? 'yarn.cmd' : 'yarn', [
-      'vitest',
+    await run('go', ['build', '-tags', 'conformance', '-o', conformanceExecutable, './cmd/blok-server'], {
+      cwd: join(repositoryRoot, 'packages/server'),
+    });
+    await run(process.execPath, [
+      join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
       'run',
       '--project=unit',
       'test/unit/server-conformance/server-contract.test.ts',
     ], {
       cwd: repositoryRoot,
-      env: { ...process.env, BLOK_CONFORMANCE_SERVER: executable },
+      env: {
+        ...process.env,
+        BLOK_CONFORMANCE_ORDINARY_SERVER: ordinaryExecutable,
+        BLOK_CONFORMANCE_SERVER: conformanceExecutable,
+      },
     });
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });

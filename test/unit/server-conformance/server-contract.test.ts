@@ -113,6 +113,8 @@ function expectNoCors(headers: Record<string, string>): void {
   expect(headers.vary).toBeUndefined();
 }
 
+const MULTIPART_BOUNDARY = 'blok-server-conformance-boundary';
+
 interface MultipartUpload {
   body: Buffer;
   contentType: string;
@@ -130,13 +132,17 @@ function createMultipartUpload(options: {
   fieldName?: string;
   fileName: string;
   mimeType?: string;
+  transferEncoding?: string;
 }): MultipartUpload {
-  const boundary = 'blok-server-conformance-boundary';
+  const boundary = MULTIPART_BOUNDARY;
   const escapedFileName = options.fileName.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
   const header = [
     `--${boundary}`,
     `Content-Disposition: form-data; name="${options.fieldName ?? 'file'}"; filename="${escapedFileName}"`,
     `Content-Type: ${options.mimeType ?? 'application/octet-stream'}`,
+    ...(options.transferEncoding === undefined
+      ? []
+      : [`Content-Transfer-Encoding: ${options.transferEncoding}`]),
     '',
     '',
   ].join('\r\n');
@@ -993,6 +999,100 @@ it('requires a valid multipart file field named file', async () => {
         text: 'malformed upload\n',
       });
       expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
+
+it('matches Go duplicate multipart boundary handling', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        bytes: Buffer.from('duplicate boundary'),
+        fileName: 'duplicate-boundary.txt',
+      });
+      const equalBoundary = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: {
+          'Content-Type': `${upload.contentType}; boundary=${MULTIPART_BOUNDARY}`,
+        },
+        parseJson: true,
+      });
+
+      expect(equalBoundary.status).toBe(200);
+      expect(requireUploadResponse(equalBoundary.json).size).toBe(18);
+
+      const conflictingBoundary = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: {
+          'Content-Type': `${upload.contentType}; boundary=other-boundary`,
+        },
+      });
+
+      expect(conflictingBoundary).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'malformed upload\n',
+      });
+      expect(await readdir(directory)).toHaveLength(1);
+    });
+  });
+});
+
+it('matches Go duplicate media parameter handling', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const equalMediaType = 'text/plain; charset=utf-8; charset=utf-8';
+      const equalUpload = createMultipartUpload({
+        bytes: Buffer.from('equal media'),
+        fileName: 'equal-media.txt',
+        mimeType: equalMediaType,
+      });
+      const equalMedia = await server.request('POST', '/upload', {
+        body: equalUpload.body,
+        headers: { 'Content-Type': equalUpload.contentType },
+        parseJson: true,
+      });
+
+      expect(equalMedia.status).toBe(200);
+      expect(requireUploadResponse(equalMedia.json).mimeType).toBe(equalMediaType);
+
+      const conflictingUpload = createMultipartUpload({
+        bytes: Buffer.from('conflicting media'),
+        fileName: 'conflicting-media.txt',
+        mimeType: 'text/plain; charset=utf-8; charset=us-ascii',
+      });
+      const conflictingMedia = await server.request('POST', '/upload', {
+        body: conflictingUpload.body,
+        headers: { 'Content-Type': conflictingUpload.contentType },
+        parseJson: true,
+      });
+
+      expect(conflictingMedia.status).toBe(200);
+      expect(requireUploadResponse(conflictingMedia.json).mimeType).toBeUndefined();
+      expect(await readdir(directory)).toHaveLength(2);
+    });
+  });
+});
+
+it('decodes quoted-printable multipart file bytes before storage', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        bytes: Buffer.from('=00=FF'),
+        fileName: 'encoded.bin',
+        transferEncoding: 'quoted-printable',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+      const payload = requireUploadResponse(response.json);
+      const storedName = new URL(payload.url).pathname.split('/').at(-1) ?? '';
+
+      expect(response.status).toBe(200);
+      expect(payload.size).toBe(2);
+      expect(await readFile(join(directory, storedName))).toEqual(Buffer.from([0, 255]));
     });
   });
 });

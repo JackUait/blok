@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Xunit;
 
 namespace Blok.Server.Host.Tests;
@@ -20,13 +21,100 @@ public sealed class HostProcessTests
     Assert.Equal("{\"status\":\"ok\",\"version\":\"dev\"}\n", await health.Content.ReadAsStringAsync());
 
     using var unfurl = await host.Client.GetAsync("/unfurl");
-    Assert.Equal(HttpStatusCode.NotImplemented, unfurl.StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, unfurl.StatusCode);
+    Assert.Equal("{\"success\":0}\n", await unfurl.Content.ReadAsStringAsync());
 
     using var upload = await host.Client.PostAsync("/upload", new StringContent(""));
-    Assert.Equal(HttpStatusCode.NotImplemented, upload.StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, upload.StatusCode);
+    Assert.Equal("malformed upload\n", await upload.Content.ReadAsStringAsync());
 
     using var uploadByUrl = await host.Client.PostAsync("/upload-by-url", new StringContent(""));
     Assert.Equal(HttpStatusCode.NotImplemented, uploadByUrl.StatusCode);
+  }
+
+  [Fact]
+  public async Task AcceptsAnUploadBetweenKestrelsDefaultAndTheConfiguredDefaultCap()
+  {
+    const int fileSize = 30_100_000;
+    var directory = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-large-upload-{Guid.NewGuid():N}");
+
+    try
+    {
+      await using var host = await StartHostAsync(
+      [
+        "--listen", AllocateListenAddress(),
+        "--storage-dir", directory,
+      ]);
+      using var client = new HttpClient
+      {
+        BaseAddress = host.Client.BaseAddress,
+        Timeout = TimeSpan.FromSeconds(30),
+      };
+      using var multipart = new MultipartFormDataContent(
+          "blok-host-large-upload-boundary");
+      using var file = new ByteArrayContent(new byte[fileSize]);
+      file.Headers.ContentType = new("application/octet-stream");
+      multipart.Add(file, "file", "large.bin");
+
+      using var response = await client.PostAsync("/upload", multipart);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      using var payload = JsonDocument.Parse(
+          await response.Content.ReadAsStringAsync());
+      Assert.Equal(
+          fileSize,
+          payload.RootElement.GetProperty("size").GetInt64());
+    }
+    finally
+    {
+      if (Directory.Exists(directory))
+      {
+        Directory.Delete(directory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task RemovesTheEndpointSpoolAfterASuccessfulUpload()
+  {
+    var root = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-upload-cleanup-{Guid.NewGuid():N}");
+    var temporaryDirectory = Path.Combine(root, "temp");
+    var storageDirectory = Path.Combine(root, "storage");
+    Directory.CreateDirectory(temporaryDirectory);
+
+    try
+    {
+      await using var host = await StartHostAsync(
+      [
+        "--listen", AllocateListenAddress(),
+        "--storage-dir", storageDirectory,
+      ],
+      new Dictionary<string, string?>
+      {
+        ["TMPDIR"] = temporaryDirectory,
+      });
+      using var multipart = new MultipartFormDataContent(
+          "blok-host-spool-cleanup-boundary");
+      using var file = new ByteArrayContent("uploaded bytes"u8.ToArray());
+      multipart.Add(file, "file", "upload.bin");
+
+      using var response = await host.Client.PostAsync("/upload", multipart);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Empty(
+          Directory.GetFiles(temporaryDirectory, ".blok-upload-*"));
+    }
+    finally
+    {
+      if (Directory.Exists(root))
+      {
+        Directory.Delete(root, recursive: true);
+      }
+    }
   }
 
   [Fact]
@@ -64,7 +152,8 @@ public sealed class HostProcessTests
     Assert.Equal(HttpStatusCode.NotFound, unfurl.StatusCode);
 
     using var upload = await host.Client.PostAsync("/upload", new StringContent(""));
-    Assert.Equal(HttpStatusCode.NotImplemented, upload.StatusCode);
+    Assert.Equal(HttpStatusCode.Forbidden, upload.StatusCode);
+    Assert.Equal("origin not allowed\n", await upload.Content.ReadAsStringAsync());
 
     using var uploadByUrl = await host.Client.PostAsync("/upload-by-url", new StringContent(""));
     Assert.Equal(HttpStatusCode.NotFound, uploadByUrl.StatusCode);

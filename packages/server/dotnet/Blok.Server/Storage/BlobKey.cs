@@ -36,7 +36,7 @@ internal static class BlobKey
     return IsGenerated(key);
   }
 
-  private static string NormalizeExtension(string extension)
+  internal static string NormalizeExtension(string extension)
   {
     if (extension.Length is < 2 or > MaximumExtensionLength + 1 ||
         extension[0] != '.')

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Blok.Server.AspNetCore;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
@@ -17,8 +18,10 @@ public sealed class UploadEndpointTests
   public static TheoryData<string, string, string> BrowserFileNames =>
       new()
       {
-        { @"C:\Users\me\PHOTO.PNG", "PHOTO.PNG", ".PNG" },
+        { @"C:\Users\me\PHOTO.PNG", "PHOTO.PNG", ".png" },
         { "../../notes/report.txt", "report.txt", ".txt" },
+        { "report.💥", "report.💥", "" },
+        { "report.abcdefghijklmnop", "report.abcdefghijklmnop", "" },
       };
 
   public static TheoryData<string> InvalidDisplayNames =>
@@ -69,7 +72,7 @@ public sealed class UploadEndpointTests
         "{\"url\":\"https://uploads.example.test/files/blob\",\"fileName\":\"archive.TAR\",\"size\":6,\"mimeType\":\"application/octet-stream\"}\n",
         await response.Content.ReadAsStringAsync());
     var put = Assert.Single(store.Puts);
-    Assert.Equal(".TAR", put.Extension);
+    Assert.Equal(".tar", put.Extension);
     Assert.Equal("application/octet-stream", put.MimeType);
     Assert.Equal(bytes, put.Bytes);
   }
@@ -90,10 +93,11 @@ public sealed class UploadEndpointTests
     using var response = await client.SendAsync(CreateUploadRequest(body));
 
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    Assert.Contains(
-        $"\"fileName\":\"{expectedName}\"",
-        await response.Content.ReadAsStringAsync(),
-        StringComparison.Ordinal);
+    using var payload = JsonDocument.Parse(
+        await response.Content.ReadAsStringAsync());
+    Assert.Equal(
+        expectedName,
+        payload.RootElement.GetProperty("fileName").GetString());
     Assert.Equal(expectedExtension, Assert.Single(store.Puts).Extension);
   }
 
@@ -197,13 +201,16 @@ public sealed class UploadEndpointTests
     using var client = app.GetTestClient();
     var validBody = BuildMultipart(
         new MultipartPart("file", "photo.png", "image/png", [1, 2, 3]));
+    var overlongBoundary = new string('a', 129);
     var cases = new[]
     {
       new MalformedCase(validBody, null),
       new MalformedCase(validBody, "multipart/form-data"),
       new MalformedCase(
-          validBody,
-          $"multipart/form-data; boundary={new string('a', 129)}"),
+          BuildMultipart(
+              overlongBoundary,
+              new MultipartPart("file", "photo.png", "image/png", [1, 2, 3])),
+          $"multipart/form-data; boundary={overlongBoundary}"),
       new MalformedCase(Encoding.UTF8.GetBytes("not multipart"), MultipartContentType),
       new MalformedCase(
           BuildMultipart(
@@ -224,6 +231,26 @@ public sealed class UploadEndpointTests
     }
 
     Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task AcceptsAMultipartBoundaryAtTheMaximumLength()
+  {
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var boundary = new string('a', 128);
+    var body = BuildMultipart(
+        boundary,
+        new MultipartPart("file", "photo.png", "image/png", [1]));
+
+    using var response = await client.SendAsync(
+        CreateUploadRequest(
+            body,
+            $"multipart/form-data; boundary={boundary}"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Single(store.Puts);
   }
 
   [Fact]
@@ -274,6 +301,48 @@ public sealed class UploadEndpointTests
         HttpStatusCode.RequestEntityTooLarge,
         "file too large\n");
     Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task ReportsOnlyTheBytesTheStoreActuallyConsumes()
+  {
+    var store = new RecordingBlobStore
+    {
+      MaximumBytesToRead = 3,
+    };
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var body = BuildMultipart(
+        new MultipartPart("file", "partial.bin", null, [1, 2, 3, 4, 5]));
+
+    using var response = await client.SendAsync(CreateUploadRequest(body));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    using var payload = JsonDocument.Parse(
+        await response.Content.ReadAsStringAsync());
+    Assert.Equal(3, payload.RootElement.GetProperty("size").GetInt64());
+    Assert.Equal(new byte[] { 1, 2, 3 }, Assert.Single(store.Puts).Bytes);
+  }
+
+  [Fact]
+  public async Task OmitsSizeWhenTheStoreConsumesNoBytes()
+  {
+    var store = new RecordingBlobStore
+    {
+      MaximumBytesToRead = 0,
+    };
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var body = BuildMultipart(
+        new MultipartPart("file", "unread.bin", null, [1, 2, 3]));
+
+    using var response = await client.SendAsync(CreateUploadRequest(body));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    using var payload = JsonDocument.Parse(
+        await response.Content.ReadAsStringAsync());
+    Assert.False(payload.RootElement.TryGetProperty("size", out _));
+    Assert.Empty(Assert.Single(store.Puts).Bytes);
   }
 
   [Fact]
@@ -398,10 +467,25 @@ public sealed class UploadEndpointTests
   private static byte[] BuildMultipart(
       params MultipartPart[] parts)
   {
-    return BuildMultipart(close: true, parts);
+    return BuildMultipart(Boundary, close: true, parts);
   }
 
   private static byte[] BuildMultipart(
+      string boundary,
+      params MultipartPart[] parts)
+  {
+    return BuildMultipart(boundary, close: true, parts);
+  }
+
+  private static byte[] BuildMultipart(
+      bool close,
+      params MultipartPart[] parts)
+  {
+    return BuildMultipart(Boundary, close, parts);
+  }
+
+  private static byte[] BuildMultipart(
+      string boundary,
       bool close,
       params MultipartPart[] parts)
   {
@@ -409,7 +493,7 @@ public sealed class UploadEndpointTests
 
     foreach (var part in parts)
     {
-      Write(body, $"--{Boundary}\r\n");
+      Write(body, $"--{boundary}\r\n");
       var disposition = $"Content-Disposition: form-data; name=\"{Escape(part.Name)}\"";
 
       if (part.FileName is not null)
@@ -431,7 +515,7 @@ public sealed class UploadEndpointTests
 
     if (close)
     {
-      Write(body, $"--{Boundary}--\r\n");
+      Write(body, $"--{boundary}--\r\n");
     }
 
     return body.ToArray();
@@ -483,6 +567,8 @@ public sealed class UploadEndpointTests
 
     public Exception? Failure { get; init; }
 
+    public int? MaximumBytesToRead { get; init; }
+
     public bool WaitForCancellation { get; init; }
 
     public Stream? Input { get; private set; }
@@ -517,7 +603,32 @@ public sealed class UploadEndpointTests
       }
 
       using var bytes = new MemoryStream();
-      await content.CopyToAsync(bytes, cancellationToken);
+
+      if (MaximumBytesToRead is int maximum)
+      {
+        var buffer = new byte[Math.Min(maximum, 81920)];
+        var remaining = maximum;
+
+        while (remaining > 0)
+        {
+          var read = await content.ReadAsync(
+              buffer.AsMemory(0, Math.Min(remaining, buffer.Length)),
+              cancellationToken);
+
+          if (read == 0)
+          {
+            break;
+          }
+
+          bytes.Write(buffer, 0, read);
+          remaining -= read;
+        }
+      }
+      else
+      {
+        await content.CopyToAsync(bytes, cancellationToken);
+      }
+
       Puts.Add(new PutObservation(extension, mimeType, bytes.ToArray()));
 
       if (Failure is not null)

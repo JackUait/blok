@@ -166,7 +166,19 @@ internal static class UploadByUrlEndpoint
 
   private sealed class UploadRequest
   {
+    private string _url = "";
+
     [JsonPropertyName("url")]
-    public string? Url { get; init; }
+    public string Url
+    {
+      get => _url;
+      init
+      {
+        if (value is not null)
+        {
+          _url = value;
+        }
+      }
+    }
   }
 }

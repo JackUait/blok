@@ -71,12 +71,80 @@ public sealed class UploadByUrlEndpointTests
   }
 
   [Fact]
-  public async Task GuardFailureReturnsTheExactBadRequestAndMediaLimits()
+  public async Task DuplicateNullUrlRetainsThePriorString()
   {
     var fetcher = new StubFetcher
     {
-      Error = new GuardedFetchException(
-          GuardedFetchFailure.BlockedDestination),
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(
+            """{"url":"https://source.example.test/file","url":null}"""));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(
+        "https://source.example.test/file",
+        fetcher.Target);
+    Assert.Single(store.Puts);
+  }
+
+  [Fact]
+  public async Task AcceptsAValidEnvelopeEndingAtEightKiB()
+  {
+    var body = EnvelopeWithClosingByteAt(8 << 10);
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(body));
+
+    Assert.Equal(8 << 10, Encoding.UTF8.GetByteCount(body));
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(1, fetcher.CallCount);
+    Assert.Single(store.Puts);
+  }
+
+  [Fact]
+  public async Task RejectsAnEnvelopeWhoseClosingByteIsAtEightKiBPlusOne()
+  {
+    var body = EnvelopeWithClosingByteAt((8 << 10) + 1);
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(body));
+
+    Assert.Equal((8 << 10) + 1, Encoding.UTF8.GetByteCount(body));
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "expected {\"url\": \"...\"}\n");
+    Assert.Equal(0, fetcher.CallCount);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Theory]
+  [InlineData((int)GuardedFetchFailure.BlockedDestination)]
+  [InlineData((int)GuardedFetchFailure.ResponseTooLarge)]
+  [InlineData((int)GuardedFetchFailure.TimedOut)]
+  [InlineData((int)GuardedFetchFailure.TooManyRedirects)]
+  public async Task EveryGuardFailureReturnsTheExactBadRequestAndMediaLimits(
+      int failure)
+  {
+    var fetcher = new StubFetcher
+    {
+      Error = new GuardedFetchException((GuardedFetchFailure)failure),
     };
     var store = new RecordingBlobStore();
     await using var app = await StartApplication(
@@ -98,6 +166,29 @@ public sealed class UploadByUrlEndpointTests
     Assert.Equal(TimeSpan.FromMinutes(2), fetcher.Limits.TotalTimeout);
     Assert.Equal(12345, fetcher.Limits.MaximumResponseBytes);
     Assert.Equal(5, fetcher.Limits.MaximumRedirects);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task PropagatesRequestCancellationToTheFetcher()
+  {
+    var fetcher = new StubFetcher
+    {
+      WaitForCancellation = true,
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var cancellation = new CancellationTokenSource();
+
+    var response = app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""),
+        cancellation.Token);
+    await fetcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    cancellation.Cancel();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => response);
+    await fetcher.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
     Assert.Equal(0, store.PutCalls);
   }
 
@@ -187,6 +278,29 @@ public sealed class UploadByUrlEndpointTests
     Assert.Equal(bytes, put.Bytes);
   }
 
+  [Fact]
+  public async Task PercentDecodesTheFinalUrlFileName()
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(
+          body: [1],
+          finalUrl:
+              "https://cdn.example.test/final/photo%20one.PNG?download=1",
+          contentType: "image/png"),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    Assert.Equal(
+        "{\"url\":\"https://uploads.example.test/files/blob\",\"fileName\":\"photo one.PNG\",\"size\":1,\"mimeType\":\"image/png\"}\n",
+        await response.Content.ReadAsStringAsync());
+    Assert.Equal(".png", Assert.Single(store.Puts).Extension);
+  }
+
   [Theory]
   [InlineData("https://example.test")]
   [InlineData("https://example.test/")]
@@ -262,6 +376,33 @@ public sealed class UploadByUrlEndpointTests
     Assert.Equal(1, store.PutCalls);
   }
 
+  [Fact]
+  public async Task PropagatesRequestCancellationToStorageAndDisposesItsInput()
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore
+    {
+      WaitForCancellation = true,
+    };
+    await using var app = await StartApplication(fetcher, store);
+    using var cancellation = new CancellationTokenSource();
+
+    var response = app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""),
+        cancellation.Token);
+    await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    cancellation.Cancel();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => response);
+    await store.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    Assert.NotNull(store.Input);
+    Assert.Throws<ObjectDisposedException>(() => store.Input.ReadByte());
+  }
+
   private static GuardedResponse SuccessfulResponse(
       byte[]? body = null,
       string finalUrl = "https://example.test/file.png",
@@ -273,6 +414,44 @@ public sealed class UploadByUrlEndpointTests
         contentType,
         finalUrl,
         statusCode);
+  }
+
+  private static string EnvelopeWithClosingByteAt(int bytePosition)
+  {
+    const string prefix = "{\"url\":\"";
+    const string suffix = "\"}";
+
+    return prefix +
+        new string('x', bytePosition - prefix.Length - suffix.Length) +
+        suffix;
+  }
+
+  private static async Task WaitUntilCancelledAsync(
+      CancellationToken cancellationToken,
+      TaskCompletionSource cancelled,
+      string dependency)
+  {
+    using var timeout = new CancellationTokenSource(
+        TimeSpan.FromSeconds(6));
+    using var wait = CancellationTokenSource.CreateLinkedTokenSource(
+        cancellationToken,
+        timeout.Token);
+
+    try
+    {
+      await Task.Delay(Timeout.InfiniteTimeSpan, wait.Token);
+    }
+    catch (OperationCanceledException) when (
+        cancellationToken.IsCancellationRequested)
+    {
+      cancelled.TrySetResult();
+      throw new OperationCanceledException(cancellationToken);
+    }
+    catch (OperationCanceledException)
+    {
+      throw new TimeoutException(
+          $"The {dependency} did not receive request cancellation.");
+    }
   }
 
   private static StringContent Json(string body)
@@ -325,6 +504,14 @@ public sealed class UploadByUrlEndpointTests
 
     public GuardedFetchException? Error { get; init; }
 
+    public bool WaitForCancellation { get; init; }
+
+    public TaskCompletionSource Entered { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Cancelled { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public int CallCount { get; private set; }
 
     public string? Target { get; private set; }
@@ -345,10 +532,27 @@ public sealed class UploadByUrlEndpointTests
         throw Error;
       }
 
-      return ValueTask.FromResult(
-          Response ??
+      return WaitForCancellation
+        ? WaitForCancellationAsync(cancellationToken)
+        : ValueTask.FromResult(
+            Response ??
+            throw new InvalidOperationException(
+                "No guarded response was configured."));
+    }
+
+    private async ValueTask<GuardedResponse> WaitForCancellationAsync(
+        CancellationToken cancellationToken)
+    {
+      Entered.TrySetResult();
+
+      await WaitUntilCancelledAsync(
+          cancellationToken,
+          Cancelled,
+          "fetcher");
+
+      return Response ??
           throw new InvalidOperationException(
-              "No guarded response was configured."));
+              "No guarded response was configured.");
     }
   }
 
@@ -360,6 +564,16 @@ public sealed class UploadByUrlEndpointTests
 
     public Exception? Failure { get; init; }
 
+    public bool WaitForCancellation { get; init; }
+
+    public Stream? Input { get; private set; }
+
+    public TaskCompletionSource Entered { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Cancelled { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public async Task<string> PutAsync(
         string extension,
         string mimeType,
@@ -367,6 +581,17 @@ public sealed class UploadByUrlEndpointTests
         CancellationToken cancellationToken = default)
     {
       PutCalls++;
+      Input = content;
+
+      if (WaitForCancellation)
+      {
+        Entered.TrySetResult();
+        await WaitUntilCancelledAsync(
+            cancellationToken,
+            Cancelled,
+            "store");
+      }
+
       using var bytes = new MemoryStream();
       await content.CopyToAsync(bytes, cancellationToken);
       Puts.Add(new PutObservation(

@@ -15,7 +15,6 @@ namespace Blok.Server.AspNetCore;
 
 internal static class UploadEndpoint
 {
-  private const int MaximumBoundaryLength = 128;
   private const int MaximumFileNameBytes = 255;
   private const int MaximumMediaTypeLength = 255;
   private const int CopyBufferSize = 81920;
@@ -61,15 +60,28 @@ internal static class UploadEndpoint
 
       try
       {
-        var reader = new MultipartReader(boundary, requestBody);
+        var reader = new MultipartReader(
+            boundary,
+            requestBody,
+            Math.Max(
+                4096,
+                Encoding.UTF8.GetByteCount(boundary) + 8));
         MultipartSection? section;
 
         while ((section = await reader.ReadNextSectionAsync(
                    context.RequestAborted)) is not null)
         {
+          var content = IsQuotedPrintable(section)
+            ? new QuotedPrintableReadStream(section.Body)
+            : section.Body;
+
           if (temporaryFile is not null ||
               !TryGetFileMetadata(section, out fileName, out mimeType))
           {
+            await content.CopyToAsync(
+                Stream.Null,
+                CopyBufferSize,
+                context.RequestAborted);
             continue;
           }
 
@@ -83,9 +95,6 @@ internal static class UploadEndpoint
               FileShare.None,
               CopyBufferSize,
               FileOptions.Asynchronous | FileOptions.SequentialScan);
-          var content = IsQuotedPrintable(section)
-            ? new QuotedPrintableReadStream(section.Body)
-            : section.Body;
           await content.CopyToAsync(
               temporaryFile,
               CopyBufferSize,
@@ -196,7 +205,7 @@ internal static class UploadEndpoint
 
     boundary = HeaderUtilities.RemoveQuotes(parsed.Boundary).Value ?? "";
 
-    return boundary.Length is > 0 and <= MaximumBoundaryLength;
+    return boundary != "";
   }
 
   private static bool HasConflictingParameters(
@@ -208,7 +217,7 @@ internal static class UploadEndpoint
     foreach (var parameter in mediaType.Parameters)
     {
       var name = parameter.Name.Value ?? "";
-      var value = Unquote(parameter.Value);
+      var value = UnquoteMediaParameter(parameter.Value);
 
       if (values.TryGetValue(name, out var existing) &&
           existing != value)
@@ -268,6 +277,40 @@ internal static class UploadEndpoint
             values[0]?.Trim(),
             "quoted-printable",
             StringComparison.OrdinalIgnoreCase);
+  }
+
+  private static string UnquoteMediaParameter(StringSegment value)
+  {
+    var raw = value.Value ?? "";
+    var quoted = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"';
+    var unquoted = HeaderUtilities.RemoveQuotes(value).Value ?? "";
+
+    if (!quoted || unquoted.IndexOf('\\') < 0)
+    {
+      return unquoted;
+    }
+
+    var result = new StringBuilder(unquoted.Length);
+
+    for (var index = 0; index < unquoted.Length; index++)
+    {
+      if (unquoted[index] == '\\' &&
+          index + 1 < unquoted.Length &&
+          IsMimeSpecial(unquoted[index + 1]))
+      {
+        index++;
+      }
+
+      result.Append(unquoted[index]);
+    }
+
+    return result.ToString();
+  }
+
+  private static bool IsMimeSpecial(char value)
+  {
+    return value is '(' or ')' or '<' or '>' or '@' or ',' or ';' or ':' or
+        '\\' or '"' or '/' or '[' or ']' or '?' or '=';
   }
 
   private static string Unquote(StringSegment value)

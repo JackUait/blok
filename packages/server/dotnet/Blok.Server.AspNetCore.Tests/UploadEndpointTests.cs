@@ -201,16 +201,10 @@ public sealed class UploadEndpointTests
     using var client = app.GetTestClient();
     var validBody = BuildMultipart(
         new MultipartPart("file", "photo.png", "image/png", [1, 2, 3]));
-    var overlongBoundary = new string('a', 129);
     var cases = new[]
     {
       new MalformedCase(validBody, null),
       new MalformedCase(validBody, "multipart/form-data"),
-      new MalformedCase(
-          BuildMultipart(
-              overlongBoundary,
-              new MultipartPart("file", "photo.png", "image/png", [1, 2, 3])),
-          $"multipart/form-data; boundary={overlongBoundary}"),
       new MalformedCase(Encoding.UTF8.GetBytes("not multipart"), MultipartContentType),
       new MalformedCase(
           BuildMultipart(
@@ -233,13 +227,52 @@ public sealed class UploadEndpointTests
     Assert.Equal(0, store.PutCalls);
   }
 
-  [Fact]
-  public async Task AcceptsAMultipartBoundaryAtTheMaximumLength()
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task RejectsMalformedQuotedPrintableInDiscardedPartsBeforeStorage(
+      bool laterFile)
   {
     var store = new RecordingBlobStore();
     await using var app = await StartApplication(store);
     using var client = app.GetTestClient();
-    var boundary = new string('a', 128);
+    var discarded = laterFile
+      ? new MultipartPart(
+          "file",
+          "later.txt",
+          null,
+          Encoding.UTF8.GetBytes("="),
+          "quoted-printable")
+      : new MultipartPart(
+          "note",
+          null,
+          null,
+          Encoding.UTF8.GetBytes("="),
+          "quoted-printable");
+    var body = BuildMultipart(
+        new MultipartPart(
+            "file",
+            "first.txt",
+            "text/plain",
+            Encoding.UTF8.GetBytes("valid file")),
+        discarded);
+
+    using var response = await client.SendAsync(CreateUploadRequest(body));
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "malformed upload\n");
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task AcceptsAMultipartBoundaryWithoutAnEndpointSpecificCap()
+  {
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var boundary = new string('a', 129);
     var body = BuildMultipart(
         boundary,
         new MultipartPart("file", "photo.png", "image/png", [1]));
@@ -508,6 +541,13 @@ public sealed class UploadEndpointTests
         Write(body, $"Content-Type: {part.ContentType}\r\n");
       }
 
+      if (part.TransferEncoding is not null)
+      {
+        Write(
+            body,
+            $"Content-Transfer-Encoding: {part.TransferEncoding}\r\n");
+      }
+
       Write(body, "\r\n");
       body.Write(part.Bytes);
       Write(body, "\r\n");
@@ -548,7 +588,8 @@ public sealed class UploadEndpointTests
       string Name,
       string? FileName,
       string? ContentType,
-      byte[] Bytes);
+      byte[] Bytes,
+      string? TransferEncoding = null);
 
   private sealed record MalformedCase(
       byte[] Body,

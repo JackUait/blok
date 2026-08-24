@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using Xunit;
 
@@ -105,6 +106,106 @@ public sealed class HostProcessTests
       using var response = await host.Client.PostAsync("/upload", multipart);
 
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Empty(
+          Directory.GetFiles(temporaryDirectory, ".blok-upload-*"));
+    }
+    finally
+    {
+      if (Directory.Exists(root))
+      {
+        Directory.Delete(root, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task RemovesTheEndpointSpoolAfterMalformedTrailingData()
+  {
+    const string boundary = "blok-host-malformed-cleanup-boundary";
+    var root = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-malformed-cleanup-{Guid.NewGuid():N}");
+    var temporaryDirectory = Path.Combine(root, "temp");
+    var storageDirectory = Path.Combine(root, "storage");
+    Directory.CreateDirectory(temporaryDirectory);
+
+    try
+    {
+      await using var host = await StartHostAsync(
+      [
+        "--listen", AllocateListenAddress(),
+        "--storage-dir", storageDirectory,
+      ],
+      new Dictionary<string, string?>
+      {
+        ["TMPDIR"] = temporaryDirectory,
+      });
+      var body = Encoding.UTF8.GetBytes(
+          $"--{boundary}\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename=\"first.txt\"\r\n" +
+          "Content-Type: text/plain\r\n\r\n" +
+          "valid file\r\n" +
+          $"--{boundary}\r\n" +
+          "Content-Disposition: form-data; name=\"note\"\r\n" +
+          "Content-Transfer-Encoding: quoted-printable\r\n\r\n" +
+          "=\r\n" +
+          $"--{boundary}--\r\n");
+      using var content = new ByteArrayContent(body);
+      content.Headers.TryAddWithoutValidation(
+          "Content-Type",
+          $"multipart/form-data; boundary={boundary}");
+
+      using var response = await host.Client.PostAsync("/upload", content);
+
+      Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+      Assert.Equal(
+          "malformed upload\n",
+          await response.Content.ReadAsStringAsync());
+      Assert.Empty(
+          Directory.GetFiles(temporaryDirectory, ".blok-upload-*"));
+    }
+    finally
+    {
+      if (Directory.Exists(root))
+      {
+        Directory.Delete(root, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task RemovesTheEndpointSpoolAfterStorageFailure()
+  {
+    var root = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-storage-failure-cleanup-{Guid.NewGuid():N}");
+    var temporaryDirectory = Path.Combine(root, "temp");
+    var storagePath = Path.Combine(root, "storage-file");
+    Directory.CreateDirectory(temporaryDirectory);
+    await File.WriteAllTextAsync(storagePath, "occupied");
+
+    try
+    {
+      await using var host = await StartHostAsync(
+      [
+        "--listen", AllocateListenAddress(),
+        "--storage-dir", storagePath,
+      ],
+      new Dictionary<string, string?>
+      {
+        ["TMPDIR"] = temporaryDirectory,
+      });
+      using var multipart = new MultipartFormDataContent(
+          "blok-host-storage-failure-cleanup-boundary");
+      using var file = new ByteArrayContent("uploaded bytes"u8.ToArray());
+      multipart.Add(file, "file", "upload.bin");
+
+      using var response = await host.Client.PostAsync("/upload", multipart);
+
+      Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+      Assert.Equal(
+          "upload failed\n",
+          await response.Content.ReadAsStringAsync());
       Assert.Empty(
           Directory.GetFiles(temporaryDirectory, ".blok-upload-*"));
     }

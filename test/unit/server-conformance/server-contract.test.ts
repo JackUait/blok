@@ -127,31 +127,51 @@ interface UploadResponse {
   url: string;
 }
 
+function createMultipartParts(
+  parts: Array<{ bytes: Uint8Array; headers: string[] }>,
+  boundary = MULTIPART_BOUNDARY,
+): MultipartUpload {
+  const body: Buffer[] = [];
+
+  for (const part of parts) {
+    body.push(
+      Buffer.from(`--${boundary}\r\n${part.headers.join('\r\n')}\r\n\r\n`),
+      Buffer.from(part.bytes),
+      Buffer.from('\r\n'),
+    );
+  }
+
+  body.push(Buffer.from(`--${boundary}--\r\n`));
+
+  return {
+    body: Buffer.concat(body),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
 function createMultipartUpload(options: {
+  boundary?: string;
   bytes: Uint8Array;
   fieldName?: string;
   fileName: string;
   mimeType?: string;
   transferEncoding?: string;
 }): MultipartUpload {
-  const boundary = MULTIPART_BOUNDARY;
   const escapedFileName = options.fileName.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
-  const header = [
-    `--${boundary}`,
-    `Content-Disposition: form-data; name="${options.fieldName ?? 'file'}"; filename="${escapedFileName}"`,
-    `Content-Type: ${options.mimeType ?? 'application/octet-stream'}`,
-    ...(options.transferEncoding === undefined
-      ? []
-      : [`Content-Transfer-Encoding: ${options.transferEncoding}`]),
-    '',
-    '',
-  ].join('\r\n');
-  const footer = `\r\n--${boundary}--\r\n`;
 
-  return {
-    body: Buffer.concat([Buffer.from(header), Buffer.from(options.bytes), Buffer.from(footer)]),
-    contentType: `multipart/form-data; boundary=${boundary}`,
-  };
+  return createMultipartParts(
+    [{
+      bytes: options.bytes,
+      headers: [
+        `Content-Disposition: form-data; name="${options.fieldName ?? 'file'}"; filename="${escapedFileName}"`,
+        `Content-Type: ${options.mimeType ?? 'application/octet-stream'}`,
+        ...(options.transferEncoding === undefined
+          ? []
+          : [`Content-Transfer-Encoding: ${options.transferEncoding}`]),
+      ],
+    }],
+    options.boundary,
+  );
 }
 
 function isUploadResponse(value: unknown): value is UploadResponse {
@@ -1003,6 +1023,27 @@ it('requires a valid multipart file field named file', async () => {
   });
 });
 
+it.each([129, 4_089])('accepts a matching %i-character multipart boundary', async (length) => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        boundary: 'a'.repeat(length),
+        bytes: Buffer.from('long boundary'),
+        fileName: 'long-boundary.txt',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(requireUploadResponse(response.json).size).toBe(13);
+      expect(await readdir(directory)).toHaveLength(1);
+    });
+  });
+});
+
 it('matches Go duplicate multipart boundary handling', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
@@ -1033,6 +1074,74 @@ it('matches Go duplicate multipart boundary handling', async () => {
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         text: 'malformed upload\n',
       });
+      expect(await readdir(directory)).toHaveLength(1);
+    });
+  });
+});
+
+it('rejects conflicting escaped duplicate multipart boundaries like Go', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        boundary: String.raw`m\z`,
+        bytes: Buffer.from('escaped boundary'),
+        fileName: 'escaped-boundary.txt',
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: {
+          'Content-Type': String.raw`multipart/form-data; boundary="m\z"; boundary=mz`,
+        },
+      });
+
+      expect(response).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'malformed upload\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
+
+it('sanitizes conflicting escaped duplicate media parameters like Go', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartUpload({
+        bytes: Buffer.from('escaped media'),
+        fileName: 'escaped-media.txt',
+        mimeType: String.raw`text/plain; charset="a\z"; charset=az`,
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(requireUploadResponse(response.json).mimeType).toBeUndefined();
+      expect(await readdir(directory)).toHaveLength(1);
+    });
+  });
+});
+
+it('matches Go MIME-special quoted parameter escapes', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const mimeType = String.raw`text/plain; charset="a\/b"; charset="a/b"`;
+      const upload = createMultipartUpload({
+        bytes: Buffer.from('escaped special'),
+        fileName: 'escaped-special.txt',
+        mimeType,
+      });
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(requireUploadResponse(response.json).mimeType).toBe(mimeType);
       expect(await readdir(directory)).toHaveLength(1);
     });
   });
@@ -1093,6 +1202,49 @@ it('decodes quoted-printable multipart file bytes before storage', async () => {
       expect(response.status).toBe(200);
       expect(payload.size).toBe(2);
       expect(await readFile(join(directory, storedName))).toEqual(Buffer.from([0, 255]));
+    });
+  });
+});
+
+it.each([
+  {
+    disposition: 'Content-Disposition: form-data; name="note"',
+    label: 'ignored field',
+  },
+  {
+    disposition: 'Content-Disposition: form-data; name="file"; filename="later.txt"',
+    label: 'later file',
+  },
+])('rejects malformed quoted-printable in a $label before storage', async ({ disposition }) => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const upload = createMultipartParts([
+        {
+          bytes: Buffer.from('valid file'),
+          headers: [
+            'Content-Disposition: form-data; name="file"; filename="first.txt"',
+            'Content-Type: text/plain',
+          ],
+        },
+        {
+          bytes: Buffer.from('='),
+          headers: [
+            disposition,
+            'Content-Transfer-Encoding: quoted-printable',
+          ],
+        },
+      ]);
+      const response = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+      });
+
+      expect(response).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'malformed upload\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
     });
   });
 });

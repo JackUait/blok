@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { expect, it } from 'vitest';
+import { expect, it as baseIt } from 'vitest';
 
 import {
   runServerCommand,
@@ -18,6 +18,14 @@ import {
 import { FIXTURE_MEDIA_BODY, startFixtureOrigin } from './fixture-origin';
 import { startFakeS3 } from './fake-s3';
 import { sendRequest } from './http-client';
+
+// These cases drive a real built executable that only
+// scripts/test-server-conformance.mjs builds and points BLOK_CONFORMANCE_SERVER at.
+// The default `unit` project globs this file too, so without the guard every
+// ordinary `yarn test` run is red.
+const it = baseIt.skipIf(
+  process.env.BLOK_CONFORMANCE_SERVER === undefined || process.env.BLOK_CONFORMANCE_SERVER === '',
+);
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
 const DISALLOWED_ORIGIN = 'https://evil.example.net';

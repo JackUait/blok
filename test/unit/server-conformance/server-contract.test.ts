@@ -20,8 +20,10 @@ interface TicketFixture {
   compatible: string;
   expired: string;
   malformed: string;
+  noncanonicalHeaderTicket: string;
   secret: string;
   tampered: string;
+  userTwo: string;
 }
 
 function isTicketFixture(value: unknown): value is TicketFixture {
@@ -31,7 +33,7 @@ function isTicketFixture(value: unknown): value is TicketFixture {
 
   const fixture = value as Record<string, unknown>;
 
-  return ['compatible', 'expired', 'malformed', 'secret', 'tampered']
+  return ['compatible', 'expired', 'malformed', 'noncanonicalHeaderTicket', 'secret', 'tampered', 'userTwo']
     .every((key) => typeof fixture[key] === 'string');
 }
 
@@ -217,34 +219,37 @@ it.each([
     name: 'none',
     args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    disallowedStatus: 400,
-    missingStatus: 400,
+    rejectedRequest: {
+      contentType: 'application/json',
+      status: 400,
+      text: '{"success":0}\n',
+    },
   },
   {
     name: 'proxy',
     args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    disallowedStatus: 400,
-    missingStatus: 400,
+    rejectedRequest: {
+      contentType: 'application/json',
+      status: 400,
+      text: '{"success":0}\n',
+    },
   },
   {
     name: 'ticket',
     args: ticketArgs('--rate-limit', '0'),
     token: tickets.compatible,
-    disallowedStatus: 403,
-    missingStatus: 403,
+    rejectedRequest: {
+      contentType: 'text/plain; charset=utf-8',
+      status: 403,
+      text: 'origin not allowed\n',
+    },
   },
 ])('$name mode handles allowed, disallowed, and missing origins', async (testCase) => {
   await withServer(testCase.args, async (server) => {
     const allowed = await server.request('GET', '/unfurl', {
       headers: requestHeaders(ALLOWED_ORIGIN, testCase.token),
       parseJson: true,
-    });
-    const disallowed = await server.request('GET', '/unfurl', {
-      headers: requestHeaders(DISALLOWED_ORIGIN, testCase.token),
-    });
-    const missing = await server.request('GET', '/unfurl', {
-      headers: requestHeaders(undefined, testCase.token),
     });
 
     expect(allowed).toMatchObject({
@@ -254,10 +259,34 @@ it.each([
       text: '{"success":0}\n',
     });
     expect(allowed.rawHeaders.vary).toEqual(['Origin']);
-    expect(disallowed.status).toBe(testCase.disallowedStatus);
-    expect(missing.status).toBe(testCase.missingStatus);
-    expectNoCors(disallowed.headers);
-    expectNoCors(missing.headers);
+
+    for (const [name, origin] of [
+      ['disallowed', DISALLOWED_ORIGIN],
+      ['missing', undefined],
+    ] as const) {
+      const rejectedRequest = await server.request('GET', '/unfurl', {
+        headers: requestHeaders(origin, testCase.token),
+      });
+      const rejectedPreflight = await server.request('OPTIONS', '/unfurl', {
+        headers: {
+          ...requestHeaders(origin),
+          'Access-Control-Request-Method': 'GET',
+        },
+      });
+
+      expect(rejectedRequest, name).toMatchObject({
+        status: testCase.rejectedRequest.status,
+        headers: { 'content-type': testCase.rejectedRequest.contentType },
+        text: testCase.rejectedRequest.text,
+      });
+      expectNoCors(rejectedRequest.headers);
+      expect(rejectedPreflight, name).toMatchObject({
+        status: 403,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'origin not allowed\n',
+      });
+      expectNoCors(rejectedPreflight.headers);
+    }
   });
 });
 
@@ -334,6 +363,55 @@ it('accepts the fixed compatible ticket and rejects malformed ticket cases', asy
   });
 });
 
+it('preserves Go ticket header and authorization grammar', async () => {
+  await withServer(ticketArgs('--rate-limit', '0', '--storage-dir', ''), async (server) => {
+    for (const testCase of [
+      {
+        name: 'a correctly signed ticket with a reordered header',
+        authorization: `Bearer ${tickets.noncanonicalHeaderTicket}`,
+        status: 401,
+        contentType: 'text/plain; charset=utf-8',
+        text: 'invalid pass\n',
+      },
+      {
+        name: 'a bare compatible ticket',
+        authorization: tickets.compatible,
+        status: 400,
+        contentType: 'application/json',
+        text: '{"success":0}\n',
+      },
+      {
+        name: 'a lowercase bearer prefix',
+        authorization: `bearer ${tickets.compatible}`,
+        status: 401,
+        contentType: 'text/plain; charset=utf-8',
+        text: 'invalid pass\n',
+      },
+    ]) {
+      const response = await server.request('GET', '/unfurl', {
+        headers: {
+          ...requestHeaders(ALLOWED_ORIGIN),
+          Authorization: testCase.authorization,
+        },
+        parseJson: testCase.status === 400,
+      });
+
+      expect(response, testCase.name).toMatchObject({
+        status: testCase.status,
+        headers: {
+          'access-control-allow-origin': ALLOWED_ORIGIN,
+          'content-type': testCase.contentType,
+        },
+        text: testCase.text,
+      });
+      expect(response.rawHeaders.vary).toEqual(['Origin']);
+      if (testCase.status === 400) {
+        expect(response.json).toEqual({ success: 0 });
+      }
+    }
+  });
+});
+
 it('runs origin checks before ticket checks and ticket checks before the limiter', async () => {
   await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
     const forbiddenOrigin = await server.request('GET', '/unfurl', {
@@ -406,6 +484,93 @@ it('uses the default ticket limit of 60 and an explicit small limit', async () =
   });
 });
 
+it('uses separate fixed-window buckets for ticket users and disables zero limits', async () => {
+  await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).status).toBe(400);
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    }))).toMatchObject({
+      status: 429,
+      text: 'rate limit exceeded\n',
+    });
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.userTwo),
+    })).status).toBe(400);
+  });
+
+  await withServer(ticketArgs('--rate-limit', '0', '--storage-dir', ''), async (server) => {
+    for (let index = 0; index < 3; index += 1) {
+      expect((await server.request('GET', '/unfurl', {
+        headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      })).status).toBe(400);
+    }
+  });
+});
+
+it('resets a ticket rate-limit bucket after its fixed one-minute window', async () => {
+  await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).status).toBe(400);
+    expect((await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).status).toBe(429);
+
+    const deadline = Date.now() + 65_000;
+    let response = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    });
+
+    while (response.status === 429 && Date.now() < deadline) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 250));
+      response = await server.request('GET', '/unfurl', {
+        headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+      });
+    }
+
+    expect(response).toMatchObject({ status: 400, text: '{"success":0}\n' });
+  });
+}, 70_000);
+
+it('reads BLOK_SECRET and lets an explicit secret override it', async () => {
+  const fromEnvironment = await startServer({
+    args: serverArgs(
+      '--auth',
+      'ticket',
+      '--allow-origin',
+      ALLOWED_ORIGIN,
+      '--rate-limit',
+      '0',
+      '--storage-dir',
+      '',
+    ),
+    env: { BLOK_SECRET: tickets.secret },
+  });
+
+  try {
+    expect((await fromEnvironment.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).status).toBe(400);
+  } finally {
+    await fromEnvironment.stop();
+  }
+
+  const fromFlag = await startServer({
+    args: ticketArgs('--rate-limit', '0', '--storage-dir', ''),
+    env: { BLOK_SECRET: 'a-different-secret-with-at-least-32-characters' },
+  });
+
+  try {
+    expect((await fromFlag.request('GET', '/unfurl', {
+      headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
+    })).status).toBe(400);
+  } finally {
+    await fromFlag.stop();
+  }
+});
+
 it.each([
   {
     name: 'help',
@@ -455,6 +620,25 @@ it.each([
     exitCode: 1,
     stderr: '--s3-bucket needs --s3-endpoint',
     env: undefined,
+  },
+  {
+    name: 'S3 with a malformed endpoint',
+    args: [
+      '--s3-bucket',
+      'blok',
+      '--s3-endpoint',
+      's3.example.test',
+      '--s3-region',
+      'eu-central-1',
+      '--s3-bucket-url',
+      'https://uploads.example.test',
+    ],
+    exitCode: 1,
+    stderr: '--s3-endpoint must be a full URL with a scheme and a host',
+    env: {
+      BLOK_S3_ACCESS_KEY: 'access-key',
+      BLOK_S3_SECRET_KEY: 'secret-key',
+    },
   },
   {
     name: 'S3 without region',

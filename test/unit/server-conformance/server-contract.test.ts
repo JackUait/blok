@@ -854,6 +854,32 @@ it.each([
   expect(result.stderr).toContain(testCase.error);
 });
 
+it('serves a preseeded local file at the public URL path as an attachment', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    const storedName = '0123456789abcdef0123456789abcdef.html';
+    const bytes = Buffer.from('<h1>preseeded upload</h1>');
+
+    await writeFile(join(directory, storedName), bytes);
+    await withServer(serverArgs(
+      '--storage-dir',
+      directory,
+      '--public-url',
+      'https://uploads.example.com/media/files/',
+    ), async (server) => {
+      const served = await server.request('GET', `/media/files/${storedName}`);
+
+      expect(served).toMatchObject({
+        status: 200,
+        headers: {
+          'content-disposition': 'attachment',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+      expect(served.bytes).toEqual(bytes);
+    });
+  });
+});
+
 it('stores multipart bytes under safe local keys and serves them as attachments', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {

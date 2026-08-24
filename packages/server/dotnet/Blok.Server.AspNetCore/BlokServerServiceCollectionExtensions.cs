@@ -1,4 +1,5 @@
 using Blok.Server.Runtime;
+using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -38,6 +39,12 @@ public static class BlokServerServiceCollectionExtensions
     services.TryAddSingleton<IBlokAuthorization, DenyBlokAuthorization>();
     services.TryAddSingleton<FixedWindowRateLimiter>();
     services.TryAddSingleton<BlokServerRequestGuard>();
+
+    if (options.StorageDirectory != "" && options.S3Bucket == "")
+    {
+      services.TryAddSingleton<IBlobStore>(
+          new LocalBlobStore(options.StorageDirectory, options.PublicUrl));
+    }
 
     return new BlokServerBuilder(services);
   }

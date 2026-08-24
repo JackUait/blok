@@ -16,6 +16,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     ArgumentNullException.ThrowIfNull(pattern);
 
     var options = endpoints.ServiceProvider.GetRequiredService<BlokServerOptions>();
+    LocalFileEndpoint.Map(endpoints, options);
     var routes = endpoints.MapGroup(pattern);
 
     routes.MapMethods("/health", ["GET", "HEAD"], HandleHealth);

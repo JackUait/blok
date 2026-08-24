@@ -263,6 +263,10 @@ describe('CI critical-path law', () => {
         name: 'Test .NET runtime',
         run: 'dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj',
       },
+      {
+        name: 'Test packed .NET packages',
+        run: 'node scripts/test-server-packages.mjs',
+      },
     ]);
   });
 

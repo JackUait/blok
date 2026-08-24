@@ -98,6 +98,9 @@ jobs:
       - name: Test .NET runtime
         run: dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj
 
+      - name: Test packed .NET packages
+        run: node scripts/test-server-packages.mjs
+
   unit-tests:
     name: Unit Tests (${{ matrix.shard }})
     needs: [build]

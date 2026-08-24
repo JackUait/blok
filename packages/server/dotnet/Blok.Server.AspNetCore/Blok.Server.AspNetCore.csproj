@@ -4,6 +4,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>true</IsPackable>
+    <PackageId>Blok.Server.AspNetCore</PackageId>
+    <Authors>JackUait</Authors>
+    <Description>ASP.NET Core registration and endpoint mapping for Blok server services.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://blokeditor.com</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/JackUait/blok.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

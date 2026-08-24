@@ -12,8 +12,150 @@ namespace Blok.Server.AspNetCore.Tests;
 public sealed class LocalFileServingTests : IDisposable
 {
   private const string StoredKey = "0123456789abcdef0123456789abcdef.html";
+  private const string RangeKey = "0123456789abcdef0123456789abcdef.png";
   private readonly string directory =
       Path.Combine(Path.GetTempPath(), $"blok-local-files-{Guid.NewGuid():N}");
+
+  [Theory]
+  [InlineData("GET", "2345")]
+  [InlineData("HEAD", "")]
+  public async Task ServesSingleByteRangesForGetAndHead(string method, string expectedBody)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, method, "bytes=2-5");
+
+    Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+    Assert.Equal("bytes 2-5/10", response.Content.Headers.ContentRange?.ToString());
+    Assert.Equal(4L, response.Content.Headers.ContentLength);
+    Assert.Equal("attachment", response.Content.Headers.ContentDisposition?.ToString());
+    Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+    Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
+    Assert.Equal(expectedBody, await response.Content.ReadAsStringAsync());
+  }
+
+  [Theory]
+  [InlineData("GET")]
+  [InlineData("HEAD")]
+  public async Task ServesMultipleByteRangesForGetAndHead(string method)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, method, "bytes=0-1,4-6");
+
+    Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+    var contentType = response.Content.Headers.ContentType;
+    Assert.NotNull(contentType);
+    Assert.Equal("multipart/byteranges", contentType.MediaType);
+    var boundaryParameter = Assert.Single(
+        contentType.Parameters,
+        parameter => string.Equals(
+            parameter.Name,
+            "boundary",
+            StringComparison.OrdinalIgnoreCase));
+    Assert.NotNull(boundaryParameter.Value);
+    var boundary = boundaryParameter.Value.Trim('"');
+    var expectedBody =
+        $"--{boundary}\r\n" +
+        "Content-Range: bytes 0-1/10\r\n" +
+        "Content-Type: image/png\r\n" +
+        "\r\n" +
+        "01\r\n" +
+        $"--{boundary}\r\n" +
+        "Content-Range: bytes 4-6/10\r\n" +
+        "Content-Type: image/png\r\n" +
+        "\r\n" +
+        "456\r\n" +
+        $"--{boundary}--\r\n";
+
+    Assert.Equal(
+        Encoding.ASCII.GetByteCount(expectedBody),
+        response.Content.Headers.ContentLength);
+    Assert.Equal(
+        string.Equals(method, "HEAD", StringComparison.Ordinal) ? "" : expectedBody,
+        await response.Content.ReadAsStringAsync());
+  }
+
+  [Theory]
+  [InlineData("GET", "invalid range: failed to overlap\n")]
+  [InlineData("HEAD", "")]
+  public async Task RejectsUnsatisfiableByteRangesForGetAndHead(
+      string method,
+      string expectedBody)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, method, "bytes=10-");
+
+    Assert.Equal(HttpStatusCode.RequestedRangeNotSatisfiable, response.StatusCode);
+    Assert.Equal("bytes */10", response.Content.Headers.ContentRange?.ToString());
+    Assert.Equal(33L, response.Content.Headers.ContentLength);
+    Assert.Equal("text/plain; charset=utf-8", response.Content.Headers.ContentType?.ToString());
+    Assert.Equal("attachment", response.Content.Headers.ContentDisposition?.ToString());
+    Assert.Equal("nosniff", Assert.Single(response.Headers.GetValues("X-Content-Type-Options")));
+    Assert.Empty(response.Headers.AcceptRanges);
+    Assert.Null(response.Content.Headers.LastModified);
+    Assert.Equal(expectedBody, await response.Content.ReadAsStringAsync());
+  }
+
+  [Fact]
+  public async Task HonorsOnlyMatchingDateIfRangeValidators()
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var complete = await client.GetAsync($"/files/{RangeKey}");
+    var lastModified = complete.Content.Headers.LastModified;
+    Assert.NotNull(lastModified);
+
+    using var matching = await SendRangeAsync(
+        client,
+        "GET",
+        "bytes=2-5",
+        lastModified.Value.ToString("R"));
+
+    Assert.Equal(HttpStatusCode.PartialContent, matching.StatusCode);
+    Assert.Equal("2345", await matching.Content.ReadAsStringAsync());
+
+    foreach (var ifRange in new[]
+    {
+      lastModified.Value.AddDays(-1).ToString("R"),
+      "\"stale\"",
+    })
+    {
+      using var ignored = await SendRangeAsync(client, "GET", "bytes=2-5", ifRange);
+
+      Assert.Equal(HttpStatusCode.OK, ignored.StatusCode);
+      Assert.Null(ignored.Content.Headers.ContentRange);
+      Assert.Equal(10L, ignored.Content.Headers.ContentLength);
+      Assert.Equal("0123456789", await ignored.Content.ReadAsStringAsync());
+    }
+  }
+
+  [Fact]
+  public async Task DiscardsUnsatisfiableMembersWhenAByteRangeStillOverlaps()
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, "GET", "bytes=99-,2-5");
+
+    Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+    Assert.Equal("bytes 2-5/10", response.Content.Headers.ContentRange?.ToString());
+    Assert.Equal(4L, response.Content.Headers.ContentLength);
+    Assert.Equal("2345", await response.Content.ReadAsStringAsync());
+  }
+
+  [Fact]
+  public async Task IgnoresByteRangesWhoseCombinedLengthExceedsTheFile()
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, "GET", "bytes=0-9,0-0");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Null(response.Content.Headers.ContentRange);
+    Assert.Equal(10L, response.Content.Headers.ContentLength);
+    Assert.Equal("0123456789", await response.Content.ReadAsStringAsync());
+  }
 
   [Fact]
   public async Task ServesDirectFilesAtTheConfiguredPublicUrlPathAsAttachments()
@@ -229,6 +371,44 @@ public sealed class LocalFileServingTests : IDisposable
     {
       Directory.Delete(directory, recursive: true);
     }
+  }
+
+  private async Task<WebApplication> StartRangeApplicationAsync()
+  {
+    Directory.CreateDirectory(directory);
+    await File.WriteAllTextAsync(
+        Path.Combine(directory, RangeKey),
+        "0123456789",
+        Encoding.ASCII,
+        CancellationToken.None);
+    var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = directory;
+      options.PublicUrl = "https://uploads.example.com/files";
+    });
+    app.MapBlokServer();
+    await app.StartAsync();
+
+    return app;
+  }
+
+  private static async Task<HttpResponseMessage> SendRangeAsync(
+      HttpClient client,
+      string method,
+      string range,
+      string? ifRange = null)
+  {
+    using var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}");
+    request.Headers.TryAddWithoutValidation("Range", range);
+
+    if (ifRange is not null)
+    {
+      request.Headers.TryAddWithoutValidation("If-Range", ifRange);
+    }
+
+    return await client.SendAsync(request);
   }
 
   private static WebApplication BuildApplication(Action<BlokServerOptions> configure)

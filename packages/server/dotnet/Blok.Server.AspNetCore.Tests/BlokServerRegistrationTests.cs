@@ -132,7 +132,7 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
-  public async Task ActiveRoutesKeepTheirOptionsHandlers()
+  public async Task ActiveRoutesKeepTheirRejectedPreflightWire()
   {
     await using var app = BuildApplication(_ => { });
     app.MapBlokServer();
@@ -144,7 +144,9 @@ public sealed class BlokServerRegistrationTests
       using var request = new HttpRequestMessage(HttpMethod.Options, path);
       using var response = await client.SendAsync(request);
 
-      Assert.Equal(System.Net.HttpStatusCode.NotImplemented, response.StatusCode);
+      Assert.Equal(System.Net.HttpStatusCode.Forbidden, response.StatusCode);
+      Assert.Equal("text/plain; charset=utf-8", response.Content.Headers.ContentType?.ToString());
+      Assert.Equal("origin not allowed\n", await response.Content.ReadAsStringAsync());
     }
   }
 

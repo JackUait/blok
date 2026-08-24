@@ -33,8 +33,11 @@ public static class BlokServerServiceCollectionExtensions
     options.Validate();
 
     services.TryAddSingleton(options);
+    services.TryAddSingleton(TimeProvider.System);
     services.TryAddSingleton<IBlokRuntime>(static _ => JintBlokRuntime.FromEmbeddedResource());
     services.TryAddSingleton<IBlokAuthorization, DenyBlokAuthorization>();
+    services.TryAddSingleton<FixedWindowRateLimiter>();
+    services.TryAddSingleton<BlokServerRequestGuard>();
 
     return new BlokServerBuilder(services);
   }

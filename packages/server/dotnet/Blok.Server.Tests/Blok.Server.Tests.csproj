@@ -20,4 +20,10 @@
   <ItemGroup>
     <ProjectReference Include="../Blok.Server/Blok.Server.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../../../test/unit/server-conformance/fixtures/tickets.json"
+          Link="Fixtures/tickets.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

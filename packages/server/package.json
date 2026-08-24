@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/server",
-  "version": "1.10.1",
+  "version": "1.11.0",
   "description": "Blok backend service — a small Go sidecar that handles file uploads and link previews, so you write no backend code for either.",
   "license": "Apache-2.0",
   "author": "JackUait",

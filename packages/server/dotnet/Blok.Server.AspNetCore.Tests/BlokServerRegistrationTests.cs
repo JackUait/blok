@@ -105,6 +105,50 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public async Task ActiveRoutesUseTheExactMethodNotAllowedWire()
+  {
+    await using var app = BuildApplication(_ => { });
+    app.MapBlokServer();
+    await app.StartAsync();
+    using var client = app.GetTestClient();
+
+    var cases = new[]
+    {
+      (Method: HttpMethod.Post, Path: "/unfurl", Allow: "GET, HEAD, OPTIONS"),
+      (Method: HttpMethod.Get, Path: "/upload", Allow: "OPTIONS, POST"),
+      (Method: HttpMethod.Get, Path: "/upload-by-url", Allow: "OPTIONS, POST"),
+    };
+
+    foreach (var testCase in cases)
+    {
+      using var request = new HttpRequestMessage(testCase.Method, testCase.Path);
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(System.Net.HttpStatusCode.MethodNotAllowed, response.StatusCode);
+      Assert.Equal(testCase.Allow, string.Join(", ", response.Content.Headers.Allow));
+      Assert.Equal("text/plain; charset=utf-8", response.Content.Headers.ContentType?.ToString());
+      Assert.Equal("Method Not Allowed\n", await response.Content.ReadAsStringAsync());
+    }
+  }
+
+  [Fact]
+  public async Task ActiveRoutesKeepTheirOptionsHandlers()
+  {
+    await using var app = BuildApplication(_ => { });
+    app.MapBlokServer();
+    await app.StartAsync();
+    using var client = app.GetTestClient();
+
+    foreach (var path in new[] { "/unfurl", "/upload", "/upload-by-url" })
+    {
+      using var request = new HttpRequestMessage(HttpMethod.Options, path);
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(System.Net.HttpStatusCode.NotImplemented, response.StatusCode);
+    }
+  }
+
+  [Fact]
   public async Task PreservesTheGoMethodAndUnknownRouteResponses()
   {
     var app = BuildApplication(options =>
@@ -124,10 +168,13 @@ public sealed class BlokServerRegistrationTests
       Assert.Equal("text/plain; charset=utf-8", wrongMethod.Content.Headers.ContentType?.ToString());
       Assert.Equal("Method Not Allowed\n", await wrongMethod.Content.ReadAsStringAsync());
 
-      using var unknownRoute = await client.GetAsync("/missing");
-      Assert.Equal(System.Net.HttpStatusCode.NotFound, unknownRoute.StatusCode);
-      Assert.Equal("text/plain; charset=utf-8", unknownRoute.Content.Headers.ContentType?.ToString());
-      Assert.Equal("404 page not found\n", await unknownRoute.Content.ReadAsStringAsync());
+      foreach (var path in new[] { "/missing", "/upload" })
+      {
+        using var unknownRoute = await client.GetAsync(path);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, unknownRoute.StatusCode);
+        Assert.Equal("text/plain; charset=utf-8", unknownRoute.Content.Headers.ContentType?.ToString());
+        Assert.Equal("404 page not found\n", await unknownRoute.Content.ReadAsStringAsync());
+      }
     }
   }
 

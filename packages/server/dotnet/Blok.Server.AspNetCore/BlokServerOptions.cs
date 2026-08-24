@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 
 namespace Blok.Server.AspNetCore;
@@ -70,6 +71,8 @@ public sealed class BlokServerOptions
             $"--auth must be none, proxy, or ticket (got \"{Auth}\")");
     }
 
+    ValidateListenAddress();
+
     if (MaxUploadBytes <= 0)
     {
       throw new InvalidOperationException(
@@ -119,6 +122,62 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"--s3-addressing must be \"path\" or \"virtual\", or empty to choose automatically (got \"{S3Addressing}\")");
+    }
+  }
+
+  private void ValidateListenAddress()
+  {
+    string port;
+
+    if (ListenAddress.StartsWith("[", StringComparison.Ordinal))
+    {
+      var bracket = ListenAddress.IndexOf(']');
+
+      if (bracket < 0 ||
+          bracket + 1 >= ListenAddress.Length ||
+          ListenAddress[bracket + 1] != ':')
+      {
+        throw new InvalidOperationException(
+            $"listen tcp: address {ListenAddress}: missing port in address");
+      }
+
+      port = ListenAddress[(bracket + 2)..];
+    }
+    else
+    {
+      var firstColon = ListenAddress.IndexOf(':');
+      var lastColon = ListenAddress.LastIndexOf(':');
+
+      if (lastColon < 0)
+      {
+        throw new InvalidOperationException(
+            $"listen tcp: address {ListenAddress}: missing port in address");
+      }
+
+      if (firstColon != lastColon)
+      {
+        throw new InvalidOperationException(
+            $"listen tcp: address {ListenAddress}: too many colons in address");
+      }
+
+      port = ListenAddress[(lastColon + 1)..];
+    }
+
+    if (port == "")
+    {
+      throw new InvalidOperationException(
+          $"listen tcp: address {ListenAddress}: missing port in address");
+    }
+
+    if (!uint.TryParse(
+          port,
+          NumberStyles.None,
+          CultureInfo.InvariantCulture,
+          out var portNumber) ||
+        portNumber > 65535)
+    {
+      throw new InvalidOperationException(
+          $"listen tcp: address {port}: invalid port");
     }
   }
 

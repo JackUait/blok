@@ -262,6 +262,29 @@ it('returns the Go method and unknown-route responses', async () => {
   });
 });
 
+it('returns the exact wrong-method wire for every active route', async () => {
+  await withServer(serverArgs(), async (server) => {
+    const cases = [
+      { method: 'POST', path: '/unfurl', allow: 'GET, HEAD, OPTIONS' },
+      { method: 'GET', path: '/upload', allow: 'OPTIONS, POST' },
+      { method: 'GET', path: '/upload-by-url', allow: 'OPTIONS, POST' },
+    ];
+
+    for (const testCase of cases) {
+      const response = await server.request(testCase.method, testCase.path);
+
+      expect(response).toMatchObject({
+        status: 405,
+        headers: {
+          allow: testCase.allow,
+          'content-type': 'text/plain; charset=utf-8',
+        },
+        text: 'Method Not Allowed\n',
+      });
+    }
+  });
+});
+
 it('unregisters both outbound routes when unfurling is disabled', async () => {
   await withServer(serverArgs('--no-unfurl'), async (server) => {
     const requests = await Promise.all([
@@ -810,6 +833,25 @@ it.each([
   expect(result.exitCode).toBe(testCase.exitCode);
   expect(result.signal).toBeNull();
   expect(result.stderr).toContain(testCase.stderr);
+});
+
+it.each([
+  {
+    listen: 'localhost',
+    error: 'listen tcp: address localhost: missing port in address',
+  },
+  {
+    listen: 'localhost:65536',
+    error: 'listen tcp: address 65536: invalid port',
+  },
+])('rejects malformed listen address $listen before serving', async (testCase) => {
+  const result = await runServerCommand({
+    args: ['--listen', testCase.listen],
+    timeoutMs: 5_000,
+  });
+
+  expect(result).toMatchObject({ exitCode: 1, signal: null });
+  expect(result.stderr).toContain(testCase.error);
 });
 
 it('stores multipart bytes under safe local keys and serves them as attachments', async () => {

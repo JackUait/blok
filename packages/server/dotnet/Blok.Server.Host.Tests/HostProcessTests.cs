@@ -111,6 +111,18 @@ public sealed class HostProcessTests
       { ["--auth", "unknown"], 1, "--auth must be none, proxy, or ticket (got \"unknown\")", null },
       { ["--listen", "0.0.0.0:4000"], 1, "--auth none", null },
       {
+        ["--listen", "localhost"],
+        1,
+        "listen tcp: address localhost: missing port in address",
+        null
+      },
+      {
+        ["--listen", "localhost:65536"],
+        1,
+        "listen tcp: address 65536: invalid port",
+        null
+      },
+      {
         ["--auth", "ticket", "--secret", "short", "--allow-origin", "https://app.example.com"],
         1,
         "--secret must be at least 32 characters (got 5)",
@@ -268,7 +280,18 @@ public sealed class HostProcessTests
   {
     using var process = StartProcess(args, environment);
     var standardError = process.StandardError.ReadToEndAsync();
-    await process.WaitForExitAsync();
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+    try
+    {
+      await process.WaitForExitAsync(deadline.Token);
+    }
+    catch (OperationCanceledException)
+    {
+      process.Kill(entireProcessTree: true);
+      await process.WaitForExitAsync();
+      throw new TimeoutException("Host command did not exit within 5 seconds");
+    }
 
     return new CommandResult(process.ExitCode, await standardError);
   }

@@ -21,6 +21,7 @@ export interface RunningServer {
 export interface RunServerCommandOptions {
   args: string[];
   env?: NodeJS.ProcessEnv;
+  timeoutMs?: number;
 }
 
 export interface ServerCommandResult {
@@ -96,12 +97,22 @@ export function runServerCommand(options: RunServerCommandOptions): Promise<Serv
     });
     let stderr = '';
 
-    child.once('error', reject);
+    const timeoutMs = options.timeoutMs ?? 10_000;
+    const deadline = setTimeout(() => {
+      child.kill();
+      reject(new Error('Server command did not exit within ' + timeoutMs + ' ms'));
+    }, timeoutMs);
+
+    child.once('error', (error) => {
+      clearTimeout(deadline);
+      reject(error);
+    });
     child.stderr?.setEncoding('utf8');
     child.stderr?.on('data', (chunk: string) => {
       stderr += chunk;
     });
     child.once('close', (exitCode, signal) => {
+      clearTimeout(deadline);
       resolve({ exitCode, signal, stderr });
     });
   });

@@ -19,7 +19,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     var routes = endpoints.MapGroup(pattern);
 
     routes.MapMethods("/health", ["GET", "HEAD"], HandleHealth);
-    routes.Map("/health", HandleMethodNotAllowed).WithOrder(1);
+    routes.Map("/health", context => HandleMethodNotAllowed(context, "GET, HEAD")).WithOrder(1);
 
     if (!options.UnfurlDisabled)
     {
@@ -45,6 +45,11 @@ public static class BlokServerEndpointRouteBuilderExtensions
   {
     routes.MapMethods(pattern, [method], HandleNotImplemented);
     routes.MapMethods(pattern, ["OPTIONS"], HandleNotImplemented);
+
+    var allowedMethods = method == "GET"
+      ? "GET, HEAD, OPTIONS"
+      : "OPTIONS, POST";
+    routes.Map(pattern, context => HandleMethodNotAllowed(context, allowedMethods)).WithOrder(1);
   }
 
   private static async Task HandleHealth(
@@ -62,10 +67,12 @@ public static class BlokServerEndpointRouteBuilderExtensions
     await context.Response.WriteAsync(body + "\n");
   }
 
-  private static async Task HandleMethodNotAllowed(HttpContext context)
+  private static async Task HandleMethodNotAllowed(
+      HttpContext context,
+      string allowedMethods)
   {
     context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-    context.Response.Headers.Allow = "GET, HEAD";
+    context.Response.Headers.Allow = allowedMethods;
     context.Response.ContentType = "text/plain; charset=utf-8";
     await context.Response.WriteAsync("Method Not Allowed\n");
   }

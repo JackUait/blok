@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Blok.Server.AspNetCore.Tests/Blok.Server.AspNetCore.Tests.csproj" />
+  <Project Path="Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj" />
+  <Project Path="Blok.Server.Host.Tests/Blok.Server.Host.Tests.csproj" />
+  <Project Path="Blok.Server.Host/Blok.Server.Host.csproj" />
+  <Project Path="Blok.Server.Tests/Blok.Server.Tests.csproj" />
+  <Project Path="Blok.Server/Blok.Server.csproj" />
+</Solution>

@@ -5,7 +5,21 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-var parsed = HostArguments.Parse(args, Environment.GetEnvironmentVariable);
+var hostArguments = args;
+#if BLOK_SERVER_CONFORMANCE
+var conformance = ConformanceArguments.Parse(args);
+if (conformance.Error is not null)
+{
+  Console.Error.WriteLine(conformance.Error);
+  Console.Error.Write(HostArguments.Usage);
+  return 2;
+}
+hostArguments = conformance.Arguments;
+#endif
+
+var parsed = HostArguments.Parse(
+    hostArguments,
+    Environment.GetEnvironmentVariable);
 
 if (parsed.HelpRequested)
 {
@@ -46,7 +60,15 @@ var listenAddress = options.ListenAddress.StartsWith(':')
   ? $"0.0.0.0{options.ListenAddress}"
   : options.ListenAddress;
 builder.WebHost.UseUrls($"http://{listenAddress}");
-builder.Services.AddBlokServer(options);
+var blokServer = builder.Services.AddBlokServer(options);
+#if BLOK_SERVER_CONFORMANCE
+if (conformance.Origin is not null)
+{
+  blokServer.UseConformanceOrigin(
+      conformance.Origin,
+      conformance.Port);
+}
+#endif
 
 var app = builder.Build();
 app.MapBlokServer();

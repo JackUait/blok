@@ -42,7 +42,13 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
   private readonly IGuardedOutboundPolicy policy;
 
   internal GuardedOutboundFetcher() :
-      this(new GuardedOutboundPolicy(), new SystemDnsResolver())
+      this(new GuardedOutboundPolicy())
+  {
+  }
+
+  internal GuardedOutboundFetcher(
+      IGuardedOutboundPolicy policy) :
+      this(policy, new SystemDnsResolver())
   {
   }
 

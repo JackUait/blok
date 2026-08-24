@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Blok.Server.AspNetCore;
+using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -37,6 +38,27 @@ public sealed class BlokServerRegistrationTests
     var user = new ClaimsPrincipal();
     Assert.False(await authorization.CanReadDocumentAsync(user, "document-1"));
     Assert.False(await authorization.CanWriteDocumentAsync(user, "document-1"));
+  }
+
+  [Fact]
+  public void RegistersOneGuardedOutboundFetcher()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer();
+    services.AddBlokServer();
+
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(IGuardedOutboundPolicy));
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(IGuardedOutboundFetcher));
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<GuardedOutboundFetcher>(
+        provider.GetRequiredService<IGuardedOutboundFetcher>());
   }
 
   [Fact]
@@ -121,6 +143,22 @@ public sealed class BlokServerRegistrationTests
     using var provider = services.BuildServiceProvider();
 
     Assert.Same(customStore, provider.GetRequiredService<IBlobStore>());
+  }
+
+  [Fact]
+  public void HonorsAnExistingGuardedFetcherOverride()
+  {
+    var services = new ServiceCollection();
+    var fetcher = new StubGuardedFetcher();
+    services.AddSingleton<IGuardedOutboundFetcher>(fetcher);
+
+    services.AddBlokServer();
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Same(
+        fetcher,
+        provider.GetRequiredService<IGuardedOutboundFetcher>());
   }
 
   [Fact]
@@ -270,6 +308,17 @@ public sealed class BlokServerRegistrationTests
         .SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [])
         .Order()
         .ToArray();
+  }
+
+  private sealed class StubGuardedFetcher : IGuardedOutboundFetcher
+  {
+    public ValueTask<GuardedResponse> GetAsync(
+        string rawUrl,
+        GuardedFetchLimits limits,
+        CancellationToken cancellationToken)
+    {
+      throw new NotSupportedException();
+    }
   }
 
   private sealed class AllowAllAuthorization : IBlokAuthorization

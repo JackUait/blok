@@ -45,7 +45,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
   private static void MapShell(RouteGroupBuilder routes, string pattern, string method)
   {
     var handler = method == "GET"
-      ? (RequestDelegate)HandleUnfurlShell
+      ? (RequestDelegate)UnfurlEndpoint.HandleAsync
       : pattern == "/upload"
         ? UploadEndpoint.HandleAsync
         : HandleNotImplemented;
@@ -108,13 +108,6 @@ public static class BlokServerEndpointRouteBuilderExtensions
     context.Response.Headers.AccessControlMaxAge = "600";
     context.Response.Headers.Append("Vary", "Origin");
     context.Response.StatusCode = StatusCodes.Status204NoContent;
-  }
-
-  private static async Task HandleUnfurlShell(HttpContext context)
-  {
-    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-    context.Response.ContentType = "application/json";
-    await context.Response.WriteAsync("{\"success\":0}\n");
   }
 
   private static async Task HandleHealth(

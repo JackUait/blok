@@ -52,6 +52,8 @@ async function main() {
   const executableSuffix = process.platform === 'win32' ? '.exe' : '';
   const ordinaryExecutable = join(temporaryDirectory, `blok-server-ordinary${executableSuffix}`);
   const conformanceExecutable = join(temporaryDirectory, `blok-server-conformance${executableSuffix}`);
+  const csharpOrdinaryDirectory = join(temporaryDirectory, 'csharp-ordinary');
+  const csharpConformanceDirectory = join(temporaryDirectory, 'csharp-conformance');
 
   try {
     if (options.target === 'go') {
@@ -62,13 +64,28 @@ async function main() {
         cwd: join(repositoryRoot, 'packages/server'),
       });
     } else {
+      const hostProject = join(
+        repositoryRoot,
+        'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
+      );
       await run('dotnet', [
         'build',
-        join(repositoryRoot, 'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj'),
+        hostProject,
         '--configuration',
         'Release',
         '--output',
-        temporaryDirectory,
+        csharpOrdinaryDirectory,
+      ], {
+        cwd: repositoryRoot,
+      });
+      await run('dotnet', [
+        'build',
+        hostProject,
+        '--configuration',
+        'Debug',
+        '--output',
+        csharpConformanceDirectory,
+        '-p:DefineConstants=BLOK_SERVER_CONFORMANCE',
       ], {
         cwd: repositoryRoot,
       });
@@ -92,11 +109,11 @@ async function main() {
       }
       : {
         BLOK_CONFORMANCE_ORDINARY_SERVER: join(
-          temporaryDirectory,
+          csharpOrdinaryDirectory,
           `Blok.Server.Host${executableSuffix}`,
         ),
         BLOK_CONFORMANCE_SERVER: join(
-          temporaryDirectory,
+          csharpConformanceDirectory,
           `Blok.Server.Host${executableSuffix}`,
         ),
       };

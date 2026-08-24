@@ -178,6 +178,36 @@ public sealed class UnfurlMetadataParserTests
     Assert.Equal("https://example.com/favicon.ico", metadata.Favicon);
   }
 
+  [Fact]
+  public void KeepsMetadataWhenTextFollowsTheDeepestAllowedOpenElement()
+  {
+    const int NestedDivCount = 510;
+    var html =
+        "<meta property=\"og:title\" content=\"Boundary Title\">" +
+        string.Concat(Enumerable.Repeat("<div>", NestedDivCount)) +
+        "deep text" +
+        string.Concat(Enumerable.Repeat("</div>", NestedDivCount));
+
+    Assert.Equal(
+        "Boundary Title",
+        Parse(html, "https://example.com/x").Title);
+  }
+
+  [Fact]
+  public void ClearsMetadataAtTheFiveHundredThirteenthOpenElement()
+  {
+    const int NestedDivCount = 511;
+    var html =
+        "<meta property=\"og:title\" content=\"Boundary Title\">" +
+        string.Concat(Enumerable.Repeat("<div>", NestedDivCount)) +
+        "deep text" +
+        string.Concat(Enumerable.Repeat("</div>", NestedDivCount));
+
+    Assert.Equal(
+        "",
+        Parse(html, "https://example.com/x").Title);
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData(":")]

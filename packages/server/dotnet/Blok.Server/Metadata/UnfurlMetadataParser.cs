@@ -6,7 +6,7 @@ namespace Blok.Server.Metadata;
 
 internal static class UnfurlMetadataParser
 {
-  private const int MaximumTreeDepth = 512;
+  private const int MaximumOpenElementDepth = 512;
   private const string HtmlNamespace = "http://www.w3.org/1999/xhtml";
 
   internal static UnfurlMetadata Parse(
@@ -38,13 +38,13 @@ internal static class UnfurlMetadataParser
       while (nodes.Count > 0)
       {
         var (node, depth) = nodes.Pop();
-        if (depth > MaximumTreeDepth)
-        {
-          return Build(baseUrl);
-        }
-
         if (node is IElement element)
         {
+          if (depth > MaximumOpenElementDepth)
+          {
+            return Build(baseUrl);
+          }
+
           switch (element.LocalName)
           {
             case "title" when element.NamespaceUri == HtmlNamespace:

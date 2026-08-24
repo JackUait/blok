@@ -87,6 +87,55 @@ public sealed class HostProcessTests
   }
 
   [Fact]
+  public async Task StartsOnABlankHostListenerInTicketMode()
+  {
+    var listen = $":{AllocatePort()}";
+    await using var host = await StartHostAsync(
+    [
+      "--listen", listen,
+      "--auth", "ticket",
+      "--secret", ValidSecret,
+      "--allow-origin", "https://app.example.com",
+      "--storage-dir", "",
+    ]);
+
+    using var health = await host.Client.GetAsync("/health");
+    Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+  }
+
+  [Fact]
+  public async Task KeepsPortZeroWhenBindingABlankHostListener()
+  {
+    using var process = StartProcess(
+    [
+      "--listen", ":0",
+      "--auth", "ticket",
+      "--secret", ValidSecret,
+      "--allow-origin", "https://app.example.com",
+      "--storage-dir", "",
+    ],
+    environment: null);
+
+    try
+    {
+      await WaitForStandardErrorAsync(process, "listening on :0", TimeSpan.FromSeconds(10));
+      var exited = process.WaitForExitAsync();
+      var remainedRunning = Task.Delay(500);
+
+      Assert.Same(remainedRunning, await Task.WhenAny(exited, remainedRunning));
+    }
+    finally
+    {
+      if (!process.HasExited)
+      {
+        process.Kill(entireProcessTree: true);
+      }
+
+      await process.WaitForExitAsync();
+    }
+  }
+
+  [Fact]
   public async Task AnExplicitSecretWinsEvenWhenItIsInvalid()
   {
     var result = await RunHostCommandAsync(
@@ -110,6 +159,8 @@ public sealed class HostProcessTests
       { ["--max-upload", "not-a-number"], 2, "invalid value \"not-a-number\" for flag -max-upload", null },
       { ["--auth", "unknown"], 1, "--auth must be none, proxy, or ticket (got \"unknown\")", null },
       { ["--listen", "0.0.0.0:4000"], 1, "--auth none", null },
+      { ["--listen", $":{AllocatePort()}"], 1, "--auth none", null },
+      { ["--listen", $":{AllocatePort()}", "--auth", "proxy"], 1, "--auth proxy", null },
       {
         ["--listen", "localhost"],
         1,
@@ -226,9 +277,12 @@ public sealed class HostProcessTests
   {
     var process = StartProcess(args, environment);
     var listen = RequiredListenAddress(args);
+    var clientAddress = listen.StartsWith(':')
+      ? $"127.0.0.1{listen}"
+      : listen;
     var client = new HttpClient
     {
-      BaseAddress = new Uri($"http://{listen}"),
+      BaseAddress = new Uri($"http://{clientAddress}"),
       Timeout = TimeSpan.FromSeconds(1),
     };
     var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
@@ -328,6 +382,43 @@ public sealed class HostProcessTests
     return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the host process");
   }
 
+  private static async Task WaitForStandardErrorAsync(
+      Process process,
+      string expected,
+      TimeSpan timeout)
+  {
+    using var deadline = new CancellationTokenSource(timeout);
+    var lines = new List<string>();
+
+    while (true)
+    {
+      string? line;
+
+      try
+      {
+        line = await process.StandardError.ReadLineAsync(deadline.Token);
+      }
+      catch (OperationCanceledException)
+      {
+        throw new TimeoutException(
+            $"Host did not write {expected} within {timeout}: {string.Join(Environment.NewLine, lines)}");
+      }
+
+      if (line is null)
+      {
+        throw new InvalidOperationException(
+            $"Host exited before writing {expected}: {string.Join(Environment.NewLine, lines)}");
+      }
+
+      lines.Add(line);
+
+      if (line.Contains(expected, StringComparison.Ordinal))
+      {
+        return;
+      }
+    }
+  }
+
   private static string RequiredListenAddress(string[] args)
   {
     for (var index = 0; index < args.Length; index++)
@@ -350,11 +441,16 @@ public sealed class HostProcessTests
 
   private static string AllocateListenAddress()
   {
+    return $"127.0.0.1:{AllocatePort()}";
+  }
+
+  private static int AllocatePort()
+  {
     using var listener = new TcpListener(IPAddress.Loopback, 0);
     listener.Start();
     var endpoint = Assert.IsType<IPEndPoint>(listener.LocalEndpoint);
 
-    return $"127.0.0.1:{endpoint.Port}";
+    return endpoint.Port;
   }
 
   private sealed record CommandResult(

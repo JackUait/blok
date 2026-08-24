@@ -42,7 +42,10 @@ if (parsed.SecretFromFlag)
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
 builder.Logging.ClearProviders();
-builder.WebHost.UseUrls($"http://{options.ListenAddress}");
+var listenAddress = options.ListenAddress.StartsWith(':')
+  ? $"0.0.0.0{options.ListenAddress}"
+  : options.ListenAddress;
+builder.WebHost.UseUrls($"http://{listenAddress}");
 builder.Services.AddBlokServer(options);
 
 var app = builder.Build();

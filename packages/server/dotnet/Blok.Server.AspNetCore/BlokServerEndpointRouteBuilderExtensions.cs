@@ -46,7 +46,9 @@ public static class BlokServerEndpointRouteBuilderExtensions
   {
     var handler = method == "GET"
       ? (RequestDelegate)HandleUnfurlShell
-      : HandleNotImplemented;
+      : pattern == "/upload"
+        ? UploadEndpoint.HandleAsync
+        : HandleNotImplemented;
 
     routes.MapMethods(pattern, [method], Guard(handler));
     routes.MapMethods(

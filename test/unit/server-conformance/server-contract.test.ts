@@ -511,6 +511,8 @@ it('uses separate fixed-window buckets for ticket users and disables zero limits
 
 it('resets a ticket rate-limit bucket after its fixed one-minute window', async () => {
   await withServer(ticketArgs('--rate-limit', '1', '--storage-dir', ''), async (server) => {
+    const firstRequestStartedAt = Date.now();
+
     expect((await server.request('GET', '/unfurl', {
       headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
     })).status).toBe(400);
@@ -518,7 +520,7 @@ it('resets a ticket rate-limit bucket after its fixed one-minute window', async 
       headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
     })).status).toBe(429);
 
-    const deadline = Date.now() + 65_000;
+    const deadline = firstRequestStartedAt + 65_000;
     let response = await server.request('GET', '/unfurl', {
       headers: requestHeaders(ALLOWED_ORIGIN, tickets.compatible),
     });
@@ -530,7 +532,11 @@ it('resets a ticket rate-limit bucket after its fixed one-minute window', async 
       });
     }
 
+    const elapsed = Date.now() - firstRequestStartedAt;
+
     expect(response).toMatchObject({ status: 400, text: '{"success":0}\n' });
+    expect(elapsed).toBeGreaterThanOrEqual(59_000);
+    expect(elapsed).toBeLessThanOrEqual(65_000);
   });
 }, 70_000);
 

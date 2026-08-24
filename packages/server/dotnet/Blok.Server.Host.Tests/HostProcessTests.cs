@@ -30,7 +30,10 @@ public sealed class HostProcessTests
     Assert.Equal("malformed upload\n", await upload.Content.ReadAsStringAsync());
 
     using var uploadByUrl = await host.Client.PostAsync("/upload-by-url", new StringContent(""));
-    Assert.Equal(HttpStatusCode.NotImplemented, uploadByUrl.StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, uploadByUrl.StatusCode);
+    Assert.Equal(
+        "expected {\"url\": \"...\"}\n",
+        await uploadByUrl.Content.ReadAsStringAsync());
   }
 
   [Fact]

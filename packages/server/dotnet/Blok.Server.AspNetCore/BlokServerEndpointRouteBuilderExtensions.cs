@@ -48,7 +48,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
       ? (RequestDelegate)UnfurlEndpoint.HandleAsync
       : pattern == "/upload"
         ? UploadEndpoint.HandleAsync
-        : HandleNotImplemented;
+        : UploadByUrlEndpoint.HandleAsync;
 
     routes.MapMethods(pattern, [method], Guard(handler));
     routes.MapMethods(
@@ -133,13 +133,6 @@ public static class BlokServerEndpointRouteBuilderExtensions
     context.Response.Headers.Allow = allowedMethods;
     context.Response.ContentType = "text/plain; charset=utf-8";
     await context.Response.WriteAsync("Method Not Allowed\n");
-  }
-
-  private static Task HandleNotImplemented(HttpContext context)
-  {
-    context.Response.StatusCode = StatusCodes.Status501NotImplemented;
-
-    return Task.CompletedTask;
   }
 
   private static async Task HandleNotFound(HttpContext context)

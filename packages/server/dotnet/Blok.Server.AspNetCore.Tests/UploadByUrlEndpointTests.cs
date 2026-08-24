@@ -1,0 +1,392 @@
+using System.Net;
+using System.Text;
+using Blok.Server.Outbound;
+using Blok.Server.Storage;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Blok.Server.AspNetCore.Tests;
+
+public sealed class UploadByUrlEndpointTests
+{
+  private const string StoredUrl =
+      "https://uploads.example.test/files/blob";
+
+  public static TheoryData<string> MalformedEnvelopes =>
+      new()
+      {
+        "",
+        "not json",
+        "{}",
+        """{"url":""}""",
+        """{"url":1}""",
+        "null",
+        "[]",
+        $$"""{"url":"{{new string('x', 8 << 10)}}"}""",
+      };
+
+  public static TheoryData<string> InvalidMediaTypes
+  {
+    get
+    {
+      var maximum = "text/plain; x=" + new string('a', 241);
+
+      Assert.Equal(255, maximum.Length);
+
+      return new TheoryData<string>
+      {
+        "",
+        "   ",
+        "not a media type",
+        "text/plain; charset=utf-8; charset=iso-8859-1",
+        maximum + "a",
+      };
+    }
+  }
+
+  [Theory]
+  [MemberData(nameof(MalformedEnvelopes))]
+  public async Task RejectsMalformedOrOversizedEnvelopesBeforeFetching(
+      string body)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(body));
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "expected {\"url\": \"...\"}\n");
+    Assert.Equal(0, fetcher.CallCount);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task GuardFailureReturnsTheExactBadRequestAndMediaLimits()
+  {
+    var fetcher = new StubFetcher
+    {
+      Error = new GuardedFetchException(
+          GuardedFetchFailure.BlockedDestination),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(
+        fetcher,
+        store,
+        maxUploadBytes: 12345);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "the URL could not be fetched\n");
+    Assert.Equal(1, fetcher.CallCount);
+    Assert.Equal(
+        "https://source.example.test/file",
+        fetcher.Target);
+    Assert.Equal(TimeSpan.FromMinutes(2), fetcher.Limits.TotalTimeout);
+    Assert.Equal(12345, fetcher.Limits.MaximumResponseBytes);
+    Assert.Equal(5, fetcher.Limits.MaximumRedirects);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Theory]
+  [InlineData(199)]
+  [InlineData(301)]
+  [InlineData(404)]
+  [InlineData(502)]
+  [InlineData(300)]
+  public async Task RejectsEveryRepresentativeNonTwoHundredStatusBeforeStorage(
+      int statusCode)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(statusCode: statusCode),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "the URL could not be fetched\n");
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Theory]
+  [InlineData(200)]
+  [InlineData(203)]
+  [InlineData(226)]
+  [InlineData(299)]
+  public async Task AcceptsEveryRepresentativeTwoHundredStatus(
+      int statusCode)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(
+          body: [],
+          finalUrl: "https://example.test/",
+          contentType: "",
+          statusCode: statusCode),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(
+        "{\"url\":\"https://uploads.example.test/files/blob\"}\n",
+        await response.Content.ReadAsStringAsync());
+    Assert.Single(store.Puts);
+  }
+
+  [Fact]
+  public async Task StoresExactBytesWithFinalNameMimeAndResponseSize()
+  {
+    var bytes = new byte[] { 0, 1, 2, 127, 128, 255 };
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(
+          bytes,
+          "https://cdn.example.test/final/photo.JPEG?download=1#ignored",
+          " image/jpeg; profile=web ",
+          StatusCodes.Status206PartialContent),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/redirect"}"""));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(
+        "application/json",
+        response.Content.Headers.ContentType?.ToString());
+    Assert.Equal(
+        "{\"url\":\"https://uploads.example.test/files/blob\",\"fileName\":\"photo.JPEG\",\"size\":6,\"mimeType\":\"image/jpeg; profile=web\"}\n",
+        await response.Content.ReadAsStringAsync());
+    var put = Assert.Single(store.Puts);
+    Assert.Equal(".jpeg", put.Extension);
+    Assert.Equal("image/jpeg; profile=web", put.MimeType);
+    Assert.Equal(bytes, put.Bytes);
+  }
+
+  [Theory]
+  [InlineData("https://example.test")]
+  [InlineData("https://example.test/")]
+  [InlineData("https://example.test/folder/")]
+  [InlineData("https://example.test/a/../")]
+  public async Task OmitsANameForAPathlessOrTrailingSlashFinalUrl(
+      string finalUrl)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(
+          body: [1],
+          finalUrl: finalUrl,
+          contentType: "image/png"),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    Assert.Equal(
+        "{\"url\":\"https://uploads.example.test/files/blob\",\"size\":1,\"mimeType\":\"image/png\"}\n",
+        await response.Content.ReadAsStringAsync());
+    Assert.Equal("", Assert.Single(store.Puts).Extension);
+  }
+
+  [Theory]
+  [MemberData(nameof(InvalidMediaTypes))]
+  public async Task DropsInvalidConflictingOrOverlongMediaTypes(
+      string contentType)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(
+          body: [1],
+          finalUrl: "https://example.test/file.bin",
+          contentType: contentType),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal(
+        "{\"url\":\"https://uploads.example.test/files/blob\",\"fileName\":\"file.bin\",\"size\":1}\n",
+        await response.Content.ReadAsStringAsync());
+    Assert.Equal("", Assert.Single(store.Puts).MimeType);
+  }
+
+  [Fact]
+  public async Task StoreFailureReturnsTheExactBadGateway()
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore
+    {
+      Failure = new IOException("store failed"),
+    };
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadGateway,
+        "upload failed\n");
+    Assert.Equal(1, store.PutCalls);
+  }
+
+  private static GuardedResponse SuccessfulResponse(
+      byte[]? body = null,
+      string finalUrl = "https://example.test/file.png",
+      string contentType = "image/png",
+      int statusCode = StatusCodes.Status200OK)
+  {
+    return new GuardedResponse(
+        body ?? "imagebytes"u8.ToArray(),
+        contentType,
+        finalUrl,
+        statusCode);
+  }
+
+  private static StringContent Json(string body)
+  {
+    return new StringContent(body, Encoding.UTF8, "application/json");
+  }
+
+  private static async Task<WebApplication> StartApplication(
+      IGuardedOutboundFetcher fetcher,
+      IBlobStore store,
+      long maxUploadBytes = 32L << 20)
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddSingleton(fetcher);
+    builder.Services.AddSingleton(store);
+    builder.Services.AddBlokServer(options =>
+    {
+      options.StorageDirectory = "./unused-upload-by-url-test-storage";
+      options.PublicUrl = "https://unused.example.test/files";
+      options.MaxUploadBytes = maxUploadBytes;
+    });
+    var app = builder.Build();
+    app.MapBlokServer();
+    await app.StartAsync();
+
+    return app;
+  }
+
+  private static async Task AssertError(
+      HttpResponseMessage response,
+      HttpStatusCode status,
+      string body)
+  {
+    Assert.Equal(status, response.StatusCode);
+    Assert.Equal(
+        "text/plain; charset=utf-8",
+        response.Content.Headers.ContentType?.ToString());
+    Assert.Equal(body, await response.Content.ReadAsStringAsync());
+  }
+
+  private sealed record PutObservation(
+      string Extension,
+      string MimeType,
+      byte[] Bytes);
+
+  private sealed class StubFetcher : IGuardedOutboundFetcher
+  {
+    public GuardedResponse? Response { get; init; }
+
+    public GuardedFetchException? Error { get; init; }
+
+    public int CallCount { get; private set; }
+
+    public string? Target { get; private set; }
+
+    public GuardedFetchLimits Limits { get; private set; }
+
+    public ValueTask<GuardedResponse> GetAsync(
+        string rawUrl,
+        GuardedFetchLimits limits,
+        CancellationToken cancellationToken)
+    {
+      CallCount++;
+      Target = rawUrl;
+      Limits = limits;
+
+      if (Error is not null)
+      {
+        throw Error;
+      }
+
+      return ValueTask.FromResult(
+          Response ??
+          throw new InvalidOperationException(
+              "No guarded response was configured."));
+    }
+  }
+
+  private sealed class RecordingBlobStore : IBlobStore
+  {
+    public List<PutObservation> Puts { get; } = [];
+
+    public int PutCalls { get; private set; }
+
+    public Exception? Failure { get; init; }
+
+    public async Task<string> PutAsync(
+        string extension,
+        string mimeType,
+        Stream content,
+        CancellationToken cancellationToken = default)
+    {
+      PutCalls++;
+      using var bytes = new MemoryStream();
+      await content.CopyToAsync(bytes, cancellationToken);
+      Puts.Add(new PutObservation(
+          extension,
+          mimeType,
+          bytes.ToArray()));
+
+      if (Failure is not null)
+      {
+        throw Failure;
+      }
+
+      return StoredUrl;
+    }
+
+    public Task DeleteAsync(
+        string url,
+        CancellationToken cancellationToken = default)
+    {
+      throw new NotSupportedException();
+    }
+  }
+}

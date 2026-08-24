@@ -1,6 +1,4 @@
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -15,8 +13,6 @@ namespace Blok.Server.AspNetCore;
 
 internal static class UploadEndpoint
 {
-  private const int MaximumFileNameBytes = 255;
-  private const int MaximumMediaTypeLength = 255;
   private const int CopyBufferSize = 81920;
 
   internal static async Task HandleAsync(HttpContext context)
@@ -163,15 +159,12 @@ internal static class UploadEndpoint
         return;
       }
 
-      var response = new UploadResponse(
+      await UploadWire.WriteResponseAsync(
+          context,
           url,
-          fileName == "" ? null : fileName,
-          countedContent.BytesRead == 0 ? null : countedContent.BytesRead,
-          mimeType == "" ? null : mimeType);
-      context.Response.ContentType = "application/json";
-      await context.Response.WriteAsync(
-          JsonSerializer.Serialize(response) + "\n",
-          context.RequestAborted);
+          fileName,
+          countedContent.BytesRead,
+          mimeType);
     }
     finally
     {
@@ -198,7 +191,7 @@ internal static class UploadEndpoint
             parsed.MediaType.Value,
             "multipart/form-data",
             StringComparison.OrdinalIgnoreCase) ||
-        HasConflictingParameters(parsed))
+        UploadWire.HasConflictingParameters(parsed))
     {
       return false;
     }
@@ -206,29 +199,6 @@ internal static class UploadEndpoint
     boundary = HeaderUtilities.RemoveQuotes(parsed.Boundary).Value ?? "";
 
     return boundary != "";
-  }
-
-  private static bool HasConflictingParameters(
-      MediaTypeHeaderValue mediaType)
-  {
-    var values = new Dictionary<string, string>(
-        StringComparer.OrdinalIgnoreCase);
-
-    foreach (var parameter in mediaType.Parameters)
-    {
-      var name = parameter.Name.Value ?? "";
-      var value = UnquoteMediaParameter(parameter.Value);
-
-      if (values.TryGetValue(name, out var existing) &&
-          existing != value)
-      {
-        return true;
-      }
-
-      values[name] = value;
-    }
-
-    return false;
   }
 
   private static bool TryGetFileMetadata(
@@ -260,8 +230,8 @@ internal static class UploadEndpoint
       return false;
     }
 
-    fileName = SanitizeFileName(Unquote(rawFileName));
-    mimeType = SanitizeMediaType(section.ContentType);
+    fileName = UploadWire.SanitizeFileName(Unquote(rawFileName));
+    mimeType = UploadWire.SanitizeMediaType(section.ContentType);
 
     return true;
   }
@@ -277,40 +247,6 @@ internal static class UploadEndpoint
             values[0]?.Trim(),
             "quoted-printable",
             StringComparison.OrdinalIgnoreCase);
-  }
-
-  private static string UnquoteMediaParameter(StringSegment value)
-  {
-    var raw = value.Value ?? "";
-    var quoted = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"';
-    var unquoted = HeaderUtilities.RemoveQuotes(value).Value ?? "";
-
-    if (!quoted || unquoted.IndexOf('\\') < 0)
-    {
-      return unquoted;
-    }
-
-    var result = new StringBuilder(unquoted.Length);
-
-    for (var index = 0; index < unquoted.Length; index++)
-    {
-      if (unquoted[index] == '\\' &&
-          index + 1 < unquoted.Length &&
-          IsMimeSpecial(unquoted[index + 1]))
-      {
-        index++;
-      }
-
-      result.Append(unquoted[index]);
-    }
-
-    return result.ToString();
-  }
-
-  private static bool IsMimeSpecial(char value)
-  {
-    return value is '(' or ')' or '<' or '>' or '@' or ',' or ';' or ':' or
-        '\\' or '"' or '/' or '[' or ']' or '?' or '=';
   }
 
   private static string Unquote(StringSegment value)
@@ -339,32 +275,6 @@ internal static class UploadEndpoint
     return result.ToString();
   }
 
-  private static string SanitizeFileName(string fileName)
-  {
-    var separator = fileName.LastIndexOfAny(['/', '\\']);
-
-    if (separator >= 0)
-    {
-      fileName = fileName[(separator + 1)..];
-    }
-
-    return fileName is "." or ".." ||
-        Encoding.UTF8.GetByteCount(fileName) > MaximumFileNameBytes
-      ? ""
-      : fileName;
-  }
-
-  private static string SanitizeMediaType(string? mediaType)
-  {
-    var candidate = mediaType?.Trim() ?? "";
-
-    return candidate.Length is > 0 and <= MaximumMediaTypeLength &&
-        MediaTypeHeaderValue.TryParse(candidate, out var parsed) &&
-        !HasConflictingParameters(parsed)
-      ? candidate
-      : "";
-  }
-
   private static async Task WriteErrorAsync(
       HttpContext context,
       int statusCode,
@@ -374,18 +284,6 @@ internal static class UploadEndpoint
     context.Response.ContentType = "text/plain; charset=utf-8";
     await context.Response.WriteAsync(body, context.RequestAborted);
   }
-
-  private sealed record UploadResponse(
-      [property: JsonPropertyName("url")] string Url,
-      [property: JsonPropertyName("fileName")]
-      [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-      string? FileName,
-      [property: JsonPropertyName("size")]
-      [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-      long? Size,
-      [property: JsonPropertyName("mimeType")]
-      [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-      string? MimeType);
 
   private sealed class UploadTooLargeException : Exception;
 

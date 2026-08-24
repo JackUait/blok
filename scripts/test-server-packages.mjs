@@ -150,8 +150,9 @@ function assertPackageMetadata(packageId, nuspec) {
     `${packageId} must target only net10.0`,
   );
 
-  const blokDependencies = [...nuspec.matchAll(/<dependency\b[^>]*>/g)]
-    .map((match) => xmlAttributes(match[0]))
+  const dependencies = [...nuspec.matchAll(/<dependency\b[^>]*>/g)]
+    .map((match) => xmlAttributes(match[0]));
+  const blokDependencies = dependencies
     .filter((dependency) => dependency.id?.startsWith('Blok.'));
 
   if (packageId === 'Blok.Server.AspNetCore') {
@@ -160,6 +161,17 @@ function assertPackageMetadata(packageId, nuspec) {
     assert.equal(blokDependencies[0].version, packageVersion);
   } else {
     assert.deepEqual(blokDependencies, []);
+    assert.deepEqual(
+      dependencies
+        .map(({ id, version }) => ({ id, version }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+      [
+        { id: 'AngleSharp', version: '1.5.0' },
+        { id: 'BouncyCastle.Cryptography', version: '2.6.2' },
+        { id: 'Jint', version: '4.16.1' },
+      ],
+      'Blok.Server must retain its exact direct package dependencies',
+    );
   }
 }
 
@@ -362,10 +374,29 @@ async function stopProcess(running) {
   const closed = once(running.child, 'close');
   running.child.kill();
 
+  const activeTimeoutCount = () => process.getActiveResourcesInfo()
+    .filter((resource) => resource === 'Timeout')
+    .length;
+  const timeoutCountBefore = activeTimeoutCount();
+  let fallbackTimer;
   const timeout = new Promise((resolveTimeout) => {
-    setTimeout(resolveTimeout, 5_000);
+    fallbackTimer = setTimeout(resolveTimeout, 5_000);
   });
-  const result = await Promise.race([closed, timeout]);
+  let result;
+
+  try {
+    result = await Promise.race([closed, timeout]);
+  } finally {
+    clearTimeout(fallbackTimer);
+  }
+
+  if (result !== undefined) {
+    assert.equal(
+      activeTimeoutCount(),
+      timeoutCountBefore,
+      'The server shutdown fallback timer must not keep Node alive',
+    );
+  }
 
   if (result === undefined &&
       running.child.exitCode === null &&
@@ -472,6 +503,31 @@ async function main() {
   );
 
   try {
+    for (const [packageId, project] of Object.entries(packageProjects)) {
+      const projectXml = (await readFile(project.path, 'utf8'))
+        .replace(/<!--[\s\S]*?-->/g, '');
+
+      assert.doesNotMatch(
+        projectXml,
+        /<(?:Version|PackageVersion)\b/,
+        `${packageId} must not declare Version or PackageVersion`,
+      );
+    }
+
+    const hostProjectXml = (await readFile(hostProject, 'utf8'))
+      .replace(/<!--[\s\S]*?-->/g, '');
+    const hostPackableValues = [
+      ...hostProjectXml.matchAll(
+        /<IsPackable\b[^>]*>([\s\S]*?)<\/IsPackable>/g,
+      ),
+    ].map((match) => match[1].trim());
+
+    assert.deepEqual(
+      hostPackableValues,
+      ['false'],
+      'Blok.Server.Host must be explicitly non-packable',
+    );
+
     await mkdir(feed, { recursive: true });
     await mkdir(globalPackages, { recursive: true });
 

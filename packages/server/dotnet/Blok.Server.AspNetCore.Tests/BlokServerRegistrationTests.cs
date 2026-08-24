@@ -52,16 +52,103 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
-  public void MapsAnEmptyRouteGroup()
+  public async Task MapsTheExactUngatedHealthWireWithoutCors()
   {
     var builder = WebApplication.CreateBuilder();
     builder.WebHost.UseTestServer();
-    builder.Services.AddBlokServer();
-    var app = builder.Build();
+    builder.Services.AddBlokServer(options =>
+    {
+      options.Version = "dev";
+      options.StorageDirectory = "";
+      options.UnfurlDisabled = true;
+    });
+    await using var app = builder.Build();
+    app.MapBlokServer("/blok");
+    await app.StartAsync();
 
-    var routeGroup = app.MapBlokServer("/blok");
+    using var client = app.GetTestClient();
+    using var request = new HttpRequestMessage(HttpMethod.Get, "/blok/health");
+    request.Headers.Add("Origin", "https://app.example.com");
+    using var response = await client.SendAsync(request);
 
-    Assert.IsType<RouteGroupBuilder>(routeGroup);
+    Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal("application/json", response.Content.Headers.ContentType?.ToString());
+    Assert.Equal("{\"status\":\"ok\",\"version\":\"dev\"}\n", await response.Content.ReadAsStringAsync());
+    Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
+    Assert.False(response.Headers.Contains("Vary"));
+  }
+
+  [Fact]
+  public async Task RegistersOnlyRoutesWhoseDependenciesAreEnabled()
+  {
+    await using var enabled = BuildApplication(_ => { });
+    enabled.MapBlokServer("/blok");
+
+    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(enabled, "/blok/health"));
+    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(enabled, "/blok/unfurl"));
+    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload"));
+    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload-by-url"));
+
+    await using var noStorage = BuildApplication(options => options.StorageDirectory = "");
+    noStorage.MapBlokServer("/blok");
+
+    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(noStorage, "/blok/unfurl"));
+    Assert.Empty(GetMethods(noStorage, "/blok/upload"));
+    Assert.Empty(GetMethods(noStorage, "/blok/upload-by-url"));
+
+    await using var noUnfurl = BuildApplication(options => options.UnfurlDisabled = true);
+    noUnfurl.MapBlokServer("/blok");
+
+    Assert.Empty(GetMethods(noUnfurl, "/blok/unfurl"));
+    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(noUnfurl, "/blok/upload"));
+    Assert.Empty(GetMethods(noUnfurl, "/blok/upload-by-url"));
+  }
+
+  [Fact]
+  public async Task PreservesTheGoMethodAndUnknownRouteResponses()
+  {
+    var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = "";
+      options.UnfurlDisabled = true;
+    });
+    await using (app)
+    {
+      app.MapBlokServer();
+      await app.StartAsync();
+      using var client = app.GetTestClient();
+
+      using var wrongMethod = await client.PostAsync("/health", content: null);
+      Assert.Equal(System.Net.HttpStatusCode.MethodNotAllowed, wrongMethod.StatusCode);
+      Assert.Equal("GET, HEAD", string.Join(", ", wrongMethod.Content.Headers.Allow));
+      Assert.Equal("text/plain; charset=utf-8", wrongMethod.Content.Headers.ContentType?.ToString());
+      Assert.Equal("Method Not Allowed\n", await wrongMethod.Content.ReadAsStringAsync());
+
+      using var unknownRoute = await client.GetAsync("/missing");
+      Assert.Equal(System.Net.HttpStatusCode.NotFound, unknownRoute.StatusCode);
+      Assert.Equal("text/plain; charset=utf-8", unknownRoute.Content.Headers.ContentType?.ToString());
+      Assert.Equal("404 page not found\n", await unknownRoute.Content.ReadAsStringAsync());
+    }
+  }
+
+  private static WebApplication BuildApplication(Action<BlokServerOptions> configure)
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddBlokServer(configure);
+
+    return builder.Build();
+  }
+
+  private static string[] GetMethods(WebApplication app, string pattern)
+  {
+    return ((IEndpointRouteBuilder)app).DataSources
+        .SelectMany(dataSource => dataSource.Endpoints)
+        .OfType<RouteEndpoint>()
+        .Where(endpoint => endpoint.RoutePattern.RawText == pattern)
+        .SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [])
+        .Order()
+        .ToArray();
   }
 
   private sealed class AllowAllAuthorization : IBlokAuthorization

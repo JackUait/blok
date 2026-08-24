@@ -1,3 +1,7 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
 using Blok.Server.Storage;
 using Xunit;
 
@@ -108,6 +112,11 @@ public sealed class S3TargetResolverTests
         { "https://ünïcode.example.com", "media", "" },
         { "https://s3.example.com", "media", "dns" },
         { "https://gateway.example.com/s3", "media", "" },
+        { "https://s3.example.com/s3/..", "media", "" },
+        { "https://s3.example.com/s3/%2e%2e", "media", "" },
+        { "https://s3.example.com/%2e", "media", "" },
+        { "https://s3.example.com/%2E%2E", "media", "" },
+        { "https://s3.example.com/./", "media", "" },
       };
 
   [Theory]
@@ -188,6 +197,10 @@ public sealed class S3RequestSignerTests
 
 public sealed class S3BlobStoreRequestTests
 {
+  private const string OkResponse =
+      "HTTP/1.1 200 OK\r\n" +
+      "Content-Length: 0\r\n" +
+      "Connection: close\r\n\r\n";
   private static readonly DateTimeOffset FrozenTime =
       new(2025, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
@@ -233,6 +246,116 @@ public sealed class S3BlobStoreRequestTests
         captured.Headers["Authorization"],
         StringComparison.Ordinal);
     Assert.True(content.CanRead);
+  }
+
+  [Fact]
+  public async Task DoesNotFollowARedirectAwayFromTheConfiguredEndpoint()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    await using var target = new LoopbackServer(
+        static _ => OkResponse,
+        readBody: false);
+    await using var source = new LoopbackServer(
+        _ =>
+            "HTTP/1.1 302 Found\r\n" +
+            $"Location: {target.Url}/forwarded\r\n" +
+            "Content-Length: 0\r\n" +
+            "Connection: close\r\n\r\n");
+    using var store = CreateRealStore(
+        source.Url,
+        temporaryDirectory.Path);
+
+    var error = await Assert.ThrowsAsync<HttpRequestException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("private bytes"u8.ToArray()),
+            CancellationToken.None));
+
+    Assert.Equal(1, source.RequestCount);
+    Assert.Equal(0, target.RequestCount);
+    Assert.Equal(HttpStatusCode.Found, error.StatusCode);
+  }
+
+  [Fact]
+  public async Task PutsWithTheExactOnWireSignatureForItsGeneratedTarget()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    await using var endpoint = new LoopbackServer(
+        static _ => OkResponse);
+    using var store = CreateRealStore(
+        endpoint.Url,
+        temporaryDirectory.Path);
+    var body = "signed dynamic bytes"u8.ToArray();
+
+    var url = await store.PutAsync(
+        ".png",
+        "image/png",
+        new MemoryStream(body),
+        CancellationToken.None);
+
+    var request = Assert.IsType<WireRequest>(endpoint.LastRequest);
+    var key = new Uri(url).Segments[^1];
+    var target = $"/media/{key}";
+    var host = new Uri(endpoint.Url).Authority;
+    var payloadHash = Sha256Hex(body);
+    Assert.Equal("PUT", request.Method);
+    Assert.Equal(target, request.Target);
+    Assert.Equal(host, request.Headers["Host"]);
+    Assert.Equal("image/png", request.Headers["Content-Type"]);
+    Assert.Equal(
+        body.Length.ToString(
+            System.Globalization.CultureInfo.InvariantCulture),
+        request.Headers["Content-Length"]);
+    Assert.Equal(payloadHash, request.Headers["x-amz-content-sha256"]);
+    Assert.Equal(body, request.Body);
+    Assert.Equal(
+        ExpectedAuthorization(
+            "PUT",
+            target,
+            host,
+            "image/png",
+            payloadHash),
+        request.Headers["Authorization"]);
+  }
+
+  [Fact]
+  public async Task DeletesWithTheExactOnWireSignatureForItsDynamicTarget()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    await using var endpoint = new LoopbackServer(
+        static _ =>
+            "HTTP/1.1 204 No Content\r\n" +
+            "Content-Length: 0\r\n" +
+            "Connection: close\r\n\r\n");
+    using var store = CreateRealStore(
+        endpoint.Url,
+        temporaryDirectory.Path);
+    var key = $"{new string('a', 32)}.png";
+
+    await store.DeleteAsync(
+        $"https://cdn.example.com/media/{key}",
+        CancellationToken.None);
+
+    var request = Assert.IsType<WireRequest>(endpoint.LastRequest);
+    var target = $"/media/{key}";
+    var host = new Uri(endpoint.Url).Authority;
+    var payloadHash = Sha256Hex([]);
+    Assert.Equal("DELETE", request.Method);
+    Assert.Equal(target, request.Target);
+    Assert.Equal(host, request.Headers["Host"]);
+    Assert.DoesNotContain("Content-Type", request.Headers.Keys);
+    Assert.Equal("0", request.Headers["Content-Length"]);
+    Assert.Equal(payloadHash, request.Headers["x-amz-content-sha256"]);
+    Assert.Empty(request.Body);
+    Assert.Equal(
+        ExpectedAuthorization(
+            "DELETE",
+            target,
+            host,
+            contentType: null,
+            payloadHash),
+        request.Headers["Authorization"]);
   }
 
   [Fact]
@@ -328,17 +451,89 @@ public sealed class S3BlobStoreRequestTests
         StringComparison.Ordinal);
   }
 
+  [Theory]
+  [InlineData(
+      "text/plain; charset=utf-8; charset=us-ascii",
+      false)]
+  [InlineData(
+      "text/plain; charset=utf-8; charset=utf-8",
+      true)]
+  [InlineData(
+      "text/plain; charset=\"a\\z\"; charset=az",
+      false)]
+  [InlineData(
+      "text/plain; charset=\"a\\/b\"; charset=\"a/b\"",
+      true)]
+  [InlineData(
+      "text/plain; charset=\"a\\z\"; charset=\"a\\z\"",
+      true)]
+  public async Task SanitizesDuplicateMediaParametersLikeGo(
+      string mediaType,
+      bool expected)
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    CapturedRequest? captured = null;
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        async (request, cancellationToken) =>
+        {
+          captured = await CapturedRequest.CreateAsync(
+              request,
+              cancellationToken);
+
+          return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+    await store.PutAsync(
+        ".txt",
+        mediaType,
+        new MemoryStream("bytes"u8.ToArray()),
+        CancellationToken.None);
+
+    Assert.NotNull(captured);
+
+    if (expected)
+    {
+      Assert.Equal(
+          mediaType,
+          captured.ContentHeaders["Content-Type"]);
+      Assert.Contains(
+          "content-type",
+          captured.Headers["Authorization"],
+          StringComparison.Ordinal);
+    }
+    else
+    {
+      Assert.DoesNotContain(
+          "Content-Type",
+          captured.ContentHeaders.Keys);
+      Assert.DoesNotContain(
+          "content-type",
+          captured.Headers["Authorization"],
+          StringComparison.Ordinal);
+    }
+  }
+
   [Fact]
   public async Task SpoolsANonSeekableBodyOnlyForTheRequestLifetime()
   {
     using var temporaryDirectory = new TemporaryDirectory();
     var spoolFilesDuringRequest = -1;
+    UnixFileMode? spoolModeDuringRequest = null;
     using var store = CreateStore(
         temporaryDirectory.Path,
         async (request, cancellationToken) =>
         {
-          spoolFilesDuringRequest =
-              Directory.GetFiles(temporaryDirectory.Path).Length;
+          var spoolFile = Assert.Single(
+              Directory.GetFiles(temporaryDirectory.Path));
+          spoolFilesDuringRequest = 1;
+
+          if (!OperatingSystem.IsWindows())
+          {
+            spoolModeDuringRequest = File.GetUnixFileMode(
+                spoolFile);
+          }
+
           _ = await CapturedRequest.CreateAsync(
               request,
               cancellationToken);
@@ -355,6 +550,15 @@ public sealed class S3BlobStoreRequestTests
         CancellationToken.None);
 
     Assert.Equal(1, spoolFilesDuringRequest);
+
+    if (!OperatingSystem.IsWindows())
+    {
+      Assert.Equal(
+          UnixFileMode.UserRead | UnixFileMode.UserWrite,
+          spoolModeDuringRequest &
+          (UnixFileMode)Convert.ToInt32("777", 8));
+    }
+
     Assert.Empty(Directory.GetFileSystemEntries(temporaryDirectory.Path));
   }
 
@@ -502,6 +706,98 @@ public sealed class S3BlobStoreRequestTests
   }
 
   [Fact]
+  public async Task CancelsARealTransportStalledBeforeResponseHeaders()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    await using var endpoint = new LoopbackServer(
+        static _ => OkResponse,
+        responseDelay: TimeSpan.FromMilliseconds(250));
+    using var store = CreateRealStore(
+        endpoint.Url,
+        temporaryDirectory.Path,
+        requestTimeout: TimeSpan.FromSeconds(5),
+        responseHeaderTimeout: TimeSpan.FromMilliseconds(30));
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("bytes"u8.ToArray()),
+            CancellationToken.None).WaitAsync(
+                TimeSpan.FromMilliseconds(500)));
+
+    var request = Assert.IsType<WireRequest>(endpoint.LastRequest);
+    Assert.Equal("bytes"u8.ToArray(), request.Body);
+  }
+
+  [Fact]
+  public async Task StartsTheResponseHeaderDeadlineAfterPayloadSerialization()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    var payloadSerialized = new TaskCompletionSource(
+        TaskCreationOptions.RunContinuationsAsynchronously);
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        async (request, cancellationToken) =>
+        {
+          Assert.NotNull(request.Content);
+          await request.Content.CopyToAsync(
+              Stream.Null,
+              cancellationToken);
+          payloadSerialized.TrySetResult();
+          await Task.Delay(
+              Timeout.InfiniteTimeSpan,
+              cancellationToken);
+
+          return new HttpResponseMessage(HttpStatusCode.OK);
+        },
+        requestTimeout: TimeSpan.FromSeconds(5),
+        responseHeaderTimeout: TimeSpan.FromMilliseconds(30));
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("bytes"u8.ToArray()),
+            CancellationToken.None).WaitAsync(
+                TimeSpan.FromMilliseconds(500)));
+    Assert.True(payloadSerialized.Task.IsCompletedSuccessfully);
+  }
+
+  [Fact]
+  public async Task DoesNotApplyTheHeaderDeadlineWhilePayloadIsProgressing()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        async (request, cancellationToken) =>
+        {
+          Assert.NotNull(request.Content);
+          await request.Content.CopyToAsync(
+              Stream.Null,
+              cancellationToken);
+
+          return new HttpResponseMessage(HttpStatusCode.OK);
+        },
+        requestTimeout: TimeSpan.FromSeconds(5),
+        responseHeaderTimeout: TimeSpan.FromMilliseconds(30));
+    await using var content = new DelayedUploadStream(
+        "progressing bytes"u8.ToArray(),
+        TimeSpan.FromMilliseconds(100));
+
+    var url = await store.PutAsync(
+        ".bin",
+        "application/octet-stream",
+        content,
+        CancellationToken.None);
+
+    Assert.StartsWith(
+        "https://cdn.example.com/media/",
+        url,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
   public async Task BoundsTheConfiguredS3RequestAndRemovesTheSpool()
   {
     using var temporaryDirectory = new TemporaryDirectory();
@@ -598,6 +894,115 @@ public sealed class S3BlobStoreRequestTests
   }
 
   [Fact]
+  public async Task IgnoresAResponsePrefixReadFailureAfterSuccess()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        (request, cancellationToken) =>
+        {
+          return Task.FromResult(
+              new HttpResponseMessage(HttpStatusCode.OK)
+              {
+                Content = new StreamContent(
+                    new ThrowingResponseStream("accepted"u8.ToArray())),
+              });
+        });
+
+    var url = await store.PutAsync(
+        ".bin",
+        "application/octet-stream",
+        new MemoryStream("bytes"u8.ToArray()),
+        CancellationToken.None);
+
+    Assert.StartsWith(
+        "https://cdn.example.com/media/",
+        url,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task RetainsAnErrorPrefixWhenItsResponseReadFails()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        (request, cancellationToken) =>
+        {
+          return Task.FromResult(
+              new HttpResponseMessage(HttpStatusCode.Forbidden)
+              {
+                Content = new StreamContent(
+                    new ThrowingResponseStream(
+                        "<Error><Code>FixtureFailure</Code>"u8.ToArray())),
+              });
+        });
+
+    var error = await Assert.ThrowsAsync<HttpRequestException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("bytes"u8.ToArray()),
+            CancellationToken.None));
+
+    Assert.Equal(HttpStatusCode.Forbidden, error.StatusCode);
+    Assert.Contains(
+        "FixtureFailure",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task PropagatesCallerCancellationWhileReadingTheResponsePrefix()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    using var cancellation = new CancellationTokenSource();
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        (request, cancellationToken) =>
+        {
+          return Task.FromResult(
+              new HttpResponseMessage(HttpStatusCode.OK)
+              {
+                Content = new StreamContent(
+                    new CancellingResponseStream(cancellation)),
+              });
+        });
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("bytes"u8.ToArray()),
+            cancellation.Token));
+  }
+
+  [Fact]
+  public async Task PreservesCancellationWhenAResponseReadReportsIoFailure()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    using var cancellation = new CancellationTokenSource();
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        (request, cancellationToken) =>
+        {
+          return Task.FromResult(
+              new HttpResponseMessage(HttpStatusCode.OK)
+              {
+                Content = new StreamContent(
+                    new CancellingFailingResponseStream(cancellation)),
+              });
+        });
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => store.PutAsync(
+            ".bin",
+            "application/octet-stream",
+            new MemoryStream("bytes"u8.ToArray()),
+            cancellation.Token));
+  }
+
+  [Fact]
   public async Task TruncatesTheUpstreamErrorBody()
   {
     using var temporaryDirectory = new TemporaryDirectory();
@@ -631,11 +1036,102 @@ public sealed class S3BlobStoreRequestTests
     Assert.True(error.Message.Length < 600);
   }
 
+  private static string ExpectedAuthorization(
+      string method,
+      string target,
+      string host,
+      string? contentType,
+      string payloadHash)
+  {
+    const string amzDate = "20250102T030405Z";
+    const string dateStamp = "20250102";
+    const string region = "eu-central-1";
+    const string accessKey = "AKIAEXAMPLE";
+    const string secretKey = "wJalrXUtnFEMI/K7MDENG";
+    var canonicalHeaders = contentType is null
+      ? $"host:{host}\n" +
+        $"x-amz-content-sha256:{payloadHash}\n" +
+        $"x-amz-date:{amzDate}\n"
+      : $"content-type:{contentType}\n" +
+        $"host:{host}\n" +
+        $"x-amz-content-sha256:{payloadHash}\n" +
+        $"x-amz-date:{amzDate}\n";
+    var signedHeaders = contentType is null
+      ? "host;x-amz-content-sha256;x-amz-date"
+      : "content-type;host;x-amz-content-sha256;x-amz-date";
+    var canonicalRequest = string.Join(
+        "\n",
+        method,
+        target,
+        "",
+        canonicalHeaders,
+        signedHeaders,
+        payloadHash);
+    var scope = $"{dateStamp}/{region}/s3/aws4_request";
+    var stringToSign = string.Join(
+        "\n",
+        "AWS4-HMAC-SHA256",
+        amzDate,
+        scope,
+        Sha256Hex(Encoding.UTF8.GetBytes(canonicalRequest)));
+    var signingKey = HmacSha256(
+        HmacSha256(
+            HmacSha256(
+                HmacSha256(
+                    Encoding.UTF8.GetBytes($"AWS4{secretKey}"),
+                    Encoding.UTF8.GetBytes(dateStamp)),
+                Encoding.UTF8.GetBytes(region)),
+            "s3"u8.ToArray()),
+        "aws4_request"u8.ToArray());
+    var signature = Convert.ToHexStringLower(
+        HmacSha256(
+            signingKey,
+            Encoding.UTF8.GetBytes(stringToSign)));
+
+    return $"AWS4-HMAC-SHA256 Credential={accessKey}/{scope}, " +
+        $"SignedHeaders={signedHeaders}, Signature={signature}";
+  }
+
+  private static byte[] HmacSha256(
+      byte[] key,
+      byte[] data)
+  {
+    return HMACSHA256.HashData(key, data);
+  }
+
+  private static string Sha256Hex(ReadOnlySpan<byte> bytes)
+  {
+    return Convert.ToHexStringLower(SHA256.HashData(bytes));
+  }
+
+  private static S3BlobStore CreateRealStore(
+      string endpoint,
+      string temporaryDirectory,
+      TimeSpan requestTimeout = default,
+      TimeSpan responseHeaderTimeout = default)
+  {
+    return new S3BlobStore(
+        new S3BlobStoreOptions(
+            endpoint,
+            "eu-central-1",
+            "media",
+            "AKIAEXAMPLE",
+            "wJalrXUtnFEMI/K7MDENG",
+            "https://cdn.example.com/media",
+            "path",
+            1024,
+            temporaryDirectory,
+            requestTimeout,
+            responseHeaderTimeout),
+        new FrozenTimeProvider(FrozenTime));
+  }
+
   private static S3BlobStore CreateStore(
       string temporaryDirectory,
       Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send,
       long maximumSpoolBytes = 1024,
-      TimeSpan requestTimeout = default)
+      TimeSpan requestTimeout = default,
+      TimeSpan responseHeaderTimeout = default)
   {
     return new S3BlobStore(
         new S3BlobStoreOptions(
@@ -648,7 +1144,8 @@ public sealed class S3BlobStoreRequestTests
             "path",
             maximumSpoolBytes,
             temporaryDirectory,
-            requestTimeout),
+            requestTimeout,
+            responseHeaderTimeout),
         new DelegateHandler(send),
         new FrozenTimeProvider(FrozenTime));
   }
@@ -798,6 +1295,66 @@ public sealed class S3BlobStoreRequestTests
     }
   }
 
+  private sealed class DelayedUploadStream(
+      byte[] bytes,
+      TimeSpan delay) : ReadOnlyStream
+  {
+    private readonly MemoryStream inner = new(bytes);
+    private int beginSeeks;
+    private bool delayed;
+
+    public override bool CanSeek => true;
+
+    public override long Length => inner.Length;
+
+    public override long Position
+    {
+      get => inner.Position;
+      set => inner.Position = value;
+    }
+
+    public override async ValueTask<int> ReadAsync(
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+      if (beginSeeks >= 2 && !delayed)
+      {
+        delayed = true;
+        await Task.Delay(delay, cancellationToken);
+      }
+
+      return await inner.ReadAsync(buffer, cancellationToken);
+    }
+
+    public override long Seek(
+        long offset,
+        SeekOrigin origin)
+    {
+      if (origin == SeekOrigin.Begin && offset == 0)
+      {
+        beginSeeks++;
+      }
+
+      return inner.Seek(offset, origin);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+      if (disposing)
+      {
+        inner.Dispose();
+      }
+
+      base.Dispose(disposing);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+      await inner.DisposeAsync();
+      GC.SuppressFinalize(this);
+    }
+  }
+
   private sealed class FailingSeekableStream(byte[] bytes) :
       ReadOnlyStream
   {
@@ -897,6 +1454,56 @@ public sealed class S3BlobStoreRequestTests
     }
   }
 
+  private sealed class ThrowingResponseStream(byte[] prefix) :
+      ReadOnlyStream
+  {
+    private bool returnedPrefix;
+
+    public override ValueTask<int> ReadAsync(
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+      if (returnedPrefix)
+      {
+        return ValueTask.FromException<int>(
+            new IOException("response stream failed"));
+      }
+
+      returnedPrefix = true;
+      prefix.CopyTo(buffer);
+
+      return ValueTask.FromResult(prefix.Length);
+    }
+  }
+
+  private sealed class CancellingResponseStream(
+      CancellationTokenSource cancellation) : ReadOnlyStream
+  {
+    public override ValueTask<int> ReadAsync(
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+      cancellation.Cancel();
+
+      return ValueTask.FromCanceled<int>(
+          cancellationToken);
+    }
+  }
+
+  private sealed class CancellingFailingResponseStream(
+      CancellationTokenSource cancellation) : ReadOnlyStream
+  {
+    public override ValueTask<int> ReadAsync(
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+      cancellation.Cancel();
+
+      return ValueTask.FromException<int>(
+          new IOException("cancelled read failed"));
+    }
+  }
+
   private sealed class ProbeStream(
       byte[] prefix,
       int totalLength) : ReadOnlyStream
@@ -930,6 +1537,174 @@ public sealed class S3BlobStoreRequestTests
       cancellationToken.ThrowIfCancellationRequested();
 
       return ValueTask.FromResult(Read(buffer.Span));
+    }
+  }
+
+  private sealed record WireRequest(
+      string Method,
+      string Target,
+      IReadOnlyDictionary<string, string> Headers,
+      byte[] Body)
+  {
+    internal static async Task<WireRequest> ReadAsync(
+        NetworkStream stream,
+        bool readBody,
+        CancellationToken cancellationToken)
+    {
+      var headerBytes = new List<byte>();
+
+      while (!EndsWithHeaderTerminator(headerBytes))
+      {
+        var next = new byte[1];
+        var read = await stream.ReadAsync(next, cancellationToken);
+
+        if (read == 0)
+        {
+          throw new IOException("The request ended before its headers.");
+        }
+
+        headerBytes.Add(next[0]);
+
+        if (headerBytes.Count > 64 * 1024)
+        {
+          throw new IOException("The request headers are too large.");
+        }
+      }
+
+      var headerText = Encoding.ASCII.GetString(
+          [.. headerBytes]);
+      var lines = headerText.Split(
+          "\r\n",
+          StringSplitOptions.None);
+      var requestLine = lines[0].Split(' ');
+      var headers = new Dictionary<string, string>(
+          StringComparer.OrdinalIgnoreCase);
+
+      foreach (var line in lines.Skip(1))
+      {
+        var separator = line.IndexOf(':');
+
+        if (separator > 0)
+        {
+          headers[line[..separator]] = line[(separator + 1)..].Trim();
+        }
+      }
+
+      var contentLength = headers.TryGetValue(
+          "Content-Length",
+          out var rawLength)
+        ? int.Parse(rawLength, System.Globalization.CultureInfo.InvariantCulture)
+        : 0;
+      var body = readBody
+        ? new byte[contentLength]
+        : [];
+      var offset = 0;
+
+      while (offset < body.Length)
+      {
+        var read = await stream.ReadAsync(
+            body.AsMemory(offset),
+            cancellationToken);
+
+        if (read == 0)
+        {
+          throw new IOException("The request body ended early.");
+        }
+
+        offset += read;
+      }
+
+      return new WireRequest(
+          requestLine[0],
+          requestLine[1],
+          headers,
+          body);
+    }
+
+    private static bool EndsWithHeaderTerminator(
+        IReadOnlyList<byte> bytes)
+    {
+      return bytes.Count >= 4 &&
+          bytes[^4] == '\r' &&
+          bytes[^3] == '\n' &&
+          bytes[^2] == '\r' &&
+          bytes[^1] == '\n';
+    }
+  }
+
+  private sealed class LoopbackServer : IAsyncDisposable
+  {
+    private readonly TcpListener listener = new(
+        IPAddress.Loopback,
+        0);
+    private readonly bool readBody;
+    private readonly Func<WireRequest, string> respond;
+    private readonly TimeSpan responseDelay;
+    private readonly Task worker;
+    private WireRequest? lastRequest;
+    private int requestCount;
+
+    internal LoopbackServer(
+        Func<WireRequest, string> respond,
+        bool readBody = true,
+        TimeSpan responseDelay = default)
+    {
+      this.respond = respond;
+      this.readBody = readBody;
+      this.responseDelay = responseDelay;
+      listener.Start();
+      var endpoint = (IPEndPoint)listener.LocalEndpoint;
+      Url = $"http://127.0.0.1:{endpoint.Port}";
+      worker = ServeAsync();
+    }
+
+    internal WireRequest? LastRequest => Volatile.Read(
+        ref lastRequest);
+
+    internal int RequestCount => Volatile.Read(
+        ref requestCount);
+
+    internal string Url { get; }
+
+    public async ValueTask DisposeAsync()
+    {
+      listener.Stop();
+
+      try
+      {
+        await worker.WaitAsync(TimeSpan.FromSeconds(5));
+      }
+      catch (Exception error) when (
+          error is SocketException or ObjectDisposedException)
+      {
+      }
+    }
+
+    private async Task ServeAsync()
+    {
+      try
+      {
+        using var client = await listener.AcceptTcpClientAsync();
+        Interlocked.Increment(ref requestCount);
+        await using var stream = client.GetStream();
+        var request = await WireRequest.ReadAsync(
+            stream,
+            readBody,
+            CancellationToken.None);
+        Volatile.Write(ref lastRequest, request);
+
+        if (responseDelay > TimeSpan.Zero)
+        {
+          await Task.Delay(responseDelay);
+        }
+
+        var response = Encoding.ASCII.GetBytes(respond(request));
+        await stream.WriteAsync(response);
+      }
+      catch (Exception error) when (
+          error is IOException or SocketException or ObjectDisposedException)
+      {
+      }
     }
   }
 

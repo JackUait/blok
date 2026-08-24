@@ -10,4 +10,5 @@ internal sealed record S3BlobStoreOptions(
     string AddressingStyle,
     long MaximumSpoolBytes,
     string TemporaryDirectory,
-    TimeSpan RequestTimeout = default);
+    TimeSpan RequestTimeout = default,
+    TimeSpan ResponseHeaderTimeout = default);

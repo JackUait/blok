@@ -24,6 +24,9 @@ public sealed class BlokServerRegistrationTests
         descriptor => descriptor.ServiceType.FullName == "Blok.Server.Runtime.IBlokRuntime");
     Assert.Equal(ServiceLifetime.Singleton, runtimeDescriptor.Lifetime);
     Assert.NotNull(runtimeDescriptor.ImplementationFactory);
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(IBlobStore));
 
     using var provider = services.BuildServiceProvider();
     var runtime = provider.GetService(runtimeDescriptor.ServiceType);
@@ -73,6 +76,51 @@ public sealed class BlokServerRegistrationTests
 
     Assert.IsType<S3BlobStore>(
         provider.GetRequiredService<IBlobStore>());
+  }
+
+  [Fact]
+  public void UsesTheRegisteredOptionsForBlobStoreSelection()
+  {
+    var services = new ServiceCollection();
+    var registeredOptions = new BlokServerOptions
+    {
+      StorageDirectory = "/effective/local/storage",
+      PublicUrl = "/effective-media",
+    };
+    services.AddSingleton(registeredOptions);
+
+    services.AddBlokServer(options =>
+    {
+      options.StorageDirectory = "/unused/local/storage";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3Addressing = "path";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Same(registeredOptions, provider.GetRequiredService<BlokServerOptions>());
+    Assert.IsType<LocalBlobStore>(provider.GetRequiredService<IBlobStore>());
+  }
+
+  [Fact]
+  public void HonorsAnExistingBlobStoreOverride()
+  {
+    var services = new ServiceCollection();
+    var customStore = new LocalBlobStore(
+        "/custom/local/storage",
+        "https://uploads.example.com/files");
+    services.AddSingleton<IBlobStore>(customStore);
+
+    services.AddBlokServer();
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.Same(customStore, provider.GetRequiredService<IBlobStore>());
   }
 
   [Fact]

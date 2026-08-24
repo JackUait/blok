@@ -12,6 +12,8 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
   private const int ErrorBodyLimit = 512;
   private static readonly TimeSpan DefaultRequestTimeout =
       TimeSpan.FromMinutes(5);
+  private static readonly TimeSpan DefaultResponseHeaderTimeout =
+      TimeSpan.FromSeconds(60);
   private static readonly string EmptyPayloadHash =
       S3RequestSigner.Sha256Hex([]);
 
@@ -115,9 +117,26 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
       CancellationToken cancellationToken)
   {
     var target = S3TargetResolver.Resolve(options, key);
+    using var requestCancellation =
+        CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken);
+    requestCancellation.CancelAfter(
+        options.RequestTimeout > TimeSpan.Zero
+          ? options.RequestTimeout
+          : DefaultRequestTimeout);
+    using var responseHeaderCancellation =
+        CancellationTokenSource.CreateLinkedTokenSource(
+            requestCancellation.Token);
+    var responseHeaderTimeout = options.ResponseHeaderTimeout > TimeSpan.Zero
+      ? options.ResponseHeaderTimeout
+      : DefaultResponseHeaderTimeout;
     using var request = new HttpRequestMessage(method, target.Url)
     {
-      Content = new PayloadContent(content, contentLength),
+      Content = new PayloadContent(
+          content,
+          contentLength,
+          () => responseHeaderCancellation.CancelAfter(
+              responseHeaderTimeout)),
     };
 
     if (mimeType != "")
@@ -134,17 +153,12 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         payloadHash,
         timeProvider.GetUtcNow());
 
-    using var requestCancellation =
-        CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken);
-    requestCancellation.CancelAfter(
-        options.RequestTimeout > TimeSpan.Zero
-          ? options.RequestTimeout
-          : DefaultRequestTimeout);
     using var response = await client.SendAsync(
         request,
         HttpCompletionOption.ResponseHeadersRead,
-        requestCancellation.Token);
+        responseHeaderCancellation.Token);
+    responseHeaderCancellation.CancelAfter(
+        Timeout.InfiniteTimeSpan);
     var responseBody = await ReadResponsePrefixAsync(
         response,
         requestCancellation.Token);
@@ -164,6 +178,7 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
   {
     return new SocketsHttpHandler
     {
+      AllowAutoRedirect = false,
       ConnectTimeout = TimeSpan.FromSeconds(10),
     };
   }
@@ -177,28 +192,52 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
       return [];
     }
 
-    await using var body = await response.Content.ReadAsStreamAsync(
-        cancellationToken);
-    var buffer = new byte[ErrorBodyLimit];
-    var total = 0;
+    Stream body;
 
-    while (total < buffer.Length)
+    try
     {
-      var read = await body.ReadAsync(
-          buffer.AsMemory(total),
+      body = await response.Content.ReadAsStreamAsync(
           cancellationToken);
+    }
+    catch (Exception error) when (
+        error is not OperationCanceledException)
+    {
+      cancellationToken.ThrowIfCancellationRequested();
 
-      if (read == 0)
-      {
-        break;
-      }
-
-      total += read;
+      return [];
     }
 
-    return total == buffer.Length
-      ? buffer
-      : buffer[..total];
+    await using (body)
+    {
+      var buffer = new byte[ErrorBodyLimit];
+      var total = 0;
+
+      try
+      {
+        while (total < buffer.Length)
+        {
+          var read = await body.ReadAsync(
+              buffer.AsMemory(total),
+              cancellationToken);
+
+          if (read == 0)
+          {
+            break;
+          }
+
+          total += read;
+        }
+      }
+      catch (Exception error) when (
+          error is not OperationCanceledException)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+      }
+
+      return total == buffer.Length
+        ? buffer
+        : buffer[..total];
+    }
   }
 
   private static string SanitizeMediaType(string value)
@@ -208,12 +247,69 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
     if (value == "" ||
         value.Length > 255 ||
         !IsAscii(value) ||
-        !MediaTypeHeaderValue.TryParse(value, out _))
+        !MediaTypeHeaderValue.TryParse(value, out var mediaType) ||
+        HasConflictingParameters(mediaType))
     {
       return "";
     }
 
     return value;
+  }
+
+  private static bool HasConflictingParameters(
+      MediaTypeHeaderValue mediaType)
+  {
+    var values = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase);
+
+    foreach (var parameter in mediaType.Parameters)
+    {
+      var value = UnquoteMediaParameter(parameter.Value);
+
+      if (values.TryGetValue(parameter.Name, out var existing) &&
+          existing != value)
+      {
+        return true;
+      }
+
+      values[parameter.Name] = value;
+    }
+
+    return false;
+  }
+
+  private static string UnquoteMediaParameter(string? value)
+  {
+    if (value is null ||
+        value.Length < 2 ||
+        value[0] != '"' ||
+        value[^1] != '"')
+    {
+      return value ?? "";
+    }
+
+    value = value[1..^1];
+    var result = new StringBuilder(value.Length);
+
+    for (var index = 0; index < value.Length; index++)
+    {
+      if (value[index] == '\\' &&
+          index + 1 < value.Length &&
+          IsMimeSpecial(value[index + 1]))
+      {
+        index++;
+      }
+
+      result.Append(value[index]);
+    }
+
+    return result.ToString();
+  }
+
+  private static bool IsMimeSpecial(char value)
+  {
+    return value is '(' or ')' or '<' or '>' or '@' or ',' or ';' or ':' or
+        '\\' or '"' or '/' or '[' or ']' or '?' or '=';
   }
 
   private static bool IsAscii(string value)
@@ -347,15 +443,24 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
       var path = Path.Combine(
           temporaryDirectory,
           $"blok-s3-{Guid.NewGuid():N}.tmp");
-      var file = new FileStream(
-          path,
-          FileMode.CreateNew,
-          FileAccess.ReadWrite,
-          FileShare.None,
-          CopyBufferSize,
-          FileOptions.Asynchronous |
-          FileOptions.SequentialScan |
-          FileOptions.DeleteOnClose);
+      var fileOptions = new FileStreamOptions
+      {
+        Access = FileAccess.ReadWrite,
+        BufferSize = CopyBufferSize,
+        Mode = FileMode.CreateNew,
+        Options = FileOptions.Asynchronous |
+            FileOptions.SequentialScan |
+            FileOptions.DeleteOnClose,
+        Share = FileShare.None,
+      };
+
+      if (!OperatingSystem.IsWindows())
+      {
+        fileOptions.UnixCreateMode =
+            UnixFileMode.UserRead | UnixFileMode.UserWrite;
+      }
+
+      var file = new FileStream(path, fileOptions);
       var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferSize);
 
       try
@@ -426,28 +531,33 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
   private sealed class PayloadContent : HttpContent
   {
     private readonly Stream content;
+    private readonly Action serializationCompleted;
 
     internal PayloadContent(
         Stream content,
-        long length)
+        long length,
+        Action serializationCompleted)
     {
       this.content = content;
+      this.serializationCompleted = serializationCompleted;
       Headers.ContentLength = length;
     }
 
-    protected override Task SerializeToStreamAsync(
+    protected override async Task SerializeToStreamAsync(
         Stream stream,
         TransportContext? context)
     {
-      return content.CopyToAsync(stream);
+      await content.CopyToAsync(stream);
+      serializationCompleted();
     }
 
-    protected override Task SerializeToStreamAsync(
+    protected override async Task SerializeToStreamAsync(
         Stream stream,
         TransportContext? context,
         CancellationToken cancellationToken)
     {
-      return content.CopyToAsync(stream, cancellationToken);
+      await content.CopyToAsync(stream, cancellationToken);
+      serializationCompleted();
     }
 
     protected override bool TryComputeLength(out long length)

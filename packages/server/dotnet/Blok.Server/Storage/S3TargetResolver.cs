@@ -43,7 +43,7 @@ internal static class S3TargetResolver
           $"blobstore: s3 endpoint host \"{endpoint.Host}\" must be ASCII");
     }
 
-    if (endpoint.AbsolutePath.Trim('/') != "")
+    if (HasEndpointPath(options.Endpoint))
     {
       throw new InvalidOperationException(
           $"blobstore: s3 endpoint \"{options.Endpoint}\" must have no path");
@@ -147,6 +147,32 @@ internal static class S3TargetResolver
     }
 
     return true;
+  }
+
+  private static bool HasEndpointPath(string endpoint)
+  {
+    var schemeEnd = endpoint.IndexOf("://", StringComparison.Ordinal);
+    var authorityStart = schemeEnd + 3;
+    var suffixStart = endpoint.IndexOfAny(
+        ['?', '#'],
+        authorityStart);
+    var pathStart = endpoint.IndexOf('/', authorityStart);
+
+    if (pathStart < 0 ||
+        (suffixStart >= 0 && pathStart > suffixStart))
+    {
+      return false;
+    }
+
+    var pathEnd = endpoint.IndexOfAny(
+        ['?', '#'],
+        pathStart);
+    var rawPath = pathEnd < 0
+      ? endpoint[pathStart..]
+      : endpoint[pathStart..pathEnd];
+    var decodedPath = Uri.UnescapeDataString(rawPath);
+
+    return decodedPath.Trim('/') != "";
   }
 
   private static bool HasAsciiAuthorityHost(string endpoint)

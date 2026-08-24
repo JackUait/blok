@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Blok.Server.AspNetCore;
+using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -213,11 +214,13 @@ public sealed class LocalFileServingTests : IDisposable
 
     var descriptor = Assert.Single(
         services,
-        service => service.ServiceType.FullName == "Blok.Server.Storage.IBlobStore");
-    Assert.Equal(
-        "Blok.Server.Storage.LocalBlobStore",
-        descriptor.ImplementationInstance?.GetType().FullName);
+        service => service.ServiceType == typeof(IBlobStore));
+    Assert.NotNull(descriptor.ImplementationFactory);
     Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+
+    using var provider = services.BuildServiceProvider();
+    Assert.IsType<LocalBlobStore>(
+        provider.GetRequiredService<IBlobStore>());
   }
 
   public void Dispose()

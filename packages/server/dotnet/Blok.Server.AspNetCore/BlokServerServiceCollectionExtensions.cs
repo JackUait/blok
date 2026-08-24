@@ -40,27 +40,35 @@ public static class BlokServerServiceCollectionExtensions
     services.TryAddSingleton<FixedWindowRateLimiter>();
     services.TryAddSingleton<BlokServerRequestGuard>();
 
-    if (options.S3Bucket != "")
+    services.TryAddSingleton<IBlobStore>(provider =>
     {
-      services.TryAddSingleton<IBlobStore>(
-          provider => new S3BlobStore(
-              new S3BlobStoreOptions(
-                  options.S3Endpoint,
-                  options.S3Region,
-                  options.S3Bucket,
-                  options.S3AccessKey,
-                  options.S3SecretKey,
-                  options.S3BucketUrl,
-                  options.S3Addressing,
-                  options.MaxUploadBytes,
-                  Path.GetTempPath()),
-              provider.GetRequiredService<TimeProvider>()));
-    }
-    else if (options.StorageDirectory != "")
-    {
-      services.TryAddSingleton<IBlobStore>(
-          new LocalBlobStore(options.StorageDirectory, options.PublicUrl));
-    }
+      var effectiveOptions = provider.GetRequiredService<BlokServerOptions>();
+
+      if (effectiveOptions.S3Bucket != "")
+      {
+        return new S3BlobStore(
+            new S3BlobStoreOptions(
+                effectiveOptions.S3Endpoint,
+                effectiveOptions.S3Region,
+                effectiveOptions.S3Bucket,
+                effectiveOptions.S3AccessKey,
+                effectiveOptions.S3SecretKey,
+                effectiveOptions.S3BucketUrl,
+                effectiveOptions.S3Addressing,
+                effectiveOptions.MaxUploadBytes,
+                Path.GetTempPath()),
+            provider.GetRequiredService<TimeProvider>());
+      }
+
+      if (effectiveOptions.StorageDirectory != "")
+      {
+        return new LocalBlobStore(
+            effectiveOptions.StorageDirectory,
+            effectiveOptions.PublicUrl);
+      }
+
+      throw new InvalidOperationException("Blob storage is disabled.");
+    });
 
     return new BlokServerBuilder(services);
   }

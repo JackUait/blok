@@ -90,7 +90,7 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
          url.Scheme != Uri.UriSchemeHttps) ||
         url.Host == "" ||
         url.UserInfo != "" ||
-        AuthorityContainsUserInfo(rawUrl))
+        AuthorityContainsUserInfo(url))
     {
       throw Blocked();
     }
@@ -145,33 +145,18 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
         GuardedFetchFailure.BlockedDestination);
   }
 
-  private static bool AuthorityContainsUserInfo(string rawUrl)
+  private static bool AuthorityContainsUserInfo(Uri url)
   {
-    var schemeEnd = rawUrl.IndexOf(
-        "://",
-        StringComparison.Ordinal);
-    var authorityStart = schemeEnd >= 0
-      ? schemeEnd + 3
-      : rawUrl.StartsWith("//", StringComparison.Ordinal)
-        ? 2
-        : -1;
+    var canonical = url.AbsoluteUri.AsSpan();
+    var authorityStart =
+        url.Scheme.Length + Uri.SchemeDelimiter.Length;
+    var relativeAuthorityEnd = canonical[authorityStart..]
+        .IndexOfAny('/', '?', '#');
+    var authorityEnd = relativeAuthorityEnd < 0
+      ? canonical.Length
+      : authorityStart + relativeAuthorityEnd;
 
-    if (authorityStart < 0)
-    {
-      return false;
-    }
-
-    var authorityEnd = rawUrl.IndexOfAny(
-        ['/', '?', '#', '\\'],
-        authorityStart);
-
-    if (authorityEnd < 0)
-    {
-      authorityEnd = rawUrl.Length;
-    }
-
-    return rawUrl.AsSpan(authorityStart, authorityEnd - authorityStart)
-        .Contains('@');
+    return canonical[authorityStart..authorityEnd].Contains('@');
   }
 
   private readonly record struct NetworkRange(

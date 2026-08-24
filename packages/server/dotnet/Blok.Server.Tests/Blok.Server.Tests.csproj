@@ -19,6 +19,10 @@
 
   <ItemGroup>
     <ProjectReference Include="../Blok.Server/Blok.Server.csproj" />
+    <Reference Include="Microsoft.CodeAnalysis"
+               HintPath="$(RoslynTargetsPath)/bincore/Microsoft.CodeAnalysis.dll" />
+    <Reference Include="Microsoft.CodeAnalysis.CSharp"
+               HintPath="$(RoslynTargetsPath)/bincore/Microsoft.CodeAnalysis.CSharp.dll" />
   </ItemGroup>
 
   <ItemGroup>

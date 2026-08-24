@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -127,7 +128,11 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
         throw Blocked();
       }
 
-      using var handler = CreateHandler(target, addresses[0]);
+      var useManagedTls = UsesManagedTls(target);
+      using var handler = CreateHandler(
+          target,
+          addresses[0],
+          useManagedTls);
       using var client = new HttpClient(
           handler,
           disposeHandler: false)
@@ -136,7 +141,13 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       };
       using var request = new HttpRequestMessage(
           HttpMethod.Get,
-          target.Url);
+          useManagedTls
+            ? CreateManagedTlsTransportUrl(target)
+            : target.Url);
+      if (useManagedTls)
+      {
+        request.Headers.Host = CreateHostHeader(target);
+      }
       request.Headers.TryAddWithoutValidation(
           "User-Agent",
           UserAgent);
@@ -198,12 +209,54 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
     if (content.Headers.ContentLength is long contentLength &&
         contentLength > maximumBytes)
     {
-      throw new GuardedFetchException(
-          GuardedFetchFailure.ResponseTooLarge);
+      throw ResponseTooLarge();
     }
 
-    await using var stream = await content.ReadAsStreamAsync(
+    await using var raw = await content.ReadAsStreamAsync(
         cancellationToken);
+    var boundedRaw = new BoundedReadStream(
+        raw,
+        maximumBytes);
+    if (!IsGzip(content))
+    {
+      return await ReadDecodedAsync(
+          boundedRaw,
+          maximumBytes,
+          cancellationToken);
+    }
+
+    byte[] body;
+    await using (var gzip = new GZipStream(
+        boundedRaw,
+        CompressionMode.Decompress,
+        leaveOpen: true))
+    {
+      body = await ReadDecodedAsync(
+          gzip,
+          maximumBytes,
+          cancellationToken);
+    }
+
+    await DrainAsync(
+        boundedRaw,
+        cancellationToken);
+    return body;
+  }
+
+  private static bool IsGzip(HttpContent content)
+  {
+    return content.Headers.ContentEncoding.Count == 1 &&
+        string.Equals(
+            content.Headers.ContentEncoding.Single(),
+            "gzip",
+            StringComparison.OrdinalIgnoreCase);
+  }
+
+  private static async ValueTask<byte[]> ReadDecodedAsync(
+      Stream stream,
+      long maximumBytes,
+      CancellationToken cancellationToken)
+  {
     var initialCapacity = checked((int)Math.Min(maximumBytes, 81920));
     using var output = new MemoryStream(initialCapacity);
     var bufferLength = checked((int)Math.Min(maximumBytes + 1, 81920));
@@ -228,12 +281,22 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
 
       if (read > remaining)
       {
-        throw new GuardedFetchException(
-            GuardedFetchFailure.ResponseTooLarge);
+        throw ResponseTooLarge();
       }
 
       output.Write(buffer, 0, read);
       total += read;
+    }
+  }
+
+  private static async ValueTask DrainAsync(
+      Stream stream,
+      CancellationToken cancellationToken)
+  {
+    var buffer = new byte[81920];
+
+    while (await stream.ReadAsync(buffer, cancellationToken) != 0)
+    {
     }
   }
 
@@ -257,38 +320,84 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
 
   private SocketsHttpHandler CreateHandler(
       GuardedTarget target,
-      IPAddress address)
+      IPAddress address,
+      bool useManagedTls)
   {
     var handler = new SocketsHttpHandler
     {
       AllowAutoRedirect = false,
-      AutomaticDecompression = DecompressionMethods.GZip,
+      AutomaticDecompression = DecompressionMethods.None,
       ConnectCallback = (context, cancellationToken) =>
           ConnectAsync(
               context,
               target,
               address,
+              useManagedTls,
               cancellationToken),
       MaxResponseDrainSize = 0,
       UseCookies = false,
       UseProxy = false,
     };
 
-    if (customTrustRoots is not null)
+    if (target.Url.Scheme == Uri.UriSchemeHttps &&
+        !useManagedTls)
     {
-      var chainPolicy = new X509ChainPolicy
-      {
-        RevocationMode = X509RevocationMode.NoCheck,
-        TrustMode = X509ChainTrustMode.CustomRootTrust,
-      };
-      chainPolicy.CustomTrustStore.AddRange(customTrustRoots);
-      handler.SslOptions = new SslClientAuthenticationOptions
-      {
-        CertificateChainPolicy = chainPolicy,
-      };
+      handler.SslOptions = CreateTlsOptions(target);
     }
 
     return handler;
+  }
+
+  private static bool UsesManagedTls(GuardedTarget target)
+  {
+    return OperatingSystem.IsMacOS() &&
+        target.Url.Scheme == Uri.UriSchemeHttps;
+  }
+
+  private static Uri CreateManagedTlsTransportUrl(
+      GuardedTarget target)
+  {
+    return new UriBuilder(target.Url)
+    {
+      Scheme = Uri.UriSchemeHttp,
+      Port = target.Port,
+    }.Uri;
+  }
+
+  private static string CreateHostHeader(
+      GuardedTarget target)
+  {
+    var host = target.LiteralAddress?.AddressFamily ==
+        AddressFamily.InterNetworkV6
+      ? $"[{target.Host.Trim('[', ']')}]"
+      : target.Host;
+
+    return target.Url.IsDefaultPort
+      ? host
+      : $"{host}:{target.Port}";
+  }
+
+  private SslClientAuthenticationOptions CreateTlsOptions(
+      GuardedTarget target)
+  {
+    var chainPolicy = new X509ChainPolicy
+    {
+      DisableCertificateDownloads = true,
+      RevocationMode = X509RevocationMode.NoCheck,
+    };
+
+    if (customTrustRoots is not null)
+    {
+      chainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+      chainPolicy.CustomTrustStore.AddRange(customTrustRoots);
+    }
+
+    return new SslClientAuthenticationOptions
+    {
+      CertificateChainPolicy = chainPolicy,
+      CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+      TargetHost = target.Host,
+    };
   }
 
   private static bool MatchesTarget(
@@ -314,10 +423,11 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
         endpointAddress.Equals(target.LiteralAddress);
   }
 
-  private static async ValueTask<Stream> ConnectAsync(
+  private async ValueTask<Stream> ConnectAsync(
       SocketsHttpConnectionContext context,
       GuardedTarget target,
       IPAddress address,
+      bool useManagedTls,
       CancellationToken cancellationToken)
   {
     if (!MatchesTarget(context.DnsEndPoint, target))
@@ -336,8 +446,17 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       await socket.ConnectAsync(
           new IPEndPoint(address, target.Port),
           cancellationToken);
+      var network = new NetworkStream(
+          socket,
+          ownsSocket: true);
 
-      return new NetworkStream(socket, ownsSocket: true);
+      return useManagedTls
+        ? await MacOsTlsTransport.AuthenticateAsync(
+            network,
+            target.Host,
+            customTrustRoots,
+            cancellationToken)
+        : network;
     }
     catch
     {
@@ -350,6 +469,122 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
   {
     return new GuardedFetchException(
         GuardedFetchFailure.BlockedDestination);
+  }
+
+  private static GuardedFetchException ResponseTooLarge()
+  {
+    return new GuardedFetchException(
+        GuardedFetchFailure.ResponseTooLarge);
+  }
+
+  private sealed class BoundedReadStream(
+      Stream inner,
+      long maximumBytes) : Stream
+  {
+    private long total;
+
+    public override bool CanRead => true;
+
+    public override bool CanSeek => false;
+
+    public override bool CanWrite => false;
+
+    public override long Length =>
+        throw new NotSupportedException();
+
+    public override long Position
+    {
+      get => throw new NotSupportedException();
+      set => throw new NotSupportedException();
+    }
+
+    public override void Flush()
+    {
+      inner.Flush();
+    }
+
+    public override int Read(
+        byte[] buffer,
+        int offset,
+        int count)
+    {
+      var read = inner.Read(
+          buffer,
+          offset,
+          LimitReadLength(count));
+      Count(read);
+      return read;
+    }
+
+    public override int Read(Span<byte> buffer)
+    {
+      var read = inner.Read(
+          buffer[..LimitReadLength(buffer.Length)]);
+      Count(read);
+      return read;
+    }
+
+    public override Task<int> ReadAsync(
+        byte[] buffer,
+        int offset,
+        int count,
+        CancellationToken cancellationToken)
+    {
+      return ReadAsync(
+          buffer.AsMemory(offset, count),
+          cancellationToken).AsTask();
+    }
+
+    public override async ValueTask<int> ReadAsync(
+        Memory<byte> buffer,
+        CancellationToken cancellationToken = default)
+    {
+      var read = await inner.ReadAsync(
+          buffer[..LimitReadLength(buffer.Length)],
+          cancellationToken);
+      Count(read);
+      return read;
+    }
+
+    public override long Seek(
+        long offset,
+        SeekOrigin origin)
+    {
+      throw new NotSupportedException();
+    }
+
+    public override void SetLength(long value)
+    {
+      throw new NotSupportedException();
+    }
+
+    public override void Write(
+        byte[] buffer,
+        int offset,
+        int count)
+    {
+      throw new NotSupportedException();
+    }
+
+    private int LimitReadLength(int requested)
+    {
+      if (requested == 0)
+      {
+        return 0;
+      }
+
+      var remaining = maximumBytes - total;
+      return checked((int)Math.Min(requested, remaining + 1));
+    }
+
+    private void Count(int read)
+    {
+      total += read;
+      if (total > maximumBytes)
+      {
+        throw ResponseTooLarge();
+      }
+    }
   }
 
   private sealed class SystemDnsResolver : IGuardedDnsResolver

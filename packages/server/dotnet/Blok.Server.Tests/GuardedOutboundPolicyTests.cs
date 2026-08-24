@@ -52,6 +52,8 @@ public sealed class GuardedOutboundPolicyTests
   [InlineData("http://admin@example.com/")]
   [InlineData("http://:secret@example.com/")]
   [InlineData("http://@example.com/")]
+  [InlineData("http:/\\@example.com/")]
+  [InlineData("http:\\\\@example.com/")]
   [InlineData("https://user%40domain@example.com/")]
   public void RejectsEveryFormOfAuthorityCredentials(string rawUrl)
   {
@@ -113,6 +115,18 @@ public sealed class GuardedOutboundPolicyTests
 
     Assert.Equal(
         "https://example.com/next?from=redirect",
+        target.Url.AbsoluteUri);
+  }
+
+  [Fact]
+  public void AcceptsARelativeRedirectWithAUrlInItsQuery()
+  {
+    var target = Policy.Validate(
+        "next?return=http://user@elsewhere",
+        new Uri("https://example.com/path/start"));
+
+    Assert.Equal(
+        "https://example.com/path/next?return=http://user@elsewhere",
         target.Url.AbsoluteUri);
   }
 

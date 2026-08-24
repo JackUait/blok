@@ -232,6 +232,118 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task DefaultTlsValidationDoesNotDownloadAMissingIssuer()
+  {
+    byte[] issuerBytes = [];
+    await using var issuer = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Type: application/pkix-cert\r\n" +
+              $"Content-Length: {issuerBytes.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(issuerBytes, cancellationToken);
+        });
+    using var certificates = TestCertificates.CreateWithIntermediateAia(
+        "aia.example",
+        $"http://127.0.0.1:{issuer.Port}/issuer.cer",
+        out issuerBytes);
+    await using var origin = new LoopbackOrigin(certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "aia.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]));
+
+    Assert.Equal(0, issuer.RequestCount);
+    var exception = await Record.ExceptionAsync(
+        async () => await fetcher.GetAsync(
+            $"https://aia.example:{origin.Port}/",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(0, issuer.RequestCount);
+    var error = Assert.IsType<GuardedFetchException>(exception);
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, error.Failure);
+  }
+
+  [Fact]
+  public async Task OffersOnlyHttp11DuringMacOsTlsNegotiation()
+  {
+    if (!OperatingSystem.IsMacOS())
+    {
+      return;
+    }
+
+    using var certificates = TestCertificates.Create("alpn.example");
+    await using var origin = new LoopbackOrigin(
+        certificates.Server,
+        [
+          SslApplicationProtocol.Http2,
+          SslApplicationProtocol.Http11,
+        ]);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "alpn.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    var response = await fetcher.GetAsync(
+        $"https://alpn.example:{origin.Port}/",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal(
+        SslApplicationProtocol.Http11,
+        origin.LastTlsApplicationProtocol);
+  }
+
+  [Fact]
+  public async Task AcceptsACompleteServerChainWithACustomRoot()
+  {
+    byte[] issuerBytes = [];
+    await using var issuer = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Type: application/pkix-cert\r\n" +
+              $"Content-Length: {issuerBytes.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(issuerBytes, cancellationToken);
+        });
+    using var certificates = TestCertificates.CreateWithIntermediateAia(
+        "chain.example",
+        $"http://127.0.0.1:{issuer.Port}/issuer.cer",
+        out issuerBytes);
+    await using var origin = new LoopbackOrigin(
+        certificates.Server,
+        certificates.Intermediates);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "chain.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    var response = await fetcher.GetAsync(
+        $"https://chain.example:{origin.Port}/",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal(0, issuer.RequestCount);
+  }
+
+  [Fact]
   public async Task ReturnsTheFinalNonSuccessStatusForTheConsumerToRefuse()
   {
     await using var origin = new LoopbackOrigin(
@@ -563,6 +675,67 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task TlsDeadlineStopsAResponseAndDisposesTheConnection()
+  {
+    using var certificates = TestCertificates.Create("deadline-tls.example");
+    var disconnected = new TaskCompletionSource(
+        TaskCreationOptions.RunContinuationsAsynchronously);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          try
+          {
+            await stream.WriteAsync(
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"u8.ToArray(),
+                cancellationToken);
+            var closeProbe = stream.ReadAsync(
+                new byte[1],
+                cancellationToken).AsTask();
+
+            while (!closeProbe.IsCompleted)
+            {
+              await stream.WriteAsync(
+                  "1\r\nx\r\n"u8.ToArray(),
+                  cancellationToken);
+              await stream.FlushAsync(cancellationToken);
+              await Task.Delay(
+                  TimeSpan.FromMilliseconds(5),
+                  cancellationToken);
+            }
+
+            if (await closeProbe == 0)
+            {
+              disconnected.TrySetResult();
+            }
+          }
+          catch (IOException)
+          {
+            disconnected.TrySetResult();
+          }
+        },
+        certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "deadline-tls.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"https://deadline-tls.example:{origin.Port}/",
+            new GuardedFetchLimits(
+                TimeSpan.FromMilliseconds(75),
+                1024,
+                0),
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.TimedOut, error.Failure);
+    await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(2));
+  }
+
+  [Fact]
   public async Task TotalDeadlineSpansTheWholeRedirectChain()
   {
     await using var origin = new LoopbackOrigin(
@@ -705,6 +878,47 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task TlsStreamingPreservesCallerCancellation()
+  {
+    using var certificates = TestCertificates.Create("cancel-tls.example");
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          await stream.WriteAsync(
+              "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"u8.ToArray(),
+              cancellationToken);
+
+          for (var index = 0; index < 100; index++)
+          {
+            await stream.WriteAsync(
+                "1\r\nx\r\n"u8.ToArray(),
+                cancellationToken);
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(5),
+                cancellationToken);
+          }
+        },
+        certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "cancel-tls.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+    using var cancellation = new CancellationTokenSource(
+        TimeSpan.FromMilliseconds(75));
+
+    var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        async () => await fetcher.GetAsync(
+            $"https://cancel-tls.example:{origin.Port}/",
+            Limits,
+            cancellation.Token));
+
+    Assert.Equal(cancellation.Token, error.CancellationToken);
+  }
+
+  [Fact]
   public async Task AppliesTheBodyCapAfterGzipDecompression()
   {
     var compressed = Compress(Encoding.UTF8.GetBytes(
@@ -727,6 +941,130 @@ public sealed class GuardedOutboundFetcherTests
         async () => await fetcher.GetAsync(
             $"http://gzip.example:{origin.Port}/large.gz",
             new GuardedFetchLimits(TimeSpan.FromSeconds(2), 64, 0),
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
+  }
+
+  [Fact]
+  public async Task AcceptsGzipWhoseRawBodyExactlyMatchesTheCap()
+  {
+    var compressed = Compress("x"u8.ToArray());
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Encoding: gzip\r\n" +
+              $"Content-Length: {compressed.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(compressed, cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "raw-exact.example");
+
+    var response = await fetcher.GetAsync(
+        $"http://raw-exact.example:{origin.Port}/exact.gz",
+        new GuardedFetchLimits(
+            TimeSpan.FromSeconds(2),
+            compressed.Length,
+            0),
+        CancellationToken.None);
+
+    Assert.Equal("x", Encoding.UTF8.GetString(response.Body));
+  }
+
+  [Fact]
+  public async Task AcceptsGzipWhoseDecodedBodyExactlyMatchesTheCap()
+  {
+    var body = Encoding.UTF8.GetBytes(new string('x', 64));
+    var compressed = Compress(body);
+    Assert.True(compressed.Length < body.Length);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Encoding: gzip\r\n" +
+              $"Content-Length: {compressed.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(compressed, cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "decoded-exact.example");
+
+    var response = await fetcher.GetAsync(
+        $"http://decoded-exact.example:{origin.Port}/exact.gz",
+        new GuardedFetchLimits(
+            TimeSpan.FromSeconds(2),
+            body.Length,
+            0),
+        CancellationToken.None);
+
+    Assert.Equal(body, response.Body);
+  }
+
+  [Fact]
+  public async Task RejectsConcatenatedGzipWhenRawBytesExceedTheCap()
+  {
+    var compressed = Enumerable.Range(0, 100)
+        .SelectMany(_ => Compress("x"u8.ToArray()))
+        .ToArray();
+    Assert.True(compressed.Length > 128);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              "Content-Encoding: gzip\r\n" +
+              $"Content-Length: {compressed.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(compressed, cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "raw-gzip.example");
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://raw-gzip.example:{origin.Port}/members.gz",
+            new GuardedFetchLimits(TimeSpan.FromSeconds(2), 128, 0),
+            CancellationToken.None));
+
+    Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
+  }
+
+  [Fact]
+  public async Task RejectsChunkedGzipWhenRawBytesExceedTheCap()
+  {
+    var compressed = Enumerable.Range(0, 100)
+        .SelectMany(_ => Compress("x"u8.ToArray()))
+        .ToArray();
+    Assert.True(compressed.Length > 128);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(
+                  "HTTP/1.1 200 OK\r\n" +
+                  "Content-Encoding: gzip\r\n" +
+                  "Transfer-Encoding: chunked\r\n" +
+                  "Connection: close\r\n\r\n"),
+              cancellationToken);
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(
+                  $"{compressed.Length:X}\r\n"),
+              cancellationToken);
+          await stream.WriteAsync(compressed, cancellationToken);
+          await stream.WriteAsync(
+              "\r\n0\r\n\r\n"u8.ToArray(),
+              cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "chunked-gzip.example");
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://chunked-gzip.example:{origin.Port}/members.gz",
+            new GuardedFetchLimits(TimeSpan.FromSeconds(2), 128, 0),
             CancellationToken.None));
 
     Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
@@ -779,6 +1117,64 @@ public sealed class GuardedOutboundFetcherTests
             new GuardedFetchLimits(TimeSpan.FromSeconds(1), 4, 0),
             CancellationToken.None).AsTask().WaitAsync(
                 TimeSpan.FromSeconds(2)));
+
+    Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
+    await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(2));
+  }
+
+  [Fact]
+  public async Task TlsSizeLimitDisposesTheConnection()
+  {
+    using var certificates = TestCertificates.Create("dispose-tls.example");
+    var disconnected = new TaskCompletionSource(
+        TaskCreationOptions.RunContinuationsAsynchronously);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          try
+          {
+            await stream.WriteAsync(
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"u8.ToArray(),
+                cancellationToken);
+            var closeProbe = stream.ReadAsync(
+                new byte[1],
+                cancellationToken).AsTask();
+
+            while (!closeProbe.IsCompleted)
+            {
+              await stream.WriteAsync(
+                  "1\r\nx\r\n"u8.ToArray(),
+                  cancellationToken);
+              await stream.FlushAsync(cancellationToken);
+              await Task.Delay(
+                  TimeSpan.FromMilliseconds(5),
+                  cancellationToken);
+            }
+
+            if (await closeProbe == 0)
+            {
+              disconnected.TrySetResult();
+            }
+          }
+          catch (IOException)
+          {
+            disconnected.TrySetResult();
+          }
+        },
+        certificates.Server);
+    var fetcher = new GuardedOutboundFetcher(
+        new FixtureOutboundPolicy(
+            "dispose-tls.example",
+            origin.Port,
+            IPAddress.Loopback),
+        new SequenceDnsResolver([IPAddress.Loopback]),
+        new X509Certificate2Collection(certificates.Root));
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"https://dispose-tls.example:{origin.Port}/",
+            new GuardedFetchLimits(TimeSpan.FromSeconds(1), 4, 0),
+            CancellationToken.None));
 
     Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
     await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -979,7 +1375,10 @@ public sealed class GuardedOutboundFetcherTests
         "Connection: close\r\n\r\n" +
         "ok";
 
-    private readonly X509Certificate2? certificate;
+    private readonly List<SslApplicationProtocol>?
+        applicationProtocols;
+    private readonly SslStreamCertificateContext? certificateContext;
+    private readonly X509Certificate2Collection? certificateChain;
     private readonly ConcurrentBag<Task> connections = new();
     private readonly ConcurrentQueue<WireRequest> requests = new();
     private readonly Func<
@@ -996,28 +1395,72 @@ public sealed class GuardedOutboundFetcherTests
     private int requestCount;
 
     internal LoopbackOrigin(X509Certificate2? certificate = null) :
-        this(DefaultRespondAsync, certificate, IPAddress.Loopback)
+        this(
+            DefaultRespondAsync,
+            certificate,
+            additionalCertificates: null,
+            IPAddress.Loopback)
+    {
+    }
+
+    internal LoopbackOrigin(
+        X509Certificate2 certificate,
+        X509Certificate2Collection additionalCertificates) :
+        this(
+            DefaultRespondAsync,
+            certificate,
+            additionalCertificates,
+            IPAddress.Loopback)
+    {
+    }
+
+    internal LoopbackOrigin(
+        X509Certificate2 certificate,
+        IReadOnlyList<SslApplicationProtocol> applicationProtocols) :
+        this(
+            DefaultRespondAsync,
+            certificate,
+            additionalCertificates: null,
+            IPAddress.Loopback,
+            applicationProtocols)
     {
     }
 
     internal LoopbackOrigin(IPAddress listenAddress) :
-        this(DefaultRespondAsync, certificate: null, listenAddress)
+        this(
+            DefaultRespondAsync,
+            certificate: null,
+            additionalCertificates: null,
+            listenAddress)
     {
     }
 
     internal LoopbackOrigin(
         Func<WireRequest, Stream, int, CancellationToken, Task> respond,
         X509Certificate2? certificate = null) :
-        this(respond, certificate, IPAddress.Loopback)
+        this(
+            respond,
+            certificate,
+            additionalCertificates: null,
+            IPAddress.Loopback)
     {
     }
 
     private LoopbackOrigin(
         Func<WireRequest, Stream, int, CancellationToken, Task> respond,
         X509Certificate2? certificate,
-        IPAddress listenAddress)
+        X509Certificate2Collection? additionalCertificates,
+        IPAddress listenAddress,
+        IReadOnlyList<SslApplicationProtocol>? applicationProtocols = null)
     {
-      this.certificate = certificate;
+      certificateContext = certificate is null
+        ? null
+        : SslStreamCertificateContext.Create(
+            certificate,
+            additionalCertificates,
+            offline: true);
+      certificateChain = additionalCertificates;
+      this.applicationProtocols = applicationProtocols?.ToList();
       this.respond = respond;
       listener = new TcpListener(listenAddress, 0);
       listener.Start();
@@ -1026,6 +1469,8 @@ public sealed class GuardedOutboundFetcherTests
     }
 
     internal WireRequest? LastRequest => Volatile.Read(ref lastRequest);
+
+    internal SslApplicationProtocol LastTlsApplicationProtocol { get; private set; }
 
     internal string? LastTlsServerName => Volatile.Read(
         ref lastTlsServerName);
@@ -1087,13 +1532,18 @@ public sealed class GuardedOutboundFetcherTests
 
         try
         {
-          if (certificate is not null)
+          if (certificateContext is not null)
           {
             tls = new SslStream(network, leaveInnerStreamOpen: true);
             await tls.AuthenticateAsServerAsync(
                 new SslServerAuthenticationOptions
                 {
-                  ServerCertificate = certificate,
+                  CertificateChainPolicy =
+                      CreateServerChainPolicy(),
+                  ApplicationProtocols = applicationProtocols,
+                  CertificateRevocationCheckMode =
+                      X509RevocationMode.NoCheck,
+                  ServerCertificateContext = certificateContext,
                   EnabledSslProtocols =
                       SslProtocols.Tls12 | SslProtocols.Tls13,
                 },
@@ -1101,6 +1551,8 @@ public sealed class GuardedOutboundFetcherTests
             Volatile.Write(
                 ref lastTlsServerName,
                 tls.TargetHostName);
+            LastTlsApplicationProtocol =
+                tls.NegotiatedApplicationProtocol;
             stream = tls;
           }
 
@@ -1129,6 +1581,24 @@ public sealed class GuardedOutboundFetcherTests
           }
         }
       }
+    }
+
+    private X509ChainPolicy CreateServerChainPolicy()
+    {
+      var policy = new X509ChainPolicy
+      {
+        DisableCertificateDownloads = true,
+        RevocationMode = X509RevocationMode.NoCheck,
+      };
+
+      if (certificateChain is not null)
+      {
+        policy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        policy.CustomTrustStore.AddRange(certificateChain);
+        policy.ExtraStore.AddRange(certificateChain);
+      }
+
+      return policy;
     }
 
     private static Task DefaultRespondAsync(
@@ -1212,8 +1682,12 @@ public sealed class GuardedOutboundFetcherTests
 
   private sealed class TestCertificates(
       X509Certificate2 root,
-      X509Certificate2 server) : IDisposable
+      X509Certificate2 server,
+      X509Certificate2Collection? intermediates = null) : IDisposable
   {
+    internal X509Certificate2Collection Intermediates { get; } =
+        intermediates ?? [];
+
     internal X509Certificate2 Root { get; } = root;
 
     internal X509Certificate2 Server { get; } = server;
@@ -1282,8 +1756,121 @@ public sealed class GuardedOutboundFetcherTests
       return new TestCertificates(root, server);
     }
 
+    internal static TestCertificates CreateWithIntermediateAia(
+        string host,
+        string issuerUrl,
+        out byte[] issuerBytes)
+    {
+      using var rootKey = RSA.Create(2048);
+      var rootRequest = new CertificateRequest(
+          "CN=Blok Guarded Fetch AIA Root",
+          rootKey,
+          HashAlgorithmName.SHA256,
+          RSASignaturePadding.Pkcs1);
+      rootRequest.CertificateExtensions.Add(
+          new X509BasicConstraintsExtension(
+              certificateAuthority: true,
+              hasPathLengthConstraint: false,
+              pathLengthConstraint: 0,
+              critical: true));
+      rootRequest.CertificateExtensions.Add(
+          new X509KeyUsageExtension(
+              X509KeyUsageFlags.KeyCertSign |
+                  X509KeyUsageFlags.CrlSign,
+              critical: true));
+      using var generatedRoot = rootRequest.CreateSelfSigned(
+          DateTimeOffset.UtcNow.AddMinutes(-5),
+          DateTimeOffset.UtcNow.AddDays(1));
+      var root = X509CertificateLoader.LoadPkcs12(
+          generatedRoot.Export(X509ContentType.Pfx),
+          password: null);
+
+      using var intermediateKey = RSA.Create(2048);
+      var intermediateRequest = new CertificateRequest(
+          "CN=Blok Guarded Fetch AIA Intermediate",
+          intermediateKey,
+          HashAlgorithmName.SHA256,
+          RSASignaturePadding.Pkcs1);
+      intermediateRequest.CertificateExtensions.Add(
+          new X509BasicConstraintsExtension(
+              certificateAuthority: true,
+              hasPathLengthConstraint: true,
+              pathLengthConstraint: 0,
+              critical: true));
+      intermediateRequest.CertificateExtensions.Add(
+          new X509KeyUsageExtension(
+              X509KeyUsageFlags.KeyCertSign |
+                  X509KeyUsageFlags.CrlSign,
+              critical: true));
+      using var issuedIntermediate = intermediateRequest.Create(
+          root,
+          DateTimeOffset.UtcNow.AddMinutes(-5),
+          DateTimeOffset.UtcNow.AddHours(18),
+          RandomNumberGenerator.GetBytes(16));
+      using var intermediateWithKey =
+          issuedIntermediate.CopyWithPrivateKey(intermediateKey);
+      using var intermediate = X509CertificateLoader.LoadPkcs12(
+          intermediateWithKey.Export(X509ContentType.Pfx),
+          password: null);
+      issuerBytes = intermediate.Export(X509ContentType.Cert);
+      var intermediatePublic = X509CertificateLoader.LoadCertificate(
+          issuerBytes);
+      var rootPublic = X509CertificateLoader.LoadCertificate(
+          root.Export(X509ContentType.Cert));
+
+      using var serverKey = RSA.Create(2048);
+      var serverRequest = new CertificateRequest(
+          $"CN={host}",
+          serverKey,
+          HashAlgorithmName.SHA256,
+          RSASignaturePadding.Pkcs1);
+      serverRequest.CertificateExtensions.Add(
+          new X509BasicConstraintsExtension(
+              certificateAuthority: false,
+              hasPathLengthConstraint: false,
+              pathLengthConstraint: 0,
+              critical: true));
+      serverRequest.CertificateExtensions.Add(
+          new X509KeyUsageExtension(
+              X509KeyUsageFlags.DigitalSignature |
+                  X509KeyUsageFlags.KeyEncipherment,
+              critical: true));
+      serverRequest.CertificateExtensions.Add(
+          new X509EnhancedKeyUsageExtension(
+              [new Oid("1.3.6.1.5.5.7.3.1")],
+              critical: true));
+      var names = new SubjectAlternativeNameBuilder();
+      names.AddDnsName(host);
+      serverRequest.CertificateExtensions.Add(names.Build());
+      serverRequest.CertificateExtensions.Add(
+          new X509AuthorityInformationAccessExtension(
+              ocspUris: [],
+              caIssuersUris: [issuerUrl],
+              critical: false));
+      using var issuedServer = serverRequest.Create(
+          intermediate,
+          DateTimeOffset.UtcNow.AddMinutes(-5),
+          DateTimeOffset.UtcNow.AddHours(12),
+          RandomNumberGenerator.GetBytes(16));
+      using var serverWithKey =
+          issuedServer.CopyWithPrivateKey(serverKey);
+      var server = X509CertificateLoader.LoadPkcs12(
+          serverWithKey.Export(X509ContentType.Pfx),
+          password: null);
+
+      return new TestCertificates(
+          root,
+          server,
+          [intermediatePublic, rootPublic]);
+    }
+
     public void Dispose()
     {
+      foreach (var intermediate in Intermediates)
+      {
+        intermediate.Dispose();
+      }
+
       Server.Dispose();
       Root.Dispose();
     }

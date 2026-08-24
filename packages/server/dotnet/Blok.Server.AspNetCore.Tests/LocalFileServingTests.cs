@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using Blok.Server.AspNetCore;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -129,6 +131,40 @@ public sealed class LocalFileServingTests : IDisposable
       Assert.Equal(10L, ignored.Content.Headers.ContentLength);
       Assert.Equal("0123456789", await ignored.Content.ReadAsStringAsync());
     }
+  }
+
+  [Theory]
+  [InlineData("rfc850")]
+  [InlineData("ansi-c")]
+  public async Task HonorsMatchingAlternateHttpDateIfRangeValidator(string format)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var complete = await client.GetAsync($"/files/{RangeKey}");
+    var lastModified = complete.Content.Headers.LastModified;
+    Assert.NotNull(lastModified);
+    var ifRange = format switch
+    {
+      "rfc850" => lastModified.Value.ToString(
+          "dddd, dd-MMM-yy HH:mm:ss 'GMT'",
+          CultureInfo.InvariantCulture),
+      _ => string.Format(
+          CultureInfo.InvariantCulture,
+          "{0:ddd MMM} {1,2} {0:HH:mm:ss yyyy}",
+          lastModified.Value,
+          lastModified.Value.Day),
+    };
+
+    var context = await app.GetTestServer().SendAsync(request =>
+    {
+      request.Request.Method = "HEAD";
+      request.Request.Path = $"/files/{RangeKey}";
+      request.Request.Headers.Range = "bytes=2-5";
+      request.Request.Headers.IfRange = ifRange;
+    }, CancellationToken.None);
+
+    Assert.Equal(StatusCodes.Status206PartialContent, context.Response.StatusCode);
+    Assert.Equal("bytes 2-5/10", context.Response.Headers.ContentRange.ToString());
   }
 
   [Fact]

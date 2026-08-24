@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Net.Http.Headers;
 
 namespace Blok.Server.AspNetCore;
 
@@ -154,12 +155,7 @@ internal static class LocalFileEndpoint
       return true;
     }
 
-    return DateTimeOffset.TryParseExact(
-        ifRange,
-        "R",
-        CultureInfo.InvariantCulture,
-        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
-        out var requestedDate) &&
+    return HeaderUtilities.TryParseDate(ifRange, out var requestedDate) &&
         requestedDate == lastModified;
   }
 

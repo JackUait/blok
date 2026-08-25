@@ -228,7 +228,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('retains the exact server transition job contract', () => {
+  it('retains the exact final server job contract', () => {
     const server = getJob(ci, 'server');
 
     expect(server.name).toBe('Server');
@@ -238,26 +238,11 @@ describe('CI critical-path law', () => {
       checkout,
       setupNodeDependencies,
       {
-        name: 'Setup Go',
-        uses: 'actions/setup-go@v5',
-        with: {
-          'go-version': '1.25',
-          // setup-go fails the job when this path resolves to nothing, so the
-          // module keeps a committed go.sum even with no used dependency.
-          'cache-dependency-path': 'packages/server/go.sum',
-        },
-      },
-      {
         name: 'Setup .NET',
         uses: 'actions/setup-dotnet@v4',
         with: {
           'dotnet-version': '10.0.x',
         },
-      },
-      {
-        name: 'Test Go reference',
-        'working-directory': 'packages/server',
-        run: 'go vet ./... && go test ./...',
       },
       {
         name: 'Test .NET server',
@@ -270,10 +255,6 @@ describe('CI critical-path law', () => {
       {
         name: 'Test packed .NET packages',
         run: 'node scripts/test-server-packages.mjs',
-      },
-      {
-        name: 'Test Go conformance',
-        run: 'node scripts/test-server-conformance.mjs --target go',
       },
       {
         name: 'Test C# conformance',

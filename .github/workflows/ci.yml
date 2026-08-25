@@ -77,23 +77,10 @@ jobs:
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          # setup-go's cache step fails the job when this path resolves to
-          # nothing, so packages/server must keep a committed go.sum even while
-          # every declared dependency is still unused.
-          cache-dependency-path: packages/server/go.sum
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-
-      - name: Test Go reference
-        working-directory: packages/server
-        run: go vet ./... && go test ./...
 
       - name: Test .NET server
         run: dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
@@ -103,9 +90,6 @@ jobs:
 
       - name: Test packed .NET packages
         run: node scripts/test-server-packages.mjs
-
-      - name: Test Go conformance
-        run: node scripts/test-server-conformance.mjs --target go
 
       - name: Test C# conformance
         run: node scripts/test-server-conformance.mjs --target csharp

@@ -269,7 +269,7 @@ it('returns the exact ungated health response without CORS', async () => {
   });
 });
 
-it('returns the Go method and unknown-route responses', async () => {
+it('returns the frozen method and unknown-route responses', async () => {
   await withServer(serverArgs('--storage-dir', ''), async (server) => {
     const wrongMethod = await server.request('POST', '/health');
     const unknownRoute = await server.request('GET', '/missing');
@@ -504,7 +504,7 @@ it('accepts the fixed compatible ticket and rejects malformed ticket cases', asy
   });
 });
 
-it('preserves Go ticket header and authorization grammar', async () => {
+it('preserves the frozen ticket header and authorization grammar', async () => {
   await withServer(ticketArgs('--rate-limit', '0', '--storage-dir', ''), async (server) => {
     for (const testCase of [
       {
@@ -1052,7 +1052,7 @@ it.each([129, 4_089])('accepts a matching %i-character multipart boundary', asyn
   });
 });
 
-it('matches Go duplicate multipart boundary handling', async () => {
+it('preserves frozen duplicate multipart boundary handling', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
       const upload = createMultipartUpload({
@@ -1087,7 +1087,7 @@ it('matches Go duplicate multipart boundary handling', async () => {
   });
 });
 
-it('rejects conflicting escaped duplicate multipart boundaries like Go', async () => {
+it('rejects conflicting escaped duplicate multipart boundaries with frozen behavior', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
       const upload = createMultipartUpload({
@@ -1112,7 +1112,7 @@ it('rejects conflicting escaped duplicate multipart boundaries like Go', async (
   });
 });
 
-it('sanitizes conflicting escaped duplicate media parameters like Go', async () => {
+it('sanitizes conflicting escaped duplicate media parameters with frozen behavior', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
       const upload = createMultipartUpload({
@@ -1133,7 +1133,7 @@ it('sanitizes conflicting escaped duplicate media parameters like Go', async () 
   });
 });
 
-it('matches Go MIME-special quoted parameter escapes', async () => {
+it('preserves frozen MIME-special quoted parameter escapes', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
       const mimeType = String.raw`text/plain; charset="a\/b"; charset="a/b"`;
@@ -1155,7 +1155,7 @@ it('matches Go MIME-special quoted parameter escapes', async () => {
   });
 });
 
-it('matches Go duplicate media parameter handling', async () => {
+it('preserves frozen duplicate media parameter handling', async () => {
   await withTemporaryDirectory(async (directory) => {
     await withServer(serverArgs('--storage-dir', directory), async (server) => {
       const equalMediaType = 'text/plain; charset=utf-8; charset=utf-8';

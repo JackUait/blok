@@ -107,16 +107,14 @@ describe('server release wiring', () => {
     expect(server.version).toBe(root.version);
   });
 
-  it('keeps Go and C# verification together in transition CI', () => {
+  it('keeps Node and C# verification together in final CI', () => {
     const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
     const steps = workflow.jobs.server?.steps ?? [];
     const actions = steps.map((step) => step.uses ?? '').join('\n');
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
     expect(actions).toContain('./.github/actions/setup-node-deps');
-    expect(actions).toContain('actions/setup-go@v5');
     expect(actions).toContain('actions/setup-dotnet@v4');
-    expect(runs).toContain('go vet ./... && go test ./...');
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
     );
@@ -124,7 +122,6 @@ describe('server release wiring', () => {
       'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
     );
     expect(runs).toContain('node scripts/test-server-packages.mjs');
-    expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
     expect(runs).toContain('node scripts/test-server-conformance.mjs --target csharp');
     expect(runs).toContain('node scripts/publish-server.mjs --version 1.10.1 --dry-run');
     expect(runs).toContain('test/unit/architecture/server-release-wiring.test.ts');
@@ -160,9 +157,6 @@ describe('server release wiring', () => {
     expect(actions).toContain('./.github/actions/setup-node-deps');
     expect(actions).toContain('actions/setup-dotnet@v4');
     expect(actions).toContain('docker/login-action@v3');
-    expect(actions).not.toContain('actions/setup-go');
-    expect(actions).not.toContain('goreleaser');
-
     expect(source.match(/version="\$\{GITHUB_REF_NAME#v\}"/g)).toHaveLength(1);
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
@@ -322,7 +316,7 @@ describe('server release wiring', () => {
     expect(ignore).not.toMatch(/^\.yarnrc\.yml$/m);
   });
 
-  it('keeps every public delivery surface on C# while Go remains only an oracle', () => {
+  it('keeps every public delivery surface on C#', () => {
     const publicSources = [
       read(RELEASE_WORKFLOW),
       read('packages/server/Dockerfile'),
@@ -331,7 +325,7 @@ describe('server release wiring', () => {
       read('scripts/release-manifest.mjs'),
     ].join('\n');
 
-    expect(publicSources).not.toMatch(/Go sidecar|GoReleaser|\.goreleaser/i);
+    expect(publicSources).not.toContain('Go sidecar');
     expect(read(SERVER_MANIFEST)).toMatch(/C#|ASP\.NET/);
     expect(read('packages/server/README.md')).toContain('Blok.Server.AspNetCore');
     expect(read('packages/server/README.md')).not.toContain('UseMySql');

@@ -4,14 +4,15 @@
 
 **Goal:** Replace the unreleased Go server with one .NET 10 implementation shared by NuGet and the standalone host, switch every delivery path to C#, and delete all Go source and build wiring.
 
-**Architecture:** A TypeScript/Vitest black-box suite freezes the externally observable Go contract before C# route work starts. `Blok.Server` holds framework-neutral services, `Blok.Server.AspNetCore` maps the shared HTTP contract, and `Blok.Server.Host` only parses standalone configuration and starts ASP.NET. The same C# handlers back NuGet and the host; Go remains frozen until the C# host, packages, artifacts, Docker image, npm wrapper, and security gates pass, then is deleted in one change.
+**Architecture:** A TypeScript/Vitest black-box suite freezes the externally observable Go contract before C# route work starts. `Blok.Server` holds framework-neutral services, `Blok.Server.AspNetCore` maps the shared HTTP contract, and `Blok.Server.Host` only parses standalone configuration and starts ASP.NET. The same C# handlers back NuGet and the host; Go remained frozen until the C# host, packages, artifacts, Docker image, npm wrapper, and security gates passed, then was deleted in one change.
 
 **Tech Stack:** TypeScript, Vitest, .NET 10, ASP.NET Core, Jint 4.16.1, AngleSharp, xUnit 2.9.3, Microsoft.AspNetCore.TestHost 10.0.0, self-contained single-file `dotnet publish`, Docker, GitHub Actions.
 
 **Spec:** `docs/plans/2026-08-23-blok-dotnet-library-design.md`
 
-**Status:** C# package, host, artifact, and public delivery wiring are implemented through
-Task 15. Go remains the transition oracle through Task 16 and is deleted only in Task 17.
+**Status:** Tasks 1–17 are complete. C# is the sole server implementation and delivery
+path; Task 17 removed the frozen Go source and build wiring after the unwaived Task 16
+dual-target gate passed. Task 18 remains the final repository verification and publish step.
 
 ## Global constraints
 
@@ -38,7 +39,7 @@ Task 15. Go remains the transition oracle through Task 16 and is deleted only in
 - `test/server-conformance/fixtures.ts` — deterministic HTML, upload bytes, ticket vectors, and expected wire results.
 - `test/server-conformance/server-contract.test.ts` — health, route registration, CORS, auth, limits, uploads, local files, unfurl, and process tests.
 - `test/server-conformance/run-against.ts` — selects `BLOK_CONFORMANCE_SERVER` and allocates storage/listen configuration.
-- `scripts/test-server-conformance.mjs` — builds/selects Go or C# target and invokes the same Vitest file.
+- `scripts/test-server-conformance.mjs` — builds the ordinary and conformance C# hosts and invokes the same 58-case Vitest contract.
 
 ### C# projects
 
@@ -54,7 +55,7 @@ Task 15. Go remains the transition oracle through Task 16 and is deleted only in
 - `.github/workflows/release-server.yml` packs NuGet, archives hosts, smoke-tests native artifacts, and publishes the existing image/assets.
 - `packages/server/Dockerfile` becomes a repository-root-context .NET multi-stage build.
 - `packages/server/bin/blok-server.mjs` keeps the existing external protocol and downloads the C# single-file host.
-- Final deletion removes `.goreleaser.yaml`, `packages/server/go.mod`, `packages/server/go.sum`, `packages/server/cmd`, and `packages/server/internal`.
+- Task 17 removed `.goreleaser.yaml`, `packages/server/go.mod`, `packages/server/go.sum`, `packages/server/cmd`, and `packages/server/internal`.
 
 ---
 
@@ -514,27 +515,27 @@ internal interface IGuardedOutboundFetcher
 
 ---
 
-### Task 16: Run the removal gate against both implementations
+### Task 16: Run the removal gate against both implementations — complete
 
 **Files:**
 - Modify only tests/implementation defects discovered by the gate.
 - Record no waived failures.
 
-- [ ] **Step 1: Run all focused C# tests**
+- [x] **Step 1: Run all focused C# tests**
 
 ```bash
 dotnet test packages/server/dotnet/Blok.Server.slnx
 dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 ```
 
-- [ ] **Step 2: Run the exact same black-box suite against Go and C#**
+- [x] **Step 2: Run the exact same black-box suite against Go and C#**
 
 ```bash
 node scripts/test-server-conformance.mjs --target go
 node scripts/test-server-conformance.mjs --target csharp
 ```
 
-- [ ] **Step 3: Run delivery gates**
+- [x] **Step 3: Run delivery gates**
 
 ```bash
 node scripts/publish-server.mjs --version "$(node -p "require('./package.json').version")" --dry-run
@@ -542,17 +543,17 @@ yarn vitest run --project=unit   test/unit/server/bin.test.ts   test/unit/script
 docker build --platform linux/amd64 -f packages/server/Dockerfile --build-arg BLOK_SERVER_VERSION=1.10.1 .
 ```
 
-- [ ] **Step 4: Run security review cases**
+- [x] **Step 4: Run security review cases**
 
 Require green deterministic tests for private/loopback/metadata IPv4 and IPv6, mixed DNS results, DNS rebinding, redirect-to-private, redirect-to-credentials, disallowed ports, exact address pinning, Host/SNI, size, timeout, and cancellation.
 
-- [ ] **Step 5: Confirm no public release points at Go assets**
+- [x] **Step 5: Confirm no public release points at Go assets**
 
 Inspect release workflow, wrapper mapping, Dockerfile, docs release gates, and current changelog. Do not delete Go until every step is green.
 
 ---
 
-### Task 17: Delete Go in one change
+### Task 17: Delete Go in one change — complete
 
 **Files:**
 - Delete: `packages/server/cmd/`
@@ -563,14 +564,14 @@ Inspect release workflow, wrapper mapping, Dockerfile, docs release gates, and c
 - Remove Go setup/tests/references from CI/release/current docs and `.gitignore`
 - Update conformance script so normal runs target C#; retain language-neutral contract tests.
 
-- [ ] **Step 1: Add/red-update static removal laws**
+- [x] **Step 1: Add/red-update static removal laws**
 
 Assert no tracked `.go`, `go.mod`, `go.sum`, GoReleaser config, `setup-go`, `go test`, or Go artifact builder remains outside explicitly historical plan documents.
 
-- [ ] **Step 2: Delete all Go implementation/build files and update wiring**
-- [ ] **Step 3: Run removal law, all C# tests, black-box C# suite, Docker/artifact/wrapper gates**
-- [ ] **Step 4: Update active design status to C# only**
-- [ ] **Step 5: Commit with `refactor(server): remove the Go implementation`**
+- [x] **Step 2: Delete all Go implementation/build files and update wiring**
+- [x] **Step 3: Run removal law, all C# tests, black-box C# suite, Docker/artifact/wrapper gates**
+- [x] **Step 4: Update active design status to C# only**
+- [x] **Step 5: Commit with `refactor(server): remove the Go implementation`**
 
 ---
 

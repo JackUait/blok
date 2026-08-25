@@ -29,67 +29,56 @@ function run(command, args, options = {}) {
 
 function selectedOptions(args) {
   const targetIndex = args.indexOf('--target');
-  const target = targetIndex >= 0 ? args[targetIndex + 1] : undefined;
+  const target = targetIndex >= 0 ? args[targetIndex + 1] : 'csharp';
   const filterIndex = args.indexOf('--test-name-pattern');
   const testNamePattern = filterIndex >= 0 ? args[filterIndex + 1] : undefined;
 
   if (
-    (target !== 'go' && target !== 'csharp') ||
+    target !== 'csharp' ||
     (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === ''))
   ) {
     throw new Error(
-      'Usage: node scripts/test-server-conformance.mjs --target go|csharp ' +
+      'Usage: node scripts/test-server-conformance.mjs [--target csharp] ' +
       '[--test-name-pattern PATTERN]',
     );
   }
 
-  return { target, testNamePattern };
+  return { testNamePattern };
 }
 
 async function main() {
   const options = selectedOptions(process.argv.slice(2));
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
   const executableSuffix = process.platform === 'win32' ? '.exe' : '';
-  const ordinaryExecutable = join(temporaryDirectory, `blok-server-ordinary${executableSuffix}`);
-  const conformanceExecutable = join(temporaryDirectory, `blok-server-conformance${executableSuffix}`);
-  const csharpOrdinaryDirectory = join(temporaryDirectory, 'csharp-ordinary');
-  const csharpConformanceDirectory = join(temporaryDirectory, 'csharp-conformance');
+  const ordinaryDirectory = join(temporaryDirectory, 'csharp-ordinary');
+  const conformanceDirectory = join(temporaryDirectory, 'csharp-conformance');
+  const hostProject = join(
+    repositoryRoot,
+    'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
+  );
 
   try {
-    if (options.target === 'go') {
-      await run('go', ['build', '-o', ordinaryExecutable, './cmd/blok-server'], {
-        cwd: join(repositoryRoot, 'packages/server'),
-      });
-      await run('go', ['build', '-tags', 'conformance', '-o', conformanceExecutable, './cmd/blok-server'], {
-        cwd: join(repositoryRoot, 'packages/server'),
-      });
-    } else {
-      const hostProject = join(
-        repositoryRoot,
-        'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
-      );
-      await run('dotnet', [
-        'build',
-        hostProject,
-        '--configuration',
-        'Release',
-        '--output',
-        csharpOrdinaryDirectory,
-      ], {
-        cwd: repositoryRoot,
-      });
-      await run('dotnet', [
-        'build',
-        hostProject,
-        '--configuration',
-        'Debug',
-        '--output',
-        csharpConformanceDirectory,
-        '-p:DefineConstants=BLOK_SERVER_CONFORMANCE',
-      ], {
-        cwd: repositoryRoot,
-      });
-    }
+    await run('dotnet', [
+      'build',
+      hostProject,
+      '--configuration',
+      'Release',
+      '--output',
+      ordinaryDirectory,
+    ], {
+      cwd: repositoryRoot,
+    });
+    await run('dotnet', [
+      'build',
+      hostProject,
+      '--configuration',
+      'Debug',
+      '--output',
+      conformanceDirectory,
+      '-p:DefineConstants=BLOK_SERVER_CONFORMANCE',
+    ], {
+      cwd: repositoryRoot,
+    });
 
     const vitestArgs = [
       join(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
@@ -102,27 +91,18 @@ async function main() {
       vitestArgs.push('-t', options.testNamePattern);
     }
 
-    const serverEnvironment = options.target === 'go'
-      ? {
-        BLOK_CONFORMANCE_ORDINARY_SERVER: ordinaryExecutable,
-        BLOK_CONFORMANCE_SERVER: conformanceExecutable,
-      }
-      : {
-        BLOK_CONFORMANCE_ORDINARY_SERVER: join(
-          csharpOrdinaryDirectory,
-          `Blok.Server.Host${executableSuffix}`,
-        ),
-        BLOK_CONFORMANCE_SERVER: join(
-          csharpConformanceDirectory,
-          `Blok.Server.Host${executableSuffix}`,
-        ),
-      };
-
     await run(process.execPath, vitestArgs, {
       cwd: repositoryRoot,
       env: {
         ...process.env,
-        ...serverEnvironment,
+        BLOK_CONFORMANCE_ORDINARY_SERVER: join(
+          ordinaryDirectory,
+          `Blok.Server.Host${executableSuffix}`,
+        ),
+        BLOK_CONFORMANCE_SERVER: join(
+          conformanceDirectory,
+          `Blok.Server.Host${executableSuffix}`,
+        ),
       },
     });
   } finally {

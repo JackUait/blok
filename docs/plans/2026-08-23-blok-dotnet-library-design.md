@@ -1,16 +1,16 @@
 # Blok server as a .NET library and host
 
-Status: **C# delivery implemented; Go removal pending.** The shared
-`Blok.Server` and `Blok.Server.AspNetCore` packages, standalone host, six
-self-contained archives, npm wrapper, and linux/amd64 container are wired to the same
-C# handlers. The Go server remains in source and transition CI only as the Task 16
-conformance oracle; Task 17 deletes it after that gate passes. Database-block and MySQL
-support remain a later phase and are not included in the current packages.
+Status: **C# implementation and delivery complete; former Go oracle removed.** The
+shared `Blok.Server` and `Blok.Server.AspNetCore` packages, standalone host, six
+self-contained archives, npm wrapper, and linux/amd64 container use the same C# handlers.
+The unwaived Task 16 dual-target gate passed, and Task 17 removed the frozen Go source and
+build wiring. Database-block and MySQL support remain a later phase and are not included
+in the current packages.
 
 This document supersedes the Go implementation decision in
 `2026-08-22-backend-service-design.md`. The existing HTTP contracts and security
-invariants remain. The Go code is now a temporary reference implementation used only
-while the C# replacement is proved.
+invariants remain. The former Go code served as the temporary migration oracle and was
+removed after the C# replacement passed the gate.
 
 ---
 
@@ -89,9 +89,8 @@ npx @bloklabs/server ...
 ```
 
 The image name, CLI name, route paths, request bodies, response bodies, flags, and
-environment variables remain compatible with the existing Go implementation wherever
-the Go implementation already defines them. The npm package changes only which binary
-it downloads.
+environment variables remain compatible with the frozen wire contract inherited from
+the former Go implementation. The npm package changed only which binary it downloads.
 
 The standalone executable is published with `dotnet publish` as self-contained
 platform artifacts. NativeAOT is not a goal: the embedded JavaScript runtime and server
@@ -222,8 +221,8 @@ In .NET this is implemented below `HttpClient` with a guarded
 component must not construct a client for consumer-supplied URLs. A static architecture
 test enforces the rule.
 
-The C# port cannot replace Go until black-box tests prove these properties, including
-DNS rebinding and redirect-to-private-address cases.
+The C# implementation replaced Go only after black-box tests proved these properties,
+including DNS rebinding and redirect-to-private-address cases.
 
 ---
 
@@ -355,12 +354,12 @@ accepted.
 
 ---
 
-## Existing Go implementation: migration oracle, then deletion
+## Former Go implementation: migration oracle, then deletion
 
-The Go service is not a second product and receives no new features. Until removal, only
-security and correctness fixes are allowed.
+The Go service was never a second product. It remained frozen except for security and
+correctness fixes, served as the migration oracle, and was removed in Task 17.
 
-### What it contributes to the move
+### What it contributed to the move
 
 - exact wire responses for `/health`, `/unfurl`, `/upload`, and `/upload-by-url`;
 - CLI and environment-variable behavior;
@@ -369,38 +368,37 @@ security and correctness fixes are allowed.
 - local-directory and S3 storage behavior;
 - a mature regression suite for outbound-fetch attacks and size limits.
 
-### How parity is proved
+### How parity was proved
 
-Move route-level behavior into a language-independent black-box conformance suite. The
-suite starts a server binary or targets a supplied URL, then runs the same cases against
-Go and C#.
+Route-level behavior moved into a language-independent black-box conformance suite. The
+Task 16 gate ran the same 58 cases against the frozen Go oracle and the C# host.
 
 The suite covers success and failure responses, headers, preflights, auth modes, rate
 limits, upload limits, redirect limits, unsafe addresses, DNS rebinding, malformed
 tickets, storage key validation, and shutdown behavior. C# also keeps focused unit tests;
-the black-box suite is the cross-language acceptance gate.
+the black-box suite remains its process-level acceptance gate.
 
-### Removal gate
+### Removal gate — passed
 
-Go is deleted only after all of the following are true:
+The unwaived Task 16 gate verified all of the following before deletion:
 
-1. the C# unit and integration tests pass;
-2. the black-box suite passes against both implementations;
-3. the C# host passes Docker and self-contained-binary smoke tests on supported
+1. the C# unit and integration tests passed;
+2. the black-box suite passed against both implementations;
+3. the C# host passed Docker and self-contained-binary smoke tests on supported
    platforms;
-4. a packed NuGet package works in a minimal .NET application and in a .NET 10 fixture
+4. a packed NuGet package worked in a minimal .NET application and in a .NET 10 fixture
    shaped like KB;
-5. the npm wrapper downloads and runs the C# artifact;
-6. an independent security review accepts the guarded outbound client;
-7. no public release points at the Go assets.
+5. the npm wrapper downloaded and ran the C# artifact;
+6. an independent security review accepted the guarded outbound client;
+7. no public release pointed at the Go assets.
 
-Then remove the Go sources, modules, Go CI setup, goreleaser configuration, and Go build
-artifacts in the same change. `packages/server` remains the product directory and becomes
-the C# source, host, npm wrapper, and Docker build context.
+Task 17 then removed the Go sources, modules, CI setup, release configuration, and build
+artifacts in one change. `packages/server` remains the product directory for the C# source,
+host, npm wrapper, and Docker build context.
 
-Because the Go server has not been released, this transition should happen before its
-first public release. We preserve its contract because the editor wiring and tests already
-depend on that contract, not because users need a language migration.
+Because the Go server was never released, the transition completed before its first public
+release. Its contract was preserved because editor wiring and tests already depended on
+that contract, not because users needed a language migration.
 
 ---
 
@@ -408,12 +406,12 @@ depend on that contract, not because users need a language migration.
 
 | Existing asset | Decision |
 |---|---|
-| `packages/server` Go code | Frozen, used for parity, then deleted |
+| Former `packages/server` Go code | Deleted after the parity gate |
 | `packages/server/package.json` and `bin/blok-server.mjs` | Kept; wrapper downloads the C# host artifact |
 | `packages/server/Dockerfile` | Replaced by a .NET multi-stage build using the same image name |
-| Go blob stores | Ported once to C#; interfaces and behaviors stay |
-| Go fetch guard | Replaced by the guarded C# client only after adversarial parity |
-| Go ticket and middleware | Ported to ASP.NET authentication/endpoints with the same wire behavior |
+| Former Go blob stores | Ported to C#; interfaces and behaviors stay |
+| Former Go fetch guard | Replaced by the guarded C# client after adversarial parity |
+| Former Go ticket and middleware | Ported to ASP.NET authentication/endpoints with the same wire behavior |
 | `packages/presets` | Unchanged; browser storage remains a peer path |
 | editor `server`/ticket wiring plan | Wire contract stays; it targets the C# host or in-process routes |
 | bookmark degradation | Already implemented in `f8083d54` |
@@ -462,8 +460,8 @@ handlers. Packed-NuGet and standalone-host probes exercise the same routes.
 
 The release wiring packs two NuGets, builds six self-contained host archives and
 checksums, rebuilds the linux/amd64 image, and points `@bloklabs/server` at the C# assets.
-The Task 16 dual-target gate and Task 17 Go deletion still precede the first server
-release.
+The Task 16 dual-target gate passed, and Task 17 removed the frozen Go implementation
+before the first server release.
 
 ### 6. Adopt document services in KB
 

@@ -27,9 +27,6 @@ packages/cli/dist/
 packages/server/dotnet/**/bin/
 packages/server/dotnet/**/obj/
 packages/server/dotnet/Blok.Server/Generated/blok-server-runtime.js
-# goreleaser output (see dist: in .goreleaser.yaml — kept out of dist/ so a
-# local `goreleaser release --clean` cannot empty the editor bundle)
-.goreleaser-dist/
 .server-release-dist/
 test/playwright/fixtures/vendor/
 

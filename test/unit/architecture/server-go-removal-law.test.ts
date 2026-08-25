@@ -1,6 +1,12 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import {
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(__dirname, '../../..');
@@ -12,25 +18,20 @@ const trackedFiles = execFileSync('git', ['ls-files', '-z'], {
   .split('\0')
   .filter(Boolean);
 
-const isHistoricalPlan = (path: string): boolean => path.startsWith('docs/plans/');
+const isHistoricalMarkdownPlan = (path: string): boolean =>
+  path.startsWith('docs/plans/') && path.endsWith('.md');
 
 describe('server implementation removal law', () => {
   it('has no tracked Go implementation or module files', () => {
-    const forbiddenFiles = trackedFiles.filter((path) => {
-      if (isHistoricalPlan(path)) {
-        return false;
-      }
-
-      const releaseConfig = ['.gore', 'leaser.yaml'].join('');
-
-      return path.endsWith('.go') ||
-        path === 'go.mod' ||
-        path.endsWith('/go.mod') ||
-        path === 'go.sum' ||
-        path.endsWith('/go.sum') ||
-        path === releaseConfig ||
-        path.endsWith(`/${releaseConfig}`);
-    });
+    const releaseConfig = ['.gore', 'leaser.yaml'].join('');
+    const forbiddenFiles = trackedFiles.filter((path) =>
+      path.endsWith('.go') ||
+      path === 'go.mod' ||
+      path.endsWith('/go.mod') ||
+      path === 'go.sum' ||
+      path.endsWith('/go.sum') ||
+      path === releaseConfig ||
+      path.endsWith(`/${releaseConfig}`));
 
     expect(forbiddenFiles).toEqual([]);
   });
@@ -46,26 +47,64 @@ describe('server implementation removal law', () => {
     ].join('|');
     const result = spawnSync(
       'git',
-      ['grep', '-n', '-E', forbiddenReferencePattern, '--', ':!docs/plans/**'],
+      ['grep', '-l', '-z', '-E', forbiddenReferencePattern, '--'],
       { cwd: repoRoot, encoding: 'utf8' },
     );
+    const forbiddenFiles = result.stdout
+      .split('\0')
+      .filter(Boolean)
+      .filter((path) => !isHistoricalMarkdownPlan(path));
 
     expect([0, 1], result.stderr).toContain(result.status);
-    expect(result.stdout).toBe('');
+    expect(forbiddenFiles).toEqual([]);
   });
 
-  it('has no Go target branch in the conformance harness', () => {
+  it('has no Go token in the conformance harness', () => {
     const source = readFileSync(
       resolve(repoRoot, 'scripts/test-server-conformance.mjs'),
       'utf8',
     );
-    const forbiddenMarkers = [
-      ['--target ', 'go'].join(''),
-      ["target === '", "go'"].join(''),
-      ["target !== '", "go'"].join(''),
-      ["run('", "go'"].join(''),
-    ];
+    const retiredTarget = ['g', 'o'].join('');
+    const retiredTargetToken = new RegExp(`\\b${retiredTarget}\\b`);
 
-    expect(forbiddenMarkers.filter((marker) => source.includes(marker))).toEqual([]);
+    expect(source).not.toMatch(retiredTargetToken);
+  });
+
+  it('rejects the retired target before build or temporary work', () => {
+    const temporaryRoot = mkdtempSync(join(tmpdir(), 'blok-server-rejection-'));
+
+    try {
+      const retiredTarget = ['g', 'o'].join('');
+      const forbiddenTemporaryRoot = join(temporaryRoot, 'must-not-exist');
+      const result = spawnSync(
+        process.execPath,
+        [
+          resolve(repoRoot, 'scripts/test-server-conformance.mjs'),
+          '--target',
+          retiredTarget,
+        ],
+        {
+          cwd: repoRoot,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: '',
+            TEMP: forbiddenTemporaryRoot,
+            TMP: forbiddenTemporaryRoot,
+            TMPDIR: forbiddenTemporaryRoot,
+          },
+        },
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe(
+        'Usage: node scripts/test-server-conformance.mjs [--target csharp] ' +
+        '[--test-name-pattern PATTERN]\n',
+      );
+      expect(readdirSync(temporaryRoot)).toEqual([]);
+    } finally {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
   });
 });

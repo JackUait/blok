@@ -98,7 +98,7 @@ new Blok({
     title: 'Your app runs ASP.NET Core',
     situation: 'You want Blok routes inside the .NET app that already owns your users and deployment.',
     description:
-      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your authorization implementation stays in the same app, and the editor calls the route prefix you choose. The current package supplies uploads and link previews; database blocks and MySQL integration come later.',
+      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. IBlokAuthorization is the document and database permission seam for later document routes; it is not the upload or link-preview gate. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
     runsService: true,
     whatToRun: [
       {
@@ -114,12 +114,17 @@ new Blok({
         code: `using Blok.Server.AspNetCore;
 
 builder.Services
-  .AddBlokServer()
+  .AddBlokServer(options =>
+  {
+    options.StorageDirectory = "./blok-uploads";
+    options.PublicUrl = "https://uploads.example.com/files";
+    options.UnfurlDisabled = false;
+  })
   .UseAuthorization<AppBlokAuthorization>();
 
 var app = builder.Build();
 
-app.MapBlokServer("/api/blok");`,
+app.MapBlokServer("/api/blok").RequireAuthorization();`,
       },
     ],
     editorConfig: {

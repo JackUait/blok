@@ -473,6 +473,7 @@ public sealed class UploadByUrlEndpointTests
       options.StorageDirectory = "./unused-upload-by-url-test-storage";
       options.PublicUrl = "https://unused.example.test/files";
       options.MaxUploadBytes = maxUploadBytes;
+      options.UnfurlDisabled = false;
     });
     var app = builder.Build();
     app.MapBlokServer();

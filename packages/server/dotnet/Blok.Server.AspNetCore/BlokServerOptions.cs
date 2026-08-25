@@ -17,15 +17,15 @@ public sealed class BlokServerOptions
 
   public IList<string> AllowedOrigins { get; set; } = [];
 
-  public string StorageDirectory { get; set; } = "./blok-uploads";
+  public string StorageDirectory { get; set; } = "";
 
-  public string PublicUrl { get; set; } = "http://127.0.0.1:4000/files";
+  public string PublicUrl { get; set; } = "";
 
   public long MaxUploadBytes { get; set; } = DefaultMaxUploadBytes;
 
-  public int RateLimitPerMinute { get; set; }
+  public long RateLimitPerMinute { get; set; }
 
-  public bool UnfurlDisabled { get; set; }
+  public bool UnfurlDisabled { get; set; } = true;
 
   public string S3Endpoint { get; set; } = "";
 
@@ -43,8 +43,11 @@ public sealed class BlokServerOptions
 
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
+  internal string LocalPublicPath { get; private set; } = "";
+
   public void Validate()
   {
+    LocalPublicPath = "";
     switch (Auth)
     {
       case "none" when !IsLoopback(ListenAddress):
@@ -78,6 +81,11 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"--max-upload must be a positive number of bytes (got {MaxUploadBytes}): " +
           "a zero cap refuses every upload");
+    }
+
+    if (StorageDirectory != "" && S3Bucket == "")
+    {
+      LocalPublicPath = ParseLocalPublicPath();
     }
 
     if (S3Bucket == "")
@@ -123,6 +131,50 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"--s3-addressing must be \"path\" or \"virtual\", or empty to choose automatically (got \"{S3Addressing}\")");
     }
+  }
+
+  private string ParseLocalPublicPath()
+  {
+    if (PublicUrl == "" || HasMalformedPercentEscape(PublicUrl) ||
+        !Uri.TryCreate(PublicUrl, UriKind.RelativeOrAbsolute, out var parsed))
+    {
+      throw new InvalidOperationException(
+          $"PublicUrl must be a valid relative or absolute URL (got \"{PublicUrl}\")");
+    }
+
+    if (parsed.IsAbsoluteUri)
+    {
+      return parsed.AbsolutePath.TrimEnd('/');
+    }
+
+    var suffixStart = PublicUrl.IndexOfAny(['?', '#']);
+    var relativePath = suffixStart < 0
+      ? PublicUrl
+      : PublicUrl[..suffixStart];
+
+    return relativePath.TrimEnd('/');
+  }
+
+  private static bool HasMalformedPercentEscape(string value)
+  {
+    for (var index = 0; index < value.Length; index++)
+    {
+      if (value[index] != '%')
+      {
+        continue;
+      }
+
+      if (index + 2 >= value.Length ||
+          !Uri.IsHexDigit(value[index + 1]) ||
+          !Uri.IsHexDigit(value[index + 2]))
+      {
+        return true;
+      }
+
+      index += 2;
+    }
+
+    return false;
   }
 
   private void ValidateListenAddress()

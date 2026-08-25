@@ -3,6 +3,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Blok.Server.AspNetCore;
+using Blok.Server.Host;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Blok.Server.Host.Tests;
@@ -306,6 +312,357 @@ public sealed class HostProcessTests
   }
 
   [Fact]
+  public async Task CancelsBlockedStorageWorkAtTheHostDeadline()
+  {
+    using var upstream = new TcpListener(IPAddress.Loopback, 0);
+    upstream.Start();
+    var upstreamEndpoint = Assert.IsType<IPEndPoint>(upstream.LocalEndpoint);
+    var listen = AllocateListenAddress();
+    var options = new BlokServerOptions
+    {
+      ListenAddress = listen,
+      S3AccessKey = "access-key",
+      S3Addressing = "path",
+      S3Bucket = "media",
+      S3BucketUrl = "https://uploads.example/media",
+      S3Endpoint = $"http://127.0.0.1:{upstreamEndpoint.Port}",
+      S3Region = "eu-test-1",
+      S3SecretKey = "secret-key",
+    };
+    await using var host = await StartDeadlineHostAsync(
+        listen,
+        options,
+        TimeSpan.FromSeconds(2));
+    using var client = new HttpClient
+    {
+      BaseAddress = new Uri($"http://{listen}"),
+      Timeout = TimeSpan.FromSeconds(5),
+    };
+    using var multipart = new MultipartFormDataContent(
+        "blok-host-storage-deadline-boundary");
+    using var file = new ByteArrayContent("uploaded bytes"u8.ToArray());
+    multipart.Add(file, "file", "slow.bin");
+    var responseTask = client.PostAsync("/upload", multipart);
+    using var acceptDeadline =
+        new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    using var upstreamConnection = await upstream.AcceptTcpClientAsync(
+        acceptDeadline.Token);
+    await using var upstreamStream = upstreamConnection.GetStream();
+    using var request = new MemoryStream();
+    var buffer = new byte[4096];
+    var expectedLength = -1L;
+    var headerLength = -1;
+
+    while (headerLength < 0 || request.Length < headerLength + expectedLength)
+    {
+      var received = await upstreamStream.ReadAsync(
+          buffer,
+          acceptDeadline.Token);
+      Assert.NotEqual(0, received);
+      request.Write(buffer, 0, received);
+      var requestText = Encoding.ASCII.GetString(request.ToArray());
+      var headerEnd = requestText.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+
+      if (headerEnd >= 0 && headerLength < 0)
+      {
+        headerLength = headerEnd + 4;
+        var contentLengthHeader = requestText[..headerEnd]
+            .Split("\r\n", StringSplitOptions.None)
+            .Single(line => line.StartsWith(
+                "Content-Length:",
+                StringComparison.OrdinalIgnoreCase));
+        expectedLength = long.Parse(
+            contentLengthHeader["Content-Length:".Length..],
+            System.Globalization.CultureInfo.InvariantCulture);
+      }
+    }
+
+    using var response = await responseTask;
+    Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
+
+    var cancellationObserved = false;
+    using var cancellationDeadline =
+        new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+    try
+    {
+      cancellationObserved = await upstreamStream.ReadAsync(
+          buffer,
+          cancellationDeadline.Token) == 0;
+    }
+    catch (IOException)
+    {
+      cancellationObserved = true;
+    }
+
+    Assert.True(
+        cancellationObserved,
+        "The timed-out request did not cancel the blocked blob-store request.");
+  }
+
+  [Fact]
+  public async Task CancelsAStalledRequestBodyAtTheHostDeadline()
+  {
+    const string boundary = "blok-host-deadline-boundary";
+    var listen = AllocateListenAddress();
+    var port = int.Parse(
+        listen[(listen.LastIndexOf(':') + 1)..],
+        System.Globalization.CultureInfo.InvariantCulture);
+    var directory = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-deadline-{Guid.NewGuid():N}");
+
+    try
+    {
+      var options = new BlokServerOptions
+      {
+        ListenAddress = listen,
+        PublicUrl = $"http://{listen}/files",
+        StorageDirectory = directory,
+      };
+      await using var host = await StartDeadlineHostAsync(
+          listen,
+          options,
+          TimeSpan.FromMilliseconds(500));
+      using var connection = new TcpClient();
+      await connection.ConnectAsync(IPAddress.Loopback, port);
+      await using var stream = connection.GetStream();
+      var request = Encoding.ASCII.GetBytes(
+          "POST /upload HTTP/1.1\r\n" +
+          $"Host: 127.0.0.1:{port}\r\n" +
+          $"Content-Type: multipart/form-data; boundary={boundary}\r\n" +
+          "Content-Length: 100000\r\n" +
+          "Connection: close\r\n\r\n" +
+          $"--{boundary}\r\n" +
+          "Content-Disposition: form-data; name=\"file\"; filename=\"slow.bin\"\r\n" +
+          "Content-Type: application/octet-stream\r\n\r\n" +
+          "partial");
+      await stream.WriteAsync(request);
+      var response = new byte[4096];
+      using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      var received = await stream.ReadAsync(response, deadline.Token);
+
+      Assert.Contains(
+          "HTTP/1.1 504",
+          Encoding.ASCII.GetString(response, 0, received),
+          StringComparison.Ordinal);
+    }
+    finally
+    {
+      if (Directory.Exists(directory))
+      {
+        Directory.Delete(directory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task RefusesAMalformedLocalPublicUrlBeforeBinding()
+  {
+    var listen = AllocateListenAddress();
+    var port = int.Parse(
+        listen[(listen.LastIndexOf(':') + 1)..],
+        System.Globalization.CultureInfo.InvariantCulture);
+    using var process = StartProcess(
+    [
+      "--listen", listen,
+      "--public-url", "https://uploads.example/%zz",
+    ],
+    environment: null);
+    var exited = false;
+    var listenerOpened = false;
+
+    try
+    {
+      using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+      try
+      {
+        await process.WaitForExitAsync(deadline.Token);
+        exited = true;
+      }
+      catch (OperationCanceledException)
+      {
+        using var connectionDeadline =
+            new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        using var client = new TcpClient();
+
+        try
+        {
+          await client.ConnectAsync(
+              IPAddress.Loopback,
+              port,
+              connectionDeadline.Token);
+          listenerOpened = true;
+        }
+        catch (Exception error) when (
+            error is OperationCanceledException or SocketException)
+        {
+        }
+      }
+    }
+    finally
+    {
+      if (!process.HasExited)
+      {
+        process.Kill(entireProcessTree: true);
+      }
+
+      await process.WaitForExitAsync();
+    }
+
+    var standardError = await process.StandardError.ReadToEndAsync();
+    Assert.True(exited, "Host did not refuse the malformed public URL.");
+    Assert.False(listenerOpened, "Host opened a listener for the malformed public URL.");
+    Assert.Equal(1, process.ExitCode);
+    Assert.Contains("PublicUrl", standardError, StringComparison.Ordinal);
+  }
+
+  public static TheoryData<string> BaseZeroIntegerSpellings =>
+    new()
+    {
+      "16",
+      "+16",
+      "020",
+      "0o20",
+      "0x10",
+      "0b10000",
+      "1_6",
+    };
+
+  [Theory]
+  [MemberData(nameof(BaseZeroIntegerSpellings))]
+  public async Task AcceptsTheFrozenBaseZeroIntegerGrammar(string value)
+  {
+    await using var host = await StartHostAsync(
+    [
+      "--listen", AllocateListenAddress(),
+      "--storage-dir", "",
+      "--max-upload", value,
+      "--rate-limit", value,
+    ]);
+
+    using var health = await host.Client.GetAsync("/health");
+    Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+  }
+
+  public static TheoryData<string, string> InvalidBaseZeroIntegers =>
+    new()
+    {
+      { "--max-upload", "08" },
+      { "--max-upload", "1__0" },
+      { "--max-upload", "0x8000000000000000" },
+      { "--rate-limit", "0x8000000000000000" },
+    };
+
+  [Theory]
+  [MemberData(nameof(InvalidBaseZeroIntegers))]
+  public async Task RefusesInvalidOrOverflowingBaseZeroIntegers(
+      string flag,
+      string value)
+  {
+    var result = await RunHostCommandAsync(
+    [
+      "--listen", "0.0.0.0:0",
+      "--storage-dir", "",
+      flag, value,
+    ]);
+
+    Assert.Equal(2, result.ExitCode);
+    Assert.Contains(
+        $"invalid value \"{value}\" for flag -{flag[2..]}",
+        result.StandardError,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task KeepsParseAndValidationExitCodesDistinctForSignedValues()
+  {
+    var result = await RunHostCommandAsync(
+    [
+      "--listen", "127.0.0.1:0",
+      "--storage-dir", "",
+      "--max-upload", "-0x1",
+    ]);
+
+    Assert.Equal(1, result.ExitCode);
+    Assert.Contains(
+        "--max-upload must be a positive number of bytes (got -1)",
+        result.StandardError,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task AcceptsASigned64BitRateLimit()
+  {
+    await using var host = await StartHostAsync(
+    [
+      "--listen", AllocateListenAddress(),
+      "--storage-dir", "",
+      "--rate-limit", "0x80000000",
+    ]);
+
+    using var health = await host.Client.GetAsync("/health");
+    Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+  }
+
+  [Fact]
+  public async Task TreatsALeadingZeroMaximumAsOctal()
+  {
+    const int formerDefaultMaximum = 8 << 20;
+    var directory = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-octal-upload-{Guid.NewGuid():N}");
+
+    try
+    {
+      await using var host = await StartHostAsync(
+      [
+        "--listen", AllocateListenAddress(),
+        "--storage-dir", directory,
+        "--max-upload", "040000000",
+      ]);
+      using var content =
+          new ByteArrayContent(new byte[formerDefaultMaximum + 1]);
+      using var request = new HttpRequestMessage(HttpMethod.Post, "/upload")
+      {
+        Content = content,
+      };
+      request.Headers.ExpectContinue = true;
+      using var response = await host.Client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+    finally
+    {
+      if (Directory.Exists(directory))
+      {
+        Directory.Delete(directory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
+  public async Task TreatsALeadingZeroRateLimitAsOctal()
+  {
+    await using var host = await StartHostAsync(
+    [
+      "--listen", AllocateListenAddress(),
+      "--storage-dir", "",
+      "--rate-limit", "010",
+    ]);
+
+    for (var request = 1; request <= 8; request++)
+    {
+      using var accepted = await host.Client.GetAsync("/unfurl");
+      Assert.Equal(HttpStatusCode.BadRequest, accepted.StatusCode);
+    }
+
+    using var rejected = await host.Client.GetAsync("/unfurl");
+    Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+  }
+
+  [Fact]
   public async Task AcceptsEveryFlagAndLetsAnExplicitSecretOverrideTheEnvironment()
   {
     var listen = AllocateListenAddress();
@@ -546,6 +903,25 @@ public sealed class HostProcessTests
       ["BLOK_S3_ACCESS_KEY"] = "access-key",
       ["BLOK_S3_SECRET_KEY"] = "secret-key",
     };
+  }
+
+  private static async Task<WebApplication> StartDeadlineHostAsync(
+      string listenAddress,
+      BlokServerOptions options,
+      TimeSpan requestTimeout)
+  {
+    var builder = WebApplication.CreateBuilder(
+        new WebApplicationOptions { Args = [] });
+    builder.Logging.ClearProviders();
+    builder.WebHost.UseUrls($"http://{listenAddress}");
+    HostRequestTimeouts.Configure(builder, requestTimeout);
+    builder.Services.AddBlokServer(options);
+    var app = builder.Build();
+    HostRequestTimeouts.Use(app);
+    app.MapBlokServer();
+    await app.StartAsync();
+
+    return app;
   }
 
   private static async Task<RunningHost> StartHostAsync(

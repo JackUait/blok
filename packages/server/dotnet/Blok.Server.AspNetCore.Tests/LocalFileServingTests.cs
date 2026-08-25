@@ -100,6 +100,201 @@ public sealed class LocalFileServingTests : IDisposable
     Assert.Equal(expectedBody, await response.Content.ReadAsStringAsync());
   }
 
+  [Theory]
+  [InlineData("GET", "invalid range: failed to overlap\n")]
+  [InlineData("HEAD", "")]
+  public async Task RejectsAZeroLengthSuffixRangeForANonemptyFile(
+      string method,
+      string expectedBody)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, method, "bytes=-0");
+
+    Assert.Equal(HttpStatusCode.RequestedRangeNotSatisfiable, response.StatusCode);
+    Assert.Equal("bytes */10", response.Content.Headers.ContentRange?.ToString());
+    Assert.Equal(33L, response.Content.Headers.ContentLength);
+    Assert.Equal(expectedBody, await response.Content.ReadAsStringAsync());
+  }
+
+  [Theory]
+  [InlineData("GET")]
+  [InlineData("HEAD")]
+  public async Task IgnoresAZeroLengthSuffixRangeForAnEmptyFile(string method)
+  {
+    Directory.CreateDirectory(directory);
+    await File.WriteAllBytesAsync(
+        Path.Combine(directory, RangeKey),
+        [],
+        CancellationToken.None);
+    await using var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = directory;
+      options.PublicUrl = "https://uploads.example.com/files";
+    });
+    app.MapBlokServer();
+    await app.StartAsync();
+    using var client = app.GetTestClient();
+    using var response = await SendRangeAsync(client, method, "bytes=-0");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Null(response.Content.Headers.ContentRange);
+    Assert.Equal(0L, response.Content.Headers.ContentLength);
+    Assert.Equal("", await response.Content.ReadAsStringAsync());
+  }
+
+  [Theory]
+  [InlineData("GET", "0123456789")]
+  [InlineData("HEAD", "")]
+  public async Task HonorsDateRepresentationPreconditions(
+      string method,
+      string successfulBody)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    using var complete = await client.GetAsync($"/files/{RangeKey}");
+    var lastModified = Assert.IsType<DateTimeOffset>(
+        complete.Content.Headers.LastModified);
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.IfModifiedSince = lastModified;
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
+      Assert.Null(response.Content.Headers.ContentType);
+      Assert.Equal(lastModified, response.Content.Headers.LastModified);
+      Assert.Equal("", await response.Content.ReadAsStringAsync());
+    }
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.IfModifiedSince = lastModified.AddDays(-1);
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Equal(successfulBody, await response.Content.ReadAsStringAsync());
+    }
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.IfUnmodifiedSince = lastModified.AddDays(-1);
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
+      Assert.Null(response.Content.Headers.ContentType);
+      Assert.Equal("", await response.Content.ReadAsStringAsync());
+    }
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.IfUnmodifiedSince = lastModified;
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Equal(successfulBody, await response.Content.ReadAsStringAsync());
+    }
+  }
+
+  [Theory]
+  [InlineData("GET", "0123456789")]
+  [InlineData("HEAD", "")]
+  public async Task HonorsWildcardAndMismatchedEntityTagPreconditions(
+      string method,
+      string successfulBody)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.TryAddWithoutValidation("If-Match", "\"stale\"");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
+      Assert.Equal("", await response.Content.ReadAsStringAsync());
+    }
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.TryAddWithoutValidation("If-Match", "*");
+      request.Headers.IfUnmodifiedSince = DateTimeOffset.UnixEpoch;
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Equal(successfulBody, await response.Content.ReadAsStringAsync());
+    }
+
+    using (var request = new HttpRequestMessage(
+        new HttpMethod(method),
+        $"/files/{RangeKey}"))
+    {
+      request.Headers.TryAddWithoutValidation("If-None-Match", "*");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
+      Assert.Equal("", await response.Content.ReadAsStringAsync());
+    }
+
+    using (var complete = await client.GetAsync($"/files/{RangeKey}"))
+    {
+      var lastModified = Assert.IsType<DateTimeOffset>(
+          complete.Content.Headers.LastModified);
+      using var request = new HttpRequestMessage(
+          new HttpMethod(method),
+          $"/files/{RangeKey}");
+      request.Headers.TryAddWithoutValidation(
+          "If-None-Match",
+          "\"stale\"");
+      request.Headers.IfModifiedSince = lastModified;
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Equal(successfulBody, await response.Content.ReadAsStringAsync());
+    }
+  }
+
+  [Theory]
+  [InlineData("GET")]
+  [InlineData("HEAD")]
+  public async Task AppliesRepresentationPreconditionsBeforeRange(string method)
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+
+    foreach (var header in new[] { "If-Match", "If-None-Match" })
+    {
+      using var request = new HttpRequestMessage(
+          new HttpMethod(method),
+          $"/files/{RangeKey}");
+      request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(2, 5);
+      request.Headers.TryAddWithoutValidation(
+          header,
+          header == "If-Match" ? "\"stale\"" : "*");
+      using var response = await client.SendAsync(request);
+
+      Assert.Equal(
+          header == "If-Match"
+            ? HttpStatusCode.PreconditionFailed
+            : HttpStatusCode.NotModified,
+          response.StatusCode);
+      Assert.Null(response.Content.Headers.ContentRange);
+      Assert.Equal("", await response.Content.ReadAsStringAsync());
+    }
+  }
+
   [Fact]
   public async Task HonorsOnlyMatchingDateIfRangeValidators()
   {
@@ -316,7 +511,7 @@ public sealed class LocalFileServingTests : IDisposable
     await using var app = BuildApplication(options =>
     {
       options.StorageDirectory = "";
-      options.PublicUrl = "https://uploads.example.com/files";
+      options.PublicUrl = "https://uploads.example.com/%zz";
     });
     app.MapBlokServer();
     await app.StartAsync();
@@ -338,7 +533,7 @@ public sealed class LocalFileServingTests : IDisposable
     await using var app = BuildApplication(options =>
     {
       options.StorageDirectory = directory;
-      options.PublicUrl = "https://uploads.example.com/files";
+      options.PublicUrl = "https://uploads.example.com/%zz";
       options.S3Endpoint = "https://s3.example.com";
       options.S3Region = "eu-test-1";
       options.S3Bucket = "media";

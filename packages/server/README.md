@@ -18,16 +18,23 @@ Register the services, use your application's authorization policy, and map the 
 using Blok.Server.AspNetCore;
 
 builder.Services
-  .AddBlokServer()
+  .AddBlokServer(options =>
+  {
+    options.StorageDirectory = "./blok-uploads";
+    options.PublicUrl = "https://uploads.example.com/files";
+    options.UnfurlDisabled = false;
+  })
   .UseAuthorization<MyBlokAuthorization>();
 
 var app = builder.Build();
 
-app.MapBlokServer("/api/blok");
+app.MapBlokServer("/api/blok").RequireAuthorization();
 app.Run();
 ```
 
-`MyBlokAuthorization` implements `IBlokAuthorization`, so access stays tied to the users already signed in to your app. `AddBlokServer(options => { ... })` also accepts the same storage, origin, upload-limit, and unfurl settings used by the standalone host.
+The mapped group uses your ASP.NET Core authorization policy for the current upload and unfurl routes. Health and validated CORS preflight remain anonymous. `IBlokAuthorization` is the document/database permission seam for later document routes; it is not called for uploads or unfurling.
+
+In-process defaults expose health only. Storage and outbound routes must be enabled explicitly, and local storage requires an explicit valid `PublicUrl`. `AddBlokServer(options => { ... })` also accepts the origin, upload-limit, and S3 settings used by the standalone host.
 
 ## Standalone
 

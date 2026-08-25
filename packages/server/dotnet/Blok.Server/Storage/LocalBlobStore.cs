@@ -35,13 +35,22 @@ internal sealed class LocalBlobStore(
 
     try
     {
-      temporaryFile = new FileStream(
-          temporaryPath,
-          FileMode.CreateNew,
-          FileAccess.Write,
-          FileShare.None,
-          CopyBufferSize,
-          FileOptions.Asynchronous);
+      var fileOptions = new FileStreamOptions
+      {
+        Access = FileAccess.Write,
+        BufferSize = CopyBufferSize,
+        Mode = FileMode.CreateNew,
+        Options = FileOptions.Asynchronous,
+        Share = FileShare.None,
+      };
+
+      if (!OperatingSystem.IsWindows())
+      {
+        fileOptions.UnixCreateMode =
+            UnixFileMode.UserRead | UnixFileMode.UserWrite;
+      }
+
+      temporaryFile = new FileStream(temporaryPath, fileOptions);
 
       await content.CopyToAsync(
           temporaryFile,

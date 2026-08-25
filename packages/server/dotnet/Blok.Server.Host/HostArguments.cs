@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using Blok.Server.AspNetCore;
 
@@ -12,8 +11,8 @@ internal sealed record HostParseResult(
 
 internal static class HostArguments
 {
-  private const int DefaultTicketRateLimit = 60;
-  private const int AutomaticRateLimit = -1;
+  private const long DefaultTicketRateLimit = 60;
+  private const long AutomaticRateLimit = -1;
 
   internal const string Usage =
       """
@@ -56,7 +55,11 @@ internal static class HostArguments
     ArgumentNullException.ThrowIfNull(args);
     ArgumentNullException.ThrowIfNull(getEnvironmentVariable);
 
-    var options = new BlokServerOptions();
+    var options = new BlokServerOptions
+    {
+      StorageDirectory = "./blok-uploads",
+      UnfurlDisabled = false,
+    };
     var origins = "";
     var publicUrl = "";
     var rateLimit = AutomaticRateLimit;
@@ -146,7 +149,7 @@ internal static class HostArguments
           publicUrl = value;
           break;
         case "max-upload":
-          if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var maxUpload))
+          if (!TryParseBaseZeroInt64(value, out var maxUpload))
           {
             return ParseError(
                 $"invalid value \"{value}\" for flag -max-upload: parse error");
@@ -155,7 +158,7 @@ internal static class HostArguments
           options.MaxUploadBytes = maxUpload;
           break;
         case "rate-limit":
-          if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out rateLimit))
+          if (!TryParseBaseZeroInt64(value, out rateLimit))
           {
             return ParseError(
                 $"invalid value \"{value}\" for flag -rate-limit: parse error");
@@ -245,6 +248,129 @@ internal static class HostArguments
       default:
         result = false;
         return false;
+    }
+  }
+
+  private static bool TryParseBaseZeroInt64(
+      string value,
+      out long result)
+  {
+    result = 0;
+
+    if (value == "")
+    {
+      return false;
+    }
+
+    var index = 0;
+    var negative = false;
+
+    if (value[index] is '+' or '-')
+    {
+      negative = value[index] == '-';
+      index++;
+
+      if (index == value.Length)
+      {
+        return false;
+      }
+    }
+
+    var numberBase = 10;
+    var explicitPrefix = false;
+
+    if (value[index] == '0')
+    {
+      numberBase = 8;
+
+      if (index + 1 < value.Length)
+      {
+        numberBase = value[index + 1] switch
+        {
+          'b' or 'B' => 2,
+          'o' or 'O' => 8,
+          'x' or 'X' => 16,
+          _ => numberBase,
+        };
+        explicitPrefix = value[index + 1] is
+            'b' or 'B' or 'o' or 'O' or 'x' or 'X';
+
+        if (explicitPrefix)
+        {
+          index += 2;
+        }
+      }
+    }
+
+    var digitsStart = index;
+    var digitSeen = false;
+    var previousUnderscore = false;
+    var limit = negative ? 1UL << 63 : (ulong)long.MaxValue;
+    ulong magnitude = 0;
+
+    for (; index < value.Length; index++)
+    {
+      var character = value[index];
+
+      if (character == '_')
+      {
+        var followsPrefix = explicitPrefix &&
+            !digitSeen &&
+            index == digitsStart;
+        var nextDigit = index + 1 < value.Length
+          ? DigitValue(value[index + 1])
+          : -1;
+
+        if ((!digitSeen && !followsPrefix) ||
+            previousUnderscore ||
+            nextDigit < 0 ||
+            nextDigit >= numberBase)
+        {
+          return false;
+        }
+
+        previousUnderscore = true;
+        continue;
+      }
+
+      var digit = DigitValue(character);
+
+      if (digit < 0 || digit >= numberBase ||
+          magnitude > (limit - (ulong)digit) / (ulong)numberBase)
+      {
+        return false;
+      }
+
+      magnitude = magnitude * (ulong)numberBase + (ulong)digit;
+      digitSeen = true;
+      previousUnderscore = false;
+    }
+
+    if (!digitSeen)
+    {
+      return false;
+    }
+
+    if (!negative)
+    {
+      result = (long)magnitude;
+      return true;
+    }
+
+    result = magnitude == 1UL << 63
+      ? long.MinValue
+      : -(long)magnitude;
+    return true;
+
+    static int DigitValue(char character)
+    {
+      return character switch
+      {
+        >= '0' and <= '9' => character - '0',
+        >= 'a' and <= 'z' => character - 'a' + 10,
+        >= 'A' and <= 'Z' => character - 'A' + 10,
+        _ => -1,
+      };
     }
   }
 

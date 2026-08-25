@@ -171,7 +171,10 @@ public sealed class UnfurlEndpointTests
     builder.WebHost.UseTestServer();
     builder.Services.AddSingleton(fetcher);
     builder.Services.AddBlokServer(options =>
-        options.StorageDirectory = "");
+    {
+      options.StorageDirectory = "";
+      options.UnfurlDisabled = false;
+    });
 
     var app = builder.Build();
     app.MapBlokServer();

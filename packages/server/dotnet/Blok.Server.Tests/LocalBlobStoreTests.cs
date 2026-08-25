@@ -96,6 +96,39 @@ public sealed class LocalBlobStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task CreatesTheTemporaryFileOwnerOnlyWhileCopying()
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      return;
+    }
+
+    var store = CreateStore();
+    await using var content = new PausingStream("private bytes"u8.ToArray());
+    var put = store.PutAsync(
+        ".txt",
+        "text/plain",
+        content,
+        CancellationToken.None);
+
+    await content.WaitUntilPausedAsync();
+
+    try
+    {
+      var temporaryPath = Assert.Single(Directory.GetFiles(directory));
+      var mode = File.GetUnixFileMode(temporaryPath);
+      Assert.Equal(
+          UnixFileMode.UserRead | UnixFileMode.UserWrite,
+          mode & (UnixFileMode)Convert.ToInt32("777", 8));
+    }
+    finally
+    {
+      content.Resume();
+      await put;
+    }
+  }
+
+  [Fact]
   public async Task RemovesTheTemporaryFileWhenTheInputFails()
   {
     var store = CreateStore();

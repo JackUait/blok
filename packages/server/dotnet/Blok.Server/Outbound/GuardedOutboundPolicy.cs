@@ -63,6 +63,7 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
     NetworkRange.Parse("2001:db8::/32"),
     NetworkRange.Parse("2001::/32"),
     NetworkRange.Parse("fc00::/7"),
+    NetworkRange.Parse("fec0::/10"),
     NetworkRange.Parse("fe80::/10"),
     NetworkRange.Parse("ff00::/8"),
     NetworkRange.Parse("2002::/16"),

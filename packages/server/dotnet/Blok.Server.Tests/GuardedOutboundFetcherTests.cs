@@ -75,6 +75,34 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal(1, resolver.CallCount);
   }
 
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task RejectsSiteLocalDnsAnswersBeforeOpeningASocket(bool mixedAnswer)
+  {
+    var siteLocal = IPAddress.Parse("fec0::1");
+    var resolver = new SequenceDnsResolver(
+        mixedAnswer
+          ? [IPAddress.Parse("93.184.216.34"), siteLocal]
+          : [siteLocal]);
+    var policy = new RecordingOutboundPolicy(
+        new GuardedOutboundPolicy());
+    var fetcher = new GuardedOutboundFetcher(policy, resolver);
+
+    var error = await Record.ExceptionAsync(
+        async () => await fetcher.GetAsync(
+            "http://site-local.example/",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(
+        mixedAnswer ? [true, false] : [false],
+        policy.AddressDecisions);
+    var blocked = Assert.IsType<GuardedFetchException>(error);
+    Assert.Equal(GuardedFetchFailure.BlockedDestination, blocked.Failure);
+    Assert.Equal(1, resolver.CallCount);
+  }
+
   [Fact]
   public async Task ResolvesOnceAndConnectsToTheExactFirstValidatedAddress()
   {
@@ -1205,6 +1233,27 @@ public sealed class GuardedOutboundFetcherTests
             origin.Port,
             IPAddress.Loopback),
         new SequenceDnsResolver([IPAddress.Loopback]));
+  }
+
+  private sealed class RecordingOutboundPolicy(
+      IGuardedOutboundPolicy inner) : IGuardedOutboundPolicy
+  {
+    internal List<bool> AddressDecisions { get; } = [];
+
+    public GuardedTarget Validate(
+        string rawUrl,
+        Uri? baseUrl = null)
+    {
+      return inner.Validate(rawUrl, baseUrl);
+    }
+
+    public bool IsAddressAllowed(IPAddress address)
+    {
+      var allowed = inner.IsAddressAllowed(address);
+      AddressDecisions.Add(allowed);
+
+      return allowed;
+    }
   }
 
   private sealed class FixtureOutboundPolicy(

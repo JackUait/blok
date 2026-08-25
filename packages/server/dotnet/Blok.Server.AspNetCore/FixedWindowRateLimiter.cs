@@ -5,7 +5,7 @@ internal sealed class FixedWindowRateLimiter
   private static readonly TimeSpan WindowDuration = TimeSpan.FromMinutes(1);
 
   private readonly object _gate = new();
-  private readonly int _requestsPerMinute;
+  private readonly long _requestsPerMinute;
   private readonly TimeProvider _timeProvider;
   private readonly Dictionary<string, Window> _windows = [];
   private DateTimeOffset _lastSweep;
@@ -69,10 +69,10 @@ internal sealed class FixedWindowRateLimiter
     }
   }
 
-  private sealed class Window(DateTimeOffset start, int count)
+  private sealed class Window(DateTimeOffset start, long count)
   {
     public DateTimeOffset Start { get; } = start;
 
-    public int Count { get; set; } = count;
+    public long Count { get; set; } = count;
   }
 }

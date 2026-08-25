@@ -102,6 +102,7 @@ public sealed class GuardedOutboundPolicyTests
         "3fff::1",
         "5f00::1",
         "fc00::1",
+        "fec0::1",
         "fe80::1",
         "ff00::1",
       };

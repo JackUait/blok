@@ -102,6 +102,53 @@ public sealed class UploadEndpointTests
   }
 
   [Fact]
+  public async Task CreatesTheEndpointSpoolOwnerOnlyWhileStorageIsBlocked()
+  {
+    if (OperatingSystem.IsWindows())
+    {
+      return;
+    }
+
+    var existingSpools = Directory
+        .GetFiles(Path.GetTempPath(), ".blok-upload-*")
+        .ToHashSet(StringComparer.Ordinal);
+    var store = new RecordingBlobStore
+    {
+      WaitForRelease = true,
+    };
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var body = BuildMultipart(
+        new MultipartPart(
+            "file",
+            "private.bin",
+            "application/octet-stream",
+            "private endpoint bytes"u8.ToArray()));
+    using var request = CreateUploadRequest(body);
+    var responseTask = client.SendAsync(request);
+
+    await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+    try
+    {
+      var temporaryPath = Assert.Single(
+          Directory.GetFiles(Path.GetTempPath(), ".blok-upload-*"),
+          path => !existingSpools.Contains(path));
+      var mode = File.GetUnixFileMode(temporaryPath);
+      Assert.Equal(
+          UnixFileMode.UserRead | UnixFileMode.UserWrite,
+          mode & (UnixFileMode)Convert.ToInt32("777", 8));
+    }
+    finally
+    {
+      store.Release.TrySetResult();
+    }
+
+    using var response = await responseTask;
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+  }
+
+  [Fact]
   public async Task OmitsEmptyFileNameSizeAndMimeTypeFromTheResponse()
   {
     var store = new RecordingBlobStore();
@@ -225,6 +272,61 @@ public sealed class UploadEndpointTests
     }
 
     Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task AcceptsOneThousandMultipartSectionsAndRejectsTheNext()
+  {
+    var acceptedParts = new List<MultipartPart>
+    {
+      new("file", "accepted.txt", "text/plain", "accepted"u8.ToArray()),
+    };
+    acceptedParts.AddRange(Enumerable.Range(1, 999).Select(index =>
+        new MultipartPart(
+            $"field-{index}",
+            null,
+            null,
+            Array.Empty<byte>())));
+    var acceptedStore = new RecordingBlobStore();
+    await using (var app = await StartApplication(acceptedStore))
+    {
+      using var client = app.GetTestClient();
+      using var response = await client.SendAsync(
+          CreateUploadRequest(BuildMultipart([.. acceptedParts])));
+
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      Assert.Single(acceptedStore.Puts);
+    }
+
+    var existingSpools = Directory
+        .GetFiles(Path.GetTempPath(), ".blok-upload-*")
+        .ToHashSet(StringComparer.Ordinal);
+    var rejectedParts = new List<MultipartPart>
+    {
+      new("file", "rejected.txt", "text/plain", "rejected"u8.ToArray()),
+    };
+    rejectedParts.AddRange(Enumerable.Range(1, 1_000).Select(index =>
+        new MultipartPart(
+            $"field-{index}",
+            null,
+            null,
+            Array.Empty<byte>())));
+    var rejectedStore = new RecordingBlobStore();
+    await using (var app = await StartApplication(rejectedStore))
+    {
+      using var client = app.GetTestClient();
+      using var response = await client.SendAsync(
+          CreateUploadRequest(BuildMultipart([.. rejectedParts])));
+
+      await AssertError(
+          response,
+          HttpStatusCode.BadRequest,
+          "malformed upload\n");
+      Assert.Equal(0, rejectedStore.PutCalls);
+      Assert.Empty(
+          Directory.GetFiles(Path.GetTempPath(), ".blok-upload-*")
+              .Except(existingSpools, StringComparer.Ordinal));
+    }
   }
 
   [Theory]
@@ -612,12 +714,17 @@ public sealed class UploadEndpointTests
 
     public bool WaitForCancellation { get; init; }
 
+    public bool WaitForRelease { get; init; }
+
     public Stream? Input { get; private set; }
 
     public TaskCompletionSource Entered { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public TaskCompletionSource Cancelled { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Release { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public async Task<string> PutAsync(
@@ -641,6 +748,11 @@ public sealed class UploadEndpointTests
           Cancelled.TrySetResult();
           throw;
         }
+      }
+
+      if (WaitForRelease)
+      {
+        await Release.Task.WaitAsync(cancellationToken);
       }
 
       using var bytes = new MemoryStream();

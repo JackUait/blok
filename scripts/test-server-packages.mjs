@@ -250,9 +250,10 @@ function assertConsumerAssets(assets) {
   );
 }
 
-function sendRequest(method, url) {
+function sendRequest(method, url, headers = {}) {
   return new Promise((resolveRequest, reject) => {
     const outgoing = request(url, {
+      headers,
       method,
       timeout: 5_000,
     }, (incoming) => {
@@ -286,7 +287,12 @@ function assertResponse(actual, expected, label) {
   }
 }
 
-async function probeEndpoints(baseUrl, prefix, expectedVersion) {
+async function probeEndpoints(
+  baseUrl,
+  prefix,
+  expectedVersion,
+  applicationAuthorization = false,
+) {
   const endpoint = (path) => new URL(`${prefix}${path}`, baseUrl);
 
   assertResponse(
@@ -319,17 +325,53 @@ async function probeEndpoints(baseUrl, prefix, expectedVersion) {
     },
     'POST /health',
   );
+  if (applicationAuthorization) {
+    const anonymous = await sendRequest('GET', endpoint('/unfurl'));
+
+    assert.equal(anonymous.status, 401, 'anonymous GET /unfurl status');
+    assertResponse(
+      await sendRequest('GET', endpoint('/unfurl'), {
+        'X-Test-User': 'signed-in',
+      }),
+      {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+        body: '{"success":0}\n',
+      },
+      'authenticated GET /unfurl',
+    );
+    assertResponse(
+      await sendRequest('OPTIONS', endpoint('/unfurl'), {
+        'Access-Control-Request-Method': 'GET',
+        Origin: 'https://app.example.test',
+      }),
+      {
+        status: 204,
+        headers: {
+          'access-control-allow-methods': 'GET, OPTIONS',
+          'access-control-allow-origin': 'https://app.example.test',
+        },
+        body: '',
+      },
+      'anonymous OPTIONS /unfurl',
+    );
+  } else {
+    assertResponse(
+      await sendRequest('GET', endpoint('/unfurl')),
+      {
+        status: 400,
+        headers: { 'content-type': 'application/json' },
+        body: '{"success":0}\n',
+      },
+      'GET /unfurl',
+    );
+  }
   assertResponse(
-    await sendRequest('GET', endpoint('/unfurl')),
-    {
-      status: 400,
-      headers: { 'content-type': 'application/json' },
-      body: '{"success":0}\n',
-    },
-    'GET /unfurl',
-  );
-  assertResponse(
-    await sendRequest('POST', endpoint('/upload')),
+    await sendRequest(
+      'POST',
+      endpoint('/upload'),
+      applicationAuthorization ? { 'X-Test-User': 'signed-in' } : {},
+    ),
     {
       status: 404,
       headers: { 'content-type': 'text/plain; charset=utf-8' },
@@ -338,7 +380,11 @@ async function probeEndpoints(baseUrl, prefix, expectedVersion) {
     'POST /upload',
   );
   assertResponse(
-    await sendRequest('GET', endpoint('/missing')),
+    await sendRequest(
+      'GET',
+      endpoint('/missing'),
+      applicationAuthorization ? { 'X-Test-User': 'signed-in' } : {},
+    ),
     {
       status: 404,
       headers: { 'content-type': 'text/plain; charset=utf-8' },
@@ -480,6 +526,7 @@ async function runAndProbe(
   environment,
   prefix,
   expectedVersion,
+  applicationAuthorization = false,
 ) {
   const port = await allocatePort();
   const baseUrl = new URL(`http://127.0.0.1:${port}`);
@@ -494,7 +541,12 @@ async function runAndProbe(
       running,
       new URL(`${prefix}/health`, baseUrl),
     );
-    await probeEndpoints(baseUrl, prefix, expectedVersion);
+    await probeEndpoints(
+      baseUrl,
+      prefix,
+      expectedVersion,
+      applicationAuthorization,
+    );
   } finally {
     await stopProcess(running);
   }
@@ -706,6 +758,7 @@ async function main() {
       { BLOK_EXPECTED_RUNTIME_SHA256: expectedRuntimeHash },
       '/api/blok',
       consumerVersion,
+      true,
     );
 
     await run('dotnet', [

@@ -12,6 +12,7 @@
   <ItemGroup>
     <AssemblyMetadata Include="BlokServerVersion" Value="$(BlokServerVersion)" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="Blok.Server.Host.Tests" />
   </ItemGroup>
 
   <ItemGroup>

@@ -21,7 +21,7 @@ internal static class LocalFileEndpoint
       return;
     }
 
-    var prefix = PublicPath(options.PublicUrl);
+    var prefix = options.LocalPublicPath;
 
     if (prefix == "")
     {
@@ -80,13 +80,18 @@ internal static class LocalFileEndpoint
       lastModified = lastModified.AddTicks(
           -(lastModified.Ticks % TimeSpan.TicksPerSecond));
 
-      context.Response.ContentType = contentType;
       context.Response.Headers.ContentDisposition = "attachment";
       context.Response.Headers.XContentTypeOptions = "nosniff";
       context.Response.Headers.LastModified = lastModified.ToString(
           "R",
           CultureInfo.InvariantCulture);
 
+      if (ApplyRepresentationPreconditions(context, lastModified))
+      {
+        return;
+      }
+
+      context.Response.ContentType = contentType;
       var rangeHeader = context.Request.Headers.Range.ToString();
 
       if (rangeHeader != "" && !IfRangeMatches(context, lastModified))
@@ -142,6 +147,71 @@ internal static class LocalFileEndpoint
           break;
       }
     }
+  }
+
+  private static bool ApplyRepresentationPreconditions(
+      HttpContext context,
+      DateTimeOffset lastModified)
+  {
+    var ifMatch = context.Request.Headers.IfMatch.ToString();
+
+    if (ifMatch != "")
+    {
+      if (!HasWildcardEntityTag(ifMatch))
+      {
+        context.Response.StatusCode =
+            StatusCodes.Status412PreconditionFailed;
+        return true;
+      }
+    }
+    else
+    {
+      var ifUnmodifiedSince =
+          context.Request.Headers.IfUnmodifiedSince.ToString();
+
+      if (HeaderUtilities.TryParseDate(
+            ifUnmodifiedSince,
+            out var unmodifiedSince) &&
+          lastModified > unmodifiedSince)
+      {
+        context.Response.StatusCode =
+            StatusCodes.Status412PreconditionFailed;
+        return true;
+      }
+    }
+
+    var ifNoneMatch = context.Request.Headers.IfNoneMatch.ToString();
+
+    if (ifNoneMatch != "")
+    {
+      if (HasWildcardEntityTag(ifNoneMatch))
+      {
+        context.Response.StatusCode = StatusCodes.Status304NotModified;
+        return true;
+      }
+
+      return false;
+    }
+
+    var ifModifiedSince =
+        context.Request.Headers.IfModifiedSince.ToString();
+
+    if (HeaderUtilities.TryParseDate(
+          ifModifiedSince,
+          out var modifiedSince) &&
+        lastModified <= modifiedSince)
+    {
+      context.Response.StatusCode = StatusCodes.Status304NotModified;
+      return true;
+    }
+
+    return false;
+  }
+
+  private static bool HasWildcardEntityTag(string value)
+  {
+    return value.Split(',')
+        .Any(candidate => candidate.Trim() == "*");
   }
 
   private static bool IfRangeMatches(
@@ -207,6 +277,13 @@ internal static class LocalFileEndpoint
         }
 
         suffixLength = Math.Min(suffixLength, fileLength);
+
+        if (suffixLength == 0)
+        {
+          noOverlap = true;
+          continue;
+        }
+
         ranges.Add(new ByteRange(
             fileLength - suffixLength,
             suffixLength));
@@ -405,21 +482,6 @@ internal static class LocalFileEndpoint
     {
       return $"bytes {Start}-{Start + Length - 1}/{fileLength}";
     }
-  }
-
-  private static string PublicPath(string publicUrl)
-  {
-    if (Uri.TryCreate(publicUrl, UriKind.Absolute, out var absolute))
-    {
-      return absolute.AbsolutePath.TrimEnd('/');
-    }
-
-    var suffixStart = publicUrl.IndexOfAny(['?', '#']);
-    var relativePath = suffixStart < 0
-      ? publicUrl
-      : publicUrl[..suffixStart];
-
-    return relativePath.TrimEnd('/');
   }
 
   private static bool IsDirectFileName(string fileName)

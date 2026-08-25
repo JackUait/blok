@@ -19,8 +19,11 @@ public static class BlokServerEndpointRouteBuilderExtensions
     LocalFileEndpoint.Map(endpoints, options);
     var routes = endpoints.MapGroup(pattern);
 
-    routes.MapMethods("/health", ["GET", "HEAD"], HandleHealth);
-    routes.Map("/health", context => HandleMethodNotAllowed(context, "GET, HEAD")).WithOrder(1);
+    routes.MapMethods("/health", ["GET", "HEAD"], HandleHealth)
+        .AllowAnonymous();
+    routes.Map("/health", context => HandleMethodNotAllowed(context, "GET, HEAD"))
+        .WithOrder(1)
+        .AllowAnonymous();
 
     if (!options.UnfurlDisabled)
     {
@@ -54,7 +57,8 @@ public static class BlokServerEndpointRouteBuilderExtensions
     routes.MapMethods(
         pattern,
         ["OPTIONS"],
-        context => HandlePreflight(context, method));
+        context => HandlePreflight(context, method))
+        .AllowAnonymous();
 
     var allowedMethods = method == "GET"
       ? "GET, HEAD, OPTIONS"

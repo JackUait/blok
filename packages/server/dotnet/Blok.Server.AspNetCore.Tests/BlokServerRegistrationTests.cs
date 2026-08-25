@@ -1,11 +1,16 @@
+using System.Net;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Blok.Server.AspNetCore.Tests;
@@ -75,6 +80,25 @@ public sealed class BlokServerRegistrationTests
 
     using var provider = services.BuildServiceProvider();
     Assert.IsType<AllowAllAuthorization>(provider.GetRequiredService<IBlokAuthorization>());
+  }
+
+  [Fact]
+  public void RequiresAnExplicitValidPublicUrlForLocalStorage()
+  {
+    var services = new ServiceCollection();
+
+    var missing = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.StorageDirectory = "/local/storage"));
+    Assert.Contains("PublicUrl", missing.Message, StringComparison.Ordinal);
+
+    var malformed = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.StorageDirectory = "/local/storage";
+          options.PublicUrl = "https://uploads.example/%zz";
+        }));
+    Assert.Contains("PublicUrl", malformed.Message, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -189,6 +213,68 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public async Task ApplicationAuthorizationProtectsGuardedRoutesOnly()
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services
+        .AddAuthentication("test")
+        .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+            "test",
+            _ => { });
+    builder.Services.AddAuthorization();
+    builder.Services.AddBlokServer(options =>
+    {
+      options.AllowedOrigins = ["https://app.example.test"];
+      options.UnfurlDisabled = false;
+    });
+    await using var app = builder.Build();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapBlokServer("/blok").RequireAuthorization();
+    await app.StartAsync();
+    using var client = app.GetTestClient();
+
+    using var anonymous = await client.GetAsync("/blok/unfurl");
+    Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+
+    using var authenticatedRequest = new HttpRequestMessage(
+        HttpMethod.Get,
+        "/blok/unfurl");
+    authenticatedRequest.Headers.Add("X-Test-User", "signed-in");
+    using var authenticated = await client.SendAsync(authenticatedRequest);
+    Assert.Equal(HttpStatusCode.BadRequest, authenticated.StatusCode);
+    Assert.Equal(
+        "{\"success\":0}\n",
+        await authenticated.Content.ReadAsStringAsync());
+
+    using var health = await client.GetAsync("/blok/health");
+    Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+
+    using var preflightRequest = new HttpRequestMessage(
+        HttpMethod.Options,
+        "/blok/unfurl");
+    preflightRequest.Headers.Add("Origin", "https://app.example.test");
+    preflightRequest.Headers.Add("Access-Control-Request-Method", "GET");
+    using var preflight = await client.SendAsync(preflightRequest);
+    Assert.Equal(HttpStatusCode.NoContent, preflight.StatusCode);
+  }
+
+  [Fact]
+  public async Task BareDefaultsMapOnlySafeRoutes()
+  {
+    await using var app = BuildApplication(
+        _ => { },
+        enableGuardedRoutes: false);
+    app.MapBlokServer("/blok");
+
+    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(app, "/blok/health"));
+    Assert.Empty(GetMethods(app, "/blok/unfurl"));
+    Assert.Empty(GetMethods(app, "/blok/upload"));
+    Assert.Empty(GetMethods(app, "/blok/upload-by-url"));
+  }
+
+  [Fact]
   public async Task RegistersOnlyRoutesWhoseDependenciesAreEnabled()
   {
     await using var enabled = BuildApplication(_ => { });
@@ -290,11 +376,23 @@ public sealed class BlokServerRegistrationTests
     }
   }
 
-  private static WebApplication BuildApplication(Action<BlokServerOptions> configure)
+  private static WebApplication BuildApplication(
+      Action<BlokServerOptions> configure,
+      bool enableGuardedRoutes = true)
   {
     var builder = WebApplication.CreateBuilder();
     builder.WebHost.UseTestServer();
-    builder.Services.AddBlokServer(configure);
+    builder.Services.AddBlokServer(options =>
+    {
+      if (enableGuardedRoutes)
+      {
+        options.StorageDirectory = "./blok-uploads";
+        options.PublicUrl = "http://127.0.0.1:4000/files";
+        options.UnfurlDisabled = false;
+      }
+
+      configure(options);
+    });
 
     return builder.Build();
   }
@@ -308,6 +406,31 @@ public sealed class BlokServerRegistrationTests
         .SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [])
         .Order()
         .ToArray();
+  }
+
+  private sealed class HeaderAuthenticationHandler(
+      IOptionsMonitor<AuthenticationSchemeOptions> options,
+      ILoggerFactory logger,
+      UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(
+          options,
+          logger,
+          encoder)
+  {
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+      if (!Request.Headers.ContainsKey("X-Test-User"))
+      {
+        return Task.FromResult(AuthenticateResult.NoResult());
+      }
+
+      var identity = new ClaimsIdentity(
+          [new Claim(ClaimTypes.NameIdentifier, "signed-in")],
+          Scheme.Name);
+      var principal = new ClaimsPrincipal(identity);
+      var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+      return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
   }
 
   private sealed class StubGuardedFetcher : IGuardedOutboundFetcher

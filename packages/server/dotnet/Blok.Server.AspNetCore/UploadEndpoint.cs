@@ -14,6 +14,7 @@ namespace Blok.Server.AspNetCore;
 internal static class UploadEndpoint
 {
   private const int CopyBufferSize = 81920;
+  private const int MaximumMultipartSections = 1_000;
 
   internal static async Task HandleAsync(HttpContext context)
   {
@@ -63,10 +64,19 @@ internal static class UploadEndpoint
                 4096,
                 Encoding.UTF8.GetByteCount(boundary) + 8));
         MultipartSection? section;
+        var sectionCount = 0;
 
         while ((section = await reader.ReadNextSectionAsync(
                    context.RequestAborted)) is not null)
         {
+          sectionCount++;
+
+          if (sectionCount > MaximumMultipartSections)
+          {
+            throw new InvalidDataException(
+                "multipart section limit exceeded");
+          }
+
           var content = IsQuotedPrintable(section)
             ? new QuotedPrintableReadStream(section.Body)
             : section.Body;
@@ -84,13 +94,23 @@ internal static class UploadEndpoint
           temporaryPath = Path.Combine(
               Path.GetTempPath(),
               $".blok-upload-{Guid.NewGuid():N}");
-          temporaryFile = new FileStream(
-              temporaryPath,
-              FileMode.CreateNew,
-              FileAccess.ReadWrite,
-              FileShare.None,
-              CopyBufferSize,
-              FileOptions.Asynchronous | FileOptions.SequentialScan);
+          var fileOptions = new FileStreamOptions
+          {
+            Access = FileAccess.ReadWrite,
+            BufferSize = CopyBufferSize,
+            Mode = FileMode.CreateNew,
+            Options = FileOptions.Asynchronous |
+                FileOptions.SequentialScan,
+            Share = FileShare.None,
+          };
+
+          if (!OperatingSystem.IsWindows())
+          {
+            fileOptions.UnixCreateMode =
+                UnixFileMode.UserRead | UnixFileMode.UserWrite;
+          }
+
+          temporaryFile = new FileStream(temporaryPath, fileOptions);
           await content.CopyToAsync(
               temporaryFile,
               CopyBufferSize,

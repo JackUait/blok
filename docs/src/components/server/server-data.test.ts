@@ -42,8 +42,13 @@ describe('server docs data', () => {
     expect(samples.some((sample) => sample.language === 'csharp')).toBe(true);
     expect(code).toContain('dotnet add package Blok.Server.AspNetCore');
     expect(code).toContain('AddBlokServer');
+    expect(code).toContain('StorageDirectory');
+    expect(code).toContain('PublicUrl');
+    expect(code).toContain('UnfurlDisabled = false');
     expect(code).toContain('UseAuthorization<');
-    expect(code).toContain('MapBlokServer');
+    expect(code).toContain('MapBlokServer("/api/blok").RequireAuthorization()');
+    expect(dotnet?.description).toMatch(/application.*authorization policy/i);
+    expect(dotnet?.description).toMatch(/IBlokAuthorization.*document/i);
     expect(code).not.toContain('UseMySql');
   });
 

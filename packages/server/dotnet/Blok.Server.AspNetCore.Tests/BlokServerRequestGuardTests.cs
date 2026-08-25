@@ -413,7 +413,7 @@ public sealed class BlokServerRequestGuardTests
 
   private static async Task<WebApplication> StartApplication(
       string auth,
-      int rateLimit,
+      long rateLimit,
       bool storageEnabled = false,
       TimeProvider? timeProvider = null)
   {
@@ -427,6 +427,10 @@ public sealed class BlokServerRequestGuardTests
       options.AllowedOrigins = [AllowedOrigin];
       options.RateLimitPerMinute = rateLimit;
       options.StorageDirectory = storageEnabled ? "./blok-uploads" : "";
+      options.PublicUrl = storageEnabled
+        ? "http://127.0.0.1:4000/files"
+        : "";
+      options.UnfurlDisabled = false;
     });
 
     if (timeProvider is not null)

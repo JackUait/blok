@@ -3,6 +3,8 @@ using Blok.Server.AspNetCore;
 using Blok.Server.Host;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -65,6 +67,7 @@ var listenAddress = options.ListenAddress.StartsWith(':')
   ? $"0.0.0.0{options.ListenAddress}"
   : options.ListenAddress;
 builder.WebHost.UseUrls($"http://{listenAddress}");
+HostRequestTimeouts.Configure(builder, TimeSpan.FromMinutes(10));
 var blokServer = builder.Services.AddBlokServer(options);
 #if BLOK_SERVER_CONFORMANCE
 if (conformance.Origin is not null)
@@ -76,6 +79,7 @@ if (conformance.Origin is not null)
 #endif
 
 var app = builder.Build();
+HostRequestTimeouts.Use(app);
 app.MapBlokServer();
 
 Console.Error.WriteLine(
@@ -90,4 +94,34 @@ catch (Exception error)
 {
   Console.Error.WriteLine($"blok-server refused to start: {error.Message}");
   return 1;
+}
+
+namespace Blok.Server.Host
+{
+  internal static class HostRequestTimeouts
+  {
+    internal static void Configure(
+        WebApplicationBuilder builder,
+        TimeSpan timeout)
+    {
+      builder.WebHost.ConfigureKestrel(kestrel =>
+      {
+        kestrel.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10);
+        kestrel.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+      });
+      builder.Services.AddRequestTimeouts(timeouts =>
+      {
+        timeouts.DefaultPolicy = new RequestTimeoutPolicy
+        {
+          Timeout = timeout,
+          TimeoutStatusCode = StatusCodes.Status504GatewayTimeout,
+        };
+      });
+    }
+
+    internal static void Use(WebApplication app)
+    {
+      app.UseRequestTimeouts();
+    }
+  }
 }

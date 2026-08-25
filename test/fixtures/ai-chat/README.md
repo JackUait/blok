@@ -67,22 +67,29 @@ Capturing Claude needs a **headed** browser (`playwright-cli open --persistent
 --headed`). Headless sits on the Cloudflare interstitial forever; headed clears
 the JS challenge on its own, with no login and no interaction.
 
-- **Claude's answers are already semantic HTML** — `<p>`, `<ul>`/`<ol>` with
-  text directly in `<li>` (no `<p>` wrapper), `<h3>`/`<h4>`, `<blockquote>`,
-  `<table><thead><th scope>`, `<pre><code>`, `<strong>`, inline `<code>`. That
-  is why there is still no Claude branch: there is nothing to rewrite.
+- **Claude's prose is already semantic HTML** — `<p>`, `<ul>`/`<ol>` with text
+  directly in `<li>` (no `<p>` wrapper), `<h3>`/`<h4>`, `<blockquote>`,
+  `<table><thead><th scope>`, `<pre><code>`, `<strong>`, inline `<code>`. All of
+  that needs no rewrite. Two constructs do, which is why "no Claude branch" is a
+  scoping decision and not a claim that the payload is clean:
+- **A code block sheds its language as loose text.** The label sits in a `<div>`
+  that is a SIBLING of the `<pre>`, inside a wrapper the sanitizer unwraps, so
+  running `claude-code.html` through preprocess + the real `clean()` yields
+  `<br>python<pre><code>…` — Gemini's stray "SQL" line in a different app. The
+  code itself survives intact; the language is not carried onto the block.
 - **The LaTeX source does NOT survive the clipboard.** The live page has
   `<annotation encoding="application/x-tex">` on every formula; the payload has
   zero (`grep -c annotation claude-math.html` → 0). What arrives is presentation
-  MathML plus the `aria-hidden` KaTeX layout — so a pasted formula doubles its
-  own visible text. This is the one known gap.
+  MathML BESIDE the `aria-hidden` KaTeX layout, and both are made of tags the
+  sanitizer keeps, so every formula doubles: `X∣n ∼ Gamma(n+1,p)X∣n∼Gamma(n+1,p)`.
+  Dropping the `aria-hidden` half would halve it; nothing recovers the TeX.
 - **Detect on `font-claude-response-body`**, which is on every `<p>` and `<li>`
   and so survives a partial selection. `standard-markdown` sits on the message
   wrapper and is lost when the selection starts mid-answer.
-- **Code language rides on `<code class="language-python">`**, and again as a
+- **Code language rides on `<code class="language-python">`**, and again as the
   label div above the block; an unlabelled block has neither, plus
-  `aria-label="Code"`. Blok does not read either today, so a pasted Claude code
-  block keeps its text and loses its language.
+  `aria-label="Code"`. Blok reads neither today — the class is stripped, and the
+  div is what becomes the stray line above.
 - Chrome's serializer — not claude.ai — adds `<span> </span>` around inter-element
   spaces and `<br class="Apple-interchange-newline"`. Verified against the live DOM.
 - **Unverified, absent from every sample:** links, `<hr>`, nested lists, `<em>`,

@@ -230,12 +230,92 @@ describe('server release wiring', () => {
     expect(publishDraft).toBeGreaterThan(observable);
   });
 
+  it('dispatches tagged docs deployment after publishing the release', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const job = workflow.jobs['release-server'];
+    const steps = job?.steps ?? [];
+    const publishIndex = steps.findIndex(
+      (step) => step.name === 'Publish the draft GitHub release',
+    );
+    const dispatchIndex = steps.findIndex(
+      (step) => step.name === 'Deploy docs from the release tag',
+    );
+    const dispatch = steps[dispatchIndex];
+
+    expect(job?.permissions).toMatchObject({ actions: 'write' });
+    expect(dispatch?.run).toContain('gh workflow run deploy-docs.yml');
+    expect(dispatch?.run).toContain('--ref "$GITHUB_REF_NAME"');
+    expect(dispatch?.run).toContain(
+      '-f release_tag="$GITHUB_REF_NAME"',
+    );
+    expect(dispatchIndex).toBeGreaterThan(publishIndex);
+  });
+
+  it('publishes latest only for stable server versions', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+    const build = steps.find(
+      (step) => step.name === 'Build and smoke linux/amd64 image',
+    )?.run ?? '';
+    const push = steps.find(
+      (step) => step.name === 'Push linux/amd64 image',
+    )?.run ?? '';
+
+    expect(build).toContain(
+      'image_tags=(--tag "$image:$BLOK_SERVER_VERSION")',
+    );
+    expect(build).toContain(
+      'if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then',
+    );
+    expect(build).toContain(
+      'image_tags+=(--tag "$image:latest")',
+    );
+    expect(build).toContain('"${image_tags[@]}"');
+    expect(push).toContain('docker push "$image:$BLOK_SERVER_VERSION"');
+    expect(push).toContain(
+      'if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then',
+    );
+    expect(push).toContain('docker push "$image:latest"');
+  });
+
+  it('requires the unsafe image smoke to refuse quickly and exactly', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const build = workflow.jobs['release-server']?.steps?.find(
+      (step) => step.name === 'Build and smoke linux/amd64 image',
+    )?.run ?? '';
+
+    expect(build).toContain(
+      'timeout 10s docker run --rm "$image:$BLOK_SERVER_VERSION"',
+    );
+    expect(build).toContain('unsafe_status=$?');
+    expect(build).toContain('if [ "$unsafe_status" -eq 124 ]; then');
+    expect(build).toContain('if [ "$unsafe_status" -eq 0 ]; then');
+    expect(build).toContain(
+      'if [ "$unsafe_refusal" != "$expected_refusal" ]; then',
+    );
+    expect(build).toContain(
+      'blok-server refused to start: --auth none serves anyone who can reach',
+    );
+  });
+
   it('lets the package fixture validate the exact release NuGets', () => {
     const fixture = read('scripts/test-server-packages.mjs');
+    const project = read(
+      'test/fixtures/dotnet-server-consumer/Blok.Server.Consumer.csproj',
+    );
 
     expect(fixture).toContain("argument === '--package-dir'");
     expect(fixture).toContain("argument === '--version'");
     expect(fixture).toContain('packageDirectory ??');
+    expect(fixture).toContain(
+      '`-p:BlokServerPackageVersion=${packageVersion}`',
+    );
+    expect(fixture.match(/packageVersionProperty,/g)).toHaveLength(2);
+    expect(project).toContain(
+      '<BlokServerPackageVersion Condition="\'$(BlokServerPackageVersion)\' == \'\'">0.0.0-task13</BlokServerPackageVersion>',
+    );
+    expect(project).toContain('Version="$(BlokServerPackageVersion)"');
+    expect(project).not.toContain('PackageReference Include="Blok.Server"');
   });
 
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {

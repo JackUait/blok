@@ -10,6 +10,7 @@ jobs:
     if: github.repository == 'JackUait/blok'
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
       packages: write
     steps:
@@ -111,15 +112,37 @@ jobs:
       - name: Build and smoke linux/amd64 image
         run: |
           image="ghcr.io/jackuait/blok-server"
+          image_tags=(--tag "$image:$BLOK_SERVER_VERSION")
+          if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then
+            image_tags+=(--tag "$image:latest")
+          fi
           docker build --platform linux/amd64 -f packages/server/Dockerfile \
             --build-arg BLOK_SERVER_VERSION="$BLOK_SERVER_VERSION" \
-            --tag "$image:$BLOK_SERVER_VERSION" \
-            --tag "$image:latest" \
+            "${image_tags[@]}" \
             .
 
-          if docker run --rm "$image:$BLOK_SERVER_VERSION" \
-            --listen 0.0.0.0:4000 --auth none; then
+          unsafe_log="$(mktemp)"
+          set +e
+          timeout 10s docker run --rm "$image:$BLOK_SERVER_VERSION" \
+            --listen 0.0.0.0:4000 --auth none >"$unsafe_log" 2>&1
+          unsafe_status=$?
+          set -e
+
+          if [ "$unsafe_status" -eq 124 ]; then
+            echo "::error::unsafe configuration smoke timed out"
+            cat "$unsafe_log"
+            exit 1
+          fi
+          if [ "$unsafe_status" -eq 0 ]; then
             echo "::error::public unauthenticated configuration started"
+            exit 1
+          fi
+          unsafe_refusal="$(cat "$unsafe_log")"
+          rm -f "$unsafe_log"
+          expected_refusal='blok-server refused to start: --auth none serves anyone who can reach "0.0.0.0:4000" (which binds every network interface); it may only bind loopback — use --listen 127.0.0.1:PORT, or --auth ticket to expose this service'
+          if [ "$unsafe_refusal" != "$expected_refusal" ]; then
+            echo "::error::unsafe configuration failed for an unexpected reason"
+            printf '%s\n' "$unsafe_refusal"
             exit 1
           fi
 
@@ -151,7 +174,9 @@ jobs:
         run: |
           image="ghcr.io/jackuait/blok-server"
           docker push "$image:$BLOK_SERVER_VERSION"
-          docker push "$image:latest"
+          if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then
+            docker push "$image:latest"
+          fi
 
       - name: Verify published server delivery
         env:
@@ -200,3 +225,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false
+
+      - name: Deploy docs from the release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy-docs.yml \
+            --ref "$GITHUB_REF_NAME" \
+            -f release_tag="$GITHUB_REF_NAME"

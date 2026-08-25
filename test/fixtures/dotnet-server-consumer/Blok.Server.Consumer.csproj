@@ -5,10 +5,11 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
+    <BlokServerPackageVersion Condition="'$(BlokServerPackageVersion)' == ''">0.0.0-task13</BlokServerPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Blok.Server.AspNetCore"
-                      Version="0.0.0-task13" />
+                      Version="$(BlokServerPackageVersion)" />
   </ItemGroup>
 </Project>

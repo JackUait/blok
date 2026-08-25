@@ -714,6 +714,8 @@ async function main() {
       `-p:BaseIntermediateOutputPath=${withTrailingSeparator(fixtureIntermediate)}`;
     const outputProperty =
       `-p:BaseOutputPath=${withTrailingSeparator(fixtureOutput)}`;
+    const packageVersionProperty =
+      `-p:BlokServerPackageVersion=${packageVersion}`;
 
     await run('dotnet', [
       'restore',
@@ -726,6 +728,7 @@ async function main() {
       '--force-evaluate',
       intermediateProperty,
       outputProperty,
+      packageVersionProperty,
     ]);
 
     const assets = JSON.parse(
@@ -743,6 +746,7 @@ async function main() {
       '-p:ContinuousIntegrationBuild=true',
       intermediateProperty,
       outputProperty,
+      packageVersionProperty,
     ]);
 
     const executableSuffix = process.platform === 'win32' ? '.exe' : '';

@@ -55,7 +55,7 @@ internal static class BlobKey
     return extension.ToLowerInvariant();
   }
 
-  private static bool IsGenerated(string key)
+  internal static bool IsGenerated(string key)
   {
     if (key.Length < HexLength)
     {

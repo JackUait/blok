@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Blok.Server.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -42,7 +43,7 @@ internal static class LocalFileEndpoint
       string directory,
       string fileName)
   {
-    if (!IsDirectFileName(fileName))
+    if (!IsDirectFileName(fileName) || !BlobKey.IsGenerated(fileName))
     {
       await NotFoundAsync(context);
       return;

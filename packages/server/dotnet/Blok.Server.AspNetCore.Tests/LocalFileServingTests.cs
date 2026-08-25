@@ -415,6 +415,34 @@ public sealed class LocalFileServingTests : IDisposable
     Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync());
   }
 
+  [Theory]
+  [InlineData(".env")]
+  [InlineData("config.json")]
+  public async Task RefusesPreExistingFilesOutsideTheGeneratedKeyGrammar(
+      string fileName)
+  {
+    Directory.CreateDirectory(directory);
+    await File.WriteAllTextAsync(
+        Path.Combine(directory, fileName),
+        "private configuration",
+        CancellationToken.None);
+    await using var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = directory;
+      options.PublicUrl = "https://uploads.example.com/files";
+    });
+    app.MapBlokServer();
+    await app.StartAsync();
+
+    using var client = app.GetTestClient();
+    using var response = await client.GetAsync($"/files/{fileName}");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    Assert.Equal(
+        "404 page not found\n",
+        await response.Content.ReadAsStringAsync());
+  }
+
   [Fact]
   public async Task DoesNotSniffAnExtensionlessFileAsHtml()
   {

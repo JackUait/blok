@@ -32,11 +32,21 @@ describe('docs deployment workflow', () => {
 
   it('deploys on published releases, manual runs, and main pushes', () => {
     expect(workflow.on.release).toEqual({ types: ['published'] });
-    expect(workflow.on).toHaveProperty('workflow_dispatch');
+    expect(workflow.on.workflow_dispatch).toEqual({
+      inputs: {
+        release_tag: {
+          description: 'Release tag to verify and deploy',
+          required: false,
+          type: 'string',
+        },
+      },
+    });
   });
 
   it('skips release verification for docs-only deployments', () => {
-    expect(workflow.jobs['verify-release'].if).toBe("github.event_name == 'release'");
+    expect(workflow.jobs['verify-release'].if).toBe(
+      "github.event_name == 'release' || inputs.release_tag != ''",
+    );
     expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
     // A skipped `needs` job skips its dependents unless the dependent's own `if`
     // accepts that result, so the build must treat a skipped verify-release as OK.
@@ -48,27 +58,38 @@ describe('docs deployment workflow', () => {
     );
   });
 
-  it('verifies the package family before building the docs release', () => {
+  it('verifies the selected release tag before building docs', () => {
+    const checkout = workflow.jobs['verify-release'].steps?.find(
+      (step) => step.uses === 'actions/checkout@v4',
+    );
     const verification = workflow.jobs['verify-release'].steps?.find(
       (step) => step.name === 'Verify published package family',
     );
+    const selectedRef =
+      "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}";
 
+    expect(checkout?.with?.ref).toBe(selectedRef);
     expect(verification).toMatchObject({
       run: 'node scripts/verify-docs-release.mjs "$RELEASE_TAG"',
       env: {
-        RELEASE_TAG: '${{ github.event.release.tag_name }}',
+        RELEASE_TAG:
+          "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}",
       },
     });
   });
 
-  it('builds the release tag for releases and the triggering ref otherwise', () => {
-    const checkout = workflow.jobs.build.steps?.find(
+  it('tests and builds the selected tag without changing ordinary manual refs', () => {
+    const docsTestCheckout = workflow.jobs['docs-tests'].steps?.find(
       (step) => step.uses === 'actions/checkout@v4',
     );
-
-    expect(checkout?.with?.ref).toBe(
-      "${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}",
+    const buildCheckout = workflow.jobs.build.steps?.find(
+      (step) => step.uses === 'actions/checkout@v4',
     );
+    const selectedRef =
+      "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}";
+
+    expect(docsTestCheckout?.with?.ref).toBe(selectedRef);
+    expect(buildCheckout?.with?.ref).toBe(selectedRef);
   });
 
   it('publishes the docs build without the library dist', () => {

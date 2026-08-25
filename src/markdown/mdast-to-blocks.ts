@@ -2,6 +2,7 @@ import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, R
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
 import { phrasingToHtml } from './phrasing-to-html';
+import { normalizeFenceLang } from './fence-language';
 
 /**
  * Creates a scoped ID generator. Each call to mdastToBlocks gets a fresh generator.
@@ -106,9 +107,13 @@ function handleBuiltInNode(
   }
 
   if (node.type === 'code') {
+    const rawLang = node.lang ?? '';
+
     return [makeBlock('code', {
       code: node.value,
-      language: node.lang ?? 'plain text',
+      // Unknown languages keep their raw label rather than collapsing to
+      // "plain text" — the fence still says what the snippet is.
+      language: normalizeFenceLang(rawLang) ?? (rawLang || 'plain text'),
     }, generateId)];
   }
 
@@ -245,7 +250,12 @@ function handleList(
   const blocks: OutputBlockData[] = [];
 
   for (const [index, item] of list.children.entries()) {
-    blocks.push(...handleListItem(item, list, config, depth, index, generateId));
+    // Blok's list is flat: a non-list block already emitted for this list ends
+    // the numbering run (ListMarkerCalculator stops counting at a foreign
+    // block), so the items after it must carry their own `start`.
+    const runInterrupted = blocks.some((block) => block.type !== 'list');
+
+    blocks.push(...handleListItem(item, list, config, depth, index, generateId, runInterrupted));
   }
 
   return blocks;
@@ -266,6 +276,7 @@ function handleListItem(
   depth: number,
   index: number,
   generateId: () => string,
+  runInterrupted: boolean,
 ): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
   const isChecklist = item.checked !== null && item.checked !== undefined;
@@ -283,16 +294,26 @@ function handleListItem(
     data.checked = item.checked;
   }
 
-  if (list.ordered && index === 0 && list.start !== null && list.start !== undefined && list.start !== 1) {
-    data.start = list.start;
+  const startValue = (list.start ?? 1) + index;
+
+  if (list.ordered && (index === 0 ? startValue !== 1 : runInterrupted)) {
+    data.start = startValue;
   }
 
   blocks.push(makeBlock('list', data, generateId));
 
-  // Process nested lists (increase depth)
+  // Everything else in the item becomes sibling blocks in document order.
+  // Skipped by identity, not by type: a SECOND paragraph is real content.
+  // listDepth is depth + 1 so a nested list keeps indenting.
   for (const child of item.children) {
-    if (child.type === 'list') {
-      blocks.push(...handleList(child, config, depth + 1, generateId));
+    if (child === paragraphChild) {
+      continue;
+    }
+
+    const childBlocks = convertNode(child, config, depth + 1, generateId);
+
+    if (childBlocks) {
+      blocks.push(...childBlocks);
     }
   }
 

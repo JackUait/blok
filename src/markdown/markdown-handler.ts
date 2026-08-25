@@ -1,4 +1,5 @@
 import type { BlokModules } from '../types-internal/blok-modules';
+import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { SanitizerConfigBuilder } from '../components/modules/paste/sanitizer-config';
 import type { ToolRegistry } from '../components/modules/paste/tool-registry';
 import type { HandlerContext } from '../components/modules/paste/types';
@@ -18,6 +19,7 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /^- \[[ x]\]/m,                  // Task list items: - [ ] or - [x]
   /^[ \t]*[-*+][ \t]+\S/m,         // Unordered list item: - / * / + marker + content
   /^[ \t]*\d{1,9}[.)][ \t]+\S/m,  // Ordered list item: 1. / 1) marker + content
+  /^ {0,3}> \S/m,                  // Blockquote: `> text` (a space then content, so `->`/`=>`/`>>>` never match)
   /\[.+?\]\(.+?\)/,               // Markdown links: [text](url)
   /\*\*.+?\*\*/,                   // Bold: **text**
   /!\[/,                           // Image: ![
@@ -67,10 +69,9 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
       return false;
     }
 
-    const { markdownToBlocks } = await import('./index');
-    const rawOutputBlocks = await markdownToBlocks(data);
+    const rawOutputBlocks = await this.convert(data);
 
-    if (!rawOutputBlocks.length) {
+    if (rawOutputBlocks === null || !rawOutputBlocks.length) {
       return false;
     }
 
@@ -174,5 +175,24 @@ export class MarkdownHandler extends BasePasteHandler implements PasteHandler {
     }
 
     return true;
+  }
+
+  /**
+   * Convert, or return null so `handle` DECLINES the paste. A throw here (bad
+   * markdown, failed chunk load) must not escape routeToHandlers — otherwise
+   * the pipeline never reaches TextHandler and the paste silently does
+   * nothing. Only conversion is guarded: a throw after insertMany must not
+   * report false and get re-pasted as plain text on top of the inserted blocks.
+   */
+  private async convert(data: string): Promise<OutputBlockData[] | null> {
+    try {
+      const { markdownToBlocks } = await import('./index');
+
+      return await markdownToBlocks(data);
+    } catch (e) {
+      console.warn('MarkdownHandler: markdown conversion failed, falling back to plain text', e);
+
+      return null;
+    }
   }
 }

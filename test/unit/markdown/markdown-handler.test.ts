@@ -298,6 +298,23 @@ describe('hasMarkdownSignals', () => {
     expect(hasMarkdownSignals('![alt text](https://img.com/pic.png)')).toBe(true);
   });
 
+  it('detects a blockquote-only paste', () => {
+    expect(hasMarkdownSignals('> quoted line')).toBe(true);
+    expect(hasMarkdownSignals('intro\n\n> quoted line')).toBe(true);
+    expect(hasMarkdownSignals('   > indented up to three spaces')).toBe(true);
+  });
+
+  it('does NOT misfire on arrows, comparisons or REPL transcripts', () => {
+    expect(hasMarkdownSignals('-> next step')).toBe(false);
+    expect(hasMarkdownSignals('=> returns a value')).toBe(false);
+    expect(hasMarkdownSignals('if 5 > 3 then stop')).toBe(false);
+    expect(hasMarkdownSignals('>>> import os')).toBe(false);
+    expect(hasMarkdownSignals('>')).toBe(false);
+    expect(hasMarkdownSignals('> ')).toBe(false);
+    // Old-style email quoting has no space after `>`; the markdown convention does.
+    expect(hasMarkdownSignals('>no space quoting')).toBe(false);
+  });
+
   it('rejects plain text without markdown signals', () => {
     expect(hasMarkdownSignals('Hello world')).toBe(false);
     expect(hasMarkdownSignals('Just some regular text here.')).toBe(false);

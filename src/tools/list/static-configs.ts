@@ -5,22 +5,20 @@
  */
 
 import type { ConversionConfig, PasteConfig, ToolSanitizerConfig } from '../../../types';
+import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 
 import type { ListItemData } from './types';
 
 /**
- * Sanitization configuration for list content
+ * Sanitization configuration for list content.
+ *
+ * Spreads the shared inline whitelist like every other text tool, so the marks
+ * the inline tools and markdown paste produce (<strong>, <code>, <s>, <mark>…)
+ * survive save and "Turn into" conversion instead of saving as plain text.
  */
 export const getListSanitizeConfig = (): ToolSanitizerConfig => ({
   text: {
-    br: true,
-    a: {
-      href: true,
-      target: '_blank',
-      rel: 'nofollow',
-    },
-    b: true,
-    i: true,
+    ...INLINE_TEXT_SANITIZE,
   },
 });
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mdastToBlocks } from '../../../src/markdown/mdast-to-blocks';
+import { markdownToBlocks } from '../../../src/markdown/index';
 import type { Root } from 'mdast';
 
 describe('mdastToBlocks', () => {
@@ -264,6 +265,52 @@ describe('mdastToBlocks', () => {
       expect(blocks[0].data).toEqual({ code: 'const x = 1;', language: 'typescript' });
     });
 
+    it('normalizes common model-emitted fence aliases to Prism language ids', () => {
+      const aliases: Array<[string, string]> = [
+        ['js', 'javascript'],
+        ['jsx', 'javascript'],
+        ['ts', 'typescript'],
+        ['tsx', 'typescript'],
+        ['py', 'python'],
+        ['sh', 'bash'],
+        ['zsh', 'bash'],
+        ['console', 'bash'],
+        ['yml', 'yaml'],
+        ['c++', 'cpp'],
+        ['golang', 'go'],
+        ['c#', 'csharp'],
+        ['docker', 'dockerfile'],
+        ['tex', 'latex'],
+      ];
+
+      const tree: Root = {
+        type: 'root',
+        children: aliases.map(([lang]) => ({ type: 'code' as const, value: 'x', lang })),
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => (b.data as { language: string }).language)).toEqual(aliases.map(([, id]) => id));
+    });
+
+    it('keeps an already-canonical language untouched', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'code', value: 'x', lang: 'bash' }],
+      };
+
+      expect((mdastToBlocks(tree)[0].data as { language: string }).language).toBe('bash');
+    });
+
+    it('keeps an unknown language label rather than erasing it', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'code', value: 'x', lang: 'elixir' }],
+      };
+
+      expect((mdastToBlocks(tree)[0].data as { language: string }).language).toBe('elixir');
+    });
+
     it('defaults language to "plain text" when lang is null', () => {
       const tree: Root = {
         type: 'root',
@@ -386,6 +433,164 @@ describe('mdastToBlocks', () => {
       });
 
       expect(blocks[0].type).toBe('myCode');
+    });
+  });
+
+  describe('list item with nested block content', () => {
+    it('emits a fenced code block nested in a list item as a sibling code block', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: true,
+          children: [{
+            type: 'listItem',
+            children: [
+              { type: 'paragraph', children: [{ type: 'text', value: 'Install it:' }] },
+              { type: 'code', lang: 'bash', value: 'npm i thing' },
+            ],
+          }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'code']);
+      expect(blocks[1].data).toMatchObject({ code: 'npm i thing', language: 'bash' });
+    });
+
+    it('emits a second paragraph in a list item as a sibling paragraph', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: false,
+          children: [{
+            type: 'listItem',
+            children: [
+              { type: 'paragraph', children: [{ type: 'text', value: 'First' }] },
+              { type: 'paragraph', children: [{ type: 'text', value: 'Second' }] },
+            ],
+          }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'paragraph']);
+      expect(blocks[0].data.text).toBe('First');
+      expect(blocks[1].data.text).toBe('Second');
+    });
+
+    it('emits a blockquote nested in a list item as a sibling quote block', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: false,
+          children: [{
+            type: 'listItem',
+            children: [
+              { type: 'paragraph', children: [{ type: 'text', value: 'Note' }] },
+              {
+                type: 'blockquote',
+                children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Careful' }] }],
+              },
+            ],
+          }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'quote']);
+      expect(blocks[1].data.text).toBe('Careful');
+    });
+
+    it('still emits a list block when the item starts with non-paragraph content', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: false,
+          children: [{
+            type: 'listItem',
+            children: [{ type: 'code', lang: null, value: 'x' }],
+          }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'code']);
+      expect(blocks[0].data.text).toBe('');
+    });
+
+    it('keeps nested list content after the item own nested blocks in document order', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: false,
+          children: [{
+            type: 'listItem',
+            children: [
+              { type: 'paragraph', children: [{ type: 'text', value: 'Parent' }] },
+              { type: 'code', lang: null, value: 'code' },
+              {
+                type: 'list',
+                ordered: false,
+                children: [{
+                  type: 'listItem',
+                  children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Child' }] }],
+                }],
+              },
+            ],
+          }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'code', 'list']);
+      expect(blocks[2].data).toMatchObject({ text: 'Child', depth: 1 });
+    });
+
+    it('restarts ordered numbering after interposed content by stamping start', async () => {
+      const md = [
+        '1. Install it:',
+        '',
+        '   ```bash',
+        '   npm i thing',
+        '   ```',
+        '',
+        '2. Then run it.',
+      ].join('\n');
+
+      const blocks = await markdownToBlocks(md);
+
+      expect(blocks.map(b => b.type)).toEqual(['list', 'code', 'list']);
+      expect(blocks[0].data).toMatchObject({ text: 'Install it:', style: 'ordered' });
+      expect(blocks[1].data).toMatchObject({ code: 'npm i thing', language: 'bash' });
+      expect(blocks[2].data).toMatchObject({ text: 'Then run it.', style: 'ordered', start: 2 });
+    });
+
+    it('does not stamp start on an uninterrupted ordered list', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'list',
+          ordered: true,
+          children: [
+            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'One' }] }] },
+            { type: 'listItem', children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Two' }] }] },
+          ],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks[1].data.start).toBeUndefined();
     });
   });
 

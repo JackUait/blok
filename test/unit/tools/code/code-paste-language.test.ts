@@ -61,7 +61,9 @@ describe('Code tool — language carried in from a pasted code block', () => {
     });
 
     expect(cleaned).toContain(`${CODE_LANGUAGE_ATTR}="sql"`);
-    expect(JSON.stringify(CodeTool.pasteConfig.tags)).toContain(CODE_LANGUAGE_ATTR);
+    expect(JSON.stringify((CodeTool.pasteConfig as { tags?: unknown }).tags)).toContain(
+      CODE_LANGUAGE_ATTR
+    );
   });
 
   it('adopts the pasted language', async () => {

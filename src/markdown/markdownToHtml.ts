@@ -8,8 +8,8 @@ import type {
   PhrasingContent, Definition, FootnoteDefinition,
 } from 'mdast';
 import { isSamePageLink } from '../tools/link/registry';
-import { isHighlightable, tokenizePrism } from '../tools/code/prism-loader';
-import { extToPrismLang } from '../tools/file/code-languages';
+import { tokenizePrism } from '../tools/code/prism-loader';
+import { normalizeFenceLang } from './fence-language';
 import { renderLatex } from '../shared/katex';
 import { safeHref, safeImageSrc } from '../components/utils/sanitize-url';
 import { sanitizeBlockHtml } from './sanitize-html';
@@ -97,20 +97,6 @@ function textContent(nodes: InlineNode[]): string {
 
     return '';
   }).join('');
-}
-
-/**
- * Resolve a fenced-code language to a Prism id. A fence may use a canonical
- * Prism id (`javascript`) or a file extension / alias (`js`).
- */
-function normalizeFenceLang(rawLang: string): string | null {
-  if (rawLang === '') return null;
-  if (isHighlightable(rawLang)) return rawLang;
-
-  const mapped = extToPrismLang(rawLang);
-  if (mapped !== null && isHighlightable(mapped)) return mapped;
-
-  return null;
 }
 
 async function loadMathExtensions(): Promise<{

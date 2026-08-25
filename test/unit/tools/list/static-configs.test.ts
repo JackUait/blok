@@ -67,10 +67,12 @@ describe('static-configs', () => {
       const config = getListSanitizeConfig();
 
       if (isSanitizerConfig(config.text)) {
+        // Values are `true`, not fixed strings: a same-page link saves
+        // target="_self" and must not be rewritten to "_blank".
         expect(config.text.a).toEqual({
           href: true,
-          target: '_blank',
-          rel: 'nofollow',
+          target: true,
+          rel: true,
         });
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
@@ -81,7 +83,8 @@ describe('static-configs', () => {
       const config = getListSanitizeConfig();
 
       if (isSanitizerConfig(config.text)) {
-        expect(config.text.b).toBe(true);
+        // `{}` keeps the tag and strips its attributes, like every other text tool.
+        expect(config.text.b).toEqual({});
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
@@ -91,17 +94,19 @@ describe('static-configs', () => {
       const config = getListSanitizeConfig();
 
       if (isSanitizerConfig(config.text)) {
-        expect(config.text.i).toBe(true);
+        expect(config.text.i).toEqual({});
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
     });
 
-    it('does not include mark entry so marker inline tool sanitizer is not overridden', () => {
+    it('uses a function rule for mark so the marker inline tool sanitizer is not overridden', () => {
       const config = getListSanitizeConfig();
 
       if (isSanitizerConfig(config.text)) {
-        expect(config.text.mark).toBeUndefined();
+        // `mark: true` would clobber the marker tool's function rule and strip
+        // colors; a function rule preserves them (see the merge test below).
+        expect(typeof config.text.mark).toBe('function');
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
@@ -113,8 +118,8 @@ describe('static-configs', () => {
       if (isSanitizerConfig(config.text)) {
         // Access each property directly to avoid union type indexing issues
         expect(config.text.br).toBe(true);
-        expect(config.text.b).toBe(true);
-        expect(config.text.i).toBe(true);
+        expect(config.text.b).toEqual({});
+        expect(config.text.i).toEqual({});
       } else {
         throw new Error('Expected text to be a SanitizerConfig');
       }
@@ -297,6 +302,29 @@ describe('static-configs', () => {
       } else {
         throw new Error('Expected import to be a function');
       }
+    });
+  });
+
+  describe('getListSanitizeConfig — markdown paste marks survive save', () => {
+    /**
+     * Markdown paste writes list text through phrasing-to-html, which emits
+     * <strong>/<code>/<s>. The old allowlist (br/a/b/i only) unwrapped them on
+     * save, so a pasted bold bullet rendered bold and saved as plain text.
+     */
+    it('keeps strong, code, s, em, u and del through save sanitize', () => {
+      const text = '<strong>bold</strong> <em>it</em> <u>u</u> <s>struck</s> <del>gone</del> <code>npm i</code>';
+      const [result] = sanitizeBlocks([{ tool: 'list', data: { text } }], getListSanitizeConfig());
+
+      const cleaned = (result.data as { text: string }).text;
+
+      expect(cleaned).toBe(text);
+    });
+
+    it('keeps target="_self" on a same-page link through save sanitize', () => {
+      const text = '<a href="#section" target="_self" rel="noopener noreferrer nofollow">jump</a>';
+      const [result] = sanitizeBlocks([{ tool: 'list', data: { text } }], getListSanitizeConfig());
+
+      expect((result.data as { text: string }).text).toContain('target="_self"');
     });
   });
 

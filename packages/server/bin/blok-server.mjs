@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 /**
- * npm wrapper for the blok-server Go binary.
+ * npm wrapper for the published blok-server binary.
  *
- * The package ships no binary. On first run it resolves the archive goreleaser
- * published for this platform on the GitHub release matching this package's
- * version, verifies it against that release's checksums.txt, unpacks it into a
- * cache directory, and execs it. Later runs go straight to the cached binary.
+ * The package ships no binary. On first run it resolves the archive published
+ * for this platform on the matching GitHub release, verifies checksums.txt,
+ * unpacks it into a cache directory, and execs it. Later runs use the cache.
  *
- * The version is the family version, not a server version: every release moves
- * it whether or not the Go sources changed, which is why .github/workflows/
- * release-server.yml publishes archives on EVERY tag and skips only the image.
+ * The release and npm package use the same family version.
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -24,28 +21,33 @@ const CHECKSUMS_FILE = 'checksums.txt';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** Mirrors the goos/goarch matrix in .goreleaser.yaml. */
 const PLATFORMS = { darwin: 'darwin', linux: 'linux', win32: 'windows' };
 const ARCHITECTURES = { x64: 'amd64', arm64: 'arm64' };
+const RUNTIMES = {
+  darwin: { x64: 'osx-x64', arm64: 'osx-arm64' },
+  linux: { x64: 'linux-x64', arm64: 'linux-arm64' },
+  win32: { x64: 'win-x64', arm64: 'win-arm64' },
+};
 
 /**
  * @param {string} platform - process.platform
  * @param {string} arch - process.arch
- * @returns {{ os: string, arch: string, archive: string, binary: string } | null}
+ * @returns {{ os: string, arch: string, rid: string, archive: string, binary: string } | null}
  */
 export function resolveTarget(platform, arch) {
   const os = PLATFORMS[platform];
-  const goarch = ARCHITECTURES[arch];
+  const archiveArch = ARCHITECTURES[arch];
+  const rid = RUNTIMES[platform]?.[arch];
 
-  if (os === undefined || goarch === undefined) {
+  if (os === undefined || archiveArch === undefined || rid === undefined) {
     return null;
   }
 
-  // Must match archives.name_template + format_overrides in .goreleaser.yaml.
   return {
     os,
-    arch: goarch,
-    archive: `blok-server_${os}_${goarch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
+    arch: archiveArch,
+    rid,
+    archive: `blok-server_${os}_${archiveArch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
     binary: os === 'windows' ? 'blok-server.exe' : 'blok-server',
   };
 }
@@ -57,8 +59,8 @@ export function supportedTargets() {
 }
 
 /**
- * Read one asset's expected digest out of a goreleaser checksums file, whose
- * lines are `<sha256><two spaces><filename>`.
+ * Read one asset's expected digest from a release checksums file, whose lines
+ * are `<sha256><two spaces><filename>`.
  *
  * @param {string} contents - checksums.txt body
  * @param {string} assetName - the archive filename to look up
@@ -131,10 +133,11 @@ function firstWritable(candidates) {
 
 /**
  * @param {string} url
+ * @param {typeof fetch} fetchImpl
  * @returns {Promise<Buffer>}
  */
-async function download(url) {
-  const response = await fetch(url);
+async function download(url, fetchImpl) {
+  const response = await fetchImpl(url);
 
   if (!response.ok) {
     throw new Error(`GET ${url} → ${response.status} ${response.statusText}`);
@@ -151,13 +154,19 @@ async function download(url) {
  * any point leaves a scratch directory, never a truncated binary at the path the
  * next run would execute.
  *
- * @param {{ version: string, target: ReturnType<typeof resolveTarget>, destination: string }} opts
+ * @param {{
+ *   version: string,
+ *   target: NonNullable<ReturnType<typeof resolveTarget>>,
+ *   destination: string,
+ *   fetchImpl?: typeof fetch,
+ * }} opts
  */
-async function fetchBinary({ version, target, destination }) {
+export async function installBinary({ version, target, destination, fetchImpl = fetch }) {
   const base = `${REPO}/releases/download/v${version}`;
-  // A 404 here means an unsigned download, so it aborts the run rather than
-  // falling through to "verification unavailable, running it anyway".
-  const checksums = (await download(`${base}/${CHECKSUMS_FILE}`)).toString('utf-8');
+  // A 404 here means an unsigned download, so the run must stop.
+  const checksums = (
+    await download(`${base}/${CHECKSUMS_FILE}`, fetchImpl)
+  ).toString('utf-8');
   const expected = checksumFor(checksums, target.archive);
 
   if (expected === null) {
@@ -167,7 +176,7 @@ async function fetchBinary({ version, target, destination }) {
   const scratch = mkdtempSync(join(dirname(destination), '.download-'));
 
   try {
-    const archive = await download(`${base}/${target.archive}`);
+    const archive = await download(`${base}/${target.archive}`, fetchImpl);
     const actual = createHash('sha256').update(archive).digest('hex');
 
     if (actual !== expected) {
@@ -253,7 +262,7 @@ async function main() {
     binary = join(root, target.binary);
 
     if (!existsSync(binary)) {
-      await fetchBinary({ version, target, destination: binary });
+      await installBinary({ version, target, destination: binary });
     }
   } catch (error) {
     console.error(fallbackMessage(version, error.message));

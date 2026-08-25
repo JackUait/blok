@@ -37,6 +37,90 @@ public sealed class HostProcessTests
   }
 
   [Fact]
+  public async Task PublishedHostReportsTheSuppliedBuildVersion()
+  {
+    var outputDirectory = Path.Combine(
+        Path.GetTempPath(),
+        $"blok-host-publish-version-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(outputDirectory);
+
+    try
+    {
+      var projectPath = Path.GetFullPath(Path.Combine(
+          AppContext.BaseDirectory,
+          "..",
+          "..",
+          "..",
+          "..",
+          "Blok.Server.Host",
+          "Blok.Server.Host.csproj"));
+      var startInfo = new ProcessStartInfo("dotnet")
+      {
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+      };
+
+      // Reused MSBuild workers keep the redirected pipes open.
+      startInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+
+      foreach (var argument in new[]
+      {
+        "publish",
+        projectPath,
+        "--configuration",
+        "Release",
+        "--output",
+        outputDirectory,
+        "-p:AssemblyName=blok-server",
+        "-p:BlokServerVersion=1.2.3",
+      })
+      {
+        startInfo.ArgumentList.Add(argument);
+      }
+
+      using var publish = Process.Start(startInfo) ??
+          throw new InvalidOperationException("Could not start dotnet publish");
+      var standardOutput = publish.StandardOutput.ReadToEndAsync();
+      var standardError = publish.StandardError.ReadToEndAsync();
+      using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+
+      try
+      {
+        await publish.WaitForExitAsync(deadline.Token);
+      }
+      catch (OperationCanceledException)
+      {
+        publish.Kill(entireProcessTree: true);
+        await publish.WaitForExitAsync();
+        throw new TimeoutException("dotnet publish did not exit within 2 minutes");
+      }
+
+      Assert.True(
+          publish.ExitCode == 0,
+          $"dotnet publish exited with {publish.ExitCode}:{Environment.NewLine}" +
+          $"{await standardOutput}{Environment.NewLine}{await standardError}");
+
+      await using var host = await StartHostAsync(
+          ["--listen", AllocateListenAddress()],
+          assemblyPath: Path.Combine(outputDirectory, "blok-server.dll"));
+      using var health = await host.Client.GetAsync("/health");
+
+      Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+      Assert.Equal(
+          "{\"status\":\"ok\",\"version\":\"1.2.3\"}\n",
+          await health.Content.ReadAsStringAsync());
+    }
+    finally
+    {
+      if (Directory.Exists(outputDirectory))
+      {
+        Directory.Delete(outputDirectory, recursive: true);
+      }
+    }
+  }
+
+  [Fact]
   public async Task AcceptsAnUploadBetweenKestrelsDefaultAndTheConfiguredDefaultCap()
   {
     const int fileSize = 30_100_000;
@@ -466,9 +550,10 @@ public sealed class HostProcessTests
 
   private static async Task<RunningHost> StartHostAsync(
       string[] args,
-      IReadOnlyDictionary<string, string?>? environment = null)
+      IReadOnlyDictionary<string, string?>? environment = null,
+      string? assemblyPath = null)
   {
-    var process = StartProcess(args, environment);
+    var process = StartProcess(args, environment, assemblyPath);
     var listen = RequiredListenAddress(args);
     var clientAddress = listen.StartsWith(':')
       ? $"127.0.0.1{listen}"
@@ -545,7 +630,8 @@ public sealed class HostProcessTests
 
   private static Process StartProcess(
       string[] args,
-      IReadOnlyDictionary<string, string?>? environment)
+      IReadOnlyDictionary<string, string?>? environment,
+      string? assemblyPath = null)
   {
     var startInfo = new ProcessStartInfo("dotnet")
     {
@@ -553,7 +639,8 @@ public sealed class HostProcessTests
       UseShellExecute = false,
       WorkingDirectory = Path.GetTempPath(),
     };
-    startInfo.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Blok.Server.Host.dll"));
+    startInfo.ArgumentList.Add(
+        assemblyPath ?? Path.Combine(AppContext.BaseDirectory, "Blok.Server.Host.dll"));
 
     foreach (var arg in args)
     {

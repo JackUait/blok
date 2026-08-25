@@ -1,3 +1,4 @@
+using System.Reflection;
 using Blok.Server.AspNetCore;
 using Blok.Server.Host;
 using Microsoft.AspNetCore.Builder;
@@ -36,6 +37,10 @@ if (parsed.Error is not null)
 
 var options = parsed.Options ??
     throw new InvalidOperationException("Parsed host options are missing");
+options.Version = Assembly.GetEntryAssembly()
+    ?.GetCustomAttributes<AssemblyMetadataAttribute>()
+    .SingleOrDefault(metadata => metadata.Key == "BlokServerVersion")
+    ?.Value ?? "dev";
 
 try
 {

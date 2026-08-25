@@ -10,9 +10,9 @@
 
 **Spec:** `docs/plans/2026-08-23-blok-dotnet-library-design.md`
 
-**Status:** Tasks 1–17 are complete. C# is the sole server implementation and delivery
+**Status:** Tasks 1–18 are complete. C# is the sole server implementation and delivery
 path; Task 17 removed the frozen Go source and build wiring after the unwaived Task 16
-dual-target gate passed. Task 18 remains the final repository verification and publish step.
+dual-target gate passed, and Task 18 completed the final repository verification.
 
 ## Global constraints
 
@@ -579,13 +579,13 @@ Assert no tracked `.go`, `go.mod`, `go.sum`, GoReleaser config, `setup-go`, `go 
 
 **Files:** all files changed by Tasks 1–17.
 
-- [ ] **Step 1: Review session diff for dead compatibility layers, duplicate handlers, unsafe clients, and stale Go references**
-- [ ] **Step 2: Run production build**
-- [ ] **Step 3: Run full unit suite sequentially after build**
-- [ ] **Step 4: Run all .NET, conformance, NuGet, self-contained, Docker, wrapper, and architecture gates**
-- [ ] **Step 5: Run ESLint only on changed TS/JS files and `git diff --check`**
-- [ ] **Step 6: Commit any verified cleanup**
-- [ ] **Step 7: `git pull --rebase`, `git push origin main`, and verify `HEAD == origin/main` with a clean status**
+- [x] **Step 1: Review session diff for dead compatibility layers, duplicate handlers, unsafe clients, and stale Go references**
+- [x] **Step 2: Run production build**
+- [x] **Step 3: Run full unit suite sequentially after build**
+- [x] **Step 4: Run all .NET, conformance, NuGet, self-contained, Docker, wrapper, and architecture gates**
+- [x] **Step 5: Run ESLint only on changed TS/JS files and `git diff --check`**
+- [x] **Step 6: Commit any verified cleanup**
+- [x] **Step 7: `git pull --rebase`, `git push origin main`, and verify `HEAD == origin/main` with a clean status**
 
 ## Removal completion checklist
 

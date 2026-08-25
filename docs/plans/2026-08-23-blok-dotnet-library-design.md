@@ -65,18 +65,22 @@ The intended KB integration is ordinary ASP.NET registration:
 
 ```csharp
 builder.Services
-    .AddBlokServer()
+    .AddBlokServer(options =>
+    {
+        options.StorageDirectory = "./blok-uploads";
+        options.PublicUrl = "https://uploads.example.com/files";
+        options.UnfurlDisabled = false;
+    })
     .UseAuthorization<KnowledgeBaseBlokAuthorization>();
 
-app.MapBlokServer("/api/blok");
+app.MapBlokServer("/api/blok").RequireAuthorization();
 ```
 
-This registration shape is the current public contract: one server builder, one
-authorization implementation, and one route mapping. The current packages provide
-uploads and link previews. A MySQL provider and database-block routes follow this
-migration; they are not advertised as available yet. When that phase lands, KB still
-must not implement a `DatabaseAdapter`, controller, query builder, migration, or Blok
-document converter.
+Local storage and unfurling are explicit in-process opt-ins. The consuming application's
+ASP.NET authorization policy protects uploads and unfurling; health and validated CORS
+preflight remain anonymous. `IBlokAuthorization` remains the document/database-route
+seam and is not called for uploads or unfurling. A MySQL provider and database-block
+routes are not advertised as available yet.
 
 ### Non-.NET consumer
 

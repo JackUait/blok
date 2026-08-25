@@ -66,3 +66,11 @@ export const collectTagNames = (tagOrSanitizeConfig: string | SanitizerConfig): 
 
   return [];
 }
+
+/**
+ * Language of a pasted code block, stamped by the AI-chat preprocessor when the
+ * source renders the language outside the `<pre>` (Gemini prints it in the code
+ * block's header bar). Whitelisted on `pre` by the Code tool's pasteConfig so it
+ * survives sanitization, and read back in that tool's `onPaste`.
+ */
+export const CODE_LANGUAGE_ATTR = 'data-blok-code-language';

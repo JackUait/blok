@@ -47,6 +47,8 @@ import { renderMermaid } from './mermaid-loader';
 import { tokenizePrism, isHighlightable } from './prism-loader';
 import { applyPrismHighlight, disposePrismStyles } from './prism-applier';
 import { detectLanguage } from './language-detector';
+import { extToPrismLang } from '../file/code-languages';
+import { CODE_LANGUAGE_ATTR } from '../../components/modules/paste/constants';
 
 const COPIED_FEEDBACK_DURATION = 1500;
 
@@ -506,6 +508,8 @@ export class CodeTool implements BlockTool {
 
       if (content instanceof HTMLElement) {
         this._data.code = content.textContent ?? '';
+        this._data.language =
+          resolvePastedLanguage(content.getAttribute(CODE_LANGUAGE_ATTR)) ?? this._data.language;
       } else if (typeof content === 'string') {
         // Pattern match — strip triple backtick fences
         const stripped = content.replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
@@ -934,10 +938,38 @@ export class CodeTool implements BlockTool {
 
   public static get pasteConfig(): PasteConfig {
     return {
-      tags: ['PRE'],
+      /**
+       * The language attribute must be listed here or the paste sanitizer drops
+       * it, since it keeps only the attributes a tool names for its own tags.
+       */
+      tags: [{ PRE: { [CODE_LANGUAGE_ATTR]: true } }],
       patterns: {
         code: /^```/,
       },
     };
   }
+}
+
+
+/**
+ * Resolve a code language copied in from another app to a Prism id.
+ *
+ * Sources label a fence however the author typed it (`js`, `py`, `SQL`), so an
+ * unmapped label is dropped rather than shown: an id Prism does not know would
+ * disable highlighting AND print a bogus label on the block.
+ */
+function resolvePastedLanguage(raw: string | null): string | null {
+  const label = raw?.trim().toLowerCase() ?? '';
+
+  if (label === '') {
+    return null;
+  }
+
+  if (LANGUAGES.some((entry) => entry.id === label)) {
+    return label;
+  }
+
+  const mapped = extToPrismLang(label);
+
+  return mapped !== null && LANGUAGES.some((entry) => entry.id === mapped) ? mapped : null;
 }

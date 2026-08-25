@@ -55,7 +55,10 @@ import { Quote } from '../../../src/tools/quote';
 import { Table } from '../../../src/tools/table';
 import { ToggleItem } from '../../../src/tools/toggle';
 import { VideoTool } from '../../../src/tools/video';
+import { EquationInlineTool } from '../../../src/components/inline-tools/inline-tool-equation';
+import { LinkInlineTool } from '../../../src/components/inline-tools/inline-tool-link';
 import type { PasteConfig } from '../../../types/configs/paste-config';
+import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
 
 const REPO_ROOT = resolve(__dirname, '../../..');
 const SCAN_ROOT = 'src/components/modules/paste';
@@ -88,6 +91,16 @@ const EXEMPT_STAMPS: ExemptStamp[] = [
 ];
 
 type ToolWithPasteConfig = { pasteConfig?: PasteConfig | false };
+
+type ToolWithSanitize = { sanitize?: SanitizerConfig };
+
+/**
+ * Inline tools whose sanitize config names an attribute. The whole-document
+ * paste pass composes these in alongside the block tools' pasteConfigs
+ * (see Paste.getDataForHandler), so an attribute they keep survives `clean()`
+ * exactly as a block tool's does.
+ */
+const INLINE_TOOL_CLASSES: unknown[] = [EquationInlineTool, LinkInlineTool];
 
 const TOOL_CLASSES: unknown[] = [
   AudioTool, CalloutTool, CodeTool, DividerTool, FileTool, Header, ImageTool,
@@ -128,7 +141,27 @@ const structuralUnion = (): Set<string> =>
       .map((attr) => attr.toLowerCase())
   );
 
-const SURVIVING_ATTRS = new Set([...structuralUnion(), ...pasteConfigUnion()]);
+const inlineSanitizeUnion = (): Set<string> => {
+  const attrs = new Set<string>();
+
+  for (const toolClass of INLINE_TOOL_CLASSES) {
+    const config = (toolClass as ToolWithSanitize).sanitize;
+
+    Object.values(config ?? {}).forEach((tagConfig) => {
+      if (typeof tagConfig === 'object' && tagConfig !== null) {
+        Object.keys(tagConfig).forEach((attr) => attrs.add(attr.toLowerCase()));
+      }
+    });
+  }
+
+  return attrs;
+};
+
+const SURVIVING_ATTRS = new Set([
+  ...structuralUnion(),
+  ...pasteConfigUnion(),
+  ...inlineSanitizeUnion(),
+]);
 
 const collectFiles = (root: string): string[] => {
   const entries = readdirSync(root);

@@ -1,0 +1,135 @@
+Let x be an odd square. Then we can write
+
+x=a
+2
+,
+
+where a is an odd integer. Since a is odd, define
+
+y=(
+2
+a
+2
+−1
+	​
+
+)
+2
+.
+
+Notice that a
+2
+ is odd, so a
+2
+−1 is even, and in fact
+
+a
+2
+−1=(a−1)(a+1).
+
+Because a is odd, both a−1 and a+1 are even; hence, a
+2
+−1 is divisible by 4. This means 
+2
+a
+2
+−1
+	​
+
+ is even, and consequently, y is the square of an even number.
+
+Now, consider the sum:
+
+x+y=a
+2
++(
+2
+a
+2
+−1
+	​
+
+)
+2
+.
+
+Compute:
+
+x+y=a
+2
++
+4
+a
+4
+−2a
+2
++1
+	​
+
+=
+4
+4a
+2
++a
+4
+−2a
+2
++1
+	​
+
+=
+4
+a
+4
++2a
+2
++1
+	​
+
+.
+
+Notice that
+
+a
+4
++2a
+2
++1=(a
+2
++1)
+2
+,
+
+so we have
+
+x+y=
+4
+(a
+2
++1)
+2
+	​
+
+.
+
+Since a
+2
+ is odd, a
+2
++1 is even; let a
+2
++1=2b for some integer b. Then
+
+x+y=
+4
+(2b)
+2
+	​
+
+=b
+2
+,
+
+which is a perfect square.
+
+Thus, for any odd square x, we have found an even square y such that x+y is a square number.

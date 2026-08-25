@@ -325,7 +325,11 @@ describe('CodeTool', () => {
       const { CodeTool } = await import('../../../../src/tools/code');
       const config = CodeTool.pasteConfig;
 
-      expect((config as { tags: string[] }).tags).toContain('PRE');
+      const tagNames = (config as { tags: (string | Record<string, unknown>)[] }).tags.flatMap(
+        (tag) => (typeof tag === 'string' ? [tag] : Object.keys(tag))
+      );
+
+      expect(tagNames).toContain('PRE');
       expect((config as { patterns: Record<string, RegExp> }).patterns.code).toEqual(/^```/);
     });
 

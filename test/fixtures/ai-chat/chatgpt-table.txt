@@ -1,0 +1,15 @@
+Here is a table of 10 prominent US stocks that are expected to benefit significantly from the artificial intelligence revolution, along with their P/E ratios, estimated earnings growth rates ("g") for the next few years, and their PEG ratios:
+
+Stock	P/E Ratio	Earnings Growth Rate (g)	PEG Ratio
+Nvidia (NVDA)	62.4	31%	2.01
+Alphabet (GOOGL)	28.3	19%	1.49
+Microsoft (MSFT)	33.7	18%	1.87
+Amazon (AMZN)	73.9	28%	2.64
+Meta Platforms (META)	22.5	21%	1.07
+Advanced Micro Devices (AMD)	52.1	24%	2.17
+Tesla (TSLA)	54.3	25%	2.17
+Palantir Technologies (PLTR)	49.2	26%	1.89
+Salesforce (CRM)	34.6	17%	2.04
+Adobe (ADBE)	40.2	20%	2.01
+
+These stocks have been identified based on their significant involvement and investment in AI technologies, positioning them to benefit from the ongoing AI boom. Sources for this data include reports from Investopedia, Yahoo Finance, and Nasdaq.

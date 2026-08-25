@@ -7,6 +7,7 @@ import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 import { SAFE_STRUCTURAL_TAGS } from './constants';
 import { preprocessGoogleDocsHtml } from './google-docs-preprocessor';
 import { preprocessNotionHtml } from './notion-preprocessor';
+import { preprocessAiChatHtml } from './ai-chat-preprocessor';
 import { recoverGfmToggles } from './gfm-toggle-recovery';
 import { NOTION_BLOCKS_V3_MIME, parseNotionBlocksV3 } from './notion-blocks-v3';
 import { NEXT_SPACE_MIMES, parseNextSpaceBlocks } from './next-space-blocks';
@@ -312,7 +313,9 @@ export class Paste extends Module {
       this.config.sanitizer as SanitizerConfig
     );
 
-    const preprocessed = recoverGfmToggles(preprocessNotionHtml(preprocessGoogleDocsHtml(rawHtmlData)));
+    const preprocessed = recoverGfmToggles(
+      preprocessNotionHtml(preprocessAiChatHtml(preprocessGoogleDocsHtml(rawHtmlData)))
+    );
     /**
      * Clipboard sources describe formatting run by run, so pasted markup
      * arrives fragmented no matter which app it came from. Collapse it here,

@@ -260,12 +260,41 @@ describe('CI critical-path law', () => {
         run: 'go vet ./... && go test ./...',
       },
       {
-        name: 'Test .NET runtime',
-        run: 'dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj',
+        name: 'Test .NET server',
+        run: 'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+      },
+      {
+        name: 'Check .NET formatting',
+        run: 'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
       },
       {
         name: 'Test packed .NET packages',
         run: 'node scripts/test-server-packages.mjs',
+      },
+      {
+        name: 'Test Go conformance',
+        run: 'node scripts/test-server-conformance.mjs --target go',
+      },
+      {
+        name: 'Test C# conformance',
+        run: 'node scripts/test-server-conformance.mjs --target csharp',
+      },
+      {
+        name: 'Dry-run server artifacts',
+        run: 'node scripts/publish-server.mjs --version 1.10.1 --dry-run',
+      },
+      {
+        name: 'Test server delivery wiring',
+        run: [
+          'yarn vitest run --project=unit \\',
+          '  test/unit/server/bin.test.ts \\',
+          '  test/unit/scripts/publish-server.test.ts \\',
+          '  test/unit/scripts/verify-docs-release.test.ts \\',
+          '  test/unit/scripts/release-cli.test.ts \\',
+          '  test/unit/architecture/server-release-wiring.test.ts \\',
+          '  test/unit/architecture/ci-critical-path-law.test.ts \\',
+          '  test/unit/architecture/package-metadata-law.test.ts',
+        ].join('\n'),
       },
     ]);
   });

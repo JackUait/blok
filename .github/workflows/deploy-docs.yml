@@ -34,14 +34,14 @@ jobs:
       - name: Run docs tests
         run: cd docs && npm test
 
-  # Checks that the npm package family matching the release tag is published, so
-  # the docs never advertise a version nobody can install. That question is
+  # Checks that the package family, NuGets, host assets, and image matching the
+  # release tag are published, so docs never advertise missing delivery. This is
   # meaningless for a docs-only deploy, hence the release-only gate.
   verify-release:
     name: Verify Package Family Release
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    timeout-minutes: 2
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

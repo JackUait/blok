@@ -40,6 +40,10 @@ const languagesUsedInDocs = (): Map<string, string[]> => {
  * but nobody registered renders as unhighlighted plaintext with no error.
  */
 describe('CodeBlock supported languages', () => {
+  it('registers C# for the in-process server sample', () => {
+    expect(SUPPORTED_LANGUAGES).toContain('csharp');
+  });
+
   it('registers a grammar for every language the docs actually request', () => {
     const missing = [...languagesUsedInDocs()]
       .filter(([lang]) => !(SUPPORTED_LANGUAGES as readonly string[]).includes(lang))

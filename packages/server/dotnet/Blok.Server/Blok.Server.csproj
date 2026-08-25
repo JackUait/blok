@@ -25,7 +25,9 @@
                       LogicalName="Blok.Server.Runtime.blok-server-runtime.js" />
   </ItemGroup>
 
-  <Target Name="BuildBlokServerRuntime" BeforeTargets="PrepareResourceNames">
+  <Target Name="BuildBlokServerRuntime"
+          BeforeTargets="PrepareResourceNames"
+          Condition="'$(SkipBlokServerRuntimeBuild)' != 'true'">
     <Exec Command="node &quot;$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs&quot;" />
   </Target>
 </Project>

@@ -36,7 +36,7 @@ describe('ServerPage', () => {
     expect(note.compareDocumentPosition(paths) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('lists the three paths in the order the design puts them, storage-only first', () => {
+  it('lists the four paths in the order the design puts them, storage-only first', () => {
     renderPage();
     const table = screen.getByTestId('server-table');
     const ids = within(table)
@@ -46,6 +46,7 @@ describe('ServerPage', () => {
 
     expect(ids).toEqual([
       'server-summary-own-storage',
+      'server-summary-dotnet',
       'server-summary-own-server',
       'server-summary-serverless',
     ]);

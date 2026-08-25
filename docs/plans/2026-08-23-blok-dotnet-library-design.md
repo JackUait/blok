@@ -1,10 +1,11 @@
 # Blok server as a .NET library and host
 
-Status: **implementation started.** The embedded-runtime probe passed on
-2026-08-24: Jint 4.16.1 loaded the real self-contained bundle and passed Markdown
-(including math), HTML, plain-text, 64-call concurrency, and cancellation-recovery tests.
-The runtime choice is now Jint; ClearScript remains only a fallback if a later Blok
-feature exceeds Jint's compatibility.
+Status: **C# delivery implemented; Go removal pending.** The shared
+`Blok.Server` and `Blok.Server.AspNetCore` packages, standalone host, six
+self-contained archives, npm wrapper, and linux/amd64 container are wired to the same
+C# handlers. The Go server remains in source and transition CI only as the Task 16
+conformance oracle; Task 17 deletes it after that gate passes. Database-block and MySQL
+support remain a later phase and are not included in the current packages.
 
 This document supersedes the Go implementation decision in
 `2026-08-22-backend-service-design.md`. The existing HTTP contracts and security
@@ -65,26 +66,24 @@ The intended KB integration is ordinary ASP.NET registration:
 ```csharp
 builder.Services
     .AddBlokServer()
-    .UseMySql(connectionString)
     .UseAuthorization<KnowledgeBaseBlokAuthorization>();
 
 app.MapBlokServer("/api/blok");
 ```
 
-This registration shape is the public design contract: one server builder, one MySQL
-provider call, one authorization implementation, and one route mapping. Names may be
-polished without adding another integration concept. KB does not implement a
-`DatabaseAdapter`, controller, query builder, migration, or Blok document converter.
-
-The first database provider is MySQL because KB uses MySQL. We do not design a provider
-matrix before a second consumer asks for one.
+This registration shape is the current public contract: one server builder, one
+authorization implementation, and one route mapping. The current packages provide
+uploads and link previews. A MySQL provider and database-block routes follow this
+migration; they are not advertised as available yet. When that phase lands, KB still
+must not implement a `DatabaseAdapter`, controller, query builder, migration, or Blok
+document converter.
 
 ### Non-.NET consumer
 
 The standalone host keeps the current product surface:
 
 ```text
-docker run bloklabs/server ...
+docker run ghcr.io/jackuait/blok-server ...
 # or
 npx @bloklabs/server ...
 ```
@@ -102,18 +101,19 @@ libraries must not be distorted merely to reduce binary size.
 
 ## Package boundaries
 
-Start with the smallest package family that expresses the real boundaries:
+The current package family keeps the implemented boundaries small:
 
 | Project | Responsibility |
 |---|---|
-| `Blok.Server` | Feature services, wire contracts, document runtime boundary, upload and database abstractions |
-| `Blok.Server.AspNetCore` | DI registration, endpoints, authentication hooks, limits, CORS, health checks |
-| `Blok.Server.AspNetCore.MySql` | MySQL schema, migrations, row queries, group counts, and document cleanup; depends on the two packages above |
-| `Blok.Server.Host` | Standalone process: reads config and composes the same packages |
+| `Blok.Server` | Shared feature services, wire contracts, document runtime boundary, upload and storage abstractions |
+| `Blok.Server.AspNetCore` | DI registration, endpoints, authorization hooks, limits, CORS, and health checks |
+| `Blok.Server.Host` | Non-packable standalone process that reads config and composes the same packages |
+| `Blok.Server.AspNetCore.MySql` *(planned)* | Later database-block schema, migrations, queries, and document cleanup |
 
-KB installs `Blok.Server.AspNetCore.MySql` as its one direct package; NuGet brings the
-lower layers transitively. Splitting more projects before a real dependency boundary
-appears is out of scope.
+Current consumers install `Blok.Server.AspNetCore`; NuGet brings `Blok.Server`
+transitively. KB can move to the planned MySQL package when that later phase has real
+functionality. Splitting more projects before a real dependency boundary appears is out
+of scope.
 
 All projects initially target `net10.0`: KB already runs .NET 10, the standalone host is
 self-contained, and speculative multi-targeting adds a test matrix without helping the
@@ -453,17 +453,17 @@ Create the black-box conformance suite from the Go route tests. No feature work 
 C# until the success, failure, and security behavior to preserve is executable outside
 Go.
 
-### 4. Build the C# package and host
+### 4. Build the C# package and host — complete
 
-Port health, tickets, middleware, unfurl, uploads, local storage, and S3 in small TDD
-slices. The NuGet path and host path must exercise the same handlers in every integration
-test.
+Health, tickets, middleware, unfurl, uploads, local storage, and S3 now use the shared C#
+handlers. Packed-NuGet and standalone-host probes exercise the same routes.
 
-### 5. Replace delivery artifacts
+### 5. Replace delivery artifacts — complete
 
-Pack NuGet, publish self-contained host binaries, rebuild the Docker image, and point
-`@bloklabs/server` at the C# assets. Run the removal gate, then delete Go before the first
-server release.
+The release wiring packs two NuGets, builds six self-contained host archives and
+checksums, rebuilds the linux/amd64 image, and points `@bloklabs/server` at the C# assets.
+The Task 16 dual-target gate and Task 17 Go deletion still precede the first server
+release.
 
 ### 6. Adopt document services in KB
 

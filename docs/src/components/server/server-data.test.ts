@@ -3,8 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { serverCoverageNote, serverLimits, serverPaths } from './server-data';
 
 describe('server docs data', () => {
-  it('documents the three deployment paths as separate entries', () => {
-    expect(serverPaths.map((p) => p.id)).toEqual(['own-storage', 'own-server', 'serverless']);
+  it('documents the four deployment paths as separate entries', () => {
+    expect(serverPaths.map((p) => p.id)).toEqual([
+      'own-storage',
+      'dotnet',
+      'own-server',
+      'serverless',
+    ]);
   });
 
   it('states the link-preview coverage limit up front', () => {
@@ -16,9 +21,30 @@ describe('server docs data', () => {
     expect(serverPaths[0].id).toBe('own-storage');
     expect(serverPaths[0].runsService).toBe(false);
     expect(serverPaths.filter((p) => p.runsService).map((p) => p.id)).toEqual([
+      'dotnet',
       'own-server',
       'serverless',
     ]);
+  });
+
+  it('shows the in-process ASP.NET registration without advertising MySQL', () => {
+    const dotnet = serverPaths.find((path) => path.id === 'dotnet');
+
+    expect(dotnet).toBeDefined();
+
+    const samples = [
+      ...(dotnet?.whatToRun ?? []),
+      ...(dotnet?.appRoute ?? []),
+      ...(dotnet === undefined ? [] : [dotnet.editorConfig]),
+    ];
+    const code = samples.map((sample) => sample.code).join('\n');
+
+    expect(samples.some((sample) => sample.language === 'csharp')).toBe(true);
+    expect(code).toContain('dotnet add package Blok.Server.AspNetCore');
+    expect(code).toContain('AddBlokServer');
+    expect(code).toContain('UseAuthorization<');
+    expect(code).toContain('MapBlokServer');
+    expect(code).not.toContain('UseMySql');
   });
 
   it('sends the storage-only path to the presets page instead of restating it', () => {
@@ -47,7 +73,7 @@ describe('server docs data', () => {
   });
 
   it('names only flags the binary actually parses', () => {
-    // cmd/blok-server/main.go's whole flag set, plus the docker flags the run
+    // The standalone host's whole flag set, plus the docker flags the run
     // commands legitimately carry. A docs page naming a flag the binary does
     // not have sends a reader to a process that exits with "flag provided but
     // not defined", so this is a whitelist rather than a spot check.

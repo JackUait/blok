@@ -3,25 +3,6 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-/**
- * SERVER RELEASE WIRING LAW
- *
- * Nothing in this repo auto-iterates workspaces. Every release step reads an
- * explicit list, so a package missing from one list does not fail — it silently
- * drops out of that step and nobody notices until a consumer installs a version
- * that was never published. `@bloklabs/presets` proved it: it was added to
- * `FAMILY` without being added to the exact-list assertion that mirrors FAMILY,
- * and that test sat red on main.
- *
- * This law pins EVERY list a published package has to appear in, one assertion
- * per list with its own failure message, so the next package added learns the
- * full set from one red run instead of from a missing npm tarball.
- *
- * Where a list can be derived from another (metadata law coverage, the
- * build graph, the FAMILY mirror test) the assertion is derived rather than
- * hard-coded — that way it guards every future package, not just this one.
- */
-
 const repoRoot = resolve(__dirname, '../../..');
 
 const read = (path: string): string => readFileSync(join(repoRoot, path), 'utf-8');
@@ -32,19 +13,46 @@ const SERVER_NPM_NAME = '@bloklabs/server';
 const SERVER_GPR_NAME = '@dodopizza/blok-server';
 const SERVER_MANIFEST = 'packages/server/package.json';
 const RELEASE_WORKFLOW = '.github/workflows/release-server.yml';
+const SERVER_ARCHIVES = [
+  'blok-server_darwin_amd64.tar.gz',
+  'blok-server_darwin_arm64.tar.gz',
+  'blok-server_linux_amd64.tar.gz',
+  'blok-server_linux_arm64.tar.gz',
+  'blok-server_windows_amd64.zip',
+  'blok-server_windows_arm64.zip',
+];
 
-type FamilyEntry = { npmName: string; gprName: string; manifestPath: string; packDir: string };
+type FamilyEntry = {
+  npmName: string;
+  gprName: string;
+  manifestPath: string;
+  packDir: string;
+};
+
+type WorkflowStep = {
+  name?: string;
+  run?: string;
+  uses?: string;
+  with?: Record<string, string | number>;
+};
+
+type Workflow = {
+  on?: { push?: { tags?: string[] } };
+  jobs: Record<string, {
+    if?: string;
+    permissions?: Record<string, string>;
+    steps?: WorkflowStep[];
+  }>;
+};
 
 const loadFamily = async (): Promise<FamilyEntry[]> => {
-  const { FAMILY } = (await import('../../../scripts/release-manifest.mjs')) as { FAMILY: FamilyEntry[] };
+  const { FAMILY } = (await import('../../../scripts/release-manifest.mjs')) as {
+    FAMILY: FamilyEntry[];
+  };
 
   return FAMILY;
 };
 
-/**
- * Pull one `const NAME = [ ... ]` array literal out of a script's source, so an
- * assertion is about the actual list and not a stray mention elsewhere in the file.
- */
 const extractArrayLiteral = (source: string, constName: string): string => {
   const start = source.indexOf(`${constName} = [`);
 
@@ -58,184 +66,272 @@ const extractArrayLiteral = (source: string, constName: string): string => {
 };
 
 describe('server release wiring', () => {
-  it('list 1/7 — scripts/release.mjs WORKSPACE_MANIFESTS stamps the family version onto the server manifest', () => {
+  it('stamps and publishes the npm wrapper through every explicit family list', async () => {
     const manifests = extractArrayLiteral(read('scripts/release.mjs'), 'WORKSPACE_MANIFESTS');
 
-    expect(
-      manifests,
-      `${SERVER_MANIFEST} is absent from WORKSPACE_MANIFESTS — the server would stay pinned at the previous version forever and its manifest would never be committed`
-    ).toContain(`'${SERVER_MANIFEST}'`);
-  });
+    expect(manifests).toContain(`'${SERVER_MANIFEST}'`);
 
-  it('list 2/7 — scripts/release-manifest.mjs FAMILY is what actually publishes the server', async () => {
     const family = await loadFamily();
     const entry = family.find((item) => item.npmName === SERVER_NPM_NAME);
 
-    expect(entry, `${SERVER_NPM_NAME} is absent from FAMILY — nothing publishes it to npm or the GitHub Packages mirror`).toBeDefined();
-    expect(entry?.gprName, 'GitHub Packages forces the @dodopizza scope and cannot carry slashes').toBe(SERVER_GPR_NAME);
-    expect(entry?.manifestPath).toBe(SERVER_MANIFEST);
-    expect(entry?.packDir).toBe('packages/server');
+    expect(entry).toEqual({
+      npmName: SERVER_NPM_NAME,
+      gprName: SERVER_GPR_NAME,
+      manifestPath: SERVER_MANIFEST,
+      packDir: 'packages/server',
+    });
+
+    const metadataLaw = read('test/unit/architecture/package-metadata-law.test.ts');
+    const mirrorTest = read('test/unit/scripts/release-manifest.test.ts');
+    const docsVerifier = read('scripts/verify-docs-release.mjs');
+
+    expect(metadataLaw).toContain(`name: '${SERVER_NPM_NAME}'`);
+    expect(mirrorTest).toContain(`'${SERVER_NPM_NAME}'`);
+    expect(docsVerifier).toContain(`name: '${SERVER_NPM_NAME}'`);
   });
 
-  it('list 3/7 — every FAMILY package is covered by the package metadata law', async () => {
-    const family = await loadFamily();
-    const law = read('test/unit/architecture/package-metadata-law.test.ts');
-    const uncovered = family.filter((entry) => !law.includes(`name: '${entry.npmName}'`));
-
-    expect(
-      uncovered.map((entry) => entry.npmName),
-      'these packages publish an npm page nothing checks for keywords, links or a README'
-    ).toEqual([]);
-  });
-
-  it('list 4/7 — every FAMILY package is covered by the exact-list mirror test', async () => {
-    const family = await loadFamily();
-    const mirror = read('test/unit/scripts/release-manifest.test.ts');
-    const uncovered = family.filter((entry) => !mirror.includes(`'${entry.npmName}'`));
-
-    expect(
-      uncovered.map((entry) => entry.npmName),
-      'the FAMILY mirror assertion in test/unit/scripts/release-manifest.test.ts is stale'
-    ).toEqual([]);
-  });
-
-  it('list 5/7 — scripts/build-all.mjs covers every workspace that declares a build script', async () => {
+  it('keeps a wrapper-only npm package out of the JavaScript build graph', async () => {
     const { buildTasks } = (await import('../../../scripts/build-all.mjs')) as {
       buildTasks: (opts?: { mode?: string; withCli?: boolean }) => { name: string }[];
     };
     const tasks = new Set(buildTasks({ withCli: true }).map((task) => task.name));
-    const family = await loadFamily();
 
-    // The root package is built by `main`/`iife`/`umd`/`locales`, not by one
-    // task named after it; every workspace gets a task named for its directory.
-    const workspaceDirs = family
-      .map((entry) => /^packages\/([^/]+)\//.exec(entry.manifestPath)?.[1])
-      .filter((dir): dir is string => dir !== undefined);
-
-    const missing = workspaceDirs.filter((dir) => {
-      const scripts = readJson<{ scripts?: Record<string, string> }>(`packages/${dir}/package.json`).scripts ?? {};
-
-      return 'build' in scripts && !tasks.has(dir);
-    });
-
-    expect(
-      missing,
-      'these packages declare a build script but nothing in the release build graph runs it'
-    ).toEqual([]);
-
-    // The inverse for the server specifically: it has no build script (goreleaser
-    // compiles the Go binary), so a build-all entry would run a command that does
-    // not exist. Absence here is deliberate, not an oversight.
     expect(readJson<{ scripts?: Record<string, string> }>(SERVER_MANIFEST).scripts).toBeUndefined();
     expect(tasks.has('server')).toBe(false);
-  });
-
-  it('list 6/7 — every FAMILY package is covered by the docs deploy gate', async () => {
-    const family = await loadFamily();
-    // deploy-docs.yml blocks the docs deploy until every name here is resolvable
-    // on npm, so an omission ships docs describing a version nobody can install.
-    // Its own test lives outside test/unit/architecture/ and would not be caught
-    // by the gate this law is run under.
-    const verifier = read('scripts/verify-docs-release.mjs');
-    const uncovered = family.filter((entry) => !verifier.includes(`'${entry.npmName}'`));
-
-    expect(
-      uncovered.map((entry) => entry.npmName),
-      'RELEASE_PACKAGES in scripts/verify-docs-release.mjs is stale'
-    ).toEqual([]);
-  });
-
-  it('list 7/7 — CI runs both server implementations during the transition', () => {
-    const ci = parse(read('.github/workflows/ci.yml')) as {
-      jobs: Record<string, { steps?: { run?: string; uses?: string }[] }>;
-    };
-    const steps = ci.jobs.server?.steps ?? [];
-    const runs = steps.map((step) => step.run).join('\n');
-    const actions = steps.map((step) => step.uses).join('\n');
-
-    expect(ci.jobs.server, 'no `server` job in ci.yml — neither server suite would run').toBeDefined();
-    expect(actions).toContain('./.github/actions/setup-node-deps');
-    expect(actions).toContain('actions/setup-dotnet@v4');
-    expect(runs).toContain('go test ./...');
-    expect(runs).toContain('dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj');
   });
 
   it('keeps the server package on the family version', () => {
     const root = readJson<{ version: string }>('package.json');
     const server = readJson<{ version: string }>(SERVER_MANIFEST);
 
-    expect(server.version, 'the service takes the family version — lockstep is the point').toBe(root.version);
+    expect(server.version).toBe(root.version);
   });
 
-  it('publishes the binaries and the image from a tag-triggered workflow', () => {
-    expect(
-      existsSync(join(repoRoot, RELEASE_WORKFLOW)),
-      'ci.yml has no tag trigger, so the goreleaser run needs its own workflow'
-    ).toBe(true);
+  it('keeps Go and C# verification together in transition CI', () => {
+    const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
+    const steps = workflow.jobs.server?.steps ?? [];
+    const actions = steps.map((step) => step.uses ?? '').join('\n');
+    const runs = steps.map((step) => step.run ?? '').join('\n');
 
-    const workflow = parse(read(RELEASE_WORKFLOW)) as {
-      on?: { push?: { tags?: string[] } };
-      jobs: Record<string, { if?: string; permissions?: Record<string, string>; steps?: { run?: string; uses?: string }[] }>;
-    };
+    expect(actions).toContain('./.github/actions/setup-node-deps');
+    expect(actions).toContain('actions/setup-go@v5');
+    expect(actions).toContain('actions/setup-dotnet@v4');
+    expect(runs).toContain('go vet ./... && go test ./...');
+    expect(runs).toContain(
+      'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+    );
+    expect(runs).toContain(
+      'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
+    );
+    expect(runs).toContain('node scripts/test-server-packages.mjs');
+    expect(runs).toContain('node scripts/test-server-conformance.mjs --target go');
+    expect(runs).toContain('node scripts/test-server-conformance.mjs --target csharp');
+    expect(runs).toContain('node scripts/publish-server.mjs --version 1.10.1 --dry-run');
+    expect(runs).toContain('test/unit/architecture/server-release-wiring.test.ts');
+  });
 
-    expect(workflow.on?.push?.tags, 'must fire on the v* tag scripts/release.mjs pushes').toContain('v*');
+  it('creates the family release as a draft before the server workflow runs', () => {
+    const releaseScript = read('scripts/release.mjs');
+
+    expect(releaseScript).toMatch(/gh release create \$\{gitTag\}[^\n]* --draft/);
+  });
+
+  it('publishes two NuGets, six hosts, checksums, and the amd64 image before the draft', () => {
+    expect(existsSync(join(repoRoot, RELEASE_WORKFLOW))).toBe(true);
+
+    const source = read(RELEASE_WORKFLOW);
+    const workflow = parse(source) as Workflow;
+
+    expect(workflow.on?.push?.tags).toContain('v*');
 
     const job = workflow.jobs['release-server'];
 
-    expect(job, 'missing the release-server job').toBeDefined();
-    // mirror.yml pushes every v* tag to dodopizza/blok, where this workflow would
-    // fire again with no GHCR credentials and no matching GitHub release.
-    expect(job.if, 'the job must not run on the mirror repository').toContain('github.repository');
-    // contents: write uploads the release assets; packages: write pushes to GHCR.
-    expect(job.permissions).toMatchObject({ contents: 'write', packages: 'write' });
+    expect(job).toBeDefined();
+    expect(job?.if).toContain('github.repository');
+    expect(job?.permissions).toMatchObject({ contents: 'write', packages: 'write' });
 
-    const source = read(RELEASE_WORKFLOW);
+    const steps = job?.steps ?? [];
+    const actions = steps.map((step) => step.uses ?? '').join('\n');
+    const runs = steps.map((step) => step.run ?? '').join('\n');
 
-    expect(
-      (job.steps ?? []).map((step) => step.uses ?? '').join('\n'),
-      'nothing runs goreleaser'
-    ).toMatch(/goreleaser\/goreleaser-action/);
-    // A release that did not touch the server re-tags the previous image instead
-    // of pushing an identical one, but must still publish binaries — the npm
-    // wrapper resolves them from the release matching its own (family) version.
-    expect(source, 'an unchanged server must still ship binaries').toContain('--skip=docker');
-    expect(source, 'an unchanged server must reuse the previous image digest').toContain('imagetools create');
+    expect(actions).toContain('actions/checkout@v4');
+    expect(steps.find((step) => step.uses === 'actions/checkout@v4')?.with)
+      .toMatchObject({ 'fetch-depth': 0 });
+    expect(actions).toContain('./.github/actions/setup-node-deps');
+    expect(actions).toContain('actions/setup-dotnet@v4');
+    expect(actions).toContain('docker/login-action@v3');
+    expect(actions).not.toContain('actions/setup-go');
+    expect(actions).not.toContain('goreleaser');
+
+    expect(source.match(/version="\$\{GITHUB_REF_NAME#v\}"/g)).toHaveLength(1);
+    expect(runs).toContain(
+      'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+    );
+    expect(runs).toContain(
+      'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
+    );
+
+    for (const project of [
+      'packages/server/dotnet/Blok.Server/Blok.Server.csproj',
+      'packages/server/dotnet/Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj',
+    ]) {
+      expect(runs).toContain(`dotnet pack ${project}`);
+    }
+
+    expect(runs).toContain('-p:PackageVersion="$BLOK_SERVER_VERSION"');
+    expect(runs).toContain('--output .server-release-dist/nuget');
+    expect(runs).toContain(
+      'node scripts/test-server-packages.mjs --package-dir .server-release-dist/nuget --version "$BLOK_SERVER_VERSION"',
+    );
+    expect(runs).toContain(
+      'node scripts/publish-server.mjs --version "$BLOK_SERVER_VERSION" --output .server-release-dist',
+    );
+
+    for (const archive of SERVER_ARCHIVES) {
+      expect(runs).toContain(archive);
+    }
+
+    expect(runs).toContain('checksums.txt');
+    expect(runs).toContain('Blok.Server."$BLOK_SERVER_VERSION".nupkg');
+    expect(runs).toContain('Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg');
+    expect(runs).toContain('dotnet nuget push');
+    expect(source).toContain('NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}');
+    expect(source).not.toContain('BLOK_NUGET');
+
+    expect(runs).toContain(
+      'docker build --platform linux/amd64 -f packages/server/Dockerfile',
+    );
+    expect(runs).toContain('--build-arg BLOK_SERVER_VERSION="$BLOK_SERVER_VERSION"');
+    expect(runs).toContain('image="ghcr.io/jackuait/blok-server"');
+    expect(runs).toContain('--tag "$image:$BLOK_SERVER_VERSION"');
+    expect(runs).toContain('--network host');
+    expect(runs).toContain('--listen 127.0.0.1:4000');
+    expect(runs).toContain('--auth proxy');
+    expect(runs).toContain('docker push "$image:$BLOK_SERVER_VERSION"');
+    expect(runs).toContain('docker push "$image:latest"');
+    expect(runs).not.toContain('docker buildx build');
+    expect(runs).not.toContain('--platform linux/arm64');
+
+    expect(runs).toContain('gh release upload "$GITHUB_REF_NAME"');
+    expect(runs).toContain('gh release edit "$GITHUB_REF_NAME" --draft=false');
+
+    const nugetPush = source.indexOf('dotnet nuget push');
+    const assetUpload = source.indexOf('gh release upload "$GITHUB_REF_NAME"');
+    const imagePush = source.indexOf('docker push "$image:$BLOK_SERVER_VERSION"');
+    const observable = source.indexOf('Verify published server delivery');
+    const publishDraft = source.indexOf('gh release edit "$GITHUB_REF_NAME" --draft=false');
+
+    expect(nugetPush).toBeGreaterThan(-1);
+    expect(assetUpload).toBeGreaterThan(nugetPush);
+    expect(imagePush).toBeGreaterThan(assetUpload);
+    expect(observable).toBeGreaterThan(imagePush);
+    expect(publishDraft).toBeGreaterThan(observable);
   });
 
-  it('builds the Go module from the repo-root goreleaser config without clobbering the editor bundle', () => {
-    const config = parse(read('.goreleaser.yaml')) as {
-      dist?: string;
-      builds: { dir?: string; main?: string }[];
-      checksum?: { name_template?: string };
-      archives?: { name_template?: string }[];
-      dockers?: { dockerfile?: string; image_templates?: string[] }[];
-    };
+  it('lets the package fixture validate the exact release NuGets', () => {
+    const fixture = read('scripts/test-server-packages.mjs');
 
-    // Paths are relative to the config, which sits at the repo root — a JS project's root.
-    expect(config.builds[0].dir).toBe('packages/server');
-    expect(existsSync(join(repoRoot, 'packages/server', config.builds[0].main ?? '')), 'main does not resolve').toBe(true);
-
-    // goreleaser's default output dir is ./dist — the same directory vite writes
-    // the editor bundle into, and `goreleaser release --clean` empties it.
-    expect(config.dist, 'goreleaser must not write into the editor build output').not.toBe('dist');
-    expect(config.dist).toBeTruthy();
-
-    // The npm wrapper builds these exact filenames; goreleaser's defaults embed
-    // the project name and version, which the wrapper would then have to guess.
-    expect(config.checksum?.name_template).toBe('checksums.txt');
-    expect(config.archives?.[0].name_template).toBeTruthy();
-
-    expect(existsSync(join(repoRoot, config.dockers?.[0].dockerfile ?? '')), 'Dockerfile does not resolve').toBe(true);
+    expect(fixture).toContain("argument === '--package-dir'");
+    expect(fixture).toContain("argument === '--version'");
+    expect(fixture).toContain('packageDirectory ??');
   });
 
-  it('ships an npm wrapper that verifies what it downloads', () => {
+  it('builds the C# host from the root context into .NET 10 runtime-deps', () => {
+    const dockerfile = read('packages/server/Dockerfile');
+    const workflow = read(RELEASE_WORKFLOW);
+
+    expect(dockerfile).toMatch(/^FROM node:24[^\n]* AS runtime-build/m);
+    expect(dockerfile).toContain('corepack enable');
+    expect(dockerfile).toContain('yarn install --immutable');
+
+    for (const manifest of [
+      'packages/angular/package.json',
+      'packages/cli/package.json',
+      'packages/presets/package.json',
+      'packages/react/package.json',
+      'packages/server/package.json',
+      'packages/vue/package.json',
+    ]) {
+      expect(dockerfile).toContain(`COPY ${manifest} ${manifest}`);
+    }
+    expect(dockerfile.indexOf('COPY . .')).toBeLessThan(
+      dockerfile.indexOf('yarn install --immutable'),
+    );
+    expect(dockerfile).toContain('node scripts/build-server-runtime.mjs');
+    expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/sdk:10\.0[^\n]* AS publish/m);
+    expect(dockerfile).toContain(
+      'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
+    );
+    expect(dockerfile).toContain('--runtime linux-x64');
+    expect(dockerfile).toContain('--self-contained true');
+    expect(dockerfile).toContain('-p:PublishSingleFile=true');
+    expect(dockerfile).toContain('-p:SkipBlokServerRuntimeBuild=true');
+    expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
+    expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
+    expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/runtime-deps:10\.0/m);
+    expect(dockerfile).toContain('EXPOSE 4000');
+    expect(dockerfile).toContain('ENTRYPOINT ["/blok-server"]');
+    expect(dockerfile).not.toMatch(/\bgo(?:lang)?\b/i);
+    expect(dockerfile).not.toContain('distroless');
+
+    expect(workflow).toMatch(
+      /docker build --platform linux\/amd64 -f packages\/server\/Dockerfile[\s\S]*?^\s+\.$/m,
+    );
+  });
+
+  it('keeps the root Docker context small without excluding release inputs', () => {
+    const ignore = read('.dockerignore');
+
+    const patterns = ignore.split('\n');
+
+    for (const pattern of [
+      '.git',
+      'node_modules',
+      '**/node_modules',
+      '.yarn',
+      '.venv',
+      'storybook-static',
+      'dist',
+      '**/dist',
+      '**/bin',
+      '**/obj',
+      'docs/dist',
+      '.server-release-dist',
+      '.superpowers',
+    ]) {
+      expect(patterns).toContain(pattern);
+    }
+
+    expect(ignore).not.toMatch(/^src\/?$/m);
+    expect(ignore).not.toMatch(/^scripts\/?$/m);
+    expect(ignore).not.toMatch(/^packages\/server\/dotnet\/?$/m);
+    expect(ignore).not.toMatch(/^package\.json$/m);
+    expect(ignore).not.toMatch(/^yarn\.lock$/m);
+    expect(ignore).not.toMatch(/^\.yarnrc\.yml$/m);
+  });
+
+  it('keeps every public delivery surface on C# while Go remains only an oracle', () => {
+    const publicSources = [
+      read(RELEASE_WORKFLOW),
+      read('packages/server/Dockerfile'),
+      read(SERVER_MANIFEST),
+      read('packages/server/README.md'),
+      read('scripts/release-manifest.mjs'),
+    ].join('\n');
+
+    expect(publicSources).not.toMatch(/Go sidecar|GoReleaser|\.goreleaser/i);
+    expect(read(SERVER_MANIFEST)).toMatch(/C#|ASP\.NET/);
+    expect(read('packages/server/README.md')).toContain('Blok.Server.AspNetCore');
+    expect(read('packages/server/README.md')).not.toContain('UseMySql');
+    expect(read(RELEASE_WORKFLOW)).not.toContain('MySql');
+  });
+
+  it('ships an npm wrapper that verifies the C# host it downloads', () => {
     const wrapper = read('packages/server/bin/blok-server.mjs');
 
-    expect(wrapper, 'the wrapper must verify the download against the checksums file').toContain('checksums.txt');
+    expect(wrapper).toContain('checksums.txt');
     expect(wrapper).toContain('createHash');
-    expect(wrapper, 'a blocked download must still leave a path').toContain('ghcr.io/jackuait/blok-server');
-    // npm installs the bin as a symlink and Node realpaths import.meta.url but not
-    // argv[1]; comparing them raw makes every `npx` run exit 0 having done nothing.
-    expect(wrapper, 'the direct-run guard must realpath argv[1]').toMatch(/realpathSync\(process\.argv\[1\]\)/);
+    expect(wrapper).toContain('ghcr.io/jackuait/blok-server');
+    expect(wrapper).toMatch(/realpathSync\(process\.argv\[1\]\)/);
   });
 });

@@ -20,8 +20,53 @@ import JSZip from 'jszip';
 import { buildServerRuntime } from './build-server-runtime.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const packageVersion = '0.0.0-task13';
+const defaultPackageVersion = '0.0.0-task13';
 const consumerVersion = 'package-fixture';
+
+function parseArgs(args) {
+  let packageDirectory;
+  let packageVersion = defaultPackageVersion;
+  let suppliedVersion = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (argument === '--package-dir') {
+      const value = args[index + 1];
+
+      if (value === undefined || value.startsWith('--')) {
+        throw new Error('--package-dir needs a value');
+      }
+
+      packageDirectory = resolve(repositoryRoot, value);
+      index += 1;
+      continue;
+    }
+
+    if (argument === '--version') {
+      const value = args[index + 1];
+
+      if (value === undefined || value.startsWith('--')) {
+        throw new Error('--version needs a value');
+      }
+
+      packageVersion = value;
+      suppliedVersion = true;
+      index += 1;
+      continue;
+    }
+
+    throw new Error(`unknown argument: ${argument}`);
+  }
+
+  if (packageDirectory !== undefined && !suppliedVersion) {
+    throw new Error('--package-dir requires --version');
+  }
+
+  return { packageDirectory, packageVersion };
+}
+
+const { packageDirectory, packageVersion } = parseArgs(process.argv.slice(2));
 const packageProjects = {
   'Blok.Server': {
     description: 'Shared server services and embedded document runtime for Blok.',
@@ -482,7 +527,7 @@ function escapeXml(value) {
 
 async function main() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'blok-server-packages-'));
-  const feed = join(temporaryRoot, 'feed');
+  const feed = packageDirectory ?? join(temporaryRoot, 'feed');
   const expectedRuntimeDirectory = join(temporaryRoot, 'expected-runtime');
   const globalPackages = join(temporaryRoot, 'global-packages');
   const fixtureIntermediate = join(temporaryRoot, 'fixture-obj');
@@ -528,7 +573,10 @@ async function main() {
       'Blok.Server.Host must be explicitly non-packable',
     );
 
-    await mkdir(feed, { recursive: true });
+    if (packageDirectory === undefined) {
+      await mkdir(feed, { recursive: true });
+    }
+
     await mkdir(globalPackages, { recursive: true });
 
     const expectedRuntimePath = await buildServerRuntime(expectedRuntimeDirectory);
@@ -543,18 +591,20 @@ async function main() {
       '-p:ContinuousIntegrationBuild=true',
     ]);
 
-    for (const packageId of packageIds) {
-      await run('dotnet', [
-        'pack',
-        packageProjects[packageId].path,
-        '--configuration',
-        'Release',
-        '--no-build',
-        `-p:PackageVersion=${packageVersion}`,
-        '-p:ContinuousIntegrationBuild=true',
-        '--output',
-        feed,
-      ]);
+    if (packageDirectory === undefined) {
+      for (const packageId of packageIds) {
+        await run('dotnet', [
+          'pack',
+          packageProjects[packageId].path,
+          '--configuration',
+          'Release',
+          '--no-build',
+          `-p:PackageVersion=${packageVersion}`,
+          '-p:ContinuousIntegrationBuild=true',
+          '--output',
+          feed,
+        ]);
+      }
     }
 
     const feedFiles = (await readdir(feed))

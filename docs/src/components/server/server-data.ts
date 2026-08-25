@@ -1,11 +1,11 @@
 // docs/src/components/server/server-data.ts
 
-export type ServerPathId = 'own-storage' | 'own-server' | 'serverless';
+export type ServerPathId = 'own-storage' | 'dotnet' | 'own-server' | 'serverless';
 
 export interface ServerCodeSample {
   /** Plain-language label above the block, e.g. "Start the service". */
   label: string;
-  language: 'bash' | 'typescript';
+  language: 'bash' | 'csharp' | 'typescript';
   code: string;
 }
 
@@ -52,7 +52,7 @@ export const serverCoverageNote: string =
   'Link previews work for roughly 70% of the sites people paste. X, Instagram, LinkedIn and many news sites serve no preview data to anything that is not a browser, and no service can read what a site does not send. When a preview cannot be read, the block falls back to a plain link showing the domain. It is never an error, and nothing about the paste breaks.';
 
 /**
- * The three deployment paths, in the order a reader should meet them. The path
+ * The deployment paths, in the order a reader should meet them. The path
  * that runs no service leads: an extra service to run is the single biggest
  * reason someone installs nothing at all.
  */
@@ -90,6 +90,58 @@ new Blok({
         cause:
           'Copying a remote file needs a fetch made by a server. Supabase and presigned uploads happen entirely in the browser, so there is nobody to make it.',
         fix: 'The Cloudinary preset does this on its own, and so does the service. With the others the original URL is stored as-is, which still renders — it just depends on the other site staying up.',
+      },
+    ],
+  },
+  {
+    id: 'dotnet',
+    title: 'Your app runs ASP.NET Core',
+    situation: 'You want Blok routes inside the .NET app that already owns your users and deployment.',
+    description:
+      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your authorization implementation stays in the same app, and the editor calls the route prefix you choose. The current package supplies uploads and link previews; database blocks and MySQL integration come later.',
+    runsService: true,
+    whatToRun: [
+      {
+        label: 'Install the ASP.NET Core package',
+        language: 'bash',
+        code: 'dotnet add package Blok.Server.AspNetCore',
+      },
+    ],
+    appRoute: [
+      {
+        label: 'Register and map Blok in your app',
+        language: 'csharp',
+        code: `using Blok.Server.AspNetCore;
+
+builder.Services
+  .AddBlokServer()
+  .UseAuthorization<AppBlokAuthorization>();
+
+var app = builder.Build();
+
+app.MapBlokServer("/api/blok");`,
+      },
+    ],
+    editorConfig: {
+      label: 'Point the editor at the mapped routes',
+      language: 'typescript',
+      code: `import { Blok } from '@bloklabs/core';
+import { fetchStorage } from '@bloklabs/presets';
+
+new Blok({
+  holder: 'editor',
+  uploader: fetchStorage({ baseUrl: '/api/blok' }),
+  tools: {
+    bookmark: { config: { endpoint: '/api/blok/unfurl' } },
+  },
+});`,
+    },
+    failureModes: [
+      {
+        symptom: 'Upload routes return 404 while health and link previews work.',
+        cause:
+          'Storage is disabled, so the package does not map routes that could never complete.',
+        fix: 'Set StorageDirectory, or configure the S3 options, when calling AddBlokServer.',
       },
     ],
   },

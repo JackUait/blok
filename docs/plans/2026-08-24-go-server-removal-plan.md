@@ -10,6 +10,9 @@
 
 **Spec:** `docs/plans/2026-08-23-blok-dotnet-library-design.md`
 
+**Status:** C# package, host, artifact, and public delivery wiring are implemented through
+Task 15. Go remains the transition oracle through Task 16 and is deleted only in Task 17.
+
 ## Global constraints
 
 - Work directly on the existing `main` branch. Do not create branches, worktrees, or stashes.
@@ -500,7 +503,7 @@ internal interface IGuardedOutboundFetcher
 - Docker image remains `ghcr.io/jackuait/blok-server`.
 - Docker build uses repository root context because the embedded bundle build needs root TypeScript and Node dependencies.
 - Tag builds publish NuGet packages, six archives, checksums, and the image before docs can advertise them.
-- CI uses Node + .NET only after Task 16 authorizes Go deletion.
+- CI retains Node, Go, and .NET plus both conformance targets through Task 16; Task 17 removes Go.
 
 - [ ] **Step 1: Rewrite architecture tests first and run them red**
 - [ ] **Step 2: Replace Dockerfile with Node-build + dotnet-publish/runtime stages**
@@ -528,7 +531,7 @@ dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 
 ```bash
 node scripts/test-server-conformance.mjs --target go
-node scripts/test-server-conformance.mjs --target dotnet
+node scripts/test-server-conformance.mjs --target csharp
 ```
 
 - [ ] **Step 3: Run delivery gates**
@@ -536,7 +539,7 @@ node scripts/test-server-conformance.mjs --target dotnet
 ```bash
 node scripts/publish-server.mjs --version "$(node -p "require('./package.json').version")" --dry-run
 yarn vitest run --project=unit   test/unit/server/bin.test.ts   test/unit/scripts/publish-server.test.ts   test/unit/architecture/server-release-wiring.test.ts   test/unit/architecture/ci-critical-path-law.test.ts
-docker build -f packages/server/Dockerfile .
+docker build --platform linux/amd64 -f packages/server/Dockerfile --build-arg BLOK_SERVER_VERSION=1.10.1 .
 ```
 
 - [ ] **Step 4: Run security review cases**

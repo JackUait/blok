@@ -361,9 +361,9 @@ public sealed class OutboundClientArchitectureTests
         declaration.Parent is FieldDeclarationSyntax &&
         declaration.Variables is
         [
-          {
-            Identifier.ValueText: "client",
-          },
+        {
+          Identifier.ValueText: "client",
+        },
         ])
     {
       return S3UseSite.ClientField;

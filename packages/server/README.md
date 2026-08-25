@@ -1,20 +1,53 @@
 # @bloklabs/server
 
-A small Go sidecar for [Blok](https://blokeditor.com). It answers the two requests a rich-text editor cannot make from the browser — storing an uploaded file, and reading the title/description/image of a pasted link — so you do not write a backend for either.
+Blok's shared C# server handles file uploads and link previews. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-It stores no documents. There is no database, and nothing here is a hosted service you depend on: you run it.
+The current packages store no documents and include no database-block or MySQL integration. Those features follow this delivery migration.
 
-## Run it
+## ASP.NET Core
+
+Install the public integration package. NuGet brings in `Blok.Server` transitively.
+
+```bash
+dotnet add package Blok.Server.AspNetCore
+```
+
+Register the services, use your application's authorization policy, and map the routes under one prefix:
+
+```csharp
+using Blok.Server.AspNetCore;
+
+builder.Services
+  .AddBlokServer()
+  .UseAuthorization<MyBlokAuthorization>();
+
+var app = builder.Build();
+
+app.MapBlokServer("/api/blok");
+app.Run();
+```
+
+`MyBlokAuthorization` implements `IBlokAuthorization`, so access stays tied to the users already signed in to your app. `AddBlokServer(options => { ... })` also accepts the same storage, origin, upload-limit, and unfurl settings used by the standalone host.
+
+## Standalone
+
+Run the self-contained host through npm:
 
 ```bash
 npx @bloklabs/server --listen 127.0.0.1:4000
 ```
 
-The npm package is a wrapper. On first run it downloads the binary for your platform from the matching GitHub release, checks it against the release's `checksums.txt`, and caches it. If your network blocks that download, the container image is the same build:
+The npm package is a small wrapper. On first run it downloads the C# host for your platform from the matching GitHub release, verifies it against `checksums.txt`, and caches it.
+
+The same host is available at the existing image name. This loopback example uses the host network so the service is not exposed directly to the internet:
 
 ```bash
-docker run -p 4000:4000 ghcr.io/jackuait/blok-server --listen 0.0.0.0:4000
+docker run --network host ghcr.io/jackuait/blok-server \
+  --listen 127.0.0.1:4000 \
+  --auth proxy
 ```
+
+For an internet-facing deployment, use `--auth ticket`, set `BLOK_SECRET`, and provide `--allow-origin`. The process refuses unsafe public configurations instead of starting with a warning.
 
 ## Point the editor at it
 
@@ -29,37 +62,30 @@ new Blok({
 
       body.append('file', file);
 
-      const res = await fetch('http://127.0.0.1:4000/upload', { method: 'POST', body });
+      const response = await fetch('/api/blok/upload', {
+        method: 'POST',
+        body,
+      });
 
-      return res.json();
+      return response.json();
     },
   },
 });
 ```
 
-The response shapes match what Blok's own parsers already expect, so nothing on the editor side needs configuring beyond the URL.
+The standalone host uses routes at the root. An ASP.NET Core app uses the prefix passed to `MapBlokServer`.
 
 ## Routes
 
 | Route | What it does |
 | --- | --- |
-| `GET /health` | Liveness plus the running version |
-| `GET /unfurl?url=…` | Title, description and image for a pasted link |
-| `POST /upload` | Stores an uploaded file, returns where it landed |
-| `POST /upload-by-url` | Fetches a remote URL server-side and re-hosts it |
+| `GET /health` | Reports liveness and the running version |
+| `GET /unfurl?url=…` | Reads title, description, and image metadata |
+| `POST /upload` | Stores an uploaded file |
+| `POST /upload-by-url` | Fetches and stores a remote file |
 
-Both routes that fetch a URL the browser supplied go through one SSRF-guarded HTTP client, so a pasted `http://169.254.169.254/…` cannot reach your cloud metadata endpoint.
-
-## Access modes
-
-`--auth` picks who may call the service, and the process refuses to start on a combination that would leave it open:
-
-- `none` — no check, and therefore only allowed to bind loopback.
-- `proxy` — trusts every caller, for when something in front of it already authenticated them; loopback only for the same reason.
-- `ticket` — each request carries a short-lived pass your app signs with the shared secret. The only mode allowed to bind a public address.
-
-Storage is a local directory by default (`--storage-dir`), or any S3-compatible bucket via `--s3-bucket` and friends. Credentials are read from `BLOK_S3_ACCESS_KEY` / `BLOK_S3_SECRET_KEY` — never from flags, which land in process listings.
+Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses.
 
 ## Docs
 
-Full flag reference and deployment notes: [https://blokeditor.com/docs](https://blokeditor.com/docs)
+Full configuration and deployment guidance: [https://blokeditor.com/docs](https://blokeditor.com/docs)

@@ -1,5 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { gprPublishCommand, buildReleaseNotes, publishPackagePair } from '../../../scripts/release.mjs';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildReleaseNotes, gprPublishCommand, publishPackagePair } from '../../../scripts/release.mjs';
+
+const repositoryRoot = resolve(import.meta.dirname, '../../..');
+
+describe('release.mjs GitHub release sequencing', () => {
+  it('creates a draft that the server workflow publishes after its assets', () => {
+    const source = readFileSync(resolve(repositoryRoot, 'scripts/release.mjs'), 'utf8');
+
+    expect(source).toMatch(/gh release create \$\{gitTag\}[^\n]* --draft/);
+  });
+});
 
 describe('release.mjs gprPublishCommand', () => {
   it('builds publish command from pack JSON and directory', () => {

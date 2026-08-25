@@ -1,7 +1,7 @@
 {
   "name": "@bloklabs/server",
   "version": "1.11.0",
-  "description": "Blok backend service — a small Go sidecar that handles file uploads and link previews, so you write no backend code for either.",
+  "description": "Blok server delivery for ASP.NET Core, npm, and Docker — shared C# routes for file uploads and link previews.",
   "license": "Apache-2.0",
   "author": "JackUait",
   "homepage": "https://blokeditor.com",

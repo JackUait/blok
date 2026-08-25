@@ -323,7 +323,7 @@ if (isDirectRun) {
     notesFlag = ` --notes-file ${notesFile}`;
   }
 
-  run(`gh release create ${gitTag}${prereleaseFlag}${notesFlag}`);
+  run(`gh release create ${gitTag} --draft${prereleaseFlag}${notesFlag}`);
 
   console.log(`\nReleased ${version} successfully.`);
 }

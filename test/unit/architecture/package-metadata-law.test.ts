@@ -154,6 +154,23 @@ describe('package metadata law', () => {
     expect(missing, `${name} is missing keywords: ${missing.join(', ')}`).toEqual([]);
   });
 
+  it('describes the server as shared C# delivery without advertising MySQL', () => {
+    const manifest = readManifest('packages/server');
+    const description = readString(manifest, 'description');
+    const readme = readFileSync(join(repoRoot, 'packages/server/README.md'), 'utf-8');
+
+    expect(description).toMatch(/C#|ASP\.NET/);
+    expect(description).not.toMatch(/\bGo\b/);
+    expect(readme).toContain('dotnet add package Blok.Server.AspNetCore');
+    expect(readme).toContain('AddBlokServer');
+    expect(readme).toContain('UseAuthorization<');
+    expect(readme).toContain('MapBlokServer');
+    expect(readme).toContain('npx @bloklabs/server');
+    expect(readme).toContain('ghcr.io/jackuait/blok-server');
+    expect(readme).not.toContain('UseMySql');
+    expect(readme).not.toMatch(/Go sidecar/i);
+  });
+
   it('the declared license matches the LICENSE file', () => {
     const license = readFileSync(join(repoRoot, 'LICENSE'), 'utf-8');
 

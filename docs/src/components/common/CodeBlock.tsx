@@ -67,6 +67,7 @@ const setInitPromise = (promise: Promise<HighlighterCore> | null): void => {
  */
 export const SUPPORTED_LANGUAGES = [
   "bash",
+  "csharp",
   "html",
   "javascript",
   "json",
@@ -79,6 +80,7 @@ export const SUPPORTED_LANGUAGES = [
 // Display names for languages
 const languageDisplayNames: Record<string, string> = {
   bash: "Terminal",
+  csharp: "C#",
   html: "HTML",
   javascript: "JavaScript",
   json: "JSON",
@@ -109,6 +111,7 @@ const getHighlighter = async (): Promise<HighlighterCore> => {
       // rather than by building this options object.
       langs: [
         () => import("shiki/langs/bash.mjs"),
+        () => import("shiki/langs/csharp.mjs"),
         () => import("shiki/langs/html.mjs"),
         () => import("shiki/langs/javascript.mjs"),
         () => import("shiki/langs/json.mjs"),

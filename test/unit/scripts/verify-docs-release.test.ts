@@ -1,9 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FAMILY } from '../../../scripts/release-manifest.mjs';
 
 const loadVerifier = async () => import('../../../scripts/verify-docs-release.mjs');
 
 describe('docs release verification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('accepts stable and prerelease version tags', async () => {
     const { releaseVersionFromTag } = await loadVerifier();
 
@@ -76,5 +84,137 @@ describe('docs release verification', () => {
       retryDelayMs: 1,
       wait: async () => {},
     })).rejects.toThrow('@bloklabs/vue published 2.3.3');
+  });
+
+  it('pins the two NuGet packages, six host archives, and checksums', async () => {
+    const { SERVER_NUGET_PACKAGES, SERVER_RELEASE_ASSETS } = await loadVerifier();
+
+    expect(SERVER_NUGET_PACKAGES).toEqual([
+      'Blok.Server',
+      'Blok.Server.AspNetCore',
+    ]);
+    expect(SERVER_RELEASE_ASSETS).toEqual([
+      'blok-server_darwin_amd64.tar.gz',
+      'blok-server_darwin_arm64.tar.gz',
+      'blok-server_linux_amd64.tar.gz',
+      'blok-server_linux_arm64.tar.gz',
+      'blok-server_windows_amd64.zip',
+      'blok-server_windows_arm64.zip',
+      'checksums.txt',
+    ]);
+  });
+
+  it('looks up an exact version in the public NuGet flat-container index', async () => {
+    const { lookupNuGetVersion } = await loadVerifier();
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      versions: ['2.3.3', '2.3.4'],
+    })));
+
+    await expect(lookupNuGetVersion('Blok.Server.AspNetCore', '2.3.4', fetchImpl))
+      .resolves.toBe('2.3.4');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://api.nuget.org/v3-flatcontainer/blok.server.aspnetcore/index.json',
+      { headers: { accept: 'application/json' } },
+    );
+  });
+
+  it('looks up the release assets from the tagged GitHub release', async () => {
+    const { lookupGitHubReleaseAssets } = await loadVerifier();
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      assets: [{ name: 'checksums.txt' }, { name: 'server.tar.gz' }],
+    })));
+
+    await expect(lookupGitHubReleaseAssets('v2.3.4', fetchImpl))
+      .resolves.toEqual(['checksums.txt', 'server.tar.gz']);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://api.github.com/repos/JackUait/blok/releases/tags/v2.3.4',
+      {
+        headers: {
+          accept: 'application/vnd.github+json',
+          'x-github-api-version': '2022-11-28',
+        },
+      },
+    );
+  });
+
+  it('authenticates anonymously before checking the versioned GHCR manifest', async () => {
+    const { lookupGhcrVersion } = await loadVerifier();
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response('', {
+        status: 401,
+        headers: {
+          'www-authenticate': 'Bearer realm="https://ghcr.io/token",service="ghcr.io",scope="repository:jackuait/blok-server:pull"',
+        },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ token: 'registry-token' })))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+    await expect(lookupGhcrVersion('2.3.4', fetchImpl)).resolves.toBe('2.3.4');
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      'https://ghcr.io/token?service=ghcr.io&scope=repository%3Ajackuait%2Fblok-server%3Apull',
+      { headers: { accept: 'application/json' } },
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
+      'https://ghcr.io/v2/jackuait/blok-server/manifests/2.3.4',
+      {
+        headers: {
+          accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+          authorization: 'Bearer registry-token',
+        },
+      },
+    );
+  });
+
+  it('retries until NuGet, release assets, and the image are all observable', async () => {
+    const { verifyPublishedServerDelivery } = await loadVerifier();
+    let attempt = 0;
+    const wait = vi.fn(async () => {});
+
+    await verifyPublishedServerDelivery('2.3.4', {
+      attempts: 2,
+      lookupNuGetVersion: async () => '2.3.4',
+      lookupReleaseAssets: async () => {
+        attempt += 1;
+
+        return attempt === 1 ? [] : ['a.tar.gz', 'checksums.txt'];
+      },
+      lookupContainerVersion: async () => {
+        if (attempt === 1) {
+          throw new Error('not found');
+        }
+
+        return '2.3.4';
+      },
+      nugetPackageIds: ['Blok.Server', 'Blok.Server.AspNetCore'],
+      requiredAssets: ['a.tar.gz', 'checksums.txt'],
+      retryDelayMs: 1,
+      wait,
+    });
+
+    expect(wait).toHaveBeenCalledOnce();
+  });
+
+  it('names every missing server output after propagation retries are exhausted', async () => {
+    const { verifyPublishedServerDelivery } = await loadVerifier();
+
+    await expect(verifyPublishedServerDelivery('2.3.4', {
+      attempts: 1,
+      lookupNuGetVersion: async (name: string) => (
+        name === 'Blok.Server' ? '2.3.3' : '2.3.4'
+      ),
+      lookupReleaseAssets: async () => [],
+      lookupContainerVersion: async () => {
+        throw new Error('manifest missing');
+      },
+      nugetPackageIds: ['Blok.Server', 'Blok.Server.AspNetCore'],
+      requiredAssets: ['a.tar.gz', 'checksums.txt'],
+      wait: async () => {},
+    })).rejects.toThrow(
+      'Blok.Server published 2.3.3; missing release assets: a.tar.gz, checksums.txt; ' +
+      'ghcr.io/jackuait/blok-server:2.3.4 unavailable (manifest missing)',
+    );
   });
 });

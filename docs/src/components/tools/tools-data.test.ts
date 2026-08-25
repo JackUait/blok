@@ -141,3 +141,20 @@ describe('callout keyboard exit', () => {
     expect(description).toMatch(/empty last line|blank line/i);
   });
 });
+
+describe('pasted code language', () => {
+  /**
+   * A pasted code block only keeps its highlighting if the language survives
+   * the clipboard, and whether it does is a property of the SOURCE — a fenced
+   * markdown block names it, and so does a Gemini answer, while a ChatGPT code
+   * block carries no language at all. The docs have to say the language can
+   * come across, or the picker looks like the only way to set it.
+   */
+  it('documents that the language is adopted from a pasted source that names it', () => {
+    const description = TOOL_SECTIONS.find((s) => s.id === 'code')?.description ?? '';
+
+    expect(description).toContain('language');
+    expect(description).toMatch(/```sql|fence/);
+    expect(description).toContain('Gemini');
+  });
+});

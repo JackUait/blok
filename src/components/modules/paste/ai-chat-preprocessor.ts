@@ -13,9 +13,10 @@ import { CODE_LANGUAGE_ATTR } from './constants';
  * semantic tag set BEFORE the sanitizer runs, mirroring `preprocessNotionHtml`,
  * and is a no-op when the source is neither app.
  *
- * Claude (claude.ai) is deliberately not handled: no payload has been captured
- * from it, and the repo's fixture-provenance rule forbids writing a detector
- * against selectors nobody has verified.
+ * Claude (claude.ai) has no branch because it needs none: its answers are
+ * already semantic HTML (see test/fixtures/ai-chat/claude-*.html), so they
+ * survive the generic path. One gap is recorded there — Chrome drops KaTeX's
+ * TeX annotation on copy, so a Claude formula has no recoverable source.
  *
  * @param html - raw clipboard HTML string
  * @returns preprocessed HTML string (unchanged when not an AI chat app)

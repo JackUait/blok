@@ -163,7 +163,7 @@ For advanced control (e.g. rendering outside a single container) use `useBlok` +
 | **Undo/redo on Yjs** | History is CRDT-backed: undo restores the caret, groups small edits, and batches atomically via `blocks.transact()`. |
 | **69 locales, RTL** | Reads the browser language, lazy-loads the matching locale, and lays out right-to-left scripts correctly. |
 | **Plugin system** | Three extension points — block tools, inline tools, block tunes — with lifecycle hooks, paste handling, and conversion rules, over 21 API namespaces. |
-| **Smart paste** | A handler chain keeps block structure intact on internal paste, strips Google Docs HTML noise, and lets tools claim specific file types or patterns. |
+| **Smart paste** | Copy an answer out of ChatGPT, Claude or Gemini, or a page out of Notion or Google Docs, and it arrives as real blocks — headings, lists, tables, quotes and code, not one flat paragraph. A handler chain keeps block structure intact on internal paste, and tools can claim specific file types or patterns. |
 | **Block conversion** | Turn one block type into another from the inline toolbar or in code, one block or a whole selection at a time. |
 | **Read-only mode** | Call `readOnly.set(true)` and the editor re-renders without editing affordances. |
 | **Accessibility** | ARIA live announcements for drag and block ops, Notion-style vertical caret movement, semantic data attributes for tests. |

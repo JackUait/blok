@@ -57,7 +57,33 @@ sanitizer takes ~5s on the untrimmed 69KB payload).
 
 ## Claude
 
-No `claude.ai` fixture: its share pages sit behind a Cloudflare bot check that
-headless Chromium does not clear, so no payload could be captured. The
-preprocessor therefore has no Claude branch — adding one needs a real capture
-first.
+`claude-code.html`, `claude-math.html`, `claude-lists.html` — captured the same
+way, from public `claude.ai/share/...` pages. **Style-stripped**: Chrome's
+serializer writes a full computed `style="..."` onto every element, so these
+carry every tag, attribute and class of the real payload with only `style`
+removed. Capture the raw bytes again before writing a detector against them.
+
+Capturing Claude needs a **headed** browser (`playwright-cli open --persistent
+--headed`). Headless sits on the Cloudflare interstitial forever; headed clears
+the JS challenge on its own, with no login and no interaction.
+
+- **Claude's answers are already semantic HTML** — `<p>`, `<ul>`/`<ol>` with
+  text directly in `<li>` (no `<p>` wrapper), `<h3>`/`<h4>`, `<blockquote>`,
+  `<table><thead><th scope>`, `<pre><code>`, `<strong>`, inline `<code>`. That
+  is why there is still no Claude branch: there is nothing to rewrite.
+- **The LaTeX source does NOT survive the clipboard.** The live page has
+  `<annotation encoding="application/x-tex">` on every formula; the payload has
+  zero (`grep -c annotation claude-math.html` → 0). What arrives is presentation
+  MathML plus the `aria-hidden` KaTeX layout — so a pasted formula doubles its
+  own visible text. This is the one known gap.
+- **Detect on `font-claude-response-body`**, which is on every `<p>` and `<li>`
+  and so survives a partial selection. `standard-markdown` sits on the message
+  wrapper and is lost when the selection starts mid-answer.
+- **Code language rides on `<code class="language-python">`**, and again as a
+  label div above the block; an unlabelled block has neither, plus
+  `aria-label="Code"`. Blok does not read either today, so a pasted Claude code
+  block keeps its text and loses its language.
+- Chrome's serializer — not claude.ai — adds `<span> </span>` around inter-element
+  spaces and `<br class="Apple-interchange-newline"`. Verified against the live DOM.
+- **Unverified, absent from every sample:** links, `<hr>`, nested lists, `<em>`,
+  `<del>`, images, task-list checkboxes, and loose (blank-line-separated) lists.

@@ -1,0 +1,34 @@
+<meta charset='utf-8'><div role="group" aria-label="python code" tabindex="0" class="relative group/copy bg-bg-000/50 border-0.5 border-border-400 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-100"><div class="text-text-500 font-small p-3.5 pb-0"><br class="Apple-interchange-newline">python</div><div class="overflow-x-auto"><pre class="code-block__code !my-0 !rounded-lg !text-sm !leading-relaxed p-3.5"><code class="language-python"><span class="block [unicode-bidi:inherit] [text-align:-webkit-match-parent] [text-align:match-parent]" data-code-line-group=""><span><span>from</span> scipy<span>.</span>stats <span>import</span> chi2
+</span><span>
+</span><span><span>def</span> <span>estimate_trials</span><span>(</span><span>observations</span><span>):</span>
+</span><span>    <span>"""</span>
+</span><span><span>    observations: list of (n_i, k_i) tuples</span>
+</span><span><span>                  n_i = number of successes</span>
+</span><span><span>                  k_i = probability exponent (prob = 2^-k_i)</span>
+</span><span><span>    </span>
+</span><span><span>    Returns: (point_estimate, lower_95, upper_95)</span>
+</span><span><span>    """</span>
+</span><span>    n = <span>sum</span><span>(</span>n_i <span>for</span> n_i<span>,</span> k_i <span>in</span> observations<span>)</span>
+</span><span>    p = <span>sum</span><span>(</span><span>2</span>^<span>(</span>-k_i<span>)</span> <span>for</span> n_i<span>,</span> k_i <span>in</span> observations<span>)</span>
+</span><span>    
+</span><span>    point_estimate = n / p
+</span><span>    
+</span><span>    <span># Exact CI using chi-squared quantiles</span>
+</span><span>    <span># For Poisson: CI for rate λ is [χ²_{2n,α/2}/2, χ²_{2(n+1),1-α/2}/2]</span>
+</span><span>    <span># Here λ = X·p, so X = λ/p</span>
+</span><span>    
+</span><span>    <span>if</span> n == <span>0</span><span>:</span>
+</span><span>        lower = <span>0</span>
+</span><span>    <span>else</span><span>:</span>
+</span><span>        lower = chi2<span>.</span>ppf<span>(</span><span>0.025</span><span>,</span> <span>2</span>*n<span>)</span> / <span>(</span><span>2</span>*p<span>)</span>
+</span><span>    
+</span><span>    upper = chi2<span>.</span>ppf<span>(</span><span>0.975</span><span>,</span> <span>2</span>*<span>(</span>n+<span>1</span><span>))</span> / <span>(</span><span>2</span>*p<span>)</span>
+</span><span>    
+</span><span>    <span>return</span> <span>(</span>point_estimate<span>,</span> lower<span>,</span> upper<span>)</span>
+</span><span>
+</span><span><span># Example usage</span>
+</span><span>obs = <span>[(</span><span>8</span><span>,</span> <span>10</span><span>),</span> <span>(</span><span>3</span><span>,</span> <span>8</span><span>)]</span>  <span># 8 successes at 2^-10, 3 at 2^-8</span>
+</span><span>est<span>,</span> lo<span>,</span> hi = estimate_trials<span>(</span>obs<span>)</span>
+</span><span><span>print</span><span>(</span><span>f</span><span>"Point estimate: </span><span>{</span>est<span>:.0f</span><span>}</span><span> trials"</span><span>)</span>
+</span></span><span class="block [unicode-bidi:inherit] [text-align:-webkit-match-parent] [text-align:match-parent]" data-code-line-group=""><span><span>print</span><span>(</span><span>f</span><span>"95% CI: [</span><span>{</span>lo<span>:.0f</span><span>}</span><span>, </span><span>{</span>hi<span>:.0f</span><span>}</span><span>]"</span><span>)</span></span></span></code></pre></div></div><p class="font-claude-response-body break-words whitespace-normal" dir="ltr">Output for that example:</p><div role="group" aria-label="Code" tabindex="0" class="relative group/copy bg-bg-000/50 border-0.5 border-border-400 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-100"><div class="sticky opacity-0 group-hover/copy:opacity-100 group-focus-within/copy:opacity-100 top-2 py-2 h-12 w-0 float-right"><div class="absolute right-0 h-8 px-2 items-center inline-flex z-10"><span role="status" class="sr-only"></span></div></div><div class="overflow-x-auto"><pre class="code-block__code !my-0 !rounded-lg !text-sm !leading-relaxed p-3.5"><code>Point estimate: 2253 trials
+95% CI: [1125, 4032]</code></pre></div></div><p class="font-claude-response-body break-words whitespace-normal" dir="ltr">(The exact chi-squared bounds are a bit wider than the Gaussian approximation, especially for smaller n.)</p>

@@ -533,7 +533,7 @@ const editor = new Blok(config);`,
         type: "(html: string) => string | null",
         default: "undefined",
         description:
-          "Transforms the raw `text/html` clipboard payload before any Blok preprocessing or sanitization, so a capture-phase paste interceptor is no longer needed. Return the HTML to feed into the rest of the paste pipeline, or null to skip the HTML path and fall through to plain text.",
+          "Transforms the raw `text/html` clipboard payload before any Blok preprocessing or sanitization, so a capture-phase paste interceptor is no longer needed. Return the HTML to feed into the rest of the paste pipeline, or null to skip the HTML path and fall through to plain text. Everything below runs after your hook. Blok normalizes what other apps put on the clipboard, so an answer copied out of ChatGPT, Claude or Gemini — or a page copied out of Notion or Google Docs — arrives as real blocks (headings, lists, tables, quotes, code) rather than one flat paragraph. ChatGPT and Gemini get a dedicated pre-pass on top, because each hides meaning in markup the sanitizer would otherwise drop: ChatGPT ships no MathML, so a formula's LaTeX is recovered from its source attribute and rebuilt as an equation, and its code blocks are de-duplicated (each one renders as a nested editor); Gemini's code language is read off the label it prints above the block. Claude has no pre-pass of its own — its answers are already semantic HTML, so they come through the standard HTML and markdown paths.",
       },
       {
         option: "onBeforeRender",

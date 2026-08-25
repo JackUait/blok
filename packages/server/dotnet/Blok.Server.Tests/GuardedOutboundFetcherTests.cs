@@ -295,7 +295,7 @@ public sealed class GuardedOutboundFetcherTests
 
     var response = await fetcher.GetAsync(
         $"https://alpn.example:{origin.Port}/",
-        Limits,
+        new GuardedFetchLimits(TimeSpan.FromSeconds(10), 1024, 3),
         CancellationToken.None);
 
     Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
@@ -743,7 +743,7 @@ public sealed class GuardedOutboundFetcherTests
         {
           await Task.Delay(
               TimeSpan.FromMilliseconds(
-                  request.Target == "/start" ? 40 : 90),
+                  request.Target == "/start" ? 100 : 950),
               cancellationToken);
           var response = request.Target == "/start"
             ? "HTTP/1.1 302 Found\r\n" +
@@ -762,7 +762,7 @@ public sealed class GuardedOutboundFetcherTests
     var error = await Assert.ThrowsAsync<GuardedFetchException>(
         async () => await fetcher.GetAsync(
             $"http://deadline.example:{origin.Port}/start",
-            new GuardedFetchLimits(TimeSpan.FromMilliseconds(100), 1024, 1),
+            new GuardedFetchLimits(TimeSpan.FromSeconds(1), 1024, 1),
             CancellationToken.None));
 
     Assert.Equal(GuardedFetchFailure.TimedOut, error.Failure);

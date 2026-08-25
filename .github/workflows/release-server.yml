@@ -169,6 +169,7 @@ jobs:
             "Blok.Server.$BLOK_SERVER_VERSION.nupkg"
             "Blok.Server.AspNetCore.$BLOK_SERVER_VERSION.nupkg"
           )
+          anonymous_docker_config="$(mktemp -d)"
 
           for _ in $(seq 1 60); do
             ready=true
@@ -183,7 +184,7 @@ jobs:
               grep --fixed-strings --line-regexp --quiet "$asset" <<<"$assets" || ready=false
             done
 
-            docker manifest inspect \
+            DOCKER_CONFIG="$anonymous_docker_config" docker manifest inspect \
               "ghcr.io/jackuait/blok-server:$BLOK_SERVER_VERSION" >/dev/null 2>&1 || ready=false
 
             if [ "$ready" = "true" ]; then

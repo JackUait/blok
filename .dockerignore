@@ -1,4 +1,7 @@
 .git
+.env
+.env.*
+.npmrc
 node_modules
 **/node_modules
 .yarn
@@ -16,6 +19,7 @@ playwright-report
 blob-report
 all-blob-reports
 .server-release-dist
+.server-release-smoke
 .superpowers
 *.log
 .DS_Store

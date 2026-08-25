@@ -209,6 +209,14 @@ describe('server release wiring', () => {
     expect(runs).toContain('--auth proxy');
     expect(runs).toContain('docker push "$image:$BLOK_SERVER_VERSION"');
     expect(runs).toContain('docker push "$image:latest"');
+
+    const deliveryVerification = steps.find(
+      (step) => step.name === 'Verify published server delivery',
+    )?.run;
+
+    expect(deliveryVerification).toMatch(
+      /anonymous_docker_config="\$\(mktemp -d\)"[\s\S]*DOCKER_CONFIG="\$anonymous_docker_config" docker manifest inspect/,
+    );
     expect(runs).not.toContain('docker buildx build');
     expect(runs).not.toContain('--platform linux/arm64');
 
@@ -297,7 +305,11 @@ describe('server release wiring', () => {
       '**/obj',
       'docs/dist',
       '.server-release-dist',
+      '.server-release-smoke',
       '.superpowers',
+      '.env',
+      '.env.*',
+      '.npmrc',
     ]) {
       expect(patterns).toContain(pattern);
     }

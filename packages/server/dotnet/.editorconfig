@@ -1,0 +1,11 @@
+# The repository has no root .editorconfig, so `dotnet format` in CI fell back to
+# its 4-space default while this code is written 2-space. `root = true` also stops
+# the walk into a developer's home directory, so CI and a laptop agree.
+root = true
+
+[*.{cs,csproj,slnx}]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true

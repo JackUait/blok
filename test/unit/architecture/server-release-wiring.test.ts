@@ -30,12 +30,10 @@ type FamilyEntry = {
 };
 
 type WorkflowStep = {
-  id?: string;
   name?: string;
   run?: string;
   uses?: string;
   with?: Record<string, string | number>;
-  env?: Record<string, string>;
 };
 
 type Workflow = {
@@ -147,11 +145,7 @@ describe('server release wiring', () => {
 
     expect(job).toBeDefined();
     expect(job?.if).toContain('github.repository');
-    expect(job?.permissions).toMatchObject({
-      contents: 'write',
-      packages: 'write',
-      'id-token': 'write',
-    });
+    expect(job?.permissions).toMatchObject({ contents: 'write', packages: 'write' });
 
     const steps = job?.steps ?? [];
     const actions = steps.map((step) => step.uses ?? '').join('\n');
@@ -195,6 +189,7 @@ describe('server release wiring', () => {
     expect(runs).toContain('Blok.Server."$BLOK_SERVER_VERSION".nupkg');
     expect(runs).toContain('Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg');
     expect(runs).toContain('dotnet nuget push');
+    expect(source).toContain('NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}');
     expect(source).not.toContain('BLOK_NUGET');
 
     expect(runs).toContain(
@@ -233,24 +228,6 @@ describe('server release wiring', () => {
     expect(imagePush).toBeGreaterThan(assetUpload);
     expect(observable).toBeGreaterThan(imagePush);
     expect(publishDraft).toBeGreaterThan(observable);
-  });
-
-  it('mints a short-lived NuGet key over OIDC right before pushing', () => {
-    const source = read(RELEASE_WORKFLOW);
-    const steps = (parse(source) as Workflow).jobs['release-server']?.steps ?? [];
-    const loginIndex = steps.findIndex((step) => step.uses === 'NuGet/login@v1');
-    const pushIndex = steps.findIndex((step) => step.name === 'Publish NuGet packages');
-
-    expect(loginIndex).toBeGreaterThan(-1);
-    expect(steps[loginIndex]?.id).toBe('nuget-login');
-    expect(steps[loginIndex]?.with).toMatchObject({ user: 'JackUait' });
-    expect(steps[pushIndex]?.env).toMatchObject({
-      NUGET_API_KEY: '${{ steps.nuget-login.outputs.NUGET_API_KEY }}',
-    });
-
-    // the OIDC key is short-lived, so nothing slow may sit between minting and pushing
-    expect(loginIndex).toBe(pushIndex - 1);
-    expect(source).not.toContain('secrets.NUGET_API_KEY');
   });
 
   it('dispatches tagged docs deployment after publishing the release', () => {

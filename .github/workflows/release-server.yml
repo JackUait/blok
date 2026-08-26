@@ -12,7 +12,6 @@ jobs:
     permissions:
       actions: write
       contents: write
-      id-token: write
       packages: write
     steps:
       - name: Checkout code
@@ -81,16 +80,9 @@ jobs:
           tar -xzf .server-release-dist/blok-server_linux_amd64.tar.gz -C .server-release-smoke
           .server-release-smoke/blok-server --help
 
-      # minted here, not earlier: the OIDC key is short-lived and the build above is slow
-      - name: Log in to NuGet
-        id: nuget-login
-        uses: NuGet/login@v1
-        with:
-          user: JackUait
-
       - name: Publish NuGet packages
         env:
-          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           dotnet nuget push .server-release-dist/nuget/Blok.Server."$BLOK_SERVER_VERSION".nupkg \
             --api-key "$NUGET_API_KEY" \

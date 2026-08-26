@@ -62,7 +62,7 @@ function releaseFetch(target: ReturnType<typeof requiredTarget>, archive: Buffer
     }
 
     if (url.endsWith(`/${target.archive}`)) {
-      return new Response(archive);
+      return new Response(new Uint8Array(archive));
     }
 
     return new Response('', { status: 404, statusText: 'Not Found' });
@@ -176,7 +176,7 @@ describe('blok-server npm wrapper', () => {
           return new Response(`${'0'.repeat(64)}  ${target.archive}\n`);
         }
 
-        return new Response(archive);
+        return new Response(new Uint8Array(archive));
       });
 
       await expect(installBinary({

@@ -23,8 +23,15 @@ import { sendRequest } from './http-client';
 // scripts/test-server-conformance.mjs builds and points BLOK_CONFORMANCE_SERVER at.
 // The default `unit` project globs this file too, so without the guard every
 // ordinary `yarn test` run is red.
-const it = baseIt.skipIf(
-  process.env.BLOK_CONFORMANCE_SERVER === undefined || process.env.BLOK_CONFORMANCE_SERVER === '',
+const unset = (name: string): boolean =>
+  process.env[name] === undefined || process.env[name] === '';
+
+const it = baseIt.skipIf(unset('BLOK_CONFORMANCE_SERVER'));
+
+// A few cases drive the ordinary binary too, which the same runner builds beside
+// the conformance one. `skipIf` returns an API that cannot be narrowed again.
+const ordinaryIt = baseIt.skipIf(
+  unset('BLOK_CONFORMANCE_SERVER') || unset('BLOK_CONFORMANCE_ORDINARY_SERVER'),
 );
 
 const ALLOWED_ORIGIN = 'https://app.example.com';
@@ -1298,10 +1305,7 @@ it('refuses a zero upload cap at process startup', async () => {
   );
 });
 
-it.runIf(
-  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== undefined &&
-  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== '',
-)('accepts only an exact HTTP 127.0.0.1 origin in the tagged binary', async () => {
+ordinaryIt('accepts only an exact HTTP 127.0.0.1 origin in the tagged binary', async () => {
   for (const origin of [
     'https://127.0.0.1:43123',
     'http://localhost:43123',
@@ -1322,10 +1326,7 @@ it.runIf(
   }
 });
 
-it.runIf(
-  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== undefined &&
-  process.env.BLOK_CONFORMANCE_ORDINARY_SERVER !== '',
-)('keeps the conformance-only origin flag out of an ordinary binary', async () => {
+ordinaryIt('keeps the conformance-only origin flag out of an ordinary binary', async () => {
   await expect(startServer({
     command: ordinaryServerCommand(),
     args: serverArgs(

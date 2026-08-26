@@ -188,7 +188,7 @@ function createTar(name, contents) {
 }
 
 /**
- * @param {(typeof TARGETS)[number]} target
+ * @param {{ archive: string, binary: string }} target
  * @param {Buffer} executable
  * @returns {Promise<Buffer>}
  */

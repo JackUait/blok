@@ -1,6 +1,6 @@
 {
   "name": "@bloklabs/presets",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "description": "Storage presets for Blok — ready-made uploaders for Supabase, S3-compatible storage, Cloudinary, and IndexedDB.",
   "license": "Apache-2.0",
   "author": "JackUait",

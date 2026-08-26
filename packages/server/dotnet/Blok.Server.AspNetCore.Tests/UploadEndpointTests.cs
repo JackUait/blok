@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -131,9 +132,7 @@ public sealed class UploadEndpointTests
 
     try
     {
-      var temporaryPath = Assert.Single(
-          Directory.GetFiles(Path.GetTempPath(), ".blok-upload-*"),
-          path => !existingSpools.Contains(path));
+      var temporaryPath = Assert.Single(await WaitForNewSpoolsAsync(existingSpools, 1));
       var mode = File.GetUnixFileMode(temporaryPath);
       Assert.Equal(
           UnixFileMode.UserRead | UnixFileMode.UserWrite,
@@ -323,9 +322,7 @@ public sealed class UploadEndpointTests
           HttpStatusCode.BadRequest,
           "malformed upload\n");
       Assert.Equal(0, rejectedStore.PutCalls);
-      Assert.Empty(
-          Directory.GetFiles(Path.GetTempPath(), ".blok-upload-*")
-              .Except(existingSpools, StringComparer.Ordinal));
+      Assert.Empty(await WaitForNewSpoolsAsync(existingSpools, 0));
     }
   }
 
@@ -545,6 +542,44 @@ public sealed class UploadEndpointTests
 
     await AssertError(response, HttpStatusCode.Unauthorized, "missing pass\n");
     Assert.Equal(0, store.PutCalls);
+  }
+
+  /// <summary>
+  /// Reads the endpoint spools that were not there before, waiting for the
+  /// expected count.
+  /// </summary>
+  /// <remarks>
+  /// The spool lives in the machine-wide temp directory, so a file there can
+  /// belong to a request this assembly never made — Blok.Server.Host.Tests
+  /// uploads through a real host process, and `dotnet test` runs the two in
+  /// parallel. A leak is a spool that never goes away, so both callers wait
+  /// for one instead of reading the directory the instant a response arrives:
+  /// the handler deletes its spool in a `finally` that runs after the client
+  /// already has the response.
+  /// </remarks>
+  private static async Task<string[]> WaitForNewSpoolsAsync(
+      IReadOnlyCollection<string> existing,
+      int expectedCount)
+  {
+    var stopwatch = Stopwatch.StartNew();
+    string[] found;
+
+    do
+    {
+      found = [.. Directory
+          .GetFiles(Path.GetTempPath(), ".blok-upload-*")
+          .Where(path => !existing.Contains(path))];
+
+      if (found.Length == expectedCount)
+      {
+        return found;
+      }
+
+      await Task.Delay(25);
+    }
+    while (stopwatch.Elapsed < TimeSpan.FromSeconds(5));
+
+    return found;
   }
 
   private static string MultipartContentType =>

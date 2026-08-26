@@ -766,12 +766,16 @@ public sealed class GuardedOutboundFetcherTests
   [Fact]
   public async Task TotalDeadlineSpansTheWholeRedirectChain()
   {
+    // The budget has to sit between the second hop's delay (or a per-hop
+    // deadline would pass this) and the sum of both (or nothing times out),
+    // so both margins are set in seconds: a loaded runner has stalled this
+    // process for most of a second between hops.
     await using var origin = new LoopbackOrigin(
         async (request, stream, requestCount, cancellationToken) =>
         {
           await Task.Delay(
               TimeSpan.FromMilliseconds(
-                  request.Target == "/start" ? 100 : 950),
+                  request.Target == "/start" ? 1500 : 3000),
               cancellationToken);
           var response = request.Target == "/start"
             ? "HTTP/1.1 302 Found\r\n" +
@@ -790,7 +794,7 @@ public sealed class GuardedOutboundFetcherTests
     var error = await Assert.ThrowsAsync<GuardedFetchException>(
         async () => await fetcher.GetAsync(
             $"http://deadline.example:{origin.Port}/start",
-            new GuardedFetchLimits(TimeSpan.FromSeconds(1), 1024, 1),
+            new GuardedFetchLimits(TimeSpan.FromSeconds(4), 1024, 1),
             CancellationToken.None));
 
     Assert.Equal(GuardedFetchFailure.TimedOut, error.Failure);

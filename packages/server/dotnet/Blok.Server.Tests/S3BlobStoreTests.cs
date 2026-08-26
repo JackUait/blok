@@ -724,7 +724,7 @@ public sealed class S3BlobStoreRequestTests
             "application/octet-stream",
             new MemoryStream("bytes"u8.ToArray()),
             CancellationToken.None).WaitAsync(
-                TimeSpan.FromMilliseconds(500)));
+                TimeSpan.FromSeconds(2)));
 
     var request = Assert.IsType<WireRequest>(endpoint.LastRequest);
     Assert.Equal("bytes"u8.ToArray(), request.Body);
@@ -760,7 +760,7 @@ public sealed class S3BlobStoreRequestTests
             "application/octet-stream",
             new MemoryStream("bytes"u8.ToArray()),
             CancellationToken.None).WaitAsync(
-                TimeSpan.FromMilliseconds(500)));
+                TimeSpan.FromSeconds(2)));
     Assert.True(payloadSerialized.Task.IsCompletedSuccessfully);
   }
 

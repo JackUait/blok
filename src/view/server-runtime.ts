@@ -1,6 +1,7 @@
 import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-formats/output-data';
 import { markdownToBlocks } from '../markdown';
 import { blocksToHtml } from './blocks-to-html';
+import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import { blocksToPlainText } from './blocks-to-plain-text';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -70,6 +71,13 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     }
     case 'blocksToHtml':
       return blocksToHtml(parseDocument(inputJson));
+    /**
+     * Returns JSON rather than a bare string: a consumer handing Markdown to
+     * something that cannot ask a follow-up question needs to know which
+     * constructs degraded on the way out.
+     */
+    case 'blocksToMarkdown':
+      return JSON.stringify(blocksToMarkdownWithReport(parseDocument(inputJson)));
     case 'blocksToPlainText':
       return blocksToPlainText(parseDocument(inputJson));
     default:

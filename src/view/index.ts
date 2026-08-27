@@ -16,6 +16,8 @@ export type {
 } from './blocks-to-html';
 export type { ViewInlineElement, ViewInlineRenderer } from './inline-renderers';
 export { blocksToPlainText } from './blocks-to-plain-text';
+export { blocksToMarkdown, blocksToMarkdownWithReport } from './blocks-to-markdown';
+export type { MarkdownDegradation, MarkdownSerializationResult } from './blocks-to-markdown';
 export { htmlTextContent } from './html-text';
 export { outlineFromOutputData } from './outline';
 export type { OutlineItem } from './outline';

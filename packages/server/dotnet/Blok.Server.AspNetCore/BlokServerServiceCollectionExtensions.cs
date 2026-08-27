@@ -36,7 +36,7 @@ public static class BlokServerServiceCollectionExtensions
 
     services.TryAddSingleton(options);
     services.TryAddSingleton(TimeProvider.System);
-    services.TryAddSingleton<IBlokRuntime>(static _ => JintBlokRuntime.FromEmbeddedResource());
+    services.AddBlokDocuments();
     services.TryAddSingleton<IBlokAuthorization, DenyBlokAuthorization>();
     services.TryAddSingleton<IGuardedOutboundPolicy, GuardedOutboundPolicy>();
     services.TryAddSingleton<IGuardedOutboundFetcher>(provider =>

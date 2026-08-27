@@ -13,6 +13,11 @@ const SERVER_NPM_NAME = '@bloklabs/server';
 const SERVER_GPR_NAME = '@dodopizza/blok-server';
 const SERVER_MANIFEST = 'packages/server/package.json';
 const RELEASE_WORKFLOW = '.github/workflows/release-server.yml';
+const SETUP_NODE_ACTION = '.github/actions/setup-node-deps/action.yml';
+const CHECKOUT_ACTION = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
+const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9';
+const LOGIN_ACTION = 'docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9';
+const SETUP_NODE_ACTION_SHA = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const SERVER_ARCHIVES = [
   'blok-server_darwin_amd64.tar.gz',
   'blok-server_darwin_arm64.tar.gz',
@@ -30,10 +35,16 @@ type FamilyEntry = {
 };
 
 type WorkflowStep = {
+  if?: string;
   name?: string;
   run?: string;
   uses?: string;
-  with?: Record<string, string | number>;
+  with?: Record<string, boolean | string | number>;
+};
+
+type CompositeAction = {
+  inputs?: Record<string, { default?: string }>;
+  runs?: { steps?: WorkflowStep[] };
 };
 
 type Workflow = {
@@ -127,6 +138,26 @@ describe('server release wiring', () => {
     expect(runs).toContain('test/unit/architecture/server-release-wiring.test.ts');
   });
 
+  it('lets release jobs skip the separate docs dependency install', () => {
+    const action = parse(read(SETUP_NODE_ACTION)) as CompositeAction;
+    const docsInstall = action.runs?.steps?.find(
+      (step) => step.name === 'Install docs dependencies',
+    );
+
+    expect(action.inputs?.['install-docs']?.default).toBe('true');
+    expect(docsInstall?.if).toBe("inputs.install-docs == 'true'");
+  });
+
+  it('pins external actions used by the server release', () => {
+    const release = read(RELEASE_WORKFLOW);
+    const setup = read(SETUP_NODE_ACTION);
+
+    expect(release).toContain(`uses: ${CHECKOUT_ACTION}`);
+    expect(release).toContain(`uses: ${SETUP_DOTNET_ACTION}`);
+    expect(release).toContain(`uses: ${LOGIN_ACTION}`);
+    expect(setup).toContain(`uses: ${SETUP_NODE_ACTION_SHA}`);
+  });
+
   it('creates the family release as a draft before the server workflow runs', () => {
     const releaseScript = read('scripts/release.mjs');
 
@@ -151,12 +182,17 @@ describe('server release wiring', () => {
     const actions = steps.map((step) => step.uses ?? '').join('\n');
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
-    expect(actions).toContain('actions/checkout@v4');
-    expect(steps.find((step) => step.uses === 'actions/checkout@v4')?.with)
-      .toMatchObject({ 'fetch-depth': 0 });
+    expect(actions).toContain(CHECKOUT_ACTION);
+    expect(steps.find((step) => step.uses === CHECKOUT_ACTION)?.with)
+      .toMatchObject({
+        'fetch-depth': 0,
+        'persist-credentials': false,
+      });
     expect(actions).toContain('./.github/actions/setup-node-deps');
-    expect(actions).toContain('actions/setup-dotnet@v4');
-    expect(actions).toContain('docker/login-action@v3');
+    expect(steps.find((step) => step.uses === './.github/actions/setup-node-deps')?.with)
+      .toMatchObject({ 'install-docs': false });
+    expect(actions).toContain(SETUP_DOTNET_ACTION);
+    expect(actions).toContain(LOGIN_ACTION);
     expect(source.match(/version="\$\{GITHUB_REF_NAME#v\}"/g)).toHaveLength(1);
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
@@ -228,6 +264,22 @@ describe('server release wiring', () => {
     expect(imagePush).toBeGreaterThan(assetUpload);
     expect(observable).toBeGreaterThan(imagePush);
     expect(publishDraft).toBeGreaterThan(observable);
+  });
+
+  it('holds GHCR credentials only for the image push', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+    const loginIndex = steps.findIndex(
+      (step) => step.uses === LOGIN_ACTION,
+    );
+    const pushIndex = steps.findIndex((step) => step.name === 'Push linux/amd64 image');
+    const logoutIndex = steps.findIndex((step) => step.name === 'Log out of GHCR');
+    const logout = steps[logoutIndex];
+
+    expect(loginIndex).toBe(pushIndex - 1);
+    expect(logoutIndex).toBe(pushIndex + 1);
+    expect(logout?.if).toBe('always()');
+    expect(logout?.run).toContain('docker logout ghcr.io');
   });
 
   it('dispatches tagged docs deployment after publishing the release', () => {
@@ -318,6 +370,27 @@ describe('server release wiring', () => {
     expect(project).not.toContain('PackageReference Include="Blok.Server"');
   });
 
+  it('makes the embedded runtime build incremental', () => {
+    const project = read('packages/server/dotnet/Blok.Server/Blok.Server.csproj');
+    const target = project.match(
+      /<Target Name="BuildBlokServerRuntime"[\s\S]*?<\/Target>/,
+    )?.[0] ?? '';
+
+    expect(project).toContain(
+      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../src/**/*.ts" />',
+    );
+    expect(project).toContain(
+      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../types/**/*.d.ts" />',
+    );
+    expect(project).toContain(
+      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs" />',
+    );
+    expect(target).toContain('Inputs="@(BlokServerRuntimeInput)"');
+    expect(target).toContain(
+      'Outputs="$(MSBuildThisFileDirectory)Generated/blok-server-runtime.js"',
+    );
+  });
+
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {
     const dockerfile = read('packages/server/Dockerfile');
     const workflow = read(RELEASE_WORKFLOW);
@@ -336,8 +409,8 @@ describe('server release wiring', () => {
     ]) {
       expect(dockerfile).toContain(`COPY ${manifest} ${manifest}`);
     }
-    expect(dockerfile.indexOf('COPY . .')).toBeLessThan(
-      dockerfile.indexOf('yarn install --immutable'),
+    expect(dockerfile.indexOf('yarn install --immutable')).toBeLessThan(
+      dockerfile.indexOf('COPY . .'),
     );
     expect(dockerfile).toContain('node scripts/build-server-runtime.mjs');
     expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/sdk:10\.0[^\n]* AS publish/m);
@@ -351,6 +424,16 @@ describe('server release wiring', () => {
     expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
     expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
     expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/runtime-deps:10\.0/m);
+
+    const runtimeStage = dockerfile.slice(
+      dockerfile.lastIndexOf('FROM mcr.microsoft.com/dotnet/runtime-deps:10.0'),
+    );
+
+    expect(runtimeStage).toMatch(/useradd[^\n]*blok/);
+    expect(runtimeStage).toContain('mkdir /data');
+    expect(runtimeStage).toContain('chown blok:blok /data');
+    expect(runtimeStage).toMatch(/^WORKDIR \/data$/m);
+    expect(runtimeStage).toMatch(/^USER blok$/m);
     expect(dockerfile).toContain('EXPOSE 4000');
     expect(dockerfile).toContain('ENTRYPOINT ["/blok-server"]');
     expect(dockerfile).not.toMatch(/\bgo(?:lang)?\b/i);
@@ -359,6 +442,18 @@ describe('server release wiring', () => {
     expect(workflow).toMatch(
       /docker build --platform linux\/amd64 -f packages\/server\/Dockerfile[\s\S]*?^\s+\.$/m,
     );
+  });
+
+  it('documents a loopback Docker port, persistent data, and TLS termination', () => {
+    const readme = read('packages/server/README.md');
+
+    expect(readme).toContain('--network host');
+    expect(readme).toContain('--listen 127.0.0.1:4000');
+    expect(readme).toMatch(/-p 127\.0\.0\.1:4000:4000[\s\S]*--auth ticket/);
+    expect(readme).toContain('--listen 0.0.0.0:4000');
+    expect(readme).toContain('target=/data');
+    expect(readme).toContain('--storage-dir /data');
+    expect(readme).toMatch(/TLS[^\n]*(reverse proxy|hosting platform)|(reverse proxy|hosting platform)[^\n]*TLS/i);
   });
 
   it('keeps the root Docker context small without excluding release inputs', () => {

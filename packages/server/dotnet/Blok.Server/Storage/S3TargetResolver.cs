@@ -28,6 +28,13 @@ internal static class S3TargetResolver
           $"blobstore: s3 addressing style must be \"path\" or \"virtual\" (got \"{options.AddressingStyle}\")");
     }
 
+    if (options.AddressingStyle == "virtual" &&
+        !IsDnsCompatibleBucket(options.Bucket))
+    {
+      throw new InvalidOperationException(
+          $"blobstore: s3 bucket \"{options.Bucket}\" is not valid for virtual-hosted addressing");
+    }
+
     if (!Uri.TryCreate(options.Endpoint, UriKind.Absolute, out var endpoint) ||
         endpoint.Host == "" ||
         (endpoint.Scheme != Uri.UriSchemeHttp &&
@@ -98,6 +105,7 @@ internal static class S3TargetResolver
             host.EndsWith(
                 ".amazonaws.com",
                 StringComparison.OrdinalIgnoreCase)) &&
+        !options.Bucket.Contains('.') &&
         IsDnsCompatibleBucket(options.Bucket);
   }
 
@@ -118,9 +126,19 @@ internal static class S3TargetResolver
         continue;
       }
 
+      if (character == '.' &&
+          index > 0 &&
+          index < bucket.Length - 1 &&
+          bucket[index - 1] != '.')
+      {
+        continue;
+      }
+
       if (character != '-' ||
           index == 0 ||
-          index == bucket.Length - 1)
+          index == bucket.Length - 1 ||
+          bucket[index - 1] == '.' ||
+          bucket[index + 1] == '.')
       {
         return false;
       }

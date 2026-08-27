@@ -23,10 +23,17 @@
   <ItemGroup>
     <EmbeddedResource Include="Generated/blok-server-runtime.js"
                       LogicalName="Blok.Server.Runtime.blok-server-runtime.js" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../src/**/*.ts" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../types/**/*.d.ts" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../package.json" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../yarn.lock" />
   </ItemGroup>
 
   <Target Name="BuildBlokServerRuntime"
           BeforeTargets="PrepareResourceNames"
+          Inputs="@(BlokServerRuntimeInput)"
+          Outputs="$(MSBuildThisFileDirectory)Generated/blok-server-runtime.js"
           Condition="'$(SkipBlokServerRuntimeBuild)' != 'true'">
     <Exec Command="node &quot;$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs&quot;" />
   </Target>

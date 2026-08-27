@@ -12,7 +12,6 @@ internal sealed record HostParseResult(
 internal static class HostArguments
 {
   private const long DefaultTicketRateLimit = 60;
-  private const long AutomaticRateLimit = -1;
 
   internal const string Usage =
       """
@@ -32,7 +31,7 @@ internal static class HostArguments
         --max-upload value
           largest upload accepted, in bytes (default 33554432)
         --rate-limit value
-          requests a minute per caller (default -1)
+          requests a minute per caller (ticket mode defaults to 60; other modes default to 0)
         --no-unfurl
           close GET /unfurl and POST /upload-by-url
         --s3-endpoint value
@@ -62,7 +61,7 @@ internal static class HostArguments
     };
     var origins = "";
     var publicUrl = "";
-    var rateLimit = AutomaticRateLimit;
+    long? rateLimit = null;
     var secretFromFlag = false;
 
     for (var index = 0; index < args.Length; index++)
@@ -158,12 +157,13 @@ internal static class HostArguments
           options.MaxUploadBytes = maxUpload;
           break;
         case "rate-limit":
-          if (!TryParseBaseZeroInt64(value, out rateLimit))
+          if (!TryParseBaseZeroInt64(value, out var parsedRateLimit))
           {
             return ParseError(
                 $"invalid value \"{value}\" for flag -rate-limit: parse error");
           }
 
+          rateLimit = parsedRateLimit;
           break;
         case "s3-endpoint":
           options.S3Endpoint = value;
@@ -187,9 +187,8 @@ internal static class HostArguments
     options.PublicUrl = publicUrl == ""
       ? DefaultPublicUrl(options.ListenAddress)
       : publicUrl;
-    options.RateLimitPerMinute = rateLimit == AutomaticRateLimit
-      ? options.Auth == "ticket" ? DefaultTicketRateLimit : 0
-      : rateLimit;
+    options.RateLimitPerMinute = rateLimit ??
+        (options.Auth == "ticket" ? DefaultTicketRateLimit : 0);
 
     if (!secretFromFlag)
     {

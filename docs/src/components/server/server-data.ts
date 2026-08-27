@@ -148,6 +148,12 @@ new Blok({
           'Storage is disabled, so the package does not map routes that could never complete.',
         fix: 'Set StorageDirectory, or configure the S3 options, when calling AddBlokServer.',
       },
+      {
+        symptom: 'The app rejects its Blok configuration before it maps routes or opens storage.',
+        cause:
+          'MaxUploadBytes cannot be larger than Array.MaxLength, RateLimitPerMinute must be zero or greater, and neither PublicUrl nor S3BucketUrl may contain a query or fragment. ListenAddress rejects a DNS host because the standalone Kestrel host would bind every network interface.',
+        fix: 'Lower the numeric limit, use a plain URL prefix without anything after ? or #, and bind an IP address, localhost, or an explicit wildcard.',
+      },
     ],
   },
   {
@@ -161,10 +167,14 @@ new Blok({
       {
         label: 'Start the service beside your app',
         language: 'bash',
-        code: `docker run --network host ghcr.io/jackuait/blok-server \\
+        code: `docker run \\
+  --network host \\
+  --mount type=volume,source=blok-server-data,target=/data \\
+  ghcr.io/jackuait/blok-server \\
   --listen 127.0.0.1:4000 \\
   --auth proxy \\
-  --storage-dir /var/lib/blok-uploads \\
+  --allow-origin https://myapp.com \\
+  --storage-dir /data \\
   --public-url https://uploads.myapp.com/files`,
       },
     ],
@@ -240,7 +250,7 @@ new Blok({
     title: 'You are on Vercel or Netlify',
     situation: 'Your app is deployed to a host that runs your code on demand, with nothing running beside it.',
     description:
-      'There is no machine to sit the service next to, so it is deployed on its own — Fly, Railway, Render, a small VPS — under a hostname you own. Because it is now reachable from the internet, it checks every request. Your app adds one route that hands the browser a short-lived pass naming the signed-in user. The service checks the pass by itself, with no call back to your app, and lets the request through or refuses it.',
+      'There is no machine to sit the service next to, so it is deployed on its own — Fly, Railway, Render, a small VPS — under a hostname you own. Because it is now reachable from the internet, it checks every request. The hosting platform or a reverse proxy must terminate TLS before forwarding plain HTTP to the service. Your app adds one route that hands the browser a short-lived pass naming the signed-in user. The service checks the pass by itself, with no call back to your app, and lets the request through or refuses it.',
     runsService: true,
     whatToRun: [
       {
@@ -248,11 +258,15 @@ new Blok({
         language: 'bash',
         // The secret rides an environment variable, not a flag: a flag lands in
         // the machine's process list, where anyone with a shell can read it.
-        code: `docker run -p 4000:4000 -e BLOK_SECRET ghcr.io/jackuait/blok-server \\
+        code: `docker run \\
+  -p 127.0.0.1:4000:4000 \\
+  --mount type=volume,source=blok-server-data,target=/data \\
+  -e BLOK_SECRET \\
+  ghcr.io/jackuait/blok-server \\
   --listen 0.0.0.0:4000 \\
   --auth ticket \\
   --allow-origin https://myapp.com \\
-  --storage-dir /var/lib/blok-uploads \\
+  --storage-dir /data \\
   --public-url https://blok.myapp.com/files`,
       },
     ],
@@ -332,6 +346,11 @@ new Blok({
         fix: 'Send an Origin header that matches one of the --allow-origin values, and check for typos: the scheme and port are part of the match.',
       },
       {
+        symptom: 'A signed pass can load link previews but cannot upload files.',
+        cause: 'A pass with write: false may call only the unfurl route. Both upload routes require write: true.',
+        fix: 'Mint upload passes with write: true. Use write: false when a caller should be limited to link previews.',
+      },
+      {
         symptom: 'Uploads worked, then started coming back 401 after the tab had been open a while.',
         cause: 'The pass expired. That is what makes it safe to hand to a browser.',
         fix: 'Mint a new one per request, as the uploader config above does. Give it a lifetime measured in minutes or hours, not days.',
@@ -370,11 +389,21 @@ export const serverLimits: ServerLimit[] = [
   {
     id: 'cors-preflight',
     title: 'A browser calling the service directly needs --allow-origin',
-    body: 'Before sending a request with unusual headers, a browser first asks the destination whether it is allowed. The service answers that question only for addresses you listed with --allow-origin, and in loopback-only modes there is no such list by default. This never comes up on the second path, where the browser talks to your app and your app talks to the service. It comes up when you point the editor straight at the service and send a custom header — a plain GET needs no permission and works either way.',
+    body: 'Every request that carries an Origin must match an address listed with --allow-origin, in every auth mode. In none and proxy modes, an originless request marked Sec-Fetch-Site: cross-site is also refused, while a genuine server-to-server backend request that carries neither header still works. Ticket mode always requires an allowed Origin. Preflight requests follow the same allowlist.',
+  },
+  {
+    id: 'upload-by-url-json',
+    title: 'Remote uploads accept JSON requests only',
+    body: 'POST /upload-by-url requires Content-Type: application/json. Parameters such as charset=utf-8 are allowed, but other media types — including application/problem+json — receive 415 before the service fetches the URL.',
   },
   {
     id: 'proxy-rate-limit',
     title: 'Behind your own app, the rate limit is one allowance for everybody',
-    body: 'The service limits how often a caller may make it fetch a URL. It tells callers apart by the address the request came from, and when your app forwards every request, every request arrives from the same address — so the whole deployment shares one allowance and one busy user can use it up. Limiting per user belongs in your own app, on the forwarding route, where you already know who is signed in. This does not apply on the third path, where the pass names the user and each user is counted separately.',
+    body: 'The service limits how often a caller may make it fetch a URL. When --rate-limit is omitted, ticket mode allows 60 requests a minute per caller; otherwise the limit is 0, which turns it off. Any explicit value must be zero or greater. It tells callers apart by the address the request came from, and when your app forwards every request, every request arrives from the same address — so the whole deployment shares one allowance and one busy user can use it up. Limiting per user belongs in your own app, on the forwarding route, where you already know who is signed in. This does not apply on the third path, where the pass names the user and each user is counted separately.',
+  },
+  {
+    id: 'tls-termination',
+    title: 'Terminate TLS before internet traffic reaches the service',
+    body: 'The standalone host speaks plain HTTP and does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic.',
   },
 ];

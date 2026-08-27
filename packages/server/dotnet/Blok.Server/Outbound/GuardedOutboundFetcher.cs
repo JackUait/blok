@@ -11,11 +11,41 @@ internal readonly record struct GuardedFetchLimits(
     long MaximumResponseBytes,
     int MaximumRedirects);
 
-internal sealed record GuardedResponse(
-    byte[] Body,
-    string ContentType,
-    string FinalUrl,
-    int StatusCode);
+internal sealed class GuardedResponse : IAsyncDisposable
+{
+  private SemaphoreSlim? concurrencyPermit;
+
+  internal GuardedResponse(
+      ReadOnlyMemory<byte> body,
+      string contentType,
+      string finalUrl,
+      int statusCode,
+      SemaphoreSlim? concurrencyPermit = null)
+  {
+    Body = body;
+    ContentType = contentType;
+    FinalUrl = finalUrl;
+    StatusCode = statusCode;
+    this.concurrencyPermit = concurrencyPermit;
+  }
+
+  internal ReadOnlyMemory<byte> Body { get; }
+
+  internal string ContentType { get; }
+
+  internal string FinalUrl { get; }
+
+  internal int StatusCode { get; }
+
+  public ValueTask DisposeAsync()
+  {
+    Interlocked.Exchange(
+        ref concurrencyPermit,
+        null)?.Release();
+
+    return ValueTask.CompletedTask;
+  }
+}
 
 internal interface IGuardedOutboundFetcher
 {
@@ -36,7 +66,10 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
 {
   private const string UserAgent =
       "blok-server (+https://blokeditor.com)";
+  private static readonly TimeSpan ConnectAttemptTimeout =
+      TimeSpan.FromSeconds(1);
 
+  private readonly SemaphoreSlim concurrency = new(4, 4);
   private readonly X509Certificate2Collection? customTrustRoots;
   private readonly IGuardedDnsResolver resolver;
   private readonly IGuardedOutboundPolicy policy;
@@ -83,12 +116,20 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       deadline.Cancel();
     }
 
+    var permitOwned = false;
+
     try
     {
-      return await GetCoreAsync(
+      await concurrency.WaitAsync(deadline.Token);
+      permitOwned = true;
+      var response = await GetCoreAsync(
           rawUrl,
           limits,
-          deadline.Token);
+          deadline.Token,
+          concurrency);
+      permitOwned = false;
+
+      return response;
     }
     catch (GuardedFetchException)
     {
@@ -109,12 +150,20 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
     {
       throw Blocked();
     }
+    finally
+    {
+      if (permitOwned)
+      {
+        concurrency.Release();
+      }
+    }
   }
 
   private async ValueTask<GuardedResponse> GetCoreAsync(
       string rawUrl,
       GuardedFetchLimits limits,
-      CancellationToken cancellationToken)
+      CancellationToken cancellationToken,
+      SemaphoreSlim concurrencyPermit)
   {
     var redirects = 0;
 
@@ -137,7 +186,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       var useManagedTls = UsesManagedTls(target);
       using var handler = CreateHandler(
           target,
-          addresses[0],
+          addresses,
           useManagedTls);
       using var client = new HttpClient(
           handler,
@@ -188,7 +237,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           body,
           response.Content?.Headers.ContentType?.ToString() ?? "",
           target.Url.AbsoluteUri,
-          (int)response.StatusCode);
+          (int)response.StatusCode,
+          concurrencyPermit);
     }
   }
 
@@ -202,14 +252,14 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
         HttpStatusCode.PermanentRedirect;
   }
 
-  private static async ValueTask<byte[]> ReadBoundedAsync(
+  private static async ValueTask<ReadOnlyMemory<byte>> ReadBoundedAsync(
       HttpContent? content,
       long maximumBytes,
       CancellationToken cancellationToken)
   {
     if (content is null)
     {
-      return [];
+      return ReadOnlyMemory<byte>.Empty;
     }
 
     if (content.Headers.ContentLength is long contentLength &&
@@ -218,12 +268,24 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       throw ResponseTooLarge();
     }
 
+    var encodings = content.Headers.ContentEncoding;
+    if (encodings.Count > 1)
+    {
+      throw new GuardedFetchException(
+          GuardedFetchFailure.UnsupportedContentEncoding);
+    }
+
+    var encoding = encodings.SingleOrDefault();
     await using var raw = await content.ReadAsStreamAsync(
         cancellationToken);
     var boundedRaw = new BoundedReadStream(
         raw,
         maximumBytes);
-    if (!IsGzip(content))
+    if (encoding is null ||
+        string.Equals(
+            encoding,
+            "identity",
+            StringComparison.OrdinalIgnoreCase))
     {
       return await ReadDecodedAsync(
           boundedRaw,
@@ -231,14 +293,29 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           cancellationToken);
     }
 
-    byte[] body;
-    await using (var gzip = new GZipStream(
-        boundedRaw,
-        CompressionMode.Decompress,
-        leaveOpen: true))
+    Stream decoded = encoding.ToLowerInvariant() switch
+    {
+      "gzip" => new GZipStream(
+          boundedRaw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      "br" => new BrotliStream(
+          boundedRaw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      "deflate" => new ZLibStream(
+          boundedRaw,
+          CompressionMode.Decompress,
+          leaveOpen: true),
+      _ => throw new GuardedFetchException(
+          GuardedFetchFailure.UnsupportedContentEncoding),
+    };
+
+    ReadOnlyMemory<byte> body;
+    await using (decoded)
     {
       body = await ReadDecodedAsync(
-          gzip,
+          decoded,
           maximumBytes,
           cancellationToken);
     }
@@ -249,16 +326,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
     return body;
   }
 
-  private static bool IsGzip(HttpContent content)
-  {
-    return content.Headers.ContentEncoding.Count == 1 &&
-        string.Equals(
-            content.Headers.ContentEncoding.Single(),
-            "gzip",
-            StringComparison.OrdinalIgnoreCase);
-  }
-
-  private static async ValueTask<byte[]> ReadDecodedAsync(
+  private static async ValueTask<ReadOnlyMemory<byte>> ReadDecodedAsync(
       Stream stream,
       long maximumBytes,
       CancellationToken cancellationToken)
@@ -282,7 +350,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
 
       if (read == 0)
       {
-        return output.ToArray();
+        return output.GetBuffer()
+            .AsMemory(0, checked((int)output.Length));
       }
 
       if (read > remaining)
@@ -326,7 +395,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
 
   private SocketsHttpHandler CreateHandler(
       GuardedTarget target,
-      IPAddress address,
+      IPAddress[] addresses,
       bool useManagedTls)
   {
     var handler = new SocketsHttpHandler
@@ -337,7 +406,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           ConnectAsync(
               context,
               target,
-              address,
+              addresses,
               useManagedTls,
               cancellationToken),
       MaxResponseDrainSize = 0,
@@ -432,7 +501,7 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
   private async ValueTask<Stream> ConnectAsync(
       SocketsHttpConnectionContext context,
       GuardedTarget target,
-      IPAddress address,
+      IPAddress[] addresses,
       bool useManagedTls,
       CancellationToken cancellationToken)
   {
@@ -442,31 +511,78 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
           (int)SocketError.AccessDenied);
     }
 
-    var socket = new Socket(
-        address.AddressFamily,
-        SocketType.Stream,
-        ProtocolType.Tcp);
+    Socket? connected = null;
+    SocketException? lastError = null;
+
+    for (var index = 0; index < addresses.Length; index++)
+    {
+      var address = addresses[index];
+      var socket = new Socket(
+          address.AddressFamily,
+          SocketType.Stream,
+          ProtocolType.Tcp);
+
+      using var attempt = CancellationTokenSource.CreateLinkedTokenSource(
+          cancellationToken);
+      if (index + 1 < addresses.Length)
+      {
+        attempt.CancelAfter(ConnectAttemptTimeout);
+      }
+
+      try
+      {
+        await socket.ConnectAsync(
+            new IPEndPoint(address, target.Port),
+            attempt.Token);
+        connected = socket;
+        break;
+      }
+      catch (OperationCanceledException) when (
+          !cancellationToken.IsCancellationRequested)
+      {
+        lastError = new SocketException(
+            (int)SocketError.TimedOut);
+        socket.Dispose();
+      }
+      catch (SocketException error) when (
+          !cancellationToken.IsCancellationRequested)
+      {
+        lastError = error;
+        socket.Dispose();
+      }
+      catch
+      {
+        socket.Dispose();
+        throw;
+      }
+    }
+
+    if (connected is null)
+    {
+      throw lastError ?? new SocketException(
+          (int)SocketError.HostUnreachable);
+    }
+
+    var network = new NetworkStream(
+        connected,
+        ownsSocket: true);
+
+    if (!useManagedTls)
+    {
+      return network;
+    }
 
     try
     {
-      await socket.ConnectAsync(
-          new IPEndPoint(address, target.Port),
+      return await MacOsTlsTransport.AuthenticateAsync(
+          network,
+          target.Host,
+          customTrustRoots,
           cancellationToken);
-      var network = new NetworkStream(
-          socket,
-          ownsSocket: true);
-
-      return useManagedTls
-        ? await MacOsTlsTransport.AuthenticateAsync(
-            network,
-            target.Host,
-            customTrustRoots,
-            cancellationToken)
-        : network;
     }
     catch
     {
-      socket.Dispose();
+      await network.DisposeAsync();
       throw;
     }
   }

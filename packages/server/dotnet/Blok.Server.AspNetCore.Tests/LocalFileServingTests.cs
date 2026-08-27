@@ -78,6 +78,27 @@ public sealed class LocalFileServingTests : IDisposable
         await response.Content.ReadAsStringAsync());
   }
 
+  [Fact]
+  public async Task RejectsMoreThanSixteenByteRanges()
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    var ranges = string.Join(
+        ',',
+        Enumerable.Repeat("0-0", 17));
+    using var response = await SendRangeAsync(
+        client,
+        "GET",
+        $"bytes={ranges}");
+
+    Assert.Equal(
+        HttpStatusCode.RequestedRangeNotSatisfiable,
+        response.StatusCode);
+    Assert.Equal(
+        "too many ranges\n",
+        await response.Content.ReadAsStringAsync());
+  }
+
   [Theory]
   [InlineData("GET", "invalid range: failed to overlap\n")]
   [InlineData("HEAD", "")]

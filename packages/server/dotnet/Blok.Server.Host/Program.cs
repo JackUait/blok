@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 var hostArguments = args;
@@ -82,12 +83,12 @@ var app = builder.Build();
 HostRequestTimeouts.Use(app);
 app.MapBlokServer();
 
-Console.Error.WriteLine(
-    $"blok-server {options.Version} listening on {options.ListenAddress} (--auth {options.Auth})");
-
 try
 {
-  await app.RunAsync();
+  await app.StartAsync();
+  Console.Error.WriteLine(
+      $"blok-server {options.Version} listening on {options.ListenAddress} (--auth {options.Auth})");
+  await app.WaitForShutdownAsync();
   return 0;
 }
 catch (Exception error)

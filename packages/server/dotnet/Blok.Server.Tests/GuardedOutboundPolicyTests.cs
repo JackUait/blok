@@ -86,6 +86,8 @@ public sealed class GuardedOutboundPolicyTests
         "255.255.255.255",
         "::",
         "::1",
+        "::2",
+        "::127.0.0.1",
         "::ffff:127.0.0.1",
         "::ffff:169.254.169.254",
         "::ffff:192.168.0.1",

@@ -19,14 +19,24 @@ internal sealed class BlokServerRequestGuard
     _timeProvider = timeProvider;
   }
 
-  public async Task<bool> AllowAsync(HttpContext context)
+  public async Task<bool> AllowAsync(
+      HttpContext context,
+      bool requireWrite)
   {
     var origin = BlokServerCors.RequestOrigin(context.Request);
     var originAllowed = BlokServerCors.IsAllowed(
         origin,
         _options.AllowedOrigins);
 
-    if (_options.Auth == "ticket" && !originAllowed)
+    var originRequired =
+        _options.Auth == "ticket" ||
+        context.Request.Headers.ContainsKey("Origin") ||
+        string.Equals(
+            context.Request.Headers["Sec-Fetch-Site"].FirstOrDefault(),
+            "cross-site",
+            StringComparison.OrdinalIgnoreCase);
+
+    if (originRequired && !originAllowed)
     {
       await RejectAsync(
           context,
@@ -71,6 +81,16 @@ internal sealed class BlokServerRequestGuard
             context,
             StatusCodes.Status401Unauthorized,
             "invalid pass\n");
+
+        return false;
+      }
+
+      if (requireWrite && !claims.Write)
+      {
+        await RejectAsync(
+            context,
+            StatusCodes.Status403Forbidden,
+            "write access required\n");
 
         return false;
       }

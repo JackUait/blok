@@ -29,7 +29,9 @@ const parseBlock = (block: unknown): LooseOutputBlockData => {
     throw new TypeError('Document input requires valid block objects.');
   }
 
-  if (block.parent !== undefined && block.parent !== null && typeof block.parent !== 'string') {
+  const parent = block.parent ?? block.parentId;
+
+  if (parent !== undefined && parent !== null && typeof parent !== 'string') {
     throw new TypeError('Document input requires valid block objects.');
   }
 
@@ -37,7 +39,7 @@ const parseBlock = (block: unknown): LooseOutputBlockData => {
     type: block.type,
     ...(block.data === undefined ? {} : { data: block.data }),
     ...(block.id === undefined ? {} : { id: block.id }),
-    ...(block.parent === undefined ? {} : { parent: block.parent }),
+    ...(parent === undefined ? {} : { parent }),
   };
 };
 

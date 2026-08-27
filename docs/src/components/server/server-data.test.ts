@@ -77,6 +77,23 @@ describe('server docs data', () => {
     }
   });
 
+  it('keeps Docker data writable and publishes the ticket host port on loopback', () => {
+    const ownServer = serverPaths.find((path) => path.id === 'own-server');
+    const serverless = serverPaths.find((path) => path.id === 'serverless');
+    const ownServerCommand = ownServer?.whatToRun.map((sample) => sample.code).join('\n') ?? '';
+    const serverlessCommand = serverless?.whatToRun.map((sample) => sample.code).join('\n') ?? '';
+
+    expect(ownServerCommand).toContain('--network host');
+    expect(ownServerCommand).toContain('--listen 127.0.0.1:4000');
+    expect(serverlessCommand).toContain('-p 127.0.0.1:4000:4000');
+    expect(serverlessCommand).toContain('--listen 0.0.0.0:4000');
+
+    for (const command of [ownServerCommand, serverlessCommand]) {
+      expect(command).toContain('target=/data');
+      expect(command).toContain('--storage-dir /data');
+    }
+  });
+
   it('names only flags the binary actually parses', () => {
     // The standalone host's whole flag set, plus the docker flags the run
     // commands legitimately carry. A docs page naming a flag the binary does
@@ -98,6 +115,7 @@ describe('server docs data', () => {
       '--secret',
       '--storage-dir',
       // docker run's own
+      '--mount',
       '--network',
     ];
     const prose = [
@@ -115,13 +133,31 @@ describe('server docs data', () => {
     expect([...new Set(named)].filter((flag) => !known.includes(flag))).toEqual([]);
   });
 
-  it('states the five deploy-time limits the design refuses to bury', () => {
+  it('documents the validated option bounds and standalone rate defaults', () => {
+    const prose = [
+      ...serverPaths.flatMap((path) => [
+        path.description,
+        ...path.failureModes.flatMap((mode) => [mode.cause, mode.fix]),
+      ]),
+      ...serverLimits.map((limit) => limit.body),
+    ].join(' ');
+
+    expect(prose).toMatch(/MaxUploadBytes.*Array\.MaxLength/i);
+    expect(prose).toMatch(/RateLimitPerMinute.*zero or greater/i);
+    expect(prose).toMatch(/PublicUrl.*S3BucketUrl.*query or fragment/i);
+    expect(prose).toMatch(/ListenAddress.*DNS host.*every network interface/i);
+    expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
+  });
+
+  it('states the seven service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'file-origin',
       's3-untested',
       'cors-preflight',
+      'upload-by-url-json',
       'proxy-rate-limit',
+      'tls-termination',
     ]);
     for (const limit of serverLimits) {
       expect(limit.title.length).toBeGreaterThan(0);
@@ -144,5 +180,46 @@ describe('server docs data', () => {
   it('admits the S3 signatures have never met a real bucket', () => {
     const body = serverLimits.find((l) => l.id === 's3-untested')?.body ?? '';
     expect(body).toMatch(/real bucket/i);
+  });
+
+  it('documents the browser-origin guard without blocking backend calls', () => {
+    const body = serverLimits.find((l) => l.id === 'cors-preflight')?.body ?? '';
+
+    expect(body).toMatch(/Origin/);
+    expect(body).toMatch(/Sec-Fetch-Site.*cross-site/);
+    expect(body).toMatch(/server-to-server|backend/i);
+  });
+
+  it('allowlists the app origin in the proxy deployment example', () => {
+    const ownServer = serverPaths.find((path) => path.id === 'own-server');
+    const command = ownServer?.whatToRun.map((sample) => sample.code).join('\n') ?? '';
+
+    expect(command).toContain('--auth proxy');
+    expect(command).toContain('--allow-origin https://myapp.com');
+  });
+
+  it('documents the upload-by-url JSON media type', () => {
+    const limit = serverLimits.find((l) => l.id === 'upload-by-url-json');
+
+    expect(limit?.body).toMatch(/POST \/upload-by-url/);
+    expect(limit?.body).toMatch(/Content-Type: application\/json/);
+  });
+
+  it('documents read-only ticket permissions', () => {
+    const direct = serverPaths.find((path) => path.id === 'serverless');
+    const prose = [
+      direct?.description,
+      ...(direct?.failureModes.flatMap((mode) => [mode.cause, mode.fix]) ?? []),
+    ].join(' ');
+
+    expect(prose).toMatch(/write: false.*unfurl/i);
+    expect(prose).toMatch(/upload.*write: true/i);
+  });
+
+  it('requires TLS termination for an internet-facing host', () => {
+    const body = serverLimits.find((l) => l.id === 'tls-termination')?.body ?? '';
+
+    expect(body).toMatch(/does not terminate TLS|speaks plain HTTP/i);
+    expect(body).toMatch(/reverse proxy|hosting platform/i);
   });
 });

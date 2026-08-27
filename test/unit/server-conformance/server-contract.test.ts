@@ -367,7 +367,7 @@ it.each([
     name: 'none',
     args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'application/json',
       status: 400,
       text: '{"success":0}\n',
@@ -377,7 +377,7 @@ it.each([
     name: 'proxy',
     args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'application/json',
       status: 400,
       text: '{"success":0}\n',
@@ -387,17 +387,26 @@ it.each([
     name: 'ticket',
     args: ticketArgs('--rate-limit', '0'),
     token: tickets.compatible,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'text/plain; charset=utf-8',
       status: 403,
       text: 'origin not allowed\n',
     },
   },
-])('$name mode handles allowed, disallowed, and missing origins', async (testCase) => {
+])('$name mode handles allowed and missing origins', async (testCase) => {
   await withServer(testCase.args, async (server) => {
     const allowed = await server.request('GET', '/unfurl', {
       headers: requestHeaders(ALLOWED_ORIGIN, testCase.token),
       parseJson: true,
+    });
+    const missingRequest = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(undefined, testCase.token),
+    });
+    const missingPreflight = await server.request('OPTIONS', '/unfurl', {
+      headers: {
+        ...requestHeaders(),
+        'Access-Control-Request-Method': 'GET',
+      },
     });
 
     expect(allowed).toMatchObject({
@@ -407,34 +416,75 @@ it.each([
       text: '{"success":0}\n',
     });
     expect(allowed.rawHeaders.vary).toEqual(['Origin']);
+    expect(missingRequest).toMatchObject({
+      status: testCase.missingRequest.status,
+      headers: { 'content-type': testCase.missingRequest.contentType },
+      text: testCase.missingRequest.text,
+    });
+    expectNoCors(missingRequest.headers);
+    expect(missingPreflight).toMatchObject({
+      status: 403,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      text: 'origin not allowed\n',
+    });
+    expectNoCors(missingPreflight.headers);
+  });
+});
 
-    for (const [name, origin] of [
-      ['disallowed', DISALLOWED_ORIGIN],
-      ['missing', undefined],
-    ] as const) {
-      const rejectedRequest = await server.request('GET', '/unfurl', {
+it.each([
+  {
+    name: 'none',
+    args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+  },
+  {
+    name: 'proxy',
+    args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+  },
+  {
+    name: 'ticket',
+    args: ticketArgs('--rate-limit', '0'),
+    token: tickets.compatible,
+  },
+])('$name mode rejects every present disallowed origin', async (testCase) => {
+  await withServer(testCase.args, async (server) => {
+    for (const origin of [DISALLOWED_ORIGIN, 'null']) {
+      const response = await server.request('GET', '/unfurl', {
         headers: requestHeaders(origin, testCase.token),
       });
-      const rejectedPreflight = await server.request('OPTIONS', '/unfurl', {
-        headers: {
-          ...requestHeaders(origin),
-          'Access-Control-Request-Method': 'GET',
-        },
-      });
 
-      expect(rejectedRequest, name).toMatchObject({
-        status: testCase.rejectedRequest.status,
-        headers: { 'content-type': testCase.rejectedRequest.contentType },
-        text: testCase.rejectedRequest.text,
-      });
-      expectNoCors(rejectedRequest.headers);
-      expect(rejectedPreflight, name).toMatchObject({
+      expect(response, JSON.stringify(origin)).toMatchObject({
         status: 403,
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         text: 'origin not allowed\n',
       });
-      expectNoCors(rejectedPreflight.headers);
+      expectNoCors(response.headers);
     }
+  });
+});
+
+it.each([
+  {
+    name: 'none',
+    args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+  },
+  {
+    name: 'proxy',
+    args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+  },
+])('$name mode rejects an originless cross-site browser request', async (testCase) => {
+  await withServer(testCase.args, async (server) => {
+    const response = await server.request('GET', '/unfurl', {
+      headers: { 'Sec-Fetch-Site': 'cross-site' },
+    });
+
+    expect(response).toMatchObject({
+      status: 403,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      text: 'origin not allowed\n',
+    });
+    expectNoCors(response.headers);
   });
 });
 
@@ -1442,6 +1492,32 @@ it('reports an upstream unfurl timeout as success zero', async () => {
     await origin.stop();
   }
 }, 15_000);
+
+it('requires the exact application/json media type for upload-by-url', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      for (const contentType of [
+        undefined,
+        'text/plain',
+        'application/problem+json',
+        'application/json-patch+json',
+      ]) {
+        const response = await server.request('POST', '/upload-by-url', {
+          body: '{"url":"https://source.example.test/file"}',
+          headers: contentType === undefined ? {} : { 'Content-Type': contentType },
+        });
+
+        expect(response, contentType).toMatchObject({
+          status: 415,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+          text: 'expected application/json\n',
+        });
+      }
+
+      expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
 
 it('stores redirected upload-by-url bytes with final response metadata', async () => {
   const origin = await startFixtureOrigin();

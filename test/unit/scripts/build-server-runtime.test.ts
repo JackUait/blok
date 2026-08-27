@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -27,5 +27,28 @@ describe('buildServerRuntime', () => {
     expect(readdirSync(outDir)).toEqual(['blok-server-runtime.js']);
     expect(source).toContain('blokServerInvoke');
     expect(source).not.toMatch(/\bimport\s*\(/);
+  });
+
+  it('keeps the previous bundle available while rebuilding', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const previous = readFileSync(outputPath);
+    let rebuilding = true;
+    let changedBeforeCompletion = false;
+    const rebuild = buildServerRuntime(outDir).finally(() => {
+      rebuilding = false;
+    });
+
+    while (rebuilding) {
+      if (!existsSync(outputPath) || !readFileSync(outputPath).equals(previous)) {
+        changedBeforeCompletion = true;
+        break;
+      }
+
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
+    await rebuild;
+
+    expect(changedBeforeCompletion).toBe(false);
   });
 });

@@ -1,9 +1,11 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using MediaTypeHeaderValue = Microsoft.Net.Http.Headers.MediaTypeHeaderValue;
 
 namespace Blok.Server.AspNetCore;
 
@@ -17,7 +19,23 @@ internal static class UploadByUrlEndpoint
 
   internal static async Task HandleAsync(HttpContext context)
   {
-    var buffer = new byte[MaximumEnvelopeBytes];
+    if (!MediaTypeHeaderValue.TryParse(
+          context.Request.ContentType,
+          out var contentType) ||
+        !string.Equals(
+            contentType.MediaType.Value,
+            "application/json",
+            StringComparison.OrdinalIgnoreCase) ||
+        UploadWire.HasConflictingParameters(contentType))
+    {
+      await WriteErrorAsync(
+          context,
+          StatusCodes.Status415UnsupportedMediaType,
+          "expected application/json\n");
+      return;
+    }
+
+    var buffer = new byte[MaximumEnvelopeBytes + 1];
     var length = 0;
 
     while (length < buffer.Length)
@@ -34,7 +52,8 @@ internal static class UploadByUrlEndpoint
       length += read;
     }
 
-    if (!TryReadTarget(buffer.AsSpan(0, length), out var target))
+    if (length > MaximumEnvelopeBytes ||
+        !TryReadTarget(buffer.AsSpan(0, length), out var target))
     {
       await WriteErrorAsync(
           context,
@@ -68,6 +87,8 @@ internal static class UploadByUrlEndpoint
       return;
     }
 
+    await using var ownedResponse = response;
+
     if (response.StatusCode is < 200 or > 299)
     {
       await WriteErrorAsync(
@@ -85,9 +106,27 @@ internal static class UploadByUrlEndpoint
     {
       var store = context.RequestServices.GetService<IBlobStore>() ??
           throw new InvalidOperationException("No blob store is registered.");
+      ArraySegment<byte> body;
+      if (response.Body.IsEmpty)
+      {
+        body = new ArraySegment<byte>(Array.Empty<byte>());
+      }
+      else if (!MemoryMarshal.TryGetArray(response.Body, out body) ||
+               body.Array is null)
+      {
+        throw new InvalidOperationException(
+            "The guarded response body is not array-backed.");
+      }
+
+      var bodyArray = body.Array ??
+          throw new InvalidOperationException(
+              "The guarded response body is not array-backed.");
       await using var content = new MemoryStream(
-          response.Body,
-          writable: false);
+          bodyArray,
+          body.Offset,
+          body.Count,
+          writable: false,
+          publiclyVisible: false);
       url = await store.PutAsync(
           BlobKey.NormalizeExtension(Path.GetExtension(fileName)),
           mimeType,
@@ -112,7 +151,7 @@ internal static class UploadByUrlEndpoint
         context,
         url,
         fileName,
-        response.Body.LongLength,
+        response.Body.Length,
         mimeType);
   }
 
@@ -131,7 +170,13 @@ internal static class UploadByUrlEndpoint
           RequestJson);
       target = request?.Url ?? "";
 
-      return target != "";
+      if (target == "" || reader.Read())
+      {
+        target = "";
+        return false;
+      }
+
+      return true;
     }
     catch (JsonException)
     {

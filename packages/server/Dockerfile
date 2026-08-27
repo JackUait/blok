@@ -8,8 +8,8 @@ COPY packages/presets/package.json packages/presets/package.json
 COPY packages/react/package.json packages/react/package.json
 COPY packages/server/package.json packages/server/package.json
 COPY packages/vue/package.json packages/vue/package.json
-COPY . .
 RUN corepack enable && yarn install --immutable
+COPY . .
 RUN node scripts/build-server-runtime.mjs
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS publish
@@ -32,7 +32,13 @@ RUN dotnet publish packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.cspr
     -p:SkipBlokServerRuntimeBuild=true
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
+RUN groupadd --system blok \
+    && useradd --system --gid blok --home-dir /nonexistent --no-create-home blok \
+    && mkdir /data \
+    && chown blok:blok /data
 COPY --from=publish /out/blok-server /blok-server
 
+WORKDIR /data
+USER blok
 EXPOSE 4000
 ENTRYPOINT ["/blok-server"]

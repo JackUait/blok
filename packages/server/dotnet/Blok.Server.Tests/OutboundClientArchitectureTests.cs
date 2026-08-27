@@ -52,6 +52,27 @@ public sealed class OutboundClientArchitectureTests
         string.Join("\n", violations));
   }
 
+  [Fact]
+  public void GuardedFetcherDoesNotCloneTheCompletedResponseBuffer()
+  {
+    var root = FindDotnetRoot();
+    var source = File.ReadAllText(
+        Path.Combine(root, "Blok.Server", "Outbound", "GuardedOutboundFetcher.cs"));
+    var method = CSharpSyntaxTree.ParseText(source)
+        .GetRoot()
+        .DescendantNodes()
+        .OfType<MethodDeclarationSyntax>()
+        .Single(candidate =>
+            candidate.Identifier.ValueText == "ReadDecodedAsync");
+    var clones = method.DescendantNodes()
+        .OfType<InvocationExpressionSyntax>()
+        .Where(invocation =>
+            invocation.Expression is MemberAccessExpressionSyntax access &&
+            access.Name.Identifier.ValueText == "ToArray");
+
+    Assert.Empty(clones);
+  }
+
   [Theory]
   [InlineData(
       "var client = new global::System.Net.Http.HttpClient();",

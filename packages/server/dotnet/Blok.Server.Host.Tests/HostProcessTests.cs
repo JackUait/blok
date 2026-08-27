@@ -35,7 +35,9 @@ public sealed class HostProcessTests
     Assert.Equal(HttpStatusCode.BadRequest, upload.StatusCode);
     Assert.Equal("malformed upload\n", await upload.Content.ReadAsStringAsync());
 
-    using var uploadByUrl = await host.Client.PostAsync("/upload-by-url", new StringContent(""));
+    using var uploadByUrl = await host.Client.PostAsync(
+        "/upload-by-url",
+        new StringContent("", Encoding.UTF8, "application/json"));
     Assert.Equal(HttpStatusCode.BadRequest, uploadByUrl.StatusCode);
     Assert.Equal(
         "expected {\"url\": \"...\"}\n",
@@ -518,6 +520,56 @@ public sealed class HostProcessTests
     Assert.Contains("PublicUrl", standardError, StringComparison.Ordinal);
   }
 
+  [Theory]
+  [InlineData("none", 0)]
+  [InlineData("proxy", 0)]
+  [InlineData("ticket", 60)]
+  public void UsesTheAuthDefaultRateLimitWhenTheFlagIsOmitted(
+      string auth,
+      long expectedRateLimit)
+  {
+    var parsed = HostArguments.Parse(
+        ["--auth", auth],
+        _ => null);
+    var options = Assert.IsType<BlokServerOptions>(parsed.Options);
+
+    Assert.Equal(expectedRateLimit, options.RateLimitPerMinute);
+  }
+
+  [Fact]
+  public void DescribesTheAutomaticRateLimitDefaults()
+  {
+    Assert.Contains(
+        "ticket mode defaults to 60",
+        HostArguments.Usage,
+        StringComparison.Ordinal);
+    Assert.Contains(
+        "other modes default to 0",
+        HostArguments.Usage,
+        StringComparison.Ordinal);
+    Assert.DoesNotContain(
+        "default -1",
+        HostArguments.Usage,
+        StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("-1")]
+  [InlineData("-2")]
+  [InlineData("-010")]
+  [InlineData("-0x1")]
+  public void RejectsEveryExplicitNegativeRateLimit(string value)
+  {
+    var parsed = HostArguments.Parse(
+        ["--rate-limit", value],
+        _ => null);
+    var options = Assert.IsType<BlokServerOptions>(parsed.Options);
+
+    var error = Assert.Throws<InvalidOperationException>(options.Validate);
+
+    Assert.Contains("--rate-limit", error.Message, StringComparison.Ordinal);
+  }
+
   public static TheoryData<string> BaseZeroIntegerSpellings =>
     new()
     {
@@ -783,6 +835,24 @@ public sealed class HostProcessTests
 
     Assert.Equal(1, result.ExitCode);
     Assert.Contains("--secret must be at least 32 characters (got 5)", result.StandardError);
+  }
+
+  [Fact]
+  public async Task ReportsListeningOnlyAfterBindingSucceeds()
+  {
+    using var occupied = new TcpListener(IPAddress.Loopback, 0);
+    occupied.Start();
+    var port = ((IPEndPoint)occupied.LocalEndpoint).Port;
+
+    var result = await RunHostCommandAsync(
+    [
+      "--listen", $"127.0.0.1:{port}",
+      "--storage-dir", "",
+    ]);
+
+    Assert.Equal(1, result.ExitCode);
+    Assert.Contains("refused to start", result.StandardError);
+    Assert.DoesNotContain("listening on", result.StandardError);
   }
 
   public static TheoryData<string[], int, string, Dictionary<string, string?>?> InvalidCommandCases =>

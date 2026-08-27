@@ -30,6 +30,62 @@ public sealed class GuardedOutboundFetcherTests
   }
 
   [Fact]
+  public async Task HoldsFourConcurrentResponsesUntilOneIsDisposed()
+  {
+    await using var origin = new LoopbackOrigin();
+    var resolver = new CoordinatedDnsResolver(
+        [IPAddress.Loopback]);
+    var policy = new FixtureOutboundPolicy(
+        "bounded.example",
+        origin.Port,
+        IPAddress.Loopback);
+    var fetcher = new GuardedOutboundFetcher(policy, resolver);
+    var requests = Enumerable.Range(0, 5)
+        .Select(index => fetcher.GetAsync(
+            $"http://bounded.example:{origin.Port}/{index}",
+            Limits,
+            CancellationToken.None).AsTask())
+        .ToArray();
+
+    try
+    {
+      Assert.Equal(4, resolver.CallCount);
+      resolver.Release();
+      var responses = await Task.WhenAll(requests[..4])
+          .WaitAsync(TimeSpan.FromSeconds(5));
+
+      Assert.Equal(4, resolver.CallCount);
+      var lease = Assert.IsAssignableFrom<IAsyncDisposable>(
+          (object)responses[0]);
+      await lease.DisposeAsync();
+      await resolver.FifthEntered.Task.WaitAsync(
+          TimeSpan.FromSeconds(5));
+      await requests[4].WaitAsync(TimeSpan.FromSeconds(5));
+    }
+    finally
+    {
+      resolver.Release();
+
+      foreach (var request in requests)
+      {
+        try
+        {
+          var response = await request.WaitAsync(
+              TimeSpan.FromSeconds(5));
+
+          if ((object)response is IAsyncDisposable disposable)
+          {
+            await disposable.DisposeAsync();
+          }
+        }
+        catch
+        {
+        }
+      }
+    }
+  }
+
+  [Fact]
   public async Task BoundsAndRedactsDnsAndTransportErrors()
   {
     var resolver = new ThrowingDnsResolver(
@@ -123,7 +179,7 @@ public sealed class GuardedOutboundFetcherTests
         CancellationToken.None);
 
     Assert.Equal(1, resolver.CallCount);
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal("text/plain; charset=utf-8", response.ContentType);
     Assert.Equal(200, response.StatusCode);
     Assert.Equal(
@@ -131,6 +187,30 @@ public sealed class GuardedOutboundFetcherTests
         response.FinalUrl);
     Assert.Equal($"pinned.example:{origin.Port}", origin.LastRequest?.Host);
     Assert.Equal("/exact", origin.LastRequest?.Target);
+  }
+
+  [Fact]
+  public async Task ConnectsToTheNextValidatedAddressWhenTheFirstIsUnavailable()
+  {
+    await using var origin = new LoopbackOrigin();
+    var unavailable = IPAddress.Parse("127.0.0.2");
+    var resolver = new SequenceDnsResolver(
+        [unavailable, IPAddress.Loopback]);
+    var policy = new FixtureOutboundPolicy(
+        "fallback.example",
+        origin.Port,
+        unavailable,
+        IPAddress.Loopback);
+    var fetcher = new GuardedOutboundFetcher(policy, resolver);
+
+    await using var response = await fetcher.GetAsync(
+        $"http://fallback.example:{origin.Port}/fallback",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal(1, resolver.CallCount);
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
+    Assert.Equal("/fallback", origin.LastRequest?.Target);
   }
 
   [Fact]
@@ -155,7 +235,7 @@ public sealed class GuardedOutboundFetcherTests
         Limits,
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(0, resolver.CallCount);
     Assert.Equal("/literal", origin.LastRequest?.Target);
   }
@@ -184,7 +264,7 @@ public sealed class GuardedOutboundFetcherTests
         Limits,
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(1, resolver.CallCount);
     Assert.Equal("/ipv6", origin.LastRequest?.Target);
   }
@@ -209,7 +289,7 @@ public sealed class GuardedOutboundFetcherTests
         Limits,
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal("secure.example", origin.LastTlsServerName);
     Assert.Equal($"secure.example:{origin.Port}", origin.LastRequest?.Host);
   }
@@ -326,7 +406,7 @@ public sealed class GuardedOutboundFetcherTests
         new GuardedFetchLimits(TimeSpan.FromSeconds(10), 1024, 3),
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(
         SslApplicationProtocol.Http11,
         origin.LastTlsApplicationProtocol);
@@ -367,7 +447,7 @@ public sealed class GuardedOutboundFetcherTests
         Limits,
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(0, issuer.RequestCount);
   }
 
@@ -389,7 +469,7 @@ public sealed class GuardedOutboundFetcherTests
         CancellationToken.None);
 
     Assert.Equal(503, response.StatusCode);
-    Assert.Equal("error", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("error", Encoding.UTF8.GetString(response.Body.Span));
   }
 
   [Fact]
@@ -425,7 +505,7 @@ public sealed class GuardedOutboundFetcherTests
         new GuardedFetchLimits(TimeSpan.FromSeconds(2), 1024, 1),
         CancellationToken.None);
 
-    Assert.Equal("arrived", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("arrived", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(
         $"http://redirect.example:{origin.Port}/final",
         response.FinalUrl);
@@ -472,7 +552,7 @@ public sealed class GuardedOutboundFetcherTests
         new GuardedFetchLimits(TimeSpan.FromSeconds(2), 1024, 1),
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(2, origin.RequestCount);
     Assert.All(origin.Requests, request => Assert.Equal("GET", request.Method));
   }
@@ -511,7 +591,7 @@ public sealed class GuardedOutboundFetcherTests
         new GuardedFetchLimits(TimeSpan.FromSeconds(2), 1024, 2),
         CancellationToken.None);
 
-    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("ok", Encoding.UTF8.GetString(response.Body.Span));
     Assert.Equal(3, origin.RequestCount);
     Assert.Equal(3, resolver.CallCount);
   }
@@ -641,7 +721,7 @@ public sealed class GuardedOutboundFetcherTests
         new GuardedFetchLimits(TimeSpan.FromSeconds(2), 4, 0),
         CancellationToken.None);
 
-    Assert.Equal("1234", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("1234", Encoding.UTF8.GetString(response.Body.Span));
   }
 
   [Fact]
@@ -978,6 +1058,66 @@ public sealed class GuardedOutboundFetcherTests
     Assert.Equal(GuardedFetchFailure.ResponseTooLarge, error.Failure);
   }
 
+  [Theory]
+  [InlineData("br")]
+  [InlineData("deflate")]
+  public async Task DecodesSupportedContentEncoding(string contentEncoding)
+  {
+    var body = "decoded body"u8.ToArray();
+    var compressed = contentEncoding == "br"
+      ? CompressBrotli(body)
+      : CompressDeflate(body);
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          var headers = Encoding.ASCII.GetBytes(
+              "HTTP/1.1 200 OK\r\n" +
+              $"Content-Encoding: {contentEncoding}\r\n" +
+              $"Content-Length: {compressed.Length}\r\n" +
+              "Connection: close\r\n\r\n");
+          await stream.WriteAsync(headers, cancellationToken);
+          await stream.WriteAsync(compressed, cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "encoded.example");
+
+    await using var response = await fetcher.GetAsync(
+        $"http://encoded.example:{origin.Port}/body",
+        Limits,
+        CancellationToken.None);
+
+    Assert.Equal(body, response.Body);
+  }
+
+  [Theory]
+  [InlineData("compress")]
+  [InlineData("gzip, br")]
+  public async Task RejectsUnsupportedContentEncoding(
+      string contentEncoding)
+  {
+    await using var origin = new LoopbackOrigin(
+        async (request, stream, requestCount, cancellationToken) =>
+        {
+          await stream.WriteAsync(
+              Encoding.ASCII.GetBytes(
+                  "HTTP/1.1 200 OK\r\n" +
+                  $"Content-Encoding: {contentEncoding}\r\n" +
+                  "Content-Length: 1\r\n" +
+                  "Connection: close\r\n\r\nx"),
+              cancellationToken);
+        });
+    var fetcher = CreateFixtureFetcher(origin, "encoded.example");
+
+    var error = await Assert.ThrowsAsync<GuardedFetchException>(
+        async () => await fetcher.GetAsync(
+            $"http://encoded.example:{origin.Port}/body",
+            Limits,
+            CancellationToken.None));
+
+    Assert.Equal(
+        GuardedFetchFailure.UnsupportedContentEncoding,
+        error.Failure);
+  }
+
   [Fact]
   public async Task AcceptsGzipWhoseRawBodyExactlyMatchesTheCap()
   {
@@ -1003,7 +1143,7 @@ public sealed class GuardedOutboundFetcherTests
             0),
         CancellationToken.None);
 
-    Assert.Equal("x", Encoding.UTF8.GetString(response.Body));
+    Assert.Equal("x", Encoding.UTF8.GetString(response.Body.Span));
   }
 
   [Fact]
@@ -1227,6 +1367,36 @@ public sealed class GuardedOutboundFetcherTests
     return output.ToArray();
   }
 
+  private static byte[] CompressBrotli(byte[] bytes)
+  {
+    using var output = new MemoryStream();
+
+    using (var brotli = new BrotliStream(
+        output,
+        CompressionLevel.SmallestSize,
+        leaveOpen: true))
+    {
+      brotli.Write(bytes);
+    }
+
+    return output.ToArray();
+  }
+
+  private static byte[] CompressDeflate(byte[] bytes)
+  {
+    using var output = new MemoryStream();
+
+    using (var deflate = new ZLibStream(
+        output,
+        CompressionLevel.SmallestSize,
+        leaveOpen: true))
+    {
+      deflate.Write(bytes);
+    }
+
+    return output.ToArray();
+  }
+
   private static GuardedOutboundFetcher CreateFixtureFetcher(
       LoopbackOrigin origin,
       string host)
@@ -1368,6 +1538,41 @@ public sealed class GuardedOutboundFetcherTests
     public bool IsAddressAllowed(IPAddress address)
     {
       return addresses.Contains(address);
+    }
+  }
+
+  private sealed class CoordinatedDnsResolver(
+      IPAddress[] answer) : IGuardedDnsResolver
+  {
+    private readonly TaskCompletionSource release =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int callCount;
+
+    internal int CallCount => Volatile.Read(ref callCount);
+
+    internal TaskCompletionSource FifthEntered { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public async ValueTask<IPAddress[]> ResolveAsync(
+        string host,
+        CancellationToken cancellationToken)
+    {
+      _ = host;
+      var call = Interlocked.Increment(ref callCount);
+
+      if (call == 5)
+      {
+        FifthEntered.TrySetResult();
+      }
+
+      await release.Task.WaitAsync(cancellationToken);
+
+      return answer;
+    }
+
+    internal void Release()
+    {
+      release.TrySetResult();
     }
   }
 

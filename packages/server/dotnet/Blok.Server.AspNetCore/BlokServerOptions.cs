@@ -83,6 +83,19 @@ public sealed class BlokServerOptions
           "a zero cap refuses every upload");
     }
 
+    if (MaxUploadBytes > Array.MaxLength)
+    {
+      throw new InvalidOperationException(
+          $"--max-upload must be no greater than {Array.MaxLength} bytes " +
+          $"(got {MaxUploadBytes})");
+    }
+
+    if (RateLimitPerMinute < 0)
+    {
+      throw new InvalidOperationException(
+          $"--rate-limit must be zero or greater (got {RateLimitPerMinute})");
+    }
+
     if (StorageDirectory != "" && S3Bucket == "")
     {
       LocalPublicPath = ParseLocalPublicPath();
@@ -119,6 +132,12 @@ public sealed class BlokServerOptions
           "--s3-bucket needs --s3-bucket-url: it is the prefix stored URLs are built from, and the only prefix a delete is recognised under");
     }
 
+    if (S3BucketUrl.IndexOfAny(['?', '#']) >= 0)
+    {
+      throw new InvalidOperationException(
+          $"--s3-bucket-url must not contain a query or fragment (got \"{S3BucketUrl}\")");
+    }
+
     if (S3AccessKey == "" || S3SecretKey == "")
     {
       throw new InvalidOperationException(
@@ -135,6 +154,12 @@ public sealed class BlokServerOptions
 
   private string ParseLocalPublicPath()
   {
+    if (PublicUrl.IndexOfAny(['?', '#']) >= 0)
+    {
+      throw new InvalidOperationException(
+          $"PublicUrl must not contain a query or fragment (got \"{PublicUrl}\")");
+    }
+
     if (PublicUrl == "" || HasMalformedPercentEscape(PublicUrl) ||
         !Uri.TryCreate(PublicUrl, UriKind.RelativeOrAbsolute, out var parsed))
     {
@@ -142,17 +167,9 @@ public sealed class BlokServerOptions
           $"PublicUrl must be a valid relative or absolute URL (got \"{PublicUrl}\")");
     }
 
-    if (parsed.IsAbsoluteUri)
-    {
-      return parsed.AbsolutePath.TrimEnd('/');
-    }
-
-    var suffixStart = PublicUrl.IndexOfAny(['?', '#']);
-    var relativePath = suffixStart < 0
-      ? PublicUrl
-      : PublicUrl[..suffixStart];
-
-    return relativePath.TrimEnd('/');
+    return parsed.IsAbsoluteUri
+      ? parsed.AbsolutePath.TrimEnd('/')
+      : PublicUrl.TrimEnd('/');
   }
 
   private static bool HasMalformedPercentEscape(string value)
@@ -230,6 +247,18 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"listen tcp: address {port}: invalid port");
+    }
+
+    var host = ListenHost(ListenAddress);
+
+    if (host != "" &&
+        host is not ("*" or "+") &&
+        !string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) &&
+        !IPAddress.TryParse(host, out _))
+    {
+      throw new InvalidOperationException(
+          $"listen tcp: DNS host \"{host}\" would bind every network interface; " +
+          "use an IP address, localhost, or an explicit wildcard");
     }
   }
 

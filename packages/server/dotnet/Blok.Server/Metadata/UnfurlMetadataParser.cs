@@ -10,10 +10,9 @@ internal static class UnfurlMetadataParser
   private const string HtmlNamespace = "http://www.w3.org/1999/xhtml";
 
   internal static UnfurlMetadata Parse(
-      byte[] body,
+      ReadOnlySpan<byte> body,
       string finalUrl)
   {
-    ArgumentNullException.ThrowIfNull(body);
     ArgumentNullException.ThrowIfNull(finalUrl);
 
     var baseUrl = TryParseBaseUrl(finalUrl);

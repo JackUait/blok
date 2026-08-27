@@ -46,15 +46,35 @@ npx @bloklabs/server --listen 127.0.0.1:4000
 
 The npm package is a small wrapper. On first run it downloads the C# host for your platform from the matching GitHub release, verifies it against `checksums.txt`, and caches it.
 
-The same host is available at the existing image name. This loopback example uses the host network so the service is not exposed directly to the internet:
+The same host is available at the existing image name. In proxy mode it must stay on loopback, so this example uses the host network. The named volume keeps uploads in the image's writable `/data` directory:
 
 ```bash
-docker run --network host ghcr.io/jackuait/blok-server \
+docker run --rm \
+  --network host \
+  --mount type=volume,source=blok-server-data,target=/data \
+  ghcr.io/jackuait/blok-server \
   --listen 127.0.0.1:4000 \
-  --auth proxy
+  --auth proxy \
+  --storage-dir /data \
+  --public-url https://uploads.example.com/files
 ```
 
-For an internet-facing deployment, use `--auth ticket`, set `BLOK_SECRET`, and provide `--allow-origin`. The process refuses unsafe public configurations instead of starting with a warning.
+For an internet-facing deployment, use ticket authentication and publish the container port only on loopback for the local reverse proxy:
+
+```bash
+docker run --rm \
+  -p 127.0.0.1:4000:4000 \
+  --mount type=volume,source=blok-server-data,target=/data \
+  -e BLOK_SECRET \
+  ghcr.io/jackuait/blok-server \
+  --listen 0.0.0.0:4000 \
+  --auth ticket \
+  --allow-origin https://myapp.com \
+  --storage-dir /data \
+  --public-url https://uploads.example.com/files
+```
+
+Set `BLOK_SECRET` to a random value of at least 32 characters. Put the service behind a reverse proxy or hosting platform that terminates TLS before forwarding plain HTTP to it; the host does not manage certificates. The process refuses unsafe public configurations instead of starting with a warning.
 
 ## Point the editor at it
 
@@ -89,9 +109,11 @@ The standalone host uses routes at the root. An ASP.NET Core app uses the prefix
 | `GET /health` | Reports liveness and the running version |
 | `GET /unfurl?url=…` | Reads title, description, and image metadata |
 | `POST /upload` | Stores an uploaded file |
-| `POST /upload-by-url` | Fetches and stores a remote file |
+| `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
 
-Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses.
+Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
+
+A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl`; both upload routes require `write: true`. The `doc` claim is reserved for future document-scoped routes and does not scope today’s file or unfurl routes.
 
 ## Docs
 

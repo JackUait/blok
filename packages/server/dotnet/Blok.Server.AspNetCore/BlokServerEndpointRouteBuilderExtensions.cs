@@ -16,6 +16,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     ArgumentNullException.ThrowIfNull(pattern);
 
     var options = endpoints.ServiceProvider.GetRequiredService<BlokServerOptions>();
+    options.Validate();
     LocalFileEndpoint.Map(endpoints, options);
     var routes = endpoints.MapGroup(pattern);
 
@@ -53,7 +54,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
         ? UploadEndpoint.HandleAsync
         : UploadByUrlEndpoint.HandleAsync;
 
-    routes.MapMethods(pattern, [method], Guard(handler));
+    routes.MapMethods(pattern, [method], Guard(handler, method == "POST"));
     routes.MapMethods(
         pattern,
         ["OPTIONS"],
@@ -66,13 +67,15 @@ public static class BlokServerEndpointRouteBuilderExtensions
     routes.Map(pattern, context => HandleMethodNotAllowed(context, allowedMethods)).WithOrder(1);
   }
 
-  private static RequestDelegate Guard(RequestDelegate next)
+  private static RequestDelegate Guard(
+      RequestDelegate next,
+      bool requireWrite)
   {
     return async context =>
     {
       var guard = context.RequestServices.GetRequiredService<BlokServerRequestGuard>();
 
-      if (await guard.AllowAsync(context))
+      if (await guard.AllowAsync(context, requireWrite))
       {
         await next(context);
       }

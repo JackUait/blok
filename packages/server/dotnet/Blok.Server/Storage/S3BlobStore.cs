@@ -36,6 +36,7 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
     ArgumentNullException.ThrowIfNull(options);
     ArgumentNullException.ThrowIfNull(handler);
     ArgumentNullException.ThrowIfNull(timeProvider);
+    S3TargetResolver.Resolve(options, "validation");
 
     this.options = options;
     this.timeProvider = timeProvider;
@@ -144,6 +145,8 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
       request.Content.Headers.TryAddWithoutValidation(
           "Content-Type",
           mimeType);
+      request.Content.Headers.ContentDisposition =
+          new ContentDispositionHeaderValue("attachment");
     }
 
     S3RequestSigner.Sign(
@@ -159,19 +162,20 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         responseHeaderCancellation.Token);
     responseHeaderCancellation.CancelAfter(
         Timeout.InfiniteTimeSpan);
+    if (response.IsSuccessStatusCode)
+    {
+      return;
+    }
+
     var responseBody = await ReadResponsePrefixAsync(
         response,
         requestCancellation.Token);
-
-    if (!response.IsSuccessStatusCode)
-    {
-      throw new HttpRequestException(
-          $"blobstore: s3 {method.Method} returned " +
-          $"{(int)response.StatusCode}: " +
-          Encoding.UTF8.GetString(responseBody).Trim(),
-          inner: null,
-          response.StatusCode);
-    }
+    throw new HttpRequestException(
+        $"blobstore: s3 {method.Method} returned " +
+        $"{(int)response.StatusCode}: " +
+        Encoding.UTF8.GetString(responseBody).Trim(),
+        inner: null,
+        response.StatusCode);
   }
 
   private static HttpMessageHandler CreateHandler()

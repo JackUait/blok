@@ -46,6 +46,8 @@ internal static class UnfurlEndpoint
       return;
     }
 
+    await using var ownedResponse = response;
+
     if (response.StatusCode is < 200 or > 299)
     {
       await WriteAsync(
@@ -56,7 +58,7 @@ internal static class UnfurlEndpoint
     }
 
     var metadata = UnfurlMetadataParser.Parse(
-        response.Body,
+        response.Body.Span,
         response.FinalUrl);
     await WriteAsync(
         context,

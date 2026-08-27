@@ -48,6 +48,7 @@ public static class BlokServerServiceCollectionExtensions
     services.TryAddSingleton<IBlobStore>(provider =>
     {
       var effectiveOptions = provider.GetRequiredService<BlokServerOptions>();
+      effectiveOptions.Validate();
 
       if (effectiveOptions.S3Bucket != "")
       {

@@ -102,6 +102,91 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
+  public void RejectsUploadLimitsLargerThanManagedArrays()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.MaxUploadBytes = (long)Array.MaxLength + 1));
+
+    Assert.Contains("--max-upload", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsNegativeRateLimits()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.RateLimitPerMinute = -1));
+
+    Assert.Contains("--rate-limit", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("internal.example:4000")]
+  [InlineData("example.test:0")]
+  public void RejectsDnsListenHostsThatKestrelWouldTreatAsWildcards(
+      string listenAddress)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.AllowedOrigins = ["https://app.example.com"];
+          options.Auth = "ticket";
+          options.ListenAddress = listenAddress;
+          options.Secret = new string('s', 32);
+        }));
+
+    Assert.Contains("DNS host", error.Message, StringComparison.Ordinal);
+    Assert.Contains("every network interface", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://uploads.example.com/files?download=1")]
+  [InlineData("/files#latest")]
+  public void RejectsQueryOrFragmentInLocalPublicUrls(string publicUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.StorageDirectory = "/local/storage";
+          options.PublicUrl = publicUrl;
+        }));
+
+    Assert.Contains("PublicUrl", error.Message, StringComparison.Ordinal);
+    Assert.Contains("query or fragment", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://cdn.example.com/media?download=1")]
+  [InlineData("https://cdn.example.com/media#latest")]
+  public void RejectsQueryOrFragmentInS3BucketUrls(string bucketUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = bucketUrl;
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-bucket-url", error.Message, StringComparison.Ordinal);
+    Assert.Contains("query or fragment", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
   public void RegistersTheSharedS3StoreWhenABucketIsConfigured()
   {
     var services = new ServiceCollection();
@@ -151,6 +236,43 @@ public sealed class BlokServerRegistrationTests
 
     Assert.Same(registeredOptions, provider.GetRequiredService<BlokServerOptions>());
     Assert.IsType<LocalBlobStore>(provider.GetRequiredService<IBlobStore>());
+  }
+
+  [Fact]
+  public async Task ValidatesPreRegisteredOptionsBeforeMappingRoutes()
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddSingleton(new BlokServerOptions
+    {
+      RateLimitPerMinute = -1,
+    });
+    builder.Services.AddBlokServer();
+    await using var app = builder.Build();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        app.MapBlokServer());
+
+    Assert.Contains("--rate-limit", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void ValidatesPreRegisteredOptionsBeforeResolvingStorage()
+  {
+    var services = new ServiceCollection();
+    services.AddSingleton(new BlokServerOptions
+    {
+      MaxUploadBytes = (long)Array.MaxLength + 1,
+      PublicUrl = "/files",
+      StorageDirectory = "/effective/local/storage",
+    });
+    services.AddBlokServer();
+    using var provider = services.BuildServiceProvider();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<IBlobStore>());
+
+    Assert.Contains("--max-upload", error.Message, StringComparison.Ordinal);
   }
 
   [Fact]

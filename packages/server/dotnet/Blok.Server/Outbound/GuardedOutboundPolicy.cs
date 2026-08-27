@@ -9,6 +9,7 @@ internal enum GuardedFetchFailure
   ResponseTooLarge,
   TimedOut,
   TooManyRedirects,
+  UnsupportedContentEncoding,
 }
 
 internal sealed class GuardedFetchException : Exception
@@ -55,8 +56,7 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
     NetworkRange.Parse("240.0.0.0/4"),
     NetworkRange.Parse("255.255.255.255/32"),
     NetworkRange.Parse("100.64.0.0/10"),
-    NetworkRange.Parse("::/128"),
-    NetworkRange.Parse("::1/128"),
+    NetworkRange.Parse("::/96"),
     NetworkRange.Parse("100::/64"),
     NetworkRange.Parse("2001::/23"),
     NetworkRange.Parse("2001:2::/48"),

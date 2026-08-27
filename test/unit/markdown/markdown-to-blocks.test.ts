@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { markdownToBlocks } from '../../../src/markdown/index';
+import { markdownToBlocks, markdownToBlocksWithReport } from '../../../src/markdown/index';
+import type { OutputBlockData } from '../../../types';
 
 describe('markdownToBlocks', () => {
   it('converts a full markdown document to blocks', async () => {
@@ -133,5 +134,47 @@ $$e^{i\\pi} + 1 = 0$$`;
     expect(codeBlocks).toHaveLength(2);
     expect(codeBlocks[0].data.language).toBe('latex');
     expect(codeBlocks[1].data.language).toBe('latex');
+  });
+});
+
+describe('markdownToBlocksWithReport', () => {
+  it('returns the same blocks as markdownToBlocks', async () => {
+    const md = '# Title\n\nBody with **bold**.';
+    /** Ids are minted from the clock, so two runs never share them. */
+    const withoutIds = (blocks: OutputBlockData[]): unknown[] =>
+      blocks.map(({ id: _id, ...rest }) => rest);
+
+    const { blocks } = await markdownToBlocksWithReport(md);
+
+    expect(withoutIds(blocks)).toEqual(withoutIds(await markdownToBlocks(md)));
+  });
+
+  it('reports nothing for Markdown that imports losslessly', async () => {
+    const { warnings } = await markdownToBlocksWithReport('# Title\n\n- one\n- two');
+
+    expect(warnings).toEqual([]);
+  });
+
+  /**
+   * Blok has no raw-HTML block, so markup written into Markdown is escaped and
+   * stored as literal text. That is the right fallback — it never executes —
+   * but it is silent, and a client that round-trips through Markdown would
+   * otherwise not learn its `<div>` became visible characters.
+   */
+  it('reports block-level HTML escaped into a paragraph', async () => {
+    const { blocks, warnings } = await markdownToBlocksWithReport('<div class="note">hi</div>');
+
+    expect(blocks[0].type).toBe('paragraph');
+    expect(blocks[0].data.text).toBe('&lt;div class=&quot;note&quot;&gt;hi&lt;/div&gt;');
+    expect(warnings).toEqual([
+      { construct: 'html', action: 'degraded', detail: expect.stringContaining('escaped') },
+    ]);
+  });
+
+  it('reports inline HTML too, once per run of markup', async () => {
+    const { warnings } = await markdownToBlocksWithReport('Text with <b>inline</b> markup.');
+
+    expect(warnings).toHaveLength(2);
+    expect(warnings.every((warning) => warning.construct === 'html')).toBe(true);
   });
 });

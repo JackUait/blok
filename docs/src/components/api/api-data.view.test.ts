@@ -6,7 +6,8 @@ import ru from "../../i18n/ru.json";
 
 /**
  * Documentation coverage for the `@bloklabs/core/view` renderer
- * (blocksToHtml / blocksToPlainText / defineBlokSchema / blocksToViewNodes)
+ * (blocksToHtml / blocksToPlainText / blocksToMarkdown / defineBlokSchema /
+ * blocksToViewNodes)
  * and its React bindings (BlokView / useBlokView).
  */
 describe("view renderer section", () => {
@@ -39,6 +40,8 @@ describe("view renderer section", () => {
     expect(names).toEqual([
       "blocksToHtml(data, options?)",
       "blocksToPlainText(data, options?)",
+      "blocksToMarkdown(data)",
+      "blocksToMarkdownWithReport(data)",
       "htmlTextContent(html)",
       "sanitizeHtmlFragment(html, config)",
       "outlineFromOutputData(data)",

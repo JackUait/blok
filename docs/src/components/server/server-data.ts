@@ -98,7 +98,7 @@ new Blok({
     title: 'Your app runs ASP.NET Core',
     situation: 'You want Blok routes inside the .NET app that already owns your users and deployment.',
     description:
-      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. IBlokAuthorization is the document and database permission seam for later document routes; it is not the upload or link-preview gate. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
+      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. IBlokAuthorization is the document and database permission seam for later document routes; it is not the upload or link-preview gate. The editor calls the route prefix you choose, and database blocks and MySQL integration come later. The package also converts saved documents in-process — to Markdown, HTML or plain text, and back from Markdown — running Blok\'s own implementation rather than a C# port of it, which is how a port silently loses every block it was never taught.',
     runsService: true,
     whatToRun: [
       {
@@ -125,6 +125,32 @@ builder.Services
 var app = builder.Build();
 
 app.MapBlokServer("/api/blok").RequireAuthorization();`,
+      },
+      {
+        label: 'Convert documents — no storage, no route',
+        language: 'csharp',
+        code: `using Blok.Server.Documents;
+
+// Registers the converter on its own. AddBlokServer includes it, but a service
+// that only reads documents does not have to configure a bucket to get one.
+builder.Services.AddBlokDocuments();
+
+// Anywhere you already have the saved JSON — an MCP tool, an agent, an export.
+public sealed class ArticleExport(IBlokDocumentConverter blok)
+{
+  public async Task<string> ToMarkdownAsync(string contentJson, CancellationToken ct)
+  {
+    var conversion = await blok.ToMarkdownAsync(contentJson, ct);
+
+    foreach (var warning in conversion.Warnings)
+    {
+      // e.g. block "callout", action "degraded", detail "rendered as a blockquote…"
+      logger.LogInformation("{Block} {Action}: {Detail}", warning.Block, warning.Action, warning.Detail);
+    }
+
+    return conversion.Markdown;
+  }
+}`,
       },
     ],
     editorConfig: {

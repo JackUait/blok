@@ -1,5 +1,5 @@
 import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-formats/output-data';
-import { markdownToBlocks } from '../markdown';
+import { markdownToBlocksWithReport } from '../markdown';
 import { blocksToHtml } from './blocks-to-html';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import { blocksToPlainText } from './blocks-to-plain-text';
@@ -64,11 +64,8 @@ const parseDocument = (inputJson: string): LooseOutputData => {
 
 export const invoke = async (operation: string, inputJson: string): Promise<string> => {
   switch (operation) {
-    case 'markdownToBlocks': {
-      const blocks = await markdownToBlocks(parseMarkdown(inputJson));
-
-      return JSON.stringify({ blocks });
-    }
+    case 'markdownToBlocks':
+      return JSON.stringify(await markdownToBlocksWithReport(parseMarkdown(inputJson)));
     case 'blocksToHtml':
       return blocksToHtml(parseDocument(inputJson));
     /**

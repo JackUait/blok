@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Blok.Server.Runtime;
 
@@ -35,13 +36,26 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return runtime.InvokeAsync("blocksToPlainText", documentJson, cancellationToken);
   }
 
-  public ValueTask<string> FromMarkdownAsync(string markdown, CancellationToken cancellationToken = default)
+  public async ValueTask<BlokImportConversion> FromMarkdownAsync(
+      string markdown,
+      CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(markdown);
 
     var input = JsonSerializer.Serialize(new MarkdownInput(markdown));
+    var output = await runtime.InvokeAsync("markdownToBlocks", input, cancellationToken);
 
-    return runtime.InvokeAsync("markdownToBlocks", input, cancellationToken);
+    var payload = JsonNode.Parse(output)?.AsObject()
+        ?? throw new InvalidOperationException("The Blok runtime returned no document.");
+    var warnings = payload["warnings"].Deserialize<List<BlokDegradation>>() ?? [];
+
+    /**
+     * The report rides alongside the document on the wire, but it is not part
+     * of it — a caller storing the result must not persist the warnings.
+     */
+    payload.Remove("warnings");
+
+    return new BlokImportConversion(payload.ToJsonString(), warnings);
   }
 
   private sealed record MarkdownInput(

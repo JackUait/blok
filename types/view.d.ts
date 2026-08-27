@@ -196,6 +196,56 @@ export declare function blocksToPlainText(
 ): string;
 
 /**
+ * A construct Markdown could not express as-is (see
+ * {@link blocksToMarkdownWithReport}).
+ */
+export interface MarkdownDegradation {
+  /**
+   * What degraded: a block tool name (`callout`) on the way out, a Markdown
+   * construct (`html`) on the way in.
+   */
+  construct: string;
+  /** `dropped` — nothing was emitted; `degraded` — emitted, but lossily. */
+  action: 'dropped' | 'degraded';
+  /** Plain-language explanation of what was lost. */
+  detail: string;
+}
+
+/** A document's Markdown plus everything that could not be carried across. */
+export interface MarkdownSerializationResult {
+  /** The serialized document. */
+  markdown: string;
+  /** Constructs that were dropped or emitted lossily, in document order. */
+  warnings: MarkdownDegradation[];
+}
+
+/**
+ * Serialize a saved Blok document to Markdown — synchronous and DOM-free, the
+ * outbound twin of `markdownToBlocks`. Headings become `#`, lists `-`/`1.`,
+ * tables GFM pipe grids; a callout becomes a blockquote and columns flatten
+ * into reading order, since Markdown can express neither.
+ *
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @returns Markdown ('' for empty/malformed documents)
+ */
+export declare function blocksToMarkdown(
+  data: OutputData | LooseOutputData | null | undefined
+): string;
+
+/**
+ * Serialize a saved Blok document to Markdown and report what degraded on the
+ * way out. The Markdown is identical to {@link blocksToMarkdown}; reach for
+ * this when the result goes somewhere that cannot ask a follow-up question —
+ * an AI client, an export — and needs to be told what it is missing.
+ *
+ * @param data - saved document (strict or loose wire shape; nullish tolerated)
+ * @returns the Markdown and its degradations
+ */
+export declare function blocksToMarkdownWithReport(
+  data: OutputData | LooseOutputData | null | undefined
+): MarkdownSerializationResult;
+
+/**
  * Extract the plain text of an HTML fragment — synchronous and DOM-free, the
  * view renderer's replacement for `element.textContent`. Entities are decoded
  * (`a &lt; b` → `a < b`) and `<br>` becomes a newline. Consumers building a

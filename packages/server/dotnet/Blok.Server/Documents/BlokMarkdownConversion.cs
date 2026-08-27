@@ -9,8 +9,18 @@ public sealed record BlokMarkdownConversion(
     [property: JsonPropertyName("markdown")] string Markdown,
     [property: JsonPropertyName("warnings")] IReadOnlyList<BlokDegradation> Warnings);
 
-/// <summary>A construct Markdown could not express as-is.</summary>
-/// <param name="Block">The block tool that degraded, e.g. <c>callout</c>.</param>
+/// <summary>A parsed Markdown document, and everything Markdown could not carry into it.</summary>
+/// <param name="DocumentJson">The saved document: <c>{"blocks":[…]}</c>.</param>
+/// <param name="Warnings">Constructs that arrived degraded, in document order.</param>
+public sealed record BlokImportConversion(
+    string DocumentJson,
+    IReadOnlyList<BlokDegradation> Warnings);
+
+/// <summary>A construct a Markdown conversion could not carry across as-is.</summary>
+/// <param name="Construct">
+/// What degraded: a block tool name (<c>callout</c>) on the way out, a Markdown
+/// construct (<c>html</c>) on the way in.
+/// </param>
 /// <param name="Action">
 /// <c>dropped</c> when nothing was emitted, <c>degraded</c> when something was
 /// emitted but lossily. A string rather than an enum so a Blok release that
@@ -18,6 +28,6 @@ public sealed record BlokMarkdownConversion(
 /// </param>
 /// <param name="Detail">Plain-language explanation of what was lost.</param>
 public sealed record BlokDegradation(
-    [property: JsonPropertyName("block")] string Block,
+    [property: JsonPropertyName("construct")] string Construct,
     [property: JsonPropertyName("action")] string Action,
     [property: JsonPropertyName("detail")] string Detail);

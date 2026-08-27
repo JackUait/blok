@@ -36,10 +36,12 @@ public interface IBlokDocumentConverter
   ValueTask<string> ToPlainTextAsync(string documentJson, CancellationToken cancellationToken = default);
 
   /// <summary>
-  /// Parses Markdown into a saved document: <c>{"blocks":[…]}</c>. GitHub
-  /// Flavored Markdown and <c>$…$</c> math are both understood.
+  /// Parses Markdown into a saved document, reporting what Markdown could not
+  /// carry into it. GitHub Flavored Markdown and <c>$…$</c> math are both
+  /// understood; Blok has no raw-HTML block, so markup written into the
+  /// Markdown is escaped into literal text and reported.
   /// </summary>
   /// <param name="markdown">The Markdown source.</param>
   /// <param name="cancellationToken">Cancels the conversion.</param>
-  ValueTask<string> FromMarkdownAsync(string markdown, CancellationToken cancellationToken = default);
+  ValueTask<BlokImportConversion> FromMarkdownAsync(string markdown, CancellationToken cancellationToken = default);
 }

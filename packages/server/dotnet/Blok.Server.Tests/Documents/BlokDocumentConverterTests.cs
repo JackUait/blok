@@ -48,13 +48,13 @@ public sealed class BlokDocumentConverterTests
         conversion.Warnings,
         warning =>
         {
-          Assert.Equal("callout", warning.Block);
+          Assert.Equal("callout", warning.Construct);
           Assert.Equal("degraded", warning.Action);
           Assert.Contains("blockquote", warning.Detail);
         },
         warning =>
         {
-          Assert.Equal("spacer", warning.Block);
+          Assert.Equal("spacer", warning.Construct);
           Assert.Equal("dropped", warning.Action);
         });
   }
@@ -65,10 +65,11 @@ public sealed class BlokDocumentConverterTests
     var converter = BlokDocuments.Create(poolSize: 1);
     const string markdown = "# Title\n\nA **bold** claim and a `token`.\n\n- one\n- two";
 
-    var blocksJson = await converter.FromMarkdownAsync(markdown);
-    var conversion = await converter.ToMarkdownAsync(blocksJson);
+    var import = await converter.FromMarkdownAsync(markdown);
+    var conversion = await converter.ToMarkdownAsync(import.DocumentJson);
 
     Assert.Equal(markdown, conversion.Markdown);
+    Assert.Empty(import.Warnings);
   }
 
   [Fact]
@@ -76,12 +77,32 @@ public sealed class BlokDocumentConverterTests
   {
     var converter = BlokDocuments.Create(poolSize: 1);
 
-    var blocksJson = await converter.FromMarkdownAsync("# Hello");
+    var import = await converter.FromMarkdownAsync("# Hello");
 
-    using var document = JsonDocument.Parse(blocksJson);
+    using var document = JsonDocument.Parse(import.DocumentJson);
     var block = document.RootElement.GetProperty("blocks")[0];
     Assert.Equal("header", block.GetProperty("type").GetString());
     Assert.Equal("Hello", block.GetProperty("data").GetProperty("text").GetString());
+
+    // The report rides beside the document, never inside what a caller stores.
+    Assert.False(document.RootElement.TryGetProperty("warnings", out _));
+  }
+
+  /// <summary>
+  /// Blok has no raw-HTML block, so markup written into Markdown becomes
+  /// literal text. Silent on its own — an MCP client would find its markup
+  /// turned into visible characters only by reading the article back.
+  /// </summary>
+  [Fact]
+  public async Task ReportsMarkupMarkdownCouldNotCarryIn()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var import = await converter.FromMarkdownAsync("<div class=\"note\">careful</div>");
+
+    var warning = Assert.Single(import.Warnings);
+    Assert.Equal("html", warning.Construct);
+    Assert.Equal("degraded", warning.Action);
   }
 
   [Fact]

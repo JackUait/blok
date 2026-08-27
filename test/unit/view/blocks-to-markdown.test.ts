@@ -163,7 +163,7 @@ describe('blocksToMarkdown (view)', () => {
       const { warnings } = blocksToMarkdownWithReport(doc([{ type: 'spacer', data: {} }]));
 
       expect(warnings).toEqual([
-        { block: 'spacer', action: 'dropped', detail: expect.stringContaining('Markdown') },
+        { construct: 'spacer', action: 'dropped', detail: expect.stringContaining('Markdown') },
       ]);
     });
 
@@ -174,7 +174,7 @@ describe('blocksToMarkdown (view)', () => {
       ]));
 
       expect(warnings).toEqual([
-        { block: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
+        { construct: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
       ]);
     });
 
@@ -192,7 +192,7 @@ describe('blocksToMarkdown (view)', () => {
 
       expect(markdown).toBe('A');
       expect(warnings).toEqual([
-        { block: 'org-chart', action: 'dropped', detail: expect.any(String) },
+        { construct: 'org-chart', action: 'dropped', detail: expect.any(String) },
       ]);
     });
 

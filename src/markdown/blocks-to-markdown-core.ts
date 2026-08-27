@@ -47,8 +47,11 @@ export interface InlineBackend {
 
 /** A construct that could not be carried into Markdown as-is. */
 export interface MarkdownDegradation {
-  /** The block tool that degraded. */
-  block: string;
+  /**
+   * What degraded. A block tool name (`callout`) on the way out; a Markdown
+   * construct (`html`) on the way in.
+   */
+  construct: string;
   /** `dropped` — nothing was emitted; `degraded` — emitted, but lossy. */
   action: 'dropped' | 'degraded';
   /** Plain-language explanation of what was lost. */
@@ -96,17 +99,17 @@ interface SerializationContext {
 /**
  * Record a degradation.
  * @param context - the serialization context
- * @param block - tool name that degraded
+ * @param construct - tool name that degraded
  * @param action - whether anything was emitted
  * @param detail - plain-language explanation
  */
 const warn = (
   context: SerializationContext,
-  block: string,
+  construct: string,
   action: MarkdownDegradation['action'],
   detail: string
 ): void => {
-  context.warnings.push({ block,
+  context.warnings.push({ construct,
     action,
     detail });
 };

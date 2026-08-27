@@ -4114,6 +4114,20 @@ const parsed = await markdownToBlocks('# Title\\n\\n- one\\n- two');
 await blocks.render({ blocks: parsed });`,
       },
       {
+        name: "markdownToBlocksWithReport(md, config?)",
+        returnType: "Promise<{ blocks: OutputBlockData[]; warnings: MarkdownDegradation[] }>",
+        description:
+          "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text — safe, but silent. Reach for this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view.",
+        example: `import { markdownToBlocksWithReport } from '@bloklabs/core/markdown';
+
+const { blocks: parsed, warnings } = await markdownToBlocksWithReport(source);
+// warnings: [{ construct: 'html', action: 'degraded', detail: 'HTML is escaped and stored as literal text…' }]
+
+if (warnings.length === 0) {
+  await blocks.render({ blocks: parsed });
+}`,
+      },
+      {
         name: "move(id, target)",
         returnType: "void",
         description:
@@ -4478,6 +4492,26 @@ const transportBytes = new TextEncoder().encode(JSON.stringify(savedData)).lengt
 if (transportBytes > 500 * 1024) {
   throw new Error('Document exceeds the 500KB save limit');
 }`,
+      },
+      {
+        name: "blocksToMarkdown(data)",
+        returnType: "string",
+        description:
+          "Serialize a saved document to Markdown — synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], tables GFM pipe grids. Markdown has no callout, toggle, column or spacer, so a callout becomes a blockquote carrying its emoji, a toggle a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped. Returns '' for empty or malformed documents.",
+        example: `import { blocksToMarkdown } from '@bloklabs/core/view';
+
+// Feed an article to an LLM, or write it to a .md file
+const markdown = blocksToMarkdown(savedData);`,
+      },
+      {
+        name: "blocksToMarkdownWithReport(data)",
+        returnType: "{ markdown: string; warnings: MarkdownDegradation[] }",
+        description:
+          "The same Markdown, plus a list of what could not be carried across: each entry names the construct, whether it was 'dropped' (nothing emitted) or 'degraded' (emitted lossily), and why. Reach for it when the result goes somewhere that cannot ask a follow-up question — an AI client, an export — and needs to be told what it is missing. A block that leaves no output and carries no inline text is reported too, so a custom tool with no Markdown form is named rather than vanishing.",
+        example: `import { blocksToMarkdownWithReport } from '@bloklabs/core/view';
+
+const { markdown, warnings } = blocksToMarkdownWithReport(savedData);
+// warnings: [{ construct: 'callout', action: 'degraded', detail: 'callout is rendered as a blockquote; …' }]`,
       },
       {
         name: "htmlTextContent(html)",

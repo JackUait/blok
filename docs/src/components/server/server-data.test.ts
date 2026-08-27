@@ -49,6 +49,23 @@ describe('server docs data', () => {
     expect(code).toContain('MapBlokServer("/api/blok").RequireAuthorization()');
     expect(dotnet?.description).toMatch(/application.*authorization policy/i);
     expect(dotnet?.description).toMatch(/IBlokAuthorization.*document/i);
+  });
+
+  /**
+   * Converting a document is the one thing the package does that needs no
+   * storage, no outbound network access and no route — a reader who only wants
+   * Markdown out of an article should not be sent to configure a bucket.
+   */
+  it('shows document conversion as its own registration, without storage or a route', () => {
+    const dotnet = serverPaths.find((path) => path.id === 'dotnet');
+    const code = [...(dotnet?.whatToRun ?? []), ...(dotnet?.appRoute ?? [])]
+      .map((sample) => sample.code)
+      .join('\n');
+
+    expect(code).toContain('AddBlokDocuments');
+    expect(code).toContain('IBlokDocumentConverter');
+    expect(code).toContain('ToMarkdownAsync');
+    expect(dotnet?.description).toMatch(/markdown/i);
     expect(code).not.toContain('UseMySql');
   });
 

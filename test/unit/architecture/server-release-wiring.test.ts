@@ -135,7 +135,7 @@ describe('server release wiring', () => {
     const runs = steps.map((step) => step.run ?? '').join('\n');
 
     expect(actions).toContain('./.github/actions/setup-node-deps');
-    expect(actions).toContain('actions/setup-dotnet@v4');
+    expect(actions).toContain(SETUP_DOTNET_ACTION);
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx',
     );

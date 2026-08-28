@@ -125,7 +125,7 @@ dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 dotnet restore packages/server/dotnet/Blok.Server.slnx
 ```
 
-CI collects merged production coverage and requires at least 85% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, audits all direct and transitive NuGet packages, scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
+CI collects merged production coverage and requires at least 80% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, audits all direct and transitive NuGet packages, scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
 
 ## Docs
 

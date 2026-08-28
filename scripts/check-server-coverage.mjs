@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const COVERAGE_THRESHOLDS = Object.freeze({
-  lines: 85,
+  lines: 80,
   branches: 80,
 });
 

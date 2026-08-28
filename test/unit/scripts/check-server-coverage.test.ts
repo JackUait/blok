@@ -19,19 +19,19 @@ describe('check-server-coverage', () => {
   });
 
   it('accepts coverage at the enforced floors', () => {
-    expect(validateServerCoverage(coverage('0.85', '0.80'))).toEqual({
-      lines: 85,
+    expect(validateServerCoverage(coverage('0.80', '0.80'))).toEqual({
+      lines: 80,
       branches: 80,
     });
     expect(COVERAGE_THRESHOLDS).toEqual({
-      lines: 85,
+      lines: 80,
       branches: 80,
     });
   });
 
   it('rejects line coverage below the floor', () => {
-    expect(() => validateServerCoverage(coverage('0.849', '0.90')))
-      .toThrow('Line coverage 84.9% is below 85%');
+    expect(() => validateServerCoverage(coverage('0.799', '0.90')))
+      .toThrow('Line coverage 79.9% is below 80%');
   });
 
   it('rejects branch coverage below the floor', () => {

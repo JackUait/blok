@@ -51,19 +51,12 @@ const dumpTexts = async (page: Page): Promise<Array<unknown>> =>
     return data.blocks.map((b) => b.data.text);
   });
 
-const center = async (locator: Locator): Promise<{ x: number; y: number }> => {
-  const box = await locator.boundingBox();
-  if (!box) throw new Error('no box');
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-};
+const selectBlockRange = async (page: Page, fromIndex: number, toIndex: number): Promise<void> => {
+  await getParagraphByIndex(page, fromIndex).click();
 
-const dragSelect = async (page: Page, fromIndex: number, toIndex: number): Promise<void> => {
-  const from = await center(getParagraphByIndex(page, fromIndex));
-  const to = await center(getParagraphByIndex(page, toIndex));
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 12 });
-  await page.mouse.up();
+  for (let index = fromIndex; index < toIndex; index += 1) {
+    await page.keyboard.press('Shift+ArrowDown');
+  }
 };
 
 test.describe('modules/type-over-block-selection', () => {
@@ -73,7 +66,7 @@ test.describe('modules/type-over-block-selection', () => {
   test('typing over a cross-block selection replaces every selected block with one block holding the char', async ({ page }) => {
     await createBlok(page, ['Hello world', 'Second block', 'Foobar tail']);
 
-    await dragSelect(page, 0, 2);
+    await selectBlockRange(page, 0, 2);
     // Every block is part of the selection.
     await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(3);
 
@@ -85,7 +78,7 @@ test.describe('modules/type-over-block-selection', () => {
   test('typing over a subset selection deletes those blocks and drops the char into a fresh block at their position', async ({ page }) => {
     await createBlok(page, ['One', 'Two', 'Three', 'Four']);
 
-    await dragSelect(page, 0, 2);
+    await selectBlockRange(page, 0, 2);
     await expect(page.locator('[data-blok-selected="true"]')).toHaveCount(3);
 
     await page.keyboard.type('Z');

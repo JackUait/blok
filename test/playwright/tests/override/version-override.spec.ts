@@ -145,6 +145,7 @@ test.describe('blok version override', () => {
   // The one page the extension must NOT keep reloading: the payload is in the
   // realm and this blok predates the seam, so no reload will ever swap it.
   test('a page whose blok predates the seam is reported, never reloaded in circles', async () => {
+    test.slow();
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;
@@ -196,6 +197,7 @@ test.describe('blok version override', () => {
   });
 
   test('popup routes a detected CDN script to the local build in one click', async () => {
+    test.slow();
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;

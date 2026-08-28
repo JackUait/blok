@@ -379,6 +379,13 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Build E2E fixtures
+        run: |
+          node scripts/build-react-vendor.mjs
+          node scripts/build-vue-vendor.mjs
+          node scripts/build-angular-vendor.mjs
+          node scripts/override/sync.mjs
+
       # The adapters were extracted into packages/*/dist (they used to live under
       # dist/). Downstream jobs (Unit's bundle-outputs test, E2E's react-adapter
       # fixture) load those built adapter bundles, so they must travel in the
@@ -394,6 +401,8 @@ jobs:
             packages/react/dist/
             packages/vue/dist/
             packages/angular/dist/
+            test/playwright/fixtures/vendor/
+            override-extension/payload/
           retention-days: 1
 
   install-browsers:
@@ -573,14 +582,20 @@ jobs:
           name: dist
           path: .
 
-      - name: Build React Vendor Files
-        run: node scripts/build-react-vendor.mjs
-
       - name: Install Chromium
         run: npx playwright install chromium
 
       - name: Run visual regression tests
         run: BLOK_BUILT=true BLOK_VISUAL=1 yarn playwright test --project=chromium-default test/playwright/tests/visual-regression
+
+      - name: Upload visual regression diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-regression
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 3
 
   production-readiness:
     name: Production Readiness

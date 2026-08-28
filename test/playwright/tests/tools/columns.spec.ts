@@ -442,6 +442,8 @@ test.describe('Columns tool', () => {
 
     // Drag "Right para" onto the right edge of "Left para" → [Left, Right] columns.
     const source = page.getByTestId('block-wrapper').filter({ hasText: 'Right para' });
+
+    await source.click();
     await source.hover();
     const handle = page.locator(SETTINGS_BUTTON);
     await expect(handle).toBeVisible();

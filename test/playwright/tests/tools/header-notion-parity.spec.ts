@@ -9,7 +9,7 @@ const HOLDER_ID = 'blok';
 const HEADER_BLOCK_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-component="header"]`;
 const SETTINGS_BUTTON_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-testid="settings-toggler"]`;
 const POPOVER_CONTAINER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-testid="popover-container"]';
-const NESTED_POPOVER_SELECTOR = '[data-blok-nested="true"] [data-blok-testid="popover-container"]';
+const NESTED_POPOVER_SELECTOR = '[data-blok-testid="block-tunes-popover"] [data-blok-nested="true"] [data-blok-testid="popover-container"]';
 const TOGGLE_ARROW_SELECTOR = `${BLOK_INTERFACE_SELECTOR} [data-blok-toggle-arrow]`;
 
 declare global {
@@ -60,10 +60,11 @@ const createBlok = async (page: Page, data: OutputData): Promise<void> => {
 
 const openBlockTunes = async (page: Page): Promise<void> => {
   const block = page.locator(HEADER_BLOCK_SELECTOR).first();
+  const editable = block.locator('[contenteditable="true"]').first();
 
-  await expect(block).toBeVisible();
-  await block.click();
-  await block.hover();
+  await expect(editable).toBeVisible();
+  await editable.click();
+  await editable.hover();
 
   const settingsButton = page.locator(SETTINGS_BUTTON_SELECTOR);
 

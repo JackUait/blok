@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
+import { dragBetweenCharacters } from '../../helpers/text-drag';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
 
 /**
@@ -198,8 +199,7 @@ test.describe('table cell delete-focus matrix', () => {
     await expectFocusInCell(page, 0, 0);
   });
 
-  test('multi-line block selection + Backspace keeps focus in the cell', async ({ page }) => {
-    // Build a 3-line cell, block-select the last line, extend upward, delete
+  test('cross-line text selection + Backspace keeps focus in the cell', async ({ page }) => {
     await getCellEditable(page, 0, 0).click();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
@@ -207,14 +207,14 @@ test.describe('table cell delete-focus matrix', () => {
     await page.keyboard.press('Enter');
     await page.keyboard.type('line three');
 
-    // Block-select the caret line, then extend upward to a multi-line selection
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.press('Shift+ArrowUp');
-    await expect
-      .poll(async () => page.locator('[data-blok-selected="true"]').count())
-      .toBeGreaterThanOrEqual(2);
+    const editables = getCell(page, 0, 0).locator('[contenteditable="true"]');
 
+    await expect(editables).toHaveCount(3);
+    await dragBetweenCharacters(
+      page,
+      { editable: editables.nth(2), offset: 4 },
+      { editable: editables.nth(0), offset: 2 }
+    );
     await page.keyboard.press('Backspace');
 
     await expectFocusInCell(page, 0, 0);

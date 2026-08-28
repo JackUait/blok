@@ -53,9 +53,6 @@ jobs:
           # shellcheck disable=SC2086
           echo "BLOK_BUILT=true" >> $GITHUB_ENV
 
-      - name: Build React Vendor Files
-        run: node scripts/build-react-vendor.mjs
-
       - name: Restore Playwright Browsers
         uses: ./.github/actions/setup-playwright-browsers
         with:

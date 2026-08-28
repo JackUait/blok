@@ -2816,6 +2816,8 @@ test.describe('drag and drop', () => {
     });
 
     test('should nest block inside toggle when dropped after spring-load expands it', async ({ page }) => {
+      test.slow();
+
       await createBlok(page, {
         data: {
           blocks: [

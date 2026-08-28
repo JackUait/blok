@@ -117,8 +117,22 @@ const setupNodeDependencies: Step = {
 const lintCachePaths =
   'node_modules/.cache/blok-eslint\nnode_modules/.cache/blok-lint.tsbuildinfo\n';
 
-const buildArtifactPaths =
-  'dist/\npackages/react/dist/\npackages/vue/dist/\npackages/angular/dist/\n';
+const buildArtifactPaths = [
+  'dist/',
+  'packages/react/dist/',
+  'packages/vue/dist/',
+  'packages/angular/dist/',
+  'test/playwright/fixtures/vendor/',
+  'override-extension/payload/',
+  '',
+].join('\n');
+
+const buildE2eFixturesRun = [
+  'node scripts/build-react-vendor.mjs',
+  'node scripts/build-vue-vendor.mjs',
+  'node scripts/build-angular-vendor.mjs',
+  'node scripts/override/sync.mjs',
+].join('\n');
 
 const mergeReportRun = [
   'if [ -d ./all-blob-reports ] && [ -n "$(ls -A ./all-blob-reports 2>/dev/null)" ]; then',
@@ -399,6 +413,10 @@ describe('CI critical-path law', () => {
         run: 'yarn build',
       },
       {
+        name: 'Build E2E fixtures',
+        run: buildE2eFixturesRun,
+      },
+      {
         name: 'Upload build artifacts',
         uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
@@ -569,10 +587,6 @@ describe('CI critical-path law', () => {
       {
         name: 'Mark Build as Available',
         run: markBuildRun,
-      },
-      {
-        name: 'Build React Vendor Files',
-        run: 'node scripts/build-react-vendor.mjs',
       },
       {
         name: 'Restore Playwright Browsers',

@@ -7,6 +7,7 @@ import { parse } from 'yaml';
 type WorkflowValue = boolean | number | string;
 
 interface WorkflowStep {
+  if?: string;
   name?: string;
   run?: string;
   uses?: string;
@@ -205,11 +206,34 @@ describe('production readiness gates', () => {
       step.run?.includes('BLOK_VISUAL=1') === true &&
       step.run.includes('test/playwright/tests/visual-regression')
     )).toBe(true);
+    expect(visual.steps?.some(step =>
+      step.if === 'failure()' &&
+      step.uses?.startsWith('actions/upload-artifact@') === true &&
+      step.with?.path === 'test-results/'
+    )).toBe(true);
     expect(needsList(readiness.needs)).toContain('visual-regression');
     expect(read('playwright.config.ts')).toContain('failOnFlakyTests: true');
     expect(read('scripts/validate-test-categories.mjs')).toContain(
       'visual: extractPatterns(visualMatch)'
     );
+  });
+
+  it('ships every catch-all browser fixture in the shared build artifact', () => {
+    const ci = workflow('.github/workflows/ci.yml');
+    const build = job(ci, 'build');
+    const fixtureBuild = build.steps?.find(step => step.name === 'Build E2E fixtures');
+    const artifact = build.steps?.find(step => step.name === 'Upload build artifacts');
+
+    for (const command of [
+      'node scripts/build-react-vendor.mjs',
+      'node scripts/build-vue-vendor.mjs',
+      'node scripts/build-angular-vendor.mjs',
+      'node scripts/override/sync.mjs',
+    ]) {
+      expect(fixtureBuild?.run).toContain(command);
+    }
+    expect(artifact?.with?.path).toContain('test/playwright/fixtures/vendor/');
+    expect(artifact?.with?.path).toContain('override-extension/payload/');
   });
 
   it('enforces measured root and docs coverage floors in blocking CI jobs', () => {

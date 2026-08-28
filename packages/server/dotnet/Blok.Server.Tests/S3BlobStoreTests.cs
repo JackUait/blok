@@ -1348,6 +1348,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }
@@ -1408,6 +1409,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }
@@ -1463,6 +1465,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }

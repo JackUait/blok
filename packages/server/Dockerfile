@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS runtime-build
+FROM node:25-bookworm-slim AS runtime-build
 WORKDIR /workspace
 
 COPY package.json yarn.lock .yarnrc.yml ./

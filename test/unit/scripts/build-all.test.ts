@@ -74,9 +74,9 @@ describe('buildTasks', () => {
     expect(cmds).toContain('yarn workspace @bloklabs/react build');
     expect(cmds).toContain('yarn workspace @bloklabs/vue build');
     expect(cmds).toContain('yarn workspace @bloklabs/presets build');
-    expect(cmds).toContain('node scripts/build-server-runtime.mjs');
+    expect(cmds).not.toContain('node scripts/build-server-runtime.mjs');
     expect(cmds).toContain('node scripts/override/generate-override-entries.mjs');
-    expect(cmds).toHaveLength(11);
+    expect(cmds).toHaveLength(10);
   });
 
   it('orders dist/ writers after the main build (which empties dist/) and everything after fonts', () => {
@@ -87,13 +87,6 @@ describe('buildTasks', () => {
     for (const name of ['iife', 'umd', 'locales', 'angular']) {
       expect(tasks.get(name)?.deps, `${name} must wait for main (emptyOutDir)`).toContain('main');
     }
-  });
-
-  it('builds the embedded server runtime independently of the editor dist', () => {
-    const tasks = byName(buildTasks({ mode: 'production' }));
-
-    expect(tasks.get('server-runtime')?.cmd).toBe('node scripts/build-server-runtime.mjs');
-    expect(tasks.get('server-runtime')?.deps ?? []).toEqual([]);
   });
 
   it('lets react and vue build independently of the core dist (core is external)', () => {
@@ -128,8 +121,8 @@ describe('buildTasks', () => {
     expect(tasks.get('override-entries')?.cmd).toBe('node scripts/override/generate-override-entries.mjs');
     expect(tasks.get('override-payload')?.cmd).toBe('node scripts/override/sync.mjs');
     expect(tasks.get('presets')?.cmd).toBe('yarn workspace @bloklabs/presets build');
-    expect(tasks.get('server-runtime')?.cmd).toBe('node scripts/build-server-runtime.mjs');
-    expect(buildTasks({ mode: 'test' })).toHaveLength(15);
+    expect(tasks.has('server-runtime')).toBe(false);
+    expect(buildTasks({ mode: 'test' })).toHaveLength(14);
   });
 
   it('test mode stages the override payload only after every dist writer', () => {

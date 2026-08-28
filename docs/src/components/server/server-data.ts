@@ -98,7 +98,7 @@ new Blok({
     title: 'Your app runs ASP.NET Core',
     situation: 'You want Blok routes inside the .NET app that already owns your users and deployment.',
     description:
-      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. IBlokAuthorization is the document and database permission seam for later document routes; it is not the upload or link-preview gate. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
+      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
     runsService: true,
     whatToRun: [
       {
@@ -113,14 +113,12 @@ new Blok({
         language: 'csharp',
         code: `using Blok.Server.AspNetCore;
 
-builder.Services
-  .AddBlokServer(options =>
-  {
-    options.StorageDirectory = "./blok-uploads";
-    options.PublicUrl = "https://uploads.example.com/files";
-    options.UnfurlDisabled = false;
-  })
-  .UseAuthorization<AppBlokAuthorization>();
+builder.Services.AddBlokServer(options =>
+{
+  options.StorageDirectory = "./blok-uploads";
+  options.PublicUrl = "https://uploads.example.com/files";
+  options.UnfurlDisabled = false;
+});
 
 var app = builder.Build();
 
@@ -151,8 +149,8 @@ new Blok({
       {
         symptom: 'The app rejects its Blok configuration before it maps routes or opens storage.',
         cause:
-          'MaxUploadBytes cannot be larger than Array.MaxLength, RateLimitPerMinute must be zero or greater, and neither PublicUrl nor S3BucketUrl may contain a query or fragment. ListenAddress rejects a DNS host because the standalone Kestrel host would bind every network interface.',
-        fix: 'Lower the numeric limit, use a plain URL prefix without anything after ? or #, and bind an IP address, localhost, or an explicit wildcard.',
+          'MaxUploadBytes cannot be larger than Array.MaxLength when storage and remote unfurl are both enabled. RateLimitPerMinute must be zero or greater. PublicUrl must be HTTP(S) or root-relative, while S3BucketUrl must be absolute HTTP(S); neither may contain credentials, a query or a fragment. S3Endpoint must be an origin without credentials, a path, a query or a fragment, and must use HTTPS except for loopback HTTP. ListenAddress rejects a DNS host because the standalone Kestrel host would bind every network interface.',
+        fix: 'Use a safe public URL, keep remote S3 endpoints on HTTPS, lower the buffered-upload limit when required, and bind an IP address, localhost or an explicit wildcard.',
       },
     ],
   },

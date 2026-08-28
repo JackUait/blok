@@ -17,14 +17,12 @@ Register the services, use your application's authorization policy, and map the 
 ```csharp
 using Blok.Server.AspNetCore;
 
-builder.Services
-  .AddBlokServer(options =>
-  {
-    options.StorageDirectory = "./blok-uploads";
-    options.PublicUrl = "https://uploads.example.com/files";
-    options.UnfurlDisabled = false;
-  })
-  .UseAuthorization<MyBlokAuthorization>();
+builder.Services.AddBlokServer(options =>
+{
+  options.StorageDirectory = "./blok-uploads";
+  options.PublicUrl = "https://uploads.example.com/files";
+  options.UnfurlDisabled = false;
+});
 
 var app = builder.Build();
 
@@ -32,7 +30,7 @@ app.MapBlokServer("/api/blok").RequireAuthorization();
 app.Run();
 ```
 
-The mapped group uses your ASP.NET Core authorization policy for the current upload and unfurl routes. Health and validated CORS preflight remain anonymous. `IBlokAuthorization` is the document/database permission seam for later document routes; it is not called for uploads or unfurling.
+The mapped group uses your ASP.NET Core authorization policy for upload and unfurl routes. Health and validated CORS preflight remain anonymous.
 
 In-process defaults expose health only. Storage and outbound routes must be enabled explicitly, and local storage requires an explicit valid `PublicUrl`. `AddBlokServer(options => { ... })` also accepts the origin, upload-limit, and S3 settings used by the standalone host.
 
@@ -44,7 +42,7 @@ Run the self-contained host through npm:
 npx @bloklabs/server --listen 127.0.0.1:4000
 ```
 
-The npm package is a small wrapper. On first run it downloads the C# host for your platform from the matching GitHub release, verifies it against `checksums.txt`, and caches it.
+The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published.
 
 The same host is available at the existing image name. In proxy mode it must stay on loopback, so this example uses the host network. The named volume keeps uploads in the image's writable `/data` directory:
 

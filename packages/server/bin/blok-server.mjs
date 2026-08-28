@@ -31,24 +31,41 @@ const RUNTIMES = {
 };
 
 /**
+ * @param {{ header?: { glibcVersionRuntime?: string } }} [report] Node process report.
+ * @returns {'glibc' | 'musl'} Linux C library.
+ */
+export function detectLinuxLibc(
+  report = process.report === undefined ? undefined : process.report.getReport(),
+) {
+  return report?.header?.glibcVersionRuntime === undefined ? 'musl' : 'glibc';
+}
+
+/**
  * @param {string} platform - process.platform
  * @param {string} arch - process.arch
+ * @param {'glibc' | 'musl'} [libc] Linux C library.
  * @returns {{ os: string, arch: string, rid: string, archive: string, binary: string } | null}
  */
-export function resolveTarget(platform, arch) {
+export function resolveTarget(platform, arch, libc = 'glibc') {
   const os = PLATFORMS[platform];
   const archiveArch = ARCHITECTURES[arch];
-  const rid = RUNTIMES[platform]?.[arch];
+  const rid = platform === 'linux' && libc === 'musl'
+    ? RUNTIMES.linux?.[arch]?.replace('linux-', 'linux-musl-')
+    : RUNTIMES[platform]?.[arch];
 
   if (os === undefined || archiveArch === undefined || rid === undefined) {
     return null;
   }
 
+  const archiveOs = platform === 'linux' && libc === 'musl'
+    ? 'linux_musl'
+    : os;
+
   return {
     os,
     arch: archiveArch,
     rid,
-    archive: `blok-server_${os}_${archiveArch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
+    archive: `blok-server_${archiveOs}_${archiveArch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
     binary: os === 'windows' ? 'blok-server.exe' : 'blok-server',
   };
 }
@@ -286,7 +303,8 @@ export function fallbackMessage(version, reason) {
 
 async function main() {
   const { version } = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf-8'));
-  const target = resolveTarget(process.platform, process.arch);
+  const libc = process.platform === 'linux' ? detectLinuxLibc() : 'glibc';
+  const target = resolveTarget(process.platform, process.arch, libc);
 
   if (target === null) {
     console.error(fallbackMessage(

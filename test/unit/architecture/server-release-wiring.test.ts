@@ -23,6 +23,8 @@ const SERVER_ARCHIVES = [
   'blok-server_darwin_arm64.tar.gz',
   'blok-server_linux_amd64.tar.gz',
   'blok-server_linux_arm64.tar.gz',
+  'blok-server_linux_musl_amd64.tar.gz',
+  'blok-server_linux_musl_arm64.tar.gz',
   'blok-server_windows_amd64.zip',
   'blok-server_windows_arm64.zip',
 ];
@@ -48,6 +50,7 @@ type CompositeAction = {
 };
 
 type Workflow = {
+  concurrency?: { group?: string; 'cancel-in-progress'?: boolean };
   on?: { push?: { tags?: string[] } };
   jobs: Record<string, {
     if?: string;
@@ -111,6 +114,13 @@ describe('server release wiring', () => {
     expect(tasks.has('server')).toBe(false);
   });
 
+  it('does not ship an unused generated JavaScript runtime', () => {
+    expect(existsSync(join(
+      repoRoot,
+      'packages/server/dotnet/Blok.Server/Generated/blok-server-runtime.js',
+    ))).toBe(false);
+  });
+
   it('keeps the server package on the family version', () => {
     const root = readJson<{ version: string }>('package.json');
     const server = readJson<{ version: string }>(SERVER_MANIFEST);
@@ -160,19 +170,34 @@ describe('server release wiring', () => {
     expect(setup).toContain(`uses: ${SETUP_NODE_ACTION_SHA}`);
   });
 
+  it('validates the family version before publishing or tagging', () => {
+    const releaseScript = read('scripts/release.mjs');
+
+    expect(releaseScript).toContain(
+      "import { isReleaseVersion } from './release-version.mjs';",
+    );
+    expect(releaseScript.indexOf('if (!isReleaseVersion(version))')).toBeLessThan(
+      releaseScript.indexOf('npm whoami'),
+    );
+  });
+
   it('creates the family release as a draft before the server workflow runs', () => {
     const releaseScript = read('scripts/release.mjs');
 
     expect(releaseScript).toMatch(/gh release create \$\{gitTag\}[^\n]* --draft/);
   });
 
-  it('publishes two NuGets, six hosts, checksums, and the amd64 image before the draft', () => {
+  it('publishes two NuGets, eight hosts, checksums, and a multi-architecture image before the draft', () => {
     expect(existsSync(join(repoRoot, RELEASE_WORKFLOW))).toBe(true);
 
     const source = read(RELEASE_WORKFLOW);
     const workflow = parse(source) as Workflow;
 
     expect(workflow.on?.push?.tags).toContain('v*');
+    expect(workflow.concurrency).toEqual({
+      group: 'release-server',
+      'cancel-in-progress': false,
+    });
 
     const job = workflow.jobs['release-server'];
 
@@ -201,6 +226,9 @@ describe('server release wiring', () => {
     );
     expect(runs).toContain(
       'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
+    );
+    expect(runs).toContain(
+      'yarn test test/unit/server-conformance/server-contract.test.ts',
     );
 
     for (const project of [
@@ -239,8 +267,10 @@ describe('server release wiring', () => {
     expect(runs).toContain('--network host');
     expect(runs).toContain('--listen 127.0.0.1:4000');
     expect(runs).toContain('--auth proxy');
-    expect(runs).toContain('docker push "$image:$BLOK_SERVER_VERSION"');
-    expect(runs).toContain('docker push "$image:latest"');
+    expect(runs).toContain('docker buildx build');
+    expect(runs).toContain('--platform linux/amd64,linux/arm64');
+    expect(runs).toContain('--push');
+    expect(runs).not.toContain('docker push "$image:$BLOK_SERVER_VERSION"');
 
     const deliveryVerification = steps.find(
       (step) => step.name === 'Verify published server delivery',
@@ -249,15 +279,15 @@ describe('server release wiring', () => {
     expect(deliveryVerification).toMatch(
       /anonymous_docker_config="\$\(mktemp -d\)"[\s\S]*DOCKER_CONFIG="\$anonymous_docker_config" docker manifest inspect/,
     );
-    expect(runs).not.toContain('docker buildx build');
-    expect(runs).not.toContain('--platform linux/arm64');
+    expect(deliveryVerification).toContain('"architecture": "amd64"');
+    expect(deliveryVerification).toContain('"architecture": "arm64"');
 
     expect(runs).toContain('gh release upload "$GITHUB_REF_NAME"');
     expect(runs).toContain('gh release edit "$GITHUB_REF_NAME" --draft=false');
 
     const nugetPush = source.indexOf('dotnet nuget push');
     const assetUpload = source.indexOf('gh release upload "$GITHUB_REF_NAME"');
-    const imagePush = source.indexOf('docker push "$image:$BLOK_SERVER_VERSION"');
+    const imagePush = source.indexOf('docker buildx build');
     const observable = source.indexOf('Verify published server delivery');
     const publishDraft = source.indexOf('gh release edit "$GITHUB_REF_NAME" --draft=false');
 
@@ -274,7 +304,7 @@ describe('server release wiring', () => {
     const loginIndex = steps.findIndex(
       (step) => step.uses === LOGIN_ACTION,
     );
-    const pushIndex = steps.findIndex((step) => step.name === 'Push linux/amd64 image');
+    const pushIndex = steps.findIndex((step) => step.name === 'Push multi-architecture image');
     const logoutIndex = steps.findIndex((step) => step.name === 'Log out of GHCR');
     const logout = steps[logoutIndex];
 
@@ -312,7 +342,7 @@ describe('server release wiring', () => {
       (step) => step.name === 'Build and smoke linux/amd64 image',
     )?.run ?? '';
     const push = steps.find(
-      (step) => step.name === 'Push linux/amd64 image',
+      (step) => step.name === 'Push multi-architecture image',
     )?.run ?? '';
 
     expect(build).toContain(
@@ -325,11 +355,17 @@ describe('server release wiring', () => {
       'image_tags+=(--tag "$image:latest")',
     );
     expect(build).toContain('"${image_tags[@]}"');
-    expect(push).toContain('docker push "$image:$BLOK_SERVER_VERSION"');
+    expect(push).toContain(
+      'image_tags=(--tag "$image:$BLOK_SERVER_VERSION")',
+    );
     expect(push).toContain(
       'if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then',
     );
-    expect(push).toContain('docker push "$image:latest"');
+    expect(push).toContain(
+      'image_tags+=(--tag "$image:latest")',
+    );
+    expect(push).toContain('"${image_tags[@]}"');
+    expect(push).toContain('docker buildx build');
   });
 
   it('requires the unsafe image smoke to refuse quickly and exactly', () => {
@@ -372,57 +408,30 @@ describe('server release wiring', () => {
     expect(project).not.toContain('PackageReference Include="Blok.Server"');
   });
 
-  it('makes the embedded runtime build incremental', () => {
-    const project = read('packages/server/dotnet/Blok.Server/Blok.Server.csproj');
-    const target = project.match(
-      /<Target Name="BuildBlokServerRuntime"[\s\S]*?<\/Target>/,
-    )?.[0] ?? '';
-
-    expect(project).toContain(
-      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../src/**/*.ts" />',
-    );
-    expect(project).toContain(
-      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../types/**/*.d.ts" />',
-    );
-    expect(project).toContain(
-      '<BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs" />',
-    );
-    expect(target).toContain('Inputs="@(BlokServerRuntimeInput)"');
-    expect(target).toContain(
-      'Outputs="$(MSBuildThisFileDirectory)Generated/blok-server-runtime.js"',
-    );
-  });
-
   it('builds the C# host from the root context into .NET 10 runtime-deps', () => {
     const dockerfile = read('packages/server/Dockerfile');
     const workflow = read(RELEASE_WORKFLOW);
 
-    expect(dockerfile).toMatch(/^FROM node:24[^\n]* AS runtime-build/m);
-    expect(dockerfile).toContain('corepack enable');
-    expect(dockerfile).toContain('yarn install --immutable');
-
-    for (const manifest of [
-      'packages/angular/package.json',
-      'packages/cli/package.json',
-      'packages/presets/package.json',
-      'packages/react/package.json',
-      'packages/server/package.json',
-      'packages/vue/package.json',
-    ]) {
-      expect(dockerfile).toContain(`COPY ${manifest} ${manifest}`);
-    }
-    expect(dockerfile.indexOf('yarn install --immutable')).toBeLessThan(
-      dockerfile.indexOf('COPY . .'),
+    expect(dockerfile).toMatch(
+      /^FROM --platform=\$BUILDPLATFORM mcr\.microsoft\.com\/dotnet\/sdk:10\.0[^\n]* AS publish/m,
     );
-    expect(dockerfile).toContain('node scripts/build-server-runtime.mjs');
-    expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/sdk:10\.0[^\n]* AS publish/m);
+    expect(dockerfile).toContain(
+      'COPY packages/server/dotnet/ packages/server/dotnet/',
+    );
+    expect(dockerfile).not.toContain('FROM node:');
+    expect(dockerfile).not.toContain('yarn install');
+    expect(dockerfile).not.toContain('build-server-runtime');
     expect(dockerfile).toContain(
       'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
     );
-    expect(dockerfile).toContain('--runtime linux-x64');
+    expect(dockerfile).toContain('ARG TARGETARCH');
+    expect(dockerfile).toContain('rid=linux-x64');
+    expect(dockerfile).toContain('rid=linux-arm64');
+    expect(dockerfile).toContain('--runtime "$rid"');
+    expect(dockerfile).not.toContain('--runtime linux-x64');
     expect(dockerfile).toContain('--self-contained true');
     expect(dockerfile).toContain('-p:PublishSingleFile=true');
-    expect(dockerfile).toContain('-p:SkipBlokServerRuntimeBuild=true');
+    expect(dockerfile).not.toContain('SkipBlokServerRuntimeBuild');
     expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
     expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
     expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/runtime-deps:10\.0/m);
@@ -431,11 +440,10 @@ describe('server release wiring', () => {
       dockerfile.lastIndexOf('FROM mcr.microsoft.com/dotnet/runtime-deps:10.0'),
     );
 
-    expect(runtimeStage).toMatch(/useradd[^\n]*blok/);
-    expect(runtimeStage).toContain('mkdir /data');
-    expect(runtimeStage).toContain('chown blok:blok /data');
+    expect(runtimeStage).not.toContain('useradd');
+    expect(runtimeStage).toContain('COPY --from=publish --chown=65532:65532 /data /data');
     expect(runtimeStage).toMatch(/^WORKDIR \/data$/m);
-    expect(runtimeStage).toMatch(/^USER blok$/m);
+    expect(runtimeStage).toMatch(/^USER 65532:65532$/m);
     expect(dockerfile).toContain('EXPOSE 4000');
     expect(dockerfile).toContain('ENTRYPOINT ["/blok-server"]');
     expect(dockerfile).not.toMatch(/\bgo(?:lang)?\b/i);
@@ -443,6 +451,9 @@ describe('server release wiring', () => {
 
     expect(workflow).toMatch(
       /docker build --platform linux\/amd64 -f packages\/server\/Dockerfile[\s\S]*?^\s+\.$/m,
+    );
+    expect(workflow).toMatch(
+      /docker buildx build[\s\S]*--platform linux\/amd64,linux\/arm64[\s\S]*--push/m,
     );
   });
 
@@ -455,6 +466,7 @@ describe('server release wiring', () => {
     expect(readme).toContain('--listen 0.0.0.0:4000');
     expect(readme).toContain('target=/data');
     expect(readme).toContain('--storage-dir /data');
+    expect(readme).toMatch(/Alpine|musl/);
     expect(readme).toMatch(/TLS[^\n]*(reverse proxy|hosting platform)|(reverse proxy|hosting platform)[^\n]*TLS/i);
   });
 

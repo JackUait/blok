@@ -22,31 +22,23 @@ public sealed class BlokServerRegistrationTests
   private static readonly string[] WriteMethods = ["OPTIONS", "POST"];
 
   [Fact]
-  public async Task AddsTheEmbeddedRuntimeAndDenyByDefaultAuthorizationOnce()
+  public void DoesNotRegisterUnusedFutureServices()
   {
     var services = new ServiceCollection();
 
     services.AddBlokServer();
     services.AddBlokServer();
 
-    var runtimeDescriptor = Assert.Single(
+    Assert.DoesNotContain(
         services,
         descriptor => descriptor.ServiceType.FullName == "Blok.Server.Runtime.IBlokRuntime");
-    Assert.Equal(ServiceLifetime.Singleton, runtimeDescriptor.Lifetime);
-    Assert.NotNull(runtimeDescriptor.ImplementationFactory);
+    Assert.DoesNotContain(
+        services,
+        descriptor =>
+            descriptor.ServiceType.FullName == "Blok.Server.AspNetCore.IBlokAuthorization");
     Assert.Single(
         services,
         descriptor => descriptor.ServiceType == typeof(IBlobStore));
-
-    using var provider = services.BuildServiceProvider();
-    var runtime = provider.GetService(runtimeDescriptor.ServiceType);
-    Assert.NotNull(runtime);
-    Assert.Equal("Blok.Server.Runtime.JintBlokRuntime", runtime.GetType().FullName);
-
-    var authorization = provider.GetRequiredService<IBlokAuthorization>();
-    var user = new ClaimsPrincipal();
-    Assert.False(await authorization.CanReadDocumentAsync(user, "document-1"));
-    Assert.False(await authorization.CanWriteDocumentAsync(user, "document-1"));
   }
 
   [Fact]
@@ -71,7 +63,7 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
-  public void ReplacesTheDefaultAuthorization()
+  public void RegistersCustomAuthorizationForCompatibility()
   {
     var services = new ServiceCollection();
 
@@ -105,16 +97,154 @@ public sealed class BlokServerRegistrationTests
     Assert.Contains("PublicUrl", malformed.Message, StringComparison.Ordinal);
   }
 
-  [Fact]
-  public void RejectsUploadLimitsLargerThanManagedArrays()
+  [Theory]
+  [InlineData("javascript:alert(1)")]
+  [InlineData("data:text/plain,payload")]
+  [InlineData("//evil.example/files")]
+  [InlineData("/\\evil.example/files")]
+  [InlineData("/files\\nested")]
+  [InlineData("https://user@uploads.example.com/files")]
+  [InlineData("files")]
+  public void RejectsUnsafeLocalPublicUrls(string publicUrl)
   {
     var services = new ServiceCollection();
 
     var error = Assert.Throws<InvalidOperationException>(() =>
         services.AddBlokServer(options =>
-            options.MaxUploadBytes = (long)Array.MaxLength + 1));
+        {
+          options.StorageDirectory = "/local/storage";
+          options.PublicUrl = publicUrl;
+        }));
+
+    Assert.Contains("PublicUrl", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("javascript:alert(1)")]
+  [InlineData("data:text/plain,payload")]
+  [InlineData("ftp://cdn.example.com/media")]
+  [InlineData("//evil.example/media")]
+  [InlineData("/media")]
+  [InlineData("https://user@cdn.example.com/media")]
+  [InlineData("https://cdn.example.com/%zz")]
+  public void RejectsUnsafeS3BucketUrls(string bucketUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = bucketUrl;
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-bucket-url", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://user@s3.example.com")]
+  [InlineData("https://s3.example.com/path")]
+  [InlineData("https://s3.example.com?mode=test")]
+  [InlineData("https://s3.example.com#fragment")]
+  public void RejectsUnsafeS3Endpoints(string endpoint)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = endpoint;
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-endpoint", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsNonLoopbackHttpS3Endpoints()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "http://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("HTTPS", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsLoopbackHttpS3Endpoints()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.S3Endpoint = "http://127.0.0.1:9000";
+      options.S3Region = "local";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "http://127.0.0.1:9000/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+  }
+
+  [Fact]
+  public void RejectsUploadLimitsLargerThanManagedArraysWhenRemoteUploadsAreEnabled()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.MaxUploadBytes = (long)Array.MaxLength + 1;
+          options.PublicUrl = "/files";
+          options.StorageDirectory = "/local/storage";
+          options.UnfurlDisabled = false;
+        }));
 
     Assert.Contains("--max-upload", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsUploadLimitsLargerThanManagedArraysWhenRemoteUploadsAreDisabled()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.MaxUploadBytes = (long)Array.MaxLength + 1;
+      options.PublicUrl = "/files";
+      options.StorageDirectory = "/local/storage";
+      options.UnfurlDisabled = true;
+    });
+  }
+
+  [Fact]
+  public void AllowsUploadLimitsLargerThanManagedArraysWithoutStorage()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.MaxUploadBytes = (long)Array.MaxLength + 1;
+      options.UnfurlDisabled = false;
+    });
   }
 
   [Fact]
@@ -269,6 +399,7 @@ public sealed class BlokServerRegistrationTests
       MaxUploadBytes = (long)Array.MaxLength + 1,
       PublicUrl = "/files",
       StorageDirectory = "/effective/local/storage",
+      UnfurlDisabled = false,
     });
     services.AddBlokServer();
     using var provider = services.BuildServiceProvider();

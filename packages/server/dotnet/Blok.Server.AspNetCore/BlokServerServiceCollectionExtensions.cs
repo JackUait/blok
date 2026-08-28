@@ -1,5 +1,4 @@
 using Blok.Server.Outbound;
-using Blok.Server.Runtime;
 using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -36,8 +35,6 @@ public static class BlokServerServiceCollectionExtensions
 
     services.TryAddSingleton(options);
     services.TryAddSingleton(TimeProvider.System);
-    services.TryAddSingleton<IBlokRuntime>(static _ => JintBlokRuntime.FromEmbeddedResource());
-    services.TryAddSingleton<IBlokAuthorization, DenyBlokAuthorization>();
     services.TryAddSingleton<IGuardedOutboundPolicy, GuardedOutboundPolicy>();
     services.TryAddSingleton<IGuardedOutboundFetcher>(provider =>
         new GuardedOutboundFetcher(

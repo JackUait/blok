@@ -68,7 +68,7 @@ describe('publish-server', () => {
     rmSync(temporaryDirectory, { recursive: true, force: true });
   });
 
-  it('maps exactly the six external assets to their .NET RIDs', () => {
+  it('maps exactly the eight external assets to their .NET RIDs', () => {
     expect(TARGETS).toEqual([
       {
         platform: 'darwin',
@@ -96,6 +96,20 @@ describe('publish-server', () => {
         arch: 'arm64',
         rid: 'linux-arm64',
         archive: 'blok-server_linux_arm64.tar.gz',
+        binary: 'blok-server',
+      },
+      {
+        platform: 'linux',
+        arch: 'x64',
+        rid: 'linux-musl-x64',
+        archive: 'blok-server_linux_musl_amd64.tar.gz',
+        binary: 'blok-server',
+      },
+      {
+        platform: 'linux',
+        arch: 'arm64',
+        rid: 'linux-musl-arm64',
+        archive: 'blok-server_linux_musl_arm64.tar.gz',
         binary: 'blok-server',
       },
       {
@@ -129,6 +143,7 @@ describe('publish-server', () => {
   it.each([
     [[], '--version is required'],
     [['--version', 'v1.10.1'], 'invalid version'],
+    [['--version', '1.10.1+build.1'], 'invalid version'],
     [['--version', '1.10.1', '--output'], '--output needs a value'],
     [['--version', '1.10.1', '--unknown'], 'unknown argument'],
   ])('rejects invalid arguments %#', (args, message) => {
@@ -217,7 +232,7 @@ describe('publish-server', () => {
     );
   });
 
-  it('dry-run prints all six publish/archive operations without dotnet or release writes', () => {
+  it('dry-run prints all eight publish/archive operations without dotnet or release writes', () => {
     const output = join(temporaryDirectory, 'release');
     const result = spawnSync(
       process.execPath,
@@ -234,7 +249,7 @@ describe('publish-server', () => {
 
     const lines = result.stdout.trim().split('\n');
 
-    expect(lines).toHaveLength(12);
+    expect(lines).toHaveLength(TARGETS.length * 2);
 
     for (const target of TARGETS) {
       expect(lines.some((line) => line.includes(`--runtime ${target.rid}`))).toBe(true);

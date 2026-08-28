@@ -140,13 +140,17 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
               responseHeaderTimeout)),
     };
 
+    if (method == HttpMethod.Put)
+    {
+      request.Content.Headers.ContentDisposition =
+          new ContentDispositionHeaderValue("attachment");
+    }
+
     if (mimeType != "")
     {
       request.Content.Headers.TryAddWithoutValidation(
           "Content-Type",
           mimeType);
-      request.Content.Headers.ContentDisposition =
-          new ContentDispositionHeaderValue("attachment");
     }
 
     S3RequestSigner.Sign(

@@ -4,6 +4,10 @@ on:
   push:
     tags: ['v*']
 
+concurrency:
+  group: release-server
+  cancel-in-progress: false
+
 jobs:
   release-server:
     name: Release server
@@ -52,6 +56,7 @@ jobs:
         run: |
           dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
           dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
+          yarn test test/unit/server-conformance/server-contract.test.ts
 
       - name: Build NuGet and host artifacts
         run: |
@@ -98,6 +103,8 @@ jobs:
             .server-release-dist/blok-server_darwin_arm64.tar.gz \
             .server-release-dist/blok-server_linux_amd64.tar.gz \
             .server-release-dist/blok-server_linux_arm64.tar.gz \
+            .server-release-dist/blok-server_linux_musl_amd64.tar.gz \
+            .server-release-dist/blok-server_linux_musl_arm64.tar.gz \
             .server-release-dist/blok-server_windows_amd64.zip \
             .server-release-dist/blok-server_windows_arm64.zip \
             .server-release-dist/checksums.txt \
@@ -173,13 +180,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push linux/amd64 image
+      - name: Push multi-architecture image
         run: |
           image="ghcr.io/jackuait/blok-server"
-          docker push "$image:$BLOK_SERVER_VERSION"
+          image_tags=(--tag "$image:$BLOK_SERVER_VERSION")
           if [[ "$BLOK_SERVER_VERSION" != *-* ]]; then
-            docker push "$image:latest"
+            image_tags+=(--tag "$image:latest")
           fi
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -f packages/server/Dockerfile \
+            --build-arg BLOK_SERVER_VERSION="$BLOK_SERVER_VERSION" \
+            "${image_tags[@]}" \
+            --push \
+            .
 
       - name: Log out of GHCR
         if: always()
@@ -195,6 +209,8 @@ jobs:
             blok-server_darwin_arm64.tar.gz
             blok-server_linux_amd64.tar.gz
             blok-server_linux_arm64.tar.gz
+            blok-server_linux_musl_amd64.tar.gz
+            blok-server_linux_musl_arm64.tar.gz
             blok-server_windows_amd64.zip
             blok-server_windows_arm64.zip
             checksums.txt
@@ -216,8 +232,13 @@ jobs:
               grep --fixed-strings --line-regexp --quiet "$asset" <<<"$assets" || ready=false
             done
 
-            DOCKER_CONFIG="$anonymous_docker_config" docker manifest inspect \
-              "ghcr.io/jackuait/blok-server:$BLOK_SERVER_VERSION" >/dev/null 2>&1 || ready=false
+            manifest=''
+            if ! manifest="$(DOCKER_CONFIG="$anonymous_docker_config" docker manifest inspect \
+              "ghcr.io/jackuait/blok-server:$BLOK_SERVER_VERSION" 2>/dev/null)"; then
+              ready=false
+            fi
+            grep --quiet '"architecture": "amd64"' <<<"$manifest" || ready=false
+            grep --quiet '"architecture": "arm64"' <<<"$manifest" || ready=false
 
             if [ "$ready" = "true" ]; then
               exit 0

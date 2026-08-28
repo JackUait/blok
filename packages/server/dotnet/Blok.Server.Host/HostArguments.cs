@@ -385,7 +385,7 @@ internal static class HostArguments
   {
     var (host, port) = SplitListenAddress(listenAddress);
 
-    if (host == "" ||
+    if (host is "" or "*" or "+" ||
         (IPAddress.TryParse(host, out var address) &&
          (address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any))))
     {

@@ -83,11 +83,11 @@ public sealed class BlokServerOptions
           "a zero cap refuses every upload");
     }
 
-    if (MaxUploadBytes > Array.MaxLength)
+    if (HasStorage && !UnfurlDisabled && MaxUploadBytes > Array.MaxLength)
     {
       throw new InvalidOperationException(
           $"--max-upload must be no greater than {Array.MaxLength} bytes " +
-          $"(got {MaxUploadBytes})");
+          $"when remote URL upload is enabled (got {MaxUploadBytes})");
     }
 
     if (RateLimitPerMinute < 0)
@@ -114,10 +114,21 @@ public sealed class BlokServerOptions
 
     if (!Uri.TryCreate(S3Endpoint, UriKind.Absolute, out var endpoint) ||
         endpoint.Host == "" ||
+        endpoint.UserInfo != "" ||
+        endpoint.Query != "" ||
+        endpoint.Fragment != "" ||
+        endpoint.AbsolutePath.Trim('/') != "" ||
         (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
     {
       throw new InvalidOperationException(
-          $"--s3-endpoint must be a full URL with a scheme and a host (got \"{S3Endpoint}\")");
+          $"--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment (got \"{S3Endpoint}\")");
+    }
+
+    if (endpoint.Scheme == Uri.UriSchemeHttp &&
+        !endpoint.IsLoopback)
+    {
+      throw new InvalidOperationException(
+          $"--s3-endpoint must use HTTPS unless it targets loopback for local development (got \"{S3Endpoint}\")");
     }
 
     if (S3Region == "")
@@ -136,6 +147,13 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"--s3-bucket-url must not contain a query or fragment (got \"{S3BucketUrl}\")");
+    }
+
+    if (HasMalformedPercentEscape(S3BucketUrl) ||
+        ParseHttpUrl(S3BucketUrl) is null)
+    {
+      throw new InvalidOperationException(
+          $"--s3-bucket-url must be a full HTTP(S) URL (got \"{S3BucketUrl}\")");
     }
 
     if (S3AccessKey == "" || S3SecretKey == "")
@@ -160,16 +178,43 @@ public sealed class BlokServerOptions
           $"PublicUrl must not contain a query or fragment (got \"{PublicUrl}\")");
     }
 
-    if (PublicUrl == "" || HasMalformedPercentEscape(PublicUrl) ||
-        !Uri.TryCreate(PublicUrl, UriKind.RelativeOrAbsolute, out var parsed))
+    if (PublicUrl == "" || HasMalformedPercentEscape(PublicUrl))
     {
       throw new InvalidOperationException(
-          $"PublicUrl must be a valid relative or absolute URL (got \"{PublicUrl}\")");
+          $"PublicUrl must be an HTTP(S) URL or a root-relative path (got \"{PublicUrl}\")");
     }
 
-    return parsed.IsAbsoluteUri
-      ? parsed.AbsolutePath.TrimEnd('/')
-      : PublicUrl.TrimEnd('/');
+    var absoluteUrl = ParseHttpUrl(PublicUrl);
+
+    if (absoluteUrl is not null)
+    {
+      return absoluteUrl.AbsolutePath.TrimEnd('/');
+    }
+
+    if (!PublicUrl.StartsWith('/') ||
+        PublicUrl.StartsWith("//", StringComparison.Ordinal) ||
+        PublicUrl.Contains('\\') ||
+        !Uri.TryCreate(PublicUrl, UriKind.Relative, out _))
+    {
+      throw new InvalidOperationException(
+          $"PublicUrl must be an HTTP(S) URL or a root-relative path (got \"{PublicUrl}\")");
+    }
+
+    return PublicUrl == "/" ? "/" : PublicUrl.TrimEnd('/');
+  }
+
+  private static Uri? ParseHttpUrl(string value)
+  {
+    if (!Uri.TryCreate(value, UriKind.Absolute, out var parsed) ||
+        parsed.Host == "" ||
+        parsed.UserInfo != "" ||
+        (parsed.Scheme != Uri.UriSchemeHttp &&
+         parsed.Scheme != Uri.UriSchemeHttps))
+    {
+      return null;
+    }
+
+    return parsed;
   }
 
   private static bool HasMalformedPercentEscape(string value)

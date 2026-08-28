@@ -4,6 +4,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 
 import { collectGprRewriteFiles, FAMILY, prepareManifestForGpr, rewriteSpecifiersForGpr } from './release-manifest.mjs';
+import { isReleaseVersion } from './release-version.mjs';
 
 /**
  * Build the `npm publish` command that publishes a pre-packed tarball.
@@ -125,6 +126,11 @@ if (isDirectRun) {
     console.error('Examples:');
     console.error('  yarn release 1.0.0            # stable');
     console.error('  yarn release 1.0.0-beta.1     # beta (auto-detected)');
+    process.exit(1);
+  }
+
+  if (!isReleaseVersion(version)) {
+    console.error(`Invalid release version: ${version}`);
     process.exit(1);
   }
 

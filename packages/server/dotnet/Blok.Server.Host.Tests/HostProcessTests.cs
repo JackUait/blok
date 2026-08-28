@@ -521,6 +521,19 @@ public sealed class HostProcessTests
   }
 
   [Theory]
+  [InlineData("*:4000")]
+  [InlineData("+:4000")]
+  public void UsesALoopbackPublicUrlForWildcardListeners(string listenAddress)
+  {
+    var parsed = HostArguments.Parse(
+        ["--listen", listenAddress],
+        _ => null);
+    var options = Assert.IsType<BlokServerOptions>(parsed.Options);
+
+    Assert.Equal("http://127.0.0.1:4000/files", options.PublicUrl);
+  }
+
+  [Theory]
   [InlineData("none", 0)]
   [InlineData("proxy", 0)]
   [InlineData("ticket", 60)]
@@ -898,7 +911,7 @@ public sealed class HostProcessTests
           "--s3-bucket-url", "https://uploads.example.test",
         ],
         1,
-        "--s3-endpoint must be a full URL with a scheme and a host",
+        "--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment",
         S3Credentials()
       },
       {

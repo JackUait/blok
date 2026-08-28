@@ -475,6 +475,9 @@ public sealed class S3BlobStoreRequestTests
 
     Assert.NotNull(captured);
     Assert.DoesNotContain("Content-Type", captured.ContentHeaders.Keys);
+    Assert.Equal(
+        "attachment",
+        captured.ContentHeaders["Content-Disposition"]);
     Assert.DoesNotContain(
         "content-type",
         captured.Headers["Authorization"],

@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import fs from "node:fs";
@@ -14,6 +14,19 @@ const externalDistPlugin = (): Plugin => {
   const parentPackagesDir = resolve(__dirname, "..", "packages");
   const reactAdapterEntry = resolve(parentPackagesDir, "react", "dist", "index.mjs");
   const docsAppRoot = resolve(__dirname, "src", "root.tsx");
+  const resolveDistFile = (path: string): string | null => {
+    try {
+      const realDistDir = fs.realpathSync(parentDistDir);
+      const realFilePath = fs.realpathSync(resolve(parentDistDir, path));
+
+      return realFilePath.startsWith(`${realDistDir}${sep}`) &&
+        fs.statSync(realFilePath).isFile()
+        ? realFilePath
+        : null;
+    } catch {
+      return null;
+    }
+  };
 
   return {
     name: "external-dist",
@@ -73,18 +86,23 @@ const externalDistPlugin = (): Plugin => {
         return { id: resolve(parentDistDir, "locales.mjs") };
       }
       if (id.startsWith("/dist/")) {
-        return { id: resolve(parentDistDir, id.slice("/dist/".length)) };
+        const filePath = resolveDistFile(id.slice("/dist/".length));
+
+        return filePath === null ? null : { id: filePath };
       }
       return null;
     },
     load(id) {
-      if (id.startsWith(parentDistDir)) {
-        // Mark the bundle file as a watched dependency so a rebuild invalidates
-        // this module instead of serving the cached copy (see configureServer).
-        this.addWatchFile(id);
-        return fs.readFileSync(id, "utf-8");
+      const filePath = resolveDistFile(id);
+
+      if (filePath === null) {
+        return null;
       }
-      return null;
+
+      // Mark the bundle file as a watched dependency so a rebuild invalidates
+      // this module instead of serving the cached copy (see configureServer).
+      this.addWatchFile(filePath);
+      return fs.readFileSync(filePath, "utf-8");
     },
     configureServer(server) {
       // The Blok editor bundle in ../dist is produced by a SEPARATE build and
@@ -128,8 +146,19 @@ const externalDistPlugin = (): Plugin => {
           return;
         }
 
-        const filePath = resolve(parentDistDir, url.slice("/dist/".length));
-        if (!fs.existsSync(filePath)) {
+        let filePath: string | null = null;
+
+        try {
+          const pathname = decodeURIComponent(
+            new URL(url, "http://localhost").pathname,
+          );
+
+          filePath = resolveDistFile(pathname.slice("/dist/".length));
+        } catch {
+          filePath = null;
+        }
+
+        if (filePath === null) {
           const notFoundRes = res as typeof res & {
             statusCode: number;
             end: (data: string) => void;

@@ -436,6 +436,29 @@ public sealed class LocalFileServingTests : IDisposable
     Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync());
   }
 
+  [Fact]
+  public async Task ServesDirectFilesFromARootRelativePublicUrl()
+  {
+    Directory.CreateDirectory(directory);
+    await File.WriteAllTextAsync(
+        Path.Combine(directory, StoredKey),
+        "root file",
+        CancellationToken.None);
+    await using var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = directory;
+      options.PublicUrl = "/";
+    });
+    app.MapBlokServer("/blok");
+    await app.StartAsync();
+
+    using var client = app.GetTestClient();
+    using var response = await client.GetAsync($"/{StoredKey}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal("root file", await response.Content.ReadAsStringAsync());
+  }
+
   [Theory]
   [InlineData(".env")]
   [InlineData("config.json")]

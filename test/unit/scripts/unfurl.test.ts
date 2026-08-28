@@ -268,7 +268,7 @@ describe('createUnfurlHandler', () => {
     expect(payload.meta).not.toHaveProperty('description');
   });
 
-  it('sends a browser-like user-agent and follows redirects', async () => {
+  it('sends a browser-like user-agent and keeps redirects manual', async () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(htmlResponse('<title>T</title>'))
     );
@@ -282,7 +282,7 @@ describe('createUnfurlHandler', () => {
     const [target, init] = fetchMock.mock.calls[0];
 
     expect(target).toBe('https://example.com/start');
-    expect(init?.redirect).toBe('follow');
+    expect(init?.redirect).toBe('manual');
     expect(init?.headers).toMatchObject({
       'user-agent': expect.stringContaining('BlokDevUnfurl'),
     });
@@ -349,12 +349,15 @@ describe('createUnfurlHandler', () => {
   });
 
   it('responds with success: 0 for a non-HTML content-type', async () => {
-    const jsonHeaders = {
+    const nonHtmlHeaders = {
       get: (name: string): string | null =>
-        name.toLowerCase() === 'content-type' ? 'application/json' : null,
+        name.toLowerCase() === 'content-type' ? 'application/not-html' : null,
     };
     const fetchMock = vi.fn(() =>
-      Promise.resolve(htmlResponse('{}', { headers: jsonHeaders } as Partial<Response>))
+      Promise.resolve(htmlResponse(
+        '<title>Wrong</title><meta property="og:image" content="https://example.com/wrong.png">',
+        { headers: nonHtmlHeaders } as Partial<Response>,
+      ))
     );
     const handler = createUnfurlHandler(fetchMock);
     const res = createFakeRes();

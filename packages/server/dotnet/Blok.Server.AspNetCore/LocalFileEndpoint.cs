@@ -30,8 +30,10 @@ internal static class LocalFileEndpoint
       return;
     }
 
+    var route = prefix == "/" ? "/{fileName}" : $"{prefix}/{{fileName}}";
+
     endpoints.MapMethods(
-        $"{prefix}/{{fileName}}",
+        route,
         ["GET", "HEAD"],
         context => ServeAsync(
             context,

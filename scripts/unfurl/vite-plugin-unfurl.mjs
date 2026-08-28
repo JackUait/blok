@@ -8,15 +8,13 @@
  *
  *   { success: 1, link, meta: { title, description, image: { url }, favicon, domain } }
  *
- * Dev-only middleware — no SSRF hardening beyond the http(s) scheme check.
+ * Dev-only middleware with destination validation and bounded responses.
  */
 
+import { createGuardedFetch, validateOutboundUrl } from './guarded-fetch.mjs';
 import { parseMetadata } from './parse-metadata.mjs';
 
 const FETCH_TIMEOUT_MS = 6_000;
-
-/** Meta tags live in <head>; cap the body read so huge pages stay cheap. */
-const MAX_BODY_CHARS = 1.5 * 1024 * 1024;
 
 const PRIMARY_UA = 'Mozilla/5.0 (compatible; BlokDevUnfurl/1.0)';
 
@@ -65,9 +63,7 @@ function extractTargetUrl(reqUrl) {
   }
 
   try {
-    const target = new URL(raw);
-
-    return target.protocol === 'http:' || target.protocol === 'https:' ? target.href : undefined;
+    return validateOutboundUrl(raw).href;
   } catch {
     return undefined;
   }
@@ -80,7 +76,7 @@ function extractTargetUrl(reqUrl) {
  * @param {(url: string, init?: RequestInit) => Promise<Response>} [fetchImpl] Fetch implementation.
  * @returns {(req: UnfurlRequest, res: UnfurlResponse) => Promise<void>} Connect-style middleware.
  */
-export function createUnfurlHandler(fetchImpl = fetch) {
+export function createUnfurlHandler(fetchImpl = createGuardedFetch()) {
   /**
    * Fetches the target with one user-agent and parses its metadata.
    *
@@ -95,7 +91,7 @@ export function createUnfurlHandler(fetchImpl = fetch) {
 
     try {
       const response = await fetchImpl(target, {
-        redirect: 'follow',
+        redirect: 'manual',
         signal: controller.signal,
         headers: {
           'user-agent': userAgent,
@@ -104,12 +100,16 @@ export function createUnfurlHandler(fetchImpl = fetch) {
       });
 
       const contentType = response.headers.get('content-type') ?? '';
+      const mediaType = contentType.split(';', 1)[0].trim().toLowerCase();
 
-      if (!response.ok || !contentType.includes('html')) {
+      if (
+        !response.ok ||
+        (mediaType !== 'text/html' && mediaType !== 'application/xhtml+xml')
+      ) {
         return undefined;
       }
 
-      const html = (await response.text()).slice(0, MAX_BODY_CHARS);
+      const html = await response.text();
       const finalUrl = response.url !== '' ? response.url : target;
 
       return { meta: parseMetadata(html, finalUrl), finalUrl };

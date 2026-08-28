@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import {
   mkdtemp,
@@ -16,8 +15,6 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import JSZip from 'jszip';
-
-import { buildServerRuntime } from './build-server-runtime.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultPackageVersion = '0.0.0-task13';
@@ -69,7 +66,7 @@ function parseArgs(args) {
 const { packageDirectory, packageVersion } = parseArgs(process.argv.slice(2));
 const packageProjects = {
   'Blok.Server': {
-    description: 'Shared server services and embedded document runtime for Blok.',
+    description: 'Shared server services for Blok.',
     path: join(
       repositoryRoot,
       'packages/server/dotnet/Blok.Server/Blok.Server.csproj',
@@ -105,10 +102,6 @@ function run(command, args, options = {}) {
       ));
     });
   });
-}
-
-function sha256(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
 }
 
 function withTrailingSeparator(path) {
@@ -163,8 +156,10 @@ async function readPackedPackage(feed, packageId) {
 
   const dllPath = `lib/net10.0/${packageId}.dll`;
   const dll = await archive.file(dllPath)?.async('nodebuffer');
+  const readme = await archive.file('README.md')?.async('string');
 
   assert.notEqual(dll, undefined, `${packageId} package is missing ${dllPath}`);
+  assert.notEqual(readme, undefined, `${packageId} package is missing README.md`);
 
   return { dll, nuspec };
 }
@@ -182,6 +177,7 @@ function assertPackageMetadata(packageId, nuspec) {
   assert.equal(xmlAttributes(license).type, 'expression');
   assert.equal(xmlText(nuspec, 'license'), 'Apache-2.0');
   assert.equal(xmlText(nuspec, 'projectUrl'), 'https://blokeditor.com/');
+  assert.equal(xmlText(nuspec, 'readme'), 'README.md');
 
   const repository = xmlAttributes(xmlTag(nuspec, 'repository'));
   assert.equal(repository.type, 'git');
@@ -213,7 +209,6 @@ function assertPackageMetadata(packageId, nuspec) {
       [
         { id: 'AngleSharp', version: '1.5.0' },
         { id: 'BouncyCastle.Cryptography', version: '2.6.2' },
-        { id: 'Jint', version: '4.16.1' },
       ],
       'Blok.Server must retain its exact direct package dependencies',
     );
@@ -580,7 +575,6 @@ function escapeXml(value) {
 async function main() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'blok-server-packages-'));
   const feed = packageDirectory ?? join(temporaryRoot, 'feed');
-  const expectedRuntimeDirectory = join(temporaryRoot, 'expected-runtime');
   const globalPackages = join(temporaryRoot, 'global-packages');
   const fixtureIntermediate = join(temporaryRoot, 'fixture-obj');
   const fixtureOutput = join(temporaryRoot, 'fixture-bin');
@@ -630,9 +624,6 @@ async function main() {
     }
 
     await mkdir(globalPackages, { recursive: true });
-
-    const expectedRuntimePath = await buildServerRuntime(expectedRuntimeDirectory);
-    const expectedRuntimeHash = sha256(await readFile(expectedRuntimePath));
 
     await run('dotnet', [
       'build',
@@ -701,8 +692,6 @@ async function main() {
       <package pattern="Blok.Server.AspNetCore" />
     </packageSource>
     <packageSource key="nuget.org">
-      <package pattern="Jint" />
-      <package pattern="Acornima" />
       <package pattern="AngleSharp" />
       <package pattern="BouncyCastle.Cryptography" />
     </packageSource>
@@ -759,7 +748,7 @@ async function main() {
     await runAndProbe(
       consumerExecutable,
       (port) => ['--urls', `http://127.0.0.1:${port}`],
-      { BLOK_EXPECTED_RUNTIME_SHA256: expectedRuntimeHash },
+      {},
       '/api/blok',
       consumerVersion,
       true,

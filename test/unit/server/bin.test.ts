@@ -22,6 +22,7 @@ import { createArchive } from '../../../scripts/publish-server.mjs';
 import {
   cacheRoot,
   checksumFor,
+  detectLinuxLibc,
   fallbackMessage,
   installBinary,
   prepareInstallRoot,
@@ -148,6 +149,31 @@ describe('blok-server npm wrapper', () => {
         });
       },
     );
+
+    it.each([
+      ['x64', 'amd64', 'linux-musl-x64', 'blok-server_linux_musl_amd64.tar.gz'],
+      ['arm64', 'arm64', 'linux-musl-arm64', 'blok-server_linux_musl_arm64.tar.gz'],
+    ])('linux/%s selects the musl build when Node reports musl', (
+      arch,
+      archiveArch,
+      rid,
+      archive,
+    ) => {
+      expect(resolveTarget('linux', arch, 'musl')).toEqual({
+        os: 'linux',
+        arch: archiveArch,
+        rid,
+        archive,
+        binary: 'blok-server',
+      });
+    });
+
+    it('detects glibc and musl from the Node process report', () => {
+      expect(detectLinuxLibc({
+        header: { glibcVersionRuntime: '2.36' },
+      })).toBe('glibc');
+      expect(detectLinuxLibc({ header: {} })).toBe('musl');
+    });
 
     it.each([
       ['sunos', 'x64'],

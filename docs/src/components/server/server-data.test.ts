@@ -45,10 +45,10 @@ describe('server docs data', () => {
     expect(code).toContain('StorageDirectory');
     expect(code).toContain('PublicUrl');
     expect(code).toContain('UnfurlDisabled = false');
-    expect(code).toContain('UseAuthorization<');
+    expect(code).not.toContain('UseAuthorization<');
     expect(code).toContain('MapBlokServer("/api/blok").RequireAuthorization()');
     expect(dotnet?.description).toMatch(/application.*authorization policy/i);
-    expect(dotnet?.description).toMatch(/IBlokAuthorization.*document/i);
+    expect(dotnet?.description).not.toContain('IBlokAuthorization');
     expect(code).not.toContain('UseMySql');
   });
 
@@ -142,9 +142,11 @@ describe('server docs data', () => {
       ...serverLimits.map((limit) => limit.body),
     ].join(' ');
 
-    expect(prose).toMatch(/MaxUploadBytes.*Array\.MaxLength/i);
+    expect(prose).toMatch(/MaxUploadBytes.*Array\.MaxLength.*storage.*unfurl/i);
     expect(prose).toMatch(/RateLimitPerMinute.*zero or greater/i);
-    expect(prose).toMatch(/PublicUrl.*S3BucketUrl.*query or fragment/i);
+    expect(prose).toMatch(/PublicUrl.*HTTP.*root-relative/i);
+    expect(prose).toMatch(/S3BucketUrl.*absolute HTTP/i);
+    expect(prose).toMatch(/S3Endpoint.*HTTPS.*loopback HTTP/i);
     expect(prose).toMatch(/ListenAddress.*DNS host.*every network interface/i);
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });

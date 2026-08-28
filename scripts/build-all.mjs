@@ -6,7 +6,7 @@
  *   fonts ─→ main ─→ iife / umd / locales / angular   (dist/ writers: main
  *                                                       empties dist/, so they
  *                                                       must follow it)
- *   react, vue, cli, server-runtime                    (own out dirs, core is
+ *   react, vue, cli                                    (own out dirs, core is
  *                                                       external — fully
  *                                                       independent)
  *   react-vendor ─→ vue-vendor / angular-vendor       (test mode only:
@@ -46,7 +46,6 @@ export function buildTasks({ mode = 'production', withCli = false } = {}) {
     { name: 'react', cmd: 'yarn workspace @bloklabs/react build', deps: ['fonts'] },
     { name: 'vue', cmd: 'yarn workspace @bloklabs/vue build', deps: ['fonts'] },
     { name: 'presets', cmd: 'yarn workspace @bloklabs/presets build', deps: [] },
-    { name: 'server-runtime', cmd: 'node scripts/build-server-runtime.mjs', deps: [] },
     // Wrappers rename the entry files main/locales just wrote, so both must
     // be finished; iife/umd/angular read src, not dist entries, and can run
     // concurrently.

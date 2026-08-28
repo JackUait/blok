@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { isReleaseVersion } from './release-version.mjs';
+
 export const RELEASE_PACKAGES = [
   { name: '@bloklabs/core', manifestPath: 'package.json' },
   { name: '@bloklabs/react', manifestPath: 'packages/react/package.json' },
@@ -21,25 +23,28 @@ export const SERVER_RELEASE_ASSETS = [
   'blok-server_darwin_arm64.tar.gz',
   'blok-server_linux_amd64.tar.gz',
   'blok-server_linux_arm64.tar.gz',
+  'blok-server_linux_musl_amd64.tar.gz',
+  'blok-server_linux_musl_arm64.tar.gz',
   'blok-server_windows_amd64.zip',
   'blok-server_windows_arm64.zip',
   'checksums.txt',
 ];
 
-const RELEASE_TAG_PATTERN = /^v(\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$/;
 const GHCR_MANIFEST_ACCEPT = [
+  'application/vnd.oci.image.index.v1+json',
+  'application/vnd.docker.distribution.manifest.list.v2+json',
   'application/vnd.oci.image.manifest.v1+json',
   'application/vnd.docker.distribution.manifest.v2+json',
 ].join(', ');
 
 export function releaseVersionFromTag(tag) {
-  const match = RELEASE_TAG_PATTERN.exec(tag);
+  const version = tag.startsWith('v') ? tag.slice(1) : '';
 
-  if (!match) {
+  if (!isReleaseVersion(version)) {
     throw new Error(`Invalid package release tag: ${tag}`);
   }
 
-  return match[1];
+  return version;
 }
 
 export function assertLockstepManifestVersions(version, manifests) {

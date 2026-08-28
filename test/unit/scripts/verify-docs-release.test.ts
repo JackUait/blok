@@ -19,11 +19,18 @@ describe('docs release verification', () => {
     expect(releaseVersionFromTag('v2.3.4-beta.5')).toBe('2.3.4-beta.5');
   });
 
-  it('rejects tags that are not canonical package versions', async () => {
+  it('rejects tags that are not valid release versions', async () => {
     const { releaseVersionFromTag } = await loadVerifier();
 
-    expect(() => releaseVersionFromTag('docs-2.3.4')).toThrow('Invalid package release tag');
-    expect(() => releaseVersionFromTag('v2.3')).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('docs-2.3.4');
+    }).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('v2.3');
+    }).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('v2.3.4+build.1');
+    }).toThrow('Invalid package release tag');
   });
 
   it('requires every lockstep manifest to match the release version', async () => {
@@ -86,7 +93,7 @@ describe('docs release verification', () => {
     })).rejects.toThrow('@bloklabs/vue published 2.3.3');
   });
 
-  it('pins the two NuGet packages, six host archives, and checksums', async () => {
+  it('pins the two NuGet packages, eight host archives, and checksums', async () => {
     const { SERVER_NUGET_PACKAGES, SERVER_RELEASE_ASSETS } = await loadVerifier();
 
     expect(SERVER_NUGET_PACKAGES).toEqual([
@@ -98,6 +105,8 @@ describe('docs release verification', () => {
       'blok-server_darwin_arm64.tar.gz',
       'blok-server_linux_amd64.tar.gz',
       'blok-server_linux_arm64.tar.gz',
+      'blok-server_linux_musl_amd64.tar.gz',
+      'blok-server_linux_musl_arm64.tar.gz',
       'blok-server_windows_amd64.zip',
       'blok-server_windows_arm64.zip',
       'checksums.txt',
@@ -161,7 +170,7 @@ describe('docs release verification', () => {
       'https://ghcr.io/v2/jackuait/blok-server/manifests/2.3.4',
       {
         headers: {
-          accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+          accept: 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
           authorization: 'Bearer registry-token',
         },
       },

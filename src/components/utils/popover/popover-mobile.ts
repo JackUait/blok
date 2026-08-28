@@ -101,10 +101,10 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
       css.popoverContainerMobile
     );
 
-    // The sheet's items wrapper takes real DOM focus while the sheet is open
-    // (Radix Dialog/Drawer behaviour). Without it, keydowns keep targeting the
-    // contenteditable block behind the sheet and the flipper skips them.
-    this.nodes.items.tabIndex = -1;
+    // Keep the scroll region focusable for accessibility checks while inert
+    // keeps the closed sheet out of sequential focus navigation.
+    this.nodes.items.tabIndex = 0;
+    this.nodes.items.inert = true;
 
     this.flipper = new Flipper({
       items: this.flippableElements,
@@ -198,6 +198,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     this.scrollLocker.lock();
 
     this.isHidden = false;
+    this.nodes.items.inert = false;
 
     // Move focus into the sheet so keyboard users land on the first item
     // (Radix Dialog/Drawer behaviour). The flipper drives virtual focus over
@@ -221,6 +222,7 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     super.hide();
 
     this.flipper.deactivate();
+    this.nodes.items.inert = true;
 
     this.restorePreviousFocus();
 

@@ -48,11 +48,11 @@ describe('lint script', () => {
       'utf8'
     );
 
-    expect(workflow).toContain('uses: actions/cache/restore@v4');
+    expect(workflow).toMatch(/uses: actions\/cache\/restore@[0-9a-f]{40} # v4/);
     expect(workflow).toContain('node_modules/.cache/blok-eslint');
     expect(workflow).toContain('node_modules/.cache/blok-lint.tsbuildinfo');
     expect(workflow).toContain('restore-keys:');
-    expect(workflow).toContain('uses: actions/cache/save@v4');
+    expect(workflow).toMatch(/uses: actions\/cache\/save@[0-9a-f]{40} # v4/);
     // ESLint's cache persists per-file results INCLUDING errors, keyed only on
     // each file's own content — a cache saved from a red run replays stale
     // typed-lint errors on every later run, so saving must be gated on green.

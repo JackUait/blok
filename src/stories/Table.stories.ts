@@ -403,7 +403,7 @@ export const WithBothHeadings: Story = {
             withHeadings: true,
             withHeadingColumn: true,
             content: [
-              ['', 'Jan', 'Feb', 'Mar'],
+              ['Metric', 'Jan', 'Feb', 'Mar'],
               ['Sales', '120', '145', '163'],
               ['Costs', '80', '85', '90'],
               ['Profit', '40', '60', '73'],
@@ -1064,15 +1064,15 @@ export const ReadOnlyWithColors: Story = {
             content: [
               ['Priority', 'Task'],
               [
-                { blocks: ['rc-high'], color: '#FEE2E2', textColor: '#DC2626' },
+                { blocks: ['rc-high'], color: '#FEE2E2', textColor: '#B91C1C' },
                 { blocks: ['rc-task-1'] },
               ],
               [
-                { blocks: ['rc-medium'], color: '#FEF3C7', textColor: '#D97706' },
+                { blocks: ['rc-medium'], color: '#FEF3C7', textColor: '#92400E' },
                 { blocks: ['rc-task-2'] },
               ],
               [
-                { blocks: ['rc-low'], color: '#D1FAE5', textColor: '#059669' },
+                { blocks: ['rc-low'], color: '#D1FAE5', textColor: '#047857' },
                 { blocks: ['rc-task-3'] },
               ],
             ],

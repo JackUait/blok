@@ -90,6 +90,18 @@ describe('Table scroll container', () => {
       expect(rows?.length).toBe(2);
     });
 
+    it('makes the scroll container keyboard-focusable', () => {
+      const options = createTableOptions({
+        content: [['A', 'B'], ['C', 'D']],
+        colWidths: [200, 200],
+      });
+      const table = new Table(options);
+      const element = table.render();
+      const scrollContainer = element.querySelector('[data-blok-table-scroll]');
+
+      expect(scrollContainer?.getAttribute('tabindex')).toBe('0');
+    });
+
     it('scroll container is a direct child of the wrapper', () => {
       const options = createTableOptions({
         content: [['A', 'B'], ['C', 'D']],

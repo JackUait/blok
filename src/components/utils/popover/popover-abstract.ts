@@ -475,8 +475,15 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
 
     return items.map(item => {
       switch (item.type) {
-        case PopoverItemType.Separator:
-          return new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
+        case PopoverItemType.Separator: {
+          const separator = new PopoverItemSeparator(this.itemsRenderParams[PopoverItemType.Separator]);
+
+          if (this.params.listbox === true) {
+            separator.getElement().setAttribute('role', 'presentation');
+          }
+
+          return separator;
+        }
         case PopoverItemType.Html:
           return new PopoverItemHtml(item, this.itemsRenderParams[PopoverItemType.Html]);
         case PopoverItemType.Default:
@@ -997,6 +1004,7 @@ export abstract class PopoverAbstract<Nodes extends PopoverNodes = PopoverNodes>
     // is a plain container for the form it wraps.
     if (this.itemsDefault.length > 0) {
       items.setAttribute('role', this.params.listbox === true ? 'listbox' : 'menu');
+      items.setAttribute('aria-label', this.messages.actions ?? 'Actions');
       // The container scrolls (overflow-y-auto) but its items are all
       // tabindex="-1" — arrow keys are the Flipper's, not the browser's — so
       // without a tab stop of its own a keyboard-only user cannot reach the

@@ -116,10 +116,10 @@
   --blok-item-focus-shadow: rgba(35, 131, 226, 0.14);
   --blok-item-hover-bg: rgba(55, 53, 47, 0.08);
   --blok-icon-bg: rgba(0, 0, 0, 0.04);
-  --blok-item-confirm-bg: #e24a4a;
-  --blok-item-confirm-hover-bg: #ce4343;
-  --blok-item-destructive-text: #e24a4a;
-  --blok-item-destructive-hover-bg: rgba(226, 74, 74, 0.08);
+  --blok-item-confirm-bg: #c93636;
+  --blok-item-confirm-hover-bg: #b92f2f;
+  --blok-item-destructive-text: #c93636;
+  --blok-item-destructive-hover-bg: rgba(201, 54, 54, 0.08);
   --blok-notify-success-bg: #fafffe;
   --blok-notify-success-bar: #41ffb1;
   --blok-notify-error-bg: #fffbfb;

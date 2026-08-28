@@ -4,8 +4,53 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
-import { gprPublishCommand } from './release.mjs';
+import { gprPublishCommand, waitForSuccessfulCi } from './release.mjs';
 import { collectGprRewriteFiles } from './release-manifest.mjs';
+
+describe('waitForSuccessfulCi', () => {
+  it('waits until CI completes successfully for the source commit', async () => {
+    const results = [[], [{ status: 'in_progress', conclusion: '' }], [{ status: 'completed', conclusion: 'success' }]];
+    let calls = 0;
+
+    await waitForSuccessfulCi({
+      sha: 'release-sha',
+      attempts: 3,
+      getRuns: (sha) => {
+        assert.equal(sha, 'release-sha');
+        return results[calls++];
+      },
+      sleep: async () => {},
+    });
+
+    assert.equal(calls, 3);
+  });
+
+  it('fails immediately when CI completes unsuccessfully', async () => {
+    for (const conclusion of ['failure', 'cancelled', 'timed_out']) {
+      await assert.rejects(
+        waitForSuccessfulCi({
+          sha: 'release-sha',
+          attempts: 3,
+          getRuns: () => [{ status: 'completed', conclusion }],
+          sleep: async () => {},
+        }),
+        new RegExp(`CI failed for release-sha with conclusion ${conclusion}`),
+      );
+    }
+  });
+
+  it('fails when CI never completes', async () => {
+    await assert.rejects(
+      waitForSuccessfulCi({
+        sha: 'release-sha',
+        attempts: 2,
+        getRuns: () => [],
+        sleep: async () => {},
+      }),
+      /CI did not complete for release-sha/,
+    );
+  });
+});
 
 describe('gprPublishCommand', () => {
   it('builds a publish command targeting a .tgz tarball', () => {

@@ -838,7 +838,7 @@ it.each([
       'https://uploads.example.test',
     ],
     exitCode: 1,
-    stderr: '--s3-endpoint must be a full URL with a scheme and a host',
+    stderr: '--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment',
     env: {
       BLOK_S3_ACCESS_KEY: 'access-key',
       BLOK_S3_SECRET_KEY: 'secret-key',

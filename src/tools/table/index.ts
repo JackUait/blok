@@ -455,6 +455,7 @@ export class Table implements BlockTool {
     const sc = document.createElement('div');
 
     sc.setAttribute('data-blok-table-scroll', '');
+    sc.tabIndex = 0;
 
     const grid = this.gridElement;
 
@@ -512,6 +513,7 @@ export class Table implements BlockTool {
     const sc = document.createElement('div');
 
     sc.setAttribute('data-blok-table-scroll', '');
+    sc.tabIndex = 0;
     sc.classList.add(...SCROLL_OVERFLOW_CLASSES);
     sc.appendChild(gridEl);
     wrapper.appendChild(sc);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Embed, type EmbedData } from '../../../../src/tools/link/embed';
 import type { API, BlockToolConstructorOptions, PatternPasteEvent } from '../../../../types';
 
@@ -63,6 +63,10 @@ const patternEvent = (key: string, url: string): PatternPasteEvent =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('Embed tool', () => {
@@ -182,6 +186,7 @@ describe('Embed tool', () => {
 
     expect(root.querySelector('iframe')).toBeNull();
     expect(root.querySelector('blockquote')).not.toBeNull();
+    expect(root.querySelector('blockquote a')?.getAttribute('aria-label')).toBe('https://x.com/user/status/1234567890');
     expect(script?.getAttribute('src')).toContain('twitter.com');
   });
 
@@ -216,6 +221,7 @@ describe('Embed tool', () => {
     expect(blockquote?.getAttribute('data-text-post-permalink')).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
     expect(blockquote?.getAttribute('data-text-post-version')).toBe('0');
     expect(blockquote?.querySelector('a')?.getAttribute('href')).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
+    expect(blockquote?.querySelector('a')?.getAttribute('aria-label')).toBe('https://www.threads.com/@zuck/post/C8z2Qq0Rk1x');
     expect(script?.getAttribute('src')).toBe('https://www.threads.com/embed.js');
   });
 

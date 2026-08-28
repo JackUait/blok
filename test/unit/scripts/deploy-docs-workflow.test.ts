@@ -45,12 +45,18 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('requires successful CI and skips release verification for CI deployments', () => {
+  it('accepts only trusted latest same-repository push CI deployments', () => {
+    const trustedRun = "github.event.workflow_run.conclusion == 'success'"
+      + " && github.event.workflow_run.event == 'push'"
+      + ' && github.event.workflow_run.head_repository.full_name == github.repository'
+      + ' && github.event.workflow_run.head_sha == github.sha';
+
     expect(workflow.jobs['docs-tests'].if).toBe(
-      "github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
+      `github.event_name != 'workflow_run' || (${trustedRun})`,
     );
     expect(workflow.jobs['verify-release'].if).toBe(
-      "github.event_name == 'release' || inputs.release_tag != ''",
+      `(github.event_name == 'workflow_run' && ${trustedRun})`
+      + " || github.event_name == 'release' || inputs.release_tag != ''",
     );
     expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
     // A skipped `needs` job skips its dependents unless the dependent accepts it.
@@ -59,7 +65,7 @@ describe('docs deployment workflow', () => {
       + " && needs.docs-tests.result == 'success'"
       + " && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')"
       + " && (github.event_name != 'workflow_run'"
-      + " || github.event.workflow_run.conclusion == 'success') }}",
+      + ` || (${trustedRun})) }}`,
     );
   });
 
@@ -77,7 +83,8 @@ describe('docs deployment workflow', () => {
 
     expect(checkout?.with?.ref).toBe(selectedRef);
     expect(verification).toMatchObject({
-      run: 'node scripts/verify-docs-release.mjs "$RELEASE_TAG"',
+      run: 'tag="${RELEASE_TAG:-v$(node -p "require(\'./package.json\').version")}"\n'
+        + 'node scripts/verify-docs-release.mjs "$tag"\n',
       env: {
         RELEASE_TAG:
           "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}",

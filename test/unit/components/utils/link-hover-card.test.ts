@@ -75,6 +75,18 @@ describe('LinkHoverCard', () => {
     expect(shown?.textContent).toContain('https://youtube.com/');
   });
 
+  it('keeps closed controls out of keyboard and accessibility navigation', () => {
+    expect(getCard()?.inert).toBe(true);
+
+    const anchor = createAnchor('https://youtube.com/');
+
+    showCard(card, anchor);
+
+    expect(getCard()?.inert).toBe(false);
+    card.hide();
+    expect(getCard()?.inert).toBe(true);
+  });
+
   it('does not render the card content until the hover-intent delay elapses', () => {
     const anchor = createAnchor('https://youtube.com/');
 

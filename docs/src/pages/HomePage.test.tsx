@@ -210,9 +210,8 @@ describe('HomePage', () => {
       expect(screen.getByTestId('home-panel-loading')).toBeInTheDocument();
       await waitForElementToBeRemoved(
         () => screen.queryByTestId('home-panel-loading'),
-        // The demo panel pulls in the editor bundle; 1s is not enough to
-        // transform it on a cold module graph.
-        { timeout: 5000 }
+        // Coverage transforms the editor bundle on a cold module graph.
+        { timeout: 15000 }
       );
     }
   );

@@ -228,6 +228,7 @@ export class LinkHoverCard {
     // cancel its scheduled removal so it animates straight back in.
     this.cancelExit();
     this.currentAnchor = anchor;
+    this.nodes.wrapper.inert = false;
 
     const href = anchor.getAttribute('href') ?? anchor.href;
 
@@ -324,6 +325,7 @@ export class LinkHoverCard {
 
     this.shown = false;
     this.currentAnchor = null;
+    this.nodes.wrapper.inert = true;
     this.positionTracker?.detach();
     this.positionTracker = null;
 
@@ -462,6 +464,7 @@ export class LinkHoverCard {
     wrapper.style.paddingRight = '0.375rem';
     wrapper.setAttribute('data-state', 'closed');
     wrapper.setAttribute('data-blok-testid', 'link-hover-card');
+    wrapper.inert = true;
     // The card is body-mounted, outside the editor root. Compiled Tailwind
     // utilities and the preflight reset are scoped to
     // `[data-blok-interface]`/`[data-blok-popover]` roots, so without this

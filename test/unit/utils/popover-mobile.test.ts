@@ -281,6 +281,22 @@ describe('PopoverMobile', () => {
   });
 
   describe('show', () => {
+    it('keeps the closed sheet inert and the open scroll region focusable', () => {
+      const { popover } = createPopover();
+      const nodes = getNodes(popover);
+
+      expect(nodes.items.tabIndex).toBe(0);
+      expect(nodes.items.inert).toBe(true);
+
+      popover.show();
+      expect(nodes.items.tabIndex).toBe(0);
+      expect(nodes.items.inert).toBe(false);
+
+      popover.hide();
+      expect(nodes.items.tabIndex).toBe(0);
+      expect(nodes.items.inert).toBe(true);
+    });
+
     it('removes overlay hidden attribute, adds popover to DOM, and locks scroll', () => {
       const { popover } = createPopover();
       const nodes = getNodes(popover);

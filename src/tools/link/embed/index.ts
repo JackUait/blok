@@ -449,6 +449,7 @@ export class Embed implements BlockTool {
       const threadsAnchor = document.createElement('a');
 
       threadsAnchor.href = this.embedSrc();
+      threadsAnchor.setAttribute('aria-label', this.embedSrc());
       threadsQuote.appendChild(threadsAnchor);
       container.appendChild(threadsQuote);
 
@@ -469,6 +470,7 @@ export class Embed implements BlockTool {
     const anchor = document.createElement('a');
 
     anchor.href = toSafeEmbedSrc(this.data.source);
+    anchor.setAttribute('aria-label', toSafeEmbedSrc(this.data.source));
     blockquote.appendChild(anchor);
     container.appendChild(blockquote);
 

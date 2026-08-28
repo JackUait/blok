@@ -114,6 +114,12 @@ const CROSS_BROWSER_TESTS = [
   '**/tools/placeholder-caret-position.spec.ts',
 ] as const;
 
+// Screenshot baselines are captured on Darwin. Linux catch-all shards exclude
+// them; the dedicated macOS visual job opts in with BLOK_VISUAL=1.
+const VISUAL_TESTS = [
+  '**/visual-regression/**/*.spec.ts',
+] as const;
+
 // Logic/API tests - browser-agnostic, run once on Chromium
 const LOGIC_TESTS = [
   // View<->read-only visual parity. MUST live in LOGIC_TESTS: CI's e2e matrix
@@ -204,6 +210,7 @@ export default defineConfig({
     timeout: 5_000,
   },
   fullyParallel: true,
+  failOnFlakyTests: true,
   reporter: process.env.CI
     ? [['blob'], ['list'], ['github']]
     : [['list'], ['html', { open: 'never' }]],
@@ -224,7 +231,11 @@ export default defineConfig({
     {
       name: 'chromium-default',
       use: { browserName: 'chromium' },
-      testIgnore: [...CROSS_BROWSER_TESTS, ...LOGIC_TESTS],
+      testIgnore: [
+        ...CROSS_BROWSER_TESTS,
+        ...LOGIC_TESTS,
+        ...(process.env.BLOK_VISUAL === '1' ? [] : VISUAL_TESTS),
+      ],
     },
   ],
   webServer: {
@@ -237,12 +248,11 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120000, // Give the server more time to start up
   },
-  // One local retry absorbs load-flakes at high worker counts (CI already
-  // runs 2); a retry lands in a fresh worker + context. Real regressions
-  // fail both attempts and stay red.
+  // Retries confirm whether a failure is flaky in a fresh worker + context.
+  // failOnFlakyTests keeps both local and CI runs red when a retry passes.
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 3 : AMOUNT_OF_LOCAL_WORKERS,
 });
 
 // Export for tooling/scripts
-export { CROSS_BROWSER_TESTS, LOGIC_TESTS };
+export { CROSS_BROWSER_TESTS, LOGIC_TESTS, VISUAL_TESTS };

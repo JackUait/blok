@@ -39,6 +39,28 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           echo "BLOK_SERVER_VERSION=$version" >> "$GITHUB_ENV"
 
+      - name: Wait for successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for _ in $(seq 1 360); do
+            state="$(gh run list --workflow CI --branch main --event push --commit "$GITHUB_SHA" --limit 1 \
+              --json status,conclusion \
+              --jq 'if length == 0 then "missing" else "\(.[0].status):\(.[0].conclusion // "")" end')"
+            case "$state" in
+              completed:success)
+                exit 0
+                ;;
+              completed:*)
+                echo "::error::CI did not pass for $GITHUB_SHA ($state)"
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::CI did not complete for $GITHUB_SHA after 60 minutes"
+          exit 1
+
       - name: Wait for the draft GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

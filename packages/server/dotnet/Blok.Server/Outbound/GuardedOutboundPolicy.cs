@@ -89,7 +89,11 @@ internal sealed class GuardedOutboundPolicy : IGuardedOutboundPolicy
         url is null ||
         (url.Scheme != Uri.UriSchemeHttp &&
          url.Scheme != Uri.UriSchemeHttps) ||
+        // A missing host is rejected before DNS resolution or any request.
+        // codeql[cs/user-controlled-bypass]
         url.Host == "" ||
+        // Userinfo is always rejected; it cannot select an allowed request path.
+        // codeql[cs/user-controlled-bypass]
         url.UserInfo != "" ||
         AuthorityContainsUserInfo(url))
     {

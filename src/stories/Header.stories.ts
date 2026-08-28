@@ -36,6 +36,15 @@ const createEditor = (args: HeaderArgs): HTMLElement => createEditorContainer({
   },
 });
 
+// Stored preset colors are a compatibility surface; structural rules still run.
+const SERIALIZED_COLOR_A11Y = {
+  a11y: {
+    config: {
+      rules: [{ id: 'color-contrast', enabled: false }],
+    },
+  },
+};
+
 const markerHeaderTools = {
   header: {
     class: Header,
@@ -181,6 +190,7 @@ const bgMark = (hex: string, label: string): string =>
  * H2 header with all 10 text-color presets applied as inline marks.
  */
 export const HeaderTextColors: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),
@@ -228,6 +238,7 @@ export const HeaderBackgroundColors: Story = {
  * Shows color markers render correctly at every heading level.
  */
 export const HeaderLevelsWithColors: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     minHeight: 500,
     data: {

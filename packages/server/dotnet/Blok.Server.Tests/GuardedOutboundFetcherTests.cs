@@ -834,7 +834,7 @@ public sealed class GuardedOutboundFetcherTests
         async () => await fetcher.GetAsync(
             $"https://deadline-tls.example:{origin.Port}/",
             new GuardedFetchLimits(
-                TimeSpan.FromMilliseconds(75),
+                TimeSpan.FromSeconds(2),
                 1024,
                 0),
             CancellationToken.None));

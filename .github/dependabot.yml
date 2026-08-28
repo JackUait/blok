@@ -1,5 +1,25 @@
 version: 2
 updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:07"
+    groups:
+      root-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:12"
+    groups:
+      docs-dependencies:
+        patterns: ["*"]
+
   - package-ecosystem: nuget
     directory: /packages/server/dotnet
     schedule:

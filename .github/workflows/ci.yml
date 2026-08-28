@@ -10,13 +10,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   i18n:
     name: i18n Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -32,14 +35,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
       - name: Restore lint cache
         id: lint-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             node_modules/.cache/blok-eslint
@@ -60,12 +63,136 @@ jobs:
       # file whose content didn't change since the failure.
       - name: Save lint cache
         if: success() && steps.lint-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             node_modules/.cache/blok-eslint
             node_modules/.cache/blok-lint.tsbuildinfo
           key: ${{ steps.lint-cache.outputs.cache-primary-key }}
+
+  workflow-lint:
+    name: Workflow Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Lint GitHub Actions workflows
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+        with:
+          version: 1.7.7
+          fail-on-error: true
+
+  frontend-coverage:
+    name: Frontend Coverage
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: .
+
+      - name: Build CLI
+        run: yarn build:cli
+
+      - name: Run frontend coverage
+        run: yarn test:coverage
+
+      - name: Upload coverage diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 3
+
+  docs-quality:
+    name: Docs Quality
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: .
+
+      - name: Check docs types
+        run: yarn --cwd docs lint
+
+      - name: Run docs coverage
+        run: yarn --cwd docs test:coverage
+
+      - name: Build docs
+        run: yarn --cwd docs build
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: csharp
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Setup .NET
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Build C# server
+        if: matrix.language == 'csharp'
+        run: dotnet build packages/server/dotnet/Blok.Server.slnx --configuration Release -p:ContinuousIntegrationBuild=true
+
+      - name: Analyze source
+        id: analyze
+        uses: github/codeql-action/analyze@6f5948dfacef28e207b48d0905cf90c03365536d # v3
+        with:
+          output: codeql-results
+
+      - name: Enforce high-severity CodeQL results
+        run: node scripts/check-codeql-results.mjs "${{ steps.analyze.outputs.sarif-output }}"
 
   server-security:
     name: Server Security
@@ -94,11 +221,11 @@ jobs:
           GITLEAKS_CONFIG: gitleaks.toml
           GITLEAKS_ENABLE_COMMENTS: 'false'
 
-      - name: Scan server vulnerabilities and configuration
+      - name: Scan repository vulnerabilities and configuration
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           scan-type: fs
-          scan-ref: packages/server
+          scan-ref: .
           scanners: vuln,secret,misconfig
           severity: HIGH,CRITICAL
           ignore-unfixed: 'false'
@@ -124,13 +251,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
 
@@ -188,13 +315,13 @@ jobs:
         shard: ["1/2", "2/2"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: dist
           # Archive keeps repo-relative paths (dist/, packages/*/dist/); extract at root.
@@ -226,20 +353,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
       - name: Validate all spec files match a Playwright project
+        env:
+          BLOK_VISUAL: '1'
         run: yarn validate:spec-coverage
+
+      - name: Validate test categories
+        run: yarn e2e:validate-categories
 
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -254,7 +386,7 @@ jobs:
       # archive keeps each path at its repo-relative location — download steps
       # therefore extract at the repo root (path: .), not into dist/.
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dist
           path: |
@@ -270,7 +402,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -335,6 +467,30 @@ jobs:
           - project: chromium-logic
             browser: chromium
             shard: 4/4
+          - project: chromium-default
+            browser: chromium
+            shard: 1/8
+          - project: chromium-default
+            browser: chromium
+            shard: 2/8
+          - project: chromium-default
+            browser: chromium
+            shard: 3/8
+          - project: chromium-default
+            browser: chromium
+            shard: 4/8
+          - project: chromium-default
+            browser: chromium
+            shard: 5/8
+          - project: chromium-default
+            browser: chromium
+            shard: 6/8
+          - project: chromium-default
+            browser: chromium
+            shard: 7/8
+          - project: chromium-default
+            browser: chromium
+            shard: 8/8
     uses: ./.github/workflows/e2e.yml
     with:
       artifact-name: dist
@@ -350,13 +506,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
 
       - name: Download all blob reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: all-blob-reports
           pattern: blob-report-*
@@ -371,7 +527,7 @@ jobs:
           fi
 
       - name: Upload unified HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report
           path: playwright-report
@@ -383,7 +539,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -398,3 +554,67 @@ jobs:
 
       - name: Run Storybook Tests
         run: yarn storybook:test
+
+  visual-regression:
+    name: Visual Regression
+    needs: [build]
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: .
+
+      - name: Build React Vendor Files
+        run: node scripts/build-react-vendor.mjs
+
+      - name: Install Chromium
+        run: npx playwright install chromium
+
+      - name: Run visual regression tests
+        run: BLOK_BUILT=true BLOK_VISUAL=1 yarn playwright test --project=chromium-default test/playwright/tests/visual-regression
+
+  production-readiness:
+    name: Production Readiness
+    if: always()
+    needs:
+      - i18n
+      - lint
+      - workflow-lint
+      - codeql
+      - server-security
+      - server
+      - unit-tests
+      - validate-spec-coverage
+      - build
+      - install-browsers
+      - e2e-tests
+      - storybook-tests
+      - frontend-coverage
+      - docs-quality
+      - visual-regression
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require every quality gate
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          node - <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS_JSON);
+          const failed = Object.entries(needs).filter(([, value]) => value.result !== 'success');
+          if (failed.length > 0) {
+            console.error('Production readiness failed:', failed);
+            process.exit(1);
+          }
+          console.log('Production readiness passed for every required job.');
+          NODE

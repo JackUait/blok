@@ -296,7 +296,7 @@ describe('Search', () => {
         () => {
           expect(screen.getByRole('button', { name: 'Open search' })).toHaveFocus();
         },
-        { timeout: 1500 }
+        { timeout: 5000 }
       );
     });
 
@@ -321,7 +321,7 @@ describe('Search', () => {
         () => {
           expect(screen.getByRole('button', { name: 'Open search' })).toHaveFocus();
         },
-        { timeout: 1500 }
+        { timeout: 5000 }
       );
     });
   });

@@ -108,7 +108,7 @@ describe('guarded development unfurl fetch', () => {
     const createGuardedFetch = await loadFactory();
     const request = vi.fn();
     const guardedFetch = createGuardedFetch({
-      lookup: vi.fn(async () => [{ address, family }]),
+      lookup: vi.fn(async (): Promise<Address[]> => [{ address, family }]),
       request,
     });
 
@@ -122,7 +122,7 @@ describe('guarded development unfurl fetch', () => {
     const createGuardedFetch = await loadFactory();
     const request = vi.fn();
     const guardedFetch = createGuardedFetch({
-      lookup: vi.fn(async () => [
+      lookup: vi.fn(async (): Promise<Address[]> => [
         { address: '93.184.216.34', family: 4 },
         { address: '127.0.0.1', family: 4 },
       ]),
@@ -144,7 +144,7 @@ describe('guarded development unfurl fetch', () => {
       [Buffer.from('<title>Safe</title>')],
     ));
     const guardedFetch = createGuardedFetch({
-      lookup: vi.fn(async () => [pinnedAddress]),
+      lookup: vi.fn(async (): Promise<Address[]> => [pinnedAddress]),
       request,
     });
 
@@ -165,7 +165,7 @@ describe('guarded development unfurl fetch', () => {
       { location: 'http://169.254.169.254/latest/meta-data' },
     ));
     const guardedFetch = createGuardedFetch({
-      lookup: vi.fn(async () => [
+      lookup: vi.fn(async (): Promise<Address[]> => [
         { address: '93.184.216.34', family: 4 },
       ]),
       request,
@@ -189,7 +189,7 @@ describe('guarded development unfurl fetch', () => {
       },
     };
     const guardedFetch = createGuardedFetch({
-      lookup: vi.fn(async () => [
+      lookup: vi.fn(async (): Promise<Address[]> => [
         { address: '93.184.216.34', family: 4 },
       ]),
       request: vi.fn(async () => ({

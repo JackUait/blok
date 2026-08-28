@@ -31,7 +31,7 @@ runs:
     - name: Cache Playwright Browsers
       if: inputs.download == 'true'
       id: cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/ms-playwright
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -39,7 +39,7 @@ runs:
     - name: Restore Playwright Browsers
       if: inputs.download != 'true'
       id: cache-restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/ms-playwright
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ steps.pw.outputs.version }}

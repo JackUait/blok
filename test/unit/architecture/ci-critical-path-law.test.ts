@@ -20,6 +20,7 @@ type Step = {
   uses?: string;
   if?: string;
   'working-directory'?: string;
+  env?: Record<string, WorkflowValue>;
   with?: Record<string, WorkflowValue>;
 };
 
@@ -105,7 +106,7 @@ const expectOrderedSteps = (
 
 const checkout: Step = {
   name: 'Checkout code',
-  uses: 'actions/checkout@v4',
+  uses: 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
 };
 
 const setupNodeDependencies: Step = {
@@ -149,6 +150,14 @@ const e2eMatrix: MatrixEntry[] = [
   { project: 'chromium-logic', browser: 'chromium', shard: '2/4' },
   { project: 'chromium-logic', browser: 'chromium', shard: '3/4' },
   { project: 'chromium-logic', browser: 'chromium', shard: '4/4' },
+  { project: 'chromium-default', browser: 'chromium', shard: '1/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '2/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '3/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '4/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '5/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '6/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '7/8' },
+  { project: 'chromium-default', browser: 'chromium', shard: '8/8' },
 ];
 
 describe('CI critical-path law', () => {
@@ -156,6 +165,10 @@ describe('CI critical-path law', () => {
     const requiredJobs = [
       'i18n',
       'lint',
+      'workflow-lint',
+      'frontend-coverage',
+      'docs-quality',
+      'codeql',
       'server-security',
       'server',
       'unit-tests',
@@ -165,6 +178,8 @@ describe('CI critical-path law', () => {
       'e2e-tests',
       'merge-reports',
       'storybook-tests',
+      'visual-regression',
+      'production-readiness',
     ];
 
     for (const id of requiredJobs) {
@@ -204,7 +219,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Restore lint cache',
         id: 'lint-cache',
-        uses: 'actions/cache/restore@v4',
+        uses: 'actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830',
         with: {
           path: lintCachePaths,
           // v2: v1 caches are poisoned — ESLint's cache persists errored
@@ -220,7 +235,7 @@ describe('CI critical-path law', () => {
         name: 'Save lint cache',
         // success() only: a red run's ESLint cache carries the error entries.
         if: "success() && steps.lint-cache.outputs.cache-hit != 'true'",
-        uses: 'actions/cache/save@v4',
+        uses: 'actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830',
         with: {
           path: lintCachePaths,
           key: '${{ steps.lint-cache.outputs.cache-primary-key }}',
@@ -240,7 +255,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Setup .NET',
-        uses: 'actions/setup-dotnet@v4',
+        uses: 'actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9',
         with: {
           'dotnet-version': '10.0.x',
         },
@@ -317,7 +332,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
         with: {
           name: 'dist',
           path: '.',
@@ -362,7 +377,14 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Validate all spec files match a Playwright project',
+        env: {
+          BLOK_VISUAL: '1',
+        },
         run: 'yarn validate:spec-coverage',
+      },
+      {
+        name: 'Validate test categories',
+        run: 'yarn e2e:validate-categories',
       },
     ]);
 
@@ -378,7 +400,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload build artifacts',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
           name: 'dist',
           path: buildArtifactPaths,
@@ -469,7 +491,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download all blob reports',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
         with: {
           path: 'all-blob-reports',
           pattern: 'blob-report-*',
@@ -482,7 +504,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload unified HTML report',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
           name: 'playwright-report',
           path: 'playwright-report',
@@ -538,7 +560,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
         with: {
           name: '${{ inputs.artifact-name }}',
           path: '.',
@@ -567,7 +589,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload E2E Test Results',
         if: 'failure()',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
           name: 'playwright-results-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'test-results/',
@@ -576,8 +598,8 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload Blob Report',
-        if: 'always()',
-        uses: 'actions/upload-artifact@v4',
+        if: "always() && github.ref != 'refs/heads/main'",
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
           name: 'blob-report-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'blob-report/',

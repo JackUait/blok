@@ -17,6 +17,7 @@ enableJsdomWebStorageGuard();
 export default defineConfig({
   test: {
     globals: true,
+    testTimeout: 30_000,
     environment: 'jsdom',
     include: ['src/**/*.{test,test.deferred}.{ts,tsx}'],
     exclude: ['node_modules', 'dist'],
@@ -24,6 +25,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      thresholds: {
+        statements: 78,
+        lines: 80,
+        functions: 80,
+        branches: 71,
+      },
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.d.ts', 'test/**', 'node_modules/**'],
     },

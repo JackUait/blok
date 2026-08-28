@@ -81,6 +81,26 @@ export async function publishPackagePair({ publishToNpm, publishToGpr, restoreNa
   }
 }
 
+export async function waitForSuccessfulCi({ sha, getRuns, sleep, attempts = 360 }) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const run = getRuns(sha)[0];
+
+    if (run?.status === 'completed') {
+      if (run.conclusion === 'success') {
+        return;
+      }
+
+      throw new Error(`CI failed for ${sha} with conclusion ${run.conclusion}`);
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep();
+    }
+  }
+
+  throw new Error(`CI did not complete for ${sha} after ${attempts} checks`);
+}
+
 export function buildReleaseNotes(version, mainChangelog, cliChangelog) {
   const mainSection = extractChangelogSection(version, mainChangelog);
   const cliSection = extractChangelogSection(version, cliChangelog);
@@ -115,6 +135,12 @@ if (isDirectRun) {
   }
 
   let cleanupNpmrc = false;
+
+  process.once('exit', () => {
+    if (cleanupNpmrc && existsSync('.npmrc')) {
+      unlinkSync('.npmrc');
+    }
+  });
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry-run');
@@ -157,6 +183,11 @@ if (isDirectRun) {
     process.exit(1);
   }
 
+  if (runCapture('git branch --show-current') !== 'main') {
+    console.error('Releases must run from main.');
+    process.exit(1);
+  }
+
   const npmToken = process.env.BLOK_NPM_TOKEN;
 
   if (npmToken) {
@@ -176,8 +207,30 @@ if (isDirectRun) {
 
   console.log(`\nReleasing ${version} (tag: ${tag})${isDryRun ? ' [DRY RUN]' : ''}\n`);
 
-  if (!skipPreflight) {
-    run('yarn release:preflight');
+  let sourceSha = '';
+
+  if (!isDryRun) {
+    sourceSha = runCapture('git rev-parse HEAD');
+    run('git fetch origin main');
+
+    if (runCapture('git rev-parse origin/main') !== sourceSha) {
+      throw new Error('Local main is not the current origin/main; refusing to publish');
+    }
+
+    await waitForSuccessfulCi({
+      sha: sourceSha,
+      getRuns: (sha) => JSON.parse(runCapture(
+        `gh run list --workflow CI --branch main --event push --commit ${sha} --limit 1 --json status,conclusion`,
+      )),
+      sleep: () => new Promise((resolve) => setTimeout(resolve, 10_000)),
+    });
+
+    if (
+      runCapture('git rev-parse HEAD') !== sourceSha ||
+      runCapture('git status --porcelain') !== ''
+    ) {
+      throw new Error('Release source changed while CI was running; refusing to publish');
+    }
   }
 
   // --- Bump versions: root via npm, workspaces by manifest edit (lockstep) ---
@@ -211,9 +264,28 @@ if (isDirectRun) {
   // release commit fails CI's `yarn install --immutable` with YN0028.
   run('yarn install --mode=update-lockfile');
 
+  if (!skipPreflight) {
+    run('yarn release:preflight');
+  }
+
   // --- Build the whole family + CLI as one parallel task graph ---
 
   run('node scripts/build-all.mjs --with-cli');
+
+  if (!isDryRun) {
+    run(`git add package.json yarn.lock ${WORKSPACE_MANIFESTS.join(' ')}`);
+    run(`git commit -m "chore(release): ${version}"`);
+
+    if (runCapture('git status --porcelain') !== '') {
+      throw new Error('Release build changed tracked source; refusing to publish');
+    }
+
+    run('git fetch origin main');
+
+    if (runCapture('git rev-parse origin/main') !== sourceSha) {
+      throw new Error('Origin main changed during release preparation; refusing to publish');
+    }
+  }
 
   // --- Publish the whole family: npmjs @bloklabs/* + GHP @dodopizza/* mirrors ---
 
@@ -293,16 +365,16 @@ if (isDirectRun) {
 
   cleanupNpmrc = false; // the family loop always removes .npmrc in restoreName
 
-  // --- Git: commit, tag, push ---
-
   if (isDryRun) {
     run('git checkout -- package.json yarn.lock ' + WORKSPACE_MANIFESTS.join(' '));
     console.log(`\nDry run complete for ${version} — nothing was published.`);
     process.exit(0);
   }
 
-  run(`git add package.json yarn.lock ${WORKSPACE_MANIFESTS.join(' ')}`);
-  run(`git commit -m "chore(release): ${version}"`);
+  if (runCapture('git status --porcelain') !== '') {
+    throw new Error('Release publication changed tracked source; refusing to push');
+  }
+
   run(`git tag ${gitTag}`);
   run('git push');
   run(`git push origin ${gitTag}`);

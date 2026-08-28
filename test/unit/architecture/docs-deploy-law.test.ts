@@ -153,7 +153,7 @@ describe('docs deploy law — reachable without a release', () => {
 
   it('checks out the exact commit that CI verified', () => {
     for (const id of ['docs-tests', 'build']) {
-      const checkout = getJob(id).steps?.find((step) => step.uses === 'actions/checkout@v4');
+      const checkout = getJob(id).steps?.find((step) => step.name === 'Checkout code');
 
       expect(checkout?.with?.ref, `${id} must check out the workflow_run head SHA`).toBe(
         WORKFLOW_RUN_CHECKOUT_REF,

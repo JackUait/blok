@@ -65,7 +65,7 @@ describe('docs deployment workflow', () => {
 
   it('verifies the selected release tag before building docs', () => {
     const checkout = workflow.jobs['verify-release'].steps?.find(
-      (step) => step.uses === 'actions/checkout@v4',
+      (step) => step.name === 'Checkout code',
     );
     const verification = workflow.jobs['verify-release'].steps?.find(
       (step) => step.name === 'Verify published package family',
@@ -87,10 +87,10 @@ describe('docs deployment workflow', () => {
 
   it('tests and builds the exact CI head SHA while preserving release and manual refs', () => {
     const docsTestCheckout = workflow.jobs['docs-tests'].steps?.find(
-      (step) => step.uses === 'actions/checkout@v4',
+      (step) => step.name === 'Checkout code',
     );
     const buildCheckout = workflow.jobs.build.steps?.find(
-      (step) => step.uses === 'actions/checkout@v4',
+      (step) => step.name === 'Checkout code',
     );
     const selectedRef =
       "${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha"

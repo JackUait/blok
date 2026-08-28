@@ -198,7 +198,7 @@ public sealed class BlokServerOptions
   {
     string port;
 
-    if (ListenAddress.StartsWith("[", StringComparison.Ordinal))
+    if (ListenAddress.StartsWith('['))
     {
       var bracket = ListenAddress.IndexOf(']');
 
@@ -302,7 +302,7 @@ public sealed class BlokServerOptions
 
   private static string ListenHost(string listenAddress)
   {
-    if (listenAddress.StartsWith("[", StringComparison.Ordinal))
+    if (listenAddress.StartsWith('['))
     {
       var bracket = listenAddress.IndexOf(']');
 

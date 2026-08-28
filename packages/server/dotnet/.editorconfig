@@ -9,3 +9,7 @@ end_of_line = lf
 indent_size = 2
 indent_style = space
 insert_final_newline = true
+
+[Blok.Server/Outbound/GuardedOutboundFetcher.cs]
+# SemaphoreSlim stays managed unless AvailableWaitHandle is read.
+dotnet_diagnostic.CA1001.severity = none

@@ -127,8 +127,10 @@ describe('server release wiring', () => {
     expect(actions).toContain('./.github/actions/setup-node-deps');
     expect(actions).toContain('actions/setup-dotnet@v4');
     expect(runs).toContain(
-      'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+      'dotnet test packages/server/dotnet/Blok.Server.slnx',
     );
+    expect(runs).toContain('--collect:"Code Coverage;Format=Cobertura"');
+    expect(runs).toContain('node scripts/check-server-coverage.mjs');
     expect(runs).toContain(
       'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
     );
@@ -475,6 +477,8 @@ describe('server release wiring', () => {
       'docs/dist',
       '.server-release-dist',
       '.server-release-smoke',
+      '.server-test-results',
+      '.server-coverage',
       '.superpowers',
       '.env',
       '.env.*',

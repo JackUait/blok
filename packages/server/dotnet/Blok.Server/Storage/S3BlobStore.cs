@@ -178,7 +178,7 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         response.StatusCode);
   }
 
-  private static HttpMessageHandler CreateHandler()
+  private static SocketsHttpHandler CreateHandler()
   {
     return new SocketsHttpHandler
     {

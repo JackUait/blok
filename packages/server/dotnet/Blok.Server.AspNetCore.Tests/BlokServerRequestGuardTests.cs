@@ -16,6 +16,9 @@ public sealed class BlokServerRequestGuardTests
   private const string AllowedOrigin = "https://app.example.com";
   private const string DisallowedOrigin = "https://evil.example.net";
   private const string RemoteAddressHeader = "X-Test-Remote-Address";
+  private static readonly string[] CorsPreflightVaryHeaders =
+      ["Access-Control-Request-Headers", "Origin"];
+  private static readonly string[] CorsVaryHeaders = ["Origin"];
   private static readonly DateTimeOffset FixedNow =
       DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
 
@@ -193,9 +196,7 @@ public sealed class BlokServerRequestGuardTests
       Assert.Equal(
           "600",
           Assert.Single(accepted.Headers.GetValues("Access-Control-Max-Age")));
-      Assert.Equal(
-          new[] { "Access-Control-Request-Headers", "Origin" },
-          accepted.Headers.Vary);
+      Assert.Equal(CorsPreflightVaryHeaders, accepted.Headers.Vary);
     }
 
     foreach (var origin in new[] { DisallowedOrigin, null })
@@ -653,7 +654,7 @@ public sealed class BlokServerRequestGuardTests
     Assert.Equal(
         AllowedOrigin,
         Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
-    Assert.Equal(new[] { "Origin" }, response.Headers.Vary);
+    Assert.Equal(CorsVaryHeaders, response.Headers.Vary);
   }
 
   private static void AssertNoCors(HttpResponseMessage response)

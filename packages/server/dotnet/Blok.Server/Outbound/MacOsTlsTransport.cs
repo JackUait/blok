@@ -454,7 +454,10 @@ internal static class MacOsCertificateTrust
   [DllImport(CoreFoundation)]
   private static extern void CFRelease(nint value);
 
-  [DllImport(CoreFoundation)]
+  [DllImport(
+      CoreFoundation,
+      BestFitMapping = false,
+      ThrowOnUnmappableChar = true)]
   private static extern nint CFStringCreateWithCString(
       nint allocator,
       [MarshalAs(UnmanagedType.LPUTF8Str)] string value,

@@ -17,6 +17,10 @@ namespace Blok.Server.AspNetCore.Tests;
 
 public sealed class BlokServerRegistrationTests
 {
+  private static readonly string[] HealthMethods = ["GET", "HEAD"];
+  private static readonly string[] ReadMethods = ["GET", "OPTIONS"];
+  private static readonly string[] WriteMethods = ["OPTIONS", "POST"];
+
   [Fact]
   public async Task AddsTheEmbeddedRuntimeAndDenyByDefaultAuthorizationOnce()
   {
@@ -390,7 +394,7 @@ public sealed class BlokServerRegistrationTests
         enableGuardedRoutes: false);
     app.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(app, "/blok/health"));
+    Assert.Equal(HealthMethods, GetMethods(app, "/blok/health"));
     Assert.Empty(GetMethods(app, "/blok/unfurl"));
     Assert.Empty(GetMethods(app, "/blok/upload"));
     Assert.Empty(GetMethods(app, "/blok/upload-by-url"));
@@ -402,15 +406,15 @@ public sealed class BlokServerRegistrationTests
     await using var enabled = BuildApplication(_ => { });
     enabled.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(enabled, "/blok/health"));
-    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(enabled, "/blok/unfurl"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload-by-url"));
+    Assert.Equal(HealthMethods, GetMethods(enabled, "/blok/health"));
+    Assert.Equal(ReadMethods, GetMethods(enabled, "/blok/unfurl"));
+    Assert.Equal(WriteMethods, GetMethods(enabled, "/blok/upload"));
+    Assert.Equal(WriteMethods, GetMethods(enabled, "/blok/upload-by-url"));
 
     await using var noStorage = BuildApplication(options => options.StorageDirectory = "");
     noStorage.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(noStorage, "/blok/unfurl"));
+    Assert.Equal(ReadMethods, GetMethods(noStorage, "/blok/unfurl"));
     Assert.Empty(GetMethods(noStorage, "/blok/upload"));
     Assert.Empty(GetMethods(noStorage, "/blok/upload-by-url"));
 
@@ -418,7 +422,7 @@ public sealed class BlokServerRegistrationTests
     noUnfurl.MapBlokServer("/blok");
 
     Assert.Empty(GetMethods(noUnfurl, "/blok/unfurl"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(noUnfurl, "/blok/upload"));
+    Assert.Equal(WriteMethods, GetMethods(noUnfurl, "/blok/upload"));
     Assert.Empty(GetMethods(noUnfurl, "/blok/upload-by-url"));
   }
 

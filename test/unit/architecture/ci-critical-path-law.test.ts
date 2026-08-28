@@ -156,6 +156,7 @@ describe('CI critical-path law', () => {
     const requiredJobs = [
       'i18n',
       'lint',
+      'server-security',
       'server',
       'unit-tests',
       'validate-spec-coverage',
@@ -245,8 +246,27 @@ describe('CI critical-path law', () => {
         },
       },
       {
-        name: 'Test .NET server',
-        run: 'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+        name: 'Test .NET server with coverage',
+        run: [
+          'rm -rf .server-test-results .server-coverage',
+          'dotnet test packages/server/dotnet/Blok.Server.slnx \\',
+          '  --configuration Release \\',
+          '  --collect:"Code Coverage;Format=Cobertura" \\',
+          '  --results-directory .server-test-results',
+        ].join('\n'),
+      },
+      {
+        name: 'Enforce .NET server coverage',
+        run: [
+          'dotnet tool restore',
+          'dotnet reportgenerator \\',
+          "  '-reports:.server-test-results/**/*.cobertura.xml' \\",
+          "  '-targetdir:.server-coverage' \\",
+          "  '-reporttypes:Cobertura;MarkdownSummaryGithub' \\",
+          "  '-assemblyfilters:+Blok.Server*;-*.Tests'",
+          'node scripts/check-server-coverage.mjs .server-coverage/Cobertura.xml',
+          'cat .server-coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"',
+        ].join('\n'),
       },
       {
         name: 'Check .NET formatting',
@@ -269,10 +289,12 @@ describe('CI critical-path law', () => {
         run: [
           'yarn vitest run --project=unit \\',
           '  test/unit/server/bin.test.ts \\',
+          '  test/unit/scripts/check-server-coverage.test.ts \\',
           '  test/unit/scripts/publish-server.test.ts \\',
           '  test/unit/scripts/verify-docs-release.test.ts \\',
           '  test/unit/scripts/release-cli.test.ts \\',
           '  test/unit/architecture/server-release-wiring.test.ts \\',
+          '  test/unit/architecture/server-quality-gates.test.ts \\',
           '  test/unit/architecture/ci-critical-path-law.test.ts \\',
           '  test/unit/architecture/package-metadata-law.test.ts',
         ].join('\n'),

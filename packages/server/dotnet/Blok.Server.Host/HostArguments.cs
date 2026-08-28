@@ -373,7 +373,7 @@ internal static class HostArguments
     }
   }
 
-  private static IList<string> SplitOrigins(string value)
+  private static string[] SplitOrigins(string value)
   {
     return value.Split(',')
         .Select(origin => origin.Trim())
@@ -406,7 +406,7 @@ internal static class HostArguments
 
   private static (string Host, string Port) SplitListenAddress(string listenAddress)
   {
-    if (listenAddress.StartsWith("[", StringComparison.Ordinal))
+    if (listenAddress.StartsWith('['))
     {
       var bracket = listenAddress.IndexOf(']');
 

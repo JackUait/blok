@@ -55,16 +55,16 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
     var engine = await engines.Reader.ReadAsync(cancellationToken);
     var reusable = true;
+    var returned = false;
+    string result;
 
     try
     {
-      var result = await engine.InvokeAsync(
+      result = (await engine.InvokeAsync(
           "blokServerInvoke",
           cancellationToken,
           operation,
-          inputJson);
-
-      return result.AsString();
+          inputJson)).AsString();
     }
     catch (OperationCanceledException)
     {
@@ -75,11 +75,15 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     {
       var returnedEngine = reusable ? engine : CreateEngine();
 
-      if (!engines.Writer.TryWrite(returnedEngine))
-      {
-        throw new InvalidOperationException("Could not return an engine to the Blok runtime pool.");
-      }
+      returned = engines.Writer.TryWrite(returnedEngine);
     }
+
+    if (!returned)
+    {
+      throw new InvalidOperationException("Could not return an engine to the Blok runtime pool.");
+    }
+
+    return result;
   }
 
   private Engine CreateEngine()

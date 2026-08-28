@@ -152,7 +152,7 @@ public sealed class OutboundClientArchitectureTests
                   var socket = new Socket(default, default, default);
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -188,7 +188,7 @@ public sealed class OutboundClientArchitectureTests
                   second = new HttpClient();
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -221,7 +221,7 @@ public sealed class OutboundClientArchitectureTests
                   client = new HttpClient(handler, disposeHandler: true);
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -313,6 +313,8 @@ public sealed class OutboundClientArchitectureTests
         }
 
         if (uses.Count(use =>
+                ClassifyS3Use(use) == S3UseSite.HandlerReturn) != 1 ||
+            uses.Count(use =>
                 ClassifyS3Use(use) == S3UseSite.HandlerCreation) != 1)
         {
           identifiers.Add("SocketsHttpHandler");
@@ -405,6 +407,17 @@ public sealed class OutboundClientArchitectureTests
     }
 
     if (use.Identifier == "SocketsHttpHandler" &&
+        use.Node.Parent is MethodDeclarationSyntax
+        {
+          Identifier.ValueText: "CreateHandler",
+          ReturnType: var returnType,
+        } &&
+        returnType == use.Node)
+    {
+      return S3UseSite.HandlerReturn;
+    }
+
+    if (use.Identifier == "SocketsHttpHandler" &&
         use.Node.Parent is ObjectCreationExpressionSyntax handlerCreation &&
         handlerCreation.Type == use.Node &&
         handlerCreation.FirstAncestorOrSelf<MethodDeclarationSyntax>() is
@@ -472,6 +485,7 @@ public sealed class OutboundClientArchitectureTests
     None,
     ClientField,
     ClientCreation,
+    HandlerReturn,
     HandlerCreation,
   }
 

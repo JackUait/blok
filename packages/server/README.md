@@ -115,6 +115,18 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl`; both upload routes require `write: true`. The `doc` claim is reserved for future document-scoped routes and does not scope today’s file or unfurl routes.
 
+## Quality gates
+
+The .NET solution keeps three test layers: `Blok.Server.Tests` for core behavior, `Blok.Server.AspNetCore.Tests` for in-process integration, and `Blok.Server.Host.Tests` for real-process end-to-end behavior. CI also runs the cross-runtime conformance and package smoke tests.
+
+```bash
+dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
+dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
+dotnet restore packages/server/dotnet/Blok.Server.slnx
+```
+
+CI collects merged production coverage and requires at least 85% line and 80% branch coverage. It also runs the SDK analyzers with warnings as errors, audits all direct and transitive NuGet packages, scans committed secrets with Gitleaks, scans the server tree and built image with Trivy, and analyzes C# with CodeQL. Dependabot keeps NuGet, Docker, and GitHub Actions dependencies current.
+
 ## Docs
 
 Full configuration and deployment guidance: [https://blokeditor.com/docs](https://blokeditor.com/docs)

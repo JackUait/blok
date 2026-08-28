@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic ticket fixtures"
+paths = ['''^test/unit/server-conformance/fixtures/tickets\.json$''']

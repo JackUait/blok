@@ -125,8 +125,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
       var response = await GetCoreAsync(
           rawUrl,
           limits,
-          deadline.Token,
-          concurrency);
+          concurrency,
+          deadline.Token);
       permitOwned = false;
 
       return response;
@@ -162,8 +162,8 @@ internal sealed class GuardedOutboundFetcher : IGuardedOutboundFetcher
   private async ValueTask<GuardedResponse> GetCoreAsync(
       string rawUrl,
       GuardedFetchLimits limits,
-      CancellationToken cancellationToken,
-      SemaphoreSlim concurrencyPermit)
+      SemaphoreSlim concurrencyPermit,
+      CancellationToken cancellationToken)
   {
     var redirects = 0;
 

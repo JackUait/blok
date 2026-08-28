@@ -67,6 +67,58 @@ jobs:
             node_modules/.cache/blok-lint.tsbuildinfo
           key: ${{ steps.lint-cache.outputs.cache-primary-key }}
 
+  server-security:
+    name: Server Security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Audit NuGet dependencies
+        run: dotnet restore packages/server/dotnet/Blok.Server.slnx
+
+      - name: Scan committed secrets
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+
+      - name: Scan server vulnerabilities and configuration
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: packages/server
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: 'false'
+          format: table
+          exit-code: '1'
+
+      - name: Build server container image
+        run: docker build --tag blok-server:ci --file packages/server/Dockerfile .
+
+      - name: Scan server container image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: image
+          image-ref: blok-server:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: 'false'
+          format: table
+          exit-code: '1'
+
   server:
     name: Server
     runs-on: ubuntu-latest
@@ -82,8 +134,24 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Test .NET server
-        run: dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
+      - name: Test .NET server with coverage
+        run: |
+          rm -rf .server-test-results .server-coverage
+          dotnet test packages/server/dotnet/Blok.Server.slnx \
+            --configuration Release \
+            --collect:"Code Coverage;Format=Cobertura" \
+            --results-directory .server-test-results
+
+      - name: Enforce .NET server coverage
+        run: |
+          dotnet tool restore
+          dotnet reportgenerator \
+            '-reports:.server-test-results/**/*.cobertura.xml' \
+            '-targetdir:.server-coverage' \
+            '-reporttypes:Cobertura;MarkdownSummaryGithub' \
+            '-assemblyfilters:+Blok.Server*;-*.Tests'
+          node scripts/check-server-coverage.mjs .server-coverage/Cobertura.xml
+          cat .server-coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check .NET formatting
         run: dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
@@ -101,10 +169,12 @@ jobs:
         run: |
           yarn vitest run --project=unit \
             test/unit/server/bin.test.ts \
+            test/unit/scripts/check-server-coverage.test.ts \
             test/unit/scripts/publish-server.test.ts \
             test/unit/scripts/verify-docs-release.test.ts \
             test/unit/scripts/release-cli.test.ts \
             test/unit/architecture/server-release-wiring.test.ts \
+            test/unit/architecture/server-quality-gates.test.ts \
             test/unit/architecture/ci-critical-path-law.test.ts \
             test/unit/architecture/package-metadata-law.test.ts
 

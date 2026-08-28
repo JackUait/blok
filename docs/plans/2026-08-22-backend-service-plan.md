@@ -1415,7 +1415,7 @@ func TestRejectsAnExpiredPass(t *testing.T) {
 // "alg": "none" is the oldest JWT hole there is. It must not be honoured.
 func TestRejectsTheNoneAlgorithm(t *testing.T) {
 	// {"alg":"none","typ":"JWT"} . {"user":"admin","exp":9999999999} . (empty)
-	token := "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWRtaW4iLCJleHAiOjk5OTk5OTk5OTl9."
+	token := "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJ1c2VyIjoiYWRtaW4iLCJleHAiOjk5OTk5OTk5OTl9." // gitleaks:allow
 
 	if _, err := ticket.Verify(secret, token, time.Unix(1_700_000_000, 0)); err == nil {
 		t.Fatal("err = nil, want a rejection")

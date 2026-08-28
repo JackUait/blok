@@ -1104,7 +1104,7 @@ public sealed class S3BlobStoreRequestTests
     const string dateStamp = "20250102";
     const string region = "eu-central-1";
     const string accessKey = "AKIAEXAMPLE";
-    const string secretKey = "wJalrXUtnFEMI/K7MDENG";
+    const string secretKey = "wJalrXUtnFEMI/K7MDENG"; // gitleaks:allow
     var canonicalHeaders = contentType is null
       ? $"host:{host}\n" +
         $"x-amz-content-sha256:{payloadHash}\n" +

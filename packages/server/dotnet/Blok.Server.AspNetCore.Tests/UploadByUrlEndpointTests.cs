@@ -533,9 +533,9 @@ public sealed class UploadByUrlEndpointTests
   }
 
   private static async Task WaitUntilCancelledAsync(
-      CancellationToken cancellationToken,
       TaskCompletionSource cancelled,
-      string dependency)
+      string dependency,
+      CancellationToken cancellationToken)
   {
     using var timeout = new CancellationTokenSource(
         TimeSpan.FromSeconds(6));
@@ -653,9 +653,9 @@ public sealed class UploadByUrlEndpointTests
       Entered.TrySetResult();
 
       await WaitUntilCancelledAsync(
-          cancellationToken,
           Cancelled,
-          "fetcher");
+          "fetcher",
+          cancellationToken);
 
       return Response ??
           throw new InvalidOperationException(
@@ -694,9 +694,9 @@ public sealed class UploadByUrlEndpointTests
       {
         Entered.TrySetResult();
         await WaitUntilCancelledAsync(
-            cancellationToken,
             Cancelled,
-            "store");
+            "store",
+            cancellationToken);
       }
 
       using var bytes = new MemoryStream();

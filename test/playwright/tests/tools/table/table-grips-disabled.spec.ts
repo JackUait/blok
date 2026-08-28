@@ -302,9 +302,10 @@ test.describe('Delete Button Disabled State and Heading Toggle Position', () => 
     await expect(page.getByRole('menuitem', { name: 'Insert column left', exact: true })).toBeVisible();
     await expect(page.getByText('Header column', { exact: true })).toHaveCount(0);
 
-    // Close the popover
+    // Close the popover and wait for its grip to finish hiding.
     await page.mouse.click(10, 10);
     await expect(page.locator('[data-blok-popover]')).toHaveCount(0);
+    await expect(page.locator('[data-blok-table-grip-visible]')).toHaveCount(0);
 
     // Hover the first cell in column 0 to show its grips.
     const firstCell = page.locator(`${CELL_SELECTOR} >> nth=0`);

@@ -251,7 +251,7 @@ public sealed class OutboundClientArchitectureTests
     Assert.Contains("HttpClient", violation, StringComparison.Ordinal);
   }
 
-  private static IReadOnlyList<string> FindViolations(
+  private static List<string> FindViolations(
       IReadOnlyList<SourceFile> sources)
   {
     var trees = sources

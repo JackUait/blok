@@ -1928,7 +1928,7 @@ public sealed class GuardedOutboundFetcherTests
           headers);
     }
 
-    private static bool EndsWithHeaders(IReadOnlyList<byte> bytes)
+    private static bool EndsWithHeaders(List<byte> bytes)
     {
       return bytes.Count >= 4 &&
           bytes[^4] == '\r' &&

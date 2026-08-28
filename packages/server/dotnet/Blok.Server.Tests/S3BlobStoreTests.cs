@@ -1682,7 +1682,7 @@ public sealed class S3BlobStoreRequestTests
     }
 
     private static bool EndsWithHeaderTerminator(
-        IReadOnlyList<byte> bytes)
+        List<byte> bytes)
     {
       return bytes.Count >= 4 &&
           bytes[^4] == '\r' &&

@@ -416,35 +416,38 @@ test.describe('modules/selection', () => {
     ]);
 
     const paragraph = getParagraphByIndex(page, 0);
-
-    await selectText(paragraph, 'bold');
-
     const paragraphText = (await paragraph.innerText()).trim();
 
-    const apiResults = await page.evaluate(({ fakeBackgroundSelector }) => {
+    const apiResults = await paragraph.evaluate((element, { fakeBackgroundSelector }) => {
       const blok = window.blokInstance;
+      const selection = window.getSelection();
+      const strong = element.querySelector('strong');
+      const paragraphEl = element.querySelector('[contenteditable]');
+      const strongTextNode = strong?.firstChild;
 
-      if (!blok) {
-        throw new Error('Blok instance is not ready');
+      if (!blok || !selection || !(paragraphEl instanceof HTMLElement) || !(strongTextNode instanceof Text)) {
+        throw new Error('Selection test setup is not ready');
       }
 
-      const selection = window.getSelection();
+      const selectedRange = document.createRange();
 
-      const savedText = selection?.toString() ?? '';
+      selectedRange.selectNodeContents(strongTextNode);
+      selection.removeAllRanges();
+      selection.addRange(selectedRange);
+
+      const savedText = selection.toString();
 
       blok.selection.save();
+      selection.removeAllRanges();
 
-      selection?.removeAllRanges();
+      const textNode = paragraphEl.firstChild;
 
-      const paragraphEl = document.querySelector('[data-blok-testid="block-wrapper"] [contenteditable]');
-      const textNode = paragraphEl?.firstChild as Text | null;
-
-      if (textNode) {
+      if (textNode instanceof Text) {
         const range = document.createRange();
 
         range.setStart(textNode, textNode.textContent?.length ?? 0);
         range.collapse(true);
-        selection?.addRange(range);
+        selection.addRange(range);
       }
 
       blok.selection.restore();
@@ -452,9 +455,7 @@ test.describe('modules/selection', () => {
       const restored = window.getSelection()?.toString() ?? '';
       const strongTag = blok.selection.findParentTag('STRONG');
 
-      if (paragraphEl instanceof HTMLElement) {
-        blok.selection.expandToTag(paragraphEl);
-      }
+      blok.selection.expandToTag(paragraphEl);
 
       const expanded = window.getSelection()?.toString() ?? '';
 

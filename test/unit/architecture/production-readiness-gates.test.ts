@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 
 type WorkflowValue = boolean | number | string;
@@ -64,6 +64,14 @@ const needsList = (value: string | string[] | undefined): string[] =>
   typeof value === 'string' ? [value] : value ?? [];
 
 describe('production readiness gates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('has one blocking CI result covering every release-critical job', () => {
     const ci = workflow('.github/workflows/ci.yml');
     const readiness = job(ci, 'production-readiness');
@@ -198,6 +206,9 @@ describe('production readiness gates', () => {
     const matrix = job(ci, 'e2e-tests').strategy?.matrix?.include ?? [];
     const projects = new Set(matrix.map(entry => entry.project));
     const visual = job(ci, 'visual-regression');
+    const visualDiagnostics = visual.steps?.find(
+      step => step.name === 'Upload visual regression diagnostics'
+    );
     const readiness = job(ci, 'production-readiness');
 
     expect(projects).toContain('chromium-default');
@@ -206,11 +217,10 @@ describe('production readiness gates', () => {
       step.run?.includes('BLOK_VISUAL=1') === true &&
       step.run.includes('test/playwright/tests/visual-regression')
     )).toBe(true);
-    expect(visual.steps?.some(step =>
-      step.if === 'failure()' &&
-      step.uses?.startsWith('actions/upload-artifact@') === true &&
-      step.with?.path === 'test-results/'
-    )).toBe(true);
+    expect(visualDiagnostics?.if).toBe('failure()');
+    expect(visualDiagnostics?.uses?.startsWith('actions/upload-artifact@')).toBe(true);
+    expect(visualDiagnostics?.with?.name).toBe('visual-regression-${{ github.run_attempt }}');
+    expect(visualDiagnostics?.with?.path).toBe('test-results/');
     expect(needsList(readiness.needs)).toContain('visual-regression');
     expect(read('playwright.config.ts')).toContain('failOnFlakyTests: true');
     expect(read('scripts/validate-test-categories.mjs')).toContain(

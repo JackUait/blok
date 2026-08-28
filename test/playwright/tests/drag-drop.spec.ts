@@ -2812,6 +2812,7 @@ test.describe('drag and drop', () => {
       await page.clock.fastForward(500);
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
+      await page.clock.resume();
       await page.mouse.up();
     });
 

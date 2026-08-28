@@ -23,14 +23,16 @@ const workflow = parse(
 ) as Workflow;
 
 describe('docs deployment workflow', () => {
-  it('runs push checks only for documentation inputs', () => {
-    expect(workflow.on.push).toEqual({
-      branches: ['**'],
-      paths: ['docs/**', 'CHANGELOG.md'],
+  it('runs after the CI workflow completes on main', () => {
+    expect(workflow.on.workflow_run).toEqual({
+      workflows: ['CI'],
+      types: ['completed'],
+      branches: ['main'],
     });
+    expect(workflow.on).not.toHaveProperty('push');
   });
 
-  it('deploys on published releases, manual runs, and main pushes', () => {
+  it('deploys on published releases and manual runs too', () => {
     expect(workflow.on.release).toEqual({ types: ['published'] });
     expect(workflow.on.workflow_dispatch).toEqual({
       inputs: {
@@ -43,18 +45,21 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('skips release verification for docs-only deployments', () => {
+  it('requires successful CI and skips release verification for CI deployments', () => {
+    expect(workflow.jobs['docs-tests'].if).toBe(
+      "github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
+    );
     expect(workflow.jobs['verify-release'].if).toBe(
       "github.event_name == 'release' || inputs.release_tag != ''",
     );
     expect(workflow.jobs.build.needs).toEqual(['docs-tests', 'verify-release']);
-    // A skipped `needs` job skips its dependents unless the dependent's own `if`
-    // accepts that result, so the build must treat a skipped verify-release as OK.
+    // A skipped `needs` job skips its dependents unless the dependent accepts it.
     expect(workflow.jobs.build.if).toBe(
       '${{ !cancelled()'
       + " && needs.docs-tests.result == 'success'"
       + " && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')"
-      + " && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}",
+      + " && (github.event_name != 'workflow_run'"
+      + " || github.event.workflow_run.conclusion == 'success') }}",
     );
   });
 
@@ -66,7 +71,9 @@ describe('docs deployment workflow', () => {
       (step) => step.name === 'Verify published package family',
     );
     const selectedRef =
-      "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}";
+      "${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha"
+      + " || github.event_name == 'release' && github.event.release.tag_name"
+      + ' || inputs.release_tag || github.ref }}';
 
     expect(checkout?.with?.ref).toBe(selectedRef);
     expect(verification).toMatchObject({
@@ -78,7 +85,7 @@ describe('docs deployment workflow', () => {
     });
   });
 
-  it('tests and builds the selected tag without changing ordinary manual refs', () => {
+  it('tests and builds the exact CI head SHA while preserving release and manual refs', () => {
     const docsTestCheckout = workflow.jobs['docs-tests'].steps?.find(
       (step) => step.uses === 'actions/checkout@v4',
     );
@@ -86,7 +93,9 @@ describe('docs deployment workflow', () => {
       (step) => step.uses === 'actions/checkout@v4',
     );
     const selectedRef =
-      "${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}";
+      "${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha"
+      + " || github.event_name == 'release' && github.event.release.tag_name"
+      + ' || inputs.release_tag || github.ref }}';
 
     expect(docsTestCheckout?.with?.ref).toBe(selectedRef);
     expect(buildCheckout?.with?.ref).toBe(selectedRef);

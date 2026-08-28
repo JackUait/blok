@@ -1,26 +1,16 @@
 /**
  * Architectural enforcement: the docs deploy must fail if prerendering silently
- * regresses to a shell, and it must be reachable without a release.
+ * regresses to a shell, and ordinary main deployments must use the commit that
+ * CI verified.
  *
- * Two incidents motivate this. First: the docs site shipped for months as a
- * client-rendered SPA whose deployed HTML was an empty `<div id="root">` — a
- * deep link answered 200 with no prose in the body, so every crawler that does
- * not execute JavaScript (which is all of them except Googlebot and Applebot)
- * saw nothing. The fix was React Router's `prerender`, which writes a real HTML
- * file per URL. But a prerender regression is INVISIBLE from CI: the build still
- * succeeds, the files still exist, they are just empty again — so the guard has
- * to be an assertion on the built artifact, in the job that builds it.
- * Second: `verify-release` checks that the npm package family for a release tag
- * is published. That question is meaningless for a docs-only change, and a
- * skipped `needs` job skips its dependents by default, so the docs deploy has to
- * accept `skipped` explicitly or content changes can never ship on their own.
- *
- * The law: the build job asserts, BEFORE uploading, that a known prerendered
+ * The law: the build job asserts, before uploading, that a known prerendered
  * page carries real markup and that robots.txt and sitemap.xml are in the
- * artifact; and no job outside RELEASE_GATED_JOBS may be gated on a release
- * event. Unit tests cannot see `docs/dist` (it does not exist during a unit
- * run), so the assertion lives in the workflow and this law asserts the workflow
- * still carries it — the same YAML-parsing pattern as `ci-critical-path-law.test.ts`.
+ * artifact. Main deployments start from a successful CI workflow run and every
+ * checkout uses that run's exact head SHA. Release and manual deployments remain
+ * available, with release verification skipped only when it does not apply.
+ *
+ * Unit tests cannot see `docs/dist` during a unit run, so the artifact assertion
+ * lives in the workflow and this law asserts that the workflow still carries it.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -45,9 +35,13 @@ type Job = {
 
 type Workflow = {
   on?: {
-    push?: { branches?: string[]; paths?: string[] };
+    workflow_run?: {
+      workflows?: string[];
+      types?: string[];
+      branches?: string[];
+    };
     release?: { types?: string[] };
-    workflow_dispatch?: null;
+    workflow_dispatch?: null | Record<string, unknown>;
   };
   jobs: Record<string, Job>;
 };
@@ -67,6 +61,11 @@ const PRERENDER_PROBE_FILE = `${ARTIFACT_ROOT}${PRERENDER_PROBE_ROUTE}/index.htm
 /** Files that make the site crawlable at all, so their absence must fail the deploy. */
 const REQUIRED_ARTIFACT_FILES = [`${ARTIFACT_ROOT}/robots.txt`, `${ARTIFACT_ROOT}/sitemap.xml`];
 
+const WORKFLOW_RUN_CHECKOUT_REF =
+  "${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha"
+  + " || github.event_name == 'release' && github.event.release.tag_name"
+  + ' || inputs.release_tag || github.ref }}';
+
 /**
  * Jobs allowed to run only for a `release` event, each with the written reason
  * it cannot also gate an ordinary docs deploy. An empty reason fails the test
@@ -75,7 +74,7 @@ const REQUIRED_ARTIFACT_FILES = [`${ARTIFACT_ROOT}/robots.txt`, `${ARTIFACT_ROOT
 const RELEASE_GATED_JOBS: Record<string, string> = {
   'verify-release':
     'Asserts the npm package family matching the release tag is published, so the docs never ' +
-    'advertise a version nobody can install. There is no tag on a docs-only push, so the check ' +
+    'advertise a version nobody can install. There is no tag on a CI workflow run, so the check ' +
     'is meaningless there — it is skipped, and the build job accepts `skipped` so content still ships.',
 };
 
@@ -138,9 +137,28 @@ describe('docs deploy law — the artifact is verified before it ships', () => {
 });
 
 describe('docs deploy law — reachable without a release', () => {
-  it('triggers on a docs push and on demand, not only on a release', () => {
-    expect(workflow.on?.push?.paths, 'a docs-only change must be able to deploy itself').toContain('docs/**');
+  it('triggers from CI on main and on demand, not only on a release', () => {
+    expect(workflow.on?.workflow_run).toEqual({
+      workflows: ['CI'],
+      types: ['completed'],
+      branches: ['main'],
+    });
     expect(workflow.on).toHaveProperty('workflow_dispatch');
+  });
+
+  it('requires a successful CI run before testing or building docs', () => {
+    expect(getJob('docs-tests').if).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(build.if).toContain("github.event.workflow_run.conclusion == 'success'");
+  });
+
+  it('checks out the exact commit that CI verified', () => {
+    for (const id of ['docs-tests', 'build']) {
+      const checkout = getJob(id).steps?.find((step) => step.uses === 'actions/checkout@v4');
+
+      expect(checkout?.with?.ref, `${id} must check out the workflow_run head SHA`).toBe(
+        WORKFLOW_RUN_CHECKOUT_REF,
+      );
+    }
   });
 
   it('gates only the exempted jobs on a release event', () => {
@@ -151,7 +169,7 @@ describe('docs deploy law — reachable without a release', () => {
 
     expect(
       releaseGated,
-      'a job gated on `release` blocks every docs-only deploy unless it is listed in ' +
+      'a job gated on `release` blocks every CI deploy unless it is listed in ' +
         'RELEASE_GATED_JOBS with the reason it is release-only',
     ).toEqual(Object.keys(RELEASE_GATED_JOBS).sort());
   });
@@ -161,7 +179,7 @@ describe('docs deploy law — reachable without a release', () => {
       .filter(([, reason]) => reason.trim().length === 0)
       .map(([id]) => id);
 
-    expect(unjustified, 'every release gate must state why it cannot run on a docs push').toEqual([]);
+    expect(unjustified, 'every release gate must state why it cannot run after CI').toEqual([]);
   });
 
   it('lets the build proceed when the release-only job is skipped', () => {
@@ -170,7 +188,7 @@ describe('docs deploy law — reachable without a release', () => {
     for (const id of Object.keys(RELEASE_GATED_JOBS)) {
       expect(
         build.if,
-        `build must accept a skipped ${id}, or a docs-only change can never deploy`,
+        `build must accept a skipped ${id}, or a successful CI run can never deploy`,
       ).toContain(`needs.${id}.result == 'skipped'`);
     }
   });
@@ -180,14 +198,8 @@ describe('docs deploy law — reachable without a release', () => {
   });
 
   it('publishes when the build succeeded despite an upstream skip', () => {
-    // GitHub propagates a skip TRANSITIVELY: `verify-release` is skipped on a
-    // docs push, so `deploy` is skipped too — even though `build` overrode the
-    // propagation for itself and ran to green. Observed on run 29891179538
-    // (commit f4d5fd05): docs-tests success, build success, deploy SKIPPED, and
-    // the last real publish stayed at tag v1.3.0. Every docs deploy since the
-    // build was ungated has built, verified its artifact, and published nothing.
-    // Overriding the condition one level deep is not enough; the terminal job
-    // needs it too.
+    // A skipped release check propagates through the dependency chain unless
+    // the terminal deploy job accepts a successful build explicitly.
     expect(
       getJob('deploy').if,
       'deploy must override the transitive skip, or a green docs build publishes nothing',

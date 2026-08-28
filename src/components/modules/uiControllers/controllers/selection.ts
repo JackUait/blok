@@ -23,8 +23,12 @@ export class SelectionController extends Controller {
    * Handle selection change to manipulate Inline Toolbar appearance
    */
   private selectionChangeDebounced = debounce(() => {
-    this.handleSelectionChange();
+    if (this.isEnabled) {
+      this.handleSelectionChange();
+    }
   }, selectionChangeDebounceTimeout);
+
+  private isEnabled = false;
 
   /**
    * Set the wrapper element for selection change handling
@@ -74,10 +78,19 @@ export class SelectionController extends Controller {
    * Enable selection change listeners
    */
   public override enable(): void {
+    this.isEnabled = true;
     this.listeners.on(document, 'selectionchange', this.selectionChangeDebounced);
     this.listeners.on(document, 'pointerdown', this.handlePointerDown);
     this.listeners.on(document, 'pointerup', this.handlePointerUp);
     this.listeners.on(document, 'pointercancel', this.handlePointerCancel);
+  }
+
+  /**
+   * Disable selection change listeners and queued work
+   */
+  public override disable(): void {
+    this.isEnabled = false;
+    super.disable();
   }
 
   /**

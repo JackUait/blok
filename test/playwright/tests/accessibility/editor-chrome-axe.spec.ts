@@ -37,6 +37,10 @@ const NESTED_POPOVER = '[data-blok-nested="true"]';
 const BLOCK_COLOR_PICKER = '[data-blok-testid="block-color-picker"]';
 const LINK_INPUT = '[data-blok-testid="inline-tool-input"]';
 
+const expectPopoverSettled = async (popover: Locator): Promise<void> => {
+  await expect(popover).toHaveCSS('opacity', '1');
+};
+
 declare global {
   interface Window {
     blokInstance?: Blok;
@@ -431,6 +435,7 @@ test.describe('editor chrome accessibility', () => {
       await expect(nested).toBeVisible();
       await expect(convertTo).toHaveAttribute('aria-expanded', 'true');
       await expect(nested.locator(VISIBLE_POPOVER_ITEM).first()).toBeVisible();
+      await expectPopoverSettled(nested);
 
       await expectNoA11yViolations(page, {
         include: NESTED_POPOVER,
@@ -478,9 +483,11 @@ test.describe('editor chrome accessibility', () => {
       await colorItem.dispatchEvent('mouseover');
 
       const picker = page.locator(BLOCK_COLOR_PICKER);
+      const nested = page.locator(`${BLOCK_TUNES_POPOVER_SELECTOR} ${NESTED_POPOVER} ${POPOVER_CONTAINER}`);
 
       await expect(picker).toBeVisible();
       await expect(picker.getByRole('button').first()).toBeVisible();
+      await expectPopoverSettled(nested);
 
       await expectNoA11yViolations(page, {
         include: BLOCK_COLOR_PICKER,

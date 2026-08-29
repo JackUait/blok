@@ -25,6 +25,9 @@ import type {
   BlokStyleConfig,
   BlokLinkConfig,
   OutputData,
+  PersistedDocument,
+  SaveContext,
+  SaveResult,
 } from '../../../types';
 
 /** True only when `A` and `B` are mutually assignable (structurally identical). */
@@ -65,3 +68,22 @@ declare const saveHandler: OnSaveHandler;
 declare const doc: OutputData;
 declare const api: API;
 saveHandler(doc, api);
+
+/**
+ * `persistence` is written by hand far more often than it is read back, and its
+ * members have to be nameable for that: a wrapper holding the version between a
+ * load and a save needs the type, not an index-access into
+ * `BlokConfig['persistence']` that breaks the day the key is restructured.
+ */
+type Persistence = NonNullable<BlokConfig['persistence']>;
+
+const _persistedDocument: Exact<
+  OutputData | PersistedDocument | null,
+  Awaited<ReturnType<Persistence['load']>>
+> = true;
+const _saveContext: Exact<SaveContext, Parameters<Persistence['save']>[1]> = true;
+const _saveResult: Exact<SaveResult | void, Awaited<ReturnType<Persistence['save']>>> = true;
+
+void _persistedDocument;
+void _saveContext;
+void _saveResult;

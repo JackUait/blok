@@ -23,7 +23,86 @@ describe('expandPersistenceConfig', () => {
 
     result.onSave?.(DOC, API_STUB);
 
-    expect(save).toHaveBeenCalledWith(DOC);
+    expect(save).toHaveBeenCalledWith(DOC, { version: null });
+  });
+
+  // The version is what a consumer's endpoint needs for an `If-Match`. Blok
+  // only carries it between load and save — it never compares two versions and
+  // never resolves a conflict, because it does not own the stored document.
+  it('passes a null version when the loaded document reported none', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({ persistence: { load: async () => DOC, save } });
+
+    await result.persistence?.load();
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenCalledWith(DOC, { version: null });
+  });
+
+  it('passes the version load reported', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 'v1' }), save },
+    });
+
+    await result.persistence?.load();
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenCalledWith(DOC, { version: 'v1' });
+  });
+
+  it('passes the version a save returned to the next save', async () => {
+    const save = vi.fn()
+      .mockResolvedValueOnce({ version: 'v2' })
+      .mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 'v1' }), save },
+    });
+
+    await result.persistence?.load();
+
+    result.onSave?.(DOC, API_STUB);
+    expect(save).toHaveBeenNthCalledWith(1, DOC, { version: 'v1' });
+
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+    expect(save).toHaveBeenNthCalledWith(2, { ...DOC, time: 2 }, { version: 'v2' });
+  });
+
+  // An endpoint that does not version returns nothing at all: the version it
+  // was given must survive, or a versioned store would lose it on the first
+  // save that answered with an empty body.
+  it('keeps the previous version when a save returns nothing', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => ({ data: DOC, version: 'v1' }), save },
+    });
+
+    await result.persistence?.load();
+
+    result.onSave?.(DOC, API_STUB);
+    result.onSave?.({ ...DOC, time: 2 }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+    expect(save).toHaveBeenNthCalledWith(2, { ...DOC, time: 2 }, { version: 'v1' });
+  });
+
+  // Every documented example returns the document itself; the envelope is opt-in.
+  it('accepts a bare document from load and hands it back unchanged', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const result = expandPersistenceConfig({ persistence: { load: async () => DOC, save } });
+
+    await expect(result.persistence?.load()).resolves.toEqual(DOC);
+
+    result.onSave?.(DOC, API_STUB);
+
+    expect(save).toHaveBeenCalledWith(DOC, { version: null });
   });
 
   // Loading is NOT wired into `data`: that key is read synchronously while the

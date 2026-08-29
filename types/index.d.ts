@@ -121,6 +121,9 @@ export {
   BlokUploader,
   UploadContext,
   UploadedAsset,
+  PersistedDocument,
+  SaveContext,
+  SaveResult,
 } from './configs';
 
 export * from './utils/popover';

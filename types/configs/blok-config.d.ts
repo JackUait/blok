@@ -10,6 +10,38 @@ import type { BlokUploader } from './uploader';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
 /**
+ * The versioned answer {@link BlokConfig.persistence}'s `load` may give instead
+ * of the document itself, for a store that versions its documents.
+ */
+export interface PersistedDocument {
+  /** The saved document, or `null` for "nothing saved yet". */
+  data: OutputData | null;
+  /** Whatever your store versions with — an ETag, a revision number, a hash. */
+  version?: string;
+}
+
+/**
+ * Second argument of {@link BlokConfig.persistence}'s `save`.
+ */
+export interface SaveContext {
+  /**
+   * The version of the document this save overwrites: what `load` reported,
+   * then what the previous `save` returned. `null` until a version is known —
+   * including forever, for an endpoint that does not version.
+   */
+  version: string | null;
+}
+
+/**
+ * What {@link BlokConfig.persistence}'s `save` may answer with. Returning
+ * nothing is fine and leaves the version Blok holds untouched.
+ */
+export interface SaveResult {
+  /** The version the write produced. Omit it and the previous one stands. */
+  version?: string;
+}
+
+/**
  * Data model format for input/output
  * - 'legacy': Use nested items structure (e.g., List items[] with nested items[])
  * - 'hierarchical': Use flat blocks with parent/content references (Notion-like)
@@ -564,17 +596,42 @@ export interface BlokMountOptions {
    * stale content back.
    *
    * Setting `onSave` yourself wins: this fills it in only when you have not.
+   *
+   * Versioning is opt-in and Blok only CARRIES the version: `load` may report
+   * one, every `save` is told the version it is overwriting, and the version a
+   * `save` returns is what the next one is told. Deciding that a write is stale
+   * is your endpoint's job — it owns the storage and the transaction, and Blok
+   * storing a second opinion about a record it does not keep would be a second
+   * source of truth.
    * @example
    * persistence: {
    *   load: () => fetch('/api/doc/42').then((r) => r.json()),
-   *   save: (data) => fetch('/api/doc/42', { method: 'PUT', body: JSON.stringify(data) }),
+   *   save: async (data) => { await fetch('/api/doc/42', { method: 'PUT', body: JSON.stringify(data) }); },
+   * }
+   * @example
+   * // Versioned: an ETag in, an ETag out.
+   * persistence: {
+   *   load: async () => {
+   *     const response = await fetch('/api/doc/42');
+   *
+   *     return { data: await response.json(), version: response.headers.get('etag') ?? undefined };
+   *   },
+   *   save: async (data, { version }) => {
+   *     const response = await fetch('/api/doc/42', {
+   *       method: 'PUT',
+   *       headers: version === null ? {} : { 'If-Match': version },
+   *       body: JSON.stringify(data),
+   *     });
+   *
+   *     return { version: response.headers.get('etag') ?? undefined };
+   *   },
    * }
    */
   persistence?: {
     /** Read the document. Return null for "nothing saved yet". */
-    load(): Promise<OutputData | null>;
+    load(): Promise<OutputData | PersistedDocument | null>;
     /** Write the document. Called at most once at a time. */
-    save(data: OutputData): Promise<void>;
+    save(data: OutputData, ctx: SaveContext): Promise<SaveResult | void>;
     /** Called when a save rejects. Without it, failures are silent. */
     onError?(error: unknown): void;
   };

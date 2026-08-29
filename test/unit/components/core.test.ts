@@ -453,6 +453,35 @@ describe('Core', () => {
       expect(core.configuration.data?.blocks).toHaveLength(1);
       expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
     });
+
+    // A store that versions its documents answers with an envelope around the
+    // document. What renders is what is inside it.
+    it('renders the document a versioned load wrapped', async () => {
+      const load = vi.fn().mockResolvedValue({ data: SAVED, version: 'v1' });
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(core.configuration.data?.blocks).toEqual([expect.objectContaining({ data: { text: 'saved' } })]);
+      expect(mockRendererRender).toHaveBeenCalledWith([expect.objectContaining({ data: { text: 'saved' } })]);
+    });
+
+    // `{ data: null }` is "nothing saved yet", not "an empty document that has
+    // a version" — rendering the envelope would put a blank document on screen
+    // and autosave would then write it over whatever the store really holds.
+    it('treats a versioned envelope holding no document as nothing saved yet', async () => {
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: {
+          load: async () => ({ data: null, version: 'v1' }),
+          save: async (): Promise<void> => {},
+        },
+      });
+
+      expect(core.configuration.data?.blocks).toHaveLength(1);
+      expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
+    });
   });
 
   describe('render', () => {

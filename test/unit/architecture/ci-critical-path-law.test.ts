@@ -346,7 +346,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           name: 'dist',
           path: '.',
@@ -516,7 +516,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download all blob reports',
-        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           path: 'all-blob-reports',
           pattern: 'blob-report-*',
@@ -585,7 +585,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           name: '${{ inputs.artifact-name }}',
           path: '.',

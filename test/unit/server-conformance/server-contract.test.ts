@@ -1796,3 +1796,105 @@ it('bounds and validates the upload-by-url JSON envelope', async () => {
     await origin.stop();
   }
 });
+
+it('deletes a stored asset and refuses a URL it did not issue', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const bytes = Buffer.from('asset to be swept');
+      const upload = createMultipartUpload({ bytes, fileName: 'photo.png', mimeType: 'image/png' });
+      const stored = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+      const payload = requireUploadResponse(stored.json);
+      const storedPath = new URL(payload.url).pathname;
+      const storedName = storedPath.split('/').at(-1) ?? '';
+
+      expect(stored.status).toBe(200);
+      expect(await readdir(directory)).toEqual([storedName]);
+
+      const foreign = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `https://cdn.example.test/files/${storedName}` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const ungenerated = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `${server.baseUrl}/files/notes.txt` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const traversal = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `${server.baseUrl}/files/../${storedName}` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const wrongMedia = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'text/plain' },
+      });
+      const malformed = await server.request('POST', '/delete', {
+        body: '{}',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      for (const response of [foreign, ungenerated, traversal]) {
+        expect(response).toMatchObject({
+          status: 404,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+          text: 'not found\n',
+        });
+      }
+      expect(wrongMedia).toMatchObject({
+        status: 415,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'expected application/json\n',
+      });
+      expect(malformed).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'expected {"url": "..."}\n',
+      });
+      expect(await readdir(directory)).toEqual([storedName]);
+
+      const deleted = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'application/json' },
+        parseJson: true,
+      });
+
+      expect(deleted).toMatchObject({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        json: { success: 1 },
+        text: '{"success":1}\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
+      expect(await server.request('GET', storedPath)).toMatchObject({ status: 404 });
+
+      const repeated = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(repeated.status).toBeLessThan(500);
+      expect(repeated).toMatchObject({ status: deleted.status, text: deleted.text });
+    });
+  });
+});
+
+it('unregisters the delete route when storage is absent', async () => {
+  await withServer(serverArgs('--storage-dir', ''), async (server) => {
+    const requests = await Promise.all([
+      server.request('POST', '/delete', {
+        body: '{"url":"https://cdn.example.test/files/x"}',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      server.request('OPTIONS', '/delete', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+    ]);
+
+    for (const response of requests) {
+      expect(response).toMatchObject({
+        status: 404,
+        text: '404 page not found\n',
+      });
+    }
+  });
+});

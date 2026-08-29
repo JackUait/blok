@@ -484,12 +484,13 @@ start rather than warn.
 
 `packages/server/package.json` has **no `scripts` block at all**, so Step 2 has nothing to run.
 Before writing the test, add `"test": "yarn run -T vitest run"` and a `vitest.config.ts`
-copied from `packages/presets`. Nothing else — the build half stays in Step 4, where it can be
-driven by a signer that already works.
+copied from `packages/presets` — keep its `cacheDir` redirect, which exists because
+`packages/*/node_modules` is not gitignored. Nothing else: the build half stays in Step 4,
+where a working signer can drive it.
 
-```bash
-yarn workspace @bloklabs/server test   # 0 tests, exits clean
-```
+Do not run it yet. Vitest exits 1 when it finds no test files, and none of these configs set
+`passWithNoTests` — so an empty package looks identical to a broken one. Step 2 is the first
+meaningful run, and what it must show is a failing assertion, not a missing command.
 
 - [ ] **Step 1: Write the failing test**
 

@@ -16,7 +16,7 @@ const RELEASE_WORKFLOW = '.github/workflows/release-server.yml';
 const SETUP_NODE_ACTION = '.github/actions/setup-node-deps/action.yml';
 const CHECKOUT_ACTION = 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262';
 const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9';
-const LOGIN_ACTION = 'docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9';
+const LOGIN_ACTION = 'docker/login-action@dbcb813823bdd20940b903addbd779551569679f';
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const SERVER_ARCHIVES = [
   'blok-server_darwin_amd64.tar.gz',

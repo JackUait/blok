@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { expandPersistenceConfig } from '../../../../src/components/utils/persistence';
+import { expandPersistenceConfig, releasePersistenceQueue } from '../../../../src/components/utils/persistence';
 import { orphanSweepFor } from '../../../../src/components/utils/orphan-sweep';
 import type { API, BlokConfig, OutputData } from '../../../../types';
 
@@ -375,6 +375,98 @@ describe('expandPersistenceConfig', () => {
 
     expect(detachedHandler).toBe(attachedHandler);
     expect(fireBeforeUnload()).toBe(false);
+  });
+
+  // The queue detaches its own listener when it runs out of work, which covers
+  // every case but one: an editor destroyed while a save is still unwritten.
+  // In a single-page app that leaked listener asks the user to confirm every
+  // later navigation, for an editor that is no longer on the page.
+  it('removes the unload guard when released with a save in flight', async () => {
+    vi.useFakeTimers();
+
+    const gate: { reject: ((reason: Error) => void) | null } = { reject: null };
+    const save = vi.fn().mockImplementation(() => new Promise<void>((_resolve, reject) => {
+      gate.reject = reject;
+    }));
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => null, save, onError: vi.fn() },
+    });
+
+    result.onSave?.(DOC, API_STUB);
+
+    expect(fireBeforeUnload()).toBe(true);
+
+    releasePersistenceQueue(result.persistence);
+
+    expect(fireBeforeUnload()).toBe(false);
+
+    // The save the destroyed editor left behind still runs to its end: it
+    // rejects, retries, and parks. None of that bookkeeping may put back the
+    // listener the release just took off.
+    save.mockRejectedValue(new Error('offline'));
+    gate.reject?.(new Error('offline'));
+    await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+    expect(fireBeforeUnload()).toBe(false);
+  });
+
+  it('removes the unload guard when released with a payload parked', async () => {
+    vi.useFakeTimers();
+
+    const save = vi.fn().mockRejectedValue(new Error('offline'));
+
+    const result = expandPersistenceConfig({
+      persistence: { load: async () => null, save, onError: vi.fn() },
+    });
+
+    result.onSave?.(DOC, API_STUB);
+    await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+    expect(save).toHaveBeenCalledTimes(ATTEMPTS);
+    expect(fireBeforeUnload()).toBe(true);
+
+    releasePersistenceQueue(result.persistence);
+
+    expect(fireBeforeUnload()).toBe(false);
+  });
+
+  // destroy() can be reached more than once, and two editors share one window:
+  // a release that removed anything but its own editor's listener would let a
+  // torn-down editor silence the guard of a live one.
+  it('releases twice without throwing and leaves another editor guarding', async () => {
+    const gates: Array<() => void> = [];
+    const save = vi.fn().mockImplementation(() => new Promise<void>((resolve) => {
+      gates.push(resolve);
+    }));
+
+    const mine = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+    const theirs = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+    mine.onSave?.(DOC, API_STUB);
+    theirs.onSave?.(DOC, API_STUB);
+
+    expect(fireBeforeUnload()).toBe(true);
+
+    releasePersistenceQueue(mine.persistence);
+    releasePersistenceQueue(mine.persistence);
+
+    expect(fireBeforeUnload()).toBe(true);
+
+    releasePersistenceQueue(theirs.persistence);
+
+    expect(fireBeforeUnload()).toBe(false);
+
+    gates.forEach((release) => release());
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+  });
+
+  // destroy() runs for every editor, and most of them never saw `persistence`:
+  // the release has to be a no-op for a config that has no queue behind it.
+  it('releases harmlessly for an editor that had no persistence', () => {
+    const config = expandPersistenceConfig({ holder: 'app' });
+
+    expect(() => releasePersistenceQueue(config.persistence)).not.toThrow();
   });
 
   // The sweep needs a reliable "the document was written" signal, and this

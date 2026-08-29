@@ -8,6 +8,9 @@ import { attachOrphanSweep, createOrphanSweep } from './orphan-sweep';
  */
 type LoadResult = OutputData | PersistedDocument | null;
 
+/** The expanded `persistence` block one editor's queue and sweep are keyed by. */
+type ExpandedPersistence = NonNullable<BlokConfig['persistence']>;
+
 /**
  * How long to wait before each retry of a rejecting save, in milliseconds. One
  * entry per retry, so a save gets three attempts in all.
@@ -37,6 +40,43 @@ export function unwrapPersistedDocument(loaded: LoadResult): OutputData | null {
   }
 
   return loaded;
+}
+
+/**
+ * One queue teardown per editor, keyed by the expanded `persistence` object
+ * the expansion built for it — the same handle the orphan sweep is keyed by,
+ * because it is still the only one both sides reach: the queue creates it, and
+ * the config carrying it is the config every module receives.
+ *
+ * A module-level disposer would be shared by every editor on the page, so
+ * destroying one would strip the unload guard of another that still has an
+ * unwritten save.
+ */
+const disposers = new WeakMap<ExpandedPersistence, () => void>();
+
+/**
+ * Drop the unload guard an editor's save queue is holding.
+ *
+ * The queue detaches its own listener whenever it runs out of work, which
+ * leaves exactly one case for `destroy()` to close: an editor torn down while
+ * a save is still unwritten. A listener that outlives its editor makes every
+ * later navigation in a single-page app ask the user to confirm a loss that
+ * cannot happen any more.
+ *
+ * Anything may be passed: an editor that never had `persistence` has no queue
+ * behind it and releases to nothing, and releasing twice is the same no-op —
+ * `destroy()` can be reached more than once.
+ * @param owner - the editor's `persistence` block, if it has one
+ */
+export function releasePersistenceQueue(owner: ExpandedPersistence | undefined): void {
+  if (owner === undefined) {
+    return;
+  }
+
+  const dispose = disposers.get(owner);
+
+  disposers.delete(owner);
+  dispose?.();
 }
 
 /**
@@ -79,6 +119,13 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     /** Wakes a backoff early. Non-null only while one is running. */
     cancelBackoff: (() => void) | null;
     guarding: boolean;
+    /**
+     * Set once the editor is gone. A save still in flight then runs to its own
+     * end — it can reject, back off and park long afterwards — and every one of
+     * those steps re-reads the queue's state, so without this the queue would
+     * re-attach the listener the release just took off.
+     */
+    released: boolean;
   } = {
     inFlight: null,
     pending: null,
@@ -86,6 +133,7 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
     parked: false,
     cancelBackoff: null,
     guarding: false,
+    released: false,
   };
 
   const guardUnload = (event: BeforeUnloadEvent): void => {
@@ -93,14 +141,13 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   };
 
   /**
-   * The listener is attached only while there is something to lose. Blok has no
-   * teardown hook a config expansion can reach — `destroy()` walks module
-   * instances, not the config — so a listener attached for the editor's whole
-   * life would outlive the editor and block navigation forever. Tying it to the
-   * queue's own state is what makes it self-removing.
+   * The listener is attached only while there is something to lose, so a queue
+   * that empties detaches its own guard. That covers everything but the editor
+   * torn down with a save still unwritten — in flight, or parked once its
+   * attempts ran out — and `releasePersistenceQueue` covers that one.
    */
   const syncUnloadGuard = (): void => {
-    const hasWork = queue.inFlight !== null || queue.pending !== null;
+    const hasWork = !queue.released && (queue.inFlight !== null || queue.pending !== null);
 
     if (hasWork === queue.guarding) {
       return;
@@ -213,6 +260,15 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   // candidate set by, so an asset recorded here can never be swept by the
   // editor next to it on the page.
   attachOrphanSweep(expanded, sweep);
+
+  // Keyed by the same handle, for the same reason: the guard removed on
+  // destroy has to be THIS editor's, never the one the editor beside it on the
+  // page is still holding for work of its own.
+  disposers.set(expanded, () => {
+    queue.released = true;
+    queue.guarding = false;
+    window.removeEventListener('beforeunload', guardUnload);
+  });
 
   return {
     ...config,

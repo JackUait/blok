@@ -20,6 +20,19 @@ function requireUploadByFile(uploader: BlokUploader): NonNullable<BlokUploader['
   return uploadByFile;
 }
 
+/**
+ * @param uploader - the uploader under test
+ */
+function requireDelete(uploader: BlokUploader): NonNullable<BlokUploader['delete']> {
+  const remove = uploader.delete;
+
+  if (!remove) {
+    throw new Error('expected delete to be defined');
+  }
+
+  return remove;
+}
+
 describe('fetchStorage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,6 +40,7 @@ describe('fetchStorage', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('uploads to <baseUrl>/upload and returns the parsed url', async () => {
@@ -62,5 +76,41 @@ describe('fetchStorage', () => {
 
   it('declares uploadByUrl, which a browser-only preset cannot offer', () => {
     expect(fetchStorage({ baseUrl: 'https://blok.example.com' }).uploadByUrl).toBeTypeOf('function');
+  });
+
+  it('posts the url to <baseUrl>/delete with the headers minted for that request', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve({ ok: true, status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const headers = vi.fn().mockResolvedValue({ Authorization: 'Bearer pass-1' });
+    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com', headers });
+
+    await requireDelete(uploader)('https://cdn.example.com/a.png', { kind: 'image', tool: 'image' });
+
+    expect(headers).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://blok.example.com/delete');
+
+    const sent = fetchMock.mock.calls[0][1]?.headers as Record<string, string>;
+
+    expect(sent.Authorization).toBe('Bearer pass-1');
+
+    const body = fetchMock.mock.calls[0][1]?.body;
+
+    if (typeof body !== 'string') {
+      throw new Error('expected a string body');
+    }
+
+    expect(JSON.parse(body)).toEqual({ url: 'https://cdn.example.com/a.png' });
+  });
+
+  it('throws with the status when the endpoint rejects the delete', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve({ ok: false, status: 403 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
+
+    await expect(requireDelete(uploader)('https://cdn.example.com/a.png', { kind: 'image' })).rejects.toThrow(
+      'Fetch endpoint delete failed with status 403'
+    );
   });
 });

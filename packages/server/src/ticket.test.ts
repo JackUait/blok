@@ -5,7 +5,6 @@ const SECRET = 's3cret-value-at-least-32-chars-long!';
 
 interface TicketPayload {
   user: string;
-  doc?: string;
   write: boolean;
   exp: number;
 }
@@ -40,10 +39,10 @@ describe('blokTicket', () => {
   it('carries the claims and a default five-minute expiry', () => {
     vi.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
 
-    const [, payload] = blokTicket(SECRET, { user: 'u1', doc: 'doc-42', write: true }).split('.');
+    const [, payload] = blokTicket(SECRET, { user: 'u1', write: true }).split('.');
     const claims = decodePayload(payload);
 
-    expect(claims).toMatchObject({ user: 'u1', doc: 'doc-42', write: true });
+    expect(claims).toMatchObject({ user: 'u1', write: true });
     expect(claims.exp).toBe(Math.floor(Date.parse('2026-01-01T00:00:00Z') / 1000) + 300);
   });
 
@@ -76,8 +75,14 @@ describe('blokTicket', () => {
       .toBe('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
   });
 
-  it('omits doc when no document was named, rather than sending an empty one', () => {
-    const [, payload] = blokTicket(SECRET, { user: 'u1' }).split('.');
+  // A pass is not scoped to a document, and nothing on the service checks that
+  // it is: the guard reads `write` and `user` only. Offering the claim promised
+  // a restriction that was never applied, so the claim left the minting API —
+  // both as a type (the line below stops compiling if it comes back) and on the
+  // wire. The verifier stays tolerant of a hand-made pass that carries one.
+  it('never mints a doc claim, because nothing enforces document scoping', () => {
+    // @ts-expect-error - `doc` is not a claim blokTicket accepts.
+    const [, payload] = blokTicket(SECRET, { user: 'u1', doc: 'doc-42' }).split('.');
 
     expect(decodePayload(payload)).not.toHaveProperty('doc');
   });

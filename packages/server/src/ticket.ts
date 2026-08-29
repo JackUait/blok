@@ -14,8 +14,11 @@ const HEADER = '{"alg":"HS256","typ":"JWT"}';
 export interface BlokTicketClaims {
   /** Your own user id. The service stores it but never interprets it. */
   user: string;
-  /** Restrict the pass to one document. */
-  doc?: string;
+  // No `doc` claim: a pass is not scoped to a document. Nothing in Blok carries
+  // a document identity for the service to check one against, so the guard
+  // reads `write` and `user` only — the claim is not offered rather than
+  // offered and ignored. The verifier still accepts a hand-made pass carrying
+  // one, so no released wire changed.
   /** Whether the holder may write. Defaults to false. */
   write?: boolean;
   /** Lifetime in seconds. Defaults to 300 — short on purpose. */
@@ -38,7 +41,6 @@ export function blokTicket(secret: string, claims: BlokTicketClaims): string {
 
   const payload = {
     user: claims.user,
-    ...(claims.doc === undefined ? {} : { doc: claims.doc }),
     write: claims.write ?? false,
     exp: Math.floor(Date.now() / 1000) + (claims.ttlSeconds ?? DEFAULT_TTL_SECONDS),
   };

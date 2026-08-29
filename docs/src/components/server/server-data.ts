@@ -297,7 +297,7 @@ export async function GET() {
 //
 //   header   {"alg":"HS256","typ":"JWT"}   these two keys, in this order
 //   claims   user   your own user id, stored but never interpreted
-//            doc    optional; reserved for document-scoped routes
+//            doc    accepted and ignored; a pass is not scoped to one
 //            write  false may read previews; uploads need true
 //            exp    seconds since the epoch; keep the life short
 //   secret   the same BLOK_SECRET the service runs with, 32 chars or more
@@ -391,6 +391,11 @@ export const serverLimits: ServerLimit[] = [
     body: 'A file someone uploads is served by whatever hostname you put it on, and a browser trusts a page by its hostname. So if uploads are served from the same hostname as your app, a file someone uploads can act as if it were one of your own pages — read the signed-in user’s session, call your API as them. The service sends Content-Disposition: attachment and X-Content-Type-Options: nosniff so a browser downloads such a file instead of running it, but putting uploads on a different hostname from your app (uploads.myapp.com, or an S3 bucket’s own address) is the only complete answer.',
   },
   {
+    id: 'asset-cors',
+    title: 'The hostname serving your uploads has to answer CORS',
+    body: 'Five things in the editor read an uploaded file back after it is stored: the audio player fetches the track to draw its waveform, the image block fetches a GIF before turning it into a video and an SVG to read its real size, the file block fetches a document to show a preview, and the image download button fetches the picture so the browser saves it rather than opening it. Once uploads are served from their own hostname every one of those is a cross-origin request, and the browser refuses it unless the response carries Access-Control-Allow-Origin for your app. Each of them is written to give up quietly rather than break the block, so instead of an error you get a player with no waveform, a GIF that stays a still image, an SVG at the wrong size, a preview that never appears and a download that opens the file instead of saving it — nothing in Blok reports why. Allow your app’s origin on the bucket or hostname the files are served from.',
+  },
+  {
     id: 's3-untested',
     title: 'The S3 support has not met a real bucket yet',
     body: 'Uploading to S3-compatible storage is built and covered by tests, but those tests check the request against our own reading of the specification — it has never been run against a real bucket, at AWS or anywhere else. Try it on a throwaway bucket before you rely on it. If the storage refuses a request, the service passes the storage’s own explanation through, so the message you see is the one that endpoint sent.',
@@ -409,6 +414,11 @@ export const serverLimits: ServerLimit[] = [
     id: 'proxy-rate-limit',
     title: 'Behind your own app, the rate limit is one allowance for everybody',
     body: 'The service limits how often a caller may make it fetch a URL. When --rate-limit is omitted, ticket mode allows 60 requests a minute per caller; otherwise the limit is 0, which turns it off. Any explicit value must be zero or greater. It tells callers apart by the address the request came from, and when your app forwards every request, every request arrives from the same address — so the whole deployment shares one allowance and one busy user can use it up. Limiting per user belongs in your own app, on the forwarding route, where you already know who is signed in. This does not apply on the third path, where the pass names the user and each user is counted separately.',
+  },
+  {
+    id: 'ticket-not-scoped',
+    title: 'A pass names a user, not a document',
+    body: 'A pass says who is holding it and whether they may write. It does not restrict them to one document, and it cannot: nothing the editor sends names a document, so the service has nothing to check a restriction against. A pass you hand to someone who opened a single page therefore works for every upload and every link preview that page can make, for as long as the pass lives. Keep that life short, hand a pass out only from a route that has already checked who is signed in, and keep the per-document permission check in your own app, where you know which document is open.',
   },
   {
     id: 'tls-termination',

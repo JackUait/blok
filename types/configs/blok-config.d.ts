@@ -553,6 +553,32 @@ export interface BlokMountOptions {
    */
   ticket?: string;
 
+  /**
+   * Load the document on mount and save it as it changes, against YOUR OWN
+   * endpoint — the Blok service stores no documents.
+   *
+   * Two functions rather than a URL: the shape of your endpoint, its auth and
+   * the document id are yours, and a URL template would need an option for
+   * each. Saves are queued, never run in parallel, and only the newest pending
+   * document is sent — otherwise a slow save finishing after a fast one brings
+   * stale content back.
+   *
+   * Setting `onSave` yourself wins: this fills it in only when you have not.
+   * @example
+   * persistence: {
+   *   load: () => fetch('/api/doc/42').then((r) => r.json()),
+   *   save: (data) => fetch('/api/doc/42', { method: 'PUT', body: JSON.stringify(data) }),
+   * }
+   */
+  persistence?: {
+    /** Read the document. Return null for "nothing saved yet". */
+    load(): Promise<OutputData | null>;
+    /** Write the document. Called at most once at a time. */
+    save(data: OutputData): Promise<void>;
+    /** Called when a save rejects. Without it, failures are silent. */
+    onError?(error: unknown): void;
+  };
+
   uploader?: BlokUploader;
 
   /**

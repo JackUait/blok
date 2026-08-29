@@ -1,4 +1,4 @@
-import type { BlokConfig } from '../../types';
+import type { BlokConfig, OutputData } from '../../types';
 import type { BlokModules } from '../types-internal/blok-modules';
 
 import { Dom as $ } from './dom';
@@ -8,6 +8,7 @@ import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
+import { expandPersistenceConfig } from './utils/persistence';
 import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
@@ -82,6 +83,12 @@ export class Core {
    * Setting for configuration
    * @param {BlokConfig|string|undefined} config - Blok's config to set
    */
+  /**
+   * One-shot document load, consumed by the first render. Null once used, so a
+   * re-render never re-fetches.
+   */
+  private pendingPersistedLoad: (() => Promise<OutputData | null>) | null = null;
+
   public set configuration(config: BlokConfig|string|undefined) {
     /**
      * Place config into the class property
@@ -107,6 +114,17 @@ export class Core {
      * the rest of the editor from ever learning the key.
      */
     this.config = expandServerConfig(this.config);
+
+    /**
+     * Read BEFORE `data` is defaulted below — after that every config has data
+     * and "the host supplied none" is no longer answerable. Loading over data
+     * the host passed would discard it, so persistence only fills a gap.
+     */
+    this.pendingPersistedLoad = this.config.persistence !== undefined && this.config.data == null
+      ? this.config.persistence.load.bind(this.config.persistence)
+      : null;
+
+    this.config = expandPersistenceConfig(this.config);
 
     /**
      * If holder is empty then set a default value
@@ -329,10 +347,29 @@ export class Core {
       throw new CriticalError('Blok data is not initialized');
     }
 
+    const data = this.config.data;
+    const load = this.pendingPersistedLoad;
+
+    this.pendingPersistedLoad = null;
+
     // Idempotent re-normalization: `config.data` is declared with the loose
     // wire type, but prepare() already normalized it — this narrows the type
     // without a cast.
-    return renderer.render(normalizeOutputBlocks(this.config.data.blocks));
+    if (load === null) {
+      return renderer.render(normalizeOutputBlocks(data.blocks));
+    }
+
+    return load().then((loaded) => {
+      const blocks = loaded?.blocks;
+
+      if (blocks !== undefined && blocks.length > 0) {
+        this.config.data = { ...loaded, blocks: cloneOutputBlocks(normalizeOutputBlocks(blocks)) };
+
+        return renderer.render(normalizeOutputBlocks(blocks));
+      }
+
+      return renderer.render(normalizeOutputBlocks(data.blocks));
+    });
   }
 
   /**

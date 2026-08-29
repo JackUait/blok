@@ -52,6 +52,7 @@ export const USE_BLOK_CONFIG_KEYS = [
   'uploader',
   'server',
   'ticket',
+  'persistence',
   'captureClicksBelowEditor',
 ] as const satisfies readonly (keyof UseBlokConfig)[];
 

@@ -398,6 +398,47 @@ describe('Core', () => {
     });
   });
 
+  describe('persistence', () => {
+    const SAVED = {
+      blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'saved' } }],
+    };
+
+    it('renders the persisted document instead of the default block', async () => {
+      const load = vi.fn().mockResolvedValue(SAVED);
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(core.configuration.data?.blocks).toEqual([expect.objectContaining({ data: { text: 'saved' } })]);
+      expect(mockRendererRender).toHaveBeenCalledWith([expect.objectContaining({ data: { text: 'saved' } })]);
+    });
+
+    // Data the host passed is theirs and wins; loading over it would discard it.
+    it('does not load when the host supplied data', async () => {
+      const load = vi.fn().mockResolvedValue(SAVED);
+
+      await createReadyCore({
+        holder: 'holder',
+        data: { blocks: [{ id: 'h1', type: 'paragraph', data: { text: 'host' } }] },
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the default block when nothing is saved yet', async () => {
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+      });
+
+      expect(core.configuration.data?.blocks).toHaveLength(1);
+      expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
+    });
+  });
+
   describe('render', () => {
     it('invokes renderer with current blocks', async () => {
       const core = await createReadyCore();

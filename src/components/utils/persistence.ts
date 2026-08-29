@@ -1,5 +1,6 @@
 import type { BlokConfig, OutputData } from '../../../types';
 import type { PersistedDocument } from '../../../types/configs/blok-config';
+import { attachOrphanSweep, createOrphanSweep } from './orphan-sweep';
 
 /**
  * What `persistence.load` may answer with: the document, a versioned envelope
@@ -62,6 +63,8 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
   if (persistence === undefined || config.onSave !== undefined) {
     return config;
   }
+
+  const sweep = createOrphanSweep();
 
   const queue: {
     inFlight: Promise<void> | null;
@@ -159,8 +162,22 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
         return;
       }
 
+      // The retry is a whole attempt of its own, sweep included, so this one
+      // is finished either way.
       await attemptSave(payload, attempt + 1);
+
+      return;
     }
+
+    // A resolved save is the only proof the editor ever gets that the document
+    // was written, which is what makes it safe to delete the assets that
+    // document no longer names. A payload that ran out of attempts is parked,
+    // not saved, and never reaches this line.
+    //
+    // The sweep sits after the catch rather than inside the try so that nothing
+    // it does can be mistaken for the save rejecting — a retry here would write
+    // the document a second time.
+    await sweep.sweep(payload);
   };
 
   const drain = (): void => {
@@ -179,20 +196,27 @@ export function expandPersistenceConfig(config: BlokConfig): BlokConfig {
       });
   };
 
+  const expanded = {
+    ...persistence,
+    load: async (): Promise<LoadResult> => {
+      const loaded = await persistence.load();
+
+      if (loaded !== null && 'data' in loaded && typeof loaded.version === 'string') {
+        queue.version = loaded.version;
+      }
+
+      return loaded;
+    },
+  };
+
+  // The expanded block is the handle the uploader finds this editor's
+  // candidate set by, so an asset recorded here can never be swept by the
+  // editor next to it on the page.
+  attachOrphanSweep(expanded, sweep);
+
   return {
     ...config,
-    persistence: {
-      ...persistence,
-      load: async (): Promise<LoadResult> => {
-        const loaded = await persistence.load();
-
-        if (loaded !== null && 'data' in loaded && typeof loaded.version === 'string') {
-          queue.version = loaded.version;
-        }
-
-        return loaded;
-      },
-    },
+    persistence: expanded,
     onSave: (data: OutputData): void => {
       queue.pending = data;
       queue.parked = false;

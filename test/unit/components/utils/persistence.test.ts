@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expandPersistenceConfig } from '../../../../src/components/utils/persistence';
+import { orphanSweepFor } from '../../../../src/components/utils/orphan-sweep';
 import type { API, BlokConfig, OutputData } from '../../../../types';
 
 const DOC: OutputData = { blocks: [], time: 0, version: '1' };
@@ -376,11 +377,179 @@ describe('expandPersistenceConfig', () => {
     expect(fireBeforeUnload()).toBe(false);
   });
 
+  // The sweep needs a reliable "the document was written" signal, and this
+  // queue is the only place that has one.
+  describe('the orphan sweep', () => {
+    const asset = (name: string): string => `https://cdn.example/uploads/${name}.png`;
+
+    const documentWith = (url: string): OutputData => ({
+      ...DOC,
+      blocks: [ { id: 'b1', type: 'image', data: { file: { url } } } ],
+    });
+
+    it('deletes an asset this session uploaded once a save lands without it', async () => {
+      const url = asset('landed');
+      const remove = vi.fn().mockResolvedValue(undefined);
+      const save = vi.fn().mockResolvedValue(undefined);
+
+      const result = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+      orphanSweepFor(result.persistence)?.record(url, remove);
+      result.onSave?.(DOC, API_STUB);
+
+      await vi.waitFor(() => expect(remove).toHaveBeenCalledWith(url));
+    });
+
+    it('leaves an asset the saved document still references alone', async () => {
+      const url = asset('still-used');
+      const remove = vi.fn().mockResolvedValue(undefined);
+      const save = vi.fn().mockResolvedValue(undefined);
+
+      const result = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+      orphanSweepFor(result.persistence)?.record(url, remove);
+      result.onSave?.(documentWith(url), API_STUB);
+
+      await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    // A save that never landed says nothing about what the stored document
+    // references, so sweeping on it would delete assets a live document uses.
+    it('sweeps nothing for a save that failed, nor for the payload it parked', async () => {
+      vi.useFakeTimers();
+
+      const url = asset('unsaved');
+      const remove = vi.fn().mockResolvedValue(undefined);
+      const save = vi.fn().mockRejectedValue(new Error('offline'));
+
+      const result = expandPersistenceConfig({
+        persistence: { load: async () => null, save, onError: vi.fn() },
+      });
+
+      orphanSweepFor(result.persistence)?.record(url, remove);
+      result.onSave?.(DOC, API_STUB);
+      await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+      expect(save).toHaveBeenCalledTimes(ATTEMPTS);
+      expect(remove).not.toHaveBeenCalled();
+
+      // The payload is parked, not saved: draining is not a written document.
+      await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);
+
+      expect(remove).not.toHaveBeenCalled();
+
+      // Land a successful save that still references the asset, so the unload
+      // guard is released without the sweep taking it.
+      save.mockResolvedValue(undefined);
+      result.onSave?.(documentWith(url), API_STUB);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it('sweeps after a save that only succeeded on a retry', async () => {
+      vi.useFakeTimers();
+
+      const url = asset('retried');
+      const remove = vi.fn().mockResolvedValue(undefined);
+      const save = vi.fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValue(undefined);
+
+      const result = expandPersistenceConfig({
+        persistence: { load: async () => null, save, onError: vi.fn() },
+      });
+
+      orphanSweepFor(result.persistence)?.record(url, remove);
+      result.onSave?.(DOC, API_STUB);
+      await vi.advanceTimersByTimeAsync(FIRST_RETRY_DELAY_MS);
+
+      expect(save).toHaveBeenCalledTimes(2);
+      expect(remove).toHaveBeenCalledWith(url);
+    });
+
+    // Undo: the user deletes a block and puts it back before the queue gets to
+    // the document that lacked it. The saved document is the one with the URL,
+    // so the asset was never an orphan.
+    it('never sweeps a URL whose absence no saved document carried', async () => {
+      const url = asset('undone');
+      const remove = vi.fn().mockResolvedValue(undefined);
+      const gate: { release: (() => void) | null } = { release: null };
+      const save = vi.fn()
+        .mockImplementationOnce(async () => {
+          await new Promise<void>((resolve) => {
+            gate.release = resolve;
+          });
+        })
+        .mockResolvedValue(undefined);
+
+      const result = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+      orphanSweepFor(result.persistence)?.record(url, remove);
+
+      result.onSave?.(documentWith(url), API_STUB);
+      // The block is deleted…
+      result.onSave?.(DOC, API_STUB);
+      // …and undone, before either document reached the store.
+      result.onSave?.(documentWith(url), API_STUB);
+
+      gate.release?.();
+      await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+
+      expect(save).toHaveBeenLastCalledWith(documentWith(url), { version: null });
+      expect(remove).not.toHaveBeenCalled();
+    });
+  });
+
   it('does not mutate the config it was given', () => {
     const config: BlokConfig = { persistence: { load: async (): Promise<null> => null, save: vi.fn() } };
 
     expandPersistenceConfig(config);
 
     expect(config.onSave).toBeUndefined();
+  });
+});
+
+describe('expandPersistenceConfig — one candidate set per editor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Two editors on one page share nothing else, and they must not share this:
+  // a set held by the module would let the editor that saves delete an asset
+  // the OTHER editor just uploaded, leaving a live document pointing at a file
+  // that is gone. Session provenance means nothing if "session" means "page".
+  it('never sweeps an asset another editor on the page uploaded', async () => {
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const save = vi.fn().mockResolvedValue(undefined);
+
+    const uploading = expandPersistenceConfig({
+      persistence: { load: async () => null, save: vi.fn().mockResolvedValue(undefined) },
+    });
+    const saving = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+    orphanSweepFor(uploading.persistence)?.record('https://cdn/theirs.png', remove);
+
+    saving.onSave?.({ blocks: [] }, API_STUB);
+    await vi.waitFor(() => expect(save).toHaveBeenCalled());
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('sweeps through the set belonging to the editor that saved', async () => {
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const save = vi.fn().mockResolvedValue(undefined);
+    const config = expandPersistenceConfig({ persistence: { load: async () => null, save } });
+
+    orphanSweepFor(config.persistence)?.record('https://cdn/ours.png', remove);
+
+    config.onSave?.({ blocks: [] }, API_STUB);
+    await vi.waitFor(() => expect(remove).toHaveBeenCalledWith('https://cdn/ours.png'));
   });
 });

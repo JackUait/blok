@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expandServerConfig } from '../../../../src/components/utils/server-config';
 import type { BlokConfig } from '../../../../types';
 
@@ -87,6 +87,64 @@ describe('expandServerConfig', () => {
 
     expect(typeof settings === 'object' && settings !== null && settings.class).toBe(CustomBookmark);
     expect(toolConfig(result, 'bookmark')?.endpoint).toBe('https://blok.example.com/unfurl');
+  });
+
+  describe('with a ticket endpoint', () => {
+    const PASS = `x.${btoa(JSON.stringify({ exp: 4102444800 })).replace(/=+$/, '')}.y`;
+    let fetchMock: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ticket: PASS }) });
+      vi.stubGlobal('fetch', fetchMock);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('gives the bookmark tool a headers function rather than a frozen object', async () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        ticket: '/api/blok-ticket',
+      });
+      const headers = toolConfig(result, 'bookmark')?.headers;
+
+      expect(headers).toBeTypeOf('function');
+      await expect((headers as () => Promise<Record<string, string>>)())
+        .resolves.toEqual({ Authorization: `Bearer ${PASS}` });
+    });
+
+    // Uploads and previews must share one pass. Two sources would mint two
+    // passes on load and double the traffic to the host's minting route.
+    it('feeds uploads and previews from one cached pass', async () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        ticket: '/api/blok-ticket',
+      });
+      const headers = toolConfig(result, 'bookmark')?.headers as () => Promise<Record<string, string>>;
+
+      await headers();
+      await result.uploader?.uploadByUrl?.('https://elsewhere.example.net/i.png', { kind: 'image' })
+        .catch(() => undefined);
+
+      expect(fetchMock.mock.calls.filter(([url]) => url === '/api/blok-ticket')).toHaveLength(1);
+    });
+
+    it('keeps headers the consumer set on the bookmark tool', () => {
+      const result = expandServerConfig({
+        server: 'https://blok.example.com',
+        ticket: '/api/blok-ticket',
+        tools: { bookmark: { config: { headers: { Authorization: 'Bearer mine' } } } },
+      });
+
+      expect(toolConfig(result, 'bookmark')?.headers).toEqual({ Authorization: 'Bearer mine' });
+    });
+
+    it('ignores a ticket endpoint when there is no server to point it at', () => {
+      const config: BlokConfig = { ticket: '/api/blok-ticket' };
+
+      expect(expandServerConfig(config)).toEqual(config);
+    });
   });
 
   it('does not mutate the config it was given', () => {

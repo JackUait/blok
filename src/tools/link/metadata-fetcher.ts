@@ -11,8 +11,13 @@ import { isHttpUrl } from './registry';
 export interface BookmarkConfig {
   /** Consumer-supplied unfurl endpoint. Required. */
   endpoint: string;
-  /** Optional headers (e.g. auth) sent with the request. */
-  headers?: Record<string, string>;
+  /**
+   * Optional headers (e.g. auth) sent with the request. Pass a function to mint
+   * a short-lived access pass per request — a static object would freeze the
+   * pass resolved when the editor was built, and previews would start failing
+   * the moment it expired while uploads carried on working.
+   */
+  headers?: Record<string, string> | (() => Promise<Record<string, string>>);
 }
 
 export interface BookmarkMeta {
@@ -45,7 +50,10 @@ export class MetadataFetcher {
     }
 
     const requestUrl = `${this.config.endpoint}?url=${encodeURIComponent(url)}`;
-    const response = await fetch(requestUrl, { headers: this.config.headers });
+    const headers = typeof this.config.headers === 'function'
+      ? await this.config.headers()
+      : this.config.headers;
+    const response = await fetch(requestUrl, { headers });
 
     if (!response.ok) {
       throw new Error(`Metadata request failed with status ${response.status}.`);

@@ -542,6 +542,17 @@ export interface BlokMountOptions {
    */
   server?: string;
 
+  /**
+   * Endpoint in YOUR app that mints a short-lived access pass for the signed-in
+   * user, answering `{ "ticket": "<pass>" }`. Only needed when `server` points
+   * at a standalone service — routes running inside your own app already know
+   * who the caller is.
+   *
+   * The editor caches the pass and replaces it ahead of expiry, and uploads and
+   * link previews share the same one.
+   */
+  ticket?: string;
+
   uploader?: BlokUploader;
 
   /**

@@ -8,6 +8,7 @@ import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
+import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
 
@@ -99,6 +100,13 @@ export class Core {
         holder: config as string | undefined,
       };
     }
+
+    /**
+     * `server` is sugar over options that already exist. Expanding it here —
+     * before validate() and before any module reads the config — is what keeps
+     * the rest of the editor from ever learning the key.
+     */
+    this.config = expandServerConfig(this.config);
 
     /**
      * If holder is empty then set a default value

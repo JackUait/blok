@@ -529,6 +529,19 @@ export interface BlokMountOptions {
    *   },
    * }
    */
+  /**
+   * Base URL of a service speaking Blok's upload and unfurl contracts, e.g.
+   * `https://blok.myapp.com` or a same-origin path like `/api/blok`.
+   *
+   * Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint`
+   * if you have not set them yourself. Anything you set explicitly wins, so
+   * taking the service for link previews while uploading into your own S3 needs
+   * no extra wiring.
+   *
+   * It does NOT configure document storage — that stays yours.
+   */
+  server?: string;
+
   uploader?: BlokUploader;
 
   /**

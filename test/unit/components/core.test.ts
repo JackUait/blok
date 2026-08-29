@@ -297,6 +297,19 @@ describe('Core', () => {
 
       expect(core.configuration.onChange).toBeUndefined();
     });
+
+    // `server` must be gone by the time anything downstream reads the config —
+    // no module is allowed to learn the key exists.
+    it('expands the server shorthand into the options that already exist', async () => {
+      const core = await createReadyCore({ holder: 'holder', server: 'https://blok.example.com/' });
+      const bookmark = core.configuration.tools?.bookmark;
+      const bookmarkConfig = typeof bookmark === 'object' && bookmark !== null && 'config' in bookmark
+        ? bookmark.config
+        : undefined;
+
+      expect(core.configuration.uploader?.uploadByFile).toBeTypeOf('function');
+      expect(bookmarkConfig?.endpoint).toBe('https://blok.example.com/unfurl');
+    });
   });
 
   describe('validate', () => {

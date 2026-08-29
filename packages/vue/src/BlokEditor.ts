@@ -77,6 +77,8 @@ export const BlokEditor = defineComponent({
     migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
     /** Editor-level uploader, routed by asset kind (images, video, audio, files). */
     uploader: { type: Object as PropType<BlokConfig['uploader']>, default: undefined },
+    /** Base URL of a service speaking Blok's upload and unfurl contracts. */
+    server: { type: String as PropType<BlokConfig['server']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */

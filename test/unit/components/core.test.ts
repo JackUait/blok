@@ -428,6 +428,22 @@ describe('Core', () => {
       expect(load).not.toHaveBeenCalled();
     });
 
+    // A failed load must NOT degrade to an empty document: one keystroke later
+    // autosave would write that emptiness over the user's real document.
+    it('fails the boot when the document cannot be loaded', async () => {
+      const core = new Core({
+        holder: 'holder',
+        persistence: {
+          load: async (): Promise<null> => {
+            throw new Error('offline');
+          },
+          save: async (): Promise<void> => {},
+        },
+      });
+
+      await expect(core.isReady).rejects.toThrow('offline');
+    });
+
     it('falls back to the default block when nothing is saved yet', async () => {
       const core = await createReadyCore({
         holder: 'holder',

@@ -377,6 +377,13 @@ describe('CI critical-path law', () => {
         if: "matrix.shard == '1/2'",
         run: 'yarn workspace @bloklabs/presets test',
       },
+      {
+        // Same reason again: own vitest config, tests under src/. Its ticket
+        // signer is checked against the same fixture the C# verifier reads.
+        name: 'Run @bloklabs/server Unit Tests',
+        if: "matrix.shard == '1/2'",
+        run: 'yarn workspace @bloklabs/server test',
+      },
     ]);
   });
 

@@ -348,6 +348,13 @@ jobs:
         if: matrix.shard == '1/2'
         run: yarn workspace @bloklabs/presets test
 
+      - name: Run @bloklabs/server Unit Tests
+        # Same reason again: the server package has its own vitest config and
+        # keeps its tests under src/. Its ticket signer is checked against the
+        # same fixture the C# verifier reads, so this must not be skipped.
+        if: matrix.shard == '1/2'
+        run: yarn workspace @bloklabs/server test
+
   validate-spec-coverage:
     name: Validate Spec File Coverage
     runs-on: ubuntu-latest

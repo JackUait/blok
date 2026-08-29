@@ -81,24 +81,45 @@ import { Blok } from '@bloklabs/core';
 
 new Blok({
   holder: 'editor',
-  uploader: {
-    async uploadByFile(file) {
-      const body = new FormData();
-
-      body.append('file', file);
-
-      const response = await fetch('/api/blok/upload', {
-        method: 'POST',
-        body,
-      });
-
-      return response.json();
-    },
-  },
+  server: '/api/blok',
 });
 ```
 
+One key fills in the uploader and the link-preview endpoint. Anything you set yourself wins, so uploading into your own storage while keeping previews here needs no extra wiring.
+
 The standalone host uses routes at the root. An ASP.NET Core app uses the prefix passed to `MapBlokServer`.
+
+## Access passes
+
+A standalone host cannot see who your user is, so your own backend vouches for them with a short-lived pass:
+
+```ts
+import { blokTicket } from '@bloklabs/server/ticket';
+
+export async function GET() {
+  const session = await getSession();
+
+  if (!session) {
+    return new Response('Not signed in', { status: 401 });
+  }
+
+  return Response.json({
+    ticket: blokTicket(process.env.BLOK_SECRET, { user: session.userId, write: true }),
+  });
+}
+```
+
+```ts
+new Blok({
+  holder: 'editor',
+  server: 'https://blok.myapp.com',
+  ticket: '/api/blok-ticket',
+});
+```
+
+The editor caches the pass and replaces it ahead of expiry, and uploads and link previews share the same one.
+
+A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed with the secret the service runs with (at least 32 characters). Any backend can mint one with its own JWT library — `blokTicket` exists so a JavaScript one does not have to. Routes running inside your own ASP.NET app need none of this: they already know who the caller is.
 
 ## Routes
 

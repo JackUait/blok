@@ -46,6 +46,7 @@ export function buildTasks({ mode = 'production', withCli = false } = {}) {
     { name: 'react', cmd: 'yarn workspace @bloklabs/react build', deps: ['fonts'] },
     { name: 'vue', cmd: 'yarn workspace @bloklabs/vue build', deps: ['fonts'] },
     { name: 'presets', cmd: 'yarn workspace @bloklabs/presets build', deps: [] },
+    { name: 'server', cmd: 'yarn workspace @bloklabs/server build', deps: [] },
     // Wrappers rename the entry files main/locales just wrote, so both must
     // be finished; iife/umd/angular read src, not dist entries, and can run
     // concurrently.

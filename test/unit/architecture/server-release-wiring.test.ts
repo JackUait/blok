@@ -104,14 +104,49 @@ describe('server release wiring', () => {
     expect(docsVerifier).toContain(`name: '${SERVER_NPM_NAME}'`);
   });
 
-  it('keeps a wrapper-only npm package out of the JavaScript build graph', async () => {
+  /**
+   * The package shipped only `bin/` until the ticket signer landed, and the law
+   * here used to pin that. Now that it publishes JavaScript, the invariant is
+   * the opposite one: everything `exports` points at has to be produced by a
+   * build the release actually runs. `release.mjs` runs `build-all.mjs` before
+   * packing, so a package that ships `dist` and is missing from that graph
+   * publishes an exports map aimed at files nobody built.
+   */
+  it('builds every JavaScript file it ships', async () => {
     const { buildTasks } = (await import('../../../scripts/build-all.mjs')) as {
       buildTasks: (opts?: { mode?: string; withCli?: boolean }) => { name: string }[];
     };
     const tasks = new Set(buildTasks({ withCli: true }).map((task) => task.name));
+    const manifest = readJson<{
+      scripts?: Record<string, string>;
+      files?: string[];
+      exports?: Record<string, Record<string, string> | string>;
+    }>(SERVER_MANIFEST);
 
-    expect(readJson<{ scripts?: Record<string, string> }>(SERVER_MANIFEST).scripts).toBeUndefined();
-    expect(tasks.has('server')).toBe(false);
+    expect(manifest.files).toContain('dist');
+    expect(manifest.scripts?.build).toBeTypeOf('string');
+    expect(tasks.has('server')).toBe(true);
+
+    const targets = Object.values(manifest.exports ?? {})
+      .flatMap((entry) => (typeof entry === 'string' ? [entry] : Object.values(entry)))
+      .filter((target) => target.startsWith('./dist/'));
+
+    expect(targets.length).toBeGreaterThan(0);
+    for (const target of targets) {
+      expect(
+        manifest.files?.some((included) => target.startsWith(`./${included}/`)),
+        `${target} is not covered by "files"`
+      ).toBe(true);
+    }
+  });
+
+  // The signer must agree with the C# verifier, and the only thing that proves
+  // it is the fixture both read. Its suite has to run in CI for that to count.
+  it('runs the ticket signer suite in CI', () => {
+    const workflow = parse(read('.github/workflows/ci.yml')) as Workflow;
+    const steps = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []);
+
+    expect(steps.some((step) => step.run === `yarn workspace ${SERVER_NPM_NAME} test`)).toBe(true);
   });
 
   it('does not ship an unused generated JavaScript runtime', () => {

@@ -1,7 +1,7 @@
 {
   "name": "@bloklabs/server",
   "version": "1.12.0",
-  "description": "Blok server delivery for ASP.NET Core, npm, and Docker — shared C# routes for file uploads and link previews.",
+  "description": "Blok server delivery for ASP.NET Core, npm, and Docker \u2014 shared C# routes for file uploads and link previews.",
   "license": "Apache-2.0",
   "author": "JackUait",
   "homepage": "https://blokeditor.com",
@@ -26,16 +26,32 @@
     "sidecar",
     "ssrf"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ticket": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/ticket.mjs",
+      "require": "./dist/ticket.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "blok-server": "bin/blok-server.mjs"
   },
   "files": [
-    "bin"
+    "bin",
+    "dist",
+    "types"
   ],
   "engines": {
     "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "yarn run -T vite build --mode production",
+    "test": "yarn run -T vitest run"
   }
 }

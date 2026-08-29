@@ -101,7 +101,15 @@ describe('server quality gates', () => {
     ).toMatchObject({ GITLEAKS_CONFIG: 'gitleaks.toml' });
     const gitleaksConfig = read('gitleaks.toml');
 
-    expect(gitleaksConfig.match(/\[\[allowlists\]\]/g)).toHaveLength(1);
+    /**
+     * The singular table, and never the plural array of them: gitleaks 8.24.3
+     * parses `[[allowlists]]` without complaint and then ignores it, so a config
+     * written that way allows nothing while reading as though it does. The
+     * repository shipped exactly that until a placeholder blob name in the
+     * server tests failed the scan the config claimed to have excused.
+     */
+    expect(gitleaksConfig).toMatch(/^\[allowlist\]$/m);
+    expect(gitleaksConfig).not.toMatch(/\[\[allowlists\]\]/);
     expect(gitleaksConfig).toContain(
       '^test/unit/server-conformance/fixtures/tickets\\.json$',
     );

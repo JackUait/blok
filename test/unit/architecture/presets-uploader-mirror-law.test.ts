@@ -3,8 +3,8 @@
  * types must not drift from their sources.
  *
  * `packages/presets/types/index.d.ts` hand-copies `AssetKind`,
- * `UploadedAsset`, `UploadContext`, `BlokUploader`, and each preset's own
- * option interfaces (`FetchStorageOptions`, `SupabaseLike`,
+ * `UploadedAsset`, `UploadContext`, `DeleteContext`, `BlokUploader`, and
+ * each preset's own option interfaces (`FetchStorageOptions`, `SupabaseLike`,
  * `SupabaseStorageOptions`, `SignRequest`, `SignedTarget`,
  * `PresignedStorageOptions`, `CloudinaryStorageOptions`,
  * `IndexedDBStorageOptions`) instead of importing them, because a published
@@ -207,6 +207,7 @@ describe('presets uploader-type mirrors stay in sync with their sources', () => 
   const interfaceCases: ReadonlyArray<readonly [ name: string, sourceLabel: string, sourceFile: ts.SourceFile ]> = [
     [ 'UploadedAsset', UPLOADER_LABEL, uploaderSource ],
     [ 'UploadContext', UPLOADER_LABEL, uploaderSource ],
+    [ 'DeleteContext', UPLOADER_LABEL, uploaderSource ],
     [ 'BlokUploader', UPLOADER_LABEL, uploaderSource ],
     [ 'FetchStorageOptions', FETCH_ENDPOINT_LABEL, fetchEndpointSource ],
     [ 'SupabaseLike', SUPABASE_LABEL, supabaseSource ],

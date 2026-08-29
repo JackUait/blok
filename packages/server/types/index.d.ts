@@ -10,8 +10,10 @@
 export interface BlokTicketClaims {
   /** Your own user id. The service stores it but never interprets it. */
   user: string;
-  /** Restrict the pass to one document. */
-  doc?: string;
+  // No `doc` claim: a pass is not scoped to a document. Nothing in Blok carries
+  // a document identity for the service to check one against, so the guard
+  // reads `write` and `user` only. The verifier still accepts a hand-made pass
+  // carrying one, so no released wire changed.
   /** Whether the holder may write. Defaults to false. */
   write?: boolean;
   /** Lifetime in seconds. Defaults to 300 — short on purpose. */

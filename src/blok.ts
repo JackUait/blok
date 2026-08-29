@@ -16,6 +16,7 @@ import {
   type ReadyStateSnapshot,
 } from './components/utils/ready-registry';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
+import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
 import './components/polyfills';
 import type { BlokModules } from './types-internal/blok-modules';
@@ -560,6 +561,12 @@ class Blok {
             listeners.removeAll();
           }
         });
+
+      // The save queue's `beforeunload` listener hangs off window rather than
+      // off a module, so the walk above cannot reach it. Left attached it
+      // outlives the editor and asks the user to confirm every later
+      // navigation in a single-page app, over a document that is already gone.
+      releasePersistenceQueue(blok.config?.persistence);
 
       destroyTooltip();
 

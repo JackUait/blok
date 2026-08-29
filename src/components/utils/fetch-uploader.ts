@@ -1,10 +1,10 @@
-import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
+import type { BlokUploader, DeleteContext, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
 import { uploadWithProgress } from './upload-xhr';
 
 /**
  * Options for an uploader talking to a service that speaks Blok's upload
  * contract — the standalone host, the in-process ASP.NET routes, or anything
- * else exposing `/upload` and `/upload-by-url`.
+ * else exposing `/upload`, `/upload-by-url` and `/delete`.
  *
  * `@bloklabs/presets`' `fetchStorage` is the published face of this; it keeps
  * its own `FetchStorageOptions` declaration because its published `.d.ts` is
@@ -69,6 +69,19 @@ export function createFetchUploader(options: FetchUploaderOptions): BlokUploader
       }
 
       return toAsset(parseJson(await response.text()));
+    },
+
+    async delete(url: string, _ctx: DeleteContext): Promise<void> {
+      const response = await fetch(`${base}/delete`, {
+        method: 'POST',
+        // Content-Type last, same reasoning as uploadByUrl above.
+        headers: { ...(await resolveHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Fetch endpoint delete failed with status ${response.status}`);
+      }
     },
   };
 }

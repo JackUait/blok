@@ -32,4 +32,15 @@ describe("server wiring config keys", () => {
   it("points persistence at the reader's own endpoint, never at the service", () => {
     expect(row("persistence")?.description).toMatch(/your own|no documents/i);
   });
+
+  // The signature is a hand-written string, so nothing but a test notices when
+  // the real contract moves under it.
+  it("shows the version save is told it is overwriting", () => {
+    expect(row("persistence")?.type).toContain("SaveContext");
+    expect(row("persistence")?.type).toContain("SaveResult");
+  });
+
+  it("says the reader's endpoint decides a conflict, not Blok", () => {
+    expect(row("persistence")?.description).toMatch(/version/i);
+  });
 });

@@ -30,6 +30,20 @@ export interface UploadContext {
 }
 
 /**
+ * Describes a single deletion request.
+ *
+ * The same `kind`/`tool` pair {@link UploadContext} carries, so a host can
+ * route a deletion to whichever pipeline stored the asset. There is no
+ * progress callback: a deletion has nothing to report but its outcome.
+ */
+export interface DeleteContext {
+  /** Kind of asset being deleted. */
+  kind: AssetKind;
+  /** Name of the block tool that owned the asset, when known. */
+  tool?: string;
+}
+
+/**
  * Editor-level uploader, keyed by asset kind rather than by tool.
  *
  * Set on {@link BlokConfig.uploader}, it serves every media tool. A per-tool
@@ -37,7 +51,7 @@ export interface UploadContext {
  * for its own asset kind and takes precedence — this is the fallback for kinds
  * no tool-level uploader claims.
  *
- * Both methods are optional and resolved independently: declaring only
+ * Every method is optional and resolved independently: declaring only
  * `uploadByUrl` here still lets a tool-level `uploadByFile` handle files.
  */
 export interface BlokUploader {
@@ -53,4 +67,12 @@ export interface BlokUploader {
    * When absent for a kind, the URL is stored verbatim.
    */
   uploadByUrl?(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+
+  /**
+   * Delete a stored asset by the URL this uploader returned for it.
+   * When absent, nothing is ever deleted — assets an editing session
+   * uploaded and then abandoned stay in the store forever. Rejecting is how
+   * a host reports that the deletion did not happen.
+   */
+  delete?(url: string, ctx: DeleteContext): Promise<void>;
 }

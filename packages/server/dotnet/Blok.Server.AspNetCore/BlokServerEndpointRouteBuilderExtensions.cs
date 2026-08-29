@@ -34,6 +34,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
     if (options.HasStorage)
     {
       MapShell(routes, "/upload", "POST");
+      MapShell(routes, "/delete", "POST");
 
       if (!options.UnfurlDisabled)
       {
@@ -50,9 +51,12 @@ public static class BlokServerEndpointRouteBuilderExtensions
   {
     var handler = method == "GET"
       ? (RequestDelegate)UnfurlEndpoint.HandleAsync
-      : pattern == "/upload"
-        ? UploadEndpoint.HandleAsync
-        : UploadByUrlEndpoint.HandleAsync;
+      : pattern switch
+      {
+        "/upload" => UploadEndpoint.HandleAsync,
+        "/delete" => DeleteEndpoint.HandleAsync,
+        _ => UploadByUrlEndpoint.HandleAsync,
+      };
 
     routes.MapMethods(pattern, [method], Guard(handler, method == "POST"));
     routes.MapMethods(

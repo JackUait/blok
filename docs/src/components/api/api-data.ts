@@ -614,10 +614,10 @@ const editor = new Blok(config);`,
       },
       {
         option: "persistence",
-        type: "{ load(): Promise<OutputData | null>; save(data: OutputData): Promise<void>; onError?(error: unknown): void }",
+        type: "{ load(): Promise<OutputData | PersistedDocument | null>; save(data: OutputData, ctx: SaveContext): Promise<SaveResult | void>; onError?(error: unknown): void }",
         default: "undefined",
         description:
-          "Load the document on mount and save it as it changes, against your own endpoint \u2014 the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins.",
+          "Load the document on mount and save it as it changes, against your own endpoint \u2014 the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins. `load` may answer with a version alongside the document, and each `save` is told the version it is overwriting and may report the one it wrote \u2014 Blok only carries that version between the two calls, so your endpoint stays the only place a stale write is detected.",
       },
       {
         option: "theme",

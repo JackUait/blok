@@ -120,7 +120,16 @@ test.describe('blok version override', () => {
 
       // Flipping the switch is the whole interaction: the extension reloads
       // the page itself and the popup catches up with no button to press.
-      await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+      //
+      // This one assertion covers strictly more than its sibling at :31, which
+      // arms the origin through the service worker directly: here a popup click
+      // has to reach the worker and come back before the reload even starts,
+      // and only then does the multi-MB dev payload evaluate. `test.slow()`
+      // triples the TEST budget and leaves `expect` on the global 5s, which the
+      // whole chain does not fit into on a loaded runner — the test then fails
+      // once and passes on retry, which `failOnFlakyTests` counts as a failure.
+      await expect(page.getByTestId('blok-editor'))
+        .toHaveAttribute('data-blok-version', /-dev\./, { timeout: 15_000 });
       await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);
       await expect(popup.getByText('Running your build')).toBeVisible();
 

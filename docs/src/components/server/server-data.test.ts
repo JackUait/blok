@@ -192,14 +192,16 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the seven service limits the design refuses to bury', () => {
+  it('states the nine service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'file-origin',
+      'asset-cors',
       's3-untested',
       'cors-preflight',
       'upload-by-url-json',
       'proxy-rate-limit',
+      'ticket-not-scoped',
       'tls-termination',
     ]);
     for (const limit of serverLimits) {
@@ -218,6 +220,23 @@ describe('server docs data', () => {
     expect(body).toMatch(/different (origin|hostname)/i);
     expect(body).toMatch(/Content-Disposition/);
     expect(body).toMatch(/nosniff/);
+  });
+
+  // Five features read an uploaded file back from the browser and swallow the
+  // failure, so a hostname that answers no CORS header degrades each of them
+  // with nothing in Blok to say why. It sits beside file-origin because the two
+  // are one instruction: a different hostname, that answers CORS.
+  it('says the hostname serving uploads must answer CORS, and what breaks when it does not', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'asset-cors')?.body ?? '';
+
+    expect(limits.indexOf('asset-cors')).toBe(limits.indexOf('file-origin') + 1);
+    expect(body).toMatch(/Access-Control-Allow-Origin/);
+    for (const feature of [/waveform/i, /GIF/, /SVG/, /preview/i, /download/i]) {
+      expect(body, String(feature)).toMatch(feature);
+    }
+    // The silence is the reason this is written down at all.
+    expect(body).toMatch(/quietly|silently|no error|nothing/i);
   });
 
   it('admits the S3 signatures have never met a real bucket', () => {
@@ -257,6 +276,17 @@ describe('server docs data', () => {
 
     expect(prose).toMatch(/write: false.*unfurl/i);
     expect(prose).toMatch(/upload.*write: true/i);
+  });
+
+  // The pass mints a `doc` claim no longer, and never enforced one: the guard
+  // reads `write` and `user` only. A reader who assumes otherwise hands out a
+  // pass believing it is confined to the page the holder opened.
+  it('says a pass names a user and is not confined to one document', () => {
+    const body = serverLimits.find((l) => l.id === 'ticket-not-scoped')?.body ?? '';
+
+    expect(body).toMatch(/not (restrict|confine|scope)|does not restrict/i);
+    expect(body).toMatch(/document/i);
+    expect(body).toMatch(/your own app|your app/i);
   });
 
   it('requires TLS termination for an internet-facing host', () => {

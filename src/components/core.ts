@@ -1,4 +1,5 @@
 import type { BlokConfig, OutputData } from '../../types';
+import type { PersistedDocument } from '../../types/configs/blok-config';
 import type { BlokModules } from '../types-internal/blok-modules';
 
 import { Dom as $ } from './dom';
@@ -8,7 +9,7 @@ import { Modules } from './modules';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
-import { expandPersistenceConfig } from './utils/persistence';
+import { expandPersistenceConfig, unwrapPersistedDocument } from './utils/persistence';
 import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
@@ -85,9 +86,10 @@ export class Core {
    */
   /**
    * One-shot document load, consumed by the first render. Null once used, so a
-   * re-render never re-fetches.
+   * re-render never re-fetches. Resolves with either shape a store may answer
+   * with — the envelope is unwrapped where it is awaited.
    */
-  private pendingPersistedLoad: (() => Promise<OutputData | null>) | null = null;
+  private pendingPersistedLoad: (() => Promise<OutputData | PersistedDocument | null>) | null = null;
 
   public set configuration(config: BlokConfig|string|undefined) {
     /**
@@ -115,16 +117,21 @@ export class Core {
      */
     this.config = expandServerConfig(this.config);
 
+    this.config = expandPersistenceConfig(this.config);
+
     /**
      * Read BEFORE `data` is defaulted below — after that every config has data
      * and "the host supplied none" is no longer answerable. Loading over data
      * the host passed would discard it, so persistence only fills a gap.
+     *
+     * Bound from the EXPANDED config: the expansion wraps `load` to record the
+     * document version the next save has to report back.
      */
-    this.pendingPersistedLoad = this.config.persistence !== undefined && this.config.data == null
-      ? this.config.persistence.load.bind(this.config.persistence)
-      : null;
+    const persistence = this.config.persistence;
 
-    this.config = expandPersistenceConfig(this.config);
+    this.pendingPersistedLoad = persistence !== undefined && this.config.data == null
+      ? persistence.load.bind(persistence)
+      : null;
 
     /**
      * If holder is empty then set a default value
@@ -359,7 +366,8 @@ export class Core {
       return renderer.render(normalizeOutputBlocks(data.blocks));
     }
 
-    return load().then((loaded) => {
+    return load().then((result) => {
+      const loaded = unwrapPersistedDocument(result);
       const blocks = loaded?.blocks;
 
       if (blocks !== undefined && blocks.length > 0) {

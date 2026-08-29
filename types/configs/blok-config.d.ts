@@ -603,6 +603,12 @@ export interface BlokMountOptions {
    * is your endpoint's job — it owns the storage and the transaction, and Blok
    * storing a second opinion about a record it does not keep would be a second
    * source of truth.
+   *
+   * A rejecting `save` is retried a few times with a short backoff before
+   * `onError` hears about it, and the payload stays queued afterwards so the
+   * next change carries it out rather than losing it. While anything is queued
+   * or in flight the tab asks for confirmation before it closes. None of this
+   * survives a page reload — the queue lives in memory only.
    * @example
    * persistence: {
    *   load: () => fetch('/api/doc/42').then((r) => r.json()),
@@ -632,7 +638,10 @@ export interface BlokMountOptions {
     load(): Promise<OutputData | PersistedDocument | null>;
     /** Write the document. Called at most once at a time. */
     save(data: OutputData, ctx: SaveContext): Promise<SaveResult | void>;
-    /** Called when a save rejects. Without it, failures are silent. */
+    /**
+     * Called once a save has rejected and its retries are spent — not once per
+     * attempt. Without it, failures are silent.
+     */
     onError?(error: unknown): void;
   };
 

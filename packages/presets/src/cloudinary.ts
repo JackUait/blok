@@ -1,6 +1,6 @@
 import type { AssetKind } from '../../../types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '../../../types/configs/uploader';
-import { uploadWithProgress } from './upload-xhr';
+import { uploadWithProgress } from '../../../src/components/utils/upload-xhr';
 
 export interface CloudinaryStorageOptions {
   cloudName: string;

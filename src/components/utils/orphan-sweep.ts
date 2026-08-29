@@ -1,4 +1,12 @@
-import type { OutputData } from '../../../types';
+import type { BlokConfig, OutputData } from '../../../types';
+
+/**
+ * The expanded `persistence` block a candidate set belongs to. It is the key
+ * rather than a bare object so the two sides that look a set up — the queue
+ * that builds the block and the uploader that reads it off the config — cannot
+ * drift onto different handles.
+ */
+type SweepOwner = NonNullable<BlokConfig['persistence']>;
 
 /** Deletes one stored asset. Rejecting is how a host says it did not happen. */
 type RemoveAsset = (url: string) => Promise<void>;
@@ -87,14 +95,14 @@ export function createOrphanSweep(): OrphanSweep {
  * `persistence` save may sweep — no `persistence`, no set, so nothing is ever
  * recorded, let alone deleted.
  */
-const sweeps = new WeakMap<object, OrphanSweep>();
+const sweeps = new WeakMap<SweepOwner, OrphanSweep>();
 
 /**
  * Give an editor's `persistence` block its candidate set.
  * @param owner - the expanded `persistence` object
  * @param sweep - the set the queue will sweep
  */
-export function attachOrphanSweep(owner: object, sweep: OrphanSweep): void {
+export function attachOrphanSweep(owner: SweepOwner, sweep: OrphanSweep): void {
   sweeps.set(owner, sweep);
 }
 
@@ -104,6 +112,6 @@ export function attachOrphanSweep(owner: object, sweep: OrphanSweep): void {
  * no signal would ever say the document was written.
  * @param owner - the editor's `persistence` block, if it has one
  */
-export function orphanSweepFor(owner: object | undefined): OrphanSweep | undefined {
+export function orphanSweepFor(owner: SweepOwner | undefined): OrphanSweep | undefined {
   return owner === undefined ? undefined : sweeps.get(owner);
 }

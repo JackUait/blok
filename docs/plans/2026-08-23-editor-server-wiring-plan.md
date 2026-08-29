@@ -1,21 +1,37 @@
 # Editor Server Wiring Implementation Plan
 
-> **Status amendment (re-verified against the code 2026-08-29):**
+> **DONE 2026-08-29.** Every task is implemented, committed and pushed. The gate ran
+> clean: unit suite across all 8 shards, `yarn lint` 0 errors, `tsc` clean, docs suite
+> 1400/1400.
 >
-> - **Task 4 is DONE.** `ToolState` no longer has an `'ERROR'` member at all, the catch
->   branch renders a plain link, and `test/unit/tools/link/bookmark.test.ts` exists. The
->   optional cleanup in its Step 3 was taken: neither `'ERROR'` nor a
->   `tools.bookmark.error` i18n key survives.
-> - **Tasks 1, 2, 3, 5, 6 are NOT started.** `grep -rn blokTicket src/ types/` is empty and
->   no `server` / `ticket` / `persistence` key exists in the config surface.
-> - **Nothing blocks the rest.** Both upstream plans shipped: `@bloklabs/presets` and
->   `@bloklabs/server` are published at 1.12.0.
-> - The server target is the C# host or in-process ASP.NET routes. **Tickets apply only when
->   requests cross into a standalone host**; in-process routes use the consumer's existing
->   identity. See
->   [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
-> - Task 3 was re-scoped — see the decision block on it. Its original justification named the
->   Go verifier, which no longer exists.
+> **What the plan did not anticipate, and what was done instead:**
+>
+> - **Task 1's import direction was backwards.** Taking `fetchStorage` from
+>   `@bloklabs/presets` would have made the editor depend on a package that depends on it,
+>   and the editor ships zero runtime dependencies. The implementation MOVED into the
+>   editor (`src/components/utils/fetch-uploader.ts` + `upload-xhr.ts`), and `fetchStorage`
+>   now delegates to it, keeping `FetchStorageOptions` declared where the mirror law
+>   expects. One copy, dependency pointing the right way.
+> - **A new config key is not one edit.** Each of `server` / `ticket` / `persistence` also
+>   needs registering in `packages/react/src/config-keys.ts`,
+>   `packages/vue/src/config-keys.ts` AND a Vue prop declaration in
+>   `packages/vue/src/BlokEditor.ts` — the adapters' exhaustiveness guards fail `tsc`
+>   otherwise. Nothing in this plan said so.
+> - **Task 2 grew a prerequisite:** the bookmark tool's `headers` could not hold a live
+>   pass. Widened to the same union `fetchStorage` accepts, resolved per request in
+>   `MetadataFetcher`.
+> - **Task 5 could not use `data`.** That key is read synchronously while the config is
+>   normalized, so it cannot hold a promise. The editor takes the load once, in `render()`,
+>   and only when the host supplied no data of their own.
+> - **Task 3 tripped an EIGHTH registration point** nobody listed:
+>   `test/unit/architecture/server-release-wiring.test.ts` pinned the package as
+>   wrapper-only. It now pins the opposite — everything `exports` points at must be built
+>   by the release — and is mutation-verified.
+> - **Task 4 was already done** before this session started.
+>
+> Tickets apply only when requests cross into a standalone host; in-process ASP.NET routes
+> use the consumer's existing identity. See
+> [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -64,7 +80,7 @@
 - Consumes: `fetchStorage` from `@bloklabs/presets`.
 - Produces: `expandServerConfig(config: BlokConfig): BlokConfig` — pure, returns a new object, never mutates its input.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/server-config.test.ts`:
 
@@ -139,7 +155,7 @@ describe('expandServerConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/server-config.test.ts
@@ -147,7 +163,7 @@ yarn test test/unit/components/utils/server-config.test.ts
 
 Expected: FAIL — the module does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/server-config.ts`:
 
@@ -213,14 +229,14 @@ Declare the key in `types/configs/blok-config.d.ts`:
   server?: string;
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/components/utils/server-config.test.ts
 yarn lint src/components/utils/server-config.ts types/configs/blok-config.d.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/server-config.ts src/components/core.ts types/configs/blok-config.d.ts test/unit/components/utils/server-config.test.ts
@@ -240,7 +256,7 @@ git commit -m "feat(config): expand the server option into uploader and unfurl e
 - Consumes: nothing.
 - Produces: `createPassSource(options: { endpoint: string; now?: () => number }): () => Promise<Record<string, string>>` — a headers function suitable for `fetchStorage({ headers })`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/access-pass.test.ts`:
 
@@ -311,13 +327,13 @@ describe('createPassSource', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/access-pass.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/access-pass.ts`:
 
@@ -420,13 +436,13 @@ Widen bookmark's `headers` to the same union as `fetchStorage`, resolve it per r
 second request carries the second one. Then one `createPassSource` instance feeds both sides
 and the whole editor shares one cached pass.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/components/utils/access-pass.test.ts test/unit/components/utils/server-config.test.ts test/unit/tools/link/metadata-fetcher.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/access-pass.ts src/components/utils/server-config.ts types/configs/blok-config.d.ts test/unit/components/utils/access-pass.test.ts
@@ -480,7 +496,7 @@ git commit -m "feat(config): fetch and cache access passes for the server option
 The minimum secret length is **32**, enforced at `BlokServerOptions.cs:61`, which refuses to
 start rather than warn.
 
-- [ ] **Step 0: Give the package a test runner**
+- [x] **Step 0: Give the package a test runner**
 
 `packages/server/package.json` has **no `scripts` block at all**, so Step 2 has nothing to run.
 Before writing the test, add `"test": "yarn run -T vitest run"` and a `vitest.config.ts`
@@ -492,7 +508,7 @@ Do not run it yet. Vitest exits 1 when it finds no test files, and none of these
 `passWithNoTests` — so an empty package looks identical to a broken one. Step 2 is the first
 meaningful run, and what it must show is a failing assertion, not a missing command.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `packages/server/src/ticket.test.ts`:
 
@@ -556,13 +572,13 @@ describe('blokTicket', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn workspace @bloklabs/server test src/ticket.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `packages/server/src/ticket.ts`:
 
@@ -614,7 +630,7 @@ function b64(value: string): string {
 }
 ```
 
-- [ ] **Step 4: Make the package able to ship JavaScript**
+- [x] **Step 4: Make the package able to ship JavaScript**
 
 This is the part with no precedent in `packages/server`. Mirror `packages/presets`, which is
 the closest shape — a published, zero-runtime-dependency package.
@@ -642,7 +658,7 @@ and two of them are pinned by tests that go red the moment you touch the thing t
 been exercised — a green local `yarn build` proves nothing about it. Pack the tarball and
 list its contents.
 
-- [ ] **Step 5: Verify against the real verifier, not only against itself**
+- [x] **Step 5: Verify against the real verifier, not only against itself**
 
 A signer that agrees only with its own tests is worthless. The cross-language fixtures
 already exist on the JS side: **`test/unit/server-conformance/fixtures/tickets.json`** —
@@ -662,7 +678,7 @@ yarn workspace @bloklabs/server test
 Do not add a copy of the fixture under `packages/server`. One file, two readers: the copies
 you will find under `bin/` are build output.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/server scripts test .github
@@ -830,7 +846,7 @@ interface PersistenceConfig {
 
 Callbacks rather than a URL: the consumer's endpoint shape, auth, and document id are theirs, and a URL template would need to grow options for each. Two functions cost them three lines and cost us no configuration surface.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/persistence.test.ts`:
 
@@ -919,13 +935,13 @@ describe('expandPersistenceConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/persistence.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/persistence.ts`:
 
@@ -995,14 +1011,14 @@ Declare `persistence?: PersistenceConfig` in `types/configs/blok-config.d.ts`, h
 
 Confirm that `config.data` accepts a promise; if it does not, resolve `load()` before construction in `core.ts` and set `data` from the result, keeping `expandPersistenceConfig` pure by returning the promise for the caller to await.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/components/utils/persistence.test.ts
 yarn lint src/components/utils/persistence.ts types/configs/blok-config.d.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/persistence.ts src/components/utils/server-config.ts types/configs/blok-config.d.ts test/unit/components/utils/persistence.test.ts
@@ -1026,7 +1042,7 @@ already carries **hand-written wiring that these tasks make obsolete** — see S
 - Consumes: everything above.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, it } from 'vitest';
@@ -1049,23 +1065,23 @@ describe('server wiring docs', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 cd docs && yarn test src/components/api/api-data.test.ts
 ```
 
-- [ ] **Step 3: Write the entries**
+- [x] **Step 3: Write the entries**
 
 Three entries, each with the precedence rule stated plainly: anything set explicitly beats `server`. The `server` description must say it does **not** configure document storage — that is the single most likely wrong assumption a reader will bring, given the name.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 cd docs && yarn test src/components/api/api-data.test.ts
 ```
 
-- [ ] **Step 5: Replace the hand-written wiring in `server-data.ts`**
+- [x] **Step 5: Replace the hand-written wiring in `server-data.ts`**
 
 This file documents the standalone-host path with working code, and three pieces of it are
 superseded:
@@ -1086,13 +1102,13 @@ Pin it: extend `server-data.test.ts` so the standalone path's editor config uses
 the raw contract entry names all four claims. That file already asserts things at this
 granularity — it checks which flags the binary parses and which limits are stated.
 
-- [ ] **Step 6: Run the docs tests and watch them pass**
+- [x] **Step 6: Run the docs tests and watch them pass**
 
 ```bash
 cd docs && yarn test src/components/api/api-data.test.ts src/components/server/server-data.test.ts
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs

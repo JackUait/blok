@@ -196,14 +196,12 @@ app.use(
       label: 'Point the editor at your own route',
       language: 'typescript',
       code: `import { Blok } from '@bloklabs/core';
-import { fetchStorage } from '@bloklabs/presets';
 
 new Blok({
   holder: 'editor',
-  uploader: fetchStorage({ baseUrl: '/api/blok' }),
-  tools: {
-    bookmark: { config: { endpoint: '/api/blok/unfurl' } },
-  },
+  // Fills in the uploader and the link-preview endpoint. Anything you set
+  // yourself wins, so your own storage still works alongside it.
+  server: '/api/blok',
 });`,
     },
     failureModes: [
@@ -273,9 +271,7 @@ new Blok({
         label: 'Add one route that hands out a pass',
         language: 'typescript',
         code: `// app/api/blok-ticket/route.ts
-import { createHmac } from 'node:crypto';
-
-const b64 = (value: string) => Buffer.from(value).toString('base64url');
+import { blokTicket } from '@bloklabs/server/ticket';
 
 export async function GET() {
   const session = await getSession();
@@ -284,45 +280,60 @@ export async function GET() {
     return new Response('Not signed in', { status: 401 });
   }
 
-  // A standard JWT. Every language has a one-line library for this; it is
-  // spelled out here so you can see there is no magic in it.
-  const head = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body = b64(
-    JSON.stringify({
+  return Response.json({
+    ticket: blokTicket(process.env.BLOK_SECRET, {
       user: session.userId,
       write: true,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60,
     }),
-  );
-  const signature = createHmac('sha256', process.env.BLOK_SECRET ?? '')
-    .update(\`\${head}.\${body}\`)
-    .digest('base64url');
-
-  return Response.json({ ticket: \`\${head}.\${body}.\${signature}\` });
+  });
 }`,
+      },
+      {
+        label: 'The same route, if your backend is not JavaScript',
+        language: 'typescript',
+        code: `// A pass is a standard HS256 JWT and nothing more. Every language has a
+// one-line library for it; this is spelled out so you can see there is no
+// magic in it, and so you can port it wherever your backend lives.
+//
+//   header   {"alg":"HS256","typ":"JWT"}   these two keys, in this order
+//   claims   user   your own user id, stored but never interpreted
+//            doc    optional; reserved for document-scoped routes
+//            write  false may read previews; uploads need true
+//            exp    seconds since the epoch; keep the life short
+//   secret   the same BLOK_SECRET the service runs with, 32 chars or more
+//
+// Both segments are base64url with the padding stripped, joined with a dot,
+// and the signature is HMAC-SHA256 over that string, base64url again.
+import { createHmac } from 'node:crypto';
+
+const b64 = (value: string) => Buffer.from(value).toString('base64url');
+
+const head = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+const body = b64(
+  JSON.stringify({
+    user: session.userId,
+    write: true,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60,
+  }),
+);
+const signature = createHmac('sha256', process.env.BLOK_SECRET ?? '')
+  .update(\`\${head}.\${body}\`)
+  .digest('base64url');
+
+const ticket = \`\${head}.\${body}.\${signature}\`;`,
       },
     ],
     editorConfig: {
       label: 'Point the editor at the service, carrying the pass',
       language: 'typescript',
       code: `import { Blok } from '@bloklabs/core';
-import { fetchStorage } from '@bloklabs/presets';
-
-const SERVICE = 'https://blok.myapp.com';
-
-// Called before every upload, so an expired pass is replaced without a reload.
-const authHeaders = async () => {
-  const { ticket } = await fetch('/api/blok-ticket').then((r) => r.json());
-
-  return { Authorization: \`Bearer \${ticket}\` };
-};
 
 new Blok({
   holder: 'editor',
-  uploader: fetchStorage({ baseUrl: SERVICE, headers: authHeaders }),
-  tools: {
-    bookmark: { config: { endpoint: \`\${SERVICE}/unfurl\`, headers: await authHeaders() } },
-  },
+  server: 'https://blok.myapp.com',
+  // The editor fetches a pass from this route, keeps it, and replaces it
+  // shortly before it expires. Uploads and link previews share the same one.
+  ticket: '/api/blok-ticket',
 });`,
     },
     failureModes: [

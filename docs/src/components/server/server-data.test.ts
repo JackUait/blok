@@ -12,6 +12,47 @@ describe('server docs data', () => {
     ]);
   });
 
+  // The editor grew a `server` key that fills in the uploader and the unfurl
+  // endpoint. Showing the hand-written wiring here would teach the long way
+  // round and quietly rot against what the editor actually does.
+  it('wires the editor with the server key rather than by hand', () => {
+    for (const id of ['own-server', 'serverless']) {
+      const code = serverPaths.find((p) => p.id === id)?.editorConfig.code ?? '';
+
+      expect(code, id).toMatch(/server: /);
+      expect(code, id).not.toContain('fetchStorage');
+      expect(code, id).not.toContain('bookmark');
+    }
+  });
+
+  it('carries the pass with the ticket key, so one cached pass serves everything', () => {
+    const code = serverPaths.find((p) => p.id === 'serverless')?.editorConfig.code ?? '';
+
+    expect(code).toMatch(/ticket: /);
+    // A resolved object froze the pass at construction; previews died at expiry
+    // while uploads carried on.
+    expect(code).not.toContain('await authHeaders()');
+  });
+
+  it('mints the pass with blokTicket instead of spelling out an HMAC', () => {
+    const routes = serverPaths.find((p) => p.id === 'serverless')?.appRoute ?? [];
+
+    expect(routes.some((r) => r.code.includes("from '@bloklabs/server/ticket'"))).toBe(true);
+    expect(routes.some((r) => r.code.includes('blokTicket('))).toBe(true);
+  });
+
+  // A signer only exists for JavaScript backends. Everyone else needs the wire
+  // format itself, or they cannot use this path at all.
+  it('keeps the raw pass contract for backends that are not JavaScript', () => {
+    const routes = serverPaths.find((p) => p.id === 'serverless')?.appRoute ?? [];
+    const raw = routes.map((r) => `${r.label} ${r.code}`).join('\n');
+
+    expect(raw).toContain('HS256');
+    for (const claim of ['user', 'doc', 'write', 'exp']) {
+      expect(raw, claim).toMatch(new RegExp(`\\b${claim}\\b`));
+    }
+  });
+
   it('states the link-preview coverage limit up front', () => {
     expect(serverCoverageNote).toMatch(/70%/);
     expect(serverCoverageNote).toMatch(/plain link/i);

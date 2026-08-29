@@ -599,6 +599,27 @@ const editor = new Blok(config);`,
           "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks \u2014 including assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own. A tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence; this is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
       },
       {
+        option: "server",
+        type: "string",
+        default: "undefined",
+        description:
+          "Base URL of a service speaking Blok's upload and unfurl contracts \u2014 `https://blok.myapp.com`, or a same-origin path like `/api/blok`. Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code. It does not configure document storage \u2014 your documents stay yours; see `persistence`.",
+      },
+      {
+        option: "ticket",
+        type: "string",
+        default: "undefined",
+        description:
+          "Endpoint in YOUR app that mints a short-lived access pass for the signed-in user, answering `{ \"ticket\": \"<pass>\" }`. Only needed when `server` points at a standalone service \u2014 routes running inside your own app already know who the caller is. The editor caches the pass and replaces it ahead of expiry rather than at it, so no request arrives already invalid, and uploads and link previews share the same one. `@bloklabs/server/ticket` exports `blokTicket()` for minting it; any backend can do the same with its own JWT library.",
+      },
+      {
+        option: "persistence",
+        type: "{ load(): Promise<OutputData | null>; save(data: OutputData): Promise<void>; onError?(error: unknown): void }",
+        default: "undefined",
+        description:
+          "Load the document on mount and save it as it changes, against your own endpoint \u2014 the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins.",
+      },
+      {
         option: "theme",
         type: "'auto' | 'light' | 'dark'",
         default: "'auto'",

@@ -1,6 +1,14 @@
 [extend]
 useDefault = true
 
-[[allowlists]]
-description = "Synthetic ticket fixtures"
+# One table, not an array of them: gitleaks 8.24.3 silently ignores the plural
+# array-of-tables form, so written that way every entry below is inert and the
+# scan fails on the very findings this file says to allow.
+[allowlist]
+description = "Synthetic fixtures: tickets minted for the conformance suite, and the placeholder name a stored blob takes in the server tests."
 paths = ['''^test/unit/server-conformance/fixtures/tickets\.json$''']
+# A stored blob is named 32 hex characters plus an extension, which the
+# generic-api-key rule reads as a credential once the constant holding it has
+# "key" in its name. Matched on the value rather than on the file, so a real
+# secret in the same test still fails the scan.
+regexes = ['''(?:0123456789abcdef){2}''']

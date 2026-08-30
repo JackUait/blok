@@ -158,12 +158,23 @@ Unhook in `destroy()` before `ydoc.destroy()`.
 **2e. Sync-first load.** With `collaboration` set, the editor must NOT run
 today's load path (fromJSON-seed from `config.data`/persistence) — two clients
 doing that and then syncing permanently duplicates every block in the CRDT
-(verified; the DOM masks it, the doc corrupts). Instead: render nothing, or a
-lightweight connecting state; connect; the initial sync delivers the doc; blocks
-materialize through the existing remote path (`repaintBlocks`/`skipYjsSync`
-levers exist). The client never seeds. `persistence` and `collaboration` are
-mutually exclusive config (validated with a clear error): in collab mode the
-sidecar owns the record round-trip (§4), and the client save queue stays off.
+(verified; the DOM masks it, the doc corrupts). Instead: connect; the initial
+sync delivers the doc; blocks materialize through the existing remote path
+(`repaintBlocks`/`skipYjsSync` levers exist). The client never seeds.
+`persistence` and `collaboration` are mutually exclusive config (validated with
+a clear error): in collab mode the sidecar owns the record round-trip (§4), and
+the client save queue stays off.
+
+**When the sync server is unreachable** (down, or the connect fails), the
+editor must not become a blank page — that would make collab mode LESS
+available than single-player. Degradation: if the host passed `config.data`
+(or it is otherwise cached), render it **read-only** as the last-known
+snapshot, with the connection state exposed so the host can show "reconnecting";
+retry with backoff; on first successful sync, swap to the live doc. Never fall
+back to *editable* unsynced content — edits made against a locally-seeded doc
+would fork CRDT history and recreate the dual-seeding corruption on reconnect.
+Offline *editing* arrives with the epoch-tagged y-indexeddb cache in Phase 4,
+where local history is genuinely part of the doc rather than a fork.
 
 ## 3. Server: rooms in Blok.Server
 
@@ -184,10 +195,15 @@ ships (y-sweet, single-node hocuspocus, one-Durable-Object-per-room). Scale-out
 is documentation, not code: shard by doc id so one doc's clients land on one
 node; never fan a doc across nodes.
 
-**Auth at the door, in-band.** Browsers cannot set headers on WebSocket
-connects, so the first frame after the upgrade must be an auth message carrying
-the ticket (5s deadline, pre-auth frames rejected; this beats query-string
-tickets, which leak into access logs). Verification: existing `TicketVerifier`;
+**Auth at the door, via subprotocol.** Browsers cannot set arbitrary headers on
+WebSocket connects, but they CAN set `Sec-WebSocket-Protocol` — and the stock
+`y-websocket` client exposes it as its `protocols` option. The client offers
+`['blok-sync.v1', <ticket>]`; the server validates the ticket from the offer
+list, accepts with `blok-sync.v1`, or closes with the auth-failed code. The
+ticket stays out of URLs (query-string tickets leak into access logs), and
+ecosystem compatibility survives in BOTH modes — no Blok-only handshake.
+(A base64url ticket is a valid subprotocol token; the unpadded alphabet plus
+dots is within RFC 6455's token grammar.) Verification: existing `TicketVerifier`;
 **the `doc` claim returns to `blokTicket()`** and the sync handshake requires
 `claims.Document == {doc}` — the first route that ever enforces it, which is
 what its removal commit said to wait for. `write: false` connections receive
@@ -221,7 +237,8 @@ timing law applies (assert timeouts, never sub-second completion).
 
 **Wire conformance.** The contract is pinned the way the ticket contract is
 pinned: the conformance suite drives a **stock `y-websocket` JS client** against
-the built server binary — two clients, concurrent edits, late joiner, read-only
+the built server binary — in no-auth loopback mode AND in ticket mode via the
+`protocols` option — two clients, concurrent edits, late joiner, read-only
 drop, reconnect diff. If the stock provider syncs, every ecosystem tool syncs.
 
 ## 4. The record round-trip: seeding and export
@@ -250,6 +267,15 @@ applies.
 Both directions go to an operator-configured endpoint — the same trust class as
 the S3 driver, and the same architecture-test exemption discipline: one more
 documented owner beside the guarded outbound client, nothing else.
+
+**How the sidecar authenticates to the consumer's routes:** the operator
+supplies the header value their app already expects
+(`BLOK_DOC_ENDPOINT_AUTH="Bearer …"`, sent verbatim on seed fetches and
+export POSTs). Their route, their auth scheme, zero new concepts — the same
+shape as the client-side `fetchStorage` headers option. A self-minted
+server-to-server ticket (signed with `BLOK_SECRET`) was considered and set
+aside: it would force verification code into the consumer's endpoint, which is
+a new concept for them and nothing gained for us.
 
 **When they disagree.** While a working-set blob exists, the blob is
 authoritative and out-of-band JSON edits are overwritten by the next export —

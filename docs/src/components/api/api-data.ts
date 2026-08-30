@@ -2572,13 +2572,16 @@ class CodeTool {
         name: "sanitizer.clean(taintString, config)",
         returnType: "string",
         description:
-          "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing.",
+          "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing. Allowlisting `href`/`src` allows the attribute, not its scheme — `clean()` additionally drops URL values that can execute (`javascript:`, `data:text/html`, `data:image/svg+xml`), so an allowlisted anchor can never come back as a live script link.",
         example: `const dirtyHtml = '<script>alert("xss")</script><p>Hello</p>';
 const clean = editor.sanitizer.clean(dirtyHtml, {
   p: true,  // Allow <p> tags
   b: true   // Allow <b> tags
 });
-// Returns: '<p>Hello</p>' (script tag removed)`,
+// Returns: '<p>Hello</p>' (script tag removed)
+
+const link = editor.sanitizer.clean('<a href="javascript:alert(1)">x</a>', { a: { href: true } });
+// Returns: '<a>x</a>' (executable scheme dropped, text kept)`,
       },
     ],
     properties: [

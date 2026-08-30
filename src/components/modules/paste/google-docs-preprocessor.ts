@@ -8,6 +8,7 @@ import {
 
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
 import { parseUntrustedHtml } from '../../utils/inert-html';
+import { trimTrailingBreaks } from '../../utils/trailing-breaks';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -675,6 +676,6 @@ function convertTableCellParagraphs(wrapper: HTMLElement): void {
     Array.from(paragraphs).forEach(unwrapCellParagraph);
 
     // Remove trailing <br> from the cell
-    cell.innerHTML = cell.innerHTML.replace(/(<br\s*\/?>|\s)+$/i, '');
+    cell.innerHTML = trimTrailingBreaks(cell.innerHTML);
   }
 }

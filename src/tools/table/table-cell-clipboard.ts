@@ -4,7 +4,9 @@ import { mapPastedTableCells } from './table-operations';
 import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
-import { clean, stripUnsafeUrls } from '../../components/utils/sanitizer';
+import { clean } from '../../components/utils/sanitizer';
+import { parseUntrustedHtml } from '../../components/utils/inert-html';
+import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
@@ -253,11 +255,7 @@ function extractBlockHtml(block: ClipboardBlockData): string {
  * Strip HTML tags from a string, returning only the visible text content.
  */
 function stripHtmlTags(html: string): string {
-  const div = document.createElement('div');
-
-  div.innerHTML = html;
-
-  return div.textContent ?? '';
+  return parseUntrustedHtml(html).textContent ?? '';
 }
 
 /**
@@ -494,7 +492,7 @@ function sanitizeCellHtml(td: Element): string {
     const italic = isItalic ? `<i>${marked}</i>` : marked;
     const wrapped = isBold ? `<b>${italic}</b>` : italic;
 
-    span.replaceWith(document.createRange().createContextualFragment(wrapped));
+    span.replaceWith(span.ownerDocument.createRange().createContextualFragment(wrapped));
   }
 
   // Move background-color from <a> tags into <mark> wrappers.
@@ -529,16 +527,12 @@ function sanitizeCellHtml(td: Element): string {
 
   // Convert <p> boundaries to <br> line breaks
   for (const p of Array.from(clone.querySelectorAll('p'))) {
-    const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
+    const fragment = p.ownerDocument.createRange().createContextualFragment(p.innerHTML + '<br>');
 
     p.replaceWith(fragment);
   }
 
-  // `a: { href: true }` above allowlists the attribute, not its scheme, so a
-  // pasted `javascript:` link would survive into a live cell anchor.
-  const html = stripUnsafeUrls(clean(clone.innerHTML, CELL_SANITIZE_CONFIG))
-    .replace(/(<br\s*\/?>|\s)+$/i, '')
-    .trim();
+  const html = trimTrailingBreaks(clean(clone.innerHTML, CELL_SANITIZE_CONFIG)).trim();
 
   return html;
 }
@@ -700,9 +694,7 @@ function sanitizeClipboardPayload(payload: TableCellsClipboard): TableCellsClipb
 
   for (const block of blocks) {
     if (typeof block.data.text === 'string') {
-      // Scheme pass too: CELL_SANITIZE_CONFIG allowlists the href attribute, not
-      // its value, and this payload is attacker-forgeable clipboard JSON.
-      block.data.text = stripUnsafeUrls(clean(block.data.text, CELL_SANITIZE_CONFIG));
+      block.data.text = clean(block.data.text, CELL_SANITIZE_CONFIG);
     }
   }
 

@@ -82,9 +82,14 @@ export const sanitizeBlocks = (
     const rules: DeepSanitizerRule = (toolConfig ?? {}) as SanitizerConfig;
 
     if (isObject(rules) && isEmpty(rules) && isEmpty(globalSanitizer)) {
-      // No rules to apply, but never hand the caller's object back by
-      // reference — downstream consumers must not retain caller-owned data.
-      return { ...block };
+      /**
+       * Tag allowlisting is opt-in per tool, but URL hardening is not: this
+       * path carries forged `application/x-blok` clipboard JSON, and a tool
+       * that declares no sanitize config still renders `data.text`.
+       * Never hands the caller's object back by reference either.
+       */
+      return { ...block,
+        data: stripUnsafeUrlsDeep(block.data) };
     }
 
     return {
@@ -119,7 +124,14 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
    */
   const sanitizerInstance = new HTMLJanitor(sanitizerConfig);
 
-  return sanitizerInstance.clean(taintString);
+  /**
+   * html-janitor allowlists the `href`/`src` ATTRIBUTE and never looks at its
+   * value, so an allowlisted anchor keeps whatever scheme it carried. The
+   * scheme pass belongs here rather than at each call site: `clean()` is the
+   * public sanitizer (`api.sanitizer.clean`) and every caller that forgot it
+   * shipped a live `javascript:` link.
+   */
+  return stripUnsafeUrls(sanitizerInstance.clean(taintString));
 };
 
 /**
@@ -244,13 +256,13 @@ const cleanOneItem = (
   if (effectiveRule) {
     const cleaned = clean(taintString, effectiveRule);
 
-    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, effectiveRule)));
+    return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, effectiveRule));
   }
 
   if (!isEmpty(globalRules)) {
     const cleaned = clean(taintString, globalRules);
 
-    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, globalRules)));
+    return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, globalRules));
   }
 
   return normalizeInlineMarkupHtml(stripUnsafeUrls(taintString));
@@ -269,10 +281,10 @@ const isRule = (config: DeepSanitizerRule): boolean => {
 /**
  * Remove `href`/`src` values whose scheme can execute (`javascript:`, `data:`).
  *
- * Exported because `clean()` alone does NOT do this: html-janitor allowlists the
- * href ATTRIBUTE and never looks at its value, so any caller that runs `clean()`
- * directly — the paste path does — must run this after it.
- * @param value - HTML that has already been through `clean()`
+ * `clean()` already applies this. Exported for the paths that harden URLs
+ * WITHOUT tag allowlisting — stored block data whose tool declares no sanitize
+ * config (see {@link stripUnsafeUrlsDeep}).
+ * @param value - HTML to harden
  * @returns the HTML with executable-scheme URL attributes removed
  */
 export const stripUnsafeUrls = (value: string): string => {

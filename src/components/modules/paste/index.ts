@@ -1,7 +1,7 @@
 import type { SanitizerConfig } from '../../../../types/configs/sanitizer-config';
 import { Module } from '../../__module';
 import { Dom as dom$ } from '../../dom';
-import { composeSanitizerConfig, clean, stripUnsafeUrls } from '../../utils/sanitizer';
+import { composeSanitizerConfig, clean } from '../../utils/sanitizer';
 import { normalizeInlineMarkupHtml } from '../../utils/inline-normalization';
 
 import { SAFE_STRUCTURAL_TAGS } from './constants';
@@ -326,7 +326,7 @@ export class Paste extends Module {
      * `clean()` allowlists the href/src ATTRIBUTE but never inspects its scheme,
      * so a pasted `javascript:` link would otherwise arrive as a live anchor.
      */
-    const cleanData = normalizeInlineMarkupHtml(stripUnsafeUrls(clean(preprocessed, customConfig)));
+    const cleanData = normalizeInlineMarkupHtml(clean(preprocessed, customConfig));
     const cleanDataIsHtml = dom$.isHTMLString(cleanData);
     const shouldProcessAsPlain = !cleanData.trim() || (cleanData.trim() === plainData || !cleanDataIsHtml);
 

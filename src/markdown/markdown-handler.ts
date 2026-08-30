@@ -20,7 +20,11 @@ const MARKDOWN_SIGNALS: RegExp[] = [
   /^[ \t]*[-*+][ \t]+\S/m,         // Unordered list item: - / * / + marker + content
   /^[ \t]*\d{1,9}[.)][ \t]+\S/m,  // Ordered list item: 1. / 1) marker + content
   /^ {0,3}> \S/m,                  // Blockquote: `> text` (a space then content, so `->`/`=>`/`>>>` never match)
-  /\[.+?\]\(.+?\)/,               // Markdown links: [text](url)
+  // Link text excludes `[`/`]` and the URL excludes `[` so neither scan can
+  // run past the next candidate start: `/\[.+?\]\(.+?\)/` retried from every
+  // `[` and froze the tab on hostile paste. Costs link text containing
+  // brackets — a signal, not a parser.
+  /\[[^\][\n]+\]\([^)[\n]+\)/,   // Markdown links: [text](url)
   /\*\*.+?\*\*/,                   // Bold: **text**
   /!\[/,                           // Image: ![
   /\$\$[\s\S]+?\$\$/,             // Block math: $$...$$

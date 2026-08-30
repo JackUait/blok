@@ -29,8 +29,19 @@ export interface LocalePath {
   path: string;
 }
 
-const stripTrailingSlash = (pathname: string): string =>
-  pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname || '/';
+/**
+ * Counts the run instead of using `/\/+$/`: that pattern retries at every
+ * offset and goes quadratic on a long run of slashes.
+ */
+const stripTrailingSlash = (pathname: string): string => {
+  if (pathname.length <= 1) {
+    return pathname || '/';
+  }
+
+  const run = Array.from(pathname).reduce((count, character) => (character === '/' ? count + 1 : 0), 0);
+
+  return pathname.slice(0, pathname.length - run) || '/';
+};
 
 /** Split `/ru/docs/table` into its locale and the unprefixed `/docs/table`. */
 export const splitLocalePath = (pathname: string): LocalePath => {

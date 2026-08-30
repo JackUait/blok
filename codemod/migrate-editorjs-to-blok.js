@@ -1064,38 +1064,52 @@ function findWord(content, word, from, to) {
 }
 
 /**
- * Whether the `from` token at `fromIndex` is followed by a quoted module source
- * that ends the line (with an optional semicolon).
+ * End of the import declaration whose `from` token sits at `fromIndex` (with an
+ * optional semicolon), or -1 when no quoted module source closes it.
+ *
+ * The source may sit on a LATER line: the `\s+` of the regex this replaced spanned
+ * newlines, so `import { x } from\n'./y';` is one declaration. Only a whitespace
+ * skip that actually crossed the newline pays for locating the source line, which
+ * keeps the scan linear — an unconditional newline lookup would re-walk the rest of
+ * the line for every `from` token on it.
  */
-function isModuleSourceAt(content, fromIndex, lineEnd) {
+function moduleSourceEndAt(content, fromIndex, lineEnd) {
   let position = skipWhitespace(content, fromIndex + 'from'.length);
   const quote = content[position];
 
   if (quote !== "'" && quote !== '"') {
-    return false;
+    return -1;
+  }
+
+  let sourceLineEnd = lineEnd;
+
+  if (position > lineEnd) {
+    const newline = content.indexOf('\n', position);
+
+    sourceLineEnd = newline < 0 ? content.length : newline;
   }
 
   const quoteEnd = content.indexOf(quote, position + 1);
 
-  if (quoteEnd < 0 || quoteEnd >= lineEnd) {
-    return false;
+  if (quoteEnd < 0 || quoteEnd >= sourceLineEnd) {
+    return -1;
   }
 
   position = quoteEnd + 1;
 
-  while (position < lineEnd && isWhitespace(content[position])) {
+  while (position < sourceLineEnd && isWhitespace(content[position])) {
     position += 1;
   }
 
   if (content[position] === ';') {
     position += 1;
 
-    while (position < lineEnd && isWhitespace(content[position])) {
+    while (position < sourceLineEnd && isWhitespace(content[position])) {
       position += 1;
     }
   }
 
-  return position === lineEnd;
+  return position === sourceLineEnd ? sourceLineEnd : -1;
 }
 
 function findLastImportEnd(content) {
@@ -1120,8 +1134,10 @@ function findLastImportEnd(content) {
       // Last-to-first mirrors the greedy `.+` of the regex this replaced, so
       // `import { from as x } from '…'` resolves on the module `from`, not the binding.
       for (let i = fromPositions.length - 1; i >= 0; i--) {
-        if (isModuleSourceAt(content, fromPositions[i], lineEnd)) {
-          lastImportEnd = lineEnd;
+        const importEnd = moduleSourceEndAt(content, fromPositions[i], lineEnd);
+
+        if (importEnd >= 0) {
+          lastImportEnd = importEnd;
           break;
         }
       }

@@ -1291,6 +1291,40 @@ test('ensureToolsImport ignores a dynamic import line when placing the import', 
   );
 });
 
+test('ensureToolsImport places the import after a multi-line import, not inside a template literal', () => {
+  const input = `const t = \`
+import Q from './doc';
+\`;
+import { something } from
+'./helpers';
+const e = new Blok({ tools: { header: Header } });`;
+  const { result, changed } = ensureToolsImport(input);
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assertEqual(
+    result,
+    `const t = \`
+import Q from './doc';
+\`;
+import { something } from
+'./helpers';
+import { Header } from '@bloklabs/core/tools';
+const e = new Blok({ tools: { header: Header } });`,
+    'Generated import goes after the multi-line import, not inside the template literal'
+  );
+});
+
+test('ensureToolsImport does not anchor on a from clause followed by a non-quote line', () => {
+  const input = `import { something } from\nconst tool = Header;`;
+  const { result, changed } = ensureToolsImport(input);
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assert(
+    result.startsWith(`import { Header } from '@bloklabs/core/tools';\nimport { something } from`),
+    `Unfinished from clause must not anchor the insert, got: ${result}`
+  );
+});
+
 test('splitBlokImports handles non-breaking space between import tokens', () => {
   const input = `import\u00a0{ Blok, Header } from '@bloklabs/core';`;
   const { result, changed } = splitBlokImports(input);

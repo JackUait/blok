@@ -4,6 +4,7 @@ import type { BlockToolAdapter } from '../../tools/block';
 import type { ToolsCollection } from '../../tools/collection';
 import { isObject } from '../../utils';
 import { clean , composeSanitizerConfig } from '../../utils/sanitizer';
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
 import { SAFE_STRUCTURAL_TAGS, STRUCTURAL_TAG_ATTRIBUTES, collectTagNames } from './constants';
 import type { TagSubstitute } from './types';
@@ -105,10 +106,9 @@ export class SanitizerConfigBuilder {
       input: { type: true, checked: true },
     };
     const cleanTableHTML = clean(table.outerHTML, tableConfig);
-    const tmpWrapper = document.createElement('div');
-
-    tmpWrapper.innerHTML = cleanTableHTML;
-    const firstChild = tmpWrapper.firstChild;
+    // `img: { src: true }` above survives the clean, so a live re-parse would
+    // fetch every pasted image URL right here.
+    const firstChild = parseUntrustedHtml(cleanTableHTML).firstChild;
 
     if (!firstChild || !(firstChild instanceof HTMLElement)) {
       return null;

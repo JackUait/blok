@@ -4,7 +4,6 @@ import {
   parseGenericHtmlTable,
   parseClipboardHtml
 } from '../../../../src/tools/table/table-cell-clipboard';
-import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
 
 const cellText = (payload: ReturnType<typeof parseGenericHtmlTable>): string =>
   payload?.cells[0]?.[0]?.blocks
@@ -42,7 +41,7 @@ describe('table cell clipboard refuses unsafe URL schemes', () => {
     const forged = JSON.stringify([[{ blocks: [{ tool: 'paragraph',
       data: { text: '<a href="javascript:alert(1)">x</a>' } }] }]]);
     const payload = parseClipboardHtml(
-      `<table ${DATA_ATTR.tableCells}='${forged}'><tr><td>x</td></tr></table>`
+      `<table data-blok-table-cells='${forged}'><tr><td>x</td></tr></table>`
     );
 
     expect(cellText(payload)).not.toContain('javascript:');

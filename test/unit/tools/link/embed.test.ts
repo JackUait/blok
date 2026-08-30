@@ -1134,9 +1134,8 @@ describe('Embed stored-data URL safety (stored XSS guard)', () => {
     );
 
     const root = tool.render();
-    const href = root.querySelector('blockquote a')?.getAttribute('href') ?? '';
 
-    expect(href.startsWith('javascript:')).toBe(false);
+    expect(root.querySelector('blockquote a')).toBeNull();
   });
 
   it('still renders a valid https registry embed (guard must not break real embeds)', () => {

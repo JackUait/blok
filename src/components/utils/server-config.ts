@@ -59,7 +59,11 @@ export function expandServerConfig(config: BlokConfig): BlokConfig {
     return config;
   }
 
-  const base = server.replace(/\/+$/, '');
+  const trailingSlashes = Array.from(server)
+    .reduce((count, character) => (character === '/' ? count + 1 : 0), 0);
+  // Counting beats `/\/+$/`, which retries at every offset and goes quadratic
+  // on a long run of slashes.
+  const base = server.slice(0, server.length - trailingSlashes);
 
   // One source for the whole editor: uploads and link previews share a pass, so
   // a page full of images mints one rather than one per request.

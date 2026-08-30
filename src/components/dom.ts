@@ -1,4 +1,5 @@
 import { isNumber, isString } from './utils';
+import { parseUntrustedHtml } from './utils/inert-html';
 
 /**
  * DOM manipulations helper
@@ -453,11 +454,7 @@ export class Dom {
    * @returns {boolean}
    */
   public static isHTMLString(str: string): boolean {
-    const wrapper = Dom.make('div');
-
-    wrapper.innerHTML = str;
-
-    return wrapper.childElementCount > 0;
+    return parseUntrustedHtml(str).childElementCount > 0;
   }
 
   /**
@@ -531,15 +528,7 @@ export class Dom {
    * @returns {boolean}
    */
   public static containsOnlyInlineElements(data: string | HTMLElement): boolean {
-    const wrapper = isString(data)
-      ? (() => {
-        const container = document.createElement('div');
-
-        container.innerHTML = data;
-
-        return container;
-      })()
-      : data;
+    const wrapper = isString(data) ? parseUntrustedHtml(data) : data;
 
     const check = (element: Element): boolean => {
       return !Dom.blockElements.includes(element.tagName.toLowerCase()) &&

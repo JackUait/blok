@@ -231,7 +231,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
       }
 
       return Object.values(b.data).some(
-        (v) => typeof v === 'string' && v.includes('example.com')
+        (v) => v === 'https://example.com'
       );
     });
 
@@ -255,7 +255,7 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
       }
 
       return Object.values(b.data).some(
-        (v) => typeof v === 'string' && v.includes('example.com')
+        (v) => v === 'https://example.com'
       );
     });
 

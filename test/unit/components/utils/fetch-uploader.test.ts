@@ -92,6 +92,20 @@ describe('createFetchUploader', () => {
     expect(spy.mock.calls[0][0].url).toBe('https://blok.example.com/upload');
   });
 
+  it('normalizes a long internal slash run without polynomial backtracking', async () => {
+    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
+    const baseUrl = `https://blok.example.com/${'/'.repeat(16_000)}x`;
+    const startedAt = performance.now();
+
+    const uploader = createFetchUploader({ baseUrl });
+    const elapsed = performance.now() - startedAt;
+
+    await requireUploadByFile(uploader)(new File(['x'], 'a.png'), { kind: 'image' });
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(spy.mock.calls[0][0].url).toBe(`${baseUrl}/upload`);
+  });
+
   it('resolves headers from a function on every call', async () => {
     const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
     const headers = vi.fn().mockResolvedValue({ Authorization: 'Bearer pass-1' });

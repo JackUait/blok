@@ -42,6 +42,17 @@ describe('expandServerConfig', () => {
     expect(toolConfig(result, 'bookmark')?.endpoint).toBe('https://blok.example.com/unfurl');
   });
 
+  it('normalizes a long internal slash run without polynomial backtracking', () => {
+    const server = `https://blok.example.com/${'/'.repeat(16_000)}x`;
+    const startedAt = performance.now();
+
+    const result = expandServerConfig({ server });
+    const elapsed = performance.now() - startedAt;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(toolConfig(result, 'bookmark')?.endpoint).toBe(`${server}/unfurl`);
+  });
+
   // The spec's precedence rule: paths mix. "Service for previews, own S3 for
   // files" must work without any bridging code.
   it('keeps an explicit uploader and still fills the bookmark endpoint', () => {

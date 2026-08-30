@@ -7,6 +7,7 @@ import {
 } from '../../utils/default-page-colors';
 
 import { COLUMNS_CANDIDATE_ATTR } from './constants';
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
 /**
  * Pre-process Google Docs clipboard HTML before sanitization.
@@ -21,9 +22,7 @@ import { COLUMNS_CANDIDATE_ATTR } from './constants';
  * @returns preprocessed HTML string
  */
 export function preprocessGoogleDocsHtml(html: string): string {
-  const wrapper = document.createElement('div');
-
-  wrapper.innerHTML = html;
+  const wrapper = parseUntrustedHtml(html);
 
   const isGoogleDocs = unwrapGoogleDocsContent(wrapper);
 

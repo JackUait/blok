@@ -108,6 +108,30 @@ function withTrailingSeparator(path) {
   return path.endsWith(sep) ? path : `${path}${sep}`;
 }
 
+function stripXmlComments(xml) {
+  let cursor = 0;
+  let result = '';
+
+  while (cursor < xml.length) {
+    const start = xml.indexOf('<!--', cursor);
+
+    if (start < 0) {
+      return result + xml.slice(cursor);
+    }
+
+    const end = xml.indexOf('-->', start + 4);
+
+    if (end < 0) {
+      return result + xml.slice(cursor);
+    }
+
+    result += xml.slice(cursor, start);
+    cursor = end + 3;
+  }
+
+  return result;
+}
+
 function decodeXml(value) {
   return value
     .replaceAll('&quot;', '"')
@@ -595,8 +619,7 @@ async function main() {
 
   try {
     for (const [packageId, project] of Object.entries(packageProjects)) {
-      const projectXml = (await readFile(project.path, 'utf8'))
-        .replace(/<!--[\s\S]*?-->/g, '');
+      const projectXml = stripXmlComments(await readFile(project.path, 'utf8'));
 
       assert.doesNotMatch(
         projectXml,
@@ -605,8 +628,7 @@ async function main() {
       );
     }
 
-    const hostProjectXml = (await readFile(hostProject, 'utf8'))
-      .replace(/<!--[\s\S]*?-->/g, '');
+    const hostProjectXml = stripXmlComments(await readFile(hostProject, 'utf8'));
     const hostPackableValues = [
       ...hostProjectXml.matchAll(
         /<IsPackable\b[^>]*>([\s\S]*?)<\/IsPackable>/g,

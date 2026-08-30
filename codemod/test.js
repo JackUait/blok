@@ -11,6 +11,7 @@ const {
   normalizeKey,
   flattenI18nDictionary,
   transformI18nConfig,
+  findMatchingBrace,
   removeI18nMessages,
   I18N_KEY_MAPPINGS,
   BUNDLED_TOOLS,
@@ -601,6 +602,28 @@ test('handles multiple tool usage', () => {
   assertEqual(result.includes('Paragraph'), true, 'Should add Paragraph import');
 });
 
+test('ensureBlokImport scans malformed prefixes before a main import promptly', () => {
+  const input = `${'import{{'.repeat(5_000)}} nope\nimport { Blok } from '@bloklabs/core';\nconst tool = Header;`;
+  const startedAt = Date.now();
+  const { result, changed } = ensureBlokImport(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assert(result.includes('Header, Blok'), 'Should preserve the valid main import');
+  assert(elapsed < 750, `Deprecated main import scan took ${elapsed}ms`);
+});
+
+test('ensureBlokImport handles a malformed existing import promptly', () => {
+  const input = `import ${' '.repeat(12_000)}\nconst tool = Header;`;
+  const startedAt = Date.now();
+  const { result, changed } = ensureBlokImport(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, true, 'Should add a core import');
+  assert(result.startsWith("import { Header } from '@bloklabs/core';"), 'Should prepend the core import');
+  assert(elapsed < 750, `Deprecated last import scan took ${elapsed}ms`);
+});
+
 test('full migration adds imports for bundled tools', () => {
   // This simulates a complete migration from EditorJS with bundled tools
   const input = `import EditorJS from '@editorjs/editorjs';
@@ -786,6 +809,44 @@ test('transformI18nConfig handles single quotes', () => {
   assertEqual(changed, true, 'Should indicate change');
   // Keys are normalized to camelCase
   assertEqual(result.includes('"toolNames.text": "Текст"'), true, 'Should have flattened key with value');
+});
+
+test('transformI18nConfig handles a long malformed unquoted key promptly', () => {
+  const input = `const editor = new Blok({ i18n: { messages: {${'0'.repeat(6_000)}} } });`;
+  const startedAt = Date.now();
+  const { result, changed } = transformI18nConfig(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, false, 'Malformed messages stay unchanged');
+  assertEqual(result, input, 'Malformed source stays unchanged');
+  assert(elapsed < 750, `Malformed key scan took ${elapsed}ms`);
+});
+
+test('findMatchingBrace handles a long backslash run promptly', () => {
+  const input = `{ value: "${'\\'.repeat(20_000)}" }`;
+  const startedAt = Date.now();
+  const closingBrace = findMatchingBrace(input, 0);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(closingBrace, input.length - 1, 'Closing brace should be found');
+  assert(elapsed < 750, `Backslash scan took ${elapsed}ms`);
+});
+
+test('transformI18nConfig preserves a string ending in a backslash', () => {
+  const input = `const editor = new Blok({
+  i18n: {
+    messages: {
+      toolNames: {
+        Label: "ends\\\\"
+      }
+    }
+  }
+});`;
+  const { result, changed } = transformI18nConfig(input);
+
+  assertEqual(changed, true, 'Should indicate change');
+  assertEqual(result.includes('"toolNames.label": "ends\\\\"'), true, 'Should preserve the escaped backslash');
+  new Function(result);
 });
 
 test('I18N_KEY_MAPPINGS contains expected mappings', () => {
@@ -1122,6 +1183,37 @@ test('splitBlokImports handles aliased imports', () => {
   assertEqual(result.includes("@bloklabs/core/tools"), true, 'Should have tools import');
 });
 
+test('splitBlokImports rejects an unterminated named import promptly', () => {
+  const input = `import{{${' '.repeat(12_000)}`;
+  const startedAt = Date.now();
+  const { result, changed } = splitBlokImports(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, false, 'Malformed import should not change');
+  assertEqual(result, input, 'Malformed import should stay intact');
+  assert(elapsed < 750, `Unterminated import scan took ${elapsed}ms`);
+});
+
+test('splitBlokImports skips a malformed import before a valid one', () => {
+  const input = `import { Broken
+import { Blok, Header } from '@bloklabs/core';`;
+  const { result, changed } = splitBlokImports(input);
+
+  assertEqual(changed, true, 'Valid import should still be split');
+  assertEqual(result, `import { Broken
+import { Blok } from '@bloklabs/core';
+import { Header } from '@bloklabs/core/tools';`, 'Only the valid import should be split');
+});
+
+test('splitBlokImports handles a malformed alias separator promptly', () => {
+  const input = `import { Header ${' '.repeat(12_000)} Bogus } from '@bloklabs/core';`;
+  const startedAt = Date.now();
+  splitBlokImports(input);
+  const elapsed = Date.now() - startedAt;
+
+  assert(elapsed < 750, `Malformed alias scan took ${elapsed}ms`);
+});
+
 test('ensureToolsImport adds tools import when no import exists', () => {
   const input = `const editor = new Blok({
   tools: { header: Header }
@@ -1141,6 +1233,70 @@ const editor = new Blok({
   assertEqual(changed, true, 'Should indicate change');
   assertEqual(result.includes('Paragraph'), true, 'Should add Paragraph');
   assertEqual(result.includes("from '@bloklabs/core/tools';"), true, 'Should use tools path');
+});
+
+test('ensureToolsImport scans malformed prefixes before a tools import promptly', () => {
+  const input = `${'import{{'.repeat(5_000)}} nope\nimport { Header } from '@bloklabs/core/tools';\nconst tool = Paragraph;`;
+  const startedAt = Date.now();
+  const { result, changed } = ensureToolsImport(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assert(result.includes('Header, Paragraph'), 'Should preserve the valid tools import');
+  assert(elapsed < 750, `Tools import scan took ${elapsed}ms`);
+});
+
+test('ensureToolsImport scans malformed prefixes before a main import promptly', () => {
+  const input = `${'import{{'.repeat(5_000)}} nope\nimport { Blok } from '@bloklabs/core';\nconst tool = Header;`;
+  const startedAt = Date.now();
+  const { result, changed } = ensureToolsImport(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assert(result.includes('Header, Blok'), 'Should preserve the valid main import');
+  assert(elapsed < 750, `Main import scan took ${elapsed}ms`);
+});
+
+test('ensureToolsImport handles a malformed existing import promptly', () => {
+  const input = `import ${' '.repeat(12_000)}\nconst tool = Header;`;
+  const startedAt = Date.now();
+  const { result, changed } = ensureToolsImport(input);
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(changed, true, 'Should add a tools import');
+  assert(result.startsWith("import { Header } from '@bloklabs/core/tools';"), 'Should prepend the tools import');
+  assert(elapsed < 750, `Last import scan took ${elapsed}ms`);
+});
+
+test('ensureToolsImport places the import after a line importing a binding named from', () => {
+  const input = `import { from as source } from './tokens';\nconst tool = Header;`;
+  const { result, changed } = ensureToolsImport(input);
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assertEqual(
+    result,
+    `import { from as source } from './tokens';\nimport { Header } from '@bloklabs/core/tools';\nconst tool = Header;`,
+    'Generated import goes after the existing import, not before it'
+  );
+});
+
+test('ensureToolsImport ignores a dynamic import line when placing the import', () => {
+  const input = `'use client';\nimport('./feature'); // from 'legacy'\nconst tool = Header;`;
+  const { result, changed } = ensureToolsImport(input);
+
+  assertEqual(changed, true, 'Should add the missing tool');
+  assert(
+    result.startsWith(`import { Header } from '@bloklabs/core/tools';\n'use client';`),
+    `Dynamic import must not anchor the insert, got: ${result}`
+  );
+});
+
+test('splitBlokImports handles non-breaking space between import tokens', () => {
+  const input = `import\u00a0{ Blok, Header } from '@bloklabs/core';`;
+  const { result, changed } = splitBlokImports(input);
+
+  assertEqual(changed, true, 'Should split the import');
+  assert(result.includes("from '@bloklabs/core/tools';"), 'Header should move to the tools entry point');
 });
 
 test('ensureToolsImport does not duplicate when tools are in main import', () => {
@@ -1728,6 +1884,25 @@ test('renames only inside the <script> block of a .vue file, not the template', 
   assert(result.includes('<div>EditorJS docs</div>'), 'template text left untouched');
   assert(result.includes('const e = new Blok();'), 'script constructor migrated');
   assert(/:\s*BlokConfig/.test(result), 'script type migrated');
+});
+
+test('renames inside a Vue script block whose closing tag contains whitespace', () => {
+  const input = `<template>EditorJS docs</template>\n<script>\nconst e = new EditorJS();\n</script >\n`;
+  const { result } = renameEditorJsIdentifiers(input, { filePath: 'App.vue' });
+
+  assert(result.includes('<template>EditorJS docs</template>'), 'template text left untouched');
+  assert(result.includes('const e = new Blok();'), 'script constructor migrated');
+  assert(result.includes('</script >'), 'closing tag spelling preserved');
+});
+
+test('rejects many malformed Vue script prefixes promptly', () => {
+  const input = '<script '.repeat(10_000);
+  const startedAt = Date.now();
+  const { result } = renameEditorJsIdentifiers(input, { filePath: 'App.vue' });
+  const elapsed = Date.now() - startedAt;
+
+  assertEqual(result, input, 'Malformed component stays unchanged');
+  assert(elapsed < 750, `Malformed script scan took ${elapsed}ms`);
 });
 
 // ============================================================================

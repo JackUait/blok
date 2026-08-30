@@ -182,7 +182,7 @@ function parseObjectLiteral(str) {
       // Replace single quotes with double quotes
       .replace(/'/g, '"')
       // Handle unquoted keys (identifier followed by colon)
-      .replace(/(\s*)(\w+)(\s*:\s*)/g, '$1"$2"$3')
+      .replace(/(^|[,{])(\s*)(\w+)(\s*):/g, '$1$2"$3"$4:')
       // Remove trailing commas before closing braces/brackets
       .replace(/,(\s*[}\]])/g, '$1');
 
@@ -204,10 +204,9 @@ function objectToString(obj, indent = '      ') {
     return '{}';
   }
 
-  const lines = entries.map(([key, value]) => {
-    const escapedValue = typeof value === 'string' ? value.replace(/"/g, '\\"') : value;
-    return `${indent}"${key}": "${escapedValue}"`;
-  });
+  const lines = entries.map(([key, value]) =>
+    `${indent}${JSON.stringify(key)}: ${JSON.stringify(String(value))}`
+  );
 
   return '{\n' + lines.join(',\n') + '\n' + indent.slice(2) + '}';
 }
@@ -222,13 +221,21 @@ function findMatchingBrace(str, startIndex) {
   let depth = 0;
   let inString = false;
   let stringChar = '';
+  let precedingBackslashes = 0;
 
   for (let i = startIndex; i < str.length; i++) {
     const char = str[i];
-    const prevChar = i > 0 ? str[i - 1] : '';
+
+    if (char === '\\') {
+      precedingBackslashes += 1;
+      continue;
+    }
+
+    const isEscaped = precedingBackslashes % 2 === 1;
+    precedingBackslashes = 0;
 
     // Handle string detection
-    if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
+    if ((char === '"' || char === "'" || char === '`') && !isEscaped) {
       if (!inString) {
         inString = true;
         stringChar = char;
@@ -911,47 +918,245 @@ const BLOK_MODULAR_IMPORT_TRANSFORMS = [
  * @param {string} content - The file content
  * @returns {{result: string, changed: boolean}} Transformed content and change flag
  */
-function splitBlokImports(content) {
-  // Pattern to find @bloklabs/core named imports
-  const blokImportPattern = /import\s*\{\s*([^}]+)\s*\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/g;
-  let result = content;
-  let changed = false;
+const MAIN_IMPORT_SOURCES = new Set(['@jackuait/blok', '@bloklabs/core']);
+const TOOLS_IMPORT_SOURCES = new Set(['@jackuait/blok/tools', '@bloklabs/core/tools']);
 
-  // Collect all matches first to avoid regex state issues
-  const matches = [];
-  let match;
-  while ((match = blokImportPattern.exec(content)) !== null) {
-    matches.push({
-      fullMatch: match[0],
-      imports: match[1],
-      index: match.index,
-    });
+function isWordCharacter(character) {
+  return character !== undefined && /[A-Za-z0-9_$]/.test(character);
+}
+
+function isWhitespace(character) {
+  // Mirrors the `\s` the scanned-away regexes used: source may carry NBSP or
+  // other Unicode spaces, and treating those as non-whitespace skips valid imports.
+  return character !== undefined && /\s/.test(character);
+}
+
+function skipWhitespace(content, index) {
+  while (index < content.length && isWhitespace(content[index])) {
+    index += 1;
   }
 
-  // Process matches in reverse order to preserve indices
+  return index;
+}
+
+function hasWordAt(content, index, word) {
+  return content.slice(index, index + word.length) === word
+    && !isWordCharacter(content[index - 1])
+    && !isWordCharacter(content[index + word.length]);
+}
+
+function findNamedImports(content, sources) {
+  const matches = [];
+  let cursor = 0;
+
+  while (cursor < content.length) {
+    const start = content.indexOf('import', cursor);
+
+    if (start < 0) {
+      break;
+    }
+
+    cursor = start + 'import'.length;
+
+    if (!hasWordAt(content, start, 'import')) {
+      continue;
+    }
+
+    let position = skipWhitespace(content, cursor);
+
+    // Type-only imports stay untouched; tools are runtime values.
+    if (hasWordAt(content, position, 'type')) {
+      continue;
+    }
+
+    if (content[position] !== '{') {
+      continue;
+    }
+
+    const openBrace = position;
+    const closeBrace = content.indexOf('}', openBrace + 1);
+
+    if (closeBrace < 0) {
+      break;
+    }
+
+    position = skipWhitespace(content, closeBrace + 1);
+
+    if (!hasWordAt(content, position, 'from')) {
+      cursor = closeBrace + 1;
+      continue;
+    }
+
+    position = skipWhitespace(content, position + 'from'.length);
+    const quote = content[position];
+
+    if (quote !== "'" && quote !== '"') {
+      cursor = position + 1;
+      continue;
+    }
+
+    const quoteEnd = content.indexOf(quote, position + 1);
+
+    if (quoteEnd < 0) {
+      break;
+    }
+
+    const source = content.slice(position + 1, quoteEnd);
+    let end = quoteEnd + 1;
+    const hasSemicolon = content[end] === ';';
+
+    if (hasSemicolon) {
+      end += 1;
+    }
+
+    if (sources.has(source)) {
+      matches.push({
+        start,
+        end,
+        imports: content.slice(openBrace + 1, closeBrace),
+        hasSemicolon,
+      });
+    }
+
+    cursor = end;
+  }
+
+  return matches;
+}
+
+function importNameOf(specifier) {
+  const trimmed = specifier.trim();
+  let nameEnd = 0;
+
+  while (nameEnd < trimmed.length && !isWhitespace(trimmed[nameEnd])) {
+    nameEnd += 1;
+  }
+
+  let position = skipWhitespace(trimmed, nameEnd);
+
+  if (!hasWordAt(trimmed, position, 'as')) {
+    return trimmed;
+  }
+
+  position = skipWhitespace(trimmed, position + 'as'.length);
+
+  return position < trimmed.length ? trimmed.slice(0, nameEnd) : trimmed;
+}
+
+function findWord(content, word, from, to) {
+  let cursor = from;
+
+  while (cursor < to) {
+    const match = content.indexOf(word, cursor);
+
+    if (match < 0 || match >= to) {
+      return -1;
+    }
+
+    if (hasWordAt(content, match, word)) {
+      return match;
+    }
+
+    cursor = match + word.length;
+  }
+
+  return -1;
+}
+
+/**
+ * Whether the `from` token at `fromIndex` is followed by a quoted module source
+ * that ends the line (with an optional semicolon).
+ */
+function isModuleSourceAt(content, fromIndex, lineEnd) {
+  let position = skipWhitespace(content, fromIndex + 'from'.length);
+  const quote = content[position];
+
+  if (quote !== "'" && quote !== '"') {
+    return false;
+  }
+
+  const quoteEnd = content.indexOf(quote, position + 1);
+
+  if (quoteEnd < 0 || quoteEnd >= lineEnd) {
+    return false;
+  }
+
+  position = quoteEnd + 1;
+
+  while (position < lineEnd && isWhitespace(content[position])) {
+    position += 1;
+  }
+
+  if (content[position] === ';') {
+    position += 1;
+
+    while (position < lineEnd && isWhitespace(content[position])) {
+      position += 1;
+    }
+  }
+
+  return position === lineEnd;
+}
+
+function findLastImportEnd(content) {
+  let lineStart = 0;
+  let lastImportEnd = -1;
+
+  while (lineStart <= content.length) {
+    const newline = content.indexOf('\n', lineStart);
+    const lineEnd = newline < 0 ? content.length : newline;
+
+    // A declaration always has whitespace after `import`; `import(` and
+    // `import.meta` are expressions the generated import must not be appended to.
+    if (hasWordAt(content, lineStart, 'import') && isWhitespace(content[lineStart + 'import'.length])) {
+      const fromPositions = [];
+      let from = findWord(content, 'from', lineStart + 'import'.length, lineEnd);
+
+      while (from >= 0) {
+        fromPositions.push(from);
+        from = findWord(content, 'from', from + 'from'.length, lineEnd);
+      }
+
+      // Last-to-first mirrors the greedy `.+` of the regex this replaced, so
+      // `import { from as x } from '…'` resolves on the module `from`, not the binding.
+      for (let i = fromPositions.length - 1; i >= 0; i--) {
+        if (isModuleSourceAt(content, fromPositions[i], lineEnd)) {
+          lastImportEnd = lineEnd;
+          break;
+        }
+      }
+    }
+
+    if (newline < 0) {
+      break;
+    }
+
+    lineStart = newline + 1;
+  }
+
+  return lastImportEnd;
+}
+
+function splitBlokImports(content) {
+  let result = content;
+  let changed = false;
+  const matches = findNamedImports(content, MAIN_IMPORT_SOURCES);
+
+  // Process matches in reverse order to preserve indices.
   for (let i = matches.length - 1; i >= 0; i--) {
-    const { fullMatch, imports } = matches[i];
-
-    // Parse the imports
+    const { start, end, imports, hasSemicolon } = matches[i];
     const importList = imports.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-    // Separate core imports from tool imports
     const coreImports = [];
     const toolImports = [];
 
     for (const imp of importList) {
-      // Handle aliased imports: "Header as MyHeader"
-      const importName = imp.split(/\s+as\s+/)[0].trim();
-
-      if (ALL_TOOLS.includes(importName)) {
+      if (ALL_TOOLS.includes(importNameOf(imp))) {
         toolImports.push(imp);
       } else {
         coreImports.push(imp);
       }
     }
 
-    // Only transform if there are tool imports mixed with core imports
-    // or if there are only tool imports (they should come from /tools)
     if (toolImports.length > 0) {
       let newImports = '';
 
@@ -959,16 +1164,13 @@ function splitBlokImports(content) {
         newImports += `import { ${coreImports.join(', ')} } from '@bloklabs/core';\n`;
       }
 
-      if (toolImports.length > 0) {
-        newImports += `import { ${toolImports.join(', ')} } from '@bloklabs/core/tools';`;
+      newImports += `import { ${toolImports.join(', ')} } from '@bloklabs/core/tools';`;
+
+      if (!hasSemicolon) {
+        newImports = newImports.slice(0, -1);
       }
 
-      // Preserve trailing newline if original had one
-      if (!fullMatch.endsWith(';')) {
-        newImports = newImports.replace(/;$/, '');
-      }
-
-      result = result.replace(fullMatch, newImports);
+      result = result.slice(0, start) + newImports + result.slice(end);
       changed = true;
     }
   }
@@ -1243,20 +1445,32 @@ function babelPluginsForExt(ext) {
  * Returns null when there is no script block.
  */
 function extractScriptBlock(content) {
-  const match = content.match(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/i);
+  const openMatch = /<script\b/ig.exec(content);
 
-  if (!match || match.index === undefined) {
+  if (!openMatch) {
     return null;
   }
 
-  const openTag = match[1];
-  const code = match[2];
-  const bodyStart = match.index + openTag.length;
+  const openTagEnd = content.indexOf('>', openMatch.index + openMatch[0].length);
+
+  if (openTagEnd < 0) {
+    return null;
+  }
+
+  const closePattern = /<\/script\s*>/ig;
+  closePattern.lastIndex = openTagEnd + 1;
+  const closeMatch = closePattern.exec(content);
+
+  if (!closeMatch) {
+    return null;
+  }
+
+  const bodyStart = openTagEnd + 1;
 
   return {
     before: content.slice(0, bodyStart),
-    code,
-    after: content.slice(bodyStart + code.length),
+    code: content.slice(bodyStart, closeMatch.index),
+    after: content.slice(closeMatch.index),
   };
 }
 
@@ -1431,14 +1645,13 @@ function ensureBlokImport(content) {
   }
 
   // Check for existing @bloklabs/core import
-  const namedImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/;
-  const namedMatch = content.match(namedImportPattern);
+  const namedMatch = findNamedImports(content, MAIN_IMPORT_SOURCES)[0];
 
   let result = content;
 
   if (namedMatch) {
     // Check which tools are missing from the import
-    const existingImports = namedMatch[1];
+    const existingImports = namedMatch.imports;
     const missingTools = usedTools.filter(tool => {
       const toolPattern = new RegExp(`\\b${tool}\\b`);
       return !toolPattern.test(existingImports);
@@ -1447,27 +1660,22 @@ function ensureBlokImport(content) {
     if (missingTools.length > 0) {
       // Add missing tools to existing import
       const newImports = `${missingTools.join(', ')}, ${existingImports.trim()}`;
-      result = content.replace(
-        namedImportPattern,
-        `import { ${newImports} } from '@bloklabs/core';`
-      );
+      const replacement = `import { ${newImports} } from '@bloklabs/core';`;
+      result = content.slice(0, namedMatch.start) + replacement + content.slice(namedMatch.end);
       return { result, changed: true };
     }
     return { result: content, changed: false };
   }
 
   // No @bloklabs/core import at all -> add new import
-  const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
+  const lastImportEnd = findLastImportEnd(content);
   const newImport = `import { ${usedTools.join(', ')} } from '@bloklabs/core';`;
 
-  if (importStatements && importStatements.length > 0) {
-    const lastImport = importStatements[importStatements.length - 1];
-    const lastImportIndex = content.lastIndexOf(lastImport);
-    const insertPosition = lastImportIndex + lastImport.length;
+  if (lastImportEnd >= 0) {
     result =
-      content.slice(0, insertPosition) +
+      content.slice(0, lastImportEnd) +
       '\n' + newImport +
-      content.slice(insertPosition);
+      content.slice(lastImportEnd);
   } else {
     // No imports found, add at the very beginning (after shebang if present)
     const shebangMatch = content.match(/^#!.*\n/);
@@ -1502,18 +1710,16 @@ function ensureToolsImport(content) {
   }
 
   // Check for existing @bloklabs/core/tools import
-  const toolsImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:(?:@jackuait\/blok|@bloklabs\/core)\/tools|@bloklabs\/core\/tools)['"];?/;
-  const toolsMatch = content.match(toolsImportPattern);
+  const toolsMatch = findNamedImports(content, TOOLS_IMPORT_SOURCES)[0];
 
   // Also check for @bloklabs/core import (legacy, will be split later)
-  const mainImportPattern = /import\s*\{([^}]+)\}\s*from\s*['"](?:@jackuait\/blok|@bloklabs\/core)['"];?/;
-  const mainMatch = content.match(mainImportPattern);
+  const mainMatch = findNamedImports(content, MAIN_IMPORT_SOURCES)[0];
 
   let result = content;
 
   // Check if tools are already imported from /tools
   if (toolsMatch) {
-    const existingToolsImports = toolsMatch[1];
+    const existingToolsImports = toolsMatch.imports;
     const missingTools = usedTools.filter(tool => {
       const toolPattern = new RegExp(`\\b${tool}\\b`);
       return !toolPattern.test(existingToolsImports);
@@ -1522,10 +1728,8 @@ function ensureToolsImport(content) {
     if (missingTools.length > 0) {
       // Add missing tools to existing /tools import
       const newImports = `${existingToolsImports.trim()}, ${missingTools.join(', ')}`;
-      result = content.replace(
-        toolsImportPattern,
-        `import { ${newImports} } from '@bloklabs/core/tools';`
-      );
+      const replacement = `import { ${newImports} } from '@bloklabs/core/tools';`;
+      result = content.slice(0, toolsMatch.start) + replacement + content.slice(toolsMatch.end);
       return { result, changed: true };
     }
     return { result: content, changed: false };
@@ -1533,7 +1737,7 @@ function ensureToolsImport(content) {
 
   // Check if tools are in the main import (will be split later by splitBlokImports)
   if (mainMatch) {
-    const existingMainImports = mainMatch[1];
+    const existingMainImports = mainMatch.imports;
     const toolsInMain = usedTools.filter(tool => {
       const toolPattern = new RegExp(`\\b${tool}\\b`);
       return toolPattern.test(existingMainImports);
@@ -1553,27 +1757,22 @@ function ensureToolsImport(content) {
 
     if (missingTools.length > 0) {
       const newImports = `${missingTools.join(', ')}, ${existingMainImports.trim()}`;
-      result = content.replace(
-        mainImportPattern,
-        `import { ${newImports} } from '@bloklabs/core';`
-      );
+      const replacement = `import { ${newImports} } from '@bloklabs/core';`;
+      result = content.slice(0, mainMatch.start) + replacement + content.slice(mainMatch.end);
       return { result, changed: true };
     }
     return { result: content, changed: false };
   }
 
   // No @bloklabs/core or @bloklabs/core/tools import -> add new /tools import
-  const importStatements = content.match(/^import\s+.+from\s+['"][^'"]+['"];?\s*$/gm);
+  const lastImportEnd = findLastImportEnd(content);
   const newImport = `import { ${usedTools.join(', ')} } from '@bloklabs/core/tools';`;
 
-  if (importStatements && importStatements.length > 0) {
-    const lastImport = importStatements[importStatements.length - 1];
-    const lastImportIndex = content.lastIndexOf(lastImport);
-    const insertPosition = lastImportIndex + lastImport.length;
+  if (lastImportEnd >= 0) {
     result =
-      content.slice(0, insertPosition) +
+      content.slice(0, lastImportEnd) +
       '\n' + newImport +
-      content.slice(insertPosition);
+      content.slice(lastImportEnd);
   } else {
     // No imports found, add at the very beginning (after shebang if present)
     const shebangMatch = content.match(/^#!.*\n/);

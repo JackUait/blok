@@ -7,6 +7,7 @@ import {
   VOID_CONTENT_TAGS,
   type InlineElementView,
 } from '../../shared/inline-normalization-policy';
+import { parseUntrustedHtml } from './inert-html';
 
 /**
  * Inline markup normalization — DOM implementation.
@@ -206,9 +207,7 @@ export const normalizeInlineMarkupHtml = (html: string): string => {
     return html;
   }
 
-  const holder = document.createElement('div');
-
-  holder.innerHTML = html;
+  const holder = parseUntrustedHtml(html);
 
   return normalizeInlineMarkupIn(holder) ? holder.innerHTML : html;
 };

@@ -26,8 +26,22 @@ export interface FetchUploaderOptions {
  * Builds an uploader pointed at a service speaking Blok's upload contract.
  * @param options - base URL, multipart field name and headers
  */
+/**
+ * Drop the trailing `/` run from a base URL.
+ *
+ * Counts the run instead of using `/\/+$/`: that pattern retries at every
+ * offset and goes quadratic on a long run of slashes.
+ * @param value - the configured base URL
+ * @returns the base URL without trailing slashes
+ */
+function trimTrailingSlashes(value: string): string {
+  const run = Array.from(value).reduce((count, character) => (character === '/' ? count + 1 : 0), 0);
+
+  return value.slice(0, value.length - run);
+}
+
 export function createFetchUploader(options: FetchUploaderOptions): BlokUploader {
-  const base = options.baseUrl.replace(/\/+$/, '');
+  const base = trimTrailingSlashes(options.baseUrl);
   const field = options.field ?? 'file';
 
   const resolveHeaders = async (): Promise<Record<string, string>> =>

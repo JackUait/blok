@@ -148,12 +148,16 @@ describe("analytics", () => {
     // path.
     const docsRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
     const LOADER_URL = "https://www.googletagmanager.com/gtag/js";
+    // Matches the loader as a script `src` attribute (quote or JSX brace after
+    // `src=`), not as a bare substring — a URL that merely mentions the loader
+    // somewhere in the file must not count as loading it.
+    const LOADER_SRC_PATTERN = /src=\S{0,3}https:\/\/www\.googletagmanager\.com\/gtag\/js\?id=/;
 
     const hosts = ["index.html", "src/root.tsx"]
       .map((relative) => resolve(docsRoot, relative))
       .filter((path) => existsSync(path))
       .map((path) => ({ path, source: readFileSync(path, "utf-8") }))
-      .filter(({ source }) => source.includes(LOADER_URL));
+      .filter(({ source }) => LOADER_SRC_PATTERN.test(source));
 
     it("has exactly one file loading gtag.js", () => {
       // Two would load the tag twice and double-count every event — the likely

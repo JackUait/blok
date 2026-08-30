@@ -174,6 +174,7 @@ describe('CI critical-path law', () => {
       'server-security',
       'server',
       'unit-tests',
+      'workspace-unit-tests',
       'validate-spec-coverage',
       'build',
       'install-browsers',
@@ -319,7 +320,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs four exact unit-only coverage shards plus Angular after build', () => {
+  it('runs four exact unit-only coverage shards after build', () => {
     const unit = getJob(ci, 'unit-tests');
 
     expect(unit.name).toBe('Unit Tests (${{ matrix.shard }})');
@@ -359,35 +360,6 @@ describe('CI critical-path law', () => {
         ].join('\n'),
       },
       {
-        name: 'Run Angular Unit Tests',
-        if: "matrix.shard == '1/4'",
-        run: 'yarn test:angular',
-      },
-      {
-        // The react package carries its own vitest config (the root one cannot
-        // resolve the @bloklabs/core/view subpath through the root alias), so
-        // its suite runs separately — on one shard only, since it is not sharded.
-        name: 'Run @bloklabs/react Unit Tests',
-        if: "matrix.shard == '1/4'",
-        run: 'yarn workspace @bloklabs/react test',
-      },
-      {
-        // Same reason as react above: the presets package has its own vitest
-        // config, and its tests live under src/ rather than test/unit/, which
-        // the root config's "unit" project does not glob — on one shard only,
-        // since it is not sharded.
-        name: 'Run @bloklabs/presets Unit Tests',
-        if: "matrix.shard == '1/4'",
-        run: 'yarn workspace @bloklabs/presets test',
-      },
-      {
-        // Same reason again: own vitest config, tests under src/. Its ticket
-        // signer is checked against the same fixture the C# verifier reads.
-        name: 'Run @bloklabs/server Unit Tests',
-        if: "matrix.shard == '1/4'",
-        run: 'yarn workspace @bloklabs/server test',
-      },
-      {
         name: 'Upload frontend coverage shard',
         uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
         with: {
@@ -397,6 +369,46 @@ describe('CI critical-path law', () => {
           'include-hidden-files': true,
           'retention-days': 1,
         },
+      },
+    ]);
+  });
+
+  it('runs unsharded workspace suites in parallel after build', () => {
+    const workspace = getJob(ci, 'workspace-unit-tests');
+
+    expect(workspace.name).toBe('Workspace Unit Tests');
+    expect(workspace.needs).toEqual(['build']);
+    expect(workspace['runs-on']).toBe('ubuntu-latest');
+    expectOrderedSteps('ci.workspace-unit-tests', workspace, [
+      checkout,
+      setupNodeDependencies,
+      {
+        name: 'Download Build Artifacts',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        with: {
+          name: 'dist',
+          path: '.',
+        },
+      },
+      {
+        name: 'Build CLI',
+        run: 'yarn build:cli',
+      },
+      {
+        name: 'Run Angular Unit Tests',
+        run: 'yarn test:angular',
+      },
+      {
+        name: 'Run @bloklabs/react Unit Tests',
+        run: 'yarn workspace @bloklabs/react test',
+      },
+      {
+        name: 'Run @bloklabs/presets Unit Tests',
+        run: 'yarn workspace @bloklabs/presets test',
+      },
+      {
+        name: 'Run @bloklabs/server Unit Tests',
+        run: 'yarn workspace @bloklabs/server test',
       },
     ]);
   });

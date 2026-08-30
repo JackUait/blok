@@ -479,7 +479,9 @@ function convertGoogleDocsStyles(wrapper: HTMLElement, isGoogleDocs: boolean): v
     const replacement = convertSpanToSemanticHtml(span, isGoogleDocs);
 
     if (replacement !== null) {
-      span.replaceWith(document.createRange().createContextualFragment(replacement));
+      // Range anchored in span's own (inert) document: a live range parses the
+      // fragment with a browsing context, so its <img> would load right here.
+      span.replaceWith(span.ownerDocument.createRange().createContextualFragment(replacement));
     }
   }
 
@@ -657,7 +659,7 @@ function unwrapCellParagraph(p: Element): void {
     return;
   }
 
-  const fragment = document.createRange().createContextualFragment(p.innerHTML + '<br>');
+  const fragment = p.ownerDocument.createRange().createContextualFragment(p.innerHTML + '<br>');
 
   p.replaceWith(fragment);
 }

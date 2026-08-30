@@ -266,7 +266,16 @@ const isRule = (config: DeepSanitizerRule): boolean => {
   return isObject(config) || isBoolean(config) || isFunction(config) || isPlaintextRule(config);
 };
 
-const stripUnsafeUrls = (value: string): string => {
+/**
+ * Remove `href`/`src` values whose scheme can execute (`javascript:`, `data:`).
+ *
+ * Exported because `clean()` alone does NOT do this: html-janitor allowlists the
+ * href ATTRIBUTE and never looks at its value, so any caller that runs `clean()`
+ * directly — the paste path does — must run this after it.
+ * @param value - HTML that has already been through `clean()`
+ * @returns the HTML with executable-scheme URL attributes removed
+ */
+export const stripUnsafeUrls = (value: string): string => {
   if (!value || value.indexOf('<') === -1) {
     return value;
   }

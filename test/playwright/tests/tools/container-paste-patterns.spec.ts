@@ -230,8 +230,12 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
         return false;
       }
 
+      // Exact URL, either bare (plain-text fallback) or as the anchor href the
+      // pattern handler builds. Not a bare substring test: `example.com` alone
+      // would also match `https://evil.test/?u=example.com`.
       return Object.values(b.data).some(
-        (v) => v === 'https://example.com'
+        (v) => typeof v === 'string' &&
+          (v === 'https://example.com' || v.includes('href="https://example.com"'))
       );
     });
 
@@ -254,8 +258,12 @@ test.describe('paste-into-callout-child pattern/html handlers', () => {
         return false;
       }
 
+      // Exact URL, either bare (plain-text fallback) or as the anchor href the
+      // pattern handler builds. Not a bare substring test: `example.com` alone
+      // would also match `https://evil.test/?u=example.com`.
       return Object.values(b.data).some(
-        (v) => v === 'https://example.com'
+        (v) => typeof v === 'string' &&
+          (v === 'https://example.com' || v.includes('href="https://example.com"'))
       );
     });
 

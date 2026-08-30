@@ -4,7 +4,7 @@ import { mapPastedTableCells } from './table-operations';
 import { parseCellContentToBlocks, serializeCellBlocksToHtml } from './table-cell-paste';
 import { mapToNearestPresetColor } from '../../components/utils/color-mapping';
 import { isDefaultDarkBackground, isDefaultWhiteBackground } from '../../components/modules/paste/google-docs-preprocessor';
-import { clean } from '../../components/utils/sanitizer';
+import { clean, stripUnsafeUrls } from '../../components/utils/sanitizer';
 
 /** Attribute name used to embed clipboard data on the HTML table element. */
 const DATA_ATTR = 'data-blok-table-cells';
@@ -534,7 +534,9 @@ function sanitizeCellHtml(td: Element): string {
     p.replaceWith(fragment);
   }
 
-  const html = clean(clone.innerHTML, CELL_SANITIZE_CONFIG)
+  // `a: { href: true }` above allowlists the attribute, not its scheme, so a
+  // pasted `javascript:` link would survive into a live cell anchor.
+  const html = stripUnsafeUrls(clean(clone.innerHTML, CELL_SANITIZE_CONFIG))
     .replace(/(<br\s*\/?>|\s)+$/i, '')
     .trim();
 
@@ -698,7 +700,9 @@ function sanitizeClipboardPayload(payload: TableCellsClipboard): TableCellsClipb
 
   for (const block of blocks) {
     if (typeof block.data.text === 'string') {
-      block.data.text = clean(block.data.text, CELL_SANITIZE_CONFIG);
+      // Scheme pass too: CELL_SANITIZE_CONFIG allowlists the href attribute, not
+      // its value, and this payload is attacker-forgeable clipboard JSON.
+      block.data.text = stripUnsafeUrls(clean(block.data.text, CELL_SANITIZE_CONFIG));
     }
   }
 

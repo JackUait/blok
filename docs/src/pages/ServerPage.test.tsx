@@ -108,6 +108,30 @@ describe('ServerPage', () => {
     expect(within(table).getByText('Запускает сервис?')).toBeInTheDocument();
   });
 
+  // The chrome assertions above all passed while every paragraph on the page was
+  // still English. Body prose is what Google reads to classify the page, so it
+  // is what has to be asserted.
+  it('localizes the body prose — coverage note, path copy and failure modes', () => {
+    renderPage('ru', '/ru/server');
+
+    expect(screen.getByTestId('server-coverage-note')).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+
+    for (const path of serverPaths) {
+      const section = screen.getByTestId(`server-section-${path.id}`);
+      expect(within(section).queryByText(path.description)).toBeNull();
+      expect(within(section).queryByText(path.situation)).toBeNull();
+      for (const mode of path.failureModes) {
+        expect(within(section).queryByText(mode.symptom)).toBeNull();
+      }
+    }
+
+    for (const limit of serverLimits) {
+      const card = screen.getByTestId(`server-limit-${limit.id}`);
+      expect(within(card).queryByText(limit.body)).toBeNull();
+      expect(card).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+    }
+  });
+
   it("localizes the summary table's yes/no answers on a ru page", () => {
     renderPage('ru', '/ru/server');
     const table = screen.getByTestId('server-table');

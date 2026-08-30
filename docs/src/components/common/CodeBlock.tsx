@@ -77,9 +77,10 @@ export const SUPPORTED_LANGUAGES = [
   "vue",
 ] as const;
 
-// Display names for languages
+// Display names for languages. Every entry is a product name, so none of them
+// is translated; "bash" is missing on purpose — its label is a real word and
+// comes from the catalogue instead.
 const languageDisplayNames: Record<string, string> = {
-  bash: "Terminal",
   csharp: "C#",
   html: "HTML",
   javascript: "JavaScript",
@@ -281,7 +282,9 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   };
 
   const displayLanguage =
-    languageDisplayNames[language.toLowerCase()] || language;
+    language.toLowerCase() === "bash"
+      ? t('codeBlock.terminal')
+      : languageDisplayNames[language.toLowerCase()] || language;
 
   // The theme's own calibrated background — kept (not stripped to transparent)
   // so token colors retain the contrast ratios the theme was designed for.

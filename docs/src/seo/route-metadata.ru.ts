@@ -8,14 +8,19 @@ import type { RouteCopy } from './route-metadata';
  * gains an English entry and no Russian one fails `route-metadata.ru.test.ts`
  * instead of silently publishing English copy at a `/ru` URL.
  *
- * These are not machine translations of the English strings: Cyrillic is longer
- * per word, so a literal translation blows the 60-character title budget. They
- * are written to the same length rules and carry the same concrete API names,
- * which are the retrievable part of a documentation query in either language.
+ * These are not machine translations of the English strings — they are written
+ * as Russian search copy and carry the same concrete API names, which are the
+ * retrievable part of a documentation query in either language.
+ *
+ * They are NOT length-matched to the English tree. Google documents no title or
+ * description limit and truncates by pixel width per device, so a shared
+ * character budget is meaningless across two alphabets; Cyrillic is simply
+ * longer per word. Say the true thing at its natural length — an accurate title
+ * Google shortens beats a compressed one it decides to rewrite.
  */
 export const RU_COPY: Record<string, RouteCopy> = {
   '/': {
-    title: 'Blok — блочный редактор текста для React и Vue',
+    title: 'Blok — блочный редактор для React, Vue и Angular',
     description:
       'Blok — headless блочный редактор текста для React, Vue и Angular: контент хранится как типизированный JSON, а не как HTML.',
     h1: 'Создавайте красивые блочные редакторы',

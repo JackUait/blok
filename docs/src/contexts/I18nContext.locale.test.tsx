@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, renderHook, screen, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { I18nProvider, StoredLocaleRedirect, useI18n, useLocalePath } from './I18nContext';
+import {
+  I18nProvider,
+  StoredLocaleRedirect,
+  useI18n,
+  useLocalePath,
+  useLocalizedHref,
+} from './I18nContext';
 
 const STORAGE_KEY = 'blok-docs-locale';
 
@@ -68,14 +74,48 @@ describe('useLocalePath', () => {
     return renderHook(() => useLocalePath(), { wrapper });
   };
 
+  // Trailing slash throughout: GitHub Pages serves `<path>/` and 301s `<path>`,
+  // so the slashless form made the language switch — the one link that must be
+  // a clean crawlable hop between the two trees — cost a redirect.
   it('maps the current page onto its twin in the other locale', () => {
-    expect(renderAt('/docs/table').result.current('ru')).toBe('/ru/docs/table');
-    expect(renderAt('/ru/docs/table').result.current('en')).toBe('/docs/table');
+    expect(renderAt('/docs/table').result.current('ru')).toBe('/ru/docs/table/');
+    expect(renderAt('/ru/docs/table').result.current('en')).toBe('/docs/table/');
   });
 
-  it('keeps the site root free of a trailing slash', () => {
-    expect(renderAt('/').result.current('ru')).toBe('/ru');
+  it('serves each tree root as its own directory', () => {
+    expect(renderAt('/').result.current('ru')).toBe('/ru/');
     expect(renderAt('/ru').result.current('en')).toBe('/');
+  });
+
+  // GitHub Pages serves a single 404.html from the site root, so `locales.ts`
+  // deliberately emits no `/ru/404`. The switch still offered one: a Russian
+  // reader who hit a bad URL and asked for their language got a second 404 —
+  // on the page every unknown URL on the site lands on.
+  it('falls back to the other tree root where the page has no twin', () => {
+    expect(renderAt('/404').result.current('ru')).toBe('/ru/');
+  });
+});
+
+describe('useLocalizedHref', () => {
+  const renderAt = (path: string) => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>
+    );
+    return renderHook(() => useLocalizedHref(), { wrapper });
+  };
+
+  // Every internal link in the app goes through this hook, so the trailing
+  // slash has to be added here rather than at ~11k call sites.
+  it('renders a served address, not one GitHub Pages redirects', () => {
+    expect(renderAt('/').result.current('/docs/table')).toBe('/docs/table/');
+    expect(renderAt('/ru').result.current('/docs/table')).toBe('/ru/docs/table/');
+  });
+
+  it('leaves fragments and external addresses untouched', () => {
+    expect(renderAt('/').result.current('#main-content')).toBe('#main-content');
+    expect(renderAt('/').result.current('https://github.com/JackUait/blok')).toBe(
+      'https://github.com/JackUait/blok',
+    );
   });
 });
 

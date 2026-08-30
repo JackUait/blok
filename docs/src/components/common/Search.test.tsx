@@ -661,7 +661,7 @@ describe('Search', () => {
       });
 
       const link = await screen.findByRole('link', { name: /Result 1/ }, { timeout: 3000 });
-      expect(link).toHaveAttribute('href', '/docs#r-1');
+      expect(link).toHaveAttribute('href', '/docs/#r-1');
     });
 
     it('omits the hash from the href when a result has none', async () => {
@@ -675,7 +675,7 @@ describe('Search', () => {
       });
 
       const link = await screen.findByRole('link', { name: /Result 0/ }, { timeout: 3000 });
-      expect(link).toHaveAttribute('href', '/docs');
+      expect(link).toHaveAttribute('href', '/docs/');
     });
   });
 });

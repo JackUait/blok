@@ -31,6 +31,19 @@ describe('Footer', () => {
     expect(screen.getByAltText('Blok mascot')).toBeInTheDocument();
   });
 
+  // The mascot sits below the fold. Without loading="lazy" React's server
+  // renderer hoists a <link rel="preload" as="image"> for it into every page's
+  // head, so a decorative 36px badge competed with the real content for
+  // bandwidth. The intrinsic size stops it reflowing the brand row.
+  it('defers the mascot and reserves its box', () => {
+    renderFooter();
+
+    const mascot = screen.getByAltText('Blok mascot');
+    expect(mascot).toHaveAttribute('loading', 'lazy');
+    expect(mascot).toHaveAttribute('width');
+    expect(mascot).toHaveAttribute('height');
+  });
+
   it('should render the tagline', () => {
     renderFooter();
     expect(
@@ -127,10 +140,13 @@ describe('Footer', () => {
   it('keeps the documentation column inside the reader’s locale tree', () => {
     renderFooter('ru', '/ru/docs/table');
 
-    expect(screen.getByRole('link', { name: 'Справочник API' })).toHaveAttribute('href', '/ru/docs');
+    expect(screen.getByRole('link', { name: 'Справочник API' })).toHaveAttribute(
+      'href',
+      '/ru/docs/',
+    );
     expect(screen.getByRole('link', { name: 'Руководство по миграции' })).toHaveAttribute(
       'href',
-      '/ru/migration',
+      '/ru/migration/',
     );
   });
 
@@ -139,7 +155,7 @@ describe('Footer', () => {
       renderFooter('en', '/docs/table');
 
       const link = screen.getByRole('link', { name: /Русский/i });
-      expect(link).toHaveAttribute('href', '/ru/docs/table');
+      expect(link).toHaveAttribute('href', '/ru/docs/table/');
       expect(link).toHaveAttribute('hreflang', 'ru');
     });
 
@@ -147,7 +163,7 @@ describe('Footer', () => {
       renderFooter('ru', '/ru/docs/table');
 
       const link = screen.getByRole('link', { name: /English/i });
-      expect(link).toHaveAttribute('href', '/docs/table');
+      expect(link).toHaveAttribute('href', '/docs/table/');
       expect(link).toHaveAttribute('hreflang', 'en');
     });
 

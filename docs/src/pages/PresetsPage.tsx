@@ -3,7 +3,7 @@ import { Nav } from '../components/layout/Nav';
 import { Footer } from '../components/layout/Footer';
 import { Typo } from '../components/common/Typo';
 import { PresetSection } from '../components/presets/PresetSection';
-import { presets } from '../components/presets/presets-data';
+import { usePresetsTranslations } from '../hooks/usePresetsTranslations';
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { getRouteMetadata } from '../seo/route-metadata';
@@ -14,6 +14,7 @@ const ENGLISH_H1 = 'Storage presets';
 /** The storage-presets documentation body — summary table, then one section per preset. */
 export const PresetsContent: React.FC = () => {
   const { locale, t } = useI18n();
+  const presets = usePresetsTranslations();
   // See ToolSection: the descriptive H1 lives in route-metadata.ts, keyed off
   // the locale in the path, so a /ru/presets reader gets the Russian heading
   // route-metadata.ru.ts already authors instead of a hardcoded English one.

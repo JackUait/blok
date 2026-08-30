@@ -7,8 +7,13 @@ import { buildMetaDescriptors } from './seo/meta-descriptors';
 import { MarkdownPointer } from './seo/MarkdownPointer';
 import { HTML_LANG, splitLocalePath } from './seo/locales';
 import stylesheet from './index.css?url';
+// The manifest is the single declaration of the brand colour. Imported raw
+// (not re-typed here) so the tag and the manifest cannot drift apart.
+import siteManifest from '../public/site.webmanifest?raw';
 
 const GA_MEASUREMENT_ID = 'G-P4F8SK0C03';
+
+const THEME_COLOR = (JSON.parse(siteManifest) as { theme_color: string }).theme_color;
 
 // Keep local development out of the production property. This is gtag's
 // official opt-out flag, so it must be set BEFORE the loader below runs; the
@@ -50,6 +55,16 @@ const THEME_FLASH = `
 
 export const links = () => [
   { rel: 'stylesheet', href: stylesheet },
+  // Only the upright latin subset: the other seven faces are unicode-range
+  // gated. crossOrigin is required even same-origin — fonts are always fetched
+  // in CORS mode, and without it the preload misses and the file downloads twice.
+  {
+    rel: 'preload',
+    as: 'font',
+    type: 'font/woff2',
+    href: '/fonts/plus-jakarta-sans-latin.woff2',
+    crossOrigin: 'anonymous',
+  },
   { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
   { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
   { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
@@ -68,8 +83,10 @@ export const links = () => [
  * single `src/seo/route-metadata.ts` source; `routes/not-found.tsx` exports its
  * own and overrides it.
  */
-export const meta = ({ location }: { location: { pathname: string } }) =>
-  buildMetaDescriptors(location.pathname);
+export const meta = ({ location }: { location: { pathname: string } }) => [
+  ...buildMetaDescriptors(location.pathname),
+  { name: 'theme-color', content: THEME_COLOR },
+];
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   // Written here, not by an effect: prerendering renders this file to HTML and
@@ -94,8 +111,11 @@ export const Layout = ({ children }: { children: ReactNode }) => {
         <script dangerouslySetInnerHTML={{ __html: THEME_FLASH }} />
       </head>
       <body>
-        <MarkdownPointer pathname={pathname} />
         {children}
+        {/* After the app, not before it: this is the first text node a crawler
+            or an LLM fetcher reads, and rendering it first put a sentence about
+            a .md file at the head of every snippet. */}
+        <MarkdownPointer pathname={pathname} />
         <Scripts />
       </body>
     </html>

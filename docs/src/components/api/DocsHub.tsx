@@ -3,6 +3,7 @@ import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
 import { useApiTranslations } from '../../hooks/useApiTranslations';
 import { useToolsTranslations } from '../../hooks/useToolsTranslations';
+import { localizedPath } from '../../seo/locales';
 import { getRouteMetadata } from '../../seo/route-metadata';
 
 /**
@@ -24,10 +25,13 @@ export const DocsHub: React.FC = () => {
     return translated === key ? fallback : translated;
   };
 
-  // Same split as ApiSection: route-metadata.ts owns the English H1, other
-  // locales keep their translated string until /ru/** lands.
+  // Same as ApiSection: route-metadata owns the H1 for every locale, so the
+  // heading a reader sees is the one the metadata, sitemap and JSON-LD declare.
+  // Reading it for English only is what published the Russian hub with an
+  // English heading — and Google decides a page's language from its visible
+  // content, ignoring `lang`, so that made /ru/docs/ an English page.
   const heading =
-    (locale === 'en' ? getRouteMetadata('/docs')?.h1 : undefined) ??
+    getRouteMetadata(localizedPath('/docs', locale))?.h1 ??
     copy('api.hub.title', 'Blok documentation');
 
   const descriptions = new Map<string, string>();

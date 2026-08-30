@@ -20,6 +20,7 @@ describe('Breadcrumbs', () => {
     );
 
     const nav = screen.getByTestId('api-breadcrumbs');
+    expect(nav).toHaveTextContent('Home');
     expect(nav).toHaveTextContent('Docs');
     expect(nav).toHaveTextContent('Editing');
     expect(nav).toHaveTextContent('Caret API');
@@ -48,17 +49,27 @@ describe('Breadcrumbs', () => {
     );
 
     const groupLink = screen.getByRole('link', { name: 'Editing' });
-    expect(groupLink).toHaveAttribute('href', '/docs/caret-api');
+    expect(groupLink).toHaveAttribute('href', '/docs/caret-api/');
   });
 
-  it('links the "Docs" crumb to the docs entry point', () => {
+  it('links the "Home" and "Docs" crumbs to the site root and the docs hub', () => {
     render(
       <Providers>
         <Breadcrumbs currentId="caret-api" pageTitle="Caret API" />
       </Providers>,
     );
 
-    const docsLink = screen.getByRole('link', { name: 'Docs' });
-    expect(docsLink).toHaveAttribute('href', '/docs/quick-start');
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs/');
+  });
+
+  it('renders nothing for a route whose metadata declares no trail', () => {
+    render(
+      <Providers>
+        <Breadcrumbs currentId="not-a-real-module" pageTitle="Nope" />
+      </Providers>,
+    );
+
+    expect(screen.queryByTestId('api-breadcrumbs')).toBeNull();
   });
 });

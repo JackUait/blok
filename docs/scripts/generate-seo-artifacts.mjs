@@ -93,6 +93,7 @@ const loadManifest = async () => {
       STATIC_PATHS: paths.STATIC_PATHS,
       DEFAULT_LOCALE: locales.DEFAULT_LOCALE,
       absoluteUrl: locales.absoluteUrl,
+      hasMarkdownMirror: locales.hasMarkdownMirror,
       markdownMirrorPath: locales.markdownMirrorPath,
       splitLocalePath: locales.splitLocalePath,
       getRouteMetadata: metadata.getRouteMetadata,
@@ -113,6 +114,7 @@ const main = async () => {
     ROUTES,
     DEFAULT_LOCALE,
     absoluteUrl,
+    hasMarkdownMirror,
     markdownMirrorPath,
     splitLocalePath,
     getRouteMetadata,
@@ -152,11 +154,11 @@ const main = async () => {
     }
 
     const dom = new JSDOM(fs.readFileSync(htmlPath, 'utf8'));
-    // Every page advertises its markdown mirror twice — a <link rel="alternate">
-    // in the head and the visually hidden pointer in the body — and neither may
-    // name a file this run does not write. `/404` is exempt: it exports its own
-    // meta (no alternate) and a mirror of an error page is not content.
-    if (route !== '/404') {
+    // A page with a mirror advertises it twice — a <link rel="alternate"> in the
+    // head and the visually hidden pointer in the body — and neither may name a
+    // file this run does not write. Routes without one must advertise nothing,
+    // which the same predicate decides on both sides.
+    if (hasMarkdownMirror(metadata)) {
       const advertised = dom.window.document
         .querySelector('link[rel="alternate"][type="text/markdown"]')
         ?.getAttribute('href');
@@ -169,6 +171,8 @@ const main = async () => {
       if (!(dom.window.document.body.textContent ?? '').includes(expected)) {
         throw new Error(`Route ${route} renders no visible-to-agents pointer at ${expected}`);
       }
+    } else if (dom.window.document.querySelector('link[rel="alternate"][type="text/markdown"]')) {
+      throw new Error(`Route ${route} advertises a markdown mirror this run does not write`);
     }
 
     return {
@@ -209,19 +213,21 @@ const main = async () => {
   );
 
   // --- markdown mirrors ------------------------------------------------------
-  const mirrors = pages.map((page) => {
-    const file = path.join(OUT_DIR, markdownMirrorPath(page.route).slice(1));
-    const content = renderMarkdownMirror({
-      title: page.metadata.title,
-      description: page.metadata.description,
-      source: expectedLoc(page.route),
-      lastmod: page.lastmod,
-      body: page.body,
+  const mirrors = pages
+    .filter((page) => hasMarkdownMirror(page.metadata))
+    .map((page) => {
+      const file = path.join(OUT_DIR, markdownMirrorPath(page.route).slice(1));
+      const content = renderMarkdownMirror({
+        title: page.metadata.title,
+        description: page.metadata.description,
+        source: expectedLoc(page.route),
+        lastmod: page.lastmod,
+        body: page.body,
+      });
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, content);
+      return { page, content };
     });
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, content);
-    return { page, content };
-  });
 
   // --- llms.txt / llms-full.txt ----------------------------------------------
   const byRoute = new Map(indexable.map((page) => [page.route, page]));
@@ -269,10 +275,31 @@ const main = async () => {
       title: 'Blok',
       summary,
       documents: mirrors
-        .filter(({ page }) => !page.metadata.noindex && isDefaultLocale(page.route))
+        .filter(({ page }) => isDefaultLocale(page.route))
         .map(({ content }) => content),
     }),
   );
+
+  // --- unreferenced HTML ------------------------------------------------------
+  // Two files ship that nothing links to and no route needs, and both answer
+  // 200. `__spa-fallback.html` is react-router's client-routing fallback, which
+  // GitHub Pages can never serve (it has no rewrite rules — an unknown path
+  // gets 404.html), and it carries the HOME PAGE's title and canonical with no
+  // `noindex`: a crawlable duplicate of `/`. `404/index.html` has already been
+  // copied to the `404.html` GitHub Pages actually serves, so the directory
+  // form only adds a second URL answering 200 with a "not found" body.
+  //
+  // Removed here rather than in the build script because everything above still
+  // needs `404/index.html` on disk to read its metadata.
+  const unreferenced = ['__spa-fallback.html', path.join('404', 'index.html')];
+  for (const file of unreferenced) {
+    const full = path.join(OUT_DIR, file);
+    if (!fs.existsSync(full)) {
+      throw new Error(`Expected ${file} in the build output; the prerender shape changed`);
+    }
+    fs.rmSync(full);
+  }
+  fs.rmdirSync(path.join(OUT_DIR, '404'));
 
   const linkCount = sections.reduce((total, { links }) => total + links.length, 0);
   process.stdout.write(

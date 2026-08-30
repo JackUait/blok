@@ -25,6 +25,26 @@ describe('WhyBlok', () => {
     expect(screen.getByRole('heading', { name: /why blok/i })).toBeInTheDocument();
   });
 
+  // Every cell VALUE used to be an English literal, so the Russian home page's
+  // densest block of body text stayed English under a translated heading.
+  it('localizes every comparison cell on a ru page, leaving the brand row alone', () => {
+    render(
+      <I18nProvider locale="ru">
+        <WhyBlok />
+      </I18nProvider>
+    );
+    const table = screen.getByRole('table');
+
+    for (const english of ['Typed JSON', 'Paragraph only', 'Built-in', 'Manual', 'First-class']) {
+      expect(within(table).queryByText(english), english).toBeNull();
+    }
+    expect(within(table).getByText('Типизированный JSON')).toBeInTheDocument();
+    expect(within(table).getByText('69 локалей')).toBeInTheDocument();
+
+    // Competitor names are the one thing that must NOT change.
+    expect(within(table).getByText('Editor.js')).toBeInTheDocument();
+  });
+
   it('renders a comparison table', () => {
     renderTable();
     expect(screen.getByRole('table')).toBeInTheDocument();

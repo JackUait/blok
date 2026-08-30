@@ -9,9 +9,11 @@ import {
   alternateUrls,
   localizedPath,
   localizedPrerenderPaths,
+  hasMarkdownMirror,
   markdownMirrorPath,
   markdownMirrorUrl,
   splitLocalePath,
+  servedPath,
 } from './locales';
 import { SITE_URL } from './route-metadata';
 
@@ -165,9 +167,57 @@ describe('markdownMirrorPath', () => {
   });
 });
 
+// One rule, one definition: the head <link>, the in-body pointer and the build
+// step that writes the files all ask this, so the site cannot name a mirror the
+// build did not emit.
+describe('hasMarkdownMirror', () => {
+  it('gives an ordinary route a mirror', () => {
+    expect(hasMarkdownMirror({})).toBe(true);
+    expect(hasMarkdownMirror({ noindex: false })).toBe(true);
+  });
+
+  it('withholds one from a noindex route', () => {
+    expect(hasMarkdownMirror({ noindex: true })).toBe(false);
+  });
+
+  it('withholds one from a path that is not a route at all', () => {
+    expect(hasMarkdownMirror(undefined)).toBe(false);
+  });
+});
+
 describe('markdownMirrorUrl', () => {
   it('is absolute, so a mirror fetched on its own still names its origin', () => {
     expect(markdownMirrorUrl('/docs/table')).toBe(`${SITE_URL}/docs/table.md`);
     expect(markdownMirrorUrl('/')).toBe(`${SITE_URL}/index.md`);
+  });
+});
+
+// GitHub Pages emits directory indexes only, so it answers `/docs/table/` with
+// the page and 301-redirects `/docs/table` onto it. `absoluteUrl` already
+// enforces that for advertised URLs (canonical, sitemap, hreflang); this is its
+// site-relative twin for the hrefs the app renders, which were slashless and so
+// spent a redirect on every internal hop a crawler took.
+describe('servedPath', () => {
+  it('adds the trailing slash GitHub Pages redirects to', () => {
+    expect(servedPath('/docs/table')).toBe('/docs/table/');
+  });
+
+  it('leaves an address that already has one alone', () => {
+    expect(servedPath('/docs/table/')).toBe('/docs/table/');
+  });
+
+  it('keeps the site root a single slash', () => {
+    expect(servedPath('/')).toBe('/');
+  });
+
+  it('passes through anything that is not a site-absolute path', () => {
+    expect(servedPath('#main-content')).toBe('#main-content');
+    expect(servedPath('https://example.com/x')).toBe('https://example.com/x');
+  });
+
+  // The slash belongs on the path, never after the query or the fragment.
+  it('puts the slash before a query string or a fragment', () => {
+    expect(servedPath('/docs/table?tab=api')).toBe('/docs/table/?tab=api');
+    expect(servedPath('/docs/table#merged-cells')).toBe('/docs/table/#merged-cells');
   });
 });

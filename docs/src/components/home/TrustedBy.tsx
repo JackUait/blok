@@ -210,7 +210,14 @@ const CountUp: React.FC<{ value: string; surface?: string; suffixClassName?: str
   return (
     <span ref={ref}>
       <span className="sr-only">{value}</span>
-      <span aria-hidden="true" className="relative inline-flex items-center tabular-nums leading-none">
+      {/* Each reel is a 0-9 strip, so the two stats put 66 loose digits into the
+          page's extractable text. The sr-only sibling above already carries the
+          real value once — this half is animation, and nothing else. */}
+      <span
+        aria-hidden="true"
+        data-nosnippet=""
+        className="relative inline-flex items-center tabular-nums leading-none"
+      >
         {wheels}
         {suffix && <span className={suffixClassName}>{suffix}</span>}
         {/* Soft haze blurring the reel's top & bottom edges, its opacity bound

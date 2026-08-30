@@ -273,6 +273,7 @@ const buildJsonLines = (version: string): JsonTok[][] => [
 ];
 
 const CleanJsonViz: React.FC = () => {
+  const { t } = useI18n();
   const version = useLatestBlokVersion();
   const codeLines = buildJsonLines(version);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -373,7 +374,9 @@ const CleanJsonViz: React.FC = () => {
             <BlockHandle />
             <span className="bento-caret inline-block h-[1.15rem] w-[2.5px] rounded-full bg-brand-from" />
             <span className="ml-2 text-[0.95rem] tracking-tight">
-              Type <span className="font-mono">/</span> for commands
+              {t("home.features.mock.slashHintBefore")}{" "}
+              <span className="font-mono">/</span>{" "}
+              {t("home.features.mock.slashHintAfter")}
             </span>
           </div>
         </div>
@@ -386,9 +389,9 @@ const CleanJsonViz: React.FC = () => {
 // One glyph per shipped block type — a duotone palette you could scan: crisp
 // strokes carrying soft currentColor fills for mass. At rest every glyph is
 // muted; when the blob touches a chip its lit copy adopts the block's own accent.
-const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
+const BLOCK_CHIPS: { labelKey: string; color: string; path: React.ReactNode }[] = [
   {
-    label: "Table",
+    labelKey: "table",
     color: "#4c6fff",
     path: (
       <>
@@ -399,7 +402,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "List",
+    labelKey: "list",
     color: "#8b5cf6",
     path: (
       <>
@@ -411,7 +414,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Columns",
+    labelKey: "columns",
     color: "#16a34a",
     path: (
       <>
@@ -422,7 +425,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Callout",
+    labelKey: "callout",
     color: "#f2922e",
     path: (
       <>
@@ -434,7 +437,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Code",
+    labelKey: "code",
     color: "#e94e7a",
     path: (
       <>
@@ -445,7 +448,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Media",
+    labelKey: "media",
     color: "#0ea5a4",
     path: (
       <>
@@ -457,7 +460,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Embed",
+    labelKey: "embed",
     color: "#ef4444",
     path: (
       <>
@@ -468,7 +471,7 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
     ),
   },
   {
-    label: "Toggle",
+    labelKey: "toggle",
     color: "#6366f1",
     path: (
       <>
@@ -483,11 +486,14 @@ const BLOCK_CHIPS: { label: string; color: string; path: React.ReactNode }[] = [
 // accent (border + glyph + label) and is stacked over the muted base, then
 // revealed through a radial mask at the cursor — so the chips the blob touches
 // light up crisply in their own colour, which the base copy can't show.
-const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
+const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => {
+  const { t } = useI18n();
+
+  return (
   <div className="grid h-full w-full grid-cols-4 gap-2">
     {BLOCK_CHIPS.map((chip) => (
       <div
-        key={chip.label}
+        key={chip.labelKey}
         style={lit ? { color: chip.color, borderColor: chip.color } : undefined}
         className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
           lit ? "fi-chip-lit" : "fi-chip-base border-border/50 bg-card text-muted-foreground"
@@ -496,11 +502,12 @@ const ChipGrid: React.FC<{ lit?: boolean }> = ({ lit }) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           {chip.path}
         </svg>
-        <span className="text-[10px] font-semibold leading-none tracking-tight">{chip.label}</span>
+        <span className="text-[10px] font-semibold leading-none tracking-tight">{t(`home.features.mock.chip.${chip.labelKey}`)}</span>
       </div>
     ))}
   </div>
-);
+  );
+};
 
 // Radius of the brand spotlight revealed over masked layers, in px — matched to
 // the tile's visible glow blob (.bento-spot, 226×200 + ~1.2× squash + blur, so it
@@ -650,10 +657,10 @@ const BlocksViz: React.FC = () => {
 // poking over the container edge" feel that worked best. The picker lists a
 // familiar block, a custom one marked "yours" to make "custom" tangible, and an
 // inviting dashed row to add whatever block you dream up. No jargon.
-const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] = [
+const PAGE_BLOCKS: { labelKey: string; glyph: React.ReactNode; mine?: boolean }[] = [
   // document with text lines — duotone: soft-filled page behind crisp strokes
   {
-    label: "Text",
+    labelKey: "text",
     glyph: (
       <>
         <rect x="4.75" y="3.5" width="14.5" height="17" rx="3.2" fill="currentColor" fillOpacity="0.15" stroke="none" />
@@ -664,7 +671,7 @@ const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] =
   },
   // checkbox — a to-do block, duotone tile with a crisp tick
   {
-    label: "To-do",
+    labelKey: "todo",
     glyph: (
       <>
         <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="4.2" fill="currentColor" fillOpacity="0.15" stroke="none" />
@@ -675,7 +682,7 @@ const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] =
   },
   // rounded bar chart — a custom "Poll" block someone added themselves
   {
-    label: "Poll",
+    labelKey: "poll",
     mine: true,
     glyph: (
       <>
@@ -698,6 +705,7 @@ const PAGE_BLOCKS: { label: string; glyph: React.ReactNode; mine?: boolean }[] =
 ];
 
 const ExtensibleViz: React.FC = () => {
+  const { t } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLSpanElement>(null);
   const addLitRef = useRef<HTMLDivElement>(null);
@@ -776,7 +784,7 @@ const ExtensibleViz: React.FC = () => {
       <div className="flex flex-col gap-1 px-2 pt-2 pb-6">
         {PAGE_BLOCKS.map((block, i) => (
           <div
-            key={block.label}
+            key={block.labelKey}
             style={{ animationDelay: `${0.03 + i * 0.08}s`, ...(block.mine ? { borderColor: "var(--brand-from)" } : {}) }}
             className={`fi-row flex items-center gap-2.5 rounded-xl border px-3 py-1.5 ${
               block.mine ? "bg-primary/[0.06]" : "border-transparent"
@@ -794,11 +802,11 @@ const ExtensibleViz: React.FC = () => {
               </svg>
             </span>
             <span className={`text-[12px] font-semibold tracking-tight ${block.mine ? "text-foreground" : "text-muted-foreground"}`}>
-              {block.label}
+              {t(`home.features.mock.block.${block.labelKey}`)}
             </span>
             {block.mine && (
               <span className="fi-byob-badge ml-1.5 inline-block origin-center whitespace-nowrap rounded-full bg-linear-to-r from-brand-from to-brand-to px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                by you
+                {t("home.features.mock.byYou")}
               </span>
             )}
           </div>
@@ -813,7 +821,7 @@ const ExtensibleViz: React.FC = () => {
                 <path d="M12 6v12M6 12h12" />
               </svg>
             </span>
-            <span className="text-[12px] font-semibold tracking-tight">Add your own block</span>
+            <span className="text-[12px] font-semibold tracking-tight">{t("home.features.mock.addYourOwn")}</span>
           </div>
           <div
             ref={addLitRef}
@@ -826,7 +834,7 @@ const ExtensibleViz: React.FC = () => {
                   <path d="M12 6v12M6 12h12" />
                 </svg>
               </span>
-              <span className="text-[12px] font-semibold tracking-tight">Add your own block</span>
+              <span className="text-[12px] font-semibold tracking-tight">{t("home.features.mock.addYourOwn")}</span>
             </div>
           </div>
         </div>
@@ -860,22 +868,23 @@ const slashIcon = (paths: React.ReactNode) => (
   </svg>
 );
 
-type SlashRow = { label: string; glyph: React.ReactNode; shortcut?: string; current?: boolean };
+type SlashRow = { labelKey: string; glyph: React.ReactNode; shortcut?: string; current?: boolean };
 
 // Two result sets the diorama swaps between: the resting menu (you've typed
-// "text") and what a live search for a to-do block surfaces on hover.
-const SLASH_REST_QUERY = "text";
-const SLASH_HOVER_QUERY = "to-do";
+// "text") and what a live search for a to-do block surfaces on hover. The
+// queries are typed by a reader, so they are catalogue keys, not literals.
+const SLASH_REST_QUERY = 'home.features.mock.slashQueryRest';
+const SLASH_HOVER_QUERY = 'home.features.mock.slashQueryHover';
 
 const SLASH_REST_RESULTS: SlashRow[] = [
-  { label: "Text", current: true, glyph: <span className="text-[13px] font-bold leading-none">T</span> },
-  { label: "Heading 1", shortcut: "#", glyph: <Hn n="1" /> },
-  { label: "Heading 2", shortcut: "##", glyph: <Hn n="2" /> },
+  { labelKey: "text", current: true, glyph: <span className="text-[13px] font-bold leading-none">T</span> },
+  { labelKey: "heading1", shortcut: "#", glyph: <Hn n="1" /> },
+  { labelKey: "heading2", shortcut: "##", glyph: <Hn n="2" /> },
 ];
 
 const SLASH_HOVER_RESULTS: SlashRow[] = [
   {
-    label: "To-do list",
+    labelKey: "todoList",
     current: true,
     shortcut: "[]",
     glyph: slashIcon(
@@ -887,7 +896,7 @@ const SLASH_HOVER_RESULTS: SlashRow[] = [
     ),
   },
   {
-    label: "Toggle list",
+    labelKey: "toggleList",
     shortcut: ">",
     glyph: slashIcon(
       <>
@@ -897,7 +906,7 @@ const SLASH_HOVER_RESULTS: SlashRow[] = [
     ),
   },
   {
-    label: "Bulleted list",
+    labelKey: "bulletedList",
     shortcut: "-",
     glyph: slashIcon(
       <>
@@ -910,7 +919,10 @@ const SLASH_HOVER_RESULTS: SlashRow[] = [
   },
 ];
 
-const SlashRowView: React.FC<{ row: SlashRow }> = ({ row }) => (
+const SlashRowView: React.FC<{ row: SlashRow }> = ({ row }) => {
+  const { t } = useI18n();
+
+  return (
   <motion.div
     layout
     initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
@@ -931,13 +943,14 @@ const SlashRowView: React.FC<{ row: SlashRow }> = ({ row }) => (
       {row.glyph}
     </span>
     <span className={`text-[13px] tracking-tight ${row.current ? "font-semibold text-foreground" : "font-medium text-foreground/90"}`}>
-      {row.label}
+      {t(`home.features.mock.slash.${row.labelKey}`)}
     </span>
     {row.shortcut && (
       <span className="ml-auto font-mono text-[11px] text-muted-foreground/55">{row.shortcut}</span>
     )}
   </motion.div>
-);
+  );
+};
 
 // Blok's slash menu, dressed for the docs: a search field carrying the "/" query
 // over the result list, styled in the bento's house language (rounded card,
@@ -945,10 +958,11 @@ const SlashRowView: React.FC<{ row: SlashRow }> = ({ row }) => (
 // plays a live search — the typed query erases and retypes "/to-do", and the
 // results filter from the text/heading set to the list-block set as it goes.
 const SlashViz: React.FC = () => {
+  const { t } = useI18n();
   const reduce = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLSpanElement>(null);
-  const [query, setQuery] = useState(SLASH_REST_QUERY);
+  const [query, setQuery] = useState(() => t(SLASH_REST_QUERY));
   const [results, setResults] = useState<SlashRow[]>(SLASH_REST_RESULTS);
   // queryRef mirrors `query` so a freshly-started sequence can erase from wherever
   // the caret currently sits; genRef invalidates any in-flight sequence the moment
@@ -987,8 +1001,8 @@ const SlashViz: React.FC = () => {
       }
     };
 
-    const onEnter = () => void play(SLASH_HOVER_QUERY, SLASH_HOVER_RESULTS);
-    const onLeave = () => void play(SLASH_REST_QUERY, SLASH_REST_RESULTS);
+    const onEnter = () => void play(t(SLASH_HOVER_QUERY), SLASH_HOVER_RESULTS);
+    const onLeave = () => void play(t(SLASH_REST_QUERY), SLASH_REST_RESULTS);
 
     // Light the card's border pink where the tile's glow blob touches it — the
     // same radial-mask edge-light the JSON / Tables / Blocks tiles use.
@@ -1023,7 +1037,7 @@ const SlashViz: React.FC = () => {
       tile.removeEventListener("pointermove", onMove);
       tile.removeEventListener("pointerleave", onEdgeLeave);
     };
-  }, [reduce]);
+  }, [reduce, t]);
 
   return (
     <div
@@ -1070,7 +1084,7 @@ const SlashViz: React.FC = () => {
       <div className="flex flex-col">
         <AnimatePresence mode="popLayout" initial={false}>
           {results.map((row) => (
-            <SlashRowView key={row.label} row={row} />
+            <SlashRowView key={row.labelKey} row={row} />
           ))}
         </AnimatePresence>
       </div>
@@ -1082,14 +1096,15 @@ const SlashViz: React.FC = () => {
 // hovered: the Task column resizes wider while the table's real blue (#3b82f6)
 // resize line glides along the moving Task | Owner edge. Nothing is interactive
 // per-cell; reduced-motion users get the plain static table.
-const TABLE_HEADERS: { label: string; cls: string }[] = [
-  { label: "Group", cls: "col-start-1 rounded-tl-lg" },
-  { label: "Task", cls: "col-start-2" },
-  { label: "Owner", cls: "col-start-3" },
-  { label: "Date", cls: "col-start-4 rounded-tr-lg" },
+const TABLE_HEADERS: { labelKey: string; cls: string }[] = [
+  { labelKey: "group", cls: "col-start-1 rounded-tl-lg" },
+  { labelKey: "task", cls: "col-start-2" },
+  { labelKey: "owner", cls: "col-start-3" },
+  { labelKey: "date", cls: "col-start-4 rounded-tr-lg" },
 ];
 
 const TablesViz: React.FC = () => {
+  const { t } = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLSpanElement>(null);
   const reduce = useReducedMotion();
@@ -1144,47 +1159,47 @@ const TablesViz: React.FC = () => {
           bottom edge (the tile clips them) — a spreadsheet that keeps going. */}
       <div className="grid w-full grid-cols-[0.7fr_1.6fr_1fr_0.85fr] grid-rows-[repeat(7,auto)] gap-[3px] rounded-xl border border-border/60 bg-border/60 p-[3px] transition-[grid-template-columns] duration-500 ease-out motion-safe:group-hover:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr] motion-safe:group-[.is-touch-active]:grid-cols-[0.7fr_1.95fr_0.65fr_0.85fr]">
       {/* heading row */}
-      {TABLE_HEADERS.map(({ label, cls }) => (
+      {TABLE_HEADERS.map(({ labelKey, cls }) => (
         <div
-          key={label}
+          key={labelKey}
           className={`${cls} row-start-1 flex h-6 items-center bg-secondary px-2 font-semibold text-muted-foreground`}
         >
-          {label}
+          {t(`home.features.mock.table.${labelKey}`)}
         </div>
       ))}
 
       {/* group "Web" — a merged cell spanning its two task rows */}
-      <div className="col-start-1 row-start-2 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">Web</div>
-      <div className="col-start-2 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Landing page</span></div>
+      <div className="col-start-1 row-start-2 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">{t("home.features.mock.table.groupWeb")}</div>
+      <div className="col-start-2 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskLanding")}</span></div>
       {/* background-coloured cell */}
       <div className="col-start-3 row-start-2 flex items-center overflow-hidden bg-[#16a34a]/14 px-2 py-1.5 text-foreground/80"><span className="truncate">Ann</span></div>
-      <div className="col-start-4 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Jun 24</span></div>
+      <div className="col-start-4 row-start-2 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date1")}</span></div>
 
-      <div className="col-start-2 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Checkout</span></div>
+      <div className="col-start-2 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskCheckout")}</span></div>
       {/* text-coloured cell — the other cell-colour mode */}
       <div className="col-start-3 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 font-semibold text-primary"><span className="truncate">Lee</span></div>
-      <div className="col-start-4 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Jul 02</span></div>
+      <div className="col-start-4 row-start-3 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date2")}</span></div>
 
       {/* group "App" */}
-      <div className="col-start-1 row-start-4 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">App</div>
-      <div className="col-start-2 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Onboarding</span></div>
+      <div className="col-start-1 row-start-4 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">{t("home.features.mock.table.groupApp")}</div>
+      <div className="col-start-2 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskOnboarding")}</span></div>
       <div className="col-start-3 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Max</span></div>
-      <div className="col-start-4 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Aug 03</span></div>
+      <div className="col-start-4 row-start-4 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date3")}</span></div>
 
-      <div className="col-start-2 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Settings</span></div>
+      <div className="col-start-2 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskSettings")}</span></div>
       {/* background-coloured cell */}
       <div className="col-start-3 row-start-5 flex items-center overflow-hidden bg-[#3b82f6]/12 px-2 py-1.5 text-foreground/80"><span className="truncate">Zoe</span></div>
-      <div className="col-start-4 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Aug 10</span></div>
+      <div className="col-start-4 row-start-5 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date4")}</span></div>
 
       {/* group "Mobile" — these rows are the ones that bleed off the bottom */}
-      <div className="col-start-1 row-start-6 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">Mobile</div>
-      <div className="col-start-2 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Release</span></div>
+      <div className="col-start-1 row-start-6 row-span-2 flex items-center justify-center bg-secondary text-center font-semibold text-muted-foreground">{t("home.features.mock.table.groupMobile")}</div>
+      <div className="col-start-2 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskRelease")}</span></div>
       <div className="col-start-3 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Kim</span></div>
-      <div className="col-start-4 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Sep 01</span></div>
+      <div className="col-start-4 row-start-6 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date5")}</span></div>
 
-      <div className="col-start-2 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Hotfix</span></div>
+      <div className="col-start-2 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">{t("home.features.mock.table.taskHotfix")}</span></div>
       <div className="col-start-3 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-foreground/80"><span className="truncate">Sam</span></div>
-      <div className="col-start-4 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">Sep 05</span></div>
+      <div className="col-start-4 row-start-7 flex items-center overflow-hidden bg-card px-2 py-1.5 text-muted-foreground"><span className="truncate">{t("home.features.mock.table.date6")}</span></div>
 
       {/* Drag-to-fill — the spreadsheet's signature gesture. The Owner column's
           first cell is selected, then on hover the selection sweeps down the whole
@@ -1675,13 +1690,23 @@ const LanguagesViz: React.FC = () => {
   const fieldRef = useRef<HTMLDivElement>(null);
   const edgeRef = useRef<HTMLSpanElement>(null);
   const hoverRef = useRef(false);
-  // Start on a random sign so the first one shown isn't always English.
-  const startIdx = useRef<number>(undefined as unknown as number);
-  if (startIdx.current === undefined) startIdx.current = pickLocaleIndex();
-  const [idx, setIdx] = useState(startIdx.current);
-  const [active, setActive] = useState<Greeting>(() => pickPhrase(startIdx.current, false));
+  // Deterministic on both sides of hydration, then randomised in the effect
+  // below. Drawing the sign DURING render baked one greeting into the
+  // prerendered HTML and drew a different one in the browser — a text mismatch
+  // React reports as a hydration failure, after which it throws away the server
+  // HTML and re-renders the whole root on the client. See ssr-determinism.test.
+  const [idx, setIdx] = useState(0);
+  const [active, setActive] = useState<Greeting>(() => pickPhrase(0, false));
   const [count, setCount] = useState(0);
   const [phase, setPhase] = useState<"typing" | "deleting">("typing");
+
+  // Start on a random sign so the first one shown isn't always English. In an
+  // effect, not in render: this must not change what the server emitted.
+  useEffect(() => {
+    const start = pickLocaleIndex();
+    setIdx(start);
+    setActive(pickPhrase(start, false));
+  }, []);
 
   const chars = useMemo(() => Array.from(active.text), [active.text]);
 

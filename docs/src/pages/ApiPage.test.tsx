@@ -124,18 +124,18 @@ describe('ApiPage in the Russian tree', () => {
 
     expect(screen.getByTestId('api-sidebar-link-selection-api')).toHaveAttribute(
       'href',
-      '/ru/docs/selection-api',
+      '/ru/docs/selection-api/',
     );
     // Below `lg` this dropdown is the only docs navigation on screen.
     fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
     expect(screen.getByTestId('mobile-section-nav-item-selection-api')).toHaveAttribute(
       'href',
-      '/ru/docs/selection-api',
+      '/ru/docs/selection-api/',
     );
 
     expect(screen.getByTestId('api-pagination-next')).toHaveAttribute(
       'href',
-      '/ru/docs/selection-api',
+      '/ru/docs/selection-api/',
     );
 
     const breadcrumbs = screen.getByTestId('api-breadcrumbs');
@@ -149,7 +149,7 @@ describe('ApiPage in the Russian tree', () => {
 
     expect(screen.getByTestId('api-sidebar-link-selection-api')).toHaveAttribute(
       'href',
-      '/docs/selection-api',
+      '/docs/selection-api/',
     );
   });
 });

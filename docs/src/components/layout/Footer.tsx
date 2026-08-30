@@ -42,7 +42,18 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.4fr_2fr]">
           <div data-blok-testid="footer-brand">
             <div className="flex items-center gap-2.5">
-              <img src="/mascot.png" alt="Blok mascot" className="size-9 object-contain" />
+              {/* loading="lazy" is what keeps this out of the head: React's server
+                  renderer preloads every eager <img> it renders, and this one is a
+                  36px badge below the fold on all 151 pages. */}
+              <img
+                src="/mascot.png"
+                alt="Blok mascot"
+                width={108}
+                height={103}
+                loading="lazy"
+                decoding="async"
+                className="size-9 object-contain"
+              />
               <span className="font-display text-xl font-extrabold tracking-tight">Blok</span>
             </div>
             <p className="mt-4 max-w-xs text-[15px] leading-relaxed text-muted-foreground">

@@ -24,12 +24,14 @@ type Step = {
   uses?: string;
   if?: string;
   with?: Record<string, string | number | boolean>;
+  env?: Record<string, string>;
 };
 
 type Job = {
   name?: string;
   needs?: string | string[];
   if?: string;
+  outputs?: Record<string, string>;
   steps?: Step[];
 };
 
@@ -193,6 +195,43 @@ describe('docs deploy law — reachable without a release', () => {
     }
   });
 
+  // `generate-seo-artifacts.mjs` dates each page from `git log -1` on the
+  // sources behind it. A depth-1 clone has no such history, so every route
+  // falls back to HEAD's date and all 148 sitemap `lastmod` values come out
+  // identical — which is exactly what production served.
+  it('checks out enough history for per-page sitemap dates', () => {
+    const checkout = build.steps?.find((step) => step.name === 'Checkout code');
+
+    expect(
+      checkout?.with?.['fetch-depth'],
+      'the build job needs fetch-depth: 0, or every page claims it changed on deploy day',
+    ).toBe(0);
+  });
+
+  // Everything else here checks bytes on the runner. Neither of the two worst
+  // SEO defects this repo shipped — a sitemap whose 148 lastmod values were all
+  // identical, and three days of deploys that published nothing — was visible
+  // to any of it. Only a request to the host catches those.
+  it('verifies the live site after publishing it', () => {
+    const smoke = getJob('seo-smoke');
+
+    expect(smoke.needs, 'the smoke test must run after the deploy, not beside it').toContain('deploy');
+    expect(
+      smoke.steps?.some((step) => step.run?.includes('verify-live-docs.mjs')),
+      'seo-smoke no longer runs the live verification script',
+    ).toBe(true);
+  });
+
+  it('gives the smoke test a marker unique to the build it just published', () => {
+    // A 200 on `/` is true throughout an outage; only an asset from this exact
+    // build distinguishes "the site is up" from "this deploy is live".
+    expect(build.outputs?.marker).toBeDefined();
+    expect(
+      getJob('seo-smoke').steps?.some((step) => step.env?.DEPLOY_MARKER !== undefined),
+      'the smoke test is not told which build to wait for',
+    ).toBe(true);
+  });
+
   it('deploys only what the build verified', () => {
     expect(getJob('deploy').needs).toBe('build');
   });
@@ -211,7 +250,13 @@ describe('docs deploy law — non-vacuity floor', () => {
   // Guards against a workflow rename, a YAML parse that returns an empty
   // document, or a build job stripped down to nothing.
   it('parses a workflow with every deploy job present', () => {
-    expect(Object.keys(workflow.jobs).sort()).toEqual(['build', 'deploy', 'docs-tests', 'verify-release']);
+    expect(Object.keys(workflow.jobs).sort()).toEqual([
+      'build',
+      'deploy',
+      'docs-tests',
+      'seo-smoke',
+      'verify-release',
+    ]);
   });
 
   it('reads a build job with its full step list', () => {

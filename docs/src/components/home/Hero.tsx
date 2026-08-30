@@ -473,7 +473,12 @@ const OPENING_VARIANT = LAYOUTS.stack[4][0];
  *  an inverted background. */
 const HeroCard: React.FC<{ slot: CardKey; kind: BlockKind }> = ({ slot, kind }) => {
   return (
-    <div className={`hero-card-${slot} hero-slab`} data-blok-testid="hero-card">
+    // Decorative: the card bodies spell "H1", "1234" and "1.2.3." depending on
+    // which kind the slot currently holds, and the whole stack is the content of
+    // the /demo link — so an extractor reading textContent made that its anchor
+    // text. Hidden here on the card, not on the <a> (aria-hidden on a focusable
+    // element is a WCAG violation) and not per glyph (the kinds shuffle).
+    <div className={`hero-card-${slot} hero-slab`} data-blok-testid="hero-card" aria-hidden="true">
       <span className="hero-slab-edge hero-slab-edge-l" aria-hidden="true" />
       <span className="hero-slab-edge hero-slab-edge-r" aria-hidden="true" />
       <div className="hero-slab-face flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">

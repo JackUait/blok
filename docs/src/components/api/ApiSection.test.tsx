@@ -520,14 +520,6 @@ describe('ApiSection', () => {
     });
   });
 
-  describe('breadcrumbs', () => {
-    it('renders a breadcrumb trail above the section header', () => {
-      render(<Providers><ApiSection section={mockQuickStartSection} /></Providers>);
-
-      expect(screen.getByTestId('api-breadcrumbs')).toBeInTheDocument();
-    });
-  });
-
   describe('last updated', () => {
     it('renders the last-updated date when present', () => {
       const sectionWithDate: ApiSectionType = { ...mockSection, lastUpdated: '2026-06-30' };

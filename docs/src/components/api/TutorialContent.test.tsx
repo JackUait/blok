@@ -38,10 +38,10 @@ describe('TutorialContent', () => {
     // \s tolerates the non-breaking spaces Typo glues after short words ("a"/"is").
     expect(
       screen.getByRole('link', { name: /Create\sa\scustom\sblock\stool/ }),
-    ).toHaveAttribute('href', '/docs/custom-block-tool');
+    ).toHaveAttribute('href', '/docs/custom-block-tool/');
     expect(
       screen.getByRole('link', { name: /Everything\sis\sa\sblock/ }),
-    ).toHaveAttribute('href', '/docs/concepts');
+    ).toHaveAttribute('href', '/docs/concepts/');
     expect(container.querySelector('a[href^="#"]')).toBeNull();
   });
 

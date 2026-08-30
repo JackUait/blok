@@ -75,6 +75,31 @@ describe('PresetsPage', () => {
     expect(within(table).getByText('Готов к продакшену?')).toBeInTheDocument();
   });
 
+  // Same gap as on /server: the header assertions above passed while every
+  // preset description, note and setup step was still English.
+  it('localizes each preset\'s description, notes and setup steps on a ru page', () => {
+    render(
+      <MemoryRouter initialEntries={['/ru/presets']}>
+        <I18nProvider locale="ru">
+          <PresetsPage />
+        </I18nProvider>
+      </MemoryRouter>
+    );
+
+    for (const preset of presets) {
+      const section = screen.getByTestId(`presets-section-${preset.id}`);
+      expect(section).toHaveTextContent(/[\u0400-\u04FF]{4}/);
+      expect(within(section).queryByText(preset.description)).toBeNull();
+      expect(within(section).queryByText(preset.uploadByUrlNote)).toBeNull();
+      for (const step of preset.storageSetup) {
+        expect(within(section).queryByText(step)).toBeNull();
+      }
+      for (const option of preset.configOptions) {
+        expect(within(section).queryByText(option.description)).toBeNull();
+      }
+    }
+  });
+
   it('heads a ru page with the localized H1, not the hardcoded English one', () => {
     // Regression: the page used to hardcode "Storage presets" as its <h1>
     // regardless of locale, so /ru/presets served a Russian title/description

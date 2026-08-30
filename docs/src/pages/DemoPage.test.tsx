@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { I18nProvider } from '../contexts/I18nContext';
 import { DemoPage, DemoContent } from './DemoPage';
@@ -41,15 +42,31 @@ vi.mock('../components/demo/EditorWrapper', async (importOriginal) => {
   return { ...actual, EditorWrapper };
 });
 
-function renderDemoPage() {
-  return render(
-    <MemoryRouter>
-      <I18nProvider>
-        <DemoPage />
-      </I18nProvider>
-    </MemoryRouter>
-  );
+type TestLocale = 'en' | 'ru';
+
+const demoPath = (locale: TestLocale): string => (locale === 'ru' ? '/ru/demo' : '/demo');
+
+const demoTree = (locale: TestLocale) => (
+  <MemoryRouter initialEntries={[demoPath(locale)]}>
+    <I18nProvider locale={locale}>
+      <DemoPage />
+    </I18nProvider>
+  </MemoryRouter>
+);
+
+function renderDemoPage(locale: TestLocale = 'en') {
+  return render(demoTree(locale));
 }
+
+/** The markup the prerender build writes into each locale's index.html. */
+const prerenderDemoPage = (locale: TestLocale = 'en'): string =>
+  renderToStaticMarkup(demoTree(locale));
+
+/** `Typo` glues short words with U+00A0 — compare against plain spaces. */
+const plain = (text: string): string => text.replace(/\u00A0/g, ' ');
+
+/** byRole's `name` is matched verbatim, so the glued spaces have to come out. */
+const named = (text: string) => (name: string): boolean => plain(name) === text;
 
 describe('DemoPage', () => {
   beforeEach(() => {
@@ -90,18 +107,13 @@ describe('DemoPage', () => {
       expect(screen.getByTestId('footer-brand')).toBeInTheDocument();
     });
 
-    it('renders an sr-only heading for the page (a11y, not shown visually)', () => {
+    it('names the page with exactly one visible h1', () => {
       renderDemoPage();
 
-      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    });
-
-    it('does not render the marketing badge/subtitle/hint content', () => {
-      renderDemoPage();
-
-      expect(screen.queryByText('Interactive Demo')).not.toBeInTheDocument();
-      expect(screen.queryByText('Instant Feedback')).not.toBeInTheDocument();
-      expect(screen.queryByText('Open command menu')).not.toBeInTheDocument();
+      const headings = screen.getAllByRole('heading', { level: 1 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0].className).not.toMatch(/\bsr-only\b/);
+      expect(plain(headings[0].textContent ?? '')).toContain('Try the Editor');
     });
 
     it('renders the editor component', () => {
@@ -144,6 +156,100 @@ describe('DemoPage', () => {
       // A visible top gap below the static header — plain py-* (no explicit
       // top spacing) would read as flush against the header.
       expect(editorContainer.className).toMatch(/\bpt-(8|10|12)\b/);
+    });
+  });
+
+  describe('static content (what the prerendered page says with JS off)', () => {
+    it('introduces the playground with the badge and subtitle', () => {
+      renderDemoPage();
+
+      expect(screen.getByText('Interactive Demo')).toBeInTheDocument();
+      expect(
+        screen.getByText(/A fully interactive editor running right here in your browser/)
+      ).toBeInTheDocument();
+    });
+
+    it('lists what a reader can try here', () => {
+      renderDemoPage();
+
+      const section = within(screen.getByRole('region', { name: named('What you can try here') }));
+      expect(section.getByText('Slash commands')).toBeInTheDocument();
+      expect(section.getByText('Drag and drop')).toBeInTheDocument();
+      expect(section.getByText('Tables and columns')).toBeInTheDocument();
+      expect(section.getByText('Read-only mode')).toBeInTheDocument();
+      expect(section.getByText('JSON output')).toBeInTheDocument();
+      expect(section.getByText(/open the command menu/)).toBeInTheDocument();
+    });
+
+    it('links onward to the docs pages a reader needs next', () => {
+      renderDemoPage();
+
+      const section = within(screen.getByRole('region', { name: named('Where to go next') }));
+      expect(section.getByRole('link', { name: /Quick Start/ })).toHaveAttribute(
+        'href',
+        '/docs/quick-start/'
+      );
+      expect(section.getByRole('link', { name: /Configuration/ })).toHaveAttribute(
+        'href',
+        '/docs/config/'
+      );
+      expect(section.getByRole('link', { name: /OutputData/ })).toHaveAttribute(
+        'href',
+        '/docs/output-data/'
+      );
+      expect(section.getByRole('link', { name: /Framework adapters/ })).toHaveAttribute(
+        'href',
+        '/docs/blok-editor/'
+      );
+    });
+
+    it('carries the shortcut tips through to the standalone page', () => {
+      renderDemoPage();
+
+      expect(screen.getByText('Open command menu')).toBeInTheDocument();
+      expect(screen.getByText('Instant Feedback')).toBeInTheDocument();
+    });
+
+    // React never reconciles <noscript> children on the client
+    // (`shouldSetTextContent` short-circuits them), so this can only be asserted
+    // on the server-rendered markup — which is what the build ships anyway.
+    it('explains in <noscript> that the editor needs JavaScript, and links to the docs', () => {
+      const markup = plain(prerenderDemoPage());
+      const noscript = markup.match(/<noscript>([\s\S]*?)<\/noscript>/)?.[1] ?? '';
+
+      expect(noscript).not.toBe('');
+      expect(noscript).toContain('JavaScript is off');
+      expect(noscript).toContain('so the playground cannot run without it');
+      expect(noscript).toContain('href="/docs/"');
+    });
+
+    it('renders the Russian tree in Russian, with Russian-tree links', () => {
+      renderDemoPage('ru');
+
+      expect(plain(screen.getAllByRole('heading', { level: 1 })[0].textContent ?? '')).toContain(
+        'Попробуйте'
+      );
+      expect(screen.getByText('Интерактивное демо')).toBeInTheDocument();
+      const trySection = within(screen.getByRole('region', { name: named('Что можно попробовать') }));
+      expect(trySection.getByText('Слэш-команды')).toBeInTheDocument();
+      expect(trySection.getByText('Таблицы и колонки')).toBeInTheDocument();
+
+      const nextSection = within(screen.getByRole('region', { name: named('Куда идти дальше') }));
+      expect(nextSection.getByRole('link', { name: /Быстрый старт/ })).toHaveAttribute(
+        'href',
+        '/ru/docs/quick-start/'
+      );
+
+      expect(screen.queryByText('What you can try here')).not.toBeInTheDocument();
+      expect(screen.queryByText('Interactive Demo')).not.toBeInTheDocument();
+    });
+
+    it('puts the Russian <noscript> copy in Russian too', () => {
+      const markup = plain(prerenderDemoPage('ru'));
+      const noscript = markup.match(/<noscript>([\s\S]*?)<\/noscript>/)?.[1] ?? '';
+
+      expect(noscript).toContain('JavaScript отключён');
+      expect(noscript).toContain('href="/ru/docs/"');
     });
   });
 

@@ -1,29 +1,37 @@
 // docs/src/components/api/Breadcrumbs.tsx
+import { Fragment } from 'react';
 import { Link } from '../common/Link';
 import { useI18n } from '../../contexts/I18nContext';
-import { useApiTranslations } from '../../hooks/useApiTranslations';
 import { Typo } from '../common/Typo';
+import { getRouteMetadata } from '../../seo/route-metadata';
+import { localizedPath } from '../../seo/locales';
 
 interface BreadcrumbsProps {
-  /** The currently-viewed section/tool id, e.g. "caret-api". */
+  /** The currently-viewed module/tool id, e.g. "caret-api". */
   currentId: string;
   /** The current page's display title, e.g. "Caret API". */
   pageTitle: string;
 }
 
 /**
- * Trail above the page header: Docs / <sidebar group> / <page title>.
+ * Trail above the page header: Home / Docs / <group> / <page title>.
  *
- * The group crumb links to the first page in its group rather than rendering
- * as plain text — every sidebar group has at least one concrete page, so
- * there's always a sensible landing spot for that level of the hierarchy.
- * The final crumb (the current page) is plain text, not a link.
+ * The linked crumbs come from route-metadata.ts, which is also what the page's
+ * BreadcrumbList JSON-LD is built from — one definition, so the markup can
+ * never describe a trail the reader cannot see. A route that declares no trail
+ * renders nothing rather than a partial one.
+ *
+ * The final crumb (the current page) is plain text, not a link, and is the one
+ * crumb the markup deliberately leaves out.
  */
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ currentId, pageTitle }) => {
-  const { t } = useI18n();
-  const { sidebarSections } = useApiTranslations();
-  const group = sidebarSections.find((section) => section.links.some((link) => link.id === currentId));
-  const groupFirstId = group?.links[0]?.id;
+  const { t, locale } = useI18n();
+  // route-metadata keys off the locale in the path, so ask it in the reader's tree.
+  const trail = getRouteMetadata(localizedPath(`/docs/${currentId}`, locale))?.breadcrumbs;
+
+  if (!trail) {
+    return null;
+  }
 
   return (
     <nav
@@ -31,22 +39,14 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ currentId, pageTitle }
       data-blok-testid="api-breadcrumbs"
       className="mb-4 flex flex-wrap items-center gap-1.5 text-xs font-medium text-muted-foreground"
     >
-      <Link to="/docs/quick-start" className="transition-colors hover:text-foreground">
-        <Typo>{t('nav.docs')}</Typo>
-      </Link>
-      {group && (
-        <>
+      {trail.map((crumb) => (
+        <Fragment key={crumb.path}>
+          <Link to={crumb.path} className="transition-colors hover:text-foreground">
+            <Typo>{crumb.name}</Typo>
+          </Link>
           <span aria-hidden="true">/</span>
-          {groupFirstId ? (
-            <Link to={`/docs/${groupFirstId}`} className="transition-colors hover:text-foreground">
-              <Typo>{group.title}</Typo>
-            </Link>
-          ) : (
-            <span><Typo>{group.title}</Typo></span>
-          )}
-        </>
-      )}
-      <span aria-hidden="true">/</span>
+        </Fragment>
+      ))}
       <span className="text-foreground" aria-current="page">
         <Typo>{pageTitle}</Typo>
       </span>

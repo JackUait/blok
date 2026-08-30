@@ -42,6 +42,17 @@ describe('Sidebar', () => {
     vi.clearAllMocks();
   });
 
+  // Screen readers speak the nav's label, so an English one is untranslated UI
+  // on all 67 Russian pages that render a sidebar.
+  it('localizes the navigation landmark label', () => {
+    render(
+      <I18nProvider locale="ru">
+        <Sidebar sections={MOCK_SECTIONS} activeSection="quick-start" variant="api" />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole('navigation', { name: 'Разделы документации' })).toBeInTheDocument();
+  });
+
   describe('with api variant', () => {
     it('should render an aside element with correct testid', () => {
       renderWithI18n(<Sidebar sections={MOCK_SECTIONS} activeSection="core" variant="api" />);
@@ -126,7 +137,7 @@ describe('Sidebar', () => {
         { wrapper: I18nWrapper },
       );
       const link = screen.getByTestId('api-sidebar-link-caret-api');
-      expect(link).toHaveAttribute('href', '/docs/caret-api');
+      expect(link).toHaveAttribute('href', '/docs/caret-api/');
       expect(link).toHaveClass('active');
     });
   });
@@ -178,7 +189,7 @@ describe('Sidebar', () => {
       for (const id of ['blocks-api', 'caret-api', 'events-api', 'quick-start']) {
         expect(screen.getByTestId(`api-sidebar-link-${id}`)).toHaveAttribute(
           'href',
-          `/docs/${id}`,
+          `/docs/${id}/`,
         );
       }
     });

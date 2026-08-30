@@ -1,6 +1,6 @@
 // docs/src/components/api/ApiModuleBody.test.tsx
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { I18nProvider } from '../../contexts/I18nContext';
 import { FrameworkProvider } from '../../contexts/FrameworkContext';
@@ -41,6 +41,25 @@ describe('ApiModuleBody', () => {
     expect(screen.getByTestId('api-pagination')).toBeInTheDocument();
   });
 
+  it('renders the breadcrumb trail on a module page', () => {
+    renderAt('/docs/caret-api');
+
+    expect(screen.getByTestId('api-breadcrumbs')).toBeInTheDocument();
+  });
+
+  // The trail is emitted as BreadcrumbList JSON-LD on every tool page too, and
+  // marking up a trail the reader cannot see is a Google policy violation.
+  it('renders the breadcrumb trail on a tool page', () => {
+    renderAt('/docs/table');
+
+    const trail = screen.getByTestId('api-breadcrumbs');
+    expect(within(trail).getByRole('link', { name: 'Block Tools' })).toHaveAttribute(
+      'href',
+      '/docs/paragraph/',
+    );
+    expect(within(trail).getByText('Table')).toHaveAttribute('aria-current', 'page');
+  });
+
   it('redirects unknown module to quick-start', () => {
     renderAt('/docs/not-a-module');
     expect(screen.getByTestId('qs')).toBeInTheDocument();
@@ -53,7 +72,7 @@ describe('ApiModuleBody', () => {
     // pagination is scoped per-group, so Next must be absent here.
     renderAt('/docs/history-api');
 
-    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', '/docs/styles-api');
+    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', '/docs/styles-api/');
     expect(screen.queryByTestId('api-pagination-next')).toBeNull();
   });
 
@@ -64,7 +83,7 @@ describe('ApiModuleBody', () => {
     renderAt('/docs/core');
 
     expect(screen.queryByTestId('api-pagination-prev')).toBeNull();
-    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', '/docs/config');
+    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', '/docs/config/');
   });
 
   it('scrolls to the hash anchor on cold load', async () => {

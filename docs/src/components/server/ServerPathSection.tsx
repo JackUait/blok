@@ -1,9 +1,8 @@
 // docs/src/components/server/ServerPathSection.tsx
-import { Link } from 'react-router';
 import { CodeBlock } from '../common/CodeBlock';
+import { Link } from '../common/Link';
 import { Typo } from '../common/Typo';
 import { useI18n } from '../../contexts/I18nContext';
-import { localizedPath } from '../../seo/locales';
 import type { ServerCodeSample, ServerPath } from './server-data';
 
 interface ServerPathSectionProps {
@@ -30,7 +29,7 @@ const SampleGroup: React.FC<{ heading: string; samples: ServerCodeSample[] }> = 
 );
 
 export const ServerPathSection: React.FC<ServerPathSectionProps> = ({ section }) => {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
 
   return (
     <section
@@ -53,9 +52,7 @@ export const ServerPathSection: React.FC<ServerPathSectionProps> = ({ section })
 
       {section.presetsPath !== undefined && (
         <Link
-          // Prefixed for the tree being rendered: a bare /presets href is the one
-          // link on this page that would drop a Russian reader into English.
-          to={localizedPath(section.presetsPath, locale)}
+          to={section.presetsPath}
           className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-secondary/60"
         >
           {t('server.presetsLink')}

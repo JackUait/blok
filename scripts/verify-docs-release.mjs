@@ -30,6 +30,50 @@ export const SERVER_RELEASE_ASSETS = [
   'checksums.txt',
 ];
 
+/**
+ * The release each asset first shipped in. An entry here is required only from
+ * that version onward.
+ *
+ * Adding a name to SERVER_RELEASE_ASSETS applies it to whatever tag is being
+ * verified — and a main push verifies the version in package.json, which is the
+ * already-published release. So adding the musl archives two days after v1.12.0
+ * shipped made every subsequent main push demand two files that release could
+ * never have had, and the failure took the whole docs deploy down with it.
+ */
+export const SERVER_ASSET_SINCE = {
+  'blok-server_linux_musl_amd64.tar.gz': '1.13.0',
+  'blok-server_linux_musl_arm64.tar.gz': '1.13.0',
+};
+
+/** Numeric per-part compare; a prerelease sorts before the release it leads to. */
+export function compareVersions(left, right) {
+  const split = (version) => {
+    const [core, prerelease] = version.split('-');
+    return { parts: core.split('.').map(Number), prerelease };
+  };
+  const a = split(left);
+  const b = split(right);
+
+  for (let i = 0; i < 3; i += 1) {
+    if (a.parts[i] !== b.parts[i]) return a.parts[i] - b.parts[i];
+  }
+
+  if (a.prerelease === b.prerelease) return 0;
+  if (a.prerelease === undefined) return 1;
+  if (b.prerelease === undefined) return -1;
+
+  return a.prerelease < b.prerelease ? -1 : 1;
+}
+
+/** The assets a given release is actually expected to carry. */
+export function requiredAssetsFor(version, assets = SERVER_RELEASE_ASSETS) {
+  return assets.filter((name) => {
+    const since = SERVER_ASSET_SINCE[name];
+
+    return since === undefined || compareVersions(version, since) >= 0;
+  });
+}
+
 const GHCR_MANIFEST_ACCEPT = [
   'application/vnd.oci.image.index.v1+json',
   'application/vnd.docker.distribution.manifest.list.v2+json',
@@ -213,7 +257,7 @@ export async function verifyPublishedServerDelivery(version, {
   lookupContainerVersion = lookupGhcrVersion,
   nugetPackageIds = SERVER_NUGET_PACKAGES,
   onRetry = () => {},
-  requiredAssets = SERVER_RELEASE_ASSETS,
+  requiredAssets = requiredAssetsFor(version),
   retryDelayMs = 10_000,
   wait = waitFor,
 } = {}) {

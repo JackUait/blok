@@ -13,12 +13,14 @@
     "toggleMenu": "Toggle menu"
   },
   "common": {
+    "skipToContent": "Skip to content",
     "filter": "Filter...",
     "clearSearch": "Clear search",
     "noResults": "No results",
     "selectSection": "Select section",
     "unknownError": "Unknown error",
-    "pressSlashToSearch": "Press / to focus search"
+    "pressSlashToSearch": "Press / to focus search",
+    "docsSections": "Documentation sections"
   },
   "api": {
     "filterLabel": "Filter API sections",
@@ -1101,7 +1103,11 @@
         "suffix": "for the exact shape your `save()` feeds into."
       }
     },
-    "whenToUse": "When to use"
+    "whenToUse": "When to use",
+    "hub": {
+      "title": "Blok documentation",
+      "intro": "Guides, the full API reference, and every built-in block and inline tool. New here? Start with the quick start and have an editor running in five minutes."
+    }
   },
   "home": {
     "hero": {
@@ -1234,6 +1240,58 @@
           "benefit3": "Audio blocks with cached waveform peaks",
           "benefit4": "Paste or drag a file to upload"
         }
+      },
+      "mock": {
+        "slashHintBefore": "Type",
+        "slashHintAfter": "for commands",
+        "addYourOwn": "Add your own block",
+        "byYou": "by you",
+        "slashQueryRest": "text",
+        "slashQueryHover": "to-do",
+        "chip": {
+          "table": "Table",
+          "list": "List",
+          "columns": "Columns",
+          "callout": "Callout",
+          "code": "Code",
+          "media": "Media",
+          "embed": "Embed",
+          "toggle": "Toggle"
+        },
+        "block": {
+          "text": "Text",
+          "todo": "To-do",
+          "poll": "Poll"
+        },
+        "slash": {
+          "text": "Text",
+          "heading1": "Heading 1",
+          "heading2": "Heading 2",
+          "todoList": "To-do list",
+          "toggleList": "Toggle list",
+          "bulletedList": "Bulleted list"
+        },
+        "table": {
+          "group": "Group",
+          "task": "Task",
+          "owner": "Owner",
+          "date": "Date",
+          "groupWeb": "Web",
+          "groupApp": "App",
+          "groupMobile": "Mobile",
+          "taskLanding": "Landing page",
+          "taskCheckout": "Checkout",
+          "taskOnboarding": "Onboarding",
+          "taskSettings": "Settings",
+          "taskRelease": "Release",
+          "taskHotfix": "Hotfix",
+          "date1": "Jun 24",
+          "date2": "Jul 02",
+          "date3": "Aug 03",
+          "date4": "Aug 10",
+          "date5": "Sep 01",
+          "date6": "Sep 05"
+        }
       }
     },
     "migrationCard": {
@@ -1284,7 +1342,30 @@
       "rowMarkdown": "Markdown support",
       "rowBindings": "Framework adapters",
       "rowA11y": "Accessibility",
-      "disclaimer": "Comparison reflects each library's out-of-the-box defaults; all are extensible via plugins."
+      "disclaimer": "Comparison reflects each library's out-of-the-box defaults; all are extensible via plugins.",
+      "cells": {
+        "typedJson": "Typed JSON",
+        "json": "JSON",
+        "htmlOrJson": "HTML / JSON",
+        "flat": "Flat",
+        "nodes": "Nodes",
+        "builtInCount": "20 built-in",
+        "paragraphOnly": "Paragraph only",
+        "basicsOnly": "Basics only",
+        "primitives": "Primitives",
+        "builtIn": "Built-in",
+        "plugin": "Plugin",
+        "addOn": "Add-on",
+        "reactVueAngular": "React / Vue / Angular",
+        "community": "Community",
+        "reactVueSvelte": "React / Vue / Svelte",
+        "react": "React",
+        "locales": "69 locales",
+        "manual": "Manual",
+        "limited": "Limited",
+        "diy": "DIY",
+        "firstClass": "First-class"
+      }
     },
     "trusted": {
       "title": "Companies that trust us",
@@ -1359,7 +1440,8 @@
   },
   "codeBlock": {
     "copy": "Copy",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "terminal": "Terminal"
   },
   "packageManagerToggle": {
     "switchAriaPrefix": "Switch to"
@@ -1403,6 +1485,25 @@
     "hintCleanJsonDesc": "Content is stored as structured JSON blocks. Parse, validate, and store anywhere.",
     "hintBlockArchTitle": "Block-Based Architecture",
     "hintBlockArchDesc": "Create custom block types with simple JavaScript classes. Fully extensible.",
+    "tryTitle": "What you can try here",
+    "trySlashTitle": "Slash commands",
+    "trySlashDesc": "Type / in an empty block to open the command menu and insert a heading, list, quote, code block or image.",
+    "tryDragTitle": "Drag and drop",
+    "tryDragDesc": "Grab the handle to the left of any block to move it, or drop it beside another block to nest it inside.",
+    "tryLayoutTitle": "Tables and columns",
+    "tryLayoutDesc": "Insert a table and edit its cells in place, or split the page into columns and drag blocks between them.",
+    "tryReadOnlyTitle": "Read-only mode",
+    "tryReadOnlyDesc": "Open Settings and switch the editor to read-only to see the page exactly as a reader gets it.",
+    "tryJsonTitle": "JSON output",
+    "tryJsonDesc": "Nothing here is HTML. The content is saved as a plain array of blocks, ready to store or render anywhere.",
+    "nextTitle": "Where to go next",
+    "nextQuickStartDesc": "Install the package and mount your first editor in a few lines.",
+    "nextConfigDesc": "Every option the Blok constructor accepts, and what each one defaults to.",
+    "nextOutputDataDesc": "The exact JSON shape save() returns, block by block.",
+    "nextAdaptersDesc": "Drop-in components for React, Vue and Angular.",
+    "noscriptTitle": "JavaScript is off.",
+    "noscriptBody": "Blok runs in the browser, so the playground cannot run without it. Turn JavaScript on to try the editor, or read the documentation instead.",
+    "noscriptLink": "Read the documentation",
     "outputInitialMessage": "Click \"Get JSON\" to see the output",
     "editorCleared": "Editor cleared",
     "toolbar": {
@@ -1640,7 +1741,289 @@
       "strikethrough": "Strikethrough",
       "inlineCode": "Inline Code",
       "equation": "Equation",
-      "clearFormat": "Clear Format"
+      "clearFormat": "Clear Format",
+      "supSub": "Superscript & Subscript"
+    },
+    "docs": {
+      "paragraph": {
+        "description": "The default text block. Supports rich inline formatting (bold, italic, links, colour). Empty top-level paragraphs are excluded from saved output unless `preserveBlank` is enabled; empty paragraphs nested inside another block (callout, toggle, column, …) are always kept.",
+        "options": {
+          "placeholder": {
+            "description": "Placeholder text shown when the block is empty and focused."
+          },
+          "preserveBlank": {
+            "description": "When true, empty paragraph blocks are kept in the saved output. Exception: a document consisting of a single empty block of the default tool always saves as `blocks: []`, regardless of this option."
+          },
+          "styles_size": {
+            "description": "Custom CSS font-size override (e.g. \"18px\", \"1.25rem\")."
+          },
+          "styles_lineHeight": {
+            "description": "Custom CSS line-height override (e.g. \"1.8\", \"28px\")."
+          },
+          "styles_marginTop": {
+            "description": "Custom CSS margin-top override (e.g. \"12px\", \"0.75rem\")."
+          },
+          "styles_marginBottom": {
+            "description": "Custom CSS margin-bottom override."
+          }
+        }
+      },
+      "header": {
+        "description": "Heading blocks from H1 to H6. Supports multiple toolbox entries (one per heading level), keyboard shortcuts (# ## ### etc.), and optional toggle (collapse/expand children) at every level — the toolbox lists \"Toggle heading 1\" through \"Toggle heading 6\", reachable with the markdown shortcuts `>#` through `>######`. Converting an existing block into a toggle heading (via \"Turn into\" or `blocks.convert` with `isToggleable: true`) adopts its section — every following sibling until the next heading of the same or higher rank becomes a child of the new toggle, matching Notion.",
+        "options": {
+          "placeholder": {
+            "description": "Placeholder text shown in an empty heading block."
+          },
+          "levels": {
+            "description": "Restrict which heading levels are available."
+          },
+          "defaultLevel": {
+            "description": "The heading level used when inserting a new header block."
+          },
+          "levelOverrides": {
+            "description": "Per-level overrides for HTML tag, display name, or CSS values."
+          },
+          "shortcuts": {
+            "description": "Custom markdown prefixes per heading level. If omitted, the default markdown prefixes (#, ## …) are used. Pass an empty object {} to disable the plain heading prefixes — the toggle-heading prefixes (`>#` … `>######`) are matched separately, are always active, and cannot be configured or disabled here (they still respect `levels`)."
+          },
+          "anchorIds": {
+            "description": "Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier (keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, joins words with hyphens, e.g. «Обучайте команду» → id \"Обучайте-команду\"); a function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. Cross-block duplicate dedup is out of scope — consumers dedup themselves."
+          }
+        }
+      },
+      "list": {
+        "description": "Bulleted, numbered, and to-do (checklist) lists with unlimited nesting. Each list item is a separate block. The toolbox shows three entries by default — one for each style — and items can be converted between styles via the block settings menu.",
+        "options": {
+          "defaultStyle": {
+            "description": "The list style used when inserting a new list block."
+          },
+          "styles": {
+            "description": "Restrict which styles are available in the block settings conversion menu."
+          },
+          "toolboxStyles": {
+            "description": "Restrict which list styles appear as separate toolbox entries."
+          },
+          "itemColor": {
+            "description": "Custom CSS color for list item text (e.g. \"#3b82f6\")."
+          },
+          "itemSize": {
+            "description": "Custom CSS font-size for list items (e.g. \"18px\", \"1.25rem\")."
+          }
+        }
+      },
+      "table": {
+        "description": "A full-featured table block. Each cell contains its own block editor (any block type except `header`, `table` and `column_list`, which are always restricted inside cells). Supports merging and splitting cells (`colspan`/`rowspan`, with covered cells recorded as `mergedInto`), heading rows, heading columns, column resizing, cell background/text colours, row/column add and delete controls, copy/paste, and a text density switch (compact or comfortable) in the block settings menu.",
+        "options": {
+          "rows": {
+            "description": "Initial number of rows when a new table is inserted."
+          },
+          "cols": {
+            "description": "Initial number of columns when a new table is inserted."
+          },
+          "withHeadings": {
+            "description": "Whether the first row is styled as a heading row by default."
+          },
+          "withHeadingColumn": {
+            "description": "Whether the first column is styled as a heading column by default."
+          },
+          "stretched": {
+            "description": "When true, the table spans the full editor width by default."
+          },
+          "restrictedTools": {
+            "description": "Additional tool names to prevent from being inserted into table cells."
+          }
+        }
+      },
+      "toggle": {
+        "description": "A collapsible toggle block with a clickable arrow. Child blocks are nested inside the toggle and hidden when collapsed. Toggling is controlled by clicking the arrow icon, or programmatically via the public Block API: `api.blocks.getById(id)?.call(\"expand\")` / `.call(\"collapse\")`. Toggle headings (Header blocks with `isToggleable: true`) accept the same two commands. These are string-addressed commands routed through `BlockAPI.call()` — they are not declared as methods on the exported tool classes. The open/collapsed state is persisted via `isOpen` and restored on reload; toggles default to open.",
+        "options": {
+          "placeholder": {
+            "description": "Placeholder text shown in an empty toggle block."
+          }
+        }
+      },
+      "callout": {
+        "description": "A container block for highlighted content with an emoji icon. Supports customisable text and background colours via a colour picker. Child blocks are nested inside the callout. Useful for tips, warnings, notes, and other call-to-action content. Enter adds a line inside the panel; pressing it again on the empty last line leaves the callout, so the blank line becomes the paragraph below instead of padding the panel out.",
+        "options": {
+          "emojiPicker": {
+            "description": "Custom emoji picker handler that replaces the built-in picker. Call `onSelect` with the chosen emoji, or \"\" to clear."
+          }
+        }
+      },
+      "database": {
+        "description": "A multi-view database block supporting board (Kanban) and list views. Stores a schema of typed properties (text, select, multiSelect, date, checkbox, etc.) and view configurations. Rows are stored as child `database-row` blocks. Supports grouping, drag-and-drop reordering, inline editing, and an optional backend sync adapter. (`sorts` and `filters` are persisted in the view config but are not applied yet.)",
+        "options": {
+          "adapter": {
+            "description": "Optional backend sync adapter for persisting schema, row, and view changes to an external data source."
+          }
+        }
+      },
+      "database-row": {
+        "description": "An internal block tool that stores a single database row. Not user-insertable — rows are created and managed by the parent Database block. Each row stores property values conforming to the parent database schema and a position string for ordering."
+      },
+      "divider": {
+        "description": "A horizontal line separator. Renders a semantic `<hr>` element. Has no editable content or settings. Can be inserted via the toolbox or by typing `---` in an empty paragraph."
+      },
+      "spacer": {
+        "description": "An adjustable vertical gap. Drag either edge grip — or focus one and press ArrowUp/ArrowDown — to resize. Its main job is lining up content across sibling columns of unequal length, replacing piles of empty paragraphs. Invisible in read-only mode."
+      },
+      "quote": {
+        "description": "A blockquote with a left border accent. Supports two sizes (default and large) switchable via the block settings menu. Pasting a `<blockquote>` element automatically creates a quote block."
+      },
+      "code": {
+        "description": "A syntax-highlighted code block with a language picker, an optional line-number gutter, and a copy-to-clipboard button. Supports 30+ languages via Prism. LaTeX and Mermaid languages include a live preview tab. Pasting markdown fenced code blocks (```) or `<pre>` elements automatically creates a code block, and the language comes across whenever the pasted source names it — a fence that opens with ```sql, or a labelled code block copied out of an app such as Gemini."
+      },
+      "image": {
+        "description": "Embed an image via URL upload or file paste.",
+        "options": {
+          "uploader": {
+            "description": "Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName? }`. When omitted, images fall back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl)."
+          },
+          "types": {
+            "description": "Accepted MIME allowlist. Entries may be exact (`image/png`) or family wildcards (`image/*`). Defaults to any image type."
+          },
+          "maxSize": {
+            "description": "Max upload size. A number caps every type (bytes); an object caps per MIME type with `'*'` as the fallback. Pass Infinity for unlimited."
+          },
+          "sources": {
+            "description": "Restrict how an image may be added — file upload only, URL only, or both."
+          },
+          "convertGifToVideo": {
+            "description": "Auto-convert animated GIFs to a looping WebM video block on insert. Only applies when a video tool is registered — without one, GIFs stay image blocks. Set false to always keep GIFs as image blocks."
+          },
+          "captionPlaceholder": {
+            "description": "Placeholder text shown in the caption field."
+          },
+          "compress": {
+            "description": "Re-encode uploaded images before they reach the uploader. On by default in a deliberately safe mode: same format, quality 0.92, original dimensions, and the result is only used when it saves at least 10% — otherwise the original bytes are uploaded untouched. Pass an object to opt into smaller output: `format` (`'original'` | `'jpeg'` | `'webp'` | `'avif'` | `'auto'`), `fallbackFormat` (format to try when the browser cannot encode `format`, before falling back to the source format — e.g. `{ format: 'avif', fallbackFormat: 'webp' }` uploads AVIF where the browser can produce it and WebP everywhere else), `quality` (0–1), `maxWidth` / `maxHeight`, `minSize` (skip files below it, default 100 KiB), `minSavings` (default 0.1), or `transform(file)` to plug in your own encoder. Set `false` to upload the exact original bytes. Compression never breaks an upload — when it cannot help, the original is used."
+          },
+          "reloadAttempts": {
+            "description": "How many times a rendered image silently re-fetches its `src` after a load error before showing the broken-image state. Set 0 to disable auto-retry."
+          }
+        }
+      },
+      "column_list": {
+        "description": "A layout block that arranges its children into side-by-side columns. The column list itself holds no content — each column is a child `column` block, and the blocks you write live inside those columns (via `contentIds`). Columns can be created three ways: from the toolbox · by dragging a block beside another · by selecting multiple blocks and choosing \"Turn into columns\". Column widths are resizable via the separators between columns. Both tools can be registered at once with the `Columns` group handle — `tools: { columns: Columns }` expands to the `column_list` and `column` tools; saved JSON still contains `column_list` and `column` blocks."
+      },
+      "column": {
+        "description": "A single column inside a column list. Not user-insertable on its own — columns are created and managed by the parent `column_list` block. Child blocks are nested inside the column via `contentIds`. The optional `widthRatio` controls the column’s width relative to its siblings (applied as flex-grow); omit it for equal width."
+      },
+      "embed": {
+        "description": "A live interactive iframe for a pasted provider URL (YouTube, Vimeo, Figma, CodePen, and 100+ other services), like Notion’s \"Create embed\". Pure client-side: the URL is matched against a built-in embed registry and resolved into a provider-sanctioned iframe URL. By default only registry-matched URLs are embedded; set the editor-level `linkPaste.allowGenericEmbed: true` to also embed unmatched https URLs in a generic sandboxed iframe (saved with an empty `service`). Supports resizing (document-style providers such as Google Docs, Sheets, Slides, Forms and Drive also get a bottom handle for adjusting the embed height), alignment (left/center/right), and an optional caption."
+      },
+      "bookmark": {
+        "description": "A static OpenGraph card for a pasted link, like Notion’s \"Create bookmark\". Shows the page title, description, preview image, favicon, and domain. Metadata is fetched from a consumer-supplied unfurl endpoint (CORS makes a backend mandatory) — Blok ships only the contract.",
+        "options": {
+          "endpoint": {
+            "description": "Consumer-supplied unfurl endpoint. Required. Called as `endpoint?url=<encoded>` and expected to return `{ success: 1, link, meta: { title, description, image: { url }, favicon, domain } }` (note `image` is an object, not a string)."
+          },
+          "headers": {
+            "description": "Optional headers (e.g. auth) sent with the metadata request."
+          }
+        }
+      },
+      "file": {
+        "description": "An attachment card for any uploaded file. Shows a type icon, filename, human-readable size, a download action, and an optional caption. Files are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL itself (uploadByUrl). An optional MIME allowlist and max size can gate what is accepted.",
+        "options": {
+          "uploader": {
+            "description": "Consumer-supplied uploader with optional `uploadByFile(file, ctx)` and `uploadByUrl(url, ctx)` methods, each resolving to `{ url, fileName?, size?, mimeType? }`. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, files fall back to a blob URL or the pasted URL."
+          },
+          "endpoints": {
+            "description": "Upload endpoint(s) — Blok POSTs the upload itself (multipart/form-data for files, JSON `{ url }` for embedded URLs) and expects a `{ url, fileName?, size?, mimeType? }` body back. A string is used for both; an object targets each separately. An explicit `uploader` always takes precedence."
+          },
+          "field": {
+            "description": "Form-data field name carrying the uploaded file."
+          },
+          "additionalRequestHeaders": {
+            "description": "Extra headers merged into endpoint upload requests."
+          },
+          "types": {
+            "description": "Optional MIME allowlist. When omitted, files of any type are accepted."
+          },
+          "sources": {
+            "description": "Restrict how a file may be added — file upload only, URL only, or both."
+          },
+          "maxSize": {
+            "description": "Max upload size. A number caps every type (bytes); an object caps per MIME type with `'*'` as the fallback. Pass Infinity for unlimited."
+          },
+          "captionPlaceholder": {
+            "description": "Placeholder text shown in the caption field. Defaults to the localized `tools.file.captionPlaceholder` string."
+          }
+        }
+      },
+      "audio": {
+        "description": "A music-player style audio block. Renders an uploaded or linked audio file with a custom control bar (play/pause, a waveform scrubber, volume, playback speed, loop), optional cover art, title/artist metadata, and an optional caption you switch on from the block settings menu (`captionVisible`). Waveform peaks and duration are decoded once and cached in the saved data so playback renders instantly on reload. Audio is sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). Share links from Dropbox, GitHub, GitLab, Hugging Face, Google Cloud Storage, and the Internet Archive are rewritten to their direct-content form automatically; Google Drive and OneDrive links additionally require an `uploadByUrl` backend because those hosts block anonymous browser hotlinking. An optional MIME allowlist and max size gate what is accepted.",
+        "options": {
+          "uploader": {
+            "description": "Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, audio falls back to a blob URL or the pasted URL."
+          },
+          "types": {
+            "description": "Accepted MIME allowlist. Entries may be exact (`audio/mpeg`) or family wildcards (`audio/*`). Defaults to any audio type."
+          },
+          "maxSize": {
+            "description": "Max upload size. A number caps every type (bytes); an object caps per MIME type with `'*'` as the fallback."
+          },
+          "sources": {
+            "description": "Restrict how the media may be added — file upload only, URL only, or both."
+          },
+          "captionPlaceholder": {
+            "description": "Placeholder text shown in the caption field."
+          }
+        }
+      },
+      "video": {
+        "description": "A full-featured video player block. Renders an uploaded or linked video with a custom control bar (play/pause, scrubber with buffered range and hover preview, volume, playback speed, loop, picture-in-picture, theater and fullscreen modes), an optional caption, and an ambient glow behind the player. Videos are sent through a consumer-supplied uploader; when none is provided the tool falls back to a local blob URL (uploadByFile) or the pasted URL (uploadByUrl). An optional MIME allowlist and max size gate what is accepted.",
+        "options": {
+          "uploader": {
+            "description": "Consumer-supplied uploader with optional `uploadByFile(file, ctx)` (resolving to `{ url, fileName? }`) and `uploadByUrl(url, ctx)` (resolving to `{ url }`) methods. The `ctx.onProgress(percent)` callback reports upload progress. When omitted, videos fall back to a blob URL or the entered URL — which then has to be a direct media file (`.mp4`, `.webm`, `.ogg`, `.mov`, `.m4v`), since it becomes the `<video src>` verbatim. Provide `uploadByUrl` to accept any URL and resolve it yourself."
+          },
+          "types": {
+            "description": "Accepted MIME allowlist for uploads. Entries may be exact (`video/mp4`) or family wildcards (`video/*`). Defaults to any video type."
+          },
+          "maxSize": {
+            "description": "Max upload size. A number caps every type (bytes); an object caps per MIME type with `'*'` as the fallback."
+          },
+          "sources": {
+            "description": "Restrict how the media may be added — file upload only, URL only, or both."
+          },
+          "captionPlaceholder": {
+            "description": "Placeholder text shown in the caption field."
+          },
+          "glow": {
+            "description": "Ambient glow intensity rendered behind every player."
+          }
+        }
+      },
+      "bold": {
+        "description": "Wraps selected text in `<strong>`. Activated with Cmd/Ctrl+B or by clicking the B button in the inline toolbar. Supports nested bold ranges and normalises overlapping markup on paste."
+      },
+      "italic": {
+        "description": "Wraps selected text in `<i>` (pasted `<em>` is also preserved). Activated with Cmd/Ctrl+I or by clicking the I button in the inline toolbar."
+      },
+      "link": {
+        "description": "Wraps selected text in `<a href=\"...\">`. Activated with Cmd/Ctrl+K. Clicking the button on existing linked text opens the URL input allowing the link to be edited or removed. `target` and `rel` are always written alongside `href` and come from `BlokConfig.link` — defaults `_blank` and `nofollow`, with `target=\"_self\"` forced for same-page hrefs (a `#anchor`, or a URL resolving to the current origin and pathname). A `link.transform` can override any of href, target and rel."
+      },
+      "marker": {
+        "description": "Applies text colour or background colour to selected text using `<mark style=\"color:...\">` or `<mark style=\"background-color:...\">`. Clicking the toolbar button opens a colour picker with preset text and background swatches plus a Default reset. Every colour is normalised to a CSS custom property (`var(--blok-color-<name>-<text|bg>)`) so themes can restyle it: the picker offers only the nine presets, and any other CSS colour applied programmatically is snapped to the perceptually nearest preset. There is no distance threshold — only values already written as `var(...)`, values the colour parser cannot read (a CSS named colour such as `rebeccapurple`), and the default page background colours pass through untouched. Raw colours found on `<mark>` elements — e.g. pasted from another editor — are rewritten to the nearest preset var on load, so arbitrary hex values are not preserved. Cmd/Ctrl+Shift+H does not open the picker: it re-applies the last colour picked in this session straight to the selection, defaulting to a yellow highlight (`var(--blok-color-yellow-bg)`) on first use, and does nothing when the selection is collapsed."
+      },
+      "underline": {
+        "description": "Wraps selected text in `<u>`. Activated with Cmd/Ctrl+U or by clicking the U button in the inline toolbar."
+      },
+      "strikethrough": {
+        "description": "Wraps selected text in `<s>`. Activated with Cmd/Ctrl+Shift+S or by clicking the S button in the inline toolbar."
+      },
+      "inlineCode": {
+        "description": "Wraps selected text in `<code>`. Activated with Cmd/Ctrl+E or by clicking the code button in the inline toolbar. Useful for marking up variable names, function calls, and short code snippets within text."
+      },
+      "equation": {
+        "description": "Renders inline math (LaTeX) with KaTeX. Activated with Cmd/Ctrl+Shift+E — wraps the selected text, or a formula typed into the popover input, in a `<span data-latex=\"...\">`. The `data-latex` attribute is the formula: the KaTeX markup is derived from it, is stripped on save, and is regenerated whenever the block renders (load, paste, undo). Read-only surfaces that never mount an editor — `blocksToHtml` / `<BlokView>` — display the source instead; pass an `inlineRenderers` entry to render the math there too."
+      },
+      "clearFormat": {
+        "description": "Removes inline formatting (bold, italic, underline, strikethrough, inline code, highlight) from the selected text while keeping links intact. Applied by clicking the Tx button in the inline toolbar."
+      },
+      "supSub": {
+        "description": "One toolbar button with a two-option popover that toggles superscript (`<sup>`) or subscript (`<sub>`) on the selection. The two modes are mutually exclusive — applying one removes the other. Shortcuts: Cmd/Ctrl+Period for superscript, Cmd/Ctrl+Comma for subscript."
+      }
     }
   },
   "presets": {
@@ -1652,7 +2035,99 @@
     "no": "No",
     "reHosting": "Re-hosting a remote URL",
     "storageSetup": "Storage-side setup",
-    "notForProduction": "Not for production"
+    "notForProduction": "Not for production",
+    "items": {
+      "fetch-endpoint": {
+        "title": "Fetch endpoint",
+        "description": "Talks to a backend you already have. Every upload goes through your server, which decides where the bytes actually land.",
+        "uploadByUrlNote": "Yes — your endpoint does the fetch server-side, so the browser never has to reach a third-party URL itself.",
+        "configOptions": {
+          "baseUrl": {
+            "description": "Origin of your upload service, e.g. \"https://api.myapp.com\"."
+          },
+          "field": {
+            "description": "Multipart field name the endpoint reads for POST /upload."
+          },
+          "headers": {
+            "description": "Extra headers on every request. Pass a function to mint a fresh access token per upload."
+          }
+        },
+        "storageSetup": {
+          "0": "A server that answers POST {baseUrl}/upload (multipart) and POST {baseUrl}/upload-by-url ({ url }) with { url, fileName? } JSON.",
+          "1": "Where the endpoint stores the file — S3, a disk volume, Supabase — is entirely the endpoint's decision; this preset never sees it.",
+          "2": "The URL your /upload-by-url endpoint receives is user-supplied — validate it server-side and block internal/private addresses before fetching it, or you have built an SSRF vector."
+        }
+      },
+      "supabase": {
+        "title": "Supabase",
+        "description": "Uploads straight to a Supabase Storage bucket using the client you already initialize.",
+        "uploadByUrlNote": "No — re-hosting a remote URL needs a server-side fetch, and the browser can't make one on Supabase's behalf. uploadByUrl is left undefined so Blok stores the URL verbatim instead of pretending it was re-hosted.",
+        "configOptions": {
+          "bucket": {
+            "description": "Bucket name, or a function of the asset kind for per-kind buckets."
+          },
+          "path": {
+            "description": "Object path within the bucket."
+          }
+        },
+        "storageSetup": {
+          "0": "Create the bucket in the Supabase dashboard (default name \"blok\", or whatever `bucket` resolves to).",
+          "1": "Make the bucket public, or add a Storage policy granting anon SELECT — this preset returns getPublicUrl() directly, so an unreadable object is a broken image.",
+          "2": "Add a Storage INSERT policy for whichever role the client authenticates as."
+        }
+      },
+      "presigned": {
+        "title": "Presigned URLs",
+        "description": "For S3 and S3-compatible storage (R2, MinIO, GCS). Your backend mints a short-lived signed URL; the browser PUTs the file straight to it.",
+        "uploadByUrlNote": "No — re-hosting a remote URL needs a server-side fetch, which is outside what a presigned PUT URL can do. uploadByUrl is left undefined so Blok stores the URL verbatim instead.",
+        "configOptions": {
+          "sign": {
+            "description": "Called with { fileName, mimeType, size, kind }; must return { uploadUrl, publicUrl, headers? } from your backend."
+          }
+        },
+        "storageSetup": {
+          "0": "A backend endpoint that mints a presigned PUT URL (e.g. S3 PutObjectCommand) and returns it as SignedTarget.",
+          "1": "A CORS rule on the bucket allowing PUT (and the headers this preset sends, notably Content-Type) from your app's origin — this is what actually blocks people, since the browser PUTs directly to the bucket."
+        }
+      },
+      "cloudinary": {
+        "title": "Cloudinary",
+        "description": "Uploads directly to Cloudinary using an unsigned upload preset — no backend required.",
+        "uploadByUrlNote": "Yes — Cloudinary fetches the remote URL itself once the browser hands it over, so re-hosting works without any server of the consumer's.",
+        "configOptions": {
+          "cloudName": {
+            "description": "Your Cloudinary cloud name."
+          },
+          "uploadPreset": {
+            "description": "Must be an UNSIGNED upload preset — a signed one would need a server."
+          },
+          "folder": {
+            "description": "Optional folder to upload into."
+          }
+        },
+        "storageSetup": {
+          "0": "A Cloudinary account and its cloud name.",
+          "1": "An upload preset with signing mode set to Unsigned (Settings → Upload → Upload presets) — a signed preset silently fails from the browser since there is no server to sign the request.",
+          "2": "Audio assets ride Cloudinary's video pipeline by Cloudinary's own design; this preset maps kinds onto resource types accordingly, no setup needed for that part."
+        }
+      },
+      "indexeddb": {
+        "title": "IndexedDB",
+        "description": "Stores uploaded files as blobs in the browser's own IndexedDB — nothing leaves the device.",
+        "uploadByUrlNote": "No — there is nothing to re-host to; a remote URL just gets stored as-is. IndexedDB only has an uploadByFile.",
+        "productionNote": "Demo and prototyping only. The bytes live in one visitor's browser: they're gone on another device, in another browser, or the moment the user clears site data. It exists because Blok's built-in fallback (a blob: URL) doesn't even survive a page reload, which makes demos look broken before you've configured any real storage.",
+        "configOptions": {
+          "dbName": {
+            "description": "IndexedDB database name."
+          }
+        },
+        "storageSetup": {
+          "0": "None — this preset needs no external service, which is the point.",
+          "1": "Wire the exported resolveBlokObjectUrl(url) helper into wherever you render an uploaded asset: uploadByFile returns a blok:asset/… reference, not a directly usable URL, and nothing resolves it back into a blob: URL for you automatically.",
+          "2": "If you pass a custom dbName to indexedDBStorage(), pass that same dbName as resolveBlokObjectUrl(url, { dbName }) — a mismatch looks up the wrong database and resolves to null with no error, not a thrown exception."
+        }
+      }
+    }
   },
   "server": {
     "intro": "Blok needs somewhere to put uploaded files, and something to read a pasted link's title and picture. Neither is something a browser is allowed to do on its own. There are three ways to cover them. The first runs nothing at all, so start there — find the heading that describes you and ignore the other two.",
@@ -1671,6 +2146,202 @@
     "failureSymptom": "What you see",
     "failureCause": "Why",
     "failureFix": "What to do",
-    "presetsLink": "Storage presets, set up step by step"
+    "presetsLink": "Storage presets, set up step by step",
+    "coverageNote": "Link previews work for roughly 70% of the sites people paste. X, Instagram, LinkedIn and many news sites serve no preview data to anything that is not a browser, and no service can read what a site does not send. When a preview cannot be read, the block falls back to a plain link showing the domain. It is never an error, and nothing about the paste breaks.",
+    "paths": {
+      "own-storage": {
+        "title": "You already have storage",
+        "situation": "You use Supabase, S3, Cloudinary or similar, and you want uploads to go straight there.",
+        "description": "Run nothing. The browser uploads to the storage you already pay for, using a ready-made uploader from @bloklabs/presets. This is the cheapest path and it is the one most people should take. The one thing it cannot do is link previews: the browser is not allowed to fetch another site and read its page, so a preview needs some server somewhere. If you want previews too, keep this uploader and add the service for that one feature — the two do not conflict.",
+        "whatToRun": {},
+        "appRoute": {},
+        "editorConfig": {
+          "label": "Point the editor at your storage"
+        },
+        "failureModes": {
+          "0": {
+            "symptom": "A pasted link stays a plain link instead of becoming a preview card.",
+            "cause": "Nothing is reading the page behind that link. A browser cannot fetch another site and read its title and image; the site has to allow it, and almost none do.",
+            "fix": "Run the service for previews only, or point the bookmark tool at a third-party preview service. If you do not want previews at all, this is already the finished state."
+          },
+          "1": {
+            "symptom": "Pasting an image URL from another site saves that URL instead of copying the image to your storage.",
+            "cause": "Copying a remote file needs a fetch made by a server. Supabase and presigned uploads happen entirely in the browser, so there is nobody to make it.",
+            "fix": "The Cloudinary preset does this on its own, and so does the service. With the others the original URL is stored as-is, which still renders — it just depends on the other site staying up."
+          }
+        }
+      },
+      "dotnet": {
+        "title": "Your app runs ASP.NET Core",
+        "situation": "You want Blok routes inside the .NET app that already owns your users and deployment.",
+        "description": "Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.",
+        "whatToRun": {
+          "0": {
+            "label": "Install the ASP.NET Core package"
+          }
+        },
+        "appRoute": {
+          "0": {
+            "label": "Register and map Blok in your app"
+          }
+        },
+        "editorConfig": {
+          "label": "Point the editor at the mapped routes"
+        },
+        "failureModes": {
+          "0": {
+            "symptom": "Upload routes return 404 while health and link previews work.",
+            "cause": "Storage is disabled, so the package does not map routes that could never complete.",
+            "fix": "Set StorageDirectory, or configure the S3 options, when calling AddBlokServer."
+          },
+          "1": {
+            "symptom": "The app rejects its Blok configuration before it maps routes or opens storage.",
+            "cause": "MaxUploadBytes cannot be larger than Array.MaxLength when storage and remote unfurl are both enabled. RateLimitPerMinute must be zero or greater. PublicUrl must be HTTP(S) or root-relative, while S3BucketUrl must be absolute HTTP(S); neither may contain credentials, a query or a fragment. S3Endpoint must be an origin without credentials, a path, a query or a fragment, and must use HTTPS except for loopback HTTP. ListenAddress rejects a DNS host because the standalone Kestrel host would bind every network interface.",
+            "fix": "Use a safe public URL, keep remote S3 endpoints on HTTPS, lower the buffered-upload limit when required, and bind an IP address, localhost or an explicit wildcard."
+          }
+        }
+      },
+      "own-server": {
+        "title": "You run your own backend",
+        "situation": "You have a Django, Rails, Laravel, Node or Go app running on a machine you control.",
+        "description": "Run the service next to your app, listening only on 127.0.0.1. That address is reachable from your own machine and from nowhere else, so nothing on the internet can call it. Your app gets one new route that passes the request through, and your existing login check guards that route the same way it guards everything else. There is no second set of users, no second password, and no domain or certificate to arrange.",
+        "whatToRun": {
+          "0": {
+            "label": "Start the service beside your app"
+          }
+        },
+        "appRoute": {
+          "0": {
+            "label": "Add one forwarding route to your app"
+          }
+        },
+        "editorConfig": {
+          "label": "Point the editor at your own route"
+        },
+        "failureModes": {
+          "0": {
+            "symptom": "The container prints \"blok-server refused to start\" and exits immediately.",
+            "cause": "It was told to listen on an address other than 127.0.0.1 while running in a mode that checks nothing. Refusing is deliberate: starting would have put an unauthenticated service on the internet.",
+            "fix": "Keep --listen on 127.0.0.1. If you genuinely need the service reachable from outside, that is the third path below, and it uses --auth ticket."
+          },
+          "1": {
+            "symptom": "Uploads come back as 404 while link previews work.",
+            "cause": "That deployment has no storage configured, so the upload routes are not registered at all.",
+            "fix": "Give the service somewhere to put files with --storage-dir, or point it at an S3-compatible bucket."
+          },
+          "2": {
+            "symptom": "Uploads succeed, but the images are broken for everyone except you.",
+            "cause": "--public-url is the address the browser will load stored files from, and it defaults to the loopback address the service listens on. That address means \"this machine\" on every machine, so it works for you and nobody else.",
+            "fix": "Set --public-url to a real address, and point that hostname at the service or at a web server holding the same directory. Use a different hostname than your app — the reason is in the section above."
+          },
+          "3": {
+            "symptom": "Large uploads fail before they reach the service.",
+            "cause": "Every uploaded file travels through your app on this path, so your app’s own request-size limit applies first.",
+            "fix": "Raise the body-size limit on the forwarding route, or take the storage-only path above, where files never touch your app."
+          },
+          "4": {
+            "symptom": "One busy user makes everyone else hit \"rate limit exceeded\".",
+            "cause": "Every request arrives at the service from your app, so from the service’s point of view they all come from the same caller and share one allowance.",
+            "fix": "Limit per user in your own app, on the forwarding route, where you already know who is signed in."
+          },
+          "5": {
+            "symptom": "You point the editor straight at http://127.0.0.1:4000 during development and the browser blocks the request.",
+            "cause": "The service only answers a browser that arrives from an address it was told to expect, and by default it was told none.",
+            "fix": "Go through your app’s own route as shown above, or pass --allow-origin with your dev server’s address."
+          }
+        }
+      },
+      "serverless": {
+        "title": "You are on Vercel or Netlify",
+        "situation": "Your app is deployed to a host that runs your code on demand, with nothing running beside it.",
+        "description": "There is no machine to sit the service next to, so it is deployed on its own — Fly, Railway, Render, a small VPS — under a hostname you own. Because it is now reachable from the internet, it checks every request. The hosting platform or a reverse proxy must terminate TLS before forwarding plain HTTP to the service. Your app adds one route that hands the browser a short-lived pass naming the signed-in user. The service checks the pass by itself, with no call back to your app, and lets the request through or refuses it.",
+        "whatToRun": {
+          "0": {
+            "label": "Deploy the service under a hostname you own"
+          }
+        },
+        "appRoute": {
+          "0": {
+            "label": "Add one route that hands out a pass"
+          },
+          "1": {
+            "label": "The same route, if your backend is not JavaScript"
+          }
+        },
+        "editorConfig": {
+          "label": "Point the editor at the service, carrying the pass"
+        },
+        "failureModes": {
+          "0": {
+            "symptom": "The service refuses to start and complains about the secret.",
+            "cause": "The shared secret is shorter than 32 characters, or missing. A short one is almost always a password somebody typed.",
+            "fix": "Generate a long random one with openssl rand -base64 48, and put it in the BLOK_SECRET environment variable on both sides — the service and the app that mints passes have to hold the same string."
+          },
+          "1": {
+            "symptom": "The service refuses to start and asks for an origin.",
+            "cause": "A service anyone can reach, with no list of who may call it, can be used to fire requests at other sites from your address. It will not start that way.",
+            "fix": "Pass --allow-origin with your app’s address. List several by separating them with commas."
+          },
+          "2": {
+            "symptom": "Every request comes back 403 \"origin not allowed\", including ones from your own scripts.",
+            "cause": "In this mode the service refuses anything that does not say which site it came from. Browsers omit that on same-origin requests, and non-browser callers omit it entirely.",
+            "fix": "Send an Origin header that matches one of the --allow-origin values, and check for typos: the scheme and port are part of the match."
+          },
+          "3": {
+            "symptom": "A signed pass can load link previews but cannot upload files.",
+            "cause": "A pass with write: false may call only the unfurl route. Both upload routes require write: true.",
+            "fix": "Mint upload passes with write: true. Use write: false when a caller should be limited to link previews."
+          },
+          "4": {
+            "symptom": "Uploads worked, then started coming back 401 after the tab had been open a while.",
+            "cause": "The pass expired. That is what makes it safe to hand to a browser.",
+            "fix": "Mint a new one per request, as the uploader config above does. Give it a lifetime measured in minutes or hours, not days."
+          },
+          "5": {
+            "symptom": "Uploads keep working but link previews start failing after an hour.",
+            "cause": "The bookmark tool takes a fixed set of headers when the editor is created, so it keeps sending the pass it was given at startup.",
+            "fix": "Give the bookmark tool a longer-lived pass, or route link previews through a small endpoint in your own app that adds a fresh one."
+          }
+        }
+      }
+    },
+    "limits": {
+      "no-documents": {
+        "title": "Your documents are never stored here",
+        "body": "The service stores no documents. There is no database inside it and no route that saves one. That is on purpose: a document belongs to your users and your permissions, has to appear in your backups, and has to be deletable when someone asks you to delete their data. Every one of those turns into a piece of plumbing the moment the record lives in someone else’s system. Saving and loading stays a small endpoint in your own app — the same place your permission check already lives."
+      },
+      "file-origin": {
+        "title": "Serve uploaded files from a different hostname than your app",
+        "body": "A file someone uploads is served by whatever hostname you put it on, and a browser trusts a page by its hostname. So if uploads are served from the same hostname as your app, a file someone uploads can act as if it were one of your own pages — read the signed-in user’s session, call your API as them. The service sends Content-Disposition: attachment and X-Content-Type-Options: nosniff so a browser downloads such a file instead of running it, but putting uploads on a different hostname from your app (uploads.myapp.com, or an S3 bucket’s own address) is the only complete answer."
+      },
+      "asset-cors": {
+        "title": "The hostname serving your uploads has to answer CORS",
+        "body": "Five things in the editor read an uploaded file back after it is stored: the audio player fetches the track to draw its waveform, the image block fetches a GIF before turning it into a video and an SVG to read its real size, the file block fetches a document to show a preview, and the image download button fetches the picture so the browser saves it rather than opening it. Once uploads are served from their own hostname every one of those is a cross-origin request, and the browser refuses it unless the response carries Access-Control-Allow-Origin for your app. Each of them is written to give up quietly rather than break the block, so instead of an error you get a player with no waveform, a GIF that stays a still image, an SVG at the wrong size, a preview that never appears and a download that opens the file instead of saving it — nothing in Blok reports why. Allow your app’s origin on the bucket or hostname the files are served from."
+      },
+      "s3-untested": {
+        "title": "The S3 support has not met a real bucket yet",
+        "body": "Uploading to S3-compatible storage is built and covered by tests, but those tests check the request against our own reading of the specification — it has never been run against a real bucket, at AWS or anywhere else. Try it on a throwaway bucket before you rely on it. If the storage refuses a request, the service passes the storage’s own explanation through, so the message you see is the one that endpoint sent."
+      },
+      "cors-preflight": {
+        "title": "A browser calling the service directly needs --allow-origin",
+        "body": "Every request that carries an Origin must match an address listed with --allow-origin, in every auth mode. In none and proxy modes, an originless request marked Sec-Fetch-Site: cross-site is also refused, while a genuine server-to-server backend request that carries neither header still works. Ticket mode always requires an allowed Origin. Preflight requests follow the same allowlist."
+      },
+      "upload-by-url-json": {
+        "title": "Remote uploads accept JSON requests only",
+        "body": "POST /upload-by-url requires Content-Type: application/json. Parameters such as charset=utf-8 are allowed, but other media types — including application/problem+json — receive 415 before the service fetches the URL."
+      },
+      "proxy-rate-limit": {
+        "title": "Behind your own app, the rate limit is one allowance for everybody",
+        "body": "The service limits how often a caller may make it fetch a URL. When --rate-limit is omitted, ticket mode allows 60 requests a minute per caller; otherwise the limit is 0, which turns it off. Any explicit value must be zero or greater. It tells callers apart by the address the request came from, and when your app forwards every request, every request arrives from the same address — so the whole deployment shares one allowance and one busy user can use it up. Limiting per user belongs in your own app, on the forwarding route, where you already know who is signed in. This does not apply on the third path, where the pass names the user and each user is counted separately."
+      },
+      "ticket-not-scoped": {
+        "title": "A pass names a user, not a document",
+        "body": "A pass says who is holding it and whether they may write. It does not restrict them to one document, and it cannot: nothing the editor sends names a document, so the service has nothing to check a restriction against. A pass you hand to someone who opened a single page therefore works for every upload and every link preview that page can make, for as long as the pass lives. Keep that life short, hand a pass out only from a route that has already checked who is signed in, and keep the per-document permission check in your own app, where you know which document is open."
+      },
+      "tls-termination": {
+        "title": "Terminate TLS before internet traffic reaches the service",
+        "body": "The standalone host speaks plain HTTP and does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic."
+      }
+    }
   }
 }

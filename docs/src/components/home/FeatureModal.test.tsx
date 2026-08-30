@@ -146,14 +146,14 @@ describe('FeatureModal', () => {
     // the label.
     const link = screen.getByRole('link', { name: 'View documentation' });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/docs#core-save');
+    expect(link).toHaveAttribute('href', '/docs/#core-save');
   });
 
   it('should keep the reader in the Russian tree when linking into the docs', () => {
     renderModal(mockFeature, vi.fn(), visualNode, '/ru');
 
     const link = screen.getByRole('link', { name: 'View documentation' });
-    expect(link).toHaveAttribute('href', '/ru/docs#core-save');
+    expect(link).toHaveAttribute('href', '/ru/docs/#core-save');
   });
 
   it('should render the close button with accessible aria-label', () => {

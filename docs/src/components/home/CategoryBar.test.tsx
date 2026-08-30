@@ -39,10 +39,10 @@ describe('CategoryBar', () => {
     // a plain click swaps the panel in place instead of navigating.
     const expected: [RegExp, string][] = [
       [/get started/i, '/'],
-      [/^docs$/i, '/docs'],
-      [/^playground$/i, '/demo'],
-      [/^migration$/i, '/migration'],
-      [/^changelog$/i, '/changelog'],
+      [/^docs$/i, '/docs/'],
+      [/^playground$/i, '/demo/'],
+      [/^migration$/i, '/migration/'],
+      [/^changelog$/i, '/changelog/'],
     ];
 
     expected.forEach(([name, href]) => {

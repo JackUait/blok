@@ -9,7 +9,8 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { type Locale, defaultLocale, getTranslation, localeNames } from '../i18n';
-import { DEFAULT_LOCALE, localizedPath, splitLocalePath } from '../seo/locales';
+import { DEFAULT_LOCALE, localizedPath, servedPath, splitLocalePath } from '../seo/locales';
+import { getRouteMetadata } from '../seo/route-metadata';
 
 interface I18nContextType {
   locale: Locale;
@@ -96,7 +97,14 @@ export const useRouteLocale = (): Locale => splitLocalePath(useLocation().pathna
 export const useLocalePath = (): ((locale: Locale) => string) => {
   const { pathname } = useLocation();
   return useCallback(
-    (locale: Locale) => localizedPath(splitLocalePath(pathname).path, locale),
+    (locale: Locale) => {
+      const twin = localizedPath(splitLocalePath(pathname).path, locale);
+
+      // Not every page exists in both trees — `/404` is served once from the
+      // site root, so there is no `/ru/404` file to link to. Offer that tree's
+      // home rather than a link that 404s.
+      return servedPath(getRouteMetadata(twin) ? twin : localizedPath('/', locale));
+    },
     [pathname],
   );
 };
@@ -121,8 +129,10 @@ export const useLocalizedHref = (): ((to: string) => string) => {
     (to: string) => {
       if (!to.startsWith('/') || to.startsWith('//')) return to;
       const current = splitLocalePath(pathname).locale;
-      if (current === DEFAULT_LOCALE) return to;
-      return splitLocalePath(to).locale === DEFAULT_LOCALE ? localizedPath(to, current) : to;
+      if (current === DEFAULT_LOCALE) return servedPath(to);
+      return servedPath(
+        splitLocalePath(to).locale === DEFAULT_LOCALE ? localizedPath(to, current) : to,
+      );
     },
     [pathname],
   );

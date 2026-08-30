@@ -100,7 +100,7 @@ describe('MigrationCard', () => {
 
     const link = screen.getByRole('link', { name: /View Migration Guide/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/migration');
+    expect(link).toHaveAttribute('href', '/migration/');
   });
 
   it('should render the View Codemod button', () => {

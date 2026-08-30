@@ -6,7 +6,6 @@ import { TutorialContent } from "./TutorialContent";
 import { HowToCustomToolContent } from "./HowToCustomToolContent";
 import { DevOverrideSeamContent } from "./DevOverrideSeamContent";
 import { EditorAccessNote } from "./EditorAccessNote";
-import { Breadcrumbs } from "./Breadcrumbs";
 import { Typo } from "../common/Typo";
 import { useI18n } from "../../contexts/I18nContext";
 import { useFramework } from "../../contexts/FrameworkContext";
@@ -273,7 +272,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "quick-start") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -286,7 +284,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "tutorial") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -299,7 +296,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "concepts") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -312,7 +308,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "how-to-custom-tool") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -325,7 +320,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
   if (section.customType === "dev-override-seam") {
     return (
       <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-        <Breadcrumbs currentId={section.id} pageTitle={section.title} />
         <div className="mb-10">
           <SectionHeader section={section} />
         </div>
@@ -336,7 +330,6 @@ export const ApiSection: React.FC<ApiSectionProps> = ({ section }) => {
 
   return (
     <section id={section.id} className="scroll-mt-24" data-blok-testid={section.id} aria-label={section.title}>
-      <Breadcrumbs currentId={section.id} pageTitle={section.title} />
       <SectionHeader section={section} />
 
       {section.methods && section.methods.length > 0 && (

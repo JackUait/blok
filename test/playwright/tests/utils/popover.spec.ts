@@ -2,7 +2,6 @@ import type { Locator, Page } from '@playwright/test';
 import type { Blok } from '@/types';
 import type { OutputData } from '@/types';
 import { PopoverItemType } from '@/types/utils/popover/popover-item-type';
-import type { BlockToolConstructable } from '@/types/tools';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../src/components/constants';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -53,7 +52,7 @@ type SerializableMenuItem =
 type SerializableMenuConfig = SerializableMenuItem | SerializableMenuItem[];
 
 interface SerializableToolConfig {
-  menu: SerializableMenuConfig | { render: () => HTMLElement };
+  menu: SerializableMenuConfig;
   isTune?: boolean;
 }
 
@@ -64,13 +63,7 @@ interface GlobalToolConfig {
   [key: string]: unknown;
 }
 
-type SerializableToolsConfig = Record<string, SerializableToolConfig>;
-type ToolConfigInput =
-  | SerializableToolConfig
-  | BlockToolConstructable
-  | { class: BlockToolConstructable }
-  | GlobalToolConfig;
-type ToolsConfigInput = Record<string, ToolConfigInput>;
+type SerializableToolsConfig = Record<string, SerializableToolConfig | GlobalToolConfig>;
 
 const buildTestToolsConfig = (
   menu: SerializableMenuConfig,
@@ -109,13 +102,13 @@ const resetBlok = async (page: Page): Promise<void> => {
  * Create blok with provided blocks and optional tools/tunes
  * @param page - The Playwright page object
  * @param blocks - The blocks data to initialize the blok with
- * @param tools - Optional tools configuration (can be SerializableToolsConfig or tool classes)
+ * @param tools - Optional serializable tools configuration
  * @param tunes - Optional tunes configuration
  */
 const createBlokWithBlocks = async (
   page: Page,
   blocks: OutputData['blocks'],
-  tools?: SerializableToolsConfig | ToolsConfigInput,
+  tools?: SerializableToolsConfig,
   tunes?: string[]
 ): Promise<void> => {
   await resetBlok(page);
@@ -195,18 +188,13 @@ const createBlokWithBlocks = async (
       };
 
       const buildTools = (
-        toolsConfig?: SerializableToolsConfig | ToolsConfigInput
+        toolsConfig?: SerializableToolsConfig
       ): Record<string, unknown> | undefined => {
         if (!toolsConfig) {
           return undefined;
         }
 
         const toolEntries = Object.entries(toolsConfig).map(([toolName, toolConfig]) => {
-          // Check if toolConfig is a tool class directly (not SerializableToolConfig)
-          if (typeof toolConfig === 'function' || (typeof toolConfig === 'object' && toolConfig !== null && 'class' in toolConfig)) {
-            return [toolName, typeof toolConfig === 'function' ? { class: toolConfig } : toolConfig] as const;
-          }
-
           if (typeof toolConfig === 'object' && toolConfig !== null && 'fromGlobal' in toolConfig) {
             const { fromGlobal, config, ...rest } = toolConfig;
 
@@ -246,33 +234,12 @@ const createBlokWithBlocks = async (
 
           const { menu, isTune } = toolConfig;
 
-          // Check if menu is a function (for HTML render)
-          if (typeof menu === 'object' && menu !== null && 'render' in menu && typeof (menu as { render: unknown }).render === 'function') {
-            const DynamicTune = class {
-              /**
-               *
-               */
-              public render(): HTMLElement {
-                return (menu).render();
-              }
-            };
-
-            Object.defineProperty(DynamicTune, 'isTune', {
-              value: isTune ?? true,
-              configurable: true,
-            });
-
-            (DynamicTune as unknown as { isTune: boolean }).isTune = isTune ?? true;
-
-            return [toolName, { class: DynamicTune } ] as const;
-          }
-
           const DynamicTune = class {
             /**
              *
              */
             public render(): unknown {
-              const builtMenu = buildMenu(menu as SerializableMenuConfig);
+              const builtMenu = buildMenu(menu);
 
               return builtMenu;
             }
@@ -288,22 +255,10 @@ const createBlokWithBlocks = async (
           return [toolName, { class: DynamicTune } ] as const;
         });
 
-        return Object.fromEntries(toolEntries) as Record<string, unknown>;
+        return Object.fromEntries(toolEntries);
       };
 
-      // Automatically add tool names to tunes list if they're tunes
-      // For direct tool classes, we can't determine if they're tunes, so skip auto-detection
-      const toolNames = blokTools && !Object.values(blokTools).some(tool => {
-        if (typeof tool === 'function') {
-          return true;
-        }
-
-        if (typeof tool === 'object' && tool !== null) {
-          return 'class' in tool || 'fromGlobal' in (tool as { fromGlobal?: unknown });
-        }
-
-        return false;
-      })
+      const toolNames = blokTools && !Object.values(blokTools).some(tool => 'fromGlobal' in tool)
         ? Object.keys(blokTools)
         : [];
       let tunesList: string[] | undefined;
@@ -328,13 +283,7 @@ const createBlokWithBlocks = async (
     {
       holder: HOLDER_ID,
       blokBlocks: blocks,
-      // The evaluate argument must be structured-cloneable, so only the
-      // serializable tool shape crosses the boundary (tool classes are handled
-      // dynamically inside `buildTools`). Typing it as the serializable subset
-      // also keeps Playwright's arg-type recursion shallow — the full
-      // `ToolsConfigInput` graph (which reaches deep DOM types) otherwise trips
-      // TS2589 "type instantiation is excessively deep".
-      blokTools: tools as SerializableToolsConfig | undefined,
+      blokTools: tools,
       blokTunes: tunes,
       PopoverItemTypeValues: {
         Default: PopoverItemType.Default,

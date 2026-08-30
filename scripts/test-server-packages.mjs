@@ -208,7 +208,7 @@ function assertPackageMetadata(packageId, nuspec) {
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
         { id: 'AngleSharp', version: '1.7.2' },
-        { id: 'BouncyCastle.Cryptography', version: '2.6.2' },
+        { id: 'BouncyCastle.Cryptography', version: '2.7.0' },
       ],
       'Blok.Server must retain its exact direct package dependencies',
     );

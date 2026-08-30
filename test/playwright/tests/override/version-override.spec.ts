@@ -28,6 +28,38 @@ const launch = async (): Promise<{ context: BrowserContext, sw: Worker }> => {
 };
 
 test.describe('blok version override', () => {
+  test('serializes concurrent extension state synchronization', async () => {
+    const { context, sw } = await launch();
+
+    try {
+      const syncCompleted = await sw.evaluate(async () => {
+        const hooks = globalThis as unknown as {
+          armOriginForTests: (origin: string) => Promise<void>;
+          setRedirectsForTests: (redirects: { from: string; to: string }[]) => Promise<void>;
+        };
+        const origin = 'https://concurrent.example';
+        const redirects = [
+          { from: 'https://cdn.concurrent.example/', to: 'https://local.concurrent.example/' },
+        ];
+
+        await Promise.all([
+          hooks.armOriginForTests(origin),
+          hooks.armOriginForTests(origin),
+        ]);
+        await Promise.all([
+          hooks.setRedirectsForTests(redirects),
+          hooks.setRedirectsForTests(redirects),
+        ]);
+
+        return true;
+      });
+
+      expect(syncCompleted).toBe(true);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('arming an origin swaps the page blok for the local payload', async () => {
     // Two full loads of a multi-MB module graph (the fixture's dist build, then
     // the dev payload) — legitimately heavier than the default budget.

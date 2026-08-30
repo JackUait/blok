@@ -262,14 +262,19 @@ describe('production readiness gates', () => {
     }
 
     const frontendCoverage = job(ci, 'frontend-coverage');
+    const unitTests = job(ci, 'unit-tests');
     const docsQuality = job(ci, 'docs-quality');
 
-    expect(needsList(frontendCoverage.needs)).toContain('build');
+    expect(needsList(frontendCoverage.needs)).toContain('unit-tests');
     expect(frontendCoverage.steps?.some(step =>
-      step.run === 'yarn test:coverage'
+      step.run?.includes('--merge-reports=') === true && step.run.includes('--coverage')
     )).toBe(true);
-    expect(frontendCoverage.steps?.some(step =>
+    expect(needsList(unitTests.needs)).toContain('build');
+    expect(unitTests.steps?.some(step =>
       step.run === 'yarn build:cli'
+    )).toBe(true);
+    expect(unitTests.steps?.some(step =>
+      step.run?.includes('vitest run --coverage') === true
     )).toBe(true);
     expect(needsList(docsQuality.needs)).toContain('build');
     expect(docsQuality.steps?.some(step =>

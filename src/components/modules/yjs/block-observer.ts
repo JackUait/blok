@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 
+import { logLabeled } from '../../utils';
 import {
   LOCAL_ORIGIN_TAGS,
   type BlockChangeEvent,
@@ -42,9 +43,23 @@ export class BlockObserver {
 
     this.yblocks.observeDeep((events, transaction) => {
       const origin = this.mapTransactionOrigin(transaction.origin);
+      // One transaction touching several maps of one block fires one event
+      // per map; each 'update' drives a full downstream reconcile, so emit
+      // at most one per block per dispatch. Never carried across dispatches.
+      const emittedUpdates = new Set<string>();
 
       for (const event of events) {
-        this.handleYjsEvent(event as Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>, origin);
+        // One bad event (or a throwing subscriber) must not desync the rest
+        // of the transaction's blocks — remote payloads are untrusted input.
+        try {
+          this.handleYjsEvent(
+            event as Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>,
+            origin,
+            emittedUpdates
+          );
+        } catch (error) {
+          logLabeled('Failed to process a document change event.', 'error', error);
+        }
       }
     });
   }
@@ -133,7 +148,8 @@ export class BlockObserver {
    */
   private handleYjsEvent(
     event: Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>,
-    origin: TransactionOrigin
+    origin: TransactionOrigin,
+    emittedUpdates: Set<string>
   ): void {
     if (this.yblocks === null) {
       return;
@@ -145,7 +161,7 @@ export class BlockObserver {
     }
 
     if (event.target instanceof Y.Map) {
-      this.handleMapEvent(event.target, origin);
+      this.handleMapEvent(event, origin, emittedUpdates);
     }
   }
 
@@ -242,72 +258,85 @@ export class BlockObserver {
   }
 
   /**
-   * Handle map-level changes (data update, tunes update, or top-level
-   * yblock key changes like `parentId` / `contentIds`).
+   * Handle map-level changes: setting a top-level yblock key (`parentId`,
+   * a whole `contentIds` array, …), or a key inside `data` / `tunes` at any
+   * depth.
    *
-   * When a remote client reparents a block, the changed Y.Map is the
-   * yblock itself — not a nested `data`/`tunes` sub-map. Detect both
-   * cases so we always emit an update event for the affected block id.
+   * Known gap: in-place mutations of an EXISTING `contentIds` Y.Array target
+   * a Y.Array, never reach this handler, and are dropped. Child-order
+   * reconciliation belongs to doc schema v2 — Phase 1 of
+   * `docs/plans/2026-08-31-multiplayer-design.md` (§2c, order as data);
+   * emitting updates here would suggest coverage downstream does not act on.
    */
-  private handleMapEvent(ymap: Y.Map<unknown>, origin: TransactionOrigin): void {
-    if (this.yblocks === null) {
+  private handleMapEvent(
+    event: Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>,
+    origin: TransactionOrigin,
+    emittedUpdates: Set<string>
+  ): void {
+    const yblock = this.findOwningBlock(event);
+
+    if (yblock === null) {
       return;
     }
 
-    // Direct yblock change (e.g. parentId/contentIds written on the yblock itself).
-    if (this.isTopLevelYblock(ymap)) {
-      const id: unknown = ymap.get('id');
+    const id: unknown = yblock.get('id');
 
-      if (typeof id === 'string') {
-        this.emitChange({
-          type: 'update',
-          blockId: id,
-          origin,
-        });
-      }
-
+    if (typeof id !== 'string') {
       return;
     }
 
-    const yblock = this.findParentBlock(ymap);
-
-    if (yblock === undefined) {
+    if (emittedUpdates.has(id)) {
       return;
     }
+    emittedUpdates.add(id);
 
     this.emitChange({
       type: 'update',
-      blockId: yblock.get('id') as string,
+      blockId: id,
       origin,
     });
   }
 
   /**
-   * Returns true if the given Y.Map is one of the top-level yblocks tracked
-   * in the blocks array.
+   * Resolve the yblock that owns the changed Y.Map by identity: walk
+   * `event.target` up its parent chain until the parent is `yblocks`.
+   *
+   * NOT by `event.path`: yjs freezes every event's path BEFORE dispatch
+   * (events are sorted by path length and `YEvent.path` memoizes), while a
+   * subscriber may legally grow `yblocks` mid-dispatch (yjs-sync inserts a
+   * remote block → a container tool's rendered() hook inserts a child). A
+   * frozen index resolved against the live array then points at the wrong
+   * block. The parent chain is immune to sibling structural writes.
+   *
+   * Returns null when the chain never reaches `yblocks`, or when the member
+   * directly under `yblocks` is not a Y.Map (hostile shapes drop silently).
    */
-  private isTopLevelYblock(ymap: Y.Map<unknown>): boolean {
+  private findOwningBlock(
+    event: Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>
+  ): Y.Map<unknown> | null {
     if (this.yblocks === null) {
-      return false;
+      return null;
     }
 
-    return this.yblocks.toArray().includes(ymap);
+    return this.walkToOwningBlock(event.target);
   }
 
   /**
-   * Find the parent block Y.Map for a nested Y.Map (data or tunes).
+   * Recursive step of the identity walk: the node directly under `yblocks`
+   * is the owning block — but only if it is a Y.Map.
    */
-  private findParentBlock(ymap: Y.Map<unknown>): Y.Map<unknown> | undefined {
-    if (this.yblocks === null) {
-      return undefined;
+  private walkToOwningBlock(node: unknown): Y.Map<unknown> | null {
+    if (!(node instanceof Y.Map) && !(node instanceof Y.Array)) {
+      return null;
     }
 
-    return this.yblocks.toArray().find((yblock) => {
-      const ydata = yblock.get('data');
-      const ytunes = yblock.get('tunes');
+    const parent: unknown = node.parent;
 
-      return ydata === ymap || ytunes === ymap;
-    });
+    if (parent === this.yblocks) {
+      return node instanceof Y.Map ? node : null;
+    }
+
+    return this.walkToOwningBlock(parent);
   }
 
   /**
@@ -320,7 +349,11 @@ export class BlockObserver {
    */
   private emitChange(event: BlockChangeEvent): void {
     for (const callback of this.changeCallbacks) {
-      callback(event);
+      try {
+        callback(event);
+      } catch (error) {
+        logLabeled('A block-change subscriber threw.', 'error', error);
+      }
     }
   }
 

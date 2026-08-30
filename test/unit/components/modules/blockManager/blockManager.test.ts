@@ -12,6 +12,9 @@ import type { ModuleConfig } from '../../../../../src/types-internal/module-conf
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockAddedMutationType } from '../../../../../types/events/block/BlockAdded';
+import { YjsManager } from '../../../../../src/components/modules/yjs';
+import { ToolsCollection } from '../../../../../src/components/tools/collection';
+import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 
 /**
  * Create a minimal ModuleConfig for constructing BlockManager without calling prepare().
@@ -812,5 +815,128 @@ describe('BlockManager.insertMany hierarchy reconciliation', () => {
 
     expect(() => harness.insertMany([orphan])).not.toThrow();
     expect(orphan.parentId).toBeNull();
+  });
+});
+
+describe('BlockManager yjs-sync wiring carries config.sanitizer', () => {
+  type PreparedHarness = {
+    blockManager: BlockManager;
+    yjsManager: YjsManager;
+    block: Block;
+    setData: ReturnType<typeof vi.fn>;
+  };
+
+  let harness: PreparedHarness | null = null;
+
+  const createPreparedHarness = (): PreparedHarness => {
+    const redactor = document.createElement('div');
+    const wrapper = document.createElement('div');
+
+    document.body.appendChild(wrapper);
+    wrapper.appendChild(redactor);
+
+    const yjsManager = new YjsManager({
+      config: {},
+      eventsDispatcher: {
+        on: vi.fn(),
+        off: vi.fn(),
+        emit: vi.fn(),
+      } as unknown as YjsManager['eventsDispatcher'],
+    });
+
+    const tools = new ToolsCollection<BlockToolAdapter>();
+
+    tools.set('paragraph', { sanitizeConfig: { text: { b: {} } } } as unknown as BlockToolAdapter);
+
+    const blockManager = new BlockManager({
+      // The global sanitizer allows a tag the tool config does not — markup
+      // that survives ONLY when prepare() hands config.sanitizer to yjs-sync.
+      config: { defaultBlock: 'paragraph', sanitizer: { u: {} } },
+      eventsDispatcher: new EventsDispatcher<BlokEventMap>(),
+    });
+
+    blockManager.state = {
+      YjsManager: yjsManager,
+      UI: { nodes: { redactor, wrapper } },
+      BlockEvents: { handleCommandC: vi.fn() },
+      API: {},
+      Tools: { blockTools: tools },
+      Caret: {},
+      I18n: {},
+    } as unknown as BlokModules;
+
+    blockManager.prepare();
+
+    const setData = vi.fn((): Promise<boolean> => Promise.resolve(true));
+    const holder = document.createElement('div');
+
+    holder.setAttribute('data-blok-element', '');
+
+    const block = {
+      id: 'block-1',
+      holder,
+      parentId: null,
+      contentIds: [],
+      preservedTunes: {},
+      setData: setData as unknown as Block['setData'],
+      call: vi.fn(),
+      destroy: vi.fn(),
+      name: 'paragraph',
+      on: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
+      destroyEvents: vi.fn(),
+    } as unknown as Block;
+
+    (blockManager as unknown as { _blocks: { push(b: Block): void } })._blocks.push(block);
+
+    return { blockManager, yjsManager, block, setData };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    if (harness !== null) {
+      const priv = harness.blockManager as unknown as { shortcuts: { unregister(): void } };
+
+      priv.shortcuts.unregister();
+      harness = null;
+    }
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('applies the editor-level sanitizer to remote block data through the real prepare() wiring', async () => {
+    harness = createPreparedHarness();
+    const { yjsManager, setData } = harness;
+
+    yjsManager.fromJSON([{ id: 'block-1', type: 'paragraph', data: { text: 'hello' } }]);
+
+    const yblock = yjsManager.getBlockById('block-1');
+
+    if (yblock === undefined || yblock.doc === null) {
+      throw new Error('Y.Doc not reachable');
+    }
+
+    // An origin outside LOCAL_ORIGIN_TAGS classifies as 'remote'.
+    yblock.doc.transact(() => {
+      const ydata = yblock.get('data') as Y.Map<unknown>;
+
+      ydata.set('text', '<b>tool</b><u>global</u><img src="x" onerror="alert(1)">');
+    }, 'test-provider');
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(setData).toHaveBeenCalledTimes(1);
+
+    const [dataArg] = setData.mock.calls[0] as [Record<string, unknown>];
+    const text = String(dataArg.text);
+
+    // <u> survives ONLY via the injected config.sanitizer; <b> via tool config.
+    expect(text).toContain('<u>');
+    expect(text).toContain('<b>');
+    expect(text).not.toContain('onerror');
   });
 });

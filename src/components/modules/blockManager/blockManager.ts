@@ -439,6 +439,7 @@ export class BlockManager extends Module {
       {
         YjsManager: this.Blok.YjsManager,
         operations: this.operations,
+        sanitizer: this.config.sanitizer,
       },
       this.repository,
       this.factory,

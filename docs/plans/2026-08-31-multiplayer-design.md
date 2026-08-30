@@ -109,8 +109,13 @@ off the shared doc reaches `block.setData` → `innerHTML` and three
 `composeBlock` paths with no sanitize pass. Mirror the renderer's load path
 (`sanitizeBlocks` + `stripUnsafeUrlsDeep`) at the three read sites in
 `yjs-sync.ts` (`handleYjsUpdate` :427, `handleYjsAdd` :601, `handleYjsBatchAdd`
-:730), gated to remote origin. A hostile collaborator's update must be exactly
-as powerless as hostile pasted HTML. Regression tests drive the Y.Doc directly.
+:730) — for EVERY origin that reaches them (undo/redo/remote), not just remote.
+A remote-only gate is launderable (confirmed by runtime repro during review):
+the raw payload lives in the doc, and one local undo restores it under an
+`'undo'` origin, straight past the gate into `innerHTML`. Sanitizing replays
+loses nothing a reload wouldn't — the renderer already applies this exact pass
+to all data on load. A hostile collaborator's update must be exactly as
+powerless as hostile pasted HTML. Regression tests drive the Y.Doc directly.
 
 **2b. Fix the two verified reconciler blind spots.** (1) A remote write into a
 *nested* data map (e.g. `data.style.color`) emits no event at all —

@@ -1477,12 +1477,14 @@ describe('BlockYjsSync', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      it('treats missing parentId key as no-op (Fix 4)', async () => {
+      it('treats missing parentId key as no-op for history replays (Fix 4)', async () => {
         /**
-         * Fix 4 regression: when the Yjs record has no `parentId` key at
-         * all (key never written), handleYjsUpdate must NOT call
-         * setBlockParent — missing key means "no authoritative value",
-         * not "reparent to root".
+         * On undo/redo a missing `parentId` key must NOT call
+         * setBlockParent — parent restores are owned by the
+         * parentRestoreCallback in modules/yjs/index.ts. On the REMOTE
+         * path a missing key IS authoritative (deleted key = root, per
+         * the serializer contract) — covered in
+         * yjs-sync-remote-sanitize.test.ts.
          */
         const childBlock = createMockBlock({
           id: 'child-1',
@@ -1519,7 +1521,7 @@ describe('BlockYjsSync', () => {
         mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
         mockHandlers.getBlockIndex = vi.fn(() => 0);
 
-        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+        callback({ blockId: 'child-1', type: 'update', origin: 'undo' });
 
         await new Promise(resolve => setTimeout(resolve, 0));
 

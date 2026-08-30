@@ -5,11 +5,13 @@
  */
 import type { Map as YMap } from 'yjs';
 
+import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
+import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
-import type { BlockChangeEvent } from '../yjs/types';
+import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
 import type { BlockOperations } from './operations';
@@ -25,6 +27,8 @@ export interface BlockYjsSyncDependencies {
   YjsManager: YjsManager;
   /** BlockOperations instance for suppressing stopCapturing during atomic operations */
   operations?: BlockOperations;
+  /** Editor-level sanitizer config (`config.sanitizer`), applied to remote block data */
+  sanitizer?: SanitizerConfig;
 }
 
 /**
@@ -242,7 +246,7 @@ export class BlockYjsSync {
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
     if (event.type === 'update') {
-      this.handleYjsUpdate(event.blockId);
+      this.handleYjsUpdate(event.blockId, event.origin);
     } else if (event.type === 'move') {
       this.handleYjsMove();
     } else if (event.type === 'add') {
@@ -414,9 +418,9 @@ export class BlockYjsSync {
   }
 
   /**
-   * Handle block update from Yjs (undo/redo)
+   * Handle block update from Yjs (undo/redo or a remote peer)
    */
-  private handleYjsUpdate(blockId: string): void {
+  private handleYjsUpdate(blockId: string, origin: TransactionOrigin): void {
     const block = this.repository.getBlockById(blockId);
     const yblock = this.dependencies.YjsManager.getBlockById(blockId);
 
@@ -424,7 +428,8 @@ export class BlockYjsSync {
       return;
     }
 
-    const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+    const yjsType = yblock.get('type') as string;
+    const data = this.sanitizeToolData(yjsType, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
     const ytunes = yblock.get('tunes') as YMap<unknown> | undefined;
     const tunes = ytunes !== undefined ? this.dependencies.YjsManager.yMapToObject(ytunes) : {};
     const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
@@ -463,6 +468,16 @@ export class BlockYjsSync {
           this.handlers.setBlockParent(block, remoteParentId);
         });
       }
+    } else if (origin === 'remote' && block.parentId !== null) {
+      /**
+       * A remote non-root → root move DELETES the parentId key (the
+       * serializer never writes null for root), so the branch above cannot
+       * see it. Remote-only: local history replays reconcile through the
+       * parentRestoreCallback in `modules/yjs/index.ts` instead.
+       */
+      this.withAtomicOperation(() => {
+        this.handlers.setBlockParent(block, null);
+      });
     }
 
     // Tool TYPE changed (a turn-into / markdown conversion being undone, redone,
@@ -472,8 +487,6 @@ export class BlockYjsSync {
     // recreate path and is the counterpart to `replaceBlockContent`, which
     // mutates a block's type in place rather than remove+add (the old approach
     // the observer misclassified as a no-op move, so undo never re-rendered).
-    const yjsType = yblock.get('type') as string;
-
     if (yjsType !== block.name) {
       const blockIndex = this.handlers.getBlockIndex(block);
       const newBlock = this.factory.composeBlock({
@@ -583,7 +596,7 @@ export class BlockYjsSync {
   }
 
   /**
-   * Handle block add from Yjs (undo/redo - restoring a removed block)
+   * Handle block add from Yjs (undo/redo - restoring a removed block, or a remote insert)
    */
   private handleYjsAdd(blockId: string): void {
     // Block already exists in DOM, no need to add
@@ -598,7 +611,7 @@ export class BlockYjsSync {
     }
 
     const toolName = yblock.get('type') as string;
-    const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+    const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
     const parentId = yblock.get('parentId') as string | undefined;
     const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
     const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
@@ -727,7 +740,7 @@ export class BlockYjsSync {
       }
 
       const toolName = yblock.get('type') as string;
-      const data = this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>);
+      const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
       const parentId = yblock.get('parentId') as string | undefined;
       const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
       const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
@@ -929,6 +942,29 @@ export class BlockYjsSync {
         this.blocksStore.move(targetIndex, currentIndex);
       }
     });
+  }
+
+  /**
+   * Clean block data coming off the shared doc — mirror of
+   * `Renderer.sanitizeToolData` (tool sanitize config + global sanitizer,
+   * then the unconditional URL-scheme pass). Applied to EVERY origin that
+   * reaches these handlers, not just 'remote': a hostile peer's raw payload
+   * lives in the Y.Doc, and a local undo restoring that prior state would
+   * launder it past a remote-only gate. The renderer sanitizes all data on
+   * load, so a replay cannot lose anything a reload would keep.
+   * @param tool - tool name the block will be rendered with
+   * @param data - block data read from the Y.Map
+   */
+  private sanitizeToolData(tool: string, data: BlockToolData): BlockToolData {
+    const toolSanitizeConfig = this.factory.getTool(tool)?.sanitizeConfig;
+
+    const [sanitized] = sanitizeBlocks(
+      [{ tool, data }],
+      () => toolSanitizeConfig,
+      this.dependencies.sanitizer
+    );
+
+    return stripUnsafeUrlsDeep(sanitized.data, toolSanitizeConfig);
   }
 
   /**

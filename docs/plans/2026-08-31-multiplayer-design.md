@@ -140,6 +140,18 @@ today only because nothing remote exists.
   interleave; with order-as-data they record "id X back to parent P after
   sibling S", which survives concurrent edits. This collapses two recorded
   undo-breakage classes.
+- **Bandwidth hotspot, same schema pass:** arrays are atomic in the current
+  serializer, so a table's entire 2-D cell grid is ONE value — editing a cell
+  re-broadcasts the whole grid (a large table makes every keystroke cost tens
+  of KB, and concurrent edits to *different cells* clobber each other, the
+  worst of both worlds). Store the grid as nested maps (row → cell) so an edit
+  sends one cell and merges per cell. Ordinary text is fine unfixed — a
+  whole-field update of a 1–2KB paragraph a few times a second is noise — but
+  local doc writes during typing must be **coalesced on a short window**
+  (aligned with the existing 400ms mutation batch) rather than fired per input
+  event, so traffic scales with typing sessions, not keystrokes. Per-character
+  updates arrive with Y.Text later; they are the same change as per-character
+  merging.
 
 This is the one structurally invasive client change, and it is **free only
 now**: the doc format today is ephemeral (rebuilt from JSON each load, never

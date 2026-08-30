@@ -345,18 +345,8 @@ describe('CI critical-path law', () => {
         run: 'yarn build:cli',
       },
       {
-        name: 'Run Unit Tests with coverage',
-        run: [
-          'yarn vitest run --coverage --project=unit --project=unit-angular \\',
-          '  --shard=${{ matrix.shard }} \\',
-          '  --reporter=default \\',
-          '  --reporter=blob \\',
-          '  --coverage.reporter=json \\',
-          '  --coverage.thresholds.statements=0 \\',
-          '  --coverage.thresholds.lines=0 \\',
-          '  --coverage.thresholds.functions=0 \\',
-          '  --coverage.thresholds.branches=0',
-        ].join('\n'),
+        name: 'Run Unit Tests',
+        run: 'yarn test --shard=${{ matrix.shard }}',
       },
       {
         // The react package carries its own vitest config (the root one cannot
@@ -382,40 +372,32 @@ describe('CI critical-path law', () => {
         if: "matrix.shard == '1/3'",
         run: 'yarn workspace @bloklabs/server test',
       },
-      {
-        name: 'Upload frontend coverage shard',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
-        with: {
-          name: 'frontend-coverage-${{ strategy.job-index }}',
-          path: '.vitest-reports/',
-          'if-no-files-found': 'error',
-          'include-hidden-files': true,
-          'retention-days': 1,
-        },
-      },
     ]);
   });
 
-  it('merges shard coverage and keeps CodeQL dependency-free', () => {
+  it('runs coverage from the last green path and keeps CodeQL dependency-free', () => {
     const coverage = getJob(ci, 'frontend-coverage');
     const codeql = getJob(ci, 'codeql');
 
-    expect(coverage.needs).toEqual(['unit-tests']);
+    expect(coverage.needs).toEqual(['build']);
     expectOrderedSteps('ci.frontend-coverage', coverage, [
       checkout,
       setupNodeDependencies,
       {
-        name: 'Download frontend coverage shards',
+        name: 'Download Build Artifacts',
         uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
-          pattern: 'frontend-coverage-*',
-          path: '.vitest-reports',
-          'merge-multiple': true,
+          name: 'dist',
+          path: '.',
         },
       },
       {
-        name: 'Merge frontend coverage',
-        run: 'yarn vitest --merge-reports=.vitest-reports --coverage --reporter=default',
+        name: 'Build CLI',
+        run: 'yarn build:cli',
+      },
+      {
+        name: 'Run frontend coverage',
+        run: 'yarn test:coverage',
       },
       {
         name: 'Upload coverage diagnostics',

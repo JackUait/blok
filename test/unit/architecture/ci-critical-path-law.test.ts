@@ -349,6 +349,7 @@ describe('CI critical-path law', () => {
         run: [
           'yarn vitest run --coverage --project=unit --project=unit-angular \\',
           '  --shard=${{ matrix.shard }} \\',
+          '  --reporter=default \\',
           '  --reporter=blob \\',
           '  --coverage.reporter=json \\',
           '  --coverage.thresholds.statements=0 \\',
@@ -388,6 +389,7 @@ describe('CI critical-path law', () => {
           name: 'frontend-coverage-${{ strategy.job-index }}',
           path: '.vitest-reports/',
           'if-no-files-found': 'error',
+          'include-hidden-files': true,
           'retention-days': 1,
         },
       },

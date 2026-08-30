@@ -319,7 +319,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs three exact unit-and-coverage shards after build', () => {
+  it('runs four exact unit-only coverage shards plus Angular after build', () => {
     const unit = getJob(ci, 'unit-tests');
 
     expect(unit.name).toBe('Unit Tests (${{ matrix.shard }})');
@@ -327,7 +327,7 @@ describe('CI critical-path law', () => {
     expect(unit['runs-on']).toBe('ubuntu-latest');
     expect(unit.strategy).toEqual({
       'fail-fast': false,
-      matrix: { shard: ['1/3', '2/3', '3/3'] },
+      matrix: { shard: ['1/4', '2/4', '3/4', '4/4'] },
     });
     expectOrderedSteps('ci.unit-tests', unit, [
       checkout,
@@ -345,15 +345,30 @@ describe('CI critical-path law', () => {
         run: 'yarn build:cli',
       },
       {
-        name: 'Run Unit Tests',
-        run: 'yarn test --shard=${{ matrix.shard }}',
+        name: 'Run Unit Tests with coverage',
+        run: [
+          'yarn vitest run --coverage --project=unit \\',
+          '  --shard=${{ matrix.shard }} \\',
+          '  --reporter=default \\',
+          '  --reporter=blob \\',
+          '  --coverage.reporter=json \\',
+          '  --coverage.thresholds.statements=0 \\',
+          '  --coverage.thresholds.lines=0 \\',
+          '  --coverage.thresholds.functions=0 \\',
+          '  --coverage.thresholds.branches=0',
+        ].join('\n'),
+      },
+      {
+        name: 'Run Angular Unit Tests',
+        if: "matrix.shard == '1/4'",
+        run: 'yarn test:angular',
       },
       {
         // The react package carries its own vitest config (the root one cannot
         // resolve the @bloklabs/core/view subpath through the root alias), so
         // its suite runs separately — on one shard only, since it is not sharded.
         name: 'Run @bloklabs/react Unit Tests',
-        if: "matrix.shard == '1/3'",
+        if: "matrix.shard == '1/4'",
         run: 'yarn workspace @bloklabs/react test',
       },
       {
@@ -362,42 +377,50 @@ describe('CI critical-path law', () => {
         // the root config's "unit" project does not glob — on one shard only,
         // since it is not sharded.
         name: 'Run @bloklabs/presets Unit Tests',
-        if: "matrix.shard == '1/3'",
+        if: "matrix.shard == '1/4'",
         run: 'yarn workspace @bloklabs/presets test',
       },
       {
         // Same reason again: own vitest config, tests under src/. Its ticket
         // signer is checked against the same fixture the C# verifier reads.
         name: 'Run @bloklabs/server Unit Tests',
-        if: "matrix.shard == '1/3'",
+        if: "matrix.shard == '1/4'",
         run: 'yarn workspace @bloklabs/server test',
+      },
+      {
+        name: 'Upload frontend coverage shard',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        with: {
+          name: 'frontend-coverage-${{ strategy.job-index }}',
+          path: '.vitest-reports/',
+          'if-no-files-found': 'error',
+          'include-hidden-files': true,
+          'retention-days': 1,
+        },
       },
     ]);
   });
 
-  it('runs coverage from the last green path and keeps CodeQL dependency-free', () => {
+  it('merges shard coverage and keeps CodeQL dependency-free', () => {
     const coverage = getJob(ci, 'frontend-coverage');
     const codeql = getJob(ci, 'codeql');
 
-    expect(coverage.needs).toEqual(['build']);
+    expect(coverage.needs).toEqual(['unit-tests']);
     expectOrderedSteps('ci.frontend-coverage', coverage, [
       checkout,
       setupNodeDependencies,
       {
-        name: 'Download Build Artifacts',
+        name: 'Download frontend coverage shards',
         uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
-          name: 'dist',
-          path: '.',
+          pattern: 'frontend-coverage-*',
+          path: '.vitest-reports',
+          'merge-multiple': true,
         },
       },
       {
-        name: 'Build CLI',
-        run: 'yarn build:cli',
-      },
-      {
-        name: 'Run frontend coverage',
-        run: 'yarn test:coverage',
+        name: 'Merge frontend coverage',
+        run: 'yarn vitest --merge-reports=.vitest-reports --coverage --reporter=default',
       },
       {
         name: 'Upload coverage diagnostics',

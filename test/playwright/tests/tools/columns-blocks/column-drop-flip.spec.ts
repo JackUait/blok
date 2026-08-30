@@ -87,38 +87,84 @@ test.beforeEach(async ({ page }) => {
 const BELOW = ['below1', 'below2', 'below3'];
 
 test.describe('column drop — FLIP of the blocks below', () => {
-  test('the first animation frame shows them at their pre-drop positions, not ~200px away', async ({ page }) => {
+  test('the FLIP transition starts at each block\'s pre-drop position', async ({ page }) => {
     await createBlok(page, fixture());
 
     const before = await visualTops(page, BELOW);
     const handle = await grabLeafHandle(page, 'sub');
 
+    await page.evaluate(blockIds => {
+      const state = window as Window & {
+        blokFlipStarts?: Promise<Record<string, number>>;
+      };
+
+      state.blokFlipStarts = new Promise(resolve => {
+        const observer = new MutationObserver(() => {
+          if (document.querySelector('[data-blok-column-drop-animating]') === null) {
+            return;
+          }
+
+          const starts: Record<string, number> = {};
+
+          for (const id of blockIds) {
+            const element = document.querySelector<HTMLElement>(`[data-blok-id="${id}"]`);
+            const transition = element
+              ?.getAnimations()
+              .find(
+                animation =>
+                  animation instanceof CSSTransition && animation.transitionProperty === 'transform'
+              );
+            const effect = transition?.effect;
+
+            if (!(effect instanceof KeyframeEffect)) {
+              return;
+            }
+
+            const transform = effect.getKeyframes()[0]?.transform;
+
+            if (typeof transform !== 'string') {
+              return;
+            }
+
+            starts[id] = new DOMMatrixReadOnly(transform).m42;
+          }
+
+          observer.disconnect();
+          resolve(starts);
+        });
+
+        observer.observe(document.documentElement, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['data-blok-column-drop-animating'],
+        });
+      });
+    }, BELOW);
+
     await sideDrop(page, handle, 'target');
 
-    // FLIP's contract: on the frame the transition starts, each moved block is
-    // still painted at its OLD position. Reading the rect picks up the pinned
-    // transform, so this is the block's on-screen position.
-    const firstFrame = await page.evaluate(
-      blockIds =>
-        new Promise<Record<string, number>>(resolve => {
-          requestAnimationFrame(() => {
-            resolve(
-              Object.fromEntries(
-                blockIds.map(id => [
-                  id,
-                  Math.round(
-                    document.querySelector(`[data-blok-id="${id}"]`)?.getBoundingClientRect().top ?? NaN
-                  ),
-                ])
-              )
-            );
-          });
-        }),
-      BELOW
-    );
+    const startOffsets = await page.evaluate(async () => {
+      const promise = (
+        window as Window & {
+          blokFlipStarts?: Promise<Record<string, number>>;
+        }
+      ).blokFlipStarts;
+
+      if (!promise) {
+        throw new Error('missing FLIP start capture');
+      }
+
+      return await promise;
+    });
+
+    await expect(page.locator('[data-blok-column-drop-animating]')).toHaveCount(0);
+    const settled = await visualTops(page, BELOW);
 
     for (const id of BELOW) {
-      expect(Math.abs(firstFrame[id] - before[id]), `${id} start-of-animation position`).toBeLessThanOrEqual(4);
+      expect(
+        Math.abs(settled[id] + startOffsets[id] - before[id]),
+        `${id} starts at its old position`
+      ).toBeLessThanOrEqual(1);
     }
   });
 

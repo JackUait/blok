@@ -148,30 +148,18 @@ const markBuildRun = [
 ].join('\n');
 
 const e2eMatrix: MatrixEntry[] = [
-  { project: 'chromium', browser: 'chromium', shard: '1/3' },
-  { project: 'chromium', browser: 'chromium', shard: '2/3' },
-  { project: 'chromium', browser: 'chromium', shard: '3/3' },
-  { project: 'firefox', browser: 'firefox', shard: '1/4' },
-  { project: 'firefox', browser: 'firefox', shard: '2/4' },
-  { project: 'firefox', browser: 'firefox', shard: '3/4' },
-  { project: 'firefox', browser: 'firefox', shard: '4/4' },
-  { project: 'webkit', browser: 'webkit', shard: '1/5' },
-  { project: 'webkit', browser: 'webkit', shard: '2/5' },
-  { project: 'webkit', browser: 'webkit', shard: '3/5' },
-  { project: 'webkit', browser: 'webkit', shard: '4/5' },
-  { project: 'webkit', browser: 'webkit', shard: '5/5' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '1/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '2/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '3/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '4/4' },
-  { project: 'chromium-default', browser: 'chromium', shard: '1/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '2/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '3/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '4/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '5/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '6/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '7/8' },
-  { project: 'chromium-default', browser: 'chromium', shard: '8/8' },
+  { project: 'chromium', browser: 'chromium', shard: '1/2' },
+  { project: 'chromium', browser: 'chromium', shard: '2/2' },
+  { project: 'firefox', browser: 'firefox', shard: '1/2' },
+  { project: 'firefox', browser: 'firefox', shard: '2/2' },
+  { project: 'webkit', browser: 'webkit', shard: '1/3' },
+  { project: 'webkit', browser: 'webkit', shard: '2/3' },
+  { project: 'webkit', browser: 'webkit', shard: '3/3' },
+  { project: 'chromium-logic', browser: 'chromium', shard: '1/2' },
+  { project: 'chromium-logic', browser: 'chromium', shard: '2/2' },
+  { project: 'chromium-default', browser: 'chromium', shard: '1/3' },
+  { project: 'chromium-default', browser: 'chromium', shard: '2/3' },
+  { project: 'chromium-default', browser: 'chromium', shard: '3/3' },
 ];
 
 describe('CI critical-path law', () => {
@@ -331,7 +319,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs two exact unit shards after build without fail-fast cancellation', () => {
+  it('runs three exact unit-and-coverage shards after build', () => {
     const unit = getJob(ci, 'unit-tests');
 
     expect(unit.name).toBe('Unit Tests (${{ matrix.shard }})');
@@ -339,7 +327,7 @@ describe('CI critical-path law', () => {
     expect(unit['runs-on']).toBe('ubuntu-latest');
     expect(unit.strategy).toEqual({
       'fail-fast': false,
-      matrix: { shard: ['1/2', '2/2'] },
+      matrix: { shard: ['1/3', '2/3', '3/3'] },
     });
     expectOrderedSteps('ci.unit-tests', unit, [
       checkout,
@@ -357,15 +345,24 @@ describe('CI critical-path law', () => {
         run: 'yarn build:cli',
       },
       {
-        name: 'Run Unit Tests',
-        run: 'yarn test --shard=${{ matrix.shard }}',
+        name: 'Run Unit Tests with coverage',
+        run: [
+          'yarn vitest run --coverage --project=unit --project=unit-angular \\',
+          '  --shard=${{ matrix.shard }} \\',
+          '  --reporter=blob \\',
+          '  --coverage.reporter=json \\',
+          '  --coverage.thresholds.statements=0 \\',
+          '  --coverage.thresholds.lines=0 \\',
+          '  --coverage.thresholds.functions=0 \\',
+          '  --coverage.thresholds.branches=0',
+        ].join('\n'),
       },
       {
         // The react package carries its own vitest config (the root one cannot
         // resolve the @bloklabs/core/view subpath through the root alias), so
         // its suite runs separately — on one shard only, since it is not sharded.
         name: 'Run @bloklabs/react Unit Tests',
-        if: "matrix.shard == '1/2'",
+        if: "matrix.shard == '1/3'",
         run: 'yarn workspace @bloklabs/react test',
       },
       {
@@ -374,17 +371,63 @@ describe('CI critical-path law', () => {
         // the root config's "unit" project does not glob — on one shard only,
         // since it is not sharded.
         name: 'Run @bloklabs/presets Unit Tests',
-        if: "matrix.shard == '1/2'",
+        if: "matrix.shard == '1/3'",
         run: 'yarn workspace @bloklabs/presets test',
       },
       {
         // Same reason again: own vitest config, tests under src/. Its ticket
         // signer is checked against the same fixture the C# verifier reads.
         name: 'Run @bloklabs/server Unit Tests',
-        if: "matrix.shard == '1/2'",
+        if: "matrix.shard == '1/3'",
         run: 'yarn workspace @bloklabs/server test',
       },
+      {
+        name: 'Upload frontend coverage shard',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        with: {
+          name: 'frontend-coverage-${{ strategy.job-index }}',
+          path: '.vitest-reports/',
+          'if-no-files-found': 'error',
+          'retention-days': 1,
+        },
+      },
     ]);
+  });
+
+  it('merges shard coverage and keeps CodeQL dependency-free', () => {
+    const coverage = getJob(ci, 'frontend-coverage');
+    const codeql = getJob(ci, 'codeql');
+
+    expect(coverage.needs).toEqual(['unit-tests']);
+    expectOrderedSteps('ci.frontend-coverage', coverage, [
+      checkout,
+      setupNodeDependencies,
+      {
+        name: 'Download frontend coverage shards',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        with: {
+          pattern: 'frontend-coverage-*',
+          path: '.vitest-reports',
+          'merge-multiple': true,
+        },
+      },
+      {
+        name: 'Merge frontend coverage',
+        run: 'yarn vitest --merge-reports=.vitest-reports --coverage --reporter=default',
+      },
+      {
+        name: 'Upload coverage diagnostics',
+        if: 'failure()',
+        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        with: {
+          name: 'frontend-coverage',
+          path: 'coverage/',
+          'if-no-files-found': 'ignore',
+          'retention-days': 3,
+        },
+      },
+    ]);
+    expect(codeql.steps).not.toContainEqual(setupNodeDependencies);
   });
 
   it('retains the exact spec-coverage and build job contracts', () => {

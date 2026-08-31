@@ -222,7 +222,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Restore lint cache',
         id: 'lint-cache',
-        uses: 'actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830',
+        uses: 'actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: lintCachePaths,
           // v2: v1 caches are poisoned — ESLint's cache persists errored
@@ -238,7 +238,7 @@ describe('CI critical-path law', () => {
         name: 'Save lint cache',
         // success() only: a red run's ESLint cache carries the error entries.
         if: "success() && steps.lint-cache.outputs.cache-hit != 'true'",
-        uses: 'actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830',
+        uses: 'actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: lintCachePaths,
           key: '${{ steps.lint-cache.outputs.cache-primary-key }}',

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "first",
+    "type": "paragraph",
+    "data": {
+      "text": "first root"
+    }
+  },
+  {
+    "id": "last",
+    "type": "paragraph",
+    "data": {
+      "text": "last root"
+    }
+  },
+  {
+    "id": "nullish",
+    "type": "paragraph",
+    "data": {
+      "text": "parent: null"
+    }
+  }
+]

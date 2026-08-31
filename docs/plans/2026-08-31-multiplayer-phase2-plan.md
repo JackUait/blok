@@ -172,3 +172,20 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   abstraction (Seed(Doc, json) / Export(Doc)); B1's `YDocConverter` binds
   through a one-line adapter after both land. The room never references the
   concrete converter.
+- **B1 LANDED** — `YDocConverter.Seed(Doc, JsonArray blocks)` / `Export(Doc) → JsonArray`
+  operate on the BLOCKS ARRAY, not the OutputData envelope (envelope, `data:null`,
+  version are the room's job). Numbers: always `Input.Double` (yrs `Long` → JS
+  BigInt breaks JSON.stringify). Ordinal (UTF-16) comparison for sorts and the
+  cycle keeper. 18 fixtures under `fixtures/collab/<case>/` + manifest; the JS
+  freshness test is always-on. Reverse direction (C#-seeded → JS) probed 18/18.
+- **Client behaviors pinned as-is by the fixtures (candidates for a later
+  tightening pass, NOT changed):** `parent: null` (or non-string) is written as
+  doc Null, excluded from root order → orphan tail, reads back parentless;
+  `lastEditedBy: null` / non-number `lastEditedAt` written then dropped on read;
+  `content` is never deduped in projection (`[x,x]` emitted verbatim) and
+  non-string entries pass through; orphan pass 2 can emit a child before its
+  own parent; a `null` block entry throws in fromJSON while a primitive entry
+  is skipped; a data value shaped `{__rows, __rowKeys:[objects]}` would be
+  misread as a grid; the escaped NUL (backslash-u0000) inside strings is
+  SUSPECTED to truncate through yffi's C strings — excluded from fixtures,
+  verify before relying on it.

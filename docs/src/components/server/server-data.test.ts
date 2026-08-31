@@ -270,12 +270,13 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the eighteen service limits the design refuses to bury', () => {
+  it('states the nineteen service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'working-copy-privacy',
       'collab-reset',
       'doc-endpoint-auth',
+      'collab-new-documents',
       'file-origin',
       'asset-cors',
       's3-untested',
@@ -332,6 +333,24 @@ describe('server docs data', () => {
     expect(body).toMatch(/verbatim/i);
   });
 
+  // The seed call treats null as "nothing saved yet" and anything non-2xx as a
+  // failure, so an endpoint that answers 404 for a new document locks it. The
+  // entry sits right after the auth one because both describe that endpoint.
+  it('tells the document endpoint to answer null for a new document, never 404', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-new-documents')?.body ?? '';
+
+    expect(limits.indexOf('collab-new-documents')).toBe(limits.indexOf('doc-endpoint-auth') + 1);
+    expect(body).toMatch(/200 with null/);
+    expect(body).toContain('{ "data": null }');
+    expect(body).toMatch(/404/);
+    expect(body).toMatch(/5xx/);
+    expect(body).toMatch(/failure/i);
+    expect(body).toMatch(/reconnecting notice/i);
+    expect(body).toMatch(/overwrite/i);
+    expect(body).toContain('--doc-endpoint');
+  });
+
   it('gives collaboration passes about 30 minutes and admits revocation waits for a reconnect', () => {
     const body = serverLimits.find((l) => l.id === 'collab-pass-lifetime')?.body ?? '';
 
@@ -354,16 +373,22 @@ describe('server docs data', () => {
   });
 
   // The review asked for the unbounded things to be said out loud, next to the
-  // three bounds that do exist, so nobody reads the connection cap as a quota.
-  it('says what live collaboration leaves unlimited, and names the three bounds it does have', () => {
+  // four bounds that do exist, so nobody reads the connection cap as a quota.
+  it('says what live collaboration leaves unlimited, and names the four bounds it does have', () => {
     const body = serverLimits.find((l) => l.id === 'collab-what-is-not-limited')?.body ?? '';
 
     expect(body).toMatch(/no cap/i);
     expect(body).toMatch(/your own backend/i);
     expect(body).toContain('1 MiB');
     expect(body).toContain('8 MiB');
+    expect(body).toMatch(/50/);
+    expect(body).toContain('inbound rate exceeded');
+    expect(body).toMatch(/1008/);
+    expect(body).toContain('CollabInboundFramesPerSecond');
     expect(body).toContain('--rate-limit');
     expect(body).toMatch(/not limited/i);
+    // The inbound budget made this sentence false.
+    expect(body).not.toMatch(/how fast an open connection sends is not limited/i);
   });
 
   // Awareness frames are relayed verbatim and never parsed, read-only members

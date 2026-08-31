@@ -104,35 +104,33 @@ export interface CaretHistoryEntry {
 }
 
 /**
- * One replay step of a recorded move, handed to the placement callback by
- * move-undo/move-redo. INTERIM SHAPE: the move stacks still speak flat
- * indices; the placement-based stacks swap `index` for a full
- * {parentId, afterId} placement.
+ * Replays one recorded move step during move-undo/move-redo: restore the
+ * block to `placement` (doc write + in-memory reparent). Owned by
+ * YjsManager; must not record its own history entry.
  */
-export interface MoveReplayRequest {
-  blockId: string;
-  /** Parent to restore; undefined = the entry recorded no parent change */
-  parentId: string | null | undefined;
-  /** Flat index to restore; -1 = parent-only entry (no recorded position) */
-  index: number;
-  origin: 'move-undo' | 'move-redo';
-}
+export type MoveReplayCallback = (
+  blockId: string,
+  placement: BlockPlacement,
+  origin: 'move-undo' | 'move-redo'
+) => void;
 
 /**
  * Represents a single move operation within a move group.
  *
- * Drag-reparent flows attach `fromParentId`/`toParentId` so that undo/redo
- * can restore the parent relationship atomically alongside the array move.
- * Without this, a drag-reparent splits across two history stacks
- * (`moveUndoStack` for the array move, Y.UndoManager for the parentId write)
- * and requires two Cmd+Z presses to fully reverse.
+ * Both sides are full placements (parent + preceding sibling), captured
+ * from the doc BEFORE/AFTER the mutation, so replay is index-free and
+ * survives concurrent remote edits that shift flat indices. A parent
+ * change recorded mid-group rides the same entry — without this, a
+ * drag-reparent splits across two history stacks (`moveUndoStack` for the
+ * position, Y.UndoManager for the parentId write) and requires two Cmd+Z
+ * presses to fully reverse.
  */
 export interface SingleMoveEntry {
   blockId: string;
-  fromIndex: number;
-  toIndex: number;
-  fromParentId?: string | null;
-  toParentId?: string | null;
+  /** Placement before the move; undo restores this side */
+  from: BlockPlacement;
+  /** Placement after the move; redo restores this side */
+  to: BlockPlacement;
 }
 
 /**

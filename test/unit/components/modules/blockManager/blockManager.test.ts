@@ -464,6 +464,8 @@ describe('BlockManager.setBlockParent applyPlacement delegation', () => {
     // so assertions run against actual doc state and transaction counts.
     const yjsManager = {
       getBlockById: (id: string): Y.Map<unknown> | undefined => store.getBlockById(id),
+      getBlockPlacement: (id: string): { parentId: string | null; afterId: string | null } | null =>
+        store.getPlacement(id),
       applyBlockPlacement: (
         id: string,
         placement: { parentId: string | null; afterId: string | null },
@@ -597,7 +599,12 @@ describe('BlockManager.setBlockParent applyPlacement delegation', () => {
     expect(harness.getContentIds('parent-b')).toEqual(['child']);
     // … but off the Y.UndoManager stack: the in-flight move entry owns it.
     expect(harness.undoManager.undoStack).toHaveLength(0);
-    expect(harness.recordParentChange).toHaveBeenCalledWith('child', null, 'parent-b');
+    // The recorded from-placement is the doc placement BEFORE the write.
+    expect(harness.recordParentChange).toHaveBeenCalledWith(
+      'child',
+      { parentId: null, afterId: 'parent-b' },
+      { parentId: 'parent-b', afterId: null }
+    );
   });
 
   it('fires the block tool MOVED lifecycle hook on a real reparent (so tools re-render their nesting UI)', () => {

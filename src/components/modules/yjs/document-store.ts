@@ -289,7 +289,7 @@ export class DocumentStore {
   public moveBlock(
     id: string,
     toIndex: number,
-    origin: 'local' | 'move-undo' | 'move-redo'
+    origin: 'local'
   ): void {
     const fromIndex = this.deriveOrderedIds().indexOf(id);
 
@@ -302,9 +302,9 @@ export class DocumentStore {
       return;
     }
 
-    // Use the origin for the transaction:
-    // - 'local' for user-initiated moves (we use 'move' so Yjs UndoManager doesn't track them)
-    // - 'move-undo' / 'move-redo' for our custom undo/redo (maps to 'undo'/'redo' for DOM sync)
+    // 'move' keeps the Y.UndoManager from tracking the order edit — the
+    // placement-based move stacks own its history. Replay never comes back
+    // through here: move-undo/move-redo drive `applyPlacement` instead.
     const transactionOrigin: LocalOriginTag = origin === 'local' ? 'move' : origin;
 
     this.transact(() => {
@@ -347,9 +347,14 @@ export class DocumentStore {
     }
 
     this.transact(() => {
+      // Idempotent parentId write: an agreeing value writes nothing, so the
+      // transaction touches order arrays ONLY and the observer emits a pure
+      // 'move'. Move replay relies on this — a spurious parentId item would
+      // emit an 'update' whose undo/redo-origin handling re-runs setData on
+      // the block mid-replay. (delete on an absent key is already a no-op.)
       if (placement.parentId === null) {
         yblock.delete('parentId');
-      } else {
+      } else if (yblock.get('parentId') !== placement.parentId) {
         yblock.set('parentId', placement.parentId);
       }
 
@@ -374,6 +379,35 @@ export class DocumentStore {
     const yblock = this.yBlocksMap.get(id);
 
     return yblock instanceof Y.Map ? yblock : undefined;
+  }
+
+  /**
+   * A block's current placement: its doc parentId (possibly dangling) plus
+   * the sibling it follows in whichever order array holds it (null = first
+   * slot, or an orphan held by no array).
+   * @param id - Block id
+   * @returns The placement, or null when the block has no map entry
+   */
+  public getPlacement(id: string): BlockPlacement | null {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return null;
+    }
+
+    const rawParentId = yblock.get('parentId');
+    const parentId = typeof rawParentId === 'string' ? rawParentId : null;
+
+    for (const order of this.orderArrays()) {
+      const ids = order.toArray();
+      const index = ids.indexOf(id);
+
+      if (index !== -1) {
+        return { parentId, afterId: index > 0 ? ids[index - 1] : null };
+      }
+    }
+
+    return { parentId, afterId: null };
   }
 
   /**

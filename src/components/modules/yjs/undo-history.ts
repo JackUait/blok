@@ -4,7 +4,7 @@ import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
-import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayRequest, SingleMoveEntry, UndoScopeType } from './types';
+import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
 /**
  * UndoHistory manages all undo/redo state.
@@ -98,7 +98,7 @@ export class UndoHistory {
    * Must not record its own history entry — the call is part of replaying
    * an existing `SingleMoveEntry`. Set by YjsManager.
    */
-  private placementCallback: (request: MoveReplayRequest) => void;
+  private placementCallback: MoveReplayCallback;
 
   /**
    * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
@@ -135,9 +135,7 @@ export class UndoHistory {
    * Set the placement callback used by move-undo/move-redo to replay
    * recorded moves. See `placementCallback`.
    */
-  public setPlacementCallback(
-    callback: (request: MoveReplayRequest) => void
-  ): void {
+  public setPlacementCallback(callback: MoveReplayCallback): void {
     this.placementCallback = callback;
   }
 
@@ -299,9 +297,8 @@ export class UndoHistory {
       // Reverse all moves in the group, in reverse order.
       // This is crucial for multi-block moves to restore correctly.
       //
-      // Drag-reparent entries may additionally carry `fromParentId`; restore
-      // the parent BEFORE the position so the block lands in the correct
-      // flat-array slot relative to its (soon-to-be-restored) parent siblings.
+      // Each entry replays its full FROM placement (parent + preceding
+      // sibling) through the one placement callback.
       [...lastMoveGroup].reverse().forEach((move) => {
         this.replayMoveUndo(move);
       });
@@ -347,10 +344,8 @@ export class UndoHistory {
       // Push back to undo stack
       this.moveUndoStack.push(lastMoveGroup);
 
-      // Redo all moves in the group, in original order. Drag-reparent
-      // entries restore the destination parent BEFORE the position (same
-      // as undo): the position restore resolves its target order array
-      // from the block's current parentId.
+      // Redo all moves in the group, in original order: each entry
+      // replays its full TO placement through the placement callback.
       for (const move of lastMoveGroup) {
         this.replayMoveRedo(move);
       }
@@ -405,24 +400,14 @@ export class UndoHistory {
    * side. The placement callback owns the parent-before-position ordering.
    */
   private replayMoveUndo(move: SingleMoveEntry): void {
-    this.placementCallback({
-      blockId: move.blockId,
-      parentId: move.fromParentId,
-      index: move.fromIndex,
-      origin: 'move-undo',
-    });
+    this.placementCallback(move.blockId, move.from, 'move-undo');
   }
 
   /**
    * Replay a single move entry in the redo direction: restore the TO side.
    */
   private replayMoveRedo(move: SingleMoveEntry): void {
-    this.placementCallback({
-      blockId: move.blockId,
-      parentId: move.toParentId,
-      index: move.toIndex,
-      origin: 'move-redo',
-    });
+    this.placementCallback(move.blockId, move.to, 'move-redo');
   }
 
   /**
@@ -538,46 +523,39 @@ export class UndoHistory {
 
   /**
    * Record a move operation. Called by YjsManager during moveBlock.
-   * @param blockId - Block being moved
-   * @param fromIndex - Original index
-   * @param toIndex - Target index
+   * The entry's `from` placement must be captured from the doc BEFORE the
+   * mutation and `to` after it.
+   * @param entry - Move entry carrying both placements
    * @param isGrouped - Whether this is part of a grouped move operation
    */
-  public recordMove(
-    blockId: string,
-    fromIndex: number,
-    toIndex: number,
-    isGrouped: boolean
-  ): void {
-    const moveEntry: SingleMoveEntry = { blockId, fromIndex, toIndex };
-
+  public recordMove(entry: SingleMoveEntry, isGrouped: boolean): void {
     if (isGrouped && this.pendingMoveGroup !== null) {
       // Grouped move: collect into pending group
-      this.pendingMoveGroup.push(moveEntry);
+      this.pendingMoveGroup.push(entry);
     } else {
       // Single move: record immediately
       this.markCaretBeforeChange();
-      this.recordMoveForUndo([moveEntry]);
+      this.recordMoveForUndo([entry]);
     }
   }
 
   /**
-   * Attach a parent change to the in-flight move entry (or create a
-   * parent-only entry if the block hasn't been moved inside the group yet).
+   * Attach a reparent to the in-flight move entry (or create a parent-only
+   * entry if the block hasn't been moved inside the group yet).
    *
    * Used by drag-reparent so that `undo` restores the parent relationship
-   * atomically with the array move. The caller (`BlockManager.setBlockParent`
+   * atomically with the position. The caller (`BlockManager.setBlockParent`
    * when `YjsManager.isInMoveGroup` is true) is responsible for writing the
-   * parentId/contentIds to Yjs through `transactWithoutCapture` so the
-   * Y.UndoManager does not also record the change.
+   * placement to Yjs through the no-capture flavor so the Y.UndoManager
+   * does not also record the change.
    * @param blockId - id of the reparented block
-   * @param fromParentId - parent id before the reparent (null for root)
-   * @param toParentId - parent id after the reparent (null for root)
+   * @param from - the block's doc placement BEFORE the reparent write
+   * @param to - the placement the reparent wrote
    */
   public recordParentChangeForPendingMove(
     blockId: string,
-    fromParentId: string | null,
-    toParentId: string | null
+    from: BlockPlacement,
+    to: BlockPlacement
   ): void {
     if (this.pendingMoveGroup === null) {
       // Not inside a move group — nothing to attach to. Drop the hint.
@@ -589,28 +567,18 @@ export class UndoHistory {
     );
 
     if (existing !== undefined) {
-      // Preserve the earliest known `fromParentId` (first write wins — that's
-      // the parent BEFORE the drag started). Always update `toParentId` to
-      // the most recent write.
-      if (existing.fromParentId === undefined) {
-        existing.fromParentId = fromParentId;
-      }
-      existing.toParentId = toParentId;
+      // `from` is first-write-wins: the entry's existing `from` is the
+      // placement BEFORE the drag started (a mid-group flat move already
+      // displaced the block, so `from` here would be wrong). Only `to`
+      // advances to the most recent write.
+      existing.to = to;
 
       return;
     }
 
-    // No matching move entry yet (e.g. a same-index reparent within a toggle
+    // No matching move entry yet (e.g. a same-slot reparent within a toggle
     // body, where DragController calls setBlockParent without a prior move).
-    // Push a parent-only entry with identical from/to indices so the undo
-    // walker still has something to unwind.
-    this.pendingMoveGroup.push({
-      blockId,
-      fromIndex: -1,
-      toIndex: -1,
-      fromParentId,
-      toParentId,
-    });
+    this.pendingMoveGroup.push({ blockId, from, to });
   }
 
   /**

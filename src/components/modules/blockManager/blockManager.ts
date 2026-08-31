@@ -1102,7 +1102,7 @@ export class BlockManager extends Module {
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
-    // the from-placement is what recordParentChangeForPendingMove records.
+    // the BlockMoved emission guard below compares against it.
     const oldParentId = block.parentId;
 
     this.hierarchy.setBlockParent(block, newParentId);
@@ -1201,12 +1201,14 @@ export class BlockManager extends Module {
     // parent change attaches to the in-flight move entry instead so
     // undo/redo rewinds both atomically.
     if (this.Blok.YjsManager.isInMoveGroup) {
+      // From-placement must be read BEFORE the write below mutates the doc.
+      const fromPlacement = this.Blok.YjsManager.getBlockPlacement(block.id);
+
       this.Blok.YjsManager.applyBlockPlacement(block.id, placement, { capture: false });
-      this.Blok.YjsManager.recordParentChangeForPendingMove(
-        block.id,
-        oldParentId,
-        newParentId
-      );
+
+      if (fromPlacement !== null) {
+        this.Blok.YjsManager.recordParentChangeForPendingMove(block.id, fromPlacement, placement);
+      }
 
       return;
     }

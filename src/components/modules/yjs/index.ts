@@ -8,7 +8,7 @@ import { Module } from '../../__module';
 import { BlockObserver } from './block-observer';
 import { DocumentStore } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
-import type { BlockChangeCallback, BlockPlacement, CaretSnapshot, MoveReplayRequest } from './types';
+import type { BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
@@ -103,8 +103,8 @@ export class YjsManager extends Module {
 
     // ONE placement callback replays recorded moves during move-undo /
     // move-redo (parent restore + position, see replayMovePlacement).
-    this.undoHistory.setPlacementCallback((request) => {
-      this.replayMovePlacement(request);
+    this.undoHistory.setPlacementCallback((blockId, placement, origin) => {
+      this.replayMovePlacement(blockId, placement, origin);
     });
 
     // Barrier inside UndoHistory so the internal 100ms word-boundary timer's
@@ -122,35 +122,44 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Replay one recorded move step during move-undo/move-redo.
+   * Replay one recorded move step during move-undo/move-redo: restore the
+   * block to the recorded {parentId, afterId} placement.
    *
-   * The parent restore runs FIRST in BOTH directions: `moveBlock` resolves
-   * its target order array from the block's CURRENT parentId, so restoring
-   * the parent after the move would splice the id into the OLD parent's
-   * order array (the redo direction of the previous two-callback design
-   * did exactly that).
+   * The parent restore runs FIRST in BOTH directions and stays INVISIBLE
+   * to the sync layer: it goes through `applyPlacement` under 'no-capture'
+   * (maps to a 'local' event origin `BlockYjsSync` deliberately ignores,
+   * and Y.UndoManager does not track it), so the in-memory reparent goes
+   * DIRECT via `reparentFromHistoryReplay`.
    *
-   * The restore goes through `applyPlacement` — one transaction owning the
-   * parentId set/DELETE and order-array membership (root array included) —
-   * under 'no-capture' so Y.UndoManager does not record the replay as a
-   * new stack item. The move stacks still speak flat indices (interim
-   * until placement-based stacks land), so `afterId` is unknown here: the
-   * flat-index `moveBlock` right after settles the exact slot. Parent-only
-   * entries (index -1) land at the first slot of the restored parent.
-   *
-   * The in-memory reparent goes DIRECT via `reparentFromHistoryReplay`:
-   * 'no-capture' maps to a 'local' event origin, which `BlockYjsSync`
-   * deliberately ignores, so the observer cannot drive the DOM restore.
+   * The position restore then re-asserts the SAME placement under the
+   * replay origin. By then the doc's parentId already agrees, and
+   * `applyPlacement`'s idempotent parentId write skips it — the visible
+   * transaction touches order arrays only, so the observer emits a pure
+   * 'move' under 'undo'/'redo' and `BlockYjsSync` resyncs the DOM order
+   * (never `setData`). Degradation is applyPlacement's: a since-deleted
+   * afterId appends to the parent's order; a since-deleted parent leaves
+   * the block an orphan (stays in the doc, renders at the end).
    */
-  private replayMovePlacement({ blockId, parentId, index, origin }: MoveReplayRequest): void {
-    if (parentId !== undefined && this.documentStore.getBlockById(blockId) !== undefined) {
-      this.documentStore.applyPlacement(blockId, { parentId, afterId: null }, 'no-capture');
-      this.reparentInMemoryFromReplay(blockId, parentId);
+  private replayMovePlacement(
+    blockId: string,
+    placement: BlockPlacement,
+    origin: 'move-undo' | 'move-redo'
+  ): void {
+    const yblock = this.documentStore.getBlockById(blockId);
+
+    if (yblock === undefined) {
+      return;
     }
 
-    if (index !== -1) {
-      this.documentStore.moveBlock(blockId, index, origin);
+    const rawParentId = yblock.get('parentId');
+    const docParentId = typeof rawParentId === 'string' ? rawParentId : null;
+
+    if (docParentId !== placement.parentId) {
+      this.documentStore.applyPlacement(blockId, placement, 'no-capture');
+      this.reparentInMemoryFromReplay(blockId, placement.parentId);
     }
+
+    this.documentStore.applyPlacement(blockId, placement, origin);
   }
 
   /**
@@ -248,17 +257,34 @@ export class YjsManager extends Module {
   public moveBlock(id: string, toIndex: number): void {
     this.flushPendingBlockWrites();
 
-    const fromIndex = this.documentStore.findBlockIndex(id);
+    // The FROM placement must be read BEFORE the mutation — it is what
+    // undo restores, index-free.
+    const from = this.documentStore.getPlacement(id);
 
-    if (fromIndex === -1) {
+    if (from === null) {
       return;
     }
 
-    // Record move for undo history
-    this.undoHistory.recordMove(id, fromIndex, toIndex, this.isMoveGroupActive);
+    // Caret-before also predates the mutation (idempotent: inside a move
+    // group, startMoveGroup's capture wins).
+    this.undoHistory.markCaretBeforeChange();
 
-    // Perform the move
     this.documentStore.moveBlock(id, toIndex, 'local');
+
+    const to = this.documentStore.getPlacement(id) ?? from;
+
+    this.undoHistory.recordMove({ blockId: id, from, to }, this.isMoveGroupActive);
+  }
+
+  /**
+   * A block's current doc placement (parent + preceding sibling), or null
+   * when the block is not in the doc. `BlockManager.setBlockParent` reads
+   * this BEFORE a drag-reparent write so the pending move entry records
+   * the true from-placement.
+   * @param id - Block id
+   */
+  public getBlockPlacement(id: string): BlockPlacement | null {
+    return this.documentStore.getPlacement(id);
   }
 
   /**
@@ -481,27 +507,24 @@ export class YjsManager extends Module {
   }
 
   /**
-   * Attach a parent change to the in-flight move entry so `undo`/`redo`
+   * Attach a reparent to the in-flight move entry so `undo`/`redo`
    * restores the block's parent atomically with its position.
    *
    * Called from `BlockManager.setBlockParent` when a drag-backed move group
-   * is open (see `isInMoveGroup`). The accompanying Yjs parentId write must
-   * use `transactWithoutCapture` — otherwise Y.UndoManager records it as a
-   * separate stack item and the drag splits into a two-step undo.
+   * is open (see `isInMoveGroup`). The accompanying Yjs placement write
+   * must use the no-capture flavor — otherwise Y.UndoManager records it as
+   * a separate stack item and the drag splits into a two-step undo.
    * @param blockId - id of the block being reparented
-   * @param fromParentId - parent id before the reparent (null for root)
-   * @param toParentId - parent id after the reparent (null for root)
+   * @param from - the block's doc placement BEFORE the reparent write
+   *   (read via `getBlockPlacement`)
+   * @param to - the placement the reparent wrote
    */
   public recordParentChangeForPendingMove(
     blockId: string,
-    fromParentId: string | null,
-    toParentId: string | null
+    from: BlockPlacement,
+    to: BlockPlacement
   ): void {
-    this.undoHistory.recordParentChangeForPendingMove(
-      blockId,
-      fromParentId,
-      toParentId
-    );
+    this.undoHistory.recordParentChangeForPendingMove(blockId, from, to);
   }
 
   /**

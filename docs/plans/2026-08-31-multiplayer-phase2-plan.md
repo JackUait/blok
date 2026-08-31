@@ -205,3 +205,21 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   write. Every Doc that may produce updates MUST be created with
   `DocOptions { Id = random uint32 }` (the browsers' id space). Rooms do; test
   helpers use `YDocs.NewClient()`. Audit any future `new Doc()`.
+- **C3 LANDED (`254b8ee1`)** — drain via `IHostedLifecycleService.StoppingAsync`
+  (ApplicationStopping is a synchronous Action; StoppingAsync runs after it and
+  BEFORE Kestrel stops listening, under the 30s shutdown timeout);
+  `MaxConcurrentUpgradedConnections = 1024` when collab is on; real SIGTERM test.
+  FOLLOW-UP: at the upgrade limit Kestrel throws inside AcceptWebSocketAsync →
+  HTTP 500 after JoinAsync already ran; the endpoint should pre-check the limit
+  and answer 503 before joining.
+- **Review facts (Phase 2 review round):** lone surrogates in strings become
+  U+FFFD on the wire (lib0 UTF-8) — the originating client's own toJSON keeps
+  them while every replica, including its own replay, reads U+FFFD; DOM text is
+  well-formed UTF-16 so this is a note, not a fix. U+0000 in any map KEY makes
+  yffi PANIC and abort the .NET process on read (uncatchable); NUL in string
+  VALUES truncates on write — Seed rejects NUL; a hostile UPDATE carrying a NUL
+  key cannot be guarded in-process without decoding the update (writers hold
+  consumer-minted write passes; the client strips NUL in Phase 3; upstream fix =
+  yrs returning an error instead of unwrap). The release workflow's bare
+  `yarn test <conformance files>` step was vacuous (no BLOK_CONFORMANCE_SERVER);
+  CI's `test-server-conformance.mjs` runner is the real gate release waits for.

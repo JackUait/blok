@@ -150,6 +150,7 @@ interface BootOptions {
   readOnly?: boolean;
   ticket?: string;
   collaboration?: boolean;
+  user?: { name: string; color?: string };
 }
 
 const boot = async (options: BootOptions = {}): Promise<Harness> => {
@@ -161,6 +162,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
   const sockets: MockSocket[] = [];
   const collaboration: CollaborationConfig = {
     doc: options.doc ?? 'doc-1',
+    user: options.user,
     socketFactory: (url, protocols) => {
       const socket = new MockSocket(url, protocols);
 
@@ -416,6 +418,81 @@ describe('collaboration — sync-first load', () => {
     });
   });
 
+  describe('lineage reset', () => {
+    it('drops the old room, reconnects, and materialises the new one', async () => {
+      const harness = await boot();
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'the old room' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'old room block');
+
+      socket.serverClose(4409, 'the room was reset');
+
+      // Document and DOM both gone, synchronously with the close.
+      expect(harness.core.moduleInstances.YjsManager.toJSON()).toEqual([]);
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+
+      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'read-only while unsynced again');
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect');
+
+      const second = harness.socket();
+
+      second.open();
+
+      // The one frame that may precede the control frame now describes a
+      // document with no history: nothing of the old room can reach the new one.
+      expect(second.sent).toHaveLength(1);
+
+      second.deliver(controlFrame());
+
+      const peer = peerWith([{ type: 'paragraph', data: { text: 'the new room' } }]);
+
+      second.deliver({
+        type: 'syncStep2',
+        update: peer.encodeStateAsUpdate(harness.core.moduleInstances.YjsManager.getStateVector()),
+      });
+      peer.destroy();
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'new room block');
+
+      expect(blockTexts(harness.core)).toEqual(['the new room']);
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+      expect(collabAttr(harness.core)).toBe('connected');
+    });
+
+    it('keeps publishing peers afterwards, on the awareness the reset rebuilt', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'the old room' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'old room block');
+
+      socket.serverClose(4409, 'the room was reset');
+
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect');
+
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+
+      // Awareness subscriptions bind to the INSTANCE, and the reset built a new
+      // one: a module still hooked to the old object would publish nothing here.
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { name: 'Ada' });
+      second.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+      peer.destroy();
+
+      expect(seen.at(-1)?.peers.map((entry) => entry.user.name)).toContain('Ada');
+    });
+  });
+
   describe('readOnly arbitration', () => {
     it('refuses set(false) while unsynced and says why', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -482,6 +559,28 @@ describe('collaboration — sync-first load', () => {
 
       expect(seen.map((payload) => payload.status)).toEqual(['connected', 'offline']);
       expect(seen[0].peers).toEqual([]);
+    });
+
+    it('leaves the local user out of peers, now that presence publishes an identity', async () => {
+      const harness = await boot({ user: { name: 'Me' } });
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      // The local state is REAL and would satisfy `toPeer` — before presence
+      // existed it was excluded only because it carried no name. The exclusion
+      // has to be by client id now, or the host sees itself in its own roster.
+      const states = Array.from(harness.core.moduleInstances.YjsManager.getAwarenessStates().values());
+
+      expect(states).toHaveLength(1);
+      expect(states[0].user).toMatchObject({ name: 'Me' });
+      expect(seen.at(-1)?.peers).toEqual([]);
     });
   });
 

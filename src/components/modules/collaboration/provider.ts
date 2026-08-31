@@ -56,11 +56,13 @@ const CLOSE_POLICY_VIOLATION = 1008;
 const CLOSE_MESSAGE_TOO_BIG = 1009;
 const CLOSE_UNAUTHORIZED = 4401;
 
+/** The room was reset: our history does not belong to it. Recoverable, not terminal. */
+const CLOSE_LINEAGE_RESET = 4409;
+
 /** Close codes that end the session outright — reconnecting would only repeat them. */
 const TERMINAL_CLOSE_CODES: Record<number, CollabTerminalError> = {
   4400: 'bad-request',
   4403: 'forbidden',
-  4409: 'resync-required',
 };
 
 /** Identifies the transactions this connection applied, for echo suppression. */
@@ -362,6 +364,32 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }, delay);
   };
 
+  /**
+   * The room's history is not ours any more — a control frame announcing a new
+   * lineage, or the server closing with 4409.
+   *
+   * Discard our document for a genuinely fresh one and reconnect. It is NEVER
+   * continued on the same socket: this connection already sent a SyncStep1 for
+   * the state vector we just threw away, so the server's answer would be a diff
+   * against history that no longer exists here. A new connection re-does the
+   * handshake from an empty state vector and receives the room whole.
+   *
+   * Always through `scheduleReconnect`, never `openGeneration` — a server that
+   * announces a fresh lineage every time would otherwise spin without backoff.
+   * @param code - the close code that triggered it, if any
+   * @param reason - human explanation for the status detail
+   */
+  const relineage = (code: number | undefined, reason: string): void => {
+    yjs.resetForRelineage();
+
+    // Load-bearing: the next control frame announces the NEW lineage, and a
+    // remembered old one would mismatch against it and reset forever.
+    state.lineage = null;
+    state.tag = null;
+
+    scheduleReconnect(code, reason);
+  };
+
   const markSynced = (): void => {
     if (state.synced) {
       return;
@@ -425,10 +453,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
-    // Lineage only: epoch is captured but never compared here — epoch semantics
-    // belong to the reset that recreates the document.
+    // Lineage only: epoch is captured but never compared here — epoch counts
+    // resets, and a peer that missed one still recognises the lineage it holds.
     if (state.lineage !== null && state.lineage !== tag.lineage) {
-      terminate('resync-required', { reason: `${docId} was reset; its history is not ours` });
+      // Close first: this connection is negotiated against the history we are
+      // about to drop, and the reconnect re-does the handshake from empty.
+      teardownGeneration(true);
+      relineage(undefined, `${docId} was reset; its history is not ours`);
 
       return;
     }
@@ -476,6 +507,12 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     if (terminalError !== undefined) {
       terminate(terminalError, { code, reason });
+
+      return;
+    }
+
+    if (code === CLOSE_LINEAGE_RESET) {
+      relineage(code, reason);
 
       return;
     }

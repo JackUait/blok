@@ -59,18 +59,33 @@ describe('Architecture: raw Yjs access guard', () => {
   it('DocumentStore.ydoc is not declared public', () => {
     const source = readFileSync(DOCUMENT_STORE_PATH, 'utf8');
 
-    // The only permitted forms are `private readonly ydoc` or a bare
-    // `readonly ydoc` (TS defaults class fields to public, so bare is
-    // disallowed — explicit `private` is required).
-    const publicMatch = source.match(/public\s+readonly\s+ydoc\b/);
+    // TS defaults class fields to public, so a bare declaration is disallowed
+    // too — explicit `private` is required.
+    const publicMatch = source.match(/public\s+(?:readonly\s+)?ydoc\b/);
 
     expect(
       publicMatch,
-      'DocumentStore.ydoc must be `private readonly` — exposing it gives ' +
+      'DocumentStore.ydoc must be `private` — exposing it gives ' +
         'callers a way to bypass the LocalOriginTag type barrier and ' +
         'reintroduce the table-row-removal bug class.'
     ).toBeNull();
 
-    expect(source).toMatch(/private\s+readonly\s+ydoc\b/);
+    expect(source).toMatch(/private\s+(?:readonly\s+)?ydoc\b/);
+  });
+
+  it('DocumentStore.ydoc is reassigned only by the lineage reset', () => {
+    const source = readFileSync(DOCUMENT_STORE_PATH, 'utf8');
+
+    // `ydoc` dropped `readonly` so `resetForRelineage` can swap in a fresh
+    // Y.Doc (an in-place wipe keeps the poisoned history — the whole point of
+    // the reset). That is the ONLY write the field may take: a swap anywhere
+    // else would strand the undo manager, the observer and the seam handlers
+    // on a document nobody re-binds.
+    const resetIndex = source.indexOf('public resetForRelineage(');
+    const assignments = source.match(/this\.ydoc\s*=/g) ?? [];
+
+    expect(resetIndex, 'DocumentStore must keep resetForRelineage as the reset entry point').toBeGreaterThan(-1);
+    expect(assignments).toHaveLength(1);
+    expect(source.slice(resetIndex)).toMatch(/this\.ydoc\s*=/);
   });
 });

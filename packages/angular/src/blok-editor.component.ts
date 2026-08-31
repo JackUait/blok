@@ -39,6 +39,19 @@ import type {
 import type { BlokAngularConfig } from './types';
 
 /**
+ * Warning text for a controlled `data` change the adapter refuses to render
+ * under collaboration. Kept verbatim in all three adapters (they share no code).
+ * @param doc - the collaboration document id, for the reset endpoint in the text
+ * @returns the message to warn with, once per adapter instance
+ */
+const collaborationDataIgnoredMessage = (doc?: string): string =>
+  '[Blok] `data` is ignored while collaboration is on: the document lives on the sync service ' +
+  'and is shared with everyone editing it, so replacing it from this editor would overwrite their work. ' +
+  `To replace the whole document, call POST /sync/${doc ?? '{doc}'}/reset on your server — ` +
+  'it reloads the document from your own document endpoint and every open editor picks it up. ' +
+  'To change part of it, use the blocks API (insert/update/delete).';
+
+/**
  * The blessed all-in-one Angular component for embedding Blok (mirrors React's
  * `BlokEditor`). Delegates instance lifecycle to an internal `BlokContentDirective`
  * and layers the typed reactive input/output API on top.
@@ -243,6 +256,8 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   private appliedInlineToolbar?: boolean | string[];
   private seededEditor: Blok | null = null;
   private renderChain: Promise<void> = Promise.resolve();
+  /** One collaboration warning per component instance (see the data effect). */
+  private collaborationWarned = false;
 
   /** Registered by `ControlValueAccessor.registerOnChange` (Angular forms). */
   private cvaOnChange?: (data: OutputData) => void;
@@ -761,6 +776,20 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
       const baseline = this.lastRenderedData;
 
       if (baseline !== undefined && equalsOutputData(data, baseline)) {
+        return;
+      }
+
+      // Under collaboration the document belongs to the sync service, and
+      // render() refuses a wholesale replace — so don't attempt one. The input's
+      // premise ("this value IS the document") does not hold here.
+      const collaboration = this.escapeHatchConfig().collaboration;
+
+      if (collaboration !== undefined) {
+        if (!this.collaborationWarned) {
+          this.collaborationWarned = true;
+          console.warn(collaborationDataIgnoredMessage(collaboration.doc));
+        }
+
         return;
       }
 

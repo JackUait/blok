@@ -219,9 +219,43 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Refuses a whole-document replacement while collaboration is on.
+   *
+   * `render()` and `clear()` rebuild the document from local data. In a
+   * collaboration session the document belongs to the sync service, so
+   * rebuilding it here would push one client's copy over everybody else's —
+   * the dual-seeding corruption the sync-first load exists to prevent. The
+   * sanctioned wholesale-replace is the server's reset endpoint.
+   *
+   * Zero cost single-player: `Collaboration` is undefined in a stubbed harness
+   * and `isEnabled` is false whenever the `collaboration` key is absent.
+   * @param method - the refused API, named back to the caller
+   */
+  private refuseWholesaleReplace(method: 'render' | 'clear' | 'renderFromHTML'): void {
+    if (!this.Blok.Collaboration?.isEnabled) {
+      return;
+    }
+
+    // The gate is the module; the doc id is only for the message, so a config
+    // that cannot supply one still produces a readable endpoint.
+    const doc = this.config.collaboration?.doc ?? '{doc}';
+
+    throw new Error(
+      `blocks.${method}() is not allowed while collaboration is on. ` +
+      'The document lives on the sync service and is shared with everyone editing it, ' +
+      'so replacing it from this editor would overwrite their work. ' +
+      `To replace the whole document, call POST /sync/${doc}/reset on your server: ` +
+      'it reloads the document from your own document endpoint and every open editor picks it up. ' +
+      'To change part of the document, use blocks.insert(), blocks.update() or blocks.delete().'
+    );
+  }
+
+  /**
    * Clear Blok's area
    */
   public async clear(): Promise<void> {
+    this.refuseWholesaleReplace('clear');
+
     await this.Blok.BlockManager.clear(true);
     this.Blok.InlineToolbar.close();
   }
@@ -231,6 +265,10 @@ export class BlocksAPI extends Module {
    * @param {OutputData} data — Saved Blok data
    */
   public async render(data: OutputData | LooseOutputData): Promise<void> {
+    // Before the data check and before the echo-equality save(): a refused
+    // wholesale replace must do no work at all.
+    this.refuseWholesaleReplace('render');
+
     if (data === undefined || data.blocks === undefined) {
       throw new Error('Incorrect data passed to the render() method');
     }
@@ -279,6 +317,8 @@ export class BlocksAPI extends Module {
    * @returns {Promise<void>}
    */
   public async renderFromHTML(data: string): Promise<void> {
+    this.refuseWholesaleReplace('renderFromHTML');
+
     this.Blok.Renderer.markRenderStart();
 
     try {

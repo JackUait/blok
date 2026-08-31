@@ -419,9 +419,14 @@ export class BlockObserver {
   }
 
   /**
-   * Cleanup on destroy.
+   * Detach from the observed document, KEEPING the change subscribers.
+   *
+   * This is the half of `destroy` a lineage reset needs: the Y.Doc is being
+   * swapped, but every subscriber (BlockYjsSync above all) must survive the
+   * swap — re-registering them would mean reaching into BlockManager to rebuild
+   * a subscription that never had to break. Pair it with a fresh `observe`.
    */
-  public destroy(): void {
+  public unobserve(): void {
     if (this.deepObserver !== null) {
       this.blocksMap?.unobserveDeep(this.deepObserver);
       this.rootOrder?.unobserveDeep(this.deepObserver);
@@ -431,12 +436,20 @@ export class BlockObserver {
       this.doc?.off('afterTransaction', this.afterTransactionHandler);
     }
 
-    this.changeCallbacks = [];
     this.blocksMap = null;
     this.rootOrder = null;
     this.undoManager = null;
     this.doc = null;
     this.deepObserver = null;
     this.afterTransactionHandler = null;
+  }
+
+  /**
+   * Cleanup on destroy.
+   */
+  public destroy(): void {
+    this.unobserve();
+
+    this.changeCallbacks = [];
   }
 }

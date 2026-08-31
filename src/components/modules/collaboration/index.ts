@@ -5,6 +5,8 @@ import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
 import { createTicketSource } from '../../utils/access-pass';
 
+import { createPresence, type Presence } from './presence';
+import { createPresenceRenderer } from './presence-renderer';
 import { createCollabProvider } from './provider';
 import type {
   CollabDocSeam,
@@ -23,7 +25,7 @@ import type {
 export interface CollaborationConfig {
   /** The document id shared with the sync service. One path segment. */
   doc: string;
-  /** Display identity shown to peers. Presence rendering lands with C3. */
+  /** Display identity shown to peers; the colour defaults from the client id. */
   user?: {
     name: string;
     color?: string;
@@ -121,10 +123,10 @@ const syncUrl = (server: string, doc: string): string => {
 /**
  * Maps one awareness state to the peer shape the host renders.
  *
- * A state without a display identity is not a peer anybody can draw — which is
- * also how the LOCAL client is excluded today, since C1 publishes no presence
- * and y-protocols seeds the local state as `{}`. C3 starts publishing, and it
- * owns excluding the local client id explicitly at that point.
+ * A state without a display identity is not a peer anybody can draw. The LOCAL
+ * client is filtered out by client id BEFORE this runs — presence publishes an
+ * identity for it too, so "no identity" stopped being an accidental exclusion
+ * the moment C3 landed.
  * @param clientId - awareness client id
  * @param state - the raw, untrusted state that client broadcast
  */
@@ -153,6 +155,7 @@ const toPeer = (clientId: number, state: Record<string, unknown>): Collaboration
 interface CollabSettings {
   doc: string;
   url: string;
+  user: { name?: string; color?: string } | undefined;
   ticketEndpoint: string | undefined;
   socketFactory: CollabSocketFactory | undefined;
   handshakeTimeoutMs: number | undefined;
@@ -191,6 +194,13 @@ export class Collaboration extends Module {
   /** The provider gave up; no reconnect will ever ship pending edits. */
   private terminal = false;
 
+  /**
+   * Bumped by every lineage reset. An in-flight `handleStatus` captures it
+   * before it awaits and abandons its tail if the document was swapped
+   * underneath — see the guard there.
+   */
+  private resetGeneration = 0;
+
   /** An explicit `write: false` claim on the connection ticket. */
   private writeDenied = false;
 
@@ -204,6 +214,9 @@ export class Collaboration extends Module {
   private degradeRendered = false;
 
   private awarenessUnhook: (() => void) | null = null;
+
+  /** Publishes this editor's presence and draws everybody else's. */
+  private presence: Presence | null = null;
 
   /**
    * @param moduleConfig - the editor config and the shared event bus
@@ -226,6 +239,7 @@ export class Collaboration extends Module {
     this.settings = {
       doc: collaboration.doc,
       url: syncUrl(server, collaboration.doc),
+      user: collaboration.user,
       ticketEndpoint: this.config.ticket,
       socketFactory: collaboration.socketFactory,
       handshakeTimeoutMs: collaboration.handshakeTimeoutMs,
@@ -270,6 +284,20 @@ export class Collaboration extends Module {
     this.Blok.YjsManager.enableAwareness();
     this.awarenessUnhook = this.Blok.YjsManager.onAwarenessChange(() => this.emitStatus());
 
+    this.presence = createPresence({
+      yjs: this.Blok.YjsManager,
+      user: settings.user,
+      currentBlockId: () => this.Blok.BlockManager.currentBlock?.id ?? null,
+      renderer: createPresenceRenderer({
+        // The WRAPPER, not the redactor: the stack must not sit inside the
+        // subtree the modifications observer watches.
+        host: this.Blok.UI.nodes.wrapper,
+        resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
+        isHidden: () => this.Blok.ReadOnly.isControlsHidden,
+      }),
+    });
+    this.presence.start();
+
     this.provider = createCollabProvider({
       url: settings.url,
       docId: settings.doc,
@@ -294,6 +322,10 @@ export class Collaboration extends Module {
    * and a live awareness to clear.
    */
   public destroy(): void {
+    // Presence first: awareness prunes a vanished peer only after 30 seconds,
+    // so the outlines and the stack have to come down now, not then.
+    this.presence?.stop();
+    this.presence = null;
     this.awarenessUnhook?.();
     this.awarenessUnhook = null;
     this.provider?.destroy();
@@ -328,7 +360,51 @@ export class Collaboration extends Module {
       encodeAwarenessUpdate: (clients) => yjs.encodeAwarenessUpdate(clients),
       applyAwarenessUpdate: (update, origin) => yjs.applyAwarenessUpdate(update, origin),
       clearRemoteAwarenessStates: () => yjs.clearRemoteAwarenessStates(),
+      resetForRelineage: () => this.resetForRelineage(),
     };
+  }
+
+  /**
+   * The room was reset: throw this session's document away and start over.
+   *
+   * The DOM goes FIRST and the document second. `BlockManager.clear` runs block
+   * teardown, and any stray write it provokes must land in the document we are
+   * discarding — landing it in the FRESH one would put pre-reset content back on
+   * the wire on the very next connection, which is the leak this whole reset
+   * exists to prevent. `skipYjsSync` keeps the clear itself out of the document
+   * either way; the ordering is the belt to that brace.
+   *
+   * `clear` is declared async but its body never awaits, so the holders are gone
+   * before this returns — the same contract `dropDegradedView` relies on. The
+   * provider reconnects immediately after, and the room's blocks materialise
+   * through the ordinary remote path.
+   */
+  private resetForRelineage(): void {
+    const { BlockManager, ModificationsObserver, YjsManager } = this.Blok;
+
+    ModificationsObserver.disable();
+    void BlockManager.clear(false, { skipYjsSync: true });
+    ModificationsObserver.enable();
+
+    this.degraded = false;
+
+    // Awareness subscriptions bind to the Awareness INSTANCE, and the reset
+    // builds a new one. Unhook before and re-subscribe after, or the published
+    // peer list silently stops updating for the rest of the session. Presence
+    // rides the same instance AND caches which client id is local — the new
+    // Awareness binds a new one — so it is stopped and started, not kept.
+    this.presence?.stop();
+    this.awarenessUnhook?.();
+    YjsManager.resetForRelineage();
+    this.awarenessUnhook = YjsManager.onAwarenessChange(() => this.emitStatus());
+    this.presence?.start();
+
+    // The document no longer carries server lineage, so decision 7's
+    // "offline is still editable" asymmetry no longer applies: this is an
+    // unsynced document again, and unsynced is read-only.
+    this.firstSynced = false;
+    this.resetGeneration += 1;
+    void this.applyArbitration();
   }
 
   /**
@@ -368,6 +444,7 @@ export class Collaboration extends Module {
     }
 
     const isFirstSync = status === 'connected' && !this.firstSynced;
+    const generation = this.resetGeneration;
 
     this.status = status;
     // 'error' is the provider's last word — it never reports again — so this
@@ -379,6 +456,15 @@ export class Collaboration extends Module {
     this.emitStatus();
 
     await this.applyArbitration();
+
+    // Arbitration re-renders, so a lineage reset can land while it is in
+    // flight. Everything below writes to the document or the DOM, and doing so
+    // for a transition that belongs to a document we have since thrown away
+    // seeds a stale block into the FRESH one — which the next connection then
+    // broadcasts into the reset room.
+    if (this.resetGeneration !== generation || this.isDestroyed) {
+      return;
+    }
 
     if (isFirstSync) {
       this.seedEmptyDocument();
@@ -494,9 +580,15 @@ export class Collaboration extends Module {
       return;
     }
 
+    // Presence publishes a display identity for THIS client too, so the local
+    // state now satisfies `toPeer` and would otherwise show up in the host's own
+    // peer list. This is the explicit exclusion `toPeer` was waiting for.
+    const localClientId = this.presence?.localClientId ?? null;
+
     this.eventsDispatcher.emit(CollaborationStatusChanged, {
       status: this.status === 'error' ? 'offline' : this.status,
       peers: Array.from(this.Blok.YjsManager.getAwarenessStates().entries())
+        .filter(([clientId]) => clientId !== localClientId)
         .map(([clientId, state]) => toPeer(clientId, state))
         .filter((peer): peer is CollaborationPeer => peer !== null),
     });

@@ -17,9 +17,21 @@ import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry
  */
 export class UndoHistory {
   /**
-   * Undo manager for history operations
+   * Undo manager for history operations.
+   *
+   * Backed by a field rather than a readonly property because a lineage reset
+   * swaps the whole Y.Doc: an UndoManager is bound to its scope's document at
+   * construction, so it has to be rebuilt (see {@link rebindScope}).
    */
-  public readonly undoManager: Y.UndoManager;
+  private currentUndoManager: Y.UndoManager;
+
+  /**
+   * The live undo manager. Callers MUST read it through this getter rather
+   * than caching it — `rebindScope` replaces the instance.
+   */
+  public get undoManager(): Y.UndoManager {
+    return this.currentUndoManager;
+  }
 
   /**
    * Blok modules (for caret operations)
@@ -118,10 +130,7 @@ export class UndoHistory {
   ) {
     this.blok = blok;
 
-    this.undoManager = new Y.UndoManager(scope, {
-      captureTimeout: CAPTURE_TIMEOUT_MS,
-      trackedOrigins: new Set(['local']),
-    });
+    this.currentUndoManager = this.createUndoManager(scope);
 
     this.setupCaretTracking();
 
@@ -129,6 +138,37 @@ export class UndoHistory {
     this.placementCallback = () => {
       // Placeholder, will be set by setPlacementCallback
     };
+  }
+
+  /**
+   * Build an UndoManager over the given roots. One place, so the constructor
+   * and {@link rebindScope} can never drift on captureTimeout / trackedOrigins.
+   * @param scope - the shared types to track
+   */
+  private createUndoManager(scope: UndoScopeType[]): Y.UndoManager {
+    return new Y.UndoManager(scope, {
+      captureTimeout: CAPTURE_TIMEOUT_MS,
+      trackedOrigins: new Set(['local']),
+    });
+  }
+
+  /**
+   * Rebuild the undo manager over a NEW document's roots (lineage reset).
+   *
+   * Deliberately does NOT call `clear()`: `Y.UndoManager.clear` transacts on its
+   * document, and by the time this runs the old document is already destroyed.
+   * The caller clears the history BEFORE the swap — see
+   * `YjsManager.resetForRelineage`, whose step order this method depends on.
+   *
+   * Caret tracking is re-armed here because its listeners live on the manager
+   * instance that is being replaced.
+   * @param scope - the fresh document's shared types
+   */
+  public rebindScope(scope: UndoScopeType[]): void {
+    this.currentUndoManager.destroy();
+    this.currentUndoManager = this.createUndoManager(scope);
+
+    this.setupCaretTracking();
   }
 
   /**

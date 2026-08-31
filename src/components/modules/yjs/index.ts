@@ -119,7 +119,14 @@ export class YjsManager extends Module {
       this.undoHistory.rewindCaptureClock(lastEnqueueAt);
     });
 
-    // Set up observation
+    this.observeDocument();
+  }
+
+  /**
+   * Point the observer at the store's CURRENT roots and undo manager. Called
+   * once at construction and again after a lineage reset swaps both.
+   */
+  private observeDocument(): void {
     this.blockObserver.observe(
       {
         blocksMap: this.documentStore.blocksMap,
@@ -127,6 +134,42 @@ export class YjsManager extends Module {
       },
       this.undoHistory.undoManager
     );
+  }
+
+  /**
+   * Discard this document and start over on a genuinely FRESH Y.Doc, because
+   * the server reset the room and our history no longer belongs to it.
+   *
+   * Every step is ordered against the swap, and every one of them is a bug if
+   * moved:
+   *
+   * 1. FLUSH the write buffer. A pending flush closure captured the OLD Y.Maps;
+   *    running it after the swap would write typing into a dead document —
+   *    silently, since `updateBlockData` on a missing block just returns false.
+   *    Flushing also cancels the trailing timers, so nothing fires later.
+   * 2. CLEAR the undo history while the old document is still alive:
+   *    `Y.UndoManager.clear` transacts on its doc.
+   * 3. UNOBSERVE, so the dying document's teardown classifies nothing. The
+   *    observer keeps its subscribers, so `BlockYjsSync` never re-subscribes.
+   * 4. SWAP the document (the store owns the seam handlers and Awareness).
+   * 5. REBIND the undo manager to the new roots — an UndoManager is bound to
+   *    its scope's document at construction.
+   * 6. RE-OBSERVE, with the NEW undo manager, or every post-reset undo would
+   *    be misclassified as a remote change.
+   *
+   * The rendered DOM is NOT this method's business: the Collaboration module
+   * clears it (with `skipYjsSync`) so the fresh initial sync materialises
+   * through the ordinary remote path.
+   */
+  public resetForRelineage(): void {
+    this.flushPendingBlockWrites();
+    this.undoHistory.clear();
+    this.blockObserver.unobserve();
+
+    this.documentStore.resetForRelineage();
+
+    this.undoHistory.rebindScope(this.documentStore.undoScope);
+    this.observeDocument();
   }
 
   /**

@@ -80,6 +80,21 @@ export interface CollabDocSeam {
   encodeAwarenessUpdate(clients?: number[]): Uint8Array;
   applyAwarenessUpdate(update: Uint8Array, origin: unknown): void;
   clearRemoteAwarenessStates(): void;
+
+  /**
+   * Throw this document away for a genuinely FRESH one, because the room was
+   * reset and our history no longer belongs to it.
+   *
+   * MUST NOT be implemented as an in-place wipe: emptying the document keeps
+   * its CRDT history, which the next sync merges straight back into the reset
+   * room. After this call the seam's state vector is empty, `encodeStateAsUpdate`
+   * carries nothing, and the client id is new — so the reconnect that follows
+   * can leak no pre-reset history.
+   *
+   * Every subscription taken through this seam (`onDocUpdate`, `onAwarenessUpdate`)
+   * survives the swap; the implementation re-binds them.
+   */
+  resetForRelineage(): void;
 }
 
 /**
@@ -127,17 +142,17 @@ export type CollabStatus = 'connecting' | 'connected' | 'offline' | 'error';
  * - `bad-request` — close 4400; the document id or the request is unusable.
  * - `unauthorized` — close 4401 twice; the ticket is not accepted.
  * - `forbidden` — close 4403; this user may not open this document.
- * - `resync-required` — close 4409 or a changed lineage: our history is stale.
- *   Interim state until C4 lands the fresh-document reset.
  * - `unsupported-format` — the control frame names a CRDT format we cannot read.
  * - `handshake-timeout` — no control frame arrived; not a Blok sync endpoint.
  * - `oversized-update` — close 1009 twice; a frame we produce is too big.
+ *
+ * A stale lineage is deliberately NOT here: close 4409 and a changed lineage are
+ * recoverable through {@link CollabDocSeam.resetForRelineage} plus a reconnect.
  */
 export type CollabTerminalError =
   | 'bad-request'
   | 'unauthorized'
   | 'forbidden'
-  | 'resync-required'
   | 'unsupported-format'
   | 'handshake-timeout'
   | 'oversized-update';

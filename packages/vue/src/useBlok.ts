@@ -44,6 +44,19 @@ const readHandlerPresence = (config: UseBlokConfig): HandlerPresence => ({
 });
 
 /**
+ * Warning text for a controlled `data` change the adapter refuses to render
+ * under collaboration. Kept verbatim in all three adapters (they share no code).
+ * @param doc - the collaboration document id, for the reset endpoint in the text
+ * @returns the message to warn with, once per adapter instance
+ */
+const collaborationDataIgnoredMessage = (doc?: string): string =>
+  '[Blok] `data` is ignored while collaboration is on: the document lives on the sync service ' +
+  'and is shared with everyone editing it, so replacing it from this editor would overwrite their work. ' +
+  `To replace the whole document, call POST /sync/${doc ?? '{doc}'}/reset on your server — ` +
+  'it reloads the document from your own document endpoint and every open editor picks it up. ' +
+  'To change part of it, use the blocks API (insert/update/delete).';
+
+/**
  * Inject the editor's portal registry into every `createVueBlock` tool's config
  * (vanilla tools are left untouched), returning a NEW tools object so the
  * consumer's config is never mutated. A vue-block tool is constructed by CORE,
@@ -126,6 +139,7 @@ export function useBlok(
     lastRenderedData: OutputData | LooseOutputData | null | undefined;
     seededEditor: Blok | null;
     renderChain: Promise<void>;
+    collaborationWarned: boolean;
     appliedHandlerPresence: HandlerPresence;
   } = {
     current: null,
@@ -133,6 +147,7 @@ export function useBlok(
     lastRenderedData: mergedConfig().data,
     seededEditor: null,
     renderChain: Promise.resolve(),
+    collaborationWarned: false,
     appliedHandlerPresence: {
       onChange: false,
       onSave: false,
@@ -528,6 +543,20 @@ export function useBlok(
       const baseline = state.lastRenderedData;
 
       if (baseline !== undefined && equalsOutputData(data, baseline)) {
+        return;
+      }
+
+      // Under collaboration the document belongs to the sync service, and
+      // render() refuses a wholesale replace — so don't attempt one. The prop's
+      // premise ("this value IS the document") does not hold here.
+      const collaboration = mergedConfig().collaboration;
+
+      if (collaboration !== undefined) {
+        if (!state.collaborationWarned) {
+          state.collaborationWarned = true;
+          console.warn(collaborationDataIgnoredMessage(collaboration.doc));
+        }
+
         return;
       }
 

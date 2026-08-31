@@ -33,6 +33,19 @@ interface EditorInstanceState {
 }
 
 /**
+ * Warning text for a controlled `data` change the adapter refuses to render
+ * under collaboration. Kept verbatim in all three adapters (they share no code).
+ * @param doc - the collaboration document id, for the reset endpoint in the text
+ * @returns the message to warn with, once per adapter instance
+ */
+const collaborationDataIgnoredMessage = (doc?: string): string =>
+  '[Blok] `data` is ignored while collaboration is on: the document lives on the sync service ' +
+  'and is shared with everyone editing it, so replacing it from this editor would overwrite their work. ' +
+  `To replace the whole document, call POST /sync/${doc ?? '{doc}'}/reset on your server — ` +
+  'it reloads the document from your own document endpoint and every open editor picks it up. ' +
+  'To change part of it, use the blocks API (insert/update/delete).';
+
+/**
  * Inject the editor's portal registry into every `createReactBlock` tool's
  * config (vanilla tools are left untouched), returning a NEW tools object so
  * the consumer's config is never mutated. A react-block tool is constructed by
@@ -166,6 +179,8 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // initializing — still renders instead of being mistaken for the seed.
   const constructedDataRef = useRef(config.data);
   const renderChainRef = useRef<Promise<void>>(Promise.resolve());
+  // One collaboration warning per hook instance (see the data effect).
+  const collaborationWarnedRef = useRef(false);
   // The content of the render currently queued/in-flight (distinct from
   // `lastRenderedDataRef`, which tracks the last SUCCESSFULLY rendered content).
   // Used to dedupe a re-queue of the same in-flight content without advancing the
@@ -794,6 +809,18 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // arriving back reshaped (fresh envelope, stripped ids) and/or late — after a
     // newer save already replaced the baseline above.
     if (echoWindowRef.current.matches(data)) {
+      return;
+    }
+
+    // Under collaboration the document belongs to the sync service, and render()
+    // refuses a wholesale replace — so don't attempt one. The prop's premise
+    // ("this value IS the document") does not hold here.
+    if (configRef.current.collaboration !== undefined) {
+      if (!collaborationWarnedRef.current) {
+        collaborationWarnedRef.current = true;
+        console.warn(collaborationDataIgnoredMessage(configRef.current.collaboration.doc));
+      }
+
       return;
     }
 

@@ -137,6 +137,7 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
+  'components/modules/collaboration/presence-renderer.ts': 'Writes one presence colour custom property, validated hex-only; where the outline, label and avatar stack sit is decided entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',
   'components/utils/notifier/draw.ts': 'Writes notifier CSS custom properties selected by the notifier layout implementation.',
   'components/utils/popover/popover-desktop.ts': 'Writes named popover CSS variables; physical top/left placement stays inventoried separately.',

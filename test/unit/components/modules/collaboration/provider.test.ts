@@ -1,3 +1,4 @@
+import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createCollabProvider } from '../../../../../src/components/modules/collaboration/provider';
@@ -109,6 +110,7 @@ const seamFor = (store: DocumentStore): CollabDocSeam => ({
   encodeAwarenessUpdate: (clients) => store.encodeAwarenessUpdate(clients),
   applyAwarenessUpdate: (update, origin) => store.applyAwarenessUpdate(update, origin),
   clearRemoteAwarenessStates: () => store.clearRemoteAwarenessStates(),
+  resetForRelineage: () => store.resetForRelineage(),
 });
 
 interface StatusEntry {
@@ -191,6 +193,24 @@ const completeFirstSync = (harness: Harness, socket: MockSocket, peer: DocumentS
   socket.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate(harness.store.getStateVector()) });
   socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
 };
+
+/** A harness whose seam records every lineage reset the provider asks for. */
+const createResetHarness = (): { harness: Harness; resets: number[] } => {
+  const resets: number[] = [];
+  const harness = createHarness({}, (seam) => ({
+    ...seam,
+    resetForRelineage: () => {
+      resets.push(resets.length + 1);
+      seam.resetForRelineage();
+    },
+  }));
+
+  return { harness, resets };
+};
+
+/** Client ids a state vector accounts for — empty means "a document with no history". */
+const clientsIn = (stateVector: Uint8Array): number[] =>
+  Array.from(Y.decodeStateVector(stateVector).keys());
 
 const flushMicrotasks = async (): Promise<void> => {
   await Promise.resolve();
@@ -375,9 +395,11 @@ describe('createCollabProvider', () => {
       expect(harness.sockets).toHaveLength(1);
     });
 
-    it('is terminal with resync-required when a later control frame changes lineage', () => {
-      const harness = createHarness();
+    it('resets the document and reconnects when a later control frame changes lineage', () => {
+      const { harness, resets } = createResetHarness();
       const first = connectAndHandshake(harness);
+
+      harness.store.addBlock({ id: 'stale', type: 'paragraph', data: { text: 'old history' } });
 
       first.serverClose(1001, 'restart');
       vi.advanceTimersByTime(1000);
@@ -387,14 +409,35 @@ describe('createCollabProvider', () => {
       second.open();
       second.deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
 
-      expect(harness.statuses.at(-1)).toEqual({
-        status: 'error',
-        detail: expect.objectContaining({ error: 'resync-required' }),
-      });
+      expect(resets).toHaveLength(1);
+      expect(harness.store.toJSON()).toEqual([]);
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+      expect(second.closedWith).not.toBeNull();
 
       vi.advanceTimersByTime(120_000);
 
-      expect(harness.sockets).toHaveLength(2);
+      expect(harness.sockets).toHaveLength(3);
+    });
+
+    it('accepts the new lineage after a reset instead of resetting again', () => {
+      const { harness, resets } = createResetHarness();
+      const first = connectAndHandshake(harness);
+
+      first.serverClose(1001, 'restart');
+      vi.advanceTimersByTime(1000);
+      harness.socket().open();
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
+
+      vi.advanceTimersByTime(120_000);
+
+      const third = harness.socket();
+
+      third.open();
+      third.deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
+
+      expect(resets).toHaveLength(1);
+      expect(harness.provider.tag).toEqual({ format: 1, epoch: 1, lineage: LINEAGE_B });
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
     });
 
     it('does not re-hook the seam when a second control frame repeats on one connection', () => {
@@ -714,7 +757,6 @@ describe('createCollabProvider', () => {
     const terminalCases: { code: number; error: string }[] = [
       { code: 4400, error: 'bad-request' },
       { code: 4403, error: 'forbidden' },
-      { code: 4409, error: 'resync-required' },
     ];
 
     for (const { code, error } of terminalCases) {
@@ -734,6 +776,63 @@ describe('createCollabProvider', () => {
         expect(harness.sockets).toHaveLength(1);
       });
     }
+
+    it('resets the document and reconnects on 4409 instead of going terminal', () => {
+      const { harness, resets } = createResetHarness();
+      const socket = connectAndHandshake(harness);
+
+      harness.store.addBlock({ id: 'stale', type: 'paragraph', data: { text: 'old history' } });
+      socket.serverClose(4409, 'the room was reset');
+
+      expect(resets).toHaveLength(1);
+      expect(harness.store.toJSON()).toEqual([]);
+      expect(harness.statuses.at(-1)?.status).toBe('offline');
+
+      vi.advanceTimersByTime(120_000);
+
+      expect(harness.sockets).toHaveLength(2);
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+
+    it('sends no pre-reset history on the connection that follows a 4409', () => {
+      const { harness } = createResetHarness();
+      const socket = connectAndHandshake(harness);
+
+      harness.store.addBlock({ id: 'stale', type: 'paragraph', data: { text: 'must never be resent' } });
+      socket.serverClose(4409, 'the room was reset');
+      vi.advanceTimersByTime(120_000);
+
+      const second = harness.socket();
+
+      second.open();
+
+      // Control-frame-first still holds, and the ONE frame allowed before it
+      // now describes a document with no history at all.
+      expect(second.frameTypes).toEqual(['syncStep1']);
+
+      const opening = second.frames[0];
+
+      expect(opening.type === 'syncStep1' && clientsIn(opening.stateVector)).toEqual([]);
+
+      second.deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
+
+      // The room asks what we have; the answer must carry none of the old room.
+      const room = new DocumentStore(new YBlockSerializer());
+
+      stores.push(room);
+      second.deliver({ type: 'syncStep1', stateVector: room.getStateVector() });
+
+      const answer = second.frames.at(-1);
+
+      expect(answer?.type).toBe('syncStep2');
+
+      if (answer?.type === 'syncStep2') {
+        room.applyRemoteUpdate(answer.update, { source: 'room' });
+      }
+
+      expect(room.toJSON()).toEqual([]);
+      expect(second.frameTypes.filter((type) => type === 'update')).toHaveLength(0);
+    });
 
     it('refreshes the ticket and retries ONCE on 4401, then goes terminal', async () => {
       const ticketSource = vi.fn(() => Promise.resolve('tok'));

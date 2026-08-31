@@ -499,8 +499,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // between the gutter default and the two collapse rules and why the second
     // rule is physical rather than logical (~1.1KB). Bumps the multiplier
     // to 1.445.
+    // 2026-08-31: multiplayer presence — presence.css holds the whole surface
+    // (holder outline keyed off --blok-presence-color, the peer name label, the
+    // avatar stack and its overflow chip), all of it attribute-selected so no
+    // rule reaches into a tool root, plus its own token block (~2KB). Bumps the
+    // multiplier to 1.452.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.445);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.452);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

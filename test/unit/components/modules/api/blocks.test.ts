@@ -288,6 +288,12 @@ type BlokStub = {
     t: ReturnType<typeof vi.fn>;
   };
   API: Record<string, unknown>;
+  // Left OUT of the base stub on purpose: single-player tests must exercise the
+  // "no Collaboration module at all" shape, which is what the wholesale-replace
+  // gate's optional chaining has to survive.
+  Collaboration?: {
+    isEnabled: boolean;
+  };
 };
 
 const createBlokStub = (
@@ -743,6 +749,103 @@ describe('BlocksAPI', () => {
 
       expect(blockManager.clear).toHaveBeenCalledWith();
       expect(blok.Paste.processText).toHaveBeenCalledWith('<p>Hello</p>', true);
+    });
+  });
+
+  /**
+   * The wholesale-replace guard (Phase 3 plan, decision 6 / risk R1).
+   *
+   * render() and clear() replace the WHOLE document from local data. Under
+   * collaboration the document belongs to the sync service, and the framework
+   * adapters call render() whenever a controlled `data` prop changes — which
+   * would re-seed the shared document and re-arm exactly the dual-seeding
+   * corruption sync-first load exists to prevent. Both refuse; every other
+   * block operation stays legal.
+   */
+  describe('wholesale-replace guard under collaboration', () => {
+    const collaborating = {
+      blokOverrides: { Collaboration: { isEnabled: true } },
+      configOverrides: { collaboration: { doc: 'my-doc' } },
+    };
+
+    it('refuses render() and names the reset endpoint for the configured doc', async () => {
+      const { blocksApi } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.render({ blocks: [] })).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+      await expect(blocksApi.render({ blocks: [] })).rejects.toThrow(/blocks\.insert\(\)/);
+    });
+
+    it('does not touch the document when render() is refused', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.render({
+        blocks: [ { id: 'id-1',
+          type: 'paragraph',
+          data: { text: 'text' } } ],
+      })).rejects.toThrow();
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.Renderer.render).not.toHaveBeenCalled();
+      expect(blok.ModificationsObserver.disable).not.toHaveBeenCalled();
+      // Saver.save is the echo-equality check inside render(). Not calling it
+      // pins the guard ABOVE that check: a refused call does zero work.
+      expect(blok.Saver.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses clear() and leaves the blocks in place', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi({
+        ...collaborating,
+        blocks: [ createBlockStub(), createBlockStub() ],
+      });
+
+      await expect(blocksApi.clear()).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(blockManager.blocks).toHaveLength(2);
+    });
+
+    it('keeps insert(), update() and delete() legal under collaboration', async () => {
+      const existing = createBlockStub({ id: 'to-update' });
+      const { blocksApi, blockManager } = createBlocksApi({
+        ...collaborating,
+        blocks: [ existing ],
+      });
+
+      blocksApi.insert('paragraph', { text: 'added' });
+      expect(blockManager.insert).toHaveBeenCalled();
+
+      await blocksApi.update('to-update', { text: 'changed' });
+      expect(blockManager.update).toHaveBeenCalled();
+
+      await blocksApi.delete(0);
+      expect(blockManager.removeBlock).toHaveBeenCalled();
+    });
+
+    it('refuses renderFromHTML(), the third wholesale-replace path', async () => {
+      const { blocksApi } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.renderFromHTML('<p>hi</p>')).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+    });
+
+    it('falls back to a placeholder doc segment when the config carries no doc', async () => {
+      const { blocksApi } = createBlocksApi({ blokOverrides: { Collaboration: { isEnabled: true } } });
+
+      await expect(blocksApi.clear()).rejects.toThrow(/POST \/sync\/\{doc\}\/reset/);
+    });
+
+    it('leaves render() and clear() untouched when collaboration is configured off', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi({
+        blokOverrides: { Collaboration: { isEnabled: false } },
+      });
+
+      await blocksApi.render({ blocks: [ { id: 'id-1',
+        type: 'paragraph',
+        data: { text: 'text' } } ] });
+      expect(blok.Renderer.render).toHaveBeenCalled();
+
+      await blocksApi.clear();
+      expect(blockManager.clear).toHaveBeenCalledWith(true);
     });
   });
 

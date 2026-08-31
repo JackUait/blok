@@ -1218,6 +1218,12 @@
 [data-blok-columns] {
   --blok-column-gutter: min(2rem, 4vw);
 }
+[data-blok-interface] {
+  --blok-presence-color: #0b6e99;
+  --blok-presence-radius: 3px;
+  --blok-presence-gap: 6px;
+  --blok-presence-overlap: -6px;
+}
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
 }

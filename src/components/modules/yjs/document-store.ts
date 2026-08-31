@@ -36,19 +36,22 @@ export class DocumentStore {
    * type barrier. Exposing the raw Y.Doc lets callers bypass the
    * whitelist and silently reintroduce the class of bugs that
    * `BlockObserver.mapTransactionOrigin` exists to prevent.
+   *
+   * MUTABLE (with the two root types below) only for `resetForRelineage`,
+   * which swaps the whole document. Nothing else may reassign it.
    */
-  private readonly ydoc: Y.Doc = new Y.Doc();
+  private ydoc: Y.Doc = new Y.Doc();
 
   /**
    * id → per-block Y.Map. Membership lives here; order lives in the order
    * arrays (`yRootOrder` + each block's `contentIds`).
    */
-  private readonly yBlocksMap: Y.Map<Y.Map<unknown>> = this.ydoc.getMap('blocks');
+  private yBlocksMap: Y.Map<Y.Map<unknown>> = this.ydoc.getMap('blocks');
 
   /**
    * Top-level block ids in document order.
    */
-  private readonly yRootOrder: Y.Array<string> = this.ydoc.getArray('root');
+  private yRootOrder: Y.Array<string> = this.ydoc.getArray('root');
 
   /**
    * Serializer for converting between Yjs and DocumentStoreBlockData formats
@@ -1555,6 +1558,74 @@ export class DocumentStore {
     }
 
     return this.awareness;
+  }
+
+  // ========== Lineage reset ==========
+
+  /**
+   * Replace this store's document with a genuinely FRESH Y.Doc, for the case
+   * where the server reset the room and our history no longer belongs to it.
+   *
+   * It CANNOT be `fromJSON([])`. That deletes the content but keeps the CRDT
+   * history: the deleted items, their clock, and this peer's client id all
+   * survive, so the very next sync merges the stale history back into the reset
+   * room and re-poisons it. Only a new document has no history to leak.
+   *
+   * Order is load-bearing:
+   * 1. detach the seam's update handlers — they are registered on the DYING doc;
+   * 2. read the local presence state, then destroy Awareness — it binds
+   *    `doc.clientID`, and its own `doc.on('destroy')` hook would otherwise
+   *    reach a half-torn-down instance (same rule as `destroy()`);
+   * 3. swap in the new doc and its two roots, THEN destroy the old one;
+   * 4. reset echo suppression — a fresh doc has no remote origins yet;
+   * 5. re-attach the same handler objects, so every `onUpdate` subscription made
+   *    before the reset keeps working (and its unsubscribe still detaches,
+   *    because the closure reads `this.ydoc` at call time);
+   * 6. rebuild Awareness only if it existed, restoring the local state so a
+   *    reset does not silently drop this peer's presence.
+   *
+   * The new doc's clientID is Yjs's own random one — never seeded, so two peers
+   * that reset at the same moment cannot collide.
+   *
+   * The caller owns everything bound to the OLD doc from outside: the undo
+   * manager's scope and the block observer's roots (see
+   * `YjsManager.resetForRelineage`), and the rendered DOM.
+   */
+  public resetForRelineage(): void {
+    for (const handler of this.updateHandlers) {
+      this.ydoc.off('update', handler);
+    }
+
+    const localAwarenessState = this.awareness?.getLocalState() ?? null;
+    const hadAwareness = this.awareness !== null;
+
+    if (this.awareness !== null) {
+      this.awareness.destroy();
+      this.awareness = null;
+    }
+
+    const previous = this.ydoc;
+
+    this.ydoc = new Y.Doc();
+    this.yBlocksMap = this.ydoc.getMap('blocks');
+    this.yRootOrder = this.ydoc.getArray('root');
+
+    previous.destroy();
+
+    this.remoteOrigins.clear();
+    this.remoteOrigins.add(REMOTE_APPLY_ORIGIN);
+
+    for (const handler of this.updateHandlers) {
+      this.ydoc.on('update', handler);
+    }
+
+    if (hadAwareness) {
+      this.awareness = new Awareness(this.ydoc);
+
+      if (localAwarenessState !== null) {
+        this.awareness.setLocalState(localAwarenessState);
+      }
+    }
   }
 
   /**

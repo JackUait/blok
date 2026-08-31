@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Blok.Server/Blok.Server.csproj" />
+    <InternalsVisibleTo Include="Blok.Server.AspNetCore.Tests" />
   </ItemGroup>
 
   <ItemGroup>

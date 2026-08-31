@@ -270,7 +270,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the fourteen service limits the design refuses to bury', () => {
+  it('states the fifteen service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'working-copy-privacy',
@@ -284,6 +284,7 @@ describe('server docs data', () => {
       'proxy-rate-limit',
       'ticket-not-scoped',
       'collab-pass-lifetime',
+      'collab-connection-cap',
       'tls-termination',
       'alpine-nuget',
     ]);
@@ -334,6 +335,19 @@ describe('server docs data', () => {
     expect(body).toMatch(/30 minutes/);
     expect(body).toMatch(/checked once|when the connection opens/i);
     expect(body).toMatch(/reconnect/i);
+  });
+
+  // The cap keys on who is holding the connection. Behind a proxy nothing
+  // names the person, so a cap there would be one allowance for everybody.
+  it('caps live connections per person and document, and admits the proxy path has none', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-connection-cap')?.body ?? '';
+
+    expect(body).toMatch(/eight/i);
+    expect(body).toContain('too many connections');
+    expect(body).toMatch(/429/);
+    expect(body).toMatch(/address/i);
+    expect(body).toMatch(/proxy/i);
+    expect(body).toMatch(/no cap/i);
   });
 
   it('admits the NuGet package does not run on Alpine x64', () => {

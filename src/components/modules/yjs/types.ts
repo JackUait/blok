@@ -1,3 +1,29 @@
+import type * as Y from 'yjs';
+
+/**
+ * Shared types the Y.UndoManager tracks: the blocks map and the root
+ * order array. contentIds arrays nest inside blocks-map values, so these
+ * two roots cover every block write.
+ */
+export type UndoScopeType = Y.Map<Y.Map<unknown>> | Y.Array<string>;
+
+/**
+ * The two top-level shared types of doc schema v2, handed to the observer.
+ */
+export interface DocumentScope {
+  blocksMap: Y.Map<Y.Map<unknown>>;
+  rootOrder: Y.Array<string>;
+}
+
+/**
+ * Where a block sits: its parent (null = root) and the sibling it follows
+ * (null = first child). Index-free, so it survives concurrent edits.
+ */
+export interface BlockPlacement {
+  parentId: string | null;
+  afterId: string | null;
+}
+
 /**
  * Event emitted when blocks change.
  *
@@ -75,6 +101,21 @@ export interface CaretHistoryEntry {
    * reverse-chronological even when a move sits between edits.
    */
   kind?: 'move' | 'edit';
+}
+
+/**
+ * One replay step of a recorded move, handed to the placement callback by
+ * move-undo/move-redo. INTERIM SHAPE: the move stacks still speak flat
+ * indices; the placement-based stacks swap `index` for a full
+ * {parentId, afterId} placement.
+ */
+export interface MoveReplayRequest {
+  blockId: string;
+  /** Parent to restore; undefined = the entry recorded no parent change */
+  parentId: string | null | undefined;
+  /** Flat index to restore; -1 = parent-only entry (no recorded position) */
+  index: number;
+  origin: 'move-undo' | 'move-redo';
 }
 
 /**

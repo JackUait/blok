@@ -320,7 +320,8 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
       const composeSpy = vi.spyOn(factory, 'composeBlock').mockReturnValue(added);
 
       remoteTransact('block-1', (doc) => {
-        const yblocks = doc.getArray<Y.Map<unknown>>('blocks');
+        const yblocks = doc.getMap<Y.Map<unknown>>('blocks');
+        const rootOrder = doc.getArray<string>('root');
         const ydata = new Y.Map<unknown>(Object.entries({ text: IMG_ONERROR_PAYLOAD }));
         const yblock = new Y.Map<unknown>(Object.entries({
           id: 'evil-block',
@@ -328,7 +329,8 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
           data: ydata,
         }));
 
-        yblocks.push([yblock]);
+        yblocks.set('evil-block', yblock);
+        rootOrder.push(['evil-block']);
       });
 
       await flush();
@@ -355,7 +357,8 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
         createMockBlock({ id: options.id ?? 'unknown' }));
 
       remoteTransact('block-1', (doc) => {
-        const yblocks = doc.getArray<Y.Map<unknown>>('blocks');
+        const yblocks = doc.getMap<Y.Map<unknown>>('blocks');
+        const rootOrder = doc.getArray<string>('root');
         const makeBlock = (id: string, text: string): Y.Map<unknown> =>
           new Y.Map<unknown>(Object.entries({
             id,
@@ -363,10 +366,9 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
             data: new Y.Map<unknown>(Object.entries({ text })),
           }));
 
-        yblocks.push([
-          makeBlock('evil-1', IMG_ONERROR_PAYLOAD),
-          makeBlock('evil-2', JS_HREF_PAYLOAD),
-        ]);
+        yblocks.set('evil-1', makeBlock('evil-1', IMG_ONERROR_PAYLOAD));
+        yblocks.set('evil-2', makeBlock('evil-2', JS_HREF_PAYLOAD));
+        rootOrder.push(['evil-1', 'evil-2']);
       });
 
       await flush();

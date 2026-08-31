@@ -4,7 +4,7 @@ import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
-import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntry } from './types';
+import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayRequest, SingleMoveEntry, UndoScopeType } from './types';
 
 /**
  * UndoHistory manages all undo/redo state.
@@ -16,11 +16,6 @@ import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntr
  * - Implements smart undo grouping at word boundaries
  */
 export class UndoHistory {
-  /**
-   * Yjs blocks array (for move operations)
-   */
-  private yblocks: Y.Array<Y.Map<unknown>>;
-
   /**
    * Undo manager for history operations
    */
@@ -97,19 +92,13 @@ export class UndoHistory {
   private boundaryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Callback to execute move operations.
-   * Set by YjsManager to delegate move operations.
-   */
-  private moveCallback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void;
-
-  /**
-   * Callback to restore a block's parent during move-undo/move-redo.
+   * The ONE placement callback replaying a recorded move step (parent
+   * restore + position) during move-undo/move-redo.
    *
    * Must not record its own history entry — the call is part of replaying
-   * an existing `SingleMoveEntry`. Set by YjsManager to route through
-   * `transactWithoutCapture` + a direct in-memory reparent.
+   * an existing `SingleMoveEntry`. Set by YjsManager.
    */
-  private parentRestoreCallback: (blockId: string, parentId: string | null) => void;
+  private placementCallback: (request: MoveReplayRequest) => void;
 
   /**
    * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
@@ -124,45 +113,32 @@ export class UndoHistory {
   };
 
   constructor(
-    yblocks: Y.Array<Y.Map<unknown>>,
+    scope: UndoScopeType[],
     blok: BlokModules
   ) {
-    this.yblocks = yblocks;
     this.blok = blok;
 
-    this.undoManager = new Y.UndoManager(this.yblocks, {
+    this.undoManager = new Y.UndoManager(scope, {
       captureTimeout: CAPTURE_TIMEOUT_MS,
       trackedOrigins: new Set(['local']),
     });
 
     this.setupCaretTracking();
 
-    // Move callback will be set by YjsManager
-    this.moveCallback = () => {
-      // Placeholder, will be set by setMoveCallback
-    };
-    this.parentRestoreCallback = () => {
-      // Placeholder, will be set by setParentRestoreCallback
+    // Placement callback will be set by YjsManager
+    this.placementCallback = () => {
+      // Placeholder, will be set by setPlacementCallback
     };
   }
 
   /**
-   * Set the move callback. Called by YjsManager to enable move operations.
+   * Set the placement callback used by move-undo/move-redo to replay
+   * recorded moves. See `placementCallback`.
    */
-  public setMoveCallback(
-    callback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void
+  public setPlacementCallback(
+    callback: (request: MoveReplayRequest) => void
   ): void {
-    this.moveCallback = callback;
-  }
-
-  /**
-   * Set the parent-restore callback used by move-undo/move-redo to rewind
-   * drag-reparent side effects. See `parentRestoreCallback`.
-   */
-  public setParentRestoreCallback(
-    callback: (blockId: string, parentId: string | null) => void
-  ): void {
-    this.parentRestoreCallback = callback;
+    this.placementCallback = callback;
   }
 
   /**
@@ -372,9 +348,9 @@ export class UndoHistory {
       this.moveUndoStack.push(lastMoveGroup);
 
       // Redo all moves in the group, in original order. Drag-reparent
-      // entries restore the destination parent AFTER the position so that
-      // the flat-array splice settles first and the parent's contentIds
-      // then re-attach cleanly.
+      // entries restore the destination parent BEFORE the position (same
+      // as undo): the position restore resolves its target order array
+      // from the block's current parentId.
       for (const move of lastMoveGroup) {
         this.replayMoveRedo(move);
       }
@@ -425,33 +401,28 @@ export class UndoHistory {
   }
 
   /**
-   * Replay a single move entry in the undo direction.
-   * Parent restore runs BEFORE the position restore so the block lands in
-   * the correct slot relative to its (soon-to-be-restored) parent siblings.
+   * Replay a single move entry in the undo direction: restore the FROM
+   * side. The placement callback owns the parent-before-position ordering.
    */
   private replayMoveUndo(move: SingleMoveEntry): void {
-    if (move.fromParentId !== undefined) {
-      this.parentRestoreCallback(move.blockId, move.fromParentId);
-    }
-
-    if (move.fromIndex !== -1) {
-      this.moveCallback(move.blockId, move.fromIndex, 'move-undo');
-    }
+    this.placementCallback({
+      blockId: move.blockId,
+      parentId: move.fromParentId,
+      index: move.fromIndex,
+      origin: 'move-undo',
+    });
   }
 
   /**
-   * Replay a single move entry in the redo direction.
-   * Position restore runs BEFORE the parent restore so the flat-array splice
-   * settles first and the destination parent's contentIds re-attach cleanly.
+   * Replay a single move entry in the redo direction: restore the TO side.
    */
   private replayMoveRedo(move: SingleMoveEntry): void {
-    if (move.toIndex !== -1) {
-      this.moveCallback(move.blockId, move.toIndex, 'move-redo');
-    }
-
-    if (move.toParentId !== undefined) {
-      this.parentRestoreCallback(move.blockId, move.toParentId);
-    }
+    this.placementCallback({
+      blockId: move.blockId,
+      parentId: move.toParentId,
+      index: move.toIndex,
+      origin: 'move-redo',
+    });
   }
 
   /**

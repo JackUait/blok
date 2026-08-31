@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { CaretHistoryEntry } from '../../../../../src/components/modules/yjs/types';
+import type { CaretHistoryEntry, UndoScopeType } from '../../../../../src/components/modules/yjs/types';
 
 const createMockBlok = (): BlokModules => {
   const blockManager = {
@@ -38,12 +38,15 @@ describe('UndoHistory', () => {
     yblocks = ydoc.getArray('blocks');
     blok = createMockBlok();
 
-    history = new UndoHistory(yblocks, blok);
+    // UndoHistory is scope-shape-agnostic (Y.UndoManager tracks whatever
+    // shared types it is handed); the harness keeps its own flat array as
+    // the tracked substrate, so every fixture below stays valid.
+    history = new UndoHistory([yblocks as unknown as UndoScopeType], blok);
 
-    // Set up move callback to actually perform moves
-    history.setMoveCallback((blockId, toIndex) => {
+    // Set up placement callback to actually perform moves
+    history.setPlacementCallback(({ blockId, index }) => {
       const fromIndex = yblocks.toArray().findIndex((b) => b.get('id') === blockId);
-      if (fromIndex !== -1) {
+      if (fromIndex !== -1 && index !== -1) {
         const yblock = yblocks.get(fromIndex);
         const blockData = yblock.toJSON();
         yblocks.delete(fromIndex);
@@ -51,7 +54,7 @@ describe('UndoHistory', () => {
         (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
           newYblock.set(key as string, blockData[key]);
         });
-        yblocks.insert(toIndex, [newYblock]);
+        yblocks.insert(index, [newYblock]);
       }
     });
   });
@@ -140,7 +143,7 @@ describe('UndoHistory', () => {
     it('transactMoves wraps moves in a group', () => {
       const moveCallback = vi.fn();
 
-      history.setMoveCallback(moveCallback);
+      history.setPlacementCallback(moveCallback);
 
       history.transactMoves(() => {
         // Move callback won't be called here
@@ -177,7 +180,7 @@ describe('UndoHistory', () => {
 
       const moveCallback = vi.fn();
 
-      history.setMoveCallback(moveCallback);
+      history.setPlacementCallback(moveCallback);
 
       // Edit 1 (tracked) — typing into b1.
       ydoc.transact(() => {
@@ -201,7 +204,12 @@ describe('UndoHistory', () => {
 
       // 2nd undo: now the move.
       history.undo();
-      expect(moveCallback).toHaveBeenCalledWith('b1', 0, 'move-undo');
+      expect(moveCallback).toHaveBeenCalledWith({
+        blockId: 'b1',
+        parentId: undefined,
+        index: 0,
+        origin: 'move-undo',
+      });
 
       // 3rd undo: Edit 1.
       history.undo();

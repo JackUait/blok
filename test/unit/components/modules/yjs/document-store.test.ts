@@ -19,7 +19,9 @@ describe('DocumentStore', () => {
   describe('initialization', () => {
     it('creates Y.Doc on construction', () => {
       expect((store as unknown as { ydoc: unknown }).ydoc).toBeDefined();
-      expect(store.yblocks).toBeDefined();
+      expect(store.blocksMap).toBeDefined();
+      expect(store.rootOrder).toBeDefined();
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder]);
     });
 
     it('starts with empty blocks array', () => {
@@ -145,7 +147,7 @@ describe('DocumentStore', () => {
     it('is a single undo entry that restores the original type and data', () => {
       store.fromJSON([{ id: 'block1', type: 'list', data: { text: 'Item', style: 'unordered' } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -304,7 +306,7 @@ describe('DocumentStore', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { content: originalContent } }]);
 
       // Create a Y.UndoManager to track whether new undo entries are created
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -330,7 +332,7 @@ describe('DocumentStore', () => {
     it('skips update when simple array value is deeply equal but reference-different', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { colWidths: [100, 200, 150] } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -347,7 +349,7 @@ describe('DocumentStore', () => {
     it('still updates when array value has actually changed', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { content: [{ blocks: ['p1'] }] } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -373,7 +375,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
       ]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
       const initialStackLength = undoManager.undoStack.length;
@@ -392,7 +394,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
       ]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
       const initialStackLength = undoManager.undoStack.length;
@@ -563,13 +565,13 @@ describe('DocumentStore', () => {
     it('wraps operations in a transaction', () => {
       let transactionOrigin: string | null = null;
 
-      // Track the origin by observing the yblocks
-      store.yblocks.observe((event) => {
+      // Track the origin by observing the root order
+      store.rootOrder.observe((event) => {
         transactionOrigin = event.transaction.origin as string;
       });
 
       store.transact(() => {
-        store.yblocks.push([new Y.Map()]);
+        store.rootOrder.push(['some-id']);
       }, 'local');
 
       expect(transactionOrigin).toBe('local');
@@ -757,7 +759,7 @@ describe('DocumentStore', () => {
     let batches: CapturedEvent[][];
 
     const observe = (): void => {
-      store.yblocks.observeDeep((events) => {
+      store.blocksMap.observeDeep((events) => {
         batches.push(events.map((event) => ({
           target: event.target,
           keys: Array.from(event.changes.keys.keys()),
@@ -859,7 +861,7 @@ describe('DocumentStore', () => {
     });
 
     it('a changed grid write creates exactly one undo entry', () => {
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
       const initialStackLength = undoManager.undoStack.length;
@@ -1007,7 +1009,7 @@ describe('DocumentStore', () => {
     ];
 
     const createUndoManager = (): Y.UndoManager => {
-      return new Y.UndoManager(store.yblocks, {
+      return new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
     };

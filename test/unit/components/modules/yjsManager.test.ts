@@ -138,6 +138,55 @@ describe('YjsManager', () => {
     });
   });
 
+  describe('applyBlockPlacement', () => {
+    beforeEach(() => {
+      manager.fromJSON([
+        { id: 'parent1', type: 'paragraph', data: { text: 'Parent' } },
+        { id: 'child1', type: 'paragraph', data: { text: 'Child' } },
+      ]);
+    });
+
+    it('nests the block: parentId + membership move from root to the parent in one step', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+
+      const result = manager.toJSON();
+
+      expect(result.map((block) => block.id)).toEqual(['parent1', 'child1']);
+      expect(result[1].parent).toBe('parent1');
+      expect(result[0].content).toEqual(['child1']);
+    });
+
+    it('detaches the block to root: parentId key deleted, root membership restored', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+      manager.applyBlockPlacement('child1', { parentId: null, afterId: 'parent1' });
+
+      const result = manager.toJSON();
+
+      expect(result.map((block) => block.id)).toEqual(['parent1', 'child1']);
+      expect(result[1].parent).toBeUndefined();
+      expect(result[0].content).toBeUndefined();
+    });
+
+    it('captured flavor is undoable', () => {
+      expect(manager.canUndo()).toBe(false);
+
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+
+      expect(manager.canUndo()).toBe(true);
+
+      manager.undo();
+
+      expect(manager.toJSON()[1].parent).toBeUndefined();
+    });
+
+    it('no-capture flavor records nothing on the undo stack', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null }, { capture: false });
+
+      expect(manager.toJSON()[1].parent).toBe('parent1');
+      expect(manager.canUndo()).toBe(false);
+    });
+  });
+
   describe('updateBlockData', () => {
     it('should update a single property in block data', () => {
       manager.fromJSON([

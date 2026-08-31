@@ -21,7 +21,6 @@ import { BlockChanged } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
-import * as Y from 'yjs';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
@@ -1090,22 +1089,20 @@ export class BlockManager extends Module {
   /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
    *
-   * Fix 1: the Yjs-side contentIds Y.Arrays on the old and new parents must be
-   * updated in the SAME transaction as the child's parentId write. Previously,
-   * only `yblock.set('parentId', …)` was synced to Yjs, so:
-   *   - Two concurrent peers reparenting siblings would drift on both parents
-   *     because neither ever learned the move through CRDT.
-   *   - Undo snapshots captured the parentId change but left stale contentIds
-   *     on the old/new parents, so redo could restore a child that no parent
-   *     actually claimed.
-   * The companion writes keep the persistent Yjs store consistent with the
-   * in-memory hierarchy at every transaction boundary.
+   * The doc write delegates to `YjsManager.applyBlockPlacement` — ONE
+   * transaction owning the parentId set/delete AND order-array membership
+   * (old parent's contentIds, new parent's contentIds, and the root order).
+   * The parentId write and the order writes must never split across
+   * transactions: concurrent peers reparenting siblings would drift on both
+   * parents, and undo snapshots would restore a child no parent claims.
+   * BlockManager itself never touches contentIds Y.Arrays — DocumentStore
+   * owns every order-array write.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
-    // we need it to remove the child from the old parent's Yjs contentIds.
+    // the from-placement is what recordParentChangeForPendingMove records.
     const oldParentId = block.parentId;
 
     this.hierarchy.setBlockParent(block, newParentId);
@@ -1187,21 +1184,24 @@ export class BlockManager extends Module {
       }
     }
 
-    // Drag-reparent path: when a move group is open (DragController wraps
-    // its drop handler in `YjsManager.transactMoves`), route the Yjs write
-    // through `transactWithoutCapture` so Y.UndoManager does not record it
-    // as a separate stack item. Attach the parent change to the in-flight
-    // move entry instead — on undo/redo we rewind both atomically.
-    if (this.Blok.YjsManager.isInMoveGroup) {
-      this.Blok.YjsManager.transactWithoutCapture(() => {
-        if (newParentId !== null) {
-          yblock.set('parentId', newParentId);
-        } else {
-          yblock.delete('parentId');
-        }
+    // Doc write: ONE applyPlacement transaction owning the parentId
+    // set/delete + order-array membership (old parent, new parent, AND the
+    // root array — the delegation is what retires the stale-root-entry
+    // hole and the addBlock/helper double-writer). The placement's afterId
+    // comes from the in-memory hierarchy, which `hierarchy.setBlockParent`
+    // above already updated. The REQUESTED newParentId goes to the doc even
+    // when the hierarchy sanitized a dangling parent to null in memory —
+    // the doc's orphan tolerance keeps the relationship for when the parent
+    // arrives from a peer.
+    const placement = this.resolveYjsPlacement(block, newParentId);
 
-        this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
-      });
+    // Drag-reparent path: when a move group is open (DragController wraps
+    // its drop handler in `YjsManager.transactMoves`), the write must not
+    // land on Y.UndoManager as a separate stack item — no-capture, and the
+    // parent change attaches to the in-flight move entry instead so
+    // undo/redo rewinds both atomically.
+    if (this.Blok.YjsManager.isInMoveGroup) {
+      this.Blok.YjsManager.applyBlockPlacement(block.id, placement, { capture: false });
       this.Blok.YjsManager.recordParentChangeForPendingMove(
         block.id,
         oldParentId,
@@ -1211,17 +1211,41 @@ export class BlockManager extends Module {
       return;
     }
 
-    // Wrap parentId + parent contentIds updates in a single Yjs transaction so
-    // they land atomically on remote peers and in the undo stack.
-    this.Blok.YjsManager.transact(() => {
-      if (newParentId !== null) {
-        yblock.set('parentId', newParentId);
-      } else {
-        yblock.delete('parentId');
+    this.Blok.YjsManager.applyBlockPlacement(block.id, placement, { capture: true });
+  }
+
+  /**
+   * The block's placement per the in-memory hierarchy: its parent plus the
+   * sibling it follows (null = first). For root placement the preceding
+   * sibling is the nearest ROOT-LEVEL block before it in the flat order.
+   * @param block - the block whose placement to resolve
+   * @param parentId - the block's (already updated) parent id, or null for root
+   */
+  private resolveYjsPlacement(block: Block, parentId: string | null): { parentId: string | null; afterId: string | null } {
+    if (parentId !== null) {
+      const siblings = this.repository.getBlockById(parentId)?.contentIds ?? [];
+      const position = siblings.indexOf(block.id);
+
+      if (position > 0) {
+        return { parentId, afterId: siblings[position - 1] };
       }
 
-      this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
-    });
+      // Not listed (dangling in-memory state) → append after the last sibling.
+      if (position === -1 && siblings.length > 0) {
+        return { parentId, afterId: siblings[siblings.length - 1] };
+      }
+
+      return { parentId, afterId: null };
+    }
+
+    const blocks = this.repository.blocks;
+    const index = blocks.indexOf(block);
+    const precedingRootBlock = blocks
+      .slice(0, Math.max(index, 0))
+      .reverse()
+      .find((candidate) => candidate.parentId === null);
+
+    return { parentId: null, afterId: precedingRootBlock?.id ?? null };
   }
 
   /**
@@ -1274,84 +1298,6 @@ export class BlockManager extends Module {
         structural: true,
       });
     }, { extendThroughRAF: true });
-  }
-
-  /**
-   * Fix 1 helper: update the old and new parents' Yjs `contentIds` Y.Arrays
-   * so the persistent store mirrors the in-memory hierarchy after a reparent.
-   * Extracted from {@link setBlockParent} to keep block nesting shallow.
-   * @param childId - id of the block being reparented
-   * @param oldParentId - parent id before the reparent (may be null)
-   * @param newParentId - parent id after the reparent (may be null)
-   */
-  private syncParentContentIdsToYjs(
-    childId: string,
-    oldParentId: string | null,
-    newParentId: string | null
-  ): void {
-    if (oldParentId !== null && oldParentId !== newParentId) {
-      this.removeChildFromParentYContent(oldParentId, childId);
-    }
-    if (newParentId !== null) {
-      this.appendChildToParentYContent(newParentId, childId);
-    }
-  }
-
-  /**
-   * Fix 1 helper: remove a child id from a parent block's Yjs `contentIds`
-   * Y.Array if it is present. No-op when the parent or its contentIds are
-   * missing from Yjs.
-   * @param parentId - parent block id
-   * @param childId - child block id to remove
-   */
-  private removeChildFromParentYContent(parentId: string, childId: string): void {
-    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
-
-    if (parentYBlock === undefined) {
-      return;
-    }
-    const content = parentYBlock.get('contentIds');
-
-    if (!(content instanceof Y.Array)) {
-      return;
-    }
-    const idx = (content.toArray() as string[]).indexOf(childId);
-
-    if (idx !== -1) {
-      content.delete(idx, 1);
-    }
-  }
-
-  /**
-   * Fix 1 helper: append a child id to a parent block's Yjs `contentIds`
-   * Y.Array, creating the Y.Array on the parent yblock if missing. Inserts at
-   * the index the child occupies in the in-memory parent so remote peers see
-   * the same ordering as the local editor.
-   * @param parentId - parent block id
-   * @param childId - child block id to append
-   */
-  private appendChildToParentYContent(parentId: string, childId: string): void {
-    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
-
-    if (parentYBlock === undefined) {
-      return;
-    }
-    const existing = parentYBlock.get('contentIds');
-    const content: Y.Array<string> = existing instanceof Y.Array
-      ? (existing as Y.Array<string>)
-      : new Y.Array<string>();
-
-    if (!(existing instanceof Y.Array)) {
-      parentYBlock.set('contentIds', content);
-    }
-    if ((content.toArray()).includes(childId)) {
-      return;
-    }
-    const parentBlock = this.repository.getBlockById(parentId);
-    const memoryIndex = parentBlock !== undefined ? parentBlock.contentIds.indexOf(childId) : -1;
-    const insertAt = memoryIndex === -1 ? content.length : Math.min(memoryIndex, content.length);
-
-    content.insert(insertAt, [childId]);
   }
 
   /**

@@ -109,9 +109,12 @@ describe('DocumentStore binary provider seam', () => {
     let events: BlockChangeEvent[];
 
     beforeEach(() => {
-      history = new UndoHistory(storeB.yblocks, createMockBlok());
+      history = new UndoHistory(storeB.undoScope, createMockBlok());
       observer = new BlockObserver();
-      observer.observe(storeB.yblocks, history.undoManager);
+      observer.observe(
+        { blocksMap: storeB.blocksMap, rootOrder: storeB.rootOrder },
+        history.undoManager
+      );
       events = [];
       observer.onBlocksChanged((event) => events.push(event));
     });
@@ -145,7 +148,7 @@ describe('DocumentStore binary provider seam', () => {
 
   describe('undo scoping', () => {
     it('does not capture seam-applied transactions in undo history', () => {
-      const history = new UndoHistory(storeB.yblocks, createMockBlok());
+      const history = new UndoHistory(storeB.undoScope, createMockBlok());
 
       storeA.addBlock(paragraph('a1', 'Remote text'));
       storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate(storeB.getStateVector()));

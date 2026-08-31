@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 
 import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
-import { LOCAL_ORIGIN_TAGS, type LocalOriginTag } from './types';
+import { LOCAL_ORIGIN_TAGS, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
@@ -17,10 +17,14 @@ const REMOTE_APPLY_ORIGIN = Object.freeze({ source: 'blok-remote-apply' });
 /**
  * DocumentStore manages the Yjs document and provides atomic block operations.
  *
- * Responsibilities:
- * - Owns the Y.Doc and Y.Array instances
- * - Provides CRUD operations for blocks
- * - Wraps operations in transactions with proper origins
+ * Doc schema v2 — order as data:
+ * - `Y.Map('blocks')`: id → per-block Y.Map (same per-block keys as v1).
+ *   A block's Y.Map is NEVER deleted-and-recreated by a move, so a
+ *   concurrent remote edit to a moved block merges instead of vanishing.
+ * - `Y.Array('root')`: top-level block ids in order. Children keep their
+ *   order in each parent's `contentIds` exactly as before.
+ * The flat document order is DERIVED (DFS from root through contentIds);
+ * see `deriveOrderedIds` for the dedupe/orphan laws.
  */
 export class DocumentStore {
   /**
@@ -35,9 +39,15 @@ export class DocumentStore {
   private readonly ydoc: Y.Doc = new Y.Doc();
 
   /**
-   * Yjs array containing all blocks
+   * id → per-block Y.Map. Membership lives here; order lives in the order
+   * arrays (`yRootOrder` + each block's `contentIds`).
    */
-  public readonly yblocks: Y.Array<Y.Map<unknown>> = this.ydoc.getArray('blocks');
+  private readonly yBlocksMap: Y.Map<Y.Map<unknown>> = this.ydoc.getMap('blocks');
+
+  /**
+   * Top-level block ids in document order.
+   */
+  private readonly yRootOrder: Y.Array<string> = this.ydoc.getArray('root');
 
   /**
    * Serializer for converting between Yjs and DocumentStoreBlockData formats
@@ -49,58 +59,184 @@ export class DocumentStore {
   }
 
   /**
+   * The blocks map (id → block Y.Map). Read/observe surface — writes must
+   * go through the typed operations or `transact`.
+   */
+  public get blocksMap(): Y.Map<Y.Map<unknown>> {
+    return this.yBlocksMap;
+  }
+
+  /**
+   * The root order array (top-level ids). Read/observe surface — writes
+   * must go through the typed operations or `transact`.
+   */
+  public get rootOrder(): Y.Array<string> {
+    return this.yRootOrder;
+  }
+
+  /**
+   * Shared types the Y.UndoManager must track. contentIds arrays nest
+   * inside `blocksMap` values, so the two roots cover every block write.
+   */
+  public get undoScope(): UndoScopeType[] {
+    return [this.yBlocksMap, this.yRootOrder];
+  }
+
+  /**
    * Load blocks from JSON data.
    * Clears existing blocks and replaces them with the provided data.
    * Uses 'load' origin which is not tracked by undo manager.
    */
   public fromJSON(blocks: DocumentStoreBlockData[]): void {
     this.ydoc.transact(() => {
-      this.yblocks.delete(0, this.yblocks.length);
+      this.yRootOrder.delete(0, this.yRootOrder.length);
+
+      for (const key of Array.from(this.yBlocksMap.keys())) {
+        this.yBlocksMap.delete(key);
+      }
 
       for (const block of blocks) {
-        const yblock = this.serializer.outputDataToYBlock(block);
-        this.yblocks.push([yblock]);
+        if (typeof block.id !== 'string') {
+          continue;
+        }
+
+        this.yBlocksMap.set(block.id, this.serializer.outputDataToYBlock(block));
       }
+
+      const topLevelIds = blocks.flatMap((block) =>
+        block.parent === undefined && typeof block.id === 'string' ? [block.id] : []
+      );
+
+      this.yRootOrder.push(topLevelIds);
     }, 'load');
   }
 
   /**
-   * Serialize blocks to JSON format.
+   * Serialize blocks to JSON format, in derived flat document order.
    */
   public toJSON(): DocumentStoreBlockData[] {
-    return this.yblocks.toArray().map((yblock) => this.serializer.yBlockToOutputData(yblock));
+    return this.deriveOrderedIds()
+      .map((id) => this.yBlocksMap.get(id))
+      .filter((yblock): yblock is Y.Map<unknown> => yblock instanceof Y.Map)
+      .map((yblock) => this.serializer.yBlockToOutputData(yblock));
+  }
+
+  /**
+   * Flat document order: DFS from the root order, descending through each
+   * block's contentIds. Laws (cross-peer deterministic):
+   * - duplicate id across order arrays → FIRST occurrence wins;
+   * - id with no map entry → skipped;
+   * - map entries reachable from no order array → appended at the END,
+   *   sorted by id (Y.Map iteration order is not a cross-peer guarantee).
+   */
+  private deriveOrderedIds(): string[] {
+    const ordered = this.deriveReachableIds();
+    const seen = new Set(ordered);
+    const orphans = Array.from(this.yBlocksMap.keys())
+      .filter((id) => !seen.has(id))
+      .sort();
+
+    for (const id of orphans) {
+      this.visitBlock(id, seen, ordered);
+    }
+
+    return ordered;
+  }
+
+  /**
+   * Flat order of blocks reachable from the root order only (no orphan
+   * tail). Placement math uses this so an id mid-move never pollutes the
+   * positions it is measured against.
+   */
+  private deriveReachableIds(): string[] {
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+
+    for (const id of this.yRootOrder.toArray()) {
+      this.visitBlock(id, seen, ordered);
+    }
+
+    return ordered;
+  }
+
+  /**
+   * DFS step: emit the id (first occurrence only, and only when a map
+   * entry exists), then descend into its contentIds. The seen-set makes
+   * cycles terminate.
+   */
+  private visitBlock(id: unknown, seen: Set<string>, ordered: string[]): void {
+    if (typeof id !== 'string' || seen.has(id)) {
+      return;
+    }
+
+    const yblock = this.yBlocksMap.get(id);
+
+    if (!(yblock instanceof Y.Map)) {
+      return;
+    }
+
+    seen.add(id);
+    ordered.push(id);
+
+    const contentIds = yblock.get('contentIds');
+
+    if (!(contentIds instanceof Y.Array)) {
+      return;
+    }
+
+    for (const childId of contentIds.toArray()) {
+      this.visitBlock(childId, seen, ordered);
+    }
   }
 
   /**
    * Add a new block.
    * @param blockData - Block data to add
-   * @param index - Optional index to insert at (defaults to end)
+   * @param index - Optional flat index to insert at (defaults to end);
+   *   translated to a slot in the root order (no parent) or the parent's
+   *   contentIds, with the same clamping semantics as before
    * @returns The created Y.Map
    */
   public addBlock(blockData: DocumentStoreBlockData, index?: number): Y.Map<unknown> {
     const yblock = this.serializer.outputDataToYBlock(blockData);
+    const id = blockData.id;
+
+    if (typeof id !== 'string') {
+      return yblock;
+    }
 
     this.transact(() => {
-      const insertIndex = Math.max(0, Math.min(index ?? this.yblocks.length, this.yblocks.length));
-      this.yblocks.insert(insertIndex, [yblock]);
+      const flatIds = this.deriveReachableIds();
+      const desired = Math.max(0, Math.min(index ?? flatIds.length, flatIds.length));
+
+      this.yBlocksMap.set(id, yblock);
+
+      const target = this.resolveTargetOrder(blockData.parent);
+
+      if (target !== null) {
+        target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);
+      }
     }, 'local');
 
     return yblock;
   }
 
   /**
-   * Remove a block by id.
+   * Remove a block by id: delete its map entry and remove the id string
+   * from the root order and every contentIds array containing it.
    * @param id - Block id to remove
    */
   public removeBlock(id: string): void {
-    const index = this.findBlockIndex(id);
+    const isKnown = this.yBlocksMap.has(id) ||
+      this.orderArrays().some((order) => order.toArray().includes(id));
 
-    if (index === -1) {
+    if (!isKnown) {
       return;
     }
 
     this.transact(() => {
-      this.yblocks.delete(index, 1);
+      this.yBlocksMap.delete(id);
+      this.removeFromOrderArrays(id);
     }, 'local');
   }
 
@@ -138,9 +274,16 @@ export class DocumentStore {
   }
 
   /**
-   * Move a block to a new index.
+   * Move a block to a new flat index by editing order arrays ONLY — the
+   * block's Y.Map is never touched, so its identity (and any concurrent
+   * remote edit to it) survives the move.
+   *
+   * The flat toIndex is translated to a placement among the block's
+   * same-parent siblings: insert after the last sibling whose derived
+   * flat position is below the (clamped) target. For a flat root-level
+   * document this reproduces the old clamping semantics exactly.
    * @param id - Block id to move
-   * @param toIndex - Target index (the final position where the block should end up)
+   * @param toIndex - Target flat index (the final position in derived order)
    * @param origin - Transaction origin
    */
   public moveBlock(
@@ -148,7 +291,7 @@ export class DocumentStore {
     toIndex: number,
     origin: 'local' | 'move-undo' | 'move-redo'
   ): void {
-    const fromIndex = this.findBlockIndex(id);
+    const fromIndex = this.deriveOrderedIds().indexOf(id);
 
     if (fromIndex === -1) {
       return;
@@ -165,19 +308,61 @@ export class DocumentStore {
     const transactionOrigin: LocalOriginTag = origin === 'local' ? 'move' : origin;
 
     this.transact(() => {
-      const yblock = this.yblocks.get(fromIndex);
+      this.removeFromOrderArrays(id);
 
-      // Clone the block data before deletion since Y.Map can't be reinserted after deletion
-      const blockData = this.serializer.yBlockToOutputData(yblock);
+      const yblock = this.yBlocksMap.get(id);
+      const target = this.resolveTargetOrder(
+        yblock instanceof Y.Map ? yblock.get('parentId') : undefined
+      );
 
-      this.yblocks.delete(fromIndex, 1);
+      // Dangling parent: leave the block in no order array (orphan
+      // tolerance — it renders at the end until the parent arrives).
+      if (target === null) {
+        return;
+      }
 
-      // Clamp toIndex to valid range after deletion shortened the array.
-      // An out-of-bounds toIndex means the caller had stale state — clamp
-      // to array bounds rather than letting Yjs throw "Length exceeded!".
-      const clampedToIndex = Math.max(0, Math.min(toIndex, this.yblocks.length));
-      this.yblocks.insert(clampedToIndex, [this.serializer.outputDataToYBlock(blockData)]);
+      const flatIds = this.deriveReachableIds();
+      const desired = Math.max(0, Math.min(toIndex, flatIds.length));
+
+      target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);
     }, transactionOrigin);
+  }
+
+  /**
+   * Place a block: one transaction owning the parentId key AND order-array
+   * membership. Root placement DELETES the parentId key (root = absent
+   * key, never a null value). The id is removed from every order array
+   * first, then inserted after `afterId` in the target array (afterId null
+   * → first child; afterId not found → append; parent map entry missing →
+   * left in no array, orphan tolerance).
+   * @param id - Block id to place
+   * @param placement - Target parent (null = root) and preceding sibling (null = first)
+   * @param origin - Transaction origin
+   */
+  public applyPlacement(id: string, placement: BlockPlacement, origin: LocalOriginTag): void {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return;
+    }
+
+    this.transact(() => {
+      if (placement.parentId === null) {
+        yblock.delete('parentId');
+      } else {
+        yblock.set('parentId', placement.parentId);
+      }
+
+      this.removeFromOrderArrays(id);
+
+      const target = this.resolveTargetOrder(placement.parentId ?? undefined);
+
+      if (target === null) {
+        return;
+      }
+
+      target.insert(this.placementSlot(target, placement.afterId), [id]);
+    }, origin);
   }
 
   /**
@@ -186,13 +371,119 @@ export class DocumentStore {
    * @returns Y.Map or undefined if not found
    */
   public getBlockById(id: string): Y.Map<unknown> | undefined {
-    const index = this.findBlockIndex(id);
+    const yblock = this.yBlocksMap.get(id);
+
+    return yblock instanceof Y.Map ? yblock : undefined;
+  }
+
+  /**
+   * Every order array in the doc: the root order plus each block's
+   * contentIds Y.Array.
+   */
+  private orderArrays(): Y.Array<string>[] {
+    const arrays: Y.Array<string>[] = [this.yRootOrder];
+
+    this.yBlocksMap.forEach((yblock) => {
+      if (!(yblock instanceof Y.Map)) {
+        return;
+      }
+
+      const contentIds = yblock.get('contentIds');
+
+      if (contentIds instanceof Y.Array) {
+        arrays.push(contentIds as Y.Array<string>);
+      }
+    });
+
+    return arrays;
+  }
+
+  /**
+   * Remove EVERY occurrence of the id from every order array (duplicate
+   * ids can appear after concurrent moves merge — this is the write-side
+   * half of the read-side dedupe). Must run inside a transaction.
+   */
+  private removeFromOrderArrays(id: string): void {
+    for (const order of this.orderArrays()) {
+      this.removeAllOccurrences(order, id);
+    }
+  }
+
+  /**
+   * Delete occurrences back-to-front so earlier indices stay valid.
+   */
+  private removeAllOccurrences(order: Y.Array<string>, id: string): void {
+    const index = order.toArray().lastIndexOf(id);
 
     if (index === -1) {
-      return undefined;
+      return;
     }
 
-    return this.yblocks.get(index);
+    order.delete(index, 1);
+    this.removeAllOccurrences(order, id);
+  }
+
+  /**
+   * The order array a block belongs to per its parentId: the root order
+   * when there is no parentId, the parent's contentIds (created if
+   * missing) when the parent exists, and NONE when the parentId dangles.
+   */
+  private resolveTargetOrder(parentId: unknown): Y.Array<string> | null {
+    if (typeof parentId !== 'string') {
+      return this.yRootOrder;
+    }
+
+    const parent = this.yBlocksMap.get(parentId);
+
+    return parent instanceof Y.Map ? this.getOrCreateContentOrder(parent) : null;
+  }
+
+  /**
+   * Get a block's contentIds Y.Array, creating it when missing.
+   */
+  private getOrCreateContentOrder(parent: Y.Map<unknown>): Y.Array<string> {
+    const existing = parent.get('contentIds');
+
+    if (existing instanceof Y.Array) {
+      return existing as Y.Array<string>;
+    }
+
+    const created = new Y.Array<string>();
+
+    parent.set('contentIds', created);
+
+    return created;
+  }
+
+  /**
+   * Translate a desired flat position into a slot in `order`: after the
+   * LAST entry whose flat position (in `flatIds`, which must not contain
+   * the id being placed) is below `desiredFlatIndex`. Entries absent from
+   * `flatIds` (dangling ids) don't count.
+   */
+  private orderSlotForFlatIndex(
+    order: Y.Array<string>,
+    flatIds: string[],
+    desiredFlatIndex: number
+  ): number {
+    return order.toArray().reduce<number>((slot, entryId, position) => {
+      const flatIndex = flatIds.indexOf(entryId);
+
+      return flatIndex !== -1 && flatIndex < desiredFlatIndex ? position + 1 : slot;
+    }, 0);
+  }
+
+  /**
+   * Slot right after `afterId` (null → first slot; not found → append).
+   */
+  private placementSlot(order: Y.Array<string>, afterId: string | null): number {
+    if (afterId === null) {
+      return 0;
+    }
+
+    const anchor = order.toArray().indexOf(afterId);
+
+    return anchor === -1 ? order.length : anchor + 1;
   }
 
   /**
@@ -463,12 +754,12 @@ export class DocumentStore {
   }
 
   /**
-   * Find block index by id.
+   * Find a block's index in the derived flat document order.
    * @param id - Block id to find
    * @returns Index or -1 if not found
    */
   public findBlockIndex(id: string): number {
-    return this.yblocks.toArray().findIndex((yblock) => yblock.get('id') === id);
+    return this.deriveOrderedIds().indexOf(id);
   }
 
   /**

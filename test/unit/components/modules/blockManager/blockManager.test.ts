@@ -13,6 +13,8 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import { BlockChangedMutationType } from '../../../../../types/events/block/BlockChanged';
 import { BlockAddedMutationType } from '../../../../../types/events/block/BlockAdded';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
+import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import { ToolsCollection } from '../../../../../src/components/tools/collection';
 import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 
@@ -376,20 +378,26 @@ describe('BlockManager.moveCurrentBlockUp/Down (block selection)', () => {
 });
 
 /**
- * Fix 1 (Yjs contentIds companion write).
+ * setBlockParent → DocumentStore.applyPlacement delegation.
  *
- * BlockManager.setBlockParent() previously wrote yblock.set('parentId', …) on
- * the reparented child but left the old and new parents' Yjs `contentIds`
- * Y.Arrays completely untouched. That means any remote peer never learned
- * about the move, and undo snapshots silently lost the parent/child link.
+ * A reparent is ONE placement transaction owned by the document store:
+ * parentId set/delete + order-array membership (old parent's contentIds,
+ * new parent's contentIds, AND the root order). BlockManager never touches
+ * contentIds Y.Arrays directly — killing the old double-writer where both
+ * DocumentStore.addBlock and blockManager's helpers wrote parent order.
  */
-describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
+describe('BlockManager.setBlockParent applyPlacement delegation', () => {
   type Harness = {
     blockManager: BlockManager;
-    yBlocks: Map<string, Y.Map<unknown>>;
-    ydoc: Y.Doc;
+    store: DocumentStore;
+    undoManager: Y.UndoManager;
     repository: BlockRepository;
+    recordParentChange: ReturnType<typeof vi.fn>;
+    setMoveGroupActive: (active: boolean) => void;
+    transactionOrigins: unknown[];
     getContentIds: (id: string) => string[];
+    getRootOrder: () => string[];
+    getParentId: (id: string) => unknown;
   };
 
   const createChildBlockStub = (options: {
@@ -425,33 +433,49 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     }
     repository.initialize(blocksStore as unknown as BlocksStore);
 
-    const ydoc = new Y.Doc();
-    const yBlocksArray = ydoc.getArray<Y.Map<unknown>>('blocks');
-    const yBlocks = new Map<string, Y.Map<unknown>>();
+    // Seed the doc through the real write path (schema v2).
+    const store = new DocumentStore(new YBlockSerializer());
 
-    // Seed a real Y.Map for every block and integrate it into the shared
-    // Y.Array so nested Y.Arrays inside those maps are attached to the doc.
-    // Without integration, `.insert(...)` on a Y.Array child throws
-    // "Add Yjs type to a document before reading data".
-    ydoc.transact(() => {
-      for (const config of blockConfigs) {
-        const yblock = new Y.Map<unknown>();
+    store.fromJSON(blockConfigs.map((config) => ({
+      id: config.id,
+      type: 'paragraph',
+      data: {},
+      parent: config.parentId ?? undefined,
+      content: config.contentIds !== undefined && config.contentIds.length > 0
+        ? config.contentIds
+        : undefined,
+    })));
 
-        yBlocksArray.push([yblock]);
-        yblock.set('id', config.id);
-        if (config.parentId !== undefined && config.parentId !== null) {
-          yblock.set('parentId', config.parentId);
-        }
-        yblock.set('contentIds', Y.Array.from(config.contentIds ?? []));
-        yBlocks.set(config.id, yblock);
-      }
+    const undoManager = new Y.UndoManager(store.undoScope, {
+      captureTimeout: 500,
+      trackedOrigins: new Set(['local']),
     });
 
+    const transactionOrigins: unknown[] = [];
+
+    store.onUpdate((_update, origin) => {
+      transactionOrigins.push(origin);
+    });
+
+    const recordParentChange = vi.fn();
+    let moveGroupActive = false;
+
+    // Mirrors YjsManager's facade surface backed by a REAL DocumentStore,
+    // so assertions run against actual doc state and transaction counts.
     const yjsManager = {
-      getBlockById: (id: string): Y.Map<unknown> | undefined => yBlocks.get(id),
-      transact: (fn: () => void): void => {
-        ydoc.transact(fn, 'local');
+      getBlockById: (id: string): Y.Map<unknown> | undefined => store.getBlockById(id),
+      applyBlockPlacement: (
+        id: string,
+        placement: { parentId: string | null; afterId: string | null },
+        options?: { capture?: boolean }
+      ): void => {
+        store.applyPlacement(id, placement, options?.capture === false ? 'no-capture' : 'local');
       },
+      get isInMoveGroup(): boolean {
+        return moveGroupActive;
+      },
+      isDragMoveGroupActive: false,
+      recordParentChangeForPendingMove: recordParentChange,
       stopCapturing: vi.fn(),
     };
 
@@ -474,22 +498,36 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     priv._blocks = blocksStore;
     priv.operations = { suppressStopCapturing: false };
 
-    const getContentIds = (id: string): string[] => {
-      const yblock = yBlocks.get(id);
+    const readContentIds = (id: string): string[] => {
+      const contentIds = store.getBlockById(id)?.get('contentIds');
 
-      if (yblock === undefined) {
-        return [];
-      }
-      const arr = yblock.get('contentIds');
-
-      if (arr instanceof Y.Array) {
-        return arr.toArray() as string[];
-      }
-
-      return [];
+      return contentIds instanceof Y.Array ? (contentIds.toArray() as string[]) : [];
     };
 
-    return { blockManager, yBlocks, ydoc, repository, getContentIds };
+    return {
+      blockManager,
+      store,
+      undoManager,
+      repository,
+      recordParentChange,
+      setMoveGroupActive: (active: boolean): void => {
+        moveGroupActive = active;
+      },
+      transactionOrigins,
+      getContentIds: readContentIds,
+      getRootOrder: (): string[] => store.rootOrder.toArray(),
+      getParentId: (id: string): unknown => store.getBlockById(id)?.get('parentId'),
+    };
+  };
+
+  const getChild = (harness: Harness, id = 'child'): Block => {
+    const child = harness.repository.getBlockById(id);
+
+    if (child === undefined) {
+      throw new Error(`${id} block missing`);
+    }
+
+    return child;
   };
 
   beforeEach(() => {
@@ -500,21 +538,66 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     vi.restoreAllMocks();
   });
 
-  it('appends the child id to the new parent Yjs contentIds Y.Array', () => {
+  it('delegates the reparent to ONE transaction owning parentId + order membership', () => {
     const harness = createHarness([
       { id: 'parent-a', parentId: null, contentIds: [] },
       { id: 'parent-b', parentId: null, contentIds: [] },
       { id: 'child', parentId: null, contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
 
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
+    harness.transactionOrigins.length = 0;
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
 
-    harness.blockManager.setBlockParent(child, 'parent-b');
+    expect(harness.transactionOrigins).toEqual(['local']);
+    expect(harness.getParentId('child')).toBe('parent-b');
+    expect(harness.getContentIds('parent-b')).toEqual(['child']);
+    // The root array is maintained too: the nested id leaves it.
+    expect(harness.getRootOrder()).toEqual(['parent-a', 'parent-b']);
+  });
 
-    expect(harness.getContentIds('parent-b')).toContain('child');
+  it('places the child after its preceding in-memory sibling in the new parent', () => {
+    const harness = createHarness([
+      { id: 'parent-b', parentId: null, contentIds: ['existing'] },
+      { id: 'existing', parentId: 'parent-b', contentIds: [] },
+      { id: 'child', parentId: null, contentIds: [] },
+    ]);
+
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
+
+    expect(harness.getContentIds('parent-b')).toEqual(['existing', 'child']);
+  });
+
+  it('captured flavor lands the reparent on the undo stack', () => {
+    const harness = createHarness([
+      { id: 'parent-b', parentId: null, contentIds: [] },
+      { id: 'child', parentId: null, contentIds: [] },
+    ]);
+
+    expect(harness.undoManager.undoStack).toHaveLength(0);
+
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
+
+    expect(harness.undoManager.undoStack).toHaveLength(1);
+    expect(harness.recordParentChange).not.toHaveBeenCalled();
+  });
+
+  it('move-group flavor uses no-capture and attaches the change to the pending move entry', () => {
+    const harness = createHarness([
+      { id: 'parent-b', parentId: null, contentIds: [] },
+      { id: 'child', parentId: null, contentIds: [] },
+    ]);
+
+    harness.setMoveGroupActive(true);
+    harness.transactionOrigins.length = 0;
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
+
+    // The write still happened, as ONE no-capture transaction …
+    expect(harness.transactionOrigins).toEqual(['no-capture']);
+    expect(harness.getParentId('child')).toBe('parent-b');
+    expect(harness.getContentIds('parent-b')).toEqual(['child']);
+    // … but off the Y.UndoManager stack: the in-flight move entry owns it.
+    expect(harness.undoManager.undoStack).toHaveLength(0);
+    expect(harness.recordParentChange).toHaveBeenCalledWith('child', null, 'parent-b');
   });
 
   it('fires the block tool MOVED lifecycle hook on a real reparent (so tools re-render their nesting UI)', () => {
@@ -525,11 +608,7 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
       { id: 'parent-a', parentId: null, contentIds: [] },
       { id: 'child', parentId: null, contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
-
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
+    const child = getChild(harness);
 
     harness.blockManager.setBlockParent(child, 'parent-a');
 
@@ -547,14 +626,10 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     // never fired MOVED — so parentId was restored but the list tool's flat depth
     // carrier stayed stale and save() returned the wrong depth.
     const harness = createHarness([
-      { id: 'parent-a', parentId: null, contentIds: [] },
+      { id: 'parent-a', parentId: null, contentIds: ['child'] },
       { id: 'child', parentId: 'parent-a', contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
-
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
+    const child = getChild(harness);
 
     harness.blockManager.reparentFromHistoryReplay(child, null);
 
@@ -572,14 +647,10 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
     // the caret redo stack, so the reparent's move entry can never be redone.
     // Same window the block-removal replay already uses.
     const harness = createHarness([
-      { id: 'parent-a', parentId: null, contentIds: [] },
+      { id: 'parent-a', parentId: null, contentIds: ['child'] },
       { id: 'child', parentId: 'parent-a', contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
-
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
+    const child = getChild(harness);
 
     const priv = harness.blockManager as unknown as {
       yjsSync: { withAtomicOperation: (fn: () => void, options?: { extendThroughRAF?: boolean }) => void };
@@ -596,11 +667,7 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
       { id: 'parent-a', parentId: null, contentIds: ['child'] },
       { id: 'child', parentId: 'parent-a', contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
-
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
+    const child = getChild(harness);
 
     harness.blockManager.setBlockParent(child, 'parent-a');
 
@@ -613,32 +680,27 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
       { id: 'parent-b', parentId: null, contentIds: [] },
       { id: 'child', parentId: 'parent-a', contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
 
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
-
-    harness.blockManager.setBlockParent(child, 'parent-b');
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
 
     expect(harness.getContentIds('parent-a')).not.toContain('child');
     expect(harness.getContentIds('parent-b')).toContain('child');
   });
 
-  it('removes the child id from the old parent Yjs contentIds when detaching to root (newParentId null)', () => {
+  it('detaching to root removes the old contentIds entry AND inserts into the root order in flat position', () => {
     const harness = createHarness([
       { id: 'parent-a', parentId: null, contentIds: ['child'] },
       { id: 'child', parentId: 'parent-a', contentIds: [] },
+      { id: 'tail', parentId: null, contentIds: [] },
     ]);
-    const child = harness.repository.getBlockById('child');
 
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
-
-    harness.blockManager.setBlockParent(child, null);
+    harness.blockManager.setBlockParent(getChild(harness), null);
 
     expect(harness.getContentIds('parent-a')).not.toContain('child');
+    expect(harness.getParentId('child')).toBeUndefined();
+    // Root = absent parentId key + membership in the root order, right
+    // after its preceding root-level sibling in the flat block order.
+    expect(harness.getRootOrder()).toEqual(['parent-a', 'child', 'tail']);
   });
 
   it('converges two Yjs peers on reparent so the remote peer sees the move', () => {
@@ -648,45 +710,24 @@ describe('BlockManager.setBlockParent Yjs contentIds companion write', () => {
       { id: 'child', parentId: 'parent-a', contentIds: [] },
     ]);
 
-    // The harness already integrated every yblock into `harness.ydoc`'s
-    // shared `blocks` Y.Array — we just need a second doc to sync to.
-    const remote = new Y.Doc();
-    const remoteBlocks = remote.getArray<Y.Map<unknown>>('blocks');
+    const remote = new DocumentStore(new YBlockSerializer());
 
-    const applyUpdate = (origin: Y.Doc, target: Y.Doc): void => {
-      Y.applyUpdate(target, Y.encodeStateAsUpdate(origin));
+    remote.applyRemoteUpdate(harness.store.encodeStateAsUpdate());
+
+    harness.blockManager.setBlockParent(getChild(harness), 'parent-b');
+    remote.applyRemoteUpdate(harness.store.encodeStateAsUpdate(remote.getStateVector()));
+
+    const readRemoteContent = (id: string): string[] => {
+      const contentIds = remote.getBlockById(id)?.get('contentIds');
+
+      return contentIds instanceof Y.Array ? (contentIds.toArray() as string[]) : [];
     };
 
-    applyUpdate(harness.ydoc, remote);
+    expect(readRemoteContent('parent-a')).not.toContain('child');
+    expect(readRemoteContent('parent-b')).toContain('child');
+    expect(remote.getBlockById('child')?.get('parentId')).toBe('parent-b');
 
-    const child = harness.repository.getBlockById('child');
-
-    if (child === undefined) {
-      throw new Error('child block missing');
-    }
-
-    harness.blockManager.setBlockParent(child, 'parent-b');
-    applyUpdate(harness.ydoc, remote);
-
-    const remoteById = new Map<string, Y.Map<unknown>>();
-
-    remoteBlocks.forEach((yblock) => {
-      const id = yblock.get('id');
-
-      if (typeof id === 'string') {
-        remoteById.set(id, yblock);
-      }
-    });
-
-    const remoteParentAContent = remoteById.get('parent-a')?.get('contentIds');
-    const remoteParentBContent = remoteById.get('parent-b')?.get('contentIds');
-
-    if (!(remoteParentAContent instanceof Y.Array) || !(remoteParentBContent instanceof Y.Array)) {
-      throw new Error('Remote contentIds are not Y.Arrays');
-    }
-
-    expect(remoteParentAContent.toArray()).not.toContain('child');
-    expect(remoteParentBContent.toArray()).toContain('child');
+    remote.destroy();
   });
 });
 

@@ -339,7 +339,9 @@ describe('typing write coalescing', () => {
       const peer = new Y.Doc();
 
       Y.applyUpdate(peer, encoded);
-      const peerBlocks = peer.getArray('blocks').toJSON() as { data?: { text?: string } }[];
+      const peerBlocks = Object.values(
+        peer.getMap<{ data?: { text?: string } }>('blocks').toJSON()
+      );
 
       expect(peerBlocks.some((b) => b.data?.text === 'ab')).toBe(true);
     });

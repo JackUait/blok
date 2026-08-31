@@ -8,7 +8,7 @@ import { Module } from '../../__module';
 import { BlockObserver } from './block-observer';
 import { DocumentStore } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
-import type { BlockChangeCallback, CaretSnapshot } from './types';
+import type { BlockChangeCallback, BlockPlacement, CaretSnapshot, MoveReplayRequest } from './types';
 import { UndoHistory } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
@@ -97,49 +97,14 @@ export class YjsManager extends Module {
     this.documentStore = new DocumentStore(this.serializer);
     this.blockObserver = new BlockObserver();
     this.undoHistory = new UndoHistory(
-      this.documentStore.yblocks,
+      this.documentStore.undoScope,
       this.Blok
     );
 
-    // Set up move callback for undo history
-    this.undoHistory.setMoveCallback((blockId, toIndex, origin) => {
-      this.documentStore.moveBlock(blockId, toIndex, origin);
-    });
-
-    // Set up parent-restore callback — invoked by UndoHistory during
-    // move-undo/move-redo on drag-reparent entries.
-    //
-    // Writes parentId (and the two parents' contentIds) to Yjs under
-    // `transactWithoutCapture` so Y.UndoManager does not record the replay
-    // as a new stack item, then drives the in-memory BlockManager reparent
-    // directly via `reparentFromHistoryReplay`. Going direct avoids the
-    // `handleYjsUpdate` path's parentId-delete blind spot (that handler
-    // gates reconciliation on `yblock.has('parentId')` which is false after
-    // a delete, so a non-root → root undo would otherwise silently skip).
-    this.undoHistory.setParentRestoreCallback((blockId, parentId) => {
-      const yblock = this.documentStore.getBlockById(blockId);
-
-      if (yblock === undefined) {
-        return;
-      }
-
-      this.documentStore.transactWithoutCapture(() => {
-        if (parentId !== null) {
-          yblock.set('parentId', parentId);
-        } else {
-          yblock.delete('parentId');
-        }
-      });
-
-      const blockManager = this.Blok?.BlockManager;
-
-      if (blockManager !== undefined) {
-        const block = blockManager.getBlockById(blockId);
-
-        if (block !== undefined) {
-          blockManager.reparentFromHistoryReplay(block, parentId);
-        }
-      }
+    // ONE placement callback replays recorded moves during move-undo /
+    // move-redo (parent restore + position, see replayMovePlacement).
+    this.undoHistory.setPlacementCallback((request) => {
+      this.replayMovePlacement(request);
     });
 
     // Barrier inside UndoHistory so the internal 100ms word-boundary timer's
@@ -147,7 +112,57 @@ export class YjsManager extends Module {
     this.undoHistory.setFlushPendingWritesHook(() => this.flushPendingBlockWrites());
 
     // Set up observation
-    this.blockObserver.observe(this.documentStore.yblocks, this.undoHistory.undoManager);
+    this.blockObserver.observe(
+      {
+        blocksMap: this.documentStore.blocksMap,
+        rootOrder: this.documentStore.rootOrder,
+      },
+      this.undoHistory.undoManager
+    );
+  }
+
+  /**
+   * Replay one recorded move step during move-undo/move-redo.
+   *
+   * The parent restore runs FIRST in BOTH directions: `moveBlock` resolves
+   * its target order array from the block's CURRENT parentId, so restoring
+   * the parent after the move would splice the id into the OLD parent's
+   * order array (the redo direction of the previous two-callback design
+   * did exactly that).
+   *
+   * The restore goes through `applyPlacement` — one transaction owning the
+   * parentId set/DELETE and order-array membership (root array included) —
+   * under 'no-capture' so Y.UndoManager does not record the replay as a
+   * new stack item. The move stacks still speak flat indices (interim
+   * until placement-based stacks land), so `afterId` is unknown here: the
+   * flat-index `moveBlock` right after settles the exact slot. Parent-only
+   * entries (index -1) land at the first slot of the restored parent.
+   *
+   * The in-memory reparent goes DIRECT via `reparentFromHistoryReplay`:
+   * 'no-capture' maps to a 'local' event origin, which `BlockYjsSync`
+   * deliberately ignores, so the observer cannot drive the DOM restore.
+   */
+  private replayMovePlacement({ blockId, parentId, index, origin }: MoveReplayRequest): void {
+    if (parentId !== undefined && this.documentStore.getBlockById(blockId) !== undefined) {
+      this.documentStore.applyPlacement(blockId, { parentId, afterId: null }, 'no-capture');
+      this.reparentInMemoryFromReplay(blockId, parentId);
+    }
+
+    if (index !== -1) {
+      this.documentStore.moveBlock(blockId, index, origin);
+    }
+  }
+
+  /**
+   * In-memory half of the replay parent restore (see replayMovePlacement).
+   */
+  private reparentInMemoryFromReplay(blockId: string, parentId: string | null): void {
+    const blockManager = this.Blok?.BlockManager;
+    const block = blockManager?.getBlockById(blockId);
+
+    if (blockManager !== undefined && block !== undefined) {
+      blockManager.reparentFromHistoryReplay(block, parentId);
+    }
   }
 
   /**
@@ -244,6 +259,32 @@ export class YjsManager extends Module {
 
     // Perform the move
     this.documentStore.moveBlock(id, toIndex, 'local');
+  }
+
+  /**
+   * Place a block in the doc: ONE transaction owning the parentId
+   * set/delete AND order-array membership (root array included). This is
+   * the single write path for reparents — BlockManager delegates here and
+   * never touches contentIds Y.Arrays directly.
+   * @param id - Block id to place
+   * @param placement - Target parent (null = root) and preceding sibling (null = first)
+   * @param options.capture - true (default): a tracked 'local' transaction
+   *   that lands on the undo stack. false: 'no-capture', for drag move
+   *   groups whose parent change attaches to the in-flight move entry via
+   *   `recordParentChangeForPendingMove` instead.
+   */
+  public applyBlockPlacement(
+    id: string,
+    placement: BlockPlacement,
+    options?: { capture?: boolean }
+  ): void {
+    const capture = options?.capture ?? true;
+
+    if (capture) {
+      this.flushPendingBlockWrites();
+    }
+
+    this.documentStore.applyPlacement(id, placement, capture ? 'local' : 'no-capture');
   }
 
   /**

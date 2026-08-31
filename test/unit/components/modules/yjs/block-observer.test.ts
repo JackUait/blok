@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { BlockObserver } from '../../../../../src/components/modules/yjs/block-observer';
+import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import {
   LOCAL_ORIGIN_TAGS,
   type BlockChangeEvent,
@@ -16,20 +18,55 @@ const createBlockObserver = (): BlockObserver => {
 
 describe('BlockObserver', () => {
   let observer: BlockObserver;
-  let ydoc: Y.Doc;
-  let yblocks: Y.Array<Y.Map<unknown>>;
+  let store: DocumentStore;
+  let blocksMap: Y.Map<Y.Map<unknown>>;
+  let rootOrder: Y.Array<string>;
   let undoManager: Y.UndoManager;
+
+  /**
+   * Add root-level paragraph blocks through the real write path
+   * (DocumentStore.addBlock), all in one transaction.
+   */
+  const addBlocks = (ids: string[]): void => {
+    store.transact(() => {
+      for (const id of ids) {
+        store.addBlock({ id, type: 'paragraph', data: {} });
+      }
+    }, 'local');
+  };
+
+  /**
+   * Add one block under a parent through the real write path.
+   */
+  const addChild = (id: string, parent: string): void => {
+    store.addBlock({ id, type: 'paragraph', data: {}, parent });
+  };
+
+  const moveBlock = (id: string, toIndex: number): void => {
+    store.moveBlock(id, toIndex, 'local');
+  };
+
+  const removeBlock = (id: string): void => {
+    store.removeBlock(id);
+  };
 
   beforeEach(() => {
     observer = createBlockObserver();
-    ydoc = new Y.Doc();
-    yblocks = ydoc.getArray('blocks');
-    undoManager = new Y.UndoManager(yblocks, {
+    store = new DocumentStore(new YBlockSerializer());
+    blocksMap = store.blocksMap;
+    rootOrder = store.rootOrder;
+    undoManager = new Y.UndoManager(store.undoScope, {
       captureTimeout: 500,
       trackedOrigins: new Set(['local']),
     });
 
-    observer.observe(yblocks, undoManager);
+    observer.observe({ blocksMap, rootOrder }, undoManager);
+  });
+
+  afterEach(() => {
+    observer.destroy();
+    undoManager.destroy();
+    store.destroy();
   });
 
   describe('initialization', () => {
@@ -46,13 +83,7 @@ describe('BlockObserver', () => {
       expect(typeof unsubscribe).toBe('function');
 
       // Trigger an event
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       expect(callback).toHaveBeenCalled();
 
@@ -61,13 +92,7 @@ describe('BlockObserver', () => {
 
       // Reset and trigger again
       callback.mockClear();
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b2');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b2']);
 
       // Should not be called after unsubscribe
       expect(callback).not.toHaveBeenCalled();
@@ -77,13 +102,7 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
@@ -93,22 +112,12 @@ describe('BlockObserver', () => {
     });
 
     it('emits remove event when block is removed', () => {
-      // Add a block first
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Remove the block
-      ydoc.transact(() => {
-        yblocks.delete(0);
-      }, 'local');
+      removeBlock('b1');
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
@@ -118,37 +127,13 @@ describe('BlockObserver', () => {
     });
 
     it('emits move event when block is moved', () => {
-      // Add blocks
-      ydoc.transact(() => {
-        const yblock1 = new Y.Map<unknown>();
-        yblock1.set('id', 'b1');
-        yblock1.set('type', 'paragraph');
-        yblock1.set('data', new Y.Map<unknown>());
-
-        const yblock2 = new Y.Map<unknown>();
-        yblock2.set('id', 'b2');
-        yblock2.set('type', 'paragraph');
-        yblock2.set('data', new Y.Map<unknown>());
-
-        yblocks.push([yblock1, yblock2]);
-      }, 'local');
+      addBlocks(['b1', 'b2']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Move block: remove and insert same id
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        const blockData = yblock.toJSON();
-        yblocks.delete(0);
-
-        const newYblock = new Y.Map<unknown>();
-        (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
-          newYblock.set(key as string, blockData[key]);
-        });
-
-        yblocks.insert(1, [newYblock]);
-      }, 'local');
+      // Move block: root-order edit only, the Y.Map stays put
+      moveBlock('b1', 1);
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
@@ -157,26 +142,12 @@ describe('BlockObserver', () => {
     });
 
     it('emits update event when block data changes', () => {
-      // Add a block first
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        const ydata = new Y.Map<unknown>();
-        ydata.set('text', 'Hello');
-        yblock.set('data', ydata);
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Update the block data
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        const ydata = yblock.get('data') as Y.Map<unknown>;
-        ydata.set('text', 'Updated');
-      }, 'local');
+      store.updateBlockData('b1', 'text', 'Updated');
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
 
@@ -253,13 +224,7 @@ describe('BlockObserver', () => {
       observer.destroy();
 
       // Trigger an event after destroy
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       // Callback should not be called after destroy
       expect(callback).not.toHaveBeenCalled();
@@ -274,21 +239,16 @@ describe('BlockObserver', () => {
       observer.onBlocksChanged(callback1);
       observer.onBlocksChanged(callback2);
 
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       // Both callbacks should be called with the same event
       expect(callback1).toHaveBeenCalled();
       expect(callback2).toHaveBeenCalled();
 
       // Verify the observable behavior: the document state
-      expect(yblocks.length).toBe(1);
-      expect(yblocks.get(0)?.get('id')).toBe('b1');
+      expect(blocksMap.size).toBe(1);
+      expect(blocksMap.get('b1')?.get('id')).toBe('b1');
+      expect(rootOrder.toArray()).toEqual(['b1']);
 
       // Verify both callbacks received the same event data
       const event1 = callback1.mock.calls[0]?.[0] as SingleBlockEvent;
@@ -311,17 +271,11 @@ describe('BlockObserver', () => {
       // Unsubscribe callback1
       unsubscribe1();
 
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
 
       // Verify the observable behavior: the document state
-      expect(yblocks.length).toBe(1);
-      expect(yblocks.get(0)?.get('id')).toBe('b1');
+      expect(blocksMap.size).toBe(1);
+      expect(blocksMap.get('b1')?.get('id')).toBe('b1');
 
       // Verify callback registration/unregistration behavior
       expect(callback1).not.toHaveBeenCalled();
@@ -339,33 +293,13 @@ describe('BlockObserver', () => {
   });
 
   describe('move detection edge cases', () => {
-    it('emits move event when same block ID appears in both adds and removes', () => {
-      // Add initial blocks
-      ydoc.transact(() => {
-        for (let i = 1; i <= 3; i++) {
-          const yblock = new Y.Map<unknown>();
-          yblock.set('id', `b${i}`);
-          yblock.set('type', 'paragraph');
-          yblock.set('data', new Y.Map<unknown>());
-          yblocks.push([yblock]);
-        }
-      }, 'local');
+    it('emits move event for an order-array edit whose id was not added or removed', () => {
+      addBlocks(['b1', 'b2', 'b3']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Simulate a move operation: delete and insert same block
-      ydoc.transact(() => {
-        const yblock = yblocks.get(2);
-        const blockData = yblock.toJSON();
-        yblocks.delete(2);
-
-        const newYblock = new Y.Map<unknown>();
-        (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
-          newYblock.set(key as string, blockData[key]);
-        });
-        yblocks.insert(0, [newYblock]);
-      }, 'local');
+      moveBlock('b3', 0);
 
       const moveEvent = callback.mock.calls.find(
         (call) => (call[0] as BlockChangeEvent)?.type === 'move'
@@ -377,41 +311,15 @@ describe('BlockObserver', () => {
     });
 
     it('correctly handles multiple moves in a single transaction', () => {
-      // Add initial blocks
-      ydoc.transact(() => {
-        for (let i = 1; i <= 5; i++) {
-          const yblock = new Y.Map<unknown>();
-          yblock.set('id', `b${i}`);
-          yblock.set('type', 'paragraph');
-          yblock.set('data', new Y.Map<unknown>());
-          yblocks.push([yblock]);
-        }
-      }, 'local');
+      addBlocks(['b1', 'b2', 'b3', 'b4', 'b5']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Move multiple blocks
-      ydoc.transact(() => {
-        // Move b5 to position 0
-        const yblock5 = yblocks.get(4);
-        const data5 = yblock5.toJSON();
-        yblocks.delete(4);
-        const newYblock5 = new Y.Map<unknown>();
-        (Object.keys(data5) as Array<keyof typeof data5>).forEach((key) => {
-          newYblock5.set(key as string, data5[key]);
-        });
-        yblocks.insert(0, [newYblock5]);
-
-        // Move b4 to position 1
-        const yblock4 = yblocks.get(4);
-        const data4 = yblock4.toJSON();
-        yblocks.delete(4);
-        const newYblock4 = new Y.Map<unknown>();
-        (Object.keys(data4) as Array<keyof typeof data4>).forEach((key) => {
-          newYblock4.set(key as string, data4[key]);
-        });
-        yblocks.insert(1, [newYblock4]);
+      // Move multiple blocks in one transaction
+      store.transact(() => {
+        store.moveBlock('b5', 0, 'local');
+        store.moveBlock('b4', 1, 'local');
       }, 'local');
 
       const moveEvents = callback.mock.calls.filter(
@@ -423,41 +331,16 @@ describe('BlockObserver', () => {
     });
 
     it('emits both move and pure add/remove in same transaction', () => {
-      // Add initial blocks
-      ydoc.transact(() => {
-        for (let i = 1; i <= 3; i++) {
-          const yblock = new Y.Map<unknown>();
-          yblock.set('id', `b${i}`);
-          yblock.set('type', 'paragraph');
-          yblock.set('data', new Y.Map<unknown>());
-          yblocks.push([yblock]);
-        }
-      }, 'local');
+      addBlocks(['b1', 'b2', 'b3']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Move b3, add b4, remove b2
-      ydoc.transact(() => {
-        // Move b3 to position 0
-        const yblock3 = yblocks.get(2);
-        const data3 = yblock3.toJSON();
-        yblocks.delete(2);
-        const newYblock3 = new Y.Map<unknown>();
-        (Object.keys(data3) as Array<keyof typeof data3>).forEach((key) => {
-          newYblock3.set(key as string, data3[key]);
-        });
-        yblocks.insert(0, [newYblock3]);
-
-        // Add new block b4
-        const yblock4 = new Y.Map<unknown>();
-        yblock4.set('id', 'b4');
-        yblock4.set('type', 'paragraph');
-        yblock4.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock4]);
-
-        // Remove b2 (now at index 2 after the move)
-        yblocks.delete(2);
+      // Move b3, add b4, remove b2 — one transaction
+      store.transact(() => {
+        store.moveBlock('b3', 0, 'local');
+        store.addBlock({ id: 'b4', type: 'paragraph', data: {} });
+        store.removeBlock('b2');
       }, 'local');
 
       const events = callback.mock.calls.map((call) => call[0] as BlockChangeEvent);
@@ -467,56 +350,72 @@ describe('BlockObserver', () => {
       expect(types).toContain('move');
       expect(types).toContain('add');
       expect(types).toContain('remove');
+
+      // The moved id must not surface as an add or a remove
+      const moveIds = events
+        .filter((e): e is SingleBlockEvent => e.type === 'move')
+        .map((e) => e.blockId);
+
+      expect(moveIds).toEqual(['b3']);
+    });
+
+    it('emits move for an in-place contentIds reorder', () => {
+      addBlocks(['parent-1']);
+      addChild('child-a', 'parent-1');
+      addChild('child-b', 'parent-1');
+
+      const callback = vi.fn();
+      observer.onBlocksChanged(callback);
+
+      // Reorder within the parent: child-b takes child-a's flat slot.
+      moveBlock('child-b', store.findBlockIndex('child-a'));
+
+      const moveEvents = callback.mock.calls
+        .map((call) => call[0] as BlockChangeEvent)
+        .filter((event): event is SingleBlockEvent => event.type === 'move');
+
+      expect(moveEvents.map((event) => event.blockId)).toEqual(['child-b']);
     });
   });
 
   describe('top-level yblock key updates', () => {
-    it('emits update event when parentId is set on the yblock', () => {
-      // Add block with no parent
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'child-1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+    it('emits a remote update when a peer reparents the block (parentId key write)', () => {
+      addBlocks(['callout-1', 'child-1']);
+
+      // Second peer receives the doc through the binary seam, reparents
+      // child-1, and its diff comes back as ONE remote transaction.
+      const mirror = new DocumentStore(new YBlockSerializer());
+
+      mirror.applyRemoteUpdate(store.encodeStateAsUpdate());
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Simulate a remote client reparenting this block by writing
-      // parentId directly on the yblock (not on a nested data/tunes map).
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        yblock.set('parentId', 'callout-1');
-      }, 'remote-peer');
+      mirror.applyPlacement('child-1', { parentId: 'callout-1', afterId: null }, 'local');
+      store.applyRemoteUpdate(mirror.encodeStateAsUpdate(store.getStateVector()));
+      mirror.destroy();
 
       const updateEvents = callback.mock.calls
         .map((call) => call[0] as BlockChangeEvent)
-        .filter((event) => event.type === 'update');
+        .filter((event): event is SingleBlockEvent => event.type === 'update');
 
-      expect(updateEvents.length).toBeGreaterThanOrEqual(1);
-      const event = updateEvents[0] as SingleBlockEvent;
+      const childUpdate = updateEvents.find((event) => event.blockId === 'child-1');
 
-      expect(event.blockId).toBe('child-1');
-      expect(event.origin).toBe('remote');
+      expect(childUpdate).toBeDefined();
+      expect(childUpdate?.origin).toBe('remote');
     });
 
-    it('emits update event when contentIds is set on the yblock', () => {
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'toggle-1');
-        yblock.set('type', 'toggle');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+    it('emits update event when the contentIds KEY is overwritten on the yblock', () => {
+      addBlocks(['toggle-1']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        yblock.set('contentIds', ['child-a', 'child-b']);
+      // A raw key overwrite (plain-array contentIds) cannot be produced by
+      // the store API — this pins the classification of hostile/legacy
+      // shapes: a key change on the block map is an update for that block.
+      store.transact(() => {
+        blocksMap.get('toggle-1')?.set('contentIds', ['child-a', 'child-b']);
       }, 'local');
 
       const updateEvents = callback.mock.calls
@@ -532,27 +431,14 @@ describe('BlockObserver', () => {
 
   describe('nested map updates', () => {
     it('emits update event when tunes change', () => {
-      // Add block with tunes
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        const ytunes = new Y.Map<unknown>();
-        ytunes.set('alignment', 'left');
-        yblock.set('tunes', ytunes);
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['b1']);
+
+      store.updateBlockTune('b1', 'alignment', 'left');
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Update tune
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        const ytunes = yblock.get('tunes') as Y.Map<unknown>;
-        ytunes.set('alignment', 'center');
-      }, 'local');
+      store.updateBlockTune('b1', 'alignment', 'center');
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event.type).toBe('update');
@@ -560,28 +446,14 @@ describe('BlockObserver', () => {
     });
   });
 
-  describe('findParentBlock', () => {
-    it('finds parent block for nested data map', () => {
-      // Add block with data
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        const ydata = new Y.Map<unknown>();
-        ydata.set('text', 'Hello');
-        yblock.set('data', ydata);
-        yblocks.push([yblock]);
-      }, 'local');
+  describe('owning-block resolution', () => {
+    it('finds the owning block for a nested data map', () => {
+      addBlocks(['b1']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      // Update data - should emit update with correct blockId
-      ydoc.transact(() => {
-        const yblock = yblocks.get(0);
-        const ydata = yblock.get('data') as Y.Map<unknown>;
-        ydata.set('text', 'Updated');
-      }, 'local');
+      store.updateBlockData('b1', 'text', 'Updated');
 
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
       expect(event.blockId).toBe('b1');
@@ -593,25 +465,10 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      ydoc.transact(() => {
-        const table = new Y.Map<unknown>();
-        table.set('id', 'table-1');
-        table.set('type', 'table');
-        table.set('data', new Y.Map<unknown>());
-
-        const child1 = new Y.Map<unknown>();
-        child1.set('id', 'child-1');
-        child1.set('type', 'paragraph');
-        child1.set('data', new Y.Map<unknown>());
-        child1.set('parentId', 'table-1');
-
-        const child2 = new Y.Map<unknown>();
-        child2.set('id', 'child-2');
-        child2.set('type', 'paragraph');
-        child2.set('data', new Y.Map<unknown>());
-        child2.set('parentId', 'table-1');
-
-        yblocks.push([table, child1, child2]);
+      store.transact(() => {
+        store.addBlock({ id: 'table-1', type: 'paragraph', data: {} });
+        store.addBlock({ id: 'child-1', type: 'paragraph', data: {}, parent: 'table-1' });
+        store.addBlock({ id: 'child-2', type: 'paragraph', data: {}, parent: 'table-1' });
       }, 'local');
 
       // Should emit a single batch-add event instead of individual add events
@@ -625,13 +482,7 @@ describe('BlockObserver', () => {
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'single-1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+      addBlocks(['single-1']);
 
       expect(callback).toHaveBeenCalledTimes(1);
       const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
@@ -641,14 +492,16 @@ describe('BlockObserver', () => {
   });
 
   describe('edge cases', () => {
-    it('handles block without id gracefully during remove', () => {
-      // Add block without id
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        // No id set
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
+    it('handles a block value without an id field during remove (the key IS the id)', () => {
+      // Store a block whose VALUE carries no 'id' key — a shape the store
+      // API cannot produce (hostile/legacy payload); the map key names it.
+      store.transact(() => {
+        const bare = new Y.Map<unknown>();
+
+        bare.set('type', 'paragraph');
+        bare.set('data', new Y.Map<unknown>());
+        blocksMap.set('keyed-block', bare);
+        rootOrder.push(['keyed-block']);
       }, 'local');
 
       const callback = vi.fn();
@@ -656,44 +509,31 @@ describe('BlockObserver', () => {
 
       // Remove the block - should not throw
       expect(() => {
-        ydoc.transact(() => {
-          yblocks.delete(0);
-        }, 'local');
+        removeBlock('keyed-block');
       }).not.toThrow();
 
-      // When a block has no id, extractBlockIdFromDeletedItem returns undefined
-      // This results in no event being emitted for that block
-      // The test verifies that this scenario is handled gracefully (no crash)
-      if (callback.mock.calls.length > 0) {
-        const event = callback.mock.calls[0]?.[0] as BlockChangeEvent;
-        expect(event.type).toBe('remove');
-      }
+      const event = callback.mock.calls[0]?.[0] as SingleBlockEvent;
+
+      expect(event.type).toBe('remove');
+      expect(event.blockId).toBe('keyed-block');
     });
 
-    it('handles empty content array in deleted item', () => {
-      // This tests the edge case where deleted item has empty content
-      ydoc.transact(() => {
-        const yblock = new Y.Map<unknown>();
-        yblock.set('id', 'b1');
-        yblock.set('type', 'paragraph');
-        yblock.set('data', new Y.Map<unknown>());
-        yblocks.push([yblock]);
-      }, 'local');
+    it('emits remove with correct data after deletion', () => {
+      addBlocks(['b1']);
 
       const callback = vi.fn();
       observer.onBlocksChanged(callback);
 
       // Verify initial state - block exists
-      expect(yblocks.length).toBe(1);
-      expect(yblocks.get(0)?.get('id')).toBe('b1');
+      expect(blocksMap.size).toBe(1);
+      expect(blocksMap.get('b1')?.get('id')).toBe('b1');
 
       // Delete should work without errors
-      ydoc.transact(() => {
-        yblocks.delete(0);
-      }, 'local');
+      removeBlock('b1');
 
       // Verify observable behavior: the document state after deletion
-      expect(yblocks.length).toBe(0);
+      expect(blocksMap.size).toBe(0);
+      expect(rootOrder.length).toBe(0);
 
       // Verify the event was emitted with correct data
       expect(callback).toHaveBeenCalled();
@@ -703,7 +543,7 @@ describe('BlockObserver', () => {
     });
 
     it('does not emit update for changes to unrelated maps', () => {
-      // Create a separate unrelated Y.Map
+      // Create a separate unrelated Y.Map (never integrated into the doc)
       const unrelatedMap = new Y.Map<unknown>();
       unrelatedMap.set('key', 'value');
 
@@ -711,7 +551,7 @@ describe('BlockObserver', () => {
       observer.onBlocksChanged(callback);
 
       // Modify unrelated map - should not trigger callback
-      ydoc.transact(() => {
+      store.transact(() => {
         unrelatedMap.set('key', 'updated');
       }, 'local');
 
@@ -724,20 +564,17 @@ describe('BlockObserver', () => {
 
       // Rapid changes
       for (let i = 0; i < 10; i++) {
-        ydoc.transact(() => {
-          const yblock = new Y.Map<unknown>();
-          yblock.set('id', `b${i}`);
-          yblock.set('type', 'paragraph');
-          yblock.set('data', new Y.Map<unknown>());
-          yblocks.push([yblock]);
-        }, 'local');
+        addBlocks([`b${i}`]);
       }
 
       // Verify observable behavior: the document state after all changes
-      expect(yblocks.length).toBe(10);
+      expect(blocksMap.size).toBe(10);
       for (let i = 0; i < 10; i++) {
-        expect(yblocks.get(i)?.get('id')).toBe(`b${i}`);
+        expect(blocksMap.get(`b${i}`)?.get('id')).toBe(`b${i}`);
       }
+      expect(rootOrder.toArray()).toEqual(
+        Array.from({ length: 10 }, (_, i) => `b${i}`)
+      );
 
       // Verify all events were emitted with correct data
       expect(callback).toHaveBeenCalledTimes(10);
@@ -755,5 +592,135 @@ describe('BlockObserver', () => {
         expect(blockIds).toContain(`b${i}`);
       }
     });
+  });
+});
+
+/**
+ * Emission-order CONTRACT (Task 3a pin): within ONE transaction the observer
+ * emits moves → add/batch-add → removes → updates, regardless of which root
+ * (blocks map or root order) each change came through. The reconciler relies
+ * on this so the DOM can reposition before other changes land.
+ *
+ * Fixtures are built through DocumentStore APIs so the writes are the real
+ * write shapes, not hand-rolled pushes.
+ */
+describe('BlockObserver — emission order contract', () => {
+  let observer: BlockObserver;
+  let store: DocumentStore;
+  let undoManager: Y.UndoManager;
+  let events: BlockChangeEvent[];
+
+  const eventTypes = (): string[] => events.map((event) => event.type);
+
+  const singleIds = (type: 'add' | 'remove' | 'update' | 'move'): string[] =>
+    events
+      .filter((event): event is Extract<BlockChangeEvent, { blockId: string }> => event.type === type)
+      .map((event) => event.blockId);
+
+  beforeEach(() => {
+    observer = new BlockObserver();
+    store = new DocumentStore(new YBlockSerializer());
+    undoManager = new Y.UndoManager(store.undoScope, {
+      captureTimeout: 500,
+      trackedOrigins: new Set(['local']),
+    });
+
+    observer.observe(
+      { blocksMap: store.blocksMap, rootOrder: store.rootOrder },
+      undoManager
+    );
+
+    events = [];
+  });
+
+  afterEach(() => {
+    observer.destroy();
+    undoManager.destroy();
+    store.destroy();
+  });
+
+  const collectEvents = (): void => {
+    observer.onBlocksChanged((event) => events.push(event));
+  };
+
+  it('emits moves → add → removes → updates for one transaction touching all four', () => {
+    store.fromJSON([
+      { id: 'b1', type: 'paragraph', data: { text: '1' } },
+      { id: 'b2', type: 'paragraph', data: { text: '2' } },
+      { id: 'b3', type: 'paragraph', data: { text: '3' } },
+      { id: 'b4', type: 'paragraph', data: { text: '4' } },
+    ]);
+    collectEvents();
+
+    store.transact(() => {
+      store.moveBlock('b4', 0, 'local');
+      store.addBlock({ id: 'b5', type: 'paragraph', data: { text: '5' } });
+      store.removeBlock('b2');
+      store.updateBlockData('b3', 'text', 'changed');
+    }, 'local');
+
+    expect(eventTypes()).toEqual(['move', 'add', 'remove', 'update']);
+    expect(singleIds('move')).toEqual(['b4']);
+    expect(singleIds('add')).toEqual(['b5']);
+    expect(singleIds('remove')).toEqual(['b2']);
+    expect(singleIds('update')).toEqual(['b3']);
+  });
+
+  it('emits the root-order move BEFORE the blocks-map add when both land in the SAME transaction', () => {
+    store.fromJSON([
+      { id: 'parent-1', type: 'paragraph', data: { text: 'p' } },
+      { id: 'b1', type: 'paragraph', data: { text: '1' } },
+      { id: 'b2', type: 'paragraph', data: { text: '2' } },
+    ]);
+    collectEvents();
+
+    store.transact(() => {
+      // Move comes from the ROOT ORDER array …
+      store.moveBlock('b2', 0, 'local');
+      // … while the add's membership goes into a parent's contentIds, so the
+      // add is visible only through the blocks map.
+      store.addBlock({ id: 'child-1', type: 'paragraph', data: { text: 'c' }, parent: 'parent-1' });
+    }, 'local');
+
+    expect(singleIds('move')).toEqual(['b2']);
+    expect(singleIds('add')).toEqual(['child-1']);
+    // Creating the parent's contentIds key is an update to the parent —
+    // and it must still come AFTER the cross-dispatch move and add.
+    expect(singleIds('update')).toEqual(['parent-1']);
+    expect(eventTypes()).toEqual(['move', 'add', 'update']);
+  });
+
+  it('holds for root + contentIds moves, batch adds, removes, and updates combined', () => {
+    store.fromJSON([
+      { id: 'p1', type: 'paragraph', data: { text: 'p1' } },
+      { id: 'p2', type: 'paragraph', data: { text: 'p2' } },
+      { id: 'parent-1', type: 'paragraph', data: { text: 'p' }, content: ['c1', 'c2'] },
+      { id: 'c1', type: 'paragraph', data: { text: 'c1' }, parent: 'parent-1' },
+      { id: 'c2', type: 'paragraph', data: { text: 'c2' }, parent: 'parent-1' },
+    ]);
+    collectEvents();
+
+    store.transact(() => {
+      // contentIds-array move: swap c1 after c2 (flat target = c2's slot).
+      store.moveBlock('c1', store.findBlockIndex('c2'), 'local');
+      // Root-order move.
+      store.moveBlock('p2', 0, 'local');
+      // Two adds in one transaction → batch-add.
+      store.addBlock({ id: 'n1', type: 'paragraph', data: { text: 'n1' } });
+      store.addBlock({ id: 'n2', type: 'paragraph', data: { text: 'n2' } });
+      store.removeBlock('p1');
+      store.updateBlockData('c2', 'text', 'edited');
+    }, 'local');
+
+    expect(eventTypes()).toEqual(['move', 'move', 'batch-add', 'remove', 'update']);
+    expect(new Set(singleIds('move'))).toEqual(new Set(['c1', 'p2']));
+    expect(singleIds('remove')).toEqual(['p1']);
+    expect(singleIds('update')).toEqual(['c2']);
+
+    const batch = events.find(
+      (event): event is Extract<BlockChangeEvent, { blockIds: string[] }> => event.type === 'batch-add'
+    );
+
+    expect(batch?.blockIds).toEqual(['n1', 'n2']);
   });
 });

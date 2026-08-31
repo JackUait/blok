@@ -15,6 +15,7 @@ import {
   type ReadyScopeOptions,
   type ReadyStateSnapshot,
 } from './components/utils/ready-registry';
+import { resolveHashTarget } from './components/utils/hash-target';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
@@ -487,14 +488,14 @@ class Blok {
       const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
 
       if (hash) {
-        const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
+        const target = resolveHashTarget(hash, (blok.moduleInstances as Partial<BlokModules>).UI?.nodes.holder);
 
-        if (el) {
+        if (target !== null) {
           const topOffset = (isObject(this.initialConfiguration)
             ? (this.initialConfiguration as BlokConfig).scrollToBlock?.topOffset
             : undefined) ?? 0;
 
-          Blok.scrollToHashBlock(blok, el, hash, topOffset);
+          Blok.scrollToHashBlock(blok, target.element, target.blockId, topOffset);
         } else if (blok.moduleInstances.Renderer !== undefined) {
           blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }
@@ -728,16 +729,18 @@ class Blok {
    * Scrolls the located hash target into view, selects it, highlights its
    * arrival, and announces the navigation to assistive technology.
    * @param blok - Core instance
-   * @param el - matched block element
-   * @param hash - decoded block id
+   * @param el - matched element: the block itself, or the heading carrying the anchor
+   * @param blockId - id of the block that owns it, or null for a loose anchor
    * @param topOffset - scroll top offset in pixels
    */
-  private static scrollToHashBlock(blok: Core, el: Element, hash: string, topOffset: number): void {
+  private static scrollToHashBlock(blok: Core, el: Element, blockId: string | null, topOffset: number): void {
     const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
     window.scrollTo({ top: y, behavior: 'smooth' });
 
-    Blok.selectBlockById(blok, hash);
+    if (blockId !== null) {
+      Blok.selectBlockById(blok, blockId);
+    }
     highlightBlockArrival(el);
 
     const i18n = (blok.moduleInstances as Partial<BlokModules>).I18n;

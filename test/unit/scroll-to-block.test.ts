@@ -14,6 +14,8 @@ declare global {
 const mockGetBlockById = vi.fn().mockReturnValue(undefined);
 const mockSelectBlock = vi.fn();
 const mockRenderer = { pendingHashScroll: null as string | null };
+// Holder the anchor lookup is scoped to; null for every test that only uses block ids.
+const mockUI = { nodes: { holder: null as HTMLElement | null } };
 const mockI18nT = vi.fn((key: string) => key);
 
 // Spy on the announcer so tests can assert screen-reader announcements without
@@ -86,6 +88,7 @@ vi.mock('../../src/components/core', () => {
         t: mockI18nT,
       } as unknown as BlokModules['I18n'],
       Renderer: mockRenderer as unknown as BlokModules['Renderer'],
+      UI: mockUI as unknown as BlokModules['UI'],
     };
 
     public isReady: Promise<void> = Promise.resolve();
@@ -148,6 +151,7 @@ describe('scroll-to-block', () => {
     mockI18nT.mockImplementation((key: string) => key);
     mockAnnounce.mockReset();
     mockRenderer.pendingHashScroll = null;
+    mockUI.nodes.holder = null;
 
     originalScrollTo = window.scrollTo;
     originalQuerySelector = document.querySelector.bind(document);
@@ -197,6 +201,37 @@ describe('scroll-to-block', () => {
 
     // Expected: 200 (rect.top) + 100 (scrollY) - 0 (topOffset) = 300
     expect(mockScrollTo).toHaveBeenCalledWith({ top: 300, behavior: 'smooth' });
+  });
+
+  // -------------------------------------------------------------------------
+
+  it('scrolls to a heading anchor when no block carries that id', async () => {
+    /**
+     * Imported documents link to their own sections by the anchor the source
+     * HTML carried (a Google Docs table of contents points at #h.2y1ok8y7pef0).
+     * That is a heading anchor, not a block id, so the block-id lookup misses it.
+     */
+    setHash('#h.2y1ok8y7pef0');
+
+    const holder = document.createElement('div');
+    const blockEl = document.createElement('div');
+    const heading = fakeEl(180) as HTMLElement;
+
+    heading.id = 'h.2y1ok8y7pef0';
+    blockEl.setAttribute('data-blok-id', 'block-1');
+    blockEl.appendChild(heading);
+    holder.appendChild(blockEl);
+    document.body.appendChild(holder);
+    mockUI.nodes.holder = holder;
+
+    const editor = new Blok({});
+
+    await editor.isReady;
+
+    expect(mockScrollTo).toHaveBeenCalledWith({ top: 180, behavior: 'smooth' });
+    expect(mockGetBlockById).toHaveBeenCalledWith('block-1');
+
+    holder.remove();
   });
 
   // -------------------------------------------------------------------------

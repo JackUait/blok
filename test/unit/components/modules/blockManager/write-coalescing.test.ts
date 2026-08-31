@@ -438,6 +438,47 @@ describe('typing write coalescing', () => {
       expect(harness.yjsManager.getBlockDataObject('b1')).toEqual({ text: 'ab' });
     });
 
+    it('updateBlockData flushes buffered writes, so the trailing flush cannot regress it', async () => {
+      const harness = createHarness();
+
+      await arm(harness);
+      harness.yjsManager.updateBlockData('b1', 'text', 'fresh');
+
+      expect(harness.readText()).toBe('fresh');
+
+      // Without the barrier the still-open window's trailing flush lands the
+      // STALE 'ab' 400ms later and silently reverts the fresh write.
+      await advance(modificationsObserverBatchTimeout + 100);
+
+      expect(harness.readText()).toBe('fresh');
+    });
+
+    it('updateBlockMetadata flushes buffered writes first', async () => {
+      const harness = createHarness();
+
+      await arm(harness);
+      harness.yjsManager.updateBlockMetadata('b1', 1234, 'user-2');
+
+      expect(harness.readText()).toBe('ab');
+    });
+
+    it('clear flushes buffered writes, so the cleared history cannot resurrect', async () => {
+      const harness = createHarness();
+
+      await arm(harness);
+      harness.yjsManager.clear();
+
+      // The buffered tail LANDED (it was not discarded) before the wipe.
+      expect(harness.readText()).toBe('ab');
+
+      // Without the barrier the trailing flush lands after the wipe as a
+      // tracked transaction and repopulates the just-cleared undo stack.
+      await advance(modificationsObserverBatchTimeout + 100);
+
+      expect(harness.readText()).toBe('ab');
+      expect(harness.yjsManager.canUndo()).toBe(false);
+    });
+
     it('destroy flushes buffered writes before tearing down', async () => {
       const harness = createHarness();
 

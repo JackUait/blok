@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 
-import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, type YBlockSerializer, type YjsOutputBlockData } from './serializer';
 import { LOCAL_ORIGIN_TAGS, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 import { equals } from '../../utils/object';
 
@@ -113,31 +113,201 @@ export class DocumentStore {
 
   /**
    * Serialize blocks to JSON format, in derived flat document order.
+   *
+   * The hierarchy view is computed ONCE and used for both the order and the
+   * emitted `parent`/`content`, so a consumer can never read a position that
+   * contradicts the parent link (or a child listed under two parents).
    */
   public toJSON(): DocumentStoreBlockData[] {
-    return this.deriveOrderedIds()
+    const hierarchy = this.hierarchyView();
+
+    return this.deriveOrderedIds(hierarchy)
       .map((id) => this.yBlocksMap.get(id))
       .filter((yblock): yblock is Y.Map<unknown> => yblock instanceof Y.Map)
-      .map((yblock) => this.serializer.yBlockToOutputData(yblock));
+      .map((yblock) => this.projectHierarchy(this.serializer.yBlockToOutputData(yblock), hierarchy));
+  }
+
+  /**
+   * Effective parent of every block in the map: its doc `parentId`, except
+   * where a cycle broke the link (null). `parentId` is the LWW arbiter of
+   * membership — an id sitting in two parents' contentIds after a concurrent
+   * reparent belongs to whichever parent the block itself names.
+   *
+   * `parentId` is single-valued, so the parent graph is functional and its
+   * cycles are disjoint: each block belongs to at most one cycle, and the
+   * per-cycle keeper rule below can never conflict with another cycle's.
+   *
+   * Cycle rule (deterministic on every peer — content-derived, never
+   * iteration-order-derived): the member with the LEXICOGRAPHICALLY SMALLEST
+   * id keeps its parent, every other member's link is broken to null. A
+   * self-parent (`parentId === own id`) is always broken — the keeper rule
+   * alone would let it stand.
+   *
+   * A DANGLING parentId (no map entry for the parent) is kept as-is: that is
+   * the orphan tolerance a not-yet-arrived remote parent depends on.
+   */
+  private hierarchyView(): Map<string, string | null> {
+    const broken = this.brokenCycleMembers();
+
+    return new Map(
+      Array.from(this.yBlocksMap.keys())
+        .map((id): [string, string | null] => [id, broken.has(id) ? null : this.rawParentId(id)])
+    );
+  }
+
+  /**
+   * Blocks whose parentId is part of a cycle and is NOT the cycle's keeper —
+   * their link is the one that gets broken.
+   */
+  private brokenCycleMembers(): Set<string> {
+    const broken = new Set<string>();
+    const state = new Map<string, 'visiting' | 'done'>();
+
+    for (const id of this.yBlocksMap.keys()) {
+      this.markParentChain(id, [], state, broken);
+    }
+
+    return broken;
+  }
+
+  /**
+   * Colour one parentId chain: 'visiting' while it is on the current path,
+   * 'done' once its top (root, dangling parent, or a cycle) is known. Meeting
+   * a 'visiting' node closes a loop, and everything from that node onward on
+   * the path IS the cycle.
+   * @param id - block whose chain to follow
+   * @param path - ids currently on the walk, innermost last
+   * @param state - per-block colour, shared across the whole sweep
+   * @param broken - collects the members that lose their parent link
+   */
+  private markParentChain(
+    id: string,
+    path: string[],
+    state: Map<string, 'visiting' | 'done'>,
+    broken: Set<string>
+  ): void {
+    const colour = state.get(id);
+
+    if (colour === 'visiting') {
+      this.breakCycle(path.slice(path.indexOf(id)), broken);
+
+      return;
+    }
+
+    if (colour === 'done' || !this.yBlocksMap.has(id)) {
+      return;
+    }
+
+    state.set(id, 'visiting');
+    path.push(id);
+
+    const parentId = this.rawParentId(id);
+
+    if (parentId !== null) {
+      this.markParentChain(parentId, path, state, broken);
+    }
+
+    path.pop();
+    state.set(id, 'done');
+  }
+
+  /**
+   * A block's stored parentId, or null when absent, non-string, or naming
+   * the block itself (a self-parent is never a real link).
+   */
+  private rawParentId(id: string): string | null {
+    const yblock = this.yBlocksMap.get(id);
+    const parentId = yblock instanceof Y.Map ? yblock.get('parentId') : undefined;
+
+    return typeof parentId === 'string' && parentId !== id ? parentId : null;
+  }
+
+  /**
+   * Break every link in one cycle except the lexicographically smallest
+   * member's, leaving that member parented under the block that follows it
+   * around the loop and the rest at root.
+   */
+  private breakCycle(members: string[], broken: Set<string>): void {
+    const keeper = members.reduce((smallest, id) => (id < smallest ? id : smallest));
+
+    for (const member of members) {
+      if (member !== keeper) {
+        broken.add(member);
+      }
+    }
+  }
+
+  /**
+   * Rewrite one emitted block against the hierarchy view: report the
+   * effective parent, and list only the children that name THIS block as
+   * their parent. Child ids with no map entry stay (they cannot double-count,
+   * and dropping them would lose a not-yet-arrived peer's slot).
+   */
+  private projectHierarchy(
+    block: DocumentStoreBlockData,
+    hierarchy: Map<string, string | null>
+  ): DocumentStoreBlockData {
+    const id = block.id;
+
+    if (typeof id !== 'string') {
+      return block;
+    }
+
+    const projected: DocumentStoreBlockData = { ...block };
+    const parentId = hierarchy.get(id) ?? null;
+    const owned = (block.content ?? []).filter(
+      (childId) => !hierarchy.has(childId) || hierarchy.get(childId) === id
+    );
+
+    if (parentId === null) {
+      delete projected.parent;
+    } else {
+      projected.parent = parentId;
+    }
+
+    if (owned.length > 0) {
+      projected.content = owned;
+    } else {
+      delete projected.content;
+    }
+
+    return projected;
   }
 
   /**
    * Flat document order: DFS from the root order, descending through each
    * block's contentIds. Laws (cross-peer deterministic):
-   * - duplicate id across order arrays → FIRST occurrence wins;
+   * - an order-array entry counts ONLY where the block's effective parent
+   *   agrees with the array it sits in (root order ⇒ no parent) — the
+   *   write-side dedupe cannot heal a concurrent cross-parent move, so the
+   *   read side resolves it by parentId;
+   * - duplicate id across order arrays → FIRST agreeing occurrence wins;
    * - id with no map entry → skipped;
-   * - map entries reachable from no order array → appended at the END,
-   *   sorted by id (Y.Map iteration order is not a cross-peer guarantee).
+   * - map entries reachable from no order array → appended at the END, in
+   *   two passes (Y.Map iteration order is not a cross-peer guarantee):
+   *   first the tops of unreached subtrees (no parent, or a parent with no
+   *   map entry) sorted by id, then anything still unreached sorted by id.
+   *   The first pass is what makes the order ROUND-TRIP: entering at a
+   *   descendant would emit it ahead of its own parent, and reloading that
+   *   JSON would then produce a different order.
    */
-  private deriveOrderedIds(): string[] {
-    const ordered = this.deriveReachableIds();
+  private deriveOrderedIds(hierarchy: Map<string, string | null> = this.hierarchyView()): string[] {
+    const ordered = this.deriveReachableIds(hierarchy);
     const seen = new Set(ordered);
-    const orphans = Array.from(this.yBlocksMap.keys())
+    const unreached = (): string[] => Array.from(this.yBlocksMap.keys())
       .filter((id) => !seen.has(id))
       .sort();
 
-    for (const id of orphans) {
-      this.visitBlock(id, seen, ordered);
+    for (const id of unreached()) {
+      const parentId = hierarchy.get(id) ?? null;
+
+      if (parentId === null || !this.yBlocksMap.has(parentId)) {
+        this.visitBlock(id, parentId, hierarchy, seen, ordered);
+      }
+    }
+
+    for (const id of unreached()) {
+      this.visitBlock(id, hierarchy.get(id) ?? null, hierarchy, seen, ordered);
     }
 
     return ordered;
@@ -148,23 +318,30 @@ export class DocumentStore {
    * tail). Placement math uses this so an id mid-move never pollutes the
    * positions it is measured against.
    */
-  private deriveReachableIds(): string[] {
+  private deriveReachableIds(hierarchy: Map<string, string | null> = this.hierarchyView()): string[] {
     const ordered: string[] = [];
     const seen = new Set<string>();
 
     for (const id of this.yRootOrder.toArray()) {
-      this.visitBlock(id, seen, ordered);
+      this.visitBlock(id, null, hierarchy, seen, ordered);
     }
 
     return ordered;
   }
 
   /**
-   * DFS step: emit the id (first occurrence only, and only when a map
-   * entry exists), then descend into its contentIds. The seen-set makes
+   * DFS step: emit the id (first occurrence only, only when a map entry
+   * exists, and only when its effective parent is the one whose order array
+   * we are walking), then descend into its contentIds. The seen-set makes
    * cycles terminate.
    */
-  private visitBlock(id: unknown, seen: Set<string>, ordered: string[]): void {
+  private visitBlock(
+    id: unknown,
+    expectedParentId: string | null,
+    hierarchy: Map<string, string | null>,
+    seen: Set<string>,
+    ordered: string[]
+  ): void {
     if (typeof id !== 'string' || seen.has(id)) {
       return;
     }
@@ -172,6 +349,10 @@ export class DocumentStore {
     const yblock = this.yBlocksMap.get(id);
 
     if (!(yblock instanceof Y.Map)) {
+      return;
+    }
+
+    if ((hierarchy.get(id) ?? null) !== expectedParentId) {
       return;
     }
 
@@ -185,7 +366,7 @@ export class DocumentStore {
     }
 
     for (const childId of contentIds.toArray()) {
-      this.visitBlock(childId, seen, ordered);
+      this.visitBlock(childId, id, hierarchy, seen, ordered);
     }
   }
 
@@ -335,6 +516,14 @@ export class DocumentStore {
    * first, then inserted after `afterId` in the target array (afterId null
    * → first child; afterId not found → append; parent map entry missing →
    * left in no array, orphan tolerance).
+   *
+   * A placement that would parent the block under its own descendant is
+   * REFUSED — non-throwing counterpart of `BlockHierarchy.setBlockParent`'s
+   * cycle guard, which this path can be driven past by move replay. Refusing
+   * means: the cyclic parentId is never written, and the id is left in no
+   * order array (the same orphan tolerance a dangling parent gets), so LOCAL
+   * code cannot put a cycle in the doc. Concurrent peers still can — that is
+   * what `hierarchyView`'s read-side cycle break exists for.
    * @param id - Block id to place
    * @param placement - Target parent (null = root) and preceding sibling (null = first)
    * @param origin - Transaction origin
@@ -346,21 +535,27 @@ export class DocumentStore {
       return;
     }
 
+    const wouldCycle = placement.parentId !== null && this.wouldFormCycle(id, placement.parentId);
+
     this.transact(() => {
       // Idempotent parentId write: an agreeing value writes nothing, so the
       // transaction touches order arrays ONLY and the observer emits a pure
       // 'move'. Move replay relies on this — a spurious parentId item would
       // emit an 'update' whose undo/redo-origin handling re-runs setData on
       // the block mid-replay. (delete on an absent key is already a no-op.)
-      if (placement.parentId === null) {
-        yblock.delete('parentId');
-      } else if (yblock.get('parentId') !== placement.parentId) {
-        yblock.set('parentId', placement.parentId);
+      // A refused placement leaves parentId alone — writing it is the thing
+      // being refused.
+      if (!wouldCycle) {
+        if (placement.parentId === null) {
+          yblock.delete('parentId');
+        } else if (yblock.get('parentId') !== placement.parentId) {
+          yblock.set('parentId', placement.parentId);
+        }
       }
 
       this.removeFromOrderArrays(id);
 
-      const target = this.resolveTargetOrder(placement.parentId ?? undefined);
+      const target = wouldCycle ? null : this.resolveTargetOrder(placement.parentId ?? undefined);
 
       if (target === null) {
         return;
@@ -368,6 +563,24 @@ export class DocumentStore {
 
       target.insert(this.placementSlot(target, placement.afterId), [id]);
     }, origin);
+  }
+
+  /**
+   * Whether parenting `id` under `targetParentId` would close a parent cycle:
+   * the target's parent chain reaches `id` itself (self-parent included), or
+   * revisits a node — a pre-existing cycle disqualifies the reparent too.
+   * Mirrors `BlockHierarchy.wouldFormCycle` against the doc instead of memory.
+   */
+  private wouldFormCycle(id: string, targetParentId: string, visited = new Set<string>()): boolean {
+    if (targetParentId === id || visited.has(targetParentId)) {
+      return true;
+    }
+
+    visited.add(targetParentId);
+
+    const nextParentId = this.rawParentId(targetParentId);
+
+    return nextParentId !== null && this.wouldFormCycle(id, nextParentId, visited);
   }
 
   /**
@@ -473,7 +686,15 @@ export class DocumentStore {
   }
 
   /**
-   * Get a block's contentIds Y.Array, creating it when missing.
+   * A block's contentIds Y.Array. Every block Y.Map is created WITH one
+   * (`YBlockSerializer.outputDataToYBlock`), so the normal path always finds
+   * the existing array and inserts into it — which is what lets two peers'
+   * concurrent first children merge instead of one map-set clobbering the
+   * other's array (and the child id inside it).
+   *
+   * The create branch is a HEALING path only: a doc written by an older
+   * session, or a block whose contentIds key was overwritten with a non-array.
+   * Never turn it back into the normal path.
    */
   private getOrCreateContentOrder(parent: Y.Map<unknown>): Y.Array<string> {
     const existing = parent.get('contentIds');
@@ -539,6 +760,27 @@ export class DocumentStore {
     const currentValue = ydata.get(key);
 
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
+
+    // Plain array meeting a keyed grid wrapper: pair rows by identity and diff
+    // per row. Runs BEFORE the Y.Map branch below — a grid IS a Y.Map, and
+    // deep-merging an array onto it would rewrite the wrapper's own keys.
+    if (Array.isArray(value) && this.serializer.isGridMap(currentValue)) {
+      if (equals(this.serializer.gridMapToPlain(currentValue), value)) {
+        return false;
+      }
+
+      this.transact(() => {
+        if (this.serializer.isGridArray(value)) {
+          this.deepAssignYGrid(currentValue, value);
+        } else {
+          // No longer a grid (emptied, or rows turned into objects) — rebuild
+          // so the write path matches the load path.
+          ydata.set(key, this.serializer.plainToYValue(value));
+        }
+      }, 'local');
+
+      return true;
+    }
 
     // Nested OBJECT value backed by a nested Y.Map: deep-merge into the existing
     // Y.Map instead of replacing it. This (a) compares by ENTRIES so an unchanged
@@ -622,6 +864,18 @@ export class DocumentStore {
   private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown): void {
     const isPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
     const existing = target.get(key);
+
+    // Keyed grid first: a grid wrapper IS a Y.Map, so the plain-object branch
+    // below would tear its container keys apart.
+    if (Array.isArray(value) && this.serializer.isGridMap(existing)) {
+      if (this.serializer.isGridArray(value)) {
+        this.deepAssignYGrid(existing, value);
+      } else if (!equals(this.serializer.gridMapToPlain(existing), value)) {
+        target.set(key, this.serializer.plainToYValue(value));
+      }
+
+      return;
+    }
 
     if (Array.isArray(value) && existing instanceof Y.Array) {
       if (this.serializer.isConvertibleArray(value)) {
@@ -712,6 +966,12 @@ export class DocumentStore {
     const existing = target.get(index);
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
+    if (Array.isArray(value) && this.serializer.isGridMap(existing) && this.serializer.isGridArray(value)) {
+      this.deepAssignYGrid(existing, value);
+
+      return;
+    }
+
     if (valueIsPlainObject && existing instanceof Y.Map) {
       this.deepAssignYMap(existing, value as Record<string, unknown>);
 
@@ -732,6 +992,208 @@ export class DocumentStore {
 
     target.delete(index, 1);
     target.insert(index, [this.serializer.plainToYValue(value)]);
+  }
+
+  /**
+   * Assign plain rows onto a keyed grid wrapper.
+   *
+   * A local write carries no row keys — it is the whole grid as plain arrays —
+   * so the rows must be RE-ASSOCIATED with the keys already in the doc. Once
+   * paired, a row is diffed in place and its Y container survives; only the
+   * order array records that rows moved. That is the whole point: Y.Array has
+   * no move, so a positional diff expresses a reorder as delete+insert and
+   * throws away whatever a peer concurrently typed into the deleted row.
+   *
+   * `source` must satisfy `isGridArray`; must run inside a transaction.
+   */
+  private deepAssignYGrid(target: Y.Map<unknown>, source: unknown[]): void {
+    const rows = target.get(GRID_ROWS_KEY) as Y.Map<unknown>;
+    const order = target.get(GRID_ORDER_KEY) as Y.Array<string>;
+    const currentKeys = this.serializer.gridRowKeys(target);
+    const currentRows = currentKeys.map((key) => this.serializer.yValueToPlain(rows.get(key)));
+    const assignment = this.pairGridRows(currentRows, source);
+    const paired = new Set(assignment.filter((index): index is number => index !== null));
+
+    currentKeys.forEach((key, index) => {
+      if (!paired.has(index)) {
+        rows.delete(key);
+      }
+    });
+
+    const nextKeys = source.map((row, index) => {
+      const targetIndex = assignment[index];
+
+      if (targetIndex === null) {
+        const key = this.serializer.generateRowKey();
+
+        rows.set(key, this.serializer.plainToYValue(row));
+
+        return key;
+      }
+
+      const key = currentKeys[targetIndex];
+
+      this.assignYMapEntry(rows, key, row);
+
+      return key;
+    });
+
+    this.assignKeySequence(order, nextKeys);
+  }
+
+  /**
+   * Re-associate keyless plain rows with the doc's existing rows, in four
+   * passes, each cheaper and more certain than the next:
+   *
+   * 1. Two-ended anchors — the deeply-equal prefix and suffix pair 1:1. Rows
+   *    outside the edited span never enter the search.
+   * 2. Exact content match across the middle — this is how a MOVED row is
+   *    recognized as the same row rather than a delete plus an insert.
+   * 3. Cell-level similarity, only when the leftover counts DIFFER (a row was
+   *    added or removed in the same write that edited one): the edited row
+   *    still shares most of its cells with itself, a brand-new row shares
+   *    none. Equal counts skip straight to 4, which keeps the pre-identity
+   *    "equal-length middles rewrite in place" behaviour exactly.
+   * 4. Positional remainder — extra source rows are genuinely new, extra doc
+   *    rows genuinely deleted.
+   *
+   * Rows with identical content are interchangeable by definition, so pass 2
+   * pairing an arbitrary one of them is not a defect.
+   * @returns for each source row, the index into `current` it pairs with, or
+   *          null when it is a new row.
+   */
+  private pairGridRows(current: unknown[], source: unknown[]): (number | null)[] {
+    const assignment: (number | null)[] = source.map(() => null);
+    const takenTarget = new Set<number>();
+    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
+    const pair = (sourceIndex: number, targetIndex: number): void => {
+      assignment[sourceIndex] = targetIndex;
+      takenTarget.add(targetIndex);
+    };
+
+    const maxPrefix = Math.min(current.length, source.length);
+    const prefix = range(maxPrefix).find((index) => !equals(current[index], source[index])) ?? maxPrefix;
+    const maxSuffix = maxPrefix - prefix;
+    const suffix = range(maxSuffix)
+      .find((index) => !equals(current[current.length - 1 - index], source[source.length - 1 - index])) ?? maxSuffix;
+
+    range(prefix).forEach((index) => pair(index, index));
+    range(suffix).forEach((index) => pair(source.length - 1 - index, current.length - 1 - index));
+
+    const middleSources = range(source.length).filter((index) => assignment[index] === null);
+    const middleTargets = range(current.length).filter((index) => !takenTarget.has(index));
+
+    for (const sourceIndex of middleSources) {
+      const match = middleTargets
+        .find((index) => !takenTarget.has(index) && equals(current[index], source[sourceIndex]));
+
+      if (match !== undefined) {
+        pair(sourceIndex, match);
+      }
+    }
+
+    const restSources = middleSources.filter((index) => assignment[index] === null);
+    const restTargets = middleTargets.filter((index) => !takenTarget.has(index));
+
+    // Rank window: an unmatched row can only have shifted by the number of
+    // unmatched inserts/deletes around it, so scoring further afield finds
+    // nothing and would make the pass quadratic on a large grid. A row that
+    // moved further than that was already caught by the exact pass above.
+    const window = Math.abs(restSources.length - restTargets.length) + 1;
+
+    if (restSources.length !== restTargets.length) {
+      restSources.forEach((sourceIndex, rank) => {
+        const free = restTargets
+          .filter((index, targetRank) => !takenTarget.has(index) && Math.abs(targetRank - rank) <= window);
+        const match = this.mostSimilarRow(current, source[sourceIndex], free);
+
+        if (match !== -1) {
+          pair(sourceIndex, match);
+        }
+      });
+    }
+
+    const finalTargets = restTargets.filter((index) => !takenTarget.has(index));
+
+    restSources
+      .filter((index) => assignment[index] === null)
+      .forEach((sourceIndex, rank) => {
+        if (rank < finalTargets.length) {
+          pair(sourceIndex, finalTargets[rank]);
+        }
+      });
+
+    return assignment;
+  }
+
+  /**
+   * The candidate doc row sharing the most cells with `row`, or -1 when none
+   * shares any: a brand-new row has nothing in common with an existing one.
+   */
+  private mostSimilarRow(current: unknown[], row: unknown, candidates: number[]): number {
+    return candidates.reduce<{ index: number; score: number }>(
+      (winner, index) => {
+        const score = this.rowSimilarity(current[index], row);
+
+        return score > winner.score ? { index, score } : winner;
+      },
+      { index: -1, score: 0 }
+    ).index;
+  }
+
+  /**
+   * How much two rows look like the same row: the length of their common cell
+   * prefix plus common suffix. Measured from BOTH ends, never per position — a
+   * column inserted or deleted at the FRONT shifts every cell, so a positional
+   * score reads such a row as sharing nothing with itself and the pairing then
+   * hands a peer's concurrent edit to the wrong row.
+   */
+  private rowSimilarity(current: unknown, source: unknown): number {
+    if (!Array.isArray(current) || !Array.isArray(source)) {
+      return 0;
+    }
+
+    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
+    const maxPrefix = Math.min(current.length, source.length);
+    const prefix = range(maxPrefix).find((index) => !equals(current[index], source[index])) ?? maxPrefix;
+    const suffix = range(maxPrefix - prefix)
+      .find((index) => !equals(current[current.length - 1 - index], source[source.length - 1 - index]))
+      ?? maxPrefix - prefix;
+
+    return prefix + suffix;
+  }
+
+  /**
+   * Rewrite a grid's row-order array with one two-ended splice. The elements
+   * are plain key STRINGS, so delete+insert here costs nothing — no CRDT
+   * container is destroyed. Also self-heals: keys the read path normalized
+   * away (duplicated by concurrent reorders, or stranded by a concurrent
+   * delete) are absent from `keys` and get spliced out.
+   */
+  private assignKeySequence(order: Y.Array<string>, keys: string[]): void {
+    const current = order.toArray();
+
+    if (equals(current, keys)) {
+      return;
+    }
+
+    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
+    const maxPrefix = Math.min(current.length, keys.length);
+    const prefix = range(maxPrefix).find((index) => current[index] !== keys[index]) ?? maxPrefix;
+    const maxSuffix = maxPrefix - prefix;
+    const suffix = range(maxSuffix)
+      .find((index) => current[current.length - 1 - index] !== keys[keys.length - 1 - index]) ?? maxSuffix;
+
+    const currentMiddle = current.length - prefix - suffix;
+    const nextMiddle = keys.length - prefix - suffix;
+
+    if (currentMiddle > 0) {
+      order.delete(prefix, currentMiddle);
+    }
+
+    if (nextMiddle > 0) {
+      order.insert(prefix, keys.slice(prefix, prefix + nextMiddle));
+    }
   }
 
   /**
@@ -855,6 +1317,10 @@ export class DocumentStore {
 
   /**
    * Apply a binary Yjs update coming from outside this editor.
+   *
+   * Every distinct origin passed here is retained for the doc's lifetime (the
+   * echo-suppression set is never pruned), so pass a few LONG-LIVED origin
+   * objects — one per provider — never a freshly allocated one per message.
    * @param update - Encoded Yjs update (as produced by `encodeStateAsUpdate`
    *   or an `onUpdate` callback on a peer)
    * @param origin - Provider origin recorded on the transaction; defaults to

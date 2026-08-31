@@ -257,3 +257,145 @@ describe('DocumentStore order laws — applyPlacement', () => {
     expect(parentContent.toArray()).not.toContain('child-1');
   });
 });
+
+describe('DocumentStore order laws — concurrent hierarchy conflicts', () => {
+  let storeA: DocumentStore;
+  let storeB: DocumentStore;
+
+  const seedTwoContainers = (): void => {
+    storeA.fromJSON([
+      { id: 'P', type: 'toggle', data: {}, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'p1' }, parent: 'P' },
+      { id: 'Q', type: 'toggle', data: {}, content: ['q1'] },
+      { id: 'q1', type: 'paragraph', data: { text: 'q1' }, parent: 'Q' },
+      paragraph('X', 'x'),
+    ]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+  };
+
+  beforeEach(() => {
+    storeA = createStore();
+    storeB = createStore();
+  });
+
+  it('concurrent FIRST children of the same childless container: both memberships survive', () => {
+    storeA.fromJSON([
+      { id: 'P', type: 'toggle', data: {} },
+      paragraph('x', 'x'),
+      paragraph('y', 'y'),
+    ]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    storeA.applyPlacement('x', { parentId: 'P', afterId: null }, 'local');
+    storeB.applyPlacement('y', { parentId: 'P', afterId: null }, 'local');
+
+    sync(storeA, storeB);
+
+    expect(storeA.toJSON()).toEqual(storeB.toJSON());
+
+    const content = storeA.toJSON().find((block) => block.id === 'P')?.content ?? [];
+
+    // LWW picks the sibling order; membership is not up for grabs.
+    expect([...content].sort()).toEqual(['x', 'y']);
+    expect(storeA.toJSON().map((block) => block.id).sort()).toEqual(['P', 'x', 'y']);
+  });
+
+  it('concurrent reparent to two different parents: single membership, position follows parentId', () => {
+    seedTwoContainers();
+
+    storeA.applyPlacement('X', { parentId: 'P', afterId: 'p1' }, 'local');
+    storeB.applyPlacement('X', { parentId: 'Q', afterId: 'q1' }, 'local');
+
+    sync(storeA, storeB);
+
+    const json = storeA.toJSON();
+
+    expect(json).toEqual(storeB.toJSON());
+
+    // The parentId LWW winner is decided by yjs client ids — assert the law,
+    // not which peer won.
+    const winner = json.find((block) => block.id === 'X')?.parent;
+
+    expect(winner === 'P' || winner === 'Q').toBe(true);
+
+    const loser = winner === 'P' ? 'Q' : 'P';
+
+    expect(json.find((block) => block.id === winner)?.content).toContain('X');
+    expect(json.find((block) => block.id === loser)?.content ?? []).not.toContain('X');
+
+    const ids = json.map((block) => block.id);
+    const anchor = winner === 'P' ? 'p1' : 'q1';
+
+    expect(ids.indexOf('X')).toBe(ids.indexOf(anchor) + 1);
+
+    const roundTrip = createStore();
+
+    roundTrip.fromJSON(json);
+
+    expect(roundTrip.toJSON()).toEqual(json);
+  });
+
+  it('concurrent reparent forming a parent cycle: broken deterministically and cycle-free', () => {
+    storeA.fromJSON([
+      { id: 'P', type: 'toggle', data: {}, content: ['p1'] },
+      { id: 'p1', type: 'paragraph', data: { text: 'p1' }, parent: 'P' },
+      { id: 'Q', type: 'toggle', data: {}, content: ['q1'] },
+      { id: 'q1', type: 'paragraph', data: { text: 'q1' }, parent: 'Q' },
+    ]);
+    storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate());
+
+    storeA.applyPlacement('P', { parentId: 'Q', afterId: 'q1' }, 'local');
+    storeB.applyPlacement('Q', { parentId: 'P', afterId: 'p1' }, 'local');
+
+    sync(storeA, storeB);
+
+    const json = storeA.toJSON();
+
+    expect(json).toEqual(storeB.toJSON());
+
+    // Both writes touch DIFFERENT keys (P.parentId, Q.parentId) so there is no
+    // LWW coin flip: 'P' < 'Q' keeps its parent, Q's link is the broken one.
+    expect(json.map((block) => block.id)).toEqual(['Q', 'q1', 'P', 'p1']);
+    expect(json.find((block) => block.id === 'P')?.parent).toBe('Q');
+    expect(json.find((block) => block.id === 'Q')?.parent).toBeUndefined();
+    expect(json.find((block) => block.id === 'Q')?.content).toEqual(['q1', 'P']);
+    expect(json.find((block) => block.id === 'P')?.content).toEqual(['p1']);
+
+    const roundTrip = createStore();
+
+    roundTrip.fromJSON(json);
+
+    expect(roundTrip.toJSON()).toEqual(json);
+  });
+
+  it('applyPlacement refuses to parent a block under its own descendant', () => {
+    const store = createStore();
+
+    store.fromJSON([
+      { id: 'outer', type: 'toggle', data: {}, content: ['inner'] },
+      { id: 'inner', type: 'toggle', data: {}, content: ['leaf'], parent: 'outer' },
+      { id: 'leaf', type: 'paragraph', data: { text: 'leaf' }, parent: 'inner' },
+    ]);
+
+    store.applyPlacement('outer', { parentId: 'leaf', afterId: null }, 'local');
+
+    // The cyclic parentId is never written, and the refused block is left in
+    // no order array (orphan tolerance) rather than silently staying put.
+    expect(store.getBlockById('outer')?.has('parentId')).toBe(false);
+    expect(store.rootOrder.toArray()).not.toContain('outer');
+    expect((store.getBlockById('leaf')?.get('contentIds') as { toArray(): string[] }).toArray())
+      .toEqual([]);
+    expect(store.toJSON().map((block) => block.id)).toEqual(['outer', 'inner', 'leaf']);
+  });
+
+  it('applyPlacement refuses a self-parent placement', () => {
+    const store = createStore();
+
+    store.fromJSON([paragraph('solo', 'Solo')]);
+
+    store.applyPlacement('solo', { parentId: 'solo', afterId: null }, 'local');
+
+    expect(store.getBlockById('solo')?.has('parentId')).toBe(false);
+    expect(store.toJSON().map((block) => block.id)).toEqual(['solo']);
+  });
+});

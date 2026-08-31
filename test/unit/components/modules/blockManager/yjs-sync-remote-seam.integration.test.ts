@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
+import * as utils from '../../../../../src/components/utils';
 import { Blocks } from '../../../../../src/components/blocks';
+import { ToolNotFoundError } from '../../../../../src/components/errors/tool-not-found';
 import type { Block } from '../../../../../src/components/block';
 import { BlockYjsSync, type SyncHandlers } from '../../../../../src/components/modules/blockManager/yjs-sync';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
@@ -43,6 +45,9 @@ interface DocSeedBlock {
   content?: string[];
 }
 
+/** The local tool registry. A doc may legally name a tool that is not in it. */
+const KNOWN_TOOLS = new Set(['paragraph', 'toggle']);
+
 const paragraph = (id: string, extra: { parent?: string; content?: string[] } = {}): DocSeedBlock => ({
   id,
   type: 'paragraph',
@@ -69,6 +74,7 @@ const createStubBlock = (seed: StubBlockSeed): Block => {
     parentId: seed.parentId ?? null,
     contentIds: seed.contentIds ?? [],
     inputs: [],
+    preservedData: {},
     preservedTunes: {},
     setData: vi.fn(() => Promise.resolve(true)),
     call: vi.fn(),
@@ -157,17 +163,23 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
     repository = new BlockRepository();
     repository.initialize(blocksStore);
 
-    composeBlockSpy = vi.fn((options: ComposeBlockOptions): Block => createStubBlock({
-      id: options.id ?? 'missing-id',
-      name: options.tool,
-      parentId: options.parentId ?? null,
-      contentIds: options.contentIds !== undefined ? [...options.contentIds] : [],
-    }));
+    composeBlockSpy = vi.fn((options: ComposeBlockOptions): Block => {
+      if (!KNOWN_TOOLS.has(options.tool)) {
+        throw new ToolNotFoundError(options.tool, `Could not compose Block. Tool «${options.tool}» not found.`);
+      }
+
+      return createStubBlock({
+        id: options.id ?? 'missing-id',
+        name: options.tool,
+        parentId: options.parentId ?? null,
+        contentIds: options.contentIds !== undefined ? [...options.contentIds] : [],
+      });
+    });
 
     const factory = {
       composeBlock: composeBlockSpy,
       getTool: (): undefined => undefined,
-      hasTool: (): boolean => true,
+      hasTool: (name: string): boolean => KNOWN_TOOLS.has(name),
     } as unknown as BlockFactory;
 
     handlers = {
@@ -175,7 +187,13 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       removeFromDom: vi.fn(),
       moveInDom: vi.fn(),
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
-      insertDefaultBlock: vi.fn(() => createStubBlock({ id: 'default' })),
+      insertDefaultBlock: vi.fn((_skipYjsSync: boolean, id?: string) => {
+        const block = createStubBlock({ id: id ?? 'default' });
+
+        blocksStore.insert(0, block);
+
+        return block;
+      }),
       updateIndentation: vi.fn(),
       setBlockParent: vi.fn((block: Block, parentId: string | null) => {
         inMemoryReparent(block, parentId);
@@ -346,6 +364,32 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
     });
   });
 
+  describe('remote type-change to a tool the local registry lacks', () => {
+    it('keeps the existing block untouched, warns, and survives the dispatch', async () => {
+      const warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+
+      createHarness([paragraph('b1'), paragraph('b2')]);
+      syncPeerUp();
+
+      const b1Before = repository.getBlockById('b1');
+
+      peer.replaceBlockContent('b1', 'fancy-widget', { widget: true });
+      // A second change in the same update proves the dispatch survived.
+      peer.updateBlockData('b2', 'text', 'still-reconciled');
+      applyPeerToLocal();
+      await flush();
+
+      // The unknown-tool recreate is refused: same instance, same tool.
+      expect(repository.getBlockById('b1')).toBe(b1Before);
+      expect(b1Before?.name).toBe('paragraph');
+      expect(composeBlockSpy).not.toHaveBeenCalledWith(expect.objectContaining({ tool: 'fancy-widget' }));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('fancy-widget'), 'warn');
+
+      // b2's update in the same transaction still landed.
+      expect(repository.getBlockById('b2')?.setData).toHaveBeenCalledWith(expect.objectContaining({ text: 'still-reconciled' }));
+    });
+  });
+
   describe('remote reparent (parentId + order membership in one transaction)', () => {
     it('reconciles the parent AND the derived position', async () => {
       createHarness([toggle('t1', []), paragraph('p1'), paragraph('p2')]);
@@ -471,6 +515,164 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       expectOrderInvariant('redo of the local reparent', ['t1', 'p2', 'p3', 'r1', 'p1']);
       expect(repository.getBlockById('p2')?.parentId).toBe('t1');
       expect(repository.getBlockById('t1')?.contentIds).toEqual(['p2']);
+    });
+  });
+
+  describe('remote removal of the LAST block', () => {
+    it('lands the auto-inserted default paragraph in the DOC, not only in memory', async () => {
+      createHarness([paragraph('b1')]);
+      syncPeerUp();
+
+      peer.removeBlock('b1');
+      applyPeerToLocal();
+      await flush();
+
+      expect(memoryIds()).toHaveLength(1);
+      expect(yjsIds()).toEqual(memoryIds());
+
+      const autoId = memoryIds()[0];
+
+      // Reactive infrastructure, not a user edit: the repair must not become an
+      // undo step, or one Cmd+Z pops it and leaves the editor blockless again.
+      expect(manager.canUndo()).toBe(false);
+
+      // Everything typed into it must reach the doc — updateBlockData returns
+      // false when the block has no Y.Map, which is the silent-drop symptom.
+      expect(manager.updateBlockData(autoId, 'text', 'typed')).toBe(true);
+
+      syncPeerUp();
+      expect(peer.toJSON().map((block) => block.id)).toEqual([autoId]);
+      expect(peer.toJSON()[0].data.text).toBe('typed');
+    });
+
+    it('converges to ONE paragraph when both peers auto-insert concurrently', async () => {
+      createHarness([paragraph('b1')]);
+      syncPeerUp();
+
+      peer.removeBlock('b1');
+      applyPeerToLocal();
+      await flush();
+
+      const autoId = memoryIds()[0];
+
+      // The peer runs the same auto-repair on its own copy before it has seen
+      // the local one. A deterministic id makes the two writes the SAME block.
+      peer.addBlock({ id: autoId, type: 'paragraph', data: { text: '' } });
+
+      applyPeerToLocal();
+      syncPeerUp();
+      await flush();
+
+      expect(yjsIds()).toEqual([autoId]);
+      expect(peer.toJSON().map((block) => block.id)).toEqual([autoId]);
+      expect(memoryIds()).toEqual([autoId]);
+    });
+
+    it('does not auto-insert while the doc still holds blocks memory cannot render', async () => {
+      createHarness([paragraph('b1')]);
+      syncPeerUp();
+
+      const warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      peer.addBlock({ id: 'x', type: 'exotic', data: {} });
+      applyPeerToLocal();
+      await flush();
+      warn.mockRestore();
+
+      peer.removeBlock('b1');
+      applyPeerToLocal();
+      await flush();
+
+      // A memory-only paragraph here would silently drop everything typed
+      // into it, exactly like the bug this closes.
+      expect(memoryIds()).toEqual([]);
+      expect(yjsIds()).toEqual(['x']);
+      expect(handlers.insertDefaultBlock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('doc-only ids (a doc index is NOT a memory index)', () => {
+    const exotic = (id: string): DocSeedBlock => ({ id, type: 'exotic', data: {} });
+
+    /**
+     * Plant a permanent doc-only id at the HEAD of the doc: the peer inserts a
+     * block whose tool the local registry lacks, so it can never be
+     * materialised in memory while the doc keeps it forever.
+     */
+    const plantDocOnlyHead = async (): Promise<void> => {
+      const warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      peer.addBlock(exotic('x'), 0);
+      applyPeerToLocal();
+      await flush();
+      warn.mockRestore();
+
+      expect(memoryIds()).toEqual(['b1', 'b2']);
+      expect(yjsIds()).toEqual(['x', 'b1', 'b2']);
+    };
+
+    it('lands a remote add at its memory index, not its raw doc index', async () => {
+      createHarness([paragraph('b1'), paragraph('b2')]);
+      syncPeerUp();
+      await plantDocOnlyHead();
+
+      // r1's raw doc index is 2; the index memory must use is 1.
+      peer.addBlock(paragraph('r1'), 2);
+      applyPeerToLocal();
+      await flush();
+
+      expect(memoryIds()).toEqual(['b1', 'r1', 'b2']);
+      expect(Array.from(workingArea.children)).toEqual(repository.blocks.map((block) => block.holder));
+    });
+
+    it('lands a remote batch-add at memory indices, not raw doc indices', async () => {
+      createHarness([paragraph('b1'), paragraph('b2')]);
+      syncPeerUp();
+      await plantDocOnlyHead();
+
+      // Two adds, ONE encoded update → the batch-add path.
+      peer.addBlock(paragraph('ra'), 2);
+      peer.addBlock(paragraph('rb'), 3);
+      applyPeerToLocal();
+      await flush();
+
+      expect(memoryIds()).toEqual(['b1', 'ra', 'rb', 'b2']);
+      expect(Array.from(workingArea.children)).toEqual(repository.blocks.map((block) => block.holder));
+    });
+
+    it('warns naming the missing tool instead of throwing out of the dispatch', async () => {
+      createHarness([paragraph('b1')]);
+      syncPeerUp();
+
+      const warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      peer.addBlock(exotic('x'));
+      applyPeerToLocal();
+      await flush();
+
+      const missingToolWarnings = warn.mock.calls.filter(
+        ([message, level]) => level === 'warn' && String(message).includes('«exotic»')
+      );
+
+      expect(missingToolWarnings).toHaveLength(1);
+      expect(memoryIds()).toEqual(['b1']);
+    });
+
+    it('materializes the rest of a batch when one block names a missing tool', async () => {
+      createHarness([paragraph('b1')]);
+      syncPeerUp();
+
+      const warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => {});
+
+      peer.addBlock(exotic('x'));
+      peer.addBlock(paragraph('r1'));
+      applyPeerToLocal();
+      await flush();
+
+      expect(memoryIds()).toEqual(['b1', 'r1']);
+      expect(
+        warn.mock.calls.some(([message, level]) => level === 'warn' && String(message).includes('«exotic»'))
+      ).toBe(true);
     });
   });
 

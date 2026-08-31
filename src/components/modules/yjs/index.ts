@@ -328,6 +328,12 @@ export class YjsManager extends Module {
    * @param value - New value
    */
   public updateBlockData(id: string, key: string, value: unknown): boolean {
+    // Barrier: a fresh write (api.blocks.update, split, merge) must land AFTER
+    // the buffered typing it supersedes. Without it the still-open window's
+    // trailing flush lands 400ms later and REGRESSES the doc to the stale
+    // value. The flush body calls this method itself, but the buffer's
+    // dispatch guard makes that nested drain a no-op, not a recursion.
+    this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
     return this.documentStore.updateBlockData(id, key, value);
@@ -356,6 +362,9 @@ export class YjsManager extends Module {
    * @param lastEditedBy - User ID, or null
    */
   public updateBlockMetadata(id: string, lastEditedAt: number, lastEditedBy: string | null): boolean {
+    // Same barrier as updateBlockData — see there.
+    this.flushPendingBlockWrites();
+
     return this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);
   }
 
@@ -462,6 +471,10 @@ export class YjsManager extends Module {
    * Clear all history.
    */
   public clear(): void {
+    // Barrier: a buffered write that lands AFTER the wipe arrives as a tracked
+    // transaction and repopulates the history that was just cleared.
+    this.flushPendingBlockWrites();
+
     this.undoHistory.clear();
   }
 

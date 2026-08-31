@@ -241,6 +241,7 @@ describe('BlockYjsSync — redo of a mid-column insert keeps child order (integr
 
     const factory = {
       getTool: vi.fn(),
+      hasTool: (): boolean => true,
       composeBlock: (options: { id: string; parentId?: string }): Block =>
         createStubBlock({ id: options.id, parentId: options.parentId ?? null }),
     } as unknown as BlockFactory;

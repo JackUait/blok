@@ -75,6 +75,7 @@ const createMockYjsManager = (): YjsManager => ({
   updateBlockTune: vi.fn(),
   stopCapturing: vi.fn(),
   transact: vi.fn((fn: () => void) => fn()),
+  transactWithoutCapture: vi.fn((fn: () => void) => fn()),
   toJSON: vi.fn(() => []),
   getBlockById: vi.fn(() => undefined),
   onBlocksChanged: vi.fn(() => vi.fn()),
@@ -169,6 +170,14 @@ const createMockBlockFactory = (): BlockFactory => {
   };
   const mockEventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const mockTools = new ToolsCollection<BlockToolAdapter>();
+
+  // The reconciler refuses to materialise a tool this registry lacks, so the
+  // tools these tests name must be registered even though every test stubs
+  // composeBlock itself.
+  for (const toolName of ['paragraph', 'toggle', 'callout', 'table']) {
+    mockTools.set(toolName, {} as BlockToolAdapter);
+  }
+
   const bindBlockEvents = vi.fn();
 
   return new BlockFactory({
@@ -318,26 +327,6 @@ describe('BlockYjsSync', () => {
 
       // The updated blocks store should be used for subsequent operations
       // This is verified implicitly by other operations using the correct blocks
-    });
-  });
-
-  describe('syncBlockDataToYjs', () => {
-    it('syncs block data to YjsManager', async () => {
-      const block = createMockBlock({ id: 'test-block' });
-      const savedData = { data: { text: 'Hello', level: 2 } };
-
-      await yjsSync.syncBlockDataToYjs(block, savedData);
-
-      expect(mockYjsManager.updateBlockData).toHaveBeenCalledWith('test-block', 'text', 'Hello');
-      expect(mockYjsManager.updateBlockData).toHaveBeenCalledWith('test-block', 'level', 2);
-    });
-
-    it('does not sync when savedData is undefined', async () => {
-      const block = createMockBlock({ id: 'test-block' });
-
-      await yjsSync.syncBlockDataToYjs(block, undefined as unknown as { data: Record<string, unknown> });
-
-      expect(mockYjsManager.updateBlockData).not.toHaveBeenCalled();
     });
   });
 
@@ -2310,7 +2299,7 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'last', type: 'remove', origin: 'undo' });
 
-        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-last');
       });
 
       it('keeps Yjs sync state active while removing a block', () => {

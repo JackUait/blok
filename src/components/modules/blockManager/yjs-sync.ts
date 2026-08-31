@@ -9,6 +9,7 @@ import type { Map as YMap } from 'yjs';
 import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
+import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
@@ -44,8 +45,12 @@ export interface SyncHandlers {
   moveInDom: (toIndex: number, fromIndex: number) => void;
   /** Called to get current block index */
   getBlockIndex: (block: Block) => number;
-  /** Called to insert a default block */
-  insertDefaultBlock: (skipYjsSync: boolean) => Block;
+  /**
+   * Called to insert a default block. `id` pins the new block's id — the
+   * remove-the-last-block auto-repair derives a deterministic one so two peers
+   * reacting to the same removal converge on ONE block.
+   */
+  insertDefaultBlock: (skipYjsSync: boolean, id?: string) => Block;
   /** Called to update block indentation */
   updateIndentation: (block: Block) => void;
   /** Called to set the parent of a block, updating contentIds and DOM placement */
@@ -490,6 +495,13 @@ export class BlockYjsSync {
     // mutates a block's type in place rather than remove+add (the old approach
     // the observer misclassified as a no-op move, so undo never re-rendered).
     if (yjsType !== block.name) {
+      // A recreate with an unregistered tool would throw out of composeBlock
+      // and abort the rest of this dispatch. Keep the stale view instead —
+      // the doc stays authoritative and heals on the next materialization.
+      if (!this.canMaterializeTool(yjsType)) {
+        return;
+      }
+
       const blockIndex = this.handlers.getBlockIndex(block);
       const newBlock = this.factory.composeBlock({
         id: block.id,
@@ -598,6 +610,54 @@ export class BlockYjsSync {
   }
 
   /**
+   * The doc's flat order, filtered to the ids memory can actually hold, plus
+   * the ids the current event is about to materialise.
+   *
+   * A doc index is NOT a memory index. The doc legally carries ids memory does
+   * not: a peer's block whose parent has not arrived yet (`applyPlacement`'s
+   * orphan tolerance), one a local replace dropped from memory while the doc
+   * kept it, or one naming a tool this client's registry lacks (permanent —
+   * nothing ever repairs it). Every such id BEFORE an insertion point shifts
+   * everything after it, so handing a raw doc index to a memory insert
+   * silently misplaces the block (memory [A,B] against a doc implying [B,A]),
+   * and an adds-only flow runs no repair afterwards. With identical id sets
+   * the filtered order is the doc order unchanged.
+   *
+   * @param materializing - ids being created right now, so not yet in memory
+   */
+  private docOrderKnownToMemory(materializing?: ReadonlySet<string>): string[] {
+    const inMemory = new Set(this.repository.blocks.map((block) => block.id));
+
+    return this.dependencies.YjsManager.toJSON()
+      .map((yjsBlock) => yjsBlock.id)
+      .filter((id): id is string => (
+        id !== undefined && (inMemory.has(id) || materializing?.has(id) === true)
+      ));
+  }
+
+  /**
+   * Whether this client can materialise `toolName`, warning (once per add) when
+   * it cannot. A peer may insert a tool this registry lacks; composing it throws
+   * ToolNotFoundError, which the observer's subscriber guard swallows — silently
+   * for a single add, and for a BATCH taking every other block in the same
+   * transaction down with it. Refusing up front keeps the rest of the batch and
+   * names the tool, matching the renderer's load-path warning for the same
+   * cause (the renderer can substitute a stub because it owns the render; this
+   * reconciler leaves the id doc-only, which `docOrderKnownToMemory` handles).
+   *
+   * @param toolName - tool the doc names for the block being materialised
+   */
+  private canMaterializeTool(toolName: string): boolean {
+    if (this.factory.hasTool(toolName)) {
+      return true;
+    }
+
+    logLabeled(`Tool «${toolName}» is not found. Check 'tools' property at the Blok config.`, 'warn');
+
+    return false;
+  }
+
+  /**
    * Handle block add from Yjs (undo/redo - restoring a removed block, or a remote insert)
    */
   private handleYjsAdd(blockId: string): void {
@@ -613,14 +673,18 @@ export class BlockYjsSync {
     }
 
     const toolName = yblock.get('type') as string;
+
+    if (!this.canMaterializeTool(toolName)) {
+      return;
+    }
+
     const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
     const parentId = yblock.get('parentId') as string | undefined;
     const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
     const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
 
-    // Find the index of this block in Yjs to insert at correct position
-    const yjsBlocks = this.dependencies.YjsManager.toJSON();
-    const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
+    // A MEMORY index — see docOrderKnownToMemory.
+    const targetIndex = this.docOrderKnownToMemory(new Set([blockId])).indexOf(blockId);
 
     if (targetIndex === -1) {
       return;
@@ -774,10 +838,8 @@ export class BlockYjsSync {
    * `mountBlocksInCell()` can find them by ID.
    */
   private handleYjsBatchAdd(blockIds: string[]): void {
-    const yjsBlocks = this.dependencies.YjsManager.toJSON();
-
     // Collect blocks to create — skip any that already exist
-    const toCreate: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null; targetIndex: number }> = [];
+    const candidates: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null }> = [];
 
     for (const blockId of blockIds) {
       if (this.repository.getBlockById(blockId) !== undefined) {
@@ -791,18 +853,26 @@ export class BlockYjsSync {
       }
 
       const toolName = yblock.get('type') as string;
+
+      if (!this.canMaterializeTool(toolName)) {
+        continue;
+      }
+
       const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
       const parentId = yblock.get('parentId') as string | undefined;
       const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
       const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
-      const targetIndex = yjsBlocks.findIndex((b) => b.id === blockId);
 
-      if (targetIndex === -1) {
-        continue;
-      }
-
-      toCreate.push({ blockId, toolName, data, parentId: parentId ?? undefined, lastEditedAt, lastEditedBy, targetIndex });
+      candidates.push({ blockId, toolName, data, parentId: parentId ?? undefined, lastEditedAt, lastEditedBy });
     }
+
+    // ONE basis snapshot for the whole batch (see docOrderKnownToMemory): pass 1
+    // inserts into the memory array as it goes, so a per-block recompute would
+    // shift the indices of the blocks still to come.
+    const order = this.docOrderKnownToMemory(new Set(candidates.map((entry) => entry.blockId)));
+    const toCreate = candidates
+      .map((entry) => ({ ...entry, targetIndex: order.indexOf(entry.blockId) }))
+      .filter((entry) => entry.targetIndex !== -1);
 
     if (toCreate.length === 0) {
       return;
@@ -957,11 +1027,51 @@ export class BlockYjsSync {
       // Remove from DOM
       this.blocksStore.remove(index);
 
-      // If all blocks removed, insert a default block
-      if (this.blocksStore.length === 0) {
-        this.handlers.insertDefaultBlock(true);
-      }
+      this.restoreDefaultBlockIfDocEmptied(blockId);
     }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Re-establish the editor's "always at least one block" floor after a removal
+   * emptied it — in the DOC as well as in memory.
+   *
+   * The auto-inserted paragraph MUST reach the doc. A memory-only one has no
+   * Y.Map, so `updateBlockData` returns false and everything typed into it is
+   * dropped from the doc, from the undo history and from every peer, with no
+   * error anywhere.
+   *
+   * The gate is the DOC being empty, not memory: the doc legally carries ids
+   * memory cannot hold (a tool this registry lacks), so memory can empty while
+   * the doc has not — and a memory-only paragraph THERE would reproduce exactly
+   * the silent drop this fixes. It is also what keeps two peers from stacking
+   * repairs on each other's.
+   *
+   * The id is derived from the removed block so two peers reacting to the SAME
+   * removal write the SAME id: the Y.Map set converges last-writer-wins, and
+   * the doubled order entry is dropped by the doc's flat-order derivation
+   * (first occurrence only) — the race lands one paragraph, not one per peer.
+   * Uniqueness is free here: the doc is empty at this point.
+   *
+   * The write is 'no-capture' because this is reactive infrastructure, not a
+   * user edit — it must not become an undo step. It still broadcasts, which is
+   * correct: peers materialise it through their ordinary remote-add path.
+   *
+   * @param removedBlockId - id of the block whose removal emptied the document
+   */
+  private restoreDefaultBlockIfDocEmptied(removedBlockId: string): void {
+    if (this.blocksStore.length > 0 || this.dependencies.YjsManager.toJSON().length > 0) {
+      return;
+    }
+
+    const restored = this.handlers.insertDefaultBlock(true, `after-${removedBlockId}`);
+
+    this.dependencies.YjsManager.transactWithoutCapture(() => {
+      this.dependencies.YjsManager.addBlock({
+        id: restored.id,
+        type: restored.name,
+        data: restored.preservedData,
+      });
+    });
   }
 
   /**
@@ -1012,17 +1122,12 @@ export class BlockYjsSync {
       blockById.set(block.id, block);
     }
 
-    // The doc order, FILTERED to the ids memory actually holds — the target
-    // index has to be a MEMORY index. The doc may legally carry ids memory
-    // does not: a peer's block whose parent has not arrived yet
-    // (`applyPlacement`'s orphan tolerance), or one a local replace dropped
-    // from memory while the doc kept it. Enumerating the raw doc order makes
-    // every such id shift the indices of everything after it, so a move
-    // replay reorders blocks nobody touched (an undo in one column
-    // rearranged the OTHER column's blocks). With identical id sets the
-    // filtered order is the doc order unchanged.
-    const orderedBlocks = this.dependencies.YjsManager.toJSON()
-      .map((yjsBlock) => (yjsBlock.id === undefined ? undefined : blockById.get(yjsBlock.id)))
+    // Doc order filtered to memory (see docOrderKnownToMemory): enumerating the
+    // raw doc order would make every doc-only id shift the indices of
+    // everything after it, so a move replay reorders blocks nobody touched (an
+    // undo in one column rearranged the OTHER column's blocks).
+    const orderedBlocks = this.docOrderKnownToMemory()
+      .map((id) => blockById.get(id))
       .filter((block): block is Block => block !== undefined);
 
     orderedBlocks.forEach((block, targetIndex) => {
@@ -1063,21 +1168,6 @@ export class BlockYjsSync {
    */
   public updateBlocksStore(blocksStore: BlocksStore): void {
     this.blocksStore = blocksStore;
-  }
-
-  /**
-   * Handle block data update from DOM mutation
-   * @param block - the block whose data should be synced
-   * @param savedData - the saved block data
-   */
-  public async syncBlockDataToYjs(block: Block, savedData: { data: Record<string, unknown> }): Promise<void> {
-    if (savedData === undefined) {
-      return;
-    }
-
-    for (const [key, value] of Object.entries(savedData.data)) {
-      this.dependencies.YjsManager.updateBlockData(block.id, key, value);
-    }
   }
 
   /**

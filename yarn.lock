@@ -917,6 +917,7 @@ __metadata:
     vue: "npm:^3.5.40"
     webm-muxer: "npm:^5.1.4"
     y-protocols: "npm:1.0.7"
+    y-websocket: "npm:3.1.0"
     yaml: "npm:^2.9.0"
     yjs: "npm:13.6.32"
     zone.js: "npm:0.16.2"
@@ -9470,7 +9471,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lib0@npm:0.2.117, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
+"lib0@npm:0.2.117, lib0@npm:^0.2.102, lib0@npm:^0.2.85, lib0@npm:^0.2.99":
   version: 0.2.117
   resolution: "lib0@npm:0.2.117"
   dependencies:
@@ -14232,7 +14233,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"y-protocols@npm:1.0.7":
+"y-protocols@npm:1.0.7, y-protocols@npm:^1.0.5":
   version: 1.0.7
   resolution: "y-protocols@npm:1.0.7"
   dependencies:
@@ -14240,6 +14241,18 @@ __metadata:
   peerDependencies:
     yjs: ^13.0.0
   checksum: 10c0/70e14ab50b9200e97602c5effc3e14ae4ea0f51479a1628569af7cc12a6739fbc02484335828f5c508a4bf6fa0c3ef5ae1c17e13346b7a6093abeb9627f59021
+  languageName: node
+  linkType: hard
+
+"y-websocket@npm:3.1.0":
+  version: 3.1.0
+  resolution: "y-websocket@npm:3.1.0"
+  dependencies:
+    lib0: "npm:^0.2.102"
+    y-protocols: "npm:^1.0.5"
+  peerDependencies:
+    yjs: ^13.5.6
+  checksum: 10c0/880f20bbf37be63a78c84acb2f00d71000cd53115dfaaafef00868ba031fdf8c42cf1ecdbcec3bb1dbd68fb1b6aea60b0a54b590162abdc8c4b23b6d6dad9f08
   languageName: node
   linkType: hard
 

@@ -13,7 +13,7 @@ import { logLabeled } from '../../utils';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
-import type { BlockChangeEvent, TransactionOrigin } from '../yjs/types';
+import type { BlockChangeEvent } from '../yjs/types';
 
 import type { BlockFactory } from './factory';
 import type { BlockOperations } from './operations';
@@ -103,6 +103,26 @@ export class BlockYjsSync {
    * holders mid-rebuild corrupts the layout, so they are never auto-moved here.
    */
   private batchHadRemove = false;
+
+  /**
+   * Parents a replay reparent moved a block into during the current event
+   * batch (null = root). `setBlockParent` APPENDS the holder, so a replay that
+   * restores a block to a mid-container slot lands it visually last while the
+   * flat array (already re-ordered from the doc) says otherwise. Only these
+   * groups get the holder fix — a reconstruction batch's other containers are
+   * still settling their own DOM and must not be touched (see batchHadRemove).
+   */
+  private readonly batchReparentedInto = new Set<string | null>();
+
+  /**
+   * Unsubscribe handle for the Yjs change subscription, released on destroy.
+   */
+  private unsubscribeFromYjs: (() => void) | null = null;
+
+  /**
+   * Set once the owning BlockManager is torn down.
+   */
+  private destroyed = false;
 
   /**
    * Blocks store access
@@ -227,7 +247,7 @@ export class BlockYjsSync {
    * @returns unsubscribe function
    */
   public subscribe(): () => void {
-    return this.dependencies.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
+    this.unsubscribeFromYjs = this.dependencies.YjsManager.onBlocksChanged((event: BlockChangeEvent) => {
       if (
         event.origin === 'undo' ||
         event.origin === 'redo' ||
@@ -236,6 +256,19 @@ export class BlockYjsSync {
         this.syncBlockFromYjs(event);
       }
     });
+
+    return this.unsubscribeFromYjs;
+  }
+
+  /**
+   * Release the Yjs subscription and disarm any reconcile still queued for the
+   * current batch. A torn-down editor has nothing to reconcile, and its dev
+   * tripwire would read a half-dismantled DOM and throw with no test owning it.
+   */
+  public destroy(): void {
+    this.destroyed = true;
+    this.unsubscribeFromYjs?.();
+    this.unsubscribeFromYjs = null;
   }
 
   /**
@@ -252,7 +285,7 @@ export class BlockYjsSync {
    */
   private syncBlockFromYjs(event: BlockChangeEvent): void {
     if (event.type === 'update') {
-      this.handleYjsUpdate(event.blockId, event.origin);
+      this.handleYjsUpdate(event.blockId);
     } else if (event.type === 'move') {
       this.handleYjsMove();
     } else if (event.type === 'add') {
@@ -287,15 +320,24 @@ export class BlockYjsSync {
 
     queueMicrotask(() => {
       this.orderReconcileScheduled = false;
+
+      if (this.destroyed) {
+        return;
+      }
+
       const shouldFix = this.batchHadRemove;
+      const reparentedInto = [ ...this.batchReparentedInto ];
 
       this.batchHadRemove = false;
+      this.batchReparentedInto.clear();
 
       // Run inside an atomic operation so the holder moves don't echo back to
       // Yjs as fresh local writes (which would pollute the undo/redo stacks).
       this.withAtomicOperation(() => {
         if (shouldFix) {
           this.reconcileHolderOrder();
+        } else {
+          reparentedInto.forEach((parentId) => this.reconcileHolderOrderForParent(parentId));
         }
 
         this.assertDomOrderInvariantInDev('yjs-sync reconcile');
@@ -321,6 +363,19 @@ export class BlockYjsSync {
    */
   private reconcileHolderOrder(): void {
     for (const siblings of this.groupByParent().values()) {
+      this.reconcileSiblingOrder(siblings);
+    }
+  }
+
+  /**
+   * The same re-assertion, scoped to ONE parent's children (null = root).
+   *
+   * @param parentId - the parent whose children just took a replay reparent
+   */
+  private reconcileHolderOrderForParent(parentId: string | null): void {
+    const siblings = this.groupByParent().get(parentId);
+
+    if (siblings !== undefined) {
       this.reconcileSiblingOrder(siblings);
     }
   }
@@ -426,7 +481,7 @@ export class BlockYjsSync {
   /**
    * Handle block update from Yjs (undo/redo or a remote peer)
    */
-  private handleYjsUpdate(blockId: string, origin: TransactionOrigin): void {
+  private handleYjsUpdate(blockId: string): void {
     const block = this.repository.getBlockById(blockId);
     const yblock = this.dependencies.YjsManager.getBlockById(blockId);
 
@@ -474,17 +529,30 @@ export class BlockYjsSync {
           this.handlers.setBlockParent(block, remoteParentId);
           this.reconcileParentChildOrderFromDoc(remoteParentId);
         });
+        this.batchReparentedInto.add(remoteParentId);
       }
-    } else if (origin === 'remote' && block.parentId !== null) {
+    } else if (block.parentId !== null) {
       /**
-       * A remote non-root → root move DELETES the parentId key (the
-       * serializer never writes null for root), so the branch above cannot
-       * see it. Remote-only: local history replays reconcile through the
-       * parentRestoreCallback in `modules/yjs/index.ts` instead.
+       * A non-root → root move DELETES the parentId key (the serializer never
+       * writes null for root), so the branch above cannot see it.
+       *
+       * Every replay origin lands here, not just 'remote'. UndoHistory's
+       * placement callback restores the parent for DRAG moves only (writes
+       * made inside a move group); a reparent from the plain captured path —
+       * the blocks API, keyboard Tab/Shift+Tab nesting, the toolbox's
+       * insert-into-a-container — carries no placement record, so undoing it
+       * left the block parented in memory while the doc said root. The flat
+       * array followed the doc, contentIds and the DOM did not, and save()
+       * then emitted a document that did not match the screen.
+       *
+       * Idempotent where the placement callback DID run: it reparents in
+       * memory before the visible transaction, so `block.parentId` is already
+       * null by the time this sees the event.
        */
       this.withAtomicOperation(() => {
         this.handlers.setBlockParent(block, null);
       });
+      this.batchReparentedInto.add(null);
     }
 
     // Tool TYPE changed (a turn-into / markdown conversion being undone, redone,

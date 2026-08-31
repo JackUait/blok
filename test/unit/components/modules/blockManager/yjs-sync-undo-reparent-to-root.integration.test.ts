@@ -8,18 +8,23 @@ import { YjsManager } from '../../../../../src/components/modules/yjs';
 import type { OutputBlockData, OutputData } from '../../../../../types';
 
 /**
- * The doc — not just memory — must record a mid-container insert at the
- * position the user sees.
+ * Undoing a reparent that sends a block back to ROOT must mirror the doc into
+ * memory, exactly like the non-root direction already does.
  *
- * The toolbox's replace-an-empty-child path detaches the old child to root,
- * inserts the new block PARENT-LESS at the old flat index, then re-attaches it
- * with `setBlockParent`. That last call is what writes the placement to the
- * doc, and it derives the preceding sibling from the parent's in-memory
- * `contentIds` — so an APPEND there hands the doc "last child" while the flat
- * array and the DOM both say "second child". Memory hides the divergence until
- * something rebuilds memory FROM the doc: undo/redo, a remote peer, a reload.
- * That is the e2e "the mid-column insert order survives undo -> redo"
- * regression, and it starts at the forward edit.
+ * The doc stores "root" as the ABSENCE of the parentId key, so an undo of a
+ * root -> container reparent DELETES the key rather than writing a new value.
+ * `handleYjsUpdate` only saw that deletion for remote origins, on the premise
+ * that local replays restore the parent through UndoHistory's placement
+ * callback — but that callback only fires for DRAG moves (writes made inside a
+ * move group). A reparent written by the plain captured path — the blocks API,
+ * keyboard Tab/Shift+Tab nesting, the toolbox's insert-into-a-container — has
+ * no placement record, so its undo left the block parented in memory while the
+ * doc said root: the flat array followed the doc, contentIds and the DOM did
+ * not, and save() then emitted a document that did not match the screen.
+ *
+ * `stopCapturing()` between the insert and the re-attach is what >500ms of CPU
+ * starvation does to that sequence under a loaded CI shard: the capture window
+ * closes mid-gesture and one undo rewinds only the re-attach.
  */
 
 interface TestEditor {
@@ -65,19 +70,16 @@ const flush = async (): Promise<void> => {
   }
 };
 
-const docChildrenOf = (id: string): string[] | undefined => {
+const docParentOf = (id: string): string | null | undefined => {
   const yblock = capturedYjs?.toJSON().find((block: OutputBlockData) => block.id === id);
 
-  return yblock?.content;
+  return yblock === undefined ? undefined : yblock.parent ?? null;
 };
 
-const memoryChildrenOf = (saved: OutputData, parentId: string): string[] =>
-  saved.blocks
-    .filter((block) => block.parent === parentId)
-    .map((block) => block.id)
-    .filter((id): id is string => id !== undefined);
+const docChildrenOf = (id: string): string[] | undefined =>
+  capturedYjs?.toJSON().find((block: OutputBlockData) => block.id === id)?.content;
 
-describe('mid-column insert — the DOC records the visible position', () => {
+describe('yjs-sync — undo of a reparent back to root', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     holder = document.createElement('div');
@@ -124,12 +126,8 @@ describe('mid-column insert — the DOC records the visible position', () => {
     return instance;
   };
 
-  /**
-   * The toolbox's three calls for "slash menu on an empty child block":
-   * detach the placeholder to root, insert the chosen tool at its flat index
-   * (replacing it), then re-attach the new block to the original parent.
-   */
-  const insertOverSlot = (instance: TestEditor): string => {
+  it('sends the block back to root in memory, not just in the doc', async () => {
+    const instance = await createEditor();
     const slotIndex = instance.blocks.getBlockIndex('slot');
 
     instance.blocks.setBlockParent('slot', null);
@@ -143,24 +141,47 @@ describe('mid-column insert — the DOC records the visible position', () => {
       true
     );
 
+    // Close the undo capture window BEFORE the re-attach, so a single undo
+    // rewinds the reparent alone.
+    capturedYjs?.stopCapturing();
     instance.blocks.setBlockParent(inserted.id, 'c1');
-
-    return inserted.id;
-  };
-
-  it('writes the inserted block as the SECOND child of the column, not the last', async () => {
-    const instance = await createEditor();
-    const insertedId = insertOverSlot(instance);
-
     await flush();
 
-    expect(docChildrenOf('c1')).toEqual(['h1', insertedId, 'body1', 'author1']);
+    instance.history.undo();
+    await flush();
+
+    expect(docParentOf(inserted.id)).toBeNull();
+    expect(docChildrenOf('c1')).toEqual(['h1', 'body1', 'author1']);
+
+    // save() re-derives the tree from memory and refuses to emit a document
+    // whose child order disagrees with the DOM, so it is the honest witness
+    // that memory followed the doc.
+    const saved = await instance.save();
+    const insertedInMemory = saved.blocks.find((block) => block.id === inserted.id);
+
+    expect(insertedInMemory?.parent ?? null).toBeNull();
+    expect(
+      saved.blocks.filter((block) => block.parent === 'c1').map((block) => block.id)
+    ).toEqual(['h1', 'body1', 'author1']);
   });
 
-  it('keeps that order through undo -> redo', async () => {
+  it('redoes the reparent back into the column', async () => {
     const instance = await createEditor();
-    const insertedId = insertOverSlot(instance);
+    const slotIndex = instance.blocks.getBlockIndex('slot');
 
+    instance.blocks.setBlockParent('slot', null);
+
+    const inserted = instance.blocks.insert(
+      'header',
+      { text: 'Inserted', level: 3 },
+      undefined,
+      slotIndex,
+      undefined,
+      true
+    );
+
+    capturedYjs?.stopCapturing();
+    instance.blocks.setBlockParent(inserted.id, 'c1');
     await flush();
 
     instance.history.undo();
@@ -168,11 +189,12 @@ describe('mid-column insert — the DOC records the visible position', () => {
     instance.history.redo();
     await flush();
 
+    expect(docChildrenOf('c1')).toEqual(['h1', inserted.id, 'body1', 'author1']);
+
     const saved = await instance.save();
 
-    expect(docChildrenOf('c1')).toEqual(['h1', insertedId, 'body1', 'author1']);
-    expect(memoryChildrenOf(saved, 'c1')).toEqual(['h1', insertedId, 'body1', 'author1']);
-    // The untouched right column must not be reordered by the replay.
-    expect(memoryChildrenOf(saved, 'c2')).toEqual(['h2', 'body2']);
+    expect(
+      saved.blocks.filter((block) => block.parent === 'c1').map((block) => block.id)
+    ).toEqual(['h1', inserted.id, 'body1', 'author1']);
   });
 });

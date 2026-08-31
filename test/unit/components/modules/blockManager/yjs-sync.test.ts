@@ -1466,14 +1466,13 @@ describe('BlockYjsSync', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      it('treats missing parentId key as no-op for history replays (Fix 4)', async () => {
+      it('treats a missing parentId key as reparent-to-root on history replays too', async () => {
         /**
-         * On undo/redo a missing `parentId` key must NOT call
-         * setBlockParent — parent restores are owned by the
-         * parentRestoreCallback in modules/yjs/index.ts. On the REMOTE
-         * path a missing key IS authoritative (deleted key = root, per
-         * the serializer contract) — covered in
-         * yjs-sync-remote-sanitize.test.ts.
+         * A deleted key IS the doc saying "root" (the serializer never
+         * writes null), and that reading is origin-independent. Undo/redo
+         * once deferred to UndoHistory's placement callback, but that only
+         * fires for DRAG moves — undoing a reparent written by the plain
+         * captured path left the block parented in memory forever.
          */
         const childBlock = createMockBlock({
           id: 'child-1',
@@ -1514,9 +1513,7 @@ describe('BlockYjsSync', () => {
 
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
-        // Local state untouched.
-        expect(childBlock.parentId).toBe('callout-1');
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, null);
       });
 
       it('treats explicit null parentId as reparent-to-root (Fix 4)', async () => {
@@ -2637,6 +2634,70 @@ describe('BlockYjsSync', () => {
       expect(() => {
         callback({ blockId: 'test', type: 'update', origin: 'redo' });
       }).not.toThrow();
+    });
+  });
+  describe('destroy', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let unsubscribe: ReturnType<typeof vi.fn>;
+
+    /**
+     * Put block-2's holder BEFORE block-1's, so the holder-order reconcile has
+     * something to repair and its run (or absence) is observable.
+     */
+    const divergeHolders = (): HTMLElement[] => {
+      const first = repository.blocks[0].holder;
+      const second = repository.blocks[1].holder;
+
+      first.parentElement?.insertBefore(second, first);
+
+      return [ first, second ];
+    };
+
+    const domOrder = (holders: HTMLElement[]): number[] =>
+      holders.map((holder) => Array.from(holder.parentElement?.children ?? []).indexOf(holder));
+
+    beforeEach(() => {
+      unsubscribe = vi.fn();
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return unsubscribe;
+      });
+
+      yjsSync.subscribe();
+    });
+
+    it('unsubscribes from Yjs changes', () => {
+      yjsSync.destroy();
+
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a reconcile scheduled before destroy when the editor is still alive', async () => {
+      const holders = divergeHolders();
+
+      // A remove of a block this mirror never had: it schedules the batch's
+      // reconcile without disturbing the holders under test.
+      callback({ blockId: 'already-gone', type: 'remove', origin: 'undo' });
+
+      await Promise.resolve();
+
+      expect(domOrder(holders)).toEqual([ 0, 1 ]);
+    });
+
+    it('drops a reconcile scheduled before destroy', async () => {
+      const holders = divergeHolders();
+
+      callback({ blockId: 'already-gone', type: 'remove', origin: 'undo' });
+      yjsSync.destroy();
+
+      await Promise.resolve();
+
+      // A torn-down editor has nothing to reconcile — and nothing to assert
+      // about, which is what made the dev tripwire throw out of band.
+      expect(domOrder(holders)).toEqual([ 1, 0 ]);
     });
   });
 });

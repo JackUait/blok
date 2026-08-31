@@ -434,7 +434,14 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
       expect(child.parentId).toBeNull();
     });
 
-    it('leaves undo-driven parentId deletions to the parent-restore callback (guard)', async () => {
+    it('reparents to root on an undo-driven parentId deletion too', async () => {
+      /**
+       * This once deferred to UndoHistory's placement callback, which only
+       * fires for DRAG moves (writes made inside a move group). A reparent
+       * from the plain captured path — the blocks API, keyboard nesting, the
+       * toolbox's insert-into-a-container — has no placement record, so its
+       * undo left the block parented in memory while the doc said root.
+       */
       const parent = createMockBlock({ id: 'parent-1' });
       const child = createMockBlock({ id: 'child-1' });
 
@@ -451,6 +458,29 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
       });
       (child as { parentId: string | null }).parentId = 'parent-1';
 
+      manager.undo();
+
+      await flush();
+
+      expect(handlers.setBlockParent).toHaveBeenCalledWith(child, null);
+    });
+
+    it('stays a no-op when the placement callback already restored the parent', async () => {
+      const parent = createMockBlock({ id: 'parent-1' });
+      const child = createMockBlock({ id: 'child-1' });
+
+      createHarness([parent, child]);
+      manager.fromJSON([
+        { id: 'parent-1', type: 'paragraph', data: { text: 'Parent' } },
+        { id: 'child-1', type: 'paragraph', data: { text: 'Child' } },
+      ]);
+
+      manager.transact(() => {
+        manager.getBlockById('child-1')?.set('parentId', 'parent-1');
+      });
+
+      // Memory already agrees with the doc's post-undo state, exactly as the
+      // drag-move replay leaves it.
       manager.undo();
 
       await flush();

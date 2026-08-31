@@ -1725,6 +1725,10 @@ export class BlockManager extends Module {
     // Unregister keyboard shortcuts
     this.shortcuts.unregister();
 
+    // Before the blocks go: a reconcile queued for the current batch would
+    // otherwise run against the half-dismantled DOM below.
+    this.yjsSync.destroy();
+
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));

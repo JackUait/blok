@@ -270,7 +270,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the fifteen service limits the design refuses to bury', () => {
+  it('states the eighteen service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'working-copy-privacy',
@@ -285,6 +285,9 @@ describe('server docs data', () => {
       'ticket-not-scoped',
       'collab-pass-lifetime',
       'collab-connection-cap',
+      'collab-what-is-not-limited',
+      'collab-presence-unverified',
+      'collab-doc-id-shape',
       'tls-termination',
       'alpine-nuget',
     ]);
@@ -348,6 +351,46 @@ describe('server docs data', () => {
     expect(body).toMatch(/address/i);
     expect(body).toMatch(/proxy/i);
     expect(body).toMatch(/no cap/i);
+  });
+
+  // The review asked for the unbounded things to be said out loud, next to the
+  // three bounds that do exist, so nobody reads the connection cap as a quota.
+  it('says what live collaboration leaves unlimited, and names the three bounds it does have', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-what-is-not-limited')?.body ?? '';
+
+    expect(body).toMatch(/no cap/i);
+    expect(body).toMatch(/your own backend/i);
+    expect(body).toContain('1 MiB');
+    expect(body).toContain('8 MiB');
+    expect(body).toContain('--rate-limit');
+    expect(body).toMatch(/not limited/i);
+  });
+
+  // Awareness frames are relayed verbatim and never parsed, read-only members
+  // included, so the entry has to stop anyone treating presence as identity.
+  it('says presence is relayed unverified and must not carry permissions', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-presence-unverified')?.body ?? '';
+
+    expect(body).toMatch(/exactly as each browser sends/i);
+    expect(body).toMatch(/read-only pass/i);
+    expect(body).toMatch(/not an identity check/i);
+    expect(body).toMatch(/never build permissions/i);
+  });
+
+  // The id sits in /sync/{doc} and in the pass and is compared byte for byte;
+  // a slash, encoded or not, is closed 4400 by name rather than left to surface
+  // as a baffling doc-claim mismatch.
+  it('prescribes a single-segment opaque document id', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-doc-id-shape')?.body ?? '';
+
+    expect(body).toContain('/sync/{doc}');
+    expect(body).toMatch(/one path segment/i);
+    expect(body).toMatch(/slash/i);
+    expect(body).toMatch(/even an encoded one/i);
+    expect(body).toMatch(/refused/i);
+    expect(body).toContain('document ids must be a single path segment');
+    expect(body).toMatch(/opaque ids/i);
+    expect(body).toMatch(/token/i);
   });
 
   it('admits the NuGet package does not run on Alpine x64', () => {

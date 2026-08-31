@@ -2380,6 +2380,10 @@
         "title": "Give a collaboration pass about 30 minutes",
         "body": "An upload pass is checked on every request, so a few minutes of life is right for it. A collaboration pass is checked once, when the connection opens, and the connection then outlives it — so the pass has to be alive at the moments the editor connects and reconnects. Around 30 minutes is the balance: short enough that a leaked pass ages out quickly, long enough that a laptop waking up or a network blip does not fail because the pass died in between. Taking someone’s access away works the same way: it applies the next time they reconnect, not mid-connection."
       },
+      "collab-connection-cap": {
+        "title": "Eight live connections per person per document",
+        "body": "In ticket mode, where the browser carries a pass, one person may hold up to eight open collaboration connections to one document — every tab counts as one — and the ninth is refused with \"too many connections\" (HTTP 429) until one of them closes. When the pass names no user, the limit applies per network address instead; when the service runs inside your own ASP.NET app and your login check has named the user, that user is what is counted. Behind your own app or proxy — the none and proxy modes of the standalone service — there is no cap at all, because nothing there names the person: every connection arrives from the one proxy address, and a shared cap would throttle everyone together. If you need a limit there, put it in the proxy, where you already know who is signed in."
+      },
       "tls-termination": {
         "title": "Terminate TLS before internet traffic reaches the service",
         "body": "The standalone host speaks plain HTTP and does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic."

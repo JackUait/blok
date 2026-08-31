@@ -99,6 +99,8 @@ internal sealed class BlokServerRequestGuard
       {
         rateLimitKey = $"user:{claims.User}";
       }
+
+      context.Features.Set(new TicketClaimsFeature(claims));
     }
 
     if (!_rateLimiter.Allow(rateLimitKey))
@@ -129,3 +131,6 @@ internal sealed class BlokServerRequestGuard
     await context.Response.WriteAsync(body);
   }
 }
+
+/// <summary>The verified ticket of the current request; set only in ticket mode, after the guard passed it.</summary>
+internal sealed record TicketClaimsFeature(TicketClaims Claims);

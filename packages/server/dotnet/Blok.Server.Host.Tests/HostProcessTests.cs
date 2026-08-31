@@ -28,7 +28,7 @@ public sealed class HostProcessTests
   [Fact]
   public async Task StartsWithDefaultsAndReportsTheDevelopmentVersion()
   {
-    await using var host = await StartHostAsync(["--listen", AllocateListenAddress()]);
+    await using var host = await StartHostAsync(["--listen", HostProcess.AllocateListenAddress()]);
 
     using var health = await host.Client.GetAsync("/health");
     Assert.Equal(HttpStatusCode.OK, health.StatusCode);
@@ -118,7 +118,7 @@ public sealed class HostProcessTests
           $"{await standardOutput}{Environment.NewLine}{await standardError}");
 
       await using var host = await StartHostAsync(
-          ["--listen", AllocateListenAddress()],
+          ["--listen", HostProcess.AllocateListenAddress()],
           assemblyPath: Path.Combine(outputDirectory, "blok-server.dll"));
       using var health = await host.Client.GetAsync("/health");
 
@@ -148,7 +148,7 @@ public sealed class HostProcessTests
     {
       await using var host = await StartHostAsync(
       [
-        "--listen", AllocateListenAddress(),
+        "--listen", HostProcess.AllocateListenAddress(),
         "--storage-dir", directory,
       ]);
       using var client = new HttpClient
@@ -194,7 +194,7 @@ public sealed class HostProcessTests
     {
       await using var host = await StartHostAsync(
       [
-        "--listen", AllocateListenAddress(),
+        "--listen", HostProcess.AllocateListenAddress(),
         "--storage-dir", storageDirectory,
       ],
       new Dictionary<string, string?>
@@ -236,7 +236,7 @@ public sealed class HostProcessTests
     {
       await using var host = await StartHostAsync(
       [
-        "--listen", AllocateListenAddress(),
+        "--listen", HostProcess.AllocateListenAddress(),
         "--storage-dir", storageDirectory,
       ],
       new Dictionary<string, string?>
@@ -291,7 +291,7 @@ public sealed class HostProcessTests
     {
       await using var host = await StartHostAsync(
       [
-        "--listen", AllocateListenAddress(),
+        "--listen", HostProcess.AllocateListenAddress(),
         "--storage-dir", storagePath,
       ],
       new Dictionary<string, string?>
@@ -327,7 +327,7 @@ public sealed class HostProcessTests
     using var upstream = new TcpListener(IPAddress.Loopback, 0);
     upstream.Start();
     var upstreamEndpoint = Assert.IsType<IPEndPoint>(upstream.LocalEndpoint);
-    var listen = AllocateListenAddress();
+    var listen = HostProcess.AllocateListenAddress();
     var options = new BlokServerOptions
     {
       ListenAddress = listen,
@@ -414,7 +414,7 @@ public sealed class HostProcessTests
   public async Task CancelsAStalledRequestBodyAtTheHostDeadline()
   {
     const string boundary = "blok-host-deadline-boundary";
-    var listen = AllocateListenAddress();
+    var listen = HostProcess.AllocateListenAddress();
     var port = int.Parse(
         listen[(listen.LastIndexOf(':') + 1)..],
         System.Globalization.CultureInfo.InvariantCulture);
@@ -469,11 +469,11 @@ public sealed class HostProcessTests
   [Fact]
   public async Task RefusesAMalformedLocalPublicUrlBeforeBinding()
   {
-    var listen = AllocateListenAddress();
+    var listen = HostProcess.AllocateListenAddress();
     var port = int.Parse(
         listen[(listen.LastIndexOf(':') + 1)..],
         System.Globalization.CultureInfo.InvariantCulture);
-    using var process = StartProcess(
+    using var process = HostProcess.Start(
     [
       "--listen", listen,
       "--public-url", "https://uploads.example/%zz",
@@ -609,7 +609,7 @@ public sealed class HostProcessTests
   {
     await using var host = await StartHostAsync(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--storage-dir", "",
       "--max-upload", value,
       "--rate-limit", value,
@@ -670,7 +670,7 @@ public sealed class HostProcessTests
   {
     await using var host = await StartHostAsync(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--storage-dir", "",
       "--rate-limit", "0x80000000",
     ]);
@@ -691,7 +691,7 @@ public sealed class HostProcessTests
     {
       await using var host = await StartHostAsync(
       [
-        "--listen", AllocateListenAddress(),
+        "--listen", HostProcess.AllocateListenAddress(),
         "--storage-dir", directory,
         "--max-upload", "040000000",
       ]);
@@ -720,7 +720,7 @@ public sealed class HostProcessTests
   {
     await using var host = await StartHostAsync(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--storage-dir", "",
       "--rate-limit", "010",
     ]);
@@ -738,7 +738,7 @@ public sealed class HostProcessTests
   [Fact]
   public async Task AcceptsEveryFlagAndLetsAnExplicitSecretOverrideTheEnvironment()
   {
-    var listen = AllocateListenAddress();
+    var listen = HostProcess.AllocateListenAddress();
     await using var host = await StartHostAsync(
     [
       "--listen", listen,
@@ -787,7 +787,7 @@ public sealed class HostProcessTests
   {
     await using var host = await StartHostAsync(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--auth", "ticket",
       "--allow-origin", "https://app.example.com",
       "--storage-dir", "",
@@ -801,7 +801,7 @@ public sealed class HostProcessTests
   [Fact]
   public async Task StartsOnABlankHostListenerInTicketMode()
   {
-    var listen = $":{AllocatePort()}";
+    var listen = $":{HostProcess.AllocatePort()}";
     await using var host = await StartHostAsync(
     [
       "--listen", listen,
@@ -818,7 +818,7 @@ public sealed class HostProcessTests
   [Fact]
   public async Task KeepsPortZeroWhenBindingABlankHostListener()
   {
-    using var process = StartProcess(
+    using var process = HostProcess.Start(
     [
       "--listen", ":0",
       "--auth", "ticket",
@@ -830,7 +830,7 @@ public sealed class HostProcessTests
 
     try
     {
-      await WaitForStandardErrorAsync(process, "listening on :0", TimeSpan.FromSeconds(10));
+      await HostProcess.WaitForStandardErrorAsync(process, "listening on :0", TimeSpan.FromSeconds(10));
       var exited = process.WaitForExitAsync();
       var remainedRunning = Task.Delay(500);
 
@@ -850,9 +850,9 @@ public sealed class HostProcessTests
   [Fact]
   public async Task WarnsWhenTheDocEndpointAuthComesFromTheFlag()
   {
-    using var process = StartProcess(
+    using var process = HostProcess.Start(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--collab",
       "--doc-endpoint", ValidDocEndpoint,
       "--doc-endpoint-auth", "Bearer app-token",
@@ -862,7 +862,7 @@ public sealed class HostProcessTests
 
     try
     {
-      await WaitForStandardErrorAsync(
+      await HostProcess.WaitForStandardErrorAsync(
           process,
           "warning: --doc-endpoint-auth puts the credential in this machine's process list",
           TimeSpan.FromSeconds(10));
@@ -881,9 +881,9 @@ public sealed class HostProcessTests
   [Fact]
   public async Task ReadsTheDocEndpointAuthFromTheEnvironmentWithoutWarning()
   {
-    using var process = StartProcess(
+    using var process = HostProcess.Start(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--collab",
       "--doc-endpoint", ValidDocEndpoint,
       "--storage-dir", "",
@@ -897,7 +897,7 @@ public sealed class HostProcessTests
     {
       // Any auth warning is written strictly before "listening on", so the
       // collected prefix is a complete record — no timed absence wait.
-      var lines = await WaitForStandardErrorAsync(
+      var lines = await HostProcess.WaitForStandardErrorAsync(
           process,
           "listening on",
           TimeSpan.FromSeconds(10));
@@ -973,7 +973,7 @@ public sealed class HostProcessTests
   {
     var result = await RunHostCommandAsync(
     [
-      "--listen", AllocateListenAddress(),
+      "--listen", HostProcess.AllocateListenAddress(),
       "--auth", "ticket",
       "--secret", "short",
       "--allow-origin", "https://app.example.com",
@@ -1010,8 +1010,8 @@ public sealed class HostProcessTests
       { ["--max-upload", "not-a-number"], 2, "invalid value \"not-a-number\" for flag -max-upload", null },
       { ["--auth", "unknown"], 1, "--auth must be none, proxy, or ticket (got \"unknown\")", null },
       { ["--listen", "0.0.0.0:4000"], 1, "--auth none", null },
-      { ["--listen", $":{AllocatePort()}"], 1, "--auth none", null },
-      { ["--listen", $":{AllocatePort()}", "--auth", "proxy"], 1, "--auth proxy", null },
+      { ["--listen", $":{HostProcess.AllocatePort()}"], 1, "--auth none", null },
+      { ["--listen", $":{HostProcess.AllocatePort()}", "--auth", "proxy"], 1, "--auth proxy", null },
       {
         ["--listen", "localhost"],
         1,
@@ -1189,7 +1189,10 @@ public sealed class HostProcessTests
         new WebApplicationOptions { Args = [] });
     builder.Logging.ClearProviders();
     builder.WebHost.UseUrls($"http://{listenAddress}");
-    HostRequestTimeouts.Configure(builder, requestTimeout);
+    HostRequestTimeouts.Configure(
+        builder,
+        requestTimeout,
+        HostRequestTimeouts.DefaultKeepAliveTimeout);
     builder.Services.AddBlokServer(options);
     var app = builder.Build();
     HostRequestTimeouts.Use(app);
@@ -1204,8 +1207,8 @@ public sealed class HostProcessTests
       IReadOnlyDictionary<string, string?>? environment = null,
       string? assemblyPath = null)
   {
-    var process = StartProcess(args, environment, assemblyPath);
-    var listen = RequiredListenAddress(args);
+    var process = HostProcess.Start(args, environment, assemblyPath);
+    var listen = HostProcess.RequiredListenAddress(args);
     var clientAddress = listen.StartsWith(':')
       ? $"127.0.0.1{listen}"
       : listen;
@@ -1261,7 +1264,7 @@ public sealed class HostProcessTests
       string[] args,
       IReadOnlyDictionary<string, string?>? environment = null)
   {
-    using var process = StartProcess(args, environment);
+    using var process = HostProcess.Start(args, environment);
     var standardError = process.StandardError.ReadToEndAsync();
     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
@@ -1277,112 +1280,6 @@ public sealed class HostProcessTests
     }
 
     return new CommandResult(process.ExitCode, await standardError);
-  }
-
-  private static Process StartProcess(
-      string[] args,
-      IReadOnlyDictionary<string, string?>? environment,
-      string? assemblyPath = null)
-  {
-    var startInfo = new ProcessStartInfo("dotnet")
-    {
-      RedirectStandardError = true,
-      UseShellExecute = false,
-      WorkingDirectory = Path.GetTempPath(),
-    };
-    startInfo.ArgumentList.Add(
-        assemblyPath ?? Path.Combine(AppContext.BaseDirectory, "Blok.Server.Host.dll"));
-
-    foreach (var arg in args)
-    {
-      startInfo.ArgumentList.Add(arg);
-    }
-
-    startInfo.Environment["BLOK_SECRET"] = "";
-    startInfo.Environment["BLOK_S3_ACCESS_KEY"] = "";
-    startInfo.Environment["BLOK_S3_SECRET_KEY"] = "";
-    startInfo.Environment["BLOK_DOC_ENDPOINT_AUTH"] = "";
-
-    if (environment is not null)
-    {
-      foreach (var (key, value) in environment)
-      {
-        startInfo.Environment[key] = value ?? "";
-      }
-    }
-
-    return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the host process");
-  }
-
-  private static async Task<IReadOnlyList<string>> WaitForStandardErrorAsync(
-      Process process,
-      string expected,
-      TimeSpan timeout)
-  {
-    using var deadline = new CancellationTokenSource(timeout);
-    var lines = new List<string>();
-
-    while (true)
-    {
-      string? line;
-
-      try
-      {
-        line = await process.StandardError.ReadLineAsync(deadline.Token);
-      }
-      catch (OperationCanceledException)
-      {
-        throw new TimeoutException(
-            $"Host did not write {expected} within {timeout}: {string.Join(Environment.NewLine, lines)}");
-      }
-
-      if (line is null)
-      {
-        throw new InvalidOperationException(
-            $"Host exited before writing {expected}: {string.Join(Environment.NewLine, lines)}");
-      }
-
-      lines.Add(line);
-
-      if (line.Contains(expected, StringComparison.Ordinal))
-      {
-        return lines;
-      }
-    }
-  }
-
-  private static string RequiredListenAddress(string[] args)
-  {
-    for (var index = 0; index < args.Length; index++)
-    {
-      if (args[index] == "--listen" && index + 1 < args.Length)
-      {
-        return args[index + 1];
-      }
-
-      const string prefix = "--listen=";
-
-      if (args[index].StartsWith(prefix, StringComparison.Ordinal))
-      {
-        return args[index][prefix.Length..];
-      }
-    }
-
-    throw new InvalidOperationException("Host process test needs an explicit --listen address");
-  }
-
-  private static string AllocateListenAddress()
-  {
-    return $"127.0.0.1:{AllocatePort()}";
-  }
-
-  private static int AllocatePort()
-  {
-    using var listener = new TcpListener(IPAddress.Loopback, 0);
-    listener.Start();
-    var endpoint = Assert.IsType<IPEndPoint>(listener.LocalEndpoint);
-
-    return endpoint.Port;
   }
 
   private sealed record CommandResult(

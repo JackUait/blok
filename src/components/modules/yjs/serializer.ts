@@ -321,13 +321,26 @@ export class YBlockSerializer {
   }
 
   /**
-   * Convert Y.Map to plain object
+   * Convert Y.Map to plain object.
+   *
+   * Every key is written with `defineProperty`, not `obj[key] = value`: for
+   * the key `__proto__` a plain assignment invokes the prototype SETTER, so
+   * the entry vanishes from the object (and an object-valued one silently
+   * becomes the returned record's prototype). `JSON.parse` mints real own
+   * `__proto__` properties, so a stored record can carry one and
+   * `objectToYMap` writes it into the doc — the C# converter mirroring this
+   * file keeps it, and read-back must too or the two sides disagree.
    */
   public yMapToObject(ymap: Y.Map<unknown>): Record<string, unknown> {
     const obj: Record<string, unknown> = {};
 
     ymap.forEach((value, key) => {
-      obj[key] = this.yValueToPlain(value);
+      Object.defineProperty(obj, key, {
+        value: this.yValueToPlain(value),
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     });
 
     return obj;

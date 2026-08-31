@@ -40,18 +40,19 @@ function isObjectArray(value: unknown): value is Record<string, unknown>[] {
 }
 
 /**
- * input.json deliberately carries malformed blocks (numeric ids, a null
- * parent) because `fromJSON` tolerates them at runtime; only the array shape
- * is checked here.
+ * input.json deliberately carries malformed records (numeric ids, a null
+ * parent, and — in `lenient-seed` — entries that are not objects at all)
+ * because `fromJSON` tolerates them at runtime, so only the ARRAY shape is
+ * checked. canonical.json is always well-formed and gets the stricter check.
  */
-function readBlocks(path: string): OutputBlockData[] {
+function readBlocks(path: string, requireObjects: boolean): OutputBlockData[] {
   const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
 
-  if (!isObjectArray(parsed)) {
+  if (requireObjects ? !isObjectArray(parsed) : !Array.isArray(parsed)) {
     throw new Error(`${path} must hold an array of block objects`);
   }
 
-  return parsed as unknown as OutputBlockData[];
+  return parsed as OutputBlockData[];
 }
 
 function isManifest(value: unknown): value is CollabFixtureManifest {
@@ -93,8 +94,8 @@ function readCase(name: string): CollabFixtureCase {
 
   return {
     name,
-    input: readBlocks(join(directory, 'input.json')),
-    canonical: readBlocks(join(directory, 'canonical.json')),
+    input: readBlocks(join(directory, 'input.json'), false),
+    canonical: readBlocks(join(directory, 'canonical.json'), true),
     update: new Uint8Array(Buffer.from(base64, 'base64')),
   };
 }

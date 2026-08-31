@@ -13,7 +13,16 @@ namespace Blok.Server.Collab;
 internal sealed record DocEndpointOptions(
     Uri Endpoint,
     string Authorization,
-    TimeSpan RequestTimeout);
+    TimeSpan RequestTimeout)
+{
+  /// <summary>
+  /// Ceiling on a single answer's body. Generous — a document with a large
+  /// pasted table is legitimately megabytes — but finite: without it a
+  /// misbehaving or hostile endpoint can hand the room an unbounded stream
+  /// and take the process down with an OutOfMemoryException.
+  /// </summary>
+  internal long MaxResponseBytes { get; init; } = 64L * 1024 * 1024;
+}
 
 /// <summary>
 /// One GET answer: the OutputData object, or null for "nothing saved yet",
@@ -65,6 +74,25 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
   private static readonly MediaTypeHeaderValue JsonMediaType =
       new("application/json") { CharSet = "utf-8" };
 
+  /// <summary>
+  /// Both directions carry the SAME depth ceiling as the converter's own
+  /// nesting limit allows — see <see cref="YDocConverter.JsonMaxDepth"/>. The
+  /// framework default is 64, below what the converter accepts, so a
+  /// legitimately deep document would fail to load or to save; and duplicate
+  /// property names are rejected here rather than becoming an ArgumentException
+  /// from whichever line first indexes the object.
+  /// </summary>
+  private static readonly JsonDocumentOptions ReaderOptions = new()
+  {
+    MaxDepth = YDocConverter.JsonMaxDepth,
+    AllowDuplicateProperties = false,
+  };
+
+  private static readonly JsonSerializerOptions WriterOptions = new()
+  {
+    MaxDepth = YDocConverter.JsonMaxDepth,
+  };
+
   private readonly DocEndpointOptions options;
   private readonly HttpClient client;
 
@@ -111,8 +139,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
     using var request = new HttpRequestMessage(HttpMethod.Put, UrlFor(docId))
     {
-      Content = new ByteArrayContent(
-          JsonSerializer.SerializeToUtf8Bytes(outputData)),
+      Content = new ByteArrayContent(Serialize(outputData)),
     };
     request.Content.Headers.ContentType = JsonMediaType;
 
@@ -131,6 +158,21 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     client.Dispose();
   }
 
+  private static byte[] Serialize(JsonNode outputData)
+  {
+    try
+    {
+      return JsonSerializer.SerializeToUtf8Bytes(outputData, WriterOptions);
+    }
+    catch (JsonException error)
+    {
+      throw new DocEndpointException(
+          "collab: the document is nested too deeply to send " +
+          $"(over {YDocConverter.JsonMaxDepth} levels).",
+          inner: error);
+    }
+  }
+
   private static SocketsHttpHandler CreateHandler()
   {
     return new SocketsHttpHandler
@@ -146,7 +188,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
     try
     {
-      root = JsonNode.Parse(body);
+      root = JsonNode.Parse(body, documentOptions: ReaderOptions);
     }
     catch (JsonException error)
     {
@@ -191,7 +233,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
     try
     {
-      return JsonNode.Parse(body) is JsonObject answer
+      return JsonNode.Parse(body, documentOptions: ReaderOptions) is JsonObject answer
         ? VersionOf(answer)
         : null;
     }
@@ -228,14 +270,34 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
         "collab: the doc endpoint version must be a string or a number.");
   }
 
+  /// <summary>
+  /// One escaped path segment under the endpoint, never more and never less.
+  /// <see cref="Uri"/> normalizes dot segments, so an id of "." or ".."
+  /// (percent-encoded or not) would collapse the path and retarget the
+  /// request at the collection or its parent — the answer to a GET for one
+  /// document would be the whole collection, and a PUT would overwrite it.
+  /// Escaping alone does not save us: the constructor unescapes %2e before
+  /// normalizing. So the built URL is checked against the escaped id it was
+  /// supposed to carry, and anything that did not survive is refused before
+  /// a request is made. (The endpoint side has its own single-segment guard;
+  /// this is the client half of it.)
+  /// </summary>
   private Uri UrlFor(string docId)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
 
-    return new Uri(
-        options.Endpoint.AbsoluteUri.TrimEnd('/') +
-        "/" +
-        Uri.EscapeDataString(docId));
+    var basePath = options.Endpoint.AbsoluteUri.TrimEnd('/');
+    var segment = Uri.EscapeDataString(docId);
+    var url = new Uri($"{basePath}/{segment}");
+
+    if (!string.Equals(url.AbsoluteUri, $"{basePath}/{segment}", StringComparison.Ordinal))
+    {
+      throw new ArgumentException(
+          $"collab: the document id \"{docId}\" does not address a single path segment.",
+          nameof(docId));
+    }
+
+    return url;
   }
 
   private async Task<byte[]> SendAsync(
@@ -281,7 +343,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
       try
       {
-        body = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+        body = await ReadCappedAsync(response, request, timeout.Token);
       }
       catch (OperationCanceledException error) when (
           !cancellationToken.IsCancellationRequested)
@@ -302,5 +364,53 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
       return body;
     }
+  }
+
+  /// <summary>
+  /// Read at most <see cref="DocEndpointOptions.MaxResponseBytes"/>. The
+  /// declared Content-Length is only a hint — a chunked answer declares
+  /// none — so the stream is read with a hard ceiling either way.
+  /// </summary>
+  private async Task<byte[]> ReadCappedAsync(
+      HttpResponseMessage response,
+      HttpRequestMessage request,
+      CancellationToken cancellationToken)
+  {
+    var cap = options.MaxResponseBytes;
+
+    if (response.Content.Headers.ContentLength > cap)
+    {
+      throw TooLarge(request, cap);
+    }
+
+    await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+    using var buffer = new MemoryStream();
+    var chunk = new byte[81920];
+
+    while (true)
+    {
+      var read = await source.ReadAsync(chunk, cancellationToken);
+
+      if (read == 0)
+      {
+        break;
+      }
+
+      if (buffer.Length + read > cap)
+      {
+        throw TooLarge(request, cap);
+      }
+
+      buffer.Write(chunk, 0, read);
+    }
+
+    return buffer.ToArray();
+  }
+
+  private static DocEndpointException TooLarge(HttpRequestMessage request, long cap)
+  {
+    return new DocEndpointException(
+        $"collab: the doc endpoint {request.Method.Method} answer is too large " +
+        $"(over {cap} bytes).");
   }
 }

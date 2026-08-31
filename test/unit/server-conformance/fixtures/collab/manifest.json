@@ -72,6 +72,14 @@
     {
       "name": "malformed-blocks",
       "description": "a non-string id is skipped entirely; non-string content entries and parents pass through the type checks"
+    },
+    {
+      "name": "proto-key",
+      "description": "a __proto__ key is an ordinary own key in data, tunes and nested objects; other Object.prototype names are ordinary too"
+    },
+    {
+      "name": "lenient-seed",
+      "description": "malformed records fromJSON tolerates: Object.entries leniency for data/tunes, iterable content, non-object entries skipped"
     }
   ]
 }

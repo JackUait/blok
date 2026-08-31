@@ -236,17 +236,189 @@ public sealed class DocEndpointClientTests
     await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);
   }
 
+  /// <summary>
+  /// A document id must address ONE path segment. Uri normalization collapses
+  /// dot segments, so "." and ".." would silently retarget the request at the
+  /// collection root or its parent — defence in depth beside the endpoint's
+  /// own single-segment guard.
+  /// </summary>
+  [Theory]
+  [InlineData("")]
+  [InlineData(".")]
+  [InlineData("..")]
+  public async Task LoadRejectsADocIdThatIsNotOneOrdinarySegment(string docId)
+  {
+    var recorder = new RequestRecorder(_ => Json("""{"blocks":[]}"""));
+    using var client = CreateClient(recorder);
+
+    await Assert.ThrowsAnyAsync<ArgumentException>(
+        () => client.LoadAsync(docId, CancellationToken.None));
+    Assert.Empty(recorder.Requests);
+  }
+
+  [Fact]
+  public async Task SaveRejectsADotSegmentDocIdBeforeSending()
+  {
+    var recorder = new RequestRecorder(_ => Json("{}"));
+    using var client = CreateClient(recorder);
+
+    await Assert.ThrowsAnyAsync<ArgumentException>(
+        () => client.SaveAsync("..", new JsonObject(), null, CancellationToken.None));
+    Assert.Empty(recorder.Requests);
+  }
+
+  [Theory]
+  [InlineData("doc 1/x", "https://app.example.com/api/docs/doc%201%2Fx")]
+  [InlineData("a.b", "https://app.example.com/api/docs/a.b")]
+  [InlineData("...", "https://app.example.com/api/docs/...")]
+  [InlineData("a?b#c", "https://app.example.com/api/docs/a%3Fb%23c")]
+  [InlineData("../x", "https://app.example.com/api/docs/..%2Fx")]
+  // A percent-encoded dot is not a dot segment here: escaping the id escapes
+  // its own '%', so the server decodes the segment back to the literal "%2e".
+  [InlineData("%2e", "https://app.example.com/api/docs/%252e")]
+  [InlineData("%2E%2e", "https://app.example.com/api/docs/%252E%252e")]
+  public async Task AnAcceptedDocIdStaysOneEscapedSegment(string docId, string expected)
+  {
+    var recorder = new RequestRecorder(_ => Json("""{"blocks":[]}"""));
+    using var client = CreateClient(recorder);
+
+    await client.LoadAsync(docId, CancellationToken.None);
+
+    Assert.Equal(expected, Assert.Single(recorder.Requests).Url);
+  }
+
+  [Fact]
+  public async Task LoadRefusesAResponseLargerThanTheCap()
+  {
+    var recorder = new RequestRecorder(_ => Json($$"""{"blocks":[],"pad":"{{new string('x', 4096)}}"}"""));
+    using var client = CreateClient(recorder, maxResponseBytes: 1024);
+
+    var error = await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+
+    Assert.Contains("too large", error.Message, StringComparison.OrdinalIgnoreCase);
+  }
+
+  [Fact]
+  public async Task LoadRefusesAnOverlongResponseThatDeclaresNoLength()
+  {
+    var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+      Content = new StreamContent(new MemoryStream(
+          Encoding.UTF8.GetBytes($$"""{"blocks":[],"pad":"{{new string('x', 4096)}}"}"""))),
+    });
+    using var client = CreateClient(recorder, maxResponseBytes: 1024);
+
+    await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task LoadAcceptsAResponseAtTheCap()
+  {
+    var body = """{"blocks":[]}""";
+    var recorder = new RequestRecorder(_ => Json(body));
+    using var client = CreateClient(recorder, maxResponseBytes: Encoding.UTF8.GetByteCount(body));
+
+    var loaded = await client.LoadAsync("doc", CancellationToken.None);
+
+    Assert.NotNull(loaded.Data);
+  }
+
+  /// <summary>
+  /// System.Text.Json defaults to a MaxDepth of 64 in BOTH directions, well
+  /// under the converter's own nesting limit, so a legitimate deep document
+  /// would fail to load or to save.
+  /// </summary>
+  [Fact]
+  public async Task LoadReadsADocumentNestedPastTheFrameworkDefaultDepth()
+  {
+    var recorder = new RequestRecorder(_ => Json(DeepJson(100)));
+    using var client = CreateClient(recorder);
+
+    var loaded = await client.LoadAsync("doc", CancellationToken.None);
+
+    Assert.NotNull(loaded.Data);
+  }
+
+  [Fact]
+  public async Task SaveWritesADocumentNestedPastTheFrameworkDefaultDepth()
+  {
+    var recorder = new RequestRecorder(_ => Json("{}"));
+    using var client = CreateClient(recorder);
+    var document = JsonNode.Parse(
+        DeepJson(100),
+        documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 4096 })!;
+
+    await client.SaveAsync("doc", document, null, CancellationToken.None);
+
+    Assert.Contains("\"a\"", Assert.Single(recorder.Requests).Body, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task LoadRejectsADocumentNestedPastTheConfiguredDepth()
+  {
+    var recorder = new RequestRecorder(_ => Json(DeepJson(YDocConverter.JsonMaxDepth + 2)));
+    using var client = CreateClient(recorder);
+
+    await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+  }
+
+  [Fact]
+  public async Task SaveRejectsADocumentNestedPastTheConfiguredDepth()
+  {
+    var recorder = new RequestRecorder(_ => Json("{}"));
+    using var client = CreateClient(recorder);
+    var document = JsonNode.Parse(
+        DeepJson(YDocConverter.JsonMaxDepth + 2),
+        documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 4096 })!;
+
+    await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.SaveAsync("doc", document, null, CancellationToken.None));
+    Assert.Empty(recorder.Requests);
+  }
+
+  /// <summary>
+  /// JsonNode.Parse accepts duplicate keys lazily and then throws an
+  /// ArgumentException — not a JsonException — the first time the object is
+  /// indexed, from wherever that happens to be. The client must decide at
+  /// parse time and report it as a DocEndpointException like any other bad
+  /// answer. (The JS client takes last-wins here; see the report.)
+  /// </summary>
+  [Fact]
+  public async Task LoadRejectsAnAnswerWithDuplicateJsonKeys()
+  {
+    var recorder = new RequestRecorder(_ => Json("""{"data":{"a":1},"data":{"a":2}}"""));
+    using var client = CreateClient(recorder);
+
+    await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+  }
+
+  private static string DeepJson(int depth)
+  {
+    return string.Concat(Enumerable.Repeat("""{"a":""", depth)) +
+        "1" +
+        new string('}', depth);
+  }
+
   private static DocEndpointClient CreateClient(
       RequestRecorder recorder,
       string endpoint = "https://app.example.com/api/docs",
       string authorization = "Bearer secret",
-      TimeSpan? timeout = null)
+      TimeSpan? timeout = null,
+      long? maxResponseBytes = null)
   {
+    var options = new DocEndpointOptions(
+        new Uri(endpoint),
+        authorization,
+        timeout ?? TimeSpan.FromSeconds(30));
+
     return new DocEndpointClient(
-        new DocEndpointOptions(
-            new Uri(endpoint),
-            authorization,
-            timeout ?? TimeSpan.FromSeconds(30)),
+        maxResponseBytes is null
+          ? options
+          : options with { MaxResponseBytes = maxResponseBytes.Value },
         recorder);
   }
 

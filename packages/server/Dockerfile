@@ -30,6 +30,13 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 COPY --from=publish --chown=65532:65532 /data /data
 COPY --from=publish --chown=65532:65532 /out/blok-server /blok-server
 
+# USER 65532 has no home directory and cannot write /, so the single-file
+# host's self-extraction fails outright ("Default extraction directory
+# [/] ... not accessible") without somewhere writable to unpack into. NOT
+# under /data: LocalFileEndpoint serves that directory publicly.
+RUN mkdir -p /var/tmp/.net && chown 65532:65532 /var/tmp/.net
+ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=/var/tmp/.net
+
 WORKDIR /data
 USER 65532:65532
 EXPOSE 4000

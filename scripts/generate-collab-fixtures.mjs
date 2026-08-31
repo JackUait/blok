@@ -359,6 +359,52 @@ const CASES = [
       paragraph('num-parent', 'numeric parent reads as no parent', { parent: 42 }),
     ],
   },
+  {
+    name: 'proto-key',
+    // Written through JSON.parse on purpose: a `__proto__` key in an object
+    // LITERAL invokes the prototype setter and never becomes an own property,
+    // so a literal here would generate an empty fixture that pins nothing.
+    description: 'a __proto__ key is an ordinary own key in data, tunes and nested objects; other Object.prototype names are ordinary too',
+    input: JSON.parse(`[
+      {
+        "id": "pk1",
+        "type": "widget",
+        "data": { "__proto__": "in data", "kept": 1, "nested": { "__proto__": 2, "k": 3 } },
+        "tunes": { "__proto__": "in tunes", "anchor": "intro" }
+      },
+      {
+        "id": "pk2",
+        "type": "widget",
+        "data": { "__proto__": { "polluted": true }, "constructor": 1, "hasOwnProperty": 2, "toString": 3 }
+      },
+      {
+        "id": "pk3",
+        "type": "widget",
+        "data": { "rows": [{ "__proto__": "in an array element" }, { "__proto__": "and another" }] }
+      }
+    ]`),
+  },
+  {
+    name: 'lenient-seed',
+    description: 'malformed records fromJSON tolerates: Object.entries leniency for data/tunes, iterable content, non-object entries skipped',
+    input: [
+      { id: 'l-data-array', type: 'widget', data: ['a', 'b'] },
+      { id: 'l-data-string', type: 'widget', data: 'abc' },
+      { id: 'l-data-number', type: 'widget', data: 5 },
+      { id: 'l-data-boolean', type: 'widget', data: true },
+      { id: 'l-data-empty-array', type: 'widget', data: [] },
+      { id: 'l-para-number', type: 'paragraph', data: 5 },
+      { id: 'l-para-empty-array', type: 'paragraph', data: [] },
+      { id: 'l-tunes-array', type: 'widget', data: { a: 1 }, tunes: ['x'] },
+      { id: 'l-tunes-string', type: 'widget', data: { a: 1 }, tunes: 'ab' },
+      { id: 'l-tunes-number', type: 'widget', data: { a: 1 }, tunes: 5 },
+      { id: 'l-content-string', type: 'widget', data: { a: 1 }, content: 'abc' },
+      { id: 'l-content-null', type: 'widget', data: { a: 1 }, content: null },
+      'a bare string entry is skipped',
+      42,
+      [],
+    ],
+  },
 ];
 
 const deepEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);

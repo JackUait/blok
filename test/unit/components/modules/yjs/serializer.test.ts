@@ -431,6 +431,64 @@ describe('YBlockSerializer', () => {
     });
   });
 
+  describe('keys that clash with Object.prototype', () => {
+    // JSON.parse produces a real own `__proto__` property, so a consumer's
+    // stored record can carry one. Plain `obj[key] = value` would set the
+    // prototype instead of an own key, silently losing it on read-back — and
+    // the C# converter keeps it, so the two sides would disagree.
+    const parse = (json: string): Record<string, unknown> =>
+      JSON.parse(json) as Record<string, unknown>;
+
+    it('reads a __proto__ key back as an own property', () => {
+      const ymap = serializer.objectToYMap(parse('{"__proto__":"payload","safe":1}'));
+
+      ydoc.getMap('test').set('data', ymap);
+
+      const plain = serializer.yMapToObject(ymap);
+
+      expect(Object.prototype.hasOwnProperty.call(plain, '__proto__')).toBe(true);
+      expect(Object.getOwnPropertyDescriptor(plain, '__proto__')?.value).toBe('payload');
+      expect(JSON.parse(JSON.stringify(plain))).toEqual(parse('{"__proto__":"payload","safe":1}'));
+    });
+
+    it('does not let an object-valued __proto__ key become a prototype', () => {
+      const ymap = serializer.objectToYMap(parse('{"__proto__":{"polluted":true}}'));
+
+      ydoc.getMap('test').set('data', ymap);
+
+      const plain = serializer.yMapToObject(ymap);
+
+      expect(Object.getPrototypeOf(plain)).toBe(Object.prototype);
+      expect((plain as { polluted?: boolean }).polluted).toBeUndefined();
+      expect(Object.getOwnPropertyDescriptor(plain, '__proto__')?.value).toEqual({ polluted: true });
+    });
+
+    it('round-trips a block whose data and tunes carry a __proto__ key', () => {
+      const original = {
+        id: 'b1',
+        type: 'widget',
+        data: parse('{"__proto__":"in data","kept":1}'),
+        tunes: parse('{"__proto__":"in tunes","anchor":"intro"}'),
+      };
+      const yblocks = ydoc.getArray('test');
+
+      yblocks.push([serializer.outputDataToYBlock(original)]);
+
+      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(JSON.parse(JSON.stringify(converted))).toEqual(JSON.parse(JSON.stringify(original)));
+    });
+
+    it('keeps other Object.prototype names as ordinary keys', () => {
+      const ymap = serializer.objectToYMap(parse('{"constructor":1,"hasOwnProperty":2,"toString":3}'));
+
+      ydoc.getMap('test').set('data', ymap);
+
+      expect(JSON.parse(JSON.stringify(serializer.yMapToObject(ymap))))
+        .toEqual({ constructor: 1, hasOwnProperty: 2, toString: 3 });
+    });
+  });
+
   describe('isBoundaryCharacter', () => {
     it('returns true for boundary characters', () => {
       expect(isBoundaryCharacter(' ')).toBe(true);

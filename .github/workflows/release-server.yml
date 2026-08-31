@@ -151,7 +151,6 @@ jobs:
         run: |
           dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
           dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
-          yarn test test/unit/server-conformance/server-contract.test.ts test/unit/server-conformance/sync-contract.test.ts
 
       - name: Fetch the musl libyrs overrides
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -309,8 +308,10 @@ jobs:
           docker run --rm --entrypoint /bin/sh "$image:$BLOK_SERVER_VERSION" -euc '
             test "$(id -u)" = "65532"
             test ! -w "${HOME:-/}"
+            test "$DOTNET_BUNDLE_EXTRACT_BASE_DIR" = "/var/tmp/.net"
+            test -w /var/tmp/.net
             /blok-server --help >/dev/null
-            so="$(find /var/tmp /tmp -type f -name libyrs.so 2>/dev/null | head -n 1)"
+            so="$(find "$DOTNET_BUNDLE_EXTRACT_BASE_DIR" -type f -name libyrs.so | head -n 1)"
             test -n "$so"
             ldd "$so"
           '

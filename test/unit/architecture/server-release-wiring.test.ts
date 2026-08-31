@@ -275,9 +275,20 @@ describe('server release wiring', () => {
     expect(runs).toContain(
       'dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes',
     );
-    expect(runs).toContain(
-      'yarn test test/unit/server-conformance/server-contract.test.ts',
-    );
+    // The conformance suites SKIP without BLOK_CONFORMANCE_SERVER, so running
+    // them bare here was green no matter what. The real run is CI's
+    // `node scripts/test-server-conformance.mjs --target csharp`, which builds
+    // the binaries the suites drive — and this job already blocks on that CI
+    // run passing, so re-running them here can only be vacuous.
+    expect(runs).not.toContain('yarn test test/unit/server-conformance/');
+    expect(runs).not.toContain('sync-contract.test.ts');
+
+    const ciGate = steps.find((step) => step.name === 'Wait for successful CI')?.run;
+
+    expect(ciGate).toContain('gh run list --workflow CI');
+    expect(ciGate).toContain('completed:success');
+    expect(source.indexOf('Wait for successful CI'))
+      .toBeLessThan(source.indexOf('dotnet nuget push'));
 
     for (const project of [
       'packages/server/dotnet/Blok.Server/Blok.Server.csproj',
@@ -491,6 +502,16 @@ describe('server release wiring', () => {
 
     expect(runtimeStage).not.toContain('useradd');
     expect(runtimeStage).toContain('COPY --from=publish --chown=65532:65532 /data /data');
+
+    // USER 65532 has no home and no writable /, so the single-file host's
+    // self-extraction fails ("Default extraction directory [/] ... not
+    // accessible") unless it is pointed somewhere the user can write. NOT
+    // under /data — LocalFileEndpoint serves that publicly.
+    expect(runtimeStage).toMatch(
+      /^ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=\/var\/tmp\/\.net$/m,
+    );
+    expect(runtimeStage).toContain('chown 65532:65532 /var/tmp/.net');
+    expect(runtimeStage).not.toMatch(/DOTNET_BUNDLE_EXTRACT_BASE_DIR=\/data/);
     expect(runtimeStage).toMatch(/^WORKDIR \/data$/m);
     expect(runtimeStage).toMatch(/^USER 65532:65532$/m);
     expect(dockerfile).toContain('EXPOSE 4000');
@@ -734,6 +755,11 @@ describe('server release wiring', () => {
       expect(smoke?.run).toContain('id -u');
       expect(smoke?.run).toContain('65532');
       expect(smoke?.run).toContain('test ! -w "${HOME:-/}"');
+      // The image must carry the extraction directory itself: a smoke that
+      // exports the variable would pass on an image that cannot start.
+      expect(smoke?.run).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+      expect(smoke?.run).toContain('/var/tmp/.net');
+      expect(smoke?.run).not.toContain('export DOTNET_BUNDLE_EXTRACT_BASE_DIR');
       expect(smoke?.run).toContain('/blok-server --help');
       expect(smoke?.run).toContain('libyrs.so');
       expect(smoke?.run).toContain('ldd');

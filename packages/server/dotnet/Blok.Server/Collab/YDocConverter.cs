@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -31,9 +32,49 @@ namespace Blok.Server.Collab;
 /// Numbers are written as doubles only: yrs encodes an integral double as a
 /// lib0 varint, which the JS client reads as a number, while a long becomes a
 /// lib0 BigInt that JS reads as a BigInt and cannot JSON.stringify.
+///
+/// NUL IS UNREADABLE, AND EXPORT CANNOT BE PROTECTED. yffi builds a
+/// <c>CString</c> for every string it hands back and unwraps the result:
+/// map keys through <c>YMapEntry::new</c> (yrs release-v0.19.1,
+/// yffi/src/lib.rs:216) and string values through yffi/src/lib.rs:2815. A
+/// NUL anywhere — a block id, a data or grid-row key, any string value, a
+/// contentIds or root-order entry — makes that unwrap panic, and a Rust
+/// panic across the FFI boundary ABORTS the process (SIGABRT). It cannot be
+/// caught, retried or logged. The write direction is no better: yffi
+/// truncates every string at the first NUL, silently.
+///
+/// So <see cref="Seed"/> REJECTS a NUL anywhere (better a failed seed than a
+/// consumer's record shortened and PUT back), and <see cref="Export"/> has no
+/// defence at all: by the time a hostile update is in the doc, reading it is
+/// fatal. A NUL cannot arrive through Seed, only through an applied update,
+/// so the guard belongs at the room's pre-apply boundary — and YDotNet 0.6.0
+/// exposes nothing that decodes an update without applying it (no update
+/// reader; StateDiffV1/V2 need a doc), so the only reliable place is the
+/// client, before the update is produced. YDocConverterHardeningTests carries
+/// the skipped canary that reproduces the abort.
 /// </summary>
 internal static class YDocConverter
 {
+  /// <summary>
+  /// How deep a value inside a block's <c>data</c>/<c>tunes</c> may nest.
+  /// The value walks are recursive on both sides (a Y.Map inside a Y.Map has
+  /// no iterative shape that is worth the noise), and a StackOverflow cannot
+  /// be caught, so the depth is bounded instead. The parent-chain and
+  /// contentIds walks are unbounded but ITERATIVE — a document legitimately
+  /// nests thousands of blocks deep, and cycles are already broken.
+  /// </summary>
+  internal const int MaxValueDepth = 256;
+
+  /// <summary>
+  /// MaxDepth for every System.Text.Json reader and writer on the collab
+  /// path. It must stay comfortably above <see cref="MaxValueDepth"/> plus
+  /// the levels the block envelope adds above a data value (block array →
+  /// block → data), or a document this converter accepts could not be parsed
+  /// from, or written back to, the doc endpoint. The framework default is 64,
+  /// which is BELOW the converter's own limit — hence the explicit value.
+  /// </summary>
+  internal const int JsonMaxDepth = 512;
+
   private const string BlocksRoot = "blocks";
   private const string OrderRoot = "root";
   private const string GridRowsKey = "__rows";
@@ -88,6 +129,7 @@ internal static class YDocConverter
           continue;
         }
 
+        NoNul(id, "a block id");
         blockMap.Insert(transaction, id, writer.Block(id, block));
 
         if (!block.ContainsKey("parent"))
@@ -143,6 +185,80 @@ internal static class YDocConverter
     return false;
   }
 
+  /// <summary>
+  /// The one gate for the NUL hazard described in the type header. Every
+  /// string that reaches <c>Input.String</c> or becomes a Y.Map key passes
+  /// through here.
+  /// </summary>
+  private static string NoNul(string value, string what)
+  {
+    if (value.Contains('\0', StringComparison.Ordinal))
+    {
+      throw new InvalidDataException(
+          $"collab: {what} contains a NUL character. yrs truncates it on " +
+          "write and aborts the process on read, so the document is rejected.");
+    }
+
+    return value;
+  }
+
+  private static void GuardDepth(int depth, string what)
+  {
+    if (depth > MaxValueDepth)
+    {
+      throw new InvalidDataException(
+          $"collab: {what} is nested deeper than {MaxValueDepth} levels.");
+    }
+  }
+
+  /// <summary>
+  /// The keys and values a JS <c>Object.entries</c> would yield, which is
+  /// what <c>YBlockSerializer.objectToYMap</c> iterates when it is handed a
+  /// malformed <c>data</c> or <c>tunes</c>: an array yields index keys, a
+  /// string yields one key per UTF-16 code unit, a number or boolean yields
+  /// nothing, and null/undefined throws (a TypeError there, an
+  /// InvalidDataException here). Mirroring it keeps the lockstep rule intact
+  /// — the server accepts exactly what the client would load.
+  /// </summary>
+  private static JsonObject ObjectEntries(JsonNode? value, string what)
+  {
+    switch (value)
+    {
+      case null:
+        throw new InvalidDataException($"collab: {what} is null.");
+
+      case JsonObject map:
+        return map;
+
+      case JsonArray items:
+        var indexed = new JsonObject();
+
+        for (var index = 0; index < items.Count; index++)
+        {
+          indexed[index.ToString(CultureInfo.InvariantCulture)] =
+              items[index]?.DeepClone();
+        }
+
+        return indexed;
+
+      case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
+        var text = scalar.GetValue<string>();
+        var characters = new JsonObject();
+
+        for (var index = 0; index < text.Length; index++)
+        {
+          characters[index.ToString(CultureInfo.InvariantCulture)] =
+              JsonValue.Create(text[index].ToString());
+        }
+
+        return characters;
+
+      default:
+        // A number or a boolean has no own enumerable properties.
+        return [];
+    }
+  }
+
   private static JsonValue? NumberNode(double value)
   {
     if (!double.IsFinite(value))
@@ -186,29 +302,25 @@ internal static class YDocConverter
       var entries = new Dictionary<string, Input>(StringComparer.Ordinal)
       {
         ["id"] = Track(Input.String(id)),
-        ["type"] = Atomic(block["type"]),
+        ["type"] = Atomic(block["type"], 1),
       };
 
-      if (block["data"] is not JsonObject data)
-      {
-        throw new InvalidDataException($"collab: block \"{id}\" has no data object.");
-      }
-
-      entries["data"] = ObjectToYMap(NormalizeBlockData(block["type"], data));
+      entries["data"] = ObjectToYMap(
+          NormalizeBlockData(
+              block["type"],
+              ObjectEntries(block["data"], $"block \"{id}\" data")),
+          1);
 
       if (block.TryGetPropertyValue("tunes", out var tunes))
       {
-        if (tunes is not JsonObject tunesObject)
-        {
-          throw new InvalidDataException($"collab: block \"{id}\" has non-object tunes.");
-        }
-
-        entries["tunes"] = ObjectToYMap(tunesObject);
+        entries["tunes"] = ObjectToYMap(
+            ObjectEntries(tunes, $"block \"{id}\" tunes"),
+            1);
       }
 
       if (block.TryGetPropertyValue("parent", out var parent))
       {
-        entries["parentId"] = Atomic(parent);
+        entries["parentId"] = Atomic(parent, 1);
       }
 
       // EAGER, always — even with no children — so one peer is the single
@@ -217,30 +329,43 @@ internal static class YDocConverter
 
       if (block.TryGetPropertyValue("lastEditedAt", out var lastEditedAt))
       {
-        entries["lastEditedAt"] = Atomic(lastEditedAt);
+        entries["lastEditedAt"] = Atomic(lastEditedAt, 1);
       }
 
       if (block.TryGetPropertyValue("lastEditedBy", out var lastEditedBy))
       {
-        entries["lastEditedBy"] = Atomic(lastEditedBy);
+        entries["lastEditedBy"] = Atomic(lastEditedBy, 1);
       }
 
       return Track(Input.Map(entries));
     }
 
+    /// <summary>
+    /// <c>Y.Array.from(content ?? [])</c>: absent and null give an empty
+    /// array, a string spreads into its characters, and anything else that
+    /// is not an array is not iterable — a TypeError on the client, an
+    /// InvalidDataException here.
+    /// </summary>
     private Input ContentIds(string id, JsonNode? content)
     {
-      if (content is null)
+      switch (content)
       {
-        return Track(Input.Array([]));
-      }
+        case null:
+          return Track(Input.Array([]));
 
-      if (content is not JsonArray items)
-      {
-        throw new InvalidDataException($"collab: block \"{id}\" has non-array content.");
-      }
+        case JsonArray items:
+          return Track(Input.Array(items.Select(item => Atomic(item, 1)).ToArray()));
 
-      return Track(Input.Array(items.Select(Atomic).ToArray()));
+        case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
+          return Track(Input.Array(scalar.GetValue<string>()
+              .Select(character => Track(Input.String(NoNul(
+                  character.ToString(),
+                  $"block \"{id}\" content"))))
+              .ToArray()));
+
+        default:
+          throw new InvalidDataException($"collab: block \"{id}\" has non-iterable content.");
+      }
     }
 
     /// <summary>
@@ -260,13 +385,15 @@ internal static class YDocConverter
       return data;
     }
 
-    private Input ObjectToYMap(JsonObject value)
+    private Input ObjectToYMap(JsonObject value, int depth)
     {
+      GuardDepth(depth, "a data value");
+
       var entries = new Dictionary<string, Input>(StringComparer.Ordinal);
 
       foreach (var (key, child) in value)
       {
-        entries[key] = PlainToYValue(child);
+        entries[NoNul(key, "a data key")] = PlainToYValue(child, depth + 1);
       }
 
       return Track(Input.Map(entries));
@@ -276,24 +403,28 @@ internal static class YDocConverter
     /// The grid rule, then the array rule, then nested maps; primitives and
     /// non-convertible arrays stay atomic leaves.
     /// </summary>
-    private Input PlainToYValue(JsonNode? value)
+    private Input PlainToYValue(JsonNode? value, int depth)
     {
       if (value is JsonArray array && IsConvertibleArray(array))
       {
+        GuardDepth(depth, "a data value");
+
         return array.All(element => element is JsonArray)
-          ? PlainToGridMap(array)
-          : Track(Input.Array(array.Select(PlainToYValue).ToArray()));
+          ? PlainToGridMap(array, depth)
+          : Track(Input.Array(array
+              .Select(element => PlainToYValue(element, depth + 1))
+              .ToArray()));
       }
 
       if (value is JsonObject map)
       {
-        return ObjectToYMap(map);
+        return ObjectToYMap(map, depth);
       }
 
-      return Atomic(value);
+      return Atomic(value, depth);
     }
 
-    private Input PlainToGridMap(JsonArray rows)
+    private Input PlainToGridMap(JsonArray rows, int depth)
     {
       var rowMap = new Dictionary<string, Input>(StringComparer.Ordinal);
       var order = new List<Input>();
@@ -302,7 +433,9 @@ internal static class YDocConverter
       {
         var key = GenerateRowKey();
 
-        rowMap[key] = PlainToYValue(row);
+        // The row wrapper adds a container level of its own (__rows), so a
+        // grid costs two levels per row, matching the read-back walk.
+        rowMap[key] = PlainToYValue(row, depth + 2);
         order.Add(Track(Input.String(key)));
       }
 
@@ -317,7 +450,7 @@ internal static class YDocConverter
     /// A plain (non-shared) value: what a bare <c>ymap.set(key, value)</c>
     /// stores. Nested objects and arrays stay plain all the way down.
     /// </summary>
-    private Input Atomic(JsonNode? value)
+    private Input Atomic(JsonNode? value, int depth)
     {
       switch (value)
       {
@@ -325,17 +458,23 @@ internal static class YDocConverter
           return Track(Input.Null());
 
         case JsonObject map:
+          GuardDepth(depth, "a data value");
+
           var entries = new Dictionary<string, Input>(StringComparer.Ordinal);
 
           foreach (var (key, child) in map)
           {
-            entries[key] = Atomic(child);
+            entries[NoNul(key, "a data key")] = Atomic(child, depth + 1);
           }
 
           return Track(Input.Object(entries));
 
         case JsonArray items:
-          return Track(Input.Collection(items.Select(Atomic).ToArray()));
+          GuardDepth(depth, "a data value");
+
+          return Track(Input.Collection(items
+              .Select(item => Atomic(item, depth + 1))
+              .ToArray()));
 
         case JsonValue scalar:
           return Track(Scalar(scalar));
@@ -350,7 +489,7 @@ internal static class YDocConverter
       switch (value.GetValueKind())
       {
         case JsonValueKind.String:
-          return Input.String(value.GetValue<string>());
+          return Input.String(NoNul(value.GetValue<string>(), "a string value"));
 
         case JsonValueKind.True:
           return Input.Boolean(true);
@@ -511,7 +650,7 @@ internal static class YDocConverter
 
       foreach (var id in allIds)
       {
-        MarkParentChain(id, [], state, broken);
+        MarkParentChain(id, state, broken);
       }
 
       return broken;
@@ -521,40 +660,56 @@ internal static class YDocConverter
     /// Colour one parentId chain: true = on the current path, false = done.
     /// Meeting a node that is on the path closes a loop; the path from that
     /// node onward IS the cycle, whichever member the walk entered at.
+    ///
+    /// ITERATIVE on purpose. parentId is single-valued, so a chain is a
+    /// straight line with no branching — and a document may legitimately
+    /// nest thousands of blocks deep, which as recursion is a StackOverflow
+    /// that cannot be caught.
     /// </summary>
     private void MarkParentChain(
-        string id,
-        List<string> path,
+        string startId,
         Dictionary<string, bool> state,
         HashSet<string> broken)
     {
-      if (state.TryGetValue(id, out var visiting))
+      var path = new List<string>();
+      var id = startId;
+
+      while (true)
       {
-        if (visiting)
+        if (state.TryGetValue(id, out var visiting))
         {
-          BreakCycle(path.Skip(path.IndexOf(id)), broken);
+          // Only nodes on THIS path are still true: the unwind below clears
+          // every node a finished walk pushed.
+          if (visiting)
+          {
+            BreakCycle(path.Skip(path.IndexOf(id)), broken);
+          }
+
+          break;
         }
 
-        return;
+        if (!allIds.Contains(id))
+        {
+          break;
+        }
+
+        state[id] = true;
+        path.Add(id);
+
+        var parentId = RawParentId(id);
+
+        if (parentId is null)
+        {
+          break;
+        }
+
+        id = parentId;
       }
 
-      if (!allIds.Contains(id))
+      foreach (var visited in path)
       {
-        return;
+        state[visited] = false;
       }
-
-      state[id] = true;
-      path.Add(id);
-
-      var parentId = RawParentId(id);
-
-      if (parentId is not null)
-      {
-        MarkParentChain(parentId, path, state, broken);
-      }
-
-      path.RemoveAt(path.Count - 1);
-      state[id] = false;
     }
 
     /// <summary>
@@ -636,30 +791,48 @@ internal static class YDocConverter
     /// parent is the one whose order array is being walked — a disagreeing
     /// occurrence is skipped WITHOUT being marked seen, so a later agreeing
     /// slot can still claim it.
+    ///
+    /// ITERATIVE, with children pushed in reverse so the stack pops them in
+    /// document order: nesting depth is a property of the user's document,
+    /// and an uncatchable StackOverflow is not an acceptable answer to it.
     /// </summary>
     private void VisitBlock(
-        string id,
-        string? expectedParentId,
+        string startId,
+        string? startExpectedParentId,
         Dictionary<string, string?> hierarchy,
         HashSet<string> seen,
         List<string> ordered)
     {
-      if (seen.Contains(id) || !entries.TryGetValue(id, out var entry))
-      {
-        return;
-      }
+      var pending = new Stack<(string Id, string? ExpectedParentId)>();
 
-      if (!string.Equals(hierarchy[id], expectedParentId, StringComparison.Ordinal))
-      {
-        return;
-      }
+      pending.Push((startId, startExpectedParentId));
 
-      seen.Add(id);
-      ordered.Add(id);
-
-      foreach (var childId in entry.ContentIds ?? [])
+      while (pending.Count > 0)
       {
-        VisitBlock(childId, id, hierarchy, seen, ordered);
+        var (id, expectedParentId) = pending.Pop();
+
+        if (seen.Contains(id) || !entries.TryGetValue(id, out var entry))
+        {
+          continue;
+        }
+
+        if (!string.Equals(hierarchy[id], expectedParentId, StringComparison.Ordinal))
+        {
+          continue;
+        }
+
+        seen.Add(id);
+        ordered.Add(id);
+
+        var contentIds = entry.ContentIds ?? [];
+
+        for (var index = contentIds.Count - 1; index >= 0; index--)
+        {
+          if (contentIds[index].Tag == OutputTag.String)
+          {
+            pending.Push((contentIds[index].String, id));
+          }
+        }
       }
     }
 
@@ -688,14 +861,14 @@ internal static class YDocConverter
       {
         ["id"] = id.String,
         ["type"] = type.String,
-        ["data"] = YMapToObject(data.Map),
+        ["data"] = YMapToObject(data.Map, 1),
       };
 
       var tunes = entry.Map.Get(transaction, "tunes");
 
       if (tunes?.Tag == OutputTag.Map && tunes.Map.Length(transaction) > 0)
       {
-        block["tunes"] = YMapToObject(tunes.Map);
+        block["tunes"] = YMapToObject(tunes.Map, 1);
       }
 
       // Any string parentId, self-parent included — the projection re-decides
@@ -709,14 +882,16 @@ internal static class YDocConverter
 
       if (entry.ContentIds is { Count: > 0 })
       {
-        block["content"] = new JsonArray(entry.ContentIds.Select(ToPlainOrNull).ToArray());
+        block["content"] = new JsonArray(entry.ContentIds
+            .Select(child => ToPlainOrNull(child, 1))
+            .ToArray());
       }
 
       var lastEditedAt = entry.Map.Get(transaction, "lastEditedAt");
 
       if (lastEditedAt?.Tag is OutputTag.Double or OutputTag.Long)
       {
-        block["lastEditedAt"] = ToPlainOrNull(lastEditedAt);
+        block["lastEditedAt"] = ToPlainOrNull(lastEditedAt, 1);
       }
 
       var lastEditedBy = entry.Map.Get(transaction, "lastEditedBy");
@@ -771,15 +946,17 @@ internal static class YDocConverter
       return block;
     }
 
-    private JsonObject YMapToObject(YMap map)
+    private JsonObject YMapToObject(YMap map, int depth)
     {
+      GuardDepth(depth, "a doc value");
+
       var result = new JsonObject();
       using var iterator = map.Iterate(transaction);
 
       foreach (var (key, value) in iterator)
       {
         // JSON.stringify drops undefined-valued keys.
-        if (TryToPlain(value, out var plain))
+        if (TryToPlain(value, depth + 1, out var plain))
         {
           result[key] = plain;
         }
@@ -788,14 +965,18 @@ internal static class YDocConverter
       return result;
     }
 
-    private JsonArray YArrayToPlain(YArray array)
+    private JsonArray YArrayToPlain(YArray array, int depth)
     {
-      return new JsonArray(ReadArray(array).Select(ToPlainOrNull).ToArray());
+      GuardDepth(depth, "a doc value");
+
+      return new JsonArray(ReadArray(array)
+          .Select(item => ToPlainOrNull(item, depth + 1))
+          .ToArray());
     }
 
-    private JsonNode? ToPlainOrNull(Output value)
+    private JsonNode? ToPlainOrNull(Output value, int depth)
     {
-      return TryToPlain(value, out var plain) ? plain : null;
+      return TryToPlain(value, depth, out var plain) ? plain : null;
     }
 
     /// <summary>
@@ -803,33 +984,35 @@ internal static class YDocConverter
     /// grid IS a map, and reading it as an object would leak the row keys.
     /// Returns false for undefined, which JSON has no value for.
     /// </summary>
-    private bool TryToPlain(Output value, out JsonNode? plain)
+    private bool TryToPlain(Output value, int depth, out JsonNode? plain)
     {
       plain = null;
 
       switch (value.Tag)
       {
         case OutputTag.Map when IsGridMap(value.Map):
-          plain = GridMapToPlain(value.Map);
+          plain = GridMapToPlain(value.Map, depth);
 
           return true;
 
         case OutputTag.Map:
-          plain = YMapToObject(value.Map);
+          plain = YMapToObject(value.Map, depth);
 
           return true;
 
         case OutputTag.Array:
-          plain = YArrayToPlain(value.Array);
+          plain = YArrayToPlain(value.Array, depth);
 
           return true;
 
         case OutputTag.JsonObject:
+          GuardDepth(depth, "a doc value");
+
           var result = new JsonObject();
 
           foreach (var (key, child) in value.JsonObject)
           {
-            if (TryToPlain(child, out var childPlain))
+            if (TryToPlain(child, depth + 1, out var childPlain))
             {
               result[key] = childPlain;
             }
@@ -840,7 +1023,32 @@ internal static class YDocConverter
           return true;
 
         case OutputTag.JsonArray:
-          plain = new JsonArray(value.JsonArray.Select(ToPlainOrNull).ToArray());
+          GuardDepth(depth, "a doc value");
+
+          plain = new JsonArray(value.JsonArray
+              .Select(child => ToPlainOrNull(child, depth + 1))
+              .ToArray());
+
+          return true;
+
+        // A shared type no Blok client writes — a foreign peer's Y.Text, say.
+        // The JS client renders each as its string form (`JSON.stringify`
+        // calls the type's own toJSON), so this does too rather than making
+        // the room permanently unreadable. Y.XmlFragment is unreachable: it
+        // has no Output accessor in YDotNet 0.6.0, which throws while
+        // building the Output, before this switch is entered.
+        case OutputTag.Text:
+          plain = JsonValue.Create(value.Text.String(transaction));
+
+          return true;
+
+        case OutputTag.XmlText:
+          plain = JsonValue.Create(value.XmlText.String(transaction));
+
+          return true;
+
+        case OutputTag.XmlElement:
+          plain = JsonValue.Create(value.XmlElement.String(transaction));
 
           return true;
 
@@ -886,14 +1094,17 @@ internal static class YDocConverter
           map.Get(transaction, GridOrderKey)?.Tag == OutputTag.Array;
     }
 
-    private JsonArray GridMapToPlain(YMap grid)
+    private JsonArray GridMapToPlain(YMap grid, int depth)
     {
+      GuardDepth(depth, "a doc value");
+
       var rows = grid.Get(transaction, GridRowsKey)!.Map;
       var result = new JsonArray();
 
       foreach (var key in GridRowKeys(grid, rows))
       {
-        result.Add(ToPlainOrNull(rows.Get(transaction, key)!));
+        // The keyed wrapper costs the same two levels the write side spends.
+        result.Add(ToPlainOrNull(rows.Get(transaction, key)!, depth + 2));
       }
 
       return result;

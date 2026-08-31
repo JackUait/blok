@@ -75,7 +75,11 @@ var listenAddress = options.ListenAddress.StartsWith(':')
   ? $"0.0.0.0{options.ListenAddress}"
   : options.ListenAddress;
 builder.WebHost.UseUrls($"http://{listenAddress}");
-HostRequestTimeouts.Configure(builder, TimeSpan.FromMinutes(10));
+HostRequestTimeouts.Configure(
+    builder,
+    HostRequestTimeouts.DefaultRequestTimeout,
+    HostRequestTimeouts.DefaultKeepAliveTimeout);
+HostCollab.Configure(builder, options);
 var blokServer = builder.Services.AddBlokServer(options);
 #if BLOK_SERVER_CONFORMANCE
 if (conformance.Origin is not null)
@@ -88,6 +92,7 @@ if (conformance.Origin is not null)
 
 var app = builder.Build();
 HostRequestTimeouts.Use(app);
+HostCollab.Use(app, options);
 app.MapBlokServer();
 
 try
@@ -108,20 +113,29 @@ namespace Blok.Server.Host
 {
   internal static class HostRequestTimeouts
   {
+    internal static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromMinutes(10);
+
+    internal static readonly TimeSpan DefaultKeepAliveTimeout = TimeSpan.FromMinutes(2);
+
+    // Neither window applies to a sync socket: the endpoint opts out of the
+    // request-timeout policy, and Kestrel's keep-alive timer only runs
+    // between HTTP requests, not on an upgraded connection. Both are pinned
+    // by HostCollabTests against real Kestrel with shortened windows.
     internal static void Configure(
         WebApplicationBuilder builder,
-        TimeSpan timeout)
+        TimeSpan requestTimeout,
+        TimeSpan keepAliveTimeout)
     {
       builder.WebHost.ConfigureKestrel(kestrel =>
       {
         kestrel.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10);
-        kestrel.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+        kestrel.Limits.KeepAliveTimeout = keepAliveTimeout;
       });
       builder.Services.AddRequestTimeouts(timeouts =>
       {
         timeouts.DefaultPolicy = new RequestTimeoutPolicy
         {
-          Timeout = timeout,
+          Timeout = requestTimeout,
           TimeoutStatusCode = StatusCodes.Status504GatewayTimeout,
         };
       });

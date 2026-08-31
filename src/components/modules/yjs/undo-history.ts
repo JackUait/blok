@@ -425,6 +425,60 @@ export class UndoHistory {
   }
 
   /**
+   * Re-anchor the capture-merge clock to when the change actually happened.
+   *
+   * A coalesced trailing flush transacts up to 400ms after the typing it
+   * carries; Y.UndoManager stamps `lastChange` with the FLUSH time, so the
+   * captureTimeout would measure the next action's gap from the flush and
+   * merge actions the user separated by more than the capture window (two
+   * typing pauses, or typing followed by a tune change). Rewind only —
+   * never push the clock forward, and never touch the `0` sentinel a
+   * stopCapturing leaves (`0` means "always split next"; every real
+   * timestamp exceeds a rewind target).
+   * @param toTime - the wall-clock time of the flushed writes' last enqueue
+   */
+  public rewindCaptureClock(toTime: number): void {
+    if (this.undoManager.lastChange > toTime) {
+      this.undoManager.lastChange = toTime;
+    }
+  }
+
+  /**
+   * Re-open the newest undo entry when the block about to be replaced is one
+   * that very entry created.
+   *
+   * A replace-insert removes the block it replaces (see `BlockInsertion`), and
+   * Y.UndoManager only skips resurrecting a deleted item when the SAME stack
+   * item also holds its insertion. A scaffold slot — the empty paragraph the
+   * plus button builds before the toolbox opens — is created in one entry and
+   * replaced in the next as soon as the user takes longer than `captureTimeout`
+   * to pick a tool, so undoing the pick brought the scaffold back and the
+   * gesture needed two presses. Merging the two makes it one press again, and
+   * redo then restores only the chosen block.
+   *
+   * The check is exact, not a heuristic: only a block whose creation is still
+   * the newest entry never existed as a state of its own. A slot the user made
+   * earlier (their own Enter, then typing) or one that came from the loaded
+   * document is buried under later entries — no merge, and undo restores it.
+   * @param creationId - id of the Y item holding the block, or null when the
+   *   block is not in the doc
+   */
+  public continueEntryThatCreated(creationId: Y.ID | null): void {
+    const { undoStack } = this.undoManager;
+    const newestEntry = undoStack[undoStack.length - 1];
+
+    if (creationId === null || newestEntry === undefined) {
+      return;
+    }
+
+    if (!Y.isDeleted(newestEntry.insertions, creationId)) {
+      return;
+    }
+
+    this.undoManager.lastChange = Date.now();
+  }
+
+  /**
    * Stop capturing changes into current undo group.
    * Call this to force next change into a new undo entry.
    */

@@ -62,6 +62,13 @@ if (parsed.SecretFromFlag)
       "set BLOK_SECRET in the environment instead");
 }
 
+if (parsed.DocEndpointAuthFromFlag)
+{
+  Console.Error.WriteLine(
+      "warning: --doc-endpoint-auth puts the credential in this machine's process list; " +
+      "set BLOK_DOC_ENDPOINT_AUTH in the environment instead");
+}
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
 builder.Logging.ClearProviders();
 var listenAddress = options.ListenAddress.StartsWith(':')

@@ -17,6 +17,7 @@ RUN case "$TARGETARCH" in \
       --self-contained true \
       --output /out \
       -p:PublishSingleFile=true \
+      -p:IncludeNativeLibrariesForSelfExtract=true \
       -p:DebugType=None \
       -p:DebugSymbols=false \
       -p:AssemblyName=blok-server \

@@ -257,6 +257,7 @@
     "jsdom": "29.1.1",
     "jszip": "^3.10.1",
     "katex": "0.18.4",
+    "lib0": "0.2.117",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",
@@ -288,6 +289,8 @@
     "vitest": "4.1.11",
     "vue": "^3.5.40",
     "webm-muxer": "^5.1.4",
+    "y-protocols": "1.0.7",
+    "y-websocket": "3.1.0",
     "yaml": "^2.9.0",
     "yjs": "13.6.32",
     "zone.js": "0.16.2"

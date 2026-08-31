@@ -299,12 +299,54 @@ export class BlockInsertion {
      * insertion is already being synced.
      */
     if (!skipYjsSync && (!this.yjsSync.isSyncingFromYjs || this.dependencies.YjsManager.getBlockById(block.id) === undefined)) {
-      this.dependencies.YjsManager.addBlock({
-        id: block.id,
-        type: block.name,
-        data: block.preservedData,
-        parent: block.parentId ?? undefined,
-      }, targetIndex);
+      /**
+       * A replace drops the old block from memory AND the DOM (`Blocks.insert`
+       * splices + destroys it), so the doc must drop it in the same breath.
+       * Otherwise its map entry survives as a ghost `save()` cannot see but a
+       * syncing peer or a reload from the persisted doc resurrects — a stray
+       * empty paragraph at root, since the toolbox detaches the slot to root
+       * before replacing it.
+       *
+       * ONE transaction with the add, so undo is a single step that brings the
+       * slot back. The toolbox's `transact` wrapper cannot supply that: it only
+       * suppresses `stopCapturing`, and a root-level replace is not wrapped.
+       *
+       * The removal rides the add's gate on purpose — it is the same write. An
+       * extra `isSyncingFromYjs` check would silence it for the whole
+       * initial-render RAF window (where a GIF image block replaces itself with
+       * a video block), and no Yjs replay path inserts with `replace`.
+       *
+       * Same id means no removal: `convertToParagraph` (table-cell demotion)
+       * and `BlockMutation.replace` reuse the id, and a remove+add of one id
+       * reads as a no-op move to `BlockObserver`.
+       */
+      const replacedIdToRemove = replace
+        && replacedBlockId !== undefined
+        && replacedBlockId !== block.id
+        ? replacedBlockId
+        : undefined;
+
+      /**
+       * When the replaced block is a scaffold this same gesture just built (the
+       * plus button's empty paragraph), the removal joins the entry that created
+       * it so the whole gesture is one undo press.
+       */
+      if (replacedIdToRemove !== undefined) {
+        this.dependencies.YjsManager.continueUndoEntryThatCreated(replacedIdToRemove);
+      }
+
+      this.dependencies.YjsManager.transact(() => {
+        if (replacedIdToRemove !== undefined) {
+          this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
+        }
+
+        this.dependencies.YjsManager.addBlock({
+          id: block.id,
+          type: block.name,
+          data: block.preservedData,
+          parent: block.parentId ?? undefined,
+        }, targetIndex);
+      });
     }
 
     /**
@@ -770,12 +812,33 @@ export class BlockInsertion {
     const savedData = await block.save();
 
     if (savedData !== undefined) {
-      this.dependencies.YjsManager.addBlock({
-        id: block.id,
-        type: block.name,
-        data: savedData.data,
-        parent: block.parentId ?? undefined,
-      }, this.repository.getBlockIndex(block));
+      /**
+       * Same law as the replace branch of `insert()`: the replaced block is
+       * gone from memory and the DOM, so its doc entry rides out on the add's
+       * transaction. Without this, pasting onto an empty block leaves that
+       * block behind in the Y.Doc for peers and reloads.
+       */
+      const replacedIdToRemove = replace && oldBlockId !== undefined && oldBlockId !== block.id
+        ? oldBlockId
+        : undefined;
+
+      // Same gesture-merge rule as insert()'s replace branch.
+      if (replacedIdToRemove !== undefined) {
+        this.dependencies.YjsManager.continueUndoEntryThatCreated(replacedIdToRemove);
+      }
+
+      this.dependencies.YjsManager.transact(() => {
+        if (replacedIdToRemove !== undefined) {
+          this.dependencies.YjsManager.removeBlock(replacedIdToRemove);
+        }
+
+        this.dependencies.YjsManager.addBlock({
+          id: block.id,
+          type: block.name,
+          data: savedData.data,
+          parent: block.parentId ?? undefined,
+        }, this.repository.getBlockIndex(block));
+      });
     }
 
     return block;

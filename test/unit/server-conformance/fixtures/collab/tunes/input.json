@@ -1,0 +1,34 @@
+[
+  {
+    "id": "t1",
+    "type": "paragraph",
+    "data": {
+      "text": "with tunes"
+    },
+    "tunes": {
+      "anchor": "intro",
+      "alignment": {
+        "value": "center"
+      },
+      "tags": [
+        "a",
+        "b"
+      ]
+    }
+  },
+  {
+    "id": "t2",
+    "type": "paragraph",
+    "data": {
+      "text": "empty tunes"
+    },
+    "tunes": {}
+  },
+  {
+    "id": "t3",
+    "type": "paragraph",
+    "data": {
+      "text": "no tunes"
+    }
+  }
+]

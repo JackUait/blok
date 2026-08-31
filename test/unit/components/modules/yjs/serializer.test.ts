@@ -272,18 +272,26 @@ describe('YBlockSerializer', () => {
       expect((rows as Y.Array<unknown>).get(1) instanceof Y.Map).toBe(true);
     });
 
-    it('converts a table-shaped grid to Y.Array(rows) → Y.Array(cells) → Y.Map(cell fields) with plain blocks arrays', () => {
+    it('converts a table-shaped grid to keyed rows → Y.Array(cells) → Y.Map(cell fields) with plain blocks arrays', () => {
       const ydata = getData({
         content: [
           [{ blocks: ['p1'] }, { blocks: ['p2'] }],
           [{ blocks: ['p3'] }, { blocks: [] }],
         ],
       });
-      const content = ydata.get('content') as Y.Array<unknown>;
+      const content = ydata.get('content');
 
-      expect(content instanceof Y.Array).toBe(true);
+      // Rows are keyed, not positional: Y.Array has no move, so a positional
+      // rows array cannot express a reorder without recreating a row.
+      expect(serializer.isGridMap(content)).toBe(true);
 
-      const row0 = content.get(0) as Y.Array<unknown>;
+      const grid = content as Y.Map<unknown>;
+      const keys = serializer.gridRowKeys(grid);
+
+      expect(keys).toHaveLength(2);
+      expect(new Set(keys).size).toBe(2);
+
+      const row0 = (grid.get('__rows') as Y.Map<unknown>).get(keys[0]) as Y.Array<unknown>;
 
       expect(row0 instanceof Y.Array).toBe(true);
 
@@ -326,11 +334,17 @@ describe('YBlockSerializer', () => {
 
     it('keeps an empty-row element plain inside a converted grid', () => {
       const ydata = getData({ content: [[{ blocks: ['p1'] }], []] });
-      const content = ydata.get('content') as Y.Array<unknown>;
+      const content = ydata.get('content') as Y.Map<unknown>;
 
-      expect(content instanceof Y.Array).toBe(true);
-      expect(content.get(0) instanceof Y.Array).toBe(true);
-      expect(Array.isArray(content.get(1))).toBe(true);
+      expect(serializer.isGridMap(content)).toBe(true);
+
+      // An empty row is still a KEYED row — its cells are a plain atomic leaf,
+      // so deleting the last column never flips the grid representation.
+      const keys = serializer.gridRowKeys(content);
+      const rows = content.get('__rows') as Y.Map<unknown>;
+
+      expect(rows.get(keys[0]) instanceof Y.Array).toBe(true);
+      expect(Array.isArray(rows.get(keys[1]))).toBe(true);
     });
 
     it('round-trips table-shaped content byte-equal', () => {

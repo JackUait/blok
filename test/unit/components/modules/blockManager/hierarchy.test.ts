@@ -1754,6 +1754,54 @@ describe('BlockHierarchy', () => {
       expect(appended.parentId).toBe('container');
       expectDfsContiguous(chainRepository.blocks);
     });
+
+    /**
+     * `contentIds` order must follow the FLAT array, which is the order the
+     * user sees (the saver derives every parent's content[] from it and
+     * cross-checks it against the DOM). An APPEND here is invisible in save
+     * output but reaches the doc: BlockManager.setBlockParent derives the
+     * placement's `afterId` from this list, so a mid-container insert would be
+     * recorded as "last child" and resurface at the bottom the moment memory
+     * is rebuilt from the doc (undo/redo, a remote peer, a reload).
+     */
+    it('inserts into the new parent contentIds at the block FLAT position, not at the end', () => {
+      const blocksStore = new Blocks(workingArea);
+      const midRepository = new BlockRepository();
+
+      midRepository.initialize(blocksStore as BlocksStore);
+
+      const column = createMockBlock({
+        id: 'column',
+        parentId: null,
+        contentIds: ['heading', 'body', 'author'],
+      });
+      const heading = createMockBlock({ id: 'heading', parentId: 'column' });
+      const body = createMockBlock({ id: 'body', parentId: 'column' });
+      const author = createMockBlock({ id: 'author', parentId: 'column' });
+
+      blocksStore.push(column);
+      blocksStore.push(heading);
+      blocksStore.push(body);
+      blocksStore.push(author);
+
+      const columnSlot = document.createElement('div');
+
+      columnSlot.setAttribute('data-blok-nested-blocks', '');
+      column.holder.appendChild(columnSlot);
+      columnSlot.append(heading.holder, body.holder, author.holder);
+      workingArea.appendChild(column.holder);
+
+      // The toolbox's replace path: the new block is placed in the flat array
+      // right after the heading, parent-less, and only then re-attached.
+      const inserted = createMockBlock({ id: 'inserted', parentId: null });
+
+      blocksStore.insert(2, inserted);
+      columnSlot.insertBefore(inserted.holder, body.holder);
+
+      new BlockHierarchy(midRepository).setBlockParent(inserted, 'column');
+
+      expect(column.contentIds).toEqual(['heading', 'inserted', 'body', 'author']);
+    });
   });
 
 });

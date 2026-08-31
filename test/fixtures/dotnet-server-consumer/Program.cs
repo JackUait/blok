@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using YDotNet.Document;
 
 const string RemovedRuntimeResource = "Blok.Server.Runtime.blok-server-runtime.js";
 
@@ -15,6 +16,25 @@ if (Array.Exists(
 {
   throw new InvalidOperationException(
       $"Unused runtime resource {RemovedRuntimeResource} is still packaged.");
+}
+
+// Doc round-trip proves the NuGet-restored native yrs library loads in a consumer app.
+using (var doc = new Doc())
+{
+  var text = doc.Text("restore-probe");
+
+  using (var transaction = doc.WriteTransaction())
+  {
+    text.Insert(transaction, 0, "native restore proof");
+  }
+
+  using (var transaction = doc.ReadTransaction())
+  {
+    if (text.String(transaction) != "native restore proof")
+    {
+      throw new InvalidOperationException("YDotNet native round-trip failed.");
+    }
+  }
 }
 
 var builder = WebApplication.CreateBuilder(args);

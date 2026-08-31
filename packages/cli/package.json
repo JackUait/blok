@@ -39,6 +39,6 @@
     "url": "https://github.com/JackUait/blok/issues"
   },
   "dependencies": {
-    "jsdom": "30.0.1"
+    "jsdom": "29.1.1"
   }
 }

@@ -1,0 +1,94 @@
+[
+  {
+    "id": "g1",
+    "type": "table",
+    "data": {
+      "withHeadings": true,
+      "content": [
+        [
+          {
+            "text": "A1"
+          },
+          {
+            "text": "B1"
+          }
+        ],
+        [
+          {
+            "text": "A2"
+          },
+          {
+            "text": "B2"
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "id": "g2",
+    "type": "table",
+    "data": {
+      "withHeadings": false,
+      "content": [
+        [
+          {
+            "text": "only"
+          }
+        ],
+        []
+      ]
+    }
+  },
+  {
+    "id": "g3",
+    "type": "table",
+    "data": {
+      "content": [
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "id": "g4",
+    "type": "matrix",
+    "data": {
+      "cells": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "c"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "g5",
+    "type": "cube",
+    "data": {
+      "layers": [
+        [
+          [
+            {
+              "v": 1
+            }
+          ],
+          [
+            {
+              "v": 2
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "v": 3
+            }
+          ]
+        ]
+      ]
+    }
+  }
+]

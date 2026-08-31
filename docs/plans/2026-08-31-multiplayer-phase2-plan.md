@@ -144,3 +144,64 @@ Fully gated: routes, rooms, store writes, doc-endpoint traffic, drain deltas.
 Global but inert (release notes): YDotNet deps on the NuGet (~1.7MB), single-
 file layout change, musl swap, NoWarn, additive doc claim, drain hook.
 Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
+
+## Amendments from execution (2026-08-31)
+
+- **B2 DECIDED: SyncWire is hand-rolled** (`Blok.Server/Collab/SyncWire.cs`), NOT
+  YDotNet.Protocol. Evidence against the real y-protocols 1.0.7 + lib0 0.2.117
+  encoders: YDotNet.Protocol round-trips sync 0/0/1/2 and awareness byte-
+  identically, but ENCODES queryAwareness (type 3) as `[0x01]` — a stock client
+  reads that as an empty awareness update and never re-announces, defeating
+  decision 11 — and cannot DECODE auth (2), queryAwareness (3) or the Blok
+  control frame (100). Canary tests pin the mismatches so a YDotNet upgrade
+  that fixes them forces a revisit. Use SyncWire for ALL frame types — never
+  split codecs by type. SyncWire also pins: one message per WebSocket frame
+  (trailing bytes rejected; the handshake reply is TWO frames), varuint ≤ 10
+  bytes, unknown OUTER type → ignorable UnknownFrame, unknown sub-type →
+  malformed. Control frame = `[100][varuint len][UTF-8 {"epoch":N,"format":N}]`,
+  strict decode.
+- **Fixture layout**: `fixtures/sync-frames.json` lives BESIDE `tickets.json`
+  (the collab generator owns `fixtures/collab/` and must remove only its own
+  case dirs — a shared folder is not safe to `rmSync`). C# loaders find
+  fixtures via the `Blok.Server.slnx` walk-up, not csproj items.
+- **devDependencies added (plan E1 pulled forward)**: `y-protocols 1.0.7` and
+  `lib0 0.2.117`, both exact — the fixture generator must import lib0 directly
+  (y-protocols writers take a lib0 encoder) and `no-phantom-dependencies-law`
+  forbids transitive imports. `y-websocket` still lands with E2.
+- **C1 decoupling**: the room depends on a small `ICollabDocConverter`
+  abstraction (Seed(Doc, json) / Export(Doc)); B1's `YDocConverter` binds
+  through a one-line adapter after both land. The room never references the
+  concrete converter.
+- **B1 LANDED** — `YDocConverter.Seed(Doc, JsonArray blocks)` / `Export(Doc) → JsonArray`
+  operate on the BLOCKS ARRAY, not the OutputData envelope (envelope, `data:null`,
+  version are the room's job). Numbers: always `Input.Double` (yrs `Long` → JS
+  BigInt breaks JSON.stringify). Ordinal (UTF-16) comparison for sorts and the
+  cycle keeper. 18 fixtures under `fixtures/collab/<case>/` + manifest; the JS
+  freshness test is always-on. Reverse direction (C#-seeded → JS) probed 18/18.
+- **Client behaviors pinned as-is by the fixtures (candidates for a later
+  tightening pass, NOT changed):** `parent: null` (or non-string) is written as
+  doc Null, excluded from root order → orphan tail, reads back parentless;
+  `lastEditedBy: null` / non-number `lastEditedAt` written then dropped on read;
+  `content` is never deduped in projection (`[x,x]` emitted verbatim) and
+  non-string entries pass through; orphan pass 2 can emit a child before its
+  own parent; a `null` block entry throws in fromJSON while a primitive entry
+  is skipped; a data value shaped `{__rows, __rowKeys:[objects]}` would be
+  misread as a grid; the escaped NUL (backslash-u0000) inside strings is
+  SUSPECTED to truncate through yffi's C strings — excluded from fixtures,
+  verify before relying on it.
+- **C1 LANDED (`3137ba08`)** — room API: `CollabRoomManager.JoinAsync(docId,
+  ICollabMember, ct) → CollabJoinResult{Joined|SeedFailed|Draining}`,
+  `ResetAsync(docId)`, `DrainAsync`; `CollabMembership.ReceiveAsync(frame)` /
+  `LeaveAsync`; `ICollabMember {CanWrite, AcceptsControlFrames, Send, Close}` —
+  Send/Close run INSIDE the lane: enqueue and return, never block, never throw.
+  The ROOM sends the epoch control frame first; the endpoint must not. Zero
+  stored frames = unseeded (a reset's empty log re-seeds under the stored
+  epoch); an unapplicable stored frame fails the join closed — operator reset
+  recovers; compaction on load at 64 frames OR 1 MiB, always before evict when
+  >1 frame. DocEndpointClient PUT header: `Blok-Doc-Version`.
+- **YDOTNET LAW (found by C1):** `new Doc()` in YDotNet 0.6.0 does NOT get a
+  unique client id (15 distinct in a 50-doc probe), and yrs DROPS updates that
+  repeat a (client, clock) pair — "unrecoverable state corruption" if both
+  write. Every Doc that may produce updates MUST be created with
+  `DocOptions { Id = random uint32 }` (the browsers' id space). Rooms do; test
+  helpers use `YDocs.NewClient()`. Audit any future `new Doc()`.

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "root-1",
+    "type": "paragraph",
+    "data": {
+      "text": "first root"
+    }
+  },
+  {
+    "id": "toggle-1",
+    "type": "toggle",
+    "data": {
+      "text": "Toggle"
+    },
+    "content": [
+      "child-a",
+      "child-b"
+    ]
+  },
+  {
+    "id": "child-a",
+    "type": "paragraph",
+    "data": {
+      "text": "A"
+    },
+    "parent": "toggle-1",
+    "content": [
+      "grand-1",
+      "grand-2"
+    ]
+  },
+  {
+    "id": "grand-1",
+    "type": "paragraph",
+    "data": {
+      "text": "A.1"
+    },
+    "parent": "child-a"
+  },
+  {
+    "id": "grand-2",
+    "type": "paragraph",
+    "data": {
+      "text": "A.2"
+    },
+    "parent": "child-a",
+    "content": [
+      "great-1"
+    ]
+  },
+  {
+    "id": "great-1",
+    "type": "paragraph",
+    "data": {
+      "text": "A.2.i"
+    },
+    "parent": "grand-2"
+  },
+  {
+    "id": "child-b",
+    "type": "paragraph",
+    "data": {
+      "text": "B"
+    },
+    "parent": "toggle-1"
+  },
+  {
+    "id": "root-2",
+    "type": "paragraph",
+    "data": {
+      "text": "last root"
+    }
+  }
+]

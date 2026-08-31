@@ -90,3 +90,56 @@ Independent: A1∥A2∥A3∥A4∥A5∥A6∥A7∥D1. Spine: {A3,A5,A7}→B1→C1�
 ## Deferred to Phase 4
 y-indexeddb offline (epoch/lineage-tagged; C4's reset lever is its prerequisite, lands now); Y.Text/
 character carets (format bump); scale-out guide; server-side edit API; in-band ticket refresh.
+
+## Review-round findings (2026-08-31) — QUEUED, not yet fixed
+
+Three adversarial reviewers ran over `c27b5f25..d4cc9681`. The sync core held
+(handshake ordering, lineage/reset, echo suppression, codec parity all survived
+probing). These remain OPEN and block the phase closing:
+
+- **F1 (CRITICAL, data corruption — the exact R1 risk)** `renderer.ts:152-158`'s
+  empty branch calls `BlockManager.insert({origin:'load'})` WITHOUT forwarding
+  `options.skipYjsSync`, so the block lands in the Yjs doc. `readonly.ts:224-246`
+  renders `savedBlocks.blocks` (`[]` for an empty collab doc) with
+  `skipYjsSync:true` on every real read-only transition — which happens whenever
+  ANY registered tool lacks `setReadOnly` (true for essentially every
+  third-party tool). The first sync lifting read-only is such a transition and
+  runs BEFORE `seedEmptyDocument`, whose `toJSON().length > 0` guard then sees
+  the phantom and skips. Result: a RANDOM-id block per peer — N peers, N
+  paragraphs, converged. Invisible to the suite only because every fixture tool
+  implements `setReadOnly`. Both candidate fixes have traps (see the review):
+  forwarding skipYjsSync yields a DOM-only phantom whose typing is silently
+  dropped; skipping the re-render when `savedBlocks.blocks` is empty looks safer.
+- **F2/F2b (HIGH)** a terminal provider is a one-way trip to a permanently
+  read-only, un-reloadable editor that the published event calls "offline"
+  (`index.ts:589` folds error→offline; the payload doc says "edits stay pending
+  until reconnect" — the opposite of the truth). Two ordinary ways in: the
+  handshake timeout is terminal (a dead server retries forever, a SLOW one
+  bricks the session — absent from decision 8's matrix), and two consecutive
+  1009s are self-completing (the reconnect re-ships the same oversized state).
+  Mirror image: no deadline on the FIRST SYNC — if the syncStep2 never arrives
+  the client sits in `connecting` forever, read-only, empty, no reconnect, no
+  degrade. Also `onStatus`'s detail is discarded at `index.ts:309-311`, so
+  `code`/`reason`/`retryInMs` never reach a host.
+- **F3** after a reset the editor re-renders the PRE-RESET mount data for the
+  whole backoff window (a reset means "this content is being replaced").
+- **F4** `seedEmptyDocument` ignores the host's `readOnly` — a pure viewer with
+  a write-granting ticket authors the first paragraph of someone else's doc.
+  Its own docstring states the rule it doesn't implement.
+- **F6** a peer with no `collaboration.user` is invisible EVERYWHERE (presence
+  and the published `peers[]`). `user` is optional in the published type, so the
+  DEFAULT configuration yields a session where everyone is present and nobody
+  sees anyone.
+- **F7** collaboration silently requires every tool to be read-only capable
+  (`readonly.ts:105-107` throws CriticalError; collab always boots blocked) —
+  undocumented in the `collaboration` JSDoc.
+- **F8** the veto flipping mid-typing destroys the caret (network-driven,
+  unannounced, save/clear/render restores only scrollY).
+- **F9** an editable collab editor can reach zero blocks with no way to create
+  one (`seedEmptyDocument` is latched to the first sync; a later write grant
+  never re-arms it, and `UI.appendBlockAtBottom` no-ops with no lastBlock).
+- **F13 (plausible)** `ModificationsObserver.disable()/enable()` is a boolean,
+  not a counter; the new code opens overlapping disable windows around awaits.
+
+**Two fixture omissions hid four of these** and should land in the same pass: a
+registered tool WITHOUT `setReadOnly`, and a peer with NO `collaboration.user`.

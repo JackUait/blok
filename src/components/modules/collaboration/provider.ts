@@ -43,6 +43,17 @@ const SUPPORTED_FORMAT = 1;
 const DEFAULT_HANDSHAKE_TIMEOUT_MS = 10_000;
 const DEFAULT_AWARENESS_THROTTLE_MS = 100;
 
+/**
+ * Silent handshakes since the last completed sync before the session is called
+ * dead. A timeout is an INFERENCE, not a verdict: a cold-starting server and a
+ * buffering proxy look exactly like an endpoint that does not speak the
+ * protocol, so a single one may not end the session — a server that refuses the
+ * connection outright retries forever, and a slow one must not fare worse. Two
+ * attempts land inside ~11s, which is not long enough to tell those apart;
+ * three span ~33s, which is.
+ */
+const MAX_HANDSHAKE_TIMEOUTS_SINCE_SYNC = 3;
+
 const BACKOFF_BASE_MS = 1000;
 const BACKOFF_CAP_MS = 30_000;
 
@@ -89,15 +100,22 @@ interface ProviderState {
   unhookDoc: (() => void) | null;
   unhookAwareness: (() => void) | null;
   handshakeTimer: ReturnType<typeof setTimeout> | null;
+  /** Armed once the control frame validates; a first sync is what disarms it. */
+  firstSyncTimer: ReturnType<typeof setTimeout> | null;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   awarenessTimer: ReturnType<typeof setTimeout> | null;
   awarenessClients: Set<number>;
   /** A queryAwareness reply (or a reconnect) needs every state, not just the deltas. */
   awarenessFull: boolean;
   attempt: number;
-  /** Both counters run since the LAST COMPLETED SYNC, not since the last close. */
+  /** Every counter here runs since the LAST COMPLETED SYNC, not since the last close. */
   unauthorizedSinceSync: number;
   oversizedSinceSync: number;
+  handshakeTimeoutsSinceSync: number;
+  /** Largest frame written on the CURRENT connection, in encoded bytes. */
+  largestSentBytes: number;
+  /** Smallest frame size the server has refused as too big, if it has. */
+  refusedFrameBytes: number | null;
   forceTicketRefresh: boolean;
   synced: boolean;
   destroyed: boolean;
@@ -162,6 +180,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     unhookDoc: null,
     unhookAwareness: null,
     handshakeTimer: null,
+    firstSyncTimer: null,
     reconnectTimer: null,
     awarenessTimer: null,
     awarenessClients: new Set<number>(),
@@ -169,6 +188,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     attempt: 0,
     unauthorizedSinceSync: 0,
     oversizedSinceSync: 0,
+    handshakeTimeoutsSinceSync: 0,
+    largestSentBytes: 0,
+    refusedFrameBytes: null,
     forceTicketRefresh: false,
     synced: false,
     destroyed: false,
@@ -195,17 +217,32 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Writes one frame. A socket that died between the check and the write throws;
-   * the close handler owns recovery, so there is nothing useful to do here.
+   * Writes bytes already on the wire format, remembering the largest frame this
+   * connection has written: a 1009 names no frame, so the largest one we wrote
+   * is the only estimate we have of what tripped the server's message cap.
+   *
+   * A socket that died between the check and the write throws; the close
+   * handler owns recovery, so there is nothing useful to do here.
+   * @param socket - the live transport
+   * @param bytes - the encoded frame
+   */
+  const sendBytes = (socket: WebSocketLike, bytes: Uint8Array): void => {
+    state.largestSentBytes = Math.max(state.largestSentBytes, bytes.byteLength);
+
+    try {
+      socket.send(bytes);
+    } catch {
+      // Intentionally inert: `onclose` drives reconnection.
+    }
+  };
+
+  /**
+   * Writes one frame.
    * @param socket - the live transport
    * @param frame - the frame to write
    */
   const send = (socket: WebSocketLike, frame: SyncWireFrame): void => {
-    try {
-      socket.send(encode(frame));
-    } catch {
-      // Intentionally inert: `onclose` drives reconnection.
-    }
+    sendBytes(socket, encode(frame));
   };
 
   const flushAwareness = (): void => {
@@ -303,6 +340,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.unhookAwareness = null;
 
     state.handshakeTimer = clearTimer(state.handshakeTimer);
+    state.firstSyncTimer = clearTimer(state.firstSyncTimer);
     state.awarenessTimer = clearTimer(state.awarenessTimer);
     state.awarenessClients.clear();
     state.awarenessFull = false;
@@ -398,13 +436,55 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
-    // A completed sync is the ONLY thing that clears the failure counters: it is
-    // the proof that the ticket is accepted and our frames fit.
+    // A completed sync is the ONLY thing that clears the failure memory: it is
+    // the proof that the ticket is accepted, that this endpoint speaks the
+    // protocol, and that our frames fit — including the refused-size bound,
+    // which would otherwise keep refusing legitimate frames in a healed session.
     state.synced = true;
+    state.firstSyncTimer = clearTimer(state.firstSyncTimer);
     state.attempt = 0;
     state.unauthorizedSinceSync = 0;
     state.oversizedSinceSync = 0;
+    state.handshakeTimeoutsSinceSync = 0;
+    state.refusedFrameBytes = null;
     report('connected');
+  };
+
+  /**
+   * Answers the server's SyncStep1 with everything it is missing — unless that
+   * answer is at least as big as a frame the server has already refused.
+   *
+   * Without the check one oversized write ends the session in two rounds with
+   * nothing to show for it: the 1009 drops the connection, the reconnect's
+   * SyncStep1 draws the server's own SyncStep1, and answering it re-ships the
+   * very bytes that were just refused — a second 1009, terminal, and no word
+   * about what was too big. The server never announces its cap and the wire
+   * carries one y-protocols message per frame (so a large answer cannot be
+   * split across frames the server would reassemble), which leaves refusing to
+   * write it, and SAYING SO, as the only honest move.
+   *
+   * The bound is deliberately porous — it is the largest frame we wrote on the
+   * refused connection, not the server's real cap, so a frame between the two
+   * still ships and still draws the second 1009 through the ordinary path. It
+   * is a loop-breaker, not a limit oracle.
+   * @param socket - the connection it arrived on
+   * @param stateVector - what the server says it already has
+   */
+  const answerResync = (socket: WebSocketLike, stateVector: Uint8Array): void => {
+    const bytes = encode({ type: 'syncStep2', update: yjs.encodeStateAsUpdate(stateVector) });
+    const refused = state.refusedFrameBytes;
+
+    if (refused !== null && bytes.byteLength >= refused) {
+      terminate('oversized-update', {
+        reason:
+          `${docId} cannot be sent: answering the server's resync takes ${bytes.byteLength} bytes, ` +
+          `and it already refused a frame of ${refused} bytes as too big`,
+      });
+
+      return;
+    }
+
+    sendBytes(socket, bytes);
   };
 
   /**
@@ -423,7 +503,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         yjs.applyRemoteUpdate(frame.update, origin);
         break;
       case 'syncStep1':
-        send(socket, { type: 'syncStep2', update: yjs.encodeStateAsUpdate(frame.stateVector) });
+        answerResync(socket, frame.stateVector);
         break;
       case 'awareness':
         yjs.applyAwarenessUpdate(frame.update, origin);
@@ -485,12 +565,49 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.buffered = [];
 
     for (const frame of buffered) {
+      // A refused resync answer ends the session by RETURNING, not by throwing,
+      // so the loop has to notice: the rest of the buffer belongs to a
+      // connection that no longer exists, and applying a syncStep2 from it
+      // would report 'connected' after 'error' — un-latching a terminal state
+      // the module treats as the provider's last word.
+      if (state.phase !== 'ready') {
+        break;
+      }
+
       handleFrame(socket, origin, frame);
+    }
+
+    // Everything below belongs to a LIVE connection, and the drain may have
+    // ended this one — arming a deadline on a terminated provider would raise
+    // it from the dead ten seconds later.
+    if (state.phase !== 'ready') {
+      return;
     }
 
     // Re-announce our own presence to a server that has never heard it.
     if (yjs.getAwarenessStates().size > 0) {
       scheduleAwareness(true);
+    }
+
+    // AFTER the drain: a buffered SyncStep2 completes the sync right here, and
+    // `markSynced` is what disarms this. Validating a control frame is not a
+    // sync — nothing else re-arms a deadline once the handshake timer is
+    // cleared, so without this the client sits in `connecting` forever when the
+    // first sync never lands: read-only, empty, no reconnect, and no degrade
+    // view (that runs on offline/error only).
+    // Distinct from the phase guard above: a drain that COMPLETED the sync
+    // leaves the phase 'ready', so only this check stops a deadline being armed
+    // on a connection that is already live.
+    if (!state.synced) {
+      state.firstSyncTimer = setTimeout(() => {
+        state.firstSyncTimer = null;
+        teardownGeneration(true);
+
+        // Offline, not terminal: the control frame PROVED this is a Blok sync
+        // endpoint, so silence after it is a server fault that may heal — the
+        // same reading as a dropped connection, and it shows the degrade view.
+        scheduleReconnect(undefined, `${docId} validated the handshake but sent no first sync`);
+      }, handshakeTimeoutMs);
     }
   };
 
@@ -515,8 +632,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Applies the close-code policy. Both counters here run SINCE THE LAST
-   * COMPLETED SYNC — only {@link markSynced} clears them. An unrelated close in
+   * Applies the close-code policy. Both counters here — and the refused-frame
+   * bound they sit beside — run SINCE THE LAST COMPLETED SYNC, and only
+   * {@link markSynced} clears them. An unrelated close in
    * between (a dropped connection, a restart) says nothing about whether the
    * ticket is accepted or our frames fit, and clearing the count on one let a
    * flapping server hide a permanently rejected ticket forever.
@@ -528,6 +646,14 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     if (code === CLOSE_MESSAGE_TOO_BIG) {
       state.oversizedSinceSync += 1;
+
+      // The close names no frame, so the largest one we wrote is the estimate.
+      // `> 0` is load-bearing: a 1009 on a connection we never wrote to says
+      // nothing about our frames, and a bound of zero would refuse every
+      // resync answer for the rest of the session.
+      if (state.largestSentBytes > 0) {
+        state.refusedFrameBytes = Math.min(state.refusedFrameBytes ?? Infinity, state.largestSentBytes);
+      }
     }
 
     if (code === CLOSE_UNAUTHORIZED) {
@@ -565,6 +691,31 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }
 
     scheduleReconnect(code, reason);
+  };
+
+  /**
+   * The socket opened and the control frame never came.
+   *
+   * Retried like any other transient failure rather than ended outright: this
+   * is an inference from silence, not the server's verdict, and a cold start or
+   * a buffering proxy is indistinguishable from an endpoint that does not speak
+   * the protocol. A server that refuses the connection altogether is retried
+   * forever, so a merely SLOW one must not lose the session in ten seconds.
+   * Only a run of them says the endpoint is wrong.
+   */
+  const handleHandshakeTimeout = (): void => {
+    state.handshakeTimeoutsSinceSync += 1;
+
+    const reason = `${url} sent no control frame`;
+
+    if (state.handshakeTimeoutsSinceSync >= MAX_HANDSHAKE_TIMEOUTS_SINCE_SYNC) {
+      terminate('handshake-timeout', { reason });
+
+      return;
+    }
+
+    teardownGeneration(true);
+    scheduleReconnect(undefined, reason);
   };
 
   /**
@@ -606,6 +757,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.origin = origin;
     state.phase = 'awaiting-control';
     state.buffered = [];
+    state.largestSentBytes = 0;
 
     socket.onopen = (): void => {
       if (isStale(generation)) {
@@ -617,7 +769,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
       state.handshakeTimer = setTimeout(() => {
         state.handshakeTimer = null;
-        terminate('handshake-timeout', { reason: `${url} sent no control frame` });
+        handleHandshakeTimeout();
       }, handshakeTimeoutMs);
     };
 

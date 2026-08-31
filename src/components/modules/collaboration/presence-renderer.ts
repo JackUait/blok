@@ -69,10 +69,10 @@ interface Stamp {
 }
 
 /**
- * Make one selected state safe to draw. `selectDrawableStates` has already
- * proved the name is a non-empty string; everything else here is still a value
- * another browser chose, so nothing but a hex colour and a string block id
- * survives.
+ * Make one selected state safe to draw. Every field here is a value another
+ * browser chose, so nothing but a string name, a hex colour and a string block
+ * id survives. An absent name is ordinary — `collaboration.user` is optional —
+ * and becomes the empty string, which the pass draws as an anonymous peer.
  * @param entry - a state that passed the identity gate
  */
 const readPeer = (entry: DrawableState): DrawablePeer => {
@@ -83,7 +83,7 @@ const readPeer = (entry: DrawableState): DrawablePeer => {
     clientId: entry.clientId,
     // Cut by CODE POINT: slicing a string of astral characters in half leaves a
     // lone surrogate.
-    name: Array.from(name.trim()).slice(0, MAX_NAME_LENGTH).join(''),
+    name: typeof name === 'string' ? Array.from(name.trim()).slice(0, MAX_NAME_LENGTH).join('') : '',
     color: isPresenceColor(color) ? color : presenceColorFor(entry.clientId),
     blockId: typeof blockId === 'string' ? blockId : null,
   };
@@ -164,6 +164,9 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
     const stamp = existing !== undefined && existing.target === holder ? existing : createStamp(holder);
 
     stamp.element.textContent = peer.name;
+    // An anonymous peer still gets the coloured outline; an empty name bubble
+    // on their block would just look like a rendering fault.
+    stamp.element.hidden = peer.name === '';
     stamp.element.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
 
     holder.setAttribute(PRESENCE_ATTR, '');
@@ -226,11 +229,17 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
       const avatar = document.createElement('span');
 
       avatar.setAttribute(AVATAR_ATTR, '');
-      // An attribute value is never parsed as markup, so a hostile name is as
-      // safe here as it is in textContent.
-      avatar.setAttribute('title', peer.name);
+
+      // A peer who published no name is drawn as their colour alone: no
+      // monogram, and no tooltip claiming an empty name.
+      if (peer.name !== '') {
+        // An attribute value is never parsed as markup, so a hostile name is as
+        // safe here as it is in textContent.
+        avatar.setAttribute('title', peer.name);
+        avatar.textContent = initialsOf(peer.name);
+      }
+
       avatar.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
-      avatar.textContent = initialsOf(peer.name);
 
       stack.appendChild(avatar);
     });

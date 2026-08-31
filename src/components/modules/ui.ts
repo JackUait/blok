@@ -1235,16 +1235,19 @@ export class UI extends Module<UINodes> {
       return false;
     }
 
-    if (!BlockManager.lastBlock) {
-      return false;
-    }
-
     /**
      * Insert a default-block at the bottom if:
-     * - last-block is not a default-block (Text)
+     * - there is no block at all
+     * - Or, last-block is not a default-block (Text)
      * - Or, default-block is not empty
+     *
+     * The no-block case only exists under collaboration: single-player keeps a
+     * floor of one block at all times. A collaboration editor legitimately sits
+     * at zero — a room nobody has written in yet, seen by someone whose write
+     * access arrived late — and refusing here left the only gesture that makes
+     * a block doing nothing, with no way out of an empty document.
      */
-    if (!BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
+    if (!BlockManager.lastBlock || !BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
       BlockManager.insertAtEnd();
     }
 

@@ -659,11 +659,22 @@ export interface BlokMountOptions {
    *   and free of `/`, `%2f`/`%2F`, or a `.`/`..` dot segment. Anything else is
    *   refused at construction (mirrors the server's own 4400 refusal).
    * - `user` — the display identity shown to the other people in the document
-   *   (their name, and an optional cursor/avatar `color`). This is PURELY
-   *   presentational and is INDEPENDENT of the {@link BlokMountOptions.user}
-   *   `{ id }` option, which records edit attribution on each block: one is "who
-   *   gets credit for this edit", the other is "whose cursor is that". Set
-   *   either, both, or neither.
+   *   (their name, and an optional cursor/avatar `color`). OPTIONAL: without
+   *   it this editor still appears to everyone else, as an anonymous avatar in
+   *   a colour assigned from the built-in palette, and their peer entry carries
+   *   an empty `name`. This is PURELY presentational and is INDEPENDENT of the
+   *   {@link BlokMountOptions.user} `{ id }` option, which records edit
+   *   attribution on each block: one is "who gets credit for this edit", the
+   *   other is "whose cursor is that". Set either, both, or neither.
+   *
+   * EVERY REGISTERED TOOL MUST SUPPORT READ-ONLY (`static isReadOnlySupported
+   * = true`). A collaboration editor boots read-only whatever `readOnly` says —
+   * an edit made before the first sync has nowhere to go — so a tool that
+   * cannot render read-only fails the contract immediately, and the editor's
+   * ready promise REJECTS with a CriticalError naming the tool. This is not
+   * special to collaboration; it is the ordinary read-only contract, reached on
+   * every collaboration session rather than only when a host asks for
+   * `readOnly: true`.
    *
    * Mutually exclusive with {@link BlokMountOptions.persistence}: the sync
    * service owns the whole document round-trip, so a second load/save endpoint
@@ -675,7 +686,11 @@ export interface BlokMountOptions {
   collaboration?: {
     /** The document id shared with the sync service. Must be a single path segment. */
     doc: string;
-    /** The display identity shown to peers — independent of `user: { id }` attribution. */
+    /**
+     * The display identity shown to peers — independent of `user: { id }`
+     * attribution. Omit it and this editor is still visible to everyone else,
+     * drawn as an anonymous avatar in a colour from the presence palette.
+     */
     user?: {
       /** Display name shown to the other people in the document. */
       name: string;

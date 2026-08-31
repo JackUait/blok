@@ -128,13 +128,15 @@ export class Renderer extends Module {
   private insertRenderedBlocks(blocksData: OutputBlockData[], options: { skipYjsSync?: boolean } = {}): number {
     const { Tools, BlockManager } = this.Blok;
 
+    const inputBlocks = this.resolveRenderSource(blocksData, options);
+
     // Give consumers a chance to transform the blocks array before anything is
     // rendered — e.g. to run app-specific legacy-data migrations inside Blok.
     // Runs on the raw saved shape (before format analysis / hierarchical
     // expansion) so the hook sees exactly what was passed to render().
     const hookedBlocks = this.config.onBeforeRender !== undefined
-      ? this.config.onBeforeRender(blocksData)
-      : blocksData;
+      ? this.config.onBeforeRender(inputBlocks)
+      : inputBlocks;
 
     // Host-supplied per-type data migrations (`config.migrations`) run HERE —
     // before format analysis — so `dataModel: 'auto'` inspects the POST-migration
@@ -150,6 +152,25 @@ export class Renderer extends Module {
       : hookedBlocks;
 
     if (sourceBlocks.length === 0) {
+      /**
+       * Under collaboration the document — not this call — owns the floor.
+       *
+       * The insert below writes to the Yjs document (`BlockManager.insert`
+       * has no `skipYjsSync` here, and forwarding one would only trade the
+       * write for a DOM-only block whose typing is silently dropped), and the
+       * id it generates is RANDOM. Every peer running a view rebuild against
+       * an empty document would author its own paragraph, they would all
+       * converge, and a room would end up with one paragraph per peer.
+       *
+       * Collaboration seeds the first block itself, once, with an id derived
+       * from the document id so a race lands ONE paragraph — see
+       * `seedEmptyDocument`. Leaving the editor with no blocks here is what
+       * lets that run: its guard is the document still being empty.
+       */
+      if (this.Blok.Collaboration?.isEnabled ?? false) {
+        return 0;
+      }
+
       // Still a document render, not an authoring gesture: the default block is
       // what an empty document IS, so a container tool must not treat it as
       // "the author just made me".
@@ -314,6 +335,49 @@ export class Renderer extends Module {
     }
 
     return blocks.length;
+  }
+
+  /**
+   * What a render call actually renders.
+   *
+   * Ordinary renders render the caller's blocks. A COLLABORATION VIEW REBUILD —
+   * `skipYjsSync`, which under collaboration is the only kind of render there
+   * is (`blocks.render()` is refused, and the boot render never runs) — renders
+   * the Yjs document instead, whenever the document holds anything. The shared
+   * document is the authority; the caller's array is a local snapshot that is
+   * wrong in two ways this costs nothing to avoid:
+   *
+   * - It comes from `Saver.save()`, which DROPS a block whose `validate()`
+   *   rejects it. The one block a fresh room is seeded with is an empty
+   *   paragraph, so the first read-only transition in a brand-new room saved
+   *   `[]` and blanked an editor whose document had content.
+   * - It is captured before an `await`, so a lineage reset landing mid-rebuild
+   *   re-rendered the PRE-RESET blocks into the fresh document.
+   *
+   * The one exemption is the degraded view: while `config.data` is on screen as
+   * "here is what we last saw", the document is empty ON PURPOSE — the session
+   * has never synced — and the blocks the caller passed are the only content
+   * there is.
+   *
+   * Rendering the document costs nothing when the two agree: the blocks keep
+   * their ids, and `skipYjsSync` means nothing is written back.
+   * @param blocksData - blocks the caller asked to render
+   * @param options - render behaviour
+   * @param options.skipYjsSync - see `render`
+   */
+  private resolveRenderSource(
+    blocksData: OutputBlockData[],
+    options: { skipYjsSync?: boolean }
+  ): OutputBlockData[] {
+    const collaboration = this.Blok.Collaboration;
+    const isCollaborating = collaboration?.isEnabled ?? false;
+    const isShowingLastKnown = collaboration?.isDegraded ?? false;
+
+    if (options.skipYjsSync !== true || !isCollaborating || isShowingLastKnown) {
+      return blocksData;
+    }
+
+    return this.Blok.YjsManager.toJSON();
   }
 
   /**

@@ -289,13 +289,20 @@ describe('presence — local awareness upkeep', () => {
       });
     });
 
-    it('publishes the block alone when the host configured no user', () => {
+    it('publishes an identity with no name when the host configured no user', () => {
       const { seam, presence } = setup();
 
       presence.start();
 
-      expect(seam.localState()).toEqual({ blockId: 'block-1' });
-      expect(seam.writes.map((write) => write.field)).toEqual(['blockId']);
+      // `user` is optional in the published config, so this IS the default
+      // configuration. Publishing nothing about ourselves made a default room a
+      // place where everybody is present and nobody sees anyone — so the
+      // identity goes out either way, carrying the assigned colour and no name.
+      expect(seam.localState()).toEqual({
+        blockId: 'block-1',
+        user: { color: presenceColorFor(42) },
+      });
+      expect(seam.writes.map((write) => write.field)).toEqual(['blockId', 'user']);
     });
 
     it('publishes a null block when the caret is nowhere', () => {

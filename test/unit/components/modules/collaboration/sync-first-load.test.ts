@@ -20,9 +20,66 @@ import { YjsManager } from '../../../../../src/components/modules/yjs';
 import { Bookmark } from '../../../../../src/tools/link/bookmark';
 import { Paragraph } from '../../../../../src/tools/paragraph';
 import type { BlokConfig, OutputBlockData } from '../../../../../types';
+import type { BlockToolConstructable } from '../../../../../types/tools';
 import type { CollaborationStatusChangedPayload } from '../../../../../types/events/editor-events';
 
 const LINEAGE = '0123456789abcdef0123456789abcdef';
+
+/**
+ * An ordinary third-party tool: read-only CAPABLE, but with no `setReadOnly`.
+ *
+ * `setReadOnly` is a Blok extension almost nothing outside this repo implements,
+ * and one such tool in the registry is what turns every read-only transition
+ * into the real save/clear/render dance instead of the in-place per-block
+ * toggle. Both fixture tools this harness used to register (paragraph, bookmark)
+ * implement it, so the suite only ever saw the in-place path — which is how a
+ * document-corrupting bug on the dance survived three review rounds.
+ *
+ * The two levers are different and both matter: `isReadOnlySupported` must stay
+ * true (a collaboration editor always boots read-only, and a tool without it
+ * fails the contract loudly — see the `collaboration` JSDoc), while the absent
+ * `setReadOnly` is what makes the transition real.
+ */
+class PlainTool {
+  public static get isReadOnlySupported(): boolean {
+    return true;
+  }
+
+  public static get toolbox(): { icon: string; title: string } {
+    return {
+      icon: '',
+      title: 'Plain',
+    };
+  }
+
+  private readonly text: string;
+
+  /**
+   * @param options - tool constructor options
+   * @param options.data - saved block data
+   */
+  public constructor({ data }: { data?: { text?: string } }) {
+    this.text = data?.text ?? '';
+  }
+
+  /**
+   * Renders the block's only element.
+   */
+  public render(): HTMLElement {
+    const element = document.createElement('div');
+
+    element.textContent = this.text;
+
+    return element;
+  }
+
+  /**
+   * @param element - the rendered element
+   */
+  public save(element: HTMLElement): { text: string } {
+    return { text: element.textContent ?? '' };
+  }
+}
 
 /** A control frame the client accepts: our format, a stable lineage. */
 const controlFrame = (): SyncWireFrame => ({
@@ -131,9 +188,10 @@ const destroyCore = (core: Core): void => {
  * waits on `requestIdleCallback`, which fake timers fight.
  * @param predicate - condition to wait for
  * @param label - what the caller was waiting for, for the failure message
+ * @param timeoutMs - how long to wait before giving up
  */
-const waitFor = async (predicate: () => boolean, label = 'condition'): Promise<void> => {
-  const deadline = Date.now() + 2000;
+const waitFor = async (predicate: () => boolean, label = 'condition', timeoutMs = 2000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
 
   while (!predicate()) {
     if (Date.now() > deadline) {
@@ -177,7 +235,13 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
     minHeight: 50,
     // The `server` shorthand fills in a bookmark endpoint, so the tool it names
     // has to carry a class or Tools refuses the config-only entry.
-    tools: { paragraph: { class: Paragraph }, bookmark: { class: Bookmark } },
+    // `plain` has no `setReadOnly`, so every read-only transition here is the
+    // real save/clear/render dance — what a host with any third-party tool gets.
+    tools: {
+      paragraph: { class: Paragraph },
+      bookmark: { class: Bookmark },
+      plain: { class: PlainTool as unknown as BlockToolConstructable },
+    },
     data: options.data,
     readOnly: options.readOnly,
     ...(options.collaboration === false ? {} : { server: 'https://sync.test/api/', collaboration }),
@@ -257,6 +321,39 @@ describe('collaboration — sync-first load', () => {
 
       expect(core.moduleInstances.BlockManager.blocks.length).toBe(1);
       expect(core.moduleInstances.YjsManager.toJSON().length).toBe(1);
+    });
+  });
+
+  describe('the read-only contract collaboration always reaches', () => {
+    it('rejects at boot when a registered tool cannot render read-only', async () => {
+      const holder = document.createElement('div');
+
+      document.body.appendChild(holder);
+      holders.push(holder);
+
+      // No `isReadOnlySupported`. In a single-player editor this tool is fine
+      // until somebody asks for read-only; under collaboration the session
+      // boots read-only, so the contract is failed on the way up. The
+      // `collaboration` JSDoc states this — a host adding the key to an editor
+      // with such a tool otherwise gets a rejected ready promise and no clue.
+      class NoReadOnlyTool extends PlainTool {
+        public static get isReadOnlySupported(): boolean {
+          return false;
+        }
+      }
+
+      const core = new Core({
+        holder,
+        tools: {
+          paragraph: { class: Paragraph },
+          bookmark: { class: Bookmark },
+          strict: { class: NoReadOnlyTool as unknown as BlockToolConstructable },
+        },
+        server: 'https://sync.test/api/',
+        collaboration: { doc: 'doc-1', socketFactory: () => new MockSocket('', []) } as CollaborationConfig,
+      });
+
+      await expect(core.isReady).rejects.toThrow(/strict/);
     });
   });
 
@@ -359,7 +456,7 @@ describe('collaboration — sync-first load', () => {
       expect(collabAttr(harness.core)).toBe('offline');
 
       // 1001 on the first attempt reconnects in ~250ms.
-      await waitFor(() => harness.sockets.length === 2, 'reconnect');
+      await waitFor(() => harness.sockets.length === 2, 'reconnect', 6000);
 
       firstSync(harness, [{ type: 'paragraph', data: { text: 'server truth' } }]);
 
@@ -367,7 +464,9 @@ describe('collaboration — sync-first load', () => {
 
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(1);
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
-    });
+      // Two renders and a reconnect on real timers: the default 5s per-test
+      // budget is not enough on a loaded machine.
+    }, 20_000);
 
     it('stays empty and read-only when the host passed no data', async () => {
       const harness = await boot();
@@ -400,6 +499,76 @@ describe('collaboration — sync-first load', () => {
       expect(first.core.moduleInstances.YjsManager.toJSON().map((block) => block.id)).toEqual([firstId]);
     });
 
+    it('stays at ONE paragraph after the two peers exchange what they wrote', async () => {
+      const first = await boot({ doc: 'shared' });
+      const second = await boot({ doc: 'shared' });
+
+      firstSync(first, []);
+      firstSync(second, []);
+
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'seed on first peer');
+      await waitFor(() => second.core.moduleInstances.BlockManager.blocks.length === 1, 'seed on second peer');
+
+      const firstYjs = first.core.moduleInstances.YjsManager;
+      const secondYjs = second.core.moduleInstances.YjsManager;
+
+      // The mock transport does not relay, so play the server: hand each peer
+      // the other's state. Anything either of them authored on its own — a
+      // block core seeded behind the module's back — lands here as a second
+      // paragraph, and N peers would make N.
+      first.socket().deliver({ type: 'update', update: secondYjs.encodeStateAsUpdate(firstYjs.getStateVector()) });
+      second.socket().deliver({ type: 'update', update: firstYjs.encodeStateAsUpdate(secondYjs.getStateVector()) });
+
+      await waitFor(() => collabAttr(first.core) === 'connected', 'first peer still connected');
+
+      expect(firstYjs.toJSON()).toHaveLength(1);
+      expect(secondYjs.toJSON()).toHaveLength(1);
+      expect(firstYjs.toJSON()[0].id).toBe(secondYjs.toJSON()[0].id);
+      expect(first.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+      expect(second.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+    });
+
+    it('keeps a room whose only block is the empty seed on screen for the peer that joins it', async () => {
+      const harness = await boot({ doc: 'shared' });
+
+      // What a second peer receives from a room somebody else just seeded: one
+      // paragraph with no text. `validate()` rejects it, so the read-only
+      // transition's save comes back empty — and rebuilding the view from THAT
+      // would leave the joiner staring at a blank editor over a document that
+      // has content.
+      firstSync(harness, [{ id: 'seeded-block', type: 'paragraph', data: { text: '' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'the remote block');
+
+      const mounted = harness.core.moduleInstances.BlockManager.blocks[0];
+
+      // The transition rebuilds the view, so the block is composed again: wait
+      // for THAT, not for the read-only flag, which flips before the rebuild.
+      await waitFor(
+        () => harness.core.moduleInstances.BlockManager.blocks[0] !== mounted,
+        'the read-only transition to rebuild the view'
+      );
+
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+      expect(harness.core.moduleInstances.BlockManager.blocks.map((block) => block.id)).toEqual(['seeded-block']);
+      expect(harness.core.moduleInstances.YjsManager.toJSON().map((block) => block.id)).toEqual(['seeded-block']);
+    });
+
+    it('seeds nothing for a read-only host, whatever the ticket grants', async () => {
+      const harness = await boot({ doc: 'shared', readOnly: true });
+
+      firstSync(harness, []);
+
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+      // The status handler seeds synchronously after arbitration; give the whole
+      // chain a turn so "nothing was written" is a real observation.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(harness.core.moduleInstances.YjsManager.toJSON()).toEqual([]);
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
+    });
+
     it('seeds once per session, not once per reconnect', async () => {
       const harness = await boot();
       const socket = firstSync(harness, []);
@@ -408,13 +577,83 @@ describe('collaboration — sync-first load', () => {
 
       socket.serverClose(1001, 'gone');
 
-      await waitFor(() => harness.sockets.length === 2, 'reconnect');
+      await waitFor(() => harness.sockets.length === 2, 'reconnect', 6000);
 
       firstSync(harness, []);
 
       await waitFor(() => collabAttr(harness.core) === 'connected', 'reconnected');
 
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+    });
+  });
+
+  describe('an editable editor always has somewhere to type', () => {
+    it('seeds when a later ticket grants the write access the first one denied', async () => {
+      // Short-lived on purpose: the ticket source caches a pass until 30s
+      // before it expires, so a grant only ever changes on a re-mint.
+      const ticketFor = (write: boolean): string =>
+        `header.${btoa(JSON.stringify({
+          exp: Math.floor(Date.now() / 1000) + 10,
+          write,
+        }))}.signature`;
+
+      const grant = { write: false };
+
+      vi.stubGlobal('fetch', vi.fn(async () => ({
+        ok: true,
+        json: async (): Promise<unknown> => ({ ticket: ticketFor(grant.write) }),
+      })));
+
+      const harness = await boot({ doc: 'shared', ticket: '/tickets' });
+
+      await waitFor(() => harness.sockets.length === 1, 'socket after the ticket mint');
+
+      firstSync(harness, []);
+
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // A member the server will not accept writes from authors nothing.
+      expect(harness.core.moduleInstances.YjsManager.toJSON()).toEqual([]);
+
+      grant.write = true;
+      harness.socket().serverClose(1001, 'gone');
+
+      // The reconnect mints a fresh ticket, and THAT is where the grant flips.
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect', 6000);
+      await waitFor(
+        () => harness.core.moduleInstances.BlockManager.blocks.length === 1,
+        'the seed the new grant unlocks'
+      );
+
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+      expect(harness.core.moduleInstances.YjsManager.toJSON()).toHaveLength(1);
+      // A sync, a reconnect and a re-mint on real timers.
+    }, 20_000);
+
+    it('appends the first block when a click below an empty editor is the only way in', async () => {
+      const harness = await boot({ doc: 'shared', readOnly: true });
+
+      firstSync(harness, []);
+
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+      // Let the sync's own seed decision land first: lifting read-only while it
+      // is still in flight would make the seed run and hide the state under test.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // A pure viewer seeds nothing, so lifting read-only leaves an editable
+      // editor with no block — and the bottom zone is what a user reaches for.
+      await harness.core.moduleInstances.API.methods.readOnly.set(false);
+
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+
+      harness.core.moduleInstances.UI.nodes.bottomZone.dispatchEvent(
+        new MouseEvent('click', { bubbles: true })
+      );
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'the appended block');
+
+      expect(harness.core.moduleInstances.YjsManager.toJSON()).toHaveLength(1);
     });
   });
 
@@ -432,7 +671,7 @@ describe('collaboration — sync-first load', () => {
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
 
       await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'read-only while unsynced again');
-      await waitFor(() => harness.sockets.length === 2, 'a reconnect');
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect', 6000);
 
       const second = harness.socket();
 
@@ -473,7 +712,7 @@ describe('collaboration — sync-first load', () => {
 
       socket.serverClose(4409, 'the room was reset');
 
-      await waitFor(() => harness.sockets.length === 2, 'a reconnect');
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect', 6000);
 
       const second = harness.socket();
 
@@ -559,6 +798,108 @@ describe('collaboration — sync-first load', () => {
 
       expect(seen.map((payload) => payload.status)).toEqual(['connected', 'offline']);
       expect(seen[0].peers).toEqual([]);
+    });
+
+    it('reports a terminal stop as error, with why it stopped', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      // 4403 is the provider's last word. Calling that "offline" told the host
+      // the opposite of the truth — offline means edits stay pending until a
+      // reconnect, and nothing here will ever reconnect.
+      socket.serverClose(4403, 'forbidden');
+
+      await waitFor(() => seen.at(-1)?.status === 'error', 'the terminal status');
+
+      expect(seen.at(-1)?.error).toBe('forbidden');
+      expect(seen.at(-1)?.code).toBe(4403);
+      expect(seen.at(-1)?.reason).toBe('forbidden');
+    });
+
+    it('says when the next reconnect attempt is while offline', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      socket.serverClose(1001, 'server restarting');
+
+      const offline = seen.at(-1);
+
+      expect(offline?.status).toBe('offline');
+      expect(offline?.retryInMs).toBeGreaterThan(0);
+      expect(offline?.error).toBeUndefined();
+    });
+
+    it('drops a stale detail when the next transition carries none', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      socket.serverClose(1001, 'server restarting');
+
+      // A generous budget: the transition that lifted read-only is still
+      // rebuilding the view, and the reconnect timer only gets the thread back
+      // once that settles — the reported `retryInMs` is 250, the wall clock ~2s.
+      await waitFor(() => harness.sockets.length === 2, 'a reconnect', 6000);
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => seen.at(-1)?.status === 'connected', 'reconnected');
+
+      // A retry countdown riding along on `connected` would have the host
+      // telling the user a live session is about to retry.
+      expect(seen.at(-1)?.retryInMs).toBeUndefined();
+      expect(seen.at(-1)?.code).toBeUndefined();
+      expect(seen.at(-1)?.reason).toBeUndefined();
+      // Two syncs and a reconnect on real timers.
+    }, 20_000);
+
+    it('publishes a peer who configured no name — the default configuration', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      // `collaboration.user` is optional, so this is what a host who never set
+      // one looks like to everybody else. Dropping them left a room where
+      // everyone is connected and nobody appears.
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { color: '#0b6e99' });
+      socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+      peer.destroy();
+
+      expect(seen.at(-1)?.peers).toHaveLength(1);
+      expect(seen.at(-1)?.peers[0].user).toEqual({ name: '', color: '#0b6e99' });
     });
 
     it('leaves the local user out of peers, now that presence publishes an identity', async () => {

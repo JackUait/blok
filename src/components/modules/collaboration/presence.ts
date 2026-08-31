@@ -28,9 +28,13 @@ export interface PresenceState {
   state: Record<string, unknown>;
 }
 
-/** A state that carries an identity, so a pass can decide to draw it. */
+/**
+ * A state that carries an identity, so a pass can decide to draw it. The NAME
+ * is optional — `collaboration.user` is optional too, and a peer who set none
+ * is still somebody in the room.
+ */
 export interface DrawableState extends PresenceState {
-  state: Record<string, unknown> & { user: { name: string; color?: unknown } };
+  state: Record<string, unknown> & { user: { name?: unknown; color?: unknown } };
 }
 
 export interface PresenceOptions {
@@ -118,9 +122,16 @@ export const MAX_PEERS = 50;
 export const PRESENCE_SCAN_LIMIT = 1000;
 
 /**
- * Does this state carry a name presence can draw? Every field arrived from
- * another browser, so nothing here trusts its own type — including the state
- * itself, which a peer can publish as a number, an array or nothing at all.
+ * Does this state claim to be a person presence can draw?
+ *
+ * The test is the `user` OBJECT, not a name inside it: `collaboration.user` is
+ * optional, so requiring a name made the DEFAULT configuration a room where
+ * everybody is connected and nobody sees anyone. A nameless peer is drawn
+ * anonymously, in the colour their client id assigns them.
+ *
+ * Every field arrived from another browser, so nothing here trusts its own type
+ * — including the state itself, which a peer can publish as a number, an array
+ * or nothing at all.
  * @param entry - one client's raw state
  */
 export const hasDrawableIdentity = (entry: PresenceState): entry is DrawableState => {
@@ -132,13 +143,7 @@ export const hasDrawableIdentity = (entry: PresenceState): entry is DrawableStat
 
   const user: unknown = (state as Record<string, unknown>).user;
 
-  if (typeof user !== 'object' || user === null) {
-    return false;
-  }
-
-  const name: unknown = (user as Record<string, unknown>).name;
-
-  return typeof name === 'string' && name.trim() !== '';
+  return typeof user === 'object' && user !== null;
 };
 
 /**
@@ -232,17 +237,22 @@ export const createPresence = (options: PresenceOptions): Presence => {
     yjs.setAwarenessField('blockId', blockId);
   };
 
+  /**
+   * Publishes who this editor is. UNCONDITIONAL: `collaboration.user` is
+   * optional, and a client that published nothing about itself is invisible to
+   * every peer — which made the default configuration a room where everybody is
+   * present and nobody sees anyone. With no name configured the identity is the
+   * colour alone, and peers draw an anonymous avatar.
+   */
   const publishUser = (): void => {
     const name = options.user?.name;
-
-    if (typeof name !== 'string' || name.trim() === '') {
-      return;
-    }
-
     const configured = options.user?.color;
     const color = isPresenceColor(configured) ? configured : presenceColorFor(state.localClientId ?? 0);
 
-    yjs.setAwarenessField('user', { name, color });
+    yjs.setAwarenessField(
+      'user',
+      typeof name === 'string' && name.trim() !== '' ? { name, color } : { color }
+    );
   };
 
   const notify = (): void => {

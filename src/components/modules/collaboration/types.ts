@@ -1,3 +1,4 @@
+import type { CollaborationTerminalReason } from '../../events/CollaborationStatusChanged';
 import type { AwarenessChange } from '../yjs/types';
 
 /**
@@ -139,28 +140,26 @@ export type CollabTicketSource = (options?: { forceRefresh?: boolean }) => Promi
 export type CollabStatus = 'connecting' | 'connected' | 'offline' | 'error';
 
 /**
- * Why the provider stopped for good.
+ * Why the provider stopped for good — the wire-level reading of the published
+ * {@link CollaborationTerminalReason}, which is where the union is DECLARED so
+ * the host-facing name and this one can never drift apart.
  *
  * - `bad-request` — close 4400; the document id or the request is unusable.
  * - `unauthorized` — close 4401 twice since the last sync; the ticket is not accepted.
  * - `forbidden` — close 4403; this user may not open this document.
  * - `unsupported-format` — the control frame names a CRDT format we cannot read.
- * - `handshake-timeout` — no control frame arrived; not a Blok sync endpoint.
- * - `oversized-update` — close 1009 twice since the last sync; a frame we produce is too big.
+ * - `handshake-timeout` — three connections in a row opened and were never sent
+ *   a control frame; this endpoint does not speak the protocol.
+ * - `oversized-update` — a frame we must send is bigger than the server takes:
+ *   either close 1009 twice since the last sync, or a resync answer we refused
+ *   to write because it repeats a size already refused.
  * - `apply-failed` — the seam threw on an inbound frame; the document did not
  *   materialise, and the same frame would throw again.
  *
  * A stale lineage is deliberately NOT here: close 4409 and a changed lineage are
  * recoverable through {@link CollabDocSeam.resetForRelineage} plus a reconnect.
  */
-export type CollabTerminalError =
-  | 'bad-request'
-  | 'unauthorized'
-  | 'forbidden'
-  | 'unsupported-format'
-  | 'handshake-timeout'
-  | 'oversized-update'
-  | 'apply-failed';
+export type CollabTerminalError = CollaborationTerminalReason;
 
 /** Extra context for a status change; every field is best-effort. */
 export interface CollabStatusDetail {

@@ -505,7 +505,10 @@ describe('createCollabProvider', () => {
       expect(harness.sockets).toHaveLength(1);
     });
 
-    it('is terminal when the control frame never arrives', () => {
+    // A silent socket is an INFERENCE, not a verdict: a cold-starting server and
+    // a buffering proxy look exactly like an endpoint that does not speak the
+    // protocol. A dead server retries forever, so a slow one must not fare worse.
+    it('retries with backoff when the control frame never arrives', () => {
       const harness = createHarness({ handshakeTimeoutMs: 5000 });
 
       harness.provider.connect();
@@ -514,14 +517,86 @@ describe('createCollabProvider', () => {
       vi.advanceTimersByTime(5000);
 
       expect(harness.statuses.at(-1)).toEqual({
-        status: 'error',
-        detail: expect.objectContaining({ error: 'handshake-timeout' }),
+        status: 'offline',
+        detail: expect.objectContaining({ reason: expect.stringContaining('no control frame'), retryInMs: 1000 }),
       });
       expect(harness.socket().closedWith).not.toBeNull();
 
-      vi.advanceTimersByTime(120_000);
+      vi.advanceTimersByTime(1000);
 
-      expect(harness.sockets).toHaveLength(1);
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    it('recovers when the server answers the retried handshake', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      harness.provider.connect();
+      harness.socket().open();
+      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(1000);
+
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+      completeFirstSync(harness, second, peer);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+
+    it('is terminal on the third handshake timeout since the last sync', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+
+      harness.provider.connect();
+
+      for (const _attempt of [0, 1]) {
+        harness.socket().open();
+        vi.advanceTimersByTime(5000);
+
+        expect(harness.statuses.at(-1)?.status).toBe('offline');
+
+        vi.advanceTimersByTime(60_000);
+      }
+
+      harness.socket().open();
+      vi.advanceTimersByTime(5000);
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({ error: 'handshake-timeout' }),
+      });
+
+      vi.advanceTimersByTime(300_000);
+
+      expect(harness.sockets).toHaveLength(3);
+    });
+
+    it('lets a completed sync clear the handshake-timeout count', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      harness.provider.connect();
+
+      for (const _attempt of [0, 1]) {
+        harness.socket().open();
+        vi.advanceTimersByTime(5000);
+        vi.advanceTimersByTime(60_000);
+      }
+
+      harness.socket().open();
+      harness.socket().deliver(controlFrame());
+      completeFirstSync(harness, harness.socket(), peer);
+      harness.socket().serverClose(4503, '');
+      vi.advanceTimersByTime(60_000);
+
+      harness.socket().open();
+      vi.advanceTimersByTime(5000);
+
+      expect(harness.statuses.at(-1)?.status).toBe('offline');
     });
 
     it('resets the document and reconnects when a later control frame changes lineage', () => {
@@ -593,6 +668,81 @@ describe('createCollabProvider', () => {
       second.deliver(controlFrame({ epoch: 0 }));
 
       expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+  });
+
+  // Validating the control frame is not a sync. Nothing else re-arms a deadline
+  // after it, so without this the client sits in `connecting` forever — read-only,
+  // empty, no reconnect, and no degrade view (that only runs on offline/error).
+  describe('first-sync deadline', () => {
+    it('goes offline and retries when the first sync never arrives', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+
+      connectAndHandshake(harness);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connecting');
+
+      vi.advanceTimersByTime(5000);
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ reason: expect.stringContaining('no first sync'), retryInMs: 1000 }),
+      });
+      expect(harness.socket().closedWith).not.toBeNull();
+
+      vi.advanceTimersByTime(1000);
+
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    it('does not fire once the first sync lands', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      const socket = connectAndHandshake(harness);
+
+      completeFirstSync(harness, socket, peer);
+      vi.advanceTimersByTime(60_000);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.sockets).toHaveLength(1);
+    });
+
+    // The drain completes the sync inside `handleControl` itself, so a deadline
+    // armed after it would fire on a connection that is already live.
+    it('is not armed when the sync arrived before the control frame', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      peer.addBlock({ id: 'p1', type: 'paragraph', data: { text: 'from peer' } });
+
+      harness.provider.connect();
+      harness.socket().open();
+      harness.socket().deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+      harness.socket().deliver(controlFrame());
+      vi.advanceTimersByTime(60_000);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.sockets).toHaveLength(1);
+    });
+
+    it('is not re-armed by a control frame repeated on a synced connection', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      const socket = connectAndHandshake(harness);
+
+      completeFirstSync(harness, socket, peer);
+      socket.deliver(controlFrame({ epoch: 1 }));
+      vi.advanceTimersByTime(60_000);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.sockets).toHaveLength(1);
     });
   });
 
@@ -1147,6 +1297,155 @@ describe('createCollabProvider', () => {
       vi.advanceTimersByTime(300_000);
 
       expect(harness.sockets).toHaveLength(2);
+    });
+
+    // The spiral: after a 1009 the reconnect's SyncStep1 draws the server's own
+    // SyncStep1, and answering it with the whole state re-ships the very bytes
+    // that were just refused — so ONE oversized paste ends the session in two
+    // rounds, with no explanation of what was too big.
+    describe('a state the server already refused', () => {
+      /** Connect, sync against `room`, write `blocks`, then take a 1009. */
+      const refuseAfterWriting = (harness: Harness, room: DocumentStore, blocks: { id: string; text: string }[]): void => {
+        const first = connectAndHandshake(harness);
+
+        completeFirstSync(harness, first, room);
+
+        for (const block of blocks) {
+          harness.store.addBlock({ id: block.id, type: 'paragraph', data: { text: block.text } });
+        }
+
+        first.serverClose(1009, 'message too big');
+      };
+
+      it('refuses to answer a resync with it, and says how big it was', () => {
+        const harness = createHarness();
+        const room = new DocumentStore(new YBlockSerializer());
+        const fresh = new DocumentStore(new YBlockSerializer());
+
+        stores.push(room, fresh);
+        refuseAfterWriting(harness, room, [
+          { id: 'kept', text: 'y'.repeat(2048) },
+          { id: 'huge', text: 'x'.repeat(8192) },
+        ]);
+
+        expect(harness.statuses.at(-1)?.status).toBe('offline');
+
+        vi.advanceTimersByTime(30_000);
+
+        const second = harness.socket();
+
+        second.open();
+        second.deliver(controlFrame());
+        second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+        expect(second.frameTypes).toEqual(['syncStep1']);
+        expect(harness.statuses.at(-1)).toEqual({
+          status: 'error',
+          detail: expect.objectContaining({
+            error: 'oversized-update',
+            reason: expect.stringContaining('bytes'),
+          }),
+        });
+      });
+
+      // The refusal is the first thing that can end the session by returning
+      // normally, and the buffered drain is a loop: a server that ordered its
+      // frames the other way would otherwise report 'connected' AFTER 'error',
+      // un-latching a terminal state the module treats as the last word.
+      it('stops draining the buffer when the refusal ends the session', () => {
+        const harness = createHarness();
+        const room = new DocumentStore(new YBlockSerializer());
+        const fresh = new DocumentStore(new YBlockSerializer());
+
+        stores.push(room, fresh);
+        refuseAfterWriting(harness, room, [
+          { id: 'kept', text: 'y'.repeat(2048) },
+          { id: 'huge', text: 'x'.repeat(8192) },
+        ]);
+        vi.advanceTimersByTime(30_000);
+
+        const second = harness.socket();
+
+        second.open();
+        second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+        second.deliver({ type: 'syncStep2', update: room.encodeStateAsUpdate() });
+        second.deliver(controlFrame());
+
+        const terminalAt = harness.statuses.findIndex((entry) => entry.status === 'error');
+
+        expect(harness.statuses[terminalAt]?.detail?.error).toBe('oversized-update');
+
+        // Nothing may follow the provider's last word: not a buffered syncStep2
+        // reporting 'connected', and not a deadline the dead connection armed.
+        vi.advanceTimersByTime(300_000);
+
+        expect(harness.statuses.slice(terminalAt + 1)).toEqual([]);
+        expect(harness.sockets).toHaveLength(2);
+      });
+
+      it('still answers a resync whose diff is smaller than the refused frame', () => {
+        const harness = createHarness();
+        const room = new DocumentStore(new YBlockSerializer());
+
+        stores.push(room);
+        refuseAfterWriting(harness, room, [{ id: 'huge', text: 'x'.repeat(8192) }]);
+        vi.advanceTimersByTime(30_000);
+
+        const second = harness.socket();
+
+        second.open();
+        second.deliver(controlFrame());
+
+        // The room holds everything we have, so the answer is a few bytes.
+        room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
+        second.deliver({ type: 'syncStep1', stateVector: room.getStateVector() });
+
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+        expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+      });
+
+      it('forgets the refused size once a sync completes', () => {
+        const harness = createHarness();
+        const room = new DocumentStore(new YBlockSerializer());
+        const fresh = new DocumentStore(new YBlockSerializer());
+
+        stores.push(room, fresh);
+        refuseAfterWriting(harness, room, [{ id: 'huge', text: 'x'.repeat(8192) }]);
+        vi.advanceTimersByTime(30_000);
+
+        const second = harness.socket();
+
+        second.open();
+        second.deliver(controlFrame());
+        completeFirstSync(harness, second, room);
+
+        expect(harness.statuses.at(-1)?.status).toBe('connected');
+
+        second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+        expect(second.frames.at(-1)?.type).toBe('syncStep2');
+      });
+
+      // A 1009 before we wrote anything says nothing about our own frames; a
+      // bound of zero would refuse every answer for the rest of the session.
+      it('learns no bound from a 1009 on a connection it never wrote to', () => {
+        const harness = createHarness();
+        const fresh = new DocumentStore(new YBlockSerializer());
+
+        stores.push(fresh);
+        harness.provider.connect();
+        harness.socket().serverClose(1009, 'message too big');
+        vi.advanceTimersByTime(30_000);
+
+        const second = harness.socket();
+
+        second.open();
+        second.deliver(controlFrame());
+        harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
+        second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+        expect(second.frameTypes).toContain('syncStep2');
+      });
     });
 
     it('lets a completed sync clear the failure counters', () => {

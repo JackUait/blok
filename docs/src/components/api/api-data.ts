@@ -1614,8 +1614,10 @@ editor.on('block:childrenMounted', ({ blockId, childIds }) => {
 });
 
 // With the \`collaboration\` config on, this is the sync/presence indicator
-// feed: status is 'connecting' | 'connected' | 'offline', and peers lists
-// everyone else in the document. Single-player editors never emit it.
+// feed: status is 'connecting' | 'connected' | 'offline' | 'error', and peers
+// lists everyone else in the document. 'offline' is still retrying (retryInMs
+// says when) and local edits stay pending; 'error' has stopped for good and
+// carries the reason. Single-player editors never emit it.
 editor.on('collaboration:status', ({ status, peers }) => {
   console.log(status, peers.map((peer) => peer.user.name));
 });

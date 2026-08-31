@@ -179,10 +179,27 @@ describe('presence renderer', () => {
       expect(element?.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('is not drawn without a display name', () => {
+    it('is drawn anonymously when they published no display name', () => {
       const harness = setup();
 
-      harness.renderer.render([peer(99, { blockId: 'block-2' }), peer(98, { user: {}, blockId: 'block-3' })], 42);
+      // `collaboration.user` is optional, so a nameless peer is the DEFAULT
+      // configuration, not a broken one. They get the outline and an avatar in
+      // their assigned colour; only the name label has nothing to say.
+      harness.renderer.render([peer(98, { user: {}, blockId: 'block-3' })], 42);
+
+      const holder = harness.holderOf('block-3');
+
+      expect(holder.getAttribute(PRESENCE_ATTR)).toBe('');
+      expect(holder.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
+      expect(avatars(harness.host)).toHaveLength(1);
+      expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
+      expect(label(holder)?.hidden).toBe(true);
+    });
+
+    it('is not drawn by a state that carries no identity at all', () => {
+      const harness = setup();
+
+      harness.renderer.render([peer(99, { blockId: 'block-2' })], 42);
 
       expect(harness.holderOf('block-2').hasAttribute(PRESENCE_ATTR)).toBe(false);
       expect(avatars(harness.host)).toHaveLength(0);
@@ -315,7 +332,10 @@ describe('presence renderer', () => {
 
     it('counts junk in neither the avatars nor the +N', () => {
       const harness = setup({ maxAvatars: 3 });
-      const junk = Array.from({ length: 40 }, (_unused, index) => peer(2000 + index, { user: { name: '   ' } }));
+      // Junk is a state with NO identity at all. A `user` object without a name
+      // is a real (anonymous) peer since `collaboration.user` became optional,
+      // so it is no longer what this cap is defending against.
+      const junk = Array.from({ length: 40 }, (_unused, index) => peer(2000 + index, { blockId: null }));
       const crowd = Array.from({ length: 9 }, (_unused, index) =>
         named(100 + index, `Peer ${index}`, null));
 

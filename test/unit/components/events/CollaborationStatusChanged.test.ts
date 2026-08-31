@@ -40,8 +40,38 @@ describe('CollaborationStatusChanged event', () => {
   });
 
   it('accepts every declared connection status', () => {
-    const statuses: CollaborationStatusChangedPayload['status'][] = ['connecting', 'connected', 'offline'];
+    const statuses: CollaborationStatusChangedPayload['status'][] = ['connecting', 'connected', 'offline', 'error'];
 
-    expect(statuses).toHaveLength(3);
+    expect(statuses).toHaveLength(4);
+  });
+
+  // A host has to tell "retrying in 30s" from "dead, recreate the editor": the
+  // first keeps local edits pending, the second never reconnects on its own.
+  it('tells a retrying session apart from one that stopped for good', () => {
+    const dispatcher = new EventsDispatcher<BlokEventMap>();
+    const seen: CollaborationStatusChangedPayload[] = [];
+
+    dispatcher.on(CollaborationStatusChanged, (payload) => seen.push(payload));
+
+    const retrying: CollaborationStatusChangedPayload = {
+      status: 'offline',
+      peers: [],
+      code: 1006,
+      reason: 'connection lost',
+      retryInMs: 30_000,
+    };
+    const dead: CollaborationStatusChangedPayload = {
+      status: 'error',
+      peers: [],
+      error: 'forbidden',
+      code: 4403,
+      reason: 'this user may not open this document',
+    };
+
+    dispatcher.emit(CollaborationStatusChanged, retrying);
+    dispatcher.emit(CollaborationStatusChanged, dead);
+
+    expect(seen.map((payload) => payload.retryInMs)).toEqual([30_000, undefined]);
+    expect(seen.map((payload) => payload.error)).toEqual([undefined, 'forbidden']);
   });
 });

@@ -13,6 +13,7 @@ import type {
   CollabProvider,
   CollabSocketFactory,
   CollabStatus,
+  CollabStatusDetail,
   CollabTicketSource,
 } from './types';
 
@@ -123,10 +124,15 @@ const syncUrl = (server: string, doc: string): string => {
 /**
  * Maps one awareness state to the peer shape the host renders.
  *
- * A state without a display identity is not a peer anybody can draw. The LOCAL
- * client is filtered out by client id BEFORE this runs — presence publishes an
- * identity for it too, so "no identity" stopped being an accidental exclusion
- * the moment C3 landed.
+ * A state with no `user` object at all is not a peer anybody can draw. A NAME is
+ * not required: `collaboration.user` is optional, so requiring one hid every
+ * peer in a default-configured room from every other peer. A nameless peer is
+ * published with an empty `name`, which is what "anonymous" looks like in a
+ * shape whose `name` is a string.
+ *
+ * The LOCAL client is filtered out by client id BEFORE this runs — presence
+ * publishes an identity for it too, so "no identity" stopped being an accidental
+ * exclusion the moment C3 landed.
  * @param clientId - awareness client id
  * @param state - the raw, untrusted state that client broadcast
  */
@@ -138,16 +144,14 @@ const toPeer = (clientId: number, state: Record<string, unknown>): Collaboration
   }
 
   const { name, color } = user as { name?: unknown; color?: unknown };
-
-  if (typeof name !== 'string') {
-    return null;
-  }
-
   const blockId = state.blockId;
 
   return {
     clientId,
-    user: { name, color: typeof color === 'string' ? color : '' },
+    user: {
+      name: typeof name === 'string' ? name : '',
+      color: typeof color === 'string' ? color : '',
+    },
     blockId: typeof blockId === 'string' ? blockId : null,
   };
 };
@@ -193,6 +197,13 @@ export class Collaboration extends Module {
 
   /** The provider gave up; no reconnect will ever ship pending edits. */
   private terminal = false;
+
+  /**
+   * What the provider said about the LAST transition — why it closed, when it
+   * will retry. Republished with every peer-list change, which is why it is a
+   * field: the awareness hook emits with no transition of its own.
+   */
+  private lastStatusDetail: CollabStatusDetail | undefined = undefined;
 
   /**
    * Bumped by every lineage reset. An in-flight `handleStatus` captures it
@@ -253,6 +264,16 @@ export class Collaboration extends Module {
   }
 
   /**
+   * True while the last-known DOM (`config.data`) stands in for a document that
+   * has never synced. The Renderer reads it: a view rebuild normally re-renders
+   * the shared document, but while this is on the document is empty on purpose
+   * and the stand-in is the only content there is.
+   */
+  public get isDegraded(): boolean {
+    return this.degraded;
+  }
+
+  /**
    * The collaboration half of read-only arbitration (`ReadOnly` reads it):
    * unsynced, write-denied, or terminally disconnected means "not editable",
    * whatever the host asked for.
@@ -306,8 +327,8 @@ export class Collaboration extends Module {
       socketFactory: settings.socketFactory,
       handshakeTimeoutMs: settings.handshakeTimeoutMs,
       random: settings.random,
-      onStatus: (status) => {
-        void this.handleStatus(status);
+      onStatus: (status, detail) => {
+        void this.handleStatus(status, detail);
       },
     });
 
@@ -430,6 +451,13 @@ export class Collaboration extends Module {
       if (denied !== this.writeDenied) {
         this.writeDenied = denied;
         await this.applyArbitration();
+
+        // A grant that arrives LATE still has to find the room habitable. The
+        // first-sync seed is skipped for a member who may not write, and an
+        // editor that came up empty has no block to type in and no gesture that
+        // makes one — so the moment writes are granted, seed the empty document
+        // the same way the first sync would have.
+        this.seedEmptyDocument();
       }
 
       return token;
@@ -440,8 +468,9 @@ export class Collaboration extends Module {
    * The state machine. Every transition is driven from the provider's status;
    * nothing here inspects the socket.
    * @param status - the provider's new connection state
+   * @param detail - why, when the provider had something to say about it
    */
-  private async handleStatus(status: CollabStatus): Promise<void> {
+  private async handleStatus(status: CollabStatus, detail?: CollabStatusDetail): Promise<void> {
     if (this.isDestroyed) {
       return;
     }
@@ -450,6 +479,10 @@ export class Collaboration extends Module {
     const generation = this.resetGeneration;
 
     this.status = status;
+    // REPLACED, never merged — including with `undefined`. A merge would carry
+    // the previous transition's `retryInMs` onto the `connected` that ended the
+    // wait, telling the host a live session is about to reconnect.
+    this.lastStatusDetail = detail;
     // 'error' is the provider's last word — it never reports again — so this
     // only ever latches on.
     this.terminal = status === 'error';
@@ -534,11 +567,28 @@ export class Collaboration extends Module {
    * A document that synced empty gets exactly one block, so the user has
    * something to type in. Write-gated: a read-only member must not author the
    * first block of somebody else's document.
+   *
+   * "Read-only" is the APPLIED state, not just the ticket's `write` claim: a
+   * pure viewer — a host that mounted the editor with `readOnly: true` — is
+   * every bit as much a reader as a member the server denies writes to, and a
+   * write-granting ticket does not make them the author of somebody else's
+   * first paragraph. Arbitration has already run by the time this is called, so
+   * `ReadOnly.isEnabled` is exactly that applied state.
+   *
+   * Idempotent, and deliberately so: it is re-run whenever the write grant
+   * changes, and the empty-document guard plus the derived id make a second run
+   * a no-op.
    */
   private seedEmptyDocument(): void {
     const settings = this.settings;
 
-    if (settings === null || this.writeDenied || this.terminal) {
+    // Never before the first sync: a block written into a document that has
+    // never carried server lineage has nowhere to go (rule 2).
+    if (settings === null || !this.firstSynced || this.writeDenied || this.terminal) {
+      return;
+    }
+
+    if (this.Blok.ReadOnly.isEnabled) {
       return;
     }
 
@@ -574,9 +624,14 @@ export class Collaboration extends Module {
   }
 
   /**
-   * Publishes the session state. `error` is folded into `offline` because the
-   * published payload has no term for a terminal stop — the wrapper attribute
-   * is where that distinction lives.
+   * Publishes the session state, with whatever the provider said about the last
+   * transition. `error` is published as `error`: it means the session stopped
+   * for good, and calling that "offline" told a host the opposite of the truth
+   * — offline is the state where edits stay pending until a reconnect.
+   *
+   * The detail is read from the field rather than taken as an argument because
+   * this also fires from the awareness hook, where nothing transitioned and the
+   * peer list is the only thing that changed.
    */
   private emitStatus(): void {
     if (this.settings === null || this.isDestroyed) {
@@ -588,12 +643,18 @@ export class Collaboration extends Module {
     // peer list. This is the explicit exclusion `toPeer` was waiting for.
     const localClientId = this.presence?.localClientId ?? null;
 
+    const detail = this.lastStatusDetail;
+
     this.eventsDispatcher.emit(CollaborationStatusChanged, {
-      status: this.status === 'error' ? 'offline' : this.status,
+      status: this.status,
       peers: Array.from(this.Blok.YjsManager.getAwarenessStates().entries())
         .filter(([clientId]) => clientId !== localClientId)
         .map(([clientId, state]) => toPeer(clientId, state))
         .filter((peer): peer is CollaborationPeer => peer !== null),
+      ...(detail?.error === undefined ? {} : { error: detail.error }),
+      ...(detail?.code === undefined ? {} : { code: detail.code }),
+      ...(detail?.reason === undefined ? {} : { reason: detail.reason }),
+      ...(detail?.retryInMs === undefined ? {} : { retryInMs: detail.retryInMs }),
     });
   }
 }

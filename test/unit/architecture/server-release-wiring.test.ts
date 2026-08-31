@@ -187,12 +187,13 @@ describe('server release wiring', () => {
 
   // The runner is the only thing that builds the binaries the gated conformance
   // suites drive; a suite missing from its vitest arguments is never run anywhere.
-  it('runs both conformance suites through the runner CI invokes', () => {
+  it('runs every conformance suite through the runner CI invokes', () => {
     const runner = read('scripts/test-server-conformance.mjs');
 
     for (const suite of [
       'test/unit/server-conformance/server-contract.test.ts',
       'test/unit/server-conformance/sync-contract.test.ts',
+      'test/unit/server-conformance/blok-client-contract.test.ts',
     ]) {
       expect(runner).toContain(`'${suite}'`);
     }

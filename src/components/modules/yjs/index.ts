@@ -111,6 +111,14 @@ export class YjsManager extends Module {
     // stopCapturing also flushes buffered typing writes before splitting.
     this.undoHistory.setFlushPendingWritesHook(() => this.flushPendingBlockWrites());
 
+    // A trailing flush lands up to 400ms after the typing it carries. Anchor
+    // the undo captureTimeout at the typing time, not the flush time —
+    // otherwise two actions the user separated by more than the capture
+    // window merge into one undo entry.
+    this.writeBuffer.onTrailingFlush((lastEnqueueAt) => {
+      this.undoHistory.rewindCaptureClock(lastEnqueueAt);
+    });
+
     // Set up observation
     this.blockObserver.observe(
       {
@@ -332,6 +340,12 @@ export class YjsManager extends Module {
    * @param tuneData - Tune data value
    */
   public updateBlockTune(id: string, tuneName: string, tuneData: unknown): void {
+    // Barrier: a tune write is a structural chokepoint like every other
+    // non-flush-body write — buffered typing must land first so the tune
+    // change never reorders ahead of the text it followed.
+    this.flushPendingBlockWrites();
+    this.undoHistory.markCaretBeforeChange();
+
     this.documentStore.updateBlockTune(id, tuneName, tuneData);
   }
 
@@ -449,6 +463,23 @@ export class YjsManager extends Module {
    */
   public clear(): void {
     this.undoHistory.clear();
+  }
+
+  /**
+   * Keep a replace-insert inside the undo entry that created the block it is
+   * about to remove, so the pair is ONE undo press. No-op unless that creation
+   * is still the newest entry. See {@link UndoHistory.continueEntryThatCreated}.
+   *
+   * Must run BEFORE the replace transaction: it reads the block's Y item, which
+   * that transaction deletes. The flush is the usual structural barrier — and it
+   * has to land first, since a buffered write that opens a new entry is exactly
+   * the case that must NOT merge.
+   * @param blockId - id of the block the replace removes
+   */
+  public continueUndoEntryThatCreated(blockId: string): void {
+    this.flushPendingBlockWrites();
+
+    this.undoHistory.continueEntryThatCreated(this.documentStore.getBlockById(blockId)?._item?.id ?? null);
   }
 
   /**

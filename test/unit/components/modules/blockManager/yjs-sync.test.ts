@@ -1610,6 +1610,50 @@ describe('BlockYjsSync', () => {
 
         // Moves should be batched
       });
+
+      /**
+       * The doc may legally hold ids memory does not: a peer's block whose
+       * parent has not arrived yet (`applyPlacement`'s orphan tolerance), or
+       * a block a local replace dropped from memory while the doc kept it.
+       * Every such id shifts the doc's flat indices past it, so consuming
+       * them as MEMORY indices reorders blocks nobody touched — an undo in
+       * one column silently rearranged the other column's blocks.
+       */
+      it('ignores doc ids absent from memory instead of shifting every later block', async () => {
+        const memoryIds = ['cl1', 'c1', 'h1', 'body1', 'author1', 'c2', 'h2', 'body2'];
+        const newBlocksStore = createBlocksStore(memoryIds.map((id) => createMockBlock({ id })));
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // The doc still holds 'slot' — the paragraph a replace dropped from
+        // memory — between h1 and body1.
+        mockToJSON(mockYjsManager).mockReturnValue(
+          ['cl1', 'c1', 'h1', 'slot', 'body1', 'author1', 'c2', 'h2', 'body2'].map((id) => ({ id }))
+        );
+        mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+
+        callback({ blockId: 'slot', type: 'move', origin: 'undo' });
+
+        await Promise.resolve();
+
+        expect(repository.blocks.map((block) => block.id)).toEqual(memoryIds);
+      });
     });
 
     describe('handleYjsAdd', () => {

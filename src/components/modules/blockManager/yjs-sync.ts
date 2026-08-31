@@ -3,6 +3,7 @@
  * @classdesc Handles Yjs synchronization for blocks
  * @module BlockYjsSync
  */
+import { Array as YArray } from 'yjs';
 import type { Map as YMap } from 'yjs';
 
 import type { BlockToolData, SanitizerConfig } from '../../../../types';
@@ -466,6 +467,7 @@ export class BlockYjsSync {
       if (remoteParentId !== block.parentId) {
         this.withAtomicOperation(() => {
           this.handlers.setBlockParent(block, remoteParentId);
+          this.reconcileParentChildOrderFromDoc(remoteParentId);
         });
       }
     } else if (origin === 'remote' && block.parentId !== null) {
@@ -650,6 +652,7 @@ export class BlockYjsSync {
       // DOM child container, updates parent's contentIds, and applies indentation.
       if (parentId !== undefined) {
         this.handlers.setBlockParent(block, parentId);
+        this.reconcileParentChildOrderFromDoc(parentId);
       }
 
       // Reconcile orphaned children: when a parent block is restored via undo,
@@ -666,6 +669,47 @@ export class BlockYjsSync {
         block.call(BlockToolAPI.RENDERED);
       }
     }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Mirror the DOC's child order onto the in-memory parent after a replay
+   * reparent. `hierarchy.setBlockParent` derives the slot from the FLAT
+   * array — right for a forward edit, which writes the doc FROM memory
+   * afterwards — but during undo/redo/remote sync the DOC is authoritative
+   * and the flat position may not agree yet (a re-homing loop runs in
+   * repository-scan order; a remote parentId change carries no flat move at
+   * all), and save() reads memory. Ids memory holds but the doc does not are
+   * kept, after the doc-ordered ones: mid-dispatch a sibling's own remove
+   * event may not have run yet.
+   */
+  private reconcileParentChildOrderFromDoc(parentId: string | null | undefined): void {
+    if (parentId === null || parentId === undefined) {
+      return;
+    }
+
+    const parentBlock = this.repository.getBlockById(parentId);
+    const yParent = this.dependencies.YjsManager.getBlockById(parentId);
+
+    if (parentBlock === undefined || yParent === undefined) {
+      return;
+    }
+
+    const rawOrder = yParent.get('contentIds');
+
+    if (!(rawOrder instanceof YArray)) {
+      return;
+    }
+
+    const inMemory = parentBlock.contentIds;
+    const memberSet = new Set(inMemory);
+    const ordered = rawOrder.toArray()
+      .filter((id): id is string => typeof id === 'string' && memberSet.has(id));
+    const orderedSet = new Set(ordered);
+    const next = [...ordered, ...inMemory.filter((id) => !orderedSet.has(id))];
+
+    if (next.length !== inMemory.length || next.some((id, index) => id !== inMemory[index])) {
+      parentBlock.contentIds = next;
+    }
   }
 
   /**
@@ -705,6 +749,13 @@ export class BlockYjsSync {
     // adjusts visibility based on toggle state, and updates indentation.
     for (const child of orphanedChildren) {
       this.handlers.setBlockParent(child, restoredBlockId);
+    }
+
+    // The loop above re-homed children in repository-scan order, which the
+    // flat array need not match — mirror the doc's sibling order (same law
+    // as the add/batch-add reparents).
+    if (orphanedChildren.length > 0) {
+      this.reconcileParentChildOrderFromDoc(restoredBlockId);
     }
 
     return orphanedChildren.length > 0;
@@ -757,6 +808,18 @@ export class BlockYjsSync {
       return;
     }
 
+    // Restore DOCUMENT order: the observer lists a redo's adds in yjs's
+    // re-application order (REVERSE insertion — children before their
+    // container). Pass 1's positional array inserts need ascending indices
+    // to land where targetIndex says, and pass 2's activation order is what
+    // lets a container's rendered() hook ADOPT its children — activating a
+    // child first mounts it via the generic hierarchy path, and the
+    // container's own mount then sees a block "already claimed by a nested
+    // container" and duplicates it (table cells minted fresh ids on redo).
+    // Flat doc order is DFS parent-before-child, so sorting by targetIndex
+    // restores both invariants.
+    toCreate.sort((a, b) => a.targetIndex - b.targetIndex);
+
     this.withAtomicOperation(() => {
       // Pass 1 — create blocks and add to array (no DOM, no RENDERED)
       const created: Array<{ block: Block; targetIndex: number; parentId: string | undefined }> = [];
@@ -786,6 +849,7 @@ export class BlockYjsSync {
         // DOM child container, updates parent's contentIds, and applies indentation.
         if (parentId !== undefined) {
           this.handlers.setBlockParent(block, parentId);
+          this.reconcileParentChildOrderFromDoc(parentId);
         }
       }
     }, { extendThroughRAF: true });
@@ -840,10 +904,7 @@ export class BlockYjsSync {
       // including children that survive at root (e.g. when undo tears down a
       // column_list and its columns, the leaf holders nested inside the doomed
       // column subtree would be wiped even though the model promotes them to
-      // root, leaving model "at root" but the live holder gone). Yjs deletes a
-      // nested structure parent-first, so lifting each direct child one level —
-      // to immediately before the parent's own holder — walks every surviving
-      // descendant out to the document root across the cascade.
+      // root, leaving model "at root" but the live holder gone).
       //
       // Scope the lift to children whose IMMEDIATE container is a preserve-body
       // container: a toggle-children container (toggle/callout/header) or a
@@ -864,18 +925,32 @@ export class BlockYjsSync {
         childBlock.parentId = null;
         childBlock.holder.classList.remove('hidden');
 
-        // Every branch keys on the IMMEDIATE container, never an ancestor: a
-        // table/database cell sitting inside a toggle or column has a
-        // preserve-body ANCESTOR, but its immediate container is the cell —
-        // lifting it would leak the self-managing container's cells to root.
-        const immediateContainer = childBlock.holder.parentElement;
-        const isPreserveBodyChild =
-          immediateContainer?.matches('[data-blok-toggle-children]') === true ||
-          immediateContainer?.matches('[data-blok-columns]') === true ||
-          immediateContainer?.parentElement?.matches('[data-blok-column]') === true;
-
-        if (parentHolderInDom && isPreserveBodyChild && block.holder.contains(childBlock.holder)) {
+        if (parentHolderInDom && this.isLiftableFromRemovedSubtree(childBlock.holder) && block.holder.contains(childBlock.holder)) {
           moveElementBefore(childBlock.holder, block.holder);
+        }
+      }
+
+      // Removes within one batch arrive in ANY order — undo deletes a stack
+      // item's insertions in REVERSE insertion order, so a container's remove
+      // lands AFTER its children's (child-first). By then the children's own
+      // removes lifted THEIR survivors only one level — into THIS subtree —
+      // and no model link ties those survivors to this block anymore (their
+      // parentId is already promoted to null, and this block's contentIds
+      // names only the removed children). Lift every surviving stray holder
+      // still inside this subtree, outermost only (a nested survivor rides
+      // along inside its surviving container), same immediate-container guard.
+      if (parentHolderInDom) {
+        const strays = this.repository.blocks.filter((candidate) =>
+          candidate !== block &&
+          block.holder.contains(candidate.holder) &&
+          this.isLiftableFromRemovedSubtree(candidate.holder)
+        );
+        const outermost = strays.filter((candidate) =>
+          !strays.some((other) => other !== candidate && other.holder.contains(candidate.holder))
+        );
+
+        for (const stray of outermost) {
+          moveElementBefore(stray.holder, block.holder);
         }
       }
 
@@ -887,6 +962,24 @@ export class BlockYjsSync {
         this.handlers.insertDefaultBlock(true);
       }
     }, { extendThroughRAF: true });
+  }
+
+  /**
+   * Whether a holder may be lifted out of a removed block's subtree: its
+   * IMMEDIATE container (never an ancestor) must be a preserve-body
+   * container — a toggle-children container, the columns row, or a column's
+   * own child container. A table/database cell sitting inside a toggle or
+   * column has a preserve-body ANCESTOR but its immediate container is the
+   * cell — lifting it would leak the self-managing container's cells to root.
+   */
+  private isLiftableFromRemovedSubtree(holder: HTMLElement): boolean {
+    const immediateContainer = holder.parentElement;
+
+    return (
+      immediateContainer?.matches('[data-blok-toggle-children]') === true ||
+      immediateContainer?.matches('[data-blok-columns]') === true ||
+      immediateContainer?.parentElement?.matches('[data-blok-column]') === true
+    );
   }
 
   /**
@@ -912,9 +1005,6 @@ export class BlockYjsSync {
    * Re-syncs the entire block order from Yjs to handle multiple simultaneous moves correctly
    */
   private syncBlockOrderFromYjs(): void {
-    // Get the authoritative order from Yjs
-    const yjsBlocks = this.dependencies.YjsManager.toJSON();
-
     // Build id→block map for O(1) lookups instead of O(n) getBlockById calls
     const blockById = new Map<string, Block>();
 
@@ -922,20 +1012,20 @@ export class BlockYjsSync {
       blockById.set(block.id, block);
     }
 
-    // Reorder DOM blocks to match Yjs order
-    yjsBlocks.forEach((yjsBlock, targetIndex) => {
-      const blockId = yjsBlock.id;
+    // The doc order, FILTERED to the ids memory actually holds — the target
+    // index has to be a MEMORY index. The doc may legally carry ids memory
+    // does not: a peer's block whose parent has not arrived yet
+    // (`applyPlacement`'s orphan tolerance), or one a local replace dropped
+    // from memory while the doc kept it. Enumerating the raw doc order makes
+    // every such id shift the indices of everything after it, so a move
+    // replay reorders blocks nobody touched (an undo in one column
+    // rearranged the OTHER column's blocks). With identical id sets the
+    // filtered order is the doc order unchanged.
+    const orderedBlocks = this.dependencies.YjsManager.toJSON()
+      .map((yjsBlock) => (yjsBlock.id === undefined ? undefined : blockById.get(yjsBlock.id)))
+      .filter((block): block is Block => block !== undefined);
 
-      if (blockId === undefined) {
-        return;
-      }
-
-      const block = blockById.get(blockId);
-
-      if (block === undefined) {
-        return;
-      }
-
+    orderedBlocks.forEach((block, targetIndex) => {
       const currentIndex = this.handlers.getBlockIndex(block);
 
       if (currentIndex !== targetIndex) {

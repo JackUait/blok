@@ -11,6 +11,8 @@ interface BlockWriteWindow {
   flush: BufferedBlockWriteFlush;
   /** Trailing-edge timer; the window NEVER extends on further enqueues. */
   timer: ReturnType<typeof setTimeout>;
+  /** When the most recent enqueue happened — the time the typing it carries occurred. */
+  lastEnqueueAt: number;
 }
 
 /**
@@ -40,9 +42,25 @@ export class BlockWriteBuffer {
   private isDispatching = false;
 
   /**
+   * Called after a TRAILING dispatch with the window's last-enqueue time.
+   * A trailing flush lands up to `windowMs` after the typing it carries —
+   * without re-anchoring, the undo captureTimeout would measure the gap to
+   * the NEXT action from the flush instead of from the typing, silently
+   * merging user actions separated by more than the capture window.
+   */
+  private trailingFlushListener: ((lastEnqueueAt: number) => void) | null = null;
+
+  /**
    * @param windowMs - coalescing window length (the 400ms mutation batch constant)
    */
   constructor(private readonly windowMs: number) {}
+
+  /**
+   * Register the trailing-flush listener. See `trailingFlushListener`.
+   */
+  public onTrailingFlush(listener: (lastEnqueueAt: number) => void): void {
+    this.trailingFlushListener = listener;
+  }
 
   /**
    * Buffer one block's {key → value} writes.
@@ -60,13 +78,14 @@ export class BlockWriteBuffer {
         openWindow.pending.set(key, value);
       }
       openWindow.flush = flush;
+      openWindow.lastEnqueueAt = Date.now();
 
       return;
     }
 
     const timer = setTimeout(() => this.closeWindow(blockId), this.windowMs);
 
-    this.windows.set(blockId, { pending: new Map(), flush, timer });
+    this.windows.set(blockId, { pending: new Map(), flush, timer, lastEnqueueAt: Date.now() });
 
     this.dispatch(flush, new Map(Object.entries(data)));
   }
@@ -102,6 +121,7 @@ export class BlockWriteBuffer {
 
     if (openWindow.pending.size > 0) {
       this.dispatch(openWindow.flush, openWindow.pending);
+      this.trailingFlushListener?.(openWindow.lastEnqueueAt);
     }
   }
 

@@ -495,4 +495,73 @@ describe('typing write coalescing', () => {
       expect(readText()).toBe('hello world');
     });
   });
+
+  describe('capture-window anchoring (trailing flush must not extend the merge window)', () => {
+    // REAL timers on purpose: Y.UndoManager's captureTimeout math runs on
+    // lib0/time's `getUnixTime = Date.now`, a reference pinned at module
+    // load — fake timers swap the Date global but cannot reach it (yjs is
+    // externalized, so vi.mock cannot intercept its lib0 sub-imports).
+    // The scenario keeps >=100ms of slack on every timing edge, and the
+    // group-boundary assertions are phrased to hold regardless of how a
+    // slow runner sub-splits a group.
+    const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+    beforeEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('typing groups separated by more than captureTimeout stay separate undo entries', async () => {
+      const harness = createHarness();
+      const { mutate, readText, yjsManager } = harness;
+
+      // Group 1: two rapid keystrokes. The trailing flush lands ~400ms
+      // later, but it carries typing that happened NOW — the undo merge
+      // clock must anchor here, not at the flush.
+      await mutate('first');
+      await mutate('first!');
+
+      // Past the trailing flush (+400), ~650ms after the last keystroke:
+      // more than captureTimeout (500ms) since the typing, but LESS than
+      // 500ms since the trailing flush — the regression merged both groups
+      // into ONE undo entry, so a single undo jumped past group 2 AND 1.
+      await sleep(650);
+      expect(readText()).toBe('first!');
+
+      await mutate('first! second');
+
+      yjsManager.undo();
+      expect(readText()).toBe('first!');
+
+      // Draining the rest unwinds group 1 (and finally the seed addBlock)
+      // no matter how a slow runner sub-split group 1.
+      while (yjsManager.canUndo()) {
+        yjsManager.undo();
+      }
+      expect(['', undefined]).toContain(readText());
+    });
+
+    it('a tune change after a completed typing pause lands in its own undo entry', async () => {
+      const harness = createHarness();
+      const { mutate, readText, yjsManager } = harness;
+
+      await mutate('Original Modified');
+      await mutate('Original Modified!');
+
+      // ~650ms after the last keystroke (past the ~400ms trailing flush), a
+      // tune changes (blocks.update with tunes) — its own action, its own
+      // undo entry.
+      await sleep(650);
+      yjsManager.updateBlockTune('b1', 'exampleTune', 'center');
+
+      // One undo removes ONLY the tune change.
+      yjsManager.undo();
+
+      const yblock = yjsManager.getBlockById('b1');
+      const tunes = yblock?.get('tunes');
+      const tuneValue = tunes instanceof Y.Map ? tunes.get('exampleTune') : undefined;
+
+      expect(tuneValue).toBeUndefined();
+      expect(readText()).toBe('Original Modified!');
+    });
+  });
 });

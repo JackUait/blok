@@ -223,3 +223,19 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   yrs returning an error instead of unwrap). The release workflow's bare
   `yarn test <conformance files>` step was vacuous (no BLOK_CONFORMANCE_SERVER);
   CI's `test-server-conformance.mjs` runner is the real gate release waits for.
+- **Security fixes LANDED (`dc983d70`)** — every rejected handshake spends the
+  rate limit on its address and is `Abort()`ed 250 ms after the close frame
+  (browsers still read the code); per-connection `SyncInboundBudget`: token
+  buckets `CollabInboundFramesPerSecond` 50 (burst `CollabInboundBurstFrames`
+  100) + `CollabInboundResyncsPerMinute` 60 (burst 10, SyncStep1 only — the
+  amplifying frame), overflow → 1008 "inbound rate exceeded"; 0 disables a
+  budget. `TicketPrincipal.For(claims)` (auth type `blok-ticket`, Name =
+  ticket user, `blok:doc`, `blok:write`) is what IBlokAuthorization receives in
+  ticket mode; context.User only on the in-process path. Doc ids must be ONE
+  path segment: `/`, `%2F` (any case) or empty → WS 4400 / HTTP 400 "document
+  ids must be a single path segment" (`SyncClose.BadDocument`). Rejections do
+  NOT reserve a cap slot (no principal to key on) — the limiter + 250 ms
+  teardown is the lever. HTTP 401s remain free (guard returns before the
+  limiter); the WS surface deliberately diverges. Docs: `collab-what-is-not-
+  limited` now describes the inbound budget; `collab-new-documents` states the
+  200-null seed contract (404 = failure by design).

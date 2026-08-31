@@ -41,6 +41,40 @@ describe('server docs data', () => {
     expect(routes.some((r) => r.code.includes('blokTicket('))).toBe(true);
   });
 
+  // A collaboration pass is checked once, at connect, and must name the
+  // document — so the mint route reads the doc the editor asks for and gives
+  // that pass a longer life than the five-minute upload default.
+  it('mints collaboration passes with the doc claim and a longer life', () => {
+    const mint = serverPaths.find((p) => p.id === 'serverless')?.appRoute[0]?.code ?? '';
+
+    expect(mint).toMatch(/searchParams\.get\('doc'\)/);
+    expect(mint).toContain('doc');
+    expect(mint).toContain('ttlSeconds: 30 * 60');
+  });
+
+  it('keeps live collaboration a separate opt-in run command on the serverless path', () => {
+    const commands = serverPaths.find((p) => p.id === 'serverless')?.whatToRun ?? [];
+
+    expect(commands.length).toBe(2);
+    expect(commands[0].code).not.toContain('--collab');
+    expect(commands[1].code).toContain('--collab');
+    expect(commands[1].code).toContain('--collab-dir /collab');
+    expect(commands[1].code).toContain('--doc-endpoint');
+    expect(commands[1].code).toContain('-e BLOK_DOC_ENDPOINT_AUTH');
+  });
+
+  // Decision 12 of the phase-2 plan: seeding fails closed and the sync door
+  // closes on a bad pass. Both wire behaviors get a reader-facing entry here.
+  it('describes the sync door closing and the read-only reconnect state', () => {
+    const modes = serverPaths.find((p) => p.id === 'serverless')?.failureModes ?? [];
+    const prose = modes.map((m) => `${m.symptom} ${m.cause} ${m.fix}`).join('\n');
+
+    expect(prose).toMatch(/doc claim/i);
+    expect(prose).toMatch(/read-only/i);
+    expect(prose).toMatch(/--doc-endpoint/);
+    expect(prose).toMatch(/BLOK_DOC_ENDPOINT_AUTH/);
+  });
+
   // A signer only exists for JavaScript backends. Everyone else needs the wire
   // format itself, or they cannot use this path at all.
   it('keeps the raw pass contract for backends that are not JavaScript', () => {
@@ -68,6 +102,17 @@ describe('server docs data', () => {
     ]);
   });
 
+  it('says live collaboration needs the service, like link previews', () => {
+    const ownStorage = serverPaths.find((p) => p.id === 'own-storage');
+    const prose = [
+      ownStorage?.description ?? '',
+      ...(ownStorage?.failureModes ?? []).flatMap((m) => [m.symptom, m.cause, m.fix]),
+    ].join(' ');
+
+    expect(ownStorage?.description).toMatch(/live collaboration/i);
+    expect(prose).toMatch(/--collab/);
+  });
+
   it('shows the in-process ASP.NET registration without advertising MySQL', () => {
     const dotnet = serverPaths.find((path) => path.id === 'dotnet');
 
@@ -86,11 +131,40 @@ describe('server docs data', () => {
     expect(code).toContain('StorageDirectory');
     expect(code).toContain('PublicUrl');
     expect(code).toContain('UnfurlDisabled = false');
-    expect(code).not.toContain('UseAuthorization<');
     expect(code).toContain('MapBlokServer("/api/blok").RequireAuthorization()');
     expect(dotnet?.description).toMatch(/application.*authorization policy/i);
     expect(dotnet?.description).not.toContain('IBlokAuthorization');
     expect(code).not.toContain('UseMySql');
+  });
+
+  // Type names live in code samples; the prose stays plain-language, which is
+  // why the description pin above still bans IBlokAuthorization from prose.
+  it('adds the collaboration story to the in-process path', () => {
+    const dotnet = serverPaths.find((p) => p.id === 'dotnet');
+    const code = (dotnet?.appRoute ?? []).map((s) => s.code).join('\n');
+
+    expect(dotnet?.description).toMatch(/live collaboration/i);
+    expect(code).toContain('app.UseWebSockets();');
+    expect(code).toContain('CollabEnabled = true');
+    expect(code).toContain('DocEndpoint');
+    expect(code).toContain('IBlokAuthorization');
+    expect(code).toContain('CanReadDocumentAsync');
+    expect(code).toContain('CanWriteDocumentAsync');
+    expect(code).toContain('UseAuthorization<DocumentRules>');
+  });
+
+  it('explains the clear refusal when the app forgot UseWebSockets', () => {
+    const modes = serverPaths.find((p) => p.id === 'dotnet')?.failureModes ?? [];
+    const prose = modes.map((m) => `${m.symptom} ${m.cause} ${m.fix}`).join('\n');
+
+    expect(prose).toMatch(/UseWebSockets/);
+    expect(prose).toMatch(/refus/i);
+  });
+
+  it('passes WebSocket upgrades through the forwarding route', () => {
+    const route = serverPaths.find((p) => p.id === 'own-server')?.appRoute[0]?.code ?? '';
+
+    expect(route).toContain('ws: true');
   });
 
   it('sends the storage-only path to the presets page instead of restating it', () => {
@@ -143,6 +217,10 @@ describe('server docs data', () => {
     const known = [
       '--allow-origin',
       '--auth',
+      '--collab',
+      '--collab-dir',
+      '--collab-s3-prefix',
+      '--doc-endpoint',
       '--listen',
       '--max-upload',
       '--no-unfurl',
@@ -192,9 +270,12 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the nine service limits the design refuses to bury', () => {
+  it('states the fourteen service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
+      'working-copy-privacy',
+      'collab-reset',
+      'doc-endpoint-auth',
       'file-origin',
       'asset-cors',
       's3-untested',
@@ -202,7 +283,9 @@ describe('server docs data', () => {
       'upload-by-url-json',
       'proxy-rate-limit',
       'ticket-not-scoped',
+      'collab-pass-lifetime',
       'tls-termination',
+      'alpine-nuget',
     ]);
     for (const limit of serverLimits) {
       expect(limit.title.length).toBeGreaterThan(0);
@@ -210,9 +293,57 @@ describe('server docs data', () => {
     }
   });
 
-  it('says the service stores no documents and why that is deliberate', () => {
+  // Live collaboration made the old "stores no documents" claim false: the
+  // service now keeps a working copy of docs being edited. The renegotiated
+  // entry prices that honestly instead of hiding it.
+  it('says the record stays with your endpoint and prices the working copy honestly', () => {
     const body = serverLimits.find((l) => l.id === 'no-documents')?.body ?? '';
-    expect(body).toMatch(/no database|stores no documents|does not store/i);
+
+    expect(body).toMatch(/working copy/i);
+    expect(body).toMatch(/your endpoint|your own app/i);
+    expect(body).toMatch(/few seconds/i);
+  });
+
+  it('keeps the working copy out of public reach', () => {
+    const body = serverLimits.find((l) => l.id === 'working-copy-privacy')?.body ?? '';
+
+    expect(body).toContain('--collab-dir');
+    expect(body).toContain('--collab-s3-prefix');
+    expect(body).toMatch(/publicly/i);
+    expect(body).toMatch(/uploads directory|uploads folder/i);
+  });
+
+  it('documents the reset call that re-seeds from your records', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-reset')?.body ?? '';
+
+    expect(body).toContain('POST /sync/{doc}/reset');
+    expect(body).toMatch(/wins|overwritten/i);
+    expect(body).toMatch(/open tab/i);
+  });
+
+  it('documents how the service signs in to the document endpoint', () => {
+    const body = serverLimits.find((l) => l.id === 'doc-endpoint-auth')?.body ?? '';
+
+    expect(body).toContain('BLOK_DOC_ENDPOINT_AUTH');
+    expect(body).toMatch(/verbatim/i);
+  });
+
+  it('gives collaboration passes about 30 minutes and admits revocation waits for a reconnect', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-pass-lifetime')?.body ?? '';
+
+    expect(body).toMatch(/30 minutes/);
+    expect(body).toMatch(/checked once|when the connection opens/i);
+    expect(body).toMatch(/reconnect/i);
+  });
+
+  it('admits the NuGet package does not run on Alpine x64', () => {
+    const body = serverLimits.find((l) => l.id === 'alpine-nuget')?.body ?? '';
+
+    expect(body).toContain('Alpine');
+    expect(body).toContain('NuGet');
+    expect(body).toMatch(/npx/);
+    expect(body).toMatch(/Docker/);
+    expect(body).toMatch(/refus|startup/i);
   });
 
   it('warns that uploaded files belong on a different origin than the app', () => {
@@ -278,14 +409,16 @@ describe('server docs data', () => {
     expect(prose).toMatch(/upload.*write: true/i);
   });
 
-  // The pass mints a `doc` claim no longer, and never enforced one: the guard
-  // reads `write` and `user` only. A reader who assumes otherwise hands out a
-  // pass believing it is confined to the page the holder opened.
-  it('says a pass names a user and is not confined to one document', () => {
+  // Collaboration passes ARE document-scoped and the sync door enforces the
+  // claim — including refusing a pass that names no document. The upload and
+  // preview routes still ignore it, and the entry has to say both halves.
+  it('says collaboration passes are document-scoped at the sync door while upload routes stay user-scoped', () => {
     const body = serverLimits.find((l) => l.id === 'ticket-not-scoped')?.body ?? '';
 
-    expect(body).toMatch(/not (restrict|confine|scope)|does not restrict/i);
-    expect(body).toMatch(/document/i);
+    expect(body).toMatch(/do(es)? not (restrict|confine|scope)/i);
+    expect(body).toMatch(/also names the document/i);
+    expect(body).toMatch(/names no document/i);
+    expect(body).toMatch(/turned away|refused/i);
     expect(body).toMatch(/your own app|your app/i);
   });
 

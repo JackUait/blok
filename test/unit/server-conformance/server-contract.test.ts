@@ -39,9 +39,11 @@ const DISALLOWED_ORIGIN = 'https://evil.example.net';
 
 interface TicketFixture {
   compatible: string;
+  docMismatch: string;
   expired: string;
   malformed: string;
   noncanonicalHeaderTicket: string;
+  readOnly: string;
   secret: string;
   tampered: string;
   userTwo: string;
@@ -54,8 +56,17 @@ function isTicketFixture(value: unknown): value is TicketFixture {
 
   const fixture = value as Record<string, unknown>;
 
-  return ['compatible', 'expired', 'malformed', 'noncanonicalHeaderTicket', 'secret', 'tampered', 'userTwo']
-    .every((key) => typeof fixture[key] === 'string');
+  return [
+    'compatible',
+    'docMismatch',
+    'expired',
+    'malformed',
+    'noncanonicalHeaderTicket',
+    'readOnly',
+    'secret',
+    'tampered',
+    'userTwo',
+  ].every((key) => typeof fixture[key] === 'string');
 }
 
 function loadTickets(): TicketFixture {

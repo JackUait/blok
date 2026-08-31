@@ -1,0 +1,24 @@
+[
+  {
+    "id": "u1",
+    "type": "paragraph",
+    "data": {
+      "text": "Привет, мир! 你好，世界 🌍✨ 👨‍👩‍👧‍👦 é (é) שלום مرحبا"
+    }
+  },
+  {
+    "id": "u2",
+    "type": "paragraph",
+    "data": {
+      "text": "tabs\tand\nnewlines\r\nand \"quotes\" \\ backslashes <b>&amp;</b>"
+    }
+  },
+  {
+    "id": "u-🙂",
+    "type": "paragraph",
+    "data": {
+      "🔑": "emoji key",
+      "ключ": "cyrillic key"
+    }
+  }
+]

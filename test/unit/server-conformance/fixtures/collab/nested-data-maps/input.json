@@ -1,0 +1,33 @@
+[
+  {
+    "id": "n1",
+    "type": "paragraph",
+    "data": {
+      "text": "Styled",
+      "style": {
+        "color": "#ff0000",
+        "font": {
+          "family": "Inter",
+          "weight": 600
+        }
+      },
+      "meta": {}
+    }
+  },
+  {
+    "id": "n2",
+    "type": "callout",
+    "data": {
+      "title": "Note",
+      "icon": {
+        "emoji": "💡",
+        "set": "native"
+      },
+      "flags": {
+        "pinned": true,
+        "archived": false,
+        "note": null
+      }
+    }
+  }
+]

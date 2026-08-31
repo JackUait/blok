@@ -132,6 +132,37 @@ export class BlockHierarchy {
   }
 
   /**
+   * The slot `block` takes in its new parent's `contentIds`: after every
+   * already-listed sibling that precedes it in the FLAT array.
+   *
+   * The flat array is the order the user sees — the saver derives each
+   * parent's content[] from it and cross-checks it against DOM order — and
+   * `BlockManager.setBlockParent` turns `contentIds` into the doc's
+   * placement (`afterId`). Appending instead would hand the doc "last child"
+   * for a block the flat array and the DOM both show mid-container, and the
+   * bottom-of-the-container position would resurface the moment memory is
+   * rebuilt from the doc (undo/redo, a remote peer, a reload). Siblings the
+   * flat array does not hold keep their relative position.
+   *
+   * `block` is always in the flat array here — the entry guard of
+   * {@link setBlockParent} bails out otherwise.
+   * @param parent - the new parent whose contentIds is being extended
+   * @param block - the block being added to it
+   */
+  private childSlotForFlatOrder(parent: Block, block: Block): number {
+    const flatIndexById = new Map(
+      this.repository.blocks.map((candidate, index) => [candidate.id, index])
+    );
+    const flatIndex = flatIndexById.get(block.id) ?? -1;
+
+    return parent.contentIds.reduce<number>((slot, siblingId, position) => {
+      const siblingIndex = flatIndexById.get(siblingId) ?? -1;
+
+      return siblingIndex !== -1 && siblingIndex < flatIndex ? position + 1 : slot;
+    }, 0);
+  }
+
+  /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
@@ -259,12 +290,12 @@ export class BlockHierarchy {
       }
     }
 
-    // Add to new parent's contentIds
+    // Add to new parent's contentIds, at the slot the FLAT array implies.
     const newParent = sanitizedParentId !== null ? this.repository.getBlockById(sanitizedParentId) : undefined;
     const shouldAddToNewParent = newParent !== undefined && !newParent.contentIds.includes(block.id);
 
     if (shouldAddToNewParent) {
-      newParent.contentIds.push(block.id);
+      newParent.contentIds.splice(this.childSlotForFlatOrder(newParent, block), 0, block.id);
     }
 
     // Update block's parentId - parentId is a public mutable property on Block

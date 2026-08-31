@@ -17,6 +17,14 @@ public sealed class HostProcessTests
 {
   private const string ValidSecret = "a-secret-value-with-at-least-32-characters";
 
+  private const string ValidDocEndpoint = "https://app.example.test/api/blok-docs";
+
+  // Never created on disk: the refusal is lexical, so the paths only need
+  // to be unique and stable across the two flags of one test case.
+  private static readonly string CollabDataDirectory = Path.Combine(
+      Path.GetTempPath(),
+      $"blok-host-collab-{Guid.NewGuid():N}");
+
   [Fact]
   public async Task StartsWithDefaultsAndReportsTheDevelopmentVersion()
   {
@@ -747,6 +755,11 @@ public sealed class HostProcessTests
       "--s3-bucket", "blok",
       "--s3-bucket-url", "https://uploads.example.com",
       "--s3-addressing", "path",
+      "--collab",
+      "--doc-endpoint", ValidDocEndpoint,
+      "--doc-endpoint-auth", "Bearer app-token",
+      "--collab-dir", CollabDataDirectory,
+      "--collab-s3-prefix", "collab/",
     ],
     new Dictionary<string, string?>
     {
@@ -832,6 +845,127 @@ public sealed class HostProcessTests
 
       await process.WaitForExitAsync();
     }
+  }
+
+  [Fact]
+  public async Task WarnsWhenTheDocEndpointAuthComesFromTheFlag()
+  {
+    using var process = StartProcess(
+    [
+      "--listen", AllocateListenAddress(),
+      "--collab",
+      "--doc-endpoint", ValidDocEndpoint,
+      "--doc-endpoint-auth", "Bearer app-token",
+      "--storage-dir", "",
+    ],
+    environment: null);
+
+    try
+    {
+      await WaitForStandardErrorAsync(
+          process,
+          "warning: --doc-endpoint-auth puts the credential in this machine's process list",
+          TimeSpan.FromSeconds(10));
+    }
+    finally
+    {
+      if (!process.HasExited)
+      {
+        process.Kill(entireProcessTree: true);
+      }
+
+      await process.WaitForExitAsync();
+    }
+  }
+
+  [Fact]
+  public async Task ReadsTheDocEndpointAuthFromTheEnvironmentWithoutWarning()
+  {
+    using var process = StartProcess(
+    [
+      "--listen", AllocateListenAddress(),
+      "--collab",
+      "--doc-endpoint", ValidDocEndpoint,
+      "--storage-dir", "",
+    ],
+    new Dictionary<string, string?>
+    {
+      ["BLOK_DOC_ENDPOINT_AUTH"] = "Bearer environment-token",
+    });
+
+    try
+    {
+      // Any auth warning is written strictly before "listening on", so the
+      // collected prefix is a complete record — no timed absence wait.
+      var lines = await WaitForStandardErrorAsync(
+          process,
+          "listening on",
+          TimeSpan.FromSeconds(10));
+
+      Assert.DoesNotContain(
+          lines,
+          line => line.Contains("--doc-endpoint-auth", StringComparison.Ordinal));
+    }
+    finally
+    {
+      if (!process.HasExited)
+      {
+        process.Kill(entireProcessTree: true);
+      }
+
+      await process.WaitForExitAsync();
+    }
+  }
+
+  [Fact]
+  public void ParsesTheDocEndpointAuthFromTheEnvironment()
+  {
+    var parsed = HostArguments.Parse(
+        ["--collab", "--doc-endpoint", ValidDocEndpoint],
+        name => name == "BLOK_DOC_ENDPOINT_AUTH" ? "Bearer environment-token" : null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.True(parsed.Options.CollabEnabled);
+    Assert.Equal(ValidDocEndpoint, parsed.Options.DocEndpoint);
+    Assert.Equal("Bearer environment-token", parsed.Options.DocEndpointAuth);
+    Assert.False(parsed.DocEndpointAuthFromFlag);
+  }
+
+  [Fact]
+  public void LetsAnExplicitDocEndpointAuthFlagOverrideTheEnvironment()
+  {
+    var parsed = HostArguments.Parse(
+        ["--collab", "--doc-endpoint", ValidDocEndpoint, "--doc-endpoint-auth", "Bearer flag-token"],
+        name => name == "BLOK_DOC_ENDPOINT_AUTH" ? "Bearer environment-token" : null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.Equal("Bearer flag-token", parsed.Options.DocEndpointAuth);
+    Assert.True(parsed.DocEndpointAuthFromFlag);
+  }
+
+  [Fact]
+  public void DefaultsCollabOffWithAWorkingSetDirectoryBesideTheUploads()
+  {
+    var parsed = HostArguments.Parse([], _ => null);
+
+    Assert.NotNull(parsed.Options);
+    Assert.False(parsed.Options.CollabEnabled);
+    Assert.Equal("./blok-collab", parsed.Options.CollabDirectory);
+    Assert.Equal("", parsed.Options.DocEndpoint);
+    Assert.Equal("", parsed.Options.DocEndpointAuth);
+    Assert.Equal("", parsed.Options.CollabS3Prefix);
+  }
+
+  [Fact]
+  public void ParsesTheBooleanCollabFlagForms()
+  {
+    var enabled = HostArguments.Parse(["--collab"], _ => null);
+    Assert.NotNull(enabled.Options);
+    Assert.True(enabled.Options.CollabEnabled);
+
+    var disabled = HostArguments.Parse(["--collab=false"], _ => null);
+    Assert.NotNull(disabled.Options);
+    Assert.False(disabled.Options.CollabEnabled);
   }
 
   [Fact]
@@ -961,6 +1095,64 @@ public sealed class HostProcessTests
         ["--listen", "127.0.0.1:0", "--storage-dir", "", "--max-upload", "0"],
         1,
         "--max-upload must be a positive number of bytes (got 0): a zero cap refuses every upload",
+        null
+      },
+      { ["--collab"], 1, "--collab needs --doc-endpoint", null },
+      { ["--collab=maybe"], 2, "invalid value \"maybe\" for flag -collab: parse error", null },
+      {
+        ["--doc-endpoint", ValidDocEndpoint],
+        1,
+        "--doc-endpoint needs --collab",
+        null
+      },
+      {
+        ["--collab=false", "--doc-endpoint", ValidDocEndpoint],
+        1,
+        "--doc-endpoint needs --collab",
+        null
+      },
+      {
+        ["--collab", "--doc-endpoint", "app.example.test/api/blok-docs"],
+        1,
+        "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment",
+        null
+      },
+      {
+        ["--collab", "--doc-endpoint", "https://user@app.example.test/api/blok-docs"],
+        1,
+        "--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment",
+        null
+      },
+      {
+        ["--collab", "--doc-endpoint", "http://app.example.test/api/blok-docs"],
+        1,
+        "--doc-endpoint must use HTTPS unless it targets loopback",
+        null
+      },
+      { ["--collab-s3-prefix", "collab/"], 1, "--collab-s3-prefix needs --collab", null },
+      {
+        ["--collab", "--doc-endpoint", ValidDocEndpoint, "--collab-s3-prefix", "collab/"],
+        1,
+        "--collab-s3-prefix needs --s3-bucket",
+        null
+      },
+      {
+        [
+          "--collab",
+          "--doc-endpoint", ValidDocEndpoint,
+          "--storage-dir", CollabDataDirectory,
+          "--collab-dir", Path.Combine(CollabDataDirectory, "working-set"),
+        ],
+        1,
+        "--collab-dir must not resolve inside --storage-dir",
+        null
+      },
+      {
+        // The default --collab-dir ./blok-collab resolves against the
+        // process cwd, which StartProcess pins to the temp directory.
+        ["--collab", "--doc-endpoint", ValidDocEndpoint, "--storage-dir", "."],
+        1,
+        "--collab-dir must not resolve inside --storage-dir",
         null
       },
     };
@@ -1109,6 +1301,7 @@ public sealed class HostProcessTests
     startInfo.Environment["BLOK_SECRET"] = "";
     startInfo.Environment["BLOK_S3_ACCESS_KEY"] = "";
     startInfo.Environment["BLOK_S3_SECRET_KEY"] = "";
+    startInfo.Environment["BLOK_DOC_ENDPOINT_AUTH"] = "";
 
     if (environment is not null)
     {
@@ -1121,7 +1314,7 @@ public sealed class HostProcessTests
     return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the host process");
   }
 
-  private static async Task WaitForStandardErrorAsync(
+  private static async Task<IReadOnlyList<string>> WaitForStandardErrorAsync(
       Process process,
       string expected,
       TimeSpan timeout)
@@ -1153,7 +1346,7 @@ public sealed class HostProcessTests
 
       if (line.Contains(expected, StringComparison.Ordinal))
       {
-        return;
+        return lines;
       }
     }
   }

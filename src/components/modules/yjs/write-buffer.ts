@@ -1,8 +1,11 @@
 /**
  * Flush callback for one block's coalesced writes. Receives the merged
- * {key → latest value} entries buffered during the window.
+ * {key → latest value} entries buffered during the window and reports whether
+ * a Yjs write actually happened — an equality-guarded flush writes nothing, and
+ * a capture-clock rewind for a transaction that never existed would merge two
+ * unrelated user actions into one undo entry.
  */
-export type BufferedBlockWriteFlush = (entries: ReadonlyMap<string, unknown>) => void;
+export type BufferedBlockWriteFlush = (entries: ReadonlyMap<string, unknown>) => boolean;
 
 interface BlockWriteWindow {
   /** Latest buffered value per data key (last write wins). */
@@ -11,6 +14,8 @@ interface BlockWriteWindow {
   flush: BufferedBlockWriteFlush;
   /** Trailing-edge timer; the window NEVER extends on further enqueues. */
   timer: ReturnType<typeof setTimeout>;
+  /** When the most recent enqueue happened — the time the typing it carries occurred. */
+  lastEnqueueAt: number;
 }
 
 /**
@@ -40,9 +45,29 @@ export class BlockWriteBuffer {
   private isDispatching = false;
 
   /**
+   * Called after a TRAILING dispatch that WROTE, with the typing time it
+   * carries. A trailing flush lands up to `windowMs` after that typing —
+   * without re-anchoring, the undo captureTimeout would measure the gap to
+   * the NEXT action from the flush instead of from the typing, silently
+   * merging user actions separated by more than the capture window.
+   *
+   * `flushAll` fires it AT MOST ONCE, for the newest typing among the windows
+   * that wrote: windows are iterated in creation order, so rewinding per
+   * window would leave the clock at the last-iterated one, not the newest.
+   */
+  private trailingFlushListener: ((lastEnqueueAt: number) => void) | null = null;
+
+  /**
    * @param windowMs - coalescing window length (the 400ms mutation batch constant)
    */
   constructor(private readonly windowMs: number) {}
+
+  /**
+   * Register the trailing-flush listener. See `trailingFlushListener`.
+   */
+  public onTrailingFlush(listener: (lastEnqueueAt: number) => void): void {
+    this.trailingFlushListener = listener;
+  }
 
   /**
    * Buffer one block's {key → value} writes.
@@ -60,13 +85,20 @@ export class BlockWriteBuffer {
         openWindow.pending.set(key, value);
       }
       openWindow.flush = flush;
+      openWindow.lastEnqueueAt = Date.now();
 
       return;
     }
 
-    const timer = setTimeout(() => this.closeWindow(blockId), this.windowMs);
+    const timer = setTimeout(() => {
+      const wroteAt = this.closeWindow(blockId);
 
-    this.windows.set(blockId, { pending: new Map(), flush, timer });
+      if (wroteAt !== null) {
+        this.trailingFlushListener?.(wroteAt);
+      }
+    }, this.windowMs);
+
+    this.windows.set(blockId, { pending: new Map(), flush, timer, lastEnqueueAt: Date.now() });
 
     this.dispatch(flush, new Map(Object.entries(data)));
   }
@@ -81,41 +113,53 @@ export class BlockWriteBuffer {
       return;
     }
 
-    for (const blockId of Array.from(this.windows.keys())) {
-      this.closeWindow(blockId);
+    // Windows are iterated in CREATION order, so the rewind target is the max,
+    // not the last one closed. Snapshot the keys first: closeWindow deletes.
+    const writeTimes = Array.from(this.windows.keys())
+      .map((blockId) => this.closeWindow(blockId))
+      .filter((wroteAt): wroteAt is number => wroteAt !== null);
+
+    if (writeTimes.length > 0) {
+      this.trailingFlushListener?.(Math.max(...writeTimes));
     }
   }
 
   /**
    * Close one block's window: cancel the timer and dispatch buffered writes.
    * @param blockId - block whose window to close
+   * @returns the window's last-enqueue time when the dispatch actually wrote,
+   *   otherwise null (nothing pending, or every write hit an equality guard).
+   *   Callers own the rewind so `flushAll` can collapse many windows into one.
    */
-  private closeWindow(blockId: string): void {
+  private closeWindow(blockId: string): number | null {
     const openWindow = this.windows.get(blockId);
 
     if (openWindow === undefined) {
-      return;
+      return null;
     }
 
     clearTimeout(openWindow.timer);
     this.windows.delete(blockId);
 
-    if (openWindow.pending.size > 0) {
-      this.dispatch(openWindow.flush, openWindow.pending);
+    if (openWindow.pending.size === 0) {
+      return null;
     }
+
+    return this.dispatch(openWindow.flush, openWindow.pending) ? openWindow.lastEnqueueAt : null;
   }
 
   /**
    * Run a flush callback with the re-entrancy guard held.
    * @param flush - flush callback to run
    * @param entries - merged entries to hand it
+   * @returns whether the flush reported an actual Yjs write
    */
-  private dispatch(flush: BufferedBlockWriteFlush, entries: ReadonlyMap<string, unknown>): void {
+  private dispatch(flush: BufferedBlockWriteFlush, entries: ReadonlyMap<string, unknown>): boolean {
     const previous = this.isDispatching;
 
     this.isDispatching = true;
     try {
-      flush(entries);
+      return flush(entries);
     } finally {
       this.isDispatching = previous;
     }

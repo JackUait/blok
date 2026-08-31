@@ -41,7 +41,19 @@ public sealed class BlokServerOptions
 
   public string S3SecretKey { get; set; } = "";
 
+  public bool CollabEnabled { get; set; }
+
+  public string DocEndpoint { get; set; } = "";
+
+  public string DocEndpointAuth { get; set; } = "";
+
+  public string CollabDirectory { get; set; } = "";
+
+  public string CollabS3Prefix { get; set; } = "";
+
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
+
+  internal bool HasCollab => CollabEnabled;
 
   internal string LocalPublicPath { get; private set; } = "";
 
@@ -95,6 +107,8 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"--rate-limit must be zero or greater (got {RateLimitPerMinute})");
     }
+
+    ValidateCollab();
 
     if (StorageDirectory != "" && S3Bucket == "")
     {
@@ -167,6 +181,74 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"--s3-addressing must be \"path\" or \"virtual\", or empty to choose automatically (got \"{S3Addressing}\")");
+    }
+  }
+
+  private void ValidateCollab()
+  {
+    if (!CollabEnabled)
+    {
+      if (DocEndpoint != "")
+      {
+        throw new InvalidOperationException(
+            "--doc-endpoint needs --collab: without it no sync room ever runs and the endpoint would be silently ignored");
+      }
+
+      if (CollabS3Prefix != "")
+      {
+        throw new InvalidOperationException(
+            "--collab-s3-prefix needs --collab: without it no working set is ever written and the prefix would be silently ignored");
+      }
+
+      return;
+    }
+
+    if (DocEndpoint == "")
+    {
+      throw new InvalidOperationException(
+          "--collab needs --doc-endpoint: sync rooms seed documents from it and export them back to it, " +
+          "e.g. https://app.example.com/api/blok-docs");
+    }
+
+    if (!Uri.TryCreate(DocEndpoint, UriKind.Absolute, out var endpoint) ||
+        endpoint.Host == "" ||
+        endpoint.UserInfo != "" ||
+        endpoint.Query != "" ||
+        endpoint.Fragment != "" ||
+        (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+    {
+      throw new InvalidOperationException(
+          $"--doc-endpoint must be a full HTTP(S) URL without credentials, a query or a fragment (got \"{DocEndpoint}\")");
+    }
+
+    if (endpoint.Scheme == Uri.UriSchemeHttp && !endpoint.IsLoopback)
+    {
+      throw new InvalidOperationException(
+          $"--doc-endpoint must use HTTPS unless it targets loopback for local development (got \"{DocEndpoint}\")");
+    }
+
+    if (CollabS3Prefix != "" && S3Bucket == "")
+    {
+      throw new InvalidOperationException(
+          "--collab-s3-prefix needs --s3-bucket: the collaboration working set can only live in the bucket this server is configured for");
+    }
+
+    if (CollabDirectory == "" || StorageDirectory == "")
+    {
+      return;
+    }
+
+    var collabPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(CollabDirectory));
+    var storagePath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(StorageDirectory));
+
+    // Lexical only: symlinks or case-folding can still alias the two paths;
+    // this guards a config mistake, not hostile input.
+    if (collabPath == storagePath ||
+        collabPath.StartsWith(storagePath + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+    {
+      throw new InvalidOperationException(
+          $"--collab-dir must not resolve inside --storage-dir (\"{CollabDirectory}\" is under \"{StorageDirectory}\"): " +
+          "uploaded files are served publicly and the collaboration working set would be downloadable by anyone");
     }
   }
 

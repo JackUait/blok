@@ -1,0 +1,55 @@
+namespace Blok.Server.Collab;
+
+/// <summary>
+/// Shared decode-or-absent handling and the epoch law both drivers enforce.
+/// See <see cref="ICollabWorkingSetStore"/> for the contract wording.
+/// </summary>
+internal static class CollabWorkingSetLaw
+{
+  internal static CollabWorkingSet? DecodeOrAbsent(
+      string docId,
+      byte[] document,
+      Action<string>? log)
+  {
+    if (CollabWorkingSetCodec.TryDecodeDocument(
+          document,
+          out var tag,
+          out var frameSection,
+          out var error))
+    {
+      return new CollabWorkingSet(frameSection, tag);
+    }
+
+    log?.Invoke(
+        $"collab: the working set for \"{docId}\" is unreadable " +
+        $"({error}); treating it as absent");
+
+    return null;
+  }
+
+  internal static void EnsureWriteDoesNotLowerEpoch(
+      string docId,
+      CollabWorkingSet? stored,
+      CollabWorkingSetTag next)
+  {
+    if (stored is not null && next.Epoch < stored.Tag.Epoch)
+    {
+      throw new InvalidOperationException(
+          $"collab: refusing to lower the working-set epoch for " +
+          $"\"{docId}\" from {stored.Tag.Epoch} to {next.Epoch}.");
+    }
+  }
+
+  internal static void EnsureResetRaisesEpoch(
+      string docId,
+      CollabWorkingSet? stored,
+      CollabWorkingSetTag next)
+  {
+    if (stored is not null && next.Epoch <= stored.Tag.Epoch)
+    {
+      throw new InvalidOperationException(
+          $"collab: a reset must raise the working-set epoch for " +
+          $"\"{docId}\" above {stored.Tag.Epoch} (got {next.Epoch}).");
+    }
+  }
+}

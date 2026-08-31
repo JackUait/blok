@@ -4,9 +4,23 @@ import { DocumentStore } from '../../../../../src/components/modules/yjs/documen
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import type { OutputBlockData } from '../../../../../types/data-formats/output-data';
 
+const serializer = new YBlockSerializer();
+
 const createDocumentStore = (): DocumentStore => {
-  const serializer = new YBlockSerializer();
-  return new DocumentStore(serializer);
+  return new DocumentStore(new YBlockSerializer());
+};
+
+/**
+ * The Y container holding the cells of the row at `displayIndex`. Rows are
+ * keyed, so display position is a lookup through the order array, never the
+ * row's own storage slot.
+ */
+const getRow = (store: DocumentStore, blockId: string, displayIndex: number): unknown => {
+  const yblock = store.getBlockById(blockId) as Y.Map<unknown>;
+  const grid = (yblock.get('data') as Y.Map<unknown>).get('content') as Y.Map<unknown>;
+  const key = serializer.gridRowKeys(grid)[displayIndex];
+
+  return (grid.get('__rows') as Y.Map<unknown>).get(key);
 };
 
 describe('DocumentStore', () => {
@@ -670,14 +684,14 @@ describe('DocumentStore', () => {
       return yblock.get('data') as Y.Map<unknown>;
     };
 
-    it('stores a table grid as Y.Array(rows) → Y.Array(cells) → Y.Map, with plain blocks arrays', () => {
+    it('stores a table grid as keyed rows → Y.Array(cells) → Y.Map, with plain blocks arrays', () => {
       store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
 
-      const content = getDataMap('t1').get('content') as Y.Array<unknown>;
+      const content = getDataMap('t1').get('content');
 
-      expect(content instanceof Y.Array).toBe(true);
+      expect(serializer.isGridMap(content)).toBe(true);
 
-      const row = content.get(0) as Y.Array<unknown>;
+      const row = getRow(store, 't1', 0) as Y.Array<unknown>;
 
       expect(row instanceof Y.Array).toBe(true);
 
@@ -709,14 +723,13 @@ describe('DocumentStore', () => {
       next[1][1] = { blocks: ['p9'] };
       store.updateBlockData('t1', 'content', next);
 
-      const content = getDataMap('t1').get('content') as Y.Array<unknown>;
-      const cellMap = (content.get(1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+      const cellMap = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
 
       expect(Array.isArray(cellMap.get('blocks'))).toBe(true);
       expect(cellMap.get('blocks')).toEqual(['p9']);
     });
 
-    it('upgrades an empty content array to a Y.Array on the first qualifying write', () => {
+    it('upgrades an empty content array to a keyed grid on the first qualifying write', () => {
       store.fromJSON([{ id: 't1', type: 'table', data: { content: [] } }]);
 
       // Empty arrays stay plain atomic leaves on load
@@ -724,7 +737,7 @@ describe('DocumentStore', () => {
 
       store.updateBlockData('t1', 'content', grid());
 
-      expect(getDataMap('t1').get('content') instanceof Y.Array).toBe(true);
+      expect(serializer.isGridMap(getDataMap('t1').get('content'))).toBe(true);
       expect(store.toJSON()[0].data.content).toEqual(grid());
     });
 
@@ -768,10 +781,14 @@ describe('DocumentStore', () => {
       });
     };
 
-    const getContentArray = (id: string): Y.Array<unknown> => {
+    const getGridMap = (id: string): Y.Map<unknown> => {
       const yblock = store.getBlockById(id) as Y.Map<unknown>;
 
-      return (yblock.get('data') as Y.Map<unknown>).get('content') as Y.Array<unknown>;
+      return (yblock.get('data') as Y.Map<unknown>).get('content') as Y.Map<unknown>;
+    };
+
+    const getOrderArray = (id: string): Y.Array<string> => {
+      return getGridMap(id).get('__rowKeys') as Y.Array<string>;
     };
 
     beforeEach(() => {
@@ -780,8 +797,7 @@ describe('DocumentStore', () => {
     });
 
     it('editing one cell touches only that cell Y.Map', () => {
-      const content = getContentArray('t1');
-      const cell11 = (content.get(1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+      const cell11 = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
 
       observe();
 
@@ -801,8 +817,10 @@ describe('DocumentStore', () => {
       expect(events[0].keys).toEqual(['blocks']);
     });
 
-    it('inserting a row produces one splice event on the rows Y.Array', () => {
-      const content = getContentArray('t1');
+    it('inserting a row adds one row container and one key, touching no existing row', () => {
+      const order = getOrderArray('t1');
+      const rowsMap = getGridMap('t1').get('__rows');
+      const untouched = [0, 1, 2].map((index) => getRow(store, 't1', index));
 
       observe();
 
@@ -815,20 +833,34 @@ describe('DocumentStore', () => {
 
       const events = batches[0];
 
-      expect(events).toHaveLength(1);
-      expect(events[0].target).toBe(content);
+      // One key inserted in the order array, one container added to the rows
+      // map — and NOTHING on the existing rows, which is what lets a peer's
+      // concurrent typing in any of them survive.
+      expect(events).toHaveLength(2);
 
-      const delta = events[0].delta;
-      const inserts = delta.filter((op) => op.insert !== undefined);
-      const deletes = delta.filter((op) => op.delete !== undefined);
+      const orderEvent = events.find((event) => event.target === order);
+      const rowsEvent = events.find((event) => event.target === rowsMap);
+
+      expect(orderEvent).toBeDefined();
+      expect(rowsEvent).toBeDefined();
+      expect(rowsEvent?.keys).toHaveLength(1);
+
+      const inserts = (orderEvent?.delta ?? []).filter((op) => op.insert !== undefined);
+      const deletes = (orderEvent?.delta ?? []).filter((op) => op.delete !== undefined);
 
       expect(inserts).toHaveLength(1);
       expect(deletes).toHaveLength(0);
       expect((inserts[0].insert as unknown[]).length).toBe(1);
+
+      expect(getRow(store, 't1', 0)).toBe(untouched[0]);
+      expect(getRow(store, 't1', 2)).toBe(untouched[1]);
+      expect(getRow(store, 't1', 3)).toBe(untouched[2]);
     });
 
-    it('deleting a row produces one splice event on the rows Y.Array', () => {
-      const content = getContentArray('t1');
+    it('deleting a row drops one row container and one key, touching no other row', () => {
+      const order = getOrderArray('t1');
+      const rowsMap = getGridMap('t1').get('__rows');
+      const untouched = [0, 2].map((index) => getRow(store, 't1', index));
 
       observe();
 
@@ -841,14 +873,45 @@ describe('DocumentStore', () => {
 
       const events = batches[0];
 
-      expect(events).toHaveLength(1);
-      expect(events[0].target).toBe(content);
+      expect(events).toHaveLength(2);
 
-      const delta = events[0].delta;
-      const deletes = delta.filter((op) => op.delete !== undefined);
+      const orderEvent = events.find((event) => event.target === order);
+      const rowsEvent = events.find((event) => event.target === rowsMap);
+
+      expect(rowsEvent?.keys).toHaveLength(1);
+
+      const deletes = (orderEvent?.delta ?? []).filter((op) => op.delete !== undefined);
 
       expect(deletes).toHaveLength(1);
       expect(deletes[0].delete).toBe(1);
+
+      expect(getRow(store, 't1', 0)).toBe(untouched[0]);
+      expect(getRow(store, 't1', 1)).toBe(untouched[1]);
+    });
+
+    it('moving a row rewrites only the key sequence: no row container is recreated', () => {
+      const order = getOrderArray('t1');
+      const rows = [0, 1, 2].map((index) => getRow(store, 't1', index));
+
+      observe();
+
+      const next = grid();
+
+      next.push(next.shift() as { blocks: string[] }[]);
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      // The order array is the ONLY thing that changes — reordering costs a
+      // few key strings, never a row's CRDT identity.
+      expect(events).toHaveLength(1);
+      expect(events[0].target).toBe(order);
+
+      expect(getRow(store, 't1', 0)).toBe(rows[1]);
+      expect(getRow(store, 't1', 1)).toBe(rows[2]);
+      expect(getRow(store, 't1', 2)).toBe(rows[0]);
     });
 
     it('a deep-equal grid write emits zero events and returns false', () => {
@@ -877,7 +940,8 @@ describe('DocumentStore', () => {
     });
 
     it('inserting a column rewrites each row with one splice (row-wise writes, accepted)', () => {
-      const content = getContentArray('t1');
+      const order = getOrderArray('t1');
+      const rows = [0, 1, 2].map((index) => getRow(store, 't1', index));
 
       observe();
 
@@ -892,13 +956,16 @@ describe('DocumentStore', () => {
 
       const events = batches[0];
 
-      // One Y.Array splice per row, no cell-map events
+      // One Y.Array splice per row, no cell-map events and no order churn —
+      // every row is still paired to its own key even though all three changed.
       expect(events).toHaveLength(3);
 
       for (const event of events) {
         expect(event.target instanceof Y.Array).toBe(true);
-        expect(event.target === content).toBe(false);
+        expect(event.target === order).toBe(false);
       }
+
+      expect(rows.every((row, index) => getRow(store, 't1', index) === row)).toBe(true);
     });
   });
 

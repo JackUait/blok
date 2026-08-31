@@ -44,6 +44,7 @@ import { ToolsAPI } from '../components/modules/api/tools';
 import { UploaderAPI } from '../components/modules/api/uploader';
 import { I18n } from '../components/modules/i18n';
 
+import { Collaboration } from '../components/modules/collaboration';
 import { ThemeManager } from '../components/modules/themeManager';
 import { YjsManager } from '../components/modules/yjs';
 
@@ -94,5 +95,6 @@ export interface BlokModules {
   Tools: Tools,
   UI: UI,
   ThemeManager: ThemeManager,
+  Collaboration: Collaboration,
   YjsManager: YjsManager,
 }

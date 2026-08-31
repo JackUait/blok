@@ -40,6 +40,7 @@ import { InlineToolbar } from './toolbar/inline';
 import { Tools } from './tools';
 import { UI } from './ui';
 
+import { Collaboration } from './collaboration';
 import { ThemeManager } from './themeManager';
 import { YjsManager } from './yjs';
 
@@ -93,5 +94,9 @@ export const Modules = {
   Tools,
   UI,
   ThemeManager,
+
+  // Collaboration comes BEFORE YjsManager: destroy walks this map in order, and
+  // the provider's teardown needs a live document and a live awareness.
+  Collaboration,
   YjsManager,
 };

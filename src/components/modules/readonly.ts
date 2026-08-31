@@ -1,5 +1,6 @@
 import { Module } from '../__module';
 import { CriticalError } from '../errors/critical';
+import { log } from '../utils';
 import { normalizeReadOnlyConfig } from '../utils/readonly-config';
 
 /**
@@ -27,6 +28,23 @@ export class ReadOnly extends Module {
    * @type {boolean}
    */
   private readOnlyEnabled = false;
+
+  /**
+   * The HOST's own wish, remembered separately from the applied state.
+   *
+   * Collaboration can force read-only on (unsynced, write-denied, terminally
+   * disconnected) without erasing what the host asked for — so when its veto
+   * lifts, the editor returns to the host's answer rather than to "editable".
+   */
+  private hostRequestedReadOnly = false;
+
+  /**
+   * Collaboration's half of the arbitration: true while editing is impossible
+   * whatever the host wants. False (and free) in a single-player editor.
+   */
+  private get isEditingBlockedByCollaboration(): boolean {
+    return this.Blok.Collaboration?.isEditingBlocked ?? false;
+  }
 
   /**
    * Returns state of read only mode
@@ -81,7 +99,10 @@ export class ReadOnly extends Module {
 
     const { enabled: readOnlyRequested } = normalizeReadOnlyConfig(this.config.readOnly);
 
-    if (readOnlyRequested && toolsDontSupportReadOnly.length > 0) {
+    // Against the state that will be APPLIED, not the one that was asked for:
+    // a collaboration session boots read-only whatever the host wrote, and a
+    // tool that cannot render read-only must still fail the contract loudly.
+    if ((readOnlyRequested || this.isEditingBlockedByCollaboration) && toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }
 
@@ -91,10 +112,44 @@ export class ReadOnly extends Module {
   /**
    * Set read-only mode or toggle current state
    * Call all Modules `toggleReadOnly` method and re-render Blok
+   *
+   * Effective read-only is the host's wish OR collaboration's veto. Turning it
+   * OFF while collaboration blocks editing is refused outright rather than
+   * silently ignored: an editor that reports itself editable while nothing it
+   * accepts can be saved is the worse lie.
    * @param state - (optional) read-only state or toggle
    * @param isInitial - (optional) true when blok is initializing
    */
   public async toggle(state = !this.readOnlyEnabled, isInitial = false): Promise<boolean> {
+    // `isInitial` is the boot call, which is the module APPLYING the arbitrated
+    // state, not a host asking for one — refusing it would leave boot unapplied.
+    if (!state && !isInitial && this.isEditingBlockedByCollaboration) {
+      log('Read-only cannot be turned off yet: the collaboration session is not synced, or grants no write access.', 'warn');
+
+      return this.readOnlyEnabled;
+    }
+
+    this.hostRequestedReadOnly = state;
+
+    return this.applyReadOnly(state || this.isEditingBlockedByCollaboration, isInitial);
+  }
+
+  /**
+   * Re-derives the effective state after collaboration's veto changed — the
+   * first sync landing, or a ticket refresh flipping the write grant. The
+   * host's own wish is untouched, so `set(true)` before a sync still wins after
+   * it. Called by the Collaboration module; nothing else should.
+   */
+  public reapplyCollaborationArbitration(): Promise<boolean> {
+    return this.applyReadOnly(this.hostRequestedReadOnly || this.isEditingBlockedByCollaboration, false);
+  }
+
+  /**
+   * Applies an already-arbitrated read-only state.
+   * @param state - the state to apply
+   * @param isInitial - true when blok is initializing
+   */
+  private async applyReadOnly(state: boolean, isInitial: boolean): Promise<boolean> {
     if (state && this.toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }

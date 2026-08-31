@@ -6,6 +6,7 @@ import { Dom as $ } from './dom';
 import { CriticalError } from './errors/critical';
 import type { BlokEventMap } from './events';
 import { Modules } from './modules';
+import type { Collaboration } from './modules/collaboration';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
@@ -79,7 +80,15 @@ export class Core {
           UI.checkEmptiness();
           ModificationsObserver.enable();
 
-          if ((this.configuration).autofocus === true && this.configuration.readOnly !== true) {
+          /**
+           * A collaboration session is still empty at this point — its blocks
+           * arrive with the first sync — so there is nothing to focus yet.
+           */
+          if (
+            (this.configuration).autofocus === true &&
+            this.configuration.readOnly !== true &&
+            BlockManager.blocks.length > 0
+          ) {
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
           }
 
@@ -266,9 +275,16 @@ export class Core {
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 
     /**
-     * Initialize default Block to pass data to the Renderer
+     * Initialize default Block to pass data to the Renderer.
+     *
+     * NOT under collaboration: the document arrives from the sync service, and
+     * a default block injected here would be rendered as "last known" on the
+     * offline degrade path — a phantom paragraph the server never had.
      */
-    if (isEmpty(this.config.data) || this.config.data.blocks.length === 0) {
+    if (
+      this.config.collaboration === undefined &&
+      (isEmpty(this.config.data) || this.config.data.blocks.length === 0)
+    ) {
       this.config.data = { blocks: [ defaultBlockData ] };
     }
 
@@ -406,6 +422,22 @@ export class Core {
     const load = this.pendingPersistedLoad;
 
     this.pendingPersistedLoad = null;
+
+    const collaboration = this.moduleInstances['Collaboration' as keyof BlokModules] as Collaboration | undefined;
+
+    /**
+     * Sync-first load: the sync service owns the document, so NOTHING is seeded
+     * here — not the Yjs document from `config.data`, not a default block. The
+     * editor comes up empty and read-only, and the blocks materialise through
+     * the ordinary remote path when the first sync lands. `config.data` is
+     * handed over as last-known, for the read-only degrade while offline.
+     *
+     * `pendingPersistedLoad` is always null here: the config setter refuses
+     * collaboration combined with persistence.
+     */
+    if (collaboration?.isEnabled === true) {
+      return collaboration.load(normalizeOutputBlocks(data.blocks));
+    }
 
     // Idempotent re-normalization: `config.data` is declared with the loose
     // wire type, but prepare() already normalized it — this narrows the type

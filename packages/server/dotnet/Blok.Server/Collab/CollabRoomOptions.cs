@@ -11,9 +11,15 @@ internal sealed class CollabRoomOptions
   /// <summary>How long an empty room stays loaded before it is flushed and dropped.</summary>
   public TimeSpan EvictionLinger { get; init; } = TimeSpan.FromSeconds(30);
 
-  /// <summary>A stored log with at least this many frames is compacted on load.</summary>
+  /// <summary>A log with at least this many frames is compacted (on load, and in place while the room is open).</summary>
   public int CompactionFrameThreshold { get; init; } = 64;
 
-  /// <summary>A stored log at least this large (frame section, bytes) is compacted on load.</summary>
+  /// <summary>A log at least this large (frame section, bytes) is compacted the same way.</summary>
   public long CompactionByteThreshold { get; init; } = 1L << 20;
+
+  /// <summary>First wait before a failed blob write or export is retried; it doubles per failure.</summary>
+  public TimeSpan RetryBackoff { get; init; } = TimeSpan.FromSeconds(2);
+
+  /// <summary>Longest the doubling backoff may reach.</summary>
+  public TimeSpan RetryBackoffCap { get; init; } = TimeSpan.FromSeconds(60);
 }

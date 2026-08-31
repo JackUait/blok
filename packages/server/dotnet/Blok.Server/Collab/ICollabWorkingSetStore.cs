@@ -7,6 +7,19 @@ namespace Blok.Server.Collab;
 internal sealed record CollabWorkingSet(byte[] Updates, CollabWorkingSetTag Tag);
 
 /// <summary>
+/// A working-set read or write failed. A store TIMEOUT arrives as this rather
+/// than as an OperationCanceledException, which the room would otherwise read
+/// as its own shutdown.
+/// </summary>
+internal sealed class CollabWorkingSetStoreException(
+    string docId,
+    string operation,
+    Exception inner) : Exception(
+        $"collab: the working-set {operation} for \"{docId}\" failed: " +
+        $"{inner.Message}",
+        inner);
+
+/// <summary>
 /// Durable storage for a doc's collaborative working set (the Yjs update log
 /// between compactions).
 ///
@@ -19,14 +32,18 @@ internal sealed record CollabWorkingSet(byte[] Updates, CollabWorkingSetTag Tag)
 /// single-lane actor and serializes all access per doc; append semantics are
 /// read-modify-write at that layer.</item>
 /// <item>An unreadable stored blob (bad magic, truncated frame, …) reads as
-/// absent, with a log line — fail toward re-seed, never crash.</item>
-/// <item>Epoch law, enforced here as a belt-and-suspenders guard (the room is
-/// the serializing owner): WriteAsync may not lower the stored epoch (equal
-/// is the normal append case); ResetAsync must raise it strictly. When the
-/// stored blob is absent or unreadable the guard is vacuous by design — a
-/// corrupt file loses its epoch and the doc re-seeds. Write/Reset therefore
-/// read the stored tag internally; callers must not add their own guard
-/// read on top.</item>
+/// absent, with a log line — fail toward re-seed, never crash. The lineage in
+/// the tag is what tells the re-seeded history apart from the lost one.</item>
+/// <item>Epoch law: the epoch never regresses WITHIN A LINEAGE. The room owns
+/// it — it is the only writer for a doc, it carries the tag it loaded, and
+/// only a reset raises the epoch. A driver may add a cheap guard on top
+/// (LocalCollabStore reads the 32-byte header before a write); it may not pay
+/// a whole-blob read per write, which is why S3CollabStore guards resets
+/// only. When the stored blob is absent or unreadable the guard is vacuous by
+/// design.</item>
+/// <item>A cancellation the CALLER did not ask for (a store timeout) must be
+/// reported as <see cref="CollabWorkingSetStoreException"/>, never as an
+/// OperationCanceledException.</item>
 /// </list>
 /// </summary>
 internal interface ICollabWorkingSetStore

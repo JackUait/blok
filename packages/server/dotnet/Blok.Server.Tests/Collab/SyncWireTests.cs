@@ -6,7 +6,8 @@ namespace Blok.Server.Tests.Collab;
 
 public sealed class SyncWireTests
 {
-  private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.SchemaV2, 7);
+  private const string Lineage = "0123456789abcdef0123456789abcdef";
+  private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.SchemaV2, 7, Lineage);
 
   // Keyed by name because SyncWireMessage is internal and xunit theory
   // parameters must be public.
@@ -20,8 +21,12 @@ public sealed class SyncWireTests
     ["permissionDenied"] = (new PermissionDeniedFrame("no"), [0x02, 0x00, 0x02, (byte)'n', (byte)'o']),
     ["queryAwareness"] = (new QueryAwarenessFrame(), [0x03]),
     ["blokControl"] = (
-      new BlokControlFrame(new CollabWorkingSetTag(1, 0)),
-      [0x64, 0x16, .. "{\"epoch\":0,\"format\":1}"u8]),
+      new BlokControlFrame(new CollabWorkingSetTag(1, 0, Lineage)),
+      [
+        0x64,
+        0x43,
+        .. "{\"epoch\":0,\"format\":1,\"lineage\":\"0123456789abcdef0123456789abcdef\"}"u8,
+      ]),
   };
 
   public static TheoryData<string> LayoutNames
@@ -74,7 +79,10 @@ public sealed class SyncWireTests
   [Fact]
   public void RoundTripsAControlFrameWithLargeValues()
   {
-    var tag = new CollabWorkingSetTag(int.MaxValue, long.MaxValue);
+    var tag = new CollabWorkingSetTag(
+        int.MaxValue,
+        long.MaxValue,
+        CollabWorkingSetTag.NewLineage());
 
     var frame = SyncWire.Encode(new BlokControlFrame(tag));
 
@@ -113,13 +121,16 @@ public sealed class SyncWireTests
   }
 
   [Theory]
-  [InlineData(0, 0L)]
-  [InlineData(-1, 0L)]
-  [InlineData(1, -1L)]
-  public void RefusesToEncodeAnInvalidControlTag(int format, long epoch)
+  [InlineData(0, 0L, Lineage)]
+  [InlineData(-1, 0L, Lineage)]
+  [InlineData(1, -1L, Lineage)]
+  [InlineData(1, 0L, "")]
+  [InlineData(1, 0L, "0123456789abcdef0123456789abcde")]
+  [InlineData(1, 0L, "0123456789ABCDEF0123456789ABCDEF")]
+  public void RefusesToEncodeAnInvalidControlTag(int format, long epoch, string lineage)
   {
     Assert.Throws<ArgumentException>(() =>
-        SyncWire.Encode(new BlokControlFrame(new CollabWorkingSetTag(format, epoch))));
+        SyncWire.Encode(new BlokControlFrame(new CollabWorkingSetTag(format, epoch, lineage))));
   }
 
   [Fact]
@@ -157,15 +168,22 @@ public sealed class SyncWireTests
     { "control without payload", [0x64] },
     { "control with malformed json", [0x64, 0x01, (byte)'{'] },
     { "control that is not an object", [0x64, 0x01, (byte)'7'] },
-    { "control missing format", [0x64, 0x0b, .. "{\"epoch\":7}"u8] },
-    { "control missing epoch", [0x64, 0x0c, .. "{\"format\":1}"u8] },
-    { "control with negative epoch", [0x64, 0x17, .. "{\"epoch\":-1,\"format\":1}"u8] },
-    { "control with zero format", [0x64, 0x16, .. "{\"epoch\":7,\"format\":0}"u8] },
-    { "control with fractional epoch", [0x64, 0x18, .. "{\"epoch\":7.5,\"format\":1}"u8] },
-    { "control with string epoch", [0x64, 0x18, .. "{\"epoch\":\"7\",\"format\":1}"u8] },
-    { "control with extra property", [0x64, 0x1c, .. "{\"epoch\":7,\"format\":1,\"x\":1}"u8] },
-    { "control with duplicate epoch", [0x64, 0x20, .. "{\"epoch\":7,\"format\":1,\"epoch\":8}"u8] },
-    { "control with trailing json", [0x64, 0x17, .. "{\"epoch\":7,\"format\":1}1"u8] },
+    { "control missing format", ControlFrame("{\"epoch\":7,\"lineage\":\"" + Lineage + "\"}") },
+    { "control missing epoch", ControlFrame("{\"format\":1,\"lineage\":\"" + Lineage + "\"}") },
+    { "control missing lineage", ControlFrame("{\"epoch\":7,\"format\":1}") },
+    { "control with negative epoch", ControlFrame(Control(-1, 1, Lineage)) },
+    { "control with zero format", ControlFrame(Control(7, 0, Lineage)) },
+    { "control with fractional epoch", ControlFrame("{\"epoch\":7.5,\"format\":1,\"lineage\":\"" + Lineage + "\"}") },
+    { "control with string epoch", ControlFrame("{\"epoch\":\"7\",\"format\":1,\"lineage\":\"" + Lineage + "\"}") },
+    { "control with numeric lineage", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":7}") },
+    { "control with a short lineage", ControlFrame(Control(7, 1, "0123456789abcdef0123456789abcde")) },
+    { "control with a long lineage", ControlFrame(Control(7, 1, Lineage + "0")) },
+    { "control with an upper-case lineage", ControlFrame(Control(7, 1, "0123456789ABCDEF0123456789ABCDEF")) },
+    { "control with a non-hex lineage", ControlFrame(Control(7, 1, "0123456789abcdef0123456789abcdeg")) },
+    { "control with extra property", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":\"" + Lineage + "\",\"x\":1}") },
+    { "control with duplicate epoch", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":\"" + Lineage + "\",\"epoch\":8}") },
+    { "control with duplicate lineage", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":\"" + Lineage + "\",\"lineage\":\"" + Lineage + "\"}") },
+    { "control with trailing json", ControlFrame(Control(7, 1, Lineage) + "1") },
   };
 
   [Theory]
@@ -193,8 +211,21 @@ public sealed class SyncWireTests
     Assert.True(SyncWire.TryReadVarUint(ref input, out var type));
     Assert.Equal(SyncWire.MessageBlokControl, type);
     Assert.True(SyncWire.TryReadVarBytes(ref input, out var payload));
-    Assert.Equal("{\"epoch\":7,\"format\":1}", Encoding.UTF8.GetString(payload));
+    Assert.Equal(Control(7, 1, Lineage), Encoding.UTF8.GetString(payload));
     Assert.True(input.IsEmpty);
+  }
+
+  private static string Control(long epoch, int format, string lineage)
+  {
+    return $"{{\"epoch\":{epoch},\"format\":{format},\"lineage\":\"{lineage}\"}}";
+  }
+
+  /// <summary>A control frame carrying <paramref name="json"/> verbatim (payloads here stay under 128 bytes).</summary>
+  private static byte[] ControlFrame(string json)
+  {
+    var payload = Encoding.UTF8.GetBytes(json);
+
+    return [(byte)SyncWire.MessageBlokControl, (byte)payload.Length, .. payload];
   }
 
   private static void AssertSameMessage(SyncWireMessage expected, SyncWireMessage actual)

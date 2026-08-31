@@ -21,7 +21,7 @@ internal sealed record QueryAwarenessFrame : SyncWireMessage;
 
 internal sealed record PermissionDeniedFrame(string Reason) : SyncWireMessage;
 
-/// <summary>Blok-only epoch announcement (plan decision 6).</summary>
+/// <summary>Blok-only working-set announcement: epoch, format and lineage (plan decision 6).</summary>
 internal sealed record BlokControlFrame(CollabWorkingSetTag Tag) : SyncWireMessage;
 
 /// <summary>A message type this codec does not know; the payload is left unread.</summary>
@@ -36,7 +36,7 @@ internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 ///   awareness       [1][len][awareness update]
 ///   auth            [2][0][len][utf8 reason]
 ///   queryAwareness  [3]
-///   blok control    [100][len]{"epoch":N,"format":N}
+///   blok control    [100][len]{"epoch":N,"format":N,"lineage":"<32 hex>"}
 /// </code>
 /// Pinned byte-for-byte by test/unit/server-conformance/fixtures/sync-frames.json.
 /// </summary>
@@ -365,7 +365,7 @@ internal static class SyncWire
 
   private static byte[] EncodeControl(CollabWorkingSetTag tag)
   {
-    if (tag.Format < 1 || tag.Epoch < 0)
+    if (!tag.IsAnnounceable())
     {
       throw new ArgumentException(
           $"collab: the tag {tag} is not encodable.",
@@ -374,13 +374,14 @@ internal static class SyncWire
 
     var buffer = new ArrayBufferWriter<byte>();
 
-    // Key order matters: the client writes {epoch, format} and the fixture
-    // pins the bytes.
+    // Key order matters: the client writes {epoch, format, lineage} and the
+    // fixture pins the bytes.
     using (var json = new Utf8JsonWriter(buffer))
     {
       json.WriteStartObject();
       json.WriteNumber("epoch", tag.Epoch);
       json.WriteNumber("format", tag.Format);
+      json.WriteString("lineage", tag.Lineage);
       json.WriteEndObject();
     }
 
@@ -395,6 +396,7 @@ internal static class SyncWire
     tag = default;
     long? epoch = null;
     int? format = null;
+    string? lineage = null;
 
     try
     {
@@ -411,25 +413,35 @@ internal static class SyncWire
       {
         var isEpoch = reader.ValueTextEquals("epoch"u8);
         var isFormat = reader.ValueTextEquals("format"u8);
+        var isLineage = reader.ValueTextEquals("lineage"u8);
 
-        if (!reader.Read() || reader.TokenType != JsonTokenType.Number)
+        if (!reader.Read())
         {
-          error = "a control property is not a number";
+          error = "a control property has no value";
 
           return false;
         }
 
-        if (isEpoch && epoch is null && reader.TryGetInt64(out var epochValue))
+        if (isEpoch && epoch is null &&
+            reader.TokenType == JsonTokenType.Number &&
+            reader.TryGetInt64(out var epochValue))
         {
           epoch = epochValue;
         }
-        else if (isFormat && format is null && reader.TryGetInt32(out var formatValue))
+        else if (isFormat && format is null &&
+            reader.TokenType == JsonTokenType.Number &&
+            reader.TryGetInt32(out var formatValue))
         {
           format = formatValue;
         }
+        else if (isLineage && lineage is null &&
+            reader.TokenType == JsonTokenType.String)
+        {
+          lineage = reader.GetString();
+        }
         else
         {
-          error = "the control payload has an unknown, repeated or non-integer property";
+          error = "the control payload has an unknown, repeated or ill-typed property";
 
           return false;
         }
@@ -449,14 +461,23 @@ internal static class SyncWire
       return false;
     }
 
-    if (epoch is null || format is null || format < 1 || epoch < 0)
+    if (epoch is null || format is null || lineage is null)
     {
-      error = "the control payload needs format >= 1 and epoch >= 0";
+      error = "the control payload needs epoch, format and lineage";
 
       return false;
     }
 
-    tag = new CollabWorkingSetTag(format.Value, epoch.Value);
+    tag = new CollabWorkingSetTag(format.Value, epoch.Value, lineage);
+
+    if (!tag.IsAnnounceable())
+    {
+      tag = default;
+      error = "the control payload needs format >= 1, epoch >= 0 and a 32-hex lineage";
+
+      return false;
+    }
+
     error = "";
 
     return true;

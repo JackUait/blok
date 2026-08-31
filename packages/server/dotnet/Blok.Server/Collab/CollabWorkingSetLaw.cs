@@ -1,11 +1,54 @@
 namespace Blok.Server.Collab;
 
 /// <summary>
-/// Shared decode-or-absent handling and the epoch law both drivers enforce.
-/// See <see cref="ICollabWorkingSetStore"/> for the contract wording.
+/// Shared decode-or-absent handling, the cancellation guard every driver call
+/// goes through, and the epoch law. See <see cref="ICollabWorkingSetStore"/>
+/// for the contract wording.
 /// </summary>
 internal static class CollabWorkingSetLaw
 {
+  /// <summary>
+  /// A store timeout surfaces as OperationCanceledException even though the
+  /// CALLER never cancelled. Reported as-is, the room cannot tell it from its
+  /// own shutdown token and skips its failure handling entirely — so every
+  /// driver call funnels through here and a foreign cancellation comes out as
+  /// an ordinary store failure.
+  /// </summary>
+  internal static async Task<T> GuardAsync<T>(
+      string docId,
+      string what,
+      Func<Task<T>> operation,
+      CancellationToken cancellationToken)
+  {
+    try
+    {
+      return await operation();
+    }
+    catch (OperationCanceledException error)
+        when (!cancellationToken.IsCancellationRequested)
+    {
+      throw new CollabWorkingSetStoreException(docId, what, error);
+    }
+  }
+
+  internal static async Task GuardAsync(
+      string docId,
+      string what,
+      Func<Task> operation,
+      CancellationToken cancellationToken)
+  {
+    await GuardAsync<object?>(
+        docId,
+        what,
+        async () =>
+        {
+          await operation();
+
+          return null;
+        },
+        cancellationToken);
+  }
+
   internal static CollabWorkingSet? DecodeOrAbsent(
       string docId,
       byte[] document,

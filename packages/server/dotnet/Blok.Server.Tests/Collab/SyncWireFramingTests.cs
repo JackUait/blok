@@ -183,15 +183,18 @@ public sealed class SyncWireFramingTests
   }
 
   [Fact]
-  public void BlokControlCarriesTheEpochAndFormat()
+  public void BlokControlCarriesTheEpochFormatAndLineage()
   {
     var frame = Frame("blokControl");
     var message = Decode<BlokControlFrame>("blokControl");
     var control = Assert.IsType<ControlFixture>(frame.Control);
 
     Assert.Equal(SyncWire.MessageBlokControl, frame.MessageType);
-    Assert.Equal(new CollabWorkingSetTag(control.Format, control.Epoch), message.Tag);
+    Assert.Equal(
+        new CollabWorkingSetTag(control.Format, control.Epoch, control.Lineage),
+        message.Tag);
     Assert.Equal(CollabWorkingSetTag.SchemaV2, message.Tag.Format);
+    Assert.Matches("^[0-9a-f]{32}$", message.Tag.Lineage);
   }
 
   [Fact]
@@ -422,5 +425,6 @@ public sealed class SyncWireFramingTests
 
   private sealed record ControlFixture(
       [property: JsonPropertyName("epoch")] long Epoch,
-      [property: JsonPropertyName("format")] int Format);
+      [property: JsonPropertyName("format")] int Format,
+      [property: JsonPropertyName("lineage")] string Lineage);
 }

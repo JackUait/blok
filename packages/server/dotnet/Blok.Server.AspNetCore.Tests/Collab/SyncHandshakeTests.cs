@@ -12,7 +12,6 @@ namespace Blok.Server.AspNetCore.Tests.Collab;
 public sealed class SyncHandshakeTests
 {
   private const string DisallowedOrigin = "https://evil.example.net";
-  private static readonly CollabWorkingSetTag FreshTag = new(CollabWorkingSetTag.SchemaV2, 0);
   private readonly TicketFixture fixture = TicketFixture.Load();
 
   [Fact]
@@ -23,7 +22,7 @@ public sealed class SyncHandshakeTests
 
     Assert.Equal(SyncApp.Protocol, client.SubProtocol);
     var control = await client.ReceiveAsync<BlokControlFrame>();
-    Assert.Equal(FreshTag, control.Tag);
+    AssertFreshTag(control.Tag);
     Assert.Equal("seeded", await SyncedTextAsync(client));
   }
 
@@ -35,7 +34,7 @@ public sealed class SyncHandshakeTests
         protocols: [$"{SyncApp.Protocol}, {fixture.Compatible}"]);
 
     Assert.Equal(SyncApp.Protocol, client.SubProtocol);
-    Assert.Equal(FreshTag, (await client.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
   }
 
   [Fact]
@@ -46,7 +45,7 @@ public sealed class SyncHandshakeTests
         protocols: [fixture.Compatible, SyncApp.Protocol]);
 
     Assert.Equal(SyncApp.Protocol, client.SubProtocol);
-    Assert.Equal(FreshTag, (await client.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
   }
 
   [Theory]
@@ -114,8 +113,8 @@ public sealed class SyncHandshakeTests
     await using var app = await SyncApp.StartAsync("ticket");
     await using var reader = await app.ConnectWithTicketAsync(fixture.ReadOnly);
     await using var writer = await app.ConnectWithTicketAsync(fixture.Compatible);
-    Assert.Equal(FreshTag, (await reader.ReceiveAsync<BlokControlFrame>()).Tag);
-    Assert.Equal(FreshTag, (await writer.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await reader.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await writer.ReceiveAsync<BlokControlFrame>()).Tag);
     using var readerDoc = await SyncedAsync(reader);
 
     await reader.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(readerDoc, " stolen")));
@@ -170,7 +169,7 @@ public sealed class SyncHandshakeTests
     await using var client = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
 
     Assert.Equal(SyncApp.Protocol, client.SubProtocol);
-    Assert.Equal(FreshTag, (await client.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
   }
 
   [Fact]
@@ -239,14 +238,14 @@ public sealed class SyncHandshakeTests
 
     // Rejections key on the address, an accepted handshake on its user.
     await using var accepted = await app.ConnectWithTicketAsync(fixture.Compatible);
-    Assert.Equal(FreshTag, (await accepted.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await accepted.ReceiveAsync<BlokControlFrame>()).Tag);
 
     await app.AssertRefusedAsync(
         HttpStatusCode.TooManyRequests,
         protocols: [SyncApp.Protocol, fixture.Compatible]);
 
     await using var otherUser = await app.ConnectWithTicketAsync(fixture.UserTwo);
-    Assert.Equal(FreshTag, (await otherUser.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await otherUser.ReceiveAsync<BlokControlFrame>()).Tag);
   }
 
   [Fact]
@@ -296,7 +295,7 @@ public sealed class SyncHandshakeTests
         "ticket",
         services: services => services.AddSingleton<IBlokAuthorization>(authorization));
     await using var client = await app.ConnectWithTicketAsync(fixture.Compatible);
-    Assert.Equal(FreshTag, (await client.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
     using var doc = await SyncedAsync(client);
 
     await client.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(doc, " stolen")));
@@ -313,7 +312,7 @@ public sealed class SyncHandshakeTests
         "ticket",
         services: services => services.AddSingleton<IBlokAuthorization>(authorization));
     await using var writer = await app.ConnectWithTicketAsync(fixture.Compatible);
-    Assert.Equal(FreshTag, (await writer.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await writer.ReceiveAsync<BlokControlFrame>()).Tag);
 
     var principal = authorization.Principals[0];
     Assert.True(principal.Identity?.IsAuthenticated);
@@ -322,7 +321,7 @@ public sealed class SyncHandshakeTests
     Assert.Equal("true", principal.FindFirstValue("blok:write"));
 
     await using var reader = await app.ConnectWithTicketAsync(fixture.ReadOnly);
-    Assert.Equal(FreshTag, (await reader.ReceiveAsync<BlokControlFrame>()).Tag);
+    AssertFreshTag((await reader.ReceiveAsync<BlokControlFrame>()).Tag);
 
     Assert.Equal("false", authorization.Principals[^1].FindFirstValue("blok:write"));
   }
@@ -397,5 +396,16 @@ public sealed class SyncHandshakeTests
       "malformed" => fixture.Malformed,
       _ => throw new ArgumentOutOfRangeException(nameof(name), name, null),
     };
+  }
+
+  /// <summary>
+  /// A never-reset doc: schema v2 at epoch 0, under a lineage the room minted
+  /// at the seed. The lineage is 16 random bytes, so it is asserted by shape.
+  /// </summary>
+  private static void AssertFreshTag(CollabWorkingSetTag tag)
+  {
+    Assert.Equal(CollabWorkingSetTag.SchemaV2, tag.Format);
+    Assert.Equal(0, tag.Epoch);
+    Assert.Matches("^[0-9a-f]{32}$", tag.Lineage);
   }
 }

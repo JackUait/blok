@@ -8,9 +8,7 @@ public sealed class LocalCollabStoreTests : IDisposable
   private const string DocId = "doc-1";
   private const string DocKeyHex =
       "bb0e4f49443794d901e8969ff11bd112e34208a0dcdf0e1eedb480cc9b3c7293";
-  private static readonly CollabWorkingSetTag Tag = new(
-      CollabWorkingSetTag.SchemaV2,
-      3);
+  private static readonly CollabWorkingSetTag Tag = Tags.At(3);
 
   private readonly string directory = Path.Combine(
       Path.GetTempPath(),

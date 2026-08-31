@@ -12,9 +12,7 @@ public sealed class S3CollabStoreTests
       "bb0e4f49443794d901e8969ff11bd112e34208a0dcdf0e1eedb480cc9b3c7293";
   private const string EmptyPayloadHash =
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-  private static readonly CollabWorkingSetTag Tag = new(
-      CollabWorkingSetTag.SchemaV2,
-      5);
+  private static readonly CollabWorkingSetTag Tag = Tags.At(5);
 
   [Fact]
   public async Task ReadsAbsentAsNullThroughASignedGet()
@@ -54,8 +52,10 @@ public sealed class S3CollabStoreTests
 
     await store.WriteAsync(DocId, updates, Tag, CancellationToken.None);
 
+    // One PUT and nothing else: a guard GET before every write would double
+    // the traffic of an edit, and the room owns the epoch law.
     Assert.Equal(
-        new[] { HttpMethod.Get, HttpMethod.Put },
+        new[] { HttpMethod.Put },
         bucket.Requests.Select(request => request.Method).ToArray());
     var put = bucket.Requests[^1];
     Assert.Equal(ObjectPath, put.Path);
@@ -73,8 +73,14 @@ public sealed class S3CollabStoreTests
     Assert.Equal(Tag, stored.Tag);
   }
 
+  /// <summary>
+  /// The epoch law lives in the room (one writer per doc, the tag it loaded,
+  /// only a reset raises it). S3 cannot read a header cheaply, so this driver
+  /// does not re-read the object per write — the belt-and-suspenders guard
+  /// stays on the rare path, the reset.
+  /// </summary>
   [Fact]
-  public async Task WriteRefusesToLowerTheEpoch()
+  public async Task WriteDoesNotReadTheObjectToGuardTheEpoch()
   {
     var bucket = new FakeS3Bucket();
     var (store, _) = CreateStore(bucket);
@@ -82,16 +88,15 @@ public sealed class S3CollabStoreTests
         ObjectPath,
         CollabWorkingSetCodec.EncodeDocument(Tag, []));
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
-        store.WriteAsync(
-            DocId,
-            [],
-            Tag with { Epoch = Tag.Epoch - 1 },
-            CancellationToken.None));
+    await store.WriteAsync(
+        DocId,
+        [],
+        Tag with { Epoch = Tag.Epoch - 1 },
+        CancellationToken.None);
 
-    Assert.DoesNotContain(
-        bucket.Requests,
-        request => request.Method == HttpMethod.Put);
+    Assert.Equal(
+        new[] { HttpMethod.Put },
+        bucket.Requests.Select(request => request.Method).ToArray());
   }
 
   [Fact]

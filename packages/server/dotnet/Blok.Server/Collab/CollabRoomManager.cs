@@ -148,13 +148,14 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     draining = true;
 
     // A join that passed the draining check a moment ago may still add a
-    // room; keep going until nothing is left.
+    // room; keep going until nothing is left. Rooms drain together and one
+    // that throws is dropped rather than allowed to abort the pass — a
+    // sequential await let the first failure strand every room after it.
     while (LiveRooms() is { Length: > 0 } rooms)
     {
-      foreach (var room in rooms)
-      {
-        await room.DrainAsync(cancellationToken);
-      }
+      await Task.WhenAll(Array.ConvertAll(
+          rooms,
+          room => DrainRoomAsync(room, cancellationToken)));
     }
   }
 
@@ -164,6 +165,22 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     foreach (var room in LiveRooms())
     {
       await room.SettleAsync();
+    }
+  }
+
+  private async Task DrainRoomAsync(
+      CollabRoom room,
+      CancellationToken cancellationToken)
+  {
+    try
+    {
+      await room.DrainAsync(cancellationToken);
+    }
+    catch (Exception error)
+    {
+      log?.Invoke(
+          $"collab: room \"{room.DocId}\" could not be drained: {error.Message}");
+      Forget(room);
     }
   }
 

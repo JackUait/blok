@@ -36,20 +36,33 @@ internal sealed class S3CollabStore : ICollabWorkingSetStore
     this.log = log;
   }
 
-  public async Task<CollabWorkingSet?> ReadAsync(
+  public Task<CollabWorkingSet?> ReadAsync(
       string docId,
       CancellationToken cancellationToken = default)
   {
-    var document = await store.GetObjectAsync(
-        KeyFor(docId),
-        cancellationToken);
+    return CollabWorkingSetLaw.GuardAsync(
+        docId,
+        "read",
+        async () =>
+        {
+          var document = await store.GetObjectAsync(
+              KeyFor(docId),
+              cancellationToken);
 
-    return document is null
-      ? null
-      : CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log);
+          return document is null
+            ? null
+            : CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log);
+        },
+        cancellationToken);
   }
 
-  public async Task WriteAsync(
+  /// <summary>
+  /// No guard read: a write happens per edit, and a GET of the whole object
+  /// before every PUT would double the traffic and the latency for a check
+  /// the room already owns (see <see cref="ICollabWorkingSetStore"/>). S3
+  /// cannot read a header cheaply the way the local driver can.
+  /// </summary>
+  public Task WriteAsync(
       string docId,
       byte[] updates,
       CollabWorkingSetTag tag,
@@ -57,30 +70,37 @@ internal sealed class S3CollabStore : ICollabWorkingSetStore
   {
     ArgumentNullException.ThrowIfNull(updates);
 
-    var document = CollabWorkingSetCodec.EncodeDocument(tag, updates);
-    CollabWorkingSetLaw.EnsureWriteDoesNotLowerEpoch(
+    return CollabWorkingSetLaw.GuardAsync(
         docId,
-        await ReadAsync(docId, cancellationToken),
-        tag);
-    await store.PutObjectAsync(
-        KeyFor(docId),
-        document,
+        "write",
+        () => store.PutObjectAsync(
+            KeyFor(docId),
+            CollabWorkingSetCodec.EncodeDocument(tag, updates),
+            cancellationToken),
         cancellationToken);
   }
 
-  public async Task ResetAsync(
+  /// <summary>A reset is an operator lever, so it can afford the guard read a write cannot.</summary>
+  public Task ResetAsync(
       string docId,
       CollabWorkingSetTag newTag,
       CancellationToken cancellationToken = default)
   {
-    var document = CollabWorkingSetCodec.EncodeDocument(newTag, []);
-    CollabWorkingSetLaw.EnsureResetRaisesEpoch(
+    return CollabWorkingSetLaw.GuardAsync(
         docId,
-        await ReadAsync(docId, cancellationToken),
-        newTag);
-    await store.PutObjectAsync(
-        KeyFor(docId),
-        document,
+        "reset",
+        async () =>
+        {
+          var document = CollabWorkingSetCodec.EncodeDocument(newTag, []);
+          CollabWorkingSetLaw.EnsureResetRaisesEpoch(
+              docId,
+              await ReadAsync(docId, cancellationToken),
+              newTag);
+          await store.PutObjectAsync(
+              KeyFor(docId),
+              document,
+              cancellationToken);
+        },
         cancellationToken);
   }
 

@@ -74,17 +74,33 @@ internal sealed class CollabRoom : IDisposable
   private readonly MemoryStream frameSection = new();
   private readonly ITimer exportTimer;
   private readonly ITimer evictionTimer;
+  private readonly ITimer persistTimer;
 
   private RoomState state = RoomState.New;
-  private CollabWorkingSetTag tag = new(CollabWorkingSetTag.SchemaV2, 0);
+  // Replaced by load-or-seed before the room turns Ready; a tag without a
+  // lineage is never persisted and never announced.
+  private CollabWorkingSetTag tag = new(
+      CollabWorkingSetTag.SchemaV2,
+      0,
+      CollabWorkingSetTag.NoLineage);
   private Doc? doc;
   private IDisposable? updates;
   private bool applyingRemote;
   private int frameCount;
-  private bool blobDirty;
+
+  // The blob is behind the doc while blobVersion != persistedVersion; that
+  // is the room's "persist behind" flag, and it is what keeps a room that
+  // cannot write from being dropped.
+  private long blobVersion;
+  private long persistedVersion;
+  private long persistingVersion;
+  private Task? inFlightPersist;
+  private int persistFailures;
   private string? version;
   private bool exportDirty;
   private DateTimeOffset? dirtySince;
+  private DateTimeOffset? exportRetryAt;
+  private int exportFailures;
   private Task<string?>? inFlightSave;
   private int laneDepth;
   private int maxLaneDepth;
@@ -112,6 +128,16 @@ internal sealed class CollabRoom : IDisposable
         Timeout.InfiniteTimeSpan);
     evictionTimer = timeProvider.CreateTimer(
         _ => Post(EvictLocked),
+        null,
+        Timeout.InfiniteTimeSpan,
+        Timeout.InfiniteTimeSpan);
+    persistTimer = timeProvider.CreateTimer(
+        _ => Post(() =>
+        {
+          SchedulePersistLocked();
+
+          return Task.CompletedTask;
+        }),
         null,
         Timeout.InfiniteTimeSpan,
         Timeout.InfiniteTimeSpan);
@@ -157,11 +183,17 @@ internal sealed class CollabRoom : IDisposable
             }
           }
 
-          cancellationToken.ThrowIfCancellationRequested();
+          if (cancellationToken.IsCancellationRequested)
+          {
+            // The joiner is gone but the room is Ready: without this the
+            // linger would only ever be armed by a leave that never comes.
+            UpdateEvictionLocked();
+            cancellationToken.ThrowIfCancellationRequested();
+          }
 
           var membership = new CollabMembership(this, member, tag);
           members.Add(membership);
-          evictionTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+          UpdateEvictionLocked();
 
           if (member.AcceptsControlFrames)
           {
@@ -187,7 +219,7 @@ internal sealed class CollabRoom : IDisposable
         {
           if (state == RoomState.Ready && members.Contains(membership))
           {
-            return ReceiveLocked(membership, frame);
+            ReceiveLocked(membership, frame);
           }
 
           return Task.CompletedTask;
@@ -200,11 +232,9 @@ internal sealed class CollabRoom : IDisposable
     return new ValueTask(RunAsync(
         () =>
         {
-          if (members.Remove(membership) &&
-              members.Count == 0 &&
-              state == RoomState.Ready)
+          if (members.Remove(membership))
           {
-            evictionTimer.Change(options.EvictionLinger, Timeout.InfiniteTimeSpan);
+            UpdateEvictionLocked();
           }
 
           return Task.CompletedTask;
@@ -231,7 +261,14 @@ internal sealed class CollabRoom : IDisposable
             current = stored?.Tag ?? current;
           }
 
-          var next = new CollabWorkingSetTag(current.Format, current.Epoch + 1);
+          // A blob write may still be in the air with the pre-reset log and
+          // tag; letting it land after the reset would undo it.
+          await SettleInFlightPersistLocked();
+
+          var next = new CollabWorkingSetTag(
+              current.Format,
+              current.Epoch + 1,
+              CollabWorkingSetTag.NewLineage());
           await store.ResetAsync(DocId, next, cancellationToken);
           CloseLocked(CollabCloseReason.Reset);
 
@@ -240,6 +277,11 @@ internal sealed class CollabRoom : IDisposable
         cancellationToken);
   }
 
+  /// <summary>
+  /// The token bounds the FLUSH, not the close: the server is going down, so
+  /// a room whose store or endpoint fails still closes — otherwise one sick
+  /// room would hold the shutdown open forever.
+  /// </summary>
   internal Task DrainAsync(CancellationToken cancellationToken)
   {
     return RunAsync(
@@ -247,7 +289,15 @@ internal sealed class CollabRoom : IDisposable
         {
           if (state == RoomState.Ready)
           {
-            await FlushLocked();
+            try
+            {
+              await FlushLocked(cancellationToken);
+            }
+            catch (Exception error)
+            {
+              log?.Invoke(
+                  $"collab: room \"{DocId}\" could not flush while draining: {error.Message}");
+            }
           }
 
           if (state != RoomState.Closed)
@@ -255,7 +305,7 @@ internal sealed class CollabRoom : IDisposable
             CloseLocked(CollabCloseReason.Draining);
           }
         },
-        cancellationToken);
+        CancellationToken.None);
   }
 
   /// <summary>Completes once every lane operation queued before it has run.</summary>
@@ -274,6 +324,7 @@ internal sealed class CollabRoom : IDisposable
   {
     exportTimer.Dispose();
     evictionTimer.Dispose();
+    persistTimer.Dispose();
     lifetime.Cancel();
     lifetime.Dispose();
     frameSection.Dispose();
@@ -381,11 +432,9 @@ internal sealed class CollabRoom : IDisposable
       {
         await SeedLocked();
       }
-      else if (frameCount >= options.CompactionFrameThreshold ||
-          frameSection.Length >= options.CompactionByteThreshold)
+      else if (CompactIfOversizedLocked())
       {
-        CompactLocked();
-        await PersistLocked();
+        await PersistLocked(lifetime.Token);
       }
 
       state = RoomState.Ready;
@@ -426,6 +475,11 @@ internal sealed class CollabRoom : IDisposable
     var loaded = await endpoint.LoadAsync(DocId, lifetime.Token);
     version = loaded.Version;
 
+    // A seed is a brand-new CRDT history, so it gets a new lineage — the
+    // epoch alone cannot tell it apart from the history a client cached
+    // before the blob was lost or reset (see CollabWorkingSetTag).
+    tag = tag with { Lineage = CollabWorkingSetTag.NewLineage() };
+
     // A null document is the endpoint's "nothing saved yet": an empty doc
     // with an empty log, which re-seeds on the next open. Never seed empty
     // on a failure — that path throws out of LoadAsync.
@@ -434,7 +488,9 @@ internal sealed class CollabRoom : IDisposable
       converter.Seed(doc!, loaded.Data);
     }
 
-    await PersistLocked();
+    // Awaited on purpose: a seed that cannot be written must fail the join
+    // closed rather than serve a doc the store has never seen.
+    await PersistLocked(lifetime.Token);
   }
 
   private void OnLocalUpdate(UpdateEvent updateEvent)
@@ -475,15 +531,149 @@ internal sealed class CollabRoom : IDisposable
     WriteFramePrefix(frameSection, update.Length);
     frameSection.Write(update);
     frameCount++;
-    blobDirty = true;
+    blobVersion++;
   }
 
-  private async Task PersistLocked()
+  /// <summary>Writes the blob INSIDE the lane; only the seed and the flush may pay that.</summary>
+  private async Task PersistLocked(CancellationToken cancellationToken)
   {
-    await store.WriteAsync(DocId, frameSection.ToArray(), tag, lifetime.Token);
-    blobDirty = false;
+    var pending = blobVersion;
+    await store.WriteAsync(DocId, frameSection.ToArray(), tag, cancellationToken);
+    persistedVersion = pending;
+    persistFailures = 0;
   }
 
+  /// <summary>
+  /// Starts the blob write BESIDE the lane, single-flight: the frame section
+  /// is snapshotted while the lane is held and the store call runs outside
+  /// it, so a slow store never stalls sync. Edits made while a write is in
+  /// flight are coalesced into the next one.
+  /// </summary>
+  private void SchedulePersistLocked()
+  {
+    if (state != RoomState.Ready ||
+        inFlightPersist is not null ||
+        blobVersion == persistedVersion)
+    {
+      return;
+    }
+
+    persistingVersion = blobVersion;
+    var write = WritePersistAsync(frameSection.ToArray(), tag);
+    inFlightPersist = write;
+    _ = ObservePersistAsync(write);
+  }
+
+  /// <summary>Waits out the off-lane write so nothing written after it can be overtaken.</summary>
+  private async Task SettleInFlightPersistLocked()
+  {
+    if (inFlightPersist is null)
+    {
+      return;
+    }
+
+    var write = inFlightPersist;
+    inFlightPersist = null;
+
+    try
+    {
+      await write;
+      persistedVersion = persistingVersion;
+      persistFailures = 0;
+    }
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" could not persist the working set: {error.Message}");
+    }
+  }
+
+  private async Task WritePersistAsync(byte[] frames, CollabWorkingSetTag written)
+  {
+    await store.WriteAsync(DocId, frames, written, lifetime.Token);
+  }
+
+  private async Task ObservePersistAsync(Task write)
+  {
+    Exception? failure = null;
+
+    try
+    {
+      await write;
+    }
+    catch (Exception error)
+    {
+      failure = error;
+    }
+
+    Post(() =>
+    {
+      OnPersistFinishedLocked(write, failure);
+
+      return Task.CompletedTask;
+    });
+  }
+
+  private void OnPersistFinishedLocked(Task write, Exception? failure)
+  {
+    if (!ReferenceEquals(write, inFlightPersist))
+    {
+      return;
+    }
+
+    inFlightPersist = null;
+
+    if (failure is null)
+    {
+      persistedVersion = persistingVersion;
+      persistFailures = 0;
+      SchedulePersistLocked();
+
+      return;
+    }
+
+    if (lifetime.IsCancellationRequested)
+    {
+      return;
+    }
+
+    // The update lives in memory and in every member; the doc stays the
+    // authority and the whole log is written again on the retry.
+    log?.Invoke(
+        $"collab: room \"{DocId}\" could not persist the working set: {failure.Message}");
+    persistFailures++;
+    persistTimer.Change(Backoff(persistFailures), Timeout.InfiniteTimeSpan);
+  }
+
+  private TimeSpan Backoff(int failures)
+  {
+    var steps = Math.Min(Math.Max(failures - 1, 0), 16);
+    var delay = options.RetryBackoff * Math.Pow(2, steps);
+
+    return delay < options.RetryBackoffCap ? delay : options.RetryBackoffCap;
+  }
+
+  /// <summary>True when the log was replaced by one full-state frame.</summary>
+  private bool CompactIfOversizedLocked()
+  {
+    if (frameCount < 2 ||
+        (frameCount < options.CompactionFrameThreshold &&
+            frameSection.Length < options.CompactionByteThreshold))
+    {
+      return false;
+    }
+
+    CompactLocked();
+
+    return true;
+  }
+
+  /// <summary>
+  /// Replaces the log with the doc's whole state. An update yrs is still
+  /// holding PENDING (it arrived before the one it depends on) is not in that
+  /// state and is dropped — YDotNet 0.6.0 exposes no way to see pending
+  /// updates; see CompactionDropsAnUpdateThatIsStillPending.
+  /// </summary>
   private void CompactLocked()
   {
     byte[] whole;
@@ -498,7 +688,7 @@ internal sealed class CollabRoom : IDisposable
     AppendLocked(whole);
   }
 
-  private async Task ReceiveLocked(CollabMembership membership, byte[] frame)
+  private void ReceiveLocked(CollabMembership membership, byte[] frame)
   {
     if (!SyncWire.TryDecode(frame, out var message, out var error))
     {
@@ -513,10 +703,10 @@ internal sealed class CollabRoom : IDisposable
         AnswerSyncStep1Locked(membership, step1.StateVector);
         break;
       case SyncStep2Frame step2:
-        await ApplyFromMemberLocked(membership, step2.Update);
+        ApplyFromMemberLocked(membership, step2.Update);
         break;
       case SyncUpdateFrame update:
-        await ApplyFromMemberLocked(membership, update.Update);
+        ApplyFromMemberLocked(membership, update.Update);
         break;
       case AwarenessFrame:
       case QueryAwarenessFrame:
@@ -556,7 +746,7 @@ internal sealed class CollabRoom : IDisposable
     Send(membership, SyncWire.Encode(new SyncStep1Frame(stateVector)));
   }
 
-  private async Task ApplyFromMemberLocked(CollabMembership membership, byte[] update)
+  private void ApplyFromMemberLocked(CollabMembership membership, byte[] update)
   {
     if (!membership.Member.CanWrite || !ApplyRemoteLocked(update))
     {
@@ -565,18 +755,8 @@ internal sealed class CollabRoom : IDisposable
 
     AppendLocked(update);
     BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(update)), membership);
-
-    try
-    {
-      await PersistLocked();
-    }
-    catch (Exception error) when (error is not OperationCanceledException)
-    {
-      // The update lives in memory and in every member; the next write
-      // carries the whole log again.
-      log?.Invoke($"collab: room \"{DocId}\" could not persist the working set: {error.Message}");
-    }
-
+    CompactIfOversizedLocked();
+    SchedulePersistLocked();
     MarkDirtyLocked();
   }
 
@@ -603,6 +783,25 @@ internal sealed class CollabRoom : IDisposable
     }
   }
 
+  /// <summary>
+  /// The one place the linger is armed or disarmed: EVERY path that can leave
+  /// the room empty (join, cancelled join, leave, a retried eviction) ends
+  /// here, so a Ready room without members always has a timer.
+  /// </summary>
+  private void UpdateEvictionLocked(TimeSpan? linger = null)
+  {
+    if (state != RoomState.Ready)
+    {
+      return;
+    }
+
+    evictionTimer.Change(
+        members.Count == 0
+          ? linger ?? options.EvictionLinger
+          : Timeout.InfiniteTimeSpan,
+        Timeout.InfiniteTimeSpan);
+  }
+
   private void MarkDirtyLocked()
   {
     exportDirty = true;
@@ -624,6 +823,13 @@ internal sealed class CollabRoom : IDisposable
     if (latest < due)
     {
       due = latest;
+    }
+
+    // A failed export waits out its backoff instead of retrying on every
+    // tick for as long as the endpoint stays down.
+    if (exportRetryAt is { } retry && retry > due)
+    {
+      due = retry;
     }
 
     var delay = due - now;
@@ -694,10 +900,18 @@ internal sealed class CollabRoom : IDisposable
       log?.Invoke($"collab: room \"{DocId}\" export failed, retrying: {failure.Message}");
       exportDirty = true;
       dirtySince ??= timeProvider.GetUtcNow();
+      exportFailures++;
+      exportRetryAt = timeProvider.GetUtcNow() + Backoff(exportFailures);
     }
-    else if (answered is not null)
+    else
     {
-      version = answered;
+      exportFailures = 0;
+      exportRetryAt = null;
+
+      if (answered is not null)
+      {
+        version = answered;
+      }
     }
 
     if (exportDirty)
@@ -713,13 +927,50 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    await FlushLocked();
+    try
+    {
+      await FlushLocked(CancellationToken.None);
+    }
+    catch (Exception error)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" could not flush before eviction: {error.Message}");
+    }
+
+    if (state != RoomState.Ready || members.Count > 0)
+    {
+      return;
+    }
+
+    if (blobVersion != persistedVersion)
+    {
+      // Dropping the room now would leave the store holding a blob that is
+      // missing these edits — and a blob with any frame in it is
+      // authoritative on the next open, so the doc endpoint would never be
+      // consulted to fill the gap. The doc stays in memory as the authority
+      // until the write lands.
+      persistFailures++;
+      log?.Invoke(
+          $"collab: room \"{DocId}\" is staying loaded until its working set is written");
+      UpdateEvictionLocked(Backoff(persistFailures));
+
+      return;
+    }
+
     CloseLocked(null);
   }
 
-  /// <summary>Compact + persist + export; the blob is written even when the export fails.</summary>
-  private async Task FlushLocked()
+  /// <summary>
+  /// Compact + persist + export, all awaited; the blob is written even when
+  /// the export fails. Failures are logged, not thrown: the caller decides
+  /// what an unwritten blob means (eviction retries, a drain closes anyway).
+  /// </summary>
+  private async Task FlushLocked(CancellationToken cancellationToken)
   {
+    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(
+        lifetime.Token,
+        cancellationToken);
+
     if (inFlightSave is not null)
     {
       try
@@ -735,18 +986,22 @@ internal sealed class CollabRoom : IDisposable
       inFlightSave = null;
     }
 
+    // The in-flight write carries an older snapshot, so it has to land
+    // before the final one — otherwise it could overwrite it.
+    await SettleInFlightPersistLocked();
+
     if (frameCount > 1)
     {
       CompactLocked();
     }
 
-    if (blobDirty)
+    if (blobVersion != persistedVersion)
     {
       try
       {
-        await PersistLocked();
+        await PersistLocked(deadline.Token);
       }
-      catch (Exception error) when (error is not OperationCanceledException)
+      catch (Exception error) when (!lifetime.IsCancellationRequested)
       {
         log?.Invoke($"collab: room \"{DocId}\" could not flush the working set: {error.Message}");
       }
@@ -760,11 +1015,13 @@ internal sealed class CollabRoom : IDisposable
     try
     {
       var snapshot = converter.Export(doc!);
-      version = await endpoint.SaveAsync(DocId, snapshot, version, lifetime.Token) ?? version;
+      version = await endpoint.SaveAsync(DocId, snapshot, version, deadline.Token) ?? version;
       exportDirty = false;
       dirtySince = null;
+      exportFailures = 0;
+      exportRetryAt = null;
     }
-    catch (Exception error) when (error is not OperationCanceledException)
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
     {
       log?.Invoke($"collab: room \"{DocId}\" could not export during flush: {error.Message}");
     }

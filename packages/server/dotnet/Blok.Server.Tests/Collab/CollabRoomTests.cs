@@ -12,6 +12,7 @@ public sealed class CollabRoomTests
   private readonly FakeDocEndpoint endpoint = new();
   private readonly FakeDocConverter converter = new();
   private readonly ManualTimeProvider time = new();
+  private readonly List<string> log = [];
 
   [Fact]
   public async Task AnswersSyncStep1WithTheDiffAndItsOwnSyncStep1()
@@ -57,9 +58,10 @@ public sealed class CollabRoomTests
     Assert.Empty(writer.Received);
     var relayed = Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received));
     Assert.Equal(update, relayed.Update);
-    var frames = store.FramesOf(DocId);
-    Assert.Equal(framesBefore + 1, frames.Count);
-    Assert.Equal(update, frames[^1]);
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == framesBefore + 1,
+        "the working set to catch up");
+    Assert.Equal(update, store.FramesOf(DocId)[^1]);
     Assert.Equal("hello world", await ExportedTextAsync(manager));
   }
 
@@ -159,16 +161,16 @@ public sealed class CollabRoomTests
   public async Task SendsTheEpochControlFrameFirstOnlyToMembersThatNegotiatedIt()
   {
     endpoint.Holds(DocId, "hello");
-    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("hello"))], new CollabWorkingSetTag(1, 6));
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("hello"))], Tags.At(6));
     var manager = CreateManager();
     var negotiated = new FakeMember(acceptsControlFrames: true);
     var stock = new FakeMember();
     var membership = await Join(manager, negotiated);
     await Join(manager, stock);
 
-    Assert.Equal(new CollabWorkingSetTag(1, 6), membership.Tag);
+    Assert.Equal(Tags.At(6), membership.Tag);
     Assert.Equal(
-        new CollabWorkingSetTag(1, 6),
+        Tags.At(6),
         Assert.IsType<BlokControlFrame>(negotiated.Received[0]).Tag);
     Assert.DoesNotContain(stock.Received, frame => frame is BlokControlFrame);
   }
@@ -333,14 +335,14 @@ public sealed class CollabRoomTests
       updates.Add(YDocs.UpdateAppending(source, piece));
     }
 
-    store.Seed(DocId, updates, new CollabWorkingSetTag(1, 2));
+    store.Seed(DocId, updates, Tags.At(2));
     var manager = CreateManager(new CollabRoomOptions { CompactionFrameThreshold = 4 });
 
     await Join(manager, new FakeMember());
 
     var frames = store.FramesOf(DocId);
     Assert.Single(frames);
-    Assert.Equal(new CollabWorkingSetTag(1, 2), store.Stored(DocId).Tag);
+    Assert.Equal(Tags.At(2), store.Stored(DocId).Tag);
     using var replica = YDocs.NewClient();
     YDocs.Apply(replica, frames[0]);
     Assert.Equal("abcde", YDocs.Text(replica));
@@ -356,7 +358,7 @@ public sealed class CollabRoomTests
       YDocs.UpdateAppending(source, new string('a', 200)),
       YDocs.UpdateAppending(source, new string('b', 200)),
     };
-    store.Seed(DocId, updates, new CollabWorkingSetTag(1, 0));
+    store.Seed(DocId, updates, Tags.At(0));
     var manager = CreateManager(new CollabRoomOptions { CompactionByteThreshold = 256 });
 
     await Join(manager, new FakeMember());
@@ -374,7 +376,7 @@ public sealed class CollabRoomTests
       YDocs.UpdateAppending(source, "a"),
       YDocs.UpdateAppending(source, "b"),
     };
-    store.Seed(DocId, updates, new CollabWorkingSetTag(1, 0));
+    store.Seed(DocId, updates, Tags.At(0));
     var manager = CreateManager();
 
     await Join(manager, new FakeMember());
@@ -404,6 +406,158 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// The update is already applied and relayed, so a store failure must not
+  /// reach the sender's socket: it is logged and retried, and the export the
+  /// update earned still happens. An S3 timeout arrives as
+  /// TaskCanceledException, which the room used to mistake for its own
+  /// shutdown and swallow whole — losing the export as well.
+  /// </summary>
+  [Fact]
+  public async Task AStoreTimeoutDuringAnApplyIsLoggedRetriedAndStillExports()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    using var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    other.Received.Clear();
+    store.FailWrites = _ => new TaskCanceledException("s3 timed out");
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
+
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    await Waits.UntilAsync(
+        () => log.Any(line => line.Contains("could not persist", StringComparison.Ordinal)),
+        "the failed write to be reported");
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the export the failed persist must not cancel");
+    Assert.Equal("hello!", endpoint.Saves[0].Data["text"]?.GetValue<string>());
+
+    store.FailWrites = null;
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromMinutes(1),
+        () => store.Holds(DocId) && store.FramesOf(DocId).Count == 2,
+        "the retried persist");
+  }
+
+  /// <summary>The blob is written beside the lane: a stuck store must not stop sync.</summary>
+  [Fact]
+  public async Task ASlowStoreDoesNotStallTheLane()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    using var client = await SyncedClientAsync(manager, "hello");
+    other.Received.Clear();
+    var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.BeforeWrite = () => stuck.Task;
+
+    var receive = membership
+        .ReceiveAsync(
+            SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+            CancellationToken.None)
+        .AsTask();
+    var finished = await Task.WhenAny(receive, Task.Delay(TimeSpan.FromSeconds(5)));
+
+    Assert.Same(receive, finished);
+    await receive;
+    Assert.Single(other.Received);
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+
+    stuck.SetResult();
+    store.BeforeWrite = null;
+    await Waits.UntilAsync(() => store.Holds(DocId) && store.FramesOf(DocId).Count == 2, "the released write");
+  }
+
+  /// <summary>
+  /// Every write used to carry the whole log since the last compaction, and
+  /// compaction only ran on load or eviction — so a long session wrote the
+  /// entire history back on every keystroke. Compacting in place keeps a
+  /// write bounded by the doc's own state plus the threshold.
+  /// </summary>
+  [Fact]
+  public async Task NoWriteCarriesMoreFramesThanTheCompactionThreshold()
+  {
+    endpoint.Holds(DocId, "");
+    var manager = CreateManager(new CollabRoomOptions { CompactionFrameThreshold = 4 });
+    var membership = await Join(manager, new FakeMember());
+    using var client = await SyncedClientAsync(manager, "");
+
+    for (var edit = 0; edit < 60; edit++)
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "x"))),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count > 0 && Replays(store.FramesOf(DocId)) == new string('x', 60),
+        $"the last write; store holds {Replays(store.FramesOf(DocId))}");
+
+    Assert.True(
+        store.MostFramesWritten <= 4,
+        $"a write carried {store.MostFramesWritten} frames");
+    Assert.True(
+        store.LargestWriteBytes < 400,
+        $"the largest write was {store.LargestWriteBytes} bytes");
+    Assert.True(
+        store.WrittenBytes < 60 * 400,
+        $"{store.WrittenBytes} bytes written for 60 updates");
+  }
+
+  /// <summary>
+  /// DOCUMENTED LIMITATION, not a wish. An update that arrives before the one
+  /// it depends on is held pending by yrs: ApplyV1 answers Ok, the state
+  /// vector does not move (probe: still `00`) and StateDiffV1 against zero
+  /// returns the 2-byte empty state — so compaction, which replaces the log
+  /// with that diff, silently drops it (probe over 30 runs: the compacting
+  /// side reads "ab", a replica hydrated from the compacted blob reads "a").
+  /// YDotNet 0.6.0 exposes no pending-update API, so the room cannot detect
+  /// this; over a socket, frames from one member arrive in order and each
+  /// member's updates depend only on state the server already has, so a
+  /// pending update means a buggy or hostile client.
+  /// </summary>
+  [Fact]
+  public void CompactionDropsAnUpdateThatIsStillPending()
+  {
+    using var source = YDocs.NewClient();
+    var first = YDocs.UpdateAppending(source, "a");
+    var second = YDocs.UpdateAppending(source, "b");
+    using var server = YDocs.NewClient();
+
+    YDocs.Apply(server, second);
+    var compacted = YDocs.FullState(server);
+    using var replica = YDocs.NewClient();
+    YDocs.Apply(replica, compacted);
+    YDocs.Apply(replica, first);
+
+    Assert.Equal(2, compacted.Length);
+    Assert.Equal("", YDocs.Text(server));
+    Assert.Equal("a", YDocs.Text(replica));
+  }
+
+  private static string Replays(IReadOnlyList<byte[]> frames)
+  {
+    using var replica = YDocs.NewClient();
+
+    foreach (var frame in frames)
+    {
+      YDocs.Apply(replica, frame);
+    }
+
+    return YDocs.Text(replica);
+  }
+
   private CollabRoomManager CreateManager(CollabRoomOptions? options = null)
   {
     return new CollabRoomManager(
@@ -411,7 +565,8 @@ public sealed class CollabRoomTests
         endpoint,
         converter,
         options ?? new CollabRoomOptions(),
-        time);
+        time,
+        log.Add);
   }
 
   private static async Task<CollabMembership> Join(CollabRoomManager manager, FakeMember member)
@@ -457,5 +612,41 @@ public sealed class CollabRoomTests
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(probe.Received.First(frame => frame is SyncStep2Frame)).Update);
 
     return YDocs.Text(replica);
+  }
+
+  /// <summary>
+  /// R5 moved the blob write beside the lane. A reset raises the epoch and
+  /// mints a fresh lineage; if a pre-reset write were still in the air it
+  /// would land AFTER the reset and quietly restore the old log under the old
+  /// tag. ResetAsync settles the in-flight write first, so the reset's tag is
+  /// always the last one the store keeps.
+  /// </summary>
+  [Fact]
+  public async Task ResetSettlesAnInFlightWriteSoItCannotOvertakeTheReset()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember());
+    using var client = await SyncedClientAsync(manager, "hello");
+
+    // Gate the off-lane write so the edit's persist is still in flight.
+    var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.BeforeWrite = () => stuck.Task;
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+
+    // The reset must not complete while that write is unresolved.
+    var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
+    var early = await Task.WhenAny(reset, Task.Delay(TimeSpan.FromMilliseconds(200)));
+    Assert.NotSame(reset, early);
+
+    // Release the stale write; the reset now finishes and its tag wins.
+    stuck.SetResult();
+    store.BeforeWrite = null;
+    var minted = Tags.AssertMinted(1, await reset);
+    await Waits.UntilAsync(
+        () => store.Stored(DocId).Tag == Tags.At(1, minted),
+        $"the reset tag; store holds epoch {store.Stored(DocId).Tag.Epoch}");
   }
 }

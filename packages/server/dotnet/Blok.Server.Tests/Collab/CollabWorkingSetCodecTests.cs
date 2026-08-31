@@ -5,9 +5,11 @@ namespace Blok.Server.Tests.Collab;
 
 public sealed class CollabWorkingSetCodecTests
 {
+  private const string Lineage = "0123456789abcdef0123456789abcdef";
   private static readonly CollabWorkingSetTag Tag = new(
       CollabWorkingSetTag.SchemaV2,
-      7);
+      7,
+      Lineage);
 
   [Fact]
   public void RoundTripsAnEmptyLog()
@@ -51,7 +53,10 @@ public sealed class CollabWorkingSetCodecTests
   [Fact]
   public void EncodesTheDocumentedByteLayout()
   {
-    var tag = new CollabWorkingSetTag(1, 0x0102030405060708);
+    var tag = new CollabWorkingSetTag(
+        1,
+        0x0102030405060708,
+        "00112233445566778899aabbccddeeff");
     var frameSection = CollabWorkingSetCodec.EncodeFrames(
         [
           [0xaa, 0xbb],
@@ -62,9 +67,11 @@ public sealed class CollabWorkingSetCodecTests
     Assert.Equal(
         new byte[]
         {
-          0x42, 0x4b, 0x57, 0x53,
+          0x42, 0x4b, 0x57, 0x32,
           0x01, 0x00, 0x00, 0x00,
           0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+          0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+          0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
           0x02, 0x00, 0x00, 0x00,
           0xaa, 0xbb,
         },
@@ -74,7 +81,10 @@ public sealed class CollabWorkingSetCodecTests
   [Fact]
   public void PreservesExtremeTagValues()
   {
-    var tag = new CollabWorkingSetTag(int.MaxValue, long.MaxValue);
+    var tag = new CollabWorkingSetTag(
+        int.MaxValue,
+        long.MaxValue,
+        new string('f', CollabWorkingSetTag.LineageLength));
 
     var document = CollabWorkingSetCodec.EncodeDocument(tag, []);
 
@@ -89,7 +99,8 @@ public sealed class CollabWorkingSetCodecTests
   [Theory]
   [InlineData(0)]
   [InlineData(4)]
-  [InlineData(15)]
+  [InlineData(16)]
+  [InlineData(31)]
   public void RejectsATruncatedHeader(int length)
   {
     var document = CollabWorkingSetCodec.EncodeDocument(Tag, []);
@@ -100,6 +111,73 @@ public sealed class CollabWorkingSetCodecTests
         out _,
         out var error));
     Assert.NotEqual("", error);
+  }
+
+  /// <summary>
+  /// The pre-lineage container ("BKWS" + format + epoch). It is not migrated:
+  /// an old blob reads as unreadable, so the doc re-seeds under a new lineage.
+  /// </summary>
+  [Fact]
+  public void RejectsTheHeaderOfThePreLineageContainer()
+  {
+    byte[] old =
+    [
+      0x42, 0x4b, 0x57, 0x53,
+      0x01, 0x00, 0x00, 0x00,
+      0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    Assert.False(CollabWorkingSetCodec.TryDecodeDocument(
+        old,
+        out _,
+        out _,
+        out var error));
+    Assert.NotEqual("", error);
+  }
+
+  [Fact]
+  public void RoundTripsTheLineage()
+  {
+    var tag = new CollabWorkingSetTag(
+        CollabWorkingSetTag.SchemaV2,
+        2,
+        CollabWorkingSetTag.NewLineage());
+
+    var document = CollabWorkingSetCodec.EncodeDocument(tag, []);
+
+    Assert.True(CollabWorkingSetCodec.TryDecodeDocument(
+        document,
+        out var decoded,
+        out _,
+        out _));
+    Assert.Equal(tag, decoded);
+    Assert.Matches("^[0-9a-f]{32}$", decoded.Lineage);
+  }
+
+  [Fact]
+  public void MintsADistinctLineageEveryTime()
+  {
+    var lineages = Enumerable
+        .Range(0, 64)
+        .Select(_ => CollabWorkingSetTag.NewLineage())
+        .ToList();
+
+    Assert.Equal(64, lineages.Distinct(StringComparer.Ordinal).Count());
+    Assert.All(lineages, lineage => Assert.Matches("^[0-9a-f]{32}$", lineage));
+  }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("0123456789abcdef0123456789abcde")]
+  [InlineData("0123456789abcdef0123456789abcdef0")]
+  [InlineData("0123456789ABCDEF0123456789ABCDEF")]
+  [InlineData("0123456789abcdef0123456789abcdeg")]
+  public void RefusesToEncodeATagWithoutAWellFormedLineage(string lineage)
+  {
+    Assert.Throws<ArgumentException>(() =>
+        CollabWorkingSetCodec.EncodeDocument(
+            new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0, lineage),
+            []));
   }
 
   [Fact]
@@ -217,7 +295,7 @@ public sealed class CollabWorkingSetCodecTests
   {
     Assert.Throws<ArgumentException>(() =>
         CollabWorkingSetCodec.EncodeDocument(
-            new CollabWorkingSetTag(format, epoch),
+            new CollabWorkingSetTag(format, epoch, Lineage),
             []));
   }
 

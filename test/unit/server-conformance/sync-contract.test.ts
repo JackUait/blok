@@ -54,6 +54,8 @@ interface SyncTickets {
 interface ControlFrame {
   epoch: number;
   format: number;
+  /** 16 random bytes as lower hex, minted on every seed; see CollabWorkingSetTag. */
+  lineage: string;
 }
 
 interface ConnectOptions {
@@ -147,13 +149,17 @@ function parseControlFrame(json: string): ControlFrame {
     throw new Error(`Control frame is not a JSON object: ${json}`);
   }
 
-  const { epoch, format } = parsed as Record<string, unknown>;
+  const { epoch, format, lineage } = parsed as Record<string, unknown>;
 
   if (typeof epoch !== 'number' || typeof format !== 'number') {
     throw new Error(`Control frame lacks numeric epoch/format: ${json}`);
   }
 
-  return { epoch, format };
+  if (typeof lineage !== 'string') {
+    throw new Error(`Control frame lacks a lineage string: ${json}`);
+  }
+
+  return { epoch, format, lineage };
 }
 
 /**
@@ -419,7 +425,9 @@ it('accepts a compatible ticket offered as a subprotocol and announces the epoch
       () => `the epoch control frame; ${client.describe()}`,
     );
 
-    expect(client.controlFrames).toEqual([{ epoch: expect.any(Number), format: 1 }]);
+    expect(client.controlFrames).toEqual([
+      { epoch: expect.any(Number), format: 1, lineage: expect.stringMatching(/^[0-9a-f]{32}$/) },
+    ]);
     expect(client.provider.ws?.protocol).toBe(SYNC_PROTOCOL);
     expect(client.closeCodes).toEqual([]);
   });
@@ -584,7 +592,7 @@ it('resets a document: 204, open sockets close 4409, the next join sees epoch + 
       () => `alice's epoch control frame; ${alice.describe()}`,
     );
 
-    const epoch = alice.controlFrames[0].epoch;
+    const { epoch, lineage } = alice.controlFrames[0];
 
     addParagraph(alice.doc, 'a1', 'before the reset');
 
@@ -618,7 +626,14 @@ it('resets a document: 204, open sockets close 4409, the next join sees epoch + 
       () => `bob's epoch control frame; ${bob.describe()}`,
     );
 
-    expect(bob.controlFrames[0]).toEqual({ epoch: epoch + 1, format: 1 });
+    // The epoch counts resets; the lineage says "this is a different history",
+    // which is the only thing a client holding cached updates can act on.
+    expect(bob.controlFrames[0]).toEqual({
+      epoch: epoch + 1,
+      format: 1,
+      lineage: expect.stringMatching(/^[0-9a-f]{32}$/),
+    });
+    expect(bob.controlFrames[0].lineage).not.toBe(lineage);
     expect(blockIds(bob.doc)).toEqual(['seed-1']);
   });
 }, TEST_TIMEOUT_MS);

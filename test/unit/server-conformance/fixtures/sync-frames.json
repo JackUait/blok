@@ -69,12 +69,13 @@
     {
       "name": "blokControl",
       "messageType": 100,
-      "description": "Blok epoch control frame: JSON {epoch, format} as a lib0 var-string.",
-      "frameHex": "64167b2265706f6368223a372c22666f726d6174223a317d",
-      "payloadHex": "7b2265706f6368223a372c22666f726d6174223a317d",
+      "description": "Blok working-set control frame: JSON {epoch, format, lineage} as a lib0 var-string.",
+      "frameHex": "64437b2265706f6368223a372c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
+      "payloadHex": "7b2265706f6368223a372c22666f726d6174223a312c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d",
       "control": {
         "epoch": 7,
-        "format": 1
+        "format": 1,
+        "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
       }
     }
   ]

@@ -270,7 +270,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the nineteen service limits the design refuses to bury', () => {
+  it('states the twenty-one service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'working-copy-privacy',
@@ -286,11 +286,13 @@ describe('server docs data', () => {
       'ticket-not-scoped',
       'collab-pass-lifetime',
       'collab-connection-cap',
+      'collab-connection-ceiling',
       'collab-what-is-not-limited',
       'collab-presence-unverified',
       'collab-doc-id-shape',
       'tls-termination',
       'alpine-nuget',
+      'service-account-home',
     ]);
     for (const limit of serverLimits) {
       expect(limit.title.length).toBeGreaterThan(0);
@@ -372,6 +374,24 @@ describe('server docs data', () => {
     expect(body).toMatch(/no cap/i);
   });
 
+  // Kestrel's default is unlimited; the host pins 1,024 only with --collab on,
+  // and only in the standalone host. It sits right after the per-person cap so
+  // "no cap at all" on the proxy path is not read as "no ceiling either".
+  it('states the per-process ceiling on live connections, and leaves the in-app number to Kestrel', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-connection-ceiling')?.body ?? '';
+
+    expect(limits.indexOf('collab-connection-ceiling')).toBe(limits.indexOf('collab-connection-cap') + 1);
+    expect(body).toContain('1,024');
+    expect(body).toContain('--collab');
+    expect(body).toMatch(/per process/i);
+    expect(body).toMatch(/Kestrel/);
+    expect(body).toMatch(/refused/i);
+    expect(body).toMatch(/until one of the open ones closes/i);
+    expect(body).toMatch(/ASP\.NET/);
+    expect(body).toContain('MaxConcurrentUpgradedConnections');
+  });
+
   // The review asked for the unbounded things to be said out loud, next to the
   // four bounds that do exist, so nobody reads the connection cap as a quota.
   it('says what live collaboration leaves unlimited, and names the four bounds it does have', () => {
@@ -426,6 +446,22 @@ describe('server docs data', () => {
     expect(body).toMatch(/npx/);
     expect(body).toMatch(/Docker/);
     expect(body).toMatch(/refus|startup/i);
+  });
+
+  // The .NET host unpacks the single-file archive under $HOME before any
+  // service code runs, so this is not the service refusing — it never starts.
+  // Docker sets the base dir already; the archives cannot, hence the entry.
+  it('tells a home-less service account where the archive must unpack', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'service-account-home')?.body ?? '';
+
+    expect(limits.indexOf('service-account-home')).toBe(limits.indexOf('alpine-nuget') + 1);
+    expect(body).toMatch(/home directory/i);
+    expect(body).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+    expect(body).toMatch(/can write/i);
+    expect(body).toMatch(/Docker/);
+    expect(body).toContain('/var/tmp/.net');
+    expect(body).not.toMatch(/refuses/i);
   });
 
   it('warns that uploaded files belong on a different origin than the app', () => {

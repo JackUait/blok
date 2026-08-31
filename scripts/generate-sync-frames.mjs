@@ -16,7 +16,8 @@
 //   awareness       [1][varuint len][awareness update]     update = [varuint n]{[clientId][clock][varstring json]}*n
 //   auth            [2][0][varuint len][utf8 reason]       0 = permissionDenied (the only auth sub-type)
 //   queryAwareness  [3]                                    no payload
-//   blok control    [100][varuint len][utf8 json]          Blok-only: {"epoch":N,"format":N}, keys in that order
+//   blok control    [100][varuint len][utf8 json]          Blok-only: {"epoch":N,"format":N,"lineage":"<32 hex>"},
+//                                                          keys in that order
 //
 // The outer type byte comes from y-websocket, not y-protocols: the sync/auth
 // writers only emit the sub-type, so this script writes 0/1/2/3 itself exactly
@@ -56,7 +57,9 @@ const SEED_TEXT = 'Hello from Blok';
 const APPENDED_TEXT = ' and yjs';
 const AWARENESS_STATE = { user: { name: 'Ada', color: '#ff0000' }, blockId: 'block-1' };
 const PERMISSION_DENIED_REASON = 'permission denied: read-only ticket';
-const CONTROL = { epoch: 7, format: 1 };
+// The lineage is 16 random bytes at runtime; the fixture pins one value so
+// regenerating the file does not churn the bytes.
+const CONTROL = { epoch: 7, format: 1, lineage: '5f3a9c1e7b04d28a6cf1e0937b52d84a' };
 
 const hex = (bytes) => Buffer.from(bytes).toString('hex');
 
@@ -218,7 +221,8 @@ const fixture = {
     {
       name: 'blokControl',
       messageType: MESSAGE_BLOK_CONTROL,
-      description: 'Blok epoch control frame: JSON {epoch, format} as a lib0 var-string.',
+      description:
+        'Blok working-set control frame: JSON {epoch, format, lineage} as a lib0 var-string.',
       frameHex: hex(control),
       payloadHex: hex(payloadOf(control, 1)),
       control: CONTROL,

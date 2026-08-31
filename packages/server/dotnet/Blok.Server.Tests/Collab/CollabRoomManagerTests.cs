@@ -34,7 +34,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(1, store.Writes);
     var frames = store.FramesOf(DocId);
     Assert.Single(frames);
-    Assert.Equal(new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 0), store.Stored(DocId).Tag);
+    Tags.AssertMinted(0, store.Stored(DocId).Tag);
     using var replica = YDocs.NewClient();
     YDocs.Apply(replica, frames[0]);
     Assert.Equal("seeded", YDocs.Text(replica));
@@ -49,7 +49,7 @@ public sealed class CollabRoomManagerTests
       YDocs.UpdateAppending(source, "from "),
       YDocs.UpdateAppending(source, "disk"),
     };
-    store.Seed(DocId, updates, new CollabWorkingSetTag(1, 3));
+    store.Seed(DocId, updates, Tags.At(3));
     var manager = CreateManager();
     var member = new FakeMember();
 
@@ -60,7 +60,7 @@ public sealed class CollabRoomManagerTests
 
     Assert.Equal(0, endpoint.Loads);
     Assert.Equal(0, converter.Seeds);
-    Assert.Equal(new CollabWorkingSetTag(1, 3), result.Membership.Tag);
+    Assert.Equal(Tags.At(3), result.Membership.Tag);
     using var replica = YDocs.NewClient();
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
     Assert.Equal("from disk", YDocs.Text(replica));
@@ -69,7 +69,7 @@ public sealed class CollabRoomManagerTests
   [Fact]
   public async Task AnEmptyStoredLogAfterAResetReseedsUnderTheStoredEpoch()
   {
-    store.Seed(DocId, [], new CollabWorkingSetTag(1, 5));
+    store.Seed(DocId, [], Tags.At(5));
     endpoint.Holds(DocId, "fresh");
     var manager = CreateManager();
 
@@ -77,8 +77,8 @@ public sealed class CollabRoomManagerTests
 
     Assert.Equal(CollabJoinStatus.Joined, result.Status);
     Assert.Equal(1, endpoint.Loads);
-    Assert.Equal(new CollabWorkingSetTag(1, 5), result.Membership!.Tag);
-    Assert.Equal(new CollabWorkingSetTag(1, 5), store.Stored(DocId).Tag);
+    var lineage = Tags.AssertMinted(5, result.Membership!.Tag);
+    Assert.Equal(Tags.At(5, lineage), store.Stored(DocId).Tag);
     Assert.Single(store.FramesOf(DocId));
   }
 
@@ -122,7 +122,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(CollabJoinStatus.Joined, result.Status);
     Assert.Equal(0, converter.Seeds);
     Assert.Empty(store.FramesOf(DocId));
-    Assert.Equal(new CollabWorkingSetTag(1, 0), store.Stored(DocId).Tag);
+    Tags.AssertMinted(0, store.Stored(DocId).Tag);
     using var replica = YDocs.NewClient();
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
     Assert.Equal("", YDocs.Text(replica));
@@ -191,6 +191,51 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(1, endpoint.Loads);
   }
 
+  /// <summary>
+  /// A refresh during a slow seed: the joiner is gone by the time the room is
+  /// Ready. Only a LEAVE used to arm the linger, so the room sat there loaded
+  /// forever with no members and no timer.
+  /// </summary>
+  [Fact]
+  public async Task ACancelledFirstJoinLeavesARoomThatStillEvicts()
+  {
+    endpoint.Holds(DocId, "hello");
+    endpoint.LoadGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateManager();
+    using var cancellation = new CancellationTokenSource();
+
+    var join = manager.JoinAsync(DocId, new FakeMember(), cancellation.Token).AsTask();
+    await Waits.UntilAsync(() => endpoint.Loads == 1, "the seed load to start");
+    await cancellation.CancelAsync();
+    endpoint.LoadGate.SetResult();
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => join);
+    await manager.SettleAsync();
+
+    Assert.Equal(1, converter.Seeds);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal(1, time.ArmedTimerCount);
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+  }
+
+  [Fact]
+  public async Task ACancelledJoinDoesNotArmTheLingerWhileOthersAreStillInTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+    using var cancellation = new CancellationTokenSource();
+    await cancellation.CancelAsync();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => manager.JoinAsync(DocId, new FakeMember(), cancellation.Token).AsTask());
+    time.Advance(TimeSpan.FromMinutes(5));
+    await manager.SettleAsync();
+
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
   [Fact]
   public async Task TheLingerElapsingCompactsExportsAndDropsTheRoom()
   {
@@ -207,7 +252,11 @@ public sealed class CollabRoomManagerTests
           CancellationToken.None);
     }
 
-    Assert.Equal(4, store.FramesOf(DocId).Count);
+    // The blob is written beside the lane, so the log catches up rather than
+    // being current the instant ReceiveAsync returns.
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == 4,
+        "the working set to catch up");
     await membership.LeaveAsync();
     time.Advance(TimeSpan.FromSeconds(30));
     await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
@@ -299,12 +348,14 @@ public sealed class CollabRoomManagerTests
     var second = new FakeMember(canWrite: false);
     var membership = (await manager.JoinAsync(DocId, first, CancellationToken.None)).Membership!;
     await manager.JoinAsync(DocId, second, CancellationToken.None);
+    var seeded = Tags.AssertMinted(0, store.Stored(DocId).Tag);
 
     var tag = await manager.ResetAsync(DocId, CancellationToken.None);
 
-    Assert.Equal(new CollabWorkingSetTag(1, 1), tag);
+    var reset = Tags.AssertMinted(1, tag);
+    Assert.NotEqual(seeded, reset);
     Assert.Equal(1, store.Resets);
-    Assert.Equal(new CollabWorkingSetTag(1, 1), store.Stored(DocId).Tag);
+    Assert.Equal(Tags.At(1, reset), store.Stored(DocId).Tag);
     Assert.Empty(store.FramesOf(DocId));
     Assert.Equal([CollabCloseReason.Reset], first.Closes);
     Assert.Equal([CollabCloseReason.Reset], second.Closes);
@@ -320,8 +371,9 @@ public sealed class CollabRoomManagerTests
     var rejoined = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
     Assert.Equal(CollabJoinStatus.Joined, rejoined.Status);
     Assert.Equal(2, endpoint.Loads);
-    Assert.Equal(new CollabWorkingSetTag(1, 1), rejoined.Membership!.Tag);
-    Assert.Equal(new CollabWorkingSetTag(1, 1), store.Stored(DocId).Tag);
+    var reseeded = Tags.AssertMinted(1, rejoined.Membership!.Tag);
+    Assert.NotEqual(reset, reseeded);
+    Assert.Equal(Tags.At(1, reseeded), store.Stored(DocId).Tag);
     Assert.Equal("new", YDocs.Text(await ReplicaAsync(manager)));
   }
 
@@ -332,17 +384,51 @@ public sealed class CollabRoomManagerTests
   {
     if (stored)
     {
-      store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("x"))], new CollabWorkingSetTag(1, storedEpoch));
+      store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("x"))], Tags.At(storedEpoch));
     }
 
     var manager = CreateManager();
 
     var tag = await manager.ResetAsync(DocId, CancellationToken.None);
 
-    Assert.Equal(new CollabWorkingSetTag(1, expected), tag);
+    Tags.AssertMinted(expected, tag);
     Assert.Equal(1, store.Resets);
     Assert.Equal(0, endpoint.Loads);
     Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// Blob writes run beside the lane, so one can still be in the air when the
+  /// operator resets. It carries the pre-reset log under the pre-reset tag,
+  /// and the S3 driver has no guard read to refuse it, so the reset waits for
+  /// it instead of racing it.
+  /// </summary>
+  [Fact]
+  public async Task ResetWaitsForAnInFlightBlobWriteInsteadOfRacingIt()
+  {
+    endpoint.Holds(DocId, "a");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    using var client = await SyncedAsync(membership, member);
+    var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.BeforeWrite = () => stuck.Task;
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
+        CancellationToken.None);
+    await Waits.UntilAsync(() => store.Writes == 2, "the blob write to start");
+
+    var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
+    var raced = await Task.WhenAny(reset, Task.Delay(TimeSpan.FromMilliseconds(250)));
+    Assert.NotSame(reset, raced);
+
+    stuck.SetResult();
+    store.BeforeWrite = null;
+    var tag = await reset;
+
+    Tags.AssertMinted(1, tag);
+    Assert.Equal(tag, store.Stored(DocId).Tag);
+    Assert.Empty(store.FramesOf(DocId));
   }
 
   [Fact]
@@ -405,14 +491,219 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(2, endpoint.Loads);
   }
 
-  private CollabRoomManager CreateManager(CollabRoomOptions? options = null)
+  /// <summary>
+  /// An unreadable blob loses its epoch, so the doc re-seeds at epoch 0 — a
+  /// client that cached the old epoch-0 history must not merge into the fresh
+  /// one, and only the lineage can tell them apart.
+  /// </summary>
+  [Fact]
+  public async Task AReSeedAfterAnUnreadableBlobMintsANewLineage()
+  {
+    using var directory = new TemporaryDirectory();
+    var disk = new LocalCollabStore(directory.Path);
+    var before = CollabWorkingSetTag.NewLineage();
+    await disk.WriteAsync(
+        DocId,
+        CollabWorkingSetCodec.EncodeFrames([YDocs.FullState(YDocs.DocWith("old"))]),
+        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 5, before),
+        CancellationToken.None);
+    var path = Path.Combine(directory.Path, CollabDocKey.For(DocId));
+    var bytes = await File.ReadAllBytesAsync(path);
+    bytes[0] ^= 0xff;
+    await File.WriteAllBytesAsync(path, bytes);
+    endpoint.Holds(DocId, "fresh");
+    var manager = CreateManager(store: disk);
+    var member = new FakeMember(acceptsControlFrames: true);
+
+    var result = await manager.JoinAsync(DocId, member, CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, result.Status);
+    var lineage = Tags.AssertMinted(0, result.Membership!.Tag);
+    Assert.NotEqual(before, lineage);
+    Assert.Equal(
+        result.Membership.Tag,
+        Assert.IsType<BlokControlFrame>(member.Received[0]).Tag);
+    var stored = await disk.ReadAsync(DocId, CancellationToken.None);
+    Assert.Equal(result.Membership.Tag, stored!.Tag);
+  }
+
+  [Fact]
+  public async Task AReSeedAfterALostBlobMintsANewLineageUnderTheSameEpoch()
+  {
+    using var directory = new TemporaryDirectory();
+    var disk = new LocalCollabStore(directory.Path);
+    endpoint.Holds(DocId, "v1");
+    var manager = CreateManager(store: disk);
+    var first = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+    var before = Tags.AssertMinted(0, first.Tag);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+    File.Delete(Path.Combine(directory.Path, CollabDocKey.For(DocId)));
+
+    var second = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+
+    Assert.Equal(2, converter.Seeds);
+    Assert.Equal(first.Tag.Epoch, second.Tag.Epoch);
+    Assert.NotEqual(before, Tags.AssertMinted(0, second.Tag));
+  }
+
+  /// <summary>
+  /// The store is down while the doc is edited and the room then empties.
+  /// Dropping the room here would hand the next open a blob that is missing
+  /// the last edits — with at least one frame in it, the blob is
+  /// authoritative and the doc endpoint is never consulted again — so the
+  /// room stays loaded, keeps the doc as the authority and retries.
+  /// </summary>
+  [Fact]
+  public async Task AStoreOutageKeepsTheRoomLoadedUntilTheWorkingSetCatchesUp()
+  {
+    var log = new List<string>();
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(log: log);
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    using var client = await SyncedAsync(membership, member);
+    store.FailWrites = _ => new IOException("disk full");
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the export");
+    Assert.Equal("hello!", endpoint.Saves[0].Data["text"]?.GetValue<string>());
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Contains(log, line => line.Contains("could not", StringComparison.Ordinal));
+    Assert.True(time.ArmedTimerCount > 0, "the eviction has to be retried");
+
+    store.FailWrites = null;
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromMinutes(5),
+        () => manager.LiveRoomCount == 0,
+        "the retried eviction");
+
+    using var stored = YDocs.NewClient();
+    YDocs.Apply(stored, Assert.Single(store.FramesOf(DocId)));
+    Assert.Equal("hello!", YDocs.Text(stored));
+    Assert.Single(endpoint.Saves);
+
+    var rejoined = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+    Assert.Equal(CollabJoinStatus.Joined, rejoined.Status);
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal("hello!", YDocs.Text(await ReplicaAsync(manager)));
+  }
+
+  /// <summary>
+  /// An S3 timeout surfaces as TaskCanceledException. The room's failure
+  /// filters used to exempt every OperationCanceledException — they exist for
+  /// the room's own lifetime token — so a timeout escaped the eviction flush,
+  /// CloseLocked never ran and the room became an unreachable zombie.
+  /// </summary>
+  [Fact]
+  public async Task AStoreTimeoutDuringTheEvictionFlushIsAFailureNotAShutdown()
+  {
+    var log = new List<string>();
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        log: log);
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    using var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    store.FailWrites = _ => new TaskCanceledException("s3 timed out");
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.True(time.ArmedTimerCount > 0, "a room that could not flush must keep a timer");
+    Assert.DoesNotContain(log, line => line.Contains("background work failed", StringComparison.Ordinal));
+    Assert.Contains(log, line => line.Contains("could not flush the working set", StringComparison.Ordinal));
+
+    store.FailWrites = null;
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromMinutes(5),
+        () => manager.LiveRoomCount == 0,
+        "the retried eviction");
+    Assert.Single(store.FramesOf(DocId));
+  }
+
+  /// <summary>
+  /// Draining is the opposite of eviction on purpose: the server is going
+  /// down, so a room that cannot write its blob still closes (and its export
+  /// is still attempted), and one failing room never aborts the others.
+  /// </summary>
+  [Fact]
+  public async Task DrainClosesARoomWhoseStoreFailsAndStillDrainsTheOthers()
+  {
+    var log = new List<string>();
+    endpoint.Holds("doc-a", "a");
+    endpoint.Holds("doc-b", "b");
+    var manager = CreateManager(
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        log: log);
+    var memberA = new FakeMember();
+    var memberB = new FakeMember();
+    var membershipA = (await manager.JoinAsync("doc-a", memberA, CancellationToken.None)).Membership!;
+    var membershipB = (await manager.JoinAsync("doc-b", memberB, CancellationToken.None)).Membership!;
+    using var clientA = await SyncedAsync(membershipA, memberA);
+    using var clientB = await SyncedAsync(membershipB, memberB);
+    await membershipA.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientA, "!"))),
+        CancellationToken.None);
+    await membershipB.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientB, "?"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    store.FailWrites = docId => docId == "doc-a"
+      ? new TaskCanceledException("s3 timed out")
+      : null;
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal([CollabCloseReason.Draining], memberA.Closes);
+    Assert.Equal([CollabCloseReason.Draining], memberB.Closes);
+    Assert.Single(store.FramesOf("doc-b"));
+    Assert.Equal(
+        ["a!", "b?"],
+        endpoint.Saves
+            .OrderBy(save => save.DocId, StringComparer.Ordinal)
+            .Select(save => save.Data["text"]?.GetValue<string>()));
+  }
+
+  private CollabRoomManager CreateManager(
+      CollabRoomOptions? options = null,
+      ICollabWorkingSetStore? store = null,
+      List<string>? log = null)
   {
     return new CollabRoomManager(
-        store,
+        store ?? this.store,
         endpoint,
         converter,
         options ?? new CollabRoomOptions(),
-        time);
+        time,
+        log is null ? null : log.Add);
   }
 
   /// <summary>A client doc synced to the room through the member's own connection.</summary>

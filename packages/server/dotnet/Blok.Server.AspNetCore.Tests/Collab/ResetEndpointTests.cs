@@ -15,19 +15,23 @@ public sealed class ResetEndpointTests
   {
     await using var app = await SyncApp.StartAsync();
     await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
-    Assert.Equal(0, (await open.ReceiveAsync<BlokControlFrame>()).Tag.Epoch);
+    var before = (await open.ReceiveAsync<BlokControlFrame>()).Tag;
+    Assert.Equal(0, before.Epoch);
 
     using var response = await Reset(app);
 
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     Assert.Equal("", await response.Content.ReadAsStringAsync());
     Assert.Equal((4409, "document reset"), await open.ReceiveCloseAsync());
-    Assert.Equal(
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 1),
-        app.Fakes.Store.Stored(SyncApp.Doc).Tag);
+    AssertResetTag(app.Fakes.Store.Stored(SyncApp.Doc).Tag);
 
     await using var fresh = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
-    Assert.Equal(1, (await fresh.ReceiveAsync<BlokControlFrame>()).Tag.Epoch);
+    var after = (await fresh.ReceiveAsync<BlokControlFrame>()).Tag;
+    Assert.Equal(1, after.Epoch);
+
+    // The point of the lineage: the re-seeded doc is a different history, and
+    // a client holding updates from the old one can only tell by this.
+    Assert.NotEqual(before.Lineage, after.Lineage);
   }
 
   [Fact]
@@ -38,9 +42,7 @@ public sealed class ResetEndpointTests
     using var response = await Reset(app, doc: "never-opened");
 
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    Assert.Equal(
-        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2, 1),
-        app.Fakes.Store.Stored("never-opened").Tag);
+    AssertResetTag(app.Fakes.Store.Stored("never-opened").Tag);
   }
 
   [Fact]
@@ -144,5 +146,13 @@ public sealed class ResetEndpointTests
         "text/plain; charset=utf-8",
         response.Content.Headers.ContentType?.ToString());
     Assert.Equal(body, await response.Content.ReadAsStringAsync());
+  }
+
+  /// <summary>Epoch 1 after one reset, under the new lineage the reset minted.</summary>
+  private static void AssertResetTag(CollabWorkingSetTag tag)
+  {
+    Assert.Equal(CollabWorkingSetTag.SchemaV2, tag.Format);
+    Assert.Equal(1, tag.Epoch);
+    Assert.Matches("^[0-9a-f]{32}$", tag.Lineage);
   }
 }

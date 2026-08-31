@@ -68,6 +68,13 @@ export class Column implements BlockTool {
     const childContainer = document.createElement('div');
 
     childContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
+    // Everything in this slot belongs to the child blocks, and the column's own
+    // data (widthRatio, read off the holder) never reflects it. Without this,
+    // any write on a child's holder — core's reindent, an adapter's
+    // childAttributes, a remote peer's presence label — scores as a column edit
+    // and fires UPDATED + BlockChanged on the host. Same declaration as
+    // callout/toggle/toggle-heading make on their child containers.
+    childContainer.setAttribute(DATA_ATTR.mutationFree, 'true');
     wrapper.appendChild(childContainer);
 
     this.childContainer = childContainer;

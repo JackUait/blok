@@ -1344,6 +1344,7 @@ export class Table implements BlockTool {
       tableBlockId: this.blockId ?? '',
       model: this.model,
       isStructuralOpActive: () => this.structuralOpDepth > 0,
+      onCellReferenceDropped: () => this.block?.dispatchChange(),
     });
   }
 

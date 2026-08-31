@@ -31,6 +31,14 @@ export interface BlockYjsSyncDependencies {
   operations?: BlockOperations;
   /** Editor-level sanitizer config (`config.sanitizer`), applied to remote block data */
   sanitizer?: SanitizerConfig;
+  /**
+   * Effective read-only state of the editor, read lazily at the moment it
+   * matters. Read-only is the ARBITRATED answer — the host's own wish OR
+   * collaboration's veto (unsynced, write-denied, terminally disconnected) —
+   * so this one lever also covers a write-denied collaboration member.
+   * Omitted in harnesses; absent means "writable".
+   */
+  isReadOnly?: () => boolean;
 }
 
 /**
@@ -1124,9 +1132,22 @@ export class BlockYjsSync {
    * user edit — it must not become an undo step. It still broadcasts, which is
    * correct: peers materialise it through their ordinary remote-add path.
    *
+   * A client that may not write authors NOTHING — not the doc entry, and not
+   * the in-memory block either. This fires on REMOTE removals too, so without
+   * the gate a read-only collaborator watching a peer empty the document would
+   * broadcast a repair the server drops, diverging from the room forever; a
+   * memory-only block would be just as invisible to the doc (see above) and
+   * would collide with the writable peer's identically-named repair when it
+   * arrives as a remote add. Empty is a legal read-only state — the writable
+   * peer's repair materialises here through the ordinary remote-add path.
+   *
    * @param removedBlockId - id of the block whose removal emptied the document
    */
   private restoreDefaultBlockIfDocEmptied(removedBlockId: string): void {
+    if (this.dependencies.isReadOnly?.() === true) {
+      return;
+    }
+
     if (this.blocksStore.length > 0 || this.dependencies.YjsManager.toJSON().length > 0) {
       return;
     }

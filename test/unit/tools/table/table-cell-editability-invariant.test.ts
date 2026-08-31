@@ -96,7 +96,8 @@ const createTableOptions = (
   config,
   api: createMockAPI(apiOverrides),
   readOnly,
-  block: { id: 'table-invariant-test' } as never,
+  // dispatchChange is what the table calls when a cell drops a block reference.
+  block: { id: 'table-invariant-test', dispatchChange: vi.fn() } as never,
 });
 
 /**

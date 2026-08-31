@@ -708,13 +708,51 @@ internal sealed class CollabRoom : IDisposable
       case SyncUpdateFrame update:
         ApplyFromMemberLocked(membership, update.Update);
         break;
-      case AwarenessFrame:
+      case AwarenessFrame awareness:
+        RelayAwarenessLocked(membership, awareness);
+        break;
       case QueryAwarenessFrame:
         BroadcastLocked(SyncWire.Encode(message), membership);
         break;
       default:
         break;
     }
+  }
+
+  /// <summary>
+  /// Presence is relayed verbatim and never decoded (plan decision 11) —
+  /// from read-only members too, because a viewer belongs in the presence
+  /// stack. Only the entry COUNT is read, from the head of the payload,
+  /// because that count is what every OTHER member pays: y-protocols never
+  /// checks that a sender owns the client ids it encodes, so one member can
+  /// fabricate a hundred thousand peers inside a frame that is still under
+  /// the message cap, and the room would hand it to everyone.
+  ///
+  /// Over the cap the frame is dropped, not the connection: presence is
+  /// best-effort, so a genuinely huge room degrades to no presence instead
+  /// of a reconnect loop, and the log keeps the abuse visible. The
+  /// connection-level budget is what closes a member that keeps it up.
+  /// </summary>
+  private void RelayAwarenessLocked(CollabMembership membership, AwarenessFrame awareness)
+  {
+    if (!SyncWire.TryReadAwarenessClientCount(awareness.Update, out var clients))
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped an awareness frame with no readable client count");
+
+      return;
+    }
+
+    if (clients > (ulong)options.MaxAwarenessClients)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped an awareness frame claiming {clients} clients " +
+          $"(the cap is {options.MaxAwarenessClients})");
+
+      return;
+    }
+
+    BroadcastLocked(SyncWire.Encode(awareness), membership);
   }
 
   private void AnswerSyncStep1Locked(CollabMembership membership, byte[] peerStateVector)

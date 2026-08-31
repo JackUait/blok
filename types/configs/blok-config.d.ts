@@ -679,7 +679,13 @@ export interface BlokMountOptions {
     user?: {
       /** Display name shown to the other people in the document. */
       name: string;
-      /** Optional cursor/avatar color (any CSS color the presence UI can render). */
+      /**
+       * Optional cursor/avatar color. HEX ONLY — `#rgb`, `#rgba`, `#rrggbb`
+       * or `#rrggbbaa`. The value is written into a CSS custom property, so
+       * anything else (`rebeccapurple`, `rgb(...)`, `hsl(...)`) is rejected
+       * and silently replaced with a colour assigned from the built-in
+       * presence palette.
+       */
       color?: string;
     };
   };

@@ -4,6 +4,10 @@ import { createPassSource, createTicketSource } from '../../../../src/components
 // A pass whose payload declares exp = 1000 (seconds).
 const PASS = `x.${btoa(JSON.stringify({ exp: 1000 })).replace(/=+$/, '')}.y`;
 
+// A second pass with the same expiry — only its bytes differ, so a test can tell
+// a re-mint from a cache hit.
+const REFRESHED_PASS = `x.${btoa(JSON.stringify({ exp: 1000, jti: 'second' })).replace(/=+$/, '')}.y`;
+
 describe('createPassSource', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -131,5 +135,53 @@ describe('createTicketSource', () => {
     await createTicketSource('/api/blok-ticket', { doc: 'a b/c', now: () => 0 })();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/blok-ticket?doc=a%20b%2Fc', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
+  describe('forceRefresh', () => {
+    // A ticket the server rejects for anything but expiry — revoked, signing key
+    // rotated, scope re-granted — is still far from expiring, so the cache would
+    // serve the rejected bytes forever unless the caller can force a mint.
+    it('bypasses the cache and re-mints', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ticket: PASS }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ticket: REFRESHED_PASS }) });
+
+      const source = createTicketSource('/api/blok-ticket', { now: () => 0 });
+
+      expect(await source()).toBe(PASS);
+      expect(await source({ forceRefresh: true })).toBe(REFRESHED_PASS);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves an ordinary call serving the cache', async () => {
+      const source = createTicketSource('/api/blok-ticket', { now: () => 0 });
+
+      await source();
+
+      expect(await source()).toBe(PASS);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('caches the refreshed ticket for the ordinary calls that follow', async () => {
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ticket: PASS }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ ticket: REFRESHED_PASS }) });
+
+      const source = createTicketSource('/api/blok-ticket', { now: () => 0 });
+
+      await source();
+      await source({ forceRefresh: true });
+
+      expect(await source()).toBe(REFRESHED_PASS);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('collapses concurrent refresh callers onto a single mint', async () => {
+      const source = createTicketSource('/api/blok-ticket', { now: () => 0 });
+
+      await Promise.all([source({ forceRefresh: true }), source({ forceRefresh: true })]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

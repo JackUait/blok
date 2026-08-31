@@ -1,4 +1,10 @@
-import { isPresenceColor, presenceColorFor, type PresenceState } from './presence';
+import {
+  isPresenceColor,
+  presenceColorFor,
+  selectDrawableStates,
+  type DrawableState,
+  type PresenceState,
+} from './presence';
 
 export interface PresenceRendererOptions {
   /**
@@ -22,9 +28,11 @@ export interface PresenceRendererOptions {
 
 export interface PresenceRenderer {
   /**
-   * Draw the peers. Every state is untrusted input from another browser.
-   * @param states - every awareness state, the local one included
-   * @param localClientId - which of them is this editor's own
+   * Draw the peers. Every state is untrusted input from another browser, and
+   * the pass re-selects them itself — presence already narrowed the list, but
+   * this is the last gate before the DOM.
+   * @param states - awareness states in map order
+   * @param localClientId - this editor's own client id, never drawn
    */
   render(states: PresenceState[], localClientId: number | null): void;
   /** Undo everything this renderer wrote. */
@@ -44,9 +52,6 @@ const DEFAULT_MAX_AVATARS = 4;
 /** Longest name drawn. A peer can publish megabytes; the label shows a name. */
 const MAX_NAME_LENGTH = 32;
 
-/** Hard ceiling on states processed — one client can fabricate many ids. */
-const MAX_PEERS = 50;
-
 /** A peer after every hostile field has been made safe. */
 interface DrawablePeer {
   clientId: number;
@@ -64,36 +69,21 @@ interface Stamp {
 }
 
 /**
- * Read one peer's state defensively. Anything that is not what it claims to be
- * drops the peer (no name) or falls back (no colour) — never throws.
- * @param entry - the raw state as it arrived
+ * Make one selected state safe to draw. `selectDrawableStates` has already
+ * proved the name is a non-empty string; everything else here is still a value
+ * another browser chose, so nothing but a hex colour and a string block id
+ * survives.
+ * @param entry - a state that passed the identity gate
  */
-const readPeer = (entry: PresenceState): DrawablePeer | null => {
-  const user = entry.state.user;
-
-  if (typeof user !== 'object' || user === null) {
-    return null;
-  }
-
-  const { name, color } = user as { name?: unknown; color?: unknown };
-
-  if (typeof name !== 'string') {
-    return null;
-  }
-
-  // Cut by CODE POINT: slicing a string of astral characters in half leaves a
-  // lone surrogate.
-  const trimmed = Array.from(name.trim()).slice(0, MAX_NAME_LENGTH).join('');
-
-  if (trimmed === '') {
-    return null;
-  }
-
+const readPeer = (entry: DrawableState): DrawablePeer => {
+  const { name, color } = entry.state.user;
   const blockId = entry.state.blockId;
 
   return {
     clientId: entry.clientId,
-    name: trimmed,
+    // Cut by CODE POINT: slicing a string of astral characters in half leaves a
+    // lone surrogate.
+    name: Array.from(name.trim()).slice(0, MAX_NAME_LENGTH).join(''),
     color: isPresenceColor(color) ? color : presenceColorFor(entry.clientId),
     blockId: typeof blockId === 'string' ? blockId : null,
   };
@@ -272,11 +262,11 @@ export const createPresenceRenderer = (options: PresenceRendererOptions): Presen
         return;
       }
 
-      const peers = states
-        .slice(0, MAX_PEERS)
-        .filter((entry) => entry.clientId !== localClientId)
-        .map(readPeer)
-        .filter((peer): peer is DrawablePeer => peer !== null);
+      // Select, THEN cap — the order is the defence. `selectDrawableStates`
+      // counts only peers it would actually draw against the cap, so junk
+      // planted ahead of a real collaborator cannot take their place in the
+      // stack or their outline off their block.
+      const peers = selectDrawableStates(states, localClientId).map(readPeer);
 
       renderStack(peers);
       renderOutlines(peers);

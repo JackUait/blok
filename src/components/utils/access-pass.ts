@@ -22,6 +22,21 @@ export interface TicketSourceOptions {
   now?: () => number;
 }
 
+/** What a caller may ask of a ticket source on any single call. */
+export interface TicketRequest {
+  /**
+   * Skip the cache and mint a new ticket. A ticket the service rejects for
+   * anything but expiry — revoked, signing key rotated, server restarted, scope
+   * re-granted — is still far from expiring, so re-serving the cached bytes
+   * would fail exactly the same way. This is what the collaboration provider
+   * asks for on its one retry after a 4401.
+   */
+  forceRefresh?: boolean;
+}
+
+/** Hands back a raw ticket, minting one when the cache cannot serve the call. */
+export type TicketSource = (request?: TicketRequest) => Promise<string>;
+
 interface CachedPass {
   token: string;
   expiresAtMs: number;
@@ -74,10 +89,14 @@ function readExpiry(token: string): number {
  * Builds a source that keeps one short-lived ticket for the whole editor and
  * hands back the raw token. Caches it, refreshes 30s before expiry, and
  * collapses concurrent callers onto a single mint.
+ *
+ * A caller that knows the cached ticket was refused passes
+ * {@link TicketRequest.forceRefresh} to skip the cache; the mint that follows is
+ * still shared with any concurrent caller and still replaces the cache.
  * @param endpoint - the host app route that mints a ticket for the session
  * @param options - an optional document scope (`?doc=`) and clock
  */
-export function createTicketSource(endpoint: string, options: TicketSourceOptions = {}): () => Promise<string> {
+export function createTicketSource(endpoint: string, options: TicketSourceOptions = {}): TicketSource {
   const now = options.now ?? ((): number => Date.now());
   const url = composeEndpoint(endpoint, options.doc);
 
@@ -106,10 +125,10 @@ export function createTicketSource(endpoint: string, options: TicketSourceOption
     return { token: body.ticket, expiresAtMs: readExpiry(body.ticket) };
   };
 
-  return async (): Promise<string> => {
+  return async (request?: TicketRequest): Promise<string> => {
     const { cached } = state;
 
-    if (cached !== null && now() < cached.expiresAtMs - REFRESH_MARGIN_MS) {
+    if (request?.forceRefresh !== true && cached !== null && now() < cached.expiresAtMs - REFRESH_MARGIN_MS) {
       return cached.token;
     }
 

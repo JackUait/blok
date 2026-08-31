@@ -77,8 +77,12 @@ export interface CollaborationPeer {
   blockId: string | null;
 
   /**
-   * Whether the peer holds a write grant. Absent when the server does not
-   * report per-peer write capability.
+   * RESERVED — never populated today, so it is always `undefined`.
+   *
+   * Peers are built from the awareness state each browser broadcasts, and that
+   * state carries no write claim: only the server knows a member's grant, and
+   * it does not publish other members' grants to the room. Do not branch on
+   * it; a `false`-y read means "not reported", not "cannot write".
    */
   canWrite?: boolean;
 }

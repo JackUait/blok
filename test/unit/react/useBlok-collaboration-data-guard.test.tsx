@@ -146,6 +146,37 @@ describe('useBlok controlled data under collaboration', () => {
     expect(collaborationWarnings()).toHaveLength(1);
   });
 
+  it('keeps skipping (and warns) after the host drops the collaboration key', async () => {
+    // `collaboration` is mount-fixed: dropping it from the prop cannot turn the
+    // live editor into a single-player one, so the guard must decide against
+    // what the editor was CONSTRUCTED with. Reading the current prop lets the
+    // change fall through into render(), which rejects with nothing surfaced.
+    const { rerender } = render(<Harness config={{ ...COLLABORATION, data: doc('a') }} />);
+
+    await act(async () => {
+      await flush();
+    });
+
+    instances[0].render.mockRejectedValue(
+      new Error('blocks.render() is not allowed while collaboration is on')
+    );
+
+    rerender(<Harness config={{ server: 'https://blok.example', data: doc('b') }} />);
+    await act(async () => {
+      await flush();
+    });
+
+    expect(instances).toHaveLength(1);
+    expect(instances[0].render).not.toHaveBeenCalled();
+
+    const seen = collaborationWarnings();
+
+    expect(seen).toHaveLength(1);
+    // The doc id comes from the MOUNTED config, so the reset endpoint is still
+    // nameable after the key is gone from the prop.
+    expect(seen[0]).toContain('POST /sync/notes/reset');
+  });
+
   it('still re-renders on a data change when collaboration is off', async () => {
     const { rerender } = render(<Harness config={{ data: doc('a') }} />);
 

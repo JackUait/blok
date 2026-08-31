@@ -10,7 +10,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { presenceColorFor, type PresenceState } from '../../../../../src/components/modules/collaboration/presence';
+import {
+  MAX_PEERS,
+  PRESENCE_SCAN_LIMIT,
+  presenceColorFor,
+  type PresenceState,
+} from '../../../../../src/components/modules/collaboration/presence';
 import {
   createPresenceRenderer,
   type PresenceRenderer,
@@ -213,6 +218,20 @@ describe('presence renderer', () => {
       expect(avatars(harness.host)[0].children).toHaveLength(0);
     });
 
+    it('survives a state that is not an object at all', () => {
+      const harness = setup();
+
+      expect(() => harness.renderer.render([
+        peer(1, null as never),
+        peer(2, 0 as never),
+        peer(3, 'string' as never),
+        peer(4, [] as never),
+        named(99, 'Grace', 'block-2'),
+      ], 42)).not.toThrow();
+
+      expect(avatars(harness.host)).toHaveLength(1);
+    });
+
     it('caps a very long name instead of letting it paint the page', () => {
       const harness = setup();
 
@@ -263,6 +282,74 @@ describe('presence renderer', () => {
 
       expect(avatars(harness.host)).toHaveLength(3);
       expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent).toBe('+6');
+    });
+  });
+
+  /**
+   * The peer cap protects the DOM from one client that fabricates ids. It must
+   * not become the weapon: awareness map order is insertion order, so anything
+   * that counts junk toward the cap lets a single peer plant enough of it to
+   * blank the presence UI for the whole room.
+   */
+  describe('the peer cap counts only drawable peers', () => {
+    it('draws the real peer behind a wall of identity-less states', () => {
+      const harness = setup({ blockIds: ['block-1', 'real'] });
+      const junk = Array.from({ length: 60 }, (_unused, index) => peer(1000 + index, {}));
+
+      harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
+
+      expect(avatars(harness.host)).toHaveLength(1);
+      expect(avatars(harness.host)[0].getAttribute('title')).toBe('Real Person');
+      expect(harness.holderOf('real').hasAttribute(PRESENCE_ATTR)).toBe(true);
+    });
+
+    it('draws the real peer behind a wall of local-client duplicates', () => {
+      const harness = setup({ blockIds: ['block-1', 'real'] });
+      const junk = Array.from({ length: 60 }, () => named(42, 'Me', 'block-1'));
+
+      harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
+
+      expect(avatars(harness.host)).toHaveLength(1);
+      expect(harness.holderOf('block-1').hasAttribute(PRESENCE_ATTR)).toBe(false);
+    });
+
+    it('counts junk in neither the avatars nor the +N', () => {
+      const harness = setup({ maxAvatars: 3 });
+      const junk = Array.from({ length: 40 }, (_unused, index) => peer(2000 + index, { user: { name: '   ' } }));
+      const crowd = Array.from({ length: 9 }, (_unused, index) =>
+        named(100 + index, `Peer ${index}`, null));
+
+      harness.renderer.render([...junk, ...crowd], 42);
+
+      expect(avatars(harness.host)).toHaveLength(3);
+      expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent).toBe('+6');
+    });
+
+    it('never draws more than the peer cap, however large the room', () => {
+      const harness = setup({ maxAvatars: 4 });
+      const crowd = Array.from({ length: 400 }, (_unused, index) =>
+        named(100 + index, `Peer ${index}`, null));
+
+      harness.renderer.render(crowd, 42);
+
+      expect(avatars(harness.host)).toHaveLength(4);
+      expect(stack(harness.host)?.querySelector('[data-blok-presence-overflow]')?.textContent)
+        .toBe(`+${MAX_PEERS - 4}`);
+    });
+
+    /**
+     * The bound the DoS cap buys, stated as behaviour: past the scan limit the
+     * pass stops looking, so junk planted that deep DOES hide a peer behind it.
+     * Keeping the map that small is the wire's job (the provider's frame and
+     * rebroadcast caps), not the renderer's.
+     */
+    it('stops looking after the scan limit', () => {
+      const harness = setup({ blockIds: ['block-1', 'real'] });
+      const junk = Array.from({ length: PRESENCE_SCAN_LIMIT }, (_unused, index) => peer(1000 + index, {}));
+
+      harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
+
+      expect(avatars(harness.host)).toHaveLength(0);
     });
   });
 

@@ -439,6 +439,10 @@ export class BlockManager extends Module {
         YjsManager: this.Blok.YjsManager,
         operations: this.operations,
         sanitizer: this.config.sanitizer,
+        // Lazy: `ReadOnly` arbitrates the host's wish against collaboration's
+        // veto, and that answer changes over the editor's life (a ticket
+        // refresh can revoke write access), so it must be read per call.
+        isReadOnly: () => this.Blok.ReadOnly.isEnabled,
       },
       this.repository,
       this.factory,

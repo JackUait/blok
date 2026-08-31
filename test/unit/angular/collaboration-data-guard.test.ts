@@ -96,6 +96,34 @@ describe('BlokEditorComponent controlled data under collaboration', () => {
     expect(seen[0]).toContain('POST /sync/notes/reset');
   });
 
+  it('keeps skipping (and warns) after the host drops the collaboration key', async () => {
+    // `collaboration` is mount-fixed: dropping it from `[config]` cannot turn
+    // the live editor into a single-player one, so the guard must decide
+    // against what the editor was CONSTRUCTED with. Reading the current input
+    // lets the change fall through into render(), which rejects with nothing
+    // surfaced.
+    const fixture = await mount({ data: doc('a'), collaboration: true });
+    const editor = blokRegistry.last;
+
+    editor.render.mockRejectedValue(
+      new Error('blocks.render() is not allowed while collaboration is on')
+    );
+
+    fixture.componentRef.setInput('config', { server: 'https://blok.example' });
+    fixture.componentRef.setInput('data', doc('b'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(editor.render).not.toHaveBeenCalled();
+
+    const seen = collaborationWarnings();
+
+    expect(seen).toHaveLength(1);
+    // The doc id comes from the MOUNTED config, so the reset endpoint is still
+    // nameable after the key is gone.
+    expect(seen[0]).toContain('POST /sync/notes/reset');
+  });
+
   it('still re-renders on a data change when collaboration is off', async () => {
     const fixture = await mount({ data: doc('a') });
     const editor = blokRegistry.last;

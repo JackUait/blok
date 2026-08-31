@@ -231,7 +231,7 @@ export class BlocksAPI extends Module {
    * and `isEnabled` is false whenever the `collaboration` key is absent.
    * @param method - the refused API, named back to the caller
    */
-  private refuseWholesaleReplace(method: 'render' | 'clear' | 'renderFromHTML'): void {
+  private refuseWholesaleReplace(method: 'render' | 'clear' | 'renderFromHTML' | 'importMarkdown'): void {
     if (!this.Blok.Collaboration?.isEnabled) {
       return;
     }
@@ -337,6 +337,11 @@ export class BlocksAPI extends Module {
    * @param options - Optional configuration for tool mapping and extensions
    */
   public async importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData> {
+    // Refuse HERE, not in the render() this delegates to: the message names the
+    // method the caller actually invoked, and a refused call never pays for the
+    // converter's lazy chunk.
+    this.refuseWholesaleReplace('importMarkdown');
+
     const { markdownToBlocks } = await import('../../../markdown/index');
     const blocks = await markdownToBlocks(md, options);
     const data: OutputData = { blocks };

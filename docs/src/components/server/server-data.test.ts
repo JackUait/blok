@@ -297,7 +297,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-six service limits the design refuses to bury', () => {
+  it('states the twenty-seven service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -321,6 +321,7 @@ describe('server docs data', () => {
       'collab-merge-granularity',
       'collab-presence-identity',
       'collab-presence-unverified',
+      'collab-presence-room-size',
       'collab-doc-id-shape',
       'tls-termination',
       'alpine-nuget',
@@ -447,8 +448,8 @@ describe('server docs data', () => {
   });
 
   // The review asked for the unbounded things to be said out loud, next to the
-  // four bounds that do exist, so nobody reads the connection cap as a quota.
-  it('says what live collaboration leaves unlimited, and names the four bounds it does have', () => {
+  // five bounds that do exist, so nobody reads the connection cap as a quota.
+  it('says what live collaboration leaves unlimited, and names the five bounds it does have', () => {
     const body = serverLimits.find((l) => l.id === 'collab-what-is-not-limited')?.body ?? '';
 
     expect(body).toMatch(/no cap/i);
@@ -461,8 +462,23 @@ describe('server docs data', () => {
     expect(body).toContain('CollabInboundFramesPerSecond');
     expect(body).toContain('--rate-limit');
     expect(body).toMatch(/not limited/i);
+    // Presence is metered by BYTES on top of the frame count, so a connection
+    // under the message rate can still be closed. Undercounting the bounds is
+    // what makes a reader budget for four.
+    expect(body).toContain('CollabInboundAwarenessBytesPerSecond');
+    expect(body).toContain('128 KiB');
+    expect(body).toContain('512 KiB');
+    expect(body).toMatch(/beyond those five/i);
+    // Only the three RATES accept 0; CollabInboundBurstFrames must be positive
+    // and a 0 there throws at startup, so "any of them" would be false.
+    expect(body).toMatch(/0 turns any of the rates off/);
+    // The resync budget meters presence re-queries too, not whole-document
+    // resends alone.
+    expect(body).toMatch(/re-announce/i);
     // The inbound budget made this sentence false.
     expect(body).not.toMatch(/how fast an open connection sends is not limited/i);
+    // The fifth bound made this count false.
+    expect(body).not.toMatch(/beyond those four/i);
   });
 
   // The two halves of the door are deliberately asymmetric: nothing is editable
@@ -535,6 +551,25 @@ describe('server docs data', () => {
     expect(body).toMatch(/read-only pass/i);
     expect(body).toMatch(/not an identity check/i);
     expect(body).toMatch(/never build permissions/i);
+  });
+
+  // Over the cap the room drops the presence frame and logs it rather than
+  // closing anyone, so the honest framing is a degradation, not a seat count.
+  // The number is internal, so the entry must not hand out a flag name for it.
+  it('says presence stops past 256 people while editing carries on', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-presence-room-size')?.body ?? '';
+
+    expect(limits.indexOf('collab-presence-room-size')).toBe(
+      limits.indexOf('collab-presence-unverified') + 1,
+    );
+    expect(body).toContain('256');
+    expect(body).toMatch(/dropped/i);
+    expect(body).toMatch(/log/i);
+    expect(body).toMatch(/editing/i);
+    expect(body).toMatch(/keeps? typing|carries on|as usual/i);
+    expect(body).toMatch(/no setting|fixed/i);
+    expect(body).not.toMatch(/MaxAwarenessClients/);
   });
 
   // The id sits in /sync/{doc} and in the pass and is compared byte for byte;

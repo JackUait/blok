@@ -828,6 +828,18 @@ describe('BlocksAPI', () => {
       await expect(blocksApi.renderFromHTML('<p>hi</p>')).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
     });
 
+    it('refuses importMarkdown() naming the method the caller actually invoked', async () => {
+      // importMarkdown delegates to render(), so the refusal used to blame
+      // `blocks.render()` — a method the caller never touched.
+      const { blocksApi, blok, blockManager } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.importMarkdown('# Title')).rejects.toThrow(/blocks\.importMarkdown\(\)/);
+      await expect(blocksApi.importMarkdown('# Title')).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.Renderer.render).not.toHaveBeenCalled();
+    });
+
     it('falls back to a placeholder doc segment when the config carries no doc', async () => {
       const { blocksApi } = createBlocksApi({ blokOverrides: { Collaboration: { isEnabled: true } } });
 

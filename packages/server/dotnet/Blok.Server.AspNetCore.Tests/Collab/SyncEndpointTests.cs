@@ -24,6 +24,7 @@ public sealed class SyncEndpointTests
   [InlineData("CollabInboundBurstFrames", 0)]
   [InlineData("CollabInboundBurstFrames", -1)]
   [InlineData("CollabInboundResyncsPerMinute", -1)]
+  [InlineData("CollabInboundAwarenessBytesPerSecond", -1)]
   public void RejectsNonPositiveCollabLimits(string option, int value)
   {
     var options = new BlokServerOptions
@@ -49,6 +50,9 @@ public sealed class SyncEndpointTests
       case "CollabInboundResyncsPerMinute":
         options.CollabInboundResyncsPerMinute = value;
         break;
+      case "CollabInboundAwarenessBytesPerSecond":
+        options.CollabInboundAwarenessBytesPerSecond = value;
+        break;
       default:
         options.CollabKeepAliveInterval = TimeSpan.FromSeconds(value);
         break;
@@ -70,6 +74,7 @@ public sealed class SyncEndpointTests
     Assert.Equal(50, options.CollabInboundFramesPerSecond);
     Assert.Equal(100, options.CollabInboundBurstFrames);
     Assert.Equal(60, options.CollabInboundResyncsPerMinute);
+    Assert.Equal(128 << 10, options.CollabInboundAwarenessBytesPerSecond);
   }
 
   [Fact]
@@ -346,8 +351,10 @@ public sealed class SyncEndpointTests
       clock.Advance(TimeSpan.FromMilliseconds(100));
     }
 
-    await alice.SendAsync(new AwarenessFrame([255]));
-    Assert.Equal([255], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+    // A payload's first byte is the client-count varuint, so a one-byte
+    // sentinel has to stay under the continuation bit.
+    await alice.SendAsync(new AwarenessFrame([0x7f]));
+    Assert.Equal([0x7f], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
   }
 
   [Fact]
@@ -368,6 +375,89 @@ public sealed class SyncEndpointTests
     }
 
     Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  /// <summary>
+  /// A stock client answers every queryAwareness with EVERY state it holds,
+  /// so an unmetered type-3 makes each peer re-encode the whole room — the
+  /// same "cheap to send, room-wide to answer" shape as a resync, and it
+  /// shares the resync budget.
+  /// </summary>
+  [Fact]
+  public async Task AQueryAwarenessStormCloses1008LikeAResyncStorm()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+
+    for (var index = 0; index < 12; index++)
+    {
+      await client.SendAsync(new QueryAwarenessFrame());
+    }
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  /// <summary>
+  /// lib0 varuints are not canonical: [0x80, 0x00] also decodes as 0, so the
+  /// room answers this as SyncStep1. The budget must classify frames with the
+  /// codec's reader, not by comparing raw bytes.
+  /// </summary>
+  [Fact]
+  public async Task AResyncStormEncodedWithOverlongVarUintsIsStillAResyncStorm()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+
+    // [type 0][sub-type 0][len 1][empty state vector], type and sub-type
+    // written as two-byte varuints.
+    byte[] resync = [0x80, 0x00, 0x80, 0x00, 0x01, 0x00];
+
+    for (var index = 0; index < 12; index++)
+    {
+      await client.SendRawAsync(resync);
+    }
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task APresenceFloodOverTheAwarenessByteBudgetCloses1008()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+
+    // Six frames is nothing to the 100-frame burst, and each one is legal
+    // inbound — together they are 600 KB of presence in one instant.
+    for (var index = 0; index < 6; index++)
+    {
+      await client.SendAsync(new AwarenessFrame(new byte[100_000]));
+    }
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task ADocumentPasteOfTheSameSizeIsNotMeteredAsPresence()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+    using var doc = await SyncedAsync(client);
+    var paste = YDocs.UpdateAppending(doc, new string('x', 100_000));
+
+    for (var index = 0; index < 6; index++)
+    {
+      await client.SendAsync(new SyncUpdateFrame(paste));
+    }
+
+    Assert.StartsWith("seeded", await SyncedTextAsync(client), StringComparison.Ordinal);
   }
 
   [Fact]

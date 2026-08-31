@@ -7,21 +7,30 @@ import type { PresenceRenderer } from './presence-renderer';
  * The awareness slice presence needs — the same method names YjsManager
  * exposes, so binding it is a pass-through with no adapter.
  *
- * `onAwarenessChange`, NOT `onAwarenessUpdate`: y-protocols renews the local
- * state with equal content every 3s to keep peers from pruning it, and that
- * renewal rides `update` only. Rendering from `update` would repaint the whole
- * stack on every keepalive of every peer.
+ * Both events, for two different jobs. RENDERING rides `change` only:
+ * y-protocols renews the local state with equal content every 3s to keep peers
+ * from pruning it, and that renewal rides `update`, so drawing from `update`
+ * would repaint the whole stack on every keepalive of every peer. LATCHING the
+ * local client id rides `update`, because `change` is emitted only when the new
+ * local state differs from the old one — and after a lineage reset the restored
+ * state is identical, so `change` never comes.
  */
 export interface PresenceSeam {
   setAwarenessField(field: string, value: unknown): void;
   getAwarenessStates(): Map<number, Record<string, unknown>>;
   onAwarenessChange(callback: (changes: AwarenessChange, origin: unknown) => void): () => void;
+  onAwarenessUpdate(callback: (changes: AwarenessChange, origin: unknown) => void): () => void;
 }
 
 /** One client's raw, untrusted awareness state, as it came off the wire. */
 export interface PresenceState {
   clientId: number;
   state: Record<string, unknown>;
+}
+
+/** A state that carries an identity, so a pass can decide to draw it. */
+export interface DrawableState extends PresenceState {
+  state: Record<string, unknown> & { user: { name: string; color?: unknown } };
 }
 
 export interface PresenceOptions {
@@ -89,8 +98,100 @@ export const presenceColorFor = (clientId: number): string =>
   PRESENCE_PALETTE[Math.abs(Math.trunc(clientId)) % PRESENCE_PALETTE.length];
 
 /**
+ * The most peers one pass will ever take. Counted in DRAWABLE peers, never in
+ * raw states: awareness map order is insertion order, so a cap applied before
+ * the identity filter would let one client plant enough junk ahead of everyone
+ * to blank the presence UI for the whole room.
+ */
+export const MAX_PEERS = 50;
+
+/**
+ * The most awareness entries one pass will LOOK at.
+ *
+ * A hostile frame can carry tens of thousands of fabricated states, and every
+ * awareness change re-walks the map, so the walk has to be bounded. Two orders
+ * of magnitude above MAX_PEERS, so a real room never reaches it — junk fills
+ * this budget long before it could fill the peer budget. Keeping the map small
+ * enough that a genuine peer sits inside this window is the provider's job (its
+ * inbound frame and rebroadcast caps), not this walk's.
+ */
+export const PRESENCE_SCAN_LIMIT = 1000;
+
+/**
+ * Does this state carry a name presence can draw? Every field arrived from
+ * another browser, so nothing here trusts its own type — including the state
+ * itself, which a peer can publish as a number, an array or nothing at all.
+ * @param entry - one client's raw state
+ */
+export const hasDrawableIdentity = (entry: PresenceState): entry is DrawableState => {
+  const state: unknown = entry.state;
+
+  if (typeof state !== 'object' || state === null) {
+    return false;
+  }
+
+  const user: unknown = (state as Record<string, unknown>).user;
+
+  if (typeof user !== 'object' || user === null) {
+    return false;
+  }
+
+  const name: unknown = (user as Record<string, unknown>).name;
+
+  return typeof name === 'string' && name.trim() !== '';
+};
+
+/**
+ * Pick the states one pass will work on: not this client's own, carrying an
+ * identity, at most MAX_PEERS of them, after looking at no more than
+ * PRESENCE_SCAN_LIMIT entries.
+ *
+ * The selection happens INSIDE the walk, and that is the whole point. Capping
+ * first and filtering after lets junk hide real collaborators; walking without
+ * a cap lets one hostile frame make every later awareness change expensive.
+ * Only the two together are safe.
+ * @param entries - awareness states in map order, pulled lazily
+ * @param localClientId - this editor's own client id, or null before it is known
+ */
+export const selectDrawableStates = (
+  entries: Iterable<PresenceState>,
+  localClientId: number | null
+): DrawableState[] => {
+  const selected: DrawableState[] = [];
+  const walk = { scanned: 0 };
+
+  for (const entry of entries) {
+    walk.scanned += 1;
+
+    if (entry.clientId !== localClientId && hasDrawableIdentity(entry)) {
+      selected.push(entry);
+    }
+
+    // Tested AFTER the entry, not before it: breaking on the way in would have
+    // already pulled one more state out of the source than the budget allows.
+    if (walk.scanned >= PRESENCE_SCAN_LIMIT || selected.length >= MAX_PEERS) {
+      break;
+    }
+  }
+
+  return selected;
+};
+
+/**
+ * The awareness map as presence states, one at a time. A generator, not a
+ * mapped array: the consumer stops at the first cap it hits, and a fabricated
+ * map of 100k entries must not be materialised before that happens.
+ * @param states - the awareness map, keyed by client id
+ */
+function* asPresenceStates(states: Map<number, Record<string, unknown>>): Generator<PresenceState> {
+  for (const [clientId, state] of states) {
+    yield { clientId, state };
+  }
+}
+
+/**
  * Local awareness upkeep: publishes who this editor is and which block its
- * caret is in, and feeds every peer's state to the renderer.
+ * caret is in, and feeds the peers worth drawing to the renderer.
  *
  * Publishing is unconditional — a read-only viewer broadcasts exactly what an
  * editor does, which is what puts them in everyone else's avatar stack. Only
@@ -109,6 +210,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
     /** `undefined` means "never published", which is distinct from a null block. */
     publishedBlockId: undefined as string | null | undefined,
     unhookAwareness: null as (() => void) | null,
+    unhookAwarenessUpdate: null as (() => void) | null,
     onCaretMove: null as (() => void) | null,
   };
 
@@ -144,15 +246,39 @@ export const createPresence = (options: PresenceOptions): Presence => {
   };
 
   const notify = (): void => {
-    renderer?.render(
-      Array.from(yjs.getAwarenessStates().entries()).map(([clientId, peerState]) => ({ clientId, state: peerState })),
-      state.localClientId
-    );
+    if (renderer === undefined) {
+      return;
+    }
+
+    // Lazily, through the generator: `selectDrawableStates` stops at the first
+    // cap it hits, and a fabricated map must not be materialised before it does.
+    const peers = selectDrawableStates(asPresenceStates(yjs.getAwarenessStates()), state.localClientId);
+
+    renderer.render(peers, state.localClientId);
   };
 
   /**
-   * Latch the local client id from the first local-origin change, and repaint
-   * whenever a change touched anyone else.
+   * Remember which awareness client id is this editor's own.
+   *
+   * A local-origin removal (`clearRemoteAwarenessStates`) names only remote
+   * clients, so an empty delta must leave the latch alone rather than write
+   * null over it.
+   * @param changes - which clients were added, updated or removed
+   */
+  const latchLocalClientId = (changes: AwarenessChange): void => {
+    if (state.localClientId !== null) {
+      return;
+    }
+
+    const local = changes.updated[0] ?? changes.added[0];
+
+    if (local !== undefined) {
+      state.localClientId = local;
+    }
+  };
+
+  /**
+   * Repaint whenever a change touched anyone else.
    *
    * The remote test cannot be "origin !== 'local'": a disconnect clears every
    * peer through `clearRemoteAwarenessStates`, and y-protocols tags THAT
@@ -162,8 +288,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
    * @param origin - `'local'` for anything this client caused
    */
   const onAwarenessChange = (changes: AwarenessChange, origin: unknown): void => {
-    if (state.localClientId === null && origin === 'local') {
-      state.localClientId = changes.updated[0] ?? changes.added[0] ?? null;
+    if (origin === 'local') {
+      latchLocalClientId(changes);
     }
 
     const touchedSomeoneElse = [...changes.added, ...changes.updated, ...changes.removed]
@@ -171,6 +297,24 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
     if (touchedSomeoneElse) {
       notify();
+    }
+  };
+
+  /**
+   * The latch's only reliable arm, and it does nothing else.
+   *
+   * y-protocols emits `change` only when the new local state DIFFERS from the
+   * old one. A lineage reset restores this peer's state onto the fresh
+   * Awareness, so `start()` republishes something deep-equal and `update` is
+   * the only event that comes — without this, the latch would stay null and the
+   * user would be drawn as a peer to themselves. Nothing may ever RENDER from
+   * here: the 3s keepalive rides this event too.
+   * @param changes - which clients were added, updated or removed
+   * @param origin - `'local'` for anything this client caused
+   */
+  const onAwarenessUpdate = (changes: AwarenessChange, origin: unknown): void => {
+    if (origin === 'local') {
+      latchLocalClientId(changes);
     }
   };
 
@@ -187,8 +331,9 @@ export const createPresence = (options: PresenceOptions): Presence => {
       state.running = true;
       state.publishedBlockId = undefined;
       state.unhookAwareness = yjs.onAwarenessChange(onAwarenessChange);
+      state.unhookAwarenessUpdate = yjs.onAwarenessUpdate(onAwarenessUpdate);
 
-      // Order matters. The block write fires a local-origin change
+      // Order matters. The block write fires a local-origin update
       // SYNCHRONOUSLY, which is how the client id gets latched — and the id is
       // what picks the default colour, so the identity has to go second or the
       // colour would change on the next publish.
@@ -226,6 +371,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
       state.unhookAwareness?.();
       state.unhookAwareness = null;
+      state.unhookAwarenessUpdate?.();
+      state.unhookAwarenessUpdate = null;
 
       // A lineage reset replaces the Awareness, and the new one binds a new
       // client id. Forgetting it here is what lets the next `start()` latch the

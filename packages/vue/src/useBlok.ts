@@ -140,6 +140,13 @@ export function useBlok(
     seededEditor: Blok | null;
     renderChain: Promise<void>;
     collaborationWarned: boolean;
+    // The `collaboration` the live editor was CONSTRUCTED with. The key is
+    // mount-fixed, so dropping it from the config (`collaboration: on ? {...} :
+    // undefined`) cannot turn a live session into a single-player editor —
+    // reading the current config instead would let that change fall through
+    // into render(), which refuses under collaboration and rejects with
+    // nothing surfaced anywhere.
+    constructedCollaboration: UseBlokConfig['collaboration'];
     appliedHandlerPresence: HandlerPresence;
   } = {
     current: null,
@@ -148,6 +155,7 @@ export function useBlok(
     seededEditor: null,
     renderChain: Promise.resolve(),
     collaborationWarned: false,
+    constructedCollaboration: undefined,
     appliedHandlerPresence: {
       onChange: false,
       onSave: false,
@@ -261,6 +269,7 @@ export function useBlok(
     const blok = new BlokRuntime({ ...snapshot, holder });
 
     state.current = blok;
+    state.constructedCollaboration = snapshot.collaboration as UseBlokConfig['collaboration'];
     setHolder(blok, holder);
     setRegistry(blok, registry);
     // The out-of-band content channel: `<BlokEditor>`'s exposed `render()`
@@ -548,8 +557,12 @@ export function useBlok(
 
       // Under collaboration the document belongs to the sync service, and
       // render() refuses a wholesale replace — so don't attempt one. The prop's
-      // premise ("this value IS the document") does not hold here.
-      const collaboration = mergedConfig().collaboration;
+      // premise ("this value IS the document") does not hold here. Decided
+      // against the MOUNTED config, never the current one: `collaboration` is
+      // mount-fixed, so a host that drops the key is still driving a
+      // collaboration session and deserves the warning rather than a silently
+      // rejected render.
+      const collaboration = state.constructedCollaboration;
 
       if (collaboration !== undefined) {
         if (!state.collaborationWarned) {

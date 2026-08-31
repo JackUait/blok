@@ -71,6 +71,10 @@ export class ColumnList implements BlockTool {
     container.setAttribute(COLUMNS_ATTR, '');
     container.setAttribute('data-blok-testid', 'column-list');
     container.setAttribute(DATA_ATTR.nestedBlocks, '');
+    // The row holds nothing but its column children and saves no data at all,
+    // so a write on a child holder is never a row edit. Same declaration as
+    // callout/toggle/toggle-heading make on their child containers.
+    container.setAttribute(DATA_ATTR.mutationFree, 'true');
 
     // In read-only mode no resizers are built, so the container must supply the
     // horizontal gutter itself — otherwise columns render flush with no gap.

@@ -143,6 +143,95 @@ public sealed class CollabRoomTests
   }
 
   [Fact]
+  public async Task DropsAnAwarenessFrameThatClaimsMoreClientsThanTheRoomRelays()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var flooder = new FakeMember();
+    var victim = new FakeMember();
+    var membership = await Join(manager, flooder);
+    await Join(manager, victim);
+    victim.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(100_000))),
+        CancellationToken.None);
+
+    Assert.Empty(victim.Received);
+    Assert.Contains(log, line => line.Contains("100000", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task RelaysAwarenessAtTheClientCapAndDropsTheFrameAboveIt()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(new CollabRoomOptions { MaxAwarenessClients = 4 });
+    var sender = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, sender);
+    await Join(manager, other);
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(4))),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(5))),
+        CancellationToken.None);
+
+    Assert.Equal(
+        AwarenessClaiming(4),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+  }
+
+  /// <summary>
+  /// Presence for viewers is deliberate — they belong in the presence stack —
+  /// so a read-only member's awareness relays; the cap that bounds it is the
+  /// same one a writer gets, because neither can fabricate more peers.
+  /// </summary>
+  [Fact]
+  public async Task HoldsAReadOnlyMembersPresenceToTheSameClientCap()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(new CollabRoomOptions { MaxAwarenessClients = 4 });
+    var reader = new FakeMember(canWrite: false);
+    var other = new FakeMember();
+    var membership = await Join(manager, reader);
+    await Join(manager, other);
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(4))),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(5))),
+        CancellationToken.None);
+
+    Assert.Equal(
+        AwarenessClaiming(4),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+  }
+
+  [Fact]
+  public async Task DropsAnAwarenessFrameWhoseClientCountCannotBeRead()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var sender = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, sender);
+    await Join(manager, other);
+    other.Received.Clear();
+
+    // An unterminated varuint: no count, so nothing to hold to the cap.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame([0x80])),
+        CancellationToken.None);
+
+    Assert.Empty(other.Received);
+  }
+
+  [Fact]
   public async Task BroadcastsQueryAwarenessToTheOthersWhenSomeoneJoins()
   {
     endpoint.Holds(DocId, "hello");
@@ -556,6 +645,32 @@ public sealed class CollabRoomTests
     }
 
     return YDocs.Text(replica);
+  }
+
+  /// <summary>
+  /// An awareness payload that CLAIMS <paramref name="clients"/> entries.
+  /// y-protocols writes [varuint clients]{[clientId][clock][varstring state]}*
+  /// and never checks that a sender owns the ids it encodes, so the count is
+  /// free to lie: 100_000 fabricated peers fit one frame under the message
+  /// cap. The room reads the count and nothing else, so one entry of filler
+  /// stands in for the bodies.
+  /// </summary>
+  private static byte[] AwarenessClaiming(ulong clients)
+  {
+    var payload = new List<byte>();
+    var value = clients;
+
+    do
+    {
+      var current = (byte)(value & 0x7f);
+      value >>= 7;
+      payload.Add(value == 0 ? current : (byte)(current | 0x80));
+    }
+    while (value != 0);
+
+    payload.AddRange([0xe8, 0x07, 0x01, 0x02, (byte)'{', (byte)'}']);
+
+    return [.. payload];
   }
 
   private CollabRoomManager CreateManager(CollabRoomOptions? options = null)

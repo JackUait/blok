@@ -28,6 +28,53 @@ const anyNul = (value: unknown): boolean => {
   return false;
 };
 
+/**
+ * Walk the RAW Y types instead of `toJSON()`: the JSON projection renames and
+ * re-derives fields (`parentId` → `parent`), so a NUL written straight onto a
+ * Y.Map can survive the scan that only looks at the projection.
+ */
+const rawNulHits = (value: unknown, path: string, hits: string[]): string[] => {
+  if (typeof value === 'string') {
+    if (value.includes(NUL)) {
+      hits.push(`value ${path}`);
+    }
+
+    return hits;
+  }
+
+  if (value instanceof Y.Map) {
+    value.forEach((nested, key) => {
+      if (key.includes(NUL)) {
+        hits.push(`key ${path}.${key}`);
+      }
+      rawNulHits(nested, `${path}.${key}`, hits);
+    });
+
+    return hits;
+  }
+
+  if (value instanceof Y.Array) {
+    value.toArray().forEach((nested, index) => rawNulHits(nested, `${path}[${index}]`, hits));
+  }
+
+  return hits;
+};
+
+/** Every NUL anywhere in the doc's raw Y types, as readable paths. */
+const scanRawDoc = (store: DocumentStore): string[] => {
+  const hits: string[] = [];
+
+  store.blocksMap.forEach((block, key) => {
+    if (key.includes(NUL)) {
+      hits.push(`key blocks.${key}`);
+    }
+    rawNulHits(block, `blocks.${key}`, hits);
+  });
+  rawNulHits(store.rootOrder, 'root', hits);
+
+  return hits;
+};
+
 describe('NUL strip — serializer chokepoints', () => {
   const serializer = new YBlockSerializer();
 
@@ -140,6 +187,37 @@ describe('NUL strip — DocumentStore chokepoints', () => {
 
     expect(tunes).toBeDefined();
     expect(anyNul(tunes)).toBe(false);
+  });
+
+  it('strips NUL from the parentId applyPlacement writes', () => {
+    const store = createStore();
+
+    store.addBlock({ id: 'child', type: 'paragraph', data: {} });
+    store.applyPlacement('child', { parentId: `pa${NUL}rent`, afterId: null }, 'local');
+
+    expect(scanRawDoc(store)).toEqual([]);
+  });
+
+  it('places the child under the parent whose id was stripped on the way in', () => {
+    const store = createStore();
+
+    // A host id carrying a NUL reaches the doc as its stripped form, so a
+    // placement naming the raw id must resolve to the same block.
+    store.fromJSON([{ id: `pa${NUL}rent`, type: 'paragraph', data: {} }]);
+    store.addBlock({ id: 'child', type: 'paragraph', data: {} });
+    store.applyPlacement('child', { parentId: `pa${NUL}rent`, afterId: null }, 'local');
+
+    expect(scanRawDoc(store)).toEqual([]);
+    expect(store.toJSON().find((block) => block.id === 'child')?.parent).toBe('parent');
+  });
+
+  it('refuses a placement whose parentId strips down to the block\'s own id', () => {
+    const store = createStore();
+
+    store.addBlock({ id: 'parent', type: 'paragraph', data: {} });
+    store.applyPlacement('parent', { parentId: `pa${NUL}rent`, afterId: null }, 'local');
+
+    expect(store.getBlockById('parent')?.get('parentId')).toBeUndefined();
   });
 
   it('a clean document round-trips byte-identical', () => {

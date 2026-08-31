@@ -1,3 +1,5 @@
+import { logLabeled } from '../../utils/logger';
+
 import { decode, encode } from './sync-wire';
 import type {
   CollabProvider,
@@ -93,8 +95,9 @@ interface ProviderState {
   /** A queryAwareness reply (or a reconnect) needs every state, not just the deltas. */
   awarenessFull: boolean;
   attempt: number;
-  consecutiveUnauthorized: number;
-  consecutiveOversized: number;
+  /** Both counters run since the LAST COMPLETED SYNC, not since the last close. */
+  unauthorizedSinceSync: number;
+  oversizedSinceSync: number;
   forceTicketRefresh: boolean;
   synced: boolean;
   destroyed: boolean;
@@ -164,8 +167,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     awarenessClients: new Set<number>(),
     awarenessFull: false,
     attempt: 0,
-    consecutiveUnauthorized: 0,
-    consecutiveOversized: 0,
+    unauthorizedSinceSync: 0,
+    oversizedSinceSync: 0,
     forceTicketRefresh: false,
     synced: false,
     destroyed: false,
@@ -395,12 +398,12 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
-    // A completed sync clears every consecutive-failure counter, not just the
-    // backoff: the 4401-retry-once and 1009-twice rules are both consecutive.
+    // A completed sync is the ONLY thing that clears the failure counters: it is
+    // the proof that the ticket is accepted and our frames fit.
     state.synced = true;
     state.attempt = 0;
-    state.consecutiveUnauthorized = 0;
-    state.consecutiveOversized = 0;
+    state.unauthorizedSinceSync = 0;
+    state.oversizedSinceSync = 0;
     report('connected');
   };
 
@@ -492,16 +495,44 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Applies the close-code policy. Every counter here is CONSECUTIVE: a close of
-   * a different code resets it, and so does a completed sync.
+   * Holds one frame that arrived before the control frame.
+   *
+   * At the cap the connection is DROPPED rather than the frame: Yjs parks every
+   * later update on a missing dependency, so a silent drop leaves a document
+   * that stalls with nothing to show for it. The reconnect re-does the handshake
+   * from a state vector, which the server answers whole — the stall heals.
+   * @param frame - the frame to hold until the control frame validates
+   */
+  const bufferInbound = (frame: SyncWireFrame): void => {
+    if (state.buffered.length >= MAX_BUFFERED_INBOUND) {
+      teardownGeneration(true);
+      scheduleReconnect(undefined, `${docId} sent more than ${MAX_BUFFERED_INBOUND} frames before its control frame`);
+
+      return;
+    }
+
+    state.buffered.push(frame);
+  };
+
+  /**
+   * Applies the close-code policy. Both counters here run SINCE THE LAST
+   * COMPLETED SYNC — only {@link markSynced} clears them. An unrelated close in
+   * between (a dropped connection, a restart) says nothing about whether the
+   * ticket is accepted or our frames fit, and clearing the count on one let a
+   * flapping server hide a permanently rejected ticket forever.
    * @param code - the WebSocket close code
    * @param reason - the close reason, for the status detail
    */
   const handleClose = (code: number, reason: string): void => {
     teardownGeneration(false);
 
-    state.consecutiveOversized = code === CLOSE_MESSAGE_TOO_BIG ? state.consecutiveOversized + 1 : 0;
-    state.consecutiveUnauthorized = code === CLOSE_UNAUTHORIZED ? state.consecutiveUnauthorized + 1 : 0;
+    if (code === CLOSE_MESSAGE_TOO_BIG) {
+      state.oversizedSinceSync += 1;
+    }
+
+    if (code === CLOSE_UNAUTHORIZED) {
+      state.unauthorizedSinceSync += 1;
+    }
 
     const terminalError = TERMINAL_CLOSE_CODES[code];
 
@@ -517,13 +548,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
-    if (code === CLOSE_UNAUTHORIZED && state.consecutiveUnauthorized > 1) {
+    if (code === CLOSE_UNAUTHORIZED && state.unauthorizedSinceSync > 1) {
       terminate('unauthorized', { code, reason });
 
       return;
     }
 
-    if (code === CLOSE_MESSAGE_TOO_BIG && state.consecutiveOversized > 1) {
+    if (code === CLOSE_MESSAGE_TOO_BIG && state.oversizedSinceSync > 1) {
       terminate('oversized-update', { code, reason });
 
       return;
@@ -544,7 +575,30 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    */
   const openSocket = (generation: number, token: string | null): void => {
     const protocols = token === null ? [SYNC_SUBPROTOCOL] : [SYNC_SUBPROTOCOL, token];
-    const socket = socketFactory(url, protocols);
+
+    // The try covers the factory call ALONE: a throw while attaching handlers
+    // would leave a half-wired socket in `state`, which is the strand this
+    // guards against in the first place.
+    const attempt = ((): { socket: WebSocketLike } | { failure: string } => {
+      try {
+        return { socket: socketFactory(url, protocols) };
+      } catch (thrown) {
+        return { failure: thrown instanceof Error ? thrown.message : `${url} could not be opened` };
+      }
+    })();
+
+    if (!('socket' in attempt)) {
+      // A factory that throws (CSP, a bad URL, an exhausted transport) is a
+      // FAILED CONNECTION, not a dead provider — same recovery as a ticket that
+      // could not be minted. Without this the reconnect timer's callback throws,
+      // the phase stays 'connecting', and `connect()` refuses forever.
+      state.phase = 'offline';
+      scheduleReconnect(undefined, attempt.failure);
+
+      return;
+    }
+
+    const socket = attempt.socket;
     const origin: ProviderOrigin = { provider: 'blok-collab', generation };
 
     socket.binaryType = 'arraybuffer';
@@ -572,30 +626,39 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         return;
       }
 
-      const bytes = toBytes(event.data);
-      const frame = bytes === null ? null : decode(bytes);
+      try {
+        const bytes = toBytes(event.data);
+        const frame = bytes === null ? null : decode(bytes);
 
-      // `unknown` is forward compatibility; `malformed` is a frame we refuse to
-      // guess at. Neither is worth dropping the connection over.
-      if (frame === null || frame.type === 'unknown' || frame.type === 'malformed') {
-        return;
-      }
-
-      if (frame.type === 'control') {
-        handleControl(socket, origin, frame.tag);
-
-        return;
-      }
-
-      if (state.phase === 'awaiting-control') {
-        if (state.buffered.length < MAX_BUFFERED_INBOUND) {
-          state.buffered.push(frame);
+        // `unknown` is forward compatibility; `malformed` is a frame we refuse to
+        // guess at. Neither is worth dropping the connection over.
+        if (frame === null || frame.type === 'unknown' || frame.type === 'malformed') {
+          return;
         }
 
-        return;
-      }
+        if (frame.type === 'control') {
+          handleControl(socket, origin, frame.tag);
 
-      handleFrame(socket, origin, frame);
+          return;
+        }
+
+        if (state.phase === 'awaiting-control') {
+          bufferInbound(frame);
+
+          return;
+        }
+
+        handleFrame(socket, origin, frame);
+      } catch (thrown) {
+        // The seam could not materialise this frame. The same frame would throw
+        // again on a retry, and skipping it parks every later update on the one
+        // that is missing — so the document wedges either way. End the session
+        // instead: an editor whose document never loaded must not look live.
+        logLabeled(`collaboration could not apply a frame for ${docId}`, 'error', thrown);
+        terminate('apply-failed', {
+          reason: thrown instanceof Error ? thrown.message : `${docId} could not apply a frame`,
+        });
+      }
     };
 
     socket.onclose = (event): void => {

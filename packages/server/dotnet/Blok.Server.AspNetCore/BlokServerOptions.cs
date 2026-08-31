@@ -72,12 +72,25 @@ public sealed class BlokServerOptions
   public int CollabInboundBurstFrames { get; set; } = 100;
 
   /// <summary>
-  /// Whole-document resyncs (SyncStep1) one connection may sustain per minute
-  /// (0 = no limit). Each one makes the room compute a diff against the whole
-  /// document and send it back, so this is the amplifying frame. A client
-  /// sends one per connect; the most eager re-ask every 5 seconds (~12/min).
+  /// Whole-document resyncs (SyncStep1) and presence re-queries
+  /// (queryAwareness) one connection may sustain per minute (0 = no limit).
+  /// Each resync makes the room diff the whole document back at the sender,
+  /// and each re-query makes every OTHER member re-encode all the presence it
+  /// holds, so these are the amplifying frames. A client sends one resync per
+  /// connect (the most eager re-ask every 5 seconds, ~12/min) and never sends
+  /// a re-query.
   /// </summary>
   public int CollabInboundResyncsPerMinute { get; set; } = 60;
+
+  /// <summary>
+  /// Presence bytes one sync connection may sustain per second (0 = no
+  /// limit). Frames are metered by count, not size, so without this one
+  /// connection may push 50 MiB/s of awareness — and the room hands every
+  /// byte to every other member. A cursor at 10 Hz is ~3 KB/s and a full
+  /// presence reply in a busy room is tens of KB, so 128 KiB is far above
+  /// any real client.
+  /// </summary>
+  public int CollabInboundAwarenessBytesPerSecond { get; set; } = 128 << 10;
 
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
@@ -251,6 +264,13 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"CollabInboundResyncsPerMinute must be zero (off) or greater (got {CollabInboundResyncsPerMinute})");
+    }
+
+    if (CollabInboundAwarenessBytesPerSecond < 0)
+    {
+      throw new InvalidOperationException(
+          "CollabInboundAwarenessBytesPerSecond must be zero (off) or greater " +
+          $"(got {CollabInboundAwarenessBytesPerSecond})");
     }
 
     if (!CollabEnabled)

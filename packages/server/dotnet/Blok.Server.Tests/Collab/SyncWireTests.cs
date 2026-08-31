@@ -133,6 +133,22 @@ public sealed class SyncWireTests
         SyncWire.Encode(new BlokControlFrame(new CollabWorkingSetTag(format, epoch, lineage))));
   }
 
+  [Theory]
+  [InlineData(new byte[] { 0x00 }, 0UL)]
+  [InlineData(new byte[] { 0x01, 0xe8, 0x07, 0x01, 0x02, 0x7b, 0x7d }, 1UL)]
+  [InlineData(new byte[] { 0xa0, 0x8d, 0x06 }, 100_000UL)]
+  public void ReadsTheAwarenessClientCountFromTheHeadOfThePayload(byte[] update, ulong clients)
+  {
+    Assert.True(SyncWire.TryReadAwarenessClientCount(update, out var count));
+    Assert.Equal(clients, count);
+  }
+
+  [Fact]
+  public void RefusesAnAwarenessPayloadWithoutAReadableClientCount()
+  {
+    Assert.False(SyncWire.TryReadAwarenessClientCount([0x80], out _));
+  }
+
   [Fact]
   public void RefusesToEncodeAnEmptyPayload()
   {

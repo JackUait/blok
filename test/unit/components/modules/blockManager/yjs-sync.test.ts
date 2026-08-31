@@ -2299,6 +2299,69 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-last');
       });
 
+      it('does not author the repair block when the local client may not write', () => {
+        /**
+         * A read-only collaborator (a write-denied member: collaboration
+         * arbitrates that into editor read-only) watching a peer empty the
+         * document must author NOTHING. The write would be dropped by the
+         * server and the viewer would diverge from the room forever; the
+         * memory-only block left behind would be just as invisible to the doc.
+         * The writable peer's repair arrives through the ordinary remote add.
+         */
+        const lastBlock = createMockBlock({ id: 'only-block' });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.insertDefaultBlock = vi.fn(() => createMockBlock({ id: 'default' }));
+
+        repository = new BlockRepository();
+        repository.initialize(createBlocksStore([lastBlock]));
+
+        yjsSync = new BlockYjsSync(
+          {
+            ...createMockDependencies(mockYjsManager),
+            isReadOnly: () => true,
+          },
+          repository,
+          factory,
+          mockHandlers,
+          createBlocksStore([lastBlock])
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
+
+        expect(mockHandlers.insertDefaultBlock).not.toHaveBeenCalled();
+        expect(mockYjsManager.addBlock).not.toHaveBeenCalled();
+        expect(mockYjsManager.transactWithoutCapture).not.toHaveBeenCalled();
+      });
+
+      it('still repairs an emptied document for a writable client', () => {
+        const lastBlock = createMockBlock({ id: 'only-block' });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.insertDefaultBlock = vi.fn(() => createMockBlock({ id: 'default' }));
+
+        repository = new BlockRepository();
+        repository.initialize(createBlocksStore([lastBlock]));
+
+        yjsSync = new BlockYjsSync(
+          {
+            ...createMockDependencies(mockYjsManager),
+            isReadOnly: () => false,
+          },
+          repository,
+          factory,
+          mockHandlers,
+          createBlocksStore([lastBlock])
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
+
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-only-block');
+        expect(mockYjsManager.addBlock).toHaveBeenCalled();
+      });
+
       it('keeps Yjs sync state active while removing a block', () => {
         const syncStates: boolean[] = [];
         const blockToRemove = createMockBlock({ id: 'to-remove' });

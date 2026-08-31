@@ -17,6 +17,13 @@ internal sealed class CollabRoomOptions
   /// <summary>A log at least this large (frame section, bytes) is compacted the same way.</summary>
   public long CompactionByteThreshold { get; init; } = 1L << 20;
 
+  /// <summary>
+  /// Client entries one awareness frame may claim before the room refuses to
+  /// relay it. A room holds tens of participants, not thousands, and
+  /// y-protocols never checks that a sender owns the client ids it encodes.
+  /// </summary>
+  public int MaxAwarenessClients { get; init; } = 256;
+
   /// <summary>First wait before a failed blob write or export is retried; it doubles per failure.</summary>
   public TimeSpan RetryBackoff { get; init; } = TimeSpan.FromSeconds(2);
 

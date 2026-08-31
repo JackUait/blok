@@ -48,7 +48,9 @@ internal static class SyncWire
   internal const ulong MessageQueryAwareness = 3;
   internal const ulong MessageBlokControl = 100;
 
-  private const ulong SyncStep1 = 0;
+  /// <summary>Internal because the inbound budget classifies frames by it.</summary>
+  internal const ulong SyncStep1 = 0;
+
   private const ulong SyncStep2 = 1;
   private const ulong SyncUpdate = 2;
   private const ulong AuthPermissionDenied = 0;
@@ -156,6 +158,19 @@ internal static class SyncWire
     }
 
     return RequireEnd(frame, out error);
+  }
+
+  /// <summary>
+  /// The client-entry count from the head of an awareness payload
+  /// (<c>[varuint clients]{[clientId][clock][varstring state]}*</c>), without
+  /// decoding one entry: presence is relayed verbatim, never parsed
+  /// (plan decision 11).
+  /// </summary>
+  internal static bool TryReadAwarenessClientCount(
+      ReadOnlySpan<byte> update,
+      out ulong clients)
+  {
+    return TryReadVarUint(ref update, out clients);
   }
 
   internal static bool TryReadVarUint(ref ReadOnlySpan<byte> input, out ulong value)

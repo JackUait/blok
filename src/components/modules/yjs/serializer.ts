@@ -7,11 +7,14 @@ import type { OutputBlockData } from '../../../../types/data-formats/output-data
 const NUL_CHAR = String.fromCharCode(0);
 
 /**
- * Remove every NUL from a string. A NUL in a Y.Map KEY aborts the .NET sync
- * server's yrs read (process panic); a NUL in a string VALUE truncates it. The
- * browser client is the only guard, so every user string entering the doc is
- * scrubbed at the serializer write chokepoints. Fast path: scan first, allocate
- * a replacement only on a hit, so a clean write copies nothing.
+ * Remove every NUL from a string. A NUL in ANY position aborts the .NET sync
+ * server's yrs read — map key, string value, array element alike — and the abort
+ * kills the whole server process, not just the read (Phase 2's probe matrix:
+ * exit 134 for every position). There is no "safe" position, so no write site
+ * may skip the strip. The browser client is the only guard, so every user string
+ * entering the doc is scrubbed at the serializer write chokepoints. Fast path:
+ * scan first, allocate a replacement only on a hit, so a clean write copies
+ * nothing.
  */
 export const stripNul = (value: string): string =>
   value.includes(NUL_CHAR) ? value.split(NUL_CHAR).join('') : value;

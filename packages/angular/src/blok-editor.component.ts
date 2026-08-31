@@ -258,6 +258,17 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   private renderChain: Promise<void> = Promise.resolve();
   /** One collaboration warning per component instance (see the data effect). */
   private collaborationWarned = false;
+  /**
+   * The `collaboration` the live editor was CONSTRUCTED with. The key is
+   * mount-fixed, so dropping it from `[config]` (`collaboration: on ? {...} :
+   * undefined`) cannot turn a live session into a single-player editor —
+   * reading the current input instead would let that change fall through into
+   * render(), which refuses under collaboration and rejects with nothing
+   * surfaced anywhere.
+   */
+  private constructedCollaboration: BlokAngularConfig['collaboration'];
+  /** Editor the capture above belongs to (recaptured on recreate). */
+  private collaborationCapturedFor: Blok | null = null;
 
   /** Registered by `ControlValueAccessor.registerOnChange` (Angular forms). */
   private cvaOnChange?: (data: OutputData) => void;
@@ -608,6 +619,18 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
   }
 
   constructor() {
+    // Registered FIRST so the capture lands before the data effect below can
+    // read it. `collaboration` reaches the directive through `buildConfig()`,
+    // which is read once per build; this records what that build received.
+    effect(() => {
+      const editor = this.instance();
+
+      if (editor !== null && editor !== this.collaborationCapturedFor) {
+        this.collaborationCapturedFor = editor;
+        this.constructedCollaboration = this.escapeHatchConfig().collaboration;
+      }
+    });
+
     // Each effect reads `instance()` so it re-applies once the editor appears
     // (the Angular analog of React's `editor` effect-dependency).
     effect(() => {
@@ -781,8 +804,12 @@ export class BlokEditorComponent implements AfterViewInit, DoCheck, ControlValue
 
       // Under collaboration the document belongs to the sync service, and
       // render() refuses a wholesale replace — so don't attempt one. The input's
-      // premise ("this value IS the document") does not hold here.
-      const collaboration = this.escapeHatchConfig().collaboration;
+      // premise ("this value IS the document") does not hold here. Decided
+      // against the MOUNTED config, never the current input: `collaboration` is
+      // mount-fixed, so a host that drops the key is still driving a
+      // collaboration session and deserves the warning rather than a silently
+      // rejected render.
+      const collaboration = this.constructedCollaboration;
 
       if (collaboration !== undefined) {
         if (!this.collaborationWarned) {

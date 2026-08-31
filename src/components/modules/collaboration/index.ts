@@ -3,7 +3,7 @@ import type { CollaborationPeer } from '../../../../types/events/editor-events';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
-import { createTicketSource } from '../../utils/access-pass';
+import { createTicketSource, type TicketRequest } from '../../utils/access-pass';
 
 import { createPresence, type Presence } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
@@ -420,8 +420,11 @@ export class Collaboration extends Module {
 
     const mint = createTicketSource(settings.ticketEndpoint, { doc: settings.doc });
 
-    return async (): Promise<string> => {
-      const token = await mint();
+    // Load-bearing forward of `request`: the provider's one retry after a 4401
+    // asks for a fresh mint, and a wrapper that swallowed the argument would
+    // hand the rejected ticket straight back.
+    return async (request?: TicketRequest): Promise<string> => {
+      const token = await mint(request);
       const denied = !grantsWrite(token);
 
       if (denied !== this.writeDenied) {

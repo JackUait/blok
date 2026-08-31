@@ -279,6 +279,89 @@ describe('createCollabProvider', () => {
 
       expect(ticketSource).toHaveBeenCalledTimes(2);
     });
+
+    // A factory throw is a failed connection (CSP, a bad URL, an exhausted
+    // transport), not a dead provider — the same recovery as a failed mint.
+    it('goes offline instead of throwing out of connect when the socket factory throws', () => {
+      const harness = createHarness({
+        socketFactory: () => {
+          throw new Error('blocked by CSP');
+        },
+      });
+
+      expect(() => harness.provider.connect()).not.toThrow();
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ reason: 'blocked by CSP', retryInMs: 1000 }),
+      });
+    });
+
+    it('keeps retrying after the socket factory throws on a reconnect', () => {
+      const sockets: MockSocket[] = [];
+      const statuses: StatusEntry[] = [];
+      const store = new DocumentStore(new YBlockSerializer());
+      const broken = { now: false };
+
+      stores.push(store);
+
+      const provider = createCollabProvider({
+        url: 'wss://example.test/sync/doc-1',
+        docId: 'doc-1',
+        yjs: seamFor(store),
+        socketFactory: (url, protocols): WebSocketLike => {
+          if (broken.now) {
+            throw new Error('blocked');
+          }
+
+          const socket = new MockSocket(url, protocols);
+
+          sockets.push(socket);
+
+          return socket;
+        },
+        onStatus: (status, detail) => statuses.push({ status, detail }),
+        random: () => 1,
+      });
+
+      providers.push(provider);
+      provider.connect();
+      sockets[0].open();
+      sockets[0].deliver(controlFrame());
+
+      broken.now = true;
+      sockets[0].serverClose(4503, 'unavailable');
+      vi.advanceTimersByTime(1000);
+
+      expect(sockets).toHaveLength(1);
+      expect(statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ reason: 'blocked' }),
+      });
+
+      // The transport recovers and the provider is still trying.
+      broken.now = false;
+      vi.advanceTimersByTime(60_000);
+
+      expect(sockets).toHaveLength(2);
+    });
+
+    it('goes offline rather than leaking a rejection when the factory throws behind a ticket', async () => {
+      const harness = createHarness({
+        ticketSource: () => Promise.resolve('tok'),
+        socketFactory: () => {
+          throw new Error('blocked');
+        },
+      });
+
+      harness.provider.connect();
+      await flushMicrotasks();
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ reason: 'blocked' }),
+      });
+    });
   });
 
   describe('handshake order', () => {
@@ -336,6 +419,52 @@ describe('createCollabProvider', () => {
 
       expect(harness.store.toJSON().map((block) => block.id)).toEqual(['p1']);
       expect(harness.socket().frameTypes).toEqual(['syncStep1', 'syncStep2']);
+    });
+
+    // Dropping a frame is worse than dropping the connection: Yjs parks every
+    // later update on the missing one, so the document stalls with no sign of
+    // it. Closing makes the next handshake re-sync from a state vector.
+    it('closes the connection instead of dropping frames past the buffer cap, and heals on the reconnect', () => {
+      const harness = createHarness();
+      const peer = new DocumentStore(new YBlockSerializer());
+      const updates: Uint8Array[] = [];
+
+      stores.push(peer);
+
+      const unhook = peer.onUpdate((update) => updates.push(update));
+
+      for (const index of Array.from({ length: 70 }, (_, position) => position)) {
+        peer.addBlock({ id: `b${index}`, type: 'paragraph', data: { text: `line ${index}` } });
+      }
+      unhook();
+
+      harness.provider.connect();
+
+      const first = harness.socket();
+
+      first.open();
+
+      for (const update of updates) {
+        first.deliver({ type: 'update', update });
+      }
+
+      expect(first.closedWith).toEqual({ code: 1000, reason: undefined });
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ reason: expect.stringContaining('before its control frame') }),
+      });
+
+      vi.advanceTimersByTime(60_000);
+
+      const second = harness.socket();
+
+      expect(second).not.toBe(first);
+      second.open();
+      second.deliver(controlFrame());
+      second.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate(harness.store.getStateVector()) });
+
+      expect(harness.store.toJSON()).toHaveLength(70);
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
     });
 
     it('reads frames delivered as an ArrayBuffer', () => {
@@ -753,6 +882,89 @@ describe('createCollabProvider', () => {
     });
   });
 
+  // A seam that throws has failed to materialise the document. Retrying the same
+  // frame throws again, and skipping it stalls every later update on the missing
+  // one — so the session ends and the host is told, rather than presenting an
+  // editor over a document that never loaded.
+  describe('a frame the seam cannot apply', () => {
+    /** A seam whose applyRemoteUpdate throws the first `failures` times. */
+    const throwingSeam = (failures: number): { harness: Harness; applied: number[] } => {
+      const applied: number[] = [];
+      const attempts = { count: 0 };
+      const harness = createHarness({}, (seam) => ({
+        ...seam,
+        applyRemoteUpdate: (update, origin) => {
+          attempts.count += 1;
+
+          if (attempts.count <= failures) {
+            throw new Error('BlockYjsSync blew up materialising the first sync');
+          }
+
+          applied.push(update.length);
+          seam.applyRemoteUpdate(update, origin);
+        },
+      }));
+
+      return { harness, applied };
+    };
+
+    it('ends the session when the buffered drain throws', () => {
+      const { harness, applied } = throwingSeam(1);
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      peer.addBlock({ id: 'a', type: 'paragraph', data: { text: 'one' } });
+
+      harness.provider.connect();
+      harness.socket().open();
+      harness.socket().deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+      peer.addBlock({ id: 'b', type: 'paragraph', data: { text: 'two' } });
+      harness.socket().deliver({ type: 'update', update: peer.encodeStateAsUpdate() });
+
+      expect(() => harness.socket().deliver(controlFrame())).not.toThrow();
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({ error: 'apply-failed', reason: expect.stringContaining('blew up') }),
+      });
+      expect(harness.provider.status).toBe('error');
+
+      // The socket is closed and detached, so the connection cannot go on
+      // looking live over a document that never materialised.
+      expect(harness.socket().closedWith?.code).toBe(1000);
+      harness.socket().deliver({ type: 'update', update: peer.encodeStateAsUpdate() });
+      expect(applied).toHaveLength(0);
+    });
+
+    it('never reports connected when the first sync could not be applied', () => {
+      const { harness } = throwingSeam(1);
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      peer.addBlock({ id: 'a', type: 'paragraph', data: { text: 'one' } });
+
+      const socket = connectAndHandshake(harness);
+
+      socket.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('connected');
+      expect(harness.statuses.at(-1)?.detail?.error).toBe('apply-failed');
+    });
+
+    it('does not reconnect after an apply failure', () => {
+      const { harness } = throwingSeam(1);
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      peer.addBlock({ id: 'a', type: 'paragraph', data: { text: 'one' } });
+      connectAndHandshake(harness).deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate() });
+
+      vi.advanceTimersByTime(300_000);
+
+      expect(harness.sockets).toHaveLength(1);
+    });
+  });
+
   describe('close-code policy', () => {
     const terminalCases: { code: number; error: string }[] = [
       { code: 4400, error: 'bad-request' },
@@ -835,11 +1047,17 @@ describe('createCollabProvider', () => {
     });
 
     it('refreshes the ticket and retries ONCE on 4401, then goes terminal', async () => {
-      const ticketSource = vi.fn(() => Promise.resolve('tok'));
+      // A source that honours the flag, so the assertion below is about the
+      // ticket that reached the wire — an arity-0 source (the bug) re-offers the
+      // rejected one and fails here.
+      const ticketSource = vi.fn((request?: { forceRefresh?: boolean }) =>
+        Promise.resolve(request?.forceRefresh === true ? 'tok-fresh' : 'tok')
+      );
       const harness = createHarness({ ticketSource });
 
       harness.provider.connect();
       await flushMicrotasks();
+      expect(harness.socket().protocols).toEqual([PROTOCOL, 'tok']);
       harness.socket().open();
       harness.socket().deliver(controlFrame());
       harness.socket().serverClose(4401, 'invalid pass');
@@ -849,6 +1067,7 @@ describe('createCollabProvider', () => {
 
       expect(harness.sockets).toHaveLength(2);
       expect(ticketSource).toHaveBeenLastCalledWith({ forceRefresh: true });
+      expect(harness.socket().protocols).toEqual([PROTOCOL, 'tok-fresh']);
 
       harness.socket().open();
       harness.socket().serverClose(4401, 'invalid pass');
@@ -908,7 +1127,7 @@ describe('createCollabProvider', () => {
       expect(policedDelay).toBeGreaterThan(plainDelay);
     });
 
-    it('is terminal only on the SECOND consecutive 1009', () => {
+    it('is terminal only on the SECOND 1009', () => {
       const harness = createHarness();
 
       connectAndHandshake(harness).serverClose(1009, 'message too big');
@@ -930,7 +1149,7 @@ describe('createCollabProvider', () => {
       expect(harness.sockets).toHaveLength(2);
     });
 
-    it('lets a completed sync clear the consecutive-failure counters', () => {
+    it('lets a completed sync clear the failure counters', () => {
       const harness = createHarness();
       const peer = new DocumentStore(new YBlockSerializer());
 
@@ -947,7 +1166,9 @@ describe('createCollabProvider', () => {
       expect(harness.statuses.at(-1)?.status).toBe('offline');
     });
 
-    it('does not treat two 1009s separated by another code as consecutive', () => {
+    // An unrelated close in between says nothing about whether our frames fit;
+    // resetting the count on one let a flapping server hide the policy forever.
+    it('still terminates on the second 1009 when another code intervenes', () => {
       const harness = createHarness();
 
       connectAndHandshake(harness).serverClose(1009, 'message too big');
@@ -962,7 +1183,33 @@ describe('createCollabProvider', () => {
       harness.socket().deliver(controlFrame());
       harness.socket().serverClose(1009, 'message too big');
 
-      expect(harness.statuses.at(-1)?.status).toBe('offline');
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({ error: 'oversized-update', code: 1009 }),
+      });
+    });
+
+    // The second 4401 rejects a ticket that was force-minted one cycle earlier,
+    // so a dropped connection in between does not earn the session a third try.
+    it('still terminates on the second 4401 when another code intervenes', () => {
+      const harness = createHarness();
+
+      connectAndHandshake(harness).serverClose(4401, 'invalid pass');
+      vi.advanceTimersByTime(30_000);
+
+      harness.socket().open();
+      harness.socket().deliver(controlFrame());
+      harness.socket().serverClose(1006, 'connection lost');
+      vi.advanceTimersByTime(30_000);
+
+      harness.socket().open();
+      harness.socket().deliver(controlFrame());
+      harness.socket().serverClose(4401, 'invalid pass');
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({ error: 'unauthorized', code: 4401 }),
+      });
     });
   });
 

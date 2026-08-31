@@ -178,6 +178,13 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
   // undefined-at-mount then loaded, or changed before the editor finished
   // initializing — still renders instead of being mistaken for the seed.
   const constructedDataRef = useRef(config.data);
+  // The `collaboration` the live editor was CONSTRUCTED with. The key is
+  // mount-fixed, so dropping it from the prop (`collaboration: on ? {...} :
+  // undefined`) cannot turn a live session into a single-player editor —
+  // reading the current prop instead would let that change fall through into
+  // render(), which refuses under collaboration and rejects with nothing
+  // surfaced anywhere.
+  const constructedCollaborationRef = useRef(config.collaboration);
   const renderChainRef = useRef<Promise<void>>(Promise.resolve());
   // One collaboration warning per hook instance (see the data effect).
   const collaborationWarnedRef = useRef(false);
@@ -366,6 +373,7 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
     // Remember what this editor was seeded with so the reactive-`data` effect can
     // tell a genuine post-construction change from the construction value itself.
     constructedDataRef.current = currentConfig.data;
+    constructedCollaborationRef.current = currentConfig.collaboration;
     setHolder(blok, holder);
     setRegistry(blok, registry);
     // Imperative-content channel: `useBlokHandle().clear()` / `.render()` change
@@ -814,11 +822,16 @@ export function useBlok(configInput: UseBlokConfig, deps?: DependencyList): Blok
 
     // Under collaboration the document belongs to the sync service, and render()
     // refuses a wholesale replace — so don't attempt one. The prop's premise
-    // ("this value IS the document") does not hold here.
-    if (configRef.current.collaboration !== undefined) {
+    // ("this value IS the document") does not hold here. Decided against the
+    // MOUNTED config, never the current prop: `collaboration` is mount-fixed,
+    // so a host that drops the key is still driving a collaboration session and
+    // deserves the warning rather than a silently rejected render.
+    const mountedCollaboration = constructedCollaborationRef.current;
+
+    if (mountedCollaboration !== undefined) {
       if (!collaborationWarnedRef.current) {
         collaborationWarnedRef.current = true;
-        console.warn(collaborationDataIgnoredMessage(configRef.current.collaboration.doc));
+        console.warn(collaborationDataIgnoredMessage(mountedCollaboration.doc));
       }
 
       return;

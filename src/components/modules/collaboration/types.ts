@@ -121,12 +121,14 @@ export type CollabSocketFactory = (url: string, protocols: string[]) => WebSocke
 
 /**
  * Hands back a raw connection ticket. `createTicketSource` from
- * `utils/access-pass` satisfies this (it ignores the argument).
+ * `utils/access-pass` satisfies this.
  *
  * `forceRefresh` is what the provider asks for after a 4401: the cached ticket
- * was rejected, so a source that can re-mint should. The current access-pass
- * source re-mints on its own only when the ticket is within 30s of expiry, so
- * honouring the flag is what closes the revoked-but-unexpired case.
+ * was rejected. A source caches by expiry alone, so without honouring the flag a
+ * ticket refused for any other reason — revoked, signing key rotated, server
+ * restarted, scope re-granted — is re-offered unchanged and the retry is
+ * guaranteed to fail. Every layer between the provider and the mint MUST forward
+ * this argument.
  */
 export type CollabTicketSource = (options?: { forceRefresh?: boolean }) => Promise<string>;
 
@@ -140,11 +142,13 @@ export type CollabStatus = 'connecting' | 'connected' | 'offline' | 'error';
  * Why the provider stopped for good.
  *
  * - `bad-request` — close 4400; the document id or the request is unusable.
- * - `unauthorized` — close 4401 twice; the ticket is not accepted.
+ * - `unauthorized` — close 4401 twice since the last sync; the ticket is not accepted.
  * - `forbidden` — close 4403; this user may not open this document.
  * - `unsupported-format` — the control frame names a CRDT format we cannot read.
  * - `handshake-timeout` — no control frame arrived; not a Blok sync endpoint.
- * - `oversized-update` — close 1009 twice; a frame we produce is too big.
+ * - `oversized-update` — close 1009 twice since the last sync; a frame we produce is too big.
+ * - `apply-failed` — the seam threw on an inbound frame; the document did not
+ *   materialise, and the same frame would throw again.
  *
  * A stale lineage is deliberately NOT here: close 4409 and a changed lineage are
  * recoverable through {@link CollabDocSeam.resetForRelineage} plus a reconnect.
@@ -155,7 +159,8 @@ export type CollabTerminalError =
   | 'forbidden'
   | 'unsupported-format'
   | 'handshake-timeout'
-  | 'oversized-update';
+  | 'oversized-update'
+  | 'apply-failed';
 
 /** Extra context for a status change; every field is best-effort. */
 export interface CollabStatusDetail {

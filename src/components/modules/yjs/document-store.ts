@@ -553,7 +553,14 @@ export class DocumentStore {
       return;
     }
 
-    const wouldCycle = placement.parentId !== null && this.wouldFormCycle(id, placement.parentId);
+    // Scrub ONCE, then work in doc space: the doc's map keys are stripped on
+    // the way in (`addBlock`, `fromJSON`), so an unscrubbed parentId misses the
+    // cycle check and the parent lookup as well as writing a server-aborting
+    // NUL into the doc.
+    const parentId = typeof placement.parentId === 'string'
+      ? stripNul(placement.parentId)
+      : placement.parentId;
+    const wouldCycle = parentId !== null && this.wouldFormCycle(id, parentId);
 
     this.transact(() => {
       // Idempotent parentId write: an agreeing value writes nothing, so the
@@ -564,16 +571,16 @@ export class DocumentStore {
       // A refused placement leaves parentId alone — writing it is the thing
       // being refused.
       if (!wouldCycle) {
-        if (placement.parentId === null) {
+        if (parentId === null) {
           yblock.delete('parentId');
-        } else if (yblock.get('parentId') !== placement.parentId) {
-          yblock.set('parentId', placement.parentId);
+        } else if (yblock.get('parentId') !== parentId) {
+          yblock.set('parentId', parentId);
         }
       }
 
       this.removeFromOrderArrays(id);
 
-      const target = wouldCycle ? null : this.resolveTargetOrder(placement.parentId ?? undefined);
+      const target = wouldCycle ? null : this.resolveTargetOrder(parentId ?? undefined);
 
       if (target === null) {
         return;

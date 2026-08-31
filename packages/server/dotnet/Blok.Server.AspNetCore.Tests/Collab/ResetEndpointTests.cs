@@ -75,11 +75,24 @@ public sealed class ResetEndpointTests
     using var denied = await Reset(app, ticket: fixture.Compatible);
 
     await AssertError(denied, HttpStatusCode.Forbidden, "forbidden\n");
-    Assert.Contains(("write", "", SyncApp.Doc), authorization.Calls);
+    Assert.Contains(("write", "u1", SyncApp.Doc), authorization.Calls);
 
     authorization.AllowWrite = true;
     using var allowed = await Reset(app, ticket: fixture.Compatible);
     Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+  }
+
+  [Fact]
+  public async Task ADocumentIdWithAnEncodedSlashIsRefusedWithASingleSegmentReason()
+  {
+    await using var app = await SyncApp.StartAsync();
+
+    using var response = await Reset(app, doc: "a/b");
+
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "document ids must be a single path segment\n");
   }
 
   [Fact]

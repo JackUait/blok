@@ -11,6 +11,13 @@ internal static class SyncEndpoint
   /// <summary>Outbound backlog budget per connection, in inbound-message-size units.</summary>
   private const int OutboundQueueFactor = 8;
 
+  /// <summary>
+  /// A rejected client has nothing left to say, so its close gets a token
+  /// grace instead of the full one — long enough for the frame to land, short
+  /// enough that a flood of bad passes cannot park sockets on the server.
+  /// </summary>
+  private static readonly TimeSpan RejectedCloseGrace = TimeSpan.FromMilliseconds(250);
+
   public static async Task HandleAsync(HttpContext context)
   {
     var doc = RouteDoc(context);
@@ -35,6 +42,19 @@ internal static class SyncEndpoint
   internal static string RouteDoc(HttpContext context)
   {
     return context.Request.RouteValues["doc"] as string ?? "";
+  }
+
+  /// <summary>
+  /// A route value keeps an encoded slash encoded, so the id "a/b" arrives as
+  /// "a%2Fb" and never matches its ticket's doc claim — the client would see a
+  /// 4401 it cannot diagnose, and a reset would rewrite a document nobody has.
+  /// Ids are therefore one path segment, and anything else is refused by name.
+  /// </summary>
+  internal static bool IsSingleSegment(string doc)
+  {
+    return doc.Length > 0 &&
+        !doc.Contains('/') &&
+        !doc.Contains("%2f", StringComparison.OrdinalIgnoreCase);
   }
 
   internal static async Task RefuseAsync(HttpContext context, int statusCode, string body)
@@ -65,7 +85,10 @@ internal static class SyncEndpoint
       var member = new SyncSocketMember(
           accepted.CanWrite,
           acceptsControlFrames: accepted.SubProtocol is not null,
-          maxQueuedBytes: (long)OutboundQueueFactor * options.CollabMaxMessageBytes);
+          maxQueuedBytes: (long)OutboundQueueFactor * options.CollabMaxMessageBytes,
+          new SyncInboundBudget(
+              options,
+              context.RequestServices.GetRequiredService<TimeProvider>()));
       CollabJoinResult join;
 
       // Join before the upgrade: a draining server can still answer 503,
@@ -126,7 +149,12 @@ internal static class SyncEndpoint
   {
     var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
     using var socket = await AcceptAsync(context, subProtocol, options);
-    var member = new SyncSocketMember(canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 0);
+    var member = new SyncSocketMember(
+        canWrite: false,
+        acceptsControlFrames: false,
+        maxQueuedBytes: 0,
+        inbound: null,
+        RejectedCloseGrace);
     member.RequestClose(close);
 
     await member.RunAsync(
@@ -135,6 +163,7 @@ internal static class SyncEndpoint
         options.CollabMaxMessageBytes,
         lease: null,
         context.RequestAborted);
+    socket.Abort();
   }
 
   /// <summary>Stands in for a slot when the connection has no identity to cap on.</summary>

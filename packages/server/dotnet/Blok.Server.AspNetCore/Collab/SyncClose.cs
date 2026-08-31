@@ -17,8 +17,14 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame TooBig =
       new(WebSocketCloseStatus.MessageTooBig, "message too big");
 
+  internal static readonly SyncCloseFrame InboundRateExceeded =
+      new(WebSocketCloseStatus.PolicyViolation, "inbound rate exceeded");
+
   internal static readonly SyncCloseFrame SlowConsumer =
       new(WebSocketCloseStatus.PolicyViolation, "outbound queue overflow");
+
+  internal static readonly SyncCloseFrame BadDocument =
+      new((WebSocketCloseStatus)4400, "document ids must be a single path segment");
 
   internal static readonly SyncCloseFrame MissingPass =
       new((WebSocketCloseStatus)4401, "missing pass");

@@ -76,6 +76,35 @@ internal static class Deadline
   }
 }
 
+/// <summary>
+/// A clock the test drives. The inbound token buckets measure with
+/// <see cref="TimeProvider.GetTimestamp"/>, so a frozen clock makes a burst
+/// exact and <see cref="Advance"/> is the only thing that refills it.
+/// </summary>
+internal sealed class FakeClock : TimeProvider
+{
+  private static readonly DateTimeOffset Origin = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+  private long ticks;
+
+  public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+  public override long GetTimestamp()
+  {
+    return Interlocked.Read(ref ticks);
+  }
+
+  public override DateTimeOffset GetUtcNow()
+  {
+    return Origin.AddTicks(GetTimestamp());
+  }
+
+  internal void Advance(TimeSpan delta)
+  {
+    Interlocked.Add(ref ticks, delta.Ticks);
+  }
+}
+
 internal sealed record StoredWorkingSet(byte[] Frames, CollabWorkingSetTag Tag);
 
 internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
@@ -286,8 +315,12 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
     }
   }
 
-  /// <summary>Skips data frames still in flight and returns the close the server sent.</summary>
-  internal async Task<(int Status, string Description)> ReceiveCloseAsync()
+  /// <summary>
+  /// Skips data frames still in flight and returns the close the server sent.
+  /// <paramref name="answer"/> false leaves the server's close unanswered —
+  /// how a client that has stopped talking behaves.
+  /// </summary>
+  internal async Task<(int Status, string Description)> ReceiveCloseAsync(bool answer = true)
   {
     while (true)
     {
@@ -298,7 +331,7 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
         continue;
       }
 
-      if (socket.State == WebSocketState.CloseReceived)
+      if (answer && socket.State == WebSocketState.CloseReceived)
       {
         await socket.CloseOutputAsync(
             WebSocketCloseStatus.NormalClosure,
@@ -551,15 +584,15 @@ internal sealed class RecordingAuthorization : IBlokAuthorization
 
   internal List<(string Method, string User, string Document)> Calls { get; } = [];
 
+  /// <summary>Every principal the hook was handed, in call order.</summary>
+  internal List<ClaimsPrincipal> Principals { get; } = [];
+
   public ValueTask<bool> CanReadDocumentAsync(
       ClaimsPrincipal user,
       string documentId,
       CancellationToken cancellationToken = default)
   {
-    lock (Calls)
-    {
-      Calls.Add(("read", user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", documentId));
-    }
+    Record("read", user, documentId);
 
     return ValueTask.FromResult(AllowRead);
   }
@@ -569,11 +602,20 @@ internal sealed class RecordingAuthorization : IBlokAuthorization
       string documentId,
       CancellationToken cancellationToken = default)
   {
-    lock (Calls)
-    {
-      Calls.Add(("write", user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", documentId));
-    }
+    Record("write", user, documentId);
 
     return ValueTask.FromResult(AllowWrite);
+  }
+
+  private void Record(string method, ClaimsPrincipal user, string documentId)
+  {
+    lock (Calls)
+    {
+      Calls.Add((
+          method,
+          user.Identity?.Name ?? user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "",
+          documentId));
+      Principals.Add(user);
+    }
   }
 }

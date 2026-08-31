@@ -12,6 +12,9 @@ namespace Blok.Server.AspNetCore.Collab;
 /// outbound channel that a single pump task drains onto the socket; the
 /// receive loop never sends, so the socket's one-sender rule holds.
 ///
+/// Inbound frames are metered by <see cref="SyncInboundBudget"/> before they
+/// reach the room; over budget is closed 1008 rather than served.
+///
 /// Backpressure: a frame is accepted while the backlog queued BEFORE it is
 /// within budget, so one large SyncStep2 always fits and memory is bounded by
 /// budget + one frame. A consumer that falls further behind is closed 1008
@@ -22,19 +25,28 @@ internal sealed class SyncSocketMember : ICollabMember
   private const int ReceiveBufferSize = 16 * 1024;
 
   /// <summary>How long a peer gets to answer our close before the socket is torn down.</summary>
-  private static readonly TimeSpan CloseGrace = TimeSpan.FromSeconds(5);
+  private static readonly TimeSpan DefaultCloseGrace = TimeSpan.FromSeconds(5);
 
   private readonly Channel<Outbound> outbound = Channel.CreateUnbounded<Outbound>(
       new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
   private readonly long maxQueuedBytes;
+  private readonly TimeSpan closeGrace;
+  private readonly SyncInboundBudget? inbound;
   private long queuedBytes;
   private StrongBox<SyncCloseFrame>? requestedClose;
 
-  internal SyncSocketMember(bool canWrite, bool acceptsControlFrames, long maxQueuedBytes)
+  internal SyncSocketMember(
+      bool canWrite,
+      bool acceptsControlFrames,
+      long maxQueuedBytes,
+      SyncInboundBudget? inbound = null,
+      TimeSpan? closeGrace = null)
   {
     CanWrite = canWrite;
     AcceptsControlFrames = acceptsControlFrames;
     this.maxQueuedBytes = maxQueuedBytes;
+    this.inbound = inbound;
+    this.closeGrace = closeGrace ?? DefaultCloseGrace;
   }
 
   public bool CanWrite { get; }
@@ -115,7 +127,7 @@ internal sealed class SyncSocketMember : ICollabMember
 
       try
       {
-        await pump.WaitAsync(CloseGrace, CancellationToken.None);
+        await pump.WaitAsync(closeGrace, CancellationToken.None);
       }
       catch (TimeoutException)
       {
@@ -157,7 +169,7 @@ internal sealed class SyncSocketMember : ICollabMember
         var close = item.Close!.Value;
         await socket.CloseOutputAsync(close.Status, close.Reason, cancellationToken);
         // The peer now owes us its close; do not wait for it forever.
-        TryCancel(receiving, CloseGrace);
+        TryCancel(receiving, closeGrace);
 
         return;
       }
@@ -227,6 +239,15 @@ internal sealed class SyncSocketMember : ICollabMember
 
         var frame = message.ToArray();
         message.SetLength(0);
+
+        if (inbound?.Allows(frame) == false)
+        {
+          RequestClose(SyncClose.InboundRateExceeded);
+          discarding = true;
+
+          continue;
+        }
+
         await membership!.ReceiveAsync(frame, cancellationToken);
       }
     }

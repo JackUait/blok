@@ -14,6 +14,17 @@ internal static class ResetEndpoint
   public static async Task HandleAsync(HttpContext context)
   {
     var doc = SyncEndpoint.RouteDoc(context);
+
+    if (!SyncEndpoint.IsSingleSegment(doc))
+    {
+      await SyncEndpoint.RefuseAsync(
+          context,
+          StatusCodes.Status400BadRequest,
+          $"{SyncClose.BadDocument.Reason}\n");
+
+      return;
+    }
+
     var claims = context.Features.Get<TicketClaimsFeature>()?.Claims;
 
     if (claims is { } ticket &&
@@ -28,9 +39,11 @@ internal static class ResetEndpoint
     }
 
     var authorization = context.RequestServices.GetService<IBlokAuthorization>();
+    // In ticket mode the pass is the identity; context.User is empty there.
+    var user = claims is null ? context.User : TicketPrincipal.For(claims.Value);
 
     if (authorization is not null &&
-        !await authorization.CanWriteDocumentAsync(context.User, doc, context.RequestAborted))
+        !await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted))
     {
       await SyncEndpoint.RefuseAsync(context, StatusCodes.Status403Forbidden, "forbidden\n");
 

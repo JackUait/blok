@@ -30,8 +30,11 @@ internal sealed record SyncAccepted(string? SubProtocol, bool CanWrite, string? 
 /// <summary>
 /// The sync door (plan decisions 7, 9, 18). Order: WebSocket plumbing →
 /// origin → ticket (from the Sec-WebSocket-Protocol offer) → doc claim →
-/// application authorization → rate limit. As on the HTTP routes, only an
-/// accepted handshake spends the rate limit.
+/// application authorization → rate limit.
+///
+/// Unlike the HTTP routes, a REJECTED handshake spends the rate limit too: a
+/// rejection still costs an accepted WebSocket and a close frame, so without
+/// it a flood of bad passes would be free.
 /// </summary>
 internal sealed class SyncHandshake(
     BlokServerOptions options,
@@ -42,18 +45,37 @@ internal sealed class SyncHandshake(
 
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {
+    var (result, rateLimitKey) = await EvaluateAsync(context, doc);
+
+    // A refusal answers with a plain status and costs nothing to serve; an
+    // accepted OR rejected handshake costs a socket, so both spend the window.
+    if (result is not SyncRefused && !rateLimiter.Allow(rateLimitKey))
+    {
+      return new SyncRefused(StatusCodes.Status429TooManyRequests, "rate limit exceeded\n");
+    }
+
+    return result;
+  }
+
+  /// <summary>The outcome and the key its cost is billed to.</summary>
+  private async ValueTask<(SyncHandshakeResult Result, string RateLimitKey)> EvaluateAsync(
+      HttpContext context,
+      string doc)
+  {
+    var addressKey = $"addr:{context.Connection.RemoteIpAddress}";
+
     if (context.Features.Get<IHttpWebSocketFeature>() is null)
     {
-      return new SyncRefused(
+      return (new SyncRefused(
           StatusCodes.Status500InternalServerError,
-          "the sync endpoint needs WebSockets: call app.UseWebSockets() before MapBlokServer()\n");
+          "the sync endpoint needs WebSockets: call app.UseWebSockets() before MapBlokServer()\n"), addressKey);
     }
 
     if (!context.WebSockets.IsWebSocketRequest)
     {
-      return new SyncRefused(
+      return (new SyncRefused(
           StatusCodes.Status426UpgradeRequired,
-          "WebSocket upgrade required\n");
+          "WebSocket upgrade required\n"), addressKey);
     }
 
     var origin = BlokServerCors.RequestOrigin(context.Request);
@@ -67,43 +89,49 @@ internal sealed class SyncHandshake(
 
     if (originRequired && !BlokServerCors.IsAllowed(origin, options.AllowedOrigins))
     {
-      return new SyncRefused(StatusCodes.Status403Forbidden, "origin not allowed\n");
+      return (new SyncRefused(StatusCodes.Status403Forbidden, "origin not allowed\n"), addressKey);
     }
 
     var offers = ProtocolOffers(context.Request);
     var subProtocol = offers.Contains(Protocol, StringComparer.Ordinal) ? Protocol : null;
-    var addressKey = $"addr:{context.Connection.RemoteIpAddress}";
     var rateLimitKey = addressKey;
     string? principal = null;
     var canWrite = true;
+    var user = context.User;
+
+    if (!SyncEndpoint.IsSingleSegment(doc))
+    {
+      return (new SyncRejected(subProtocol, SyncClose.BadDocument), rateLimitKey);
+    }
 
     if (options.Auth == "ticket")
     {
       if (subProtocol is null)
       {
-        return new SyncRejected(null, SyncClose.ProtocolRequired);
+        return (new SyncRejected(null, SyncClose.ProtocolRequired), rateLimitKey);
       }
 
       var candidates = offers.Where(offer => offer != Protocol).ToArray();
 
       if (candidates.Length == 0)
       {
-        return new SyncRejected(subProtocol, SyncClose.MissingPass);
+        return (new SyncRejected(subProtocol, SyncClose.MissingPass), rateLimitKey);
       }
 
       if (!TryVerifyAny(candidates, out var claims))
       {
-        return new SyncRejected(subProtocol, SyncClose.InvalidPass);
+        return (new SyncRejected(subProtocol, SyncClose.InvalidPass), rateLimitKey);
       }
 
       // The ticket must name this document; an absent claim is a mismatch.
       if (!string.Equals(claims.Document, doc, StringComparison.Ordinal))
       {
-        return new SyncRejected(subProtocol, SyncClose.OtherDocument);
+        return (new SyncRejected(subProtocol, SyncClose.OtherDocument), rateLimitKey);
       }
 
       canWrite = claims.Write;
       principal = addressKey;
+      user = TicketPrincipal.For(claims);
 
       if (claims.User.Length > 0)
       {
@@ -118,21 +146,16 @@ internal sealed class SyncHandshake(
 
     if (authorization is not null)
     {
-      if (!await authorization.CanReadDocumentAsync(context.User, doc, context.RequestAborted))
+      if (!await authorization.CanReadDocumentAsync(user, doc, context.RequestAborted))
       {
-        return new SyncRejected(subProtocol, SyncClose.Forbidden);
+        return (new SyncRejected(subProtocol, SyncClose.Forbidden), rateLimitKey);
       }
 
       canWrite = canWrite &&
-          await authorization.CanWriteDocumentAsync(context.User, doc, context.RequestAborted);
+          await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted);
     }
 
-    if (!rateLimiter.Allow(rateLimitKey))
-    {
-      return new SyncRefused(StatusCodes.Status429TooManyRequests, "rate limit exceeded\n");
-    }
-
-    return new SyncAccepted(subProtocol, canWrite, principal);
+    return (new SyncAccepted(subProtocol, canWrite, principal), rateLimitKey);
   }
 
   /// <summary>The application's authenticated user (the RequireAuthorization path), if any.</summary>
@@ -173,5 +196,39 @@ internal sealed class SyncHandshake(
     claims = default;
 
     return false;
+  }
+}
+
+/// <summary>
+/// The principal the application's authorization hook is handed in ticket
+/// mode. Without it the hook would see the request's EMPTY principal — a
+/// consumer that authorizes per user would silently be authorizing anonymous.
+/// </summary>
+internal static class TicketPrincipal
+{
+  /// <summary>The document the pass names.</summary>
+  internal const string DocumentClaim = "blok:doc";
+
+  /// <summary>"true" when the pass carries write access.</summary>
+  internal const string WriteClaim = "blok:write";
+
+  private const string AuthenticationType = "blok-ticket";
+
+  internal static ClaimsPrincipal For(TicketClaims claims)
+  {
+    // A non-null authentication type is what makes IsAuthenticated true, so
+    // the hook can tell a verified pass from an anonymous request.
+    var identity = new ClaimsIdentity(AuthenticationType);
+
+    if (claims.User.Length > 0)
+    {
+      identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, claims.User));
+      identity.AddClaim(new Claim(ClaimTypes.Name, claims.User));
+    }
+
+    identity.AddClaim(new Claim(DocumentClaim, claims.Document));
+    identity.AddClaim(new Claim(WriteClaim, claims.Write ? "true" : "false"));
+
+    return new ClaimsPrincipal(identity);
   }
 }

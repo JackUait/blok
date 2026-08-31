@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -91,6 +92,20 @@ public sealed class SyncHandshakeTests
 
     Assert.Null(client.SubProtocol);
     Assert.Equal((4401, "blok-sync.v1 required"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task ADocumentIdWithAnEncodedSlashIsClosed4400InsteadOfLookingLikeAPassMismatch()
+  {
+    var ticket = fixture.Sign(
+        "{\"user\":\"u1\",\"doc\":\"a/b\",\"write\":true,\"exp\":4102444800}");
+    await using var app = await SyncApp.StartAsync("ticket");
+    await using var client = await app.ConnectWithTicketAsync(ticket, doc: "a/b");
+
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    Assert.Equal(
+        (4400, "document ids must be a single path segment"),
+        await client.ReceiveCloseAsync());
   }
 
   [Fact]
@@ -192,18 +207,37 @@ public sealed class SyncHandshakeTests
   }
 
   [Fact]
-  public async Task TheHandshakeSpendsTheRateLimitOnlyWhenAccepted()
+  public async Task ARejectedHandshakeSpendsTheRateLimitOnItsAddressSoAuthFailuresCannotFlood()
   {
     await using var app = await SyncApp.StartAsync(
         "ticket",
         options => options.RateLimitPerMinute = 1);
 
-    for (var index = 0; index < 2; index++)
+    await using (var rejected = await app.ConnectWithTicketAsync(fixture.Expired))
     {
-      await using var rejected = await app.ConnectWithTicketAsync(fixture.Expired);
       Assert.Equal((4401, "invalid pass"), await rejected.ReceiveCloseAsync());
     }
 
+    // The address has spent its window on the rejection: the next one never
+    // gets a socket at all.
+    await app.AssertRefusedAsync(
+        HttpStatusCode.TooManyRequests,
+        protocols: [SyncApp.Protocol, fixture.Expired]);
+  }
+
+  [Fact]
+  public async Task RejectionsDoNotSpendTheWindowOfAValidPassHolder()
+  {
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        options => options.RateLimitPerMinute = 1);
+
+    await using (var rejected = await app.ConnectWithTicketAsync(fixture.Expired))
+    {
+      Assert.Equal((4401, "invalid pass"), await rejected.ReceiveCloseAsync());
+    }
+
+    // Rejections key on the address, an accepted handshake on its user.
     await using var accepted = await app.ConnectWithTicketAsync(fixture.Compatible);
     Assert.Equal(FreshTag, (await accepted.ReceiveAsync<BlokControlFrame>()).Tag);
 
@@ -213,6 +247,31 @@ public sealed class SyncHandshakeTests
 
     await using var otherUser = await app.ConnectWithTicketAsync(fixture.UserTwo);
     Assert.Equal(FreshTag, (await otherUser.ReceiveAsync<BlokControlFrame>()).Tag);
+  }
+
+  [Fact]
+  public async Task ARejectedHandshakeIsTornDownWithoutWaitingOutAPeerThatNeverAnswers()
+  {
+    var served = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        configureApp: application => application.Use(async (context, next) =>
+        {
+          try
+          {
+            await next(context);
+          }
+          finally
+          {
+            served.TrySetResult();
+          }
+        }));
+    await using var client = await app.ConnectWithTicketAsync(fixture.Expired);
+
+    // The browser still reads the code, and the socket is not held open for
+    // the answer a rejected client has no reason to send.
+    Assert.Equal((4401, "invalid pass"), await client.ReceiveCloseAsync(answer: false));
+    await served.Task.WaitAsync(TimeSpan.FromSeconds(3), Deadline.Token());
   }
 
   [Fact]
@@ -226,7 +285,7 @@ public sealed class SyncHandshakeTests
 
     Assert.Equal(SyncApp.Protocol, client.SubProtocol);
     Assert.Equal((4403, "forbidden"), await client.ReceiveCloseAsync());
-    Assert.Contains(("read", "", SyncApp.Doc), authorization.Calls);
+    Assert.Contains(("read", "u1", SyncApp.Doc), authorization.Calls);
   }
 
   [Fact]
@@ -243,7 +302,29 @@ public sealed class SyncHandshakeTests
     await client.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(doc, " stolen")));
 
     Assert.Equal("seeded", await SyncedTextAsync(client));
-    Assert.Contains(("write", "", SyncApp.Doc), authorization.Calls);
+    Assert.Contains(("write", "u1", SyncApp.Doc), authorization.Calls);
+  }
+
+  [Fact]
+  public async Task TheAuthorizationHookSeesTheTicketsUserDocumentAndWriteClaims()
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+    await using var writer = await app.ConnectWithTicketAsync(fixture.Compatible);
+    Assert.Equal(FreshTag, (await writer.ReceiveAsync<BlokControlFrame>()).Tag);
+
+    var principal = authorization.Principals[0];
+    Assert.True(principal.Identity?.IsAuthenticated);
+    Assert.Equal("u1", principal.FindFirstValue(ClaimTypes.NameIdentifier));
+    Assert.Equal(SyncApp.Doc, principal.FindFirstValue("blok:doc"));
+    Assert.Equal("true", principal.FindFirstValue("blok:write"));
+
+    await using var reader = await app.ConnectWithTicketAsync(fixture.ReadOnly);
+    Assert.Equal(FreshTag, (await reader.ReceiveAsync<BlokControlFrame>()).Tag);
+
+    Assert.Equal("false", authorization.Principals[^1].FindFirstValue("blok:write"));
   }
 
   [Fact]

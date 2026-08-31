@@ -20,6 +20,10 @@ public sealed class SyncEndpointTests
   [InlineData("CollabMaxMessageBytes", 0)]
   [InlineData("CollabMaxMessageBytes", -1)]
   [InlineData("CollabKeepAliveInterval", -1)]
+  [InlineData("CollabInboundFramesPerSecond", -1)]
+  [InlineData("CollabInboundBurstFrames", 0)]
+  [InlineData("CollabInboundBurstFrames", -1)]
+  [InlineData("CollabInboundResyncsPerMinute", -1)]
   public void RejectsNonPositiveCollabLimits(string option, int value)
   {
     var options = new BlokServerOptions
@@ -35,6 +39,15 @@ public sealed class SyncEndpointTests
         break;
       case "CollabMaxMessageBytes":
         options.CollabMaxMessageBytes = value;
+        break;
+      case "CollabInboundFramesPerSecond":
+        options.CollabInboundFramesPerSecond = value;
+        break;
+      case "CollabInboundBurstFrames":
+        options.CollabInboundBurstFrames = value;
+        break;
+      case "CollabInboundResyncsPerMinute":
+        options.CollabInboundResyncsPerMinute = value;
         break;
       default:
         options.CollabKeepAliveInterval = TimeSpan.FromSeconds(value);
@@ -54,6 +67,9 @@ public sealed class SyncEndpointTests
     Assert.Equal(8, options.CollabMaxConnectionsPerUserPerDoc);
     Assert.Equal(1 << 20, options.CollabMaxMessageBytes);
     Assert.Equal(TimeSpan.FromSeconds(15), options.CollabKeepAliveInterval);
+    Assert.Equal(50, options.CollabInboundFramesPerSecond);
+    Assert.Equal(100, options.CollabInboundBurstFrames);
+    Assert.Equal(60, options.CollabInboundResyncsPerMinute);
   }
 
   [Fact]
@@ -283,6 +299,93 @@ public sealed class SyncEndpointTests
     await alice.SendRawAsync(frame);
 
     Assert.Equal(1021, (await bob.ReceiveAsync<AwarenessFrame>()).Update.Length);
+  }
+
+  [Fact]
+  public async Task AnInboundBurstOverTheBudgetCloses1008()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        configure: options =>
+        {
+          options.CollabInboundFramesPerSecond = 10;
+          options.CollabInboundBurstFrames = 10;
+        },
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+
+    // The clock never moves, so nothing refills: the eleventh frame is over.
+    for (var index = 0; index < 12; index++)
+    {
+      await client.SendAsync(new AwarenessFrame([(byte)index]));
+    }
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task ASustainedLegitimateCadenceRefillsTheBudgetAndStaysOpen()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        configure: options =>
+        {
+          options.CollabInboundFramesPerSecond = 10;
+          options.CollabInboundBurstFrames = 10;
+        },
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var alice = await app.ConnectAsync();
+    await using var bob = await app.ConnectAsync();
+
+    // Ten frames a second for three seconds — three times the burst, never
+    // over the rate. Bob's copy is the proof each one reached the room.
+    for (var index = 0; index < 30; index++)
+    {
+      await alice.SendAsync(new AwarenessFrame([(byte)index]));
+      Assert.Equal([(byte)index], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+      clock.Advance(TimeSpan.FromMilliseconds(100));
+    }
+
+    await alice.SendAsync(new AwarenessFrame([255]));
+    Assert.Equal([255], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+  }
+
+  [Fact]
+  public async Task AResyncStormCloses1008WhileTheFrameBudgetStillHasRoom()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+    using var doc = YDocs.NewClient();
+    var resync = new SyncStep1Frame(YDocs.StateVector(doc));
+
+    // Twelve frames is nothing to the 100-frame burst; every one of them asks
+    // the room for the whole document.
+    for (var index = 0; index < 12; index++)
+    {
+      await client.SendAsync(resync);
+    }
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task AnUpdateStormOfTheSameSizeIsNotAResyncStorm()
+  {
+    var clock = new FakeClock();
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<TimeProvider>(clock));
+    await using var client = await app.ConnectAsync();
+    using var doc = await SyncedAsync(client);
+    var update = YDocs.UpdateAppending(doc, " once");
+
+    for (var index = 0; index < 12; index++)
+    {
+      await client.SendAsync(new SyncUpdateFrame(update));
+    }
+
+    Assert.Equal("seeded once", await SyncedTextAsync(client));
   }
 
   [Fact]

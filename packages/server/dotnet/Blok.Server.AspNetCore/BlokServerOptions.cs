@@ -57,6 +57,28 @@ public sealed class BlokServerOptions
 
   public TimeSpan CollabKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(15);
 
+  /// <summary>
+  /// Inbound frames one sync connection may sustain per second (0 = no limit).
+  /// A fast typist commits ~10 updates a second and moves the cursor at about
+  /// 10 Hz, so ~25 frames/s is the busiest legitimate connection; 50 is double
+  /// that.
+  /// </summary>
+  public int CollabInboundFramesPerSecond { get; set; } = 50;
+
+  /// <summary>
+  /// Inbound frames one sync connection may send back-to-back before the
+  /// per-second rate binds — enough for a reconnect flurry or a large paste.
+  /// </summary>
+  public int CollabInboundBurstFrames { get; set; } = 100;
+
+  /// <summary>
+  /// Whole-document resyncs (SyncStep1) one connection may sustain per minute
+  /// (0 = no limit). Each one makes the room compute a diff against the whole
+  /// document and send it back, so this is the amplifying frame. A client
+  /// sends one per connect; the most eager re-ask every 5 seconds (~12/min).
+  /// </summary>
+  public int CollabInboundResyncsPerMinute { get; set; } = 60;
+
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
   internal bool HasCollab => CollabEnabled;
@@ -210,6 +232,25 @@ public sealed class BlokServerOptions
     {
       throw new InvalidOperationException(
           $"CollabKeepAliveInterval must be zero (off) or greater (got {CollabKeepAliveInterval})");
+    }
+
+    if (CollabInboundFramesPerSecond < 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabInboundFramesPerSecond must be zero (off) or greater (got {CollabInboundFramesPerSecond})");
+    }
+
+    if (CollabInboundBurstFrames <= 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabInboundBurstFrames must be a positive number of frames (got {CollabInboundBurstFrames}): " +
+          "a zero burst closes every connection on its first frame");
+    }
+
+    if (CollabInboundResyncsPerMinute < 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabInboundResyncsPerMinute must be zero (off) or greater (got {CollabInboundResyncsPerMinute})");
     }
 
     if (!CollabEnabled)

@@ -593,7 +593,7 @@ describe('server release wiring', () => {
     const MUSL_BUILD_JOB = 'build-musl-yffi';
     const HOST_CSPROJ = 'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj';
     const HOST_RUNTIMES_DIR = 'packages/server/dotnet/Blok.Server.Host/runtimes';
-    const CACHE_ACTION = 'actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830';
+    const CACHE_ACTION = 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9';
     const UPLOAD_ACTION = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
     const DOWNLOAD_ACTION = 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
 

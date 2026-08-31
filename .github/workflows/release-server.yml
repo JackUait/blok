@@ -45,7 +45,7 @@ jobs:
       # No restore-keys: a lib restored from another pin must never be reused.
       - name: Restore the cached libyrs build
         id: libyrs-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: yffi-out
           key: libyrs-${{ matrix.target }}-${{ env.YRS_PIN }}

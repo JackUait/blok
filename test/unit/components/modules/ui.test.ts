@@ -162,6 +162,9 @@ const createBlokStub = (): UI["Blok"] => {
     API: {
       methods: {} as API,
     },
+    BlocksAPI: {
+      scrollToBlock: vi.fn(),
+    },
     InlineToolbarAPI: {},
     BlockSettingsAPI: {},
     BlockSelectionAPI: {},
@@ -2536,6 +2539,71 @@ describe("UI module", () => {
 
       expect(wrapper.hasAttribute(DATA_ATTR.width)).toBe(false);
       expect(ui.getWidthMode()).toBe("narrow");
+    });
+  });
+
+  describe("anchor clicks", () => {
+    const createLinkUI = (): CreateUIResult => {
+      const result = createUI();
+
+      (
+        result.ui as unknown as { bindReadOnlySensitiveListeners: () => void }
+      ).bindReadOnlySensitiveListeners();
+
+      return result;
+    };
+
+    const clickLink = (redactor: HTMLElement, href: string): void => {
+      const anchor = document.createElement("a");
+
+      anchor.setAttribute("href", href);
+      anchor.textContent = "Раздел";
+      redactor.appendChild(anchor);
+
+      anchor.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+    };
+
+    it("scrolls to the section for a same-document link instead of opening a tab", () => {
+      /**
+       * A bare fragment addresses this very document — the link tool even labels
+       * it "Jump to section". Opening it in a new tab reloads the page instead.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(redactor, "#h.2y1ok8y7pef0");
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("h.2y1ok8y7pef0");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("still opens an external link in a new tab", () => {
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(redactor, "https://example.com/page");
+
+      expect(openSpy).toHaveBeenCalled();
+      expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+    });
+
+    it("ignores a fragment that is only a hash", () => {
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(redactor, "#");
+
+      expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
     });
   });
 });

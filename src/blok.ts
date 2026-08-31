@@ -15,7 +15,7 @@ import {
   type ReadyScopeOptions,
   type ReadyStateSnapshot,
 } from './components/utils/ready-registry';
-import { resolveHashTarget } from './components/utils/hash-target';
+import { decodeHashFragment, resolveHashTarget } from './components/utils/hash-target';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
@@ -485,7 +485,7 @@ class Blok {
       // from onReady, the target block won't exist yet. In that case we store the hash
       // on Renderer.pendingHashScroll so BlocksAPI.render() can retry after the real blocks arrive.
       const rawHash = window.location.hash.slice(1);
-      const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
+      const hash = rawHash ? decodeHashFragment(rawHash) : '';
 
       if (hash) {
         const target = resolveHashTarget(hash, (blok.moduleInstances as Partial<BlokModules>).UI?.nodes.holder);
@@ -710,19 +710,6 @@ class Blok {
         return uiMethods.isMobile as boolean;
       },
     });
-  }
-
-  /**
-   * Decodes a URL hash fragment, falling back to the raw value on malformed percent-sequences.
-   * @param raw - raw hash fragment (without leading #)
-   */
-  private static safeDecodeHash(raw: string): string {
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      // Malformed percent-sequence (e.g. %ZZ) — return raw so no block is matched
-      return raw;
-    }
   }
 
   /**

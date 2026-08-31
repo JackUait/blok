@@ -11,6 +11,23 @@ export interface HashTarget {
 }
 
 /**
+ * Decode a URL fragment, tolerating a malformed percent-sequence.
+ *
+ * A bad escape ("%ZZ") throws; the raw fragment is still a usable lookup key —
+ * it simply matches nothing, which is the right outcome.
+ *
+ * @param raw - the fragment, without the leading "#"
+ * @returns the decoded fragment, or the raw one when it cannot be decoded
+ */
+export function decodeHashFragment(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * Resolve a URL fragment to the element it addresses.
  *
  * Two namespaces answer to a fragment: a block id (`data-blok-id`, what "Copy

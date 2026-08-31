@@ -261,3 +261,31 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   EscapeDataString escapes the `%`). Fixtures: 20 cases (+`proto-key`,
   `lenient-seed`). The vacuous release conformance step is deleted; the pin
   asserts the "Wait for successful CI" gate.
+
+## Phase 2 — CLOSED 2026-08-31
+
+Server-side sync rooms are complete and on main. Commit chain
+`809f7b7a..6a1f7f29`: Wave A groundwork, B1 lockstep converter, B2 SyncWire,
+C1 rooms, C2 endpoint, C3 host, E1/E2/D1 conformance, and three adversarial
+review rounds (rooms/persistence, endpoint/security, lockstep/packaging) all
+closed. Final gates: full .NET solution 322 (AspNetCore) + 355 (Blok.Server,
+1 documented pending-update canary skipped) + 82 (Host), `dotnet format`
+clean; stock-client conformance **76/76 with lineage assertions**; JS unit
+24,338 (one isolated-pass load flake); ESLint 0 errors; tsc clean; CI green
+on `c58a2e36` (everything through the lockstep fixes), `6a1f7f29` verified
+locally and awaiting its own CI run.
+
+Everything ships behind `--collab`, default off; nothing on the default path
+constructs a Doc, so the emergency lever remains "don't pass --collab".
+
+**Deferred to Phase 3 (client):** the client must strip U+0000 before
+producing updates — the server cannot guard it (YDotNet 0.6.0 exposes no
+update decoder and varints contain legitimate zero bytes). The client
+compares the control frame's `lineage` by equality and resyncs fresh on a
+mismatch or a 4409.
+
+**Known follow-ups (not blockers):** at the upgrade limit Kestrel throws
+inside AcceptWebSocketAsync → HTTP 500 after JoinAsync already ran (endpoint
+should pre-check → 503); NuGet on Alpine x64 stays broken upstream (docs
+note + startup probe); the musl-arm64 override is arch/linkage-checked in the
+build job but not runtime-smoked.

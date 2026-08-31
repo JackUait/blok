@@ -1,0 +1,146 @@
+# Phase 2 Implementation Plan — Server-Side Sync Rooms
+
+Planning pass 2026-08-31 against main 013a9740 (Phases 0-1 closed). All research
+file:lines re-verified; client schema v2 is the landed form the C# side mirrors.
+Docker needs NO musl swap (runtime-deps is Debian; only linux-x64/arm64 published).
+
+## Risk register (start order)
+R1 lockstep serializers: C# YDocConverter mirrors BOTH serializer.ts (value rules:
+convertible-array predicate, keyed grids __rows/__rowKeys + first-wins key
+normalization, eager contentIds, empty-array-atomic, paragraph {}→{text:''},
+tunes-only-when-nonempty) AND DocumentStore.toJSON/fromJSON (hierarchy view,
+parentId as membership arbiter, cycle-break smallest-id-keeps-parent +
+self-parent always broken, DFS parent-agreement gating, dup-id first-agreeing-
+occurrence, two-pass sorted orphan tail, dangling tolerance). Fixtures are the
+contract (like tickets.json); JS generates from REAL client code, both CIs red
+on drift; reverse direction closed by E2.
+R2a YDotNet.Protocol byte-compat unproven → B2 fixture spike gates use-vs-
+hand-roll (~100-line codec fallback) BEFORE room code shapes around either.
+R2b echo suppression = applying-remote flag around ApplyV1 (origins taggable,
+NOT observable on UpdateEvent); Doc is not thread-safe → room = single-lane
+actor; ALL doc access through the lane.
+R3 musl: own yffi build from yrs release-v0.19.1, RUSTFLAGS -crt-static off,
+swap via runtimes/<rid>/native items; fixes OUR archives only — NuGet-on-
+Alpine-x64 stays broken upstream (docs note + startup probe refusal + upstream PR).
+R4 single-file: -p:IncludeNativeLibrariesForSelfExtract=true in publish-server
+AND Dockerfile; verify extraction under USER 65532/no-home
+(DOTNET_BUNDLE_EXTRACT_BASE_DIR if needed); add native-load smokes.
+R5 80/80 whole-solution coverage: converter/store fixture-saturated; endpoint
+driven via TestServer.CreateWebSocketClient.
+
+## Standing decisions
+1. Doc-endpoint outbound = NEW third documented owner
+   Blok.Server/Collab/DocEndpointClient.cs (guarded fetcher forbids loopback +
+   has no PUT); S3-style structural pin in OutboundClientArchitectureTests;
+   URL battery like S3; auth via BLOK_DOC_ENDPOINT_AUTH env verbatim.
+2. Working-set S3 driver adds internal key-addressed Get/Put/Delete INSIDE
+   S3BlobStore.cs (keeps the one-client pin).
+3. Working-set placement is a SECURITY decision: --collab-dir (default
+   ./blok-collab; refuse if inside StorageDirectory — LocalFileEndpoint serves
+   that publicly); S3 opt-in --collab-s3-prefix with documented not-public req.
+4. Blob = magic + {format,epoch} header + length-prefixed update frames;
+   compaction = load into fresh Doc via ApplyV1 + StateDiffV1(zero) (GC route);
+   triggers: on-load threshold + always flush-before-evict. format 1 = schema v2.
+5. Epoch NEVER regresses: reset = atomic rewrite to empty log with epoch+1,
+   close doc's connections 4409, evict; next open lazily re-seeds.
+6. Epoch wire = first in-band control frame, message-type varint 100, {epoch,
+   format}, ONLY on connections that negotiated blok-sync.v1 (stock clients in
+   loopback mode never see it).
+7. Handshake: Sec-WebSocket-Protocol offer [blok-sync.v1, <ticket>] (handle
+   comma-joined AND repeated headers); verify TicketVerifier + claims.Document
+   == {doc} (absent doc claim → reject at sync door); accept echoing
+   blok-sync.v1; auth-fail = accept-then-close-4401 (refusing subprotocol
+   gives no readable code); Origin allow-list applies to upgrades in ticket
+   mode; verify-at-connect only; TTL guidance ~30min.
+8. doc claim returns to blokTicket() additive; HTTP routes keep ignoring it.
+9. IBlokAuthorization consumed via nullable GetService at handshake + reset;
+   AND-semantics with ticket; stays unregistered by default.
+10. Read-only: drop SyncStep2 AND Update (SyncStep2 carries initial state!);
+    answer their SyncStep1; relay their awareness.
+11. Awareness verbatim; on join broadcast constant queryAwareness(3) frame to
+    others (verify stock-client reply at implementation).
+12. Seed fails CLOSED: unreachable doc-endpoint on first open → close 4503,
+    never seed empty. Export failure: log + retry next tick; blob stays
+    authoritative; eviction still flushes blob.
+13. Record wire: GET {doc-endpoint}/{docId} (bare OutputData or
+    PersistedDocument envelope; data:null = legit empty seed); PUT bare
+    OutputData + last-seen version in a header, UNCONDITIONAL overwrite (blob
+    authoritative while it exists; version is pass-through).
+14. Flags: --collab, --doc-endpoint (+BLOK_DOC_ENDPOINT_AUTH), --collab-dir,
+    --collab-s3-prefix. Refusal matrix incl. doc-endpoint-without-collab.
+    HasCollab gates route mapping like HasStorage.
+15. DI: lazy TryAddSingleton factories (throw when !HasCollab); idempotent.
+16. Code layout: pure logic Blok.Server/Collab/ (YDotNet+Native refs on
+    Blok.Server.csproj — core only, zero managed deps, skip Server.*); wire in
+    Blok.Server.AspNetCore/Collab/; Host flags/UseWebSockets/drain. NoWarn
+    NETSDK1206 in Directory.Build.props.
+17. Sync endpoint carries .DisableRequestTimeout() explicitly; keep-alive via
+    accept KeepAliveInterval ~15s (KeepAliveTimeout on net10 =
+    verify-at-implementation; fallback idle-receive deadline). In-process
+    consumers must UseWebSockets themselves — clear refusal + docs.
+18. Limits: existing limiter counts handshake; per-user-per-doc cap (8),
+    max message 1 MiB (close 1009); options not flags.
+19. Shutdown: HostOptions.ShutdownTimeout ~30s; ApplicationStopping →
+    DrainAsync (503 new upgrades → flush all rooms blob+export → close 1001);
+    REAL SIGTERM host test (today: zero — 6 Kill sites only).
+
+## Tasks (TDD; .NET timing law: explicit deadlines, never sub-second absence;
+unique per-test dirs)
+
+Wave A (parallel): A1 package refs + NoWarn + publish/Dockerfile flag +
+YDotNetRuntimeProbeTests + consumer-fixture native restore. A2 musl yffi CI
+job (rust:alpine, yrs pin, QEMU arm64, cache; fail-if-absent guard; Alpine +
+Docker + 65532 smokes; release-wiring pins). A3 JS ticket doc claim +
+additive fixtures docMismatch/readOnly + conformance updates. A4 options/
+flags/refusal matrix + registration & host tests. A5 store contract
+(Read/Write/ResetAsync) + codec + local/S3 drivers + epoch-monotonic law.
+B1 lockstep fixtures (scripts/generate-collab-fixtures.mjs → fixtures/collab/
+{input.json,canonical.json,update.bin}; JS freshness test; C# YDocConverter +
+3-direction conformance tests + per-law unit tests). B2 framing spike
+(sync-frames.json fixtures; YDotNet.Protocol decode/re-encode byte-identical
+→ adopt, else hand-roll SyncWire.cs pinned by same fixtures).
+F1 docs server-data.ts per-path collab story + limits rewrite (ticket-not-
+scoped, no-documents renegotiated honestly, working-set privacy, TTL, reset,
+Alpine caveat).
+
+Wave C (sequential): C1 CollabRoom/Manager single-lane actor (load-or-seed
+exactly-once serialized, echo flag, append-on-observe, debounced export via
+TimeProvider, eviction linger ~30s → compact+export+drop; DocEndpointClient +
+third-owner pin + add ClientWebSocket to RestrictedTypes). C2 SyncEndpoint +
+handshake guard + reset route (auth matrix off fixtures, both header forms,
+two-client convergence, late joiner, read-only drops, awareness, caps, epoch
+frame, 4409, RequireAuthorization parity). C3 Host wiring (UseWebSockets,
+ShutdownTimeout, drain; REAL SIGTERM test with fixture doc-endpoint asserting
+1001 + flushed blob + export PUT + exit 0, deadline-driven, skip-on-Windows;
+10-min-policy + keep-alive proofs via shortened windows).
+
+Wave D: D1 release wiring (sync conformance in release test step; pins).
+Wave E: E1 pinned devDeps y-websocket/y-protocols (+ws only if needed).
+E2 sync-contract.test.ts (BLOK_CONFORMANCE-gated; script extended, CI string
+unchanged): STOCK client no-auth AND ticket-via-protocols; convergence, late
+join, read-only drop (positive-event assert), reconnect diff, awareness,
+seed-from-fixture-endpoint equals canonical via REAL JS serializer (closes R1
+reverse), export lands, reset → 4409 → resync.
+
+## Architecture tests to change
+OutboundClientArchitectureTests (third owner + ClientWebSocket restricted);
+BlokServerRegistrationTests (lazy-throw, idempotent, /sync absent w/o flag,
+matrix; DoesNotRegisterUnusedFutureServices stays green);
+server-release-wiring (flags, musl job, yrs pin string, smokes, conformance);
+server-quality-gates (NoWarn exactly NETSDK1206; gitleaks entries if needed);
+ci-critical-path (unchanged if conformance-script-only);
+publish-server.test.ts; dependency/phantom laws for new devDeps;
+server-contract.test.ts isTicketFixture keys.
+
+## Parallelization
+Independent: A1∥A2∥A3∥A5∥F1; then B1∥B2 (need A1's refs). Shared-file owners:
+Options/HostArguments/Program (A4→C3); route-builder/DI extensions (A4→C2);
+csproj/props (A1); S3BlobStore (A5); OutboundClientArchitectureTests (C1);
+tickets.json (A3); release-server.yml (A2→D1); test-server-conformance.mjs (E2).
+Spine: A1 → {A5,B1,B2} → C1 → C2 → C3 → E2; A4 → C2; A3 → C2 tests.
+
+## Ships behind --collab default-off
+Fully gated: routes, rooms, store writes, doc-endpoint traffic, drain deltas.
+Global but inert (release notes): YDotNet deps on the NuGet (~1.7MB), single-
+file layout change, musl swap, NoWarn, additive doc claim, drain hook.
+Nothing default-path constructs a Doc — emergency lever = don't pass --collab.

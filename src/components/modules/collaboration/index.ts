@@ -206,6 +206,18 @@ export class Collaboration extends Module {
   private lastStatusDetail: CollabStatusDetail | undefined = undefined;
 
   /**
+   * How many of this module's own observer suspensions are outstanding.
+   *
+   * `ModificationsObserver.disable()/enable()` is a boolean, not a counter, so
+   * an inner `enable()` re-arms the observer while an outer suspension is still
+   * rewriting the DOM. The degrade render is the one window here that spans an
+   * await — a tool with a genuinely async `render` holds it open for as long as
+   * it likes — and a first sync landing inside it drops the degraded view,
+   * which suspends again. Only the outermost pair may touch the module.
+   */
+  private observerSuspensions = 0;
+
+  /**
    * Bumped by every lineage reset. An in-flight `handleStatus` captures it
    * before it awaits and abandons its tail if the document was swapped
    * underneath — see the guard there.
@@ -401,11 +413,11 @@ export class Collaboration extends Module {
    * through the ordinary remote path.
    */
   private resetForRelineage(): void {
-    const { BlockManager, ModificationsObserver, YjsManager } = this.Blok;
+    const { BlockManager, YjsManager } = this.Blok;
 
-    ModificationsObserver.disable();
+    this.suspendObserver();
     void BlockManager.clear(false, { skipYjsSync: true });
-    ModificationsObserver.enable();
+    this.resumeObserver();
 
     this.degraded = false;
 
@@ -527,9 +539,9 @@ export class Collaboration extends Module {
     this.degradeRendered = true;
     this.degraded = true;
 
-    const { BlockManager, ModificationsObserver, Renderer } = this.Blok;
+    const { BlockManager, Renderer } = this.Blok;
 
-    ModificationsObserver.disable();
+    this.suspendObserver();
 
     try {
       await BlockManager.withViewRebuild(async () => {
@@ -537,7 +549,7 @@ export class Collaboration extends Module {
         await Renderer.render(this.lastKnown, { skipYjsSync: true });
       });
     } finally {
-      ModificationsObserver.enable();
+      this.resumeObserver();
     }
   }
 
@@ -556,11 +568,33 @@ export class Collaboration extends Module {
 
     this.degraded = false;
 
-    const { BlockManager, ModificationsObserver } = this.Blok;
+    this.suspendObserver();
+    void this.Blok.BlockManager.clear(false, { skipYjsSync: true });
+    this.resumeObserver();
+  }
 
-    ModificationsObserver.disable();
-    void BlockManager.clear(false, { skipYjsSync: true });
-    ModificationsObserver.enable();
+  /**
+   * Takes the observer out of service for the caller's DOM rewrite. Nests: see
+   * {@link observerSuspensions}.
+   */
+  private suspendObserver(): void {
+    if (this.observerSuspensions === 0) {
+      this.Blok.ModificationsObserver.disable();
+    }
+
+    this.observerSuspensions += 1;
+  }
+
+  /**
+   * Releases one suspension, re-arming the observer only when the last one is
+   * gone.
+   */
+  private resumeObserver(): void {
+    this.observerSuspensions = Math.max(0, this.observerSuspensions - 1);
+
+    if (this.observerSuspensions === 0) {
+      this.Blok.ModificationsObserver.enable();
+    }
   }
 
   /**

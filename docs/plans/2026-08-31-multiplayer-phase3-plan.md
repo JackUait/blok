@@ -91,7 +91,12 @@ Independent: A1∥A2∥A3∥A4∥A5∥A6∥A7∥D1. Spine: {A3,A5,A7}→B1→C1�
 y-indexeddb offline (epoch/lineage-tagged; C4's reset lever is its prerequisite, lands now); Y.Text/
 character carets (format bump); scale-out guide; server-side edit API; in-band ticket refresh.
 
-## Review-round findings (2026-08-31) — QUEUED, not yet fixed
+## Review-round findings (2026-08-31) — CLOSED except F8
+
+Every finding below except **F8** was fixed in `41016d9c`, `295c3f5f` and the
+F13 commit that follows them. F8 is a pre-existing core behaviour collaboration
+makes reachable without a gesture, and is carried into Phase 4 — see the
+close-out. The section is kept verbatim as the record of what the review found.
 
 Three adversarial reviewers ran over `c27b5f25..d4cc9681`. The sync core held
 (handshake ordering, lineage/reset, echo suppression, codec parity all survived
@@ -143,3 +148,71 @@ probing). These remain OPEN and block the phase closing:
 
 **Two fixture omissions hid four of these** and should land in the same pass: a
 registered tool WITHOUT `setReadOnly`, and a peer with NO `collaboration.user`.
+
+## Phase 3 — CLOSED 2026-09-01
+
+The client provider is complete and on main. Commit chain from `c27b5f25`
+through this commit: Wave A groundwork (config key, sync-wire codec, awareness
+seam, NUL guard), the provider and idle-surviving presence, sync-first load,
+presence plus the reset that actually forgets, E1 real-client-against-real-
+server conformance, and three adversarial review rounds — all closed but F8.
+
+**How each finding was resolved**
+
+- **F1** — under collaboration the document owns the floor. The Renderer's
+  empty branch no longer inserts anything when `Collaboration.isEnabled`, and a
+  collaboration view rebuild renders the Yjs document rather than the caller's
+  snapshot. Both candidate fixes named in the review had traps; this is the
+  third option, and it also fixes two bugs the review did not name — a
+  `Saver.save()` snapshot drops a block whose `validate()` rejects it (which
+  blanked a freshly seeded room on its first read-only transition), and the
+  snapshot is captured before an `await` (so a lineage reset landing mid-rebuild
+  re-rendered pre-reset blocks). The degraded view is exempt: there the
+  stand-in IS the only content.
+- **F2/F2b** — `error` is published as `error`, with the reason, the close
+  code, the server's text, and `retryInMs` on a real offline.
+  `CollaborationTerminalReason` is the published union and the wire-level
+  `CollabTerminalError` is an alias of it. A handshake timeout is no longer
+  terminal on the first occurrence (three silent handshakes since the last
+  completed sync), a repeat oversized frame is refused before it is written
+  rather than self-completing into a second 1009, and the first sync now has
+  its own deadline — a server that validates the handshake and then says
+  nothing reconnects and degrades instead of sitting in `connecting` forever.
+- **F3** — covered by the same render-source change as F1.
+- **F4** — the seed is skipped for a reader in the APPLIED sense
+  (`ReadOnly.isEnabled`), not just a write-denied member, so a pure viewer with
+  a write-granting ticket no longer authors someone else's first paragraph.
+- **F6** — a peer with no configured name is published with an empty `name`
+  and still gets an avatar. Requiring a name hid every participant in a
+  default-configured room from every other one.
+- **F7** — documented in the `collaboration` JSDoc: every registered tool must
+  support read-only, because a collaboration editor always boots read-only.
+- **F9** — the seed is re-run when a late write grant arrives, and
+  `UI.appendBlockAtBottom` makes a block when there is none at all.
+- **F13** — CONFIRMED, not merely plausible: a test that parks a degrade render
+  and lands a first sync inside it reproduced the early re-arm. The module now
+  owns a suspension depth, so only the outermost pair touches
+  `ModificationsObserver`.
+- **Both fixture omissions** landed: the harness registers a tool without
+  `setReadOnly` (so every read-only transition is the real save/clear/render
+  dance) and covers a peer with no `collaboration.user`.
+
+Final gates: collaboration suite 196/196; docs suite 385/385; ESLint 0 errors;
+tsc clean. The full unit suite is green except three reds that reproduce on a
+clean HEAD worktree without these changes, under a machine at ~600 load
+average: two are cold-transform import timeouts that pass at
+`--testTimeout=30000`, and `table-insert-redo-id-stability` is the recorded
+real-timer load-flake, confirmed failing twice at HEAD.
+
+**Carried forward (not blockers)**
+
+- **F8** — the write veto flipping mid-typing destroys the caret. This is the
+  pre-existing read-only dance (`readonly.ts` restores only `scrollY` and says
+  so), and any host calling `readOnly.toggle()` mid-typing has always hit it;
+  collaboration is what makes it reachable with no gesture and no warning.
+  Fixing it belongs with the read-only in-place toggle contract, not here.
+- The server should announce `CollabMaxMessageBytes` in the control frame, so
+  the client can refuse an oversized frame before producing it rather than
+  learning from a 1009.
+- Decision 8's close-code matrix in this plan is stale: it predates the
+  handshake-timeout and oversized-update escalation rules that actually shipped.

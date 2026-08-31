@@ -479,6 +479,52 @@ describe('collaboration — sync-first load', () => {
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
     });
+
+    /**
+     * `ModificationsObserver.disable()/enable()` is a boolean, not a counter.
+     * The degrade render is the module's only suspension that spans an await —
+     * a tool with a genuinely async `render` holds it open for as long as it
+     * likes — and a first sync landing inside that window drops the degraded
+     * view, which suspends the observer again. The inner `enable()` would then
+     * re-arm the observer on top of a DOM the outer window is still rewriting,
+     * reporting the swap as the user's own edit.
+     */
+    it('keeps the observer suspended when a first sync lands mid-degrade-render', async () => {
+      const harness = await boot({ data: { blocks: [{ type: 'paragraph', data: { text: 'last known' } }] } });
+      const { ModificationsObserver, Renderer } = harness.core.moduleInstances;
+
+      const disableSpy = vi.spyOn(ModificationsObserver, 'disable');
+      const enableSpy = vi.spyOn(ModificationsObserver, 'enable');
+
+      let releaseRender = (): void => {};
+      const parked = new Promise<void>((resolve) => {
+        releaseRender = resolve;
+      });
+
+      vi.spyOn(Renderer, 'render').mockImplementationOnce(async () => {
+        await parked;
+      });
+
+      harness.socket().open();
+      harness.socket().serverClose(1001, 'gone');
+
+      await waitFor(() => disableSpy.mock.calls.length > 0, 'degrade render suspended the observer');
+      await waitFor(() => harness.sockets.length === 2, 'reconnect', 6000);
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'server truth' } }]);
+
+      await waitFor(() => disableSpy.mock.calls.length > 1, 'the swap suspended the observer again');
+
+      // The degrade render is STILL parked, so nothing may have re-armed it.
+      expect(enableSpy).not.toHaveBeenCalled();
+
+      releaseRender();
+
+      await waitFor(() => enableSpy.mock.calls.length > 0, 'observer re-armed once the render finished');
+      await waitFor(() => blockTexts(harness.core).join() === 'server truth', 'server truth on screen');
+
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(1);
+    }, 20_000);
   });
 
   describe('empty document after the first sync', () => {

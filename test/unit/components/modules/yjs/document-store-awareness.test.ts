@@ -183,4 +183,48 @@ describe('DocumentStore awareness seam', () => {
       expect(awarenessField(store)).toBeNull();
     });
   });
+
+  describe('provider-facing subscription (onAwarenessUpdate)', () => {
+    /**
+     * y-protocols renews the local state every 3s with EQUAL content to keep
+     * peers from pruning it (awareness.js:59-62 → setLocalState(getLocalState())).
+     * setLocalState only emits 'change' when filteredUpdated is non-empty, and an
+     * equal renewal is filtered out — so a 'change' subscription never sees the
+     * keepalive, the provider never rebroadcasts it, and every standard peer
+     * drops our presence after outdatedTimeout (30s). The provider must ride
+     * 'update', which fires for renewals too.
+     */
+    it('delivers an equal-content renewal that onAwarenessChange filters out', () => {
+      const store = track(createStore());
+
+      store.enableAwareness();
+      store.setAwarenessField('user', { name: 'Jack' });
+
+      const onUpdate = vi.fn();
+      const onChange = vi.fn();
+
+      store.onAwarenessUpdate(onUpdate);
+      store.onAwarenessChange(onChange);
+
+      // Exactly what the keepalive does: re-set the same state.
+      store.renewAwarenessForKeepalive();
+
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('unsubscribes cleanly', () => {
+      const store = track(createStore());
+
+      store.enableAwareness();
+
+      const onUpdate = vi.fn();
+      const unhook = store.onAwarenessUpdate(onUpdate);
+
+      unhook();
+      store.renewAwarenessForKeepalive();
+
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
 });

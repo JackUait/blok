@@ -1467,6 +1467,41 @@ export class DocumentStore {
   }
 
   /**
+   * Subscribe to EVERY presence emission, including the 3s keepalive that
+   * renews the local state with equal content. `onAwarenessChange` rides
+   * y-protocols' 'change', which is emitted only when the delta survives an
+   * equality filter — so a keepalive never reaches it. A provider that
+   * rebroadcasts only 'change' lets every standard peer prune this client
+   * after its 30s outdated timeout, and an idle collaborator's presence
+   * silently disappears. Broadcasting rides this; rendering rides 'change'.
+   * @param callback - Receives the raw delta and its origin
+   * @returns Unsubscribe function
+   */
+  public onAwarenessUpdate(callback: (changes: AwarenessChange, origin: unknown) => void): () => void {
+    const awareness = this.requireAwareness('onAwarenessUpdate');
+
+    awareness.on('update', callback);
+
+    return (): void => {
+      awareness.off('update', callback);
+    };
+  }
+
+  /**
+   * Re-set the local state to itself, exactly as y-protocols' keepalive does.
+   * Exists so the keepalive path is testable without waiting 3 seconds.
+   */
+  public renewAwarenessForKeepalive(): void {
+    const awareness = this.awareness;
+
+    if (awareness === null) {
+      return;
+    }
+
+    awareness.setLocalState(awareness.getLocalState());
+  }
+
+  /**
    * Encode a binary awareness update for the provider to broadcast.
    * @param clients - Client ids to include; defaults to every known state
    *   (this peer plus any it has learned about).

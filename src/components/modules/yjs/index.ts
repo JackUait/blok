@@ -722,6 +722,16 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Subscribe to every presence emission, keepalive renewals included — what a
+   * provider must broadcast so peers never prune an idle collaborator.
+   * @param callback - Receives the raw delta and its origin
+   * @returns Unsubscribe function
+   */
+  public onAwarenessUpdate(callback: (changes: AwarenessChange, origin: unknown) => void): () => void {
+    return this.documentStore.onAwarenessUpdate(callback);
+  }
+
+  /**
    * Encode a binary awareness update for the provider to broadcast.
    * @param clients - Client ids to include; defaults to every known state
    */

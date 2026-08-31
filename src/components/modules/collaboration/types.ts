@@ -1,3 +1,5 @@
+import type { AwarenessChange } from '../yjs/types';
+
 /**
  * Identity of a persisted working set, mirrored from the server's
  * CollabWorkingSetTag. Format names the CRDT schema the update frames were
@@ -41,3 +43,149 @@ export type SyncWireDecodeResult =
   | SyncWireFrame
   | { type: 'unknown'; messageType: number }
   | { type: 'malformed'; reason: string };
+
+/**
+ * The slice of YjsManager the provider talks to — the binary doc seam plus the
+ * awareness seam, with the SAME method names, so binding it is a pass-through
+ * with no adapter. Declared here so the Collaboration module (and any test
+ * harness) can see exactly what it must satisfy.
+ *
+ * PRE-ENABLE CONTRACT: `onAwarenessChange` and `encodeAwarenessUpdate` THROW
+ * until `enableAwareness()` has been called; the other awareness methods no-op.
+ * The provider calls `enableAwareness()` once a connection is negotiated, before
+ * it touches either of those two.
+ *
+ * ECHO CONTRACT: the origin handed to `applyRemoteUpdate` is remembered forever
+ * (the suppression set is never pruned), so the provider passes ONE long-lived
+ * object per connection generation and never mints one per message.
+ */
+export interface CollabDocSeam {
+  applyRemoteUpdate(update: Uint8Array, origin?: unknown): void;
+  onDocUpdate(callback: (update: Uint8Array, origin: unknown) => void): () => void;
+  getStateVector(): Uint8Array;
+  encodeStateAsUpdate(stateVector?: Uint8Array): Uint8Array;
+  enableAwareness(): void;
+  setAwarenessField(field: string, value: unknown): void;
+  getAwarenessStates(): Map<number, Record<string, unknown>>;
+  onAwarenessChange(callback: (changes: AwarenessChange, origin: unknown) => void): () => void;
+
+  /**
+   * Every presence emission, keepalive renewals included. A provider MUST
+   * broadcast from this rather than `onAwarenessChange`: y-protocols renews the
+   * local state with equal content every 3s, that renewal is filtered out of
+   * the 'change' delta, and a peer that never hears it prunes this client after
+   * its 30s outdated timeout — an idle collaborator's presence would vanish.
+   */
+  onAwarenessUpdate(callback: (changes: AwarenessChange, origin: unknown) => void): () => void;
+  encodeAwarenessUpdate(clients?: number[]): Uint8Array;
+  applyAwarenessUpdate(update: Uint8Array, origin: unknown): void;
+  clearRemoteAwarenessStates(): void;
+}
+
+/**
+ * The transport the provider drives. Deliberately the small mock-shaped subset
+ * of the DOM `WebSocket` rather than the DOM type itself, so a test can supply a
+ * plain object and a node tier can supply `ws`.
+ */
+export interface WebSocketLike {
+  binaryType: string;
+  readonly readyState: number;
+  onopen: ((event: unknown) => void) | null;
+  onmessage: ((event: { data: unknown }) => void) | null;
+  onclose: ((event: { code: number; reason: string }) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  send(data: ArrayBufferLike | ArrayBufferView): void;
+  close(code?: number, reason?: string): void;
+}
+
+/**
+ * Opens one transport. Injected so the provider has a mock tier and a node tier;
+ * production passes the global `WebSocket`.
+ */
+export type CollabSocketFactory = (url: string, protocols: string[]) => WebSocketLike;
+
+/**
+ * Hands back a raw connection ticket. `createTicketSource` from
+ * `utils/access-pass` satisfies this (it ignores the argument).
+ *
+ * `forceRefresh` is what the provider asks for after a 4401: the cached ticket
+ * was rejected, so a source that can re-mint should. The current access-pass
+ * source re-mints on its own only when the ticket is within 30s of expiry, so
+ * honouring the flag is what closes the revoked-but-unexpired case.
+ */
+export type CollabTicketSource = (options?: { forceRefresh?: boolean }) => Promise<string>;
+
+/**
+ * Coarse connection state for the host. `error` is TERMINAL: the provider has
+ * stopped and will not reconnect on its own.
+ */
+export type CollabStatus = 'connecting' | 'connected' | 'offline' | 'error';
+
+/**
+ * Why the provider stopped for good.
+ *
+ * - `bad-request` — close 4400; the document id or the request is unusable.
+ * - `unauthorized` — close 4401 twice; the ticket is not accepted.
+ * - `forbidden` — close 4403; this user may not open this document.
+ * - `resync-required` — close 4409 or a changed lineage: our history is stale.
+ *   Interim state until C4 lands the fresh-document reset.
+ * - `unsupported-format` — the control frame names a CRDT format we cannot read.
+ * - `handshake-timeout` — no control frame arrived; not a Blok sync endpoint.
+ * - `oversized-update` — close 1009 twice; a frame we produce is too big.
+ */
+export type CollabTerminalError =
+  | 'bad-request'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'resync-required'
+  | 'unsupported-format'
+  | 'handshake-timeout'
+  | 'oversized-update';
+
+/** Extra context for a status change; every field is best-effort. */
+export interface CollabStatusDetail {
+  /** WebSocket close code, when the transition came from a close. */
+  code?: number;
+  /** Close reason or a human explanation. */
+  reason?: string;
+  /** Set on `error` only. */
+  error?: CollabTerminalError;
+  /** Set on `offline` only: how long until the next attempt. */
+  retryInMs?: number;
+}
+
+export type CollabStatusCallback = (status: CollabStatus, detail?: CollabStatusDetail) => void;
+
+/** Everything {@link createCollabProvider} needs. */
+export interface CollabProviderOptions {
+  /** Absolute sync URL, e.g. `wss://host/sync/my-doc`. */
+  url: string;
+  /** Document id — used in messages only; the URL already carries it. */
+  docId: string;
+  /** The doc + awareness seam this provider synchronises. */
+  yjs: CollabDocSeam;
+  /** Mints connection tickets; omit for a server that needs none. */
+  ticketSource?: CollabTicketSource;
+  /** Opens the transport; defaults to the global `WebSocket`. */
+  socketFactory?: CollabSocketFactory;
+  /** Connection state sink. */
+  onStatus?: CollabStatusCallback;
+  /** How long to wait for the control frame before giving up (default 10s). */
+  handshakeTimeoutMs?: number;
+  /** Awareness send window, including queryAwareness replies (default 100ms). */
+  awarenessThrottleMs?: number;
+  /** Injectable randomness for backoff jitter; defaults to `Math.random`. */
+  random?: () => number;
+}
+
+/** What {@link createCollabProvider} hands back. */
+export interface CollabProvider {
+  /** Start connecting. Idempotent while a connection is live or pending. */
+  connect(): void;
+  /** Stop for good: close the socket, unhook the seam, cancel every timer. */
+  destroy(): void;
+  /** Last reported status. */
+  readonly status: CollabStatus;
+  /** The working-set tag from the last validated control frame. */
+  readonly tag: WorkingSetTag | null;
+}

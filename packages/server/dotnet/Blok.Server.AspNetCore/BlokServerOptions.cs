@@ -51,6 +51,12 @@ public sealed class BlokServerOptions
 
   public string CollabS3Prefix { get; set; } = "";
 
+  public int CollabMaxConnectionsPerUserPerDoc { get; set; } = 8;
+
+  public int CollabMaxMessageBytes { get; set; } = 1 << 20;
+
+  public TimeSpan CollabKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(15);
+
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
   internal bool HasCollab => CollabEnabled;
@@ -186,6 +192,26 @@ public sealed class BlokServerOptions
 
   private void ValidateCollab()
   {
+    if (CollabMaxConnectionsPerUserPerDoc <= 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabMaxConnectionsPerUserPerDoc must be a positive number (got {CollabMaxConnectionsPerUserPerDoc}): " +
+          "a zero cap refuses every sync connection");
+    }
+
+    if (CollabMaxMessageBytes <= 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabMaxMessageBytes must be a positive number of bytes (got {CollabMaxMessageBytes}): " +
+          "a zero cap closes every sync connection on its first frame");
+    }
+
+    if (CollabKeepAliveInterval < TimeSpan.Zero)
+    {
+      throw new InvalidOperationException(
+          $"CollabKeepAliveInterval must be zero (off) or greater (got {CollabKeepAliveInterval})");
+    }
+
     if (!CollabEnabled)
     {
       if (DocEndpoint != "")

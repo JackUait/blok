@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Blok.Server.AspNetCore.Collab;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -42,6 +43,17 @@ public static class BlokServerEndpointRouteBuilderExtensions
       }
     }
 
+    if (options.HasCollab)
+    {
+      // Not behind Guard: the handshake is its own door (ticket rides in
+      // the subprotocol offer). A live socket must outlast any request
+      // timeout policy the host installs.
+      routes.MapGet("/sync/{doc}", (RequestDelegate)SyncEndpoint.HandleAsync)
+          .DisableRequestTimeout();
+      routes.Map("/sync/{doc}", context => HandleMethodNotAllowed(context, "GET")).WithOrder(1);
+      MapShell(routes, "/sync/{doc}/reset", "POST");
+    }
+
     routes.Map("/{**path}", HandleNotFound).WithOrder(int.MaxValue);
 
     return routes;
@@ -55,6 +67,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
       {
         "/upload" => UploadEndpoint.HandleAsync,
         "/delete" => DeleteEndpoint.HandleAsync,
+        "/sync/{doc}/reset" => ResetEndpoint.HandleAsync,
         _ => UploadByUrlEndpoint.HandleAsync,
       };
 

@@ -1,13 +1,19 @@
+using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Blok.Server.AspNetCore;
 
 public static class BlokServerServiceCollectionExtensions
 {
+  private static readonly TimeSpan DocEndpointRequestTimeout = TimeSpan.FromSeconds(30);
+  private static readonly Action<ILogger, string, Exception?> LogCollab =
+      LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1, "Collab"), "{Message}");
+
   public static BlokServerBuilder AddBlokServer(this IServiceCollection services)
   {
     return services.AddBlokServer(new BlokServerOptions());
@@ -87,15 +93,42 @@ public static class BlokServerServiceCollectionExtensions
           "The collaboration working set needs CollabDirectory or CollabS3Prefix.");
     });
 
-    services.TryAddSingleton<ICollabRoomManager>(provider =>
-    {
-      RequireCollabOptions(provider);
+    services.TryAddSingleton<SyncHandshake>();
+    services.TryAddSingleton<SyncConnectionTable>();
 
-      throw new NotImplementedException(
-          "The collaboration room manager lands with the Phase 2 room task.");
+    services.TryAddSingleton<CollabRoomManager>(provider =>
+    {
+      var effectiveOptions = RequireCollabOptions(provider);
+      var timeProvider = provider.GetRequiredService<TimeProvider>();
+
+      return new CollabRoomManager(
+          provider.GetRequiredService<ICollabWorkingSetStore>(),
+          new DocEndpointClient(
+              new DocEndpointOptions(
+                  new Uri(effectiveOptions.DocEndpoint),
+                  effectiveOptions.DocEndpointAuth,
+                  DocEndpointRequestTimeout)),
+          new CollabDocConverter(timeProvider),
+          new CollabRoomOptions(),
+          timeProvider,
+          CollabLog(provider));
     });
 
+    // The endpoints need the concrete manager; the interface is the host's
+    // drain handle. Both resolve to the one instance.
+    services.TryAddSingleton<ICollabRoomManager>(provider =>
+        provider.GetRequiredService<CollabRoomManager>());
+
     return new BlokServerBuilder(services);
+  }
+
+  private static Action<string>? CollabLog(IServiceProvider provider)
+  {
+    var logger = provider.GetService<ILoggerFactory>()?.CreateLogger("Blok.Server.Collab");
+
+    return logger is null
+      ? null
+      : message => LogCollab(logger, message, null);
   }
 
   private static BlokServerOptions RequireCollabOptions(IServiceProvider provider)

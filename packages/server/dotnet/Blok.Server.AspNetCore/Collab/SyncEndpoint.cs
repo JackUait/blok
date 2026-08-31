@@ -1,0 +1,169 @@
+using System.Net.WebSockets;
+using Blok.Server.Collab;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Blok.Server.AspNetCore.Collab;
+
+/// <summary>GET /sync/{doc}: the WebSocket door onto a document's room.</summary>
+internal static class SyncEndpoint
+{
+  /// <summary>Outbound backlog budget per connection, in inbound-message-size units.</summary>
+  private const int OutboundQueueFactor = 8;
+
+  public static async Task HandleAsync(HttpContext context)
+  {
+    var doc = RouteDoc(context);
+    var handshake = context.RequestServices.GetRequiredService<SyncHandshake>();
+
+    switch (await handshake.NegotiateAsync(context, doc))
+    {
+      case SyncRefused refused:
+        await RefuseAsync(context, refused.StatusCode, refused.Body);
+        break;
+      case SyncRejected rejected:
+        await AcceptThenCloseAsync(context, rejected.SubProtocol, rejected.Close);
+        break;
+      case SyncAccepted accepted:
+        await ServeAsync(context, doc, accepted);
+        break;
+      default:
+        break;
+    }
+  }
+
+  internal static string RouteDoc(HttpContext context)
+  {
+    return context.Request.RouteValues["doc"] as string ?? "";
+  }
+
+  internal static async Task RefuseAsync(HttpContext context, int statusCode, string body)
+  {
+    context.Response.StatusCode = statusCode;
+    context.Response.ContentType = "text/plain; charset=utf-8";
+    await context.Response.WriteAsync(body);
+  }
+
+  private static async Task ServeAsync(HttpContext context, string doc, SyncAccepted accepted)
+  {
+    var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
+    var connections = context.RequestServices.GetRequiredService<SyncConnectionTable>();
+    var rooms = context.RequestServices.GetRequiredService<CollabRoomManager>();
+    var lease = accepted.Principal is null
+      ? NoLease.Instance
+      : connections.TryReserve(doc, accepted.Principal);
+
+    if (lease is null)
+    {
+      await RefuseAsync(context, StatusCodes.Status429TooManyRequests, "too many connections\n");
+
+      return;
+    }
+
+    using (lease)
+    {
+      var member = new SyncSocketMember(
+          accepted.CanWrite,
+          acceptsControlFrames: accepted.SubProtocol is not null,
+          maxQueuedBytes: (long)OutboundQueueFactor * options.CollabMaxMessageBytes);
+      CollabJoinResult join;
+
+      // Join before the upgrade: a draining server can still answer 503,
+      // and the room's first frames simply wait in the member's queue.
+      try
+      {
+        join = await rooms.JoinAsync(doc, member, context.RequestAborted);
+      }
+      catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+      {
+        return;
+      }
+
+      if (join.Status == CollabJoinStatus.Draining)
+      {
+        await RefuseAsync(context, StatusCodes.Status503ServiceUnavailable, "shutting down\n");
+
+        return;
+      }
+
+      WebSocket socket;
+
+      try
+      {
+        socket = await AcceptAsync(context, accepted.SubProtocol, options);
+      }
+      catch
+      {
+        if (join.Membership is not null)
+        {
+          await join.Membership.LeaveAsync();
+        }
+
+        throw;
+      }
+
+      using (socket)
+      {
+        if (join.Status == CollabJoinStatus.SeedFailed)
+        {
+          member.RequestClose(SyncClose.SeedFailed);
+        }
+
+        await member.RunAsync(
+            socket,
+            join.Membership,
+            options.CollabMaxMessageBytes,
+            lease,
+            context.RequestAborted);
+      }
+    }
+  }
+
+  private static async Task AcceptThenCloseAsync(
+      HttpContext context,
+      string? subProtocol,
+      SyncCloseFrame close)
+  {
+    var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
+    using var socket = await AcceptAsync(context, subProtocol, options);
+    var member = new SyncSocketMember(canWrite: false, acceptsControlFrames: false, maxQueuedBytes: 0);
+    member.RequestClose(close);
+
+    await member.RunAsync(
+        socket,
+        membership: null,
+        options.CollabMaxMessageBytes,
+        lease: null,
+        context.RequestAborted);
+  }
+
+  /// <summary>Stands in for a slot when the connection has no identity to cap on.</summary>
+  private sealed class NoLease : IDisposable
+  {
+    internal static readonly NoLease Instance = new();
+
+    public void Dispose()
+    {
+    }
+  }
+
+  private static Task<WebSocket> AcceptAsync(
+      HttpContext context,
+      string? subProtocol,
+      BlokServerOptions options)
+  {
+    var accept = new WebSocketAcceptContext
+    {
+      SubProtocol = subProtocol,
+      KeepAliveInterval = options.CollabKeepAliveInterval,
+    };
+
+    // A ping that goes unanswered for two intervals means the peer is gone.
+    if (options.CollabKeepAliveInterval > TimeSpan.Zero)
+    {
+      accept.KeepAliveTimeout = options.CollabKeepAliveInterval * 2;
+    }
+
+    return context.WebSockets.AcceptWebSocketAsync(accept);
+  }
+}

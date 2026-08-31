@@ -53,6 +53,8 @@ describe('server quality gates', () => {
     expect(props).toContain('<NuGetAuditMode>all</NuGetAuditMode>');
     expect(props).toContain('<NuGetAuditLevel>low</NuGetAuditLevel>');
     expect(props).toContain('NU1901;NU1902;NU1903;NU1904');
+    expect(props).toContain('<NoWarn>$(NoWarn);NETSDK1206</NoWarn>');
+    expect(props.match(/<NoWarn>/g)).toHaveLength(1);
   });
 
   it('keeps unit, integration, end-to-end, and coverage gates in CI', () => {
@@ -114,7 +116,7 @@ describe('server quality gates', () => {
       '^test/unit/server-conformance/fixtures/tickets\\.json$',
     );
     expect(securityUses.filter(use => use ===
-      'aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1'))
+      'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25'))
       .toHaveLength(2);
     expect(securitySteps.find(step =>
       step.name === 'Scan server container image')?.with).toMatchObject({

@@ -19,4 +19,33 @@
     <ProjectReference Include="../Blok.Server.AspNetCore/Blok.Server.AspNetCore.csproj"
                       GlobalPropertiesToRemove="AssemblyName" />
   </ItemGroup>
+
+  <!-- YDotNet.Native.Linux mispacks its musl natives (wrong-arch lib for
+       linux-musl-x64, none for linux-musl-arm64), so the release workflow's
+       build-musl-yffi job stages CI-built yffi libraries here and these
+       items ship them for exactly the two musl RIDs. The files exist only
+       in CI; publish-server.mjs refuses a real musl publish without them. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64'">
+    <Content Include="runtimes/linux-musl-x64/native/libyrs.so"
+             Link="libyrs.so"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-musl-arm64'">
+    <Content Include="runtimes/linux-musl-arm64/native/libyrs.so"
+             Link="libyrs.so"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Drops the package's libyrs.so from musl builds so the staged override
+       above is the only copy the single-file bundler sees. -->
+  <Target Name="UseBlokMuslLibyrsOverride"
+          AfterTargets="ResolvePackageAssets"
+          Condition="'$(RuntimeIdentifier)' == 'linux-musl-x64' or '$(RuntimeIdentifier)' == 'linux-musl-arm64'">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"
+                            Condition="'%(Filename)%(Extension)' == 'libyrs.so'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)"
+                                    Condition="'%(Filename)%(Extension)' == 'libyrs.so'" />
+    </ItemGroup>
+  </Target>
 </Project>

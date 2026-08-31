@@ -1,9 +1,11 @@
 {
   "secret": "s3cret-value-at-least-32-chars-long!",
   "compatible": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7s",
+  "docMismatch": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJvdGhlci1kb2MiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.0sycQ969b9jLIkDjPi0cyQV_VZpKT7nx79dt9nWc040",
   "expired": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjoxfQ.cTF0Rimy9O0jwk_BSXMQefNM-vQPDIIoVDSdOR_z2Kk",
   "malformed": "not-a-ticket",
   "noncanonicalHeaderTicket": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.pVozA3cNhM0QQKLCg6B6EJ6n1NzI9Gfb7Yfy1Y3IhcM",
+  "readOnly": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6ZmFsc2UsImV4cCI6NDEwMjQ0NDgwMH0.btzCkMkkdUC4mWBrWeFvRyUkjnc1JzQfSgvCKmCCtqU",
   "tampered": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTEiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.kyhb0hFmrr5sLcyP62YIGKO2A-_1RmvNglmTHE_GR7a",
   "userTwo": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoidTIiLCJkb2MiOiJkb2MtNDIiLCJ3cml0ZSI6dHJ1ZSwiZXhwIjo0MTAyNDQ0ODAwfQ.JcfiggJZ400I2mhgYv15e0x4eNbwDVfoyDHjAzWwmvU"
 }

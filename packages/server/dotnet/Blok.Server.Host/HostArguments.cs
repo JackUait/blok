@@ -7,7 +7,8 @@ internal sealed record HostParseResult(
     BlokServerOptions? Options,
     bool HelpRequested,
     string? Error,
-    bool SecretFromFlag);
+    bool SecretFromFlag,
+    bool DocEndpointAuthFromFlag);
 
 internal static class HostArguments
 {
@@ -44,6 +45,16 @@ internal static class HostArguments
           public S3 bucket URL prefix
         --s3-addressing value
           "path" or "virtual"
+        --collab
+          serve collaborative sync rooms (needs --doc-endpoint)
+        --doc-endpoint value
+          HTTP(S) URL sync rooms seed documents from and export them to
+        --doc-endpoint-auth value
+          Authorization header for --doc-endpoint; prefer BLOK_DOC_ENDPOINT_AUTH
+        --collab-dir value
+          directory for the collaboration working set (default "./blok-collab")
+        --collab-s3-prefix value
+          S3 key prefix for the collaboration working set (needs --s3-bucket)
 
       """;
 
@@ -56,6 +67,7 @@ internal static class HostArguments
 
     var options = new BlokServerOptions
     {
+      CollabDirectory = "./blok-collab",
       StorageDirectory = "./blok-uploads",
       UnfurlDisabled = false,
     };
@@ -63,6 +75,7 @@ internal static class HostArguments
     var publicUrl = "";
     long? rateLimit = null;
     var secretFromFlag = false;
+    var docEndpointAuthFromFlag = false;
 
     for (var index = 0; index < args.Length; index++)
     {
@@ -85,7 +98,7 @@ internal static class HostArguments
 
       if (name is "h" or "help")
       {
-        return new HostParseResult(null, true, null, false);
+        return new HostParseResult(null, true, null, false, false);
       }
 
       if (name == "no-unfurl")
@@ -103,6 +116,24 @@ internal static class HostArguments
         }
 
         options.UnfurlDisabled = disabled;
+        continue;
+      }
+
+      if (name == "collab")
+      {
+        if (inlineValue is null)
+        {
+          options.CollabEnabled = true;
+          continue;
+        }
+
+        if (!TryParseBoolean(inlineValue, out var collabEnabled))
+        {
+          return ParseError(
+              $"invalid value \"{inlineValue}\" for flag -collab: parse error");
+        }
+
+        options.CollabEnabled = collabEnabled;
         continue;
       }
 
@@ -180,6 +211,19 @@ internal static class HostArguments
         case "s3-addressing":
           options.S3Addressing = value;
           break;
+        case "doc-endpoint":
+          options.DocEndpoint = value;
+          break;
+        case "doc-endpoint-auth":
+          options.DocEndpointAuth = value;
+          docEndpointAuthFromFlag = true;
+          break;
+        case "collab-dir":
+          options.CollabDirectory = value;
+          break;
+        case "collab-s3-prefix":
+          options.CollabS3Prefix = value;
+          break;
       }
     }
 
@@ -195,15 +239,25 @@ internal static class HostArguments
       options.Secret = getEnvironmentVariable("BLOK_SECRET") ?? "";
     }
 
+    if (!docEndpointAuthFromFlag)
+    {
+      options.DocEndpointAuth = getEnvironmentVariable("BLOK_DOC_ENDPOINT_AUTH") ?? "";
+    }
+
     options.S3AccessKey = getEnvironmentVariable("BLOK_S3_ACCESS_KEY") ?? "";
     options.S3SecretKey = getEnvironmentVariable("BLOK_S3_SECRET_KEY") ?? "";
 
-    return new HostParseResult(options, false, null, secretFromFlag);
+    return new HostParseResult(
+        options,
+        false,
+        null,
+        secretFromFlag,
+        docEndpointAuthFromFlag);
   }
 
   private static HostParseResult ParseError(string error)
   {
-    return new HostParseResult(null, false, error, false);
+    return new HostParseResult(null, false, error, false, false);
   }
 
   private static bool IsValueFlag(string name)
@@ -221,7 +275,11 @@ internal static class HostArguments
         "s3-region" or
         "s3-bucket" or
         "s3-bucket-url" or
-        "s3-addressing";
+        "s3-addressing" or
+        "doc-endpoint" or
+        "doc-endpoint-auth" or
+        "collab-dir" or
+        "collab-s3-prefix";
   }
 
   private static bool TryParseBoolean(string value, out bool result)

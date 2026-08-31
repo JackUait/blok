@@ -1,12 +1,19 @@
+using Blok.Server.AspNetCore.Collab;
+using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Blok.Server.AspNetCore;
 
 public static class BlokServerServiceCollectionExtensions
 {
+  private static readonly TimeSpan DocEndpointRequestTimeout = TimeSpan.FromSeconds(30);
+  private static readonly Action<ILogger, string, Exception?> LogCollab =
+      LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1, "Collab"), "{Message}");
+
   public static BlokServerBuilder AddBlokServer(this IServiceCollection services)
   {
     return services.AddBlokServer(new BlokServerOptions());
@@ -49,17 +56,8 @@ public static class BlokServerServiceCollectionExtensions
 
       if (effectiveOptions.S3Bucket != "")
       {
-        return new S3BlobStore(
-            new S3BlobStoreOptions(
-                effectiveOptions.S3Endpoint,
-                effectiveOptions.S3Region,
-                effectiveOptions.S3Bucket,
-                effectiveOptions.S3AccessKey,
-                effectiveOptions.S3SecretKey,
-                effectiveOptions.S3BucketUrl,
-                effectiveOptions.S3Addressing,
-                effectiveOptions.MaxUploadBytes,
-                Path.GetTempPath()),
+        return CreateS3BlobStore(
+            effectiveOptions,
             provider.GetRequiredService<TimeProvider>());
       }
 
@@ -73,6 +71,94 @@ public static class BlokServerServiceCollectionExtensions
       throw new InvalidOperationException("Blob storage is disabled.");
     });
 
+    services.TryAddSingleton<ICollabWorkingSetStore>(provider =>
+    {
+      var effectiveOptions = RequireCollabOptions(provider);
+
+      if (effectiveOptions.CollabS3Prefix != "")
+      {
+        return new S3CollabStore(
+            CreateS3BlobStore(
+                effectiveOptions,
+                provider.GetRequiredService<TimeProvider>()),
+            effectiveOptions.CollabS3Prefix);
+      }
+
+      if (effectiveOptions.CollabDirectory != "")
+      {
+        return new LocalCollabStore(effectiveOptions.CollabDirectory);
+      }
+
+      throw new InvalidOperationException(
+          "The collaboration working set needs CollabDirectory or CollabS3Prefix.");
+    });
+
+    services.TryAddSingleton<SyncHandshake>();
+    services.TryAddSingleton<SyncConnectionTable>();
+
+    services.TryAddSingleton<CollabRoomManager>(provider =>
+    {
+      var effectiveOptions = RequireCollabOptions(provider);
+      var timeProvider = provider.GetRequiredService<TimeProvider>();
+
+      return new CollabRoomManager(
+          provider.GetRequiredService<ICollabWorkingSetStore>(),
+          new DocEndpointClient(
+              new DocEndpointOptions(
+                  new Uri(effectiveOptions.DocEndpoint),
+                  effectiveOptions.DocEndpointAuth,
+                  DocEndpointRequestTimeout)),
+          new CollabDocConverter(timeProvider),
+          new CollabRoomOptions(),
+          timeProvider,
+          CollabLog(provider));
+    });
+
+    // The endpoints need the concrete manager; the interface is the host's
+    // drain handle. Both resolve to the one instance.
+    services.TryAddSingleton<ICollabRoomManager>(provider =>
+        provider.GetRequiredService<CollabRoomManager>());
+
     return new BlokServerBuilder(services);
+  }
+
+  private static Action<string>? CollabLog(IServiceProvider provider)
+  {
+    var logger = provider.GetService<ILoggerFactory>()?.CreateLogger("Blok.Server.Collab");
+
+    return logger is null
+      ? null
+      : message => LogCollab(logger, message, null);
+  }
+
+  private static BlokServerOptions RequireCollabOptions(IServiceProvider provider)
+  {
+    var effectiveOptions = provider.GetRequiredService<BlokServerOptions>();
+    effectiveOptions.Validate();
+
+    if (!effectiveOptions.HasCollab)
+    {
+      throw new InvalidOperationException("Collaboration is disabled.");
+    }
+
+    return effectiveOptions;
+  }
+
+  private static S3BlobStore CreateS3BlobStore(
+      BlokServerOptions options,
+      TimeProvider timeProvider)
+  {
+    return new S3BlobStore(
+        new S3BlobStoreOptions(
+            options.S3Endpoint,
+            options.S3Region,
+            options.S3Bucket,
+            options.S3AccessKey,
+            options.S3SecretKey,
+            options.S3BucketUrl,
+            options.S3Addressing,
+            options.MaxUploadBytes,
+            Path.GetTempPath()),
+        timeProvider);
   }
 }

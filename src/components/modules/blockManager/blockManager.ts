@@ -453,8 +453,8 @@ export class BlockManager extends Module {
           this.blocksStore.move(toIndex, fromIndex);
         },
         getBlockIndex: (block) => this.repository.getBlockIndex(block),
-        insertDefaultBlock: (skipYjsSync) => {
-          return this.insert({ skipYjsSync });
+        insertDefaultBlock: (skipYjsSync, id) => {
+          return this.insert({ skipYjsSync, id });
         },
         updateIndentation: (block) => {
           this.hierarchy.updateBlockIndentation(block);
@@ -1970,7 +1970,7 @@ export class BlockManager extends Module {
     }
 
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
-      this.flushBlockDataWrites(block, entries);
+      return this.flushBlockDataWrites(block, entries);
     });
   }
 
@@ -1984,8 +1984,10 @@ export class BlockManager extends Module {
    * only the metadata entry instead of the actual data change.
    * @param block - the block whose buffered writes are being flushed
    * @param entries - coalesced {key → latest value} data entries
+   * @returns whether any Yjs write actually happened — the buffer skips its
+   *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
-  private flushBlockDataWrites(block: Block, entries: ReadonlyMap<string, unknown>): void {
+  private flushBlockDataWrites(block: Block, entries: ReadonlyMap<string, unknown>): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
     // and fires a stack-item-added event, which runs caret capture that may
@@ -2029,6 +2031,8 @@ export class BlockManager extends Module {
 
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     });
+
+    return dataChangedRef.value;
   }
 
   /**

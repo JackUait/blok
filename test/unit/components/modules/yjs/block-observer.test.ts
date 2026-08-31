@@ -680,12 +680,15 @@ describe('BlockObserver — emission order contract', () => {
       // … while the add's membership goes into a parent's contentIds, so the
       // add is visible only through the blocks map.
       store.addBlock({ id: 'child-1', type: 'paragraph', data: { text: 'c' }, parent: 'parent-1' });
+      // An explicit data write is what makes the parent an 'update' now:
+      // contentIds arrays are created WITH the block Y.Map, so a first child
+      // inserts into the existing array instead of overwriting the key.
+      store.updateBlockData('parent-1', 'text', 'edited');
     }, 'local');
 
     expect(singleIds('move')).toEqual(['b2']);
     expect(singleIds('add')).toEqual(['child-1']);
-    // Creating the parent's contentIds key is an update to the parent —
-    // and it must still come AFTER the cross-dispatch move and add.
+    // … and the update must still come AFTER the cross-dispatch move and add.
     expect(singleIds('update')).toEqual(['parent-1']);
     expect(eventTypes()).toEqual(['move', 'add', 'update']);
   });

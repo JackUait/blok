@@ -174,6 +174,69 @@ describe('placement-based move undo/redo', () => {
     });
   });
 
+  describe('degradation laws (redo direction)', () => {
+    it('appends to the target parent when the recorded sibling was remotely deleted', () => {
+      manager.fromJSON([
+        paragraph('b1', 'one'),
+        paragraph('b2', 'two'),
+        paragraph('b3', 'three'),
+        paragraph('b4', 'four'),
+      ]);
+      syncPeerFromManager();
+
+      // b1's recorded to-placement points after b3.
+      manager.moveBlock('b1', 2);
+      expect(orderedIds()).toEqual(['b2', 'b3', 'b1', 'b4']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['b1', 'b2', 'b3', 'b4']);
+
+      // The sibling the redo would restore after dies remotely.
+      peer.removeBlock('b3');
+      applyPeerChangesToManager();
+      expect(orderedIds()).toEqual(['b1', 'b2', 'b4']);
+
+      manager.redo();
+
+      // Missing afterId → append to the parent's order array (root here).
+      expect(orderedIds()).toEqual(['b2', 'b4', 'b1']);
+    });
+
+    it('keeps the block in the doc as an orphan when the target parent was remotely deleted', () => {
+      manager.fromJSON([
+        paragraph('r', 'root'),
+        paragraph('p', 'parent', { content: ['c1', 'c2'] }),
+        paragraph('c1', 'child one', { parent: 'p' }),
+        paragraph('c2', 'child two', { parent: 'p' }),
+      ]);
+      syncPeerFromManager();
+
+      // Same-parent move inside p: c2 becomes p's first child.
+      manager.moveBlock('c2', 2);
+      expect(orderedIds()).toEqual(['r', 'p', 'c2', 'c1']);
+
+      manager.undo();
+      expect(orderedIds()).toEqual(['r', 'p', 'c1', 'c2']);
+
+      // The parent the redo would restore into dies remotely; its children
+      // become orphans (they keep the dangling parentId).
+      peer.removeBlock('p');
+      applyPeerChangesToManager();
+      expect(orderedIds()).toEqual(['r', 'c1', 'c2']);
+
+      // The redo entry is consumed, not skipped — the degraded placement is
+      // what the replay produced, not a no-op.
+      expect(manager.canRedo()).toBe(true);
+      expect(() => manager.redo()).not.toThrow();
+      expect(manager.canRedo()).toBe(false);
+
+      // Orphan tolerance: c2 stays in the doc (rendered at the end among the
+      // sorted orphans), still claiming its dead parent.
+      expect(orderedIds()).toEqual(['r', 'c1', 'c2']);
+      expect(manager.toJSON().find((block) => block.id === 'c2')?.parent).toBe('p');
+    });
+  });
+
   describe('drag-reparent placement recording', () => {
     const placementOf = (id: string): BlockPlacement => {
       const placement = manager.getBlockPlacement(id);

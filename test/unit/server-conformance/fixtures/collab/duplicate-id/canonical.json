@@ -1,0 +1,55 @@
+[
+  {
+    "id": "pa",
+    "type": "paragraph",
+    "data": {
+      "text": "parent A"
+    },
+    "content": [
+      "shared",
+      "twice",
+      "twice"
+    ]
+  },
+  {
+    "id": "shared",
+    "type": "paragraph",
+    "data": {
+      "text": "listed under both, belongs to A"
+    },
+    "parent": "pa"
+  },
+  {
+    "id": "twice",
+    "type": "paragraph",
+    "data": {
+      "text": "listed twice under A"
+    },
+    "parent": "pa"
+  },
+  {
+    "id": "pb",
+    "type": "paragraph",
+    "data": {
+      "text": "parent B"
+    },
+    "content": [
+      "late"
+    ]
+  },
+  {
+    "id": "late",
+    "type": "paragraph",
+    "data": {
+      "text": "listed first under A, belongs to B"
+    },
+    "parent": "pb"
+  },
+  {
+    "id": "dup-root",
+    "type": "paragraph",
+    "data": {
+      "text": "second definition wins the map entry"
+    }
+  }
+]

@@ -2,6 +2,7 @@ import type * as Y from 'yjs';
 
 import type { BlokModules } from '../../../types-internal/blok-modules';
 import type { ModuleConfig } from '../../../types-internal/module-config';
+import { modificationsObserverBatchTimeout } from '../../constants';
 import { Module } from '../../__module';
 
 import { BlockObserver } from './block-observer';
@@ -9,6 +10,7 @@ import { DocumentStore } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
 import type { BlockChangeCallback, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
+import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
 /**
  * @class YjsManager
@@ -41,6 +43,13 @@ export class YjsManager extends Module {
    * Block observer for change events
    */
   private blockObserver: BlockObserver;
+
+  /**
+   * Coalescing buffer for typing-driven block data writes (leading + trailing
+   * flush on the 400ms mutation batch window). Drained synchronously by
+   * `flushPendingBlockWrites`, which every structural chokepoint calls first.
+   */
+  private writeBuffer = new BlockWriteBuffer(modificationsObserverBatchTimeout);
 
   /**
    * Flag to track if move group is active.
@@ -133,6 +142,10 @@ export class YjsManager extends Module {
       }
     });
 
+    // Barrier inside UndoHistory so the internal 100ms word-boundary timer's
+    // stopCapturing also flushes buffered typing writes before splitting.
+    this.undoHistory.setFlushPendingWritesHook(() => this.flushPendingBlockWrites());
+
     // Set up observation
     this.blockObserver.observe(this.documentStore.yblocks, this.undoHistory.undoManager);
   }
@@ -153,6 +166,8 @@ export class YjsManager extends Module {
    * @param blocks - Array of block data to load
    */
   public fromJSON(blocks: YjsOutputBlockData[]): void {
+    this.flushPendingBlockWrites();
+
     // Clear all history when loading new data
     this.undoHistory.clear();
 
@@ -164,6 +179,8 @@ export class YjsManager extends Module {
    * @returns Array of block data
    */
   public toJSON(): YjsOutputBlockData[] {
+    this.flushPendingBlockWrites();
+
     return this.documentStore.toJSON();
   }
 
@@ -174,6 +191,7 @@ export class YjsManager extends Module {
    * @returns The created Y.Map
    */
   public addBlock(blockData: YjsOutputBlockData, index?: number): Y.Map<unknown> {
+    this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
     return this.documentStore.addBlock(blockData, index);
@@ -184,6 +202,7 @@ export class YjsManager extends Module {
    * @param id - Block id to remove
    */
   public removeBlock(id: string): void {
+    this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
     this.documentStore.removeBlock(id);
@@ -200,6 +219,7 @@ export class YjsManager extends Module {
    * @returns true if the block existed and was mutated
    */
   public replaceBlockContent(id: string, type: string, data: Record<string, unknown>): boolean {
+    this.flushPendingBlockWrites();
     this.undoHistory.markCaretBeforeChange();
 
     return this.documentStore.replaceBlockContent(id, type, data);
@@ -211,6 +231,8 @@ export class YjsManager extends Module {
    * @param toIndex - Target index (the final position where the block should end up)
    */
   public moveBlock(id: string, toIndex: number): void {
+    this.flushPendingBlockWrites();
+
     const fromIndex = this.documentStore.findBlockIndex(id);
 
     if (fromIndex === -1) {
@@ -256,6 +278,40 @@ export class YjsManager extends Module {
     return this.documentStore.updateBlockMetadata(id, lastEditedAt, lastEditedBy);
   }
 
+  // ========== Public API: Typing write coalescing ==========
+
+  /**
+   * Buffer a typing-driven block data write (BlockManager's didMutated →
+   * save() path). The first write of an idle block flushes immediately
+   * (leading edge — preserves the undo captureTimeout anchor and caret-listener
+   * timing); follow-up writes coalesce until the trailing flush at the 400ms
+   * mutation batch window. The caret-before snapshot is marked HERE, at
+   * enqueue, so a deferred flush cannot record a post-typing caret as
+   * "before".
+   * @param blockId - block whose data is being written
+   * @param data - saved data entries from block.save()
+   * @param flush - callback performing the actual Yjs writes for this block
+   */
+  public enqueueBlockDataWrite(
+    blockId: string,
+    data: Record<string, unknown>,
+    flush: BufferedBlockWriteFlush
+  ): void {
+    this.undoHistory.markCaretBeforeChange();
+    this.writeBuffer.enqueue(blockId, data, flush);
+  }
+
+  /**
+   * Flush barrier: synchronously land every buffered typing write.
+   * Called at the START of every structural chokepoint (undo/redo/
+   * stopCapturing via UndoHistory, block CRUD, transact/transactMoves,
+   * toJSON/fromJSON/getBlockDataObject, destroy) so no operation ever
+   * observes or reorders around a stale buffered value.
+   */
+  public flushPendingBlockWrites(): void {
+    this.writeBuffer.flushAll();
+  }
+
   /**
    * Get block Y.Map by id.
    * @param id - Block id
@@ -278,6 +334,8 @@ export class YjsManager extends Module {
    * @returns Plain object of the block's data, or undefined if not found
    */
   public getBlockDataObject(id: string): Record<string, unknown> | undefined {
+    this.flushPendingBlockWrites();
+
     const yblock = this.documentStore.getBlockById(id);
 
     if (yblock === undefined) {
@@ -369,6 +427,8 @@ export class YjsManager extends Module {
    *   nesting leaves this false so `setBlockParent` fires MOVED.
    */
   public transactMoves(fn: () => void, isDrag = false): void {
+    this.flushPendingBlockWrites();
+
     this.isMoveGroupActive = true;
     this.isDragMoveGroup = isDrag;
     try {
@@ -409,6 +469,10 @@ export class YjsManager extends Module {
    * @param fn - Function containing Yjs operations to execute atomically
    */
   public transact(fn: () => void): void {
+    // Barrier first. Flush bodies themselves call transact — the buffer's
+    // dispatch guard makes the nested flushAll a no-op, not a recursion.
+    this.flushPendingBlockWrites();
+
     this.documentStore.transact(fn, 'local');
   }
 
@@ -474,6 +538,46 @@ export class YjsManager extends Module {
     return this.blockObserver.onBlocksChanged(callback);
   }
 
+  // ========== Public API: Binary provider seam ==========
+
+  /**
+   * Apply a binary Yjs update from a sync provider.
+   * @param update - Encoded Yjs update
+   * @param origin - Provider origin; must not be a LocalOriginTag
+   */
+  public applyRemoteUpdate(update: Uint8Array, origin?: unknown): void {
+    this.flushPendingBlockWrites();
+    this.documentStore.applyRemoteUpdate(update, origin);
+  }
+
+  /**
+   * Subscribe to this document's binary updates. Updates applied through
+   * `applyRemoteUpdate` are filtered out (echo suppression).
+   * @param callback - Receives the encoded update and its transaction origin
+   * @returns Unsubscribe function
+   */
+  public onDocUpdate(callback: (update: Uint8Array, origin: unknown) => void): () => void {
+    return this.documentStore.onUpdate(callback);
+  }
+
+  /**
+   * Encode this document's state vector for diff exchange with a peer.
+   */
+  public getStateVector(): Uint8Array {
+    this.flushPendingBlockWrites();
+    return this.documentStore.getStateVector();
+  }
+
+  /**
+   * Encode document state as a binary update, optionally as a diff against
+   * a peer's state vector.
+   * @param stateVector - Peer state vector; omit for the full document
+   */
+  public encodeStateAsUpdate(stateVector?: Uint8Array): Uint8Array {
+    this.flushPendingBlockWrites();
+    return this.documentStore.encodeStateAsUpdate(stateVector);
+  }
+
   // ========== Internal Helpers (exposed for UndoHistory) ==========
 
   /**
@@ -492,6 +596,10 @@ export class YjsManager extends Module {
    * Cleanup on destroy.
    */
   public destroy(): void {
+    // Land buffered writes while the doc is still observable, and cancel
+    // trailing timers so nothing fires against a destroyed doc.
+    this.flushPendingBlockWrites();
+
     this.blockObserver.destroy();
     this.undoHistory.destroy();
     this.documentStore.destroy();

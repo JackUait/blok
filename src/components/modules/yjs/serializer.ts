@@ -152,14 +152,46 @@ export class YBlockSerializer {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(obj)) {
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        ymap.set(key, this.objectToYMap(value as Record<string, unknown>));
-      } else {
-        ymap.set(key, value);
-      }
+      ymap.set(key, this.plainToYValue(value));
     }
 
     return ymap;
+  }
+
+  /**
+   * The array rule: a non-empty plain array whose elements are ALL objects or
+   * arrays converts to a Y.Array of recursively-converted elements, so
+   * concurrent edits merge per element (table cells, schema properties).
+   * Primitive arrays (any primitive/null element) and EMPTY arrays stay atomic
+   * plain leaves — `blocks: []` must stay plain when later populated with
+   * block-id strings, or two peers would race the representation itself.
+   * `DocumentStore.deepAssignYArray` diffs against the same predicate; the
+   * write path and the load path must never disagree on it.
+   */
+  public isConvertibleArray(value: unknown): value is unknown[] {
+    return Array.isArray(value) &&
+      value.length > 0 &&
+      value.every((element) => element !== null && typeof element === 'object');
+  }
+
+  /**
+   * Convert one plain value per the array rule. Primitives, primitive arrays
+   * and empty arrays pass through as-is.
+   */
+  public plainToYValue(value: unknown): unknown {
+    if (this.isConvertibleArray(value)) {
+      const yarray = new Y.Array<unknown>();
+
+      yarray.push(value.map((element) => this.plainToYValue(element)));
+
+      return yarray;
+    }
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      return this.objectToYMap(value as Record<string, unknown>);
+    }
+
+    return value;
   }
 
   /**
@@ -169,14 +201,32 @@ export class YBlockSerializer {
     const obj: Record<string, unknown> = {};
 
     ymap.forEach((value, key) => {
-      if (value instanceof Y.Map) {
-        obj[key] = this.yMapToObject(value);
-      } else {
-        obj[key] = value;
-      }
+      obj[key] = this.yValueToPlain(value);
     });
 
     return obj;
+  }
+
+  /**
+   * Read-back of `plainToYValue`.
+   */
+  public yValueToPlain(value: unknown): unknown {
+    if (value instanceof Y.Map) {
+      return this.yMapToObject(value);
+    }
+
+    if (value instanceof Y.Array) {
+      return this.yArrayToPlain(value);
+    }
+
+    return value;
+  }
+
+  /**
+   * Convert Y.Array to a plain array, recursing into Y.Map/Y.Array elements.
+   */
+  public yArrayToPlain(yarray: Y.Array<unknown>): unknown[] {
+    return yarray.toArray().map((element) => this.yValueToPlain(element));
   }
 
   /**

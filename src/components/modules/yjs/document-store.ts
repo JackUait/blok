@@ -1,11 +1,18 @@
 import * as Y from 'yjs';
 
 import type { YBlockSerializer, YjsOutputBlockData } from './serializer';
-import type { LocalOriginTag } from './types';
+import { LOCAL_ORIGIN_TAGS, type LocalOriginTag } from './types';
 import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
 type DocumentStoreBlockData = YjsOutputBlockData;
+
+/**
+ * Default transaction origin for updates applied through the binary seam
+ * when the provider passes none. Not a LocalOriginTag, so BlockObserver
+ * classifies these transactions 'remote' and the UndoManager ignores them.
+ */
+const REMOTE_APPLY_ORIGIN = Object.freeze({ source: 'blok-remote-apply' });
 
 /**
  * DocumentStore manages the Yjs document and provides atomic block operations.
@@ -226,6 +233,28 @@ export class DocumentStore {
       return true;
     }
 
+    // Plain array meeting an existing Y.Array: element-wise diff in place, so
+    // one cell edit writes one nested key instead of re-broadcasting the whole
+    // grid. equals(Y.Array, plainArray) is a false-negative, so this must run
+    // BEFORE the generic equality guard below.
+    if (Array.isArray(value) && currentValue instanceof Y.Array) {
+      if (equals(this.serializer.yArrayToPlain(currentValue), value)) {
+        return false;
+      }
+
+      this.transact(() => {
+        if (this.serializer.isConvertibleArray(value)) {
+          this.deepAssignYArray(currentValue, value);
+        } else {
+          // Emptied or turned primitive — no longer qualifies for Y.Array;
+          // downshift to a plain leaf so the write path matches the load path.
+          ydata.set(key, value);
+        }
+      }, 'local');
+
+      return true;
+    }
+
     // Skip if value hasn't changed - this prevents creating unnecessary undo entries
     // when block data is synced after mutations that don't actually change data
     // (e.g., marker updates in list items during undo/redo, or table content
@@ -235,9 +264,10 @@ export class DocumentStore {
     }
 
     this.transact(() => {
-      // Serialize a fresh nested object into a Y.Map so later sub-field edits can
-      // merge; primitives/arrays are stored as-is (arrays are atomic here).
-      ydata.set(key, valueIsPlainObject ? this.serializer.objectToYMap(value as Record<string, unknown>) : value);
+      // plainToYValue serializes nested objects into Y.Maps and qualifying
+      // arrays into Y.Arrays so later sub-edits can merge; primitive and
+      // empty arrays stay atomic plain leaves.
+      ydata.set(key, this.serializer.plainToYValue(value));
     }, 'local');
 
     return true;
@@ -263,17 +293,29 @@ export class DocumentStore {
     }
   }
 
-  /** Assign one key of a nested Y.Map, recursing into child Y.Maps. */
+  /** Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays. */
   private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown): void {
     const isPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
     const existing = target.get(key);
 
+    if (Array.isArray(value) && existing instanceof Y.Array) {
+      if (this.serializer.isConvertibleArray(value)) {
+        this.deepAssignYArray(existing, value);
+      } else if (!equals(this.serializer.yArrayToPlain(existing), value)) {
+        // No longer qualifies for Y.Array — downshift to a plain leaf.
+        target.set(key, value);
+      }
+
+      return;
+    }
+
     if (!isPlainObject) {
-      // Primitive/array leaf: write only when it actually changed.
-      const comparable = existing instanceof Y.Map ? this.serializer.yMapToObject(existing) : existing;
+      // Primitive/array leaf: write only when it actually changed. A first
+      // write of a qualifying array converts via plainToYValue.
+      const comparable = this.serializer.yValueToPlain(existing);
 
       if (!equals(comparable, value)) {
-        target.set(key, value);
+        target.set(key, this.serializer.plainToYValue(value));
       }
 
       return;
@@ -286,6 +328,85 @@ export class DocumentStore {
     }
 
     target.set(key, this.serializer.objectToYMap(value as Record<string, unknown>));
+  }
+
+  /**
+   * Element-wise assign `source` onto `target` Y.Array with a TWO-ENDED diff:
+   * skip the deeply-equal prefix and suffix, recurse per element when the
+   * changed middles have equal length, otherwise replace the middle with ONE
+   * splice. Y.Array item identity is what lets a concurrent row insert and a
+   * cell edit both apply, so untouched elements must never be rewritten.
+   * `source` must satisfy `isConvertibleArray`; must run inside a transaction
+   * (the caller wraps it).
+   */
+  private deepAssignYArray(target: Y.Array<unknown>, source: unknown[]): void {
+    const targetLength = target.length;
+    const sourceLength = source.length;
+    const plainAt = (index: number): unknown => this.serializer.yValueToPlain(target.get(index));
+    const maxPrefix = Math.min(targetLength, sourceLength);
+    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
+
+    const prefix = range(maxPrefix)
+      .find((index) => !equals(plainAt(index), source[index])) ?? maxPrefix;
+
+    const maxSuffix = maxPrefix - prefix;
+    const suffix = range(maxSuffix)
+      .find((index) => !equals(plainAt(targetLength - 1 - index), source[sourceLength - 1 - index])) ?? maxSuffix;
+
+    const targetMiddle = targetLength - prefix - suffix;
+    const sourceMiddle = sourceLength - prefix - suffix;
+
+    if (targetMiddle === 0 && sourceMiddle === 0) {
+      return;
+    }
+
+    if (targetMiddle === sourceMiddle) {
+      source
+        .slice(prefix, prefix + sourceMiddle)
+        .forEach((value, offset) => this.assignYArrayElement(target, prefix + offset, value));
+
+      return;
+    }
+
+    // Unequal-length middles: one splice, so a row insert/delete lands as a
+    // single Y.Array event instead of N element rewrites.
+    if (targetMiddle > 0) {
+      target.delete(prefix, targetMiddle);
+    }
+
+    if (sourceMiddle > 0) {
+      target.insert(
+        prefix,
+        source.slice(prefix, prefix + sourceMiddle).map((element) => this.serializer.plainToYValue(element))
+      );
+    }
+  }
+
+  /** Assign one Y.Array element in place, recursing into Y.Map/Y.Array elements. */
+  private assignYArrayElement(target: Y.Array<unknown>, index: number, value: unknown): void {
+    const existing = target.get(index);
+    const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
+
+    if (valueIsPlainObject && existing instanceof Y.Map) {
+      this.deepAssignYMap(existing, value as Record<string, unknown>);
+
+      return;
+    }
+
+    if (Array.isArray(value) && existing instanceof Y.Array && this.serializer.isConvertibleArray(value)) {
+      this.deepAssignYArray(existing, value);
+
+      return;
+    }
+
+    // Equal-length middles can still hold individually-equal elements
+    // between changed ones — don't rewrite those.
+    if (equals(this.serializer.yValueToPlain(existing), value)) {
+      return;
+    }
+
+    target.delete(index, 1);
+    target.insert(index, [this.serializer.plainToYValue(value)]);
   }
 
   /**
@@ -389,10 +510,102 @@ export class DocumentStore {
     return newTunes;
   }
 
+  // ========== Binary provider seam ==========
+  // Binary-only on purpose: yjs is bundled into dist, so exposing the raw
+  // Y.Doc to a host-side provider crosses two yjs module instances (the
+  // documented dual-import footgun). Uint8Array payloads are copy-safe.
+
+  /**
+   * Origins that entered through `applyRemoteUpdate`. `onUpdate` skips
+   * their transactions (echo suppression). Growth is bounded: one entry
+   * per provider origin, and origins are few and long-lived.
+   */
+  private readonly remoteOrigins = new Set<unknown>([REMOTE_APPLY_ORIGIN]);
+
+  /**
+   * Wrapped 'update' handlers registered via `onUpdate`, kept so
+   * `destroy()` can unhook them before the doc is destroyed.
+   */
+  private readonly updateHandlers = new Set<(update: Uint8Array, origin: unknown) => void>();
+
+  /**
+   * Apply a binary Yjs update coming from outside this editor.
+   * @param update - Encoded Yjs update (as produced by `encodeStateAsUpdate`
+   *   or an `onUpdate` callback on a peer)
+   * @param origin - Provider origin recorded on the transaction; defaults to
+   *   a module-level remote sentinel. Must NOT be a LocalOriginTag — those
+   *   mark this editor's own writes and are tracked by the undo scope.
+   */
+  public applyRemoteUpdate(update: Uint8Array, origin?: unknown): void {
+    const effectiveOrigin = origin ?? REMOTE_APPLY_ORIGIN;
+
+    // Throw BEFORE registering the origin: a local tag in remoteOrigins
+    // would silently swallow every later local write in onUpdate.
+    if (typeof effectiveOrigin === 'string' && (LOCAL_ORIGIN_TAGS as readonly string[]).includes(effectiveOrigin)) {
+      throw new Error(
+        `applyRemoteUpdate: "${effectiveOrigin}" is a local origin tag; ` +
+        'remote updates must carry a provider origin so undo scoping and remote classification stay correct'
+      );
+    }
+
+    // Register before applying: the 'update' event fires synchronously
+    // inside Y.applyUpdate, so a late add would echo the first message.
+    this.remoteOrigins.add(effectiveOrigin);
+
+    Y.applyUpdate(this.ydoc, update, effectiveOrigin);
+  }
+
+  /**
+   * Subscribe to this document's binary updates. Transactions applied via
+   * `applyRemoteUpdate` are skipped, so a provider can broadcast every
+   * delivery without echoing remote updates back to their source.
+   * @param cb - Receives the encoded update and its transaction origin
+   * @returns Unsubscribe function
+   */
+  public onUpdate(cb: (update: Uint8Array, origin: unknown) => void): () => void {
+    const handler = (update: Uint8Array, origin: unknown): void => {
+      if (this.remoteOrigins.has(origin)) {
+        return;
+      }
+
+      cb(update, origin);
+    };
+
+    this.updateHandlers.add(handler);
+    this.ydoc.on('update', handler);
+
+    return (): void => {
+      this.updateHandlers.delete(handler);
+      this.ydoc.off('update', handler);
+    };
+  }
+
+  /**
+   * Encode this document's state vector (for requesting a diff from a peer).
+   */
+  public getStateVector(): Uint8Array {
+    return Y.encodeStateVector(this.ydoc);
+  }
+
+  /**
+   * Encode document state as a binary update.
+   * @param stateVector - When given, only the changes the peer at that state
+   *   vector is missing are encoded; otherwise the full document.
+   */
+  public encodeStateAsUpdate(stateVector?: Uint8Array): Uint8Array {
+    return Y.encodeStateAsUpdate(this.ydoc, stateVector);
+  }
+
   /**
    * Cleanup on destroy.
    */
   public destroy(): void {
+    // Unhook providers before the doc is torn down.
+    for (const handler of this.updateHandlers) {
+      this.ydoc.off('update', handler);
+    }
+    this.updateHandlers.clear();
+
     this.ydoc.destroy();
   }
 }

@@ -2121,4 +2121,67 @@ describe('TableModel', () => {
       expect(model.getCellPlacement(0, 0)).toBeUndefined();
     });
   });
+
+  // Concurrent col-insert + row-insert can merge into a ragged grid: a row
+  // added by one peer misses the column added by the other.
+  describe('ragged grid padding', () => {
+    it('pads a short FIRST row to the widest row (cols derives from row 0)', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [cell('a')],
+          [cell('b'), cell('c'), cell('d')],
+        ],
+      }));
+
+      expect(model.cols).toBe(3);
+
+      const snap = model.snapshot();
+
+      expect(snap.content[0]).toEqual([cell('a'), { blocks: [] }, { blocks: [] }]);
+      expect(snap.content[1]).toEqual([cell('b'), cell('c'), cell('d')]);
+    });
+
+    it('pads short later rows to the widest row', () => {
+      const model = new TableModel(makeData({
+        content: [
+          [cell('a'), cell('b'), cell('c')],
+          [cell('d')],
+          [],
+        ],
+      }));
+
+      const snap = model.snapshot();
+
+      expect(snap.content[1]).toEqual([cell('d'), { blocks: [] }, { blocks: [] }]);
+      expect(snap.content[2]).toEqual([{ blocks: [] }, { blocks: [] }, { blocks: [] }]);
+      assertBlockCellMapConsistency(model);
+    });
+
+    it('pads ragged grids on replaceAll too', () => {
+      const model = new TableModel();
+
+      model.replaceAll({
+        withHeadings: false,
+        withHeadingColumn: false,
+        content: [
+          [cell('a'), cell('b')],
+          [cell('c')],
+        ],
+      });
+
+      expect(model.rows).toBe(2);
+      expect(model.cols).toBe(2);
+      expect(model.snapshot().content[1]).toEqual([cell('c'), { blocks: [] }]);
+    });
+
+    it('leaves a rectangular grid untouched', () => {
+      const content = [
+        [cell('a'), cell('b')],
+        [cell('c'), cell('d')],
+      ];
+      const model = new TableModel(makeData({ content }));
+
+      expect(model.snapshot().content).toEqual(content);
+    });
+  });
 });

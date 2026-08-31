@@ -227,6 +227,12 @@ const createBlockManager = (
       replaceBlockContent: vi.fn(() => true),
       updateBlockData: vi.fn(() => true),
       updateBlockMetadata: vi.fn(() => true),
+      // Immediate flush reproduces pre-coalescing write timing for these tests.
+      enqueueBlockDataWrite: vi.fn(
+        (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {
+          flush(new Map(Object.entries(data)));
+        }
+      ),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
@@ -1595,6 +1601,12 @@ describe('BlockManager', () => {
           // syncBlockDataToYjs uses as the signal to bump edit metadata.
           updateBlockData: vi.fn(() => true),
           updateBlockMetadata: vi.fn(() => true),
+          // Immediate flush reproduces pre-coalescing write timing.
+          enqueueBlockDataWrite: vi.fn(
+            (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {
+              flush(new Map(Object.entries(data)));
+            }
+          ),
           updateBlockTune: vi.fn(),
           stopCapturing: vi.fn(),
           transact: vi.fn((fn: () => void) => fn()),
@@ -1708,6 +1720,12 @@ describe('BlockManager', () => {
           moveBlock: vi.fn(),
           updateBlockData: updateBlockDataMock,
           updateBlockMetadata: updateBlockMetadataMock,
+          // Immediate flush reproduces pre-coalescing write timing.
+          enqueueBlockDataWrite: vi.fn(
+            (id: string, data: Record<string, unknown>, flush: (entries: ReadonlyMap<string, unknown>) => void) => {
+              flush(new Map(Object.entries(data)));
+            }
+          ),
           updateBlockTune: vi.fn(),
           stopCapturing: vi.fn(),
           transact: vi.fn((fn: () => void) => fn()),

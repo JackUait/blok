@@ -253,6 +253,170 @@ describe('YBlockSerializer', () => {
     });
   });
 
+  describe('array conversion rule', () => {
+    const getData = (data: Record<string, unknown>): Y.Map<unknown> => {
+      const yblocks = ydoc.getArray('test');
+      const yblock = serializer.outputDataToYBlock({ id: 'b1', type: 'table', data });
+
+      yblocks.push([yblock]);
+
+      return (yblocks.get(0) as Y.Map<unknown>).get('data') as Y.Map<unknown>;
+    };
+
+    it('converts a non-empty array of plain objects to a Y.Array of Y.Maps', () => {
+      const ydata = getData({ rows: [{ a: 1 }, { b: 2 }] });
+      const rows = ydata.get('rows');
+
+      expect(rows instanceof Y.Array).toBe(true);
+      expect((rows as Y.Array<unknown>).get(0) instanceof Y.Map).toBe(true);
+      expect((rows as Y.Array<unknown>).get(1) instanceof Y.Map).toBe(true);
+    });
+
+    it('converts a table-shaped grid to Y.Array(rows) → Y.Array(cells) → Y.Map(cell fields) with plain blocks arrays', () => {
+      const ydata = getData({
+        content: [
+          [{ blocks: ['p1'] }, { blocks: ['p2'] }],
+          [{ blocks: ['p3'] }, { blocks: [] }],
+        ],
+      });
+      const content = ydata.get('content') as Y.Array<unknown>;
+
+      expect(content instanceof Y.Array).toBe(true);
+
+      const row0 = content.get(0) as Y.Array<unknown>;
+
+      expect(row0 instanceof Y.Array).toBe(true);
+
+      const cell0 = row0.get(0) as Y.Map<unknown>;
+
+      expect(cell0 instanceof Y.Map).toBe(true);
+
+      // cell.blocks is a primitive string array — stays a plain atomic leaf
+      const blocks = cell0.get('blocks');
+
+      expect(Array.isArray(blocks)).toBe(true);
+      expect(blocks).toEqual(['p1']);
+    });
+
+    it('keeps primitive arrays atomic (plain arrays, not Y.Arrays)', () => {
+      const ydata = getData({ colWidths: [100, 200, 150], tags: ['a', 'b'] });
+
+      expect(Array.isArray(ydata.get('colWidths'))).toBe(true);
+      expect(Array.isArray(ydata.get('tags'))).toBe(true);
+    });
+
+    it('keeps empty arrays atomic (representation-flip hole stays closed)', () => {
+      const ydata = getData({ content: [] });
+
+      expect(Array.isArray(ydata.get('content'))).toBe(true);
+      expect(ydata.get('content')).toEqual([]);
+    });
+
+    it('keeps mixed object/primitive arrays atomic', () => {
+      const ydata = getData({ mixed: [{ a: 1 }, 'str'] });
+
+      expect(Array.isArray(ydata.get('mixed'))).toBe(true);
+    });
+
+    it('keeps arrays containing null atomic', () => {
+      const ydata = getData({ withNull: [null] });
+
+      expect(Array.isArray(ydata.get('withNull'))).toBe(true);
+    });
+
+    it('keeps an empty-row element plain inside a converted grid', () => {
+      const ydata = getData({ content: [[{ blocks: ['p1'] }], []] });
+      const content = ydata.get('content') as Y.Array<unknown>;
+
+      expect(content instanceof Y.Array).toBe(true);
+      expect(content.get(0) instanceof Y.Array).toBe(true);
+      expect(Array.isArray(content.get(1))).toBe(true);
+    });
+
+    it('round-trips table-shaped content byte-equal', () => {
+      const yblocks = ydoc.getArray('test');
+      const original = {
+        id: 't1',
+        type: 'table',
+        data: {
+          withHeadings: true,
+          colWidths: [120, 240],
+          content: [
+            [{ blocks: ['p1', 'p2'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+            [{ blocks: ['p3'], color: 'red' }, { blocks: ['p4'] }],
+            [{ blocks: [] }, { blocks: ['p5'] }],
+          ],
+        },
+      };
+
+      yblocks.push([serializer.outputDataToYBlock(original)]);
+
+      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(converted).toEqual(original);
+    });
+
+    it('round-trips database schema and views byte-equal', () => {
+      const yblocks = ydoc.getArray('test');
+      const original = {
+        id: 'db1',
+        type: 'database',
+        data: {
+          schema: [
+            { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+            {
+              id: 'p-status',
+              name: 'Status',
+              type: 'select',
+              position: 'a1',
+              config: { options: [{ id: 'o1', label: 'Todo', color: 'gray' }] },
+            },
+          ],
+          views: [
+            { id: 'v1', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-title'] },
+            {
+              id: 'v2',
+              name: 'Board',
+              type: 'board',
+              position: 'a1',
+              groupBy: 'p-status',
+              sorts: [{ propertyId: 'p-status', direction: 'asc' }],
+              filters: [],
+              visibleProperties: [],
+            },
+          ],
+          activeViewId: 'v1',
+        },
+      };
+
+      yblocks.push([serializer.outputDataToYBlock(original)]);
+
+      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(converted).toEqual(original);
+    });
+
+    it('round-trips deep nesting of arrays inside objects inside arrays', () => {
+      const yblocks = ydoc.getArray('test');
+      const original = {
+        id: 'deep1',
+        type: 'custom',
+        data: {
+          groups: [
+            { name: 'g1', items: [{ v: 1 }, { v: 2 }], empty: [], prims: [1, 2, 3] },
+            { name: 'g2', items: [{ v: 3, sub: { deep: [{ x: 'y' }] } }] },
+          ],
+        },
+      };
+
+      yblocks.push([serializer.outputDataToYBlock(original)]);
+
+      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+      expect(converted).toEqual(original);
+    });
+  });
+
   describe('isBoundaryCharacter', () => {
     it('returns true for boundary characters', () => {
       expect(isBoundaryCharacter(' ')).toBe(true);

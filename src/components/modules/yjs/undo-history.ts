@@ -111,6 +111,18 @@ export class UndoHistory {
    */
   private parentRestoreCallback: (blockId: string, parentId: string | null) => void;
 
+  /**
+   * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
+   * the START of stopCapturing/undo/redo so buffered writes join the capture
+   * group being closed or unwound. Living here (not only on YjsManager) is
+   * load-bearing: the 100ms word-boundary timer calls stopCapturing internally,
+   * and without the flush-first ordering a 400ms trailing write could land
+   * AFTER the boundary split it belongs before.
+   */
+  private flushPendingWritesHook: () => void = () => {
+    // No-op until YjsManager wires the write buffer.
+  };
+
   constructor(
     yblocks: Y.Array<Y.Map<unknown>>,
     blok: BlokModules
@@ -158,6 +170,14 @@ export class UndoHistory {
    */
   public setBlok(blok: BlokModules): void {
     this.blok = blok;
+  }
+
+  /**
+   * Set the flush barrier for coalesced typing writes.
+   * See `flushPendingWritesHook`.
+   */
+  public setFlushPendingWritesHook(hook: () => void): void {
+    this.flushPendingWritesHook = hook;
   }
 
   /**
@@ -279,6 +299,9 @@ export class UndoHistory {
    * Restores caret position after the undo operation.
    */
   public undo(): void {
+    // Land buffered typing writes first so they are part of the group we pop.
+    this.flushPendingWritesHook();
+
     // Save scroll position before DOM manipulation. Removing focused elements
     // from the DOM (e.g., undoing an Enter in a table cell removes cell paragraph
     // blocks) can cause the browser to scroll to the top. We restore scroll after
@@ -332,6 +355,9 @@ export class UndoHistory {
    * Restores caret position after the redo operation.
    */
   public redo(): void {
+    // Same barrier as undo: buffered writes must not outlive the replay.
+    this.flushPendingWritesHook();
+
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
@@ -447,6 +473,10 @@ export class UndoHistory {
    * Call this to force next change into a new undo entry.
    */
   public stopCapturing(): void {
+    // Flush BEFORE closing the group: a word-boundary checkpoint must carry
+    // the buffered tail of the word it ends (100ms boundary vs 400ms trailing).
+    this.flushPendingWritesHook();
+
     this.undoManager.stopCapturing();
   }
 

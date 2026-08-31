@@ -2009,11 +2009,10 @@ export class BlockManager extends Module {
   /**
    * Sync block data to Yjs after DOM mutation.
    *
-   * Only writes metadata (lastEditedAt / lastEditedBy) if at least one data field
-   * actually changed. This preserves the invariant "no data change → no Yjs write →
-   * no undo entry." Without this guard, a spurious metadata-only transaction lands
-   * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
-   * only the metadata entry instead of the actual data change.
+   * The save() + equality diff stay per-mutation, but the resulting writes go
+   * through YjsManager's coalescing buffer: the first write of an idle block
+   * flushes immediately (today's timing), follow-ups coalesce into one trailing
+   * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
   private async syncBlockDataToYjs(block: Block): Promise<void> {
     const savedData = await block.save();
@@ -2022,6 +2021,23 @@ export class BlockManager extends Module {
       return;
     }
 
+    this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
+      this.flushBlockDataWrites(block, entries);
+    });
+  }
+
+  /**
+   * Flush body for coalesced block data writes.
+   *
+   * Only writes metadata (lastEditedAt / lastEditedBy) if at least one data field
+   * actually changed. This preserves the invariant "no data change → no Yjs write →
+   * no undo entry." Without this guard, a spurious metadata-only transaction lands
+   * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
+   * only the metadata entry instead of the actual data change.
+   * @param block - the block whose buffered writes are being flushed
+   * @param entries - coalesced {key → latest value} data entries
+   */
+  private flushBlockDataWrites(block: Block, entries: ReadonlyMap<string, unknown>): void {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
     // and fires a stack-item-added event, which runs caret capture that may
@@ -2031,7 +2047,7 @@ export class BlockManager extends Module {
     const dataChangedRef = { value: false };
 
     this.Blok.YjsManager.transact(() => {
-      for (const [key, value] of Object.entries(savedData.data)) {
+      for (const [key, value] of entries) {
         // A list item structurally nested under another list item derives its
         // `depth` from the parentId chain (getStructuralListDepth), so persisting
         // depth to the CRDT is redundant — and harmful: the derived value lands as
@@ -2041,7 +2057,8 @@ export class BlockManager extends Module {
         // still reports depth for the public output and reload re-derives it from
         // structure, so skipping the CRDT write is safe. Flat-carrier list items
         // (authored/drag-nested via data.depth with no LIST parent) keep depth as
-        // their source of truth and are left untouched.
+        // their source of truth and are left untouched. Evaluated at FLUSH so a
+        // Tab-nesting that happened mid-window uses the block's current parent.
         if (key === 'depth' && this.isStructurallyNestedListItem(block)) {
           continue;
         }

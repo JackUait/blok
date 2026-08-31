@@ -239,3 +239,25 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   limiter); the WS surface deliberately diverges. Docs: `collab-what-is-not-
   limited` now describes the inbound budget; `collab-new-documents` states the
   200-null seed contract (404 = failure by design).
+- **Lockstep/packaging fixes LANDED (`0a13dd72`)** — NUL matrix (probe, one
+  subprocess per case): every position — map keys (yrs lib.rs:216), string
+  values / ids / order entries / row keys (lib.rs:2815) — ABORTS the .NET
+  process (exit 134) on read after `ApplyV1` returned Ok; writes truncate.
+  `Seed` rejects NUL; a skipped canary in `YDocConverterHardeningTests` holds
+  the repro. YDotNet 0.6.0 exposes NO update decoder (reflection-verified) and
+  varints legitimately contain 0x00, so a server-side pre-apply guard is
+  impossible — Phase 3's client strips NUL before producing updates. Docker:
+  `ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=/var/tmp/.net` + chown 65532 (image
+  verified unstartable before, starting after; smoke asserts the ENV).
+  Export/Seed walk iteratively; `MaxValueDepth = 256`; `JsonMaxDepth = 512`
+  both directions; `DocEndpointOptions.MaxResponseBytes` 64 MiB (streaming
+  ceiling). Duplicate JSON keys: .NET cannot mirror JS last-wins → refused
+  cleanly (`AllowDuplicateProperties = false`). C# mirrors JS `Object.entries`
+  leniency for data/tunes and `Array.from` for content; `content: 5`/`{}`
+  throw on both sides. Foreign shared types export as strings (Y.XmlFragment
+  still throws inside YDotNet's Output builder — unreachable). JS
+  `yMapToObject` uses `Object.defineProperty` so `__proto__` round-trips.
+  Dot-segment ids rejected client-side before any request (`%2e` is safe —
+  EscapeDataString escapes the `%`). Fixtures: 20 cases (+`proto-key`,
+  `lenient-seed`). The vacuous release conformance step is deleted; the pin
+  asserts the "Wait for successful CI" gate.

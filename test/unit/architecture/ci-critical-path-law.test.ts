@@ -106,7 +106,7 @@ const expectOrderedSteps = (
 
 const checkout: Step = {
   name: 'Checkout code',
-  uses: 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+  uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
 };
 
 const setupNodeDependencies: Step = {
@@ -361,7 +361,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload frontend coverage shard',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'frontend-coverage-${{ strategy.job-index }}',
           path: '.vitest-reports/',
@@ -437,7 +437,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload coverage diagnostics',
         if: 'failure()',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'frontend-coverage',
           path: 'coverage/',
@@ -487,7 +487,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload build artifacts',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'dist',
           path: buildArtifactPaths,
@@ -591,7 +591,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload unified HTML report',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'playwright-report',
           path: 'playwright-report',
@@ -672,7 +672,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload E2E Test Results',
         if: 'failure()',
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'playwright-results-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'test-results/',
@@ -682,7 +682,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload Blob Report',
         if: "always() && github.ref != 'refs/heads/main'",
-        uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'blob-report-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'blob-report/',

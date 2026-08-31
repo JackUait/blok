@@ -14,9 +14,11 @@ describe('server docs data', () => {
 
   // The editor grew a `server` key that fills in the uploader and the unfurl
   // endpoint. Showing the hand-written wiring here would teach the long way
-  // round and quietly rot against what the editor actually does.
+  // round and quietly rot against what the editor actually does. The in-process
+  // path is in the list too: `collaboration` is refused without `server`, so a
+  // hand-wired sample there cannot host the collaboration story at all.
   it('wires the editor with the server key rather than by hand', () => {
-    for (const id of ['own-server', 'serverless']) {
+    for (const id of ['dotnet', 'own-server', 'serverless']) {
       const code = serverPaths.find((p) => p.id === id)?.editorConfig.code ?? '';
 
       expect(code, id).toMatch(/server: /);
@@ -32,6 +34,31 @@ describe('server docs data', () => {
     // A resolved object froze the pass at construction; previews died at expiry
     // while uploads carried on.
     expect(code).not.toContain('await authHeaders()');
+  });
+
+  // The client half of each path. `collaboration` is refused without `server`,
+  // so every path that runs the service shows the two keys together — and the
+  // sample shape stays identical across them, because a reader compares paths.
+  it('shows the collaboration config on every path that runs the service', () => {
+    for (const id of ['dotnet', 'own-server', 'serverless']) {
+      const code = serverPaths.find((p) => p.id === id)?.editorConfig.code ?? '';
+
+      expect(code, id).toMatch(/server: /);
+      expect(code, id).toContain('collaboration: {');
+      expect(code, id).toContain("doc: 'article-42'");
+      expect(code, id).toContain("user: { name: 'Jack', color: '#f60' }");
+    }
+  });
+
+  // The storage-only path cannot run the sync service, so the sample must not
+  // show a key that would throw there — and has to say where to get it.
+  it('keeps the storage-only path honest about live collaboration', () => {
+    const code = serverPaths.find((p) => p.id === 'own-storage')?.editorConfig.code ?? '';
+
+    expect(code).not.toContain('collaboration:');
+    expect(code).toMatch(/needs the service/i);
+    expect(code).toMatch(/link previews/i);
+    expect(code).toMatch(/paths below/i);
   });
 
   it('mints the pass with blokTicket instead of spelling out an HMAC', () => {
@@ -270,9 +297,10 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-one service limits the design refuses to bury', () => {
+  it('states the twenty-six service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
+      'collab-replaces-persistence',
       'working-copy-privacy',
       'collab-reset',
       'doc-endpoint-auth',
@@ -288,6 +316,10 @@ describe('server docs data', () => {
       'collab-connection-cap',
       'collab-connection-ceiling',
       'collab-what-is-not-limited',
+      'collab-connection-states',
+      'collab-offline-reload',
+      'collab-merge-granularity',
+      'collab-presence-identity',
       'collab-presence-unverified',
       'collab-doc-id-shape',
       'tls-termination',
@@ -309,6 +341,27 @@ describe('server docs data', () => {
     expect(body).toMatch(/working copy/i);
     expect(body).toMatch(/your endpoint|your own app/i);
     expect(body).toMatch(/few seconds/i);
+    // The export debounce is a lag on the READ side too, not just a loss
+    // window: whatever else reads your records is that far behind the tab.
+    expect(body).toMatch(/trails|behind/i);
+    expect(body).toMatch(/export|report|another service/i);
+  });
+
+  // Two ways to give the document a second owner, one entry: the refused
+  // `persistence` pair, and the `onSave` payload a host used to write back.
+  // Remote edits still reach onChange/onSave on purpose, which is exactly what
+  // makes "just save what it hands you" a plausible and wrong reflex.
+  it('says the service owns the round-trip, so persistence is refused and onSave is not a save cue', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-replaces-persistence')?.body ?? '';
+
+    expect(limits.indexOf('collab-replaces-persistence')).toBe(limits.indexOf('no-documents') + 1);
+    expect(body).toMatch(/persistence/);
+    expect(body).toMatch(/cannot be combined|refuses/i);
+    expect(body).toMatch(/two owners|owns/i);
+    expect(body).toMatch(/onSave/);
+    expect(body).toMatch(/onChange/);
+    expect(body).toMatch(/do not write|never write|stop saving/i);
   });
 
   it('keeps the working copy out of public reach', () => {
@@ -359,6 +412,7 @@ describe('server docs data', () => {
     expect(body).toMatch(/30 minutes/);
     expect(body).toMatch(/checked once|when the connection opens/i);
     expect(body).toMatch(/reconnect/i);
+    expect(body).toMatch(/access away|revok/i);
   });
 
   // The cap keys on who is holding the connection. Behind a proxy nothing
@@ -409,6 +463,67 @@ describe('server docs data', () => {
     expect(body).toMatch(/not limited/i);
     // The inbound budget made this sentence false.
     expect(body).not.toMatch(/how fast an open connection sends is not limited/i);
+  });
+
+  // The two halves of the door are deliberately asymmetric: nothing is editable
+  // before the first sync (a locally seeded doc forks history), everything stays
+  // editable after one, even with the socket gone.
+  it('describes the read-only-until-synced start and the editable-while-offline reconnect', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-connection-states')?.body ?? '';
+
+    expect(body).toMatch(/read-only/i);
+    expect(body).toMatch(/first sync/i);
+    expect(body).toMatch(/write|read-only itself|host/i);
+    expect(body).toMatch(/stays editable|remains editable/i);
+    expect(body).toMatch(/reconnect/i);
+    expect(body).toContain('collaboration:status');
+    expect(body).toMatch(/connecting/);
+    expect(body).toMatch(/connected/);
+    expect(body).toMatch(/offline/);
+    expect(body).toMatch(/your own indicator|indicator of your own/i);
+  });
+
+  // Staying editable offline is only kind if the price of a reload is written
+  // down: the tab is the sole copy until it reconnects.
+  it('says a reload while disconnected loses the offline edits', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-offline-reload')?.body ?? '';
+
+    expect(body).toMatch(/reload/i);
+    expect(body).toMatch(/only copy|nowhere else|in the tab/i);
+    expect(body).toMatch(/lost|gone/i);
+    expect(body).toMatch(/later phase|not.*today/i);
+  });
+
+  // The claim the design says will eventually disappoint someone, so it is
+  // stated before they meet it: fields merge, letters inside one do not.
+  it('prices the merge granularity honestly, Notion included', () => {
+    const body = serverLimits.find((l) => l.id === 'collab-merge-granularity')?.body ?? '';
+
+    expect(body).toMatch(/different blocks/i);
+    expect(body).toMatch(/different fields|other fields/i);
+    expect(body).toMatch(/last/i);
+    expect(body).toMatch(/Notion/);
+    expect(body).toMatch(/character/i);
+  });
+
+  // Presence has two entries on purpose: this one is what a reader sees and
+  // where it comes from, the next one is what it does not prove.
+  it('says what presence renders and where the display identity comes from', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-presence-identity')?.body ?? '';
+
+    expect(limits.indexOf('collab-presence-identity')).toBe(
+      limits.indexOf('collab-presence-unverified') - 1,
+    );
+    expect(body).toMatch(/avatar/i);
+    expect(body).toMatch(/outline/i);
+    expect(body).toMatch(/collaboration/);
+    expect(body).toMatch(/name/i);
+    expect(body).toMatch(/colou?r/i);
+    // The display identity is NOT the attribution option, and a reader who
+    // conflates them wires the wrong one.
+    expect(body).toMatch(/last edited|attribution|credit/i);
+    expect(body).toMatch(/independent|separate/i);
   });
 
   // Awareness frames are relayed verbatim and never parsed, read-only members

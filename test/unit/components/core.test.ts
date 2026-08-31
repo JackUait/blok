@@ -484,6 +484,92 @@ describe('Core', () => {
     });
   });
 
+  describe('collaboration config validation', () => {
+    const withHolder = (extra: Record<string, unknown>): BlokConfig =>
+      ({ holder: 'holder', ...extra });
+
+    // The sync service owns the document round-trip, so pairing it with a
+    // persistence endpoint would give the document two owners.
+    it('refuses collaboration combined with persistence', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc' },
+          server: 'https://blok.example.com',
+          persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+        });
+      }).toThrow('collaboration and persistence cannot be combined: the sync service owns the document round-trip');
+    });
+
+    // The sync URL is derived from `server`, so collaboration cannot work without it.
+    it('refuses collaboration without the server option', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({ collaboration: { doc: 'my-doc' } });
+      }).toThrow('collaboration requires the server option');
+    });
+
+    it.each(['', 'a/b', 'a%2fb', 'a%2Fb', '.', '..'])(
+      'refuses a doc that is not a single path segment: "%s"',
+      async (doc) => {
+        const core = await createReadyCore();
+
+        expect(() => {
+          core.configuration = withHolder({
+            collaboration: { doc },
+            server: 'https://blok.example.com',
+          });
+        }).toThrow('collaboration.doc must be a single path segment');
+      }
+    );
+
+    // A JS consumer can drop `doc` entirely; that is still an invalid segment,
+    // not a crash.
+    it('refuses collaboration whose doc is missing entirely', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: {},
+          server: 'https://blok.example.com',
+        });
+      }).toThrow('collaboration.doc must be a single path segment');
+    });
+
+    // The refusal rides the same isReady rejection contract as every other
+    // config error, not just a synchronous setter throw.
+    it('rejects the boot when collaboration is misconfigured', async () => {
+      const core = new Core(withHolder({
+        collaboration: { doc: 'my-doc' },
+        persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+      }));
+
+      await expect(core.isReady).rejects.toThrow(
+        'collaboration and persistence cannot be combined: the sync service owns the document round-trip'
+      );
+    });
+
+    // The passing boundary of the matrix: server present, single-segment doc,
+    // no persistence — accepted and retained unchanged.
+    it('accepts collaboration with a server and a single-segment doc', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc', user: { name: 'Ada', color: '#ff0000' } },
+          server: 'https://blok.example.com',
+        });
+      }).not.toThrow();
+
+      expect(core.configuration.collaboration).toEqual({
+        doc: 'my-doc',
+        user: { name: 'Ada', color: '#ff0000' },
+      });
+    });
+  });
+
   describe('render', () => {
     it('invokes renderer with current blocks', async () => {
       const core = await createReadyCore();

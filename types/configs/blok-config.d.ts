@@ -648,6 +648,43 @@ export interface BlokMountOptions {
   uploader?: BlokUploader;
 
   /**
+   * Turn on real-time multiplayer editing against the `server`'s sync service.
+   *
+   * Absent, collaboration is off and costs nothing — Blok never opens a socket.
+   * Present, the document is loaded from and streamed to the sync service, so
+   * two editors pointed at the same `doc` see each other's edits live.
+   *
+   * - `doc` — the document id shared with the sync service. It becomes one path
+   *   segment of the sync URL, so it must be a SINGLE path segment: not empty,
+   *   and free of `/`, `%2f`/`%2F`, or a `.`/`..` dot segment. Anything else is
+   *   refused at construction (mirrors the server's own 4400 refusal).
+   * - `user` — the display identity shown to the other people in the document
+   *   (their name, and an optional cursor/avatar `color`). This is PURELY
+   *   presentational and is INDEPENDENT of the {@link BlokMountOptions.user}
+   *   `{ id }` option, which records edit attribution on each block: one is "who
+   *   gets credit for this edit", the other is "whose cursor is that". Set
+   *   either, both, or neither.
+   *
+   * Mutually exclusive with {@link BlokMountOptions.persistence}: the sync
+   * service owns the whole document round-trip, so a second load/save endpoint
+   * would give the document two owners. Requires {@link BlokMountOptions.server}
+   * — the sync URL is derived from it. Both are refused at construction.
+   *
+   * Fixed for the editor's life; changing it requires recreating the editor.
+   */
+  collaboration?: {
+    /** The document id shared with the sync service. Must be a single path segment. */
+    doc: string;
+    /** The display identity shown to peers — independent of `user: { id }` attribution. */
+    user?: {
+      /** Display name shown to the other people in the document. */
+      name: string;
+      /** Optional cursor/avatar color (any CSS color the presence UI can render). */
+      color?: string;
+    };
+  };
+
+  /**
    * Data to render on Blok start.
    *
    * Accepts the strict saved shape ({@link OutputData}) as well as the loose

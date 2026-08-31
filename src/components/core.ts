@@ -15,6 +15,22 @@ import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
 
 /**
+ * A collaboration `doc` becomes one path segment of the sync URL, so it must be
+ * a single segment: not empty, no `/` (raw or `%2f`/`%2F`), and not a `.`/`..`
+ * dot segment — any of which would retarget the request at another document or
+ * the whole collection. Mirrors the server's `IsSingleSegment` guard. Accepts
+ * `unknown` so a JS consumer dropping `doc` is refused, not a crash.
+ * @param doc - the configured document id
+ */
+const isSingleDocSegment = (doc: unknown): boolean =>
+  typeof doc === 'string' &&
+  doc.length > 0 &&
+  !doc.includes('/') &&
+  !doc.toLowerCase().includes('%2f') &&
+  doc !== '.' &&
+  doc !== '..';
+
+/**
  * Blok core class. Bootstraps modules.
  */
 export class Core {
@@ -109,6 +125,12 @@ export class Core {
         holder: config as string | undefined,
       };
     }
+
+    /**
+     * Refuse a broken `collaboration` config here, before any expansion runs,
+     * so a refused config never builds a persistence save queue it will not use.
+     */
+    this.validateCollaborationConfig();
 
     /**
      * `server` is sugar over options that already exist. Expanding it here —
@@ -259,6 +281,32 @@ export class Core {
    */
   public get configuration(): BlokConfig {
     return this.config;
+  }
+
+  /**
+   * Refuse a misconfigured `collaboration` block: the sync service owns the
+   * document round-trip, so it cannot be paired with a persistence endpoint; it
+   * derives the sync URL from `server`; and its `doc` becomes one path segment
+   * of that URL. Refuse-don't-warn — throwing rejects the ready promise.
+   */
+  private validateCollaborationConfig(): void {
+    const { collaboration } = this.config;
+
+    if (collaboration === undefined) {
+      return;
+    }
+
+    if (this.config.persistence !== undefined) {
+      throw new Error('collaboration and persistence cannot be combined: the sync service owns the document round-trip');
+    }
+
+    if (this.config.server === undefined) {
+      throw new Error('collaboration requires the server option');
+    }
+
+    if (!isSingleDocSegment(collaboration.doc)) {
+      throw new Error('collaboration.doc must be a single path segment');
+    }
   }
 
   /**

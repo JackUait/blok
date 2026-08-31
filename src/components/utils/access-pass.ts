@@ -11,9 +11,36 @@ export interface PassSourceOptions {
   now?: () => number;
 }
 
+export interface TicketSourceOptions {
+  /**
+   * When set, the minted ticket is scoped to one document: `?doc=<enc>` is
+   * composed onto the endpoint. Live collaboration needs this; uploads and link
+   * previews do not.
+   */
+  doc?: string;
+  /** Injectable clock; production uses Date.now. */
+  now?: () => number;
+}
+
 interface CachedPass {
   token: string;
   expiresAtMs: number;
+}
+
+/**
+ * Composes a `doc` claim onto the mint endpoint. Uses `&` when the endpoint
+ * already carries a query string, `?` otherwise.
+ * @param endpoint - the mint endpoint as the host app configured it
+ * @param doc - the document id to scope the ticket to, if any
+ */
+function composeEndpoint(endpoint: string, doc: string | undefined): string {
+  if (doc === undefined) {
+    return endpoint;
+  }
+
+  const separator = endpoint.includes('?') ? '&' : '?';
+
+  return `${endpoint}${separator}doc=${encodeURIComponent(doc)}`;
 }
 
 /**
@@ -44,12 +71,15 @@ function readExpiry(token: string): number {
 }
 
 /**
- * Builds a headers function that keeps one short-lived access pass for the
- * whole editor — uploads and link previews share it.
- * @param options - the minting endpoint and an optional clock
+ * Builds a source that keeps one short-lived ticket for the whole editor and
+ * hands back the raw token. Caches it, refreshes 30s before expiry, and
+ * collapses concurrent callers onto a single mint.
+ * @param endpoint - the host app route that mints a ticket for the session
+ * @param options - an optional document scope (`?doc=`) and clock
  */
-export function createPassSource(options: PassSourceOptions): () => Promise<Record<string, string>> {
+export function createTicketSource(endpoint: string, options: TicketSourceOptions = {}): () => Promise<string> {
   const now = options.now ?? ((): number => Date.now());
+  const url = composeEndpoint(endpoint, options.doc);
 
   // One mutable holder rather than two rebindable locals: the repo bans `let`,
   // and both fields have to survive across calls to the returned function.
@@ -61,26 +91,26 @@ export function createPassSource(options: PassSourceOptions): () => Promise<Reco
   const fetchPass = async (): Promise<CachedPass> => {
     // credentials: the endpoint authorises using the host app's own session
     // cookie, which is the entire reason it can vouch for this user.
-    const response = await fetch(options.endpoint, { credentials: 'same-origin' });
+    const response = await fetch(url, { credentials: 'same-origin' });
 
     if (!response.ok) {
-      throw new Error(`Blok could not get an access pass from ${options.endpoint} (status ${response.status})`);
+      throw new Error(`Blok could not get an access pass from ${url} (status ${response.status})`);
     }
 
     const body = (await response.json()) as { ticket?: unknown };
 
     if (typeof body.ticket !== 'string') {
-      throw new Error(`${options.endpoint} answered without a "ticket" field`);
+      throw new Error(`${url} answered without a "ticket" field`);
     }
 
     return { token: body.ticket, expiresAtMs: readExpiry(body.ticket) };
   };
 
-  return async (): Promise<Record<string, string>> => {
+  return async (): Promise<string> => {
     const { cached } = state;
 
     if (cached !== null && now() < cached.expiresAtMs - REFRESH_MARGIN_MS) {
-      return { Authorization: `Bearer ${cached.token}` };
+      return cached.token;
     }
 
     // One request serves every concurrent caller: a page with six images would
@@ -93,6 +123,22 @@ export function createPassSource(options: PassSourceOptions): () => Promise<Reco
 
     state.cached = pass;
 
-    return { Authorization: `Bearer ${pass.token}` };
+    return pass.token;
+  };
+}
+
+/**
+ * Builds a headers function that keeps one short-lived access pass for the
+ * whole editor — uploads and link previews share it. Thin wrapper over
+ * {@link createTicketSource} that turns the raw token into a Bearer header.
+ * @param options - the minting endpoint and an optional clock
+ */
+export function createPassSource(options: PassSourceOptions): () => Promise<Record<string, string>> {
+  const ticketSource = createTicketSource(options.endpoint, { now: options.now });
+
+  return async (): Promise<Record<string, string>> => {
+    const token = await ticketSource();
+
+    return { Authorization: `Bearer ${token}` };
   };
 }

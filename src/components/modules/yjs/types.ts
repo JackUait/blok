@@ -25,6 +25,17 @@ export interface BlockPlacement {
 }
 
 /**
+ * Presence delta from y-protocols Awareness: the client ids whose state was
+ * added, changed, or dropped since the last emission. Client ids are Yjs
+ * `doc.clientID` numbers, not block ids.
+ */
+export interface AwarenessChange {
+  added: number[];
+  updated: number[];
+  removed: number[];
+}
+
+/**
  * Event emitted when blocks change.
  *
  * Most events carry a single `blockId`. The `batch-add` type carries

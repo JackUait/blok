@@ -7,13 +7,17 @@ const configTable = (): { option: string; type: string; default: string; descrip
 const row = (option: string): { description: string; type: string } | undefined =>
   configTable().find((entry) => entry.option === option);
 
+const section = (id: string): { description?: string; methods?: { name: string; example?: string }[] } =>
+  API_SECTIONS.find((entry) => entry.id === id) ?? {};
+
 describe("server wiring config keys", () => {
-  it("documents all three", () => {
+  it("documents all four", () => {
     const names = configTable().map((entry) => entry.option);
 
     expect(names).toContain("server");
     expect(names).toContain("ticket");
     expect(names).toContain("persistence");
+    expect(names).toContain("collaboration");
   });
 
   // The likeliest wrong assumption a reader brings, given the name.
@@ -42,5 +46,55 @@ describe("server wiring config keys", () => {
 
   it("says the reader's endpoint decides a conflict, not Blok", () => {
     expect(row("persistence")?.description).toMatch(/version/i);
+  });
+
+  // Both refusals happen at construction, so a reader who learns them from a
+  // thrown error learned them too late.
+  it("states what collaboration requires and what it refuses to sit beside", () => {
+    const description = row("collaboration")?.description ?? "";
+
+    expect(row("collaboration")?.type).toContain("doc: string");
+    expect(row("collaboration")?.type).toContain("name: string");
+    expect(description).toMatch(/requires.*`?server`?/i);
+    expect(description).toMatch(/mutually exclusive|cannot be combined/i);
+    expect(description).toMatch(/persistence/);
+    expect(description).toMatch(/single path segment/i);
+  });
+
+  // `collaboration.user` and `user: { id }` are two different people-shaped
+  // options; the whole point of the row is that a reader picks the right one.
+  it("separates the display identity from the attribution option", () => {
+    const description = row("collaboration")?.description ?? "";
+
+    expect(description).toMatch(/display/i);
+    expect(description).toMatch(/independent/i);
+    expect(description).toMatch(/attribution|credit/i);
+  });
+
+  it("names the event a host renders its indicator from", () => {
+    expect(row("collaboration")?.description).toContain("collaboration:status");
+  });
+
+  // Angular declares a curated input list and everything else flows through
+  // [config]; collaboration is in the second group, and a reader hunting for a
+  // [collaboration] input finds nothing unless the escape hatch names it.
+  it("routes collaboration through the frameworks the way each one takes it", () => {
+    expect(row("collaboration")?.description).toMatch(/React and Vue/);
+    expect(row("collaboration")?.description).toMatch(/\[config\]/);
+    expect(section("blok-editor").description).toMatch(/collaboration/);
+  });
+});
+
+describe("collaboration status event", () => {
+  // The events section teaches events by example rather than by table, so the
+  // new one has to appear in the same `on()` example as its neighbours.
+  it("subscribes to collaboration:status beside the other lifecycle events", () => {
+    const example = section("events-api").methods?.find((method) =>
+      method.name.startsWith("on("),
+    )?.example ?? "";
+
+    expect(example).toContain("collaboration:status");
+    expect(example).toMatch(/status/);
+    expect(example).toMatch(/peers/);
   });
 });

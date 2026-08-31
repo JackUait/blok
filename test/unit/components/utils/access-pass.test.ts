@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPassSource } from '../../../../src/components/utils/access-pass';
+import { createPassSource, createTicketSource } from '../../../../src/components/utils/access-pass';
 
 // A pass whose payload declares exp = 1000 (seconds).
 const PASS = `x.${btoa(JSON.stringify({ exp: 1000 })).replace(/=+$/, '')}.y`;
@@ -92,5 +92,44 @@ describe('createPassSource', () => {
     await source();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('createTicketSource', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ticket: PASS }) });
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('returns the raw ticket token rather than a headers object', async () => {
+    const token = await createTicketSource('/api/blok-ticket', { now: () => 0 })();
+
+    expect(token).toBe(PASS);
+  });
+
+  it('appends ?doc= when the endpoint carries no query string', async () => {
+    await createTicketSource('/api/blok-ticket', { doc: 'doc-1', now: () => 0 })();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/blok-ticket?doc=doc-1', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
+  it('appends &doc= when the endpoint already carries a query string', async () => {
+    await createTicketSource('/api/blok-ticket?tenant=acme', { doc: 'doc-1', now: () => 0 })();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/blok-ticket?tenant=acme&doc=doc-1', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
+  it('url-encodes the doc value', async () => {
+    await createTicketSource('/api/blok-ticket', { doc: 'a b/c', now: () => 0 })();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/blok-ticket?doc=a%20b%2Fc', expect.objectContaining({ credentials: 'same-origin' }));
   });
 });

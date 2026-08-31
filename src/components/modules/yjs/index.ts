@@ -8,7 +8,7 @@ import { Module } from '../../__module';
 import { BlockObserver } from './block-observer';
 import { DocumentStore } from './document-store';
 import { YBlockSerializer, isBoundaryCharacter, type YjsOutputBlockData } from './serializer';
-import type { BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
+import type { AwarenessChange, BlockChangeCallback, BlockPlacement, CaretSnapshot } from './types';
 import { UndoHistory } from './undo-history';
 import { BlockWriteBuffer, type BufferedBlockWriteFlush } from './write-buffer';
 
@@ -686,6 +686,65 @@ export class YjsManager extends Module {
     return this.documentStore.encodeStateAsUpdate(stateVector);
   }
 
+  // ========== Public API: Awareness seam ==========
+
+  /**
+   * Turn presence on (idempotent). Lazily creates the Awareness; absent = zero
+   * cost for single-player.
+   */
+  public enableAwareness(): void {
+    this.documentStore.enableAwareness();
+  }
+
+  /**
+   * Set one field of this peer's presence state.
+   * @param field - Field name (e.g. `user`, `blockId`)
+   * @param value - Field value
+   */
+  public setAwarenessField(field: string, value: unknown): void {
+    this.documentStore.setAwarenessField(field, value);
+  }
+
+  /**
+   * Every known peer's presence state, keyed by Yjs client id (presence face).
+   */
+  public getAwarenessStates(): Map<number, Record<string, unknown>> {
+    return this.documentStore.getAwarenessStates();
+  }
+
+  /**
+   * Subscribe to presence deltas.
+   * @param callback - Receives the change delta and its origin
+   * @returns Unsubscribe function
+   */
+  public onAwarenessChange(callback: (changes: AwarenessChange, origin: unknown) => void): () => void {
+    return this.documentStore.onAwarenessChange(callback);
+  }
+
+  /**
+   * Encode a binary awareness update for the provider to broadcast.
+   * @param clients - Client ids to include; defaults to every known state
+   */
+  public encodeAwarenessUpdate(clients?: number[]): Uint8Array {
+    return this.documentStore.encodeAwarenessUpdate(clients);
+  }
+
+  /**
+   * Apply a binary awareness update received from a peer.
+   * @param update - Encoded awareness update
+   * @param origin - Provider origin carried on the emitted change
+   */
+  public applyAwarenessUpdate(update: Uint8Array, origin: unknown): void {
+    this.documentStore.applyAwarenessUpdate(update, origin);
+  }
+
+  /**
+   * Drop every remote peer's presence but keep this peer's own (disconnect).
+   */
+  public clearRemoteAwarenessStates(): void {
+    this.documentStore.clearRemoteAwarenessStates();
+  }
+
   // ========== Internal Helpers (exposed for UndoHistory) ==========
 
   /**
@@ -715,5 +774,5 @@ export class YjsManager extends Module {
 }
 
 // Re-export types for consumers
-export type { CaretSnapshot } from './types';
+export type { AwarenessChange, CaretSnapshot } from './types';
 export type { YjsOutputBlockData };

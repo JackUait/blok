@@ -3,6 +3,65 @@ import * as Y from 'yjs';
 
 import type { OutputBlockData } from '../../../../types/data-formats/output-data';
 
+/** The NUL character. Kept as a code-point so no raw NUL byte lives in source. */
+const NUL_CHAR = String.fromCharCode(0);
+
+/**
+ * Remove every NUL from a string. A NUL in a Y.Map KEY aborts the .NET sync
+ * server's yrs read (process panic); a NUL in a string VALUE truncates it. The
+ * browser client is the only guard, so every user string entering the doc is
+ * scrubbed at the serializer write chokepoints. Fast path: scan first, allocate
+ * a replacement only on a hit, so a clean write copies nothing.
+ */
+export const stripNul = (value: string): string =>
+  value.includes(NUL_CHAR) ? value.split(NUL_CHAR).join('') : value;
+
+/**
+ * Strip NUL from a value that is a string AT RUNTIME and pass anything else
+ * through untouched. The block format is deliberately tolerant — `parent`,
+ * `type` and `lastEditedBy` are typed `string` but a host may hand us null or
+ * a non-string, and those shapes are pinned by the lockstep fixtures. Scrubbing
+ * must never change what a tolerant write stores.
+ */
+export const stripNulIfString = (value: unknown): unknown =>
+  typeof value === 'string' ? stripNul(value) : value;
+
+/**
+ * Deep NUL scrub for a value stored as a plain LEAF — a string, or a
+ * primitive/mixed array that is NOT promoted to a Y.Array, or a plain object
+ * nested inside such an array. Recurses through arrays and objects, stripping
+ * both keys and string values. Fast path: returns the SAME reference when the
+ * subtree holds no NUL, so a clean write allocates nothing.
+ */
+export const stripNulDeep = (value: unknown): unknown => {
+  if (typeof value === 'string') {
+    return stripNul(value);
+  }
+
+  if (Array.isArray(value)) {
+    // stripNulDeep returns the SAME reference for a clean element, so an
+    // element-wise identity check tells us whether anything changed — return
+    // the original array untouched when nothing did.
+    const next = value.map((element) => stripNulDeep(element));
+
+    return next.every((element, index) => element === value[index]) ? value : next;
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+    const nextEntries = entries.map(
+      ([key, nested]): [string, unknown] => [stripNul(key), stripNulDeep(nested)]
+    );
+    const unchanged = nextEntries.every(
+      ([key, nested], index) => key === entries[index][0] && nested === entries[index][1]
+    );
+
+    return unchanged ? value : Object.fromEntries(nextEntries);
+  }
+
+  return value;
+};
+
 /**
  * Key of the row-container map inside a keyed grid wrapper: rowKey → row value.
  */
@@ -72,8 +131,10 @@ export class YBlockSerializer {
   public outputDataToYBlock(blockData: YjsOutputBlockData): Y.Map<unknown> {
     const yblock = new Y.Map<unknown>();
 
-    yblock.set('id', blockData.id);
-    yblock.set('type', blockData.type);
+    // The id also becomes this block's KEY in DocumentStore's blocks map, so a
+    // NUL here is the exact yrs-aborting hazard — stripped at both places.
+    yblock.set('id', typeof blockData.id === 'string' ? stripNul(blockData.id) : blockData.id);
+    yblock.set('type', stripNulIfString(blockData.type));
 
     // Normalize empty paragraph data to { text: '' } for consistent undo/redo behavior
     const normalizedData = this.normalizeBlockData(blockData.type, blockData.data);
@@ -85,7 +146,7 @@ export class YBlockSerializer {
     }
 
     if (blockData.parent !== undefined) {
-      yblock.set('parentId', blockData.parent);
+      yblock.set('parentId', stripNulIfString(blockData.parent));
     }
 
     // EAGER, always — even with no children. A block Y.Map is created by ONE
@@ -97,14 +158,23 @@ export class YBlockSerializer {
     // With one shared array, concurrent first children merge as two inserts.
     // Read-back still drops an empty array (`yBlockToOutputData`), so the public
     // OutputData shape is unchanged.
-    yblock.set('contentIds', Y.Array.from(blockData.content ?? []));
+    // Array.from first: `content` is typed string[] but the format tolerates a
+    // non-array (a bare string spreads to characters, a number yields []), and
+    // those shapes are pinned by the lockstep fixtures — mapping directly would
+    // throw where a tolerant write used to succeed.
+    yblock.set(
+      'contentIds',
+      Y.Array.from(
+        Array.from((blockData.content ?? []) as Iterable<unknown>).map(stripNulIfString) as string[]
+      )
+    );
 
     if (blockData.lastEditedAt !== undefined) {
       yblock.set('lastEditedAt', blockData.lastEditedAt);
     }
 
     if (blockData.lastEditedBy !== undefined) {
-      yblock.set('lastEditedBy', blockData.lastEditedBy);
+      yblock.set('lastEditedBy', stripNulIfString(blockData.lastEditedBy));
     }
 
     return yblock;
@@ -183,7 +253,7 @@ export class YBlockSerializer {
     const ymap = new Y.Map<unknown>();
 
     for (const [key, value] of Object.entries(obj)) {
-      ymap.set(key, this.plainToYValue(value));
+      ymap.set(stripNul(key), this.plainToYValue(value));
     }
 
     return ymap;
@@ -280,7 +350,9 @@ export class YBlockSerializer {
 
   /**
    * Convert one plain value per the grid rule, then the array rule. Primitives,
-   * primitive arrays and empty arrays pass through as-is.
+   * primitive arrays and empty arrays pass through the NUL scrub as leaves —
+   * a string cell or a primitive-array row (table cells) is stored verbatim,
+   * so its NUL must be stripped here rather than in a Y.Map/Y.Array branch.
    */
   public plainToYValue(value: unknown): unknown {
     if (this.isGridArray(value)) {
@@ -299,7 +371,7 @@ export class YBlockSerializer {
       return this.objectToYMap(value as Record<string, unknown>);
     }
 
-    return value;
+    return stripNulDeep(value);
   }
 
   /**

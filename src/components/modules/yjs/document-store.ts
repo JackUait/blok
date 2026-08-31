@@ -1,7 +1,8 @@
+import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
-import { GRID_ORDER_KEY, GRID_ROWS_KEY, type YBlockSerializer, type YjsOutputBlockData } from './serializer';
-import { LOCAL_ORIGIN_TAGS, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
+import { GRID_ORDER_KEY, GRID_ROWS_KEY, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
+import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
 import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
@@ -54,6 +55,16 @@ export class DocumentStore {
    */
   private serializer: YBlockSerializer;
 
+  /**
+   * Presence substrate, created LAZILY on the first `enableAwareness()`.
+   *
+   * NOT built in the constructor: `Awareness` schedules a 3s `setInterval` the
+   * moment it exists (its outdated-state sweep), which would violate the collab
+   * config's "absent = zero cost" contract for the single-player editor. Null
+   * until a provider turns presence on.
+   */
+  private awareness: Awareness | null = null;
+
   constructor(serializer: YBlockSerializer) {
     this.serializer = serializer;
   }
@@ -100,11 +111,13 @@ export class DocumentStore {
           continue;
         }
 
-        this.yBlocksMap.set(block.id, this.serializer.outputDataToYBlock(block));
+        // The map KEY is scrubbed too — a NUL here (not just in the yblock's
+        // id field) is what aborts the .NET server's yrs read.
+        this.yBlocksMap.set(stripNul(block.id), this.serializer.outputDataToYBlock(block));
       }
 
       const topLevelIds = blocks.flatMap((block) =>
-        block.parent === undefined && typeof block.id === 'string' ? [block.id] : []
+        block.parent === undefined && typeof block.id === 'string' ? [stripNul(block.id)] : []
       );
 
       this.yRootOrder.push(topLevelIds);
@@ -380,7 +393,9 @@ export class DocumentStore {
    */
   public addBlock(blockData: DocumentStoreBlockData, index?: number): Y.Map<unknown> {
     const yblock = this.serializer.outputDataToYBlock(blockData);
-    const id = blockData.id;
+    // Strip so the map KEY and the order-array id match the yblock's scrubbed
+    // id field (and never carry a yrs-aborting NUL to the server).
+    const id = typeof blockData.id === 'string' ? stripNul(blockData.id) : blockData.id;
 
     if (typeof id !== 'string') {
       return yblock;
@@ -447,7 +462,7 @@ export class DocumentStore {
     }
 
     this.transact(() => {
-      yblock.set('type', type);
+      yblock.set('type', stripNulIfString(type));
       yblock.set('data', this.serializer.objectToYMap(this.serializer.normalizeBlockData(type, data)));
     }, 'local');
 
@@ -756,8 +771,10 @@ export class DocumentStore {
       return false;
     }
 
+    // Scrub the data KEY once — a NUL key aborts the .NET server's yrs read.
+    const dataKey = stripNul(key);
     const ydata = yblock.get('data') as Y.Map<unknown>;
-    const currentValue = ydata.get(key);
+    const currentValue = ydata.get(dataKey);
 
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -775,7 +792,7 @@ export class DocumentStore {
         } else {
           // No longer a grid (emptied, or rows turned into objects) — rebuild
           // so the write path matches the load path.
-          ydata.set(key, this.serializer.plainToYValue(value));
+          ydata.set(dataKey, this.serializer.plainToYValue(value));
         }
       }, 'local');
 
@@ -815,7 +832,8 @@ export class DocumentStore {
         } else {
           // Emptied or turned primitive — no longer qualifies for Y.Array;
           // downshift to a plain leaf so the write path matches the load path.
-          ydata.set(key, value);
+          // Through plainToYValue so a primitive-array leaf is NUL-scrubbed.
+          ydata.set(dataKey, this.serializer.plainToYValue(value));
         }
       }, 'local');
 
@@ -834,7 +852,7 @@ export class DocumentStore {
       // plainToYValue serializes nested objects into Y.Maps and qualifying
       // arrays into Y.Arrays so later sub-edits can merge; primitive and
       // empty arrays stay atomic plain leaves.
-      ydata.set(key, this.serializer.plainToYValue(value));
+      ydata.set(dataKey, this.serializer.plainToYValue(value));
     }, 'local');
 
     return true;
@@ -862,8 +880,11 @@ export class DocumentStore {
 
   /** Assign one key of a nested Y.Map, recursing into child Y.Maps/Y.Arrays. */
   private assignYMapEntry(target: Y.Map<unknown>, key: string, value: unknown): void {
+    // Scrub the nested KEY here — deep-merge writes bypass objectToYMap, so this
+    // is the single chokepoint that keeps a NUL out of a nested map key.
+    const mapKey = stripNul(key);
     const isPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
-    const existing = target.get(key);
+    const existing = target.get(mapKey);
 
     // Keyed grid first: a grid wrapper IS a Y.Map, so the plain-object branch
     // below would tear its container keys apart.
@@ -871,7 +892,7 @@ export class DocumentStore {
       if (this.serializer.isGridArray(value)) {
         this.deepAssignYGrid(existing, value);
       } else if (!equals(this.serializer.gridMapToPlain(existing), value)) {
-        target.set(key, this.serializer.plainToYValue(value));
+        target.set(mapKey, this.serializer.plainToYValue(value));
       }
 
       return;
@@ -881,8 +902,9 @@ export class DocumentStore {
       if (this.serializer.isConvertibleArray(value)) {
         this.deepAssignYArray(existing, value);
       } else if (!equals(this.serializer.yArrayToPlain(existing), value)) {
-        // No longer qualifies for Y.Array — downshift to a plain leaf.
-        target.set(key, value);
+        // No longer qualifies for Y.Array — downshift to a plain leaf. Through
+        // plainToYValue so a primitive-array leaf is NUL-scrubbed.
+        target.set(mapKey, this.serializer.plainToYValue(value));
       }
 
       return;
@@ -894,7 +916,7 @@ export class DocumentStore {
       const comparable = this.serializer.yValueToPlain(existing);
 
       if (!equals(comparable, value)) {
-        target.set(key, this.serializer.plainToYValue(value));
+        target.set(mapKey, this.serializer.plainToYValue(value));
       }
 
       return;
@@ -906,7 +928,7 @@ export class DocumentStore {
       return;
     }
 
-    target.set(key, this.serializer.objectToYMap(value as Record<string, unknown>));
+    target.set(mapKey, this.serializer.objectToYMap(value as Record<string, unknown>));
   }
 
   /**
@@ -1211,7 +1233,11 @@ export class DocumentStore {
 
     this.transact(() => {
       const ytunes = this.getOrCreateTunesMap(yblock);
-      ytunes.set(tuneName, tuneData);
+
+      // Scrub the tune KEY, and deep-scrub the value (tunes may be strings or
+      // nested objects). Not routed through plainToYValue — a tune value must
+      // stay a plain object, not be promoted to a Y.Map.
+      ytunes.set(stripNul(tuneName), stripNulDeep(tuneData));
     }, 'local');
   }
 
@@ -1242,7 +1268,7 @@ export class DocumentStore {
       yblock.set('lastEditedAt', lastEditedAt);
 
       if (lastEditedBy !== null) {
-        yblock.set('lastEditedBy', lastEditedBy);
+        yblock.set('lastEditedBy', stripNulIfString(lastEditedBy));
       }
     }, 'local');
 
@@ -1387,6 +1413,115 @@ export class DocumentStore {
     return Y.encodeStateAsUpdate(this.ydoc, stateVector);
   }
 
+  // ========== Awareness seam ==========
+  // JSON at the presence face (getStates/onChange/setField), binary at the
+  // provider face (encode/apply). Lazy: nothing here exists until a provider
+  // calls `enableAwareness`. Awareness binds to `doc.clientID`, so a lineage
+  // reset that swaps the Y.Doc must recreate it (owner: the reset lever).
+
+  /**
+   * Turn presence on. Idempotent — the first call creates the Awareness (and
+   * its 3s sweep timer), later calls are no-ops. A provider MUST call this
+   * before `onAwarenessChange`/`encodeAwarenessUpdate`.
+   */
+  public enableAwareness(): void {
+    if (this.awareness !== null) {
+      return;
+    }
+
+    this.awareness = new Awareness(this.ydoc);
+  }
+
+  /**
+   * Set one field of THIS peer's presence state (e.g. `user`, `blockId`).
+   * No-op before `enableAwareness`, so a caret move under single-player costs
+   * nothing.
+   * @param field - Field name
+   * @param value - Field value
+   */
+  public setAwarenessField(field: string, value: unknown): void {
+    this.awareness?.setLocalStateField(field, value);
+  }
+
+  /**
+   * Every known peer's presence state, keyed by Yjs client id (the JSON
+   * presence face for the renderer). Empty map when presence is off.
+   */
+  public getAwarenessStates(): Map<number, Record<string, unknown>> {
+    return this.awareness?.getStates() ?? new Map<number, Record<string, unknown>>();
+  }
+
+  /**
+   * Subscribe to presence deltas (added/updated/removed client ids).
+   * @param callback - Receives the change delta and its origin
+   * @returns Unsubscribe function
+   */
+  public onAwarenessChange(callback: (changes: AwarenessChange, origin: unknown) => void): () => void {
+    const awareness = this.requireAwareness('onAwarenessChange');
+
+    awareness.on('change', callback);
+
+    return (): void => {
+      awareness.off('change', callback);
+    };
+  }
+
+  /**
+   * Encode a binary awareness update for the provider to broadcast.
+   * @param clients - Client ids to include; defaults to every known state
+   *   (this peer plus any it has learned about).
+   */
+  public encodeAwarenessUpdate(clients?: number[]): Uint8Array {
+    const awareness = this.requireAwareness('encodeAwarenessUpdate');
+
+    return encodeAwarenessUpdate(awareness, clients ?? Array.from(awareness.getStates().keys()));
+  }
+
+  /**
+   * Apply a binary awareness update received from a peer. No-op before
+   * `enableAwareness` — a stray inbound frame during single-player is ignored.
+   * @param update - Encoded awareness update
+   * @param origin - Provider origin carried on the emitted change
+   */
+  public applyAwarenessUpdate(update: Uint8Array, origin: unknown): void {
+    if (this.awareness === null) {
+      return;
+    }
+
+    applyAwarenessUpdate(this.awareness, update, origin);
+  }
+
+  /**
+   * Drop every REMOTE peer's presence but keep this peer's own state. Used on
+   * disconnect so ghost cursors clear without erasing the local presence the
+   * next connection will re-broadcast. No-op before `enableAwareness`.
+   */
+  public clearRemoteAwarenessStates(): void {
+    if (this.awareness === null) {
+      return;
+    }
+
+    const localClientId = this.awareness.clientID;
+    const remote = Array.from(this.awareness.getStates().keys()).filter((id) => id !== localClientId);
+
+    if (remote.length > 0) {
+      removeAwarenessStates(this.awareness, remote, 'local');
+    }
+  }
+
+  /**
+   * The Awareness, or throw naming the caller — for the operations that are
+   * meaningless without presence (subscribe, encode). Mutators/reads no-op
+   * instead, which is what keeps teardown ordering safe.
+   */
+  private requireAwareness(method: string): Awareness {
+    if (this.awareness === null) {
+      throw new Error(`DocumentStore.${method}: awareness not enabled; call enableAwareness() first`);
+    }
+
+    return this.awareness;
+  }
+
   /**
    * Cleanup on destroy.
    */
@@ -1396,6 +1531,13 @@ export class DocumentStore {
       this.ydoc.off('update', handler);
     }
     this.updateHandlers.clear();
+
+    // Destroy awareness BEFORE the doc: its own `doc.on('destroy')` hook would
+    // otherwise reach a half-torn-down instance. Clears the sweep timer.
+    if (this.awareness !== null) {
+      this.awareness.destroy();
+      this.awareness = null;
+    }
 
     this.ydoc.destroy();
   }

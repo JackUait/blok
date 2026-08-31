@@ -46,6 +46,64 @@ export interface BlockChildrenMountedPayload {
 }
 
 /**
+ * One collaborator visible in the shared session, as surfaced to the host for
+ * rendering a presence stack / sync pill.
+ */
+export interface CollaborationPeer {
+  /**
+   * Awareness client id of the peer. Unique per live connection, not per user.
+   */
+  clientId: number;
+
+  /**
+   * Display identity of the peer. Host-rendered, so treat as untrusted text.
+   */
+  user: {
+    /**
+     * Display name shown in the presence stack.
+     */
+    name: string;
+
+    /**
+     * CSS color used for the peer's cursor / avatar outline.
+     */
+    color: string;
+  };
+
+  /**
+   * Id of the block the peer's caret is in, or `null` when the peer has no
+   * caret in the document (e.g. focus is elsewhere).
+   */
+  blockId: string | null;
+
+  /**
+   * Whether the peer holds a write grant. Absent when the server does not
+   * report per-peer write capability.
+   */
+  canWrite?: boolean;
+}
+
+/**
+ * Payload for the `collaboration:status` event.
+ */
+export interface CollaborationStatusChangedPayload {
+  /**
+   * Connection state of the collaboration session.
+   *
+   * - `connecting` — establishing the session, before the first sync.
+   * - `connected` — synced and live with the server.
+   * - `offline` — disconnected; local edits (if the doc has server lineage)
+   *   stay pending until reconnect.
+   */
+  status: 'connecting' | 'connected' | 'offline';
+
+  /**
+   * Peers currently present in the session (excludes the local client).
+   */
+  peers: CollaborationPeer[];
+}
+
+/**
  * Payload for the `i18n:changed` event.
  */
 export interface I18nChangedPayload {
@@ -71,4 +129,5 @@ export interface BlokEditorEventMap {
   'blocks:rendered': BlocksRenderedPayload;
   'block:childrenMounted': BlockChildrenMountedPayload;
   'i18n:changed': I18nChangedPayload;
+  'collaboration:status': CollaborationStatusChangedPayload;
 }

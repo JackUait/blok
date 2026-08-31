@@ -620,6 +620,13 @@ const editor = new Blok(config);`,
           "Load the document on mount and save it as it changes, against your own endpoint \u2014 the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins. `load` may answer with a version alongside the document, and each `save` is told the version it is overwriting and may report the one it wrote \u2014 Blok only carries that version between the two calls, so your endpoint stays the only place a stale write is detected.",
       },
       {
+        option: "collaboration",
+        type: "{ doc: string; user?: { name: string; color?: string } }",
+        default: "undefined",
+        description:
+          "Real-time multiplayer editing against the sync service `server` points at: two editors opened on the same `doc` see each other's edits live. `doc` is the shared document id, and it becomes one path segment of the sync URL — so it must be a single path segment (no `/`, no encoded slash, no `.`/`..`), and anything else is refused at construction rather than failing at the door. `user` is the DISPLAY identity the other people see — the name on their avatar and the color of the outline on the block they are editing — and is independent of the `user: { id }` option, which records edit attribution: one answers \"whose outline is that\", the other \"who gets the credit for this edit\"; set either, both or neither. Requires `server`, and is mutually exclusive with `persistence` — the sync service owns the whole document round-trip, so a second load/save pair would give the document two owners — both refused at construction. Absent, it costs nothing: Blok opens no socket. Mount-only; changing it means recreating the editor. React and Vue take it as a `collaboration` prop, Angular has no dedicated input so it goes through `[config]`. Connection state and the people present arrive on the `collaboration:status` event.",
+      },
+      {
         option: "theme",
         type: "'auto' | 'light' | 'dark'",
         default: "'auto'",
@@ -1604,6 +1611,13 @@ editor.on('block:childrenMounted', ({ blockId, childIds }) => {
   if (blockId === containerId && childIds.includes(child.id)) {
     editor.caret.setToBlock(child.id);
   }
+});
+
+// With the \`collaboration\` config on, this is the sync/presence indicator
+// feed: status is 'connecting' | 'connected' | 'offline', and peers lists
+// everyone else in the document. Single-player editors never emit it.
+editor.on('collaboration:status', ({ status, peers }) => {
+  console.log(status, peers.map((peer) => peer.user.name));
 });
 
 // To react to content changes with access to the API, use the
@@ -3818,7 +3832,7 @@ const listItemBlock: OutputBlockData = {
     title: "BlokEditor component",
     lastUpdated: "2026-07-17",
     description:
-      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
+      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, server, ticket, persistence, collaboration, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
     example: `import { useState } from 'react';
 import { BlokEditor } from '@bloklabs/react';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';

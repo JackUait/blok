@@ -83,6 +83,8 @@ export const BlokEditor = defineComponent({
     ticket: { type: String as PropType<BlokConfig['ticket']>, default: undefined },
     /** Load on mount and save on change, against your own endpoint. */
     persistence: { type: Object as PropType<BlokConfig['persistence']>, default: undefined },
+    /** Real-time multiplayer against the server's sync service. Mutually exclusive with persistence. */
+    collaboration: { type: Object as PropType<BlokConfig['collaboration']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */

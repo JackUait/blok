@@ -52,7 +52,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, CollaborationPeer, CollaborationStatusChangedPayload } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -201,6 +201,8 @@ export {
   BlocksRenderedPayload,
   BlockChildrenMountedPayload,
   I18nChangedPayload,
+  CollaborationPeer,
+  CollaborationStatusChangedPayload,
 }
 
 /**

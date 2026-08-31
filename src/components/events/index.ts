@@ -11,6 +11,8 @@ import type { BlockSettingsClosedPayload } from './BlockSettingsClosed';
 import { BlockSettingsClosed } from './BlockSettingsClosed';
 import type { BlockSettingsOpenedPayload } from './BlockSettingsOpened';
 import { BlockSettingsOpened } from './BlockSettingsOpened';
+import type { CollaborationStatusChangedPayload } from './CollaborationStatusChanged';
+import { CollaborationStatusChanged } from './CollaborationStatusChanged';
 import type { BlokMobileLayoutToggledPayload } from './BlokMobileLayoutToggled';
 import { BlokMobileLayoutToggled } from './BlokMobileLayoutToggled';
 import type { FakeCursorAboutToBeToggledPayload } from './FakeCursorAboutToBeToggled';
@@ -40,6 +42,7 @@ export {
   BlockSettingsClosed,
   I18nChanged,
   SaveFailed,
+  CollaborationStatusChanged,
 };
 
 /**
@@ -59,4 +62,5 @@ export interface BlokEventMap {
   [BlockSettingsClosed]: BlockSettingsClosedPayload;
   [I18nChanged]: I18nChangedPayload;
   [SaveFailed]: SaveFailedPayload;
+  [CollaborationStatusChanged]: CollaborationStatusChangedPayload;
 }

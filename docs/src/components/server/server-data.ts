@@ -75,6 +75,9 @@ import { supabaseStorage } from '@bloklabs/presets';
 new Blok({
   holder: 'editor',
   uploader: supabaseStorage(supabase, { bucket: 'blok' }),
+  // Nothing here turns on live editing: it needs the service in the middle,
+  // exactly like link previews do. The three paths below run it — take one
+  // and keep this uploader as it is.
 });`,
     },
     presetsPath: '/presets',
@@ -167,13 +170,17 @@ builder.Services.AddBlokServer(options => { /* as above */ })
       label: 'Point the editor at the mapped routes',
       language: 'typescript',
       code: `import { Blok } from '@bloklabs/core';
-import { fetchStorage } from '@bloklabs/presets';
 
 new Blok({
   holder: 'editor',
-  uploader: fetchStorage({ baseUrl: '/api/blok' }),
-  tools: {
-    bookmark: { config: { endpoint: '/api/blok/unfurl' } },
+  // The prefix you mapped above. Fills in the uploader and the link-preview
+  // endpoint; anything you set yourself wins.
+  server: '/api/blok',
+  // Live collaboration. Everyone who opens the same doc edits together, and
+  // the name and color are what the other people see.
+  collaboration: {
+    doc: 'article-42',
+    user: { name: 'Jack', color: '#f60' },
   },
 });`,
     },
@@ -252,6 +259,12 @@ new Blok({
   // Fills in the uploader and the link-preview endpoint. Anything you set
   // yourself wins, so your own storage still works alongside it.
   server: '/api/blok',
+  // Live collaboration. Everyone who opens the same doc edits together, and
+  // the name and color are what the other people see.
+  collaboration: {
+    doc: 'article-42',
+    user: { name: 'Jack', color: '#f60' },
+  },
 });`,
     },
     failureModes: [
@@ -414,8 +427,15 @@ new Blok({
   holder: 'editor',
   server: 'https://blok.myapp.com',
   // The editor fetches a pass from this route, keeps it, and replaces it
-  // shortly before it expires. Uploads and link previews share the same one.
+  // shortly before it expires. Uploads and link previews share one; live
+  // collaboration asks the same route for its own, naming the document.
   ticket: '/api/blok-ticket',
+  // Live collaboration. Everyone who opens the same doc edits together, and
+  // the name and color are what the other people see.
+  collaboration: {
+    doc: 'article-42',
+    user: { name: 'Jack', color: '#f60' },
+  },
 });`,
     },
     failureModes: [
@@ -477,7 +497,12 @@ export const serverLimits: ServerLimit[] = [
   {
     id: 'no-documents',
     title: 'Documents stay yours; the service keeps only a working copy',
-    body: 'Saving and loading documents stays a small endpoint in your own app — the same place your permission check already lives. That endpoint remains the record: it is what lands in your backups, and it is what you clean when someone asks you to delete their data. Live collaboration adds one moving part: while people edit together, the service keeps a working copy of the open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. Losing that working copy costs at most the few seconds of changes not yet written back; the next open starts fresh from your endpoint.',
+    body: 'Saving and loading documents stays a small endpoint in your own app — the same place your permission check already lives. That endpoint remains the record: it is what lands in your backups, and it is what you clean when someone asks you to delete their data. Live collaboration adds one moving part: while people edit together, the service keeps a working copy of the open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. Losing that working copy costs at most the few seconds of changes not yet written back; the next open starts fresh from your endpoint. Those same few seconds are a lag in the other direction too: your record trails what the people in the document are looking at, so an export, a report or another service reading your database sees the document as of the last write-back rather than as of the keystroke someone just typed.',
+  },
+  {
+    id: 'collab-replaces-persistence',
+    title: 'With live collaboration on, your app stops saving the document itself',
+    body: 'The editor’s own persistence option — the load and save callbacks a single-player editor uses to talk to your endpoint — cannot be combined with collaboration. The editor refuses the pair the moment it is created and says which one to drop, because the document would otherwise have two owners writing the same record from two places. Nothing is lost in the trade: the service loads the document from your document endpoint and writes it back to the same route, so it is your endpoint either way, called from the service instead of from the browser. The same goes for saving by hand — onChange and onSave keep firing while people edit together, including for the edits other people make, which is deliberate so a form bound to the editor stays current. Do not write what they hand you back into your record: that is the service’s job now, and a second writer only fights it.',
   },
   {
     id: 'working-copy-privacy',
@@ -553,6 +578,26 @@ export const serverLimits: ServerLimit[] = [
     id: 'collab-what-is-not-limited',
     title: 'What the service does not limit for you',
     body: 'There is no cap on how many documents one person may have open, on how large a document may grow, or on how often an unknown document id makes the service ask your document endpoint for a seed — those are your records and your rules, so if you need such limits, put them in your own backend, where the permission check already lives. What the service does bound is one connection: a single message is at most 1 MiB and a bigger one closes the connection; a browser that has stopped taking messages — a frozen tab, a dead network — is closed once the messages waiting for it pass 8 MiB, and simply catches up when it reconnects (inside your own ASP.NET app, CollabMaxMessageBytes moves both numbers together); a connection that floods the service — more than about 50 messages a second once a burst of 100 is used up, or more than 60 requests a minute to resend the whole document — is closed with "inbound rate exceeded" (code 1008), and the editor simply reconnects (inside your own ASP.NET app the knobs are CollabInboundFramesPerSecond, CollabInboundBurstFrames and CollabInboundResyncsPerMinute; 0 turns either rate off); and opening a connection spends the same per-minute --rate-limit budget as every other route. Beyond those four, an open connection is not limited.',
+  },
+  {
+    id: 'collab-connection-states',
+    title: 'Read-only until the first sync, editable through a dropped connection',
+    body: 'A document opens read-only and stays that way until the first sync arrives: the editor never starts from a copy of its own, because two browsers each starting from their own copy and then syncing would duplicate every block. Once that first sync lands the document becomes editable — as long as the pass grants write and your app has not put the editor in read-only itself. After that the behaviour is deliberately asymmetric: if the connection drops, the document stays editable. What gets typed piles up in that tab and is shipped as one difference the moment it reconnects, so a tunnel or a sleeping laptop does not freeze the page under someone’s hands. The editor reports each step on the collaboration:status event — connecting, connected or offline, with the list of people present — so you can render your own indicator in the shape your product already uses. Blok does not paint one for you.',
+  },
+  {
+    id: 'collab-offline-reload',
+    title: 'A reload while it says offline loses what was typed offline',
+    body: 'Those offline edits live in that tab and nowhere else until it reconnects. Reload, close it or lose the browser before that happens and they are gone: the tab was holding the only copy, and nothing had reached the working copy or your records yet. There is no local cache behind it — surviving a reload while disconnected is a later phase, not a setting to turn on today. So the guidance is the plain one: while the editor says it is offline, leave the tab alone and let it reconnect.',
+  },
+  {
+    id: 'collab-merge-granularity',
+    title: 'Two people in one field: the last write wins',
+    body: 'Edits to different blocks merge cleanly, and so do edits to different fields of the same block — one person retitling a heading while another ticks a checklist item never collide, and neither loses anything. Inside one field it is coarser. Two people typing in the same paragraph at the same moment do not get their letters woven together: whichever change lands last is the one everybody keeps, and the other is dropped. Notion behaves the same way, and so does every editor that syncs whole fields rather than characters. Character-by-character merging is a later phase. In practice two people rarely type in one sentence at once, and presence is there so they can see when they are about to.',
+  },
+  {
+    id: 'collab-presence-identity',
+    title: 'Who is here, and which block they are in',
+    body: 'Blok draws presence itself: small avatars for the people in the document, and a colored outline around the block someone else is editing. Both read the display identity you pass in the editor’s collaboration option — a name, and an optional color used for that person’s avatar and outline. Leave it out and the person still shows up, just without a name on them. This is display only, and independent of the separate user option that stamps who last edited a block: one answers "whose outline is that", the other answers "who gets the credit for this edit". Set either, both or neither. A caret between two letters is not part of it — the outline marks a whole block, and character-level cursors are a later phase.',
   },
   {
     id: 'collab-presence-unverified',

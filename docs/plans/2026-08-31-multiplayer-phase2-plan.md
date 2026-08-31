@@ -144,3 +144,31 @@ Fully gated: routes, rooms, store writes, doc-endpoint traffic, drain deltas.
 Global but inert (release notes): YDotNet deps on the NuGet (~1.7MB), single-
 file layout change, musl swap, NoWarn, additive doc claim, drain hook.
 Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
+
+## Amendments from execution (2026-08-31)
+
+- **B2 DECIDED: SyncWire is hand-rolled** (`Blok.Server/Collab/SyncWire.cs`), NOT
+  YDotNet.Protocol. Evidence against the real y-protocols 1.0.7 + lib0 0.2.117
+  encoders: YDotNet.Protocol round-trips sync 0/0/1/2 and awareness byte-
+  identically, but ENCODES queryAwareness (type 3) as `[0x01]` — a stock client
+  reads that as an empty awareness update and never re-announces, defeating
+  decision 11 — and cannot DECODE auth (2), queryAwareness (3) or the Blok
+  control frame (100). Canary tests pin the mismatches so a YDotNet upgrade
+  that fixes them forces a revisit. Use SyncWire for ALL frame types — never
+  split codecs by type. SyncWire also pins: one message per WebSocket frame
+  (trailing bytes rejected; the handshake reply is TWO frames), varuint ≤ 10
+  bytes, unknown OUTER type → ignorable UnknownFrame, unknown sub-type →
+  malformed. Control frame = `[100][varuint len][UTF-8 {"epoch":N,"format":N}]`,
+  strict decode.
+- **Fixture layout**: `fixtures/sync-frames.json` lives BESIDE `tickets.json`
+  (the collab generator owns `fixtures/collab/` and must remove only its own
+  case dirs — a shared folder is not safe to `rmSync`). C# loaders find
+  fixtures via the `Blok.Server.slnx` walk-up, not csproj items.
+- **devDependencies added (plan E1 pulled forward)**: `y-protocols 1.0.7` and
+  `lib0 0.2.117`, both exact — the fixture generator must import lib0 directly
+  (y-protocols writers take a lib0 encoder) and `no-phantom-dependencies-law`
+  forbids transitive imports. `y-websocket` still lands with E2.
+- **C1 decoupling**: the room depends on a small `ICollabDocConverter`
+  abstraction (Seed(Doc, json) / Export(Doc)); B1's `YDocConverter` binds
+  through a one-line adapter after both land. The room never references the
+  concrete converter.

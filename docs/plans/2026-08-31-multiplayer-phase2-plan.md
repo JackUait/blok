@@ -189,3 +189,19 @@ Nothing default-path constructs a Doc — emergency lever = don't pass --collab.
   misread as a grid; the escaped NUL (backslash-u0000) inside strings is
   SUSPECTED to truncate through yffi's C strings — excluded from fixtures,
   verify before relying on it.
+- **C1 LANDED (`3137ba08`)** — room API: `CollabRoomManager.JoinAsync(docId,
+  ICollabMember, ct) → CollabJoinResult{Joined|SeedFailed|Draining}`,
+  `ResetAsync(docId)`, `DrainAsync`; `CollabMembership.ReceiveAsync(frame)` /
+  `LeaveAsync`; `ICollabMember {CanWrite, AcceptsControlFrames, Send, Close}` —
+  Send/Close run INSIDE the lane: enqueue and return, never block, never throw.
+  The ROOM sends the epoch control frame first; the endpoint must not. Zero
+  stored frames = unseeded (a reset's empty log re-seeds under the stored
+  epoch); an unapplicable stored frame fails the join closed — operator reset
+  recovers; compaction on load at 64 frames OR 1 MiB, always before evict when
+  >1 frame. DocEndpointClient PUT header: `Blok-Doc-Version`.
+- **YDOTNET LAW (found by C1):** `new Doc()` in YDotNet 0.6.0 does NOT get a
+  unique client id (15 distinct in a 50-doc probe), and yrs DROPS updates that
+  repeat a (client, clock) pair — "unrecoverable state corruption" if both
+  write. Every Doc that may produce updates MUST be created with
+  `DocOptions { Id = random uint32 }` (the browsers' id space). Rooms do; test
+  helpers use `YDocs.NewClient()`. Audit any future `new Doc()`.

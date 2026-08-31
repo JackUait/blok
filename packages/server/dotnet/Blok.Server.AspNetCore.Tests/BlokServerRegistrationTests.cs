@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
+using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Authentication;
@@ -39,6 +40,274 @@ public sealed class BlokServerRegistrationTests
     Assert.Single(
         services,
         descriptor => descriptor.ServiceType == typeof(IBlobStore));
+  }
+
+  [Fact]
+  public void RegistersCollabServiceFactoriesOnce()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer();
+    services.AddBlokServer();
+
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(ICollabWorkingSetStore));
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(ICollabRoomManager));
+  }
+
+  [Fact]
+  public void CollabServicesThrowWhenCollaborationIsDisabled()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer();
+    using var provider = services.BuildServiceProvider();
+
+    var store = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+    Assert.Equal("Collaboration is disabled.", store.Message);
+
+    var rooms = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<ICollabRoomManager>());
+    Assert.Equal("Collaboration is disabled.", rooms.Message);
+  }
+
+  [Fact]
+  public void RejectsCollabWithoutADocEndpoint()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options => options.CollabEnabled = true));
+
+    Assert.Contains(
+        "--collab needs --doc-endpoint",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsADocEndpointWithoutCollab()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.DocEndpoint = "https://app.example.com/api/blok-docs"));
+
+    Assert.Contains(
+        "--doc-endpoint needs --collab",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("app.example.com/api/blok-docs")]
+  [InlineData("/api/blok-docs")]
+  [InlineData("ftp://app.example.com/api/blok-docs")]
+  [InlineData("https://user@app.example.com/api/blok-docs")]
+  [InlineData("https://app.example.com/api/blok-docs?mode=test")]
+  [InlineData("https://app.example.com/api/blok-docs#fragment")]
+  public void RejectsUnsafeDocEndpoints(string docEndpoint)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = docEndpoint;
+        }));
+
+    Assert.Contains("--doc-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("credentials", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsNonLoopbackHttpDocEndpoints()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "http://app.example.com/api/blok-docs";
+        }));
+
+    Assert.Contains("--doc-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("HTTPS", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://app.example.com/api/blok-docs")]
+  [InlineData("https://app.example.com")]
+  [InlineData("http://127.0.0.1:5100/api/blok-docs")]
+  [InlineData("http://localhost:5100/api/blok-docs")]
+  public void AllowsFullDocEndpoints(string docEndpoint)
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = docEndpoint;
+    });
+  }
+
+  [Theory]
+  [InlineData("/srv/blok/uploads")]
+  [InlineData("/srv/blok/uploads/")]
+  [InlineData("/srv/blok/uploads/working-set")]
+  [InlineData("/srv/blok/collab/../uploads/working-set")]
+  public void RejectsCollabDirectoriesInsideTheStorageDirectory(string collabDirectory)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.StorageDirectory = "/srv/blok/uploads";
+          options.PublicUrl = "/files";
+          options.CollabDirectory = collabDirectory;
+        }));
+
+    Assert.Contains("--collab-dir", error.Message, StringComparison.Ordinal);
+    Assert.Contains("--storage-dir", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsACollabDirectoryEqualToATrailingSlashStorageDirectory()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.StorageDirectory = "/srv/blok/uploads/";
+          options.PublicUrl = "/files";
+          options.CollabDirectory = "/srv/blok/uploads";
+        }));
+
+    Assert.Contains("--collab-dir", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsACollabDirectoryBesideTheStorageDirectory()
+  {
+    var services = new ServiceCollection();
+
+    // Shares the storage path as a raw string prefix; only a
+    // separator-aware check keeps this sibling directory legal.
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.StorageDirectory = "/srv/blok/uploads";
+      options.PublicUrl = "/files";
+      options.CollabDirectory = "/srv/blok/uploads-collab";
+    });
+  }
+
+  [Fact]
+  public void RegistersTheLocalCollabStoreWhenACollabDirectoryIsConfigured()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabDirectory = "/srv/blok/collab";
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<LocalCollabStore>(
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+  }
+
+  [Fact]
+  public void RegistersTheS3CollabStoreWhenAPrefixIsConfigured()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabS3Prefix = "collab/";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<S3CollabStore>(
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+  }
+
+  [Fact]
+  public void RejectsACollabS3PrefixWithoutCollab()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.CollabS3Prefix = "collab/"));
+
+    Assert.Contains(
+        "--collab-s3-prefix needs --collab",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsACollabS3PrefixWithoutAnS3Bucket()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.CollabS3Prefix = "collab/";
+        }));
+
+    Assert.Contains(
+        "--collab-s3-prefix needs --s3-bucket",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsACollabS3PrefixWithTheFullS3Battery()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabS3Prefix = "collab/";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
   }
 
   [Fact]

@@ -62,7 +62,7 @@ export const serverPaths: ServerPath[] = [
     title: 'You already have storage',
     situation: 'You use Supabase, S3, Cloudinary or similar, and you want uploads to go straight there.',
     description:
-      'Run nothing. The browser uploads to the storage you already pay for, using a ready-made uploader from @bloklabs/presets. This is the cheapest path and it is the one most people should take. The one thing it cannot do is link previews: the browser is not allowed to fetch another site and read its page, so a preview needs some server somewhere. If you want previews too, keep this uploader and add the service for that one feature — the two do not conflict.',
+      'Run nothing. The browser uploads to the storage you already pay for, using a ready-made uploader from @bloklabs/presets. This is the cheapest path and it is the one most people should take. Two things it cannot do: link previews and live collaboration. A preview means reading another site’s page, which a browser is not allowed to do, and live collaboration means carrying edits between people’s browsers, which needs something running that both of them can reach. If you want either, keep this uploader and add the service for that feature — the two do not conflict.',
     runsService: false,
     whatToRun: [],
     appRoute: [],
@@ -91,6 +91,12 @@ new Blok({
           'Copying a remote file needs a fetch made by a server. Supabase and presigned uploads happen entirely in the browser, so there is nobody to make it.',
         fix: 'The Cloudinary preset does this on its own, and so does the service. With the others the original URL is stored as-is, which still renders — it just depends on the other site staying up.',
       },
+      {
+        symptom: 'Two people open the same document and neither sees the other’s edits.',
+        cause:
+          'Nothing is carrying edits between their browsers. Live collaboration needs the service in the middle, for the same reason link previews do — the browser alone cannot do it.',
+        fix: 'Run the service with --collab, pointed at the place your app saves documents. This uploader keeps working unchanged beside it.',
+      },
     ],
   },
   {
@@ -98,7 +104,7 @@ new Blok({
     title: 'Your app runs ASP.NET Core',
     situation: 'You want Blok routes inside the .NET app that already owns your users and deployment.',
     description:
-      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
+      'Install the ASP.NET Core package and map the shared C# handlers in your existing process. There is no second host, port or container to operate. Your application authorization policy protects uploads and link previews. Live collaboration runs in the same process too: allow WebSockets, tell Blok where your documents live, and add a check that decides who may open which document. The editor calls the route prefix you choose, and database blocks and MySQL integration come later.',
     runsService: true,
     whatToRun: [
       {
@@ -118,11 +124,43 @@ builder.Services.AddBlokServer(options =>
   options.StorageDirectory = "./blok-uploads";
   options.PublicUrl = "https://uploads.example.com/files";
   options.UnfurlDisabled = false;
+  // Live collaboration. The service keeps a working copy of open documents
+  // and loads and saves the record through your own document routes.
+  options.CollabEnabled = true;
+  options.DocEndpoint = "https://myapp.com/api/documents";
 });
 
 var app = builder.Build();
 
+// Without this call the service cannot open the long-lived connection
+// collaboration needs, and refuses it with a message saying so.
+app.UseWebSockets();
+
 app.MapBlokServer("/api/blok").RequireAuthorization();`,
+      },
+      {
+        label: 'Decide who may open which document',
+        language: 'csharp',
+        code: `using System.Security.Claims;
+using Blok.Server.AspNetCore;
+
+// Asked when someone opens a document for live collaboration, after your
+// RequireAuthorization policy has already run. Without it, any signed-in
+// user may open any document.
+public sealed class DocumentRules : IBlokAuthorization
+{
+  public ValueTask<bool> CanReadDocumentAsync(
+      ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    => ValueTask.FromResult(true /* your own check */);
+
+  public ValueTask<bool> CanWriteDocumentAsync(
+      ClaimsPrincipal user, string documentId, CancellationToken cancellationToken = default)
+    => ValueTask.FromResult(true /* your own check */);
+}
+
+// Chain it onto the registration above:
+builder.Services.AddBlokServer(options => { /* as above */ })
+  .UseAuthorization<DocumentRules>();`,
       },
     ],
     editorConfig: {
@@ -152,6 +190,12 @@ new Blok({
           'MaxUploadBytes cannot be larger than Array.MaxLength when storage and remote unfurl are both enabled. RateLimitPerMinute must be zero or greater. PublicUrl must be HTTP(S) or root-relative, while S3BucketUrl must be absolute HTTP(S); neither may contain credentials, a query or a fragment. S3Endpoint must be an origin without credentials, a path, a query or a fragment, and must use HTTPS except for loopback HTTP. ListenAddress rejects a DNS host because the standalone Kestrel host would bind every network interface.',
         fix: 'Use a safe public URL, keep remote S3 endpoints on HTTPS, lower the buffered-upload limit when required, and bind an IP address, localhost or an explicit wildcard.',
       },
+      {
+        symptom: 'Opening a document for live collaboration fails at once with a message about WebSockets.',
+        cause:
+          'The app never called UseWebSockets(), so the long-lived connection collaboration needs cannot be opened. The service refuses with a message naming the missing call rather than letting the editor time out.',
+        fix: 'Add app.UseWebSockets(); before MapBlokServer, as in the sample above.',
+      },
     ],
   },
   {
@@ -159,7 +203,7 @@ new Blok({
     title: 'You run your own backend',
     situation: 'You have a Django, Rails, Laravel, Node or Go app running on a machine you control.',
     description:
-      'Run the service next to your app, listening only on 127.0.0.1. That address is reachable from your own machine and from nowhere else, so nothing on the internet can call it. Your app gets one new route that passes the request through, and your existing login check guards that route the same way it guards everything else. There is no second set of users, no second password, and no domain or certificate to arrange.',
+      'Run the service next to your app, listening only on 127.0.0.1. That address is reachable from your own machine and from nowhere else, so nothing on the internet can call it. Your app gets one new route that passes the request through, and your existing login check guards that route the same way it guards everything else. There is no second set of users, no second password, and no domain or certificate to arrange. Live collaboration flows through the same route — the one extra thing your proxy must do is let its long-lived connection through, shown below.',
     runsService: true,
     whatToRun: [
       {
@@ -188,7 +232,13 @@ new Blok({
 app.use(
   '/api/blok',
   requireLogin,
-  createProxyMiddleware({ target: 'http://127.0.0.1:4000', pathRewrite: { '^/api/blok': '' } }),
+  createProxyMiddleware({
+    target: 'http://127.0.0.1:4000',
+    pathRewrite: { '^/api/blok': '' },
+    // Live collaboration holds a connection open through this route.
+    // Without ws: true uploads work and collaboration never connects.
+    ws: true,
+  }),
 );`,
       },
     ],
@@ -246,7 +296,7 @@ new Blok({
     title: 'You are on Vercel or Netlify',
     situation: 'Your app is deployed to a host that runs your code on demand, with nothing running beside it.',
     description:
-      'There is no machine to sit the service next to, so it is deployed on its own — Fly, Railway, Render, a small VPS — under a hostname you own. Because it is now reachable from the internet, it checks every request. The hosting platform or a reverse proxy must terminate TLS before forwarding plain HTTP to the service. Your app adds one route that hands the browser a short-lived pass naming the signed-in user. The service checks the pass by itself, with no call back to your app, and lets the request through or refuses it.',
+      'There is no machine to sit the service next to, so it is deployed on its own — Fly, Railway, Render, a small VPS — under a hostname you own. Because it is now reachable from the internet, it checks every request. The hosting platform or a reverse proxy must terminate TLS before forwarding plain HTTP to the service. Your app adds one route that hands the browser a short-lived pass naming the signed-in user. The service checks the pass by itself, with no call back to your app, and lets the request through or refuses it. Live collaboration runs on the same deployment: the service keeps a working copy of the documents people are editing, and loads and saves the record through your app’s own document routes.',
     runsService: true,
     whatToRun: [
       {
@@ -265,6 +315,29 @@ new Blok({
   --storage-dir /data \\
   --public-url https://blok.myapp.com/files`,
       },
+      {
+        label: 'The same service, with live collaboration',
+        language: 'bash',
+        // The working copy gets its own volume: --collab-dir may not live
+        // inside --storage-dir, because everything there is served publicly.
+        // BLOK_DOC_ENDPOINT_AUTH rides an env var for the same reason the
+        // secret does.
+        code: `docker run \\
+  -p 127.0.0.1:4000:4000 \\
+  --mount type=volume,source=blok-server-data,target=/data \\
+  --mount type=volume,source=blok-collab,target=/collab \\
+  -e BLOK_SECRET \\
+  -e BLOK_DOC_ENDPOINT_AUTH \\
+  ghcr.io/jackuait/blok-server \\
+  --listen 0.0.0.0:4000 \\
+  --auth ticket \\
+  --allow-origin https://myapp.com \\
+  --storage-dir /data \\
+  --public-url https://blok.myapp.com/files \\
+  --collab \\
+  --collab-dir /collab \\
+  --doc-endpoint https://myapp.com/api/documents`,
+      },
     ],
     appRoute: [
       {
@@ -273,17 +346,25 @@ new Blok({
         code: `// app/api/blok-ticket/route.ts
 import { blokTicket } from '@bloklabs/server/ticket';
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getSession();
 
   if (!session) {
     return new Response('Not signed in', { status: 401 });
   }
 
+  // With live collaboration on, the editor asks for a pass naming the
+  // document it is opening (?doc=…). This is where your own permission
+  // check runs: refuse here and that person never gets in. A collaboration
+  // pass is checked once, when the connection opens, so it gets a longer
+  // life than the five-minute upload default.
+  const doc = new URL(request.url).searchParams.get('doc');
+
   return Response.json({
     ticket: blokTicket(process.env.BLOK_SECRET, {
       user: session.userId,
       write: true,
+      ...(doc === null ? {} : { doc, ttlSeconds: 30 * 60 }),
     }),
   });
 }`,
@@ -297,7 +378,8 @@ export async function GET() {
 //
 //   header   {"alg":"HS256","typ":"JWT"}   these two keys, in this order
 //   claims   user   your own user id, stored but never interpreted
-//            doc    accepted and ignored; a pass is not scoped to one
+//            doc    for live collaboration, the one document this pass
+//                   may open; upload and preview routes ignore it
 //            write  false may read previews; uploads need true
 //            exp    seconds since the epoch; keep the life short
 //   secret   the same BLOK_SECRET the service runs with, 32 chars or more
@@ -370,6 +452,18 @@ new Blok({
           'The bookmark tool takes a fixed set of headers when the editor is created, so it keeps sending the pass it was given at startup.',
         fix: 'Give the bookmark tool a longer-lived pass, or route link previews through a small endpoint in your own app that adds a fresh one.',
       },
+      {
+        symptom: 'Uploads work, but a live-collaboration session drops the moment it opens.',
+        cause:
+          'The pass was turned away at the collaboration door. A collaboration pass must name the document being opened in its doc claim and still be alive when the editor connects; a pass without the claim, for a different document, or already expired is refused.',
+        fix: 'Mint collaboration passes with doc set to the document being opened, after checking that user may see it, and give them about 30 minutes of life.',
+      },
+      {
+        symptom: 'A document opens read-only with a reconnecting notice and never becomes editable.',
+        cause:
+          'The service could not load the document from your routes — the --doc-endpoint address is wrong, the endpoint is down, or it refused the request. Rather than open an empty document and later save it over your record, the service refuses the session, and the editor shows the last copy it has read-only while it retries.',
+        fix: 'Check that --doc-endpoint points at your document routes and that BLOK_DOC_ENDPOINT_AUTH holds the header value they expect. Once the endpoint answers, the next retry connects and the document becomes editable.',
+      },
     ],
   },
 ];
@@ -382,8 +476,23 @@ new Blok({
 export const serverLimits: ServerLimit[] = [
   {
     id: 'no-documents',
-    title: 'Your documents are never stored here',
-    body: 'The service stores no documents. There is no database inside it and no route that saves one. That is on purpose: a document belongs to your users and your permissions, has to appear in your backups, and has to be deletable when someone asks you to delete their data. Every one of those turns into a piece of plumbing the moment the record lives in someone else’s system. Saving and loading stays a small endpoint in your own app — the same place your permission check already lives.',
+    title: 'Documents stay yours; the service keeps only a working copy',
+    body: 'Saving and loading documents stays a small endpoint in your own app — the same place your permission check already lives. That endpoint remains the record: it is what lands in your backups, and it is what you clean when someone asks you to delete their data. Live collaboration adds one moving part: while people edit together, the service keeps a working copy of the open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. Losing that working copy costs at most the few seconds of changes not yet written back; the next open starts fresh from your endpoint.',
+  },
+  {
+    id: 'working-copy-privacy',
+    title: 'The working copy must not be publicly readable',
+    body: 'While people edit together, the working copy lives in the folder you name with --collab-dir, or under the S3 prefix you set with --collab-s3-prefix. It holds document content, so it must not be publicly readable: uploaded files are meant to be served to anyone with the link, the working copy is meant for the service alone. That is also why the service refuses to put it inside the uploads directory — everything there is served.',
+  },
+  {
+    id: 'collab-reset',
+    title: 'Editing a document from outside takes one reset call',
+    body: 'While a document is open for live collaboration, the working copy wins: a change written straight into your own records will be overwritten the next time the service writes the document back. When you do need to change a document from the outside — a migration, a support fix — save your change, then call POST /sync/{doc}/reset with a write pass for that document. The service discards the working copy, loads the document fresh from your endpoint, and tells every open tab to drop what it had and pick up the new version. Nobody has to close anything.',
+  },
+  {
+    id: 'doc-endpoint-auth',
+    title: 'Your document endpoint keeps its own login check',
+    body: 'The service calls your document endpoint twice over: it loads a document the first time someone opens it, and it writes changes back while people edit. If that endpoint requires login — and it should — put the header value it already expects into the BLOK_DOC_ENDPOINT_AUTH environment variable, Bearer and all. The service sends it verbatim on every call. Your route, your auth scheme, nothing new to build.',
   },
   {
     id: 'file-origin',
@@ -417,12 +526,22 @@ export const serverLimits: ServerLimit[] = [
   },
   {
     id: 'ticket-not-scoped',
-    title: 'A pass names a user, not a document',
-    body: 'A pass says who is holding it and whether they may write. It does not restrict them to one document, and it cannot: nothing the editor sends names a document, so the service has nothing to check a restriction against. A pass you hand to someone who opened a single page therefore works for every upload and every link preview that page can make, for as long as the pass lives. Keep that life short, hand a pass out only from a route that has already checked who is signed in, and keep the per-document permission check in your own app, where you know which document is open.',
+    title: 'A pass names a user; a collaboration pass also names its document',
+    body: 'A pass always says who is holding it and whether they may write. For uploads and link previews that is all the service reads: those routes do not confine the holder to one document, so a pass handed to someone who opened a single page works for every upload and every preview that page can make, for as long as the pass lives. Live collaboration is stricter: a collaboration pass also names the document it may open, the service checks that name at the door, and a pass that names no document — or a different one — is turned away. Keep the life short either way, hand a pass out only from a route that has already checked who is signed in, and keep the per-document check for uploads in your own app, where you know which document is open.',
+  },
+  {
+    id: 'collab-pass-lifetime',
+    title: 'Give a collaboration pass about 30 minutes',
+    body: 'An upload pass is checked on every request, so a few minutes of life is right for it. A collaboration pass is checked once, when the connection opens, and the connection then outlives it — so the pass has to be alive at the moments the editor connects and reconnects. Around 30 minutes is the balance: short enough that a leaked pass ages out quickly, long enough that a laptop waking up or a network blip does not fail because the pass died in between. Taking someone’s access away works the same way: it applies the next time they reconnect, not mid-connection.',
   },
   {
     id: 'tls-termination',
     title: 'Terminate TLS before internet traffic reaches the service',
     body: 'The standalone host speaks plain HTTP and does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic.',
+  },
+  {
+    id: 'alpine-nuget',
+    title: 'On Alpine, install with npx, Docker or the archives — not NuGet',
+    body: 'On Alpine Linux, install the service with npx, Docker or the release archives — all three carry a build made for Alpine. The NuGet package on Alpine x64 does not: it ships a native library built against the standard Linux C library, which Alpine does not use — a packaging gap in an upstream dependency, not something a setting fixes. The service notices at startup and refuses with a message naming the install methods that work, instead of failing somewhere later.',
   },
 ];

@@ -466,6 +466,7 @@ describe('server release wiring', () => {
     expect(dockerfile).not.toContain('--runtime linux-x64');
     expect(dockerfile).toContain('--self-contained true');
     expect(dockerfile).toContain('-p:PublishSingleFile=true');
+    expect(dockerfile).toContain('-p:IncludeNativeLibrariesForSelfExtract=true');
     expect(dockerfile).not.toContain('SkipBlokServerRuntimeBuild');
     expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
     expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
@@ -565,5 +566,203 @@ describe('server release wiring', () => {
     expect(wrapper).toContain('createHash');
     expect(wrapper).toContain('ghcr.io/jackuait/blok-server');
     expect(wrapper).toMatch(/realpathSync\(process\.argv\[1\]\)/);
+  });
+
+  /**
+   * YDotNet.Native.Linux 0.6.0 mispacks its musl natives (wrong-arch asset
+   * for linux-musl-x64, none for linux-musl-arm64), so the release builds
+   * yffi from the yrs tag YDotNet 0.6.0 was built against and swaps it in.
+   * The pin, the swap, and the smokes are all release-only — these pins are
+   * the only thing that keeps them from silently rotting.
+   */
+  describe('musl libyrs override', () => {
+    const YRS_PIN = 'release-v0.19.1';
+    const MUSL_BUILD_JOB = 'build-musl-yffi';
+    const HOST_CSPROJ = 'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj';
+    const HOST_RUNTIMES_DIR = 'packages/server/dotnet/Blok.Server.Host/runtimes';
+    const CACHE_ACTION = 'actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830';
+    const UPLOAD_ACTION = 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02';
+    const DOWNLOAD_ACTION = 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
+
+    type MuslJob = {
+      if?: string;
+      'runs-on'?: string;
+      needs?: string | string[];
+      permissions?: Record<string, string>;
+      env?: Record<string, string>;
+      strategy?: { matrix?: { include?: Record<string, string>[] } };
+      steps?: WorkflowStep[];
+    };
+
+    const loadJobs = (): Record<string, MuslJob> =>
+      (parse(read(RELEASE_WORKFLOW)) as { jobs: Record<string, MuslJob> }).jobs;
+
+    it('builds both musl natives from the pinned yrs release in rust:alpine', () => {
+      const job = loadJobs()[MUSL_BUILD_JOB];
+
+      expect(job).toBeDefined();
+      expect(job?.if).toContain('github.repository');
+      expect(job?.permissions).toEqual({ contents: 'read' });
+      expect(job?.['runs-on']).toBe('${{ matrix.runner }}');
+      expect(job?.env?.YRS_PIN).toBe(YRS_PIN);
+      expect(job?.strategy?.matrix?.include).toEqual([
+        {
+          rid: 'linux-musl-x64',
+          target: 'x86_64-unknown-linux-musl',
+          runner: 'ubuntu-latest',
+          machine: 'x86-64',
+          loader: 'libc.musl-x86_64.so.1',
+        },
+        {
+          rid: 'linux-musl-arm64',
+          target: 'aarch64-unknown-linux-musl',
+          runner: 'ubuntu-24.04-arm',
+          machine: 'ARM aarch64',
+          loader: 'libc.musl-aarch64.so.1',
+        },
+      ]);
+
+      const runs = (job?.steps ?? []).map((step) => step.run ?? '').join('\n');
+
+      expect(runs).toContain('rust:alpine');
+      expect(runs).toContain('https://github.com/y-crdt/y-crdt.git');
+      expect(runs).toContain('--branch "$YRS_PIN"');
+      expect(runs).toContain('RUSTFLAGS="-C target-feature=-crt-static"');
+      expect(runs).toContain('cargo build --release -p yffi --target ${{ matrix.target }}');
+    });
+
+    it('caches by the yrs pin and refuses partial restores', () => {
+      const steps = loadJobs()[MUSL_BUILD_JOB]?.steps ?? [];
+      const cache = steps.find((step) => (step.uses ?? '').startsWith('actions/cache@'));
+
+      expect(cache?.uses).toBe(CACHE_ACTION);
+      expect(String(cache?.with?.key)).toContain('${{ matrix.target }}');
+      expect(String(cache?.with?.key)).toContain('${{ env.YRS_PIN }}');
+      expect(cache?.with?.['restore-keys']).toBeUndefined();
+
+      const build = steps.find((step) => (step.run ?? '').includes('cargo build'));
+
+      expect(build?.if).toContain('cache-hit');
+    });
+
+    it('verifies architecture and musl linkage before uploading each native', () => {
+      const steps = loadJobs()[MUSL_BUILD_JOB]?.steps ?? [];
+      const runs = steps.map((step) => step.run ?? '').join('\n');
+
+      expect(runs).toContain("grep -F 'ELF 64-bit LSB shared object'");
+      expect(runs).toContain("grep -F '${{ matrix.machine }}'");
+      expect(runs).toContain('readelf -d');
+      expect(runs).toContain("grep -F '${{ matrix.loader }}'");
+
+      const upload = steps.find((step) => (step.uses ?? '').startsWith('actions/upload-artifact@'));
+
+      expect(upload?.uses).toBe(UPLOAD_ACTION);
+      expect(upload?.with?.name).toBe('libyrs-${{ matrix.rid }}');
+      expect(upload?.with?.['if-no-files-found']).toBe('error');
+    });
+
+    it('stages both overrides into the host project before any publish', () => {
+      const jobs = loadJobs();
+      const release = jobs['release-server'];
+
+      expect(release?.needs).toBe(MUSL_BUILD_JOB);
+
+      const steps = release?.steps ?? [];
+      const downloadIndex = steps.findIndex(
+        (step) => (step.uses ?? '').startsWith('actions/download-artifact@'),
+      );
+      const stageIndex = steps.findIndex(
+        (step) => (step.run ?? '').includes(`${HOST_RUNTIMES_DIR}/$rid/native/libyrs.so`),
+      );
+      const buildIndex = steps.findIndex(
+        (step) => step.name === 'Build NuGet and host artifacts',
+      );
+
+      expect(steps[downloadIndex]?.uses).toBe(DOWNLOAD_ACTION);
+      expect(steps[downloadIndex]?.with?.pattern).toBe('libyrs-linux-musl-*');
+      expect(stageIndex).toBeGreaterThan(downloadIndex);
+      expect(buildIndex).toBeGreaterThan(stageIndex);
+      expect(steps[stageIndex]?.run).toContain('linux-musl-x64 linux-musl-arm64');
+      expect(steps[stageIndex]?.run).toContain('install -D');
+    });
+
+    it('names the upstream mispack and the bump rule in the workflow', () => {
+      const source = read(RELEASE_WORKFLOW);
+
+      expect(source).toContain('YDotNet.Native.Linux');
+      expect(source).toContain('build-binaries.yml');
+      expect(source).toMatch(/YDotNet (version )?bump/);
+      expect(source.match(new RegExp(YRS_PIN, 'g'))?.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('smokes the musl-amd64 archive with a real native load on Alpine', () => {
+      const steps = loadJobs()['release-server']?.steps ?? [];
+      const smoke = steps.find((step) => step.name === 'Smoke musl-amd64 archive on Alpine');
+
+      expect(smoke?.run).toContain('blok-server_linux_musl_amd64.tar.gz');
+      expect(smoke?.run).toContain('runtime-deps:10.0-alpine');
+      expect(smoke?.run).toContain('--platform linux/amd64');
+      expect(smoke?.run).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+      expect(smoke?.run).toContain('/blok-server --help');
+      expect(smoke?.run).toContain('/lib/ld-musl-x86_64.so.1 --list');
+
+      const source = read(RELEASE_WORKFLOW);
+
+      expect(source.indexOf('Smoke musl-amd64 archive on Alpine'))
+        .toBeGreaterThan(source.indexOf('node scripts/publish-server.mjs --version'));
+    });
+
+    it('smokes single-file extraction and native load as USER 65532 in the image', () => {
+      const steps = loadJobs()['release-server']?.steps ?? [];
+      const smoke = steps.find(
+        (step) => step.name === 'Smoke image native extraction as USER 65532',
+      );
+
+      expect(smoke?.run).toContain('id -u');
+      expect(smoke?.run).toContain('65532');
+      expect(smoke?.run).toContain('test ! -w "${HOME:-/}"');
+      expect(smoke?.run).toContain('/blok-server --help');
+      expect(smoke?.run).toContain('libyrs.so');
+      expect(smoke?.run).toContain('ldd');
+
+      const source = read(RELEASE_WORKFLOW);
+      const smokeIndex = source.indexOf('Smoke image native extraction as USER 65532');
+
+      expect(smokeIndex).toBeGreaterThan(
+        source.indexOf('docker build --platform linux/amd64'),
+      );
+      expect(smokeIndex).toBeLessThan(source.indexOf('Log in to GHCR'));
+    });
+
+    it('overrides the packaged native per musl RID in the host project', () => {
+      const csproj = read(HOST_CSPROJ);
+
+      for (const rid of ['linux-musl-x64', 'linux-musl-arm64']) {
+        expect(csproj).toContain(
+          `<ItemGroup Condition="'$(RuntimeIdentifier)' == '${rid}'">`,
+        );
+        expect(csproj).toContain(`runtimes/${rid}/native/libyrs.so`);
+      }
+
+      expect(csproj).toContain('Link="libyrs.so"');
+      expect(csproj).toContain('CopyToPublishDirectory="PreserveNewest"');
+      expect(csproj).toContain('<NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"');
+      expect(csproj).toContain(
+        '<RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)"',
+      );
+
+      expect(read('.gitignore')).toContain(`${HOST_RUNTIMES_DIR}/`);
+    });
+
+    it('hard-fails a real musl publish before dotnet when an override is absent', () => {
+      const script = read('scripts/publish-server.mjs');
+      const dryRunBranch = script.indexOf('if (options.dryRun)');
+      const guardCall = script.indexOf('assertMuslOverridesPresent(TARGETS)');
+      const publishLoop = script.indexOf('spawnSync(command.command');
+
+      expect(dryRunBranch).toBeGreaterThan(-1);
+      expect(guardCall).toBeGreaterThan(dryRunBranch);
+      expect(guardCall).toBeLessThan(publishLoop);
+    });
   });
 });

@@ -427,7 +427,7 @@ Speeds below were measured first-hand on macOS arm64 / .NET 10.0.302.
 | Option | Process safety | Interop | Per-update speed | Packaging | Maintenance | Time to ship |
 |---|---|---|---|---|---|---|
 | YDotNet today | aborts on read-back only | exact (yrs is the reference port, pinned to yrs 0.19.1) | 1–3 µs | 8 RIDs, musl self-built in CI | upstream active but forked from Yjs 13 at 0.27 | shipped |
-| Patch yffi in the CI build already run | abort removed at source | unchanged | 1–3 µs | unchanged | one pinned patch, send upstream | **days** |
+| Patch yffi in the CI build already run | abort removed at source | unchanged | 1–3 µs | the CI job grows from the two musl RIDs to all eight, and the `YDotNet.Native` binaries stop being used | one pinned patch, send upstream | **days to a week** |
 | Jint running the real yjs (pure managed) | cannot abort; NUL round-trips | perfect, it *is* yjs | 110–720 µs (**146–570× slower**); 2,000-block load 1,206 ms vs 3.8 ms | one 2.5 MB DLL, any RID | very active, BSD-2 | weeks, read-back only |
 | ClearScript/V8 | cannot abort | perfect | near native | per-RID natives, **no musl since 2021** | active | weeks |
 | yrs compiled to wasm under wasmtime-dotnet | trap catchable, **except Windows x64 where Intel CET turns a trap back into process death** (#374) | exact | ~1.5–2.5× | 6 RIDs, **no musl**; custom yffi→wasip1 build with no prior art | active | months |
@@ -490,12 +490,20 @@ Three steps, each shippable alone, each making the next cheaper. Steps 1 and
 2 are not exclusive with abandoning YDotNet; they are what keeps the product
 safe while the replacement is built.
 
-1. **Now (days).** Patch the 21 unwrap sites in the yffi build the CI already
-   produces so read-back returns an error instead of aborting; send the same
-   patch upstream. Bind `ytransaction_pending_update` and `pending_ds` with
-   two `DllImport`s and a reflection (or `UnsafeAccessor` on
-   `UnmanagedResource`) reach to the internal handle. This flips both Wave 0
-   gates of the persistence plan honestly.
+1. **Now (days to a week).** Patch the 21 unwrap sites in the yffi build
+   the CI already produces so read-back returns an error instead of aborting;
+   send the same patch upstream. The musl-only CI job widens to all eight
+   RIDs and the package's own natives stop being used. Bind
+   `ytransaction_pending_update` and `pending_ds` with two `DllImport`s and a
+   reflection (or `UnsafeAccessor` on `UnmanagedResource`) reach to the
+   internal handle. Acceptance: a null returned from a patched `ytext_string`
+   or `YMapEntry` surfaces in the managed layer as a loud failure, never as an
+   empty key in an export that claims success; `catch_unwind` applied by macro
+   across the 192 entries, or per-site error returns, with the per-call cost
+   measured; the patched binary passes the collab conformance fixtures
+   unchanged. This makes the *process* survive. It does not by itself open
+   v2: `ApplyV1` still returns Ok on NUL, so the journal would hold a
+   poisoned update forever; step 2 is what advertises v2.
 2. **Next (weeks).** Write the managed v1 *decoder* in C#: lib0 codec, struct
    and content parsing for all ten refs, delete-set parsing, standalone (no
    doc). It is the pre-apply screen the persistence plan wants (NUL, invalid
@@ -517,8 +525,12 @@ outright, but it adds a second engine to keep in lockstep.
 ### 6.3 What this changes in the persistence plan
 
 `2026-09-01-acknowledged-operation-persistence-plan.md` Task 0.1 says "if no
-released pair passes, stop". Replace it with step 1 above: the gate is
-satisfied by the patched native build plus the managed decoder screen, not by
-a new YDotNet release. Task 0.2 is `supported` via the `DllImport` route.
+released pair passes, stop". Replace it with steps 1 and 2 above: the process
+gate is the patched native build, the v2 gate is the managed decoder screen,
+and neither is a new YDotNet release. Task 0.2 is `supported` via the
+`DllImport` route. Task 3.6 gains one rule: a projection failure the converter
+classifies as permanent (its own data refused: NUL once the native returns
+errors, an XML fragment, a depth cap) releases the eviction hold and marks the
+document unexportable for an operator reset, instead of retrying forever.
 Nothing else in that plan depends on which engine sits behind the seam; the
 journal stores raw update bytes and never decodes them.

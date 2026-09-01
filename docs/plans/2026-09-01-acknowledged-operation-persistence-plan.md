@@ -777,6 +777,11 @@ dotnet test packages/server/dotnet/Blok.Server.AspNetCore.Tests/Blok.Server.AspN
     past a failed projection would leave the consumer's record behind until
     the next edit — the Phase 2 law "evict must not drop a room whose persist
     failed" now applies to the projection; reuse the existing backoff);
+  - `PermanentProjectionFailureReleasesTheHoldAndMarksTheDocumentUnexportable`
+    (the converter refusing the document's own data — a NUL-bearing value
+    once the native returns errors instead of aborting, an XML fragment, a
+    depth-cap refusal — never heals by retrying; log once, release the hold,
+    surface it for an operator reset; only transient failures retry);
   - `OlderProjectionCannotOverwriteANewerSequenceWhenConsumerUsesHeaders`.
 - [ ] Remove operation-by-operation `MarkDirty` scheduling. Schedule projection
   after checkpoint publication and on eviction/drain only.

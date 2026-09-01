@@ -232,3 +232,36 @@ a signature naming a type whose file was never committed, so Blok.Server did
 not compile from a clean checkout. Reverted whole in `78f5d9b8`. LAW: stage by
 path when the working tree holds anyone else's work — `git add -u` is not safe
 in a tree shared with subagents.
+
+### 2026-09-01 — Wave C closed
+
+`POST /sync/{doc}/edit` is on main (`45f6f70a` the document half, `5ebc6e78`
+the endpoint, `40965857` the docs). A consumer backend can insert, update and
+remove blocks in a live document without holding a socket.
+
+Three things the implementation settled:
+
+**Plan, then write.** Everything refusable is refused before the transaction
+opens — the planner keeps its own picture of the document and mutates it as it
+goes, so later ops see earlier ones while a refusal anywhere leaves the
+document byte-for-byte unchanged.
+
+**Removal follows parentId, never contentIds.** parentId is what decides
+membership on export, so a child the removed block never listed would otherwise
+keep a dangling parent and resurface at the top of the document on the client's
+orphan pass — and a listed child naming a different parent must survive.
+
+**The NUL screen covers ids that are only COMPARED.** A parent id becomes the
+block's parentId moments later, and a remove id that carries a process-killer
+should hear about the NUL rather than "no such block". Both were holes in the
+first pass, caught by the tests that came with the scaffolding.
+
+**Process notes.** Four subagents died on this wave (three rate limits, one
+server error); the fourth left a complete parser and 565 lines of tests but an
+ApplyOps calling an EditPlanner that was never written, so the project did not
+compile. Finishing it by hand was faster than a fifth relaunch. Two
+test-construction bugs were found while doing so: an op carrying a raw NUL
+cannot be built by parsing JSON (the reader refuses it first, so the test
+proved nothing), and a broadcast assertion compared against a document that had
+never received the room's state — an update is a diff, and a mirror that never
+synced cannot render one.

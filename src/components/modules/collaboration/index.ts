@@ -415,11 +415,16 @@ export class Collaboration extends Module {
 
     const contents = await cache.open();
 
+    // The unfiltered tap, because remote updates have to be stored too —
+    // `onDocUpdate` hides exactly what a reload needs. It skips its OWN
+    // origin: the adoption replay below applies rows through this same
+    // document, and without the check every boot would write the whole
+    // document back as a fresh row.
+    this.cacheUnhook = this.Blok.YjsManager.onAnyDocUpdate((update, origin) => {
+      if (origin === CACHE_ORIGIN) {
+        return;
+      }
 
-    // Subscribed AFTER the adoption replay so the cache does not rewrite the
-    // rows it just handed us. Remote updates must be stored too, so this is
-    // the unfiltered tap — `onDocUpdate` hides exactly what a reload needs.
-    this.cacheUnhook = this.Blok.YjsManager.onAnyDocUpdate((update) => {
       void cache.append(update);
     });
 
@@ -443,8 +448,6 @@ export class Collaboration extends Module {
       this.Blok.YjsManager.applyRemoteUpdate(update, CACHE_ORIGIN);
     }
 
-
-
     return contents.meta.lineage;
   }
 
@@ -462,6 +465,15 @@ export class Collaboration extends Module {
     this.awarenessUnhook = null;
     this.provider?.destroy();
     this.provider = null;
+
+    // Before the tap comes off: the coalescing write buffer may still hold
+    // the last thing typed, and YjsManager.destroy — which flushes it — runs
+    // AFTER this module. `pagehide` covers a dying tab; this covers an editor
+    // torn down while the page lives on.
+    if (this.cache !== null) {
+      this.Blok.YjsManager.flushPendingBlockWrites();
+    }
+
     this.cacheUnhook?.();
     this.cacheUnhook = null;
 

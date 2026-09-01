@@ -440,10 +440,15 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     },
 
     clear: async () => {
-      state.lineage = null;
       state.rows = 0;
 
       await enqueue(async (db) => {
+        // Nulled HERE, not before the queue: a saveMeta already queued ahead
+        // of this one sets the lineage from inside its own turn, so clearing
+        // it up front would let that write restore it and leave later rows
+        // stamped into a store this call is about to empty.
+        state.lineage = null;
+
         const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
 
         await idb.rtop(updatesStore.clear());

@@ -613,6 +613,97 @@ describe('collaboration — sync-first load', () => {
       expect(reloaded.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
     }, 20_000);
 
+    /**
+     * The replay applies rows through the same document the cache is
+     * subscribed to. Without the origin check every boot writes the whole
+     * document straight back, so the store grows by a copy per reload.
+     */
+    it('does not write the cache back to itself on every boot', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ type: 'paragraph', data: { text: 'synced once' } }]);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      const rowsAfter = async (): Promise<number> => {
+        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const contents = await probe.open();
+
+        probe.close();
+
+        return contents?.updates.length ?? 0;
+      };
+
+      const afterFirstBoot = await rowsAfter();
+
+      for (let reload = 0; reload < 3; reload += 1) {
+        const reloaded = await boot({ offline: true });
+
+        await waitFor(
+          () => reloaded.core.moduleInstances.BlockManager.blocks.length === 1,
+          'cached blocks'
+        );
+        destroyCore(booted.splice(booted.indexOf(reloaded.core), 1)[0]);
+      }
+
+      expect(await rowsAfter()).toBe(afterFirstBoot);
+    }, 30_000);
+
+    /**
+     * `pagehide` covers a dying tab. An editor destroyed while the page lives
+     * on — an app unmounting it, a route change — must not lose the last
+     * thing typed, which is still sitting in the coalescing write buffer.
+     */
+    it('flushes the pending write buffer when the editor is destroyed', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const yjs = harness.core.moduleInstances.YjsManager;
+
+      // Two writes: the first lands on the leading edge, the second coalesces
+      // into the trailing window and is still pending at teardown. The flush
+      // body is the real one — a data write, exactly as typing produces.
+      const flush = (entries: ReadonlyMap<string, unknown>): boolean => {
+        let wrote = false;
+
+        for (const [key, value] of entries) {
+          wrote = yjs.updateBlockData('b1', key, value) || wrote;
+        }
+
+        return wrote;
+      };
+
+      yjs.enqueueBlockDataWrite('b1', { text: 'leading' }, flush);
+      yjs.enqueueBlockDataWrite('b1', { text: 'trailing' }, flush);
+
+      destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
+
+      const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+      const contents = await probe.open();
+
+      probe.close();
+
+      const replay = new DocumentStore(new YBlockSerializer());
+
+      for (const update of contents?.updates ?? []) {
+        replay.applyRemoteUpdate(update);
+      }
+
+      const text = (replay.toJSON()[0]?.data as { text?: string } | undefined)?.text;
+
+      replay.destroy();
+
+      expect(text).toBe('trailing');
+    }, 30_000);
+
     it('allocates nothing when the host did not ask for it', async () => {
       const factory = new IDBFactory();
       const openSpy = vi.spyOn(factory, 'open');

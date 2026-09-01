@@ -343,6 +343,27 @@ describe('collaboration — offline cache', () => {
     });
   });
 
+  describe('clear while a write is in flight', () => {
+    it('empties the store even when a save is still queued', async () => {
+      const cache = cacheWith();
+
+      await cache.open();
+
+      // Not awaited, exactly as the module fires it: a lineage reset can land
+      // between the save being scheduled and its turn coming round.
+      const saving = cache.saveMeta(tagWith(LINEAGE_A), false, updateWith('block-1', 'first'));
+
+      await cache.clear();
+      await saving;
+      await cache.append(updateWith('block-2', 'after the clear'));
+      cache.close();
+
+      const reader = cacheWith();
+
+      expect(await reader.open()).toBeNull();
+    });
+  });
+
   describe('degrade on failure', () => {
     it('adopts nothing when indexedDB is absent, and every write is inert', async () => {
       vi.stubGlobal('indexedDB', undefined);

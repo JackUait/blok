@@ -295,6 +295,14 @@ internal sealed class CollabRoom : IDisposable
           {
             return new CollabEditResult(CollabEditStatus.Invalid, refusal);
           }
+          finally
+          {
+            // An edit is a path that can leave a Ready room with no members —
+            // the room it just loaded to serve one HTTP request. Without this
+            // the linger is never armed and the doc lives until the process
+            // does. In the `finally` because a refusal loads the room too.
+            UpdateEvictionLocked();
+          }
 
           CompactIfOversizedLocked();
           SchedulePersistLocked();

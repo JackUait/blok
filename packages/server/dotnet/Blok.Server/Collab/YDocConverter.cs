@@ -181,9 +181,25 @@ internal static class YDocConverter
       var steps = new EditPlanner(doc, blockMap, rootOrder, writer).Plan(ops);
       using var transaction = doc.WriteTransaction();
 
-      foreach (var step in steps)
+      try
       {
-        step.Apply(transaction, blockMap, rootOrder);
+        foreach (var step in steps)
+        {
+          step.Apply(transaction, blockMap, rootOrder);
+        }
+      }
+      catch (Exception unplanned)
+      {
+        // A step is not supposed to be able to fail — everything it assumes is
+        // refused while planning. If one ever does, the transaction still
+        // COMMITS on dispose (yrs has no rollback), so the members have
+        // already been sent whatever was written: the honest report is a
+        // server error, NOT the refusal shape, which would tell the caller
+        // nothing was applied while the room says otherwise.
+        throw new InvalidOperationException(
+            "collab: an edit failed while it was being written, and the document may " +
+            "hold part of it. Reload the document from the record.",
+            unplanned);
       }
     }
     finally
@@ -338,7 +354,41 @@ internal static class YDocConverter
       InputWriter writer)
   {
     private readonly Dictionary<string, string?> parents = new(StringComparer.Ordinal);
-    private readonly List<string> order = [];
+
+    /// <summary>
+    /// Ids in the blocks map that are NOT maps. A peer can write anything
+    /// there through an ordinary update, and a step that reads one as a map
+    /// throws mid-transaction — the one way this design could write something
+    /// partial, since the transaction commits on dispose.
+    /// </summary>
+    private readonly HashSet<string> notBlocks = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Children by parent id, built once. A removal walks a subtree, and
+    /// rescanning every block per step made one small request cost
+    /// O(subtree x document) — 37 seconds on a 20,000-block document, all of
+    /// it inside the room's single lane, with every member frozen behind it.
+    /// </summary>
+    private readonly Dictionary<string, List<string>> children = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The root order as stored, INCLUDING slots that hold something other
+    /// than an id — see ReadDoc. A null is a slot this planner will not name
+    /// but must still count.
+    /// </summary>
+    private readonly List<string?> order = [];
+
+    /// <summary>
+    /// Which blocks LIST an id in their contentIds, which is not the same
+    /// question as who its parent is: a block may list a child that names
+    /// somebody else, and on removal that entry has to go too or it survives
+    /// as a reference to a block that no longer exists.
+    ///
+    /// Built on the first removal, not with the rest of the picture: it costs
+    /// a read per block, and an insert-only or update-only request has no use
+    /// for it.
+    /// </summary>
+    private Dictionary<string, List<string>>? listedBy;
 
     internal List<EditStep> Plan(IReadOnlyList<CollabEditOp> ops)
     {
@@ -376,9 +426,18 @@ internal static class YDocConverter
 
       foreach (var (id, value) in blockMap.Iterate(transaction))
       {
-        parents[id] = value.Tag == OutputTag.Map
-            ? ReadParentId(transaction, value.Map)
-            : null;
+        if (value.Tag != OutputTag.Map)
+        {
+          notBlocks.Add(id);
+          parents[id] = null;
+
+          continue;
+        }
+
+        var parentId = ReadParentId(transaction, value.Map);
+
+        parents[id] = parentId;
+        Index(id, parentId);
       }
 
       var length = rootOrder.Length(transaction);
@@ -387,11 +446,80 @@ internal static class YDocConverter
       {
         var entry = rootOrder.Get(transaction, index);
 
-        if (entry?.Tag == OutputTag.String)
+        // EVERY slot, including one holding something that is not an id: the
+        // shadow's indices are applied to the real array, so skipping a slot
+        // here shifts every later removal onto its neighbour.
+        order.Add(entry?.Tag == OutputTag.String ? entry.String : null);
+      }
+    }
+
+    /// <summary>
+    /// Who lists whom, read once per request that removes anything.
+    /// </summary>
+    private Dictionary<string, List<string>> ListedBy()
+    {
+      if (listedBy is not null)
+      {
+        return listedBy;
+      }
+
+      listedBy = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+      using var transaction = doc.ReadTransaction();
+
+      foreach (var (holder, value) in blockMap.Iterate(transaction))
+      {
+        if (value.Tag != OutputTag.Map)
         {
-          order.Add(entry.String);
+          continue;
+        }
+
+        var contentIds = value.Map.Get(transaction, "contentIds");
+
+        if (contentIds?.Tag != OutputTag.Array)
+        {
+          continue;
+        }
+
+        var length = contentIds.Array.Length(transaction);
+
+        for (uint index = 0; index < length; index++)
+        {
+          var entry = contentIds.Array.Get(transaction, index);
+
+          if (entry?.Tag != OutputTag.String)
+          {
+            continue;
+          }
+
+          if (!listedBy.TryGetValue(entry.String, out var holders))
+          {
+            holders = [];
+            listedBy[entry.String] = holders;
+          }
+
+          holders.Add(holder);
         }
       }
+
+      return listedBy;
+    }
+
+    /// <summary>Adds one child to its parent's bucket.</summary>
+    private void Index(string id, string? parentId)
+    {
+      if (parentId is null)
+      {
+        return;
+      }
+
+      if (!children.TryGetValue(parentId, out var bucket))
+      {
+        bucket = [];
+        children[parentId] = bucket;
+      }
+
+      bucket.Add(id);
     }
 
     private static string? ReadParentId(Transaction transaction, YMap block)
@@ -436,6 +564,8 @@ internal static class YDocConverter
 
       if (op.After is not null)
       {
+        NoNul(op.After, "a block id");
+
         if (!parents.TryGetValue(op.After, out var afterParent))
         {
           throw new CollabEditException(
@@ -451,6 +581,11 @@ internal static class YDocConverter
         }
       }
 
+      if (op.Parent is not null)
+      {
+        RefuseUnlessBlockMap(op.Parent, index);
+      }
+
       // Built here, not at apply time: composing the block is what runs the
       // NUL and depth guards, and a refusal must happen before any write.
       var block = new JsonObject(op.Block.Select(entry =>
@@ -464,12 +599,26 @@ internal static class YDocConverter
       var input = writer.Block(NoNul(op.Id, "a block id"), block);
 
       parents[op.Id] = op.Parent;
+      Index(op.Id, op.Parent);
 
       var steps = new List<EditStep> { EditStep.PutBlock(op.Id, input) };
 
       if (op.Parent is null)
       {
-        var at = op.After is null ? 0 : order.IndexOf(op.After) + 1;
+        var found = op.After is null ? -1 : order.IndexOf(op.After);
+
+        if (op.After is not null && found < 0)
+        {
+          // A root block by its parentId that the root order does not list.
+          // Silently inserting at the front would put the block somewhere the
+          // caller did not ask for.
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.After}\" is not in the document order, so nothing can be " +
+              "placed after it."));
+        }
+
+        var at = found + 1;
 
         order.Insert(at, op.Id);
         steps.Add(EditStep.InsertRootOrder((uint)at, writer.Track(Input.String(op.Id))));
@@ -484,11 +633,15 @@ internal static class YDocConverter
 
     private List<EditStep> PlanUpdate(CollabEditOp.Update op, int index)
     {
+      NoNul(op.Id, "a block id");
+
       if (!parents.ContainsKey(op.Id))
       {
         throw new CollabEditException(
             Where(index, $"there is no block \"{op.Id}\" to update."));
       }
+
+      RefuseUnlessBlockMap(op.Id, index);
 
       return [EditStep.ReplaceData(op.Id, writer.DataMap(op.Data))];
     }
@@ -514,14 +667,18 @@ internal static class YDocConverter
       var pending = new Queue<string>([op.Id]);
 
       // Iterative: a document may legitimately nest thousands deep, and
-      // recursion there is a StackOverflow that cannot be caught.
+      // recursion there is a StackOverflow that cannot be caught. The child
+      // index makes it linear in the SUBTREE rather than the document.
       while (pending.Count > 0)
       {
-        var parent = pending.Dequeue();
-
-        foreach (var (id, parentId) in parents)
+        if (!children.TryGetValue(pending.Dequeue(), out var bucket))
         {
-          if (string.Equals(parentId, parent, StringComparison.Ordinal) && doomed.Add(id))
+          continue;
+        }
+
+        foreach (var id in bucket)
+        {
+          if (doomed.Add(id))
           {
             pending.Enqueue(id);
           }
@@ -533,23 +690,54 @@ internal static class YDocConverter
       foreach (var id in doomed)
       {
         parents.Remove(id);
+        children.Remove(id);
         steps.Add(EditStep.RemoveBlock(id));
 
-        var at = order.IndexOf(id);
-
-        if (at >= 0)
+        // Every occurrence: a duplicate entry left behind is a permanent
+        // dangling id in the order.
+        for (var at = order.LastIndexOf(id); at >= 0; at = order.LastIndexOf(id))
         {
           order.RemoveAt(at);
           steps.Add(EditStep.RemoveRootOrder((uint)at));
         }
-      }
 
-      if (parentOfRemoved is not null)
-      {
-        steps.Add(EditStep.UnlinkChild(parentOfRemoved, op.Id));
+        // Unlink from wherever the doc lists it, not just from its parent: a
+        // block may list a child that names somebody else as its parent, and
+        // that entry would otherwise survive as a reference to a deleted
+        // block — exported to the consumer as a child that no longer exists.
+        if (ListedBy().TryGetValue(id, out var holders))
+        {
+          foreach (var holder in holders)
+          {
+            if (!doomed.Contains(holder))
+            {
+              steps.Add(EditStep.UnlinkChild(holder, id));
+            }
+          }
+        }
       }
 
       return steps;
+    }
+
+    /// <summary>
+    /// Refuses an op whose target is in the blocks map but is not a block.
+    ///
+    /// A peer can write anything into that map through an ordinary update, and
+    /// the room applies remote updates without inspecting them. Steps read
+    /// their targets as maps, and a step that throws mid-transaction is the
+    /// one way this design can write something partial: the transaction
+    /// COMMITS on dispose — yrs has no rollback — so the members would see
+    /// half an edit while the persist and export never ran. Everything a step
+    /// assumes has to be refused here instead.
+    /// </summary>
+    private void RefuseUnlessBlockMap(string id, int index)
+    {
+      if (notBlocks.Contains(id))
+      {
+        throw new CollabEditException(
+            Where(index, $"\"{id}\" is in the document but is not a block."));
+      }
     }
 
     private static string Where(int index, string message)

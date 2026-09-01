@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using YDotNet.Document.Cells;
 using Xunit;
 using YDotNet.Document;
 using JsonArray = System.Text.Json.Nodes.JsonArray;
@@ -186,6 +187,156 @@ public sealed class YDocConverterEditTests
     var exported = YDocConverter.Export(doc);
     Assert.Equal(["second", "root"], Ids(exported));
     Assert.Equal("again", BlockNamed(exported, "root")["data"]?["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// A peer can put anything in the blocks map through an ordinary update,
+  /// and the room applies remote updates without inspecting them. A step that
+  /// throws mid-transaction is the one way a partial edit could be written:
+  /// the transaction COMMITS on dispose — yrs has no rollback — so members
+  /// would see half an edit that was never persisted or exported.
+  /// </summary>
+  [Theory]
+  [InlineData("""{ "op": "update", "id": "poison", "data": { "text": "x" } }""")]
+  [InlineData("""{ "op": "insert", "id": "new", "parent": "poison", "block": { "type": "p", "data": {} } }""")]
+  public void RefusesAnOpAimedAtSomethingThatIsNotABlock(string op)
+  {
+    using var doc = SeededDoc(Root);
+
+    Poison(doc, "poison");
+
+    var message = Refused(doc, op);
+
+    Assert.Contains("not a block", message, StringComparison.Ordinal);
+    Assert.Equal(["root"], Ids(YDocConverter.Export(doc)));
+  }
+
+  /// <summary>
+  /// The removal walk is linear in the SUBTREE, not in the document: it used
+  /// to rescan every block per step, which cost 37 seconds on a 20,000-block
+  /// document — inside the room's single lane, with every member frozen.
+  /// </summary>
+  [Fact]
+  public void RemovesFromALargeDocumentWithoutRescanningItPerStep()
+  {
+    var blocks = new JsonArray();
+
+    for (var index = 0; index < 4000; index++)
+    {
+      blocks.Add(JsonNode.Parse(
+          $$"""{ "id": "n{{index}}", "type": "paragraph", "data": { "text": "x" } }"""));
+    }
+
+    using var doc = new Doc();
+
+    YDocConverter.Seed(doc, blocks);
+
+    var started = System.Diagnostics.Stopwatch.StartNew();
+
+    Apply(doc, """{ "op": "remove", "id": "n0" }""");
+    started.Stop();
+
+    Assert.Equal(3999, YDocConverter.Export(doc).Count);
+
+    // Generous next to the quadratic version's seconds, tight enough that a
+    // return to a per-step document scan fails here.
+    Assert.True(
+        started.ElapsedMilliseconds < 2000,
+        $"removing one block of 4000 took {started.ElapsedMilliseconds}ms");
+  }
+
+  /// <summary>
+  /// contentIds and parentId disagree all the time — a block may list a child
+  /// that names somebody else. Removing that child has to clear the stale
+  /// entry too, or the export claims a parent still has a child that is gone.
+  /// </summary>
+  [Fact]
+  public void RemoveClearsTheEntryOfABlockThatListsItWithoutParentingIt()
+  {
+    using var doc = SeededDoc(
+        """{ "id": "lister", "type": "toggle", "data": {}, "content": ["kid"] }""",
+        """{ "id": "owner", "type": "toggle", "data": {}, "content": ["kid"] }""",
+        """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "owner" }""");
+
+    Apply(doc, """{ "op": "remove", "id": "owner" }""");
+
+    var exported = YDocConverter.Export(doc);
+
+    Assert.Equal(["lister"], Ids(exported));
+    Assert.Equal([], Strings(BlockNamed(exported, "lister")["content"]));
+  }
+
+  /// <summary>
+  /// The planner's picture of the root order must line up slot for slot with
+  /// the real array, including a slot holding something that is not an id —
+  /// its indices are applied to that array.
+  /// </summary>
+  [Fact]
+  public void RemovesTheRightEntryWhenTheRootOrderHoldsSomethingThatIsNotAnId()
+  {
+    using var doc = SeededDoc(Root, Second);
+
+    var rootOrder = doc.Array("root");
+
+    using (var transaction = doc.WriteTransaction())
+    {
+      rootOrder.InsertRange(transaction, 0, [Input.Double(1)]);
+    }
+
+    Apply(doc, """{ "op": "remove", "id": "root" }""");
+
+    Assert.Equal(["second"], Ids(YDocConverter.Export(doc)));
+  }
+
+  [Fact]
+  public void RefusesAnAfterThatTheDocumentOrderDoesNotList()
+  {
+    using var doc = SeededDoc(Root);
+
+    var order = doc.Array("root");
+
+    using (var transaction = doc.WriteTransaction())
+    {
+      order.RemoveRange(transaction, 0, order.Length(transaction));
+    }
+
+    var message = Refused(
+        doc,
+        """{ "op": "insert", "id": "new", "after": "root", "block": { "type": "p", "data": {} } }""");
+
+    Assert.Contains("document order", message, StringComparison.Ordinal);
+  }
+
+  /// <summary>The NUL screen covers every compared id, not merely some.</summary>
+  [Theory]
+  [InlineData("after")]
+  [InlineData("update id")]
+  public void RefusesANulInAnIdThatIsOnlyEverCompared(string position)
+  {
+    using var doc = SeededDoc(Root);
+
+    var op = position == "after"
+      ? new CollabEditOp.Insert(
+          "new",
+          Block("""{ "type": "p", "data": {} }"""),
+          "root\u0000x",
+          null)
+      : (CollabEditOp)new CollabEditOp.Update("root\u0000x", new JsonObject());
+
+    var message = Assert.Throws<CollabEditException>(
+        () => YDocConverter.ApplyOps(doc, [op])).Message;
+
+    Assert.Contains("NUL", message, StringComparison.Ordinal);
+  }
+
+  /// <summary>Writes a non-block into the blocks map, as a peer can.</summary>
+  private static void Poison(Doc doc, string id)
+  {
+    // YDotNet refuses doc.Map/doc.Array while a transaction is open.
+    var blocks = doc.Map("blocks");
+    using var transaction = doc.WriteTransaction();
+
+    blocks.Insert(transaction, id, Input.String("not a block"));
   }
 
   [Theory]

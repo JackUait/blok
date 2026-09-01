@@ -7,11 +7,13 @@
  * SyncStep2 materialises the blocks through the ordinary remote path. With
  * `collaboration` absent, not one byte of that machinery may be allocated.
  */
+import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
+import { createOfflineCache } from '../../../../../src/components/modules/collaboration/offline-cache';
 import { encode } from '../../../../../src/components/modules/collaboration/sync-wire';
 import type { SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
@@ -190,10 +192,14 @@ const destroyCore = (core: Core): void => {
  * @param label - what the caller was waiting for, for the failure message
  * @param timeoutMs - how long to wait before giving up
  */
-const waitFor = async (predicate: () => boolean, label = 'condition', timeoutMs = 2000): Promise<void> => {
+const waitFor = async (
+  predicate: () => boolean | Promise<boolean>,
+  label = 'condition',
+  timeoutMs = 2000
+): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
 
-  while (!predicate()) {
+  while (!(await predicate())) {
     if (Date.now() > deadline) {
       throw new Error(`timed out waiting for ${label}`);
     }
@@ -202,12 +208,34 @@ const waitFor = async (predicate: () => boolean, label = 'condition', timeoutMs 
   }
 };
 
+/**
+ * Waits until the session has actually written its document to the cache.
+ *
+ * A real reload is a new page, so the old session's writes are long settled;
+ * in-process the two overlap, and reading the store is the only honest signal
+ * that there is something to reload INTO.
+ * @param doc - the document id the harness booted with
+ */
+const waitForCachedDocument = async (doc = 'doc-1'): Promise<void> => {
+  const key = `wss://sync.test/api/sync/${doc}`;
+
+  await waitFor(async () => {
+    const probe = createOfflineCache({ key });
+    const contents = await probe.open();
+
+    probe.close();
+
+    return contents !== null && contents.updates.length > 0;
+  }, 'the session to persist its document');
+};
+
 interface BootOptions {
   doc?: string;
   data?: BlokConfig['data'];
   readOnly?: boolean;
   ticket?: string;
   collaboration?: boolean;
+  offline?: boolean;
   user?: { name: string; color?: string };
 }
 
@@ -221,6 +249,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
   const collaboration: CollaborationConfig = {
     doc: options.doc ?? 'doc-1',
     user: options.user,
+    offline: options.offline,
     socketFactory: (url, protocols) => {
       const socket = new MockSocket(url, protocols);
 
@@ -525,6 +554,78 @@ describe('collaboration — sync-first load', () => {
 
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(1);
     }, 20_000);
+  });
+
+  describe('offline cache', () => {
+    /**
+     * The carve-out in "never editable unsynced": a cached document IS a synced
+     * one — the cache only became adoptable behind a validated control frame —
+     * so it comes up editable before this boot has spoken to anybody.
+     */
+    it('boots editable from a cached document, before any socket opens', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ type: 'paragraph', data: { text: 'synced once' } }]);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitFor(() => !first.core.moduleInstances.ReadOnly.isEnabled, 'editable');
+      await waitForCachedDocument();
+
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      expect(blockTexts(reloaded.core)).toEqual(['synced once']);
+      expect(reloaded.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+      // The claim in full: this editor is usable having exchanged nothing.
+      expect(reloaded.sockets[0].sent).toEqual([]);
+    }, 20_000);
+
+    it('stays read-only when the cache remembers a write-denied member', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const payload = btoa(JSON.stringify({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        write: false,
+      }));
+
+      vi.stubGlobal('fetch', vi.fn(async () => ({
+        ok: true,
+        json: async (): Promise<unknown> => ({ ticket: `header.${payload}.signature` }),
+      })));
+
+      const first = await boot({ offline: true, ticket: '/tickets' });
+
+      await waitFor(() => first.sockets.length === 1, 'socket after the ticket mint');
+      firstSync(first, [{ type: 'paragraph', data: { text: 'read me' } }]);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      const reloaded = await boot({ offline: true, ticket: '/tickets' });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      expect(reloaded.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
+    }, 20_000);
+
+    it('allocates nothing when the host did not ask for it', async () => {
+      const factory = new IDBFactory();
+      const openSpy = vi.spyOn(factory, 'open');
+
+      vi.stubGlobal('indexedDB', factory);
+
+      const harness = await boot();
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'no cache here' } }]);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      expect(openSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('empty document after the first sync', () => {

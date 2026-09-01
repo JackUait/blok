@@ -703,6 +703,23 @@ export interface BlokMountOptions {
        */
       color?: string;
     };
+
+    /**
+     * Keep a local copy of the document so edits made while disconnected
+     * survive a reload, and ship on the next connection. Off by default.
+     *
+     * OPT-IN ON PURPOSE: it writes document content into this browser's
+     * storage for this origin, which is a decision about the host's data, not
+     * about the editor. Without it, a reload while the editor says it is
+     * offline loses whatever was typed offline — the tab held the only copy.
+     *
+     * The copy is per browser and per document, and it is DROPPED whenever the
+     * server says its history no longer matches (a reset), so a stale copy can
+     * never be mistaken for the live document. Nothing is cached until the
+     * first successful sync, so an editor that never reached the service still
+     * cannot come up editable from a copy of its own.
+     */
+    offline?: boolean;
   };
 
   /**

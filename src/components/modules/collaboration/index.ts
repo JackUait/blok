@@ -7,6 +7,7 @@ import { createTicketSource, type TicketRequest } from '../../utils/access-pass'
 
 import { createPresence, type Presence } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
+import { createOfflineCache, type OfflineCache } from './offline-cache';
 import { createCollabProvider } from './provider';
 import type {
   CollabDocSeam,
@@ -31,6 +32,12 @@ export interface CollaborationConfig {
     name: string;
     color?: string;
   };
+  /**
+   * Keep a local copy of the document so edits made while disconnected
+   * survive a reload. Opt-in: it writes document content to origin-scoped
+   * browser storage.
+   */
+  offline?: boolean;
   /** @internal Opens the transport; defaults to the global `WebSocket`. */
   socketFactory?: CollabSocketFactory;
   /** @internal How long to wait for the server's control frame. */
@@ -38,6 +45,13 @@ export interface CollaborationConfig {
   /** @internal Backoff jitter source. */
   random?: () => number;
 }
+
+/**
+ * Origin for updates replayed out of the offline cache. Unknown to the seam's
+ * suppression set, so the observer classifies them 'remote' and undo ignores
+ * them — a restored document must not be undoable back to empty.
+ */
+const CACHE_ORIGIN = { source: 'blok-offline-cache' };
 
 /** Wrapper attribute a host (or an e2e test) reads the session state off. */
 const COLLAB_STATE_ATTR = 'data-blok-collab';
@@ -160,6 +174,7 @@ interface CollabSettings {
   doc: string;
   url: string;
   user: { name?: string; color?: string } | undefined;
+  offline: boolean;
   ticketEndpoint: string | undefined;
   socketFactory: CollabSocketFactory | undefined;
   handshakeTimeoutMs: number | undefined;
@@ -238,6 +253,28 @@ export class Collaboration extends Module {
 
   private awarenessUnhook: (() => void) | null = null;
 
+  /** The local copy of the document; null unless `collaboration.offline`. */
+  private cache: OfflineCache | null = null;
+
+  /**
+   * Latched when the boot adopted a cached document. It stands in for
+   * `firstSynced` everywhere editing is decided: the cache only ever becomes
+   * adoptable behind a VALIDATED control frame, so an adopted document carries
+   * server lineage exactly as a synced one does.
+   */
+  private cacheAdopted = false;
+
+  private cacheUnhook: (() => void) | null = null;
+
+  /**
+   * Whether the cache already holds this lineage's history. Rows can only be
+   * stamped once a validated tag names the lineage, so everything the document
+   * held before that moment — the whole first sync — needs one snapshot write.
+   */
+  private cacheSeeded = false;
+
+  private flushOnPageHide: (() => void) | null = null;
+
   /** Publishes this editor's presence and draws everybody else's. */
   private presence: Presence | null = null;
 
@@ -263,6 +300,7 @@ export class Collaboration extends Module {
       doc: collaboration.doc,
       url: syncUrl(server, collaboration.doc),
       user: collaboration.user,
+      offline: collaboration.offline === true,
       ticketEndpoint: this.config.ticket,
       socketFactory: collaboration.socketFactory,
       handshakeTimeoutMs: collaboration.handshakeTimeoutMs,
@@ -291,7 +329,8 @@ export class Collaboration extends Module {
    * whatever the host asked for.
    */
   public get isEditingBlocked(): boolean {
-    return this.settings !== null && (!this.firstSynced || this.writeDenied || this.terminal);
+    return this.settings !== null
+      && (!(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal);
   }
 
   /**
@@ -302,11 +341,11 @@ export class Collaboration extends Module {
    * empty and read-only, and the blocks arrive when the document does.
    * @param lastKnown - `config.data`, kept for the offline degrade path
    */
-  public load(lastKnown: OutputBlockData[]): Promise<void> {
+  public async load(lastKnown: OutputBlockData[]): Promise<void> {
     const settings = this.settings;
 
     if (settings === null) {
-      return Promise.resolve();
+      return;
     }
 
     this.lastKnown = lastKnown;
@@ -331,6 +370,10 @@ export class Collaboration extends Module {
     });
     this.presence.start();
 
+    // Awaited, unlike the network: this is a local-disk read, and the blocks
+    // it restores have to be on screen before the first frame can race them.
+    const adopted = await this.adoptCache(settings);
+
     this.provider = createCollabProvider({
       url: settings.url,
       docId: settings.doc,
@@ -339,14 +382,70 @@ export class Collaboration extends Module {
       socketFactory: settings.socketFactory,
       handshakeTimeoutMs: settings.handshakeTimeoutMs,
       random: settings.random,
+      // The whole point of the pre-seed: a cached document must have its
+      // lineage COMPARED against the first control frame, never overwritten by
+      // it. See the provider's `initialLineage`.
+      initialLineage: adopted,
       onStatus: (status, detail) => {
         void this.handleStatus(status, detail);
       },
     });
 
     this.provider.connect();
+  }
 
-    return Promise.resolve();
+  /**
+   * Opens the offline cache and replays what it holds, returning the lineage
+   * the restored document belongs to (or undefined when nothing was adopted).
+   *
+   * Adoption is what makes an offline editor EDITABLE before it has spoken to
+   * the server, so the gate is narrow: the cache hands back a document only
+   * behind a validated control frame it recorded earlier, which is the same
+   * "carries server lineage" test the first sync would apply.
+   * @param settings - this session's settings
+   */
+  private async adoptCache(settings: CollabSettings): Promise<string | undefined> {
+    if (!settings.offline) {
+      return undefined;
+    }
+
+    const cache = createOfflineCache({ key: settings.url });
+
+    this.cache = cache;
+
+    const contents = await cache.open();
+
+
+    // Subscribed AFTER the adoption replay so the cache does not rewrite the
+    // rows it just handed us. Remote updates must be stored too, so this is
+    // the unfiltered tap — `onDocUpdate` hides exactly what a reload needs.
+    this.cacheUnhook = this.Blok.YjsManager.onAnyDocUpdate((update) => {
+      void cache.append(update);
+    });
+
+    this.flushOnPageHide = (): void => {
+      this.Blok.YjsManager.flushPendingBlockWrites();
+    };
+    window.addEventListener('pagehide', this.flushOnPageHide);
+
+    if (contents === null) {
+      return undefined;
+    }
+
+    // The member's last known write verdict: without it an offline reload
+    // hands a read-only member an editable document whose edits the server
+    // will refuse the moment it reconnects.
+    this.writeDenied = contents.meta.writeDenied;
+    this.cacheAdopted = true;
+    this.cacheSeeded = true;
+
+    for (const update of contents.updates) {
+      this.Blok.YjsManager.applyRemoteUpdate(update, CACHE_ORIGIN);
+    }
+
+
+
+    return contents.meta.lineage;
   }
 
   /**
@@ -363,6 +462,16 @@ export class Collaboration extends Module {
     this.awarenessUnhook = null;
     this.provider?.destroy();
     this.provider = null;
+    this.cacheUnhook?.();
+    this.cacheUnhook = null;
+
+    if (this.flushOnPageHide !== null) {
+      window.removeEventListener('pagehide', this.flushOnPageHide);
+      this.flushOnPageHide = null;
+    }
+
+    this.cache?.close();
+    this.cache = null;
   }
 
   /**
@@ -436,6 +545,11 @@ export class Collaboration extends Module {
     // "offline is still editable" asymmetry no longer applies: this is an
     // unsynced document again, and unsynced is read-only.
     this.firstSynced = false;
+    // The cached rows belong to the lineage that was just discarded. Dropping
+    // them here is what stops the next boot adopting a dead room's history.
+    this.cacheAdopted = false;
+    this.cacheSeeded = false;
+    void this.cache?.clear();
     this.resetGeneration += 1;
     void this.applyArbitration();
   }
@@ -502,6 +616,7 @@ export class Collaboration extends Module {
 
     this.setStateAttribute(status);
     this.emitStatus();
+    this.recordCacheMeta(status);
 
     await this.applyArbitration();
 
@@ -526,13 +641,43 @@ export class Collaboration extends Module {
   }
 
   /**
+   * Records the working-set tag the cache adopts behind.
+   *
+   * Written on `connected` — a completed sync, not merely a validated control
+   * frame — so the gate the cache enforces is the strongest one available: a
+   * session that never finished syncing leaves nothing adoptable behind, and an
+   * adopted document is one the server has actually agreed with.
+   * @param status - the transition being published
+   */
+  private recordCacheMeta(status: CollabStatus): void {
+    const cache = this.cache;
+    const tag = this.provider?.tag;
+
+    if (status !== 'connected' || cache === null || tag === undefined || tag === null) {
+      return;
+    }
+
+    // ONE call, not a chain: the cache orders the meta and the snapshot
+    // internally, so the pair survives an editor torn down in between — which
+    // is exactly when the seed matters, since it is what the next boot adopts.
+    const snapshot = this.cacheSeeded ? undefined : this.Blok.YjsManager.encodeStateAsUpdate();
+
+    void cache.saveMeta(tag, this.writeDenied, snapshot);
+
+    this.cacheSeeded = true;
+  }
+
+  /**
    * Shows `config.data` read-only while the first sync has never happened —
    * "here is what we last saw", not an editable document. The Yjs document is
    * left untouched (`skipYjsSync`), so nothing rendered here can ever be
    * mistaken for content the server sent.
    */
   private async renderLastKnown(): Promise<void> {
-    if (this.firstSynced || this.degradeRendered || this.lastKnown.length === 0) {
+    // `cacheAdopted` belongs in this guard as much as `firstSynced`: the
+    // degrade CLEARS the editor before rendering, so running it over a restored
+    // document would swap real offline work for a stale `config.data` snapshot.
+    if (this.firstSynced || this.cacheAdopted || this.degradeRendered || this.lastKnown.length === 0) {
       return;
     }
 
@@ -618,7 +763,7 @@ export class Collaboration extends Module {
 
     // Never before the first sync: a block written into a document that has
     // never carried server lineage has nowhere to go (rule 2).
-    if (settings === null || !this.firstSynced || this.writeDenied || this.terminal) {
+    if (settings === null || !(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal) {
       return;
     }
 

@@ -81,8 +81,14 @@ export interface OfflineCache {
   /** Stores one update under the current lineage. */
   append: (update: Uint8Array) => Promise<void>;
 
-  /** Records a VALIDATED control frame — the gate every adoption goes through. */
-  saveMeta: (tag: WorkingSetTag, writeDenied: boolean) => Promise<void>;
+  /**
+   * Records a VALIDATED control frame — the gate every adoption goes through.
+   *
+   * `snapshot` seeds the lineage's history in the SAME call, because rows can
+   * only be stamped once the meta names a lineage: everything the document held
+   * before that moment would otherwise be unstorable.
+   */
+  saveMeta: (tag: WorkingSetTag, writeDenied: boolean, snapshot?: Uint8Array) => Promise<void>;
 
   /** Drops every row and the meta. Used when the lineage changes under us. */
   clear: () => Promise<void>;
@@ -192,10 +198,45 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
   const locks = resolveLocks(options.locks);
 
   /** Mutable session state, in one place — same shape the provider uses. */
-  const state: { db: IDBDatabase | null; lineage: string | null; rows: number } = {
+  const state: {
+    db: IDBDatabase | null;
+    lineage: string | null;
+    rows: number;
+    queue: Promise<void>;
+  } = {
     db: null,
     lineage: null,
     rows: 0,
+    queue: Promise.resolve(),
+  };
+
+  /**
+   * Runs one write after the last, against the database handle as it was when
+   * the CALLER asked — not as it is when the turn comes.
+   *
+   * Both halves matter. Serial, because appends stamp rows with the lineage a
+   * saveMeta sets, and interleaving them would stamp a row with the wrong one.
+   * Handle-at-call-time, because an editor torn down right after a sync would
+   * otherwise drop the very snapshot that makes the next boot adoptable — the
+   * work was already scheduled, and `close` waits for it.
+   * @param work - the write to run
+   */
+  const enqueue = (work: (db: IDBDatabase) => Promise<void>): Promise<void> => {
+    const db = state.db;
+
+    if (db === null) {
+      return Promise.resolve();
+    }
+
+    state.queue = state.queue.then(async () => {
+      try {
+        await work(db);
+      } catch {
+        // A cache that cannot write is a cache the session does without.
+      }
+    });
+
+    return state.queue;
   };
 
   /**
@@ -333,16 +374,16 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     },
 
     append: async (update) => {
-      const current = state.lineage;
+      await enqueue(async (db) => {
+        const current = state.lineage;
 
-      // No lineage means no stamp, and an unstamped row could never be adopted
-      // by anyone. Writing it would only consume the user's disk.
-      if (state.db === null || current === null) {
-        return;
-      }
+        // No lineage means no stamp, and an unstamped row could never be
+        // adopted by anyone. Writing it would only consume the user's disk.
+        if (current === null) {
+          return;
+        }
 
-      try {
-        const [store] = idb.transact(state.db, [UPDATES_STORE]);
+        const [store] = idb.transact(db, [UPDATES_STORE]);
 
         await idb.addAutoKey(store, {
           lineage: current,
@@ -354,24 +395,18 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         if (state.rows >= threshold) {
           await compact();
         }
-      } catch {
-        // A cache that cannot write is a cache the session does without.
-      }
+      });
     },
 
-    saveMeta: async (tag, writeDenied) => {
-      if (state.db === null) {
-        return;
-      }
-
+    saveMeta: async (tag, writeDenied, snapshot) => {
       if (tag.format !== SUPPORTED_FORMAT || !LINEAGE_PATTERN.test(tag.lineage)) {
         state.lineage = null;
 
         return;
       }
 
-      try {
-        const [metaStore] = idb.transact(state.db, [META_STORE]);
+      await enqueue(async (db) => {
+        const [metaStore] = idb.transact(db, [META_STORE]);
 
         await idb.put(metaStore, {
           format: tag.format,
@@ -384,36 +419,46 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         if (tag.lineage !== state.lineage) {
           state.lineage = tag.lineage;
 
-          const [countStore] = idb.transact(state.db, [UPDATES_STORE], 'readonly');
+          const [countStore] = idb.transact(db, [UPDATES_STORE], 'readonly');
 
           state.rows = (await rowsUnder(countStore, tag.lineage)).bytes.length;
         }
-      } catch {
-        // Same degrade: the session runs, it just will not survive a reload.
-      }
+
+        if (snapshot === undefined) {
+          return;
+        }
+
+        const [store] = idb.transact(db, [UPDATES_STORE]);
+
+        await idb.addAutoKey(store, {
+          lineage: tag.lineage,
+          bytes: snapshot,
+        });
+
+        state.rows += 1;
+      });
     },
 
     clear: async () => {
       state.lineage = null;
       state.rows = 0;
 
-      if (state.db === null) {
-        return;
-      }
-
-      try {
-        const [updatesStore, metaStore] = idb.transact(state.db, [UPDATES_STORE, META_STORE]);
+      await enqueue(async (db) => {
+        const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
 
         await idb.rtop(updatesStore.clear());
         await idb.del(metaStore, META_KEY);
-      } catch {
-        // Nothing to do: an uncleared cache still cannot outlive its lineage.
-      }
+      });
     },
 
     close: () => {
-      state.db?.close();
+      const db = state.db;
+
       state.db = null;
+
+      // Writes already scheduled still run: the last thing a session does is
+      // often the snapshot that makes the next boot adoptable.
+      void state.queue.then(() => db?.close());
     },
   };
 };

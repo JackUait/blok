@@ -169,18 +169,6 @@ internal static class YDocConverter
     return reader.Export();
   }
 
-  /// <summary>
-  /// Block-level edits for the HTTP edit endpoint: validate EVERY op against
-  /// a snapshot of the doc (plus the effects of earlier ops), then apply them
-  /// all in one write transaction. yrs has no rollback, so nothing may throw
-  /// once the transaction is open — every conversion, NUL and depth check
-  /// runs in the planning pass.
-  /// </summary>
-  internal static void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
-  {
-    throw new NotImplementedException();
-  }
-
   private static bool TryGetString(JsonObject block, string key, out string value)
   {
     if (block.TryGetPropertyValue(key, out var node) &&

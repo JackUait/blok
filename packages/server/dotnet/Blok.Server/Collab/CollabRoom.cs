@@ -249,14 +249,6 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
-  internal Task<CollabEditResult?> EditAsync(
-      IReadOnlyList<CollabEditOp> ops,
-      CancellationToken cancellationToken)
-  {
-    throw new NotImplementedException();
-  }
-
-  /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabWorkingSetTag?> ResetAsync(CancellationToken cancellationToken)
   {
     return RunAsync<CollabWorkingSetTag?>(

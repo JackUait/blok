@@ -20,12 +20,4 @@ internal interface ICollabDocConverter
 
   /// <summary>Reads the doc back as a bare OutputData object.</summary>
   JsonNode Export(Doc doc);
-
-  /// <summary>
-  /// Validates every op against the doc's current state, then applies them
-  /// all in ONE write transaction — the room observes that commit as one
-  /// local update. Throws <see cref="CollabEditException"/> (naming the op
-  /// index) BEFORE anything is written when any op is invalid.
-  /// </summary>
-  void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops);
 }

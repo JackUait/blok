@@ -35,4 +35,9 @@ internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDoc
       ["blocks"] = YDocConverter.Export(doc),
     };
   }
+
+  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  {
+    YDocConverter.ApplyOps(doc, ops);
+  }
 }

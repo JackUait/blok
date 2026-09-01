@@ -67,6 +67,13 @@ export type SyncWireDecodeResult =
 export interface CollabDocSeam {
   applyRemoteUpdate(update: Uint8Array, origin?: unknown): void;
   onDocUpdate(callback: (update: Uint8Array, origin: unknown) => void): () => void;
+
+  /**
+   * Every update, remote ones included — what the offline cache persists.
+   * `onDocUpdate` hides exactly those, so a cache riding it would reload a
+   * document missing every peer's work.
+   */
+  onAnyDocUpdate(callback: (update: Uint8Array, origin: unknown) => void): () => void;
   getStateVector(): Uint8Array;
   encodeStateAsUpdate(stateVector?: Uint8Array): Uint8Array;
   enableAwareness(): void;

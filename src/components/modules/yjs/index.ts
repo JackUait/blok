@@ -712,6 +712,16 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Subscribe to EVERY binary update, remote ones included — for persistence,
+   * never for broadcast. See `DocumentStore.onAnyUpdate`.
+   * @param callback - Receives the encoded update and its transaction origin
+   * @returns Unsubscribe function
+   */
+  public onAnyDocUpdate(callback: (update: Uint8Array, origin: unknown) => void): () => void {
+    return this.documentStore.onAnyUpdate(callback);
+  }
+
+  /**
    * Encode this document's state vector for diff exchange with a peer.
    */
   public getStateVector(): Uint8Array {

@@ -1408,6 +1408,29 @@ export class DocumentStore {
   }
 
   /**
+   * Subscribe to EVERY binary update, including the ones `applyRemoteUpdate`
+   * brought in — the ones {@link onUpdate} exists to hide.
+   *
+   * For persistence, not for broadcast. A cache fed by the filtered hook would
+   * store only what this tab typed and reload a document missing every peer's
+   * work; a provider using THIS hook would echo remote updates back at their
+   * source. Subscribers must skip their own writes by origin.
+   * @param cb - Receives the encoded update and its transaction origin
+   * @returns Unsubscribe function
+   */
+  public onAnyUpdate(cb: (update: Uint8Array, origin: unknown) => void): () => void {
+    // Registered in the same set as `onUpdate`'s handlers, so a lineage reset
+    // re-attaches it to the fresh doc and destroy() unhooks it.
+    this.updateHandlers.add(cb);
+    this.ydoc.on('update', cb);
+
+    return (): void => {
+      this.updateHandlers.delete(cb);
+      this.ydoc.off('update', cb);
+    };
+  }
+
+  /**
    * Encode this document's state vector (for requesting a diff from a peer).
    */
   public getStateVector(): Uint8Array {

@@ -229,6 +229,53 @@ describe('DocumentStore binary provider seam', () => {
     });
   });
 
+  describe('onAnyUpdate', () => {
+    /**
+     * The offline cache needs the updates `onUpdate` exists to hide. A cache
+     * fed by the filtered hook would store only what this tab typed and reload
+     * a document missing every peer's work.
+     */
+    it('delivers seam-applied updates too, which onUpdate deliberately hides', () => {
+      const broadcast: unknown[] = [];
+      const cached: unknown[] = [];
+
+      storeB.onUpdate((_update, origin) => broadcast.push(origin));
+      storeB.onAnyUpdate((_update, origin) => cached.push(origin));
+
+      storeA.addBlock(paragraph('a1', 'From a peer'));
+      storeB.applyRemoteUpdate(storeA.encodeStateAsUpdate(storeB.getStateVector()));
+
+      expect(broadcast).toHaveLength(0);
+      expect(cached).toHaveLength(1);
+
+      storeB.addBlock(paragraph('b1', 'Typed here'));
+
+      expect(broadcast).toEqual(['local']);
+      expect(cached).toHaveLength(2);
+      expect(cached[1]).toBe('local');
+    });
+
+    it('survives a lineage reset, like every other update subscription', () => {
+      const cached: Uint8Array[] = [];
+
+      storeB.onAnyUpdate((update) => cached.push(update));
+      storeB.resetForRelineage();
+      storeB.addBlock(paragraph('after', 'Fresh document'));
+
+      expect(cached).toHaveLength(1);
+    });
+
+    it('unsubscribe stops delivery', () => {
+      const cached: Uint8Array[] = [];
+      const stop = storeB.onAnyUpdate((update) => cached.push(update));
+
+      stop();
+      storeB.addBlock(paragraph('b1', 'Ignored'));
+
+      expect(cached).toHaveLength(0);
+    });
+  });
+
   describe('unsubscribe and destroy', () => {
     it('unsubscribe stops delivery', () => {
       const callback = vi.fn();

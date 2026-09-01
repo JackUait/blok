@@ -94,7 +94,11 @@ interface ProviderState {
   socket: WebSocketLike | null;
   origin: ProviderOrigin | null;
   tag: WorkingSetTag | null;
-  /** Lineage of the FIRST control frame; later frames are compared against it. */
+  /**
+   * Lineage this document's history belongs to. Normally learned from the
+   * first control frame; PRE-SEEDED when the document was adopted from the
+   * offline cache, so the first frame is compared rather than believed.
+   */
   lineage: string | null;
   buffered: SyncWireFrame[];
   unhookDoc: (() => void) | null;
@@ -182,7 +186,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     socket: null,
     origin: null,
     tag: null,
-    lineage: null,
+    lineage: options.initialLineage ?? null,
     buffered: [],
     unhookDoc: null,
     unhookAwareness: null,

@@ -206,6 +206,16 @@ export interface CollabProviderOptions {
   awarenessThrottleMs?: number;
   /** Injectable randomness for backoff jitter; defaults to `Math.random`. */
   random?: () => number;
+  /**
+   * Lineage the document already carries — set when booting from the offline
+   * cache, whose updates this provider never watched arrive.
+   *
+   * Without it the FIRST control frame is ADOPTED rather than compared, so a
+   * room reset while this tab was away would leave the client holding a dead
+   * room's history and shipping it back in the resync answer. With it, the
+   * mismatch takes the ordinary relineage path.
+   */
+  initialLineage?: string;
 }
 
 /** What {@link createCollabProvider} hands back. */

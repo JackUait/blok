@@ -195,9 +195,11 @@ const completeFirstSync = (harness: Harness, socket: MockSocket, peer: DocumentS
 };
 
 /** A harness whose seam records every lineage reset the provider asks for. */
-const createResetHarness = (): { harness: Harness; resets: number[] } => {
+const createResetHarness = (
+  overrides: Partial<CollabProviderOptions> = {}
+): { harness: Harness; resets: number[] } => {
   const resets: number[] = [];
-  const harness = createHarness({}, (seam) => ({
+  const harness = createHarness(overrides, (seam) => ({
     ...seam,
     resetForRelineage: () => {
       resets.push(resets.length + 1);
@@ -1194,6 +1196,46 @@ describe('createCollabProvider', () => {
 
       expect(room.toJSON()).toEqual([]);
       expect(second.frameTypes.filter((type) => type === 'update')).toHaveLength(0);
+    });
+
+    /**
+     * A cache-adopted boot carries history the provider did not watch arrive.
+     * Without the cached lineage, the FIRST control frame is adopted rather
+     * than compared — so a room reset while this tab was away announces a new
+     * lineage, the client keeps its stale history, and the resync answer ships
+     * a dead room's blocks into the live one.
+     */
+    it('relineages when the cached lineage does not match the first control frame', () => {
+      const { harness, resets } = createResetHarness({ initialLineage: LINEAGE_A });
+
+      harness.provider.connect();
+
+      const socket = harness.socket();
+
+      harness.store.addBlock({ id: 'cached', type: 'paragraph', data: { text: 'from the cache' } });
+
+      socket.open();
+      socket.deliver(controlFrame({ lineage: LINEAGE_B, epoch: 4 }));
+
+      expect(resets).toHaveLength(1);
+      expect(harness.store.toJSON()).toEqual([]);
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+
+    it('keeps a cache-adopted document when the first control frame agrees', () => {
+      const { harness, resets } = createResetHarness({ initialLineage: LINEAGE_A });
+
+      harness.provider.connect();
+
+      const socket = harness.socket();
+
+      harness.store.addBlock({ id: 'cached', type: 'paragraph', data: { text: 'from the cache' } });
+
+      socket.open();
+      socket.deliver(controlFrame({ lineage: LINEAGE_A }));
+
+      expect(resets).toHaveLength(0);
+      expect(harness.store.toJSON().map((block) => block.id)).toEqual(['cached']);
     });
 
     it('refreshes the ticket and retries ONCE on 4401, then goes terminal', async () => {

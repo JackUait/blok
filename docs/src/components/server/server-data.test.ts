@@ -297,7 +297,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-seven service limits the design refuses to bury', () => {
+  it('states the twenty-eight service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -315,6 +315,7 @@ describe('server docs data', () => {
       'collab-pass-lifetime',
       'collab-connection-cap',
       'collab-connection-ceiling',
+      'collab-scale-out',
       'collab-what-is-not-limited',
       'collab-connection-states',
       'collab-offline-reload',
@@ -445,6 +446,26 @@ describe('server docs data', () => {
     expect(body).toMatch(/until one of the open ones closes/i);
     expect(body).toMatch(/ASP\.NET/);
     expect(body).toContain('MaxConcurrentUpgradedConnections');
+  });
+
+  // The design promised a documented sharding pattern instead of scaling
+  // machinery. It sits right after the per-process ceiling — the number that
+  // makes someone reach for a second process — and the guarantee it names is
+  // deliberate: nothing in the service prevents two processes opening one
+  // document, so the routing rule IS the safety, and the entry must say so.
+  it('documents the scale-out pattern: one document, one process, routed by id', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-scale-out')?.body ?? '';
+
+    expect(limits.indexOf('collab-scale-out')).toBe(limits.indexOf('collab-connection-ceiling') + 1);
+    expect(body).toMatch(/one .*process/i);
+    expect(body).toContain('/sync/{doc}');
+    expect(body).toMatch(/route/i);
+    expect(body).toMatch(/document id/i);
+    expect(body).toMatch(/overwrit/i);
+    expect(body).toMatch(/reset/i);
+    expect(body).toMatch(/uploads? and link[- ]previews?/i);
+    expect(body).toMatch(/nothing (in the service )?stops|does not stop|no built-in/i);
   });
 
   // The review asked for the unbounded things to be said out loud, next to the

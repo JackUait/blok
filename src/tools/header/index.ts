@@ -25,6 +25,7 @@ import { twMerge } from '../../components/utils/tw';
 import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
 import { INLINE_TEXT_SANITIZE } from '../../components/shared/inline-content-sanitize';
 import { applyBlockColor, buildBlockColorTunes, BLOCK_COLOR_SANITIZE, type BlockColorData } from '../../components/shared/block-color';
+import { normalizeHeadingAnchor } from '../../shared/heading-anchor';
 import { BODY_PLACEHOLDER_STYLES, TOGGLE_ATTR } from '../toggle/constants';
 import { buildArrow } from '../toggle/dom-builder';
 import { createArrowTooltip, updateArrowState, updateBodyPlaceholderVisibility, updateChildrenVisibility, updateToggleEmptyState } from '../toggle/toggle-lifecycle';
@@ -55,6 +56,14 @@ export interface HeaderData extends BlockToolData, BlockColorData {
   isToggleable?: boolean;
   /** Whether the toggle heading is open (expanded). Persisted on save so state is restored on reload. */
   isOpen?: boolean;
+  /**
+   * Anchor id for in-document links (`<a href="#...">`), rendered as the heading
+   * element's `id`. Captured from the `id` of a pasted heading — that is how
+   * Google Docs and exported HTML address their own sections — and preserved on
+   * save so those links keep resolving. Takes precedence over an id derived by
+   * the `anchorIds` config.
+   */
+  anchor?: string;
 }
 
 /**
@@ -339,6 +348,12 @@ export class Header implements BlockTool {
       normalized.backgroundColor = data.backgroundColor;
     }
 
+    const anchor = normalizeHeadingAnchor(data.anchor);
+
+    if (anchor !== undefined) {
+      normalized.anchor = anchor;
+    }
+
     /**
      * Sanitize text to remove any previously saved arrow HTML (backwards compatibility)
      */
@@ -402,9 +417,26 @@ export class Header implements BlockTool {
    * never produce spurious DOM mutations.
    */
   private applyAnchorId(): void {
+    if (!this._element) {
+      return;
+    }
+
+    /**
+     * A stored anchor is what existing in-document links already point at, so it
+     * wins over anything derived from the current text — renaming a heading must
+     * not break the links into it.
+     */
+    if (this._data.anchor !== undefined) {
+      if (this._element.id !== this._data.anchor) {
+        this._element.id = this._data.anchor;
+      }
+
+      return;
+    }
+
     const anchorIds = this._settings.anchorIds;
 
-    if (!anchorIds || !this._element) {
+    if (!anchorIds) {
       return;
     }
 
@@ -687,6 +719,10 @@ export class Header implements BlockTool {
       data.backgroundColor = this._data.backgroundColor;
     }
 
+    if (this._data.anchor !== undefined) {
+      data.anchor = this._data.anchor;
+    }
+
     return data;
   }
 
@@ -714,6 +750,8 @@ export class Header implements BlockTool {
       },
       isToggleable: false,
       isOpen: false,
+      // Plain fragment string, already validated by normalizeHeadingAnchor — pass through.
+      anchor: false,
       // Block-level color fields hold plain preset names (not HTML) — pass through.
       ...BLOCK_COLOR_SANITIZE,
     } as SanitizerConfig;
@@ -1360,9 +1398,12 @@ export class Header implements BlockTool {
       })
       : parsedLevel;
 
+    const anchor = normalizeHeadingAnchor(content.getAttribute('id'));
+
     this.data = {
       level,
       text: content.innerHTML,
+      ...(anchor !== undefined ? { anchor } : {}),
     };
   }
 
@@ -1374,7 +1415,20 @@ export class Header implements BlockTool {
    */
   public static get pasteConfig(): PasteConfig {
     return {
-      tags: ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'],
+      /**
+       * `id` must be whitelisted here or the paste sanitizer strips it before
+       * onPaste runs, and every in-document link into the pasted heading dies
+       * silently. Object form keeps the tag keys — the tag→tool substitution
+       * registry — exactly as they were.
+       */
+      tags: [
+        { H1: { id: true } },
+        { H2: { id: true } },
+        { H3: { id: true } },
+        { H4: { id: true } },
+        { H5: { id: true } },
+        { H6: { id: true } },
+      ],
     };
   }
 

@@ -294,6 +294,11 @@ type BlokStub = {
   Collaboration?: {
     isEnabled: boolean;
   };
+  // Also left out of the base stub: the anchor lookup must survive an editor
+  // whose UI module has not mounted a holder yet.
+  UI?: {
+    nodes: { holder: HTMLElement };
+  };
 };
 
 const createBlokStub = (
@@ -1154,6 +1159,42 @@ describe('BlocksAPI', () => {
       expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
       expect(el.classList.contains('blok-block--target')).toBe(true);
       expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('resolves a heading anchor when no block carries that id', () => {
+      /**
+       * Imported documents link to their own sections by the anchor the source
+       * HTML carried (#h.2y1ok8y7pef0 from a Google Docs table of contents).
+       * The block-id lookup misses it, so the heading itself has to answer —
+       * and selection must land on the block that owns the heading.
+       */
+      const holder = document.createElement('div');
+      const blockEl = document.createElement('div');
+      const heading = stubElement(240);
+
+      heading.id = 'h.2y1ok8y7pef0';
+      blockEl.setAttribute('data-blok-id', 'block-1');
+      blockEl.appendChild(heading);
+      holder.appendChild(blockEl);
+      document.body.appendChild(holder);
+
+      const targetBlock = createBlockStub({ id: 'block-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({
+        blocks: [ targetBlock ],
+        blokOverrides: { UI: { nodes: { holder } } },
+      });
+
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'block-1' ? targetBlock : undefined
+      );
+
+      blocksApi.methods.scrollToBlock?.('h.2y1ok8y7pef0');
+
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 240, behavior: 'smooth' });
+      expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
+      expect(heading.classList.contains('blok-block--target')).toBe(true);
+
+      holder.remove();
     });
 
     it('applies the configured topOffset', () => {

@@ -235,6 +235,65 @@ export declare function outlineFromOutputData(
   data: OutputData | LooseOutputData | null | undefined
 ): OutlineItem[];
 
+/** Why {@link restoreHeadingAnchors} left a referenced fragment as it was. */
+export type HeadingAnchorSkipReason = 'no-match' | 'ambiguous';
+
+/** One fragment handed back to the heading that answers to it. */
+export interface RestoredHeadingAnchor {
+  /** The fragment, without the leading "#". */
+  anchor: string;
+  /** Id of the header block it was written onto. */
+  blockId: string;
+}
+
+/** A fragment {@link restoreHeadingAnchors} refused to place, and why. */
+export interface SkippedHeadingAnchor {
+  /** The fragment, without the leading "#". */
+  anchor: string;
+  /** `no-match` — no heading carries that text; `ambiguous` — more than one candidate. */
+  reason: HeadingAnchorSkipReason;
+}
+
+/** What one {@link restoreHeadingAnchors} pass did. */
+export interface HeadingAnchorReport {
+  /** Fragments placed onto a heading, in the order they were referenced. */
+  restored: RestoredHeadingAnchor[];
+  /** Dead fragments left alone, in the order they were referenced. */
+  skipped: SkippedHeadingAnchor[];
+}
+
+/** The repaired document plus the report for the pass that produced it. */
+export interface HeadingAnchorResult {
+  data: OutputData;
+  report: HeadingAnchorReport;
+}
+
+/**
+ * Repair in-document links whose target was lost during an import.
+ *
+ * HTML addresses its own sections by an `id` on the heading (Google Docs writes
+ * `<h2 id="h.2y1ok8y7pef0">` and links its table of contents to that fragment).
+ * A converter that mints its own block ids and drops the source ones leaves the
+ * links pointing at nothing. What survives is the link's own text — a table of
+ * contents says the heading's name — so this pass hands each dead fragment to
+ * the heading that text names, as `HeaderData.anchor`.
+ *
+ * Because it WRITES content it guesses as little as possible: only headings
+ * with no anchor yet, only an exact text match (markup, entities and whitespace
+ * are normalized away; punctuation is not), and only when exactly one heading
+ * and one fragment claim each other. Anything less certain is left alone and
+ * reported. Running it twice changes nothing further.
+ *
+ * Host-called on purpose — a heuristic that rewrites a document belongs in a
+ * one-off upgrade you decide to run, not in every load. It is DOM-free, so it
+ * runs in a Node script over stored records. Expects a document already in
+ * Blok's hierarchical shape: migrate legacy data first.
+ *
+ * @param data - a saved document in Blok's hierarchical shape
+ * @returns a new document with anchors filled in, plus what the pass decided
+ */
+export declare function restoreHeadingAnchors(data: OutputData): HeadingAnchorResult;
+
 /**
  * An element in the view tree: lowercase tag name, sanitized attributes as a
  * plain string record, ordered children.

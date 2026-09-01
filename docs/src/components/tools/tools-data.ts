@@ -142,7 +142,7 @@ const editor = new Blok({
         type: 'boolean | (text: string, blockId: string) => string',
         default: 'undefined',
         description:
-          'Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier (keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, joins words with hyphens, e.g. «Обучайте команду» → id "Обучайте-команду"); a function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. Cross-block duplicate dedup is out of scope — consumers dedup themselves.',
+          'Opt-in text-derived anchor ids on rendered headings. true uses the built-in slugifier (keeps Unicode letters/digits and letter case, strips punctuation and zero-width chars, joins words with hyphens, e.g. «Обучайте команду» → id "Обучайте-команду"); a function lets you generate ids yourself (empty string = no id). Ids stay in sync on text edits and survive level changes. A heading that carries its own data.anchor keeps that instead. Cross-block duplicate dedup is out of scope — consumers dedup themselves.',
       },
     ],
     saveDataShape: `interface HeaderData {
@@ -152,6 +152,7 @@ const editor = new Blok({
   isOpen?: boolean;         // Persisted toggle state, present when toggleable
   textColor?: string;       // Block colour preset, present when set
   backgroundColor?: string; // Block background colour preset, present when set
+  anchor?: string;          // Anchor id for in-document links, present when set
 }`,
     saveDataExample: `{
   "id": "def456",

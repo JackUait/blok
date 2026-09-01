@@ -12,6 +12,14 @@ export interface HeaderData extends BlockToolData {
   text: string;
   /** Header's level from 1 to 6 */
   level: number;
+  /**
+   * Anchor id for in-document links (`<a href="#...">`), rendered as the heading
+   * element's `id`. Captured from the `id` of a pasted heading — that is how
+   * Google Docs and exported HTML address their own sections — and preserved on
+   * save so those links keep resolving. Takes precedence over an id derived by
+   * the `anchorIds` config. Whitespace-carrying and empty values are ignored.
+   */
+  anchor?: string;
 }
 
 /**

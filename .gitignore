@@ -100,3 +100,6 @@ override-extension/payload/
 
 # CI-staged musl yffi overrides (release-server.yml build-musl-yffi job)
 packages/server/dotnet/Blok.Server.Host/runtimes/
+
+# `yarn serve` backend: built sync service, its working copy and uploads
+.dev/

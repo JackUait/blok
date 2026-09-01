@@ -132,7 +132,7 @@
     "*.css"
   ],
   "scripts": {
-    "serve": "vite --no-open",
+    "serve": "node scripts/dev.mjs",
     "serve:docs": "cd docs && vite --port 8080",
     "build": "node scripts/build-all.mjs",
     "build:angular": "node scripts/build-angular.mjs",

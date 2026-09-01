@@ -225,7 +225,7 @@ Contributions are welcome — issues, discussions and pull requests alike. Read 
 
 ```bash
 yarn install
-yarn serve   # dev playground
+yarn serve   # dev playground (add --no-server to skip the collaboration backend)
 yarn test    # unit tests
 yarn lint    # ESLint + TypeScript
 ```

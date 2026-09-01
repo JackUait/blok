@@ -99,6 +99,9 @@ export default defineConfig(({ mode }) => {
       'NODE_ENV': JSON.stringify(NODE_ENV),
       'VERSION': JSON.stringify(VERSION),
       'process.env.NODE_ENV': JSON.stringify(NODE_ENV),
+      // Set by scripts/dev.mjs: whether `yarn serve` started the sync service
+      // beside Vite, so the playground knows to collaborate or stay local.
+      '__BLOK_DEV_BACKEND__': JSON.stringify(process.env.BLOK_DEV_BACKEND === '1'),
     },
 
     resolve: {

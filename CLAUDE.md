@@ -102,7 +102,7 @@ Before designing any new feature, ask: **"Is this a block?"** If it represents c
 
 ```bash
 # Core
-yarn serve          # Dev server
+yarn serve          # Dev playground + collaboration backend (--no-server for the playground alone)
 yarn build          # Production build
 yarn build:test     # Test build for E2E
 yarn lint           # ESLint + TypeScript

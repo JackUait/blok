@@ -198,6 +198,12 @@ internal sealed class CollabRoom : IDisposable
           if (member.AcceptsControlFrames)
           {
             Send(membership, SyncWire.Encode(new BlokControlFrame(tag)));
+
+            if (options.AnnouncedMaxMessageBytes is > 0)
+            {
+              Send(membership, SyncWire.Encode(
+                  new BlokLimitsFrame(options.AnnouncedMaxMessageBytes.Value)));
+            }
           }
 
           BroadcastLocked(QueryAwareness, membership);

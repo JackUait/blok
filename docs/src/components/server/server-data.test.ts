@@ -500,6 +500,10 @@ describe('server docs data', () => {
     expect(body).not.toMatch(/how fast an open connection sends is not limited/i);
     // The fifth bound made this count false.
     expect(body).not.toMatch(/beyond those four/i);
+    // The message cap is announced at connect, so the editor refuses an
+    // oversized send itself instead of learning the cap from a disconnect.
+    expect(body).toMatch(/tells the editor the message-size limit when it connects/);
+    expect(body).toMatch(/refuses to send something too big/);
   });
 
   // The two halves of the door are deliberately asymmetric: nothing is editable

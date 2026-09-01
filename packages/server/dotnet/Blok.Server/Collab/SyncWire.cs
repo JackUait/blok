@@ -24,6 +24,13 @@ internal sealed record PermissionDeniedFrame(string Reason) : SyncWireMessage;
 /// <summary>Blok-only working-set announcement: epoch, format and lineage (plan decision 6).</summary>
 internal sealed record BlokControlFrame(CollabWorkingSetTag Tag) : SyncWireMessage;
 
+/// <summary>
+/// Blok-only limits announcement: the message cap in bytes, sent right after
+/// the control frame so a client can refuse an oversized frame before writing
+/// it. Stock clients skip the unknown type (Phase 4 A1).
+/// </summary>
+internal sealed record BlokLimitsFrame(long MaxMessageBytes) : SyncWireMessage;
+
 /// <summary>A message type this codec does not know; the payload is left unread.</summary>
 internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 
@@ -37,6 +44,7 @@ internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 ///   auth            [2][0][len][utf8 reason]
 ///   queryAwareness  [3]
 ///   blok control    [100][len]{"epoch":N,"format":N,"lineage":"<32 hex>"}
+///   blok limits     [101][len]{"maxMessageBytes":N}
 /// </code>
 /// Pinned byte-for-byte by test/unit/server-conformance/fixtures/sync-frames.json.
 /// </summary>
@@ -47,6 +55,7 @@ internal static class SyncWire
   internal const ulong MessageAuth = 2;
   internal const ulong MessageQueryAwareness = 3;
   internal const ulong MessageBlokControl = 100;
+  internal const ulong MessageBlokLimits = 101;
 
   /// <summary>Internal because the inbound budget classifies frames by it.</summary>
   internal const ulong SyncStep1 = 0;
@@ -94,6 +103,10 @@ internal static class SyncWire
       case BlokControlFrame control:
         WriteVarUint(writer, MessageBlokControl);
         WriteVarBytes(writer, EncodeControl(control.Tag));
+        break;
+      case BlokLimitsFrame limits:
+        WriteVarUint(writer, MessageBlokLimits);
+        WriteVarBytes(writer, EncodeLimits(limits.MaxMessageBytes));
         break;
       default:
         throw new ArgumentException(
@@ -149,6 +162,21 @@ internal static class SyncWire
         }
 
         message = new BlokControlFrame(tag);
+        break;
+      case MessageBlokLimits:
+        if (!TryReadVarBytes(ref frame, out var limitsJson))
+        {
+          error = "the limits payload is missing or truncated";
+
+          return false;
+        }
+
+        if (!TryDecodeLimits(limitsJson, out var maxMessageBytes, out error))
+        {
+          return false;
+        }
+
+        message = new BlokLimitsFrame(maxMessageBytes);
         break;
       default:
         message = new UnknownFrame(type);
@@ -401,6 +429,98 @@ internal static class SyncWire
     }
 
     return buffer.WrittenSpan.ToArray();
+  }
+
+  private static byte[] EncodeLimits(long maxMessageBytes)
+  {
+    if (maxMessageBytes <= 0)
+    {
+      throw new ArgumentException(
+          $"collab: the limit {maxMessageBytes} is not encodable.",
+          nameof(maxMessageBytes));
+    }
+
+    var buffer = new ArrayBufferWriter<byte>();
+
+    using (var json = new Utf8JsonWriter(buffer))
+    {
+      json.WriteStartObject();
+      json.WriteNumber("maxMessageBytes", maxMessageBytes);
+      json.WriteEndObject();
+    }
+
+    return buffer.WrittenSpan.ToArray();
+  }
+
+  private static bool TryDecodeLimits(
+      ReadOnlySpan<byte> json,
+      out long maxMessageBytes,
+      out string error)
+  {
+    maxMessageBytes = 0;
+    long? limit = null;
+
+    try
+    {
+      var reader = new Utf8JsonReader(json);
+
+      if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+      {
+        error = "the limits payload is not a JSON object";
+
+        return false;
+      }
+
+      while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+      {
+        var isLimit = reader.ValueTextEquals("maxMessageBytes"u8);
+
+        if (!reader.Read())
+        {
+          error = "a limits property has no value";
+
+          return false;
+        }
+
+        if (isLimit && limit is null &&
+            reader.TokenType == JsonTokenType.Number &&
+            reader.TryGetInt64(out var value))
+        {
+          limit = value;
+        }
+        else
+        {
+          error = "the limits payload has an unknown, repeated or ill-typed property";
+
+          return false;
+        }
+      }
+
+      if (reader.TokenType != JsonTokenType.EndObject || reader.Read())
+      {
+        error = "the limits payload has trailing content";
+
+        return false;
+      }
+    }
+    catch (JsonException)
+    {
+      error = "the limits payload is not valid JSON";
+
+      return false;
+    }
+
+    if (limit is not > 0)
+    {
+      error = "the limits payload needs a positive maxMessageBytes";
+
+      return false;
+    }
+
+    maxMessageBytes = limit.Value;
+    error = "";
+
+    return true;
   }
 
   private static bool TryDecodeControl(

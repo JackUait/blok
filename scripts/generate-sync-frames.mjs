@@ -18,6 +18,7 @@
 //   queryAwareness  [3]                                    no payload
 //   blok control    [100][varuint len][utf8 json]          Blok-only: {"epoch":N,"format":N,"lineage":"<32 hex>"},
 //                                                          keys in that order
+//   blok limits     [101][varuint len][utf8 json]          Blok-only: {"maxMessageBytes":N}
 //
 // The outer type byte comes from y-websocket, not y-protocols: the sync/auth
 // writers only emit the sub-type, so this script writes 0/1/2/3 itself exactly
@@ -50,6 +51,8 @@ const MESSAGE_AUTH = 2;
 const MESSAGE_QUERY_AWARENESS = 3;
 // Blok control frame (Phase 2 plan, decision 6).
 const MESSAGE_BLOK_CONTROL = 100;
+// Blok limits frame (Phase 4 A1): the server's message cap, announced at join.
+const MESSAGE_BLOK_LIMITS = 101;
 
 // A single fixed client id keeps every update/state vector byte-deterministic.
 const CLIENT_ID = 1000;
@@ -60,6 +63,8 @@ const PERMISSION_DENIED_REASON = 'permission denied: read-only ticket';
 // The lineage is 16 random bytes at runtime; the fixture pins one value so
 // regenerating the file does not churn the bytes.
 const CONTROL = { epoch: 7, format: 1, lineage: '5f3a9c1e7b04d28a6cf1e0937b52d84a' };
+// The server default (BlokServerOptions.CollabMaxMessageBytes = 1 MiB).
+const LIMITS = { maxMessageBytes: 1048576 };
 
 const hex = (bytes) => Buffer.from(bytes).toString('hex');
 
@@ -130,6 +135,10 @@ const permissionDenied = frame((encoder) => {
 const control = frame((encoder) => {
   encoding.writeVarUint(encoder, MESSAGE_BLOK_CONTROL);
   encoding.writeVarString(encoder, JSON.stringify(CONTROL));
+});
+const limits = frame((encoder) => {
+  encoding.writeVarUint(encoder, MESSAGE_BLOK_LIMITS);
+  encoding.writeVarString(encoder, JSON.stringify(LIMITS));
 });
 
 // Self-check: the fixtures must replay through the reference decoders.
@@ -226,6 +235,15 @@ const fixture = {
       frameHex: hex(control),
       payloadHex: hex(payloadOf(control, 1)),
       control: CONTROL,
+    },
+    {
+      name: 'blokLimits',
+      messageType: MESSAGE_BLOK_LIMITS,
+      description:
+        'Blok limits frame: JSON {maxMessageBytes} as a lib0 var-string, sent right after the control frame.',
+      frameHex: hex(limits),
+      payloadHex: hex(payloadOf(limits, 1)),
+      limits: LIMITS,
     },
   ],
 };

@@ -77,6 +77,16 @@
         "format": 1,
         "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a"
       }
+    },
+    {
+      "name": "blokLimits",
+      "messageType": 101,
+      "description": "Blok limits frame: JSON {maxMessageBytes} as a lib0 var-string, sent right after the control frame.",
+      "frameHex": "651b7b226d61784d6573736167654279746573223a313034383537367d",
+      "payloadHex": "7b226d61784d6573736167654279746573223a313034383537367d",
+      "limits": {
+        "maxMessageBytes": 1048576
+      }
     }
   ]
 }

@@ -22,6 +22,9 @@ export interface WorkingSetTag {
  * - `awareness` bytes are relayed verbatim; this codec never parses their interior.
  * - `permissionDenied` is the only auth sub-message.
  * - `control` is the Blok-only working-set announcement (message type 100).
+ * - `limits` is the Blok-only message-size announcement (message type 101): the
+ *   server's cap in bytes, sent right after the control frame so the client can
+ *   refuse an oversized frame before writing it instead of learning from a 1009.
  */
 export type SyncWireFrame =
   | { type: 'syncStep1'; stateVector: Uint8Array }
@@ -30,7 +33,8 @@ export type SyncWireFrame =
   | { type: 'awareness'; update: Uint8Array }
   | { type: 'queryAwareness' }
   | { type: 'permissionDenied'; reason: string }
-  | { type: 'control'; tag: WorkingSetTag };
+  | { type: 'control'; tag: WorkingSetTag }
+  | { type: 'limits'; maxMessageBytes: number };
 
 /**
  * What {@link decode} returns. Either a frame this codec understands, an

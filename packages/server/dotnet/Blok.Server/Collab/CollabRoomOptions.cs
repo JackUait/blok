@@ -24,6 +24,14 @@ internal sealed class CollabRoomOptions
   /// </summary>
   public int MaxAwarenessClients { get; init; } = 256;
 
+  /// <summary>
+  /// Message cap (bytes) announced to negotiated members as a limits frame
+  /// right after the control frame, so a client can refuse an oversized frame
+  /// before writing it. The transport layer owns ENFORCEMENT; null or 0 means
+  /// announce nothing.
+  /// </summary>
+  public long? AnnouncedMaxMessageBytes { get; init; }
+
   /// <summary>First wait before a failed blob write or export is retried; it doubles per failure.</summary>
   public TimeSpan RetryBackoff { get; init; } = TimeSpan.FromSeconds(2);
 

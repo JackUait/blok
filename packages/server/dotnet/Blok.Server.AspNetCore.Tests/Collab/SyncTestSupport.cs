@@ -533,14 +533,14 @@ internal sealed class SyncFakes
 
   internal CollabRoomManager Manager { get; }
 
-  internal SyncFakes()
+  internal SyncFakes(CollabRoomOptions? roomOptions = null)
   {
     Endpoint.Holds(SyncApp.Doc, "seeded");
     Manager = new CollabRoomManager(
         Store,
         Endpoint,
         Converter,
-        new CollabRoomOptions(),
+        roomOptions ?? new CollabRoomOptions(),
         TimeProvider.System);
   }
 }

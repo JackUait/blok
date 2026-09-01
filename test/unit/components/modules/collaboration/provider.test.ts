@@ -1512,6 +1512,153 @@ describe('createCollabProvider', () => {
     });
   });
 
+  // The server sends its message cap as a limits frame right after the control
+  // frame, so the client can refuse an oversized frame BEFORE writing it —
+  // learning from a 1009 stays the fallback for servers that announce nothing.
+  describe('the announced message cap', () => {
+    it('refuses to answer a resync bigger than the announced cap, terminally', () => {
+      const harness = createHarness();
+      const fresh = new DocumentStore(new YBlockSerializer());
+
+      stores.push(fresh);
+
+      const socket = connectAndHandshake(harness);
+
+      socket.deliver({ type: 'limits', maxMessageBytes: 200 });
+      harness.store.addBlock({ id: 'huge', type: 'paragraph', data: { text: 'x'.repeat(8192) } });
+      socket.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+      expect(socket.frameTypes).not.toContain('syncStep2');
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({
+          error: 'oversized-update',
+          reason: expect.stringContaining('bytes'),
+        }),
+      });
+
+      // Terminal: no reconnect may follow the refusal.
+      vi.advanceTimersByTime(300_000);
+
+      expect(harness.sockets).toHaveLength(1);
+    });
+
+    // The server refuses frames STRICTLY larger than its cap, so must we.
+    it('still answers a resync exactly at the announced cap', () => {
+      const harness = createHarness();
+      const fresh = new DocumentStore(new YBlockSerializer());
+
+      stores.push(fresh);
+
+      const socket = connectAndHandshake(harness);
+
+      harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'x'.repeat(512) } });
+
+      const answer = encode({ type: 'syncStep2', update: harness.store.encodeStateAsUpdate(fresh.getStateVector()) });
+
+      socket.deliver({ type: 'limits', maxMessageBytes: answer.byteLength });
+      socket.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+      expect(socket.frameTypes).toContain('syncStep2');
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+
+    it('refuses to send a local update bigger than the announced cap, terminally', () => {
+      const harness = createHarness();
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      const socket = connectAndHandshake(harness);
+
+      socket.deliver({ type: 'limits', maxMessageBytes: 200 });
+      completeFirstSync(harness, socket, peer);
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+
+      harness.store.addBlock({ id: 'huge', type: 'paragraph', data: { text: 'x'.repeat(8192) } });
+
+      expect(socket.frameTypes).not.toContain('update');
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({
+          error: 'oversized-update',
+          reason: expect.stringContaining('bytes'),
+        }),
+      });
+
+      vi.advanceTimersByTime(300_000);
+
+      expect(harness.sockets).toHaveLength(1);
+    });
+
+    // The announced cap is fact, not inference: a completed sync clears the
+    // LEARNED refused-size bound, but must not clear what the server declared.
+    it('keeps the announced cap across a completed sync', () => {
+      const harness = createHarness();
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+      // Written BEFORE connect, so no update frame ships: the oversized bytes
+      // leave only as the answer to the peer's syncStep1 below.
+      harness.store.addBlock({ id: 'huge', type: 'paragraph', data: { text: 'x'.repeat(8192) } });
+
+      const socket = connectAndHandshake(harness);
+
+      socket.deliver({ type: 'limits', maxMessageBytes: 200 });
+      // syncStep2 completes the sync (clearing the learned bound), THEN the
+      // peer's syncStep1 draws the oversized answer against the announced cap.
+      completeFirstSync(harness, socket, peer);
+
+      expect(harness.statuses.map((entry) => entry.status)).toContain('connected');
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'error',
+        detail: expect.objectContaining({ error: 'oversized-update' }),
+      });
+    });
+
+    // A different server (or a redeploy) may take different sizes: the cap
+    // belongs to the CONNECTION that announced it, never to the next one.
+    it('drops the announced cap on reconnect and re-learns from the next frame', () => {
+      const harness = createHarness();
+      const fresh = new DocumentStore(new YBlockSerializer());
+
+      stores.push(fresh);
+
+      const first = connectAndHandshake(harness);
+
+      first.deliver({ type: 'limits', maxMessageBytes: 100 });
+      first.serverClose(1006, 'connection lost');
+      vi.advanceTimersByTime(30_000);
+
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+      harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'x'.repeat(512) } });
+      second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
+
+      expect(second.frameTypes).toContain('syncStep2');
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+
+    it('still ignores a frame of an unknown message type', () => {
+      const harness = createHarness();
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      const socket = connectAndHandshake(harness);
+
+      completeFirstSync(harness, socket, peer);
+      // Type 102 with a payload: ignorable forward compatibility, not an error.
+      socket.receive(new Uint8Array([102, 0x02, 0xde, 0xad]));
+
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+      expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+    });
+  });
+
   describe('backoff', () => {
     it('grows exponentially and caps at 30s', () => {
       const harness = createHarness();

@@ -198,6 +198,18 @@ public sealed class SyncWireFramingTests
   }
 
   [Fact]
+  public void BlokLimitsCarriesTheMaxMessageBytes()
+  {
+    var frame = Frame("blokLimits");
+    var message = Decode<BlokLimitsFrame>("blokLimits");
+    var limits = Assert.IsType<LimitsFixture>(frame.Limits);
+
+    Assert.Equal(SyncWire.MessageBlokLimits, frame.MessageType);
+    Assert.Equal(limits.MaxMessageBytes, message.MaxMessageBytes);
+    Assert.True(message.MaxMessageBytes > 0);
+  }
+
+  [Fact]
   public void FixtureMessageTypesMatchTheDecodedKinds()
   {
     Assert.Equal(SyncWire.MessageSync, Frame("syncStep1").MessageType);
@@ -267,6 +279,7 @@ public sealed class SyncWireFramingTests
   [InlineData("permissionDenied", 2UL)]
   [InlineData("queryAwareness", 3UL)]
   [InlineData("blokControl", 100UL)]
+  [InlineData("blokLimits", 101UL)]
   public async Task YDotNetProtocolLeavesAuthQueryAndControlFramesUndecoded(
       string name,
       ulong identifier)
@@ -411,7 +424,8 @@ public sealed class SyncWireFramingTests
       [property: JsonPropertyName("payloadHex")] string PayloadHex,
       [property: JsonPropertyName("awareness")] AwarenessFixture? Awareness,
       [property: JsonPropertyName("reason")] string? Reason,
-      [property: JsonPropertyName("control")] ControlFixture? Control)
+      [property: JsonPropertyName("control")] ControlFixture? Control,
+      [property: JsonPropertyName("limits")] LimitsFixture? Limits)
   {
     public byte[] Bytes => Convert.FromHexString(FrameHex);
 
@@ -427,4 +441,7 @@ public sealed class SyncWireFramingTests
       [property: JsonPropertyName("epoch")] long Epoch,
       [property: JsonPropertyName("format")] int Format,
       [property: JsonPropertyName("lineage")] string Lineage);
+
+  private sealed record LimitsFixture(
+      [property: JsonPropertyName("maxMessageBytes")] long MaxMessageBytes);
 }

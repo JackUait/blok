@@ -15,6 +15,7 @@ import type { SyncWireDecodeResult, SyncWireFrame, WorkingSetTag } from './types
  *   auth            [2][0][varuint len][utf8 reason]
  *   queryAwareness  [3]
  *   blok control    [100][varuint len]{"epoch":N,"format":N,"lineage":"<32 hex>"}
+ *   blok limits     [101][varuint len]{"maxMessageBytes":N}
  */
 
 const MESSAGE_SYNC = 0;
@@ -22,6 +23,7 @@ const MESSAGE_AWARENESS = 1;
 const MESSAGE_AUTH = 2;
 const MESSAGE_QUERY_AWARENESS = 3;
 const MESSAGE_BLOK_CONTROL = 100;
+const MESSAGE_BLOK_LIMITS = 101;
 
 const SYNC_STEP1 = 0;
 const SYNC_STEP2 = 1;
@@ -76,6 +78,10 @@ export function encode(frame: SyncWireFrame): Uint8Array {
       encoding.writeVarUint(encoder, MESSAGE_BLOK_CONTROL);
       encoding.writeVarString(encoder, encodeControl(frame.tag));
       break;
+    case 'limits':
+      encoding.writeVarUint(encoder, MESSAGE_BLOK_LIMITS);
+      encoding.writeVarString(encoder, encodeLimits(frame.maxMessageBytes));
+      break;
   }
 
   return encoding.toUint8Array(encoder);
@@ -124,6 +130,21 @@ export function decode(bytes: Uint8Array): SyncWireDecodeResult {
       }
 
       return requireEnd(decoder) ?? { type: 'control', tag: control.tag };
+    }
+    case MESSAGE_BLOK_LIMITS: {
+      const json = readVarBytes(decoder);
+
+      if (json === null) {
+        return malformed('the limits payload is missing or truncated');
+      }
+
+      const limits = decodeLimits(json);
+
+      if (!limits.ok) {
+        return malformed(limits.reason);
+      }
+
+      return requireEnd(decoder) ?? { type: 'limits', maxMessageBytes: limits.maxMessageBytes };
     }
     default:
       // Unknown OUTER type: ignorable, and the payload is left unread — so no
@@ -251,6 +272,51 @@ function decodeControl(json: Uint8Array): ControlResult {
   return { ok: true, tag: { format, epoch, lineage } };
 }
 
+type LimitsResult = { ok: true; maxMessageBytes: number } | { ok: false; reason: string };
+
+/** Strict like {@link decodeControl}: same UTF-8, escape, duplicate and key rules. */
+function decodeLimits(json: Uint8Array): LimitsResult {
+  const text = tryDecodeUtf8(json);
+
+  if (text === null) {
+    return { ok: false, reason: 'the limits payload is not valid UTF-8' };
+  }
+
+  if (text.includes('\\')) {
+    return { ok: false, reason: 'the limits payload contains an escape' };
+  }
+
+  const parsed = tryParseJson(text);
+
+  if (!parsed.ok) {
+    return { ok: false, reason: 'the limits payload is not valid JSON' };
+  }
+
+  const record = parsed.value;
+
+  if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+    return { ok: false, reason: 'the limits payload is not a JSON object' };
+  }
+
+  const fields = record as Record<string, unknown>;
+
+  if (Object.keys(fields).some((key) => key !== 'maxMessageBytes')) {
+    return { ok: false, reason: 'the limits payload has an unknown property' };
+  }
+
+  const { maxMessageBytes } = fields;
+
+  if (typeof maxMessageBytes !== 'number' || !Number.isSafeInteger(maxMessageBytes) || maxMessageBytes < 1) {
+    return { ok: false, reason: 'the limits payload needs a positive integer maxMessageBytes' };
+  }
+
+  if (occurrences(text, '"maxMessageBytes"') > 1) {
+    return { ok: false, reason: 'the limits payload has a repeated property' };
+  }
+
+  return { ok: true, maxMessageBytes };
+}
+
 type PayloadResult = { type: 'bytes'; bytes: Uint8Array } | { type: 'error'; reason: string };
 
 /** Reads a length-prefixed payload, rejecting an empty one (sync + awareness). */
@@ -374,6 +440,14 @@ function isAnnounceable(tag: WorkingSetTag): boolean {
     Number.isSafeInteger(tag.epoch) && tag.epoch >= 0 &&
     LINEAGE_PATTERN.test(tag.lineage)
   );
+}
+
+function encodeLimits(maxMessageBytes: number): string {
+  if (!Number.isSafeInteger(maxMessageBytes) || maxMessageBytes < 1) {
+    throw new Error(`collab: the limit ${maxMessageBytes} is not encodable.`);
+  }
+
+  return JSON.stringify({ maxMessageBytes });
 }
 
 function tryDecodeUtf8(bytes: Uint8Array): string | null {

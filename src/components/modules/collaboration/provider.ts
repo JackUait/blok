@@ -116,6 +116,13 @@ interface ProviderState {
   largestSentBytes: number;
   /** Smallest frame size the server has refused as too big, if it has. */
   refusedFrameBytes: number | null;
+  /**
+   * The cap the server ANNOUNCED in its limits frame, in bytes — fact, not
+   * inference, so unlike `refusedFrameBytes` a completed sync does not clear
+   * it. It belongs to the connection that announced it: reset per connection
+   * so another server's cap never leaks across a reconnect.
+   */
+  announcedMaxBytes: number | null;
   forceTicketRefresh: boolean;
   synced: boolean;
   destroyed: boolean;
@@ -191,6 +198,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     handshakeTimeoutsSinceSync: 0,
     largestSentBytes: 0,
     refusedFrameBytes: null,
+    announcedMaxBytes: null,
     forceTicketRefresh: false,
     synced: false,
     destroyed: false,
@@ -298,7 +306,23 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         return;
       }
 
-      send(state.socket, { type: 'update', update });
+      const bytes = encode({ type: 'update', update });
+      const announced = state.announcedMaxBytes;
+
+      // Refuse BEFORE the write: the server told us its cap, so shipping a
+      // bigger frame buys nothing but a 1009. One update alone past the cap
+      // can never be shipped — same terminal verdict as a refused resync.
+      if (announced !== null && bytes.byteLength > announced) {
+        terminate('oversized-update', {
+          reason:
+            `${docId} cannot be sent: a local update takes ${bytes.byteLength} bytes, ` +
+            `and the server takes at most ${announced} bytes per message`,
+        });
+
+        return;
+      }
+
+      sendBytes(state.socket, bytes);
     });
 
     state.unhookAwareness = yjs.onAwarenessUpdate((changes, changeOrigin) => {
@@ -440,6 +464,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // the proof that the ticket is accepted, that this endpoint speaks the
     // protocol, and that our frames fit — including the refused-size bound,
     // which would otherwise keep refusing legitimate frames in a healed session.
+    // The ANNOUNCED cap is deliberately NOT cleared here: it is the server's
+    // stated fact, not an inference a sync could disprove.
     state.synced = true;
     state.firstSyncTimer = clearTimer(state.firstSyncTimer);
     state.attempt = 0;
@@ -452,26 +478,42 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
   /**
    * Answers the server's SyncStep1 with everything it is missing — unless that
-   * answer is at least as big as a frame the server has already refused.
+   * answer is bigger than the cap the server announced, or at least as big as
+   * a frame the server has already refused.
    *
-   * Without the check one oversized write ends the session in two rounds with
+   * Without the checks one oversized write ends the session in two rounds with
    * nothing to show for it: the 1009 drops the connection, the reconnect's
    * SyncStep1 draws the server's own SyncStep1, and answering it re-ships the
    * very bytes that were just refused — a second 1009, terminal, and no word
-   * about what was too big. The server never announces its cap and the wire
-   * carries one y-protocols message per frame (so a large answer cannot be
-   * split across frames the server would reassemble), which leaves refusing to
-   * write it, and SAYING SO, as the only honest move.
+   * about what was too big. The wire carries one y-protocols message per frame
+   * (so a large answer cannot be split across frames the server would
+   * reassemble), which leaves refusing to write it, and SAYING SO, as the only
+   * honest move.
    *
-   * The bound is deliberately porous — it is the largest frame we wrote on the
-   * refused connection, not the server's real cap, so a frame between the two
-   * still ships and still draws the second 1009 through the ordinary path. It
-   * is a loop-breaker, not a limit oracle.
+   * The ANNOUNCED cap (the server's limits frame) is consulted first: it is the
+   * server's own number, checked with the server's own comparison (strictly
+   * larger is refused). A server that announces nothing leaves the LEARNED
+   * bound, which is deliberately porous — it is the largest frame we wrote on
+   * the refused connection, not the server's real cap, so a frame between the
+   * two still ships and still draws the second 1009 through the ordinary path.
+   * It is a loop-breaker, not a limit oracle.
    * @param socket - the connection it arrived on
    * @param stateVector - what the server says it already has
    */
   const answerResync = (socket: WebSocketLike, stateVector: Uint8Array): void => {
     const bytes = encode({ type: 'syncStep2', update: yjs.encodeStateAsUpdate(stateVector) });
+    const announced = state.announcedMaxBytes;
+
+    if (announced !== null && bytes.byteLength > announced) {
+      terminate('oversized-update', {
+        reason:
+          `${docId} cannot be sent: answering the server's resync takes ${bytes.byteLength} bytes, ` +
+          `and the server takes at most ${announced} bytes per message`,
+      });
+
+      return;
+    }
+
     const refused = state.refusedFrameBytes;
 
     if (refused !== null && bytes.byteLength >= refused) {
@@ -517,6 +559,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         break;
       case 'control':
         // Handled before buffering; a repeat here would already have been validated.
+        break;
+      case 'limits':
+        state.announcedMaxBytes = frame.maxMessageBytes;
         break;
     }
   };
@@ -758,6 +803,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.phase = 'awaiting-control';
     state.buffered = [];
     state.largestSentBytes = 0;
+    // Per connection: the cap belongs to the server that announced it, and the
+    // next connection may reach a different one. It re-learns from the next
+    // limits frame; a server that sends none leaves the learned-bound fallback.
+    state.announcedMaxBytes = null;
 
     socket.onopen = (): void => {
       if (isStale(generation)) {

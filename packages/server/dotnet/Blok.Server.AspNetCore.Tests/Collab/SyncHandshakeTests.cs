@@ -26,6 +26,24 @@ public sealed class SyncHandshakeTests
     Assert.Equal("seeded", await SyncedTextAsync(client));
   }
 
+  // The real DI wiring announces BlokServerOptions.CollabMaxMessageBytes, so a
+  // deployed join is control frame, then limits frame, then the sync answer.
+  [Fact]
+  public async Task AnnouncesTheMessageCapRightAfterTheControlFrame()
+  {
+    var fakes = new SyncFakes(
+        new CollabRoomOptions { AnnouncedMaxMessageBytes = 1L << 20 });
+    await using var app = await SyncApp.StartAsync("ticket", fakes: fakes);
+    await using var client = await app.ConnectWithTicketAsync(fixture.Compatible);
+
+    // Raw receives pin the exact order; nothing else is in flight yet.
+    AssertFreshTag(Assert.IsType<BlokControlFrame>(await client.ReceiveAsync()).Tag);
+    Assert.Equal(
+        1L << 20,
+        Assert.IsType<BlokLimitsFrame>(await client.ReceiveAsync()).MaxMessageBytes);
+    Assert.Equal("seeded", await SyncedTextAsync(client));
+  }
+
   [Fact]
   public async Task AcceptsTheOfferAsOneCommaJoinedHeaderValue()
   {

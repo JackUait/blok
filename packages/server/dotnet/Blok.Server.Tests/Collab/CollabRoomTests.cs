@@ -262,6 +262,26 @@ public sealed class CollabRoomTests
         Tags.At(6),
         Assert.IsType<BlokControlFrame>(negotiated.Received[0]).Tag);
     Assert.DoesNotContain(stock.Received, frame => frame is BlokControlFrame);
+    // Default options announce no cap, so no limits frame follows.
+    Assert.DoesNotContain(negotiated.Received, frame => frame is BlokLimitsFrame);
+  }
+
+  [Fact]
+  public async Task AnnouncesTheMessageCapRightAfterTheControlFrame()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(
+        new CollabRoomOptions { AnnouncedMaxMessageBytes = 1L << 20 });
+    var negotiated = new FakeMember(acceptsControlFrames: true);
+    var stock = new FakeMember();
+    await Join(manager, negotiated);
+    await Join(manager, stock);
+
+    Assert.IsType<BlokControlFrame>(negotiated.Received[0]);
+    Assert.Equal(
+        1L << 20,
+        Assert.IsType<BlokLimitsFrame>(negotiated.Received[1]).MaxMessageBytes);
+    Assert.DoesNotContain(stock.Received, frame => frame is BlokLimitsFrame);
   }
 
   [Fact]

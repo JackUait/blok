@@ -30,6 +30,7 @@ interface FixtureFrame {
   reason?: string;
   awareness?: { clientId: number; clock: number; stateJson: string };
   control?: { epoch: number; format: number; lineage: string };
+  limits?: { maxMessageBytes: number };
 }
 
 interface Fixture {
@@ -74,7 +75,7 @@ const frameByName = (name: string): FixtureFrame => {
 describe('sync-wire codec — committed fixtures (cross-impl contract)', () => {
   it('the fixture carries every message type this codec speaks', () => {
     expect(fixture.frames.map((frame) => frame.name).sort()).toEqual(
-      ['awareness', 'blokControl', 'permissionDenied', 'queryAwareness', 'syncStep1', 'syncStep2', 'update'].sort(),
+      ['awareness', 'blokControl', 'blokLimits', 'permissionDenied', 'queryAwareness', 'syncStep1', 'syncStep2', 'update'].sort(),
     );
   });
 
@@ -170,6 +171,20 @@ describe('sync-wire codec — committed fixtures (cross-impl contract)', () => {
     expect(decoded.tag).toEqual(frame.control);
     expect(hex(encode(decoded))).toBe(frame.frameHex);
   });
+
+  it('decodes the blok limits frame to its message cap and re-encodes byte-identically', () => {
+    const frame = frameByName('blokLimits');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded.type).toBe('limits');
+
+    if (decoded.type !== 'limits') {
+      throw new Error('unreachable');
+    }
+
+    expect(decoded.maxMessageBytes).toBe(frame.limits?.maxMessageBytes);
+    expect(hex(encode(decoded))).toBe(frame.frameHex);
+  });
 });
 
 describe('sync-wire codec — encode contract', () => {
@@ -188,6 +203,19 @@ describe('sync-wire codec — encode contract', () => {
     expect(() => encode({ type: 'control', tag: { epoch: -1, format: 1, lineage: '0'.repeat(32) } })).toThrow();
     expect(() => encode({ type: 'control', tag: { epoch: 0, format: 0, lineage: '0'.repeat(32) } })).toThrow();
     expect(() => encode({ type: 'control', tag: { epoch: 0, format: 1, lineage: 'nothex' } })).toThrow();
+  });
+
+  it('round-trips a limits frame at the 1-byte boundary', () => {
+    const decoded = decode(encode({ type: 'limits', maxMessageBytes: 1 }));
+
+    expect(decoded).toEqual({ type: 'limits', maxMessageBytes: 1 });
+  });
+
+  it('refuses to encode a non-positive, fractional or unsafe limits value', () => {
+    expect(() => encode({ type: 'limits', maxMessageBytes: 0 })).toThrow();
+    expect(() => encode({ type: 'limits', maxMessageBytes: -1 })).toThrow();
+    expect(() => encode({ type: 'limits', maxMessageBytes: 1.5 })).toThrow();
+    expect(() => encode({ type: 'limits', maxMessageBytes: 2 ** 53 })).toThrow();
   });
 });
 
@@ -210,6 +238,18 @@ const bomControlFrame = (json: string): Uint8Array => {
   const out = new Uint8Array(payload.length + 2);
 
   out[0] = 100;
+  out[1] = payload.length;
+  out.set(payload, 2);
+
+  return out;
+};
+
+const limitsFrame = (json: string): Uint8Array => {
+  const payload = new TextEncoder().encode(json);
+  const out = new Uint8Array(payload.length + 2);
+
+  // [101][varuint len < 128][utf8 json]; every JSON below fits one length byte.
+  out[0] = 101;
   out[1] = payload.length;
   out.set(payload, 2);
 
@@ -243,6 +283,20 @@ describe('sync-wire codec — fuzz / hostile input never throws', () => {
     { name: 'a control payload that is a JSON string', input: controlFrame('"hello"') },
     { name: 'a control payload that is not JSON', input: controlFrame('not json') },
     { name: 'a truncated control length prefix', input: bytes('64ff') },
+    { name: 'a truncated limits length prefix', input: bytes('65ff') },
+    { name: 'a limits frame without a payload', input: bytes('65') },
+    { name: 'a non-UTF-8 limits payload', input: bytes('6502ffff') },
+    { name: 'a limits payload with an unknown key', input: limitsFrame('{"maxMessageBytes":1048576,"extra":1}') },
+    { name: 'a limits payload missing its key', input: limitsFrame('{}') },
+    { name: 'a limits payload with a string value', input: limitsFrame('{"maxMessageBytes":"big"}') },
+    { name: 'a limits payload with a negative value', input: limitsFrame('{"maxMessageBytes":-1}') },
+    { name: 'a limits payload with a zero value', input: limitsFrame('{"maxMessageBytes":0}') },
+    { name: 'a limits payload with a fractional value', input: limitsFrame('{"maxMessageBytes":1.5}') },
+    { name: 'a limits payload past the safe-integer range', input: limitsFrame('{"maxMessageBytes":9007199254740992}') },
+    { name: 'a limits payload with a duplicate key', input: limitsFrame('{"maxMessageBytes":1,"maxMessageBytes":2}') },
+    { name: 'a limits payload with a unicode-escaped (dup-evading) key', input: limitsFrame('{"maxMessageByte\\u0073":1,"maxMessageBytes":2}') },
+    { name: 'a limits payload that is a JSON array', input: limitsFrame('[1048576]') },
+    { name: 'a limits payload that is not JSON', input: limitsFrame('not json') },
   ];
 
   for (const { name, input } of malformedCases) {
@@ -296,7 +350,7 @@ describe('sync-wire codec — fuzz / hostile input never throws', () => {
   it('never throws and always returns a known discriminator on random bytes', () => {
     const known = new Set([
       'syncStep1', 'syncStep2', 'update', 'awareness',
-      'queryAwareness', 'permissionDenied', 'control', 'unknown', 'malformed',
+      'queryAwareness', 'permissionDenied', 'control', 'limits', 'unknown', 'malformed',
     ]);
     let seed = 0x12345678;
     const nextByte = (): number => {

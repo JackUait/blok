@@ -27,6 +27,13 @@ public sealed class SyncWireTests
         0x43,
         .. "{\"epoch\":0,\"format\":1,\"lineage\":\"0123456789abcdef0123456789abcdef\"}"u8,
       ]),
+    ["blokLimits"] = (
+      new BlokLimitsFrame(1048576),
+      [
+        0x65,
+        0x1b,
+        .. "{\"maxMessageBytes\":1048576}"u8,
+      ]),
   };
 
   public static TheoryData<string> LayoutNames
@@ -88,6 +95,24 @@ public sealed class SyncWireTests
 
     Assert.True(SyncWire.TryDecode(frame, out var message, out var error), error);
     Assert.Equal(tag, Assert.IsType<BlokControlFrame>(message).Tag);
+  }
+
+  [Fact]
+  public void RoundTripsALimitsFrameWithALargeValue()
+  {
+    var frame = SyncWire.Encode(new BlokLimitsFrame(long.MaxValue));
+
+    Assert.True(SyncWire.TryDecode(frame, out var message, out var error), error);
+    Assert.Equal(long.MaxValue, Assert.IsType<BlokLimitsFrame>(message).MaxMessageBytes);
+  }
+
+  [Theory]
+  [InlineData(0L)]
+  [InlineData(-1L)]
+  public void RefusesToEncodeANonPositiveLimit(long maxMessageBytes)
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new BlokLimitsFrame(maxMessageBytes)));
   }
 
   [Fact]
@@ -200,6 +225,19 @@ public sealed class SyncWireTests
     { "control with duplicate epoch", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":\"" + Lineage + "\",\"epoch\":8}") },
     { "control with duplicate lineage", ControlFrame("{\"epoch\":7,\"format\":1,\"lineage\":\"" + Lineage + "\",\"lineage\":\"" + Lineage + "\"}") },
     { "control with trailing json", ControlFrame(Control(7, 1, Lineage) + "1") },
+    { "limits without payload", [0x65] },
+    { "limits with a truncated payload", [0x65, 0xff] },
+    { "limits with malformed json", [0x65, 0x01, (byte)'{'] },
+    { "limits that is not an object", [0x65, 0x01, (byte)'7'] },
+    { "limits missing its key", LimitsFrame("{}") },
+    { "limits with unknown key", LimitsFrame("{\"maxMessageBytes\":1,\"x\":2}") },
+    { "limits with string value", LimitsFrame("{\"maxMessageBytes\":\"1\"}") },
+    { "limits with negative value", LimitsFrame("{\"maxMessageBytes\":-1}") },
+    { "limits with zero value", LimitsFrame("{\"maxMessageBytes\":0}") },
+    { "limits with fractional value", LimitsFrame("{\"maxMessageBytes\":1.5}") },
+    { "limits past a 64-bit long", LimitsFrame("{\"maxMessageBytes\":9223372036854775808}") },
+    { "limits with duplicate key", LimitsFrame("{\"maxMessageBytes\":1,\"maxMessageBytes\":2}") },
+    { "limits with trailing json", LimitsFrame("{\"maxMessageBytes\":1}1") },
   };
 
   [Theory]
@@ -242,6 +280,14 @@ public sealed class SyncWireTests
     var payload = Encoding.UTF8.GetBytes(json);
 
     return [(byte)SyncWire.MessageBlokControl, (byte)payload.Length, .. payload];
+  }
+
+  /// <summary>A limits frame carrying <paramref name="json"/> verbatim (payloads here stay under 128 bytes).</summary>
+  private static byte[] LimitsFrame(string json)
+  {
+    var payload = Encoding.UTF8.GetBytes(json);
+
+    return [(byte)SyncWire.MessageBlokLimits, (byte)payload.Length, .. payload];
   }
 
   private static void AssertSameMessage(SyncWireMessage expected, SyncWireMessage actual)

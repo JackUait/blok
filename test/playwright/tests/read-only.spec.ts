@@ -45,6 +45,44 @@ class UnsupportedInlineTool {
 }
 `;
 
+/**
+ * Supports read-only but has no setReadOnly, so registering it forces the
+ * whole editor onto the save/clear/render toggle path.
+ */
+const NO_IN_PLACE_BLOCK_TOOL_SOURCE = `
+class NoInPlaceBlockTool {
+  constructor({ data }) {
+    this.data = data ?? { text: '' };
+  }
+
+  static get toolbox() {
+    return {
+      title: 'NoInPlace',
+      icon: 'N',
+    };
+  }
+
+  static get isReadOnlySupported() {
+    return true;
+  }
+
+  render() {
+    const element = document.createElement('div');
+
+    element.contentEditable = 'true';
+    element.innerHTML = this.data?.text ?? '';
+
+    return element;
+  }
+
+  save(element) {
+    return {
+      text: element.innerHTML,
+    };
+  }
+}
+`;
+
 const UNSUPPORTED_BLOCK_TOOL_SOURCE = `
 class LegacyBlockTool {
   constructor({ data }) {
@@ -265,6 +303,38 @@ const placeCursorAtEnd = async (locator: Locator): Promise<void> => {
     selection?.removeAllRanges();
     selection?.addRange(range);
     element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+  });
+};
+
+const placeCaretAtOffset = async (locator: Locator, offset: number): Promise<void> => {
+  await locator.evaluate((element: HTMLElement, targetOffset: number) => {
+    const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const textNode = walker.nextNode();
+
+    if (!textNode) {
+      throw new Error('No text node found inside element');
+    }
+
+    const selection = element.ownerDocument.getSelection();
+    const range = element.ownerDocument.createRange();
+
+    range.setStart(textNode, targetOffset);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    element.ownerDocument.dispatchEvent(new Event('selectionchange'));
+  }, offset);
+};
+
+const readCaretState = async (page: Page): Promise<{ text: string | null; offset: number; collapsed: boolean }> => {
+  return page.evaluate(() => {
+    const selection = window.getSelection();
+
+    return {
+      text: selection?.anchorNode?.textContent ?? null,
+      offset: selection?.anchorOffset ?? -1,
+      collapsed: selection?.isCollapsed ?? false,
+    };
   });
 };
 
@@ -667,6 +737,65 @@ test.describe('read-only mode', () => {
     await placeCursorAtEnd(paragraph);
     await page.keyboard.type(' and more');
     await expect(paragraph).toContainText('Preserved content with edits and more');
+  });
+
+  test('keeps the caret position across a read-only round trip (in-place path)', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Caret survives here' } },
+        ],
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).locator('[contenteditable]');
+
+    await paragraph.click();
+    await placeCaretAtOffset(paragraph, 5);
+
+    await toggleReadOnly(page, true);
+    await waitForReadOnlyState(page, true);
+    await toggleReadOnly(page, false);
+    await waitForReadOnlyState(page, false);
+
+    await expect.poll(() => readCaretState(page)).toEqual({
+      text: 'Caret survives here',
+      offset: 5,
+      collapsed: true,
+    });
+  });
+
+  test('keeps the caret position across a read-only round trip (re-render path)', async ({ page }) => {
+    await createBlok(page, {
+      data: {
+        blocks: [
+          { type: 'paragraph', data: { text: 'Caret survives here' } },
+        ],
+      },
+      // Registering a tool without setReadOnly forces the save/clear/render
+      // path for the whole editor, even though the caret sits in a paragraph.
+      tools: {
+        noInPlace: {
+          classCode: NO_IN_PLACE_BLOCK_TOOL_SOURCE,
+        },
+      },
+    });
+
+    const paragraph = page.locator(PARAGRAPH_SELECTOR).locator('[contenteditable]');
+
+    await paragraph.click();
+    await placeCaretAtOffset(paragraph, 5);
+
+    await toggleReadOnly(page, true);
+    await waitForReadOnlyState(page, true);
+    await toggleReadOnly(page, false);
+    await waitForReadOnlyState(page, false);
+
+    await expect.poll(() => readCaretState(page)).toEqual({
+      text: 'Caret survives here',
+      offset: 5,
+      collapsed: true,
+    });
   });
 
   test('throws descriptive error when enabling read-only with unsupported tools', async ({ page }) => {

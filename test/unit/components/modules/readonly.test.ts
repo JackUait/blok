@@ -3,12 +3,14 @@ import type { MockInstance } from 'vitest';
 
 import { ReadOnly } from '../../../../src/components/modules/readonly';
 import { CriticalError } from '../../../../src/components/errors/critical';
+import type { CaretSnapshot } from '../../../../src/components/modules/yjs/types';
 import type { BlokConfig } from '../../../../types';
 
 interface CreateReadOnlyOptions {
   config?: BlokConfig;
   blockTools?: Array<[string, { isReadOnlySupported?: boolean; supportsInPlaceReadOnly?: boolean }]>;
   saverBlocks?: unknown[];
+  collaboration?: { isEditingBlocked: boolean };
 }
 
 type ReadOnlyMocks = {
@@ -22,6 +24,7 @@ type ReadOnlyMocks = {
   blockManager: {
     blocks: Array<{ setReadOnly: MockInstance<(state: boolean) => void> }>;
     clear: MockInstance<() => Promise<void>>;
+    getBlockById: MockInstance<(id: string) => { inputs: HTMLElement[] } | undefined>;
     toggleReadOnly: MockInstance<(state: boolean) => void>;
     withViewRebuild: MockInstance<(rebuild: () => Promise<void>) => Promise<void>>;
   };
@@ -35,6 +38,19 @@ type ReadOnlyMocks = {
   };
   inlineToolbar: {
     toggleReadOnly: MockInstance<(state: boolean) => void>;
+  };
+  blockSelection: {
+    toggleReadOnly: MockInstance<(state: boolean) => void>;
+  };
+  ui: {
+    nodes: { wrapper: HTMLDivElement };
+  };
+  yjsManager: {
+    captureCaretSnapshot: MockInstance<() => CaretSnapshot | null>;
+  };
+  caret: {
+    setToInput: MockInstance<(input: HTMLElement, position?: string, offset?: number) => void>;
+    positions: { START: string; END: string; DEFAULT: string };
   };
 };
 
@@ -69,6 +85,7 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
   const blockManager: ReadOnlyMocks['blockManager'] = {
     blocks: [],
     clear: vi.fn<() => Promise<void>>(async () => undefined),
+    getBlockById: vi.fn<(id: string) => { inputs: HTMLElement[] } | undefined>(() => undefined),
     toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
     // rebuilds the view without touching the document — runs its callback as-is
     withViewRebuild: vi.fn<(rebuild: () => Promise<void>) => Promise<void>>(async (rebuild) => {
@@ -90,6 +107,23 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
   };
 
+  const blockSelection: ReadOnlyMocks['blockSelection'] = {
+    toggleReadOnly: vi.fn<(state: boolean) => void>((_state) => undefined),
+  };
+
+  const ui: ReadOnlyMocks['ui'] = {
+    nodes: { wrapper: document.createElement('div') },
+  };
+
+  const yjsManager: ReadOnlyMocks['yjsManager'] = {
+    captureCaretSnapshot: vi.fn<() => CaretSnapshot | null>(() => null),
+  };
+
+  const caret: ReadOnlyMocks['caret'] = {
+    setToInput: vi.fn<(input: HTMLElement, position?: string, offset?: number) => void>(() => undefined),
+    positions: { START: 'start', END: 'end', DEFAULT: 'default' },
+  };
+
   const modules = {
     ModificationsObserver: modificationsObserver,
     Saver: saver,
@@ -97,6 +131,11 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
     Renderer: renderer,
     Toolbar: toolbar,
     InlineToolbar: inlineToolbar,
+    BlockSelection: blockSelection,
+    UI: ui,
+    YjsManager: yjsManager,
+    Caret: caret,
+    Collaboration: options?.collaboration,
     Tools: {
       blockTools,
     },
@@ -113,6 +152,10 @@ const createReadOnly = (options?: CreateReadOnlyOptions): CreateReadOnlyResult =
       renderer,
       toolbar,
       inlineToolbar,
+      blockSelection,
+      ui,
+      yjsManager,
+      caret,
     },
   };
 };
@@ -513,6 +556,151 @@ describe('ReadOnly module', () => {
 
         expect(readOnly.isControlsHidden).toBe(true);
       });
+    });
+  });
+
+  describe('caret survives read-only toggle', () => {
+    type CaretDom = {
+      input: HTMLDivElement;
+      selectionState: { anchorNode: Node | null };
+    };
+
+    /**
+     * Live selection inside the wrapper + a block the snapshot resolves to.
+     * BlockSelection.toggleReadOnly nulls the anchor, mimicking its real
+     * removeAllRanges — a capture running after the cascade finds nothing.
+     */
+    const setupCaretDom = (mocks: ReadOnlyMocks): CaretDom => {
+      const { wrapper } = mocks.ui.nodes;
+      const input = document.createElement('div');
+      const textNode = document.createTextNode('caret here');
+
+      input.appendChild(textNode);
+      wrapper.appendChild(input);
+      document.body.appendChild(wrapper);
+
+      const selectionState: CaretDom['selectionState'] = { anchorNode: textNode };
+
+      vi.spyOn(window, 'getSelection').mockReturnValue({
+        get anchorNode(): Node | null {
+          return selectionState.anchorNode;
+        },
+        rangeCount: 0,
+      } as unknown as Selection);
+
+      mocks.blockSelection.toggleReadOnly.mockImplementation(() => {
+        selectionState.anchorNode = null;
+      });
+
+      mocks.yjsManager.captureCaretSnapshot.mockReturnValue({ blockId: 'block-1', inputIndex: 0, offset: 4 });
+      mocks.blockManager.getBlockById.mockImplementation((id: string) => {
+        return id === 'block-1' ? { inputs: [input] } : undefined;
+      });
+
+      return { input, selectionState };
+    };
+
+    afterEach(() => {
+      document.body.replaceChildren();
+    });
+
+    it('restores the caret after a read-only round trip on the re-render path', async () => {
+      const { readOnly, mocks } = createReadOnly();
+      const { input } = setupCaretDom(mocks);
+
+      await readOnly.toggle(true);
+      await readOnly.toggle(false);
+
+      expect(mocks.caret.setToInput).toHaveBeenCalledWith(input, 'default', 4);
+    });
+
+    it('restores the caret on the in-place toggle path', async () => {
+      const { readOnly, mocks } = createReadOnly({
+        config: { readOnly: false },
+        blockTools: [
+          ['paragraph', { isReadOnlySupported: true, supportsInPlaceReadOnly: true }],
+        ],
+      });
+
+      await readOnly.prepare();
+
+      const { input } = setupCaretDom(mocks);
+
+      await readOnly.toggle(true);
+      await readOnly.toggle(false);
+
+      expect(mocks.saver.save).not.toHaveBeenCalled();
+      expect(mocks.caret.setToInput).toHaveBeenCalledWith(input, 'default', 4);
+    });
+
+    it('does not restore while the editor stays read-only', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      setupCaretDom(mocks);
+
+      await readOnly.toggle(true);
+      await readOnly.toggle(true);
+
+      expect(mocks.caret.setToInput).not.toHaveBeenCalled();
+    });
+
+    it('does not capture when the selection anchor is outside the wrapper', async () => {
+      const { readOnly, mocks } = createReadOnly();
+      const { selectionState } = setupCaretDom(mocks);
+      const outside = document.createElement('div');
+
+      outside.textContent = 'outside';
+      document.body.appendChild(outside);
+      selectionState.anchorNode = outside.firstChild;
+
+      await readOnly.toggle(true);
+
+      expect(mocks.yjsManager.captureCaretSnapshot).not.toHaveBeenCalled();
+
+      await readOnly.toggle(false);
+
+      expect(mocks.caret.setToInput).not.toHaveBeenCalled();
+    });
+
+    it('does not steal focus back when the user focused outside during read-only', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      setupCaretDom(mocks);
+
+      await readOnly.toggle(true);
+
+      const button = document.createElement('button');
+
+      document.body.appendChild(button);
+      button.focus();
+
+      await readOnly.toggle(false);
+
+      expect(mocks.caret.setToInput).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reapplyCollaborationArbitration', () => {
+    it('skips the module cascade when the derived state is unchanged', async () => {
+      const { readOnly, mocks } = createReadOnly();
+
+      const result = await readOnly.reapplyCollaborationArbitration();
+
+      expect(result).toBe(false);
+      expect(mocks.blockSelection.toggleReadOnly).not.toHaveBeenCalled();
+      expect(mocks.toolbar.toggleReadOnly).not.toHaveBeenCalled();
+    });
+
+    it('still applies when the derived state changed', async () => {
+      const { readOnly, mocks } = createReadOnly({
+        collaboration: { isEditingBlocked: true },
+      });
+
+      const result = await readOnly.reapplyCollaborationArbitration();
+
+      expect(result).toBe(true);
+      expect(readOnly.isEnabled).toBe(true);
+      expect(mocks.blockSelection.toggleReadOnly).toHaveBeenCalledWith(true);
     });
   });
 });

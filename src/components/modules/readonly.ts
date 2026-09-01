@@ -3,6 +3,8 @@ import { CriticalError } from '../errors/critical';
 import { log } from '../utils';
 import { normalizeReadOnlyConfig } from '../utils/readonly-config';
 
+import type { CaretSnapshot } from './yjs/types';
+
 /**
  * @module ReadOnly
  *
@@ -37,6 +39,11 @@ export class ReadOnly extends Module {
    * lifts, the editor returns to the host's answer rather than to "editable".
    */
   private hostRequestedReadOnly = false;
+
+  /**
+   * Where the caret stood when read-only turned on; restored on the way out.
+   */
+  private caretBeforeReadOnly: CaretSnapshot | null = null;
 
   /**
    * Collaboration's half of the arbitration: true while editing is impossible
@@ -140,8 +147,16 @@ export class ReadOnly extends Module {
    * host's own wish is untouched, so `set(true)` before a sync still wins after
    * it. Called by the Collaboration module; nothing else should.
    */
-  public reapplyCollaborationArbitration(): Promise<boolean> {
-    return this.applyReadOnly(this.hostRequestedReadOnly || this.isEditingBlockedByCollaboration, false);
+  public async reapplyCollaborationArbitration(): Promise<boolean> {
+    const derived = this.hostRequestedReadOnly || this.isEditingBlockedByCollaboration;
+
+    // A status blip with no state change (an offline flicker while editable)
+    // must not run the cascade — BlockSelection would kill a live caret.
+    if (derived === this.readOnlyEnabled) {
+      return this.readOnlyEnabled;
+    }
+
+    return this.applyReadOnly(derived, false);
   }
 
   /**
@@ -155,6 +170,12 @@ export class ReadOnly extends Module {
     }
 
     const oldState = this.readOnlyEnabled;
+
+    // Before the cascade: BlockSelection.toggleReadOnly removes all ranges,
+    // destroying the selection this reads.
+    if (state && !oldState) {
+      this.captureCaretBeforeReadOnly();
+    }
 
     this.readOnlyEnabled = state;
 
@@ -204,6 +225,10 @@ export class ReadOnly extends Module {
       }
 
       this.Blok.ModificationsObserver.enable();
+
+      if (!state) {
+        this.restoreCaretAfterReadOnly();
+      }
 
       return this.readOnlyEnabled;
     }
@@ -257,9 +282,69 @@ export class ReadOnly extends Module {
       window.scrollTo(0, savedScrollY);
     }
 
+    if (!state) {
+      this.restoreCaretAfterReadOnly();
+    }
+
     this.Blok.ModificationsObserver.enable();
 
     return this.readOnlyEnabled;
+  }
+
+  /**
+   * Remembers the caret so leaving read-only can put it back. Only a caret
+   * that lives inside this editor's wrapper is worth keeping — a selection
+   * elsewhere on the page is not ours to restore.
+   */
+  private captureCaretBeforeReadOnly(): void {
+    this.caretBeforeReadOnly = null;
+
+    // Optional chains: boot applies read-only before UI builds its nodes.
+    const wrapper = this.Blok.UI?.nodes.wrapper;
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+
+    if (wrapper === undefined || anchorNode === null || !wrapper.contains(anchorNode)) {
+      return;
+    }
+
+    this.caretBeforeReadOnly = this.Blok.YjsManager?.captureCaretSnapshot() ?? null;
+  }
+
+  /**
+   * Puts the caret back where capture left it. Block ids survive both toggle
+   * paths (the renderer reuses incoming ids), so the snapshot resolves even
+   * after the save/clear/render cycle.
+   */
+  private restoreCaretAfterReadOnly(): void {
+    const snapshot = this.caretBeforeReadOnly;
+
+    this.caretBeforeReadOnly = null;
+
+    if (snapshot === null) {
+      return;
+    }
+
+    // The user focused something else while read-only — don't steal it back.
+    const wrapper = this.Blok.UI?.nodes.wrapper;
+    const activeElement = document.activeElement;
+    const focusMovedOutside = activeElement !== null
+      && activeElement !== document.body
+      && wrapper !== undefined
+      && !wrapper.contains(activeElement);
+
+    if (focusMovedOutside) {
+      return;
+    }
+
+    const input: HTMLElement | undefined =
+      this.Blok.BlockManager.getBlockById(snapshot.blockId)?.inputs[snapshot.inputIndex];
+
+    if (input === undefined || !input.isConnected) {
+      return;
+    }
+
+    // DEFAULT + offset clamps an overlong offset instead of throwing.
+    this.Blok.Caret.setToInput(input, this.Blok.Caret.positions.DEFAULT, snapshot.offset);
   }
 
   /**

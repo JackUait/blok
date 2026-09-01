@@ -203,3 +203,32 @@ a live caret with no state change and no gesture. Fixed by returning early in
 `reapplyCollaborationArbitration` when the derived state is unchanged, scoped
 there because host-initiated same-state `set()` relies on the cascade re-run
 to re-stamp `hideControls`.
+
+### 2026-09-01 — Wave B closed
+
+The offline cache is on main (`5f299527`, `079b61d6`, `8fe43042`, `760700a8`,
+`5e170da9`). `collaboration.offline` is opt-in; with it, a reload picks up work
+typed while disconnected and ships it on the next connection.
+
+Two bugs the tests found, both real rather than test-only:
+
+**The seed race.** Rows can only be stamped once the meta names a lineage, so
+everything the document held before the first `connected` — the whole first
+sync — needed one snapshot write. Chaining `saveMeta().then(append)` meant an
+editor torn down in between lost exactly the snapshot that makes the next boot
+adoptable. Fixed by making it ONE call the cache orders internally, with a
+serialized write queue that captures the database handle when the caller asks
+rather than when the turn comes, and a `close` that waits for scheduled writes
+instead of abandoning them.
+
+**Realm-crossing bytes.** `instanceof Uint8Array` is false for a genuine byte
+array a structured-clone deserializer built in another realm — which is what
+IndexedDB hands back under fake-indexeddb, and a hazard worth not relying on
+anywhere. Storage-deserialized bytes are normalised, never instanceof-checked.
+
+**A process failure worth recording.** An earlier `git add -u` swept a dead
+agent's unfinished C# stubs onto main: three NotImplementedException bodies and
+a signature naming a type whose file was never committed, so Blok.Server did
+not compile from a clean checkout. Reverted whole in `78f5d9b8`. LAW: stage by
+path when the working tree holds anyone else's work — `git add -u` is not safe
+in a tree shared with subagents.

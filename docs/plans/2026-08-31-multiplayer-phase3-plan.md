@@ -44,9 +44,15 @@ client always offers it and always receives control frames.
    disconnect is ASYMMETRIC: doc has server lineage → stays EDITABLE while offline, reconnect ships diff.
    Reload loses unsent edits (Phase 4 y-indexeddb). Empty doc after sync + write → one default block,
    DETERMINISTIC id from doc id (first-occurrence-wins convergence, like restoreDefaultBlockIfDocEmptied).
-8. Close codes: 4400/4403 terminal; 4401 refresh ticket + retry once then terminal; 4409 lineage reset +
-   reconnect; 4503 offline+backoff; 1001 reconnect short; 1008 back off harder; 1009 two consecutive →
-   terminal oversized, drop read-only. Exp backoff + jitter ~1s→30s, reset on sync.
+8. Close codes (AS SHIPPED, updated at close-out — the original matrix predated the escalation rules):
+   4400/4403 terminal immediately; 4401 → forced ticket refresh + reconnect, terminal on the SECOND
+   4401 since the last completed sync; 4409 lineage reset + reconnect; 1009 records the largest frame
+   written as the refused size (repeat resync answers at that size are refused BEFORE being written),
+   terminal on the second 1009 since the last sync — and only a connection we actually wrote to counts;
+   1001 first attempt reconnects fast; 1008 costs two backoff steps; everything else (4503 included)
+   offline+backoff. Handshake silence is terminal only after 3 silent handshakes since the last sync,
+   and the first sync has its own deadline (reconnect + degrade, not terminal). Exp backoff + jitter
+   ~1s→30s, reset on sync.
 9-11. Client outbound throttled (write buffer coalesces updates; awareness ~100ms incl. queryAwareness
    reply; SyncStep1 on reconnect only). Presence local state {user:{name,color}, blockId} from
    currentBlock; avatar stack + colored outline on the HOLDER (child-decoration mold, data-blok-presence +
@@ -214,5 +220,5 @@ real-timer load-flake, confirmed failing twice at HEAD.
 - The server should announce `CollabMaxMessageBytes` in the control frame, so
   the client can refuse an oversized frame before producing it rather than
   learning from a 1009.
-- Decision 8's close-code matrix in this plan is stale: it predates the
-  handshake-timeout and oversized-update escalation rules that actually shipped.
+- Decision 8's close-code matrix was stale at close-out; it has since been
+  rewritten in place to describe what shipped (Phase 4 opening work).

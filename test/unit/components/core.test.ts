@@ -533,7 +533,7 @@ describe('Core', () => {
 
       expect(() => {
         core.configuration = withHolder({
-          collaboration: { doc: 'my-doc', offline } as BlokConfig['collaboration'],
+          collaboration: { doc: 'my-doc', offline },
           server: 'https://blok.example.com',
         });
       }).toThrow('collaboration.offline must be a boolean');

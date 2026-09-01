@@ -6,6 +6,13 @@ Companion research (same date, full citations and file:line evidence):
 `2026-08-31-multiplayer-research-landscape.md` (sync-server landscape, .NET options),
 `2026-08-31-multiplayer-research-operations.md` (persistence, presence, auth, scaling).
 
+> **2026-09-01 amendment:**
+> [`2026-09-01-acknowledged-operation-persistence-design.md`](2026-09-01-acknowledged-operation-persistence-design.md)
+> reopens operation history as collaboration durability data. It supersedes this
+> document's “version history dropped” and continuous-export decisions only;
+> consumer records, permissions, listing, sharing, and history UI remain outside
+> Blok.
+
 ## Goal
 
 Two people open the same document and see each other's edits live, with presence

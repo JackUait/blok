@@ -3,8 +3,6 @@ import { resolveCaretRange, type CaretPosition } from './caret-position';
 /** What the caret layer needs to know about a peer, after sanitization. */
 export interface CaretPeer {
   clientId: number;
-  /** Already trimmed and length-capped. The empty string means anonymous. */
-  name: string;
   /** Already through the hex gate. */
   color: string;
   /** Already through `readCaret`, or null when they published none. */
@@ -16,8 +14,8 @@ export interface CaretLayerOptions {
   resolveHolder: (blockId: string) => HTMLElement | null;
   /** That block's editable elements, in the order its own `inputs` reports. */
   resolveInputs: (blockId: string) => HTMLElement[];
-  /** How long a name flag stays up after the caret last moved (default 2500ms). */
-  labelLingerMs?: number;
+  /** How long a caret counts as moving before it rests (default 2500ms). */
+  restAfterMs?: number;
 }
 
 export interface CaretLayer {
@@ -37,26 +35,16 @@ export interface CaretLayer {
 
 /** The caret line. Styled by src/styles/presence.css. */
 const CARET_ATTR = 'data-blok-presence-caret';
-const NAME_ATTR = 'data-blok-presence-caret-name';
-/** Set once the peer stops moving: the stylesheet fades the flag out and starts
-    the caret's resting pulse. */
+/** Set once the peer stops moving; the stylesheet starts the resting pulse. */
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
 const COLOR_PROPERTY = '--blok-presence-color';
 
-/**
- * How long a name flag stays up after the caret last moved.
- *
- * Notion's behaviour, and the reason to copy it: a document with four people in
- * it becomes a wall of name tags if the flags never go away, so the name
- * answers "who just moved there" and the coloured line carries the position
- * from then on.
- */
-const DEFAULT_LABEL_LINGER_MS = 2500;
+/** How long after its last move a caret counts as still moving. */
+const DEFAULT_REST_AFTER_MS = 2500;
 
 /** What one pass drew for one peer, so the next pass can undo it exactly. */
 interface Drawn {
   element: HTMLElement;
-  label: HTMLElement;
   holder: HTMLElement;
   /** The position this caret was last drawn at, as its comparison key. */
   key: string;
@@ -113,10 +101,13 @@ const measure = (input: HTMLElement, offset: number): Measurement | null => {
 };
 
 /**
- * Draws remote carets: a coloured line at each peer's position, with their name
- * in a flag above it that fades once they stop moving. This is the whole of
- * remote presence inside the text — there is no block outline, because Notion
- * has none and a highlighted block says far less than a caret does.
+ * Draws remote carets: a coloured line at each peer's position, pulsing while
+ * they rest so it reads as a person rather than a rendering artefact.
+ *
+ * It carries NO name. Identity lives on the face parked in the gutter beside
+ * the block (`presence-avatars.ts`), which is how Notion splits the job: the
+ * line says where in the sentence somebody is, the face says who. Labelling
+ * both would name one person twice.
  *
  * Every caret is appended to a block's HOLDER, which the child-holder
  * decoration law blesses and which is already `position: relative`. Writing at
@@ -126,7 +117,7 @@ const measure = (input: HTMLElement, offset: number): Measurement | null => {
  */
 export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
   const { resolveHolder, resolveInputs } = options;
-  const lingerMs = options.labelLingerMs ?? DEFAULT_LABEL_LINGER_MS;
+  const lingerMs = options.restAfterMs ?? DEFAULT_REST_AFTER_MS;
 
   /** The ledger, keyed by client id — two peers can share one block. */
   const drawn = new Map<number, Drawn>();
@@ -142,10 +133,8 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
 
   const create = (holder: HTMLElement): Drawn => {
     const element = document.createElement('div');
-    const label = document.createElement('span');
 
     element.setAttribute(CARET_ATTR, '');
-    label.setAttribute(NAME_ATTR, '');
 
     // Inert on purpose: out of caret traversal, out of a copied selection, and
     // out of the accessibility tree — a screen reader announcing every remote
@@ -153,12 +142,10 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
     element.setAttribute('contenteditable', 'false');
     element.setAttribute('aria-hidden', 'true');
 
-    element.appendChild(label);
     holder.appendChild(element);
 
     return {
       element,
-      label,
       holder,
       key: '',
       idleTimer: null,
@@ -166,9 +153,9 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
   };
 
   /**
-   * Show the name flag and start its fade over again. Called only when the
+   * Mark the caret as moving and restart its rest timer. Called only when the
    * caret actually MOVED: a repaint caused by somebody else joining must not
-   * bring every idle name flag back.
+   * wake every resting caret in the document.
    * @param element - the caret being kept awake
    * @param previous - its running idle timer, if it has one
    */
@@ -250,10 +237,6 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       entry.element.style.left = `${spot.left}px`;
       entry.element.style.top = `${spot.top}px`;
       entry.element.style.height = `${spot.height}px`;
-      entry.label.textContent = peer.name;
-      // An anonymous peer keeps the coloured line; an empty flag on their
-      // caret would just look like a rendering fault.
-      entry.label.hidden = peer.name === '';
       entry.element.style.setProperty(COLOR_PROPERTY, peer.color);
 
       const key = positionKey(peer);

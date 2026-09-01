@@ -1,0 +1,189 @@
+/** What the avatar layer needs to know about a peer, after sanitization. */
+export interface AvatarPeer {
+  clientId: number;
+  /** Already trimmed and length-capped. The empty string means anonymous. */
+  name: string;
+  /** Already through the hex gate. */
+  color: string;
+  /** The block they are working in, or null when they named none. */
+  blockId: string | null;
+}
+
+export interface AvatarLayerOptions {
+  /** The holder of a block, or null when the id names nothing here. */
+  resolveHolder: (blockId: string) => HTMLElement | null;
+  /** How many faces one block shows before it starts counting (default 3). */
+  maxFaces?: number;
+}
+
+export interface AvatarLayer {
+  /**
+   * Park these peers' faces beside their blocks and take everyone else's down.
+   * @param peers - sanitized peers, this client's own already filtered out
+   */
+  render(peers: AvatarPeer[]): void;
+  /** Undo everything this layer wrote. */
+  clear(): void;
+}
+
+/** One block's gutter strip. Styled by src/styles/presence.css. */
+const GUTTER_ATTR = 'data-blok-presence-gutter';
+const FACE_ATTR = 'data-blok-presence-face';
+const OVERFLOW_ATTR = 'data-blok-presence-face-overflow';
+const COLOR_PROPERTY = '--blok-presence-color';
+
+/**
+ * Faces one block shows before it starts counting.
+ *
+ * Smaller than the editor-wide avatar stack's four: this strip lives in the
+ * gutter beside a single block, and a column of faces taller than the block it
+ * belongs to stops pointing at anything.
+ */
+const DEFAULT_MAX_FACES = 3;
+
+/** First letter of each of the first two words — a monogram, not a name. */
+const initialsOf = (name: string): string =>
+  name
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0] ?? '')
+    .join('');
+
+/**
+ * Parks a peer's face in the gutter beside the block they are working in, and
+ * moves it as they move — the Notion shape.
+ *
+ * This is where identity lives, which is why the caret carries none: a coloured
+ * line says where in the sentence somebody is, and the face beside the block
+ * says who. Putting a name on both would label one person twice.
+ *
+ * Everything is written on the block HOLDER, which the child-holder decoration
+ * law blesses and which is already `position: relative`, so the strip can hang
+ * in the gutter without the layer touching layout. Nothing is written at or
+ * below a tool root.
+ * @param options - how to find a block's holder, and how many faces it shows
+ */
+export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
+  const { resolveHolder } = options;
+  const maxFaces = options.maxFaces ?? DEFAULT_MAX_FACES;
+
+  /** The ledger, keyed by block id — a gutter belongs to a block, not a peer. */
+  const strips = new Map<string, HTMLElement>();
+
+  const buildFace = (peer: AvatarPeer): HTMLElement => {
+    const face = document.createElement('span');
+
+    face.setAttribute(FACE_ATTR, '');
+    face.style.setProperty(COLOR_PROPERTY, peer.color);
+
+    // A peer who published no name is drawn as their colour alone: no monogram,
+    // and no tooltip claiming an empty name.
+    if (peer.name !== '') {
+      // An attribute value is never parsed as markup, so a hostile name is as
+      // safe here as it is in textContent.
+      face.setAttribute('title', peer.name);
+      face.textContent = initialsOf(peer.name);
+    }
+
+    return face;
+  };
+
+  const buildOverflow = (hidden: number): HTMLElement => {
+    const overflow = document.createElement('span');
+
+    // Deliberately NOT a face: it is a count, and anything asking "how many
+    // people are on this block" must not get this one back.
+    overflow.setAttribute(OVERFLOW_ATTR, '');
+    overflow.textContent = `+${hidden}`;
+
+    return overflow;
+  };
+
+  /**
+   * The SAME strip is reused while the block still has one on the same holder —
+   * the leftover sweep compares by identity, so handing back a fresh element
+   * for an unchanged block would tear down the strip this pass just filled.
+   * @param blockId - the block being decorated
+   * @param holder - its holder
+   */
+  const stripFor = (blockId: string, holder: HTMLElement): HTMLElement => {
+    const existing = strips.get(blockId);
+
+    if (existing !== undefined && existing.parentElement === holder) {
+      return existing;
+    }
+
+    const strip = document.createElement('div');
+
+    strip.setAttribute(GUTTER_ATTR, '');
+    // Inert on purpose: out of caret traversal, out of a copied selection, and
+    // out of the accessibility tree — the editor-wide stack already names who
+    // is in the document.
+    strip.setAttribute('contenteditable', 'false');
+    strip.setAttribute('aria-hidden', 'true');
+    holder.appendChild(strip);
+
+    return strip;
+  };
+
+  return {
+    render(peers: AvatarPeer[]): void {
+      /** Peers grouped by the block they are in, in the order they arrived. */
+      const byBlock = new Map<string, AvatarPeer[]>();
+
+      peers.forEach((peer) => {
+        const blockId = peer.blockId;
+
+        if (blockId === null || resolveHolder(blockId) === null) {
+          return;
+        }
+
+        const group = byBlock.get(blockId);
+
+        if (group === undefined) {
+          byBlock.set(blockId, [peer]);
+        } else {
+          group.push(peer);
+        }
+      });
+
+      const next = new Map<string, HTMLElement>();
+
+      byBlock.forEach((group, blockId) => {
+        const holder = resolveHolder(blockId);
+
+        if (holder === null) {
+          return;
+        }
+
+        const strip = stripFor(blockId, holder);
+        const shown = group.slice(0, maxFaces).map(buildFace);
+
+        if (group.length > maxFaces) {
+          shown.push(buildOverflow(group.length - maxFaces));
+        }
+
+        // Replaced wholesale rather than diffed: a strip holds at most a
+        // handful of spans, and the identity that must survive a pass is the
+        // STRIP's (so the sweep below can tell it apart), not each face's.
+        strip.replaceChildren(...shown);
+
+        next.set(blockId, strip);
+      });
+
+      strips.forEach((strip, blockId) => {
+        if (next.get(blockId) !== strip) {
+          strip.remove();
+        }
+      });
+
+      strips.clear();
+      next.forEach((strip, blockId) => strips.set(blockId, strip));
+    },
+
+    clear(): void {
+      strips.forEach((strip) => strip.remove());
+      strips.clear();
+    },
+  };
+};

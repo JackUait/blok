@@ -513,10 +513,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and the borders bought nothing). Net a little larger than the outline it
     // replaced (~1.6KB). The pulse then moved to the RESTING state (idle is when
     // a peer needs announcing; while they type the text itself is the signal),
-    // which is a comment rather than a rule bigger. Bumps the multiplier
-    // to 1.4567.
+    // which is a comment rather than a rule bigger. The name flag was then
+    // REPLACED by the Notion gutter face: presence.css lost the flag rules and
+    // gained a per-block avatar strip that hangs in the editor's own control
+    // gutter (hidden on block hover so the +/⠿ controls keep that space), plus
+    // face/ring/gap tokens. Bumps the multiplier to 1.4608.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4567);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4608);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

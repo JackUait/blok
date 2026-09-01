@@ -28,6 +28,13 @@
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
+  --blok-presence-face-size: 22px;
+  /* Ring around a face, and the same ring on the editor-wide stack. */
+  --blok-presence-ring: 2px;
+  --blok-presence-face-gap: 2px;
+  /* One line of body text, so a face parks against the block's first line
+     rather than floating at the top of a tall block. */
+  --blok-presence-face-line: 1.5rem;
 }
 
 /* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
@@ -48,30 +55,6 @@
   background: var(--blok-presence-color);
   pointer-events: none;
   user-select: none;
-}
-
-/* Parked on the caret's own top-left corner, with the bottom-left corner square
-   so the flag reads as growing out of the line rather than floating over it. */
-[data-blok-presence-caret-name] {
-  position: absolute;
-  top: -1.4em;
-  left: 0;
-  padding: 0 var(--blok-presence-gap);
-  border-radius: var(--blok-presence-radius) var(--blok-presence-radius) var(--blok-presence-radius) 0;
-  background: var(--blok-presence-color);
-  color: var(--blok-text-on-dark);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-  white-space: nowrap;
-  opacity: 1;
-  transition: opacity var(--blok-presence-fade) ease-out;
-}
-
-/* The peer stopped moving. The name goes, the line stays — otherwise a document
-   with four people in it is a wall of name tags. */
-[data-blok-presence-caret-idle] [data-blok-presence-caret-name] {
-  opacity: 0;
 }
 
 /* The resting state pulses, and that is the whole point.
@@ -106,6 +89,66 @@
   }
 }
 
+/* The face beside the block, the way Notion parks it in the page margin.
+
+   Sits in the editor's own control gutter (--blok-editor-gutter-start, the
+   space the floating +/⠿ buttons live in), so it never overlaps the text and
+   never widens the content column. Measured from the holder's inline-START
+   edge, so it follows the gutter token instead of restating its width — and
+   LOGICAL, not `right`, because that gutter mirrors under RTL and a physical
+   side would strand the face over the text. */
+[data-blok-presence-gutter] {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 100%;
+  z-index: 1;
+  display: flex;
+  gap: var(--blok-presence-face-gap);
+  align-items: center;
+  height: var(--blok-presence-face-line);
+  margin-inline-end: var(--blok-presence-gap);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Hidden while the block is hovered: the +/⠿ controls own this strip of gutter,
+   and two things fighting for it reads as a rendering fault. The peer is still
+   in the editor-wide stack, and their caret never moves. */
+[data-blok-element]:hover [data-blok-presence-gutter] {
+  opacity: 0;
+}
+
+/* The same face the editor-wide stack draws, one size down. Filled rather than
+   outlined because that IS Blok's avatar — there is no photo to ring, so the
+   colour has to carry the identity, and the two places one person appears must
+   not look like two different people. */
+[data-blok-presence-face],
+[data-blok-presence-face-overflow] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-presence-face-size);
+  height: var(--blok-presence-face-size);
+  box-sizing: border-box;
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
+  border-radius: 50%;
+  background: var(--blok-presence-color);
+  color: var(--blok-text-on-dark);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* A count, not a person: no ring, so it never reads as another face. */
+[data-blok-presence-face-overflow] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font-size: 10px;
+}
+
 [data-blok-presence-stack] {
   position: absolute;
   top: 8px;
@@ -127,7 +170,7 @@
   width: 24px;
   height: 24px;
   margin-left: var(--blok-presence-overlap);
-  border: 2px solid var(--blok-bg-primary);
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
   border-radius: 50%;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);

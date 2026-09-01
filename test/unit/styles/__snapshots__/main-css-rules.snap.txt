@@ -8040,6 +8040,10 @@
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
+  --blok-presence-face-size: 22px;
+  --blok-presence-ring: 2px;
+  --blok-presence-face-gap: 2px;
+  --blok-presence-face-line: 1.5rem;
 }
 
 [data-blok-presence-caret] {
@@ -8053,26 +8057,6 @@
   user-select: none;
 }
 
-[data-blok-presence-caret-name] {
-  position: absolute;
-  top: -1.4em;
-  left: 0;
-  padding: 0 var(--blok-presence-gap);
-  border-radius: var(--blok-presence-radius) var(--blok-presence-radius) var(--blok-presence-radius) 0;
-  background: var(--blok-presence-color);
-  color: var(--blok-text-on-dark);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
-  white-space: nowrap;
-  opacity: 1;
-  transition: opacity var(--blok-presence-fade) ease-out;
-}
-
-[data-blok-presence-caret-idle] [data-blok-presence-caret-name] {
-  opacity: 0;
-}
-
 [data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
 }
@@ -8083,6 +8067,49 @@
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-idle] {
   animation: none;
+}
+
+[data-blok-presence-gutter] {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 100%;
+  z-index: 1;
+  display: flex;
+  gap: var(--blok-presence-face-gap);
+  align-items: center;
+  height: var(--blok-presence-face-line);
+  margin-inline-end: var(--blok-presence-gap);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-blok-element]:hover [data-blok-presence-gutter] {
+  opacity: 0;
+}
+
+[data-blok-presence-face], [data-blok-presence-face-overflow] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-presence-face-size);
+  height: var(--blok-presence-face-size);
+  box-sizing: border-box;
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
+  border-radius: 50%;
+  background: var(--blok-presence-color);
+  color: var(--blok-text-on-dark);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+[data-blok-presence-face-overflow] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font-size: 10px;
 }
 
 [data-blok-presence-stack] {
@@ -8105,7 +8132,7 @@
   width: 24px;
   height: 24px;
   margin-left: var(--blok-presence-overlap);
-  border: 2px solid var(--blok-bg-primary);
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
   border-radius: 50%;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);

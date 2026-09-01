@@ -1,14 +1,15 @@
 /**
- * Remote carets — the Notion shape: a thin coloured line where the peer's
- * caret sits, with their name in a small flag above it that fades once they
- * stop moving. No block outline; the caret IS the presence.
+ * Remote carets — half of the Notion shape: a thin coloured line where the
+ * peer's caret sits, pulsing once they stop moving. It carries NO name; the
+ * face in the gutter beside the block does that (presence-avatars.test.ts).
+ * No block outline either.
  *
  * Two things are pinned here. The child-holder decoration law: a caret is
  * appended to the block's HOLDER, never at or below the tool root, so it can
  * never dirty a save or a tool's own markup. And R5: every field of a peer's
- * state was written by another browser, so a name only reaches the DOM through
- * `textContent`, a colour only through the hex gate, and an offset only after
- * being clamped against the text that is actually here.
+ * state was written by another browser, so a colour only reaches CSS through
+ * the hex gate, and an offset only after being clamped against the text that
+ * is actually here.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,7 +21,6 @@ import {
 } from '../../../../../src/components/modules/collaboration/presence-carets';
 
 const CARET_ATTR = 'data-blok-presence-caret';
-const NAME_ATTR = 'data-blok-presence-caret-name';
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
 const COLOR_PROPERTY = '--blok-presence-color';
 
@@ -71,7 +71,7 @@ const makeHolder = (blockId: string, inputCount: number): HTMLElement => {
   return holder;
 };
 
-const setup = (options: { blockIds?: string[]; inputCount?: number; labelLingerMs?: number } = {}): Harness => {
+const setup = (options: { blockIds?: string[]; inputCount?: number; restAfterMs?: number } = {}): Harness => {
   const holders = new Map<string, HTMLElement>();
 
   (options.blockIds ?? ['block-1', 'block-2']).forEach((blockId) => {
@@ -84,7 +84,7 @@ const setup = (options: { blockIds?: string[]; inputCount?: number; labelLingerM
   const layer = createCaretLayer({
     resolveHolder: (blockId) => holders.get(blockId) ?? null,
     resolveInputs: inputsOf,
-    labelLingerMs: options.labelLingerMs,
+    restAfterMs: options.restAfterMs,
   });
 
   layers.push(layer);
@@ -146,7 +146,6 @@ const at = (blockId: string, head: number, inputIndex = 0): CaretPosition => ({
 
 const peer = (clientId: number, overrides: Partial<CaretPeer> = {}): CaretPeer => ({
   clientId,
-  name: 'Ada',
   color: '#0b6e99',
   caret: at('block-1', 3),
   ...overrides,
@@ -192,24 +191,13 @@ describe('caret layer — what it draws', () => {
     const harness = setup();
 
     harness.layer.render([
-      peer(1, { name: 'Ada', color: '#0b6e99' }),
-      peer(2, { name: 'Bo', color: '#c1461f' }),
+      peer(1, { color: '#0b6e99' }),
+      peer(2, { color: '#c1461f' }),
     ]);
 
     // Keyed by client id, not block id: two people in one paragraph is the
     // ordinary case a caret exists to show.
     expect(harness.caretsIn('block-1')).toHaveLength(2);
-  });
-
-  it('names the peer in the flag, as text', () => {
-    const harness = setup();
-
-    harness.layer.render([peer(1, { name: '<img src=x onerror=alert(1)>' })]);
-
-    const label = harness.holderOf('block-1').querySelector(`[${NAME_ATTR}]`);
-
-    expect(label?.textContent).toBe('<img src=x onerror=alert(1)>');
-    expect(label?.querySelector('img')).toBeNull();
   });
 
   it('carries the peer colour as a custom property', () => {
@@ -222,16 +210,18 @@ describe('caret layer — what it draws', () => {
     expect(caret?.style.getPropertyValue(COLOR_PROPERTY)).toBe('#c1461f');
   });
 
-  it('draws no flag for a peer who published no name', () => {
+  it('carries no name of its own', () => {
     const harness = setup();
 
-    harness.layer.render([peer(1, { name: '' })]);
+    harness.layer.render([peer(1)]);
 
-    const label = harness.holderOf('block-1').querySelector<HTMLElement>(`[${NAME_ATTR}]`);
+    const [caret] = harness.caretsIn('block-1');
 
-    // The coloured line still shows. An empty bubble would read as a fault.
-    expect(harness.caretsIn('block-1')).toHaveLength(1);
-    expect(label?.hidden).toBe(true);
+    // Identity is the gutter face's job. A caret that labelled the peer too
+    // would name one person twice, which is the wall of name tags Notion
+    // avoids by splitting the two.
+    expect(caret?.children).toHaveLength(0);
+    expect(caret?.textContent).toBe('');
   });
 
   it('keeps the caret element across renders, so it does not flicker', () => {
@@ -365,9 +355,9 @@ describe('caret layer — what it refuses to draw', () => {
   });
 });
 
-describe('caret layer — the name flag fades', () => {
-  it('shows the flag while the caret is moving', () => {
-    const harness = setup({ labelLingerMs: 2000 });
+describe('caret layer — moving versus resting', () => {
+  it('counts as moving the moment it is drawn', () => {
+    const harness = setup({ restAfterMs: 2000 });
 
     harness.layer.render([peer(1)]);
 
@@ -375,18 +365,18 @@ describe('caret layer — the name flag fades', () => {
   });
 
   it('marks the caret idle once the peer stops moving', () => {
-    const harness = setup({ labelLingerMs: 2000 });
+    const harness = setup({ restAfterMs: 2000 });
 
     harness.layer.render([peer(1)]);
     vi.advanceTimersByTime(2001);
 
-    // Notion's behaviour: the name fades out and the coloured line stays, so a
-    // busy document does not turn into a wall of name tags.
+    // Resting is the state the stylesheet pulses: parked is when a peer needs
+    // announcing, because while they type the text itself is the signal.
     expect(harness.caretsIn('block-1')[0]?.hasAttribute(IDLE_ATTR)).toBe(true);
   });
 
-  it('brings the flag back when the caret moves again', () => {
-    const harness = setup({ labelLingerMs: 2000 });
+  it('counts as moving again when the caret moves', () => {
+    const harness = setup({ restAfterMs: 2000 });
 
     harness.layer.render([peer(1)]);
     vi.advanceTimersByTime(2001);
@@ -396,7 +386,7 @@ describe('caret layer — the name flag fades', () => {
   });
 
   it('stays idle through a repaint that did not move the caret', () => {
-    const harness = setup({ labelLingerMs: 2000 });
+    const harness = setup({ restAfterMs: 2000 });
 
     harness.layer.render([peer(1)]);
     vi.advanceTimersByTime(2001);
@@ -438,7 +428,7 @@ describe('caret layer — teardown', () => {
   });
 
   it('drops the idle timers on clear, so a torn-down caret never reappears', () => {
-    const harness = setup({ labelLingerMs: 2000 });
+    const harness = setup({ restAfterMs: 2000 });
 
     harness.layer.render([peer(1)]);
     harness.layer.clear();

@@ -138,7 +138,8 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
-  'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line and its name flag are shaped entirely by presence.css.',
+  'components/modules/collaboration/presence-avatars.ts': 'Writes one presence colour custom property per gutter face, validated hex-only; where the strip hangs is decided entirely by presence.css.',
+  'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line is shaped entirely by presence.css.',
   'components/modules/collaboration/presence-renderer.ts': 'Writes one presence colour custom property per avatar, validated hex-only; where the avatar stack sits is decided entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',
   'components/utils/notifier/draw.ts': 'Writes notifier CSS custom properties selected by the notifier layout implementation.',

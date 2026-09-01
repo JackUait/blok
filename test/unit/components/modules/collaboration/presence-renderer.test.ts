@@ -138,8 +138,8 @@ const avatars = (host: HTMLElement): HTMLElement[] =>
 const caret = (holder: HTMLElement): HTMLElement | null =>
   holder.querySelector<HTMLElement>('[data-blok-presence-caret]');
 
-const label = (holder: HTMLElement): HTMLElement | null =>
-  holder.querySelector<HTMLElement>('[data-blok-presence-caret-name]');
+const face = (holder: HTMLElement): HTMLElement | null =>
+  holder.querySelector<HTMLElement>('[data-blok-presence-face]');
 
 describe('presence renderer', () => {
   beforeEach(() => {
@@ -166,7 +166,10 @@ describe('presence renderer', () => {
       // only "somebody is in this paragraph", where a caret says where.
       expect(caret(holder)).not.toBeNull();
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe('#0b6e99');
-      expect(label(holder)?.textContent).toBe('Grace Hopper');
+      // Identity rides the gutter face, not the caret: monogram on it, full
+      // name in its title.
+      expect(face(holder)?.textContent).toBe('GH');
+      expect(face(holder)?.getAttribute('title')).toBe('Grace Hopper');
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].getAttribute('title')).toBe('Grace Hopper');
     });
@@ -210,7 +213,10 @@ describe('presence renderer', () => {
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
-      expect(label(holder)?.hidden).toBe(true);
+      // A face in their colour, with no monogram and no title claiming a name.
+      expect(face(holder)).not.toBeNull();
+      expect(face(holder)?.textContent).toBe('');
+      expect(face(holder)?.hasAttribute('title')).toBe(false);
     });
 
     it('is not drawn by a state that carries no identity at all', () => {
@@ -245,9 +251,9 @@ describe('presence renderer', () => {
 
       harness.renderer.render([named(99, hostile, 'block-2')], 42);
 
-      const element = label(harness.holderOf('block-2'));
+      const element = face(harness.holderOf('block-2'));
 
-      expect(element?.textContent).toBe(hostile);
+      expect(element?.getAttribute('title')).toBe(hostile);
       expect(element?.children).toHaveLength(0);
       expect(avatars(harness.host)[0].children).toHaveLength(0);
     });
@@ -271,9 +277,12 @@ describe('presence renderer', () => {
 
       harness.renderer.render([named(99, 'x'.repeat(5000), 'block-2')], 42);
 
-      const text = label(harness.holderOf('block-2'))?.textContent ?? '';
+      const element = face(harness.holderOf('block-2'));
 
-      expect(text.length).toBeLessThanOrEqual(64);
+      // The cap has to hold on the TITLE too: a hostile name is safe as an
+      // attribute value, but a megabyte of it is still a megabyte.
+      expect((element?.getAttribute('title') ?? '').length).toBeLessThanOrEqual(64);
+      expect((element?.textContent ?? '').length).toBeLessThanOrEqual(2);
     });
 
     it.each([
@@ -467,8 +476,9 @@ describe('presence renderer', () => {
       harness.renderer.render([named(99, 'Grace', 'block-3')], 42);
 
       expect(caret(harness.holderOf('block-2'))).toBeNull();
+      expect(face(harness.holderOf('block-2'))).toBeNull();
       expect(caret(harness.holderOf('block-3'))).not.toBeNull();
-      expect(label(harness.holderOf('block-3'))?.textContent).toBe('Grace');
+      expect(face(harness.holderOf('block-3'))?.getAttribute('title')).toBe('Grace');
     });
 
     it('keeps one caret per block when a peer stays put', () => {

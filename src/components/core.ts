@@ -323,6 +323,12 @@ export class Core {
     if (!isSingleDocSegment(collaboration.doc)) {
       throw new Error('collaboration.doc must be a single path segment');
     }
+
+    // Silently ignoring a non-boolean would leave the host believing their
+    // document survives a reload when nothing is being cached at all.
+    if (collaboration.offline !== undefined && typeof collaboration.offline !== 'boolean') {
+      throw new Error('collaboration.offline must be a boolean');
+    }
   }
 
   /**

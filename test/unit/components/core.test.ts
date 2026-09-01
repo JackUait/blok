@@ -525,6 +525,20 @@ describe('Core', () => {
       }
     );
 
+    // A silently-ignored `offline: 'yes'` would leave the host believing their
+    // document survives a reload when it does not — refuse, like every other
+    // key in this block.
+    it.each([['yes'], [1], [null]])('refuses a non-boolean collaboration.offline: %s', async (offline) => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc', offline } as BlokConfig['collaboration'],
+          server: 'https://blok.example.com',
+        });
+      }).toThrow('collaboration.offline must be a boolean');
+    });
+
     // A JS consumer can drop `doc` entirely; that is still an invalid segment,
     // not a crash.
     it('refuses collaboration whose doc is missing entirely', async () => {

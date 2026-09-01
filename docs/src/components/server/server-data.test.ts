@@ -526,13 +526,23 @@ describe('server docs data', () => {
 
   // Staying editable offline is only kind if the price of a reload is written
   // down: the tab is the sole copy until it reconnects.
-  it('says a reload while disconnected loses the offline edits', () => {
+  // The default still loses offline edits on reload, so that stays the lead.
+  // The opt-in that changes it now exists, and the two things that keep a local
+  // copy from becoming a second source of truth — nothing before the first
+  // sync, and thrown away when the history stops matching — are the reason it
+  // is safe to offer at all, so they are pinned too.
+  it('says a reload loses offline edits by default, and what the offline option changes', () => {
     const body = serverLimits.find((l) => l.id === 'collab-offline-reload')?.body ?? '';
 
     expect(body).toMatch(/reload/i);
     expect(body).toMatch(/only copy|nowhere else|in the tab/i);
-    expect(body).toMatch(/lost|gone/i);
-    expect(body).toMatch(/later phase|not.*today/i);
+    expect(body).toMatch(/gone|lost/i);
+    expect(body).toMatch(/by default/i);
+    expect(body).toMatch(/offline option/i);
+    expect(body).toMatch(/off unless you ask|opt/i);
+    expect(body).toMatch(/browser storage/i);
+    expect(body).toMatch(/until the first successful sync/i);
+    expect(body).toMatch(/thrown away|discarded/i);
   });
 
   // The claim the design says will eventually disappoint someone, so it is

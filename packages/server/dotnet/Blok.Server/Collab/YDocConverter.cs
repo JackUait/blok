@@ -152,6 +152,47 @@ internal static class YDocConverter
   }
 
   /// <summary>
+  /// Applies block-level edit ops (POST /sync/{doc}/edit) in request order;
+  /// a later op sees what the earlier ones did.
+  ///
+  /// TWO PHASES, because yrs has no rollback. Everything that can refuse the
+  /// request — the structural checks against a shadow of the doc, and the
+  /// input building, which is where the NUL and depth guards fire — happens
+  /// BEFORE the write transaction opens. A refused request therefore leaves
+  /// the doc byte-for-byte as it was, and the commit the room observes is one
+  /// update carrying every op.
+  /// </summary>
+  internal static void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  {
+    ArgumentNullException.ThrowIfNull(doc);
+    ArgumentNullException.ThrowIfNull(ops);
+
+    if (ops.Count == 0)
+    {
+      return;
+    }
+
+    var blockMap = doc.Map(BlocksRoot);
+    var rootOrder = doc.Array(OrderRoot);
+    var writer = new InputWriter();
+
+    try
+    {
+      var steps = new EditPlanner(doc, blockMap, rootOrder, writer).Plan(ops);
+      using var transaction = doc.WriteTransaction();
+
+      foreach (var step in steps)
+      {
+        step.Apply(transaction, blockMap, rootOrder);
+      }
+    }
+    finally
+    {
+      writer.Dispose();
+    }
+  }
+
+  /// <summary>
   /// Serializes the doc in derived flat order the way
   /// <c>DocumentStore.toJSON</c> does. The hierarchy view is computed once
   /// and used for both the order and the emitted parent/content, so a
@@ -274,6 +315,371 @@ internal static class YDocConverter
 
   /// <summary>
   /// JSON → Yjs inputs, mirroring <c>YBlockSerializer.outputDataToYBlock</c>
+  /// <summary>
+  /// Turns a request into concrete writes, refusing anything the doc does not
+  /// agree with BEFORE the transaction opens.
+  ///
+  /// It keeps its own picture of the doc — ids, each block's parentId, and the
+  /// root order — and mutates that picture as it plans, so a later op sees the
+  /// effects of an earlier one (insert then update the same block is legal,
+  /// remove then re-insert the same id puts it in its new place, not its old).
+  ///
+  /// PARENTID IS THE MEMBERSHIP ARBITER, exactly as it is on export: a block
+  /// belongs where its own parentId says, not where some contentIds array
+  /// lists it. That is why a removal walks parentId to find the subtree — a
+  /// child the removed parent never listed would otherwise be left with a
+  /// dangling parent and resurface as a root orphan on the client's orphan
+  /// pass — and why a listed child that names a different parent survives.
+  /// </summary>
+  private sealed class EditPlanner(
+      Doc doc,
+      YMap blockMap,
+      YArray rootOrder,
+      InputWriter writer)
+  {
+    private readonly Dictionary<string, string?> parents = new(StringComparer.Ordinal);
+    private readonly List<string> order = [];
+
+    internal List<EditStep> Plan(IReadOnlyList<CollabEditOp> ops)
+    {
+      ReadDoc();
+
+      var steps = new List<EditStep>();
+
+      for (var index = 0; index < ops.Count; index++)
+      {
+        try
+        {
+          steps.AddRange(PlanOne(ops[index], index));
+        }
+        catch (InvalidDataException refusal)
+        {
+          // The converter's own guards — NUL and value depth — speak about a
+          // document, not a request. A caller reaching ApplyOps directly still
+          // has to learn WHICH op was refused, and the caller is an HTTP
+          // handler that answers 422 off this exception type.
+          throw new CollabEditException(Where(index, refusal.Message), refusal);
+        }
+      }
+
+      return steps;
+    }
+
+    /// <summary>
+    /// The one read pass: every id with its parentId, plus the root order as
+    /// stored. Both are needed by position maths, and reading them once keeps
+    /// planning O(ops) over a snapshot instead of re-walking the doc per op.
+    /// </summary>
+    private void ReadDoc()
+    {
+      using var transaction = doc.ReadTransaction();
+
+      foreach (var (id, value) in blockMap.Iterate(transaction))
+      {
+        parents[id] = value.Tag == OutputTag.Map
+            ? ReadParentId(transaction, value.Map)
+            : null;
+      }
+
+      var length = rootOrder.Length(transaction);
+
+      for (uint index = 0; index < length; index++)
+      {
+        var entry = rootOrder.Get(transaction, index);
+
+        if (entry?.Tag == OutputTag.String)
+        {
+          order.Add(entry.String);
+        }
+      }
+    }
+
+    private static string? ReadParentId(Transaction transaction, YMap block)
+    {
+      var parentId = block.Get(transaction, "parentId");
+
+      return parentId?.Tag == OutputTag.String ? parentId.String : null;
+    }
+
+    private List<EditStep> PlanOne(CollabEditOp op, int index)
+    {
+      return op switch
+      {
+        CollabEditOp.Insert insert => PlanInsert(insert, index),
+        CollabEditOp.Update update => PlanUpdate(update, index),
+        CollabEditOp.Remove remove => PlanRemove(remove, index),
+        _ => throw new CollabEditException(Where(index, "the op is not one this server knows.")),
+      };
+    }
+
+    private List<EditStep> PlanInsert(CollabEditOp.Insert op, int index)
+    {
+      if (parents.ContainsKey(op.Id))
+      {
+        throw new CollabEditException(
+            Where(index, $"the document already has a block \"{op.Id}\"."));
+      }
+
+      if (op.Parent is not null)
+      {
+        // Screened even though it is only ever COMPARED here: it becomes the
+        // block's parentId a few lines down, and "not found" would be a
+        // misleading answer for a request that carries a process-killer.
+        NoNul(op.Parent, "a parent id");
+
+        if (!parents.ContainsKey(op.Parent))
+        {
+          throw new CollabEditException(
+              Where(index, $"there is no block \"{op.Parent}\" to insert under."));
+        }
+      }
+
+      if (op.After is not null)
+      {
+        if (!parents.TryGetValue(op.After, out var afterParent))
+        {
+          throw new CollabEditException(
+              Where(index, $"there is no block \"{op.After}\" to insert after."));
+        }
+
+        if (!string.Equals(afterParent, op.Parent, StringComparison.Ordinal))
+        {
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.After}\" is not a child of " +
+              (op.Parent is null ? "the document root" : $"\"{op.Parent}\"") + "."));
+        }
+      }
+
+      // Built here, not at apply time: composing the block is what runs the
+      // NUL and depth guards, and a refusal must happen before any write.
+      var block = new JsonObject(op.Block.Select(entry =>
+          new KeyValuePair<string, JsonNode?>(entry.Key, entry.Value?.DeepClone())));
+
+      if (op.Parent is not null)
+      {
+        block["parent"] = op.Parent;
+      }
+
+      var input = writer.Block(NoNul(op.Id, "a block id"), block);
+
+      parents[op.Id] = op.Parent;
+
+      var steps = new List<EditStep> { EditStep.PutBlock(op.Id, input) };
+
+      if (op.Parent is null)
+      {
+        var at = op.After is null ? 0 : order.IndexOf(op.After) + 1;
+
+        order.Insert(at, op.Id);
+        steps.Add(EditStep.InsertRootOrder((uint)at, writer.Track(Input.String(op.Id))));
+      }
+      else
+      {
+        steps.Add(EditStep.LinkChild(op.Parent, op.Id, op.After));
+      }
+
+      return steps;
+    }
+
+    private List<EditStep> PlanUpdate(CollabEditOp.Update op, int index)
+    {
+      if (!parents.ContainsKey(op.Id))
+      {
+        throw new CollabEditException(
+            Where(index, $"there is no block \"{op.Id}\" to update."));
+      }
+
+      return [EditStep.ReplaceData(op.Id, writer.DataMap(op.Data))];
+    }
+
+    /// <summary>
+    /// The subtree by parentId — see the type docstring for why that, and not
+    /// contentIds, is what a removal follows.
+    /// </summary>
+    private List<EditStep> PlanRemove(CollabEditOp.Remove op, int index)
+    {
+      // A removed id is only ever compared, never written — but a caller
+      // sending one is sending a process-killer, and should hear that rather
+      // than "no such block".
+      NoNul(op.Id, "a block id");
+
+      if (!parents.TryGetValue(op.Id, out var parentOfRemoved))
+      {
+        throw new CollabEditException(
+            Where(index, $"there is no block \"{op.Id}\" to remove."));
+      }
+
+      var doomed = new HashSet<string>(StringComparer.Ordinal) { op.Id };
+      var pending = new Queue<string>([op.Id]);
+
+      // Iterative: a document may legitimately nest thousands deep, and
+      // recursion there is a StackOverflow that cannot be caught.
+      while (pending.Count > 0)
+      {
+        var parent = pending.Dequeue();
+
+        foreach (var (id, parentId) in parents)
+        {
+          if (string.Equals(parentId, parent, StringComparison.Ordinal) && doomed.Add(id))
+          {
+            pending.Enqueue(id);
+          }
+        }
+      }
+
+      var steps = new List<EditStep>();
+
+      foreach (var id in doomed)
+      {
+        parents.Remove(id);
+        steps.Add(EditStep.RemoveBlock(id));
+
+        var at = order.IndexOf(id);
+
+        if (at >= 0)
+        {
+          order.RemoveAt(at);
+          steps.Add(EditStep.RemoveRootOrder((uint)at));
+        }
+      }
+
+      if (parentOfRemoved is not null)
+      {
+        steps.Add(EditStep.UnlinkChild(parentOfRemoved, op.Id));
+      }
+
+      return steps;
+    }
+
+    private static string Where(int index, string message)
+    {
+      return $"collab: op {index}: {message}";
+    }
+  }
+
+  /// <summary>
+  /// One write, already validated and already built. Applying a step never
+  /// refuses: everything that could be refused happened while planning, so the
+  /// transaction either runs whole or never opens.
+  /// </summary>
+  private sealed class EditStep
+  {
+    private readonly Action<Transaction, YMap, YArray> apply;
+
+    private EditStep(Action<Transaction, YMap, YArray> apply)
+    {
+      this.apply = apply;
+    }
+
+    internal void Apply(Transaction transaction, YMap blockMap, YArray rootOrder)
+    {
+      apply(transaction, blockMap, rootOrder);
+    }
+
+    internal static EditStep PutBlock(string id, Input block)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+          blockMap.Insert(transaction, id, block));
+    }
+
+    internal static EditStep RemoveBlock(string id)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+          blockMap.Remove(transaction, id));
+    }
+
+    internal static EditStep ReplaceData(string id, Input data)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        var block = blockMap.Get(transaction, id);
+
+        block?.Map?.Insert(transaction, "data", data);
+      });
+    }
+
+    internal static EditStep InsertRootOrder(uint at, Input id)
+    {
+      return new EditStep((transaction, _, rootOrder) =>
+          rootOrder.InsertRange(transaction, at, [id]));
+    }
+
+    internal static EditStep RemoveRootOrder(uint at)
+    {
+      return new EditStep((transaction, _, rootOrder) =>
+          rootOrder.RemoveRange(transaction, at, 1));
+    }
+
+    /// <summary>
+    /// Adds the child to its parent's contentIds. Read at apply time, not
+    /// planned: the array is a live shared type, and an earlier step in this
+    /// same transaction may have changed its length.
+    /// </summary>
+    internal static EditStep LinkChild(string parentId, string childId, string? afterId)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        var contentIds = ContentIdsOf(transaction, blockMap, parentId);
+
+        if (contentIds is null)
+        {
+          return;
+        }
+
+        var at = afterId is null ? 0 : IndexOf(transaction, contentIds, afterId) + 1;
+
+        contentIds.InsertRange(transaction, (uint)at, [Input.String(childId)]);
+      });
+    }
+
+    internal static EditStep UnlinkChild(string parentId, string childId)
+    {
+      return new EditStep((transaction, blockMap, _) =>
+      {
+        var contentIds = ContentIdsOf(transaction, blockMap, parentId);
+
+        if (contentIds is null)
+        {
+          return;
+        }
+
+        var at = IndexOf(transaction, contentIds, childId);
+
+        if (at >= 0)
+        {
+          contentIds.RemoveRange(transaction, (uint)at, 1);
+        }
+      });
+    }
+
+    private static YArray? ContentIdsOf(Transaction transaction, YMap blockMap, string id)
+    {
+      var block = blockMap.Get(transaction, id)?.Map;
+      var contentIds = block?.Get(transaction, "contentIds");
+
+      return contentIds?.Tag == OutputTag.Array ? contentIds.Array : null;
+    }
+
+    private static int IndexOf(Transaction transaction, YArray contentIds, string id)
+    {
+      var length = contentIds.Length(transaction);
+
+      for (uint index = 0; index < length; index++)
+      {
+        var entry = contentIds.Get(transaction, index);
+
+        if (entry?.Tag == OutputTag.String &&
+            string.Equals(entry.String, id, StringComparison.Ordinal))
+        {
+          return (int)index;
+        }
+      }
+
+      return -1;
+    }
+  }
+
   /// and <c>plainToYValue</c>. Tracks every input it creates for disposal.
   /// </summary>
   private sealed class InputWriter : IDisposable
@@ -295,6 +701,12 @@ internal static class YDocConverter
       inputs.Add(input);
 
       return input;
+    }
+
+    /// <summary>A block's <c>data</c> map on its own, for an edit that replaces it.</summary>
+    internal Input DataMap(JsonObject data)
+    {
+      return ObjectToYMap(data, 1);
     }
 
     internal Input Block(string id, JsonObject block)

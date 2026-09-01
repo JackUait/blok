@@ -248,6 +248,7 @@
     "eslint-plugin-storybook": "10.5.10",
     "eslint-plugin-tailwindcss": "4.4.0",
     "eslint-plugin-testing-library": "^7.16.2",
+    "fake-indexeddb": "6.2.5",
     "fractional-indexing": "^4.0.0",
     "glob": "13.0.6",
     "html-janitor": "2.0.4",

@@ -439,6 +439,11 @@ internal sealed class FakeDocConverter : ICollabDocConverter
 
   internal List<ulong> SeededClientIds { get; } = [];
 
+  internal int Edits { get; private set; }
+
+  /// <summary>Set to make the next ApplyOps refuse, as an invalid op would.</summary>
+  internal CollabEditException? EditFailure { get; set; }
+
   public void Seed(Doc doc, JsonNode outputData)
   {
     Seeds++;
@@ -453,6 +458,50 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     }
 
     text.Insert(transaction, 0, outputData["text"]?.GetValue<string>() ?? "");
+  }
+
+  /// <summary>
+  /// Enough of the real op semantics for the room's sake: an insert appends
+  /// its text, an update replaces the whole root, a remove empties it. A
+  /// refusal is expressed the way the real converter expresses one.
+  /// </summary>
+  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  {
+    Edits++;
+
+    if (EditFailure is not null)
+    {
+      throw EditFailure;
+    }
+
+    var text = doc.Text("content");
+
+    foreach (var op in ops)
+    {
+      using var transaction = doc.WriteTransaction();
+
+      switch (op)
+      {
+        case CollabEditOp.Insert insert:
+          text.Insert(
+              transaction,
+              text.Length(transaction),
+              insert.Block["data"]?["text"]?.GetValue<string>() ?? "");
+
+          break;
+
+        case CollabEditOp.Update update:
+          text.RemoveRange(transaction, 0, text.Length(transaction));
+          text.Insert(transaction, 0, update.Data["text"]?.GetValue<string>() ?? "");
+
+          break;
+
+        default:
+          text.RemoveRange(transaction, 0, text.Length(transaction));
+
+          break;
+      }
+    }
   }
 
   public JsonNode Export(Doc doc)

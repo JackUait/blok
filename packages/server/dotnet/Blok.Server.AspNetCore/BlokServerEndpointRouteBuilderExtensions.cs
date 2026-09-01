@@ -52,6 +52,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
           .DisableRequestTimeout();
       routes.Map("/sync/{doc}", context => HandleMethodNotAllowed(context, "GET")).WithOrder(1);
       MapShell(routes, "/sync/{doc}/reset", "POST");
+      MapShell(routes, "/sync/{doc}/edit", "POST");
     }
 
     routes.Map("/{**path}", HandleNotFound).WithOrder(int.MaxValue);
@@ -68,6 +69,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
         "/upload" => UploadEndpoint.HandleAsync,
         "/delete" => DeleteEndpoint.HandleAsync,
         "/sync/{doc}/reset" => ResetEndpoint.HandleAsync,
+        "/sync/{doc}/edit" => EditEndpoint.HandleAsync,
         _ => UploadByUrlEndpoint.HandleAsync,
       };
 

@@ -16,6 +16,19 @@ internal sealed record CollabJoinResult(
     CollabMembership? Membership,
     Exception? Error);
 
+internal enum CollabEditStatus
+{
+  Applied,
+
+  /// <summary>An op failed validation; nothing was written. The endpoint answers 422.</summary>
+  Invalid,
+
+  /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
+  SeedFailed,
+}
+
+internal sealed record CollabEditResult(CollabEditStatus Status, Exception? Error);
+
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
 /// when they close (eviction, reset, seed failure, drain); a join that races
@@ -140,6 +153,35 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
     throw new InvalidOperationException(
         $"collab: the room for \"{docId}\" kept closing during reset.");
+  }
+
+  /// <summary>
+  /// Block-level edits from the HTTP edit endpoint. Retries on a room that
+  /// closes underneath, exactly as reset does.
+  /// </summary>
+  internal async ValueTask<CollabEditResult> EditAsync(
+      string docId,
+      IReadOnlyList<CollabEditOp> ops,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    ArgumentNullException.ThrowIfNull(ops);
+
+    for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
+    {
+      var room = RoomFor(docId);
+      var result = await room.EditAsync(ops, cancellationToken);
+
+      if (result is not null)
+      {
+        return result;
+      }
+
+      Forget(room);
+    }
+
+    throw new InvalidOperationException(
+        $"collab: the room for \"{docId}\" kept closing during an edit.");
   }
 
   /// <summary>Plan decision 19: refuse new joins, flush every room (blob + export), close members 1001.</summary>

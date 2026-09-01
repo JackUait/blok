@@ -248,6 +248,63 @@ internal sealed class CollabRoom : IDisposable
         CancellationToken.None));
   }
 
+  /// <summary>
+  /// Block-level edits from POST /sync/{doc}/edit. Null when the room has
+  /// already closed — the caller should retry on a fresh room.
+  ///
+  /// Materializes the doc the way a join does, so "edit a document nobody has
+  /// open" works. The write happens INSIDE the lane and without the
+  /// applying-remote flag, so the update observer appends it to the log and
+  /// broadcasts it to every member with no relay code here — but that observer
+  /// does not run what a member write gets afterwards, so the trio is invoked
+  /// explicitly or the edit reaches the connected tabs and nothing else: not
+  /// the blob, not the consumer's endpoint.
+  /// </summary>
+  internal Task<CollabEditResult?> EditAsync(
+      IReadOnlyList<CollabEditOp> ops,
+      CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(ops);
+
+    return RunAsync<CollabEditResult?>(
+        async () =>
+        {
+          if (state == RoomState.Closed)
+          {
+            return null;
+          }
+
+          if (state == RoomState.New)
+          {
+            var failure = await TryLoadLocked();
+
+            if (failure is not null)
+            {
+              CloseLocked(null);
+
+              return new CollabEditResult(CollabEditStatus.SeedFailed, failure);
+            }
+          }
+
+          try
+          {
+            // Ready implies a loaded doc, as every other lane body assumes.
+            converter.ApplyOps(doc!, ops);
+          }
+          catch (CollabEditException refusal)
+          {
+            return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+          }
+
+          CompactIfOversizedLocked();
+          SchedulePersistLocked();
+          MarkDirtyLocked();
+
+          return new CollabEditResult(CollabEditStatus.Applied, null);
+        },
+        cancellationToken);
+  }
+
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabWorkingSetTag?> ResetAsync(CancellationToken cancellationToken)
   {

@@ -200,6 +200,44 @@ internal sealed class FakeDocConverter : ICollabDocConverter
     text.Insert(transaction, 0, outputData["text"]?.GetValue<string>() ?? "");
   }
 
+  /// <summary>
+  /// Enough of the real op semantics for the endpoint's sake: an insert
+  /// appends its text, an update replaces the whole root, a remove empties it.
+  /// The real block laws are the converter's own tests; here the point is that
+  /// a write reaches the doc, the log and the members.
+  /// </summary>
+  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  {
+    var text = doc.Text("content");
+
+    foreach (var op in ops)
+    {
+      using var transaction = doc.WriteTransaction();
+
+      switch (op)
+      {
+        case CollabEditOp.Insert insert:
+          text.Insert(
+              transaction,
+              text.Length(transaction),
+              insert.Block["data"]?["text"]?.GetValue<string>() ?? "");
+
+          break;
+
+        case CollabEditOp.Update update:
+          text.RemoveRange(transaction, 0, text.Length(transaction));
+          text.Insert(transaction, 0, update.Data["text"]?.GetValue<string>() ?? "");
+
+          break;
+
+        default:
+          text.RemoveRange(transaction, 0, text.Length(transaction));
+
+          break;
+      }
+    }
+  }
+
   public JsonNode Export(Doc doc)
   {
     return new JsonObject { ["text"] = YDocs.Text(doc) };

@@ -27,6 +27,11 @@ internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDoc
     YDocConverter.Seed(doc, blocks);
   }
 
+  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  {
+    YDocConverter.ApplyOps(doc, ops);
+  }
+
   public JsonNode Export(Doc doc)
   {
     return new JsonObject

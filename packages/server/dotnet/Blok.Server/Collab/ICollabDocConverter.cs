@@ -20,4 +20,11 @@ internal interface ICollabDocConverter
 
   /// <summary>Reads the doc back as a bare OutputData object.</summary>
   JsonNode Export(Doc doc);
+
+  /// <summary>
+  /// Applies block-level edit ops in ONE write transaction, validating every
+  /// op against the doc FIRST — a refusal (<see cref="CollabEditException"/>)
+  /// leaves the doc untouched.
+  /// </summary>
+  void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops);
 }

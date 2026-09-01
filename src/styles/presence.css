@@ -27,7 +27,7 @@
   /* Half the width, so both ends read as a cap rather than a cut corner. */
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
-  --blok-presence-pulse: 1.2s;
+  --blok-presence-pulse: 1.6s;
 }
 
 /* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
@@ -74,19 +74,24 @@
   opacity: 0;
 }
 
-/* A pulse while they are active, and only then.
+/* The resting state pulses, and that is the whole point.
 
-   NOT a caret blink: a blinking line means "your keystrokes go here", and every
-   OS reserves it for the local caret — four blinking lines in one document and
-   nobody can find their own. This is the softer signal, and it stops on its own
-   the moment the peer goes idle, so it never becomes perpetual motion. */
-[data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+   Idle is when a peer needs announcing: while they type, the text itself is
+   visibly changing and the name flag is up, so the caret is the least of what
+   tells you they are there. Parked, a static 2px line reads as a rendering
+   artefact rather than a person — the motion is what makes it a cursor.
+
+   Deliberately NOT the local caret's blink. That one is a hard on/off step at
+   about a second, and it means "your keystrokes go here"; this is a slow soft
+   fade that never reaches zero, so several peers can rest in one document
+   without any of them being mistaken for your own insertion point. */
+[data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
 }
 
 @keyframes blok-presence-caret-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.3; }
 }
 
 /* The states still change — the flag hides and the line settles. Only the
@@ -96,7 +101,7 @@
     transition: none;
   }
 
-  [data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+  [data-blok-presence-caret-idle] {
     animation: none;
   }
 }

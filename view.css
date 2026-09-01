@@ -1226,7 +1226,7 @@
   --blok-presence-caret-width: 2px;
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
-  --blok-presence-pulse: 1.2s;
+  --blok-presence-pulse: 1.6s;
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;

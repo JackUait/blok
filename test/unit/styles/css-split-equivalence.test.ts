@@ -511,9 +511,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // stands both animations down, and the line is a painted rounded box rather
     // than the two-border trick (absolutely positioned, so it never cost layout
     // and the borders bought nothing). Net a little larger than the outline it
-    // replaced (~1.6KB). Bumps the multiplier to 1.4561.
+    // replaced (~1.6KB). The pulse then moved to the RESTING state (idle is when
+    // a peer needs announcing; while they type the text itself is the signal),
+    // which is a comment rather than a rule bigger. Bumps the multiplier
+    // to 1.4567.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4561);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4567);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

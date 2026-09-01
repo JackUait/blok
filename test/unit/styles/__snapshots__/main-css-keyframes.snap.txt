@@ -131,7 +131,7 @@
 
 @keyframes blok-presence-caret-pulse {
   0%, 100% { opacity: 1 }
-  50% { opacity: 0.4 }
+  50% { opacity: 0.3 }
 }
 
 @keyframes blok-prop-popover-in {

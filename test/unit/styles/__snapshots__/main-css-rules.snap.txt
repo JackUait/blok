@@ -8039,7 +8039,7 @@
   --blok-presence-caret-width: 2px;
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
-  --blok-presence-pulse: 1.2s;
+  --blok-presence-pulse: 1.6s;
 }
 
 [data-blok-presence-caret] {
@@ -8073,7 +8073,7 @@
   opacity: 0;
 }
 
-[data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+[data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
 }
 
@@ -8081,7 +8081,7 @@
   transition: none;
 }
 
-[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-idle] {
   animation: none;
 }
 

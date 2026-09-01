@@ -38,7 +38,8 @@ export interface CaretLayer {
 /** The caret line. Styled by src/styles/presence.css. */
 const CARET_ATTR = 'data-blok-presence-caret';
 const NAME_ATTR = 'data-blok-presence-caret-name';
-/** Set once the peer stops moving; the stylesheet fades the flag out. */
+/** Set once the peer stops moving: the stylesheet fades the flag out and starts
+    the caret's resting pulse. */
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
 const COLOR_PROPERTY = '--blok-presence-color';
 

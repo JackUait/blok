@@ -18,6 +18,7 @@ import {
   type PresenceSeam,
   type PresenceState,
 } from '../../../../../src/components/modules/collaboration/presence';
+import type { CaretPosition } from '../../../../../src/components/modules/collaboration/caret-position';
 import type { PresenceRenderer } from '../../../../../src/components/modules/collaboration/presence-renderer';
 import type { AwarenessChange } from '../../../../../src/components/modules/yjs/types';
 
@@ -135,13 +136,17 @@ class FakeAwareness implements PresenceSeam {
 const fakeRenderer = (): PresenceRenderer & {
   renders: Array<{ states: PresenceState[]; localClientId: number | null }>;
   cleared: number;
+  repositioned: number;
 } => {
   const renders: Array<{ states: PresenceState[]; localClientId: number | null }> = [];
-  const state = { cleared: 0 };
+  const state = { cleared: 0, repositioned: 0 };
 
   return {
     render: (states, localClientId) => {
       renders.push({ states, localClientId });
+    },
+    reposition: () => {
+      state.repositioned += 1;
     },
     clear: () => {
       state.cleared += 1;
@@ -149,6 +154,9 @@ const fakeRenderer = (): PresenceRenderer & {
     renders,
     get cleared(): number {
       return state.cleared;
+    },
+    get repositioned(): number {
+      return state.repositioned;
     },
   };
 };
@@ -239,18 +247,23 @@ interface SetupOptions {
   clientId?: number;
   user?: { name?: string; color?: string };
   blockId?: string | null;
+  position?: CaretPosition | null;
 }
 
 const setup = (options: SetupOptions = {}) => {
   const seam = new FakeAwareness(options.clientId ?? 42);
   const renderer = fakeRenderer();
   const target = new EventTarget();
-  const caret = { blockId: options.blockId === undefined ? 'block-1' : options.blockId };
+  const caret = {
+    blockId: options.blockId === undefined ? 'block-1' : options.blockId,
+    position: options.position ?? null,
+  };
 
   const presence = createPresence({
     yjs: seam,
     user: options.user,
     currentBlockId: () => caret.blockId,
+    currentCaret: () => caret.position,
     eventTarget: target,
     renderer,
   });
@@ -259,6 +272,14 @@ const setup = (options: SetupOptions = {}) => {
 
   return { seam, renderer, target, caret, presence };
 };
+
+/** A caret position as `readCaretPosition` would report it. */
+const at = (blockId: string, head: number, anchor = head): CaretPosition => ({
+  blockId,
+  inputIndex: 0,
+  anchor,
+  head,
+});
 
 /** A caret move the browser would report. */
 const moveCaret = (target: EventTarget): void => {
@@ -285,6 +306,7 @@ describe('presence — local awareness upkeep', () => {
 
       expect(seam.localState()).toEqual({
         blockId: 'block-1',
+        caret: null,
         user: { name: 'Ada', color: presenceColorFor(42) },
       });
     });
@@ -300,9 +322,10 @@ describe('presence — local awareness upkeep', () => {
       // identity goes out either way, carrying the assigned colour and no name.
       expect(seam.localState()).toEqual({
         blockId: 'block-1',
+        caret: null,
         user: { color: presenceColorFor(42) },
       });
-      expect(seam.writes.map((write) => write.field)).toEqual(['blockId', 'user']);
+      expect(seam.writes.map((write) => write.field)).toEqual(['blockId', 'caret', 'user']);
     });
 
     it('publishes a null block when the caret is nowhere', () => {
@@ -311,6 +334,107 @@ describe('presence — local awareness upkeep', () => {
       presence.start();
 
       expect(seam.localState().blockId).toBeNull();
+    });
+  });
+
+  describe('what it publishes about the caret', () => {
+    it('publishes the caret position as its own field', () => {
+      const { seam, presence } = setup({ position: at('block-1', 4, 2) });
+
+      presence.start();
+
+      expect(seam.localState().caret).toEqual({
+        blockId: 'block-1',
+        inputIndex: 0,
+        anchor: 2,
+        head: 4,
+      });
+    });
+
+    it('keeps publishing the block id, which already-deployed clients draw from', () => {
+      const { seam, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+
+      // The caret field carries its own blockId, so nothing HERE reads this one
+      // any more. It stays on the wire because a client from before carets
+      // shipped still outlines the block from it.
+      expect(seam.localState().blockId).toBe('block-1');
+    });
+
+    it('republishes a moved caret without rewriting the block id', () => {
+      const { seam, target, caret, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+      seam.writes.length = 0;
+
+      caret.position = at('block-1', 5);
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      // Typing inside one block must not put the unchanged block id back on the
+      // wire: every field write bumps the awareness clock and costs a frame.
+      expect(seam.writes.map((write) => write.field)).toEqual(['caret']);
+      expect(seam.localState().caret).toMatchObject({ head: 5 });
+    });
+
+    it('writes nothing at all when the caret has not moved', () => {
+      const { seam, target, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+      seam.writes.length = 0;
+
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      // `selectionchange` fires on every keystroke, so an unchanged position
+      // reaching the wire would be a frame per keypress for nothing.
+      expect(seam.writes).toEqual([]);
+    });
+
+    it('compares the whole position, not just the offset', () => {
+      const { seam, target, caret, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+      seam.writes.length = 0;
+
+      // Same offsets, a different field of the same block — a table moving
+      // between two cells that happen to share a caret offset.
+      caret.position = { blockId: 'block-1', inputIndex: 1, anchor: 4, head: 4 };
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      expect(seam.localState().caret).toMatchObject({ inputIndex: 1 });
+    });
+
+    it('re-measures the remote carets when the local caret moves', () => {
+      const { renderer, target, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+
+      const before = renderer.repositioned;
+
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      // Local typing reflows the line every remote caret in this block points
+      // into, and nothing on the wire announces that — the peers did not move,
+      // the text under them did.
+      expect(renderer.repositioned).toBeGreaterThan(before);
+    });
+
+    it('clears a published caret when it moves somewhere it cannot name', () => {
+      const { seam, target, caret, presence } = setup({ position: at('block-1', 4) });
+
+      presence.start();
+
+      caret.position = null;
+      moveCaret(target);
+      vi.advanceTimersByTime(200);
+
+      // Leaving the last position published would strand a peer's caret in a
+      // block they walked out of.
+      expect(seam.localState().caret).toBeNull();
     });
   });
 
@@ -566,6 +690,7 @@ describe('presence — local awareness upkeep', () => {
       // everybody else's avatar stack.
       expect(seam.localState()).toEqual({
         blockId: 'block-2',
+        caret: null,
         user: { name: 'Ada', color: presenceColorFor(42) },
       });
     });

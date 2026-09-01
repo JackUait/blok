@@ -504,8 +504,30 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // avatar stack and its overflow chip), all of it attribute-selected so no
     // rule reaches into a tool root, plus its own token block (~2KB). Bumps the
     // multiplier to 1.452.
+    // 2026-09-01: presence carets — presence.css traded the block outline and
+    // its holder label for the Notion shape: an absolutely-positioned caret line
+    // parked on the holder, a name flag that fades on idle, a pulse keyframe
+    // that runs only while the peer is active, and a reduced-motion block that
+    // stands both animations down, and the line is a painted rounded box rather
+    // than the two-border trick (absolutely positioned, so it never cost layout
+    // and the borders bought nothing). Net a little larger than the outline it
+    // replaced (~1.6KB). The pulse then moved to the RESTING state (idle is when
+    // a peer needs announcing; while they type the text itself is the signal),
+    // which is a comment rather than a rule bigger. The name flag was then
+    // REPLACED by the Notion gutter face: presence.css lost the flag rules and
+    // gained a per-block avatar strip that hangs in the editor's own control
+    // gutter, plus face/ring/gap tokens. The strip then moved onto the block's
+    // CONTENT wrapper (the holder spans the whole editor, so the content edge
+    // is the only thing worth measuring from) and learned to SLIDE aside by the
+    // gutter token on hover rather than vanish, so the +/⠿ controls get that
+    // space and the order across the margin reads face, +, ⠿, text — Notion's.
+    // That is a transition, an LTR rule and its RTL mirror. The fixed line-box
+    // height then became a min-height floor, because presence-avatars.ts now
+    // writes the real one per block from the MEASURED first line (a heading's
+    // line is 39px against a paragraph's 24px, so no constant centres both).
+    // Bumps the multiplier to 1.4631.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.452);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4631);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

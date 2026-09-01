@@ -799,19 +799,39 @@ describe('MutationHandler — a remote presence stamp inside a nesting container
       document.body.appendChild(host);
 
       const { holder, childTool } = mountChild(slot);
-      const renderer = createPresenceRenderer({ host, resolveHolder: () => holder });
+      const renderer = createPresenceRenderer({
+        host,
+        resolveHolder: () => holder,
+        resolveInputs: () => [childTool],
+      });
       const containerHandler = new MutationHandler(() => toolRoot, null, () => undefined);
       const peer = (peerName: string): PresenceState[] => [
-        { clientId: 9, state: { user: { name: peerName }, blockId: 'b1' } },
+        {
+          clientId: 9,
+          state: {
+            user: { name: peerName },
+            blockId: 'b1',
+            // The caret is what presence writes on a holder now, so it is what
+            // this law has to stay inert for.
+            caret: { blockId: 'b1', inputIndex: 0, anchor: 0, head: 0 },
+          },
+        },
       ];
 
-      const passes = [
-        await recordsFor(host, () => renderer.render(peer('Ada'), 1)),
-        await recordsFor(host, () => renderer.render(peer('Ada Lovelace'), 1)),
-        await recordsFor(host, () => renderer.render([], 1)),
-      ];
-
-      passes.forEach((records) => {
+      /**
+       * One presence pass, judged straight away.
+       *
+       * Judged straight away because `isMutationBelongsToElement` asks
+       * `contains()`, which answers about the tree AS IT IS WHEN ASKED — and
+       * presence records name the caret element, which the next pass takes back
+       * out. Collecting every pass and filtering at the end would ask about a
+       * torn-down tree and quietly drop the records under test. Production
+       * never does that: MutationHandler is handed its records inside the
+       * observer callback, while the DOM they describe is still current.
+       * @param write - the presence pass to record
+       */
+      const expectInert = async (write: () => void): Promise<void> => {
+        const records = await recordsFor(host, write);
         const forContainer = records.filter((record) => isMutationBelongsToElement(record, toolRoot));
 
         // The child never even sees its own decoration…
@@ -819,7 +839,11 @@ describe('MutationHandler — a remote presence stamp inside a nesting container
         // …and the container sees it but scores it mutation-free.
         expect(forContainer.length).toBeGreaterThan(0);
         expect(containerHandler.handleMutation(forContainer).shouldFireUpdate).toBe(false);
-      });
+      };
+
+      await expectInert(() => renderer.render(peer('Ada'), 1));
+      await expectInert(() => renderer.render(peer('Ada Lovelace'), 1));
+      await expectInert(() => renderer.render([], 1));
     }
   );
 });

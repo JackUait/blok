@@ -5,6 +5,7 @@ import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
 import { createTicketSource, type TicketRequest } from '../../utils/access-pass';
 
+import { readCaretPosition } from './caret-position';
 import { createPresence, type Presence } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
 import { createOfflineCache, type OfflineCache } from './offline-cache';
@@ -361,11 +362,19 @@ export class Collaboration extends Module {
       yjs: this.Blok.YjsManager,
       user: settings.user,
       currentBlockId: () => this.Blok.BlockManager.currentBlock?.id ?? null,
+      currentCaret: () => {
+        const block = this.Blok.BlockManager.currentBlock;
+
+        return block === undefined
+          ? null
+          : readCaretPosition(block.id, block.inputs, window.getSelection());
+      },
       renderer: createPresenceRenderer({
         // The WRAPPER, not the redactor: the stack must not sit inside the
         // subtree the modifications observer watches.
         host: this.Blok.UI.nodes.wrapper,
         resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
+        resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
         isHidden: () => this.Blok.ReadOnly.isControlsHidden,
       }),
     });

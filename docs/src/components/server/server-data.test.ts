@@ -578,7 +578,10 @@ describe('server docs data', () => {
       limits.indexOf('collab-presence-unverified') - 1,
     );
     expect(body).toMatch(/avatar/i);
-    expect(body).toMatch(/outline/i);
+    expect(body).toMatch(/cursor|caret/i);
+    // Presence draws a cursor, the way Notion does. An entry still promising a
+    // highlighted block describes a version of the editor that no longer ships.
+    expect(body).not.toMatch(/outline/i);
     expect(body).toMatch(/collaboration/);
     expect(body).toMatch(/name/i);
     expect(body).toMatch(/colou?r/i);
@@ -610,6 +613,7 @@ describe('server docs data', () => {
       limits.indexOf('collab-presence-unverified') + 1,
     );
     expect(body).toContain('256');
+    expect(body).toMatch(/cursor|caret/i);
     expect(body).toMatch(/dropped/i);
     expect(body).toMatch(/log/i);
     expect(body).toMatch(/editing/i);

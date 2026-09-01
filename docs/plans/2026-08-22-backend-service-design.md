@@ -4,6 +4,12 @@
 > [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
 > Its wire contracts, consumer paths, and security invariants remain inputs to the C#
 > design. Go is not a permanent implementation.
+>
+> **2026-09-01 amendment:**
+> [`2026-09-01-acknowledged-operation-persistence-design.md`](2026-09-01-acknowledged-operation-persistence-design.md)
+> adds a consumer-supplied durable operation store for collaboration. This does
+> not turn Blok into a hosted document-record product and does not add listing,
+> permissions, sharing, or history UI.
 
 ## Goal
 

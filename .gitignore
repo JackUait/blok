@@ -103,3 +103,7 @@ packages/server/dotnet/Blok.Server.Host/runtimes/
 
 # `yarn serve` backend: built sync service, its working copy and uploads
 .dev/
+
+# TOML files (gitleaks config stays tracked)
+*.toml
+!gitleaks.toml

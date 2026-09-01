@@ -2,9 +2,14 @@
   Multiplayer presence (src/components/modules/collaboration/presence-renderer.ts).
 
   Everything here is keyed off attributes the renderer writes on a block HOLDER
-  — the child-holder decoration law's outer level — plus its own label element
+  — the child-holder decoration law's outer level — plus its own caret elements
   appended inside that holder and one avatar stack on the editor wrapper. No
   selector reaches into a tool root, so a tool's own markup can change freely.
+
+  Notion's shape: a coloured line where the peer's caret is, with their name in
+  a flag above it that fades once they stop moving. There is deliberately no
+  block outline — it says only "somebody is in this paragraph", where a caret
+  says where they are.
 
   --blok-presence-color is declared here as a default and REDECLARED inline, per
   holder and per avatar, by the renderer — from a value that passed the hex-only
@@ -15,34 +20,152 @@
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
   --blok-presence-radius: 3px;
-  /* Overlap of the avatar stack, and the label's inline padding. */
+  /* Overlap of the avatar stack, and the gutter strip's inline gap. */
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
+  --blok-presence-caret-width: 2px;
+  /* Half the width, so both ends read as a cap rather than a cut corner. */
+  --blok-presence-caret-radius: 1px;
+  --blok-presence-fade: 400ms;
+  --blok-presence-pulse: 1.6s;
+  --blok-presence-face-size: 26px;
+  /* Ring around a face, and the same ring on the editor-wide stack. */
+  --blok-presence-ring: 2px;
+  --blok-presence-face-gap: 2px;
+  --blok-presence-slide: 180ms;
+  /* Only a floor. The real height is written per block by presence-avatars.ts
+     from the MEASURED first line — a heading's line is far taller than a
+     paragraph's, so no constant centres the face on both. */
+  --blok-presence-face-line: 1.5rem;
 }
 
-[data-blok-presence] {
-  outline: 2px solid var(--blok-presence-color);
-  outline-offset: 2px;
-  border-radius: var(--blok-presence-radius);
-}
+/* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
+   the coordinates the renderer measured without it touching layout.
 
-/* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so the label parks on
-   the block's own top-right corner without the renderer touching layout. */
-[data-blok-presence-label] {
+   A painted box, not the two-border trick collaborative carets usually use:
+   that trick exists to keep an INLINE widget from shifting text, and this caret
+   is absolutely positioned, so it already costs no layout. A real box is what
+   lets the ends be rounded. */
+[data-blok-presence-caret] {
   position: absolute;
-  top: -0.6rem;
-  right: 0;
   z-index: 2;
-  padding: 0 var(--blok-presence-gap);
-  border-radius: var(--blok-presence-radius);
+  width: var(--blok-presence-caret-width);
+  /* Half the width, so the line straddles the character boundary it was
+     measured at instead of sitting to the right of it. */
+  margin-left: calc(-0.5 * var(--blok-presence-caret-width));
+  border-radius: var(--blok-presence-caret-radius);
   background: var(--blok-presence-color);
-  color: var(--blok-text-on-dark);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 16px;
-  white-space: nowrap;
   pointer-events: none;
   user-select: none;
+}
+
+/* The resting state pulses, and that is the whole point.
+
+   Idle is when a peer needs announcing: while they type, the text itself is
+   visibly changing and the name flag is up, so the caret is the least of what
+   tells you they are there. Parked, a static 2px line reads as a rendering
+   artefact rather than a person — the motion is what makes it a cursor.
+
+   Deliberately NOT the local caret's blink. That one is a hard on/off step at
+   about a second, and it means "your keystrokes go here"; this is a slow soft
+   fade that never reaches zero, so several peers can rest in one document
+   without any of them being mistaken for your own insertion point. */
+[data-blok-presence-caret-idle] {
+  animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
+}
+
+@keyframes blok-presence-caret-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* The states still change — the flag hides and the line settles. Only the
+   animation between them goes. */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-presence-caret-name] {
+    transition: none;
+  }
+
+  [data-blok-presence-caret-idle] {
+    animation: none;
+  }
+
+  /* The face still steps aside — it just arrives there at once. */
+  [data-blok-presence-gutter] {
+    transition: none;
+  }
+}
+
+/* The face beside the block, the way Notion parks it in the page margin.
+
+   Mounted on the block's CONTENT wrapper, not its holder: the holder spans the
+   editor's full width with the content column centred inside it, so a strip
+   parked against the holder would sit a hundred-odd pixels out in the margin
+   instead of beside the text. `inset-inline-end` and not `right`, because the
+   control gutter mirrors under RTL and a physical side would strand the face
+   over the text. */
+[data-blok-presence-gutter] {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 100%;
+  z-index: 1;
+  display: flex;
+  gap: var(--blok-presence-face-gap);
+  align-items: center;
+  min-height: var(--blok-presence-face-line);
+  margin-inline-end: var(--blok-presence-gap);
+  transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Hovering the block summons the +/⠿ controls into exactly this space, so the
+   face steps aside for them rather than vanishing — Notion's order across the
+   margin is face, +, ⠿, text.
+
+   It slides by the gutter token, which is the width Blok reserves for those
+   controls, so the two stay in step if either changes. In read-only that token
+   collapses to zero, and so does this: no controls appear, so nothing has to
+   move. */
+[data-blok-element]:hover [data-blok-presence-gutter] {
+  transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
+}
+
+/* The mirrored side. `translateX` is physical, so RTL needs the other sign —
+   inset-inline-end already put the strip on the right there. */
+[data-blok-rtl="true"] [data-blok-element]:hover [data-blok-presence-gutter] {
+  transform: translateX(var(--blok-editor-gutter-start, 0px));
+}
+
+/* The same face the editor-wide stack draws, one size down. Filled rather than
+   outlined because that IS Blok's avatar — there is no photo to ring, so the
+   colour has to carry the identity, and the two places one person appears must
+   not look like two different people. */
+[data-blok-presence-face],
+[data-blok-presence-face-overflow] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--blok-presence-face-size);
+  height: var(--blok-presence-face-size);
+  box-sizing: border-box;
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
+  border-radius: 50%;
+  background: var(--blok-presence-color);
+  color: var(--blok-text-on-dark);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* A count, not a person: no ring, so it never reads as another face. */
+[data-blok-presence-face-overflow] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--blok-text-secondary);
+  font-size: 10px;
 }
 
 [data-blok-presence-stack] {
@@ -66,7 +189,7 @@
   width: 24px;
   height: 24px;
   margin-left: var(--blok-presence-overlap);
-  border: 2px solid var(--blok-bg-primary);
+  border: var(--blok-presence-ring) solid var(--blok-bg-primary);
   border-radius: 50%;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);

@@ -23,7 +23,9 @@
   /* Overlap of the avatar stack, and the name flag's inline padding. */
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
-  --blok-presence-caret-width: 1px;
+  --blok-presence-caret-width: 2px;
+  /* Half the width, so both ends read as a cap rather than a cut corner. */
+  --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.2s;
 }
@@ -31,19 +33,19 @@
 /* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
    the coordinates the renderer measured without it touching layout.
 
-   Two borders rather than one, the way every collaborative caret is drawn: the
-   line sits BETWEEN two characters, and negative margins of the same width pull
-   it back so it occupies no space and shifts no text. */
+   A painted box, not the two-border trick collaborative carets usually use:
+   that trick exists to keep an INLINE widget from shifting text, and this caret
+   is absolutely positioned, so it already costs no layout. A real box is what
+   lets the ends be rounded. */
 [data-blok-presence-caret] {
   position: absolute;
   z-index: 2;
-  width: 0;
-  /* Exactly the border width, negated: the line has to take no space at all,
-     or every remote caret would shift the text it points into. */
-  margin-left: calc(-1 * var(--blok-presence-caret-width));
-  margin-right: calc(-1 * var(--blok-presence-caret-width));
-  border-left: var(--blok-presence-caret-width) solid var(--blok-presence-color);
-  border-right: var(--blok-presence-caret-width) solid var(--blok-presence-color);
+  width: var(--blok-presence-caret-width);
+  /* Half the width, so the line straddles the character boundary it was
+     measured at instead of sitting to the right of it. */
+  margin-left: calc(-0.5 * var(--blok-presence-caret-width));
+  border-radius: var(--blok-presence-caret-radius);
+  background: var(--blok-presence-color);
   pointer-events: none;
   user-select: none;
 }
@@ -53,7 +55,7 @@
 [data-blok-presence-caret-name] {
   position: absolute;
   top: -1.4em;
-  left: calc(-1 * var(--blok-presence-caret-width));
+  left: 0;
   padding: 0 var(--blok-presence-gap);
   border-radius: var(--blok-presence-radius) var(--blok-presence-radius) var(--blok-presence-radius) 0;
   background: var(--blok-presence-color);

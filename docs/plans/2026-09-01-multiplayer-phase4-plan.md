@@ -111,9 +111,17 @@ decision-8 matrix rewrite (DONE, `fe1b3018`).
     both exp and revocation BY DESIGN (docs already say revocation applies
     at the next reconnect). Mid-session revocation would be a new
     server-side feature, deliberately not built.
-13. **Y.Text and character carets: DEFERRED out of Phase 4** (survey
-    verdict; the YDotNet spike decides only how the record reads, not the
-    decision). The M-sized version (Y.Text in the doc, string-level apply,
+13. **Y.Text and character carets: DEFERRED out of Phase 4** — and the
+    deferral is purely a client-side scope call, because the YDotNet spike
+    came back FULLY GREEN: Input.Text seeds nested in maps, both export
+    Output paths read it (the Phase-2 XmlFragment crash was that type
+    having NO Output accessor — Text has a complete one), diffs converge
+    character-level, Text.Observe delivers Quill-style deltas, StickyIndex
+    encodes/decodes (use Before association — After returns null at end of
+    string), UndoManager scopes to a nested Text, and the default offset
+    encoding is UTF-16, agreeing with JS as-is. NUL truncates silently in
+    Y.Text writes too — the NoNul law extends there. A future phase has a
+    green light server-side. The M-sized version (Y.Text in the doc, string-level apply,
     fallback-to-LWW under interleave) spends the one-way format-bump cost —
     frozen blobs, bricked old tabs, doubled fixture surface, mirrored C#
     laws — without the visible win (carets), and its merge win is waived

@@ -265,3 +265,66 @@ cannot be built by parsing JSON (the reader refuses it first, so the test
 proved nothing), and a broadcast assertion compared against a document that had
 never received the room's state — an update is a diff, and a mirror that never
 synced cannot render one.
+
+## Phase 4 — CLOSED 2026-09-01
+
+Everything the design deferred to "later, by demand" is now shipped or
+deliberately, recorded-ly not. Commit chain `fe1b3018..eccd6091`.
+
+**What shipped.** The scale-out guide (the sharding pattern promised instead of
+scaling machinery). The message-size announcement, on a NEW frame type. F8's
+caret fix, carried in from Phase 3. The offline cache, opt-in. The server-side
+edit API. Docs for each, English and Russian.
+
+**What did not, and why.** Y.Text and character carets: deferred as a
+client-side scope call, with the record straight — the YDotNet spike came back
+fully green, so the server is not the blocker. In-band ticket refresh: dropped
+with evidence that it has no server counterpart to talk to.
+
+**The review round.** Two adversarial passes, one per wave. Both waves' central
+safety claims survived — the edit API's NUL screening held under every attack
+the reviewer could build, and the cache cannot become adoptable without a
+completed sync nor leak history into a reset room. Six real defects fell out
+around them, three of them measured rather than argued:
+
+- A 35-byte remove request froze a room for 37 seconds on a 20,000-block
+  document, inside the single lane every member waits behind. The subtree walk
+  rescanned the whole document per step.
+- Every document ever edited over HTTP leaked its room: an edit loads a room,
+  and loading one is a path that leaves it Ready with no members — the one such
+  path that never armed the eviction timer.
+- "Nothing partial" was not quite true: a step reading a peer-written non-block
+  as a block threw mid-transaction, and the transaction COMMITS on dispose
+  (yrs has no rollback), so members saw half an edit that was never persisted.
+- The cache wrote itself back on every boot, ignoring the origin the replay
+  passes for exactly that purpose.
+- An editor destroyed while the page lives on lost the last thing typed: module
+  teardown detaches the cache before the flush that lands the write buffer.
+- `clear` nulled the lineage synchronously but wiped through the queue, so a
+  save queued ahead of it restored the lineage into an emptied store.
+
+Every fix has a regression test; the client-side ones were verified by
+reverting each fix and watching its test fail.
+
+**Final gates.** Blok.Server 755/756 (one documented skip), AspNetCore 341/341,
+collaboration + yjs 564/564, docs 61/61, `dotnet format` clean, scoped ESLint
+clean.
+
+**Carried forward, not blocking.**
+
+- The edit API answers 204 when the write has landed in the document and
+  reached every open tab, but the blob write and the export to the consumer's
+  endpoint are scheduled, not awaited. A consumer that reads its own record
+  immediately after a 204 may see the old content. Worth either awaiting the
+  persist or saying so in the docs.
+- `PlanUpdate` skips `NormalizeBlockData`, so an empty paragraph written
+  through the edit API exports `data: {}` where the seed path writes
+  `data: {text: ''}` — a divergence between two write paths in a file whose
+  whole premise is lockstep with the client.
+- Two inserts naming the same `after` in one request land in reverse order;
+  undocumented rather than wrong.
+- `writeDenied` restored from the cache has no reset path other than a ticket
+  source, so a host that removes `ticket` after a member was denied leaves them
+  read-only until they clear site data.
+- `InputWriter`'s doc comment was split when the planner was pasted into the
+  middle of it; cosmetic, in a file whose comments carry laws.

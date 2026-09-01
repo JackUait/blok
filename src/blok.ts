@@ -15,6 +15,7 @@ import {
   type ReadyScopeOptions,
   type ReadyStateSnapshot,
 } from './components/utils/ready-registry';
+import { decodeHashFragment, resolveHashTarget } from './components/utils/hash-target';
 import { highlightBlockArrival } from './components/utils/highlight-block-arrival';
 import { releasePersistenceQueue } from './components/utils/persistence';
 import { destroy as destroyTooltip } from './components/utils/tooltip';
@@ -484,17 +485,17 @@ class Blok {
       // from onReady, the target block won't exist yet. In that case we store the hash
       // on Renderer.pendingHashScroll so BlocksAPI.render() can retry after the real blocks arrive.
       const rawHash = window.location.hash.slice(1);
-      const hash = rawHash ? Blok.safeDecodeHash(rawHash) : '';
+      const hash = rawHash ? decodeHashFragment(rawHash) : '';
 
       if (hash) {
-        const el = document.querySelector(`[data-blok-id="${CSS.escape(hash)}"]`);
+        const target = resolveHashTarget(hash, (blok.moduleInstances as Partial<BlokModules>).UI?.nodes.holder);
 
-        if (el) {
+        if (target !== null) {
           const topOffset = (isObject(this.initialConfiguration)
             ? (this.initialConfiguration as BlokConfig).scrollToBlock?.topOffset
             : undefined) ?? 0;
 
-          Blok.scrollToHashBlock(blok, el, hash, topOffset);
+          Blok.scrollToHashBlock(blok, target.element, target.blockId, topOffset);
         } else if (blok.moduleInstances.Renderer !== undefined) {
           blok.moduleInstances.Renderer.pendingHashScroll = hash;
         }
@@ -712,32 +713,21 @@ class Blok {
   }
 
   /**
-   * Decodes a URL hash fragment, falling back to the raw value on malformed percent-sequences.
-   * @param raw - raw hash fragment (without leading #)
-   */
-  private static safeDecodeHash(raw: string): string {
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      // Malformed percent-sequence (e.g. %ZZ) — return raw so no block is matched
-      return raw;
-    }
-  }
-
-  /**
    * Scrolls the located hash target into view, selects it, highlights its
    * arrival, and announces the navigation to assistive technology.
    * @param blok - Core instance
-   * @param el - matched block element
-   * @param hash - decoded block id
+   * @param el - matched element: the block itself, or the heading carrying the anchor
+   * @param blockId - id of the block that owns it, or null for a loose anchor
    * @param topOffset - scroll top offset in pixels
    */
-  private static scrollToHashBlock(blok: Core, el: Element, hash: string, topOffset: number): void {
+  private static scrollToHashBlock(blok: Core, el: Element, blockId: string | null, topOffset: number): void {
     const y = el.getBoundingClientRect().top + window.scrollY - topOffset;
 
     window.scrollTo({ top: y, behavior: 'smooth' });
 
-    Blok.selectBlockById(blok, hash);
+    if (blockId !== null) {
+      Blok.selectBlockById(blok, blockId);
+    }
     highlightBlockArrival(el);
 
     const i18n = (blok.moduleInstances as Partial<BlokModules>).I18n;

@@ -19,6 +19,7 @@ import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
+import { decodeHashFragment } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 
 // Controllers and handlers
@@ -1369,6 +1370,22 @@ export class UI extends Module<UINodes> {
    */
   private openLink(href: string): void {
     if (hasUnsafeScheme(href)) {
+      return;
+    }
+
+    /**
+     * A bare fragment addresses THIS document — the link tool even labels it
+     * "Jump to section". Opening it in a new tab would reload the page instead
+     * of moving to the section, so hand it to the blocks API, which resolves
+     * both block ids and heading anchors.
+     */
+    if (href.startsWith('#')) {
+      const fragment = decodeHashFragment(href.slice(1));
+
+      if (fragment !== '') {
+        this.Blok.BlocksAPI.scrollToBlock(fragment);
+      }
+
       return;
     }
 

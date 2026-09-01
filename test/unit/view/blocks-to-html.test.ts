@@ -154,6 +154,25 @@ describe('blocksToHtml', () => {
       expect(blocksToHtml(doc([{ type: 'header', data: { text: 'T' } }]))).toBe('<h1>T</h1>');
     });
 
+    it('renders the stored anchor as the heading id', () => {
+      expect(blocksToHtml(doc([{ type: 'header', data: { text: 'Title', level: 2, anchor: 'h.2y1ok8y7pef0' } }])))
+        .toBe('<h2 id="h.2y1ok8y7pef0">Title</h2>');
+    });
+
+    it('escapes an anchor so it cannot break out of the id attribute', () => {
+      // The anchor arrives from block data, i.e. from a clipboard — a raw quote
+      // here would close the attribute and open a new one.
+      const html = blocksToHtml(doc([{ type: 'header', data: { text: 'Title', level: 2, anchor: 'a"onload="x' } }]));
+
+      expect(html).toBe('<h2 id="a&quot;onload=&quot;x">Title</h2>');
+    });
+
+    it('omits the id when the anchor is missing or unusable', () => {
+      expect(blocksToHtml(doc([{ type: 'header', data: { text: 'T', level: 2 } }]))).toBe('<h2>T</h2>');
+      expect(blocksToHtml(doc([{ type: 'header', data: { text: 'T', level: 2, anchor: '  ' } }]))).toBe('<h2>T</h2>');
+      expect(blocksToHtml(doc([{ type: 'header', data: { text: 'T', level: 2, anchor: 'two words' } }]))).toBe('<h2>T</h2>');
+    });
+
     it('renders a toggleable header as details/summary with children inside', () => {
       const html = blocksToHtml(doc([
         { id: 'h1', type: 'header', data: { text: 'Sec', level: 2, isToggleable: true, isOpen: true } },

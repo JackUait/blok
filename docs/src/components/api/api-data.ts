@@ -4549,6 +4549,18 @@ const toc = outlineFromOutputData(savedData);
 // → [{ id: 'h1', level: 1, text: 'Getting Started' }, ...]`,
       },
       {
+        name: "restoreHeadingAnchors(data)",
+        returnType: "{ data, report }",
+        description:
+          "Repair in-document links whose target was lost during an import. HTML addresses its own sections by an id on the heading (Google Docs writes <h2 id=\"h.2y1ok8y7pef0\"> and links its table of contents to that fragment); a converter that mints its own block ids and drops the source ones leaves those links pointing at nothing. The link's text still names the heading, so this pass hands each dead fragment to the heading that text names, as HeaderData.anchor. Because it writes content it guesses as little as possible: only headings with no anchor yet, only an exact text match (markup, entities and whitespace normalized away — punctuation is not), and only when exactly one heading and one fragment claim each other; anything less certain is left alone and listed in report.skipped. Running it twice changes nothing further. Call it yourself as a one-off upgrade — it is not part of the automatic load path. DOM-free, so it runs in a Node script over stored records; migrate legacy data first.",
+        example: `import { restoreHeadingAnchors } from '@bloklabs/core/view';
+
+const { data, report } = restoreHeadingAnchors(savedData);
+// report.restored → [{ anchor: 'h.2y1ok8y7pef0', blockId: 'header-18' }, ...]
+// report.skipped  → [{ anchor: 'h.other', reason: 'ambiguous' }]
+await save(data);`,
+      },
+      {
         name: "defineBlokSchema(config)",
         returnType: "{ editorConfig, viewSchema }",
         description:

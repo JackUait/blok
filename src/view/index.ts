@@ -19,6 +19,14 @@ export { blocksToPlainText } from './blocks-to-plain-text';
 export { htmlTextContent } from './html-text';
 export { outlineFromOutputData } from './outline';
 export type { OutlineItem } from './outline';
+export { restoreHeadingAnchors } from './restore-heading-anchors';
+export type {
+  HeadingAnchorReport,
+  HeadingAnchorResult,
+  HeadingAnchorSkipReason,
+  RestoredHeadingAnchor,
+  SkippedHeadingAnchor,
+} from './restore-heading-anchors';
 /**
  * `blocksToViewNodes` and the `ViewNode` tree are `@experimental` — not
  * frozen until a second framework adapter consumes them.

@@ -12,6 +12,7 @@
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*). Never import
  * the `src/components/utils` barrel, editor modules, or tool classes.
  */
+import { normalizeHeadingAnchor } from '../shared/heading-anchor';
 import { CALLOUT_CHILDREN_CLASSES } from '../shared/tool-classes/callout';
 import { CODE_AREA_CLASSES } from '../shared/tool-classes/code';
 import { DIVIDER_RULE_CLASSES } from '../shared/tool-classes/divider';
@@ -389,7 +390,14 @@ export const builtinEmitters: Record<string, Emitter> = {
      * the view stay put.
      */
     const levelAttr = env.classesEnabled ? ` data-blok-heading-level="${level}"` : '';
-    const heading = `<h${level}${env.rootAttrs(block)}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
+    /**
+     * The anchor is what in-document links point at, so the view has to emit it
+     * or every `<a href="#...">` in the rendered document dies. It comes from
+     * block data — clipboard-controlled — so it is escaped like any other value.
+     */
+    const anchor = normalizeHeadingAnchor(block.data.anchor);
+    const anchorAttr = anchor === undefined ? '' : ` id="${env.escape(anchor)}"`;
+    const heading = `<h${level}${env.rootAttrs(block)}${anchorAttr}${levelAttr}>${env.inline(block.data.text)}</h${level}>`;
 
     if (block.data.isToggleable === true) {
       const open = block.data.isOpen === true ? ' open' : '';

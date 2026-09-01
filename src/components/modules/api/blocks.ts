@@ -13,6 +13,7 @@ import { announce } from '../../utils/announcer';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
+import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
 import { logLabeled } from './../../utils';
@@ -792,11 +793,18 @@ export class BlocksAPI extends Module {
    * @param id - target block id
    */
   public scrollToBlock(id: string): void {
-    const el = document.querySelector(`[data-blok-id="${CSS.escape(id)}"]`);
+    /**
+     * `id` is a block id for every caller that knows one, but the deferred
+     * boot-time hash lands here too — and that hash can be a heading anchor
+     * from imported HTML rather than a block id.
+     */
+    const target = resolveHashTarget(id, this.Blok.UI?.nodes.holder);
 
-    if (el === null) {
+    if (target === null) {
       return;
     }
+
+    const el = target.element;
 
     /**
      * A public scroll to this exact block consumes any deferred boot-time hash
@@ -812,7 +820,9 @@ export class BlocksAPI extends Module {
 
     window.scrollTo({ top: y, behavior: 'smooth' });
 
-    const block = this.Blok.BlockManager.getBlockById(id);
+    const block = target.blockId === null
+      ? undefined
+      : this.Blok.BlockManager.getBlockById(target.blockId);
 
     if (block !== undefined) {
       this.Blok.BlockSelection.selectBlock(block);

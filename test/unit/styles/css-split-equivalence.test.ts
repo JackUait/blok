@@ -516,10 +516,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // which is a comment rather than a rule bigger. The name flag was then
     // REPLACED by the Notion gutter face: presence.css lost the flag rules and
     // gained a per-block avatar strip that hangs in the editor's own control
-    // gutter (hidden on block hover so the +/⠿ controls keep that space), plus
-    // face/ring/gap tokens. Bumps the multiplier to 1.4608.
+    // gutter, plus face/ring/gap tokens. The strip then moved onto the block's
+    // CONTENT wrapper (the holder spans the whole editor, so the content edge
+    // is the only thing worth measuring from) and learned to SLIDE aside by the
+    // gutter token on hover rather than vanish, so the +/⠿ controls get that
+    // space and the order across the margin reads face, +, ⠿, text — Notion's.
+    // That is a transition, an LTR rule and its RTL mirror. Bumps the
+    // multiplier to 1.4628.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4608);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4628);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

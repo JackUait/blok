@@ -1230,6 +1230,7 @@
   --blok-presence-face-size: 22px;
   --blok-presence-ring: 2px;
   --blok-presence-face-gap: 2px;
+  --blok-presence-slide: 180ms;
   --blok-presence-face-line: 1.5rem;
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {

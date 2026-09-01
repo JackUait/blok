@@ -1,3 +1,5 @@
+import { DATA_ATTR } from '../../constants/data-attributes';
+
 /** What the avatar layer needs to know about a peer, after sanitization. */
 export interface AvatarPeer {
   clientId: number;
@@ -100,7 +102,21 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
   };
 
   /**
-   * The SAME strip is reused while the block still has one on the same holder —
+   * Where a strip mounts: the block's own content wrapper.
+   *
+   * NOT the holder, which spans the editor's full width — the content column is
+   * centred inside it, so a strip parked against the holder's edge lands a
+   * hundred-odd pixels out in the margin instead of beside the text. The
+   * wrapper is the content edge, and the decoration law blesses it alongside
+   * the holder. `:scope >` because a container block's holder also contains its
+   * CHILDREN's wrappers, and the first one found would be the wrong block's.
+   * @param holder - the block's holder
+   */
+  const mountFor = (holder: HTMLElement): HTMLElement =>
+    holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder;
+
+  /**
+   * The SAME strip is reused while the block still has one in the same place —
    * the leftover sweep compares by identity, so handing back a fresh element
    * for an unchanged block would tear down the strip this pass just filled.
    * @param blockId - the block being decorated
@@ -108,8 +124,9 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
    */
   const stripFor = (blockId: string, holder: HTMLElement): HTMLElement => {
     const existing = strips.get(blockId);
+    const mount = mountFor(holder);
 
-    if (existing !== undefined && existing.parentElement === holder) {
+    if (existing !== undefined && existing.parentElement === mount) {
       return existing;
     }
 
@@ -121,7 +138,7 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
     // is in the document.
     strip.setAttribute('contenteditable', 'false');
     strip.setAttribute('aria-hidden', 'true');
-    holder.appendChild(strip);
+    mount.appendChild(strip);
 
     return strip;
   };

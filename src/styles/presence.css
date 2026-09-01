@@ -32,6 +32,7 @@
   /* Ring around a face, and the same ring on the editor-wide stack. */
   --blok-presence-ring: 2px;
   --blok-presence-face-gap: 2px;
+  --blok-presence-slide: 180ms;
   /* One line of body text, so a face parks against the block's first line
      rather than floating at the top of a tall block. */
   --blok-presence-face-line: 1.5rem;
@@ -87,16 +88,21 @@
   [data-blok-presence-caret-idle] {
     animation: none;
   }
+
+  /* The face still steps aside — it just arrives there at once. */
+  [data-blok-presence-gutter] {
+    transition: none;
+  }
 }
 
 /* The face beside the block, the way Notion parks it in the page margin.
 
-   Sits in the editor's own control gutter (--blok-editor-gutter-start, the
-   space the floating +/⠿ buttons live in), so it never overlaps the text and
-   never widens the content column. Measured from the holder's inline-START
-   edge, so it follows the gutter token instead of restating its width — and
-   LOGICAL, not `right`, because that gutter mirrors under RTL and a physical
-   side would strand the face over the text. */
+   Mounted on the block's CONTENT wrapper, not its holder: the holder spans the
+   editor's full width with the content column centred inside it, so a strip
+   parked against the holder would sit a hundred-odd pixels out in the margin
+   instead of beside the text. `inset-inline-end` and not `right`, because the
+   control gutter mirrors under RTL and a physical side would strand the face
+   over the text. */
 [data-blok-presence-gutter] {
   position: absolute;
   top: 0;
@@ -107,15 +113,27 @@
   align-items: center;
   height: var(--blok-presence-face-line);
   margin-inline-end: var(--blok-presence-gap);
+  transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
   user-select: none;
 }
 
-/* Hidden while the block is hovered: the +/⠿ controls own this strip of gutter,
-   and two things fighting for it reads as a rendering fault. The peer is still
-   in the editor-wide stack, and their caret never moves. */
+/* Hovering the block summons the +/⠿ controls into exactly this space, so the
+   face steps aside for them rather than vanishing — Notion's order across the
+   margin is face, +, ⠿, text.
+
+   It slides by the gutter token, which is the width Blok reserves for those
+   controls, so the two stay in step if either changes. In read-only that token
+   collapses to zero, and so does this: no controls appear, so nothing has to
+   move. */
 [data-blok-element]:hover [data-blok-presence-gutter] {
-  opacity: 0;
+  transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
+}
+
+/* The mirrored side. `translateX` is physical, so RTL needs the other sign —
+   inset-inline-end already put the strip on the right there. */
+[data-blok-rtl="true"] [data-blok-element]:hover [data-blok-presence-gutter] {
+  transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
 
 /* The same face the editor-wide stack draws, one size down. Filled rather than

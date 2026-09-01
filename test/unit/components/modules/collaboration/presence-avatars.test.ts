@@ -122,17 +122,41 @@ describe('avatar layer — what it draws', () => {
     expect(harness.facesIn('block-2')).toHaveLength(0);
   });
 
-  it('writes on the holder, never inside the tool root', () => {
+  it('writes on the content wrapper, never inside the tool root', () => {
     const harness = setup();
     const toolRoot = harness.toolRootOf('block-1');
     const before = toolRoot.outerHTML;
 
     harness.layer.render([peer(1)]);
 
-    // The child-holder decoration law. A face inside the tool root would land
-    // in a save and in a copied selection.
+    const wrapper = harness.holderOf('block-1').querySelector('[data-blok-element-content]');
+
+    // The child-holder decoration law blesses the holder AND its content
+    // wrapper; the wrapper is the one that marks the content edge, and the
+    // holder spans the whole editor. A face inside the tool root would land in
+    // a save and in a copied selection.
     expect(toolRoot.outerHTML).toBe(before);
-    expect(harness.gutterOf('block-1')?.parentElement).toBe(harness.holderOf('block-1'));
+    expect(harness.gutterOf('block-1')?.parentElement).toBe(wrapper);
+  });
+
+  it('mounts on its own wrapper, not a nested child block\'s', () => {
+    const harness = setup();
+    const holder = harness.holderOf('block-1');
+    const childHolder = document.createElement('div');
+    const childWrapper = document.createElement('div');
+
+    childHolder.setAttribute('data-blok-element', '');
+    childWrapper.setAttribute('data-blok-element-content', '');
+    childHolder.appendChild(childWrapper);
+    holder.querySelector('[data-blok-element-content]')?.appendChild(childHolder);
+
+    harness.layer.render([peer(1)]);
+
+    // A container's holder also contains its CHILDREN's wrappers, so an
+    // unscoped lookup could park the face inside the wrong block.
+    expect(childWrapper.querySelector(`[${GUTTER_ATTR}]`)).toBeNull();
+    expect(harness.gutterOf('block-1')?.parentElement)
+      .toBe(holder.querySelector(':scope > [data-blok-element-content]'));
   });
 
   it('shows a monogram, not the whole name', () => {

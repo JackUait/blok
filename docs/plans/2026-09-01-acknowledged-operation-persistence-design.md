@@ -374,8 +374,8 @@ commit-unavailable outcome. An empty update (a stock client answering SyncStep1
 while already in sync) is not journalled.
 
 A journal-backed room keeps no second copy: the working-set persist, its blob
-version tracking, the eviction hold and every compaction call are skipped, so
-the only writer of document bytes is the fenced session.
+version tracking, the blob-write eviction hold and every compaction call are
+skipped, so the only writer of document bytes is the fenced session.
 
 The HTTP block-edit endpoint takes a required idempotency key and enters this
 same commit primitive. Its 2xx response means durable operation commit. It does
@@ -490,7 +490,8 @@ source:
   eviction/drain;
 - PUT includes lineage and committed server sequence so the consumer can reject
   a stale projection;
-- failure leaves the projection dirty and retryable;
+- failure leaves the projection dirty and retryable, and a room does not evict
+  while its projection is dirty;
 - the operation store remains authoritative.
 
 A host that needs reliable history/current state supplies an operation store or

@@ -30,7 +30,8 @@
 - The operation journal, not the JSON document endpoint, is the acknowledgement
   boundary.
 - Every wave must leave main green, be committed by staging only its owned paths,
-  pulled with fast-forward-only semantics, and pushed before the next wave.
+  rebased onto origin (`git pull --rebase`; never a merge, never a stash), and
+  pushed before the next wave.
 
 ---
 
@@ -386,9 +387,12 @@ dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
   wave; Task 4.5 flips it to `[v2, v1, ticket]` once the client can drain v2.
   A client that offers v2 earlier is selected into a protocol it cannot honour.
 - [ ] Assert the client still offers `[v1, ticket]` unchanged.
-- [ ] Make v2 selectable only when an `ICollabOperationStore` is registered.
-  S3-only registration selects v1; the local directory store becomes an
-  operation store through Task 2.4's migration.
+- [ ] Make v2 selectable only when an `ICollabOperationStore` is registered
+  AND a server-side advertise constant is on; the constant stays off until
+  Task 3.3 flips it, so a main that has Wave 2's local store but not Wave 3's
+  commit path never selects a protocol it cannot serve. S3-only registration
+  selects v1; the local directory store becomes an operation store through
+  Task 2.4's migration.
 - [ ] Run focused handshake/provider tests.
 
 ```bash
@@ -674,6 +678,8 @@ dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
   violation frame (`raw write on a v2 session`).
 - [ ] Assert operation frames are rejected as `not-synced` until the initial
   server SyncStep2 is queued.
+- [ ] Flip the server-side v2 advertise constant from Task 1.4 here, once the
+  commit path (Task 3.2) and this task are green.
 - [ ] Run endpoint and room sync tests.
 
 ```bash
@@ -761,6 +767,10 @@ dotnet test packages/server/dotnet/Blok.Server.AspNetCore.Tests/Blok.Server.AspN
   - `EvictionAndDrainProjectTheLatestCommittedSequence`;
   - `ProjectionCarriesLineageAndServerSequence`;
   - `FailedProjectionStaysDirtyAndRetries`;
+  - `EvictionWaitsForADirtyProjection` (the dirty flag is in memory; evicting
+    past a failed projection would leave the consumer's record behind until
+    the next edit — the Phase 2 law "evict must not drop a room whose persist
+    failed" now applies to the projection; reuse the existing backoff);
   - `OlderProjectionCannotOverwriteANewerSequenceWhenConsumerUsesHeaders`.
 - [ ] Remove operation-by-operation `MarkDirty` scheduling. Schedule projection
   after checkpoint publication and on eviction/drain only.
@@ -793,8 +803,9 @@ alone is Risk 2 firing even if no checkpoint cursor ever advances.
   - `OperationStoreRoomEvictsWithoutWaitingForABlobWrite`.
 - [ ] In operation-store mode: load = open the fenced session and hydrate
   baseline + tail; skip persist scheduling, blob version tracking, the
-  eviction hold, and all four compaction calls. Working-set-only rooms keep
-  every one of them.
+  blob-write eviction hold, and all four compaction calls. The projection's
+  dirty hold from Task 3.6 stays. Working-set-only rooms keep every one of
+  them.
 - [ ] Run only the room tests.
 
 ### Wave 3 gate
@@ -1398,7 +1409,7 @@ node scripts/test-server-conformance.mjs --target csharp
 ### Task 7.3: Land safely on main
 
 - [ ] Confirm no stash exists and no unrelated working-tree file is staged.
-- [ ] Pull with fast-forward-only semantics.
+- [ ] Rebase onto origin (`git pull --rebase`); never merge, never stash.
 - [ ] Commit any remaining verified wave by staging only the paths that wave owns.
 - [ ] Push main.
 - [ ] Confirm `git status` says main is up to date with origin and only the

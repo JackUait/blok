@@ -62,6 +62,11 @@ const setup = (options: { blockIds?: string[]; maxFaces?: number } = {}): Harnes
 
   const layer = createAvatarLayer({
     resolveHolder: (blockId) => holders.get(blockId) ?? null,
+    resolveInputs: (blockId) => {
+      const toolRoot = holders.get(blockId)?.querySelector<HTMLElement>('[data-blok-tool]');
+
+      return toolRoot === null || toolRoot === undefined ? [] : [toolRoot];
+    },
     maxFaces: options.maxFaces,
   });
 
@@ -212,6 +217,46 @@ describe('avatar layer — what it draws', () => {
 
     expect(face?.querySelector('img')).toBeNull();
     expect(face?.getAttribute('title')).toBe(hostile);
+  });
+});
+
+describe('avatar layer — vertical placement', () => {
+  it('centres the face on the block\'s first line, not on its box', () => {
+    const harness = setup();
+
+    // A block's first line does not start at the top of its wrapper: there is
+    // half-leading above it, and a heading's line is far taller than a
+    // paragraph's, so no fixed offset is right for both.
+    vi.spyOn(harness.holderOf('block-1').querySelector('[data-blok-element-content]') as Element,
+      'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 175, height: 48, right: 0, bottom: 223, width: 0, x: 0, y: 175,
+        toJSON: () => ({}),
+      });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 184, height: 20, right: 0, bottom: 204, width: 0, x: 0, y: 184,
+      toJSON: () => ({}),
+    });
+
+    harness.layer.render([peer(1)]);
+
+    // Line centre is 194, which is 19 below the wrapper top — so a strip twice
+    // that tall, with the face centred in it, lands the face on the line.
+    expect(harness.gutterOf('block-1')?.style.height).toBe('38px');
+  });
+
+  it('falls back to a line-height box when the block has no text to measure', () => {
+    const harness = setup();
+
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, height: 0, right: 0, bottom: 0, width: 0, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+
+    harness.layer.render([peer(1)]);
+
+    // An empty block measures nothing in every engine. The strip still has to
+    // be somewhere sane rather than collapsing to zero.
+    expect(harness.gutterOf('block-1')?.style.height).not.toBe('0px');
   });
 });
 

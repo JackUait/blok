@@ -20,7 +20,7 @@
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
   --blok-presence-radius: 3px;
-  /* Overlap of the avatar stack, and the name flag's inline padding. */
+  /* Overlap of the avatar stack, and the gutter strip's inline gap. */
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
   --blok-presence-caret-width: 2px;
@@ -28,13 +28,14 @@
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
-  --blok-presence-face-size: 22px;
+  --blok-presence-face-size: 26px;
   /* Ring around a face, and the same ring on the editor-wide stack. */
   --blok-presence-ring: 2px;
   --blok-presence-face-gap: 2px;
   --blok-presence-slide: 180ms;
-  /* One line of body text, so a face parks against the block's first line
-     rather than floating at the top of a tall block. */
+  /* Only a floor. The real height is written per block by presence-avatars.ts
+     from the MEASURED first line — a heading's line is far taller than a
+     paragraph's, so no constant centres the face on both. */
   --blok-presence-face-line: 1.5rem;
 }
 
@@ -111,7 +112,7 @@
   display: flex;
   gap: var(--blok-presence-face-gap);
   align-items: center;
-  height: var(--blok-presence-face-line);
+  min-height: var(--blok-presence-face-line);
   margin-inline-end: var(--blok-presence-gap);
   transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
@@ -153,7 +154,7 @@
   border-radius: 50%;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;

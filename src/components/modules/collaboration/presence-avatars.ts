@@ -1,5 +1,7 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 
+import { resolveCaretRange } from './caret-position';
+
 /** What the avatar layer needs to know about a peer, after sanitization. */
 export interface AvatarPeer {
   clientId: number;
@@ -14,6 +16,8 @@ export interface AvatarPeer {
 export interface AvatarLayerOptions {
   /** The holder of a block, or null when the id names nothing here. */
   resolveHolder: (blockId: string) => HTMLElement | null;
+  /** That block's editable elements; only the first is measured. */
+  resolveInputs?: (blockId: string) => HTMLElement[];
   /** How many faces one block shows before it starts counting (default 3). */
   maxFaces?: number;
 }
@@ -42,6 +46,13 @@ const COLOR_PROPERTY = '--blok-presence-color';
  * belongs to stops pointing at anything.
  */
 const DEFAULT_MAX_FACES = 3;
+
+/**
+ * Where the face sits when a block's first line cannot be measured — an empty
+ * paragraph measures zero in every engine. One body line, halved by the
+ * centring below.
+ */
+const FALLBACK_LINE_CENTRE = 12;
 
 /** First letter of each of the first two words — a monogram, not a name. */
 const initialsOf = (name: string): string =>
@@ -116,6 +127,29 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
     holder.querySelector<HTMLElement>(`:scope > [${DATA_ATTR.elementContent}]`) ?? holder;
 
   /**
+   * How far below the mount's top edge the block's FIRST LINE is centred.
+   *
+   * Measured, not assumed: a line does not start at the top of its wrapper —
+   * there is half-leading above it — and a heading's line is far taller than a
+   * paragraph's, so no fixed offset is right for both. Measured through the
+   * same Range the carets use, so the face and the caret agree about where a
+   * line is.
+   * @param blockId - the block being decorated
+   * @param mount - the element the strip is positioned against
+   */
+  const lineCentreIn = (blockId: string, mount: HTMLElement): number => {
+    const input = options.resolveInputs?.(blockId)[0];
+    const range = input === undefined ? null : resolveCaretRange(input, 0);
+    const rect = range?.getBoundingClientRect();
+
+    if (rect === undefined || rect.height === 0) {
+      return FALLBACK_LINE_CENTRE;
+    }
+
+    return rect.top + rect.height / 2 - mount.getBoundingClientRect().top;
+  };
+
+  /**
    * The SAME strip is reused while the block still has one in the same place —
    * the leftover sweep compares by identity, so handing back a fresh element
    * for an unchanged block would tear down the strip this pass just filled.
@@ -184,6 +218,10 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
         // handful of spans, and the identity that must survive a pass is the
         // STRIP's (so the sweep below can tell it apart), not each face's.
         strip.replaceChildren(...shown);
+
+        // Twice the line centre, with the faces centred inside: that lands them
+        // ON the line without a transform, which the hover slide already owns.
+        strip.style.height = `${2 * lineCentreIn(blockId, strip.parentElement ?? holder)}px`;
 
         next.set(blockId, strip);
       });

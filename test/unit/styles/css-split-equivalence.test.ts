@@ -521,10 +521,13 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // is the only thing worth measuring from) and learned to SLIDE aside by the
     // gutter token on hover rather than vanish, so the +/⠿ controls get that
     // space and the order across the margin reads face, +, ⠿, text — Notion's.
-    // That is a transition, an LTR rule and its RTL mirror. Bumps the
-    // multiplier to 1.4628.
+    // That is a transition, an LTR rule and its RTL mirror. The fixed line-box
+    // height then became a min-height floor, because presence-avatars.ts now
+    // writes the real one per block from the MEASURED first line (a heading's
+    // line is 39px against a paragraph's 24px, so no constant centres both).
+    // Bumps the multiplier to 1.4631.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4628);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4631);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -8040,7 +8040,7 @@
   --blok-presence-caret-radius: 1px;
   --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
-  --blok-presence-face-size: 22px;
+  --blok-presence-face-size: 26px;
   --blok-presence-ring: 2px;
   --blok-presence-face-gap: 2px;
   --blok-presence-slide: 180ms;
@@ -8082,7 +8082,7 @@
   display: flex;
   gap: var(--blok-presence-face-gap);
   align-items: center;
-  height: var(--blok-presence-face-line);
+  min-height: var(--blok-presence-face-line);
   margin-inline-end: var(--blok-presence-gap);
   transition: transform var(--blok-presence-slide) cubic-bezier(0.2, 0.7, 0.3, 1);
   pointer-events: none;
@@ -8109,7 +8109,7 @@
   border-radius: 50%;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;

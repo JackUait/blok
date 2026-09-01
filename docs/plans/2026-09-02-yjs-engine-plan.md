@@ -337,6 +337,7 @@ yarn eslint scripts/generate-yjs-engine-fixtures.mjs test/unit/server-conformanc
 - Create: `scripts/replay-yjs-update.mjs`
 - Create: `packages/server/dotnet/Blok.Server.Tests/Yjs/YjsEngineFixtures.cs`
 - Create: `packages/server/dotnet/Blok.Server.Tests/Yjs/NodeReplay.cs`
+- Create: `packages/server/dotnet/Blok.Server.Tests/Yjs/YjsEngineHarnessTests.cs`
 
 `replay-yjs-update.mjs` reads JSON from stdin
 `{ "roots": {"name": "map"|"array"|"text"}, "updates": ["<b64>", ...], "stateVectorFor": "<b64>|null" }`,
@@ -362,7 +363,7 @@ case.
 
 ```bash
 cd packages/server/dotnet && dotnet test Blok.Server.Tests/Blok.Server.Tests.csproj \
-  --filter 'FullyQualifiedName~YjsEngineFixtures|FullyQualifiedName~NodeReplay' -p:NuGetAudit=false
+  --filter 'FullyQualifiedName~YjsEngineHarnessTests' -p:NuGetAudit=false
 ```
 
 ### Task 0.3: Capture the yrs-encoded corpus while YDotNet still exists

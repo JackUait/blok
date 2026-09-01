@@ -381,13 +381,19 @@ export class BlockObserver {
    *
    * Returns null when the chain never reaches the blocks map, or when the
    * member directly under it is not a Y.Map (hostile shapes drop silently).
+   *
+   * Any shared type is a legal STARTING node — a foreign client can nest a
+   * Y.Text under block data, and its delta events target the Y.Text itself;
+   * rejecting it here silently diverges the doc from the DOM. The
+   * member-under-blocks-must-be-a-Y.Map gate below is what keeps hostile
+   * shapes out, not this check.
    */
   private walkToOwningBlock(node: unknown): Y.Map<unknown> | null {
     if (this.blocksMap === null) {
       return null;
     }
 
-    if (!(node instanceof Y.Map) && !(node instanceof Y.Array)) {
+    if (!(node instanceof Y.AbstractType)) {
       return null;
     }
 

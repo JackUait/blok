@@ -431,6 +431,39 @@ describe('YBlockSerializer', () => {
     });
   });
 
+  describe('foreign Y.Text values', () => {
+    /**
+     * The v1 serializer never writes a Y.Text, but one can arrive from a
+     * foreign or future-format client. Reading it back as the raw shared
+     * object leaks a live Y type into OutputData; the string is what every
+     * consumer expects.
+     */
+    it('reads a Y.Text value back as its string', () => {
+      const map = ydoc.getMap<unknown>('m');
+
+      ydoc.transact(() => {
+        map.set('text', new Y.Text('hello world'));
+      });
+
+      expect(serializer.yValueToPlain(map.get('text'))).toBe('hello world');
+    });
+
+    it('reads a Y.Text nested in block data back as a string via yMapToObject', () => {
+      const map = ydoc.getMap<unknown>('m');
+
+      ydoc.transact(() => {
+        const data = new Y.Map<unknown>();
+
+        data.set('text', new Y.Text('nested'));
+        map.set('data', data);
+      });
+
+      const plain = serializer.yMapToObject(map.get('data') as Y.Map<unknown>);
+
+      expect(plain).toEqual({ text: 'nested' });
+    });
+  });
+
   describe('keys that clash with Object.prototype', () => {
     // JSON.parse produces a real own `__proto__` property, so a consumer's
     // stored record can carry one. Plain `obj[key] = value` would set the

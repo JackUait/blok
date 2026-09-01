@@ -405,6 +405,48 @@ describe('BlockObserver', () => {
       expect(childUpdate?.origin).toBe('remote');
     });
 
+    /**
+     * The v1 serializer never writes a Y.Text, but a foreign or future-format
+     * client can put one under a block's data and its DELTA events target the
+     * Y.Text itself. Dropping those leaves the doc and the DOM silently
+     * diverged — the Phase-0 blind-spot class. The walk only needs `.parent`,
+     * so any shared type must be a legal starting node.
+     */
+    it('emits a remote update when a peer edits a Y.Text nested under block data', () => {
+      const foreign = new Y.Doc();
+
+      foreign.transact(() => {
+        const block = new Y.Map<unknown>();
+        const data = new Y.Map<unknown>();
+
+        data.set('text', new Y.Text('hello'));
+        block.set('id', 'yt-1');
+        block.set('type', 'paragraph');
+        block.set('data', data);
+        foreign.getMap<Y.Map<unknown>>('blocks').set('yt-1', block);
+        foreign.getArray<string>('root').push(['yt-1']);
+      });
+      store.applyRemoteUpdate(Y.encodeStateAsUpdate(foreign));
+
+      const callback = vi.fn();
+
+      observer.onBlocksChanged(callback);
+
+      const data = foreign.getMap<Y.Map<unknown>>('blocks').get('yt-1')?.get('data') as Y.Map<unknown>;
+
+      (data.get('text') as Y.Text).insert(5, ' world');
+      store.applyRemoteUpdate(Y.encodeStateAsUpdate(foreign, store.getStateVector()));
+      foreign.destroy();
+
+      const updateEvents = callback.mock.calls
+        .map((call) => call[0] as BlockChangeEvent)
+        .filter((event): event is SingleBlockEvent => event.type === 'update');
+      const textUpdate = updateEvents.find((event) => event.blockId === 'yt-1');
+
+      expect(textUpdate).toBeDefined();
+      expect(textUpdate?.origin).toBe('remote');
+    });
+
     it('emits update event when the contentIds KEY is overwritten on the yblock', () => {
       addBlocks(['toggle-1']);
 

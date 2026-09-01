@@ -440,6 +440,13 @@ export class YBlockSerializer {
       return this.yArrayToPlain(value);
     }
 
+    // The v1 serializer never writes a Y.Text, but a foreign or
+    // future-format client can; falling through would leak the live shared
+    // object into OutputData where every consumer expects a string.
+    if (value instanceof Y.Text) {
+      return value.toJSON();
+    }
+
     return value;
   }
 

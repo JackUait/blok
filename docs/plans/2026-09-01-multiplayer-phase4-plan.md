@@ -139,14 +139,15 @@ decision-8 matrix rewrite (DONE, `fe1b3018`).
 
 ## Tasks (TDD)
 
-Wave A (parallel, no spike dependencies):
+Wave A — CLOSED:
 - A1 size announcement — frame type 101 both sides + provider
-  refuse-before-write + fixtures + docs (IN FLIGHT).
+  refuse-before-write + fixtures + docs (DONE `81a6920c`).
 - A2 F8 — caret capture on entering read-only, restore on leaving, BOTH
   toggle paths, plus the adjacent no-op-flap fix in
-  reapplyCollaborationArbitration; unit (mock harness) + e2e with a tool
-  WITHOUT setReadOnly (the fixture law) (IN FLIGHT).
+  reapplyCollaborationArbitration (DONE `683e8d6d`).
 - A3 scale-out guide (DONE `e73ecbd2`).
+- A0 decision-8 matrix rewrite (DONE `fe1b3018`); Y.Text observer/serializer
+  hardening, decision 13's carried prep (DONE `3f01ca20`).
 
 Wave B (after A1 lands — shares provider.ts/types.ts): offline cache per
 decisions 4-10, plus the walkToOwningBlock widening (13) and the pagehide
@@ -177,3 +178,28 @@ only edits decision 13's record.
 ## Amendments from execution
 
 (append-only, dated)
+
+### 2026-09-01 — Wave A closed
+
+Four items landed and are on main. Two things the execution taught, both
+worth more than the features:
+
+**The strict-parser trap (A1).** The plan opened intending to add
+`maxMessageBytes` as a field on the existing control frame. Both parsers
+reject unknown properties BY DESIGN — a client sees the frame as malformed,
+drops it, never validates the handshake, and after three attempts lands in
+the TERMINAL handshake-timeout state. Adding that field would have bricked
+every deployed client on contact with an upgraded server. The forward-compat
+channel both sides deliberately left open is an unknown OUTER message type,
+so the announcement rides a new type 101. **Law: in this protocol, new
+information goes in a new frame type, never a new field on an existing one.**
+
+**A no-op is not a no-op (A2).** F8 was filed as "the veto flip destroys the
+caret". It is worse: `BlockSelection.toggleReadOnly` removes every selection
+range from inside the module cascade, and the cascade runs BEFORE
+`applyReadOnly`'s same-state early return — so a collaboration status blip
+that changed nothing at all (an offline flicker while still editable) killed
+a live caret with no state change and no gesture. Fixed by returning early in
+`reapplyCollaborationArbitration` when the derived state is unchanged, scoped
+there because host-initiated same-state `set()` relies on the cascade re-run
+to re-stamp `hideControls`.

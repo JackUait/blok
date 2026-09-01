@@ -21,7 +21,6 @@ import {
   type PresenceRenderer,
 } from '../../../../../src/components/modules/collaboration/presence-renderer';
 
-const PRESENCE_ATTR = 'data-blok-presence';
 const PRESENCE_COLOR = '--blok-presence-color';
 
 interface Harness {
@@ -48,7 +47,8 @@ const makeHolder = (blockId: string): HTMLElement => {
   holder.setAttribute('data-blok-id', blockId);
   content.setAttribute('data-blok-element-content', '');
   toolRoot.setAttribute('data-blok-tool', 'paragraph');
-  toolRoot.contentEditable = 'true';
+  // The ATTRIBUTE, not the property: jsdom does not reflect `contentEditable`.
+  toolRoot.setAttribute('contenteditable', 'true');
   toolRoot.textContent = 'hello';
 
   content.appendChild(toolRoot);
@@ -76,6 +76,11 @@ const setup = (options: { maxAvatars?: number; blockIds?: string[] } = {}): Harn
   const renderer = createPresenceRenderer({
     host,
     resolveHolder: (blockId) => holders.get(blockId) ?? null,
+    resolveInputs: (blockId) => {
+      const toolRoot = holders.get(blockId)?.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      return toolRoot === null || toolRoot === undefined ? [] : [toolRoot];
+    },
     isHidden: () => hidden.value,
     maxAvatars: options.maxAvatars,
   });
@@ -114,8 +119,15 @@ const peer = (
   state: Record<string, unknown>
 ): PresenceState => ({ clientId, state });
 
+const caretAt = (blockId: string | null): Record<string, unknown> | null =>
+  blockId === null ? null : { blockId, inputIndex: 0, anchor: 1, head: 1 };
+
 const named = (clientId: number, name: string, blockId: string | null, color?: string): PresenceState =>
-  peer(clientId, { user: color === undefined ? { name } : { name, color }, blockId });
+  peer(clientId, {
+    user: color === undefined ? { name } : { name, color },
+    blockId,
+    caret: caretAt(blockId),
+  });
 
 const stack = (host: HTMLElement): HTMLElement | null =>
   host.querySelector<HTMLElement>('[data-blok-presence-stack]');
@@ -123,8 +135,11 @@ const stack = (host: HTMLElement): HTMLElement | null =>
 const avatars = (host: HTMLElement): HTMLElement[] =>
   Array.from(host.querySelectorAll<HTMLElement>('[data-blok-presence-avatar]'));
 
+const caret = (holder: HTMLElement): HTMLElement | null =>
+  holder.querySelector<HTMLElement>('[data-blok-presence-caret]');
+
 const label = (holder: HTMLElement): HTMLElement | null =>
-  holder.querySelector<HTMLElement>('[data-blok-presence-label]');
+  holder.querySelector<HTMLElement>('[data-blok-presence-caret-name]');
 
 describe('presence renderer', () => {
   beforeEach(() => {
@@ -140,15 +155,17 @@ describe('presence renderer', () => {
   });
 
   describe('a remote peer', () => {
-    it('gets an avatar in the stack and a coloured outline on the holder', () => {
+    it('gets an avatar in the stack and a coloured caret where they are working', () => {
       const harness = setup();
 
       harness.renderer.render([named(99, 'Grace Hopper', 'block-2', '#0b6e99')], 42);
 
       const holder = harness.holderOf('block-2');
 
-      expect(holder.getAttribute(PRESENCE_ATTR)).toBe('');
-      expect(holder.style.getPropertyValue(PRESENCE_COLOR)).toBe('#0b6e99');
+      // Notion's shape: the caret IS the presence. No block outline — that says
+      // only "somebody is in this paragraph", where a caret says where.
+      expect(caret(holder)).not.toBeNull();
+      expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe('#0b6e99');
       expect(label(holder)?.textContent).toBe('Grace Hopper');
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].getAttribute('title')).toBe('Grace Hopper');
@@ -164,8 +181,8 @@ describe('presence renderer', () => {
       const holder = harness.holderOf('block-2');
 
       expect(toolRoot.outerHTML).toBe(before);
-      expect(label(holder)?.parentElement).toBe(holder);
-      expect(holder.parentElement?.hasAttribute('data-blok-presence-label')).toBe(false);
+      expect(caret(holder)?.parentElement).toBe(holder);
+      expect(holder.parentElement?.hasAttribute('data-blok-presence-caret')).toBe(false);
     });
 
     it('marks the label inert so it never joins the caret or a copied selection', () => {
@@ -173,7 +190,7 @@ describe('presence renderer', () => {
 
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
 
-      const element = label(harness.holderOf('block-2'));
+      const element = caret(harness.holderOf('block-2'));
 
       expect(element?.getAttribute('contenteditable')).toBe('false');
       expect(element?.getAttribute('aria-hidden')).toBe('true');
@@ -183,14 +200,14 @@ describe('presence renderer', () => {
       const harness = setup();
 
       // `collaboration.user` is optional, so a nameless peer is the DEFAULT
-      // configuration, not a broken one. They get the outline and an avatar in
-      // their assigned colour; only the name label has nothing to say.
-      harness.renderer.render([peer(98, { user: {}, blockId: 'block-3' })], 42);
+      // configuration, not a broken one. They get a caret and an avatar in their
+      // assigned colour; only the name flag has nothing to say.
+      harness.renderer.render([peer(98, { user: {}, blockId: 'block-3', caret: caretAt('block-3') })], 42);
 
       const holder = harness.holderOf('block-3');
 
-      expect(holder.getAttribute(PRESENCE_ATTR)).toBe('');
-      expect(holder.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
+      expect(caret(holder)).not.toBeNull();
+      expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       expect(label(holder)?.hidden).toBe(true);
@@ -199,9 +216,9 @@ describe('presence renderer', () => {
     it('is not drawn by a state that carries no identity at all', () => {
       const harness = setup();
 
-      harness.renderer.render([peer(99, { blockId: 'block-2' })], 42);
+      harness.renderer.render([peer(99, { blockId: 'block-2', caret: caretAt('block-2') })], 42);
 
-      expect(harness.holderOf('block-2').hasAttribute(PRESENCE_ATTR)).toBe(false);
+      expect(caret(harness.holderOf('block-2'))).toBeNull();
       expect(avatars(harness.host)).toHaveLength(0);
     });
   });
@@ -215,8 +232,8 @@ describe('presence renderer', () => {
         42
       );
 
-      expect(harness.holderOf('block-1').hasAttribute(PRESENCE_ATTR)).toBe(false);
-      expect(harness.holderOf('block-2').hasAttribute(PRESENCE_ATTR)).toBe(true);
+      expect(caret(harness.holderOf('block-1'))).toBeNull();
+      expect(caret(harness.holderOf('block-2'))).not.toBeNull();
       expect(avatars(harness.host)).toHaveLength(1);
     });
   });
@@ -270,11 +287,11 @@ describe('presence renderer', () => {
 
       harness.renderer.render([named(99, 'Grace', 'block-2', color)], 42);
 
-      const holder = harness.holderOf('block-2');
+      const element = caret(harness.holderOf('block-2'));
 
-      expect(holder.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(99));
-      expect(holder.getAttribute('style') ?? '').not.toContain('url(');
-      expect(holder.getAttribute('style') ?? '').not.toContain('javascript');
+      expect(element?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(99));
+      expect(element?.getAttribute('style') ?? '').not.toContain('url(');
+      expect(element?.getAttribute('style') ?? '').not.toContain('javascript');
     });
 
     it('tolerates a block id that names nothing', () => {
@@ -287,7 +304,7 @@ describe('presence renderer', () => {
       ], 42)).not.toThrow();
 
       expect(avatars(harness.host)).toHaveLength(3);
-      expect(harness.host.querySelectorAll('[data-blok-presence-label]')).toHaveLength(0);
+      expect(harness.host.querySelectorAll('[data-blok-presence-caret]')).toHaveLength(0);
     });
 
     it('caps how many avatars it draws and counts the rest', () => {
@@ -317,7 +334,7 @@ describe('presence renderer', () => {
 
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].getAttribute('title')).toBe('Real Person');
-      expect(harness.holderOf('real').hasAttribute(PRESENCE_ATTR)).toBe(true);
+      expect(caret(harness.holderOf('real'))).not.toBeNull();
     });
 
     it('draws the real peer behind a wall of local-client duplicates', () => {
@@ -327,7 +344,7 @@ describe('presence renderer', () => {
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
       expect(avatars(harness.host)).toHaveLength(1);
-      expect(harness.holderOf('block-1').hasAttribute(PRESENCE_ATTR)).toBe(false);
+      expect(caret(harness.holderOf('block-1'))).toBeNull();
     });
 
     it('counts junk in neither the avatars nor the +N', () => {
@@ -382,12 +399,56 @@ describe('presence renderer', () => {
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
 
       expect(stack(harness.host)).toBeNull();
-      expect(harness.holderOf('block-2').hasAttribute(PRESENCE_ATTR)).toBe(false);
+      expect(caret(harness.holderOf('block-2'))).toBeNull();
+    });
+  });
+
+  describe('reflow', () => {
+    it('re-measures the carets when the editor resizes', () => {
+      const observers: ResizeObserverCallback[] = [];
+      const original = window.ResizeObserver;
+
+      window.ResizeObserver = class MockResizeObserver {
+        public constructor(callback: ResizeObserverCallback) {
+          observers.push(callback);
+        }
+
+        public observe = vi.fn();
+
+        public unobserve = vi.fn();
+
+        public disconnect = vi.fn();
+      };
+
+      try {
+        const harness = setup();
+        const rect = vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+          left: 10, top: 0, height: 18, right: 10, bottom: 18, width: 0, x: 10, y: 0,
+          toJSON: () => ({}),
+        });
+
+        harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
+
+        expect(caret(harness.holderOf('block-2'))?.style.left).toBe('10px');
+
+        rect.mockReturnValue({
+          left: 90, top: 0, height: 18, right: 90, bottom: 18, width: 0, x: 90, y: 0,
+          toJSON: () => ({}),
+        });
+        // A window resize reflows the text under every remote caret, and no
+        // awareness traffic announces it — without this the carets sit at their
+        // old coordinates until somebody happens to move.
+        observers.forEach((callback) => callback([], {} as unknown as ResizeObserver));
+
+        expect(caret(harness.holderOf('block-2'))?.style.left).toBe('90px');
+      } finally {
+        window.ResizeObserver = original;
+      }
     });
   });
 
   describe('cleanup', () => {
-    it('undoes every attribute, property and element it wrote when a peer leaves', () => {
+    it('leaves the holder exactly as it found it when a peer leaves', () => {
       const harness = setup();
       const holder = harness.holderOf('block-2');
       const before = holder.outerHTML;
@@ -395,34 +456,31 @@ describe('presence renderer', () => {
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
       harness.renderer.render([], 42);
 
-      expect(holder.hasAttribute(PRESENCE_ATTR)).toBe(false);
-      expect(holder.style.getPropertyValue(PRESENCE_COLOR)).toBe('');
-      expect(label(holder)).toBeNull();
+      expect(caret(holder)).toBeNull();
       expect(holder.outerHTML).toBe(before);
     });
 
-    it('moves the decoration when a peer moves to another block', () => {
+    it('moves the caret when a peer moves to another block', () => {
       const harness = setup();
 
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
       harness.renderer.render([named(99, 'Grace', 'block-3')], 42);
 
-      expect(harness.holderOf('block-2').hasAttribute(PRESENCE_ATTR)).toBe(false);
-      expect(label(harness.holderOf('block-2'))).toBeNull();
-      expect(harness.holderOf('block-3').hasAttribute(PRESENCE_ATTR)).toBe(true);
+      expect(caret(harness.holderOf('block-2'))).toBeNull();
+      expect(caret(harness.holderOf('block-3'))).not.toBeNull();
       expect(label(harness.holderOf('block-3'))?.textContent).toBe('Grace');
     });
 
-    it('keeps one label per block when a peer stays put', () => {
+    it('keeps one caret per block when a peer stays put', () => {
       const harness = setup();
 
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);
 
-      expect(harness.holderOf('block-2').querySelectorAll('[data-blok-presence-label]')).toHaveLength(1);
+      expect(harness.holderOf('block-2').querySelectorAll('[data-blok-presence-caret]')).toHaveLength(1);
     });
 
-    it('clear() takes the stack and every stamp with it', () => {
+    it('clear() takes the stack and every caret with it', () => {
       const harness = setup();
       const holder = harness.holderOf('block-2');
       const before = holder.outerHTML;

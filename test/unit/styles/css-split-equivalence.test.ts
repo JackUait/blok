@@ -504,8 +504,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // avatar stack and its overflow chip), all of it attribute-selected so no
     // rule reaches into a tool root, plus its own token block (~2KB). Bumps the
     // multiplier to 1.452.
+    // 2026-09-01: presence carets — presence.css traded the block outline and
+    // its holder label for the Notion shape: an absolutely-positioned caret line
+    // parked on the holder, a name flag that fades on idle, a pulse keyframe
+    // that runs only while the peer is active, and a reduced-motion block that
+    // stands both animations down. Net a little larger than the outline it
+    // replaced (~1.6KB). Bumps the multiplier to 1.456.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.452);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.456);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

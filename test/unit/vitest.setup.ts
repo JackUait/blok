@@ -41,3 +41,12 @@ if (hasDom && !window.ResizeObserver) {
     disconnect = vi.fn();
   };
 }
+
+// Polyfill Range.getBoundingClientRect for jsdom, which implements the Range
+// API without any layout. Every real engine has it; code that measures a Range
+// (remote presence carets) would otherwise throw only under test.
+if (hasDom && typeof window.Range.prototype.getBoundingClientRect !== 'function') {
+  window.Range.prototype.getBoundingClientRect = function getBoundingClientRect(): DOMRect {
+    return new window.DOMRect(0, 0, 0, 0);
+  };
+}

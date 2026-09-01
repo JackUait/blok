@@ -1,6 +1,7 @@
 import { throttle } from '../../utils/functional';
 import type { AwarenessChange } from '../yjs/types';
 
+import type { CaretPosition } from './caret-position';
 import type { PresenceRenderer } from './presence-renderer';
 
 /**
@@ -43,6 +44,11 @@ export interface PresenceOptions {
   user?: { name?: string; color?: string };
   /** The block the caret sits in right now. */
   currentBlockId: () => string | null;
+  /**
+   * Where the caret sits inside that block, or null when it is somewhere no
+   * peer could draw. Omit to publish block-level presence only.
+   */
+  currentCaret?: () => CaretPosition | null;
   /** Draws what the peers publish; omit to publish without rendering. */
   renderer?: PresenceRenderer;
   /** Where the caret listeners bind. Defaults to the ambient `document`. */
@@ -214,6 +220,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
     localClientId: null as number | null,
     /** `undefined` means "never published", which is distinct from a null block. */
     publishedBlockId: undefined as string | null | undefined,
+    /** The last caret tuple put on the wire, as its comparison key. */
+    publishedCaret: undefined as string | undefined,
     unhookAwareness: null as (() => void) | null,
     unhookAwarenessUpdate: null as (() => void) | null,
     onCaretMove: null as (() => void) | null,
@@ -235,6 +243,35 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
     state.publishedBlockId = blockId;
     yjs.setAwarenessField('blockId', blockId);
+  };
+
+  /**
+   * Publish where the caret sits inside the block.
+   *
+   * A SEPARATE field from `blockId`, never folded into it: awareness state is
+   * read by clients that shipped before carets existed, and they read `blockId`
+   * by that exact name. New information goes in a new field, the same way it
+   * goes in a new message type on the sync wire.
+   *
+   * Deduped on the whole tuple — `selectionchange` fires on every keystroke,
+   * and an unchanged position reaching the wire would be a frame per keypress.
+   */
+  const publishCaret = (): void => {
+    if (!state.running) {
+      return;
+    }
+
+    const position = options.currentCaret?.() ?? null;
+    const key = position === null
+      ? 'none'
+      : `${position.blockId}|${position.inputIndex}|${position.anchor}|${position.head}`;
+
+    if (key === state.publishedCaret) {
+      return;
+    }
+
+    state.publishedCaret = key;
+    yjs.setAwarenessField('caret', position);
   };
 
   /**
@@ -340,6 +377,7 @@ export const createPresence = (options: PresenceOptions): Presence => {
 
       state.running = true;
       state.publishedBlockId = undefined;
+      state.publishedCaret = undefined;
       state.unhookAwareness = yjs.onAwarenessChange(onAwarenessChange);
       state.unhookAwarenessUpdate = yjs.onAwarenessUpdate(onAwarenessUpdate);
 
@@ -348,11 +386,21 @@ export const createPresence = (options: PresenceOptions): Presence => {
       // what picks the default colour, so the identity has to go second or the
       // colour would change on the next publish.
       publishBlockId();
+      publishCaret();
       publishUser();
 
       // A fresh throttle per start: the previous one's clock would suppress the
       // first caret move of a restarted session.
-      const publish = throttle(publishBlockId, waitMs);
+      const publish = throttle(() => {
+        publishBlockId();
+        publishCaret();
+
+        // Local typing reflows the line every remote caret in this block points
+        // into. Nothing on the wire announces that — the peers did not move,
+        // the text under them did — so the re-measure has to ride the local
+        // caret, not an awareness change.
+        renderer?.reposition();
+      }, waitMs);
 
       state.onCaretMove = () => {
         publish();

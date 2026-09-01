@@ -2,9 +2,14 @@
   Multiplayer presence (src/components/modules/collaboration/presence-renderer.ts).
 
   Everything here is keyed off attributes the renderer writes on a block HOLDER
-  — the child-holder decoration law's outer level — plus its own label element
+  — the child-holder decoration law's outer level — plus its own caret elements
   appended inside that holder and one avatar stack on the editor wrapper. No
   selector reaches into a tool root, so a tool's own markup can change freely.
+
+  Notion's shape: a coloured line where the peer's caret is, with their name in
+  a flag above it that fades once they stop moving. There is deliberately no
+  block outline — it says only "somebody is in this paragraph", where a caret
+  says where they are.
 
   --blok-presence-color is declared here as a default and REDECLARED inline, per
   holder and per avatar, by the renderer — from a value that passed the hex-only
@@ -15,34 +20,83 @@
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
   --blok-presence-radius: 3px;
-  /* Overlap of the avatar stack, and the label's inline padding. */
+  /* Overlap of the avatar stack, and the name flag's inline padding. */
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
+  --blok-presence-caret-width: 1px;
+  --blok-presence-fade: 400ms;
+  --blok-presence-pulse: 1.2s;
 }
 
-[data-blok-presence] {
-  outline: 2px solid var(--blok-presence-color);
-  outline-offset: 2px;
-  border-radius: var(--blok-presence-radius);
-}
+/* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so a caret parks at
+   the coordinates the renderer measured without it touching layout.
 
-/* Holders are already `relative` (BLOCK_WRAPPER_CLASSES), so the label parks on
-   the block's own top-right corner without the renderer touching layout. */
-[data-blok-presence-label] {
+   Two borders rather than one, the way every collaborative caret is drawn: the
+   line sits BETWEEN two characters, and negative margins of the same width pull
+   it back so it occupies no space and shifts no text. */
+[data-blok-presence-caret] {
   position: absolute;
-  top: -0.6rem;
-  right: 0;
   z-index: 2;
+  width: 0;
+  /* Exactly the border width, negated: the line has to take no space at all,
+     or every remote caret would shift the text it points into. */
+  margin-left: calc(-1 * var(--blok-presence-caret-width));
+  margin-right: calc(-1 * var(--blok-presence-caret-width));
+  border-left: var(--blok-presence-caret-width) solid var(--blok-presence-color);
+  border-right: var(--blok-presence-caret-width) solid var(--blok-presence-color);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Parked on the caret's own top-left corner, with the bottom-left corner square
+   so the flag reads as growing out of the line rather than floating over it. */
+[data-blok-presence-caret-name] {
+  position: absolute;
+  top: -1.4em;
+  left: calc(-1 * var(--blok-presence-caret-width));
   padding: 0 var(--blok-presence-gap);
-  border-radius: var(--blok-presence-radius);
+  border-radius: var(--blok-presence-radius) var(--blok-presence-radius) var(--blok-presence-radius) 0;
   background: var(--blok-presence-color);
   color: var(--blok-text-on-dark);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 16px;
   white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
+  opacity: 1;
+  transition: opacity var(--blok-presence-fade) ease-out;
+}
+
+/* The peer stopped moving. The name goes, the line stays — otherwise a document
+   with four people in it is a wall of name tags. */
+[data-blok-presence-caret-idle] [data-blok-presence-caret-name] {
+  opacity: 0;
+}
+
+/* A pulse while they are active, and only then.
+
+   NOT a caret blink: a blinking line means "your keystrokes go here", and every
+   OS reserves it for the local caret — four blinking lines in one document and
+   nobody can find their own. This is the softer signal, and it stops on its own
+   the moment the peer goes idle, so it never becomes perpetual motion. */
+[data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+  animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
+}
+
+@keyframes blok-presence-caret-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* The states still change — the flag hides and the line settles. Only the
+   animation between them goes. */
+@media (prefers-reduced-motion: reduce) {
+  [data-blok-presence-caret-name] {
+    transition: none;
+  }
+
+  [data-blok-presence-caret]:not([data-blok-presence-caret-idle]) {
+    animation: none;
+  }
 }
 
 [data-blok-presence-stack] {

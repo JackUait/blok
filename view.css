@@ -1223,6 +1223,9 @@
   --blok-presence-radius: 3px;
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
+  --blok-presence-caret-width: 1px;
+  --blok-presence-fade: 400ms;
+  --blok-presence-pulse: 1.2s;
 }
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;

@@ -195,6 +195,12 @@ dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
 - [ ] If no released pair passes, stop this implementation. Keep v2 absent from
   the handshake and record the upstream blocker; do not substitute a client-only
   check, subprocess-per-update path, or unreviewed native fork.
+  **2026-09-02 amendment:** the probe found no released pair passes and no
+  native decode-without-apply exists; the sync path itself is NUL-safe, only
+  read-back aborts. `2026-09-02-ydotnet-replacement-research.md` §6 replaces
+  this stop with: patch the yffi build CI already produces (reviewed, sent
+  upstream) and add a managed v1 decoder as the pre-apply screen. Task 0.2 is
+  `supported` through a `DllImport` of the shipped `ytransaction_pending_update`.
 - [ ] If a released pair passes, update the two package references together and
   rerun all YDotNet runtime/hardening tests.
 

@@ -511,8 +511,8 @@ export const serverLimits: ServerLimit[] = [
   },
   {
     id: 'collab-reset',
-    title: 'Editing a document from outside takes one reset call',
-    body: 'While a document is open for live collaboration, the working copy wins: a change written straight into your own records will be overwritten the next time the service writes the document back. When you do need to change a document from the outside — a migration, a support fix — save your change, then call POST /sync/{doc}/reset with a write pass for that document. The service discards the working copy, loads the document fresh from your endpoint, and tells every open tab to drop what it had and pick up the new version. Nobody has to close anything.',
+    title: 'Changing a document from outside: two calls, and when to use which',
+    body: 'While a document is open for live collaboration, the working copy wins: a change written straight into your own records will be overwritten the next time the service writes the document back. So there are two ways in from the outside, and both take a write pass for that document. For a change to a few blocks — a status flipped by a workflow, a field filled in by a job — POST /sync/{doc}/edit with a list of what to insert, update or remove; the change lands in the document, appears in everybody’s tab within moments, and gets written back to your records like any other edit. The whole request is one step: if any part of it is refused, nothing is applied. For replacing a document wholesale — a migration, a support fix — save your version to your own records first, then call POST /sync/{doc}/reset: the service throws its working copy away, loads the document fresh from your endpoint, and tells every open tab to drop what it had and pick up the new version. Nobody has to close anything either way. Editing a document nobody has open works too; the service loads it for the occasion.',
   },
   {
     id: 'doc-endpoint-auth',

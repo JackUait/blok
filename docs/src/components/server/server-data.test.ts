@@ -375,10 +375,18 @@ describe('server docs data', () => {
     expect(body).toMatch(/uploads directory|uploads folder/i);
   });
 
-  it('documents the reset call that re-seeds from your records', () => {
+  // Two ways in, and the entry has to make the choice between them obvious:
+  // the edit call for a few blocks, the reset call for a whole document. Both
+  // properties readers act on are pinned — an edit request is all-or-nothing,
+  // and a document nobody has open can still be edited.
+  it('documents both ways to change a document from outside', () => {
     const body = serverLimits.find((l) => l.id === 'collab-reset')?.body ?? '';
 
+    expect(body).toContain('POST /sync/{doc}/edit');
     expect(body).toContain('POST /sync/{doc}/reset');
+    expect(body).toMatch(/insert, update or remove/i);
+    expect(body).toMatch(/nothing is applied|all-or-nothing/i);
+    expect(body).toMatch(/nobody has open/i);
     expect(body).toMatch(/wins|overwritten/i);
     expect(body).toMatch(/open tab/i);
   });

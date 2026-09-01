@@ -20,6 +20,9 @@ internal enum CollabEditStatus
 {
   Applied,
 
+  /// <summary>The server is going down; the endpoint answers 503.</summary>
+  Draining,
+
   /// <summary>An op failed validation; nothing was written. The endpoint answers 422.</summary>
   Invalid,
 
@@ -169,6 +172,14 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
+      // Refused during shutdown, like a join: a room created after the drain
+      // pass has already swept would seed a document from the consumer's
+      // endpoint and then be closed without ever flushing it back.
+      if (draining)
+      {
+        return new CollabEditResult(CollabEditStatus.Draining, null);
+      }
+
       var room = RoomFor(docId);
       var result = await room.EditAsync(ops, cancellationToken);
 

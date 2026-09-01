@@ -718,6 +718,13 @@ export interface BlokMountOptions {
      * never be mistaken for the live document. Nothing is cached until the
      * first successful sync, so an editor that never reached the service still
      * cannot come up editable from a copy of its own.
+     *
+     * IT IS NOT SCOPED TO A PERSON. The copy belongs to the browser, so on a
+     * shared profile the next person to open that page sees the previous
+     * one's document on screen before any connection is made — the server
+     * refuses them a moment later, but the content was already drawn. If the
+     * same browser serves more than one account, give each one its own
+     * document ids, or leave this off.
      */
     offline?: boolean;
   };

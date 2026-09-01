@@ -35,7 +35,8 @@ export interface CollaborationConfig {
   /**
    * Keep a local copy of the document so edits made while disconnected
    * survive a reload. Opt-in: it writes document content to origin-scoped
-   * browser storage.
+   * browser storage, and that storage belongs to the BROWSER, not to a
+   * person — see the published config docs.
    */
   offline?: boolean;
   /** @internal Opens the transport; defaults to the global `WebSocket`. */

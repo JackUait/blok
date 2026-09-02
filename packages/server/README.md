@@ -1,6 +1,6 @@
 # @bloklabs/server
 
-Blok's shared C# server handles file uploads, link previews and live collaboration. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
+Blok's shared C# server handles file uploads, link previews and live collaboration, and converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
 Documents stay yours: saving and loading them is a small endpoint in your own app, and that endpoint remains the record. With live collaboration on, the service keeps only a working copy of each open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. The packages include no database-block or MySQL integration; those follow this delivery migration.
 
@@ -33,6 +33,49 @@ app.Run();
 The mapped group uses your ASP.NET Core authorization policy for upload and unfurl routes. Health and validated CORS preflight remain anonymous.
 
 In-process defaults expose health only. Storage and outbound routes must be enabled explicitly, and local storage requires an explicit valid `PublicUrl`. `AddBlokServer(options => { ... })` also accepts the origin, upload-limit, and S3 settings used by the standalone host.
+
+## Convert documents
+
+`Blok.Server` carries Blok's own serializer as an embedded JavaScript bundle and runs it in this process, so a document converts through the editor's implementation rather than a port of it. A port has to be taught every block Blok gains and silently drops the ones nobody remembered.
+
+Conversion needs no storage, no outbound access and no route, so it registers on its own:
+
+```csharp
+using Blok.Server.Documents;
+
+builder.Services.AddBlokDocuments();
+```
+
+`AddBlokServer` already includes it. Outside dependency injection, `BlokDocuments.Create()` returns the same thing.
+
+```csharp
+public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleExport> logger)
+{
+  public async Task<string> ToMarkdownAsync(string documentJson, CancellationToken ct)
+  {
+    var conversion = await blok.ToMarkdownAsync(documentJson, ct);
+
+    foreach (var warning in conversion.Warnings)
+    {
+      // e.g. construct "callout", action "degraded", detail "rendered as a blockquote…"
+      logger.LogInformation("{Construct} {Action}: {Detail}", warning.Construct, warning.Action, warning.Detail);
+    }
+
+    return conversion.Markdown;
+  }
+}
+```
+
+| Method | Returns |
+|--------|---------|
+| `ToMarkdownAsync` | the Markdown, plus every construct Markdown could not carry |
+| `ToHtmlAsync` | the document's HTML |
+| `ToPlainTextAsync` | the document's readable text |
+| `FromMarkdownAsync` | the saved document, plus what Markdown could not carry into it |
+
+Markdown cannot express every block — a callout becomes a blockquote, columns flatten, a spacer disappears — so both directions report what changed. A caller handing the result to something that cannot ask a follow-up question, an export or a model, should read that report rather than assume the round trip was lossless.
+
+An instance holds a pool of engines and is expensive to construct, so register one for the lifetime of the process. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout and a recursion limit, so a pathological document fails rather than wedging the process.
 
 ## Standalone
 

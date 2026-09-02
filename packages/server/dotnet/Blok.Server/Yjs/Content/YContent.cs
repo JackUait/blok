@@ -27,6 +27,24 @@ internal abstract class YContent
   /// </summary>
   public abstract void Write(Lib0Writer writer, int offset);
 
+  /// <summary>
+  /// The payload as a list of values, one per clock tick, which is what a map
+  /// or list read indexes into. Content that occupies ticks without holding
+  /// values — a tombstone, a formatting mark — yields nothing.
+  /// </summary>
+  public abstract IReadOnlyList<object?> GetContent();
+
+  /// <summary>
+  /// Cuts the payload at <paramref name="offset"/>, keeping the left part here
+  /// and returning the right one. Content that is always one tick long is
+  /// never split, and yjs throws there rather than inventing a half.
+  /// </summary>
+  public virtual YContent Splice(int offset)
+  {
+    throw new InvalidOperationException(
+        $"yjs: content ref {Ref} occupies one tick and cannot be split.");
+  }
+
   /// <summary>Reads the payload the item's info byte selects.</summary>
   public static YContent Read(byte info, ref Lib0Reader reader)
   {

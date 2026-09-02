@@ -14,6 +14,11 @@ internal sealed class ContentDoc(string guid, object? options) : YContent
 
   internal string Guid { get; } = guid;
 
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [Guid];
+  }
+
   internal object? Options { get; } = options;
 
   public override void Write(Lib0Writer writer, int offset)

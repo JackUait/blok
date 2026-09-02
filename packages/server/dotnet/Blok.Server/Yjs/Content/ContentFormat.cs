@@ -14,6 +14,11 @@ internal sealed class ContentFormat(string key, string json) : YContent
 
   internal string Key { get; } = key;
 
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [];
+  }
+
   /// <summary>The wire's JSON, unparsed.</summary>
   internal string Json { get; } = json;
 

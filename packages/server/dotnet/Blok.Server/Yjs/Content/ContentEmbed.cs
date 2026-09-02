@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace Blok.Server.Yjs;
 
 /// <summary>
@@ -14,6 +16,11 @@ internal sealed class ContentEmbed(string json) : YContent
 
   /// <summary>The wire's JSON, unparsed.</summary>
   internal string Json { get; } = json;
+
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [JsonNode.Parse(Json)];
+  }
 
   public override void Write(Lib0Writer writer, int offset)
   {

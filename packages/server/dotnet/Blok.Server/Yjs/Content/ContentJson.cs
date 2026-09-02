@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace Blok.Server.Yjs;
 
 /// <summary>
@@ -15,7 +17,29 @@ internal sealed class ContentJson(IReadOnlyList<string> values) : YContent
   public override bool IsCountable => true;
 
   /// <summary>The wire strings, unparsed.</summary>
-  internal IReadOnlyList<string> Values { get; } = values;
+  internal IReadOnlyList<string> Values { get; private set; } = values;
+
+  /// <summary>
+  /// Parsed on read only. 'undefined' is the sentinel yjs writes for a value
+  /// JSON cannot hold, so it reads back as undefined rather than as a string.
+  /// </summary>
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return Values
+        .Select(value => value == "undefined"
+            ? YUndefined.Instance
+            : (object?)JsonNode.Parse(value))
+        .ToArray();
+  }
+
+  public override YContent Splice(int offset)
+  {
+    var right = new ContentJson(Values.Skip(offset).ToArray());
+
+    Values = Values.Take(offset).ToArray();
+
+    return right;
+  }
 
   public override void Write(Lib0Writer writer, int offset)
   {

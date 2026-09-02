@@ -26,6 +26,14 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
   /// <summary>The node name (ref 3) or hook name (ref 5); null for the rest.</summary>
   internal string? Name { get; } = name;
 
+  /// <summary>The instantiated type, set when the item is integrated.</summary>
+  internal YAbstractType? Type { get; set; }
+
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [Type];
+  }
+
   public override void Write(Lib0Writer writer, int offset)
   {
     writer.WriteVarUint((ulong)TypeRef);

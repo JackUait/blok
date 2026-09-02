@@ -14,6 +14,11 @@ internal sealed class ContentBinary(byte[] bytes) : YContent
 
   internal byte[] Bytes { get; } = bytes;
 
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [Bytes];
+  }
+
   public override void Write(Lib0Writer writer, int offset)
   {
     writer.WriteVarBytes(Bytes);

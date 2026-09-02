@@ -6,11 +6,27 @@ namespace Blok.Server.Yjs;
 /// </summary>
 internal sealed class ContentDeleted(int length) : YContent
 {
+  private int ticks = length;
+
   public override byte Ref => 1;
 
-  public override int Length { get; } = length;
+  public override int Length => ticks;
 
   public override bool IsCountable => false;
+
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return [];
+  }
+
+  public override YContent Splice(int offset)
+  {
+    var right = new ContentDeleted(ticks - offset);
+
+    ticks = offset;
+
+    return right;
+  }
 
   public override void Write(Lib0Writer writer, int offset)
   {

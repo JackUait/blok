@@ -12,7 +12,21 @@ internal sealed class ContentAny(IReadOnlyList<object?> values) : YContent
 
   public override bool IsCountable => true;
 
-  internal IReadOnlyList<object?> Values { get; } = values;
+  internal IReadOnlyList<object?> Values { get; private set; } = values;
+
+  public override IReadOnlyList<object?> GetContent()
+  {
+    return Values;
+  }
+
+  public override YContent Splice(int offset)
+  {
+    var right = new ContentAny(Values.Skip(offset).ToArray());
+
+    Values = Values.Take(offset).ToArray();
+
+    return right;
+  }
 
   public override void Write(Lib0Writer writer, int offset)
   {

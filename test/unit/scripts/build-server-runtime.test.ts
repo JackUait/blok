@@ -51,6 +51,26 @@ describe('buildServerRuntime', () => {
       .toBe('<p>Hi &amp; bye</p>');
   });
 
+  /**
+   * The stored `version` of a document has to be the same string whichever side
+   * wrote it, so the bundle reports the editor's own version rather than a
+   * number a consumer invents. `VERSION` is a build-time define; without it
+   * `getBlokVersion()` falls back to 'dev' and every server-written document is
+   * stamped with a version the editor never writes.
+   */
+  it('reports the package version', async () => {
+    const outputPath = await buildServerRuntime(outDir);
+    const source = readFileSync(outputPath, 'utf8');
+    const sandbox: Record<string, unknown> = {};
+
+    runInContext(source, createContext(sandbox));
+
+    const invoke = sandbox.blokServerInvoke as (op: string, input: string) => Promise<string>;
+    const expected = JSON.parse(readFileSync(join(__dirname, '../../../package.json'), 'utf8')).version;
+
+    expect(await invoke('version', '{}')).toBe(expected);
+  });
+
   it('keeps the previous bundle available while rebuilding', async () => {
     const outputPath = await buildServerRuntime(outDir);
     const previous = readFileSync(outputPath);

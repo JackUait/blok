@@ -25,6 +25,14 @@ public interface IBlokDocumentConverter
       string documentJson,
       CancellationToken cancellationToken = default);
 
+  /// <summary>
+  /// The version the editor stamps into a saved document's <c>version</c>
+  /// field. A caller writing documents outside the browser reads it from here
+  /// so both sides agree on what a stored document says it is.
+  /// </summary>
+  /// <param name="cancellationToken">Cancels the lookup.</param>
+  ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default);
+
   /// <summary>Converts a saved document to HTML.</summary>
   /// <param name="documentJson">A saved document: <c>{"blocks":[…]}</c>.</param>
   /// <param name="cancellationToken">Cancels the conversion.</param>

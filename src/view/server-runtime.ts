@@ -1,4 +1,7 @@
 import type { LooseOutputBlockData, LooseOutputData } from '../../types/data-formats/output-data';
+// Imported by file rather than through `src/components/utils`: the barrel
+// reaches the DOM, this module does not.
+import { getBlokVersion } from '../components/utils/version';
 import { markdownToBlocksWithReport } from '../markdown';
 import { blocksToHtml } from './blocks-to-html';
 import type { MarkdownDegradation } from './blocks-to-markdown';
@@ -122,6 +125,13 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
     }
     case 'blocksToPlainText':
       return blocksToPlainText(parseDocument(inputJson).document);
+    /**
+     * The version the editor stamps into a saved document. A consumer writing
+     * documents outside the browser reads it from here so both sides agree on
+     * what a stored document says it is.
+     */
+    case 'version':
+      return getBlokVersion();
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

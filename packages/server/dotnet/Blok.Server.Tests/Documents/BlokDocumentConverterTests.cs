@@ -13,6 +13,25 @@ public sealed class BlokDocumentConverterTests
       ]}
       """;
 
+  /// <summary>
+  /// A consumer writing documents outside the browser has to stamp the same
+  /// <c>version</c> the editor stamps, so it asks the bundle rather than
+  /// inventing a number. <c>dev</c> is the fallback the bundle returns when the
+  /// build-time define is missing — the whole failure mode this guards.
+  /// The exact equality with <c>package.json</c> is pinned on the JavaScript
+  /// side, in <c>test/unit/scripts/build-server-runtime.test.ts</c>.
+  /// </summary>
+  [Fact]
+  public async Task ReportsTheEditorsOwnDocumentVersion()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var version = await converter.GetVersionAsync();
+
+    Assert.False(string.IsNullOrWhiteSpace(version));
+    Assert.NotEqual("dev", version);
+  }
+
   [Fact]
   public async Task ConvertsADocumentToMarkdown()
   {

@@ -10,6 +10,15 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   private readonly IBlokRuntime runtime = runtime
       ?? throw new ArgumentNullException(nameof(runtime));
 
+  private string? version;
+
+  // Constant for the life of the bundle, and read on every document write, so
+  // it does not spend a pooled engine more than once.
+  public async ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default)
+  {
+    return version ??= await runtime.InvokeAsync("version", "{}", cancellationToken);
+  }
+
   public async ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
       string documentJson,
       CancellationToken cancellationToken = default)

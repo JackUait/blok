@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getBlokVersion } from '../../../src/components/utils/version';
 import { invoke } from '../../../src/view/server-runtime';
 
 describe('server runtime boundary', () => {
@@ -129,6 +130,15 @@ describe('server runtime boundary', () => {
     }));
 
     expect(output).toContain('Kept');
+  });
+
+  /**
+   * Compared against the editor's own function, not a literal: the point of the
+   * operation is that both sides stamp the SAME version, and a literal here
+   * would keep passing while they drifted apart.
+   */
+  it('reports the same version the editor stamps into a saved document', async () => {
+    expect(await invoke('version', '{}')).toBe(getBlokVersion());
   });
 
   it('refuses an unknown operation', async () => {

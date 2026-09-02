@@ -1,5 +1,5 @@
 import { build } from 'vite';
-import { mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,6 +45,7 @@ const hostGlobalsBanner = `if (typeof globalThis.atob !== 'function') {
 }`;
 
 export async function buildServerRuntime(outDir = defaultOutDir) {
+  const { version } = JSON.parse(await readFile(path.resolve(root, 'package.json'), 'utf8'));
   const outputDirectory = path.resolve(outDir);
   const outputPath = path.join(outputDirectory, 'blok-server-runtime.js');
 
@@ -80,6 +81,10 @@ export async function buildServerRuntime(outDir = defaultOutDir) {
       define: {
         'NODE_ENV': JSON.stringify('production'),
         'process.env.NODE_ENV': JSON.stringify('production'),
+        // Same define the editor bundle uses. Without it `getBlokVersion()`
+        // falls back to 'dev' and a document written on the server is stamped
+        // with a version the editor never writes.
+        'VERSION': JSON.stringify(version),
       },
     });
 

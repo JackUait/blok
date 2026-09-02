@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Blok.Server.AspNetCore.Tests.Collab;
@@ -85,6 +86,52 @@ public sealed class SyncEndpointTests
     var error = Assert.Throws<InvalidOperationException>(options.Validate);
 
     Assert.Contains("trailing newline", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void WarnsAtRegistrationWhenNothingGuardsTheSyncRoutesInProcess()
+  {
+    var open = new CapturingLoggerProvider();
+    using var unguarded = BuildApplication(EnableCollab, builder => builder.Logging.AddProvider(open));
+    unguarded.MapBlokServer("/blok");
+
+    var warning = Assert.Single(open.Entries, entry => entry.Level == LogLevel.Warning);
+    Assert.Contains("IBlokAuthorization", warning.Message, StringComparison.Ordinal);
+    Assert.Contains("/blok/sync/{doc}", warning.Message, StringComparison.Ordinal);
+    Assert.Contains("/blok/sync/{doc}/reset", warning.Message, StringComparison.Ordinal);
+    Assert.Contains("/blok/sync/{doc}/edit", warning.Message, StringComparison.Ordinal);
+    // The standalone host forwards only this category to stderr, and its
+    // none mode is loopback-only by validation: the warning is in-process only.
+    Assert.NotEqual("Blok.Server.Collab", warning.Category);
+
+    var guarded = new CapturingLoggerProvider();
+    using var withHook = BuildApplication(EnableCollab, builder =>
+    {
+      builder.Logging.AddProvider(guarded);
+      builder.Services.AddSingleton<IBlokAuthorization>(new RecordingAuthorization());
+    });
+    withHook.MapBlokServer("/blok");
+
+    var ticket = new CapturingLoggerProvider();
+    using var ticketMode = BuildApplication(
+        options =>
+        {
+          EnableCollab(options);
+          options.Auth = "ticket";
+          options.Secret = fixture.Secret;
+          options.AllowedOrigins = [SyncApp.AllowedOrigin];
+        },
+        builder => builder.Logging.AddProvider(ticket));
+    ticketMode.MapBlokServer("/blok");
+
+    Assert.DoesNotContain(guarded.Entries, entry => entry.Level == LogLevel.Warning);
+    Assert.DoesNotContain(ticket.Entries, entry => entry.Level == LogLevel.Warning);
+  }
+
+  private static void EnableCollab(BlokServerOptions options)
+  {
+    options.CollabEnabled = true;
+    options.DocEndpoint = "https://app.example.com/api/blok-docs";
   }
 
   [Fact]
@@ -667,11 +714,14 @@ public sealed class SyncEndpointTests
     return YDocs.Text(doc);
   }
 
-  private static WebApplication BuildApplication(Action<BlokServerOptions> configure)
+  private static WebApplication BuildApplication(
+      Action<BlokServerOptions> configure,
+      Action<WebApplicationBuilder>? configureBuilder = null)
   {
     var builder = WebApplication.CreateBuilder();
     builder.WebHost.UseTestServer();
     builder.Services.AddBlokServer(configure);
+    configureBuilder?.Invoke(builder);
 
     return builder.Build();
   }

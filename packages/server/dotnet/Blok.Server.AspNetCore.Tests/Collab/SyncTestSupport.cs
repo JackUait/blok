@@ -691,6 +691,47 @@ internal sealed class HeaderAuthenticationHandler(
   }
 }
 
+/// <summary>Every log entry written through it, in order, across all categories.</summary>
+internal sealed class CapturingLoggerProvider : ILoggerProvider
+{
+  internal List<(string Category, LogLevel Level, string Message)> Entries { get; } = [];
+
+  public ILogger CreateLogger(string categoryName)
+  {
+    return new Logger(this, categoryName);
+  }
+
+  public void Dispose()
+  {
+  }
+
+  private sealed class Logger(CapturingLoggerProvider owner, string category) : ILogger
+  {
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+      return null;
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+      return true;
+    }
+
+    public void Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter)
+    {
+      lock (owner.Entries)
+      {
+        owner.Entries.Add((category, logLevel, formatter(state, exception)));
+      }
+    }
+  }
+}
+
 internal sealed class RecordingAuthorization : IBlokAuthorization
 {
   internal bool AllowRead { get; set; } = true;

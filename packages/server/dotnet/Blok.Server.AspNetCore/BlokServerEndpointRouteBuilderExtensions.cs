@@ -4,11 +4,20 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Blok.Server.AspNetCore;
 
 public static class BlokServerEndpointRouteBuilderExtensions
 {
+  private static readonly Action<ILogger, string, string, string, Exception?> LogOpenSyncRoutes =
+      LoggerMessage.Define<string, string, string>(
+          LogLevel.Warning,
+          new EventId(2, "CollabOpen"),
+          "collab: no IBlokAuthorization is registered and Auth is \"none\", so {Sync}, {Reset} and {Edit} " +
+          "are open to anyone who can reach this app unless the mapped group has RequireAuthorization(); " +
+          "register a hook with AddBlokServer(...).UseAuthorization<T>() or set Auth to \"ticket\"");
+
   public static RouteGroupBuilder MapBlokServer(
       this IEndpointRouteBuilder endpoints,
       string pattern = "")
@@ -53,11 +62,40 @@ public static class BlokServerEndpointRouteBuilderExtensions
       routes.Map("/sync/{doc}", context => HandleMethodNotAllowed(context, "GET")).WithOrder(1);
       MapShell(routes, "/sync/{doc}/reset", "POST");
       MapShell(routes, "/sync/{doc}/edit", "POST");
+
+      if (options.Auth == "none" &&
+          endpoints.ServiceProvider.GetService<IBlokAuthorization>() is null)
+      {
+        WarnOpenSyncRoutes(endpoints.ServiceProvider, pattern);
+      }
     }
 
     routes.Map("/{**path}", HandleNotFound).WithOrder(int.MaxValue);
 
     return routes;
+  }
+
+  /// <summary>
+  /// Its own category, not "Blok.Server.Collab": the standalone host forwards
+  /// only that one to stderr, and its none mode is loopback-only by
+  /// validation — a check the in-process host never runs, which is the case
+  /// this warning exists for.
+  /// </summary>
+  private static void WarnOpenSyncRoutes(IServiceProvider services, string pattern)
+  {
+    var logger = services.GetService<ILoggerFactory>()?.CreateLogger("Blok.Server.AspNetCore");
+
+    if (logger is null)
+    {
+      return;
+    }
+
+    LogOpenSyncRoutes(
+        logger,
+        $"GET {pattern}/sync/{{doc}}",
+        $"POST {pattern}/sync/{{doc}}/reset",
+        $"POST {pattern}/sync/{{doc}}/edit",
+        null);
   }
 
   private static void MapShell(RouteGroupBuilder routes, string pattern, string method)

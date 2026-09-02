@@ -7,6 +7,7 @@ namespace Blok.Server.Tests.Collab;
 public sealed class SyncWireTests
 {
   private const string Lineage = "0123456789abcdef0123456789abcdef";
+  private const string OperationId = "fedcba9876543210fedcba9876543210";
   private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.SchemaV2, 7, Lineage);
 
   // Only what sync-frames.json does not carry (SyncWireFramingTests pins
@@ -124,6 +125,48 @@ public sealed class SyncWireTests
   public void RefusesToEncodeAnUnknownFrame()
   {
     Assert.Throws<ArgumentException>(() => SyncWire.Encode(new UnknownFrame(4)));
+  }
+
+  [Fact]
+  public void RefusesToEncodeAnOperationWithAnEmptyUpdate()
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new OperationFrame(Lineage, OperationId, [])));
+  }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("0123456789abcdef0123456789abcde")]
+  [InlineData("0123456789ABCDEF0123456789ABCDEF")]
+  public void RefusesToEncodeAnOperationWithAnInvalidLineage(string lineage)
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new OperationFrame(lineage, OperationId, [0x01])));
+  }
+
+  [Fact]
+  public void RefusesToEncodeAnOperationWithAnInvalidOperationId()
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new OperationFrame(Lineage, "not-hex", [0x01])));
+  }
+
+  [Fact]
+  public void RefusesToEncodeAnAcknowledgementWithServerSequenceZero()
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new AcknowledgementFrame(Lineage, OperationId, 0)));
+  }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("Read-Only")]
+  [InlineData("read_only")]
+  [InlineData("1nvalid")]
+  public void RefusesToEncodeARejectionWithAnInvalidCode(string code)
+  {
+    Assert.Throws<ArgumentException>(() =>
+        SyncWire.Encode(new RejectionFrame(Lineage, OperationId, code)));
   }
 
   [Theory]

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -180,6 +181,166 @@ public sealed class SyncWireFramingTests
     Assert.Equal(0UL, Frame("permissionDenied").AuthType);
   }
 
+  public static TheoryData<string> V2FrameNames
+  {
+    get
+    {
+      var names = new TheoryData<string>();
+
+      foreach (var frame in Fixture.V2.Frames)
+      {
+        names.Add(frame.Name);
+      }
+
+      return names;
+    }
+  }
+
+  public static TheoryData<string> CanonicalV2FrameNames
+  {
+    get
+    {
+      var names = new TheoryData<string>();
+
+      foreach (var frame in Fixture.V2.Frames)
+      {
+        if (frame.Canonical)
+        {
+          names.Add(frame.Name);
+        }
+      }
+
+      return names;
+    }
+  }
+
+  public static TheoryData<string> V2NegativeNames
+  {
+    get
+    {
+      var names = new TheoryData<string>();
+
+      foreach (var negative in Fixture.V2.Negative)
+      {
+        names.Add(negative.Name);
+      }
+
+      return names;
+    }
+  }
+
+  [Theory]
+  [MemberData(nameof(V2FrameNames))]
+  public void DecodesEveryV2FixtureIntoItsFields(string name)
+  {
+    var frame = V2Frame(name);
+
+    Assert.True(SyncWire.TryDecode(frame.Bytes, out var message, out var error), error);
+
+    switch (Assert.IsAssignableFrom<SyncWireMessage>(message))
+    {
+      case OperationFrame operation:
+        Assert.Equal(frame.Metadata.Lineage, operation.Lineage);
+        Assert.Equal(frame.Metadata.OperationId, operation.OperationId);
+        Assert.Equal(frame.Update, operation.Update);
+        break;
+      case AcknowledgementFrame acknowledgement:
+        Assert.Equal(frame.Metadata.Lineage, acknowledgement.Lineage);
+        Assert.Equal(frame.Metadata.OperationId, acknowledgement.OperationId);
+        Assert.Equal(ulong.Parse(frame.Metadata.ServerSequence!, CultureInfo.InvariantCulture), acknowledgement.ServerSequence);
+        break;
+      case RejectionFrame rejection:
+        Assert.Equal(frame.Metadata.Lineage, rejection.Lineage);
+        Assert.Equal(frame.Metadata.OperationId, rejection.OperationId);
+        Assert.Equal(frame.Metadata.Code, rejection.Code);
+        Assert.Matches(Fixture.V2.RejectionCodePattern, rejection.Code);
+        break;
+      default:
+        Assert.Fail($"{name} decoded to an unexpected message type {message?.GetType()}");
+        break;
+    }
+  }
+
+  [Theory]
+  [MemberData(nameof(CanonicalV2FrameNames))]
+  public void ReEncodesCanonicalV2FixturesByteForByte(string name)
+  {
+    var frame = V2Frame(name);
+
+    Assert.True(SyncWire.TryDecode(frame.Bytes, out var message, out var error), error);
+    Assert.Equal(
+        frame.Bytes,
+        SyncWire.Encode(Assert.IsAssignableFrom<SyncWireMessage>(message)));
+  }
+
+  // Key order is an emitter rule only (blok-sync.v2 4.2): this frame carries
+  // {operationId, serverSequence, lineage} and MUST still decode. It is the
+  // one v2.frames entry with canonical: false, so it is deliberately absent
+  // from CanonicalV2FrameNames above — asserting its re-encoding would wrongly
+  // pin a foreign key order into the encoder.
+  [Fact]
+  public void AcknowledgementKeysOutOfOrderDecodesButIsNotReEncodeAsserted()
+  {
+    var frame = V2Frame("acknowledgementKeysOutOfOrder");
+    Assert.False(frame.Canonical);
+
+    Assert.True(SyncWire.TryDecode(frame.Bytes, out var message, out var error), error);
+    var acknowledgement = Assert.IsType<AcknowledgementFrame>(message);
+
+    Assert.Equal(frame.Metadata.Lineage, acknowledgement.Lineage);
+    Assert.Equal(frame.Metadata.OperationId, acknowledgement.OperationId);
+    Assert.Equal(ulong.Parse(frame.Metadata.ServerSequence!, CultureInfo.InvariantCulture), acknowledgement.ServerSequence);
+
+    // The strongest pin of contract decision #1: an encoder fed this
+    // foreign-order frame's decoded fields emits the SAME bytes as the
+    // canonical fixture carrying the same field values in order.
+    Assert.Equal(V2Frame("acknowledgement").Bytes, SyncWire.Encode(acknowledgement));
+  }
+
+  // The six named codes in section 6 are the stable set, not a closed one: a
+  // decoder MUST accept any code matching the shape rule. Refusing an
+  // unrecognised code is a liveness hole (blok-sync.v2 section 6).
+  [Fact]
+  public void RejectionAcceptsACodeOutsideTheStableSix()
+  {
+    var frame = V2Frame("rejectionUnrecognisedCode");
+    Assert.DoesNotContain(frame.Metadata.Code, Fixture.V2.RejectionCodes);
+
+    Assert.True(SyncWire.TryDecode(frame.Bytes, out var message, out var error), error);
+    var rejection = Assert.IsType<RejectionFrame>(message);
+
+    Assert.Equal(frame.Metadata.Code, rejection.Code);
+  }
+
+  [Theory]
+  [MemberData(nameof(V2NegativeNames))]
+  public void RejectsOrIgnoresEveryV2NegativeFixtureForTheDocumentedReason(string name)
+  {
+    var negative = Fixture.V2.Negative.Single(n => n.Name == name);
+
+    var decoded = SyncWire.TryDecode(negative.Bytes, out var message, out var error, out var rule);
+
+    if (negative.Expect == "unknown")
+    {
+      Assert.True(decoded, error);
+      Assert.IsType<UnknownFrame>(message);
+      Assert.Null(negative.Rule);
+      Assert.Null(rule);
+
+      return;
+    }
+
+    Assert.Equal("malformed", negative.Expect);
+    Assert.False(decoded, $"{name}: {negative.Description} decoded but should have been refused");
+    Assert.NotEqual("", error);
+    Assert.Equal(negative.Rule, rule);
+  }
+
+  private static V2FrameFixture V2Frame(string name)
+  {
+    return Fixture.V2.Frames.Single(frame => frame.Name == name);
+  }
+
   private static T Decode<T>(string name)
       where T : SyncWireMessage
   {
@@ -245,7 +406,8 @@ public sealed class SyncWireFramingTests
       [property: JsonPropertyName("seedUpdateHex")] string SeedUpdateHex,
       [property: JsonPropertyName("incrementalUpdateHex")] string IncrementalUpdateHex,
       [property: JsonPropertyName("expected")] ExpectedContent Expected,
-      [property: JsonPropertyName("frames")] IReadOnlyList<FrameFixture> Frames)
+      [property: JsonPropertyName("frames")] IReadOnlyList<FrameFixture> Frames,
+      [property: JsonPropertyName("v2")] V2Fixture V2)
   {
     public byte[] SeedUpdate => Convert.FromHexString(SeedUpdateHex);
 
@@ -286,4 +448,48 @@ public sealed class SyncWireFramingTests
 
   private sealed record LimitsFixture(
       [property: JsonPropertyName("maxMessageBytes")] long MaxMessageBytes);
+
+  private sealed record V2Fixture(
+      [property: JsonPropertyName("protocol")] string Protocol,
+      [property: JsonPropertyName("lineage")] string Lineage,
+      [property: JsonPropertyName("operationId")] string OperationId,
+      [property: JsonPropertyName("rejectionCodes")] IReadOnlyList<string> RejectionCodes,
+      [property: JsonPropertyName("rejectionCodePattern")] string RejectionCodePattern,
+      [property: JsonPropertyName("frames")] IReadOnlyList<V2FrameFixture> Frames,
+      [property: JsonPropertyName("negative")] IReadOnlyList<V2NegativeFixture> Negative);
+
+  private sealed record V2FrameFixture(
+      [property: JsonPropertyName("name")] string Name,
+      [property: JsonPropertyName("messageType")] ulong MessageType,
+      // Non-nullable: present on every v2.frames entry so a missing value
+      // cannot silently default to false and disable a re-encode assertion.
+      [property: JsonPropertyName("canonical")] bool Canonical,
+      [property: JsonPropertyName("description")] string Description,
+      [property: JsonPropertyName("frameHex")] string FrameHex,
+      [property: JsonPropertyName("metadataJson")] string MetadataJson,
+      [property: JsonPropertyName("metadata")] V2Metadata Metadata,
+      [property: JsonPropertyName("updateHex")] string? UpdateHex)
+  {
+    public byte[] Bytes => Convert.FromHexString(FrameHex);
+
+    public byte[]? Update => UpdateHex is null ? null : Convert.FromHexString(UpdateHex);
+  }
+
+  private sealed record V2Metadata(
+      [property: JsonPropertyName("lineage")] string Lineage,
+      [property: JsonPropertyName("operationId")] string OperationId,
+      [property: JsonPropertyName("serverSequence")] string? ServerSequence,
+      [property: JsonPropertyName("code")] string? Code);
+
+  private sealed record V2NegativeFixture(
+      [property: JsonPropertyName("name")] string Name,
+      [property: JsonPropertyName("messageType")] ulong? MessageType,
+      [property: JsonPropertyName("expect")] string Expect,
+      [property: JsonPropertyName("rule")] int? Rule,
+      [property: JsonPropertyName("description")] string Description,
+      [property: JsonPropertyName("frameHex")] string FrameHex,
+      [property: JsonPropertyName("metadataJson")] string? MetadataJson)
+  {
+    public byte[] Bytes => Convert.FromHexString(FrameHex);
+  }
 }

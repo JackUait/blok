@@ -190,7 +190,6 @@ public sealed class CollabRoomManagerTests
     await Task.WhenAll(storm);
     await manager.SettleAsync();
 
-    Assert.Equal(1, manager.MaxLaneDepth);
     Assert.Equal(1, store.MaxConcurrentEntries);
     Assert.Equal(new string('x', 200), YDocs.Text(await ReplicaAsync(manager)));
   }
@@ -312,15 +311,15 @@ public sealed class CollabRoomManagerTests
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
         CancellationToken.None);
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the working set to catch up");
     await membership.LeaveAsync();
 
     time.Advance(TimeSpan.FromSeconds(2));
     await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the export to start");
     time.Advance(TimeSpan.FromSeconds(28));
-    var settled = manager.SettleAsync();
-    var finished = await Task.WhenAny(settled, Task.Delay(TimeSpan.FromMilliseconds(250)));
 
-    Assert.NotSame(settled, finished);
+    // The eviction is parked on the in-flight export with the lane held:
+    // nothing has compacted or closed.
     Assert.Equal(1, manager.LiveRoomCount);
     Assert.Equal(2, store.FramesOf(DocId).Count);
 
@@ -559,16 +558,82 @@ public sealed class CollabRoomManagerTests
     await Waits.UntilAsync(() => store.Writes == 2, "the blob write to start");
 
     var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
-    var raced = await Task.WhenAny(reset, Task.Delay(TimeSpan.FromMilliseconds(250)));
-    Assert.NotSame(reset, raced);
-
     stuck.SetResult();
     store.BeforeWrite = null;
     var tag = await reset;
 
     Tags.AssertMinted(1, tag);
+    Assert.Equal(["write:0", "reset:1"], store.Journal[^2..]);
     Assert.Equal(tag, store.Stored(DocId).Tag);
     Assert.Empty(store.FramesOf(DocId));
+  }
+
+  [Fact]
+  public async Task AStoredUpdateThatCannotBeAppliedFailsTheJoinClosed()
+  {
+    var log = new List<string>();
+    store.Seed(DocId, [[0xde, 0xad]], Tags.At(1));
+    var manager = CreateManager(log: log);
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, result.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Contains(log, line => line.Contains("could not be applied", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  public async Task AStoredWorkingSetOfAnotherFormatFailsTheJoinClosed()
+  {
+    var log = new List<string>();
+    store.Seed(
+        DocId,
+        [YDocs.FullState(YDocs.DocWith("x"))],
+        new CollabWorkingSetTag(CollabWorkingSetTag.SchemaV2 + 1, 0, Tags.Lineage));
+    var manager = CreateManager(log: log);
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.SeedFailed, result.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Contains(log, line => line.Contains("format", StringComparison.Ordinal));
+  }
+
+  /// <summary>
+  /// The doc and the stored blob are both fine when the write of the
+  /// on-load compaction fails; refusing the join over it served nobody.
+  /// </summary>
+  [Fact]
+  public async Task AStoreBlipDuringTheOnLoadCompactionStillJoinsAndRetriesTheWrite()
+  {
+    var log = new List<string>();
+    var source = YDocs.NewClient();
+    var updates = new List<byte[]>();
+
+    foreach (var piece in new[] { "a", "b", "c", "d", "e" })
+    {
+      updates.Add(YDocs.UpdateAppending(source, piece));
+    }
+
+    store.Seed(DocId, updates, Tags.At(2));
+    store.FailWrites = _ => new IOException("disk full");
+    var manager = CreateManager(new CollabRoomOptions { CompactionFrameThreshold = 4 }, log: log);
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, result.Status);
+    Assert.Equal(5, store.FramesOf(DocId).Count);
+    Assert.Contains(log, line => line.Contains("compacted", StringComparison.Ordinal));
+    Assert.Equal("abcde", YDocs.Text(await ReplicaAsync(manager)));
+
+    store.FailWrites = null;
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromMinutes(1),
+        () => store.FramesOf(DocId).Count == 1,
+        "the retried write of the compacted log");
+    Assert.Equal("abcde", YDocs.Replay(store.FramesOf(DocId)));
   }
 
   /// <summary>

@@ -46,14 +46,6 @@ internal sealed class SyncHandshake(
 {
   internal const string Protocol = "blok-sync.v1";
 
-  /// <summary>
-  /// Ticket mode runs behind a proxy, so the client address is the proxy's:
-  /// a pass naming nobody would share one cap and one rate window with
-  /// every other such pass. Refused rather than keyed on the address.
-  /// </summary>
-  private static readonly SyncCloseFrame UserlessPass =
-      new((WebSocketCloseStatus)4401, "pass names no user");
-
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {
     var (admission, rateLimitKey) = Admit(context, doc);
@@ -151,7 +143,7 @@ internal sealed class SyncHandshake(
 
       if (claims.User.Length == 0)
       {
-        return (new SyncRejected(subProtocol, UserlessPass), rateLimitKey);
+        return (new SyncRejected(subProtocol, SyncClose.UserlessPass), rateLimitKey);
       }
 
       canWrite = claims.Write;

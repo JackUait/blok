@@ -33,7 +33,7 @@ internal static class CollabWorkingSetCodec
           nameof(tag));
     }
 
-    if (!TryDecodeFrames(frameSection, out _))
+    if (!ValidateFrames(frameSection))
     {
       throw new ArgumentException(
           "collab: the frame section is not a valid update log.",
@@ -109,7 +109,7 @@ internal static class CollabWorkingSetCodec
       return false;
     }
 
-    if (!TryDecodeFrames(document[HeaderLength..], out _))
+    if (!ValidateFrames(document[HeaderLength..]))
     {
       tag = default;
       error = "an update frame is empty or truncated";
@@ -142,19 +142,47 @@ internal static class CollabWorkingSetCodec
       length += FramePrefixLength + (long)update.Length;
     }
 
-    var frameSection = new byte[length];
-    var offset = 0;
+    var frameSection = new MemoryStream((int)length);
 
     foreach (var update in updates)
     {
-      BinaryPrimitives.WriteInt32LittleEndian(
-          frameSection.AsSpan(offset),
-          update.Length);
-      update.CopyTo(frameSection.AsSpan(offset + FramePrefixLength));
-      offset += FramePrefixLength + update.Length;
+      AppendFrame(frameSection, update);
     }
 
-    return frameSection;
+    return frameSection.ToArray();
+  }
+
+  /// <summary>One length-prefixed frame; the room's log and <see cref="EncodeFrames"/> share the one writer of the layout.</summary>
+  internal static void AppendFrame(Stream stream, ReadOnlySpan<byte> update)
+  {
+    Span<byte> prefix = stackalloc byte[FramePrefixLength];
+    BinaryPrimitives.WriteInt32LittleEndian(prefix, update.Length);
+    stream.Write(prefix);
+    stream.Write(update);
+  }
+
+  /// <summary>The walk of <see cref="TryDecodeFrames"/> without its per-frame copies; every write validates its section this way.</summary>
+  internal static bool ValidateFrames(ReadOnlySpan<byte> frameSection)
+  {
+    while (frameSection.Length > 0)
+    {
+      if (frameSection.Length < FramePrefixLength)
+      {
+        return false;
+      }
+
+      var length = BinaryPrimitives.ReadInt32LittleEndian(frameSection);
+
+      if (length < 1 ||
+          length > frameSection.Length - FramePrefixLength)
+      {
+        return false;
+      }
+
+      frameSection = frameSection[(FramePrefixLength + length)..];
+    }
+
+    return true;
   }
 
   internal static bool TryDecodeFrames(

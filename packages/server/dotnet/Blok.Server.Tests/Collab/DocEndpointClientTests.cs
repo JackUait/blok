@@ -130,6 +130,46 @@ public sealed class DocEndpointClientTests
         StringComparison.Ordinal);
   }
 
+  /// <summary>
+  /// An error body used to be buffered whole (up to the 64 MiB cap) before
+  /// the status was even looked at. Now the status decides first and only a
+  /// short prefix is read, into the message, so the operator sees what the
+  /// endpoint said.
+  /// </summary>
+  [Fact]
+  public async Task AnErrorStatusIsReportedWithAPrefixOfItsBodyWithoutBufferingIt()
+  {
+    var body = new string('x', 600) + "\r\nEND";
+    var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+    {
+      Content = new StringContent(body),
+    });
+    using var client = CreateClient(recorder, maxResponseBytes: 128);
+
+    var error = await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+
+    Assert.Equal(500, error.StatusCode);
+    Assert.Contains(new string('x', 512), error.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain(new string('x', 513), error.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("END", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task AnErrorBodyIsFlattenedToOneLineInTheMessage()
+  {
+    var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.BadGateway)
+    {
+      Content = new StringContent("upstream\r\n  down"),
+    });
+    using var client = CreateClient(recorder);
+
+    var error = await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+
+    Assert.Contains("502: upstream down", error.Message, StringComparison.Ordinal);
+  }
+
   [Theory]
   [InlineData("")]
   [InlineData("{not json")]

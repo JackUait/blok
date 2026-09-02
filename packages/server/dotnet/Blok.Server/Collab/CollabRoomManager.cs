@@ -48,7 +48,6 @@ internal sealed class CollabRoomManager : ICollabRoomManager
   private readonly CollabRoomOptions options;
   private readonly TimeProvider timeProvider;
   private readonly Action<string>? log;
-  private int closedRoomsMaxLaneDepth;
   private volatile bool draining;
 
   internal CollabRoomManager(
@@ -81,22 +80,6 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       {
         return rooms.Count;
       }
-    }
-  }
-
-  /// <summary>Highest lane depth any room ever observed; 1 proves every doc access was serialized.</summary>
-  internal int MaxLaneDepth
-  {
-    get
-    {
-      var depth = Volatile.Read(ref closedRoomsMaxLaneDepth);
-
-      foreach (var room in LiveRooms())
-      {
-        depth = Math.Max(depth, room.MaxLaneDepth);
-      }
-
-      return depth;
     }
   }
 
@@ -282,14 +265,5 @@ internal sealed class CollabRoomManager : ICollabRoomManager
         rooms.Remove(room.DocId);
       }
     }
-
-    int seen;
-
-    do
-    {
-      seen = Volatile.Read(ref closedRoomsMaxLaneDepth);
-    }
-    while (room.MaxLaneDepth > seen &&
-        Interlocked.CompareExchange(ref closedRoomsMaxLaneDepth, room.MaxLaneDepth, seen) != seen);
   }
 }

@@ -933,17 +933,32 @@ public sealed class CollabRoomTests
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
         CancellationToken.None);
 
-    // The reset must not complete while that write is unresolved.
     var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
-    var early = await Task.WhenAny(reset, Task.Delay(TimeSpan.FromMilliseconds(200)));
-    Assert.NotSame(reset, early);
 
-    // Release the stale write; the reset now finishes and its tag wins.
+    // Release the stale write; the reset finishes only after it landed.
     stuck.SetResult();
     store.BeforeWrite = null;
     var minted = Tags.AssertMinted(1, await reset);
-    await Waits.UntilAsync(
-        () => store.Stored(DocId).Tag == Tags.At(1, minted),
-        $"the reset tag; store holds epoch {store.Stored(DocId).Tag.Epoch}");
+
+    Assert.Equal(["write:0", "reset:1"], store.Journal[^2..]);
+    Assert.Equal(Tags.At(1, minted), store.Stored(DocId).Tag);
+  }
+
+  [Fact]
+  public void DisposeIsIdempotent()
+  {
+    var room = new CollabRoom(
+        DocId,
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        log.Add);
+
+    room.Dispose();
+    room.Dispose();
+
+    Assert.Equal(0, time.ArmedTimerCount);
   }
 }

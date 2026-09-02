@@ -40,10 +40,6 @@ internal sealed class SyncSocketMember : ICollabMember
   /// <summary>How long a peer gets to answer our close before the socket is torn down.</summary>
   private static readonly TimeSpan DefaultCloseGrace = TimeSpan.FromSeconds(5);
 
-  /// <summary>The wire is binary; a text frame can only come from a non-Blok client.</summary>
-  private static readonly SyncCloseFrame TextFrame =
-      new(WebSocketCloseStatus.InvalidMessageType, "binary frames only");
-
   private readonly Channel<Outbound> outbound = Channel.CreateUnbounded<Outbound>(
       new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
   private readonly long maxQueuedBytes;
@@ -241,7 +237,7 @@ internal sealed class SyncSocketMember : ICollabMember
 
         if (result.MessageType == WebSocketMessageType.Text)
         {
-          RequestClose(TextFrame);
+          RequestClose(SyncClose.TextFrame);
           discarding = true;
 
           continue;

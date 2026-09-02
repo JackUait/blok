@@ -197,6 +197,26 @@ public sealed class LocalCollabStoreTests : IDisposable
   }
 
   [Fact]
+  public void SweepsStaleTemporaryFilesAtStartupAndKeepsTheRest()
+  {
+    Directory.CreateDirectory(directory);
+    var stale = Path.Combine(directory, ".blok-collab-stale");
+    var fresh = Path.Combine(directory, ".blok-collab-fresh");
+    var stored = Path.Combine(directory, DocKeyHex);
+    File.WriteAllBytes(stale, [1]);
+    File.SetLastWriteTimeUtc(stale, DateTime.UtcNow - TimeSpan.FromMinutes(2));
+    File.WriteAllBytes(fresh, [1]);
+    File.WriteAllBytes(stored, [1]);
+    File.SetLastWriteTimeUtc(stored, DateTime.UtcNow - TimeSpan.FromMinutes(2));
+
+    CreateStore();
+
+    Assert.False(File.Exists(stale));
+    Assert.True(File.Exists(fresh));
+    Assert.True(File.Exists(stored));
+  }
+
+  [Fact]
   public async Task CleansUpTheTempFileWhenTheRenameFails()
   {
     var store = CreateStore();

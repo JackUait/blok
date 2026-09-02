@@ -4,9 +4,7 @@ using System.Text;
 
 namespace Blok.Server.Collab;
 
-internal sealed class LocalCollabStore(
-    string directory,
-    Action<string>? log = null) : ICollabWorkingSetStore
+internal sealed class LocalCollabStore : ICollabWorkingSetStore
 {
   // open(2) O_RDONLY; the same value on Linux and macOS.
   private const int ReadOnlyFlags = 0;
@@ -20,6 +18,16 @@ internal sealed class LocalCollabStore(
       UnixFileMode.UserWrite |
       UnixFileMode.UserExecute;
   private int modeWarned;
+
+  private readonly string directory;
+  private readonly Action<string>? log;
+
+  internal LocalCollabStore(string directory, Action<string>? log = null)
+  {
+    this.directory = directory;
+    this.log = log;
+    SweepTemporaryFiles();
+  }
 
   public Task<CollabWorkingSet?> ReadAsync(
       string docId,
@@ -163,9 +171,18 @@ internal sealed class LocalCollabStore(
       return;
     }
 
-    var descriptor = Open(
-        Encoding.UTF8.GetBytes(path + "\0"),
-        ReadOnlyFlags);
+    int descriptor;
+
+    try
+    {
+      descriptor = Open(
+          Encoding.UTF8.GetBytes(path + "\0"),
+          ReadOnlyFlags);
+    }
+    catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException)
+    {
+      return;
+    }
 
     if (descriptor < 0)
     {
@@ -179,6 +196,39 @@ internal sealed class LocalCollabStore(
     finally
     {
       _ = Close(descriptor);
+    }
+  }
+
+  /// <summary>
+  /// ReplaceAtomicallyAsync deletes its own temp file on failure, so one
+  /// still here belongs to a writer that died. Anything under a minute old
+  /// may be mid-write by another process, and the sweep is best effort.
+  /// </summary>
+  private void SweepTemporaryFiles()
+  {
+    if (!Directory.Exists(directory))
+    {
+      return;
+    }
+
+    var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(1);
+
+    try
+    {
+      foreach (var file in Directory.EnumerateFiles(directory, ".blok-collab-*"))
+      {
+        if (File.GetLastWriteTimeUtc(file) < cutoff)
+        {
+          File.Delete(file);
+          log?.Invoke(
+              $"collab: removed the orphaned temporary working-set file {Path.GetFileName(file)}");
+        }
+      }
+    }
+    catch (Exception error)
+    {
+      log?.Invoke(
+          $"collab: could not sweep temporary working-set files: {error.Message}");
     }
   }
 

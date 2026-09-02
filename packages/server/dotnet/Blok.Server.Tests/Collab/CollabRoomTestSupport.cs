@@ -185,6 +185,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 {
   private readonly Dictionary<string, StoredWorkingSet> documents = new(StringComparer.Ordinal);
   private readonly Lock guard = new();
+  private readonly List<string> journal = [];
   private int inFlight;
   private int reads;
   private int writes;
@@ -208,6 +209,18 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   internal int LargestWriteBytes => Volatile.Read(ref largestWriteBytes);
 
   internal int MostFramesWritten => Volatile.Read(ref mostFramesWritten);
+
+  /// <summary>Every write and reset in the order it LANDED, as "write:{epoch}" / "reset:{epoch}".</summary>
+  internal List<string> Journal
+  {
+    get
+    {
+      lock (guard)
+      {
+        return [.. journal];
+      }
+    }
+  }
 
   internal Func<Task>? BeforeWrite { get; set; }
 
@@ -298,6 +311,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     lock (guard)
     {
       documents[docId] = new StoredWorkingSet(updates, tag);
+      journal.Add($"write:{tag.Epoch}");
     }
   }
 
@@ -313,6 +327,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     lock (guard)
     {
       documents[docId] = new StoredWorkingSet([], newTag);
+      journal.Add($"reset:{newTag.Epoch}");
     }
 
     AfterReset?.Invoke();

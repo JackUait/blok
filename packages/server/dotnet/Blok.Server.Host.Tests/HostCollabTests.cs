@@ -316,7 +316,7 @@ public sealed class HostCollabTests
 
       // ~19 MiB relayed at a peer that reads nothing: its pump is blocked
       // behind a full TCP window before the writer's next answer arrives.
-      var presence = SyncFrames.Awareness(new byte[200 * 1024]);
+      var presence = SyncFrames.Awareness(SyncFrames.Presence(200 * 1024));
 
       for (var index = 0; index < 96; index++)
       {
@@ -719,6 +719,29 @@ internal static class SyncFrames
     frame.AddRange(payload);
 
     return [.. frame];
+  }
+
+  /// <summary>
+  /// One client (id 1000, clock 1) whose state is a JSON string sized so the
+  /// payload is exactly <paramref name="length"/> bytes. The room walks the
+  /// y-protocols shape of every awareness frame before relaying it, so filler
+  /// bytes are dropped as malformed and close the sender on the third.
+  /// </summary>
+  internal static byte[] Presence(int length)
+  {
+    var payload = new List<byte> { 1, 0xe8, 0x07, 1 };
+    var stateLength = length - payload.Count;
+    var prefix = new List<byte>();
+    WriteVarUint(prefix, (ulong)stateLength);
+    stateLength -= prefix.Count;
+    prefix.Clear();
+    WriteVarUint(prefix, (ulong)stateLength);
+    payload.AddRange(prefix);
+    payload.Add((byte)'"');
+    payload.AddRange(Enumerable.Repeat((byte)'x', stateLength - 2));
+    payload.Add((byte)'"');
+
+    return [.. payload];
   }
 
   internal static bool TryReadSyncPayload(byte[] frame, byte subType, out byte[] payload)

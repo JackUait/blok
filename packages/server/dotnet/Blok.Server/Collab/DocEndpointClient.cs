@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -70,6 +71,9 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 {
   /// <summary>Pass-through of the version the endpoint last reported.</summary>
   internal const string VersionHeader = "Blok-Doc-Version";
+
+  /// <summary>How much of an error body goes into the exception message.</summary>
+  private const int ErrorBodyPrefixBytes = 512;
 
   private static readonly MediaTypeHeaderValue JsonMediaType =
       new("application/json") { CharSet = "utf-8" };
@@ -179,6 +183,9 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     {
       AllowAutoRedirect = false,
       ConnectTimeout = TimeSpan.FromSeconds(10),
+      // A pooled connection outliving a DNS change at the endpoint would
+      // keep talking to the old address.
+      PooledConnectionLifetime = TimeSpan.FromMinutes(5),
     };
   }
 
@@ -345,11 +352,22 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 
     using (response)
     {
-      byte[] body;
+      // The status decides before any body is read: an error body is never
+      // buffered, only its head goes into the message.
+      if (!response.IsSuccessStatusCode)
+      {
+        var prefix = await ReadErrorPrefixAsync(response, timeout.Token);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        throw new DocEndpointException(
+            $"collab: the doc endpoint {request.Method.Method} returned " +
+            $"{(int)response.StatusCode}{prefix}",
+            (int)response.StatusCode);
+      }
 
       try
       {
-        body = await ReadCappedAsync(response, request, timeout.Token);
+        return await ReadCappedAsync(response, request, timeout.Token);
       }
       catch (OperationCanceledException error) when (
           !cancellationToken.IsCancellationRequested)
@@ -359,17 +377,43 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
             $"{options.RequestTimeout.TotalSeconds:0.###}s.",
             inner: error);
       }
-
-      if (!response.IsSuccessStatusCode)
-      {
-        throw new DocEndpointException(
-            $"collab: the doc endpoint {request.Method.Method} returned " +
-            $"{(int)response.StatusCode}.",
-            (int)response.StatusCode);
-      }
-
-      return body;
     }
+  }
+
+  /// <summary>Up to the first <see cref="ErrorBodyPrefixBytes"/> of an error body as one line, best effort; "." when there is none.</summary>
+  private static async Task<string> ReadErrorPrefixAsync(
+      HttpResponseMessage response,
+      CancellationToken cancellationToken)
+  {
+    var buffer = new byte[ErrorBodyPrefixBytes];
+    var read = 0;
+
+    try
+    {
+      await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+      while (read < buffer.Length)
+      {
+        var count = await source.ReadAsync(buffer.AsMemory(read), cancellationToken);
+
+        if (count == 0)
+        {
+          break;
+        }
+
+        read += count;
+      }
+    }
+    catch (Exception)
+    {
+      // The status is the message; the body was only ever a courtesy.
+    }
+
+    var text = string.Join(
+        ' ',
+        Encoding.UTF8.GetString(buffer, 0, read).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    return text.Length == 0 ? "." : $": {text}";
   }
 
   /// <summary>

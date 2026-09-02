@@ -57,4 +57,15 @@ public sealed class SyncSocketMemberTests
     Assert.Equal(1008, (int)member.RequestedClose!.Value.Status);
     Assert.Equal("malformed awareness", member.RequestedClose.Value.Reason);
   }
+
+  /// <summary>A reason the endpoint has no mapping for closes 1011 instead of throwing inside the room's lane.</summary>
+  [Fact]
+  public void AnUnmappedReasonClosesAsAnInternalError()
+  {
+    var member = new SyncSocketMember(canWrite: false, acceptsControlFrames: true, maxQueuedBytes: 10);
+
+    member.Close((CollabCloseReason)99);
+
+    Assert.Equal(1011, (int)member.RequestedClose!.Value.Status);
+  }
 }

@@ -35,8 +35,17 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame OtherDocument =
       new((WebSocketCloseStatus)4401, "pass is for another document");
 
-  internal static readonly SyncCloseFrame ProtocolRequired =
-      new((WebSocketCloseStatus)4401, "blok-sync.v1 required");
+  /// <summary>The wire is binary; a text frame can only come from a non-Blok client.</summary>
+  internal static readonly SyncCloseFrame TextFrame =
+      new(WebSocketCloseStatus.InvalidMessageType, "binary frames only");
+
+  /// <summary>
+  /// Ticket mode runs behind a proxy, so the client address is the proxy's:
+  /// a pass naming nobody would share one cap and one rate window with
+  /// every other such pass. Refused rather than keyed on the address.
+  /// </summary>
+  internal static readonly SyncCloseFrame UserlessPass =
+      new((WebSocketCloseStatus)4401, "pass names no user");
 
   internal static readonly SyncCloseFrame Forbidden =
       new((WebSocketCloseStatus)4403, "forbidden");
@@ -50,6 +59,10 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame BadAwareness =
       new(WebSocketCloseStatus.PolicyViolation, "malformed awareness");
 
+  /// <summary>A reason with no mapping: a close is still the right answer inside the room's lane, a throw is not.</summary>
+  internal static readonly SyncCloseFrame Internal =
+      new(WebSocketCloseStatus.InternalServerError, "internal error");
+
   internal static SyncCloseFrame For(CollabCloseReason reason)
   {
     return reason switch
@@ -57,7 +70,7 @@ internal static class SyncClose
       CollabCloseReason.Reset => Reset,
       CollabCloseReason.Draining => Draining,
       CollabCloseReason.BadAwareness => BadAwareness,
-      _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
+      _ => Internal,
     };
   }
 }

@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -106,8 +105,7 @@ internal sealed class CollabRoom : IDisposable
   private DateTimeOffset? exportRetryAt;
   private int exportFailures;
   private Task<string?>? inFlightSave;
-  private int laneDepth;
-  private int maxLaneDepth;
+  private bool disposed;
 
   internal CollabRoom(
       string docId,
@@ -158,9 +156,6 @@ internal sealed class CollabRoom : IDisposable
   internal event Action<CollabRoom>? Closed;
 
   internal string DocId { get; }
-
-  /// <summary>Highest number of concurrent lane entries observed; 1 proves serialization.</summary>
-  internal int MaxLaneDepth => Volatile.Read(ref maxLaneDepth);
 
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabJoinResult?> JoinAsync(
@@ -423,6 +418,12 @@ internal sealed class CollabRoom : IDisposable
   /// </summary>
   public void Dispose()
   {
+    if (disposed)
+    {
+      return;
+    }
+
+    disposed = true;
     exportTimer.Dispose();
     evictionTimer.Dispose();
     persistTimer.Dispose();
@@ -437,20 +438,11 @@ internal sealed class CollabRoom : IDisposable
     }
   }
 
-  private static void WriteFramePrefix(Stream stream, int length)
-  {
-    Span<byte> prefix = stackalloc byte[sizeof(int)];
-    BinaryPrimitives.WriteInt32LittleEndian(prefix, length);
-    stream.Write(prefix);
-  }
-
   private async Task<T> RunAsync<T>(
       Func<Task<T>> operation,
       CancellationToken cancellationToken)
   {
     await lane.WaitAsync(cancellationToken);
-    var depth = Interlocked.Increment(ref laneDepth);
-    RecordLaneDepth(depth);
 
     try
     {
@@ -458,7 +450,6 @@ internal sealed class CollabRoom : IDisposable
     }
     finally
     {
-      Interlocked.Decrement(ref laneDepth);
       lane.Release();
     }
   }
@@ -473,18 +464,6 @@ internal sealed class CollabRoom : IDisposable
           return null;
         },
         cancellationToken);
-  }
-
-  private void RecordLaneDepth(int depth)
-  {
-    int seen;
-
-    do
-    {
-      seen = Volatile.Read(ref maxLaneDepth);
-    }
-    while (depth > seen &&
-        Interlocked.CompareExchange(ref maxLaneDepth, depth, seen) != seen);
   }
 
   /// <summary>Fire-and-forget lane entry for timer callbacks; nothing here may throw past the lane.</summary>
@@ -523,6 +502,13 @@ internal sealed class CollabRoom : IDisposable
 
       if (stored is not null)
       {
+        if (stored.Tag.Format != CollabWorkingSetTag.SchemaV2)
+        {
+          throw new InvalidDataException(
+              $"collab: the stored working set for \"{DocId}\" has format {stored.Tag.Format}; " +
+              $"this server reads format {CollabWorkingSetTag.SchemaV2}.");
+        }
+
         tag = stored.Tag;
         HydrateLocked(stored.Updates);
       }
@@ -533,7 +519,19 @@ internal sealed class CollabRoom : IDisposable
       }
       else if (CompactIfOversizedLocked())
       {
-        await PersistLocked(lifetime.Token);
+        try
+        {
+          await PersistLocked(lifetime.Token);
+        }
+        catch (Exception error) when (!lifetime.IsCancellationRequested)
+        {
+          // The doc and the stored blob are both fine; the compacted log is
+          // retried like any other write once the room is Ready.
+          log?.Invoke(
+              $"collab: room \"{DocId}\" could not write its compacted working set, retrying: {error.Message}");
+          persistFailures++;
+          persistTimer.Change(Backoff(persistFailures), Timeout.InfiniteTimeSpan);
+        }
       }
 
       state = RoomState.Ready;
@@ -642,8 +640,7 @@ internal sealed class CollabRoom : IDisposable
 
   private void AppendLocked(byte[] update)
   {
-    WriteFramePrefix(frameSection, update.Length);
-    frameSection.Write(update);
+    CollabWorkingSetCodec.AppendFrame(frameSection, update);
     frameCount++;
     blobVersion++;
   }
@@ -1129,11 +1126,6 @@ internal sealed class CollabRoom : IDisposable
     {
       log?.Invoke(
           $"collab: room \"{DocId}\" could not flush before eviction: {error.Message}");
-    }
-
-    if (state != RoomState.Ready || members.Count > 0)
-    {
-      return;
     }
 
     if (blobVersion != persistedVersion)

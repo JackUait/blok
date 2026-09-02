@@ -309,7 +309,25 @@ internal sealed class CollabRoom : IDisposable
           }
 
           CompactIfOversizedLocked();
-          SchedulePersistLocked();
+
+          // Awaited, unlike a member write: the caller is answered with a
+          // success code and there may be no member holding the edit, so
+          // the blob is the only durable copy. A failed write still answers
+          // success — the edit IS applied and broadcast — and leaves the
+          // room persist-behind, which eviction refuses to drop.
+          await SettleInFlightPersistLocked();
+
+          try
+          {
+            await PersistLocked(lifetime.Token);
+          }
+          catch (Exception error) when (!lifetime.IsCancellationRequested)
+          {
+            log?.Invoke(
+                $"collab: room \"{DocId}\" could not persist an edit, retrying: {error.Message}");
+            SchedulePersistLocked();
+          }
+
           MarkDirtyLocked();
 
           return new CollabEditResult(CollabEditStatus.Applied, null);

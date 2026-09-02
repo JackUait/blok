@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
 using Xunit;
@@ -361,6 +362,32 @@ public sealed class CollabRoomManagerTests
 
     Assert.Equal(0, manager.LiveRoomCount);
     Assert.Equal(framesBefore, store.FramesOf(DocId).Count);
+  }
+
+  /// <summary>
+  /// With no members the applied edit lived only in the doc until the
+  /// off-lane write landed, so a 204 preceded any durable copy and a process
+  /// death in that window lost an acknowledged write. The write is gated so
+  /// the order is observable: the answer must wait for the blob.
+  /// </summary>
+  [Fact]
+  public async Task AHeadlessEditIsInTheBlobBeforeItIsAnswered()
+  {
+    endpoint.Holds(DocId, "a");
+    var manager = CreateManager();
+    var probe = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+    await probe.LeaveAsync();
+    var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    store.BeforeWrite = () => stuck.Task;
+
+    var edit = manager.EditAsync(DocId, [Insert("b")], CancellationToken.None).AsTask();
+    await Waits.UntilAsync(() => store.Writes == 2, "the edit's blob write to start");
+
+    Assert.False(edit.IsCompleted, "the edit was answered before its blob write landed");
+    stuck.SetResult();
+    store.BeforeWrite = null;
+    Assert.Equal(CollabEditStatus.Applied, (await edit).Status);
+    Assert.Equal("ab", YDocs.Replay(store.FramesOf(DocId)));
   }
 
   [Fact]
@@ -799,6 +826,20 @@ public sealed class CollabRoomManagerTests
         options ?? new CollabRoomOptions(),
         time,
         log is null ? null : log.Add);
+  }
+
+  /// <summary>An insert op the fake converter applies by appending <paramref name="text"/>.</summary>
+  private static CollabEditOp.Insert Insert(string text)
+  {
+    return new CollabEditOp.Insert(
+        $"block-{text}",
+        new JsonObject
+        {
+          ["type"] = "paragraph",
+          ["data"] = new JsonObject { ["text"] = text },
+        },
+        After: null,
+        Parent: null);
   }
 
   /// <summary>A client doc synced to the room through the member's own connection.</summary>

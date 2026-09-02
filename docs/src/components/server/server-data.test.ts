@@ -417,6 +417,12 @@ describe('server docs data', () => {
     expect(body).toContain('childTools');
     expect(body).toMatch(/warning/i);
     expect(body).toMatch(/does not demote|not demoted/i);
+    // The one thing that does NOT pass through, and the lockstep rule that
+    // makes a document saved in the browser and one written back by the
+    // service agree: both skip a malformed block and both null past 256.
+    expect(body).toMatch(/256 levels/i);
+    expect(body).toMatch(/null/);
+    expect(body).toMatch(/editor and the service/i);
   });
 
   it('documents how the service signs in to the document endpoint', () => {
@@ -642,8 +648,11 @@ describe('server docs data', () => {
     expect(body).toMatch(/independent|separate/i);
   });
 
-  // Awareness frames are relayed verbatim and never parsed, read-only members
-  // included, so the entry has to stop anyone treating presence as identity.
+  // Awareness frames are relayed unread, read-only members included, so the
+  // entry has to stop anyone treating presence as identity. Their SHAPE is
+  // checked now (SyncWire.TryValidateAwarenessUpdate), so "never looks inside"
+  // would be false: a state that is not valid JSON ends every receiving
+  // session, and the third bad frame closes the sender.
   it('says presence is relayed unverified and must not carry permissions', () => {
     const body = serverLimits.find((l) => l.id === 'collab-presence-unverified')?.body ?? '';
 
@@ -651,6 +660,10 @@ describe('server docs data', () => {
     expect(body).toMatch(/read-only pass/i);
     expect(body).toMatch(/not an identity check/i);
     expect(body).toMatch(/never build permissions/i);
+    expect(body).not.toMatch(/never looks inside/i);
+    expect(body).toMatch(/valid JSON/i);
+    expect(body).toContain('malformed awareness');
+    expect(body).toMatch(/1008/);
   });
 
   // Over the cap the room drops the presence frame and logs it rather than

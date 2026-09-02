@@ -244,13 +244,12 @@ public sealed class YDocConverterHardeningTests
 
   /// <summary>
   /// The two value kinds no Blok client writes but a peer can. A Uint8Array
-  /// is the index-keyed object JSON.stringify writes for one. A SUBDOC is
-  /// where this engine and the client part company: ContentDoc.GetContent
-  /// hands back the guid STRING, indistinguishable here from any other
-  /// string, so it exports as that guid where the client writes {}.
+  /// is the index-keyed object JSON.stringify writes for one. A subdoc is an
+  /// empty object: JSON.stringify of a Y.Doc writes {}, and the guid is not
+  /// a value the record ever carried.
   /// </summary>
   [Fact]
-  public void ExportRendersPeerMintedBytesAsAnIndexKeyedObjectAndASubdocAsItsGuid()
+  public void ExportRendersPeerMintedBytesAsAnIndexKeyedObjectAndASubdocAsAnEmptyObject()
   {
     var doc = new YDoc();
 
@@ -265,7 +264,7 @@ public sealed class YDocConverterHardeningTests
     var exported = YDocConverter.Export(doc)[0]!["data"]!;
 
     AssertJson("""{"0":1,"1":2,"2":3}""", exported["blob"]);
-    Assert.Equal("sub-guid", exported["sub"]?.GetValue<string>());
+    AssertJson("{}", exported["sub"]);
   }
 
   /// <summary>

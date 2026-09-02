@@ -1750,6 +1750,13 @@ internal static class YDocConverter
 
           return true;
 
+        // JSON.stringify of a Y.Doc is {} — a subdoc's content lives in its
+        // own document, and its guid is not a value the record carries.
+        case YSubdoc:
+          plain = new JsonObject();
+
+          return true;
+
         // JSON.stringify writes a Uint8Array as an index-keyed object, and
         // the client hands the consumer exactly that.
         case byte[] bytes:

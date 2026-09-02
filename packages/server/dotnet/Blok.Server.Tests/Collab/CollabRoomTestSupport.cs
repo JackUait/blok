@@ -18,12 +18,18 @@ internal sealed class ManualTimeProvider : TimeProvider
 
   public override DateTimeOffset GetUtcNow()
   {
-    return now;
+    lock (timers)
+    {
+      return now;
+    }
   }
 
   public override long GetTimestamp()
   {
-    return now.UtcTicks;
+    lock (timers)
+    {
+      return now.UtcTicks;
+    }
   }
 
   public override ITimer CreateTimer(
@@ -54,9 +60,22 @@ internal sealed class ManualTimeProvider : TimeProvider
     }
   }
 
+  /// <summary>
+  /// Selects and claims the next due timer under one lock hold (so a
+  /// concurrent Change/Dispose can never land between the two), then fires
+  /// it unlocked — a fired callback may itself call Change/CreateTimer,
+  /// which must be free to re-take the lock without this frame still
+  /// holding it. `now` only ever moves forward, even across concurrent
+  /// Advance calls racing on the same clock.
+  /// </summary>
   internal void Advance(TimeSpan by)
   {
-    var target = now + by;
+    DateTimeOffset target;
+
+    lock (timers)
+    {
+      target = now + by;
+    }
 
     while (true)
     {
@@ -68,25 +87,30 @@ internal sealed class ManualTimeProvider : TimeProvider
             .Where(timer => timer.DueAt is not null && timer.DueAt <= target)
             .OrderBy(timer => timer.DueAt)
             .FirstOrDefault();
+
+        if (next is null)
+        {
+          break;
+        }
+
+        var dueAt = next.DueAt!.Value;
+        next.Claim();
+
+        if (dueAt > now)
+        {
+          now = dueAt;
+        }
       }
 
-      if (next is null)
-      {
-        break;
-      }
-
-      now = next.DueAt!.Value;
-      next.Fire();
+      next.InvokeCallback();
     }
 
-    now = target;
-  }
-
-  private void Remove(ManualTimer timer)
-  {
     lock (timers)
     {
-      timers.Remove(timer);
+      if (target > now)
+      {
+        now = target;
+      }
     }
   }
 
@@ -95,21 +119,30 @@ internal sealed class ManualTimeProvider : TimeProvider
       TimerCallback callback,
       object? state) : ITimer
   {
+    // Guarded by owner.timers, the same lock Advance takes: every read and
+    // write of DueAt (and of owner.now) goes through it, or Advance's
+    // outside-the-lock dereference races Change/Dispose again.
     internal DateTimeOffset? DueAt { get; private set; }
 
     public bool Change(TimeSpan dueTime, TimeSpan period)
     {
-      DueAt = dueTime == Timeout.InfiniteTimeSpan
-        ? null
-        : owner.now + dueTime;
+      lock (owner.timers)
+      {
+        DueAt = dueTime == Timeout.InfiniteTimeSpan
+          ? null
+          : owner.now + dueTime;
+      }
 
       return true;
     }
 
     public void Dispose()
     {
-      DueAt = null;
-      owner.Remove(this);
+      lock (owner.timers)
+      {
+        DueAt = null;
+        owner.timers.Remove(this);
+      }
     }
 
     public ValueTask DisposeAsync()
@@ -119,9 +152,15 @@ internal sealed class ManualTimeProvider : TimeProvider
       return ValueTask.CompletedTask;
     }
 
-    internal void Fire()
+    /// <summary>Marks this timer fired. Caller must hold owner.timers.</summary>
+    internal void Claim()
     {
       DueAt = null;
+    }
+
+    /// <summary>Runs the callback. Caller must NOT hold owner.timers — the callback may re-enter Change/CreateTimer.</summary>
+    internal void InvokeCallback()
+    {
       callback(state);
     }
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { BlockYjsSync, type SyncHandlers, type BlockYjsSyncDependencies } from '../../../../../src/components/modules/blockManager/yjs-sync';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
@@ -6,7 +6,7 @@ import { Blocks } from '../../../../../src/components/blocks';
 import type { Block } from '../../../../../src/components/block';
 import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
-import type { Map as YMap } from 'yjs';
+import { Map as YMap } from 'yjs';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { API } from '../../../../../src/components/modules/api';
@@ -14,6 +14,7 @@ import { ToolsCollection } from '../../../../../src/components/tools/collection'
 import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import { validateHierarchy } from '../../../../../src/components/utils/hierarchy-invariant';
+import * as utils from '../../../../../src/components/utils';
 
 /**
  * Create a mock Block for testing
@@ -136,6 +137,9 @@ const createMockYMap = (data: Record<string, unknown>): YMap<unknown> => {
     toJSON: mockToJSON,
     _data: data, // Store reference for test access
   } as unknown as YMap<unknown>;
+
+  // The reconciler admits a record's data/tunes only when they ARE Y.Maps.
+  Object.setPrototypeOf(yMap, YMap.prototype);
 
   return yMap;
 };
@@ -2768,6 +2772,127 @@ describe('BlockYjsSync', () => {
       // A torn-down editor has nothing to reconcile — and nothing to assert
       // about, which is what made the dev tripwire throw out of band.
       expect(domOrder(holders)).toEqual([ 1, 0 ]);
+    });
+  });
+
+  /**
+   * A peer can write any shape into the blocks map. A record the reconciler
+   * cannot read must be refused like an unknown tool — warned about, left
+   * doc-only — never thrown on, because a throw inside the observer takes
+   * every other block in the same dispatch down with it.
+   */
+  describe('malformed block records', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let warn: ReturnType<typeof vi.spyOn>;
+
+    const legitimate = (): YMap<unknown> => createMockYMap({
+      id: 'r1',
+      type: 'paragraph',
+      data: createMockYMap({ text: 'hi' }),
+    });
+
+    const serveRecords = (records: Record<string, YMap<unknown>>): void => {
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue(Object.keys(records).map((id) => ({ id })));
+    };
+
+    const stubCompose = (): ReturnType<typeof vi.spyOn> =>
+      vi.spyOn(factory, 'composeBlock').mockImplementation((options) => createMockBlock({ id: options.id }));
+
+    beforeEach(() => {
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('refuses an add whose data is not a Y.Map, then materialises the next legitimate add', () => {
+      serveRecords({
+        x: createMockYMap({ id: 'x', type: 'paragraph', data: 'junk' }),
+        r1: legitimate(),
+      });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+      callback({ blockId: 'r1', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).toHaveBeenCalledTimes(1);
+      expect(composeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+      expect(repository.getBlockById('x')).toBeUndefined();
+      expect(repository.getBlockById('r1')).toBeDefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('x');
+      expect(warn.mock.calls[0][1]).toBe('warn');
+    });
+
+    it('drops only the malformed record from a batch add', () => {
+      serveRecords({
+        x: createMockYMap({ id: 'x', type: 'paragraph', data: 'junk' }),
+        r1: legitimate(),
+      });
+      const composeBlock = stubCompose();
+
+      callback({ blockIds: ['x', 'r1'], type: 'batch-add', origin: 'remote' });
+
+      expect(composeBlock).toHaveBeenCalledTimes(1);
+      expect(composeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+      expect(repository.getBlockById('r1')).toBeDefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('x');
+    });
+
+    it('refuses an update whose data is not a Y.Map and keeps the current view', async () => {
+      const block = repository.getBlockById('block-1');
+
+      serveRecords({ 'block-1': createMockYMap({ id: 'block-1', type: 'paragraph', data: 'junk' }) });
+
+      callback({ blockId: 'block-1', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(block?.setData).not.toHaveBeenCalled();
+      expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('block-1');
+    });
+
+    it('refuses a record whose type is not a string', () => {
+      serveRecords({ x: createMockYMap({ id: 'x', type: 42, data: createMockYMap({}) }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('«x»');
+    });
+
+    it('refuses a record whose tunes is not a Y.Map', () => {
+      serveRecords({ x: createMockYMap({ id: 'x', type: 'paragraph', data: createMockYMap({}), tunes: 'junk' }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a record whose id is present but not a string', () => {
+      serveRecords({ x: createMockYMap({ id: 7, type: 'paragraph', data: createMockYMap({}) }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
     });
   });
 });

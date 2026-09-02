@@ -56,7 +56,7 @@ const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
 /**
  * Recursive type for data that can contain nested arrays
  */
-type DeepData = string | Record<string, unknown> | Array<DeepData>;
+type DeepData = string | Record<string, unknown> | Array<DeepData> | null;
 
 /**
  * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
@@ -343,9 +343,21 @@ export const stripUnsafeUrlsDeep = (
   return stripUnsafeUrlsDeepValue(data, rules as DeepSanitizerRule) as BlockToolData;
 };
 
-const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): DeepData => {
+/**
+ * Nesting past this many levels reads back as `null`. Block data comes off a
+ * shared document that any peer can write, and the recursive walk below has
+ * no other bound. The same cap governs the doc serializer and the server
+ * export, so all three agree on what a too-deep value becomes.
+ */
+const MAX_SANITIZE_DEPTH = 256;
+
+const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, depth = 0): DeepData => {
+  if (depth > MAX_SANITIZE_DEPTH) {
+    return null;
+  }
+
   if (Array.isArray(value)) {
-    return value.map((item) => stripUnsafeUrlsDeepValue(item, rules));
+    return value.map((item) => stripUnsafeUrlsDeepValue(item, rules, depth + 1));
   }
 
   if (isObject(value)) {
@@ -356,7 +368,7 @@ const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): D
       const ruleCandidate = rulesRecord?.[key];
       const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate) ? ruleCandidate : rules;
 
-      result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem);
+      result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem, depth + 1);
     });
 
     return result;

@@ -1248,6 +1248,36 @@ describe('sanitizer', () => {
 });
 
 
+describe('stripUnsafeUrlsDeep depth cap', () => {
+  /**
+   * Block data comes off a shared document any peer can write. Without a
+   * bound, a deeply nested value overflows the recursive walk — thrown from
+   * inside the document observer, which wedges every later remote event.
+   */
+  it('reads a value nested past 256 levels as null instead of overflowing the stack', () => {
+    let nested: Record<string, unknown> = { text: 'leaf' };
+
+    for (let level = 0; level < 20000; level++) {
+      nested = { child: nested };
+    }
+
+    const result = stripUnsafeUrlsDeep(nested);
+
+    const descend = (levels: number): unknown => {
+      let cursor: unknown = result;
+
+      for (let level = 0; level < levels; level++) {
+        cursor = (cursor as Record<string, unknown>).child;
+      }
+
+      return cursor;
+    };
+
+    expect(descend(256)).toEqual(expect.objectContaining({ child: null }));
+    expect(descend(257)).toBeNull();
+  });
+});
+
 describe('stripUnsafeUrls plaintext preservation', () => {
   /**
    * Runs a code block's plaintext through the real sanitizeBlocks pipeline

@@ -3,8 +3,7 @@
  * @classdesc Handles Yjs synchronization for blocks
  * @module BlockYjsSync
  */
-import { Array as YArray } from 'yjs';
-import type { Map as YMap } from 'yjs';
+import { Array as YArray, Map as YMap } from 'yjs';
 
 import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
@@ -39,6 +38,20 @@ export interface BlockYjsSyncDependencies {
    * Omitted in harnesses; absent means "writable".
    */
   isReadOnly?: () => boolean;
+}
+
+/**
+ * A block record narrowed off the doc. Peers are untrusted: handing a
+ * non-Y.Map `data` to `yMapToObject` throws inside the observer and takes
+ * every other block in the same dispatch down with it.
+ */
+interface BlockRecord {
+  type: string;
+  data: YMap<unknown>;
+  tunes: YMap<unknown> | undefined;
+  parentId: string | undefined;
+  lastEditedAt: number | undefined;
+  lastEditedBy: string | null;
 }
 
 /**
@@ -497,12 +510,16 @@ export class BlockYjsSync {
       return;
     }
 
-    const yjsType = yblock.get('type') as string;
-    const data = this.sanitizeToolData(yjsType, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
-    const ytunes = yblock.get('tunes') as YMap<unknown> | undefined;
-    const tunes = ytunes !== undefined ? this.dependencies.YjsManager.yMapToObject(ytunes) : {};
-    const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
-    const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
+    const record = this.readBlockRecord(blockId, yblock);
+
+    if (record === null) {
+      return;
+    }
+
+    const yjsType = record.type;
+    const data = this.sanitizeToolData(yjsType, this.dependencies.YjsManager.yMapToObject(record.data));
+    const tunes = record.tunes !== undefined ? this.dependencies.YjsManager.yMapToObject(record.tunes) : {};
+    const { lastEditedAt, lastEditedBy } = record;
 
     /**
      * Angle 1 fix: reconcile parentId drift BEFORE data/tunes updates.
@@ -529,8 +546,8 @@ export class BlockYjsSync {
      * polluting the undo stack and potentially looping.
      */
     if (yblock.has('parentId')) {
-      const rawParentId = yblock.get('parentId') as string | null | undefined;
-      const remoteParentId: string | null = rawParentId === undefined ? null : rawParentId;
+      const rawParentId = yblock.get('parentId');
+      const remoteParentId = typeof rawParentId === 'string' ? rawParentId : null;
 
       if (remoteParentId !== block.parentId) {
         this.withAtomicOperation(() => {
@@ -731,6 +748,46 @@ export class BlockYjsSync {
   }
 
   /**
+   * Narrow a block record off the doc, or refuse it the way an unknown tool
+   * is refused: warn once naming the block, leave it doc-only. The blocks-map
+   * KEY is the id the reconciler works with, so the record's own `id` only
+   * has to be absent or a string.
+   *
+   * @param blockId - the blocks-map key of the record
+   * @param yblock - the record to narrow
+   */
+  private readBlockRecord(blockId: string, yblock: YMap<unknown>): BlockRecord | null {
+    const id = yblock.get('id');
+    const type = yblock.get('type');
+    const data = yblock.get('data');
+    const tunes = yblock.get('tunes');
+    const wellFormed =
+      (id === undefined || typeof id === 'string') &&
+      typeof type === 'string' &&
+      data instanceof YMap &&
+      (tunes === undefined || tunes instanceof YMap);
+
+    if (!wellFormed) {
+      logLabeled(`Block «${blockId}» carries a malformed record and was left out of the editor.`, 'warn');
+
+      return null;
+    }
+
+    const parentId = yblock.get('parentId');
+    const lastEditedAt = yblock.get('lastEditedAt');
+    const lastEditedBy = yblock.get('lastEditedBy');
+
+    return {
+      type,
+      data,
+      tunes,
+      parentId: typeof parentId === 'string' ? parentId : undefined,
+      lastEditedAt: typeof lastEditedAt === 'number' ? lastEditedAt : undefined,
+      lastEditedBy: typeof lastEditedBy === 'string' ? lastEditedBy : null,
+    };
+  }
+
+  /**
    * Handle block add from Yjs (undo/redo - restoring a removed block, or a remote insert)
    */
   private handleYjsAdd(blockId: string): void {
@@ -745,16 +802,20 @@ export class BlockYjsSync {
       return;
     }
 
-    const toolName = yblock.get('type') as string;
+    const record = this.readBlockRecord(blockId, yblock);
+
+    if (record === null) {
+      return;
+    }
+
+    const toolName = record.type;
 
     if (!this.canMaterializeTool(toolName)) {
       return;
     }
 
-    const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
-    const parentId = yblock.get('parentId') as string | undefined;
-    const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
-    const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
+    const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
+    const { parentId, lastEditedAt, lastEditedBy } = record;
 
     // A MEMORY index — see docOrderKnownToMemory.
     const targetIndex = this.docOrderKnownToMemory(new Set([blockId])).indexOf(blockId);
@@ -772,7 +833,7 @@ export class BlockYjsSync {
         id: blockId,
         tool: toolName,
         data,
-        parentId: parentId ?? undefined,
+        parentId,
         bindEventsImmediately: true,
         origin: 'replay',
         lastEditedAt,
@@ -925,18 +986,22 @@ export class BlockYjsSync {
         continue;
       }
 
-      const toolName = yblock.get('type') as string;
+      const record = this.readBlockRecord(blockId, yblock);
+
+      if (record === null) {
+        continue;
+      }
+
+      const toolName = record.type;
 
       if (!this.canMaterializeTool(toolName)) {
         continue;
       }
 
-      const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(yblock.get('data') as YMap<unknown>));
-      const parentId = yblock.get('parentId') as string | undefined;
-      const lastEditedAt = yblock.get('lastEditedAt') as number | undefined;
-      const lastEditedBy = (yblock.get('lastEditedBy') as string | undefined) ?? null;
+      const data = this.sanitizeToolData(toolName, this.dependencies.YjsManager.yMapToObject(record.data));
+      const { parentId, lastEditedAt, lastEditedBy } = record;
 
-      candidates.push({ blockId, toolName, data, parentId: parentId ?? undefined, lastEditedAt, lastEditedBy });
+      candidates.push({ blockId, toolName, data, parentId, lastEditedAt, lastEditedBy });
     }
 
     // ONE basis snapshot for the whole batch (see docOrderKnownToMemory): pass 1

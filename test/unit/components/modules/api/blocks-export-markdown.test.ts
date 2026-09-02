@@ -74,7 +74,7 @@ describe('BlocksAPI.exportMarkdown', () => {
     expect(await blocksApi.exportMarkdown()).toBe('| a | b |\n| --- | --- |\n| c | d |')
   })
 
-  it('indents structurally nested blocks by their depth', async () => {
+  it('does not indent a structurally nested block outside a list', async () => {
     const blocksApi = createBlocksApi({
       blocks: [
         { id: 'parent', type: 'paragraph', data: { text: 'root' } },
@@ -82,7 +82,9 @@ describe('BlocksAPI.exportMarkdown', () => {
       ],
     })
 
-    expect(await blocksApi.exportMarkdown()).toBe('root\n\n    nested')
+    // Four leading spaces after a blank line are an indented code block, so a
+    // paragraph nested under a paragraph flattens instead of becoming code.
+    expect(await blocksApi.exportMarkdown()).toBe('root\n\nnested')
   })
 
   it('returns an empty string when there is nothing to save', async () => {

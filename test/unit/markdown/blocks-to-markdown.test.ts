@@ -40,10 +40,18 @@ describe('blocksToMarkdown', () => {
     expect(blocksToMarkdown([{ tool: 'list', data: { text: 'deep', style: 'ordered' }, indent: 2 }])).toBe('        1. deep');
   });
 
-  it('indents flat-indented (Tab-nested) non-list blocks by their indent level', () => {
-    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'nested' }, indent: 1 }])).toBe('    nested');
-    expect(blocksToMarkdown([{ tool: 'header', data: { text: 'Sub', level: 2 }, indent: 1 }])).toBe('    ## Sub');
-    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'deep' }, indent: 2 }])).toBe('        deep');
+  it('indents a non-list block only while a list item owns it', () => {
+    // Four spaces continue a list item. With no list above them they would be
+    // an indented code block instead, so the nesting is dropped rather than
+    // exported as code.
+    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'nested' }, indent: 1 }])).toBe('nested');
+    expect(blocksToMarkdown([{ tool: 'header', data: { text: 'Sub', level: 2 }, indent: 1 }])).toBe('## Sub');
+    expect(blocksToMarkdown([{ tool: 'paragraph', data: { text: 'deep' }, indent: 2 }])).toBe('deep');
+
+    expect(blocksToMarkdown([
+      { id: 'l', tool: 'list', data: { text: 'item', style: 'unordered' } },
+      { tool: 'paragraph', data: { text: 'nested' }, parentId: 'l', indent: 1 },
+    ])).toBe('- item\n\n    nested');
   });
 
   it('serializes quote, divider and code blocks', () => {

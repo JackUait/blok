@@ -29,10 +29,11 @@ export interface SerializableBlock {
   /**
    * Structural nesting depth (the parentId chain length), applied as leading
    * indentation so a Tab/drag-nested block serializes nested instead of flat —
-   * matching Notion's Markdown export. Used for EVERY tool, including `list`:
-   * list nesting is structural now, so its indent comes from here (with a
-   * fallback to the legacy flat `data.depth` for imported lists that have no
-   * structural parent yet).
+   * matching Notion's Markdown export. Always honoured for `list` (list nesting
+   * is structural now, with a fallback to the legacy flat `data.depth` for
+   * imported lists that have no structural parent yet); for every other tool
+   * only inside a list item, where four spaces continue the item instead of
+   * opening an indented code block.
    */
   indent?: number;
 }
@@ -60,6 +61,13 @@ export interface MarkdownDegradation {
 
 /** Number of spaces used per nesting level. */
 const LIST_INDENT = '    ';
+
+/**
+ * The code tool's "no language" id — `DEFAULT_LANGUAGE` in
+ * src/tools/code/constants.ts, and the fallback `mdast-to-blocks.ts` writes for
+ * an info-less fence. Inlined rather than imported: the core stays pure.
+ */
+const PLAIN_TEXT_LANGUAGE = 'plain text';
 
 /**
  * Tools that render their own descendants and therefore CLAIM them: a claimed
@@ -204,6 +212,7 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
   }
 
   const columns = grid.reduce((max, row) => Math.max(max, row.length), 0);
+  const unresolved: string[] = [];
 
   const rows = grid.map((row) =>
     Array.from({ length: columns }, (_unused, index) => {
@@ -217,7 +226,13 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
       const lines = ids.flatMap((id) => {
         const cellBlock = context.byId.get(id);
 
-        return cellBlock === undefined ? [] : cellBlockLines(cellBlock, context, 0);
+        if (cellBlock === undefined) {
+          unresolved.push(id);
+
+          return [];
+        }
+
+        return cellBlockLines(cellBlock, context, 0);
       });
 
       const markdown = lines.length > 0 ? lines.join('\n') : context.inline.inlineToMarkdown(asString(cell.text));
@@ -225,6 +240,22 @@ const tableToMarkdown = (block: SerializableBlock, context: SerializationContext
       return escapeTableCell(markdown).trim();
     })
   );
+
+  /**
+   * A cell pointing at a block that is not in the document loses its content
+   * with nothing to show for it. Staying silent here is what let a truncated
+   * article keep reporting fidelity full.
+   */
+  if (unresolved.length > 0) {
+    const one = unresolved.length === 1;
+
+    warn(
+      context,
+      block.tool,
+      'dropped',
+      `${unresolved.length} child block reference${one ? '' : 's'} could not be resolved and ${one ? 'was' : 'were'} dropped`
+    );
+  }
 
   const withHeadings = block.data.withHeadings === true;
   const header = withHeadings ? rows[0] : Array.from({ length: columns }, () => '');
@@ -290,6 +321,36 @@ const childrenToMarkdown = (block: SerializableBlock, context: SerializationCont
       indent: Math.max(Math.max(Number(child.indent ?? 0), 0) - base, 0) })),
     context
   );
+};
+
+/**
+ * Whether a block sits inside a list item. Four leading spaces continue a list
+ * item, but outside one they are an indented code block — so a non-list block
+ * only carries a flat indent when a list actually owns it.
+ * @param block - the block being serialized
+ * @param context - the serialization context
+ * @param seen - parent ids already walked (cycle guard)
+ */
+const isUnderList = (
+  block: SerializableBlock,
+  context: SerializationContext,
+  seen: Set<string> = new Set()
+): boolean => {
+  const { parentId } = block;
+
+  if (typeof parentId !== 'string' || seen.has(parentId)) {
+    return false;
+  }
+
+  seen.add(parentId);
+
+  const parent = context.byId.get(parentId);
+
+  if (parent === undefined) {
+    return false;
+  }
+
+  return parent.tool === 'list' || isUnderList(parent, context, seen);
 };
 
 /**
@@ -403,20 +464,31 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       break;
   }
 
-  // Flat Tab-indent applies to every non-list block so nested paragraphs,
-  // headers and quotes serialize indented instead of flattened.
-  const flatIndent = LIST_INDENT.repeat(Math.max(Number(block.indent ?? 0), 0));
+  // A non-list block keeps its Tab-indent only while a list item owns it, where
+  // four spaces are the continuation. Anywhere else they are an indented code
+  // block, so nesting is dropped rather than exported as code.
+  const flatIndent = isUnderList(block, context)
+    ? LIST_INDENT.repeat(Math.max(Number(block.indent ?? 0), 0))
+    : '';
 
   switch (block.tool) {
     case 'header': {
       const level = Math.min(Math.max(Number(data.level) || 1, 1), 6);
 
+      if (data.isToggleable === true) {
+        warn(context, block.tool, 'degraded', 'collapsible heading is rendered as a heading followed by its body; collapsibility is lost');
+      }
+
       return `${flatIndent}${'#'.repeat(level)} ${text}`;
     }
     case 'quote':
       return `${flatIndent}> ${text}`;
-    case 'code':
-      return `${flatIndent}\`\`\`\n${context.inline.htmlToText(asString(data.code) || asString(data.text))}\n\`\`\``;
+    case 'code': {
+      const language = asString(data.language).trim();
+      const info = language === PLAIN_TEXT_LANGUAGE ? '' : language;
+
+      return `${flatIndent}\`\`\`${info}\n${context.inline.htmlToText(asString(data.code) || asString(data.text))}\n\`\`\``;
+    }
     /** `delimiter` is the Editor.js name for the same block; imported documents still carry it. */
     case 'divider':
     case 'delimiter':
@@ -433,6 +505,8 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
     case 'file':
     case 'bookmark':
     case 'embed': {
+      warn(context, block.tool, 'degraded', `${block.tool} is rendered as a plain link; the embedded player or preview is lost`);
+
       const url = asString(data.url) || asString(data.source);
       const label = context.inline.inlineToMarkdown(asString(data.caption))
         || asString(data.title)

@@ -45,6 +45,21 @@ describe('blocksToMarkdown (view)', () => {
     expect(blocksToMarkdown(doc([{ type: 'code', data: { code: 'const a = 1;' } }]))).toBe('```\nconst a = 1;\n```');
   });
 
+  it('keeps a code block language on the fence', () => {
+    const md = blocksToMarkdown(doc([
+      { type: 'code', data: { code: 'var x = 1;', language: 'csharp' } },
+    ]));
+
+    expect(md).toBe('```csharp\nvar x = 1;\n```');
+  });
+
+  it('emits a bare fence when the language is plain text or absent', () => {
+    expect(blocksToMarkdown(doc([{ type: 'code', data: { code: 'x', language: 'plain text' } }])))
+      .toBe('```\nx\n```');
+    expect(blocksToMarkdown(doc([{ type: 'code', data: { code: 'x' } }])))
+      .toBe('```\nx\n```');
+  });
+
   /**
    * `delimiter` is Editor.js's name for the same block. Documents imported from
    * an Editor.js-era store still carry it, and without the alias it fell to the
@@ -62,6 +77,24 @@ describe('blocksToMarkdown (view)', () => {
     ]));
 
     expect(md).toBe('- one\n    1. nested\n- [x] todo');
+  });
+
+  it('does not indent a paragraph nested under a heading into a code block', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true } },
+      { id: 'p1', type: 'paragraph', data: { text: 'Body' }, parent: 'h1' },
+    ]));
+
+    expect(md).toBe('## Section\n\nBody');
+  });
+
+  it('keeps the indent for a paragraph continuing a list item', () => {
+    const md = blocksToMarkdown(doc([
+      { id: 'l1', type: 'list', data: { text: 'Step one', style: 'unordered' } },
+      { id: 'p1', type: 'paragraph', data: { text: 'More about step one' }, parent: 'l1' },
+    ]));
+
+    expect(md).toBe('- Step one\n\n    More about step one');
   });
 
   describe('containers that own their children', () => {
@@ -176,6 +209,58 @@ describe('blocksToMarkdown (view)', () => {
       expect(warnings).toEqual([
         { construct: 'callout', action: 'degraded', detail: expect.stringContaining('blockquote') },
       ]);
+    });
+
+    it('reports a collapsible heading', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 'h1', type: 'header', data: { text: 'Section', level: 2, isToggleable: true } },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: 'header',
+          action: 'degraded',
+          detail: 'collapsible heading is rendered as a heading followed by its body; collapsibility is lost' },
+      ]);
+    });
+
+    it('does not report an ordinary heading', () => {
+      expect(blocksToMarkdownWithReport(doc([
+        { type: 'header', data: { text: 'Section', level: 2 } },
+      ])).warnings).toEqual([]);
+    });
+
+    it.each(['embed', 'video', 'audio', 'file', 'bookmark'])('reports %s as a plain link', (tool) => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { type: tool, data: { url: 'https://example.com/x', title: 'X' } },
+      ]));
+
+      expect(warnings).toEqual([
+        { construct: tool, action: 'degraded', detail: expect.stringContaining('rendered as a plain link') },
+      ]);
+    });
+
+    it('reports table cell references it could not resolve', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 't1', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['gone'] }]] } },
+      ]));
+
+      expect(warnings).toContainEqual({
+        construct: 'table',
+        action: 'dropped',
+        detail: '1 child block reference could not be resolved and was dropped',
+      });
+    });
+
+    it('pluralizes the unresolved table cell reference report', () => {
+      const { warnings } = blocksToMarkdownWithReport(doc([
+        { id: 't1', type: 'table', data: { withHeadings: true, content: [[{ blocks: ['gone', 'also-gone'] }]] } },
+      ]));
+
+      expect(warnings).toContainEqual({
+        construct: 'table',
+        action: 'dropped',
+        detail: '2 child block references could not be resolved and were dropped',
+      });
     });
 
     /**

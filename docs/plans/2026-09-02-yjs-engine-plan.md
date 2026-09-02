@@ -95,11 +95,15 @@ describe hazards that no longer exist and are deleted there.
    `missing[client] = clock − 1`, a dependency gap records
    `missing[dep] = GetState(dep)`, minimum wins. A retry runs only when some
    `missing[c] < GetState(c)`, re-integrates the whole parked set with
-   `Missing` recomputed from scratch, inside the same transaction, until no
-   progress. Parking dedupes by `(client, clock range)` because duplicate
-   deliveries are expected. Pending structs (including their `Skip`s) are
-   **included** in diffs via a normaliser that emits `Skip` structs for gaps
-   and never lists one client twice, and the emitted delete set is the
+   `Missing` recomputed from scratch, inside the same transaction. That retry
+   is ONE nested pass, as yjs's nested `readUpdateV2` is — it sees
+   `pendingStructs === null` and never re-retries. Parking dedupes by
+   `(client, clock range)` because duplicate deliveries are expected, and a
+   `Skip` is never parked: it names absence, and letting one into the parked
+   set makes it swallow content that arrives for those clocks. Pending structs
+   are **included** in diffs via a normaliser that emits `Skip` structs for
+   gaps (several, when a gap is wider than an int) and never lists one client
+   twice, and the emitted delete set is the
    store's delete set **plus** `PendingDs`. Root parents stay strings until
    each integration attempt resolves them through `Doc.Get(name)`, so a
    placeholder upgrade cannot orphan a parked struct.
@@ -732,7 +736,7 @@ Port order (each with its test first):
 - [ ] `Integrator.IntegrateStructs(txn, store, decoded)` per
   `integrateStructs`: stack machine, `GetMissing` (which also resolves a
   root-name or `YId` parent into the type), retained rest → pending,
-  retry loop until no progress inside the same transaction. Tests
+  one nested retry inside the same transaction. Tests
   `OutOfOrderDeliveryRetainsPendingThenConverges`,
   `DuplicateDeliveryIsIdempotent`, `SameClientGapParksTheTail`,
   `PendingRetriesWhenTheDependencyArrives`.

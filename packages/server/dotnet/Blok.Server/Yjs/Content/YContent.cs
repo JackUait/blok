@@ -17,9 +17,10 @@ internal abstract class YContent
   /// <summary>
   /// How deep a JSON payload may nest. JSON.parse has no limit of its own, but
   /// everything downstream of a decoded value walks it recursively, so the
-  /// ceiling is set once here and reused wherever the raw string is parsed
-  /// back. It sits above the converter's own value depth, so nothing this
-  /// accepts is later refused for being too deep.
+  /// ceiling is set once here and used wherever the raw string is parsed back:
+  /// the framework default is 64, far below what a browser writes, so a
+  /// payload accepted at decode would otherwise throw in the export walk.
+  /// Same value and same reason as the converter's JsonMaxDepth.
   /// </summary>
   internal static readonly JsonDocumentOptions JsonLimits = new() { MaxDepth = 512 };
 

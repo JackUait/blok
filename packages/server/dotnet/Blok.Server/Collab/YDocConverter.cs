@@ -1805,7 +1805,7 @@ internal static class YDocConverter
 
       try
       {
-        plain = JsonNode.Parse(node.ToJsonString());
+        plain = JsonNode.Parse(node.ToJsonString(), null, YContent.JsonLimits);
       }
       catch (InvalidOperationException)
       {

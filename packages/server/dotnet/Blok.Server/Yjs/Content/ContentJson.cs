@@ -28,7 +28,7 @@ internal sealed class ContentJson(IReadOnlyList<string> values) : YContent
     return Values
         .Select(value => value == "undefined"
             ? YUndefined.Instance
-            : (object?)JsonNode.Parse(value))
+            : (object?)JsonNode.Parse(value, null, JsonLimits))
         .ToArray();
   }
 

@@ -349,6 +349,24 @@ public sealed class YDocConverterHardeningTests
     Assert.False(block["data"]!.AsObject().ContainsKey("lone"));
   }
 
+  /// <summary>
+  /// The same agreement at the seam: a payload the decoder accepted has to
+  /// survive the export walk, or the record is never written again.
+  /// </summary>
+  [Fact]
+  public void ExportReadsWireJsonNestedDeeperThanTheJsonDefault()
+  {
+    var doc = new YDoc();
+    var deep = new string('[', 100) + "1" + new string(']', 100);
+
+    WriteBlock(doc, "n1");
+    ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "deep", new ContentEmbed(deep)));
+
+    var block = Assert.Single(YDocConverter.Export(doc));
+
+    Assert.Equal(deep, block!["data"]!["deep"]!.ToJsonString());
+  }
+
   private static YMap DataOf(YDoc doc, string id)
   {
     return Assert.IsType<YMap>(

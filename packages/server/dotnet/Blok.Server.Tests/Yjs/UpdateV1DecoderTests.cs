@@ -318,6 +318,23 @@ public sealed class UpdateV1DecoderTests
     Assert.Single(decoded.Structs);
   }
 
+  /// <summary>
+  /// Decode and read-back must agree on how deep a payload may nest.
+  /// System.Text.Json defaults to 64 levels, well under what the check allows
+  /// and well under what a browser writes, so a payload accepted here would
+  /// otherwise throw later — inside the export walk, where the room can only
+  /// treat it as something to retry forever.
+  /// </summary>
+  [Fact]
+  public void RawJsonAcceptedAtDecodeCanBeReadBack()
+  {
+    var deep = new string('[', 100) + "1" + new string(']', 100);
+    var decoded = UpdateV1Decoder.Decode(
+        SingleStruct(0x05, "m", "k", writer => writer.WriteVarString(deep)));
+
+    Assert.NotNull(decoded.Structs.Values.Single()[0].Content!.GetContent()[0]);
+  }
+
   [Fact]
   public void DeleteSetSortsMergesAndWritesClientsDescending()
   {

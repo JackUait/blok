@@ -19,7 +19,7 @@ internal sealed class ContentEmbed(string json) : YContent
 
   public override IReadOnlyList<object?> GetContent()
   {
-    return [JsonNode.Parse(Json)];
+    return [JsonNode.Parse(Json, null, JsonLimits)];
   }
 
   public override void Write(Lib0Writer writer, int offset)

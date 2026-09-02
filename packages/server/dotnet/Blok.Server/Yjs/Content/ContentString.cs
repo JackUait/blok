@@ -39,6 +39,11 @@ internal sealed class ContentString(string text) : YContent
     return right;
   }
 
+  public override YContent Copy()
+  {
+    return new ContentString(Text);
+  }
+
   public override void Write(Lib0Writer writer, int offset)
   {
     writer.WriteVarString(offset == 0 ? Text : Text[offset..]);

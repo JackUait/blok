@@ -51,6 +51,11 @@ internal sealed class ContentJson(IReadOnlyList<string> values) : YContent
     }
   }
 
+  public override YContent Copy()
+  {
+    return new ContentJson(Values);
+  }
+
   internal static ContentJson Read(ref Lib0Reader reader)
   {
     var count = ReadLength(ref reader, "ContentJSON element count");

@@ -8,4 +8,21 @@ namespace Blok.Server.Yjs;
 internal sealed class YGc : YStruct
 {
   public override bool IsDeleted => true;
+
+  /// <summary>
+  /// Files the run. <paramref name="offset"/> is the part the store already
+  /// has, so the run starts where the store's knowledge ends.
+  /// </summary>
+  public void Integrate(YTransaction transaction, int offset)
+  {
+    ArgumentNullException.ThrowIfNull(transaction);
+
+    if (offset > 0)
+    {
+      Id = new YId(Id.Client, Id.Clock + (ulong)offset);
+      Length -= offset;
+    }
+
+    transaction.Doc.Store.AddStruct(this);
+  }
 }

@@ -28,6 +28,24 @@ internal sealed class ContentDeleted(int length) : YContent
     return right;
   }
 
+  public override YContent Copy()
+  {
+    return new ContentDeleted(ticks);
+  }
+
+  /// <summary>
+  /// The wire's own tombstone: the item arrives already deleted, so the
+  /// deletion is recorded in this transaction rather than inferred later.
+  /// </summary>
+  public override void Integrate(YTransaction transaction, YItem item)
+  {
+    ArgumentNullException.ThrowIfNull(transaction);
+    ArgumentNullException.ThrowIfNull(item);
+
+    transaction.DeleteSet.Add(item.Id.Client, item.Id.Clock, (ulong)ticks);
+    item.MarkDeleted();
+  }
+
   public override void Write(Lib0Writer writer, int offset)
   {
     writer.WriteVarUint((ulong)(Length - offset));

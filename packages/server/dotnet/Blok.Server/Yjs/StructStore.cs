@@ -93,26 +93,31 @@ internal sealed class StructStore
   /// </summary>
   public YItem GetItemCleanStart(YId id)
   {
+    return GetItemCleanStart(null, id);
+  }
+
+  /// <inheritdoc cref="GetItemCleanStart(YId)"/>
+  public YItem GetItemCleanStart(YTransaction? transaction, YId id)
+  {
+    return GetStructCleanStart(transaction, id) as YItem ??
+        throw new InvalidOperationException(
+            $"yjs: {id.Client}:{id.Clock} is a collected struct, not an item.");
+  }
+
+  /// <summary>
+  /// Same, but a GC covering the clock is returned whole and unsplit: a
+  /// collected run has no content to divide, and the integrator answers a GC
+  /// neighbour by dropping the item's parent rather than by failing.
+  /// </summary>
+  public YStruct GetStructCleanStart(YTransaction? transaction, YId id)
+  {
     var structs = Structs(id.Client);
     var index = FindIndex(id.Client, id.Clock);
     var found = structs[index];
 
-    if (found is not YItem item)
-    {
-      throw new InvalidOperationException(
-          $"yjs: {id.Client}:{id.Clock} is a collected struct, not an item.");
-    }
-
-    if (item.Id.Clock == id.Clock)
-    {
-      return item;
-    }
-
-    var right = item.SplitAt((int)(id.Clock - item.Id.Clock));
-
-    structs.Insert(index + 1, right);
-
-    return right;
+    return found is YItem item && item.Id.Clock < id.Clock
+        ? Split(transaction, structs, index, item, (int)(id.Clock - item.Id.Clock))
+        : found;
   }
 
   /// <summary>
@@ -122,16 +127,53 @@ internal sealed class StructStore
   /// </summary>
   public YStruct GetItemCleanEnd(YId id)
   {
+    return GetItemCleanEnd(null, id);
+  }
+
+  /// <inheritdoc cref="GetItemCleanEnd(YId)"/>
+  public YStruct GetItemCleanEnd(YTransaction? transaction, YId id)
+  {
     var structs = Structs(id.Client);
     var index = FindIndex(id.Client, id.Clock);
     var found = structs[index];
 
     if (found is YItem item && id.Clock != item.LastId.Clock)
     {
-      structs.Insert(index + 1, item.SplitAt((int)(id.Clock - item.Id.Clock) + 1));
+      Split(transaction, structs, index, item, (int)(id.Clock - item.Id.Clock) + 1);
     }
 
     return found;
+  }
+
+  /// <summary>
+  /// Swaps a struct for the one that replaces it, keeping the client's run
+  /// contiguous. Only content GC does this, turning a collected item into a
+  /// <see cref="YGc"/> of the same span.
+  /// </summary>
+  public void ReplaceStruct(YStruct existing, YStruct replacement)
+  {
+    ArgumentNullException.ThrowIfNull(existing);
+    ArgumentNullException.ThrowIfNull(replacement);
+
+    var structs = Structs(existing.Id.Client);
+
+    structs[FindIndex(existing.Id.Client, existing.Id.Clock)] = replacement;
+  }
+
+  /// <summary>
+  /// Cuts <paramref name="item"/> and files the right half straight after it,
+  /// which is what keeps the run contiguous. yjs queues the right half for
+  /// merging; this release never merges, so the queue is only kept for parity.
+  /// </summary>
+  internal static YItem Split(
+      YTransaction? transaction, List<YStruct> structs, int index, YItem item, int diff)
+  {
+    var right = item.SplitAt(diff);
+
+    structs.Insert(index + 1, right);
+    transaction?.MergeStructs.Add(right);
+
+    return right;
   }
 
   /// <summary>

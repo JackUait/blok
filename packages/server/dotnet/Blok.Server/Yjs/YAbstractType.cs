@@ -13,6 +13,9 @@ internal abstract class YAbstractType
   /// <summary>The <see cref="ContentType"/> item owning this type; null for a root.</summary>
   public YItem? Item { get; set; }
 
+  /// <summary>The document this type belongs to; null until it is integrated.</summary>
+  public YDoc? Doc { get; set; }
+
   /// <summary>The document root name this type answers to; null when nested.</summary>
   public string? RootName { get; set; }
 
@@ -24,6 +27,13 @@ internal abstract class YAbstractType
 
   /// <summary>Countable, undeleted elements; maintained by integration, not by reads.</summary>
   public int Length { get; set; }
+
+  /// <summary>yjs's AbstractType._integrate: a type learns its document and its owner.</summary>
+  public void Integrate(YDoc doc, YItem? item)
+  {
+    Doc = doc;
+    Item = item;
+  }
 
   /// <summary>
   /// The instance a <see cref="ContentType"/> ref names. The refs are the wire's
@@ -64,4 +74,14 @@ internal abstract class YAbstractType
 
     return text.ToString();
   }
+}
+
+/// <summary>
+/// A root nothing has typed yet. Integration creates one for every root name
+/// a remote update mentions, because the wire says which root an item belongs
+/// to but never which kind it is; the first <c>GetMap</c>/<c>GetArray</c>/
+/// <c>GetText</c> upgrades it in place, as yjs's Doc.get does.
+/// </summary>
+internal sealed class YUntypedType : YAbstractType
+{
 }

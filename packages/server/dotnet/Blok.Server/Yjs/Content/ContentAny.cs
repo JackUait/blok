@@ -38,6 +38,11 @@ internal sealed class ContentAny(IReadOnlyList<object?> values) : YContent
     }
   }
 
+  public override YContent Copy()
+  {
+    return new ContentAny(Values);
+  }
+
   internal static ContentAny Read(ref Lib0Reader reader)
   {
     var count = ReadLength(ref reader, "ContentAny element count");

@@ -80,6 +80,92 @@ internal sealed class DeleteSet
     }
   }
 
+  /// <summary>Records one deleted run; ranges may overlap until SortAndMerge runs.</summary>
+  public void Add(ulong client, ulong clock, ulong length)
+  {
+    if (!clients.TryGetValue(client, out var ranges))
+    {
+      ranges = [];
+      clients[client] = ranges;
+    }
+
+    ranges.Add(new DeleteRange(clock, length));
+  }
+
+  /// <summary>
+  /// Deletes everything these ranges name, and returns what could not be
+  /// applied yet — or null when everything was.
+  ///
+  /// A range is split on BOTH edges so only the named clocks die, and there
+  /// are two ways to be un-appliable: a range reaching past what this store
+  /// has seen parks only its tail and still deletes the head, while a range
+  /// starting past it parks whole. Both must wait for the structs to arrive,
+  /// which is why the remainder is kept rather than dropped.
+  /// </summary>
+  public DeleteSet? Apply(YTransaction transaction, StructStore store)
+  {
+    ArgumentNullException.ThrowIfNull(store);
+
+    var unapplied = new DeleteSet();
+
+    foreach (var (client, ranges) in clients)
+    {
+      var structs = store.Clients.TryGetValue(client, out var known) ? known : [];
+      var state = store.GetState(client);
+
+      foreach (var range in ranges)
+      {
+        var clockEnd = range.Clock + range.Length;
+
+        if (range.Clock >= state)
+        {
+          unapplied.Add(client, range.Clock, range.Length);
+
+          continue;
+        }
+
+        if (state < clockEnd)
+        {
+          unapplied.Add(client, state, clockEnd - state);
+        }
+
+        var index = store.FindIndex(client, range.Clock);
+
+        if (structs[index] is YItem head && !head.Deleted && head.Id.Clock < range.Clock)
+        {
+          StructStore.Split(
+              transaction, structs, index, head, (int)(range.Clock - head.Id.Clock));
+          index++;
+        }
+
+        while (index < structs.Count)
+        {
+          var current = structs[index++];
+
+          if (current.Id.Clock >= clockEnd)
+          {
+            break;
+          }
+
+          if (current is not YItem item || item.Deleted)
+          {
+            continue;
+          }
+
+          if (clockEnd < item.Id.Clock + (ulong)item.Length)
+          {
+            StructStore.Split(
+                transaction, structs, index - 1, item, (int)(clockEnd - item.Id.Clock));
+          }
+
+          item.Delete(transaction);
+        }
+      }
+    }
+
+    return unapplied.IsEmpty ? null : unapplied;
+  }
+
   /// <summary>
   /// Sorts each client's ranges by clock and folds every touching or
   /// overlapping pair together, in place — yjs's sortAndMergeDeleteSet.

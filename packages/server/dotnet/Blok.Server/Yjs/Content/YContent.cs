@@ -45,6 +45,36 @@ internal abstract class YContent
         $"yjs: content ref {Ref} occupies one tick and cannot be split.");
   }
 
+  /// <summary>
+  /// Runs when the owning item joins the document. Only a nested type (which
+  /// learns its document here) and a tombstone (which marks its item deleted)
+  /// need it.
+  /// </summary>
+  public virtual void Integrate(YTransaction transaction, YItem item)
+  {
+  }
+
+  /// <summary>Runs when the owning item is deleted; a nested type cascades.</summary>
+  public virtual void Delete(YTransaction transaction)
+  {
+  }
+
+  /// <summary>Runs when a deleted item is collected; a nested type collects its subtree.</summary>
+  public virtual void Gc(StructStore store)
+  {
+  }
+
+  /// <summary>
+  /// An independent payload for a second integration of the same decoded
+  /// update. Splicing, and a nested type learning its document, both mutate
+  /// the payload in place, so a re-applied update must not share one.
+  /// Immutable payloads return themselves.
+  /// </summary>
+  public virtual YContent Copy()
+  {
+    return this;
+  }
+
   /// <summary>Reads the payload the item's info byte selects.</summary>
   public static YContent Read(byte info, ref Lib0Reader reader)
   {

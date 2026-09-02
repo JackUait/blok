@@ -26,12 +26,73 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
   /// <summary>The node name (ref 3) or hook name (ref 5); null for the rest.</summary>
   internal string? Name { get; } = name;
 
-  /// <summary>The instantiated type, set when the item is integrated.</summary>
-  internal YAbstractType? Type { get; set; }
+  /// <summary>
+  /// The type instance. Built here rather than at integration because yjs
+  /// builds it while reading: a child item names its parent by id and reads
+  /// this instance off the already-integrated parent.
+  /// </summary>
+  internal YAbstractType Type { get; set; } = YAbstractType.CreateType(typeRef, name);
 
   public override IReadOnlyList<object?> GetContent()
   {
     return [Type];
+  }
+
+  public override void Integrate(YTransaction transaction, YItem item)
+  {
+    ArgumentNullException.ThrowIfNull(transaction);
+
+    Type.Integrate(transaction.Doc, item);
+  }
+
+  /// <summary>
+  /// Deleting a nested type deletes everything below it (Locked Decision 7):
+  /// the list chain and every map head. An already-deleted child older than
+  /// this transaction is only queued for merging, never deleted twice.
+  /// </summary>
+  public override void Delete(YTransaction transaction)
+  {
+    ArgumentNullException.ThrowIfNull(transaction);
+
+    for (var item = Type.Start; item is not null; item = item.Right)
+    {
+      Cascade(transaction, item);
+    }
+
+    foreach (var head in Type.Map.Values)
+    {
+      Cascade(transaction, head);
+    }
+  }
+
+  /// <summary>
+  /// Collecting a nested type turns its whole subtree into GC structs, so a
+  /// deleted grid stops costing what it held. The map is walked LEFT from
+  /// each head: the older values under a key are the rest of that chain.
+  /// </summary>
+  public override void Gc(StructStore store)
+  {
+    for (var item = Type.Start; item is not null; item = item.Right)
+    {
+      item.Gc(store, true);
+    }
+
+    Type.Start = null;
+
+    foreach (var head in Type.Map.Values)
+    {
+      for (YItem? item = head; item is not null; item = item.Left)
+      {
+        item.Gc(store, true);
+      }
+    }
+
+    Type.Map.Clear();
+  }
+
+  public override YContent Copy()
+  {
+    return new ContentType(TypeRef, Name);
   }
 
   public override void Write(Lib0Writer writer, int offset)
@@ -41,6 +102,18 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
     if (Name is { } name)
     {
       writer.WriteVarString(name);
+    }
+  }
+
+  private static void Cascade(YTransaction transaction, YItem item)
+  {
+    if (!item.Deleted)
+    {
+      item.Delete(transaction);
+    }
+    else if (item.Id.Clock < transaction.BeforeState.Get(item.Id.Client))
+    {
+      transaction.MergeStructs.Add(item);
     }
   }
 

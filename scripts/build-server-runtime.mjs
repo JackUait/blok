@@ -13,6 +13,37 @@ const defaultOutDir = path.resolve(root, 'packages/server/dotnet/Blok.Server/Gen
  * @param {string} [outDir] output directory
  * @returns {Promise<string>} absolute path to the generated bundle
  */
+/**
+ * Globals the bundle's dependencies expect from a browser or Node, prepended so
+ * the artifact runs on a bare ECMAScript engine. `entities` decodes its
+ * character-entity trie from base64 through `atob`, and a missing `atob` fails
+ * at bundle load — before any conversion runs — so the whole embedded runtime
+ * is dead without this. Pinned by the globals-free realm case in
+ * test/unit/scripts/build-server-runtime.test.ts.
+ */
+const hostGlobalsBanner = `if (typeof globalThis.atob !== 'function') {
+  globalThis.atob = function (input) {
+    var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    var data = String(input).replace(/[\\t\\n\\f\\r ]/g, '').replace(/=+$/, '');
+    var output = '';
+    var buffer = 0;
+    var bits = 0;
+    for (var index = 0; index < data.length; index += 1) {
+      var value = alphabet.indexOf(data.charAt(index));
+      if (value === -1) {
+        throw new Error('atob: invalid base64');
+      }
+      buffer = (buffer << 6) | value;
+      bits += 6;
+      if (bits >= 8) {
+        bits -= 8;
+        output += String.fromCharCode((buffer >> bits) & 255);
+      }
+    }
+    return output;
+  };
+}`;
+
 export async function buildServerRuntime(outDir = defaultOutDir) {
   const outputDirectory = path.resolve(outDir);
   const outputPath = path.join(outputDirectory, 'blok-server-runtime.js');
@@ -36,6 +67,11 @@ export async function buildServerRuntime(outDir = defaultOutDir) {
           name: 'BlokServerRuntimeBundle',
           formats: ['iife'],
           fileName: () => 'blok-server-runtime.js',
+        },
+        rollupOptions: {
+          output: {
+            banner: hostGlobalsBanner,
+          },
         },
       },
       resolve: {

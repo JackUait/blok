@@ -59,6 +59,15 @@ const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
 type DeepData = string | Record<string, unknown> | Array<DeepData> | null;
 
 /**
+ * Nesting past this many levels reads back as `null`. Block data comes off a
+ * shared document that any peer can write, and the two recursive walks
+ * below (tag allowlisting, URL-scheme pass) have no other bound. The same
+ * cap governs the doc serializer and the server export, so all three agree
+ * on what a too-deep value becomes.
+ */
+const MAX_SANITIZE_DEPTH = 256;
+
+/**
  * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
  * name and its value so the value can be normalized before the scheme check.
  */
@@ -143,8 +152,13 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
 const deepSanitize = (
   dataToSanitize: DeepData,
   rules: DeepSanitizerRule,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth = 0
 ): DeepData => {
+  if (depth > MAX_SANITIZE_DEPTH) {
+    return null;
+  }
+
   /**
    * BlockData It may contain 3 types:
    *  - Array
@@ -155,14 +169,14 @@ const deepSanitize = (
     /**
      * Array: call sanitize for each item
      */
-    return cleanArray(dataToSanitize, rules, globalRules);
+    return cleanArray(dataToSanitize, rules, globalRules, depth);
   }
 
   if (isObject(dataToSanitize)) {
     /**
      * Objects: just clean object deeper.
      */
-    return cleanObject(dataToSanitize, rules, globalRules);
+    return cleanObject(dataToSanitize, rules, globalRules, depth);
   }
 
   /**
@@ -186,9 +200,10 @@ const deepSanitize = (
 const cleanArray = (
   array: Array<DeepData>,
   ruleForItem: DeepSanitizerRule,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth: number
 ): Array<DeepData> => {
-  return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules));
+  return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules, depth + 1));
 };
 
 /**
@@ -201,7 +216,8 @@ const cleanArray = (
 const cleanObject = (
   object: Record<string, unknown>,
   rules: DeepSanitizerRule | Record<string, DeepSanitizerRule>,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth: number
 ): Record<string, unknown> => {
   const cleanData: Record<string, DeepData> = {};
   const objectRecord = object;
@@ -224,7 +240,7 @@ const cleanObject = (
       ? ruleCandidate
       : rules;
 
-    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules);
+    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules, depth + 1);
   }
 
   return cleanData;
@@ -342,14 +358,6 @@ export const stripUnsafeUrlsDeep = (
 ): BlockToolData => {
   return stripUnsafeUrlsDeepValue(data, rules as DeepSanitizerRule) as BlockToolData;
 };
-
-/**
- * Nesting past this many levels reads back as `null`. Block data comes off a
- * shared document that any peer can write, and the recursive walk below has
- * no other bound. The same cap governs the doc serializer and the server
- * export, so all three agree on what a too-deep value becomes.
- */
-const MAX_SANITIZE_DEPTH = 256;
 
 const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, depth = 0): DeepData => {
   if (depth > MAX_SANITIZE_DEPTH) {

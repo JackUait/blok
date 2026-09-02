@@ -1276,6 +1276,29 @@ describe('stripUnsafeUrlsDeep depth cap', () => {
     expect(descend(256)).toEqual(expect.objectContaining({ child: null }));
     expect(descend(257)).toBeNull();
   });
+
+  /**
+   * The tag-allowlisting walk runs BEFORE the URL pass whenever the tool
+   * declares a sanitize config, so it needs the same bound or the reconciler
+   * still overflows for every tool that has one.
+   */
+  it('caps the tag-allowlisting walk at the same depth', () => {
+    let nested: Record<string, unknown> = { text: 'leaf' };
+
+    for (let level = 0; level < 20000; level++) {
+      nested = { child: nested };
+    }
+
+    const [sanitized] = sanitizeBlocks([{ tool: 'paragraph', data: nested }], () => ({ text: {} }), {});
+
+    let cursor: unknown = sanitized.data;
+
+    for (let level = 0; level < 257; level++) {
+      cursor = (cursor as Record<string, unknown>).child;
+    }
+
+    expect(cursor).toBeNull();
+  });
 });
 
 describe('stripUnsafeUrls plaintext preservation', () => {

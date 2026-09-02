@@ -116,6 +116,31 @@ public sealed class BlokDocumentConverterTests
         await converter.ToPlainTextAsync(Article));
   }
 
+  /// <summary>
+  /// A consumer stores hand-edited and legacy documents, so one unreadable
+  /// block must not cost it the whole article. The skip is reported, not
+  /// silent.
+  /// </summary>
+  [Fact]
+  public async Task SkipsAMalformedBlockAndReportsIt()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+      {"blocks":[
+        {"id":"p1","type":"paragraph","data":{"text":"Kept"}},
+        7,
+        {"id":"p2","data":{"text":"No type"}}
+      ]}
+      """;
+
+    var conversion = await converter.ToMarkdownAsync(document);
+
+    Assert.Equal("Kept", conversion.Markdown);
+    var warning = Assert.Single(conversion.Warnings);
+    Assert.Equal("block", warning.Construct);
+    Assert.Equal("dropped", warning.Action);
+  }
+
   [Fact]
   public async Task RejectsMalformedInput()
   {

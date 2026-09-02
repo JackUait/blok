@@ -9,6 +9,7 @@
  * failure degrades to "no cache", never to a thrown session.
  */
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
+import * as idb from 'lib0/indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
@@ -70,6 +71,32 @@ const materialize = (updates: Uint8Array[]): Record<string, unknown> => {
   doc.destroy();
 
   return built;
+};
+
+/** The database a cache keyed with `KEY` opens, already created by one. */
+const openStore = async (): Promise<IDBDatabase> => idb.openDB(`blok-collab-${KEY}`, () => undefined);
+
+/**
+ * Writes a row straight into the store, bypassing the cache — what another
+ * build sharing the store, or a torn write, leaves behind.
+ * @param row - the row to plant
+ */
+const plantRow = async (row: { lineage: string; bytes: Uint8Array }): Promise<void> => {
+  const db = await openStore();
+  const [store] = idb.transact(db, ['updates']);
+
+  await idb.rtop(store.add(row));
+  db.close();
+};
+
+const storedRows = async (): Promise<unknown[]> => {
+  const db = await openStore();
+  const [store] = idb.transact(db, ['updates'], 'readonly');
+  const rows: unknown[] = await idb.getAll(store);
+
+  db.close();
+
+  return rows;
 };
 
 describe('collaboration — offline cache', () => {
@@ -229,6 +256,37 @@ describe('collaboration — offline cache', () => {
 
       expect(adopted?.meta.lineage).toBe(LINEAGE_A);
       expect(adopted?.updates).toEqual([]);
+    });
+  });
+
+  describe('unreadable rows', () => {
+    /**
+     * A row under the right lineage whose bytes yjs cannot decode: a build
+     * with a different encoding sharing `format: 1`, or a torn write. The
+     * adoption replay applies every row it is handed, so one such row would
+     * throw out of `load()` on every boot of that document in that browser.
+     */
+    it('sweeps a row yjs cannot decode, like a row from another lineage', async () => {
+      const writer = cacheWith();
+
+      await writer.open();
+      await writer.saveMeta(tagWith(LINEAGE_A), false);
+      await writer.append(updateWith('block-1', 'good'));
+      writer.close();
+
+      const garbage = new Uint8Array([255, 255, 255, 255, 7, 0, 3]);
+
+      expect(() => Y.applyUpdate(new Y.Doc(), garbage)).toThrow();
+      await plantRow({ lineage: LINEAGE_A, bytes: garbage });
+
+      const reader = cacheWith();
+      const adopted = await reader.open();
+
+      expect(adopted?.updates).toHaveLength(1);
+      expect(materialize(adopted?.updates ?? [])).toEqual({ 'block-1': 'good' });
+      reader.close();
+
+      expect(await storedRows()).toHaveLength(1);
     });
   });
 

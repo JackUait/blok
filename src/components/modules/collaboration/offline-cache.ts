@@ -128,6 +128,25 @@ const toBytes = (value: unknown): Uint8Array | null => {
 };
 
 /**
+ * Whether yjs can decode these bytes.
+ *
+ * A full struct walk, not `Y.mergeUpdates([bytes])`, which hands a single
+ * update back untouched. The adoption replay applies every row it is given,
+ * so one row another build wrote under the same `format` would otherwise throw
+ * out of `load()` on every boot of that document in that browser.
+ * @param bytes - a row's bytes
+ */
+const isReplayable = (bytes: Uint8Array): boolean => {
+  try {
+    Y.decodeUpdate(bytes);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Whether a stored record can be replayed into this client's document. Format
  * and lineage are both checked on the way IN and on the way OUT: another tab
  * running a different build writes into the same store.
@@ -286,7 +305,9 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
   };
 
   /**
-   * Rows currently stored under one lineage, with their keys.
+   * Rows currently stored under one lineage, with their keys. A row that is
+   * not under it — or that yjs cannot decode — is a stranger, and every
+   * reader here sweeps strangers the same way.
    * @param store - the updates object store to read
    * @param under - the lineage to match
    */
@@ -303,7 +324,7 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
       const row = pair.v as Partial<CachedRow> | null;
       const rowBytes = toBytes(row?.bytes);
 
-      if (row?.lineage === under && rowBytes !== null) {
+      if (row?.lineage === under && rowBytes !== null && isReplayable(rowBytes)) {
         keys.push(key);
         bytes.push(rowBytes);
       } else {

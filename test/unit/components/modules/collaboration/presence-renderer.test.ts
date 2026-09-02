@@ -213,7 +213,7 @@ describe('presence renderer', () => {
       expect(holder.textContent).toBe('hello');
     });
 
-    it('marks the label inert so it never joins the caret or a copied selection', () => {
+    it('marks the caret inert so it never joins caret traversal or a copied selection', () => {
       const harness = setup();
 
       harness.renderer.render([named(99, 'Grace', 'block-2')], 42);

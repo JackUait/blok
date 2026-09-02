@@ -8033,12 +8033,10 @@
 
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
-  --blok-presence-radius: 3px;
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
   --blok-presence-caret-width: 2px;
   --blok-presence-caret-radius: 1px;
-  --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
   --blok-presence-face-size: 26px;
   --blok-presence-ring: 2px;
@@ -8060,10 +8058,6 @@
 
 [data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
-}
-
-[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-name] {
-  transition: none;
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-idle] {
@@ -8089,11 +8083,11 @@
   user-select: none;
 }
 
-[data-blok-element]:hover [data-blok-presence-gutter] {
+[data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
 }
 
-[data-blok-rtl="true"] [data-blok-element]:hover [data-blok-presence-gutter] {
+[data-blok-rtl="true"] [data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
 

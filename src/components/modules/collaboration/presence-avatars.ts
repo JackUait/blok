@@ -1,14 +1,19 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
 
-import { resolveCaretRange } from './caret-position';
+import { measureLine } from './caret-position';
+import { PRESENCE_COLOR_PROPERTY, initialsOf } from './presence';
 
-/** What the avatar layer needs to know about a peer, after sanitization. */
-export interface AvatarPeer {
-  clientId: number;
+/** The identity half of a peer, as both avatar shapes draw it. */
+export interface AvatarIdentity {
   /** Already trimmed and length-capped. The empty string means anonymous. */
   name: string;
   /** Already through the hex gate. */
   color: string;
+}
+
+/** What the avatar layer needs to know about a peer, after sanitization. */
+export interface AvatarPeer extends AvatarIdentity {
+  clientId: number;
   /** The block they are working in, or null when they named none. */
   blockId: string | null;
 }
@@ -44,7 +49,6 @@ const OVERFLOW_ATTR = 'data-blok-presence-face-overflow';
  * into the next document.
  */
 const INITIALS_ATTR = 'data-blok-presence-initials';
-const COLOR_PROPERTY = '--blok-presence-color';
 
 /**
  * Faces one block shows before it starts counting.
@@ -56,19 +60,45 @@ const COLOR_PROPERTY = '--blok-presence-color';
 const DEFAULT_MAX_FACES = 3;
 
 /**
- * Where the face sits when a block's first line cannot be measured — an empty
- * paragraph measures zero in every engine. One body line, halved by the
- * centring below.
+ * Where the face sits when nothing measures at all — neither the first line
+ * nor the input's box, which only a hidden input (or a test DOM) gives. One
+ * body line, halved by the centring below.
  */
 const FALLBACK_LINE_CENTRE = 12;
 
-/** First letter of each of the first two words — a monogram, not a name. */
-const initialsOf = (name: string): string =>
-  name
-    .split(/\s+/u)
-    .slice(0, 2)
-    .map((word) => Array.from(word)[0] ?? '')
-    .join('');
+/**
+ * One avatar disc: the peer's colour and, for a named peer, the full name in a
+ * `title` and their monogram. Attribute values are never parsed as markup, so
+ * a hostile name is safe in both.
+ *
+ * `monogram` says where the initials go. The gutter face sits INSIDE a block
+ * holder, and block copy sanitizes `holder.innerHTML` keeping every text node
+ * it held, so the face carries them in an attribute presence.css paints. The
+ * editor-wide stack sits outside every holder and writes them as text.
+ * @param peer - the peer's sanitized identity
+ * @param attr - the attribute that marks this avatar shape
+ * @param monogram - where the initials are written
+ */
+export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text' | 'attribute'): HTMLElement => {
+  const avatar = document.createElement('span');
+
+  avatar.setAttribute(attr, '');
+  avatar.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
+
+  // A peer who published no name is drawn as their colour alone: no monogram,
+  // and no tooltip claiming an empty name.
+  if (peer.name !== '') {
+    avatar.setAttribute('title', peer.name);
+
+    if (monogram === 'attribute') {
+      avatar.setAttribute(INITIALS_ATTR, initialsOf(peer.name));
+    } else {
+      avatar.textContent = initialsOf(peer.name);
+    }
+  }
+
+  return avatar;
+};
 
 /**
  * Parks a peer's face in the gutter beside the block they are working in, and
@@ -91,23 +121,7 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
   /** The ledger, keyed by block id — a gutter belongs to a block, not a peer. */
   const strips = new Map<string, HTMLElement>();
 
-  const buildFace = (peer: AvatarPeer): HTMLElement => {
-    const face = document.createElement('span');
-
-    face.setAttribute(FACE_ATTR, '');
-    face.style.setProperty(COLOR_PROPERTY, peer.color);
-
-    // A peer who published no name is drawn as their colour alone: no monogram,
-    // and no tooltip claiming an empty name.
-    if (peer.name !== '') {
-      // Attribute values are never parsed as markup, so a hostile name is safe
-      // in both.
-      face.setAttribute('title', peer.name);
-      face.setAttribute(INITIALS_ATTR, initialsOf(peer.name));
-    }
-
-    return face;
-  };
+  const buildFace = (peer: AvatarPeer): HTMLElement => buildAvatar(peer, FACE_ATTR, 'attribute');
 
   const buildOverflow = (hidden: number): HTMLElement => {
     const overflow = document.createElement('span');
@@ -140,21 +154,21 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
    * Measured, not assumed: a line does not start at the top of its wrapper —
    * there is half-leading above it — and a heading's line is far taller than a
    * paragraph's, so no fixed offset is right for both. Measured through the
-   * same Range the carets use, so the face and the caret agree about where a
-   * line is.
+   * same `measureLine` the carets use, so the face and the caret agree about
+   * where a line is — including an empty block, where both take the input's
+   * box.
    * @param blockId - the block being decorated
    * @param mount - the element the strip is positioned against
    */
   const lineCentreIn = (blockId: string, mount: HTMLElement): number => {
     const input = options.resolveInputs?.(blockId)[0];
-    const range = input === undefined ? null : resolveCaretRange(input, 0);
-    const rect = range?.getBoundingClientRect();
+    const line = input === undefined ? null : measureLine(input, 0);
 
-    if (rect === undefined || rect.height === 0) {
+    if (line === null || line.height === 0) {
       return FALLBACK_LINE_CENTRE;
     }
 
-    return rect.top + rect.height / 2 - mount.getBoundingClientRect().top;
+    return line.top + line.height / 2 - mount.getBoundingClientRect().top;
   };
 
   /**

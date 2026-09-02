@@ -533,9 +533,15 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // ghost, which clones the wrapper the strip is mounted on, and the
     // `pointer-events: auto` opt-in on the face and avatar discs (the strip
     // and the stack are transparent, `pointer-events` inherits, and a `title`
-    // tooltip needs a hover target) (~0.7KB). Bumps the multiplier to 1.4649.
+    // tooltip needs a hover target). The hover slide then narrowed to the
+    // INNERMOST hovered block (`:hover` is true for every ancestor, and the
+    // +/⠿ controls attach to the innermost block, so a container's face must
+    // stay put while a child is hovered) — a `:not(:has())` clause and a
+    // direct-child chain on the LTR rule and its RTL mirror — while the dead
+    // radius/fade tokens and the name-flag reduced-motion rule went (~1KB
+    // net). Bumps the multiplier to 1.4656.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4649);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4656);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

@@ -268,11 +268,13 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     lineage: string | null;
     rows: number;
     queue: Promise<void>;
+    warned: boolean;
   } = {
     db: null,
     lineage: null,
     rows: 0,
     queue: Promise.resolve(),
+    warned: false,
   };
 
   /**
@@ -296,8 +298,17 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     state.queue = state.queue.then(async () => {
       try {
         await work(db);
-      } catch {
-        // A cache that cannot write is a cache the session does without.
+      } catch (error) {
+        // A cache that cannot write is a cache the session does without — and
+        // the lineage goes with it: rows written after a lost one would adopt
+        // as a history with a hole, and every update depending on the lost
+        // one would stay pending.
+        state.lineage = null;
+
+        if (!state.warned) {
+          state.warned = true;
+          console.warn('Blok collaboration: the offline cache stopped storing updates', error);
+        }
       }
     });
 
@@ -460,19 +471,27 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         state.rows += 1;
 
         if (state.rows >= threshold) {
-          await compact();
+          // Best-effort: rows are only ever merged, never dropped, so a failed
+          // compaction loses nothing and must not stop the appends.
+          try {
+            await compact();
+          } catch {
+            // Retried on the next append.
+          }
         }
       });
     },
 
     saveMeta: async (tag, writeDenied, snapshot) => {
-      if (tag.format !== SUPPORTED_FORMAT || !LINEAGE_PATTERN.test(tag.lineage)) {
-        state.lineage = null;
-
-        return;
-      }
-
       await enqueue(async (db) => {
+        // Inside the queue like every other state write: a rejected tag must
+        // not null the lineage from under an append already queued ahead.
+        if (tag.format !== SUPPORTED_FORMAT || !LINEAGE_PATTERN.test(tag.lineage)) {
+          state.lineage = null;
+
+          return;
+        }
+
         // Counted up front, on its own transaction: the write below must not
         // await anything between its two requests.
         const [countStore] = idb.transact(db, [UPDATES_STORE], 'readonly');
@@ -512,14 +531,13 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     },
 
     clear: async () => {
-      state.rows = 0;
-
       await enqueue(async (db) => {
-        // Nulled HERE, not before the queue: a saveMeta already queued ahead
+        // Reset HERE, not before the queue: a saveMeta already queued ahead
         // of this one sets the lineage from inside its own turn, so clearing
         // it up front would let that write restore it and leave later rows
         // stamped into a store this call is about to empty.
         state.lineage = null;
+        state.rows = 0;
 
         const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
 

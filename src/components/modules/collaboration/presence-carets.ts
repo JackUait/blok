@@ -1,4 +1,5 @@
-import { resolveCaretRange, type CaretPosition } from './caret-position';
+import { measureLine, type CaretPosition, type LineBox } from './caret-position';
+import { PRESENCE_COLOR_PROPERTY } from './presence';
 
 /** What the caret layer needs to know about a peer, after sanitization. */
 export interface CaretPeer {
@@ -37,7 +38,6 @@ export interface CaretLayer {
 const CARET_ATTR = 'data-blok-presence-caret';
 /** Set once the peer stops moving; the stylesheet starts the resting pulse. */
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
-const COLOR_PROPERTY = '--blok-presence-color';
 
 /** How long after its last move a caret counts as still moving. */
 const DEFAULT_REST_AFTER_MS = 2500;
@@ -51,53 +51,10 @@ interface Drawn {
   idleTimer: ReturnType<typeof setTimeout> | null;
 }
 
-/** Where a caret line goes, in viewport coordinates. */
-interface Measurement {
-  left: number;
-  top: number;
-  height: number;
-}
-
 const positionKey = (peer: CaretPeer): string => {
   const caret = peer.caret;
 
   return caret === null ? 'none' : `${caret.blockId}|${caret.inputIndex}|${caret.head}`;
-};
-
-/**
- * Measure where a caret line belongs.
- *
- * A collapsed Range measures zero in every engine when the element it sits in
- * has no text — an empty paragraph is the ordinary case, not an edge one — so
- * the input's own box is the fallback. Without it a peer's caret disappears
- * exactly when they are about to type.
- * @param input - the editable element the offset counts into
- * @param offset - the peer's published character offset
- */
-const measure = (input: HTMLElement, offset: number): Measurement | null => {
-  const range = resolveCaretRange(input, offset);
-
-  if (range === null) {
-    return null;
-  }
-
-  const rect = range.getBoundingClientRect();
-
-  if (rect.height > 0) {
-    return {
-      left: rect.left,
-      top: rect.top,
-      height: rect.height,
-    };
-  }
-
-  const box = input.getBoundingClientRect();
-
-  return {
-    left: box.left,
-    top: box.top,
-    height: box.height,
-  };
 };
 
 /**
@@ -180,14 +137,14 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
    * @param holder - the holder the caret is parented on
    * @param caret - the peer's published position
    */
-  const locate = (holder: HTMLElement, caret: CaretPosition): Measurement | null => {
+  const locate = (holder: HTMLElement, caret: CaretPosition): LineBox | null => {
     const input = resolveInputs(caret.blockId)[caret.inputIndex];
 
     if (input === undefined) {
       return null;
     }
 
-    const spot = measure(input, caret.head);
+    const spot = measureLine(input, caret.head);
 
     if (spot === null) {
       return null;
@@ -237,7 +194,7 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       entry.element.style.left = `${spot.left}px`;
       entry.element.style.top = `${spot.top}px`;
       entry.element.style.height = `${spot.height}px`;
-      entry.element.style.setProperty(COLOR_PROPERTY, peer.color);
+      entry.element.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
 
       const key = positionKey(peer);
 

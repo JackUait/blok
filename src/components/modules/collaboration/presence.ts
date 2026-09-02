@@ -97,6 +97,17 @@ export const PRESENCE_PALETTE = [
 export const isPresenceColor = (value: unknown): value is string =>
   typeof value === 'string' && /^#([\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(value);
 
+/** The custom property every presence colour is written to; presence.css reads it. */
+export const PRESENCE_COLOR_PROPERTY = '--blok-presence-color';
+
+/** First letter of each of the first two words — a monogram, not a name. */
+export const initialsOf = (name: string): string =>
+  name
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0] ?? '')
+    .join('');
+
 /**
  * A stable default colour for a client that published none.
  *

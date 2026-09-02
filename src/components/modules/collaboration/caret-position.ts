@@ -10,8 +10,7 @@ import { Dom } from '../../dom';
  * deliberate and bounded: presence is ephemeral awareness data, never part of
  * the document, and concurrent editing of the SAME block already resolves
  * last-write-wins on the whole string. A caret briefly landing a few characters
- * off is strictly less surprising than the text loss that case already has, and
- * the block outline is the existing warning for it.
+ * off is strictly less surprising than the text loss that case already has.
  *
  * `inputIndex` indexes the block's own `inputs`, because one block can own
  * several editable fields (a table's cells, a caption beside a figure) and an
@@ -33,7 +32,7 @@ export interface CaretPosition {
  * there is no Range to measure and no way to turn an offset back into a
  * position without re-implementing the browser's text metrics. Publishing an
  * offset nobody can draw would just be noise on the wire, so these are skipped
- * — the block outline still shows the peer is in the block.
+ * — the gutter face still shows the peer is in the block.
  * @param input - one of a block's editable elements
  */
 const isMeasurable = (input: HTMLElement): boolean =>
@@ -163,4 +162,38 @@ export const resolveCaretRange = (input: HTMLElement, offset: number): Range | n
   range.collapse(true);
 
   return range;
+};
+
+/** Where a line of text is, in viewport coordinates. */
+export interface LineBox {
+  left: number;
+  top: number;
+  height: number;
+}
+
+/**
+ * Measure the line a published offset sits on.
+ *
+ * A collapsed Range measures zero in every engine when the element it sits in
+ * has no text — an empty paragraph is the ordinary case, not an edge one — so
+ * the input's own box is the fallback. Shared by the caret and the gutter
+ * face, so the two agree about where an empty block's first line is.
+ * @param input - the editable element the offset counts into
+ * @param offset - the peer's published character offset
+ */
+export const measureLine = (input: HTMLElement, offset: number): LineBox | null => {
+  const range = resolveCaretRange(input, offset);
+
+  if (range === null) {
+    return null;
+  }
+
+  const rect = range.getBoundingClientRect();
+  const box = rect.height > 0 ? rect : input.getBoundingClientRect();
+
+  return {
+    left: box.left,
+    top: box.top,
+    height: box.height,
+  };
 };

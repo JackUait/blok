@@ -260,6 +260,33 @@ describe('avatar layer — vertical placement', () => {
     expect(harness.gutterOf('block-1')?.style.height).toBe('38px');
   });
 
+  it('centres the face on the input box when the first line measures nothing', () => {
+    const harness = setup();
+    const wrapper = harness.holderOf('block-1').querySelector('[data-blok-element-content]');
+    const input = harness.toolRootOf('block-1');
+
+    // An empty paragraph's collapsed Range measures zero in every engine, and
+    // the caret layer falls back to the INPUT's box for it. The face has to
+    // land where that caret lands, or the two disagree about the same line.
+    vi.spyOn(wrapper as Element, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 100, height: 30, right: 0, bottom: 130, width: 0, x: 0, y: 100,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(input, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 105, height: 30, right: 0, bottom: 135, width: 0, x: 0, y: 105,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, height: 0, right: 0, bottom: 0, width: 0, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+
+    harness.layer.render([peer(1)]);
+
+    // Box centre is 120, which is 20 below the wrapper top.
+    expect(harness.gutterOf('block-1')?.style.height).toBe('40px');
+  });
+
   it('falls back to a line-height box when the block has no text to measure', () => {
     const harness = setup();
 

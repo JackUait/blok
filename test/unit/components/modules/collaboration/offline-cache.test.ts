@@ -492,6 +492,35 @@ describe('collaboration — offline cache', () => {
       expect(materialize(adopted?.updates ?? [])).toEqual({ 'block-1': 'one', 'block-2': 'two' });
     });
 
+    /**
+     * A failed append leaves a hole in the history. Rows written after it
+     * would adopt as a document missing an update — every later update that
+     * depends on the lost one stays pending — so the first failure stops the
+     * tail, and says so once.
+     */
+    it('warns once and stops appending after a failed write', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const writer = cacheWith();
+
+      await writer.open();
+      await writer.saveMeta(tagWith(LINEAGE_A), false);
+      await writer.append(updateWith('block-1', 'one'));
+
+      vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementationOnce(() => {
+        throw new DOMException('quota', 'QuotaExceededError');
+      });
+
+      await writer.append(updateWith('block-2', 'lost'));
+      await writer.append(updateWith('block-3', 'after the failure'));
+      writer.close();
+
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      const reader = cacheWith();
+
+      expect(materialize((await reader.open())?.updates ?? [])).toEqual({ 'block-1': 'one' });
+    });
+
     it('touches the database only from open(), never at construction', async () => {
       const openSpy = vi.spyOn(factory, 'open');
       const cache = cacheWith();

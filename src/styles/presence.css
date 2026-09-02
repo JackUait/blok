@@ -6,10 +6,11 @@
   appended inside that holder and one avatar stack on the editor wrapper. No
   selector reaches into a tool root, so a tool's own markup can change freely.
 
-  Notion's shape: a coloured line where the peer's caret is, with their name in
-  a flag above it that fades once they stop moving. There is deliberately no
-  block outline — it says only "somebody is in this paragraph", where a caret
-  says where they are.
+  Notion's shape: a coloured line where the peer's caret is, pulsing once they
+  rest, and their face parked in the gutter beside the block they are in (hover
+  it for the name). There is deliberately no block outline — it says only
+  "somebody is in this paragraph", where the face says who and the caret says
+  where.
 
   --blok-presence-color is declared here as a default and REDECLARED inline, per
   holder and per avatar, by the renderer — from a value that passed the hex-only
@@ -19,14 +20,12 @@
 
 [data-blok-interface] {
   --blok-presence-color: #0b6e99;
-  --blok-presence-radius: 3px;
   /* Overlap of the avatar stack, and the gutter strip's inline gap. */
   --blok-presence-gap: 6px;
   --blok-presence-overlap: -6px;
   --blok-presence-caret-width: 2px;
   /* Half the width, so both ends read as a cap rather than a cut corner. */
   --blok-presence-caret-radius: 1px;
-  --blok-presence-fade: 400ms;
   --blok-presence-pulse: 1.6s;
   --blok-presence-face-size: 26px;
   /* Ring around a face, and the same ring on the editor-wide stack. */
@@ -62,8 +61,8 @@
 /* The resting state pulses, and that is the whole point.
 
    Idle is when a peer needs announcing: while they type, the text itself is
-   visibly changing and the name flag is up, so the caret is the least of what
-   tells you they are there. Parked, a static 2px line reads as a rendering
+   visibly changing, so the caret is the least of what tells you they are
+   there. Parked, a static 2px line reads as a rendering
    artefact rather than a person — the motion is what makes it a cursor.
 
    Deliberately NOT the local caret's blink. That one is a hard on/off step at
@@ -79,13 +78,8 @@
   50% { opacity: 0.3; }
 }
 
-/* The states still change — the flag hides and the line settles. Only the
-   animation between them goes. */
+/* The line still settles; only the animation goes. */
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-presence-caret-name] {
-    transition: none;
-  }
-
   [data-blok-presence-caret-idle] {
     animation: none;
   }
@@ -126,14 +120,19 @@
    It slides by the gutter token, which is the width Blok reserves for those
    controls, so the two stay in step if either changes. In read-only that token
    collapses to zero, and so does this: no controls appear, so nothing has to
-   move. */
-[data-blok-element]:hover [data-blok-presence-gutter] {
+   move.
+
+   Only the INNERMOST hovered block: `:hover` is true for every ancestor of the
+   hovered element, and the controls attach to the innermost block, so a
+   container's face stays put while one of its children is hovered. The
+   direct-child chain keeps it to that block's own strip. */
+[data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(calc(-1 * var(--blok-editor-gutter-start, 0px)));
 }
 
 /* The mirrored side. `translateX` is physical, so RTL needs the other sign —
    inset-inline-end already put the strip on the right there. */
-[data-blok-rtl="true"] [data-blok-element]:hover [data-blok-presence-gutter] {
+[data-blok-rtl="true"] [data-blok-element]:hover:not(:has([data-blok-element]:hover)) > [data-blok-element-content] > [data-blok-presence-gutter] {
   transform: translateX(var(--blok-editor-gutter-start, 0px));
 }
 

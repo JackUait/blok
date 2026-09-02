@@ -163,6 +163,29 @@ describe('presence stylesheet', () => {
       expect(getComputedStyle(face).pointerEvents).toBe('auto');
     });
 
+    /**
+     * `:hover` is true for every ancestor of the hovered element, and the
+     * +/⠿ controls attach to the INNERMOST hovered block — so a container's
+     * face must not step aside when one of its children is the block hovered.
+     * jsdom cannot simulate `:hover`; the selector is pinned as parsed.
+     */
+    it('steps aside only for the innermost hovered block', () => {
+      const sheet = style.sheet;
+
+      if (sheet === null) {
+        throw new Error('stylesheet did not parse');
+      }
+
+      const slides = styleRules(sheet).filter((rule) =>
+        rule.selectorText.includes(':hover') && rule.selectorText.includes('[data-blok-presence-gutter]'));
+
+      expect(slides.length).toBeGreaterThan(0);
+      slides.forEach((rule) => {
+        expect(rule.selectorText).toContain('[data-blok-element]:hover:not(:has([data-blok-element]:hover))');
+        expect(rule.style.transform).not.toBe('');
+      });
+    });
+
     it('does not ride along in the drag ghost', () => {
       const harness = setup();
 

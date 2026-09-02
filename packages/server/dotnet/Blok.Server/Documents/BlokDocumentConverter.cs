@@ -16,7 +16,28 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   // it does not spend a pooled engine more than once.
   public async ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default)
   {
-    return version ??= await runtime.InvokeAsync("version", "{}", cancellationToken);
+    if (version is not null)
+    {
+      return version;
+    }
+
+    var reported = await runtime.InvokeAsync("version", "{}", cancellationToken);
+
+    /**
+     * `dev` is what the bundle answers when it was built without the VERSION
+     * define. Caching it would stamp it into every document this process
+     * writes, and nothing downstream could tell it from a real version — so it
+     * is never cached and never returned.
+     */
+    if (reported is "dev" or "")
+    {
+      throw new InvalidOperationException(
+          "The embedded Blok runtime reports no version; it was built without the VERSION define.");
+    }
+
+    version = reported;
+
+    return version;
   }
 
   public async ValueTask<BlokMarkdownConversion> ToMarkdownAsync(

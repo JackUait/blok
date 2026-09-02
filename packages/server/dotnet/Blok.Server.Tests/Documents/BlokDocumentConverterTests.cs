@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Blok.Server.Documents;
+using Blok.Server.Runtime;
 using Xunit;
 
 namespace Blok.Server.Tests.Documents;
@@ -30,6 +31,49 @@ public sealed class BlokDocumentConverterTests
 
     Assert.False(string.IsNullOrWhiteSpace(version));
     Assert.NotEqual("dev", version);
+  }
+
+  /// <summary>
+  /// `dev` is what the bundle answers when it was built without the VERSION
+  /// define. Caching that would stamp it into every document the process writes
+  /// for as long as it lives, and nothing downstream could tell it apart from a
+  /// real version — so it fails loudly instead, every time it is asked.
+  /// </summary>
+  [Fact]
+  public async Task RefusesToHandOutAVersionTheBundleDoesNotHave()
+  {
+    var runtime = new FixedRuntime("dev");
+    var converter = new BlokDocumentConverter(runtime);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(async () => await converter.GetVersionAsync());
+    await Assert.ThrowsAsync<InvalidOperationException>(async () => await converter.GetVersionAsync());
+    Assert.Equal(2, runtime.Calls);
+  }
+
+  [Fact]
+  public async Task AsksTheBundleForItsVersionOnlyOnce()
+  {
+    var runtime = new FixedRuntime("1.2.3");
+    var converter = new BlokDocumentConverter(runtime);
+
+    Assert.Equal("1.2.3", await converter.GetVersionAsync());
+    Assert.Equal("1.2.3", await converter.GetVersionAsync());
+    Assert.Equal(1, runtime.Calls);
+  }
+
+  private sealed class FixedRuntime(string answer) : IBlokRuntime
+  {
+    public int Calls { get; private set; }
+
+    public ValueTask<string> InvokeAsync(
+        string operation,
+        string inputJson,
+        CancellationToken cancellationToken = default)
+    {
+      Calls++;
+
+      return ValueTask.FromResult(answer);
+    }
   }
 
   /// <summary>

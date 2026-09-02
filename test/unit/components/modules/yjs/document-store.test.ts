@@ -23,6 +23,17 @@ const getRow = (store: DocumentStore, blockId: string, displayIndex: number): un
   return (grid.get('__rows') as Y.Map<unknown>).get(key);
 };
 
+/** The block's Y.Map, failing the test loudly when it is missing. */
+const requireBlock = (documentStore: DocumentStore, id: string): Y.Map<unknown> => {
+  const yblock = documentStore.getBlockById(id);
+
+  if (yblock === undefined) {
+    throw new Error(`block ${id} missing`);
+  }
+
+  return yblock;
+};
+
 describe('DocumentStore', () => {
   let store: DocumentStore;
 
@@ -190,7 +201,7 @@ describe('DocumentStore', () => {
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      store.moveBlock('block3', 0, 'local');
+      store.moveBlock('block3', 0);
 
       const result = store.toJSON();
 
@@ -204,7 +215,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
       ]);
 
-      store.moveBlock('nonexistent', 0, 'local');
+      store.moveBlock('nonexistent', 0);
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
@@ -214,7 +225,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
       ]);
 
-      store.moveBlock('block1', 0, 'local');
+      store.moveBlock('block1', 0);
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
@@ -229,7 +240,7 @@ describe('DocumentStore', () => {
       // toIndex 3 was valid before delete, but after deleting block1
       // the array is length 2, so insert at index 3 would exceed bounds.
       // Should clamp to index 2 (end of array).
-      store.moveBlock('block1', 3, 'local');
+      store.moveBlock('block1', 3);
 
       const result = store.toJSON();
 
@@ -247,7 +258,7 @@ describe('DocumentStore', () => {
       // Moving block2 (at index 1) to index 2:
       // After delete, array is length 1, index 2 exceeds bounds.
       // Should clamp to index 1 (end).
-      store.moveBlock('block2', 2, 'local');
+      store.moveBlock('block2', 2);
 
       const result = store.toJSON();
 
@@ -262,7 +273,7 @@ describe('DocumentStore', () => {
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      store.moveBlock('block3', -1, 'local');
+      store.moveBlock('block3', -1);
 
       const result = store.toJSON();
 
@@ -477,21 +488,6 @@ describe('DocumentStore', () => {
     });
   });
 
-  describe('findBlockIndex', () => {
-    it('returns index of existing block', () => {
-      store.fromJSON([
-        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
-        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
-      ]);
-
-      expect(store.findBlockIndex('block2')).toBe(1);
-    });
-
-    it('returns -1 for nonexistent block', () => {
-      expect(store.findBlockIndex('nonexistent')).toBe(-1);
-    });
-  });
-
   describe('toJSON', () => {
     it('returns empty array when no blocks exist', () => {
       expect(store.toJSON()).toEqual([]);
@@ -635,7 +631,7 @@ describe('DocumentStore', () => {
 
       store.updateBlockMetadata('block1', 1700000000000, 'Alice');
 
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBe(1700000000000);
       expect(yblock.get('lastEditedBy')).toBe('Alice');
@@ -650,7 +646,7 @@ describe('DocumentStore', () => {
       // Now call with null — lastEditedBy should retain its previous value
       store.updateBlockMetadata('block1', 1700000001000, null);
 
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBe(1700000001000);
       expect(yblock.get('lastEditedBy')).toBe('Alice');
@@ -663,7 +659,7 @@ describe('DocumentStore', () => {
       store.updateBlockMetadata('nonexistent', 1700000000000, 'Alice');
 
       // Original block is unaffected
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBeUndefined();
     });
@@ -1163,8 +1159,7 @@ describe('DocumentStore', () => {
     it('destroys the Yjs document', () => {
       store.destroy();
 
-      // After destroy, the doc should be destroyed
-      // We can't directly test this, but we can verify no errors occur
+      expect((store as unknown as { ydoc: Y.Doc }).ydoc.isDestroyed).toBe(true);
       expect(() => store.toJSON()).not.toThrow();
     });
   });

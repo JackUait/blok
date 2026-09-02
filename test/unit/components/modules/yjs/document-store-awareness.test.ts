@@ -212,8 +212,8 @@ describe('DocumentStore awareness seam', () => {
       store.onAwarenessUpdate(onUpdate);
       store.onAwarenessChange(onChange);
 
-      // Exactly what the keepalive does: re-set the same state.
-      store.renewAwarenessForKeepalive();
+      // Exactly what the keepalive does: re-set an equal state.
+      store.setAwarenessField('user', { name: 'Jack' });
 
       expect(onUpdate).toHaveBeenCalledTimes(1);
       expect(onChange).not.toHaveBeenCalled();
@@ -228,7 +228,7 @@ describe('DocumentStore awareness seam', () => {
       const unhook = store.onAwarenessUpdate(onUpdate);
 
       unhook();
-      store.renewAwarenessForKeepalive();
+      store.setAwarenessField('user', { name: 'One' });
 
       expect(onUpdate).not.toHaveBeenCalled();
     });

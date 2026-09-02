@@ -271,7 +271,7 @@ describe('BlockYjsSync — redo of a mid-column insert keeps child order (integr
 
     // The mid-column toolbox insert: the empty 'slot' paragraph is replaced by
     // the image — one merged undo entry (remove + add within captureTimeout).
-    const slotFlatIndex = store.findBlockIndex('slot');
+    const slotFlatIndex = store.orderedIds().indexOf('slot');
 
     store.removeBlock('slot');
     store.addBlock({ id: 'img', type: 'paragraph', data: {}, parent: 'c1' }, slotFlatIndex);

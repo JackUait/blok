@@ -7,14 +7,12 @@ import type { OutputBlockData } from '../../../../types/data-formats/output-data
 const NUL_CHAR = String.fromCharCode(0);
 
 /**
- * Remove every NUL from a string. A NUL in ANY position aborts the .NET sync
- * server's yrs read — map key, string value, array element alike — and the abort
- * kills the whole server process, not just the read (Phase 2's probe matrix:
- * exit 134 for every position). There is no "safe" position, so no write site
- * may skip the strip. The browser client is the only guard, so every user string
- * entering the doc is scrubbed at the serializer write chokepoints. Fast path:
- * scan first, allocate a replacement only on a hit, so a clean write copies
- * nothing.
+ * Remove every NUL from a string. A NUL in ANY position — map key, string
+ * value, array element — aborts the .NET sync server's yrs read, and the
+ * abort kills the whole server process, so no write site may skip the strip.
+ * The browser client is the only guard: every user string entering the doc
+ * is scrubbed at the serializer write chokepoints. Fast path: scan first,
+ * allocate a replacement only on a hit, so a clean write copies nothing.
  */
 export const stripNul = (value: string): string =>
   value.includes(NUL_CHAR) ? value.split(NUL_CHAR).join('') : value;
@@ -463,11 +461,17 @@ export class YBlockSerializer {
       return this.yArrayToPlain(value, depth);
     }
 
-    // The v1 serializer never writes a Y.Text, but a foreign or
-    // future-format client can; falling through would leak the live shared
-    // object into OutputData where every consumer expects a string.
-    if (value instanceof Y.Text) {
-      return value.toJSON();
+    // The v1 serializer writes no other shared type, but a foreign or
+    // future-format client can; falling through would leak a live shared
+    // object (or a subdocument) into OutputData.
+    if (value instanceof Y.Doc) {
+      return null;
+    }
+
+    if (value instanceof Y.AbstractType) {
+      const plain: unknown = value.toJSON();
+
+      return plain;
     }
 
     return value;

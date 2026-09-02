@@ -43,7 +43,7 @@ describe('BlockObserver', () => {
   };
 
   const moveBlock = (id: string, toIndex: number): void => {
-    store.moveBlock(id, toIndex, 'local');
+    store.moveBlock(id, toIndex);
   };
 
   const removeBlock = (id: string): void => {
@@ -318,8 +318,8 @@ describe('BlockObserver', () => {
 
       // Move multiple blocks in one transaction
       store.transact(() => {
-        store.moveBlock('b5', 0, 'local');
-        store.moveBlock('b4', 1, 'local');
+        store.moveBlock('b5', 0);
+        store.moveBlock('b4', 1);
       }, 'local');
 
       const moveEvents = callback.mock.calls.filter(
@@ -338,7 +338,7 @@ describe('BlockObserver', () => {
 
       // Move b3, add b4, remove b2 — one transaction
       store.transact(() => {
-        store.moveBlock('b3', 0, 'local');
+        store.moveBlock('b3', 0);
         store.addBlock({ id: 'b4', type: 'paragraph', data: {} });
         store.removeBlock('b2');
       }, 'local');
@@ -368,7 +368,7 @@ describe('BlockObserver', () => {
       observer.onBlocksChanged(callback);
 
       // Reorder within the parent: child-b takes child-a's flat slot.
-      moveBlock('child-b', store.findBlockIndex('child-a'));
+      moveBlock('child-b', store.orderedIds().indexOf('child-a'));
 
       const moveEvents = callback.mock.calls
         .map((call) => call[0] as BlockChangeEvent)
@@ -695,7 +695,7 @@ describe('BlockObserver — emission order contract', () => {
     collectEvents();
 
     store.transact(() => {
-      store.moveBlock('b4', 0, 'local');
+      store.moveBlock('b4', 0);
       store.addBlock({ id: 'b5', type: 'paragraph', data: { text: '5' } });
       store.removeBlock('b2');
       store.updateBlockData('b3', 'text', 'changed');
@@ -718,7 +718,7 @@ describe('BlockObserver — emission order contract', () => {
 
     store.transact(() => {
       // Move comes from the ROOT ORDER array …
-      store.moveBlock('b2', 0, 'local');
+      store.moveBlock('b2', 0);
       // … while the add's membership goes into a parent's contentIds, so the
       // add is visible only through the blocks map.
       store.addBlock({ id: 'child-1', type: 'paragraph', data: { text: 'c' }, parent: 'parent-1' });
@@ -747,9 +747,9 @@ describe('BlockObserver — emission order contract', () => {
 
     store.transact(() => {
       // contentIds-array move: swap c1 after c2 (flat target = c2's slot).
-      store.moveBlock('c1', store.findBlockIndex('c2'), 'local');
+      store.moveBlock('c1', store.orderedIds().indexOf('c2'));
       // Root-order move.
-      store.moveBlock('p2', 0, 'local');
+      store.moveBlock('p2', 0);
       // Two adds in one transaction → batch-add.
       store.addBlock({ id: 'n1', type: 'paragraph', data: { text: 'n1' } });
       store.addBlock({ id: 'n2', type: 'paragraph', data: { text: 'n2' } });

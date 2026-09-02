@@ -44,7 +44,7 @@ describe('DocumentStore order laws — two-doc convergence via the binary seam',
   });
 
   it('concurrent move + edit of the moved block: the edit survives on both peers', () => {
-    storeA.moveBlock('b3', 0, 'local');
+    storeA.moveBlock('b3', 0);
     storeB.updateBlockData('b3', 'text', 'Edited on B');
 
     sync(storeA, storeB);
@@ -58,8 +58,8 @@ describe('DocumentStore order laws — two-doc convergence via the binary seam',
   });
 
   it('concurrent move + move of the same block: it exists once and both peers agree on order', () => {
-    storeA.moveBlock('b3', 0, 'local');
-    storeB.moveBlock('b3', 1, 'local');
+    storeA.moveBlock('b3', 0);
+    storeB.moveBlock('b3', 1);
 
     sync(storeA, storeB);
 
@@ -94,7 +94,7 @@ describe('DocumentStore order laws — block identity', () => {
 
     const before = store.getBlockById('b2');
 
-    store.moveBlock('b2', 0, 'local');
+    store.moveBlock('b2', 0);
 
     expect(store.getBlockById('b2')).toBe(before);
   });
@@ -119,7 +119,7 @@ describe('DocumentStore order laws — derived order', () => {
 
     expect(store.rootOrder.toArray()).toEqual(['b1', 'b2', 'b1']);
     expect(store.toJSON().map((block) => block.id)).toEqual(['b1', 'b2']);
-    expect(store.findBlockIndex('b1')).toBe(0);
+    expect(store.orderedIds().indexOf('b1')).toBe(0);
   });
 
   it('id present in no order array renders at the end; orphans sort by id', () => {

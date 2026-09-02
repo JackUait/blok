@@ -347,7 +347,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
 
       const before = repository.blocks.map((block) => block);
 
-      peer.moveBlock('b3', 0, 'local');
+      peer.moveBlock('b3', 0);
       applyPeerToLocal();
       await flush();
 
@@ -499,7 +499,7 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
       expect(repository.getBlockById('p2')?.parentId).toBe('t1');
 
       syncPeerUp();
-      peer.moveBlock('p3', 2, 'local');
+      peer.moveBlock('p3', 2);
       applyPeerToLocal();
       await flush();
       expectOrderInvariant('remote reorder of p3 to index 2', ['t1', 'p2', 'p3', 'r1', 'p1']);

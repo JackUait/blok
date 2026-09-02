@@ -64,15 +64,11 @@ export type TransactionOrigin =
 /**
  * Whitelist of raw origin tags that our own code passes to `Y.Doc.transact`.
  *
- * Adding a new local-authored origin tag? You MUST:
- *   1. Add it here.
- *   2. Handle it explicitly in `BlockObserver.mapTransactionOrigin`.
- *
- * The mapper's exhaustiveness check and the `block-observer.test.ts`
- * enumeration test will otherwise fail CI — preventing a repeat of the
- * table-row-removal bug where `'no-capture'` silently fell through to
- * `'remote'` and made `BlockYjsSync` clobber the authoring tool's state
- * with stale Yjs data mid-operation.
+ * A new local-authored tag MUST be added here AND handled explicitly in
+ * `BlockObserver.mapTransactionOrigin` (the mapper's exhaustiveness check and
+ * the `block-observer.test.ts` enumeration fail otherwise). A tag that falls
+ * through classifies as 'remote', and `BlockYjsSync` then overwrites the
+ * authoring tool's state with stale doc data mid-operation.
  */
 export const LOCAL_ORIGIN_TAGS = [
   'local',

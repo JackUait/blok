@@ -145,7 +145,7 @@ describe('BlockYjsSync — remote contentIds-only reorder (integration)', () => 
     const mirror = new DocumentStore(new YBlockSerializer());
 
     mirror.applyRemoteUpdate(store.encodeStateAsUpdate());
-    mirror.moveBlock('c3', mirror.findBlockIndex('c1'), 'local');
+    mirror.moveBlock('c3', mirror.orderedIds().indexOf('c1'));
 
     // Only the parent's contentIds changed — no map keys, no root order.
     store.applyRemoteUpdate(mirror.encodeStateAsUpdate(store.getStateVector()));
@@ -171,7 +171,7 @@ describe('BlockYjsSync — remote contentIds-only reorder (integration)', () => 
     const mirror = new DocumentStore(new YBlockSerializer());
 
     mirror.applyRemoteUpdate(store.encodeStateAsUpdate());
-    mirror.moveBlock('c2', mirror.findBlockIndex('c1'), 'local');
+    mirror.moveBlock('c2', mirror.orderedIds().indexOf('c1'));
     store.applyRemoteUpdate(mirror.encodeStateAsUpdate(store.getStateVector()));
     mirror.destroy();
 

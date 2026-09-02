@@ -330,7 +330,7 @@ export class YjsManager extends Module {
     // group, startMoveGroup's capture wins).
     this.undoHistory.markCaretBeforeChange();
 
-    this.documentStore.moveBlock(id, toIndex, 'local');
+    this.documentStore.moveBlock(id, toIndex);
 
     const to = this.documentStore.getPlacement(id) ?? from;
 

@@ -8,15 +8,32 @@ import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type Loca
 import { logLabeled } from '../../utils/logger';
 import { equals } from '../../utils/object';
 
-// Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
-type DocumentStoreBlockData = YjsOutputBlockData;
-
 /**
  * Default transaction origin for updates applied through the binary seam
  * when the provider passes none. Not a LocalOriginTag, so BlockObserver
  * classifies these transactions 'remote' and the UndoManager ignores them.
  */
 const REMOTE_APPLY_ORIGIN = Object.freeze({ source: 'blok-remote-apply' });
+
+/**
+ * Lengths of the equal prefix and equal suffix of two sequences, the suffix
+ * measured only past the prefix so the two never overlap. Every two-ended
+ * diff in the store shares this accounting.
+ */
+const commonEnds = (
+  leftLength: number,
+  rightLength: number,
+  isEqualAt: (leftIndex: number, rightIndex: number) => boolean
+): { prefix: number; suffix: number } => {
+  const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
+  const maxPrefix = Math.min(leftLength, rightLength);
+  const prefix = range(maxPrefix).find((index) => !isEqualAt(index, index)) ?? maxPrefix;
+  const maxSuffix = maxPrefix - prefix;
+  const suffix = range(maxSuffix)
+    .find((index) => !isEqualAt(leftLength - 1 - index, rightLength - 1 - index)) ?? maxSuffix;
+
+  return { prefix, suffix };
+};
 
 /**
  * DocumentStore manages the Yjs document and provides atomic block operations.
@@ -57,7 +74,7 @@ export class DocumentStore {
   private yRootOrder: Y.Array<string> = this.ydoc.getArray('root');
 
   /**
-   * Serializer for converting between Yjs and DocumentStoreBlockData formats
+   * Serializer for converting between Yjs and OutputBlockData formats
    */
   private serializer: YBlockSerializer;
 
@@ -104,7 +121,7 @@ export class DocumentStore {
    * Clears existing blocks and replaces them with the provided data.
    * Uses 'load' origin which is not tracked by undo manager.
    */
-  public fromJSON(blocks: DocumentStoreBlockData[]): void {
+  public fromJSON(blocks: YjsOutputBlockData[]): void {
     this.ydoc.transact(() => {
       this.yRootOrder.delete(0, this.yRootOrder.length);
 
@@ -137,7 +154,7 @@ export class DocumentStore {
    * emitted `parent`/`content`, so a consumer can never read a position that
    * contradicts the parent link (or a child listed under two parents).
    */
-  public toJSON(): DocumentStoreBlockData[] {
+  public toJSON(): YjsOutputBlockData[] {
     const hierarchy = this.hierarchyView();
 
     return this.deriveOrderedIds(hierarchy).flatMap((id) => {
@@ -283,16 +300,16 @@ export class DocumentStore {
    * and dropping them would lose a not-yet-arrived peer's slot).
    */
   private projectHierarchy(
-    block: DocumentStoreBlockData,
+    block: YjsOutputBlockData,
     hierarchy: Map<string, string | null>
-  ): DocumentStoreBlockData {
+  ): YjsOutputBlockData {
     const id = block.id;
 
     if (typeof id !== 'string') {
       return block;
     }
 
-    const projected: DocumentStoreBlockData = { ...block };
+    const projected: YjsOutputBlockData = { ...block };
     const parentId = hierarchy.get(id) ?? null;
     const owned = (block.content ?? []).filter(
       (childId) => !hierarchy.has(childId) || hierarchy.get(childId) === id
@@ -424,7 +441,7 @@ export class DocumentStore {
    *   contentIds, with the same clamping semantics as before
    * @returns The created Y.Map
    */
-  public addBlock(blockData: DocumentStoreBlockData, index?: number): Y.Map<unknown> {
+  public addBlock(blockData: YjsOutputBlockData, index?: number): Y.Map<unknown> {
     const yblock = this.serializer.outputDataToYBlock(blockData);
     // Strip so the map KEY and the order-array id match the yblock's scrubbed
     // id field (and never carry a yrs-aborting NUL to the server).
@@ -476,14 +493,11 @@ export class DocumentStore {
    * — and therefore the same block id, Yjs item identity, position, parentId,
    * contentIds and tunes.
    *
-   * Backs `BlockMutation.replace()` (turn-into + markdown conversion). The prior
-   * approach removed the yblock and inserted a NEW one that REUSED the same
-   * logical id; `BlockObserver` saw the id in both the added and removed sets and
-   * classified it as a no-op MOVE, so undoing a conversion never re-rendered the
-   * block back to its prior tool. Mutating the existing Y.Map instead emits an
-   * `update` event carrying the id, which the reconciler resolves against the
-   * yblock's `type` and re-renders the correct tool. The single transaction keeps
-   * it one undo entry.
+   * Backs `BlockMutation.replace()` (turn-into + markdown conversion). Must
+   * mutate the existing Y.Map, never remove and re-insert under the same id:
+   * `BlockObserver` reads an id in both the added and removed sets as a no-op
+   * MOVE, and an undo of the conversion then never re-renders the prior tool.
+   * The single transaction keeps it one undo entry.
    * @param id - Block id whose content to replace
    * @param type - New tool name
    * @param data - New tool data
@@ -515,13 +529,8 @@ export class DocumentStore {
    * document this reproduces the old clamping semantics exactly.
    * @param id - Block id to move
    * @param toIndex - Target flat index (the final position in derived order)
-   * @param origin - Transaction origin
    */
-  public moveBlock(
-    id: string,
-    toIndex: number,
-    origin: 'local'
-  ): void {
+  public moveBlock(id: string, toIndex: number): void {
     const fromIndex = this.deriveOrderedIds().indexOf(id);
 
     if (fromIndex === -1) {
@@ -536,8 +545,6 @@ export class DocumentStore {
     // 'move' keeps the Y.UndoManager from tracking the order edit — the
     // placement-based move stacks own its history. Replay never comes back
     // through here: move-undo/move-redo drive `applyPlacement` instead.
-    const transactionOrigin: LocalOriginTag = origin === 'local' ? 'move' : origin;
-
     this.transact(() => {
       this.removeFromOrderArrays(id);
 
@@ -556,7 +563,7 @@ export class DocumentStore {
       const desired = Math.max(0, Math.min(toIndex, flatIds.length));
 
       target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);
-    }, transactionOrigin);
+    }, 'move');
   }
 
   /**
@@ -875,11 +882,10 @@ export class DocumentStore {
     }
 
     // Nested OBJECT value backed by a nested Y.Map: deep-merge into the existing
-    // Y.Map instead of replacing it. This (a) compares by ENTRIES so an unchanged
-    // nested key writes nothing — equals(Y.Map, plainObject) was a false-negative
-    // that bumped a spurious first-save undo entry — and (b) keeps the nested
-    // value a Y.Map and touches only changed sub-fields, so concurrent edits to
-    // DIFFERENT sub-fields merge (field-level CRDT) rather than last-writer-wins.
+    // Y.Map instead of replacing it. Compare by ENTRIES — equals(Y.Map, plain)
+    // is a false negative that would write (and record an undo entry) for an
+    // unchanged value — and touch only changed sub-fields, so concurrent edits
+    // to DIFFERENT sub-fields merge instead of last-writer-wins.
     if (valueIsPlainObject && currentValue instanceof Y.Map) {
       if (equals(this.serializer.yMapToObject(currentValue), value)) {
         return false;
@@ -1019,15 +1025,11 @@ export class DocumentStore {
     const targetLength = target.length;
     const sourceLength = source.length;
     const plainAt = (index: number): unknown => this.serializer.yValueToPlain(target.get(index));
-    const maxPrefix = Math.min(targetLength, sourceLength);
-    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
-
-    const prefix = range(maxPrefix)
-      .find((index) => !equals(plainAt(index), source[index])) ?? maxPrefix;
-
-    const maxSuffix = maxPrefix - prefix;
-    const suffix = range(maxSuffix)
-      .find((index) => !equals(plainAt(targetLength - 1 - index), source[sourceLength - 1 - index])) ?? maxSuffix;
+    const { prefix, suffix } = commonEnds(
+      targetLength,
+      sourceLength,
+      (targetIndex, sourceIndex) => equals(plainAt(targetIndex), source[sourceIndex])
+    );
 
     const targetMiddle = targetLength - prefix - suffix;
     const sourceMiddle = sourceLength - prefix - suffix;
@@ -1149,8 +1151,8 @@ export class DocumentStore {
    * 3. Cell-level similarity, only when the leftover counts DIFFER (a row was
    *    added or removed in the same write that edited one): the edited row
    *    still shares most of its cells with itself, a brand-new row shares
-   *    none. Equal counts skip straight to 4, which keeps the pre-identity
-   *    "equal-length middles rewrite in place" behaviour exactly.
+   *    none. Equal counts skip straight to 4: equal-length middles rewrite
+   *    in place.
    * 4. Positional remainder — extra source rows are genuinely new, extra doc
    *    rows genuinely deleted.
    *
@@ -1168,11 +1170,11 @@ export class DocumentStore {
       takenTarget.add(targetIndex);
     };
 
-    const maxPrefix = Math.min(current.length, source.length);
-    const prefix = range(maxPrefix).find((index) => !equals(current[index], source[index])) ?? maxPrefix;
-    const maxSuffix = maxPrefix - prefix;
-    const suffix = range(maxSuffix)
-      .find((index) => !equals(current[current.length - 1 - index], source[source.length - 1 - index])) ?? maxSuffix;
+    const { prefix, suffix } = commonEnds(
+      current.length,
+      source.length,
+      (currentIndex, sourceIndex) => equals(current[currentIndex], source[sourceIndex])
+    );
 
     range(prefix).forEach((index) => pair(index, index));
     range(suffix).forEach((index) => pair(source.length - 1 - index, current.length - 1 - index));
@@ -1250,12 +1252,11 @@ export class DocumentStore {
       return 0;
     }
 
-    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
-    const maxPrefix = Math.min(current.length, source.length);
-    const prefix = range(maxPrefix).find((index) => !equals(current[index], source[index])) ?? maxPrefix;
-    const suffix = range(maxPrefix - prefix)
-      .find((index) => !equals(current[current.length - 1 - index], source[source.length - 1 - index]))
-      ?? maxPrefix - prefix;
+    const { prefix, suffix } = commonEnds(
+      current.length,
+      source.length,
+      (currentIndex, sourceIndex) => equals(current[currentIndex], source[sourceIndex])
+    );
 
     return prefix + suffix;
   }
@@ -1274,12 +1275,11 @@ export class DocumentStore {
       return;
     }
 
-    const range = (length: number): number[] => Array.from({ length }, (_, index) => index);
-    const maxPrefix = Math.min(current.length, keys.length);
-    const prefix = range(maxPrefix).find((index) => current[index] !== keys[index]) ?? maxPrefix;
-    const maxSuffix = maxPrefix - prefix;
-    const suffix = range(maxSuffix)
-      .find((index) => current[current.length - 1 - index] !== keys[keys.length - 1 - index]) ?? maxSuffix;
+    const { prefix, suffix } = commonEnds(
+      current.length,
+      keys.length,
+      (currentIndex, keyIndex) => current[currentIndex] === keys[keyIndex]
+    );
 
     const currentMiddle = current.length - prefix - suffix;
     const nextMiddle = keys.length - prefix - suffix;
@@ -1351,15 +1351,6 @@ export class DocumentStore {
   }
 
   /**
-   * Find a block's index in the derived flat document order.
-   * @param id - Block id to find
-   * @returns Index or -1 if not found
-   */
-  public findBlockIndex(id: string): number {
-    return this.deriveOrderedIds().indexOf(id);
-  }
-
-  /**
    * Execute multiple Yjs operations as a single atomic transaction.
    * All operations within the callback will be grouped into one undo entry.
    * @param fn - Function containing Yjs operations to execute atomically
@@ -1406,11 +1397,28 @@ export class DocumentStore {
   // documented dual-import footgun). Uint8Array payloads are copy-safe.
 
   /**
-   * Origins that entered through `applyRemoteUpdate`. `onUpdate` skips
-   * their transactions (echo suppression). Growth is bounded: one entry
-   * per provider origin, and origins are few and long-lived.
+   * Origins that entered through `applyRemoteUpdate`; `onUpdate` skips their
+   * transactions (echo suppression). Object origins are held weakly, so a
+   * provider minting one per connection cannot grow the set; primitive
+   * origins are retained, so those must be a few long-lived tags.
    */
-  private readonly remoteOrigins = new Set<unknown>([REMOTE_APPLY_ORIGIN]);
+  private remoteObjectOrigins: WeakSet<WeakKey> = new WeakSet([REMOTE_APPLY_ORIGIN]);
+
+  private readonly remotePrimitiveOrigins = new Set<unknown>();
+
+  private rememberRemoteOrigin(origin: unknown): void {
+    if (typeof origin === 'object' && origin !== null) {
+      this.remoteObjectOrigins.add(origin);
+    } else {
+      this.remotePrimitiveOrigins.add(origin);
+    }
+  }
+
+  private isRemoteOrigin(origin: unknown): boolean {
+    return typeof origin === 'object' && origin !== null
+      ? this.remoteObjectOrigins.has(origin)
+      : this.remotePrimitiveOrigins.has(origin);
+  }
 
   /**
    * Wrapped 'update' handlers registered via `onUpdate`, kept so
@@ -1421,9 +1429,8 @@ export class DocumentStore {
   /**
    * Apply a binary Yjs update coming from outside this editor.
    *
-   * Every distinct origin passed here is retained for the doc's lifetime (the
-   * echo-suppression set is never pruned), so pass a few LONG-LIVED origin
-   * objects — one per provider — never a freshly allocated one per message.
+   * Object origins are held weakly; a primitive origin is retained for the
+   * doc's lifetime, so use a few long-lived tags.
    * @param update - Encoded Yjs update (as produced by `encodeStateAsUpdate`
    *   or an `onUpdate` callback on a peer)
    * @param origin - Provider origin recorded on the transaction; defaults to
@@ -1433,7 +1440,7 @@ export class DocumentStore {
   public applyRemoteUpdate(update: Uint8Array, origin?: unknown): void {
     const effectiveOrigin = origin ?? REMOTE_APPLY_ORIGIN;
 
-    // Throw BEFORE registering the origin: a local tag in remoteOrigins
+    // Throw BEFORE registering the origin: a local tag in the remote set
     // would silently swallow every later local write in onUpdate.
     if (typeof effectiveOrigin === 'string' && (LOCAL_ORIGIN_TAGS as readonly string[]).includes(effectiveOrigin)) {
       throw new Error(
@@ -1444,7 +1451,7 @@ export class DocumentStore {
 
     // Register before applying: the 'update' event fires synchronously
     // inside Y.applyUpdate, so a late add would echo the first message.
-    this.remoteOrigins.add(effectiveOrigin);
+    this.rememberRemoteOrigin(effectiveOrigin);
 
     Y.applyUpdate(this.ydoc, update, effectiveOrigin);
   }
@@ -1458,7 +1465,7 @@ export class DocumentStore {
    */
   public onUpdate(cb: (update: Uint8Array, origin: unknown) => void): () => void {
     const handler = (update: Uint8Array, origin: unknown): void => {
-      if (this.remoteOrigins.has(origin)) {
+      if (this.isRemoteOrigin(origin)) {
         return;
       }
 
@@ -1585,20 +1592,6 @@ export class DocumentStore {
     return (): void => {
       awareness.off('update', callback);
     };
-  }
-
-  /**
-   * Re-set the local state to itself, exactly as y-protocols' keepalive does.
-   * Exists so the keepalive path is testable without waiting 3 seconds.
-   */
-  public renewAwarenessForKeepalive(): void {
-    const awareness = this.awareness;
-
-    if (awareness === null) {
-      return;
-    }
-
-    awareness.setLocalState(awareness.getLocalState());
   }
 
   /**
@@ -1734,8 +1727,8 @@ export class DocumentStore {
 
     previous.destroy();
 
-    this.remoteOrigins.clear();
-    this.remoteOrigins.add(REMOTE_APPLY_ORIGIN);
+    this.remoteObjectOrigins = new WeakSet([REMOTE_APPLY_ORIGIN]);
+    this.remotePrimitiveOrigins.clear();
 
     for (const handler of this.updateHandlers) {
       this.ydoc.on('update', handler);

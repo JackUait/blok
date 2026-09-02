@@ -125,7 +125,7 @@ describe('DocumentStore — flat-document insert and move cost', () => {
 
     const startedAt = performance.now();
 
-    store.moveBlock('f0', FLAT_LENGTH - 1, 'local');
+    store.moveBlock('f0', FLAT_LENGTH - 1);
 
     expect(performance.now() - startedAt).toBeLessThan(LOOSE_BOUND_MS);
     expect(store.rootOrder.toArray().at(-1)).toBe('f0');

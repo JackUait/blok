@@ -471,6 +471,26 @@ describe('YBlockSerializer', () => {
     });
   });
 
+  describe('foreign shared types other than Y.Text', () => {
+    it('reads a Y.XmlFragment back as its toJSON() string, never the live object', () => {
+      const data = ydoc.getMap('data');
+      const fragment = new Y.XmlFragment();
+
+      data.set('xml', fragment);
+      fragment.insert(0, [new Y.XmlText('frag')]);
+
+      expect(serializer.yMapToObject(data).xml).toBe('frag');
+    });
+
+    it('reads a subdocument back as null', () => {
+      const data = ydoc.getMap('data');
+
+      data.set('sub', new Y.Doc());
+
+      expect(serializer.yMapToObject(data).sub).toBeNull();
+    });
+  });
+
   describe('keys that clash with Object.prototype', () => {
     // JSON.parse produces a real own `__proto__` property, so a consumer's
     // stored record can carry one. Plain `obj[key] = value` would set the

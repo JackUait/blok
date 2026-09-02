@@ -56,9 +56,40 @@ internal sealed class LocalCollabStore(
             return null;
           }
 
-          return CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log);
+          var stored = CollabWorkingSetLaw.DecodeOrAbsent(docId, document, log);
+
+          if (stored is null)
+          {
+            MoveAside(docId, path);
+          }
+
+          return stored;
         },
         cancellationToken);
+  }
+
+  /// <summary>
+  /// The header of an unreadable file may still be intact, and the write
+  /// guard reads only the header: left in place, it would refuse every
+  /// re-seed under a lower epoch and no API could recover the doc.
+  /// </summary>
+  private void MoveAside(string docId, string path)
+  {
+    var aside = $"{path}.unreadable-{DateTime.UtcNow:yyyyMMdd'T'HHmmssfff'Z'}";
+
+    try
+    {
+      File.Move(path, aside);
+      log?.Invoke(
+          $"collab: moved the unreadable working set for \"{docId}\" to " +
+          $"{Path.GetFileName(aside)}");
+    }
+    catch (Exception error)
+    {
+      log?.Invoke(
+          $"collab: could not move the unreadable working set for \"{docId}\" " +
+          $"aside: {error.Message}");
+    }
   }
 
   public Task WriteAsync(

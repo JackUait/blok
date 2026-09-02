@@ -552,6 +552,31 @@ public sealed class CollabRoomManagerTests
   }
 
   [Fact]
+  public async Task AReSeedAfterABlobWithCorruptFramesUnderAnIntactHeaderStillJoins()
+  {
+    using var directory = new TemporaryDirectory();
+    var disk = new LocalCollabStore(directory.Path);
+    await disk.WriteAsync(
+        DocId,
+        CollabWorkingSetCodec.EncodeFrames([YDocs.FullState(YDocs.DocWith("old"))]),
+        Tags.At(3),
+        CancellationToken.None);
+    var path = Path.Combine(directory.Path, CollabDocKey.For(DocId));
+    var written = await File.ReadAllBytesAsync(path);
+    await File.WriteAllBytesAsync(path, [.. written[..CollabWorkingSetCodec.HeaderLength], 0xff, 0xff]);
+    endpoint.Holds(DocId, "fresh");
+    var manager = CreateManager(store: disk);
+
+    var result = await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, result.Status);
+    Tags.AssertMinted(0, result.Membership!.Tag);
+    var stored = await disk.ReadAsync(DocId, CancellationToken.None);
+    Assert.Equal(result.Membership.Tag, stored!.Tag);
+    Assert.Equal("fresh", YDocs.Replay(CollabWorkingSetCodec.TryDecodeFrames(stored.Updates, out var frames) ? frames : []));
+  }
+
+  [Fact]
   public async Task AReSeedAfterALostBlobMintsANewLineageUnderTheSameEpoch()
   {
     using var directory = new TemporaryDirectory();

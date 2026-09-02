@@ -166,6 +166,36 @@ public sealed class LocalCollabStoreTests : IDisposable
     Assert.Equal(0, stored.Tag.Epoch);
   }
 
+  /// <summary>
+  /// An intact header over corrupt frames read as absent yet still enforced
+  /// its epoch on the next write (the guard reads only the header), so the
+  /// doc could never be re-seeded: every join failed closed and a reset
+  /// could not raise the epoch either.
+  /// </summary>
+  [Fact]
+  public async Task MovesAnUnreadableFileAsideSoTheEpochGuardSeesNothing()
+  {
+    var store = CreateStore();
+    await store.WriteAsync(DocId, Frames([0x01]), Tag, CancellationToken.None);
+    var path = Path.Combine(directory, DocKeyHex);
+    var written = await File.ReadAllBytesAsync(path);
+    byte[] corrupt = [.. written[..CollabWorkingSetCodec.HeaderLength], 0xff, 0xff, 0xff];
+    await File.WriteAllBytesAsync(path, corrupt);
+
+    Assert.Null(await store.ReadAsync(DocId, CancellationToken.None));
+
+    Assert.False(File.Exists(path));
+    var aside = Assert.Single(Directory.GetFiles(directory));
+    Assert.StartsWith(DocKeyHex + ".unreadable-", Path.GetFileName(aside), StringComparison.Ordinal);
+    Assert.Equal(corrupt, await File.ReadAllBytesAsync(aside));
+    Assert.Contains(logs, entry => entry.Contains(Path.GetFileName(aside), StringComparison.Ordinal));
+
+    await store.WriteAsync(DocId, Frames([0x02]), Tag with { Epoch = 0 }, CancellationToken.None);
+    var stored = await store.ReadAsync(DocId, CancellationToken.None);
+    Assert.NotNull(stored);
+    Assert.Equal(0, stored.Tag.Epoch);
+  }
+
   [Fact]
   public async Task CleansUpTheTempFileWhenTheRenameFails()
   {

@@ -70,10 +70,65 @@ describe('server runtime boundary', () => {
     await expect(invoke('blocksToHtml', '{"wrong":[]}')).rejects.toThrow('`blocks` array');
   });
 
-  it('refuses malformed blocks instead of silently dropping them', async () => {
-    await expect(invoke('blocksToHtml', '{"blocks":[{"type":42,"data":{"text":"lost"}}]}')).rejects.toThrow(
-      'valid block objects'
-    );
+  /**
+   * This case used to assert the opposite — that a malformed block is refused
+   * rather than silently dropped. The objection was to the SILENCE, not to the
+   * dropping: a document conversion reports one now. HTML and plain text carry
+   * no report channel, so for those two the skip is still silent, which is the
+   * price of not losing a whole stored article to one bad entry.
+   */
+  it('skips a malformed block instead of failing the whole document', async () => {
+    const html = await invoke('blocksToHtml', '{"blocks":[{"type":42,"data":{"text":"lost"}}]}');
+
+    expect(html).toBe('');
+  });
+
+  it('skips a block that is not an object and reports it', async () => {
+    const output = await invoke('blocksToMarkdown', JSON.stringify({
+      blocks: [
+        { id: 'p1', type: 'paragraph', data: { text: 'Kept' } },
+        7,
+      ],
+    }));
+    const result = JSON.parse(output) as { markdown: string; warnings: unknown[] };
+
+    expect(result.markdown).toBe('Kept');
+    expect(result.warnings).toEqual([
+      { construct: 'block', action: 'dropped', detail: '1 malformed block was skipped' },
+    ]);
+  });
+
+  it('skips a block whose type is missing', async () => {
+    const output = await invoke('blocksToMarkdown', JSON.stringify({
+      blocks: [{ id: 'x', data: { text: 'Orphan' } }],
+    }));
+    const result = JSON.parse(output) as { markdown: string; warnings: unknown[] };
+
+    expect(result.markdown).toBe('');
+    expect(result.warnings).toHaveLength(1);
+  });
+
+  it('reports several malformed blocks as one degradation', async () => {
+    const output = await invoke('blocksToMarkdown', JSON.stringify({
+      blocks: [null, { type: 'paragraph', data: { text: 'Kept' } }, 'nope'],
+    }));
+    const result = JSON.parse(output) as { warnings: Array<{ detail: string }> };
+
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0].detail).toBe('2 malformed blocks were skipped');
+  });
+
+  it('still rejects input that is not a document at all', async () => {
+    await expect(invoke('blocksToMarkdown', JSON.stringify({ notBlocks: [] })))
+      .rejects.toThrow(TypeError);
+  });
+
+  it('skips malformed blocks for plain text too', async () => {
+    const output = await invoke('blocksToPlainText', JSON.stringify({
+      blocks: [{ type: 'paragraph', data: { text: 'Kept' } }, null],
+    }));
+
+    expect(output).toContain('Kept');
   });
 
   it('refuses an unknown operation', async () => {

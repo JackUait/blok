@@ -104,6 +104,13 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     ArgumentException.ThrowIfNullOrEmpty(directory);
     ArgumentOutOfRangeException.ThrowIfLessThan(maxUpdateBytes, 1);
 
+    // Refused at construction, not at the first oversized append: a limit the
+    // record format cannot carry is a misconfiguration, and discovering it from
+    // an EncodeRecord throw mid-session makes it look like a data problem.
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(
+        maxUpdateBytes,
+        CollabJournalCodec.MaxUpdateLength);
+
     this.directory = directory;
     this.maxUpdateBytes = maxUpdateBytes;
     this.log = log;
@@ -189,8 +196,29 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       if (fenced.Seeded)
       {
         baseline = ReadBaseline(docDirectory, fenced, documentId);
-        journal = OpenJournal(JournalPath(docDirectory, fenced.Generation));
-        records = ScanForward(journal, index, documentId, repair: true);
+
+        var journalPath = JournalPath(docDirectory, fenced.Generation);
+
+        if (!File.Exists(journalPath))
+        {
+          // OpenOrCreate would CREATE it, turning "a file is missing, an
+          // operator would notice" into "an empty lineage, indistinguishable
+          // from a fresh one" — after which this store reassigns sequences that
+          // are already taken and answers NotCommitted for committed ids.
+          // ResetAsync always creates the journal BEFORE publishing the
+          // manifest that names it, so a manifest naming a journal that is not
+          // there can only mean the file was lost.
+          throw new InvalidDataException(
+              $"collab: \"{documentId}\" names {Path.GetFileName(journalPath)}, " +
+              "which is not there.");
+        }
+
+        journal = OpenJournal(journalPath);
+        records = ScanForward(
+            journal,
+            index,
+            documentId,
+            () => RequireFence(docDirectory, documentId, fenced));
 
         if (fenced.CheckpointThrough > index.DurableThrough)
         {
@@ -463,18 +491,18 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   /// the record that follows it, and a scanner that tried to resynchronise would
   /// be silently discarding acknowledged history.
   /// </summary>
-  /// <param name="repair">
-  /// Whether a torn tail may be truncated. Only the paths that are about to
-  /// WRITE the journal pass true — the tail was never acknowledged, and leaving
-  /// it would put the next append after a hole. A lookup passes false, because
-  /// the seam says it writes nothing; it stops at the tail and the append that
-  /// follows clears it.
+  /// <param name="confirmFenceBeforeTruncating">
+  /// Null to leave a torn tail alone; otherwise a check that throws unless this
+  /// session still holds the fence. Only the paths about to WRITE the journal
+  /// pass one — the tail was never acknowledged, and leaving it would put the
+  /// next append after a hole. A lookup passes null, because the seam says it
+  /// writes nothing; it stops at the tail and the append that follows clears it.
   /// </param>
   private static List<CollabOperationRecord> ScanForward(
       FileStream journal,
       JournalIndex index,
       string documentId,
-      bool repair)
+      Action? confirmFenceBeforeTruncating)
   {
     var records = new List<CollabOperationRecord>();
     var length = journal.Length;
@@ -507,8 +535,14 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
       if (status == CollabJournalRecordStatus.Incomplete)
       {
-        if (repair)
+        if (confirmFenceBeforeTruncating is not null)
         {
+          // SetLength is a BULK delete, and this offset was decided from bytes
+          // read a moment ago. A holder that took the document in between may
+          // have appended past it, and truncating here would cut away records
+          // it has already acknowledged. Throwing costs nothing: the real
+          // holder's own scan repairs the tail.
+          confirmFenceBeforeTruncating();
           journal.SetLength(index.ScannedThrough + offset);
           journal.Flush(flushToDisk: true);
         }
@@ -719,6 +753,26 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     }
   }
 
+  /// <summary>
+  /// Re-read from the PATH, never from a handle the caller opened: a manifest
+  /// that was replaced or removed leaves that handle pointing at an inode
+  /// nobody else writes any more.
+  /// </summary>
+  private static void RequireFence(
+      string docDirectory,
+      string documentId,
+      Manifest held)
+  {
+    var onDisk = ReadManifest(Path.Combine(docDirectory, ManifestName), documentId);
+
+    if (onDisk is null ||
+        onDisk.Value.Fence != held.Fence ||
+        onDisk.Value.Generation != held.Generation)
+    {
+      throw new CollabOperationFenceLostException();
+    }
+  }
+
   /// <summary>The manifest's published state; the fence lives here.</summary>
   private readonly record struct Manifest(
       ulong WriteCounter,
@@ -888,7 +942,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
       index.ById[candidate.OperationId] = (sequence, candidate.Digest.ToArray());
       index.DurableThrough = sequence;
-      index.ScannedThrough += bytes.Length;
+      index.ScannedThrough = journal.Position;
 
       return ValueTask.FromResult(
           new CollabOperationAppendResult(CollabOperationAppendOutcome.Committed, sequence));
@@ -996,28 +1050,41 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
             frames.GetBuffer().AsSpan(0, (int)frames.Length));
       }
 
-      using (var created = OpenJournal(JournalPath(docDirectory, generation)))
+      // Opened BEFORE the publication, and swapped in only once everything
+      // that can throw has run: a failure between the publication and the swap
+      // would leave the session on the old lineage's index, and because the
+      // duplicate check precedes the seeded check, it would then answer
+      // Duplicate for ids belonging to a lineage that can never be replayed.
+      var swapped = OpenJournal(JournalPath(docDirectory, generation));
+
+      try
       {
-        created.SetLength(0);
-        created.Flush(flushToDisk: true);
+        swapped.SetLength(0);
+        swapped.Flush(flushToDisk: true);
+
+        // Both new files are durable, and so are their directory entries,
+        // before the manifest names them. The publication is the whole of the
+        // switch: until it lands, the old generation is still the document.
+        SyncDirectory(docDirectory);
+        Republish(manifest with
+        {
+          Generation = generation,
+          Seeded = true,
+          Format = reset.Format,
+          Epoch = reset.Epoch,
+          Lineage = reset.Lineage,
+          CheckpointThrough = 0,
+        });
+      }
+      catch
+      {
+        swapped.Dispose();
+
+        throw;
       }
 
-      // Both new files are durable, and so are their directory entries, before
-      // the manifest names them. The publication is the whole of the switch:
-      // until it lands, the old generation is still the document.
-      SyncDirectory(docDirectory);
-      Republish(manifest with
-      {
-        Generation = generation,
-        Seeded = true,
-        Format = reset.Format,
-        Epoch = reset.Epoch,
-        Lineage = reset.Lineage,
-        CheckpointThrough = 0,
-      });
-
       journal?.Dispose();
-      journal = OpenJournal(JournalPath(docDirectory, generation));
+      journal = swapped;
       index.Clear();
 
       return ValueTask.FromResult(
@@ -1042,30 +1109,53 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     }
 
     /// <summary>
+    /// Undoes an append whose write or flush failed, so the retry the caller is
+    /// contracted to make cannot read the record back out of the page cache and
+    /// be told Duplicate.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// THE FENCE IS CHECKED AGAIN HERE, immediately before the truncate, and
+    /// this is not defence in depth — it is the difference between undoing this
+    /// session's own failed write and deleting somebody else's committed
+    /// history. <c>length</c> was read before the write; if the fence moved in
+    /// between, the new holder may have committed and acknowledged records at
+    /// and after that offset, and <see cref="FileStream.SetLength"/> is a bulk
+    /// delete that takes all of them. Comparing lengths would not help — this
+    /// session's record can be exactly as long as the one that replaced it.
+    /// </para>
+    /// <para>
+    /// When the fence is gone, or the roll-back itself cannot be flushed, this
+    /// session can no longer say what disk holds, so it stops answering at all:
+    /// every later call throws and the caller reopens from committed data.
+    /// Leaving the bytes alone is safe either way — a torn tail is repaired by
+    /// whoever really holds the document.
+    /// </para>
+    /// </remarks>
+    private void RollBack(long length)
+    {
+      try
+      {
+        RequireFence();
+        journal!.SetLength(length);
+        journal.Flush(flushToDisk: true);
+      }
+      catch (Exception error)
+          when (error is IOException or
+              CollabOperationFenceLostException or
+              InvalidDataException)
+      {
+        faulted = true;
+      }
+    }
+
+    /// <summary>
     /// The fence is re-verified immediately before the slot write, not just at
     /// the start of the operation: a checkpoint or reset writes its files
     /// first, and over a large state that gap is long enough for a holder
     /// judged dead to take the document — after which this publication would
     /// overwrite the new holder's fence with this session's older one.
     /// </summary>
-    /// <summary>
-    /// When even the roll-back cannot be flushed, this session can no longer
-    /// say what disk holds, so it stops answering at all: every later call
-    /// throws and the caller reopens the document from committed data.
-    /// </summary>
-    private void RollBack(long length)
-    {
-      try
-      {
-        journal!.SetLength(length);
-        journal.Flush(flushToDisk: true);
-      }
-      catch (IOException)
-      {
-        faulted = true;
-      }
-    }
-
     private void Republish(Manifest next)
     {
       RequireFence();
@@ -1075,11 +1165,6 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       manifest = published;
     }
 
-    /// <summary>
-    /// Re-read from the path, never from the handle this session opened: a
-    /// manifest that was replaced or removed leaves that handle pointing at an
-    /// inode nobody else writes any more.
-    /// </summary>
     private void RequireFence()
     {
       ObjectDisposedException.ThrowIf(disposed, this);
@@ -1093,14 +1178,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
             "session can no longer say what is durable; reopen the document.");
       }
 
-      var onDisk = ReadManifest(Path.Combine(docDirectory, ManifestName), documentId);
-
-      if (onDisk is null ||
-          onDisk.Value.Fence != manifest.Fence ||
-          onDisk.Value.Generation != manifest.Generation)
-      {
-        throw new CollabOperationFenceLostException();
-      }
+      LocalCollabOperationStore.RequireFence(docDirectory, documentId, manifest);
     }
 
     /// <summary>
@@ -1113,7 +1191,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     {
       if (journal is not null)
       {
-        _ = ScanForward(journal, index, documentId, repair);
+        _ = ScanForward(
+            journal,
+            index,
+            documentId,
+            repair ? RequireFence : null);
       }
     }
 

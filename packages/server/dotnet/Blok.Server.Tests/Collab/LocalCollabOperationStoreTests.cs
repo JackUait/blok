@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Blok.Server.Collab;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -26,6 +27,12 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
       Path.GetTempPath(),
       $"blok-collab-ops-{Guid.NewGuid():N}");
   private readonly List<string> logs = [];
+  private readonly ITestOutputHelper output;
+
+  public LocalCollabOperationStoreTests(ITestOutputHelper output)
+  {
+    this.output = output;
+  }
 
   public void Dispose()
   {
@@ -356,22 +363,57 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     await first.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
     Assert.Equal(1ul, (await first.AppendAsync(Candidate(OperationId(1), [0x01]))).ServerSequence);
 
-    // The lock file is an optimisation, not the mechanism. Unlinked, a second
-    // open takes a fresh inode's lock while the first session is still alive —
-    // which is what a lock-less filesystem or a stale descriptor looks like.
+    // Losing the lock file is NOT losing the fence. Nobody has opened, so the
+    // manifest's fence is untouched and this session keeps writing. An
+    // implementation whose fence was really "is my lock file still the inode at
+    // lockPath" is red here, which is the only thing separating the two.
     File.Delete(LockPath);
 
+    var stillMine = await first.AppendAsync(Candidate(OperationId(2), [0x02]));
+    Assert.Equal(CollabOperationAppendOutcome.Committed, stillMine.Outcome);
+    Assert.Equal(2ul, stillMine.ServerSequence);
+
+    // Now a second open takes a fresh inode's lock while the first session is
+    // still alive — what a lock-less filesystem or a stale descriptor looks
+    // like — and THAT is what fences it, by raising the manifest's fence.
     await using var second = await OpenAsync();
-    Assert.Equal(1ul, second.OpenResult.Head!.DurableThrough);
+    Assert.Equal(2ul, second.OpenResult.Head!.DurableThrough);
 
     await Assert.ThrowsAsync<CollabOperationFenceLostException>(
-        async () => await first.AppendAsync(Candidate(OperationId(2), [0x02])));
+        async () => await first.AppendAsync(Candidate(OperationId(3), [0x03])));
     await Assert.ThrowsAsync<CollabOperationFenceLostException>(
         async () => await first.FindCommittedAsync(OperationId(1), SHA256.HashData([0x01])));
 
-    var winner = await second.AppendAsync(Candidate(OperationId(2), [0x02]));
+    var winner = await second.AppendAsync(Candidate(OperationId(3), [0x03]));
     Assert.Equal(CollabOperationAppendOutcome.Committed, winner.Outcome);
-    Assert.Equal(2ul, winner.ServerSequence);
+    Assert.Equal(3ul, winner.ServerSequence);
+  }
+
+  [Fact]
+  public async Task MissingJournalFileFailsClosed()
+  {
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+      await session.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    File.Delete(JournalPath(1));
+
+    // Opening it OpenOrCreate would RECREATE it empty, and an empty lineage is
+    // indistinguishable from a fresh one: the store would reassign sequence 1
+    // and answer NotCommitted for an id that is committed — the exact failure
+    // the seam's linearizability paragraph names.
+    var failure = await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
+    Assert.Contains("journal.1", failure.Message, StringComparison.Ordinal);
+    Assert.False(File.Exists(JournalPath(1)));
+
+    // The refusal released its hold, so the retry reports the same loss.
+    await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
   }
 
   [Fact]
@@ -487,6 +529,10 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
     if (OperatingSystem.IsWindows())
     {
+      output.WriteLine(
+          "The killed-process half did not run: flock(2) and the python3 " +
+          "holder are POSIX-only.");
+
       return;
     }
 
@@ -494,6 +540,19 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
     if (python is null)
     {
+      // xunit 2.9.3 has no Assert.Skip and adding a package would mean editing
+      // the csproj, so the gap is made loud instead of silent. Linux is where
+      // CI runs: a missing python3 THERE means the killed-holder half did not
+      // run at all, and reporting green for it would be a lie. Elsewhere it is
+      // a developer's machine, and the in-process half still exercises the same
+      // kernel primitive.
+      Assert.False(
+          OperatingSystem.IsLinux(),
+          "no python3 to hold the lock from a genuinely separate process, so " +
+          "the killed-holder half of this test did not run.");
+      output.WriteLine(
+          "The killed-process half did not run: no python3 on this machine.");
+
       return;
     }
 

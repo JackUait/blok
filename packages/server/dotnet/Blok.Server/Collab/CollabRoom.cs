@@ -86,6 +86,12 @@ internal sealed class CollabRoom : IDisposable
   private YDoc? doc;
   private int frameCount;
 
+  // Bytes of the full-state frame the last in-room compaction left at the
+  // head of the log; 0 until one has run. Excluded when measuring the log
+  // against the byte threshold, or a state that is itself over the
+  // threshold would compact again on every update.
+  private long baseFrameLength;
+
   // The blob is behind the doc while blobVersion != persistedVersion; that
   // is the room's "persist behind" flag, and it is what keeps a room that
   // cannot write from being dropped.
@@ -740,7 +746,7 @@ internal sealed class CollabRoom : IDisposable
   {
     if (frameCount < 2 ||
         (frameCount < options.CompactionFrameThreshold &&
-            frameSection.Length < options.CompactionByteThreshold))
+            frameSection.Length - baseFrameLength < options.CompactionByteThreshold))
     {
       return false;
     }
@@ -763,6 +769,7 @@ internal sealed class CollabRoom : IDisposable
     frameSection.SetLength(0);
     frameCount = 0;
     AppendLocked(whole);
+    baseFrameLength = frameSection.Length;
   }
 
   private void ReceiveLocked(CollabMembership membership, byte[] frame)

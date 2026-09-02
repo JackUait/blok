@@ -740,8 +740,8 @@ public sealed class CollabRoomTests
 
     await manager.SettleAsync();
     await Waits.UntilAsync(
-        () => store.FramesOf(DocId).Count > 0 && Replays(store.FramesOf(DocId)) == new string('x', 60),
-        $"the last write; store holds {Replays(store.FramesOf(DocId))}");
+        () => store.FramesOf(DocId).Count > 0 && YDocs.Replay(store.FramesOf(DocId)) == new string('x', 60),
+        $"the last write; store holds {YDocs.Replay(store.FramesOf(DocId))}");
 
     Assert.True(
         store.MostFramesWritten <= 4,
@@ -756,6 +756,46 @@ public sealed class CollabRoomTests
     Assert.True(
         store.WrittenBytes < 60 * 400,
         $"{store.WrittenBytes} bytes written for 60 updates");
+  }
+
+  /// <summary>
+  /// Once the compacted state itself is over the byte threshold, measuring
+  /// the whole log made every following update compact again — a full
+  /// StateDiffV1 and a full-blob write per keystroke. Only what accumulated
+  /// on top of the compacted frame counts. The first update after a load
+  /// still pays one compaction, which is what teaches the room its base.
+  /// </summary>
+  [Fact]
+  public async Task MeasuresTheLogWithoutItsCompactedBaseWhenDecidingToCompact()
+  {
+    var seed = new string('a', 300);
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith(seed))], Tags.At(0));
+    var manager = CreateManager(new CollabRoomOptions { CompactionByteThreshold = 256 });
+    var membership = await Join(manager, new FakeMember());
+    var client = await SyncedClientAsync(manager, seed);
+
+    foreach (var piece in new[] { "b", "c", "d" })
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, piece))),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    await Waits.UntilAsync(
+        () => YDocs.Replay(store.FramesOf(DocId)) == seed + "bcd",
+        "the working set to catch up");
+    Assert.Equal(3, store.FramesOf(DocId).Count);
+
+    var tail = new string('e', 300);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, tail))),
+        CancellationToken.None);
+
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == 1,
+        "the compaction the tail earned");
+    Assert.Equal(seed + "bcd" + tail, YDocs.Replay(store.FramesOf(DocId)));
   }
 
   /// <summary>
@@ -782,18 +822,6 @@ public sealed class CollabRoomTests
     Assert.True(server.HasPending);
     Assert.Equal("", YDocs.Text(server));
     Assert.Equal("ab", YDocs.Text(replica));
-  }
-
-  private static string Replays(IReadOnlyList<byte[]> frames)
-  {
-    var replica = YDocs.NewClient();
-
-    foreach (var frame in frames)
-    {
-      YDocs.Apply(replica, frame);
-    }
-
-    return YDocs.Text(replica);
   }
 
   /// <summary>

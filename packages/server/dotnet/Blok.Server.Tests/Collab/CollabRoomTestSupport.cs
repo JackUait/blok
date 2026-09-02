@@ -598,6 +598,19 @@ internal static class YDocs
 
     return doc;
   }
+
+  /// <summary>The text a fresh replica reads after applying <paramref name="frames"/> in order.</summary>
+  internal static string Replay(IReadOnlyList<byte[]> frames)
+  {
+    var replica = NewClient();
+
+    foreach (var frame in frames)
+    {
+      Apply(replica, frame);
+    }
+
+    return Text(replica);
+  }
 }
 
 /// <summary>

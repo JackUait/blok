@@ -1792,10 +1792,12 @@ export class BlockManager extends Module {
     });
 
     // Sync content changes to Yjs for undo/redo support
-    // Skip if we're currently syncing from Yjs (undo/redo) to avoid corrupting the undo stack.
+    // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
-    if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs && !this._isPointerDragActive) {
+    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+
+    if (mutationType === BlockChangedMutationType && !isEcho && !this._isPointerDragActive) {
       void this.syncBlockDataToYjs(block);
     }
 

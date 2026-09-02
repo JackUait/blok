@@ -285,7 +285,7 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
 
     const priv = blockManager as unknown as BlockManagerPrivate;
 
-    priv.yjsSync = { isSyncingFromYjs: true };
+    priv.yjsSync = { isSyncingFromYjs: true, isReconciling: (): boolean => true };
 
     const heard: BlockMutationEvent[] = [];
 

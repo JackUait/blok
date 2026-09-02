@@ -54,6 +54,16 @@ interface BlockRecord {
   lastEditedBy: string | null;
 }
 
+interface AtomicOperationOptions {
+  /** Keep the sync window open through the next animation frame */
+  extendThroughRAF?: boolean;
+  /**
+   * Scope the window to this block's subtree (see `isReconciling`). Omit for
+   * structural work, which suppresses every block's write-back.
+   */
+  blockId?: string;
+}
+
 /**
  * Sync handler callbacks for DOM updates
  */
@@ -100,10 +110,56 @@ export class BlockYjsSync {
   private yjsSyncCount = 0;
 
   /**
+   * Operations not scoped to one block: structural batches, holder
+   * reconciles, view rebuilds. While one is open EVERY block's write-back is
+   * an echo.
+   */
+  private unscopedSyncCount = 0;
+
+  /**
+   * Blocks whose own update (remote or replayed) is in flight, counted per
+   * id for overlapping windows. Only that block's subtree is an echo — a
+   * peer typing in one block must not drop the local user's keystrokes in
+   * another.
+   */
+  private readonly reconcilingBlocks = new Map<string, number>();
+
+  /**
    * Returns true if any Yjs sync operation is in progress
    */
   public get isSyncingFromYjs(): boolean {
     return this.yjsSyncCount > 0;
+  }
+
+  /**
+   * Whether a mutation of `block` right now is the reconciler's own echo:
+   * a structural batch is open, or the block or one of its ancestors is
+   * being updated from the doc. Gates the write-back in
+   * `BlockManager.blockDidMutated`.
+   * @param block - the block that mutated
+   */
+  public isReconciling(block: Block): boolean {
+    if (this.unscopedSyncCount > 0) {
+      return true;
+    }
+
+    return this.reconcilingBlocks.size > 0 && this.isInReconciledSubtree(block, new Set());
+  }
+
+  private isInReconciledSubtree(block: Block | undefined, visited: Set<string>): boolean {
+    if (block === undefined || visited.has(block.id)) {
+      return false;
+    }
+
+    if (this.reconcilingBlocks.has(block.id)) {
+      return true;
+    }
+
+    visited.add(block.id);
+
+    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+
+    return this.isInReconciledSubtree(parent, visited);
   }
 
   /**
@@ -186,8 +242,9 @@ export class BlockYjsSync {
    *
    * @returns cleanup function to call when operation completes
    */
-  private beginAtomicOperation(): () => void {
+  private beginAtomicOperation(blockId?: string): () => void {
     this.yjsSyncCount++;
+    this.trackScope(blockId, 1);
     const operations = this.dependencies.operations;
 
     if (operations) {
@@ -196,10 +253,27 @@ export class BlockYjsSync {
 
     return (): void => {
       this.yjsSyncCount--;
+      this.trackScope(blockId, -1);
       if (operations && this.yjsSyncCount === 0) {
         operations.suppressStopCapturing = false;
       }
     };
+  }
+
+  private trackScope(blockId: string | undefined, delta: 1 | -1): void {
+    if (blockId === undefined) {
+      this.unscopedSyncCount += delta;
+
+      return;
+    }
+
+    const count = (this.reconcilingBlocks.get(blockId) ?? 0) + delta;
+
+    if (count > 0) {
+      this.reconcilingBlocks.set(blockId, count);
+    } else {
+      this.reconcilingBlocks.delete(blockId);
+    }
   }
 
   /**
@@ -216,8 +290,8 @@ export class BlockYjsSync {
     }
   }
 
-  public withAtomicOperation<T>(fn: () => T, options?: { extendThroughRAF?: boolean }): T {
-    const cleanup = this.beginAtomicOperation();
+  public withAtomicOperation<T>(fn: () => T, options?: AtomicOperationOptions): T {
+    const cleanup = this.beginAtomicOperation(options?.blockId);
 
     try {
       const result = fn();
@@ -244,9 +318,9 @@ export class BlockYjsSync {
    */
   public async withAtomicOperationAsync(
     fn: () => Promise<void>,
-    options?: { extendThroughRAF?: boolean }
+    options?: AtomicOperationOptions
   ): Promise<void> {
-    const cleanup = this.beginAtomicOperation();
+    const cleanup = this.beginAtomicOperation(options?.blockId);
 
     try {
       await fn();
@@ -627,7 +701,7 @@ export class BlockYjsSync {
         if (hadOrphanedChildren) {
           newBlock.call(BlockToolAPI.RENDERED);
         }
-      }, { extendThroughRAF: true });
+      }, { extendThroughRAF: true, blockId });
 
       return;
     }
@@ -666,7 +740,7 @@ export class BlockYjsSync {
         if (hadOrphanedChildren) {
           newBlock.call(BlockToolAPI.RENDERED);
         }
-      }, { extendThroughRAF: true });
+      }, { extendThroughRAF: true, blockId });
     } else {
       // Update data in-place; if tool can't handle it, recreate the block.
       // Use async atomic operation with RAF extension to keep isSyncingFromYjs
@@ -705,7 +779,7 @@ export class BlockYjsSync {
             newBlock.call(BlockToolAPI.RENDERED);
           }
         }
-      }, { extendThroughRAF: true });
+      }, { extendThroughRAF: true, blockId });
     }
   }
 

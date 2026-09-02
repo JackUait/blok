@@ -291,6 +291,42 @@ describe('BlockYjsSync', () => {
     });
   });
 
+  describe('isReconciling', () => {
+    it('is false for every block while nothing is syncing', () => {
+      expect(yjsSync.isReconciling(repository.blocks[0])).toBe(false);
+    });
+
+    it('is true for every block during an unscoped operation', () => {
+      yjsSync.withAtomicOperation(() => {
+        expect(yjsSync.isReconciling(repository.blocks[0])).toBe(true);
+        expect(yjsSync.isReconciling(repository.blocks[2])).toBe(true);
+      });
+    });
+
+    it('is true only for the reconciled block and its descendants during a scoped operation', () => {
+      const parent = createMockBlock({ id: 'p', contentIds: ['c'] });
+      const child = createMockBlock({ id: 'c', parentId: 'p' });
+      const grandchild = createMockBlock({ id: 'g', parentId: 'c' });
+      const other = createMockBlock({ id: 'o' });
+
+      blocksStore = createBlocksStore([parent, child, grandchild, other]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, blocksStore);
+
+      yjsSync.withAtomicOperation(() => {
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+        expect(yjsSync.isReconciling(parent)).toBe(true);
+        expect(yjsSync.isReconciling(child)).toBe(true);
+        expect(yjsSync.isReconciling(grandchild)).toBe(true);
+        expect(yjsSync.isReconciling(other)).toBe(false);
+      }, { blockId: 'p' });
+
+      expect(yjsSync.isSyncingFromYjs).toBe(false);
+      expect(yjsSync.isReconciling(parent)).toBe(false);
+    });
+  });
+
   describe('withAtomicOperation', () => {
     it('executes function and decrements sync count even if error is thrown', () => {
       const error = new Error('Test error');

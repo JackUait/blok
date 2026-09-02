@@ -668,6 +668,14 @@ export class UndoHistory {
    * @param fn - Function containing move operations to execute atomically
    */
   public transactMoves(fn: () => void): void {
+    // A nested call rides the open group; starting another would discard
+    // the moves collected so far.
+    if (this.pendingMoveGroup !== null) {
+      fn();
+
+      return;
+    }
+
     this.startMoveGroup();
     try {
       fn();

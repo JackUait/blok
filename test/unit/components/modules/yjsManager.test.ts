@@ -564,23 +564,27 @@ describe('YjsManager', () => {
       expect(() => manager.toJSON()).not.toThrow();
     });
 
-    it('can be nested (uses counter for isMoveGroupActive)', () => {
+    it('keeps a nested group inside the outermost one, so one undo reverses both moves', () => {
       manager.fromJSON([
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      // Nested transactMoves - outermost one controls the group
       manager.transactMoves(() => {
         manager.moveBlock('block3', 0);
         manager.transactMoves(() => {
           manager.moveBlock('block2', 1);
         });
+        expect(manager.isInMoveGroup).toBe(true);
       });
 
-      // Both moves should be recorded
       expect(manager.toJSON().map((b) => b.id)).toEqual(['block3', 'block2', 'block1']);
+
+      manager.undo();
+
+      expect(manager.toJSON().map((b) => b.id)).toEqual(['block1', 'block2', 'block3']);
+      expect(manager.canUndo()).toBe(false);
     });
   });
 

@@ -52,14 +52,15 @@ export class YjsManager extends Module {
   private writeBuffer = new BlockWriteBuffer(modificationsObserverBatchTimeout);
 
   /**
-   * Flag to track if move group is active.
+   * Nesting depth of open move groups; only the outermost one opens and
+   * closes the history group.
    *
    * Read via the `isInMoveGroup` getter by `BlockManager.setBlockParent`,
-   * which routes its Yjs writes through `transactWithoutCapture` while this
-   * flag is true so the parent change attaches to the in-flight move entry
+   * which routes its Yjs writes through `transactWithoutCapture` while a
+   * group is open so the parent change attaches to the in-flight move entry
    * instead of landing on Y.UndoManager as a separate stack item.
    */
-  private isMoveGroupActive = false;
+  private moveGroupDepth = 0;
 
   /**
    * Whether the currently-open move group is a DRAG move group (the drag pipeline
@@ -74,7 +75,7 @@ export class YjsManager extends Module {
    * See `isMoveGroupActive`.
    */
   public get isInMoveGroup(): boolean {
-    return this.isMoveGroupActive;
+    return this.moveGroupDepth > 0;
   }
 
   /**
@@ -334,7 +335,7 @@ export class YjsManager extends Module {
 
     const to = this.documentStore.getPlacement(id) ?? from;
 
-    this.undoHistory.recordMove({ blockId: id, from, to }, this.isMoveGroupActive);
+    this.undoHistory.recordMove({ blockId: id, from, to }, this.isInMoveGroup);
   }
 
   /**
@@ -593,12 +594,18 @@ export class YjsManager extends Module {
   public transactMoves(fn: () => void, isDrag = false): void {
     this.flushPendingBlockWrites();
 
-    this.isMoveGroupActive = true;
+    if (this.moveGroupDepth > 0) {
+      fn();
+
+      return;
+    }
+
+    this.moveGroupDepth++;
     this.isDragMoveGroup = isDrag;
     try {
       this.undoHistory.transactMoves(fn);
     } finally {
-      this.isMoveGroupActive = false;
+      this.moveGroupDepth--;
       this.isDragMoveGroup = false;
     }
   }

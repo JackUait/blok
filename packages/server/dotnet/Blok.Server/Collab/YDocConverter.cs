@@ -354,13 +354,10 @@ internal static class YDocConverter
     /// Which blocks LIST an id in their contentIds, which is not the same
     /// question as who its parent is: a block may list a child that names
     /// somebody else, and on removal that entry has to go too or it survives
-    /// as a reference to a block that no longer exists.
-    ///
-    /// Built on the first removal, not with the rest of the picture: it costs
-    /// a read per block, and an insert-only or update-only request has no use
-    /// for it.
+    /// as a reference to a block that no longer exists. Kept current by the
+    /// inserts and removals of this request, like the rest of the picture.
     /// </summary>
-    private Dictionary<string, List<string>>? listedBy;
+    private readonly Dictionary<string, List<string>> listedBy = new(StringComparer.Ordinal);
 
     internal List<EditStep> Plan(IReadOnlyList<CollabEditOp> ops)
     {
@@ -388,9 +385,9 @@ internal static class YDocConverter
     }
 
     /// <summary>
-    /// The one read pass: every id with its parentId, plus the root order as
-    /// stored. Both are needed by position maths, and reading them once keeps
-    /// planning O(ops) over a snapshot instead of re-walking the doc per op.
+    /// The one read pass: every id with its parentId and what it lists, plus
+    /// the root order as stored. Reading them once keeps planning O(ops) over
+    /// a snapshot instead of re-walking the doc per op.
     /// </summary>
     private void ReadDoc()
     {
@@ -408,6 +405,11 @@ internal static class YDocConverter
 
         parents[id] = parentId;
         Index(id, parentId);
+
+        foreach (var childId in ReadContentIds(block))
+        {
+          ListedBy(childId).Add(id);
+        }
       }
 
       foreach (var entry in rootOrder.Enumerate())
@@ -419,44 +421,36 @@ internal static class YDocConverter
       }
     }
 
-    /// <summary>
-    /// Who lists whom, read once per request that removes anything.
-    /// </summary>
-    private Dictionary<string, List<string>> ListedBy()
+    private List<string> ListedBy(string childId)
     {
-      if (listedBy is not null)
+      if (!listedBy.TryGetValue(childId, out var holders))
       {
-        return listedBy;
+        holders = [];
+        listedBy[childId] = holders;
       }
 
-      listedBy = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+      return holders;
+    }
 
-      foreach (var holder in blockMap.Keys.ToArray())
+    /// <summary>The string entries of a block's contentIds; empty when it has no array.</summary>
+    private static List<string> ReadContentIds(YMap block)
+    {
+      var ids = new List<string>();
+
+      if (Value(block, "contentIds") is not YArray contentIds)
       {
-        if (Value(blockMap, holder) is not YMap block ||
-            Value(block, "contentIds") is not YArray contentIds)
+        return ids;
+      }
+
+      foreach (var entry in contentIds.Enumerate())
+      {
+        if (entry is string childId)
         {
-          continue;
-        }
-
-        foreach (var entry in contentIds.Enumerate())
-        {
-          if (entry is not string childId)
-          {
-            continue;
-          }
-
-          if (!listedBy.TryGetValue(childId, out var holders))
-          {
-            holders = [];
-            listedBy[childId] = holders;
-          }
-
-          holders.Add(holder);
+          ids.Add(childId);
         }
       }
 
-      return listedBy;
+      return ids;
     }
 
     /// <summary>Adds one child to its parent's bucket.</summary>
@@ -553,6 +547,11 @@ internal static class YDocConverter
       parents[op.Id] = op.Parent;
       Index(op.Id, op.Parent);
 
+      if (op.Parent is not null)
+      {
+        ListedBy(op.Id).Add(op.Parent);
+      }
+
       var steps = new List<EditStep> { EditStep.PutBlock(op.Id, composed) };
 
       if (op.Parent is null)
@@ -641,6 +640,13 @@ internal static class YDocConverter
 
       foreach (var id in doomed)
       {
+        // Out of its parent's bucket too, or a later removal of that parent
+        // would doom whatever is re-inserted under this id.
+        if (parents[id] is { } parentId && children.TryGetValue(parentId, out var siblings))
+        {
+          siblings.Remove(id);
+        }
+
         parents.Remove(id);
         children.Remove(id);
         steps.Add(EditStep.RemoveBlock(id));
@@ -657,7 +663,7 @@ internal static class YDocConverter
         // block may list a child that names somebody else as its parent, and
         // that entry would otherwise survive as a reference to a deleted
         // block — exported to the consumer as a child that no longer exists.
-        if (ListedBy().TryGetValue(id, out var holders))
+        if (listedBy.Remove(id, out var holders))
         {
           foreach (var holder in holders)
           {

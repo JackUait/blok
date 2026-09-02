@@ -264,6 +264,60 @@ public sealed class YDocConverterEditTests
   }
 
   /// <summary>
+  /// The planner's picture has to follow its own inserts: a child inserted
+  /// and removed in one request was never listed in the doc, so a lookup
+  /// built from the doc alone leaves its entry dangling in the parent.
+  /// </summary>
+  [Fact]
+  public void RemovingABlockInsertedEarlierInTheRequestUnlinksItFromItsParent()
+  {
+    var doc = SeededDoc(
+        """{ "id": "root", "type": "toggle", "data": {}, "content": ["kid"] }""",
+        """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "root" }""");
+
+    Apply(
+        doc,
+        """
+        { "op": "insert", "id": "x", "parent": "root", "after": "kid",
+          "block": { "type": "p", "data": {} } }
+        """,
+        """{ "op": "remove", "id": "x" }""");
+
+    var exported = YDocConverter.Export(doc);
+
+    Assert.Equal(["root", "kid"], Ids(exported));
+    Assert.Equal(["kid"], Strings(BlockNamed(exported, "root")["content"]));
+  }
+
+  /// <summary>
+  /// And its own removals: a child removed from one parent and re-inserted
+  /// under another must not be doomed again when the first parent goes,
+  /// which a stale child bucket would do.
+  /// </summary>
+  [Fact]
+  public void RemovingAParentSparesAChildReInsertedElsewhereEarlierInTheRequest()
+  {
+    var doc = SeededDoc(
+        """{ "id": "p", "type": "toggle", "data": {}, "content": ["x"] }""",
+        """{ "id": "x", "type": "paragraph", "data": {}, "parent": "p" }""",
+        """{ "id": "q", "type": "toggle", "data": {} }""");
+
+    Apply(
+        doc,
+        """{ "op": "remove", "id": "x" }""",
+        """
+        { "op": "insert", "id": "x", "parent": "q",
+          "block": { "type": "p", "data": { "text": "moved" } } }
+        """,
+        """{ "op": "remove", "id": "p" }""");
+
+    var exported = YDocConverter.Export(doc);
+
+    Assert.Equal(["q", "x"], Ids(exported));
+    Assert.Equal("q", BlockNamed(exported, "x")["parent"]?.GetValue<string>());
+  }
+
+  /// <summary>
   /// The planner's picture of the root order must line up slot for slot with
   /// the real array, including a slot holding something that is not an id —
   /// its indices are applied to that array.

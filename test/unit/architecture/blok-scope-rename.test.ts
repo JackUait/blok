@@ -20,6 +20,8 @@ const ALLOWLIST: RegExp[] = [
   /^packages\/cli\/CHANGELOG\.md$/,
   /^src\/cli\/.*legacy/,
   /^src\/cli\/codemod\//,
+  // Same exemption as src/cli/codemod: the migration tool must name the scope it rewrites.
+  /^codemod\//,
   /^packages\/cli\/(test\/)?fixtures\//,
   /^docs\/superpowers\//,
   /^scripts\/deprecate-legacy\.mjs$/,

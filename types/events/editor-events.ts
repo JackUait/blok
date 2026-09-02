@@ -46,6 +46,127 @@ export interface BlockChildrenMountedPayload {
 }
 
 /**
+ * One collaborator visible in the shared session, as surfaced to the host for
+ * rendering a presence stack / sync pill.
+ */
+export interface CollaborationPeer {
+  /**
+   * Awareness client id of the peer. Unique per live connection, not per user.
+   */
+  clientId: number;
+
+  /**
+   * Display identity of the peer. Host-rendered, so treat as untrusted text.
+   */
+  user: {
+    /**
+     * Display name shown in the presence stack.
+     *
+     * EMPTY STRING when that peer configured no `collaboration.user` — which is
+     * the default, since `user` is optional. They are still in the room and
+     * still get an avatar; render them anonymously, in `color`.
+     */
+    name: string;
+
+    /**
+     * CSS color used for the peer's cursor, avatar and gutter face.
+     */
+    color: string;
+  };
+
+  /**
+   * Id of the block the peer's caret is in, or `null` when the peer has no
+   * caret in the document (e.g. focus is elsewhere).
+   */
+  blockId: string | null;
+
+  /**
+   * RESERVED — never populated today, so it is always `undefined`.
+   *
+   * Peers are built from the awareness state each browser broadcasts, and that
+   * state carries no write claim: only the server knows a member's grant, and
+   * it does not publish other members' grants to the room. Do not branch on
+   * it; a `false`-y read means "not reported", not "cannot write".
+   */
+  canWrite?: boolean;
+}
+
+/**
+ * Why a collaboration session stopped for good. Every value means the same
+ * thing operationally: the editor will NOT reconnect on its own, and it stays
+ * read-only until the host recreates it.
+ *
+ * - `bad-request` — the document id or the connection request is unusable.
+ * - `unauthorized` — the connection ticket was refused twice; it is not accepted.
+ * - `forbidden` — this user may not open this document.
+ * - `unsupported-format` — the document is stored in a schema this editor cannot read.
+ * - `handshake-timeout` — repeated connections went unanswered; not a Blok sync endpoint.
+ * - `oversized-update` — the document cannot be shipped: a frame the editor must
+ *   send is larger than the server accepts. The content is still in the tab, so
+ *   offer the user a copy before the page is closed.
+ * - `apply-failed` — an incoming DOCUMENT frame could not be applied, so the
+ *   document never materialised. A presence frame that fails to apply is
+ *   dropped with a warning and is never terminal.
+ *
+ * A reset room is deliberately NOT here: the editor drops its copy and
+ * reconnects, reporting `offline` while it does.
+ */
+export type CollaborationTerminalReason =
+  | 'bad-request'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'unsupported-format'
+  | 'handshake-timeout'
+  | 'oversized-update'
+  | 'apply-failed';
+
+/**
+ * Payload for the `collaboration:status` event.
+ */
+export interface CollaborationStatusChangedPayload {
+  /**
+   * Connection state of the collaboration session.
+   *
+   * - `connecting` — establishing the session, before the first sync.
+   * - `connected` — synced and live with the server.
+   * - `offline` — disconnected, and RETRYING: local edits (if the doc has
+   *   server lineage) stay pending until it reconnects. `retryInMs` says when
+   *   the next attempt is.
+   * - `error` — stopped for good; nothing is pending because nothing will be
+   *   sent. The editor stays read-only until the host recreates it. `error`
+   *   says why.
+   */
+  status: 'connecting' | 'connected' | 'offline' | 'error';
+
+  /**
+   * Peers currently present in the session (excludes the local client).
+   */
+  peers: CollaborationPeer[];
+
+  /**
+   * Set on `error` only: why the session stopped for good.
+   */
+  error?: CollaborationTerminalReason;
+
+  /**
+   * WebSocket close code behind the transition, when there was one.
+   */
+  code?: number;
+
+  /**
+   * Human-readable explanation of the transition. Server-supplied close reasons
+   * reach this field verbatim, so treat it as untrusted text — log it, do not
+   * render it as markup.
+   */
+  reason?: string;
+
+  /**
+   * Set on `offline` only: milliseconds until the next reconnect attempt.
+   */
+  retryInMs?: number;
+}
+
+/**
  * Payload for the `i18n:changed` event.
  */
 export interface I18nChangedPayload {
@@ -71,4 +192,5 @@ export interface BlokEditorEventMap {
   'blocks:rendered': BlocksRenderedPayload;
   'block:childrenMounted': BlockChildrenMountedPayload;
   'i18n:changed': I18nChangedPayload;
+  'collaboration:status': CollaborationStatusChangedPayload;
 }

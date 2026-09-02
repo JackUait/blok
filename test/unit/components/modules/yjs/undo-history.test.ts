@@ -2,7 +2,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as Y from 'yjs';
 import { UndoHistory } from '../../../../../src/components/modules/yjs/undo-history';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
-import type { CaretHistoryEntry } from '../../../../../src/components/modules/yjs/types';
+import type { BlockPlacement, CaretHistoryEntry, SingleMoveEntry, UndoScopeType } from '../../../../../src/components/modules/yjs/types';
+
+const rootPlacement = (afterId: string | null): BlockPlacement => ({ parentId: null, afterId });
+
+/** A root-level move entry: from after `fromAfter` to after `toAfter`. */
+const rootMove = (blockId: string, fromAfter: string | null, toAfter: string | null): SingleMoveEntry => ({
+  blockId,
+  from: rootPlacement(fromAfter),
+  to: rootPlacement(toAfter),
+});
 
 const createMockBlok = (): BlokModules => {
   const blockManager = {
@@ -38,21 +47,39 @@ describe('UndoHistory', () => {
     yblocks = ydoc.getArray('blocks');
     blok = createMockBlok();
 
-    history = new UndoHistory(yblocks, blok);
+    // UndoHistory is scope-shape-agnostic (Y.UndoManager tracks whatever
+    // shared types it is handed); the harness keeps its own flat array as
+    // the tracked substrate, so every fixture below stays valid.
+    history = new UndoHistory([yblocks as unknown as UndoScopeType], blok);
 
-    // Set up move callback to actually perform moves
-    history.setMoveCallback((blockId, toIndex) => {
+    // Set up placement callback to actually perform moves on the flat
+    // substrate: reinsert the block right after its placement's afterId
+    // (null → first slot; not found → append).
+    history.setPlacementCallback((blockId, placement) => {
       const fromIndex = yblocks.toArray().findIndex((b) => b.get('id') === blockId);
-      if (fromIndex !== -1) {
-        const yblock = yblocks.get(fromIndex);
-        const blockData = yblock.toJSON();
-        yblocks.delete(fromIndex);
-        const newYblock = new Y.Map<unknown>();
-        (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
-          newYblock.set(key as string, blockData[key]);
-        });
-        yblocks.insert(toIndex, [newYblock]);
+
+      if (fromIndex === -1) {
+        return;
       }
+
+      const blockData = yblocks.get(fromIndex).toJSON();
+
+      yblocks.delete(fromIndex);
+
+      const remaining = yblocks.toArray();
+      let insertAt = 0;
+
+      if (placement.afterId !== null) {
+        const anchor = remaining.findIndex((b) => b.get('id') === placement.afterId);
+
+        insertAt = anchor === -1 ? remaining.length : anchor + 1;
+      }
+      const newYblock = new Y.Map<unknown>();
+
+      (Object.keys(blockData) as Array<keyof typeof blockData>).forEach((key) => {
+        newYblock.set(key as string, blockData[key]);
+      });
+      yblocks.insert(insertAt, [newYblock]);
     });
   });
 
@@ -73,14 +100,14 @@ describe('UndoHistory', () => {
       expect(() => history.stopCapturing()).not.toThrow();
 
       // Also verify it works when we have existing history
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       expect(history.canUndo()).toBe(true);
 
       // Stop capturing should end the current undo group
       history.stopCapturing();
 
       // New move after stopCapturing should be in a separate undo entry
-      history.recordMove('b2', 1, 2, false);
+      history.recordMove(rootMove('b2', 'b1', 'b3'), false);
 
       // We should now have 2 separate undo entries (2 moves can be undone)
       history.undo();
@@ -97,14 +124,14 @@ describe('UndoHistory', () => {
     });
 
     it('returns true after move is recorded', () => {
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
 
       expect(history.canUndo()).toBe(true);
       expect(history.canRedo()).toBe(false);
     });
 
     it('returns true for redo after undo', () => {
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       history.undo();
 
       expect(history.canUndo()).toBe(false);
@@ -115,7 +142,7 @@ describe('UndoHistory', () => {
   describe('move grouping', () => {
     it('records single moves immediately when not grouped', () => {
       history.markCaretBeforeChange();
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
 
       // Should record the move immediately
       history.undo(); // Should not throw
@@ -126,8 +153,8 @@ describe('UndoHistory', () => {
     it('collects moves during group', () => {
       history.startMoveGroup();
 
-      history.recordMove('b1', 0, 2, true);
-      history.recordMove('b2', 1, 3, true);
+      history.recordMove(rootMove('b1', null, 'b2'), true);
+      history.recordMove(rootMove('b2', 'b1', 'b3'), true);
 
       history.endMoveGroup();
 
@@ -140,13 +167,13 @@ describe('UndoHistory', () => {
     it('transactMoves wraps moves in a group', () => {
       const moveCallback = vi.fn();
 
-      history.setMoveCallback(moveCallback);
+      history.setPlacementCallback(moveCallback);
 
       history.transactMoves(() => {
         // Move callback won't be called here
         // We're just testing the grouping
-          history.recordMove('b1', 0, 1, true);
-        history.recordMove('b2', 1, 2, true);
+          history.recordMove(rootMove('b1', null, 'b2'), true);
+        history.recordMove(rootMove('b2', 'b1', 'b3'), true);
       });
 
       // Moves should be recorded
@@ -177,7 +204,7 @@ describe('UndoHistory', () => {
 
       const moveCallback = vi.fn();
 
-      history.setMoveCallback(moveCallback);
+      history.setPlacementCallback(moveCallback);
 
       // Edit 1 (tracked) — typing into b1.
       ydoc.transact(() => {
@@ -186,7 +213,7 @@ describe('UndoHistory', () => {
       history.stopCapturing();
 
       // Move b1 (recorded between the two edits).
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       history.stopCapturing();
 
       // Edit 2 (tracked) — more typing into b1.
@@ -201,11 +228,124 @@ describe('UndoHistory', () => {
 
       // 2nd undo: now the move.
       history.undo();
-      expect(moveCallback).toHaveBeenCalledWith('b1', 0, 'move-undo');
+      expect(moveCallback).toHaveBeenCalledWith('b1', rootPlacement(null), 'move-undo');
 
       // 3rd undo: Edit 1.
       history.undo();
       expect(getText('b1')).toBe('');
+    });
+
+    /**
+     * One `undo()` can pop SEVERAL yjs stack items: yjs skips an item whose
+     * changes a peer has since deleted and keeps popping until one performs
+     * a change. The caret stacks must shed exactly the entries whose items
+     * left the yjs stack, or every later press is one step out of phase.
+     */
+    it('sheds every caret entry whose stack item yjs skipped after a peer deleted the edited block', () => {
+      const seedBlock = (id: string): Y.Map<unknown> => {
+        const block = new Y.Map<unknown>();
+
+        block.set('id', id);
+        block.set('text', `${id.toLowerCase()}0`);
+
+        return block;
+      };
+
+      ydoc.transact(() => {
+        yblocks.insert(0, [seedBlock('A'), seedBlock('B'), seedBlock('C')]);
+      });
+
+      const blockManager = blok.BlockManager as unknown as {
+        currentBlock: unknown;
+        getBlockById: ReturnType<typeof vi.fn>;
+      };
+      const caret = blok.Caret as unknown as { setToBlock: ReturnType<typeof vi.fn> };
+      const setCaretIn = (id: string): void => {
+        blockManager.currentBlock = { id, currentInputIndex: 0, currentInput: undefined, inputs: [] };
+      };
+
+      blockManager.getBlockById.mockImplementation((id: string) => ({ id, inputs: [], parentId: null }));
+
+      const label = (entries: CaretHistoryEntry[]): string[] =>
+        entries.map((entry) => `${entry.kind}:${entry.before?.blockId ?? '-'}`);
+      // Read lazily: a new action REPLACES the redo stack array.
+      const stacks = history as unknown as { caretUndoStack: CaretHistoryEntry[]; caretRedoStack: CaretHistoryEntry[] };
+      const undoEntries = (): CaretHistoryEntry[] => stacks.caretUndoStack;
+      const redoEntries = (): CaretHistoryEntry[] => stacks.caretRedoStack;
+      const order = (): string[] => yblocks.toArray().map((b) => b.get('id') as string);
+
+      // E1: edit A.
+      setCaretIn('A');
+      history.markCaretBeforeChange();
+      ydoc.transact(() => {
+        getBlock('A').set('text', 'a1');
+      }, 'local');
+      history.stopCapturing();
+
+      // M: move C to the front. `recordMove` only records; the doc move
+      // itself is untracked, as YjsManager.moveBlock's is.
+      setCaretIn('C');
+      ydoc.transact(() => {
+        const moved = getBlock('C').toJSON();
+
+        yblocks.delete(order().indexOf('C'), 1);
+
+        const copy = new Y.Map<unknown>();
+
+        Object.entries(moved).forEach(([key, value]) => {
+          copy.set(key, value);
+        });
+        yblocks.insert(0, [copy]);
+      });
+      history.recordMove(rootMove('C', 'B', null), false);
+      history.stopCapturing();
+
+      // E2: edit B.
+      setCaretIn('B');
+      history.markCaretBeforeChange();
+      ydoc.transact(() => {
+        getBlock('B').set('text', 'b1');
+      }, 'local');
+
+      expect(label(undoEntries())).toEqual(['edit:A', 'move:C', 'edit:B']);
+      expect(order()).toEqual(['C', 'A', 'B']);
+
+      // A peer deletes B: E2's changes are gone from the document.
+      ydoc.transact(() => {
+        yblocks.delete(order().indexOf('B'), 1);
+      }, 'remote');
+
+      // Press 1: yjs pops E2 (no-op) AND E1 in the same call.
+      history.undo();
+
+      expect(getText('A')).toBe('a0');
+      expect(label(undoEntries())).toEqual(['move:C']);
+      expect(label(redoEntries())).toEqual(['edit:A']);
+      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
+
+      // Press 2: the move.
+      history.undo();
+
+      expect(order()).toEqual(['A', 'C']);
+      expect(history.canUndo()).toBe(false);
+      expect(undoEntries()).toHaveLength(0);
+
+      // Press 3: nothing left — no caret jump to a stale position.
+      caret.setToBlock.mockClear();
+      history.undo();
+
+      expect(caret.setToBlock).not.toHaveBeenCalled();
+      expect(undoEntries()).toHaveLength(0);
+
+      // Redo walks back forward in the same order: the move, then E1.
+      history.redo();
+      expect(order()).toEqual(['C', 'A']);
+
+      history.redo();
+      expect(getText('A')).toBe('a1');
+      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
+      expect(label(undoEntries())).toEqual(['move:C', 'edit:A']);
+      expect(history.canRedo()).toBe(false);
     });
 
     function getBlock(id: string): Y.Map<unknown> {
@@ -360,25 +500,6 @@ describe('UndoHistory', () => {
   });
 
   describe('smart grouping', () => {
-    describe('isBoundaryCharacter', () => {
-      it.each([
-        [' ', true],
-        ['\t', true],
-        ['.', true],
-        ['?', true],
-        ['!', true],
-        [',', true],
-        [';', true],
-        [':', true],
-        ['a', false],
-        ['1', false],
-        ['@', false],
-        ['-', false],
-      ])('should return %s for "%s"', (char, expected) => {
-        expect(UndoHistory.isBoundaryCharacter(char)).toBe(expected);
-      });
-    });
-
     it('hasPendingBoundary returns false initially', () => {
       expect(history.hasPendingBoundary()).toBe(false);
     });
@@ -471,7 +592,7 @@ describe('UndoHistory', () => {
   describe('clear', () => {
     it('clears all history stacks', () => {
       // Build up some history
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       history.markCaretBeforeChange();
 
       history.clear();
@@ -483,7 +604,7 @@ describe('UndoHistory', () => {
 
     it('clears the UndoManager and resets history state', () => {
       // Build up some history first
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       expect(history.canUndo()).toBe(true);
 
       // Clear should reset all state
@@ -498,7 +619,7 @@ describe('UndoHistory', () => {
   describe('destroy', () => {
     it('clears history and destroys UndoManager', () => {
       // Build up some history first
-      history.recordMove('b1', 0, 1, false);
+      history.recordMove(rootMove('b1', null, 'b2'), false);
       expect(history.canUndo()).toBe(true);
 
       // Destroy should clean up
@@ -771,7 +892,7 @@ describe('UndoHistory', () => {
       expect(initialOrder).toEqual(['b1', 'b2', 'b3']);
 
       // Record and perform a move
-      history.recordMove('b3', 2, 0, false);
+      history.recordMove(rootMove('b3', 'b2', null), false);
 
       // Verify the move was recorded
       expect(history.canUndo()).toBe(true);
@@ -796,7 +917,7 @@ describe('UndoHistory', () => {
       }, 'local');
 
       // Record and perform a move
-      history.recordMove('b3', 2, 0, false);
+      history.recordMove(rootMove('b3', 'b2', null), false);
       history.undo();
 
       const undoOrder = yblocks.toArray().map((b) => b.get('id'));
@@ -840,13 +961,13 @@ describe('UndoHistory', () => {
       history.startMoveGroup();
       // Move b5 from 4 to 0
       performMove('b5', 4, 0);
-      history.recordMove('b5', 4, 0, true);
+      history.recordMove(rootMove('b5', 'b4', null), true);
       // Now b4 is at index 4, move it to index 1
       performMove('b4', 4, 1);
-      history.recordMove('b4', 4, 1, true);
+      history.recordMove(rootMove('b4', 'b3', 'b5'), true);
       // Now b3 is at index 4, move it to index 2
       performMove('b3', 4, 2);
-      history.recordMove('b3', 4, 2, true);
+      history.recordMove(rootMove('b3', 'b2', 'b4'), true);
       history.endMoveGroup();
 
       const movedOrder = yblocks.toArray().map((b) => b.get('id'));
@@ -872,13 +993,13 @@ describe('UndoHistory', () => {
       }, 'local');
 
       // Record first move
-      history.recordMove('b3', 2, 0, false);
+      history.recordMove(rootMove('b3', 'b2', null), false);
       history.undo();
 
       expect(history.canRedo()).toBe(true);
 
       // Record new move - should clear redo stack
-      history.recordMove('b2', 1, 2, false);
+      history.recordMove(rootMove('b2', 'b1', 'b3'), false);
 
       expect(history.canRedo()).toBe(false);
       expect(history.canUndo()).toBe(true);
@@ -903,7 +1024,7 @@ describe('UndoHistory', () => {
       expect(() => {
         history.transactMoves(() => {
           // Since we're in a group, recordMove won't call markCaretBeforeChange
-          history.recordMove('b1', 0, 1, true);
+          history.recordMove(rootMove('b1', null, 'b2'), true);
           throw new Error('Test error');
         });
       }).toThrow('Test error');
@@ -928,7 +1049,7 @@ describe('UndoHistory', () => {
       }, 'local');
 
       // Recording a move to the same index should still work
-      history.recordMove('b1', 0, 0, false);
+      history.recordMove(rootMove('b1', null, null), false);
 
       expect(history.canUndo()).toBe(true);
     });
@@ -936,7 +1057,7 @@ describe('UndoHistory', () => {
     it('handles move of non-existent block gracefully', () => {
       // Recording a move for a block that doesn't exist should not throw
       expect(() => {
-        history.recordMove('nonexistent', 0, 1, false);
+        history.recordMove(rootMove('nonexistent', null, 'b1'), false);
       }).not.toThrow();
     });
 

@@ -77,6 +77,14 @@ export const BlokEditor = defineComponent({
     migrations: { type: Object as PropType<BlokConfig['migrations']>, default: undefined },
     /** Editor-level uploader, routed by asset kind (images, video, audio, files). */
     uploader: { type: Object as PropType<BlokConfig['uploader']>, default: undefined },
+    /** Base URL of a service speaking Blok's upload and unfurl contracts. */
+    server: { type: String as PropType<BlokConfig['server']>, default: undefined },
+    /** Endpoint in your app that mints a short-lived access pass for the current user. */
+    ticket: { type: String as PropType<BlokConfig['ticket']>, default: undefined },
+    /** Load on mount and save on change, against your own endpoint. */
+    persistence: { type: Object as PropType<BlokConfig['persistence']>, default: undefined },
+    /** Real-time multiplayer against the server's sync service. Mutually exclusive with persistence. */
+    collaboration: { type: Object as PropType<BlokConfig['collaboration']>, default: undefined },
     /** Opt-in: clicks on the host page below the editor append a block. */
     captureClicksBelowEditor: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     /** Changing this prop's identity destroys and recreates the editor. */

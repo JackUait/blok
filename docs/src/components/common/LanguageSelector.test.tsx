@@ -132,11 +132,11 @@ describe('LanguageSelector', () => {
 
       expect(screen.getByRole('menuitem', { name: /English/i })).toHaveAttribute(
         'href',
-        '/docs/table',
+        '/docs/table/',
       );
       expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute(
         'href',
-        '/ru/docs/table',
+        '/ru/docs/table/',
       );
     });
 
@@ -146,7 +146,7 @@ describe('LanguageSelector', () => {
 
       expect(screen.getByRole('menuitem', { name: /English/i })).toHaveAttribute(
         'href',
-        '/docs/table',
+        '/docs/table/',
       );
     });
 
@@ -155,7 +155,7 @@ describe('LanguageSelector', () => {
       openMenu();
 
       expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute('hreflang', 'ru');
-      expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute('href', '/ru');
+      expect(screen.getByRole('menuitem', { name: /Русский/i })).toHaveAttribute('href', '/ru/');
     });
   });
 

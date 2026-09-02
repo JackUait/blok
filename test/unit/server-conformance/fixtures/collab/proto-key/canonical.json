@@ -1,0 +1,44 @@
+[
+  {
+    "id": "pk1",
+    "type": "widget",
+    "data": {
+      "__proto__": "in data",
+      "kept": 1,
+      "nested": {
+        "__proto__": 2,
+        "k": 3
+      }
+    },
+    "tunes": {
+      "__proto__": "in tunes",
+      "anchor": "intro"
+    }
+  },
+  {
+    "id": "pk2",
+    "type": "widget",
+    "data": {
+      "__proto__": {
+        "polluted": true
+      },
+      "constructor": 1,
+      "hasOwnProperty": 2,
+      "toString": 3
+    }
+  },
+  {
+    "id": "pk3",
+    "type": "widget",
+    "data": {
+      "rows": [
+        {
+          "__proto__": "in an array element"
+        },
+        {
+          "__proto__": "and another"
+        }
+      ]
+    }
+  }
+]

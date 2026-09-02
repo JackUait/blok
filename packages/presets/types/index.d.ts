@@ -45,14 +45,29 @@ interface UploadContext {
 }
 
 /**
- * Editor-level uploader, keyed by asset kind rather than by tool. Both
- * methods are optional and resolved independently.
+ * Describes a single deletion request.
+ *
+ * The same `kind`/`tool` pair {@link UploadContext} carries, minus progress —
+ * a deletion has nothing to report but its outcome.
+ */
+interface DeleteContext {
+  /** Kind of asset being deleted. */
+  kind: AssetKind;
+  /** Name of the block tool that owned the asset, when known. */
+  tool?: string;
+}
+
+/**
+ * Editor-level uploader, keyed by asset kind rather than by tool. Every
+ * method is optional and resolved independently.
  */
 interface BlokUploader {
   /** Store a file chosen by the user and return its public URL. */
   uploadByFile?(file: File, ctx: UploadContext): Promise<UploadedAsset>;
   /** Re-host an asset the user supplied by URL, and return the stored URL. */
   uploadByUrl?(url: string, ctx: UploadContext): Promise<UploadedAsset>;
+  /** Delete a stored asset by the URL this uploader returned for it. */
+  delete?(url: string, ctx: DeleteContext): Promise<void>;
 }
 
 export interface FetchStorageOptions {

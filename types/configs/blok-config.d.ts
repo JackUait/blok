@@ -10,6 +10,38 @@ import type { BlokUploader } from './uploader';
 import type { NotifierPosition, NotifierOptions, ConfirmNotifierOptions, PromptNotifierOptions } from './notifier';
 
 /**
+ * The versioned answer {@link BlokConfig.persistence}'s `load` may give instead
+ * of the document itself, for a store that versions its documents.
+ */
+export interface PersistedDocument {
+  /** The saved document, or `null` for "nothing saved yet". */
+  data: OutputData | null;
+  /** Whatever your store versions with — an ETag, a revision number, a hash. */
+  version?: string;
+}
+
+/**
+ * Second argument of {@link BlokConfig.persistence}'s `save`.
+ */
+export interface SaveContext {
+  /**
+   * The version of the document this save overwrites: what `load` reported,
+   * then what the previous `save` returned. `null` until a version is known —
+   * including forever, for an endpoint that does not version.
+   */
+  version: string | null;
+}
+
+/**
+ * What {@link BlokConfig.persistence}'s `save` may answer with. Returning
+ * nothing is fine and leaves the version Blok holds untouched.
+ */
+export interface SaveResult {
+  /** The version the write produced. Omit it and the previous one stands. */
+  version?: string;
+}
+
+/**
  * Data model format for input/output
  * - 'legacy': Use nested items structure (e.g., List items[] with nested items[])
  * - 'hierarchical': Use flat blocks with parent/content references (Notion-like)
@@ -529,7 +561,189 @@ export interface BlokMountOptions {
    *   },
    * }
    */
+  /**
+   * Base URL of a service speaking Blok's upload and unfurl contracts, e.g.
+   * `https://blok.myapp.com` or a same-origin path like `/api/blok`.
+   *
+   * Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint`
+   * if you have not set them yourself. Anything you set explicitly wins, so
+   * taking the service for link previews while uploading into your own S3 needs
+   * no extra wiring.
+   *
+   * It does NOT configure document storage — that stays yours.
+   */
+  server?: string;
+
+  /**
+   * Endpoint in YOUR app that mints a short-lived access pass for the signed-in
+   * user, answering `{ "ticket": "<pass>" }`. Only needed when `server` points
+   * at a standalone service — routes running inside your own app already know
+   * who the caller is.
+   *
+   * The editor caches the pass and replaces it ahead of expiry, and uploads and
+   * link previews share the same one.
+   */
+  ticket?: string;
+
+  /**
+   * Load the document on mount and save it as it changes, against YOUR OWN
+   * endpoint — the Blok service stores no documents.
+   *
+   * Two functions rather than a URL: the shape of your endpoint, its auth and
+   * the document id are yours, and a URL template would need an option for
+   * each. Saves are queued, never run in parallel, and only the newest pending
+   * document is sent — otherwise a slow save finishing after a fast one brings
+   * stale content back.
+   *
+   * Setting `onSave` yourself wins: this fills it in only when you have not.
+   *
+   * Versioning is opt-in and Blok only CARRIES the version: `load` may report
+   * one, every `save` is told the version it is overwriting, and the version a
+   * `save` returns is what the next one is told. Deciding that a write is stale
+   * is your endpoint's job — it owns the storage and the transaction, and Blok
+   * storing a second opinion about a record it does not keep would be a second
+   * source of truth.
+   *
+   * A rejecting `save` is retried a few times with a short backoff before
+   * `onError` hears about it, and the payload stays queued afterwards so the
+   * next change carries it out rather than losing it. While anything is queued
+   * or in flight the tab asks for confirmation before it closes. None of this
+   * survives a page reload — the queue lives in memory only.
+   * @example
+   * persistence: {
+   *   load: () => fetch('/api/doc/42').then((r) => r.json()),
+   *   save: async (data) => { await fetch('/api/doc/42', { method: 'PUT', body: JSON.stringify(data) }); },
+   * }
+   * @example
+   * // Versioned: an ETag in, an ETag out.
+   * persistence: {
+   *   load: async () => {
+   *     const response = await fetch('/api/doc/42');
+   *
+   *     return { data: await response.json(), version: response.headers.get('etag') ?? undefined };
+   *   },
+   *   save: async (data, { version }) => {
+   *     const response = await fetch('/api/doc/42', {
+   *       method: 'PUT',
+   *       headers: version === null ? {} : { 'If-Match': version },
+   *       body: JSON.stringify(data),
+   *     });
+   *
+   *     return { version: response.headers.get('etag') ?? undefined };
+   *   },
+   * }
+   */
+  persistence?: {
+    /** Read the document. Return null for "nothing saved yet". */
+    load(): Promise<OutputData | PersistedDocument | null>;
+    /** Write the document. Called at most once at a time. */
+    save(data: OutputData, ctx: SaveContext): Promise<SaveResult | void>;
+    /**
+     * Called once a save has rejected and its retries are spent — not once per
+     * attempt. Without it, failures are silent.
+     */
+    onError?(error: unknown): void;
+  };
+
   uploader?: BlokUploader;
+
+  /**
+   * Turn on real-time multiplayer editing against the `server`'s sync service.
+   *
+   * Absent, collaboration is off and costs nothing — Blok never opens a socket.
+   * Present, the document is loaded from and streamed to the sync service, so
+   * two editors pointed at the same `doc` see each other's edits live.
+   *
+   * - `doc` — the document id shared with the sync service. It becomes one path
+   *   segment of the sync URL, so it must be a SINGLE path segment: not empty,
+   *   and free of `/`, `%2f`/`%2F`, or a `.`/`..` dot segment. Anything else is
+   *   refused at construction (mirrors the server's own 4400 refusal).
+   * - `user` — the display identity shown to the other people in the document
+   *   (their name, and an optional cursor/avatar `color`). OPTIONAL: without
+   *   it this editor still appears to everyone else, as an anonymous avatar in
+   *   a colour assigned from the built-in palette, and their peer entry carries
+   *   an empty `name`. This is PURELY presentational and is INDEPENDENT of the
+   *   {@link BlokMountOptions.user} `{ id }` option, which records edit
+   *   attribution on each block: one is "who gets credit for this edit", the
+   *   other is "whose cursor is that". Set either, both, or neither.
+   *
+   * EVERY REGISTERED TOOL MUST SUPPORT READ-ONLY (`static isReadOnlySupported
+   * = true`). A collaboration editor boots read-only whatever `readOnly` says —
+   * an edit made before the first sync has nowhere to go — so a tool that
+   * cannot render read-only fails the contract immediately, and the editor's
+   * ready promise REJECTS with a CriticalError naming the tool. This is not
+   * special to collaboration; it is the ordinary read-only contract, reached on
+   * every collaboration session rather than only when a host asks for
+   * `readOnly: true`.
+   *
+   * Mutually exclusive with {@link BlokMountOptions.persistence}: the sync
+   * service owns the whole document round-trip, so a second load/save endpoint
+   * would give the document two owners. Requires {@link BlokMountOptions.server}
+   * — the sync URL is derived from it. Both are refused at construction.
+   *
+   * Once connected: `collaboration:status` lists at most 50 peers, chosen
+   * after a bounded scan of the presence map; destroying the editor, and
+   * `pagehide`, flush pending typing to the wire; a block a peer wrote with a
+   * non-string `id`/`type` or a non-map `data` is skipped on save with one
+   * console warning naming it; a value nested past 256 levels saves as
+   * `null`; and an `apply-failed` terminal means a DOCUMENT frame failed to
+   * apply — a presence frame that fails is dropped with a warning and the
+   * session goes on.
+   *
+   * Fixed for the editor's life; changing it requires recreating the editor.
+   */
+  collaboration?: {
+    /** The document id shared with the sync service. Must be a single path segment. */
+    doc: string;
+    /**
+     * The display identity shown to peers — independent of `user: { id }`
+     * attribution. Omit it and this editor is still visible to everyone else,
+     * drawn as an anonymous avatar in a colour from the presence palette.
+     */
+    user?: {
+      /** Display name shown to the other people in the document. */
+      name: string;
+      /**
+       * Optional cursor/avatar color. HEX ONLY — `#rgb`, `#rgba`, `#rrggbb`
+       * or `#rrggbbaa`. The value is written into a CSS custom property, so
+       * anything else (`rebeccapurple`, `rgb(...)`, `hsl(...)`) is rejected
+       * and silently replaced with a colour assigned from the built-in
+       * presence palette.
+       */
+      color?: string;
+    };
+
+    /**
+     * Keep a local copy of the document so edits made while disconnected
+     * survive a reload, and ship on the next connection. Off by default.
+     *
+     * OPT-IN ON PURPOSE: it writes document content into this browser's
+     * storage for this origin, which is a decision about the host's data, not
+     * about the editor. Without it, a reload while the editor says it is
+     * offline loses whatever was typed offline — the tab held the only copy.
+     *
+     * The copy is per browser and per document, and it is DROPPED whenever the
+     * server says its history no longer matches (a reset), so a stale copy can
+     * never be mistaken for the live document. Nothing is cached until the
+     * first successful sync, so an editor that never reached the service still
+     * cannot come up editable from a copy of its own.
+     *
+     * Three more things about the copy: an `oversized-update` terminal
+     * discards it (the status `reason` says so) so the next load syncs from
+     * the server; a copy that cannot be replayed is discarded with a warning
+     * and the editor boots read-only until synced; and a cached write-denied
+     * verdict is honoured only while `ticket` is configured — without a
+     * ticket source the cached document comes up editable.
+     *
+     * IT IS NOT SCOPED TO A PERSON. The copy belongs to the browser, so on a
+     * shared profile the next person to open that page sees the previous
+     * one's document on screen before any connection is made — the server
+     * refuses them a moment later, but the content was already drawn. If the
+     * same browser serves more than one account, give each one its own
+     * document ids, or leave this off.
+     */
+    offline?: boolean;
+  };
 
   /**
    * Data to render on Blok start.

@@ -69,7 +69,7 @@ describe('ServerPathSection', () => {
       name: /presets/i,
     });
 
-    expect(link).toHaveAttribute('href', '/presets');
+    expect(link).toHaveAttribute('href', '/presets/');
   });
 
   it('keeps the presets link inside the Russian tree on a /ru page', () => {
@@ -80,7 +80,7 @@ describe('ServerPathSection', () => {
       name: /пресет|хранилищ/i,
     });
 
-    expect(link).toHaveAttribute('href', '/ru/presets');
+    expect(link).toHaveAttribute('href', '/ru/presets/');
   });
 
   it('localizes its own headings in Russian', () => {

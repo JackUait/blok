@@ -599,6 +599,34 @@ const editor = new Blok(config);`,
           "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks \u2014 including assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own. A tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence; this is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
       },
       {
+        option: "server",
+        type: "string",
+        default: "undefined",
+        description:
+          "Base URL of a service speaking Blok's upload and unfurl contracts \u2014 `https://blok.myapp.com`, or a same-origin path like `/api/blok`. Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code. It does not configure document storage \u2014 your documents stay yours; see `persistence`.",
+      },
+      {
+        option: "ticket",
+        type: "string",
+        default: "undefined",
+        description:
+          "Endpoint in YOUR app that mints a short-lived access pass for the signed-in user, answering `{ \"ticket\": \"<pass>\" }`. Only needed when `server` points at a standalone service \u2014 routes running inside your own app already know who the caller is. The editor caches the pass and replaces it ahead of expiry rather than at it, so no request arrives already invalid, and uploads and link previews share the same one. `@bloklabs/server/ticket` exports `blokTicket()` for minting it; any backend can do the same with its own JWT library.",
+      },
+      {
+        option: "persistence",
+        type: "{ load(): Promise<OutputData | PersistedDocument | null>; save(data: OutputData, ctx: SaveContext): Promise<SaveResult | void>; onError?(error: unknown): void }",
+        default: "undefined",
+        description:
+          "Load the document on mount and save it as it changes, against your own endpoint \u2014 the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins. `load` may answer with a version alongside the document, and each `save` is told the version it is overwriting and may report the one it wrote \u2014 Blok only carries that version between the two calls, so your endpoint stays the only place a stale write is detected.",
+      },
+      {
+        option: "collaboration",
+        type: "{ doc: string; user?: { name: string; color?: string }; offline?: boolean }",
+        default: "undefined",
+        description:
+          "Real-time multiplayer editing against the sync service `server` points at: two editors opened on the same `doc` see each other's edits live. `doc` is the shared document id, and it becomes one path segment of the sync URL — so it must be a single path segment (no `/`, no encoded slash, no `.`/`..`), and anything else is refused at construction rather than failing at the door. `user` is the DISPLAY identity the other people see — the name on their avatar, and the color of their cursor and of the small face parked in the margin beside the block they are in — and is independent of the `user: { id }` option, which records edit attribution: one answers \"whose cursor is that\", the other \"who gets the credit for this edit\"; set either, both or neither. `color` is HEX only (`#rgb`, `#rrggbb`, with or without alpha); anything else is replaced with a color from the built-in palette. `offline` keeps a copy of the document in that browser so edits made while disconnected survive a reload — off by default, because it writes document content into browser storage; the copy belongs to the browser rather than to the person signed in, and it is dropped whenever the service resets the document. Requires `server`, and is mutually exclusive with `persistence` — the sync service owns the whole document round-trip, so a second load/save pair would give the document two owners — both refused at construction. Absent, it costs nothing: Blok opens no socket. Mount-only; changing it means recreating the editor. React and Vue take it as a `collaboration` prop, Angular has no dedicated input so it goes through `[config]`. Connection state and the people present arrive on the `collaboration:status` event.",
+      },
+      {
         option: "theme",
         type: "'auto' | 'light' | 'dark'",
         default: "'auto'",
@@ -1585,6 +1613,15 @@ editor.on('block:childrenMounted', ({ blockId, childIds }) => {
   }
 });
 
+// With the \`collaboration\` config on, this is the sync/presence indicator
+// feed: status is 'connecting' | 'connected' | 'offline' | 'error', and peers
+// lists everyone else in the document. 'offline' is still retrying (retryInMs
+// says when) and local edits stay pending; 'error' has stopped for good and
+// carries the reason. Single-player editors never emit it.
+editor.on('collaboration:status', ({ status, peers }) => {
+  console.log(status, peers.map((peer) => peer.user.name));
+});
+
 // To react to content changes with access to the API, use the
 // onChange(api, event) config callback (async is allowed there):
 //   onChange: async (api) => { const data = await api.save(); }`,
@@ -2551,13 +2588,16 @@ class CodeTool {
         name: "sanitizer.clean(taintString, config)",
         returnType: "string",
         description:
-          "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing.",
+          "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing. Allowlisting `href`/`src` allows the attribute, not its scheme — `clean()` additionally drops URL values that can execute (`javascript:`, `data:text/html`, `data:image/svg+xml`), so an allowlisted anchor can never come back as a live script link.",
         example: `const dirtyHtml = '<script>alert("xss")</script><p>Hello</p>';
 const clean = editor.sanitizer.clean(dirtyHtml, {
   p: true,  // Allow <p> tags
   b: true   // Allow <b> tags
 });
-// Returns: '<p>Hello</p>' (script tag removed)`,
+// Returns: '<p>Hello</p>' (script tag removed)
+
+const link = editor.sanitizer.clean('<a href="javascript:alert(1)">x</a>', { a: { href: true } });
+// Returns: '<a>x</a>' (executable scheme dropped, text kept)`,
       },
     ],
     properties: [
@@ -3794,7 +3834,7 @@ const listItemBlock: OutputBlockData = {
     title: "BlokEditor component",
     lastUpdated: "2026-07-17",
     description:
-      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
+      "The all-in-one editor component shipped by the framework adapters — <BlokEditor> in @bloklabs/react and @bloklabs/vue, <blok-editor> (BlokEditorComponent) in @bloklabs/angular. React and Vue accept every editor config option as a prop and forward unknown props/attributes to the container div. Angular is different: it declares a curated set of `@Input()`s — tools, data, readOnly, hideToolbar, toolbarPosition, inlineToolbar, theme, width, placeholder, styleTokens, i18n, autofocus, migrations, onBeforeRender, onBeforePaste, onError — plus a `[config]` escape hatch for every other config key (sanitizer, minHeight, defaultBlock, dataModel, link, linkPaste, tunes, user, resolveUser, uploader, server, ticket, persistence, collaboration, notifier, logLevel, onEnter, onSubmit, scrollToBlock, …), and it does not forward host attributes onto the container div. The live Blok instance is read via ref/onReady (React), the `instance` on a template ref or the `@ready` emit (Vue), and the `instance` signal or the `(ready)` output (Angular). The props below cover the adapter-specific surface; everything else matches the Configuration options.",
     example: `import { useState } from 'react';
 import { BlokEditor } from '@bloklabs/react';
 import { Header, Paragraph, List } from '@bloklabs/core/tools';
@@ -4541,6 +4581,18 @@ sanitizeHtmlFragment('<b>bold</b><script>x()</script>', { b: {} });
 
 const toc = outlineFromOutputData(savedData);
 // → [{ id: 'h1', level: 1, text: 'Getting Started' }, ...]`,
+      },
+      {
+        name: "restoreHeadingAnchors(data)",
+        returnType: "{ data, report }",
+        description:
+          "Repair in-document links whose target was lost during an import. HTML addresses its own sections by an id on the heading (Google Docs writes <h2 id=\"h.2y1ok8y7pef0\"> and links its table of contents to that fragment); a converter that mints its own block ids and drops the source ones leaves those links pointing at nothing. The link's text still names the heading, so this pass hands each dead fragment to the heading that text names, as HeaderData.anchor. Because it writes content it guesses as little as possible: only headings with no anchor yet, only an exact text match (markup, entities and whitespace normalized away — punctuation is not), and only when exactly one heading and one fragment claim each other; anything less certain is left alone and listed in report.skipped. Running it twice changes nothing further. Call it yourself as a one-off upgrade — it is not part of the automatic load path. DOM-free, so it runs in a Node script over stored records; migrate legacy data first.",
+        example: `import { restoreHeadingAnchors } from '@bloklabs/core/view';
+
+const { data, report } = restoreHeadingAnchors(savedData);
+// report.restored → [{ anchor: 'h.2y1ok8y7pef0', blockId: 'header-18' }, ...]
+// report.skipped  → [{ anchor: 'h.other', reason: 'ambiguous' }]
+await save(data);`,
       },
       {
         name: "defineBlokSchema(config)",

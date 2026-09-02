@@ -1,0 +1,580 @@
+// `rtop` (request → promise) rather than lib0's add/put/del helpers: their
+// hand-written types accept only `string | number | ArrayBuffer | Date` as an
+// item and a narrower key union than `IDBValidKey`, so an object row or a key
+// read back from the store does not type-check. The helpers are one-line
+// `rtop(store.<op>(...))` aliases, so this is the same call with the real
+// IndexedDB types.
+import * as idb from 'lib0/indexeddb';
+import * as Y from 'yjs';
+
+import type { WorkingSetTag } from './types';
+
+/**
+ * Lineage is compared by EQUALITY and must look like the server's: 32 lower-hex
+ * characters. Mirrors the pattern the wire codec validates with.
+ */
+const LINEAGE_PATTERN = /^[0-9a-f]{32}$/;
+
+/** The only CRDT schema these cached updates can be replayed into. */
+const SUPPORTED_FORMAT = 1;
+
+/** Rows under one lineage before they are merged into a single update. */
+const DEFAULT_COMPACTION_THRESHOLD = 500;
+
+const UPDATES_STORE = 'updates';
+const META_STORE = 'meta';
+const META_KEY = 'meta';
+
+/** What a cached row carries: the bytes, and the lineage they belong to. */
+interface CachedRow {
+  lineage: string;
+  bytes: Uint8Array;
+}
+
+/**
+ * The cache's own record of the session that wrote it. `writeDenied` rides
+ * along so a reload restores the member's last known write verdict instead of
+ * letting them type into a document the server will refuse.
+ */
+export interface OfflineCacheMeta {
+  format: number;
+  epoch: number;
+  lineage: string;
+  writeDenied: boolean;
+  savedAt: number;
+}
+
+/** An adoptable cache: the meta that gated it, and the updates it stored. */
+export interface OfflineCacheContents {
+  meta: OfflineCacheMeta;
+  updates: Uint8Array[];
+}
+
+/**
+ * The slice of the Web Locks API compaction needs. Injected so the caller can
+ * supply one in an environment that has none — `navigator.locks` is absent in
+ * jsdom and in older browsers.
+ */
+export interface OfflineCacheLocks {
+  request: (
+    name: string,
+    options: { ifAvailable: boolean },
+    callback: (lock: unknown) => Promise<void>
+  ) => Promise<void>;
+}
+
+export interface OfflineCacheOptions {
+  /**
+   * Identifies the cached document. Server URL AND doc id: the same doc id can
+   * live on two servers, and their histories are unrelated.
+   */
+  key: string;
+
+  /** Rows under one lineage before compaction merges them. */
+  compactionThreshold?: number;
+
+  /** Defaults to `navigator.locks` when the environment has it. */
+  locks?: OfflineCacheLocks;
+}
+
+export interface OfflineCache {
+  /**
+   * Opens the database and returns what is adoptable, or null. Nothing else
+   * here touches storage until this has run.
+   */
+  open: () => Promise<OfflineCacheContents | null>;
+
+  /** Stores one update under the current lineage. */
+  append: (update: Uint8Array) => Promise<void>;
+
+  /**
+   * Records a VALIDATED control frame — the gate every adoption goes through.
+   *
+   * `snapshot` seeds the lineage's history in the SAME call, because rows can
+   * only be stamped once the meta names a lineage: everything the document held
+   * before that moment would otherwise be unstorable.
+   */
+  saveMeta: (tag: WorkingSetTag, writeDenied: boolean, snapshot?: Uint8Array) => Promise<void>;
+
+  /** Drops every row and the meta. Used when the lineage changes under us. */
+  clear: () => Promise<void>;
+
+  close: () => void;
+}
+
+/**
+ * Normalizes what storage hands back into update bytes yjs will accept.
+ *
+ * `instanceof Uint8Array` is NOT enough: a structured-clone deserializer may
+ * build the view in another realm, where the constructor is a different object
+ * and the check is false for a genuine byte array. Rebuilding over the same
+ * buffer costs nothing and copies nothing.
+ * @param value - a `bytes` field straight out of IndexedDB
+ */
+const toBytes = (value: unknown): Uint8Array | null => {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+
+  return null;
+};
+
+/**
+ * Whether yjs can decode these bytes.
+ *
+ * A full struct walk, not `Y.mergeUpdates([bytes])`, which hands a single
+ * update back untouched. The adoption replay applies every row it is given,
+ * so one row another build wrote under the same `format` would otherwise throw
+ * out of `load()` on every boot of that document in that browser.
+ * @param bytes - a row's bytes
+ */
+const isReplayable = (bytes: Uint8Array): boolean => {
+  try {
+    Y.decodeUpdate(bytes);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Whether a stored record can be replayed into this client's document. Format
+ * and lineage are both checked on the way IN and on the way OUT: another tab
+ * running a different build writes into the same store.
+ * @param value - the stored meta record, straight out of IndexedDB
+ */
+const toAdoptableMeta = (value: unknown): OfflineCacheMeta | null => {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const { format, epoch, lineage, writeDenied, savedAt } = value as Record<string, unknown>;
+
+  if (format !== SUPPORTED_FORMAT || typeof lineage !== 'string' || !LINEAGE_PATTERN.test(lineage)) {
+    return null;
+  }
+
+  return {
+    format,
+    epoch: typeof epoch === 'number' ? epoch : 0,
+    lineage,
+    writeDenied: writeDenied === true,
+    savedAt: typeof savedAt === 'number' ? savedAt : 0,
+  };
+};
+
+/** `abort()` throws once a transaction has finished or already aborted itself. */
+const abortQuietly = (transaction: IDBTransaction): void => {
+  try {
+    transaction.abort();
+  } catch {
+    // Already finished: nothing left to roll back.
+  }
+};
+
+/**
+ * Runs one batch of requests on a single transaction, so they commit or roll
+ * back together.
+ *
+ * `issue` creates every request synchronously — awaiting one request before
+ * issuing the next lets the transaction go inactive. A request that throws on
+ * the way in leaves the earlier ones queued, and those would still auto-commit,
+ * so the transaction is aborted by hand. Promises are attached only once every
+ * request exists: an abort rejects a pending request, and a promise nobody
+ * awaits would surface as an unhandled rejection.
+ * @param transaction - the readwrite transaction the batch runs on
+ * @param issue - creates the requests, in order
+ */
+const writeTogether = async (transaction: IDBTransaction, issue: () => IDBRequest[]): Promise<void> => {
+  const requests: IDBRequest[] = [];
+
+  try {
+    requests.push(...issue());
+  } catch (error) {
+    abortQuietly(transaction);
+    throw error;
+  }
+
+  try {
+    await Promise.all(requests.map((request) => idb.rtop(request)));
+  } catch (error) {
+    abortQuietly(transaction);
+    throw error;
+  }
+};
+
+/**
+ * The lock manager to compact under, or null when the environment has none.
+ * @param supplied - a lock manager the caller injected
+ */
+const resolveLocks = (supplied: OfflineCacheLocks | undefined): OfflineCacheLocks | null => {
+  if (supplied !== undefined) {
+    return supplied;
+  }
+
+  const manager = typeof navigator === 'undefined'
+    ? undefined
+    : (navigator as Navigator & { locks?: LockManager }).locks;
+
+  if (manager === undefined) {
+    return null;
+  }
+
+  return {
+    request: async (name, options, callback) => {
+      await manager.request(name, options, callback);
+    },
+  };
+};
+
+/**
+ * The collaboration offline cache: the local half of "edits made while
+ * disconnected survive a reload".
+ *
+ * Two rules carry the whole design.
+ *
+ * METADATA IS THE GATE. Rows alone are never adoptable — meta is written only
+ * after a control frame validated, so a session that never reached the server
+ * cannot fabricate a cache that later boots EDITABLE. That is what keeps the
+ * "never editable unsynced" law intact through the offline carve-out.
+ *
+ * EVERY ROW IS STAMPED WITH ITS LINEAGE. A reset mints a new lineage, and rows
+ * from the old one are not this document's history; adoption reads only rows
+ * matching the meta and sweeps the rest. Without the stamp, a tab still offline
+ * on the old lineage would mix its rows into the new document.
+ *
+ * Every storage failure degrades to "no cache". A browser with full disk, a
+ * private window, or a user who cleared site data must cost the session
+ * nothing but the cache itself.
+ * @param options - what to cache, and where
+ */
+export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache => {
+  const dbName = `blok-collab-${options.key}`;
+  const threshold = options.compactionThreshold ?? DEFAULT_COMPACTION_THRESHOLD;
+  const locks = resolveLocks(options.locks);
+
+  /** Mutable session state, in one place — same shape the provider uses. */
+  const state: {
+    db: IDBDatabase | null;
+    lineage: string | null;
+    rows: number;
+    queue: Promise<void>;
+    warned: boolean;
+  } = {
+    db: null,
+    lineage: null,
+    rows: 0,
+    queue: Promise.resolve(),
+    warned: false,
+  };
+
+  /**
+   * Runs one write after the last, against the database handle as it was when
+   * the CALLER asked — not as it is when the turn comes.
+   *
+   * Both halves matter. Serial, because appends stamp rows with the lineage a
+   * saveMeta sets, and interleaving them would stamp a row with the wrong one.
+   * Handle-at-call-time, because an editor torn down right after a sync would
+   * otherwise drop the very snapshot that makes the next boot adoptable — the
+   * work was already scheduled, and `close` waits for it.
+   * @param work - the write to run
+   */
+  const enqueue = (work: (db: IDBDatabase) => Promise<void>): Promise<void> => {
+    const db = state.db;
+
+    if (db === null) {
+      return Promise.resolve();
+    }
+
+    state.queue = state.queue.then(async () => {
+      try {
+        await work(db);
+      } catch (error) {
+        // A cache that cannot write is a cache the session does without — and
+        // the lineage goes with it: rows written after a lost one would adopt
+        // as a history with a hole, and every update depending on the lost
+        // one would stay pending.
+        state.lineage = null;
+
+        if (!state.warned) {
+          state.warned = true;
+          console.warn('Blok collaboration: the offline cache stopped storing updates', error);
+        }
+      }
+    });
+
+    return state.queue;
+  };
+
+  /**
+   * Rows currently stored under one lineage, with their keys. A row under
+   * another lineage is a stranger, and every reader here sweeps strangers the
+   * same way. A row under THIS lineage that yjs cannot decode is reported
+   * apart: the copy it belongs to has a hole in it, and a hole where the
+   * snapshot was would adopt an empty document as editable.
+   * @param store - the updates object store to read
+   * @param under - the lineage to match
+   */
+  const rowsUnder = async (
+    store: IDBObjectStore,
+    under: string
+  ): Promise<{ keys: IDBValidKey[]; bytes: Uint8Array[]; strangers: IDBValidKey[]; undecodable: number }> => {
+    const keys: IDBValidKey[] = [];
+    const bytes: Uint8Array[] = [];
+    const strangers: IDBValidKey[] = [];
+    const counter = { undecodable: 0 };
+
+    for (const pair of await idb.getAllKeysValues(store)) {
+      const key = pair.k as IDBValidKey;
+      const row = pair.v as Partial<CachedRow> | null;
+      const rowBytes = toBytes(row?.bytes);
+
+      if (row?.lineage !== under) {
+        strangers.push(key);
+      } else if (rowBytes !== null && isReplayable(rowBytes)) {
+        keys.push(key);
+        bytes.push(rowBytes);
+      } else {
+        counter.undecodable += 1;
+        strangers.push(key);
+      }
+    }
+
+    return {
+      keys,
+      bytes,
+      strangers,
+      undecodable: counter.undecodable,
+    };
+  };
+
+  /**
+   * Merges every row under the current lineage into one.
+   *
+   * The one non-idempotent sequence here — read, merge, write, delete — which
+   * is why it is the only thing that takes a lock. The merged row is written
+   * BEFORE the originals are deleted: a crash in between leaves a duplicate,
+   * which CRDT updates absorb, while the other order loses history.
+   */
+  const compactUnderLock = async (): Promise<void> => {
+    const current = state.lineage;
+
+    if (state.db === null || current === null) {
+      return;
+    }
+
+    const [readStore] = idb.transact(state.db, [UPDATES_STORE], 'readonly');
+    const { keys, bytes } = await rowsUnder(readStore, current);
+
+    if (bytes.length < 2) {
+      state.rows = bytes.length;
+
+      return;
+    }
+
+    const merged = Y.mergeUpdates(bytes);
+    const [writeStore] = idb.transact(state.db, [UPDATES_STORE]);
+
+    await idb.rtop(writeStore.add({
+      lineage: current,
+      bytes: merged,
+    }));
+
+    const [deleteStore] = idb.transact(state.db, [UPDATES_STORE]);
+
+    await Promise.all(keys.map((key) => idb.rtop(deleteStore.delete(key))));
+
+    state.rows = 1;
+  };
+
+  /**
+   * Compacts, under the Web Lock when there is one. A lock held by another tab
+   * means that tab is compacting: skipping costs nothing, because rows are only
+   * ever merged, never dropped.
+   */
+  const compact = async (): Promise<void> => {
+    if (locks === null) {
+      await compactUnderLock();
+
+      return;
+    }
+
+    await locks.request(`blok-collab-compact-${options.key}`, { ifAvailable: true }, async (lock) => {
+      if (lock === null) {
+        return;
+      }
+
+      await compactUnderLock();
+    });
+  };
+
+  return {
+    open: async () => {
+      try {
+        state.db = await idb.openDB(dbName, (created) => {
+          idb.createStores(created, [[UPDATES_STORE, { autoIncrement: true }], [META_STORE]]);
+        });
+      } catch {
+        state.db = null;
+
+        return null;
+      }
+
+      try {
+        const [metaStore] = idb.transact(state.db, [META_STORE], 'readonly');
+        const meta = toAdoptableMeta(await idb.get(metaStore, META_KEY));
+
+        if (meta === null) {
+          return null;
+        }
+
+        const [readStore] = idb.transact(state.db, [UPDATES_STORE], 'readonly');
+        const { bytes, strangers, undecodable } = await rowsUnder(readStore, meta.lineage);
+
+        // A row of this copy that will not decode means the copy is not whole.
+        // Adopting the rest would boot a document with a hole in it — an empty
+        // one, when the hole is the snapshot — as editable, so the copy goes
+        // the way a lineage change sends it: dropped, meta included, and this
+        // boot syncs from the room.
+        if (undecodable > 0) {
+          const [updatesStore, metaStore] = idb.transact(state.db, [UPDATES_STORE, META_STORE]);
+
+          await idb.rtop(updatesStore.clear());
+          await idb.rtop(metaStore.delete(META_KEY));
+
+          return null;
+        }
+
+        if (strangers.length > 0) {
+          const [sweepStore] = idb.transact(state.db, [UPDATES_STORE]);
+
+          await Promise.all(strangers.map((key) => idb.rtop(sweepStore.delete(key))));
+        }
+
+        state.lineage = meta.lineage;
+        state.rows = bytes.length;
+
+        return {
+          meta,
+          updates: bytes,
+        };
+      } catch {
+        return null;
+      }
+    },
+
+    append: async (update) => {
+      await enqueue(async (db) => {
+        const current = state.lineage;
+
+        // No lineage means no stamp, and an unstamped row could never be
+        // adopted by anyone. Writing it would only consume the user's disk.
+        if (current === null) {
+          return;
+        }
+
+        const [store] = idb.transact(db, [UPDATES_STORE]);
+
+        await idb.rtop(store.add({
+          lineage: current,
+          bytes: update,
+        }));
+
+        state.rows += 1;
+
+        if (state.rows >= threshold) {
+          // Best-effort: rows are only ever merged, never dropped, so a failed
+          // compaction loses nothing and must not stop the appends.
+          try {
+            await compact();
+          } catch {
+            // Retried on the next append.
+          }
+        }
+      });
+    },
+
+    saveMeta: async (tag, writeDenied, snapshot) => {
+      await enqueue(async (db) => {
+        // Inside the queue like every other state write: a rejected tag must
+        // not null the lineage from under an append already queued ahead.
+        if (tag.format !== SUPPORTED_FORMAT || !LINEAGE_PATTERN.test(tag.lineage)) {
+          state.lineage = null;
+
+          return;
+        }
+
+        // Counted up front, on its own transaction: the write below must not
+        // await anything between its two requests.
+        const [countStore] = idb.transact(db, [UPDATES_STORE], 'readonly');
+        const rows = tag.lineage === state.lineage
+          ? state.rows
+          : (await rowsUnder(countStore, tag.lineage)).bytes.length;
+
+        // Meta and snapshot land together or not at all. Meta is the adoption
+        // gate, and a meta with no snapshot behind it would adopt an EMPTY
+        // document as editable.
+        const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
+
+        await writeTogether(metaStore.transaction, () => {
+          const requests: IDBRequest[] = [
+            metaStore.put({
+              format: tag.format,
+              epoch: tag.epoch,
+              lineage: tag.lineage,
+              writeDenied,
+              savedAt: Date.now(),
+            }, META_KEY),
+          ];
+
+          if (snapshot !== undefined) {
+            requests.push(updatesStore.add({
+              lineage: tag.lineage,
+              bytes: snapshot,
+            }));
+          }
+
+          return requests;
+        });
+
+        state.lineage = tag.lineage;
+        state.rows = rows + (snapshot === undefined ? 0 : 1);
+      });
+    },
+
+    clear: async () => {
+      await enqueue(async (db) => {
+        // Reset HERE, not before the queue: a saveMeta already queued ahead
+        // of this one sets the lineage from inside its own turn, so clearing
+        // it up front would let that write restore it and leave later rows
+        // stamped into a store this call is about to empty.
+        state.lineage = null;
+        state.rows = 0;
+
+        const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
+
+        await idb.rtop(updatesStore.clear());
+        await idb.rtop(metaStore.delete(META_KEY));
+      });
+    },
+
+    close: () => {
+      const db = state.db;
+
+      state.db = null;
+
+      // Writes already scheduled still run: the last thing a session does is
+      // often the snapshot that makes the next boot adoptable.
+      void state.queue.then(() => db?.close());
+    },
+  };
+};

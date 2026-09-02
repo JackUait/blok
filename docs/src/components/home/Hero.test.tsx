@@ -58,7 +58,7 @@ describe('Hero', () => {
 
     const getStartedLink = screen.getByRole('link', { name: 'Get Started' });
     expect(getStartedLink).toBeInTheDocument();
-    expect(getStartedLink).toHaveAttribute('href', '/docs');
+    expect(getStartedLink).toHaveAttribute('href', '/docs/');
   });
 
   it('should render the Try it out button with correct link', () => {
@@ -74,7 +74,7 @@ describe('Hero', () => {
     // forward), so the accessible name reads "Try it out". \s matches NBSP.
     const tryItOutLink = screen.getByRole('link', { name: /Try\s+it\s+out/ });
     expect(tryItOutLink).toBeInTheDocument();
-    expect(tryItOutLink).toHaveAttribute('href', '/demo');
+    expect(tryItOutLink).toHaveAttribute('href', '/demo/');
   });
 
   it('should have data-hero-content attribute', () => {
@@ -158,5 +158,45 @@ describe('Hero', () => {
     expect(
       screen.getByText((content) => content.includes('Создавайте красивые'))
     ).toBeInTheDocument();
+  });
+
+  // The card stack is a decorative animation whose textContent ("H1", "1234",
+  // "1.2.3.") is not content. It sits inside the /demo link, so an extractor
+  // that reads textContent made "H1 1 2 3 4" the anchor text of that link in
+  // the generated markdown mirror. The `aria-hidden` on the wrapper is what
+  // `CHROME_SELECTOR` in scripts/seo-artifacts.mjs strips on, so it has to be
+  // on the card itself, not on individual glyph spans — the slot kinds shuffle
+  // at runtime and three different kinds emit text.
+  it('hides the decorative card stack from text extraction', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    const cards = screen.getAllByTestId('hero-card');
+
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  // Never on the <a> itself: an aria-hidden focusable element is a WCAG
+  // violation. The link keeps its own accessible name.
+  it('keeps the demo link itself focusable and named', () => {
+    render(
+      <I18nProvider>
+        <MemoryRouter>
+          <Hero />
+        </MemoryRouter>
+      </I18nProvider>
+    );
+
+    const link = screen.getByRole('link', { name: 'Try the demo' });
+
+    expect(link.getAttribute('aria-hidden')).toBeNull();
   });
 });

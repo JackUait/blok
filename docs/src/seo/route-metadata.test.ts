@@ -43,16 +43,29 @@ describe('route metadata coverage', () => {
 });
 
 describe('route metadata quality', () => {
-  it('keeps every title within 60 characters', () => {
+  /**
+   * These bounds catch a broken generator, not a long sentence.
+   *
+   * Google documents no length limit for either field, and truncation is by
+   * pixel width per device — which no character count expresses, least of all
+   * one shared between Latin and Cyrillic. Length is also absent from Google's
+   * list of reasons it rewrites a title. The old 60/155 bars were an SEO-tool
+   * convention, and enforcing them cost real quality here: Russian titles were
+   * compressed to fit a budget that does not exist, and a compressed title is
+   * likelier to trip the rewrite condition Google DOES document (an inaccurate
+   * title) than a long one is. Uniqueness and presence stay hard failures —
+   * those are documented.
+   */
+  it('catches a title long enough to be a generator bug', () => {
     const tooLong = entries()
-      .filter(([, meta]) => meta.title.length > 60)
+      .filter(([, meta]) => meta.title.length > 120)
       .map(([path, meta]) => `${path} (${meta.title.length}): ${meta.title}`);
     expect(tooLong).toEqual([]);
   });
 
-  it('keeps every description between 70 and 155 characters', () => {
+  it('catches a description that is empty or runaway', () => {
     const outOfBounds = entries()
-      .filter(([, meta]) => meta.description.length < 70 || meta.description.length > 155)
+      .filter(([, meta]) => meta.description.trim().length < 50 || meta.description.length > 320)
       .map(([path, meta]) => `${path} (${meta.description.length}): ${meta.description}`);
     expect(outOfBounds).toEqual([]);
   });
@@ -146,22 +159,23 @@ describe('getRouteMetadata', () => {
 });
 
 describe('breadcrumbs', () => {
-  it('trails Home / Docs / group / page on a module route', () => {
+  // The current page is the visible trail's last crumb but is deliberately not
+  // a metadata crumb: it is rendered as plain text, and Google allows the
+  // markup to omit the page itself. See docsBreadcrumbs in route-metadata.ts.
+  it('trails Home / Docs / group on a module route, stopping short of the page', () => {
     expect(ROUTE_METADATA['/docs/caret-api'].breadcrumbs).toEqual([
       { name: 'Home', path: '/' },
       { name: 'Docs', path: '/docs' },
       { name: 'Editing', path: '/docs/caret-api' },
-      { name: 'Caret API: move, focus, and set cursor position', path: '/docs/caret-api' },
     ]);
   });
 
   it('trails through the tool group on a tool route', () => {
     const trail = ROUTE_METADATA['/docs/table'].breadcrumbs;
-    expect(trail?.map((crumb) => crumb.name)).toEqual([
-      'Home',
-      'Docs',
-      'Block Tools',
-      ROUTE_METADATA['/docs/table'].h1,
+    expect(trail).toEqual([
+      { name: 'Home', path: '/' },
+      { name: 'Docs', path: '/docs' },
+      { name: 'Block Tools', path: '/docs/paragraph' },
     ]);
   });
 

@@ -29,8 +29,19 @@ export interface LocalePath {
   path: string;
 }
 
-const stripTrailingSlash = (pathname: string): string =>
-  pathname.length > 1 ? pathname.replace(/\/+$/, '') || '/' : pathname || '/';
+/**
+ * Counts the run instead of using `/\/+$/`: that pattern retries at every
+ * offset and goes quadratic on a long run of slashes.
+ */
+const stripTrailingSlash = (pathname: string): string => {
+  if (pathname.length <= 1) {
+    return pathname || '/';
+  }
+
+  const run = Array.from(pathname).reduce((count, character) => (character === '/' ? count + 1 : 0), 0);
+
+  return pathname.slice(0, pathname.length - run) || '/';
+};
 
 /** Split `/ru/docs/table` into its locale and the unprefixed `/docs/table`. */
 export const splitLocalePath = (pathname: string): LocalePath => {
@@ -72,6 +83,29 @@ export const absoluteUrl = (pathname: string): string =>
   `${SITE_URL}${pathname.endsWith('/') ? pathname : `${pathname}/`}`;
 
 /**
+ * The site-relative twin of {@link absoluteUrl}: the form an internal `href`
+ * must take so following it costs no redirect.
+ *
+ * `absoluteUrl` already pins every *advertised* URL to the trailing-slash form,
+ * but the app's own links were written slashless (`/docs/table`), and GitHub
+ * Pages answers those with a 301 onto `/docs/table/`. In-app navigation never
+ * notices — react-router resolves it client-side — so this only ever showed up
+ * as a crawler fetching two URLs for every one page.
+ *
+ * Anything that is not a site-absolute path is returned untouched, and the
+ * slash goes on the path, never after a query string or a fragment.
+ */
+export const servedPath = (to: string): string => {
+  if (!to.startsWith('/') || to.startsWith('//')) return to;
+
+  const boundary = to.search(/[?#]/);
+  const path = boundary === -1 ? to : to.slice(0, boundary);
+  const suffix = boundary === -1 ? '' : to.slice(boundary);
+
+  return path.endsWith('/') ? to : `${path}/${suffix}`;
+};
+
+/**
  * Both trees, so the build emits a real HTML file for every locale. `/404` is
  * excluded from the prefixed trees: GitHub Pages serves a single `404.html`
  * from the site root, so a `/ru/404` file could never be reached.
@@ -101,6 +135,22 @@ export const markdownMirrorPath = (pathname: string): string => {
 /** Absolute form of {@link markdownMirrorPath}. */
 export const markdownMirrorUrl = (pathname: string): string =>
   `${SITE_URL}${markdownMirrorPath(pathname)}`;
+
+/**
+ * Whether a route gets a markdown mirror at all. The build writes one file per
+ * route this returns true for, and both advertisements — the head
+ * `<link rel="alternate">` and the in-body pointer — ask the same question, so
+ * the site can never name a file the build did not emit.
+ *
+ * A noindex route is out: `/tools` and `/ru/tools` render only a redirect, so
+ * their mirrors were 200-OK files with empty bodies, and `/404` is an error
+ * page, not content. An unknown path is out too — there is no route to mirror.
+ *
+ * Structurally typed rather than taking `RouteMetadata`: that interface lives in
+ * `route-metadata.ts`, which imports this module.
+ */
+export const hasMarkdownMirror = (metadata: { noindex?: boolean } | undefined): boolean =>
+  metadata !== undefined && !metadata.noindex;
 
 export interface AlternateUrl {
   /**

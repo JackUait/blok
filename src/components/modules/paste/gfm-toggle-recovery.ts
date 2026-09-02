@@ -20,7 +20,7 @@
  * genuine bullet list is never converted into a toggle.
  */
 
-import { Dom as dom$ } from '../../dom';
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
 /** Block tags that, as the body of a single-item `<li>`, mark it as a toggle. */
 const NON_LIST_BODY_TAGS = new Set(['P', 'BLOCKQUOTE', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'DETAILS', 'TABLE']);
@@ -37,9 +37,7 @@ export function recoverGfmToggles(html: string): string {
     return html;
   }
 
-  const wrapper = dom$.make('div');
-
-  wrapper.innerHTML = html;
+  const wrapper = parseUntrustedHtml(html);
 
   const recovered = Array.from(wrapper.querySelectorAll('ul')).map((ul) => {
     // The static NodeList still references lists that a prior replacement may
@@ -98,11 +96,14 @@ function toggleFromList(ul: HTMLUListElement): HTMLElement | null {
     return null;
   }
 
-  const details = dom$.make('details');
+  // Built in the pasted tree's own (inert) document: a live <details> would load
+  // whatever the pasted body carries as soon as those nodes were appended.
+  const inert = title.ownerDocument;
+  const details = inert.createElement('details');
 
   details.setAttribute('open', '');
 
-  const summary = dom$.make('summary');
+  const summary = inert.createElement('summary');
 
   summary.innerHTML = title.innerHTML;
   details.appendChild(summary);

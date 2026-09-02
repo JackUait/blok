@@ -48,11 +48,11 @@ describe('lint script', () => {
       'utf8'
     );
 
-    expect(workflow).toContain('uses: actions/cache/restore@v4');
+    expect(workflow).toMatch(/uses: actions\/cache\/restore@[0-9a-f]{40} # v6\.1\.0/);
     expect(workflow).toContain('node_modules/.cache/blok-eslint');
     expect(workflow).toContain('node_modules/.cache/blok-lint.tsbuildinfo');
     expect(workflow).toContain('restore-keys:');
-    expect(workflow).toContain('uses: actions/cache/save@v4');
+    expect(workflow).toMatch(/uses: actions\/cache\/save@[0-9a-f]{40} # v6\.1\.0/);
     // ESLint's cache persists per-file results INCLUDING errors, keyed only on
     // each file's own content — a cache saved from a red run replays stale
     // typed-lint errors on every later run, so saving must be gated on green.
@@ -74,7 +74,8 @@ describe('buildTasks', () => {
     expect(cmds).toContain('yarn workspace @bloklabs/react build');
     expect(cmds).toContain('yarn workspace @bloklabs/vue build');
     expect(cmds).toContain('yarn workspace @bloklabs/presets build');
-    expect(cmds).toContain('node scripts/build-server-runtime.mjs');
+    expect(cmds).toContain('yarn workspace @bloklabs/server build');
+    expect(cmds).not.toContain('node scripts/build-server-runtime.mjs');
     expect(cmds).toContain('node scripts/override/generate-override-entries.mjs');
     expect(cmds).toHaveLength(11);
   });
@@ -87,13 +88,6 @@ describe('buildTasks', () => {
     for (const name of ['iife', 'umd', 'locales', 'angular']) {
       expect(tasks.get(name)?.deps, `${name} must wait for main (emptyOutDir)`).toContain('main');
     }
-  });
-
-  it('builds the embedded server runtime independently of the editor dist', () => {
-    const tasks = byName(buildTasks({ mode: 'production' }));
-
-    expect(tasks.get('server-runtime')?.cmd).toBe('node scripts/build-server-runtime.mjs');
-    expect(tasks.get('server-runtime')?.deps ?? []).toEqual([]);
   });
 
   it('lets react and vue build independently of the core dist (core is external)', () => {
@@ -128,7 +122,8 @@ describe('buildTasks', () => {
     expect(tasks.get('override-entries')?.cmd).toBe('node scripts/override/generate-override-entries.mjs');
     expect(tasks.get('override-payload')?.cmd).toBe('node scripts/override/sync.mjs');
     expect(tasks.get('presets')?.cmd).toBe('yarn workspace @bloklabs/presets build');
-    expect(tasks.get('server-runtime')?.cmd).toBe('node scripts/build-server-runtime.mjs');
+    expect(tasks.get('server')?.cmd).toBe('yarn workspace @bloklabs/server build');
+    expect(tasks.has('server-runtime')).toBe(false);
     expect(buildTasks({ mode: 'test' })).toHaveLength(15);
   });
 

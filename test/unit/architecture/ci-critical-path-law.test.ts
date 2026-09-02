@@ -20,6 +20,7 @@ type Step = {
   uses?: string;
   if?: string;
   'working-directory'?: string;
+  env?: Record<string, WorkflowValue>;
   with?: Record<string, WorkflowValue>;
 };
 
@@ -105,7 +106,7 @@ const expectOrderedSteps = (
 
 const checkout: Step = {
   name: 'Checkout code',
-  uses: 'actions/checkout@v4',
+  uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
 };
 
 const setupNodeDependencies: Step = {
@@ -116,8 +117,22 @@ const setupNodeDependencies: Step = {
 const lintCachePaths =
   'node_modules/.cache/blok-eslint\nnode_modules/.cache/blok-lint.tsbuildinfo\n';
 
-const buildArtifactPaths =
-  'dist/\npackages/react/dist/\npackages/vue/dist/\npackages/angular/dist/\n';
+const buildArtifactPaths = [
+  'dist/',
+  'packages/react/dist/',
+  'packages/vue/dist/',
+  'packages/angular/dist/',
+  'test/playwright/fixtures/vendor/',
+  'override-extension/payload/',
+  '',
+].join('\n');
+
+const buildE2eFixturesRun = [
+  'node scripts/build-react-vendor.mjs',
+  'node scripts/build-vue-vendor.mjs',
+  'node scripts/build-angular-vendor.mjs',
+  'node scripts/override/sync.mjs',
+].join('\n');
 
 const mergeReportRun = [
   'if [ -d ./all-blob-reports ] && [ -n "$(ls -A ./all-blob-reports 2>/dev/null)" ]; then',
@@ -133,22 +148,18 @@ const markBuildRun = [
 ].join('\n');
 
 const e2eMatrix: MatrixEntry[] = [
-  { project: 'chromium', browser: 'chromium', shard: '1/3' },
-  { project: 'chromium', browser: 'chromium', shard: '2/3' },
-  { project: 'chromium', browser: 'chromium', shard: '3/3' },
-  { project: 'firefox', browser: 'firefox', shard: '1/4' },
-  { project: 'firefox', browser: 'firefox', shard: '2/4' },
-  { project: 'firefox', browser: 'firefox', shard: '3/4' },
-  { project: 'firefox', browser: 'firefox', shard: '4/4' },
-  { project: 'webkit', browser: 'webkit', shard: '1/5' },
-  { project: 'webkit', browser: 'webkit', shard: '2/5' },
-  { project: 'webkit', browser: 'webkit', shard: '3/5' },
-  { project: 'webkit', browser: 'webkit', shard: '4/5' },
-  { project: 'webkit', browser: 'webkit', shard: '5/5' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '1/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '2/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '3/4' },
-  { project: 'chromium-logic', browser: 'chromium', shard: '4/4' },
+  { project: 'chromium', browser: 'chromium', shard: '1/2' },
+  { project: 'chromium', browser: 'chromium', shard: '2/2' },
+  { project: 'firefox', browser: 'firefox', shard: '1/2' },
+  { project: 'firefox', browser: 'firefox', shard: '2/2' },
+  { project: 'webkit', browser: 'webkit', shard: '1/3' },
+  { project: 'webkit', browser: 'webkit', shard: '2/3' },
+  { project: 'webkit', browser: 'webkit', shard: '3/3' },
+  { project: 'chromium-logic', browser: 'chromium', shard: '1/2' },
+  { project: 'chromium-logic', browser: 'chromium', shard: '2/2' },
+  { project: 'chromium-default', browser: 'chromium', shard: '1/3' },
+  { project: 'chromium-default', browser: 'chromium', shard: '2/3' },
+  { project: 'chromium-default', browser: 'chromium', shard: '3/3' },
 ];
 
 describe('CI critical-path law', () => {
@@ -156,14 +167,22 @@ describe('CI critical-path law', () => {
     const requiredJobs = [
       'i18n',
       'lint',
+      'workflow-lint',
+      'frontend-coverage',
+      'docs-quality',
+      'codeql',
+      'server-security',
       'server',
       'unit-tests',
+      'workspace-unit-tests',
       'validate-spec-coverage',
       'build',
       'install-browsers',
       'e2e-tests',
       'merge-reports',
       'storybook-tests',
+      'visual-regression',
+      'production-readiness',
     ];
 
     for (const id of requiredJobs) {
@@ -203,7 +222,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Restore lint cache',
         id: 'lint-cache',
-        uses: 'actions/cache/restore@v4',
+        uses: 'actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: lintCachePaths,
           // v2: v1 caches are poisoned — ESLint's cache persists errored
@@ -219,7 +238,7 @@ describe('CI critical-path law', () => {
         name: 'Save lint cache',
         // success() only: a red run's ESLint cache carries the error entries.
         if: "success() && steps.lint-cache.outputs.cache-hit != 'true'",
-        uses: 'actions/cache/save@v4',
+        uses: 'actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
         with: {
           path: lintCachePaths,
           key: '${{ steps.lint-cache.outputs.cache-primary-key }}',
@@ -239,14 +258,33 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Setup .NET',
-        uses: 'actions/setup-dotnet@v4',
+        uses: 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68',
         with: {
           'dotnet-version': '10.0.x',
         },
       },
       {
-        name: 'Test .NET server',
-        run: 'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
+        name: 'Test .NET server with coverage',
+        run: [
+          'rm -rf .server-test-results .server-coverage',
+          'dotnet test packages/server/dotnet/Blok.Server.slnx \\',
+          '  --configuration Release \\',
+          '  --collect:"Code Coverage;Format=Cobertura" \\',
+          '  --results-directory .server-test-results',
+        ].join('\n'),
+      },
+      {
+        name: 'Enforce .NET server coverage',
+        run: [
+          'dotnet tool restore',
+          'dotnet reportgenerator \\',
+          "  '-reports:.server-test-results/**/*.cobertura.xml' \\",
+          "  '-targetdir:.server-coverage' \\",
+          "  '-reporttypes:Cobertura;MarkdownSummaryGithub' \\",
+          "  '-assemblyfilters:+Blok.Server*;-*.Tests'",
+          'node scripts/check-server-coverage.mjs .server-coverage/Cobertura.xml',
+          'cat .server-coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"',
+        ].join('\n'),
       },
       {
         name: 'Check .NET formatting',
@@ -269,10 +307,12 @@ describe('CI critical-path law', () => {
         run: [
           'yarn vitest run --project=unit \\',
           '  test/unit/server/bin.test.ts \\',
+          '  test/unit/scripts/check-server-coverage.test.ts \\',
           '  test/unit/scripts/publish-server.test.ts \\',
           '  test/unit/scripts/verify-docs-release.test.ts \\',
           '  test/unit/scripts/release-cli.test.ts \\',
           '  test/unit/architecture/server-release-wiring.test.ts \\',
+          '  test/unit/architecture/server-quality-gates.test.ts \\',
           '  test/unit/architecture/ci-critical-path-law.test.ts \\',
           '  test/unit/architecture/package-metadata-law.test.ts',
         ].join('\n'),
@@ -280,7 +320,7 @@ describe('CI critical-path law', () => {
     ]);
   });
 
-  it('runs two exact unit shards after build without fail-fast cancellation', () => {
+  it('runs four exact unit-only coverage shards after build', () => {
     const unit = getJob(ci, 'unit-tests');
 
     expect(unit.name).toBe('Unit Tests (${{ matrix.shard }})');
@@ -288,14 +328,14 @@ describe('CI critical-path law', () => {
     expect(unit['runs-on']).toBe('ubuntu-latest');
     expect(unit.strategy).toEqual({
       'fail-fast': false,
-      matrix: { shard: ['1/2', '2/2'] },
+      matrix: { shard: ['1/4', '2/4', '3/4', '4/4'] },
     });
     expectOrderedSteps('ci.unit-tests', unit, [
       checkout,
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           name: 'dist',
           path: '.',
@@ -306,27 +346,107 @@ describe('CI critical-path law', () => {
         run: 'yarn build:cli',
       },
       {
-        name: 'Run Unit Tests',
-        run: 'yarn test --shard=${{ matrix.shard }}',
+        name: 'Run Unit Tests with coverage',
+        run: [
+          'yarn vitest run --coverage --project=unit \\',
+          '  --shard=${{ matrix.shard }} \\',
+          '  --reporter=default \\',
+          '  --reporter=blob \\',
+          '  --coverage.reporter=json \\',
+          '  --coverage.thresholds.statements=0 \\',
+          '  --coverage.thresholds.lines=0 \\',
+          '  --coverage.thresholds.functions=0 \\',
+          '  --coverage.thresholds.branches=0',
+        ].join('\n'),
       },
       {
-        // The react package carries its own vitest config (the root one cannot
-        // resolve the @bloklabs/core/view subpath through the root alias), so
-        // its suite runs separately — on one shard only, since it is not sharded.
+        name: 'Upload frontend coverage shard',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        with: {
+          name: 'frontend-coverage-${{ strategy.job-index }}',
+          path: '.vitest-reports/',
+          'if-no-files-found': 'error',
+          'include-hidden-files': true,
+          'retention-days': 1,
+        },
+      },
+    ]);
+  });
+
+  it('runs unsharded workspace suites in parallel after build', () => {
+    const workspace = getJob(ci, 'workspace-unit-tests');
+
+    expect(workspace.name).toBe('Workspace Unit Tests');
+    expect(workspace.needs).toEqual(['build']);
+    expect(workspace['runs-on']).toBe('ubuntu-latest');
+    expectOrderedSteps('ci.workspace-unit-tests', workspace, [
+      checkout,
+      setupNodeDependencies,
+      {
+        name: 'Download Build Artifacts',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        with: {
+          name: 'dist',
+          path: '.',
+        },
+      },
+      {
+        name: 'Build CLI',
+        run: 'yarn build:cli',
+      },
+      {
+        name: 'Run Angular Unit Tests',
+        run: 'yarn test:angular',
+      },
+      {
         name: 'Run @bloklabs/react Unit Tests',
-        if: "matrix.shard == '1/2'",
         run: 'yarn workspace @bloklabs/react test',
       },
       {
-        // Same reason as react above: the presets package has its own vitest
-        // config, and its tests live under src/ rather than test/unit/, which
-        // the root config's "unit" project does not glob — on one shard only,
-        // since it is not sharded.
         name: 'Run @bloklabs/presets Unit Tests',
-        if: "matrix.shard == '1/2'",
         run: 'yarn workspace @bloklabs/presets test',
       },
+      {
+        name: 'Run @bloklabs/server Unit Tests',
+        run: 'yarn workspace @bloklabs/server test',
+      },
     ]);
+  });
+
+  it('merges shard coverage and keeps CodeQL dependency-free', () => {
+    const coverage = getJob(ci, 'frontend-coverage');
+    const codeql = getJob(ci, 'codeql');
+
+    expect(coverage.needs).toEqual(['unit-tests']);
+    expectOrderedSteps('ci.frontend-coverage', coverage, [
+      checkout,
+      setupNodeDependencies,
+      {
+        name: 'Download frontend coverage shards',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
+        with: {
+          pattern: 'frontend-coverage-*',
+          path: '.vitest-reports',
+          'merge-multiple': true,
+        },
+      },
+      {
+        name: 'Merge frontend coverage',
+        run: 'yarn vitest --merge-reports=.vitest-reports --coverage --reporter=default',
+      },
+      {
+        name: 'Upload coverage diagnostics',
+        if: 'failure()',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
+        with: {
+          name: 'frontend-coverage',
+          path: 'coverage/',
+          'if-no-files-found': 'ignore',
+          'retention-days': 3,
+        },
+      },
+    ]);
+    expect(codeql.steps).not.toContainEqual(setupNodeDependencies);
   });
 
   it('retains the exact spec-coverage and build job contracts', () => {
@@ -340,7 +460,14 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Validate all spec files match a Playwright project',
+        env: {
+          BLOK_VISUAL: '1',
+        },
         run: 'yarn validate:spec-coverage',
+      },
+      {
+        name: 'Validate test categories',
+        run: 'yarn e2e:validate-categories',
       },
     ]);
 
@@ -355,8 +482,12 @@ describe('CI critical-path law', () => {
         run: 'yarn build',
       },
       {
+        name: 'Build E2E fixtures',
+        run: buildE2eFixturesRun,
+      },
+      {
         name: 'Upload build artifacts',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'dist',
           path: buildArtifactPaths,
@@ -447,7 +578,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download all blob reports',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           path: 'all-blob-reports',
           pattern: 'blob-report-*',
@@ -460,7 +591,7 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload unified HTML report',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'playwright-report',
           path: 'playwright-report',
@@ -516,7 +647,7 @@ describe('CI critical-path law', () => {
       setupNodeDependencies,
       {
         name: 'Download Build Artifacts',
-        uses: 'actions/download-artifact@v4',
+        uses: 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c',
         with: {
           name: '${{ inputs.artifact-name }}',
           path: '.',
@@ -525,10 +656,6 @@ describe('CI critical-path law', () => {
       {
         name: 'Mark Build as Available',
         run: markBuildRun,
-      },
-      {
-        name: 'Build React Vendor Files',
-        run: 'node scripts/build-react-vendor.mjs',
       },
       {
         name: 'Restore Playwright Browsers',
@@ -545,7 +672,7 @@ describe('CI critical-path law', () => {
       {
         name: 'Upload E2E Test Results',
         if: 'failure()',
-        uses: 'actions/upload-artifact@v4',
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'playwright-results-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'test-results/',
@@ -554,8 +681,8 @@ describe('CI critical-path law', () => {
       },
       {
         name: 'Upload Blob Report',
-        if: 'always()',
-        uses: 'actions/upload-artifact@v4',
+        if: "always() && github.ref != 'refs/heads/main'",
+        uses: 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a',
         with: {
           name: 'blob-report-${{ inputs.project }}-${{ inputs.artifact-index }}',
           path: 'blob-report/',

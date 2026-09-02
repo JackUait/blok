@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokUploader } from '../../../types/configs/uploader';
 import { cloudinaryStorage } from './cloudinary';
-import * as xhr from './upload-xhr';
+import * as xhr from '../../../src/components/utils/upload-xhr';
 
 function requireUploadByFile(uploader: BlokUploader): NonNullable<BlokUploader['uploadByFile']> {
   const { uploadByFile } = uploader;

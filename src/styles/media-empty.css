@@ -41,7 +41,7 @@
 
 .blok-media-empty__label {
   font-size: 12px; font-weight: 600;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-text-secondary);
   flex-shrink: 0;
 }
 
@@ -54,7 +54,7 @@
   appearance: none; background: transparent; border: 0;
   padding: var(--blok-space-1) var(--blok-space-2);
   font: inherit; font-size: 12px; font-weight: 500;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-text-secondary);
   border-radius: var(--blok-radius-md);
   cursor: pointer;
   transition: color var(--blok-duration-base) ease, background var(--blok-duration-base) ease;
@@ -185,7 +185,7 @@
 
 .blok-media-empty__hint {
   font-size: 12px;
-  color: var(--blok-text-tertiary);
+  color: var(--blok-text-secondary);
 }
 
 .blok-media-empty__meta {

@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { Navigate, useLocation, useParams } from 'react-router';
 import { ApiSection } from './ApiSection';
 import { ApiPagination } from './ApiPagination';
+import { Breadcrumbs } from './Breadcrumbs';
 import { ToolSection } from '../tools/ToolSection';
 import { useApiTranslations } from '../../hooks/useApiTranslations';
 import { useToolsTranslations } from '../../hooks/useToolsTranslations';
@@ -41,13 +42,15 @@ export const ApiModuleBody: React.FC = () => {
     return <Navigate to={localizedHref('/docs/quick-start')} replace />;
   }
 
+  const current = (section ?? tool)!;
+
   // Translated labels, keyed by id across every group, so the pagination
   // component can look up a neighbor's label regardless of which group it's in.
   const labels: Record<string, string> = {};
   for (const group of sidebarSections) {
     for (const link of group.links) labels[link.id] = link.label;
   }
-  const currentId = (section ?? tool)!.id;
+  const currentId = current.id;
 
   // Prev/Next is scoped to the current sidebar GROUP, not the full flattened
   // list — otherwise the chain silently threads Tutorial -> Concepts -> How-to
@@ -59,6 +62,10 @@ export const ApiModuleBody: React.FC = () => {
 
   return (
     <div data-blok-testid="api-module-body">
+      {/* One trail per PAGE, so it covers tool pages too. It cannot live inside
+          ToolSection: the /tools index and the homepage tab strip render thirty
+          of those on a single page. */}
+      <Breadcrumbs currentId={current.id} pageTitle={current.title} />
       {section ? <ApiSection section={section} /> : <ToolSection section={tool!} />}
       <ApiPagination currentId={currentId} labels={labels} order={order} />
     </div>

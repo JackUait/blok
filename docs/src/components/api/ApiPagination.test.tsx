@@ -16,19 +16,19 @@ describe('ApiPagination', () => {
   it('first module has next but no prev', () => {
     renderAt(MODULE_ORDER[0]);
     expect(screen.queryByTestId('api-pagination-prev')).toBeNull();
-    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', `/docs/${MODULE_ORDER[1]}`);
+    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', `/docs/${MODULE_ORDER[1]}/`);
   });
 
   it('last module has prev but no next', () => {
     const last = MODULE_ORDER[MODULE_ORDER.length - 1];
     renderAt(last);
-    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', `/docs/${MODULE_ORDER[MODULE_ORDER.length - 2]}`);
+    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', `/docs/${MODULE_ORDER[MODULE_ORDER.length - 2]}/`);
     expect(screen.queryByTestId('api-pagination-next')).toBeNull();
   });
 
   it('middle module links to both neighbors', () => {
     renderAt(MODULE_ORDER[2]);
-    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', `/docs/${MODULE_ORDER[1]}`);
-    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', `/docs/${MODULE_ORDER[3]}`);
+    expect(screen.getByTestId('api-pagination-prev')).toHaveAttribute('href', `/docs/${MODULE_ORDER[1]}/`);
+    expect(screen.getByTestId('api-pagination-next')).toHaveAttribute('href', `/docs/${MODULE_ORDER[3]}/`);
   });
 });

@@ -717,6 +717,13 @@ export class TableGrid {
 
     blocksContainer.setAttribute(CELL_BLOCKS_ATTR, '');
     blocksContainer.setAttribute(DATA_ATTR.nestedBlocks, '');
+    // A cell holds child blocks; the table's data only records their IDS, and
+    // TableCellBlocks maintains that from block events, not from DOM records.
+    // Without this the table scored an edit on every keystroke and every child
+    // holder write inside any cell — including a remote peer's presence label,
+    // which repaints up to ~10x/s. Same declaration as
+    // callout/toggle/toggle-heading make on their child containers.
+    blocksContainer.setAttribute(DATA_ATTR.mutationFree, 'true');
     blocksContainer.style.display = 'flex';
     blocksContainer.style.flexDirection = 'column';
     blocksContainer.style.minHeight = '100%';

@@ -150,7 +150,7 @@ public sealed class UnfurlEndpointTests
     var fetcher = new StubFetcher
     {
       Response = new GuardedResponse(
-          [],
+          ReadOnlyMemory<byte>.Empty,
           "",
           ":",
           StatusCodes.Status200OK),
@@ -162,6 +162,27 @@ public sealed class UnfurlEndpointTests
     Assert.Equal(
         "{\"success\":1,\"link\":\":\",\"meta\":{\"image\":{}}}\n",
         await response.Content.ReadAsStringAsync());
+  }
+
+  [Fact]
+  public async Task DisposesFetchedResponseAfterParsing()
+  {
+    using var permit = new SemaphoreSlim(0, 1);
+    var fetcher = new StubFetcher
+    {
+      Response = new GuardedResponse(
+          "<title>T</title>"u8.ToArray(),
+          "",
+          "https://example.com/a",
+          StatusCodes.Status200OK,
+          permit),
+    };
+    await using var app = await BuildApplication(fetcher);
+    using var response = await app.GetTestClient().GetAsync(
+        "/unfurl?url=https%3A%2F%2Fexample.com%2Fa");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True(permit.Wait(0));
   }
 
   private static async Task<WebApplication> BuildApplication(

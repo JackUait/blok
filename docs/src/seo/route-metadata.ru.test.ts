@@ -52,16 +52,29 @@ describe('Russian route metadata coverage', () => {
 });
 
 describe('Russian route metadata quality', () => {
-  it('keeps every title within 60 characters', () => {
+  /**
+   * These bounds catch a broken generator, not a long sentence.
+   *
+   * Google documents no length limit for either field, and truncation is by
+   * pixel width per device — which no character count expresses, least of all
+   * one shared between Latin and Cyrillic. Length is also absent from Google's
+   * list of reasons it rewrites a title. The old 60/155 bars were an SEO-tool
+   * convention, and enforcing them cost real quality here: Russian titles were
+   * compressed to fit a budget that does not exist, and a compressed title is
+   * likelier to trip the rewrite condition Google DOES document (an inaccurate
+   * title) than a long one is. Uniqueness and presence stay hard failures —
+   * those are documented.
+   */
+  it('catches a title long enough to be a generator bug', () => {
     const tooLong = entries()
-      .filter(([, meta]) => meta.title.length > 60)
+      .filter(([, meta]) => meta.title.length > 120)
       .map(([path, meta]) => `${path} (${meta.title.length}): ${meta.title}`);
     expect(tooLong).toEqual([]);
   });
 
-  it('keeps every description between 70 and 155 characters', () => {
+  it('catches a description that is empty or runaway', () => {
     const outOfBounds = entries()
-      .filter(([, meta]) => meta.description.length < 70 || meta.description.length > 155)
+      .filter(([, meta]) => meta.description.trim().length < 50 || meta.description.length > 320)
       .map(([path, meta]) => `${path} (${meta.description.length}): ${meta.description}`);
     expect(outOfBounds).toEqual([]);
   });
@@ -118,12 +131,7 @@ describe('Russian canonicals and breadcrumbs', () => {
 
   it('keeps breadcrumb trails inside the Russian tree', () => {
     const trail = RU_ROUTE_METADATA['/docs/caret-api'].breadcrumbs;
-    expect(trail?.map((crumb) => crumb.path)).toEqual([
-      '/ru',
-      '/ru/docs',
-      '/ru/docs/caret-api',
-      '/ru/docs/caret-api',
-    ]);
+    expect(trail?.map((crumb) => crumb.path)).toEqual(['/ru', '/ru/docs', '/ru/docs/caret-api']);
     expect(trail?.every((crumb) => CYRILLIC.test(crumb.name))).toBe(true);
   });
 
@@ -150,5 +158,17 @@ describe('getRouteMetadata with a locale prefix', () => {
 
   it('returns undefined for a prefixed path that does not exist', () => {
     expect(getRouteMetadata(localizedPath('/docs/not-a-real-module', 'ru'))).toBeUndefined();
+  });
+
+  // The description and the page both cover Angular, so a title naming only two
+  // of the three frameworks loses the Angular query it already ranks for. The
+  // 60-char budget is not what forced it: the three-framework form is 55.
+  it('names in the home title every framework its description claims', () => {
+    const home = getRouteMetadata('/ru');
+
+    for (const framework of ['React', 'Vue', 'Angular']) {
+      expect(home?.description).toContain(framework);
+      expect(home?.title).toContain(framework);
+    }
   });
 });

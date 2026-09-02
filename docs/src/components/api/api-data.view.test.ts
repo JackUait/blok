@@ -45,6 +45,7 @@ describe("view renderer section", () => {
       "htmlTextContent(html)",
       "sanitizeHtmlFragment(html, config)",
       "outlineFromOutputData(data)",
+      "restoreHeadingAnchors(data)",
       "defineBlokSchema(config)",
       "composeBaseSanitizeConfig(configs)",
       "blocksToViewNodes(data, options?)",

@@ -41,7 +41,10 @@ export interface RouteMetadata {
   noindex?: boolean;
   /** ISO date fed to TechArticle's dateModified; only where the source data carries one. */
   dateModified?: string;
-  /** Mirrors the visible breadcrumb trail; absent on top-level routes, which have none. */
+  /**
+   * The linked crumbs of the visible trail, in order. Breadcrumbs.tsx renders
+   * these and nothing else; absent on top-level routes, which have no trail.
+   */
   breadcrumbs?: BreadcrumbCrumb[];
 }
 
@@ -558,22 +561,27 @@ const toolGroupTitle = (locale: Locale, type: 'block' | 'inline'): string =>
     : getTranslation(locale, `tools.sections.${type === 'block' ? 'blockTools' : 'inlineTools'}`);
 
 /**
- * Mirrors the visible trail rendered by Breadcrumbs.tsx: Docs / <group> / <page>,
- * prefixed with Home so the markup starts at the site root as Google expects.
- * The group crumb points at the group's first page, which is where the visible
- * crumb links too. Every path stays inside the trail's own locale tree.
+ * The linked ancestors of a docs page: Home / Docs / <group>. Breadcrumbs.tsx
+ * renders exactly these — this is the single definition of the trail, so the
+ * markup cannot describe a crumb the reader never sees.
+ *
+ * The current page is deliberately absent: it is the visible trail's last
+ * crumb, but as plain text rather than a link, and Google explicitly allows
+ * the markup to omit the page itself. Naming it here instead would force the
+ * markup to carry either the long H1 (which no breadcrumb should display) or a
+ * short label this module has no source for.
+ *
+ * The group crumb points at the group's first page. Every path stays inside the
+ * trail's own locale tree.
  */
 const docsBreadcrumbs = (
   locale: Locale,
   crumbGroupTitle: string,
   groupFirstPath: string,
-  path: string,
-  h1: string,
 ): BreadcrumbCrumb[] => [
   { name: BREADCRUMB_ROOTS[locale].home, path: localizedPath('/', locale) },
   { name: BREADCRUMB_ROOTS[locale].docs, path: localizedPath('/docs', locale) },
   { name: crumbGroupTitle, path: localizedPath(groupFirstPath, locale) },
-  { name: h1, path: localizedPath(path, locale) },
 ];
 
 /**
@@ -624,13 +632,7 @@ const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
       ogImage: OG_IMAGE,
       ...(lastUpdatedById.has(id) && { dateModified: lastUpdatedById.get(id) }),
       ...(group && {
-        breadcrumbs: docsBreadcrumbs(
-          locale,
-          groupTitle(locale, group.key),
-          `/docs/${group.firstId}`,
-          path,
-          copy.h1,
-        ),
+        breadcrumbs: docsBreadcrumbs(locale, groupTitle(locale, group.key), `/docs/${group.firstId}`),
       }),
     };
   }
@@ -655,8 +657,6 @@ const buildRouteMetadata = (locale: Locale): Record<string, RouteMetadata> => {
         locale,
         toolGroupTitle(locale, tool.type),
         `/docs/${firstToolOfType[tool.type]}`,
-        path,
-        copy.h1,
       ),
     };
   }

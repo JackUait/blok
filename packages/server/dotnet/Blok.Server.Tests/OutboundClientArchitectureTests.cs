@@ -20,6 +20,7 @@ public sealed class OutboundClientArchitectureTests
     "System.Net.Sockets.TcpClient",
     "System.Net.WebClient",
     "System.Net.WebRequest",
+    "System.Net.WebSockets.ClientWebSocket",
   ];
 
   private static readonly HashSet<string> RestrictedTypeNames =
@@ -31,9 +32,16 @@ public sealed class OutboundClientArchitectureTests
       Normalize("Blok.Server/Outbound/GuardedOutboundFetcher.cs");
   private static readonly string S3Owner =
       Normalize("Blok.Server/Storage/S3BlobStore.cs");
+  private static readonly string DocEndpointOwner =
+      Normalize("Blok.Server/Collab/DocEndpointClient.cs");
+
+  // Every owner outside the guard is pinned to ONE client field, ONE client
+  // creation and ONE SocketsHttpHandler factory named CreateHandler.
+  private static readonly HashSet<string> PinnedOwners =
+      [S3Owner, DocEndpointOwner];
 
   [Fact]
-  public void OnlyTheGuardAndConfiguredS3StoreOwnOutboundClients()
+  public void OnlyTheDocumentedOwnersOwnOutboundClients()
   {
     var root = FindDotnetRoot();
     var sources = Directory
@@ -47,9 +55,30 @@ public sealed class OutboundClientArchitectureTests
 
     Assert.True(
         violations.Count == 0,
-        "Outbound networking may only be owned by the guarded fetcher " +
-        "or configured S3 store:\n" +
+        "Outbound networking may only be owned by the guarded fetcher, " +
+        "the configured S3 store or the doc-endpoint client:\n" +
         string.Join("\n", violations));
+  }
+
+  [Fact]
+  public void GuardedFetcherDoesNotCloneTheCompletedResponseBuffer()
+  {
+    var root = FindDotnetRoot();
+    var source = File.ReadAllText(
+        Path.Combine(root, "Blok.Server", "Outbound", "GuardedOutboundFetcher.cs"));
+    var method = CSharpSyntaxTree.ParseText(source)
+        .GetRoot()
+        .DescendantNodes()
+        .OfType<MethodDeclarationSyntax>()
+        .Single(candidate =>
+            candidate.Identifier.ValueText == "ReadDecodedAsync");
+    var clones = method.DescendantNodes()
+        .OfType<InvocationExpressionSyntax>()
+        .Where(invocation =>
+            invocation.Expression is MemberAccessExpressionSyntax access &&
+            access.Name.Identifier.ValueText == "ToArray");
+
+    Assert.Empty(clones);
   }
 
   [Theory]
@@ -131,7 +160,7 @@ public sealed class OutboundClientArchitectureTests
                   var socket = new Socket(default, default, default);
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -167,7 +196,7 @@ public sealed class OutboundClientArchitectureTests
                   second = new HttpClient();
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -200,7 +229,7 @@ public sealed class OutboundClientArchitectureTests
                   client = new HttpClient(handler, disposeHandler: true);
                 }
 
-                private static HttpMessageHandler CreateHandler()
+                private static SocketsHttpHandler CreateHandler()
                 {
                   return new SocketsHttpHandler();
                 }
@@ -210,6 +239,147 @@ public sealed class OutboundClientArchitectureTests
 
     Assert.Contains(
         "HttpClient",
+        violation,
+        StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("Blok.Server.AspNetCore/Sneaky.cs")]
+  [InlineData("Blok.Server/Collab/DocEndpointClient.cs")]
+  [InlineData("Blok.Server/Storage/S3BlobStore.cs")]
+  public void RestrictsClientWebSocketEverywhereIncludingThePinnedOwners(
+      string path)
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              path,
+              "var socket = new System.Net.WebSockets.ClientWebSocket();"),
+        ]));
+
+    Assert.Contains("ClientWebSocket", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsOnlyTheConfiguredClientSitesInsideTheDocEndpointExemption()
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server/Collab/DocEndpointClient.cs",
+              """
+              using System.Net.Http;
+              using System.Net.Sockets;
+              sealed class DocEndpointClient
+              {
+                private readonly HttpClient client;
+
+                internal DocEndpointClient(HttpMessageHandler handler)
+                {
+                  client = new HttpClient(handler, disposeHandler: true);
+                  var socket = new Socket(default, default, default);
+                }
+
+                private static SocketsHttpHandler CreateHandler()
+                {
+                  return new SocketsHttpHandler();
+                }
+              }
+              """),
+        ]));
+
+    Assert.Contains("Socket", violation, StringComparison.Ordinal);
+    Assert.DoesNotContain("HttpClient", violation, StringComparison.Ordinal);
+    Assert.DoesNotContain(
+        "SocketsHttpHandler",
+        violation,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void DetectsASecondDocEndpointClient()
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server/Collab/DocEndpointClient.cs",
+              """
+              using System.Net.Http;
+              sealed class DocEndpointClient
+              {
+                private readonly HttpClient client;
+                private readonly HttpClient second;
+
+                internal DocEndpointClient(HttpMessageHandler handler)
+                {
+                  client = new HttpClient(handler, disposeHandler: true);
+                  second = new HttpClient();
+                }
+
+                private static SocketsHttpHandler CreateHandler()
+                {
+                  return new SocketsHttpHandler();
+                }
+              }
+              """),
+        ]));
+
+    Assert.Contains("HttpClient", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void DetectsADuplicatedApprovedDocEndpointClientCreation()
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server/Collab/DocEndpointClient.cs",
+              """
+              using System.Net.Http;
+              sealed class DocEndpointClient
+              {
+                private readonly HttpClient client;
+
+                internal DocEndpointClient(HttpMessageHandler handler)
+                {
+                  client = new HttpClient(handler, disposeHandler: true);
+                  client = new HttpClient(handler, disposeHandler: true);
+                }
+
+                private static SocketsHttpHandler CreateHandler()
+                {
+                  return new SocketsHttpHandler();
+                }
+              }
+              """),
+        ]));
+
+    Assert.Contains("HttpClient", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void DetectsADocEndpointClientWithoutTheHandlerFactory()
+  {
+    var violation = Assert.Single(FindViolations(
+        [
+          new SourceFile(
+              "Blok.Server/Collab/DocEndpointClient.cs",
+              """
+              using System.Net.Http;
+              sealed class DocEndpointClient
+              {
+                private readonly HttpClient client;
+
+                internal DocEndpointClient(HttpMessageHandler handler)
+                {
+                  client = new HttpClient(handler, disposeHandler: true);
+                }
+              }
+              """),
+        ]));
+
+    Assert.Contains(
+        "SocketsHttpHandler",
         violation,
         StringComparison.Ordinal);
   }
@@ -230,7 +400,7 @@ public sealed class OutboundClientArchitectureTests
     Assert.Contains("HttpClient", violation, StringComparison.Ordinal);
   }
 
-  private static IReadOnlyList<string> FindViolations(
+  private static List<string> FindViolations(
       IReadOnlyList<SourceFile> sources)
   {
     var trees = sources
@@ -276,23 +446,25 @@ public sealed class OutboundClientArchitectureTests
           model).ToArray();
       var identifiers = uses
           .Where(use =>
-              source.Path != S3Owner ||
-              ClassifyS3Use(use) == S3UseSite.None)
+              !PinnedOwners.Contains(source.Path) ||
+              ClassifyPinnedUse(use) == PinnedUseSite.None)
           .Select(use => use.Identifier)
           .ToHashSet(StringComparer.Ordinal);
 
-      if (source.Path == S3Owner)
+      if (PinnedOwners.Contains(source.Path))
       {
         if (uses.Count(use =>
-                ClassifyS3Use(use) == S3UseSite.ClientField) != 1 ||
+                ClassifyPinnedUse(use) == PinnedUseSite.ClientField) != 1 ||
             uses.Count(use =>
-                ClassifyS3Use(use) == S3UseSite.ClientCreation) != 1)
+                ClassifyPinnedUse(use) == PinnedUseSite.ClientCreation) != 1)
         {
           identifiers.Add("HttpClient");
         }
 
         if (uses.Count(use =>
-                ClassifyS3Use(use) == S3UseSite.HandlerCreation) != 1)
+                ClassifyPinnedUse(use) == PinnedUseSite.HandlerReturn) != 1 ||
+            uses.Count(use =>
+                ClassifyPinnedUse(use) == PinnedUseSite.HandlerCreation) != 1)
         {
           identifiers.Add("SocketsHttpHandler");
         }
@@ -353,7 +525,7 @@ public sealed class OutboundClientArchitectureTests
     }
   }
 
-  private static S3UseSite ClassifyS3Use(RestrictedUse use)
+  private static PinnedUseSite ClassifyPinnedUse(RestrictedUse use)
   {
     if (use.Identifier == "HttpClient" &&
         use.Node.Parent is VariableDeclarationSyntax declaration &&
@@ -366,7 +538,7 @@ public sealed class OutboundClientArchitectureTests
         },
         ])
     {
-      return S3UseSite.ClientField;
+      return PinnedUseSite.ClientField;
     }
 
     if (use.Identifier == "HttpClient" &&
@@ -380,7 +552,18 @@ public sealed class OutboundClientArchitectureTests
           },
         })
     {
-      return S3UseSite.ClientCreation;
+      return PinnedUseSite.ClientCreation;
+    }
+
+    if (use.Identifier == "SocketsHttpHandler" &&
+        use.Node.Parent is MethodDeclarationSyntax
+        {
+          Identifier.ValueText: "CreateHandler",
+          ReturnType: var returnType,
+        } &&
+        returnType == use.Node)
+    {
+      return PinnedUseSite.HandlerReturn;
     }
 
     if (use.Identifier == "SocketsHttpHandler" &&
@@ -391,10 +574,10 @@ public sealed class OutboundClientArchitectureTests
           Identifier.ValueText: "CreateHandler",
         })
     {
-      return S3UseSite.HandlerCreation;
+      return PinnedUseSite.HandlerCreation;
     }
 
-    return S3UseSite.None;
+    return PinnedUseSite.None;
   }
 
   private static IEnumerable<MetadataReference> PlatformReferences()
@@ -446,11 +629,12 @@ public sealed class OutboundClientArchitectureTests
         '/');
   }
 
-  private enum S3UseSite
+  private enum PinnedUseSite
   {
     None,
     ClientField,
     ClientCreation,
+    HandlerReturn,
     HandlerCreation,
   }
 

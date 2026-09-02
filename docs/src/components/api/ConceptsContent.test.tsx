@@ -46,11 +46,11 @@ describe('ConceptsContent', () => {
     const { container } = renderConcepts();
     expect(screen.getByRole('link', { name: 'Blocks API' })).toHaveAttribute(
       'href',
-      '/docs/blocks-api',
+      '/docs/blocks-api/',
     );
     expect(screen.getByRole('link', { name: 'BlockData' })).toHaveAttribute(
       'href',
-      '/docs/block-data',
+      '/docs/block-data/',
     );
     expect(container.querySelector('a[href^="#"]')).toBeNull();
   });

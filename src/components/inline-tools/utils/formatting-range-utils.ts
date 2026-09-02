@@ -214,7 +214,9 @@ export const extendRangeToTrailingWhitespace = (range: Range): void => {
   }
 
   // Extend range if the text ends with one or more whitespace characters.
-  if (/\s+$/.test(text)) {
+  // `trimEnd()` rather than `/\s+$/`: that pattern retries at every offset and
+  // goes quadratic on a long trailing run.
+  if (text !== text.trimEnd()) {
     range.setEnd(lastTextNode, text.length);
   }
 };

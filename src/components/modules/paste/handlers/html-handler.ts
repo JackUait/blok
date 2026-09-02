@@ -14,6 +14,7 @@ import type { HandlerContext, PasteData } from '../types';
 
 import type { PasteHandler } from './base';
 import { BasePasteHandler } from './base';
+import { parseUntrustedHtml } from '../../../utils/inert-html';
 
 
 /**
@@ -83,9 +84,7 @@ export class HtmlHandler extends BasePasteHandler implements PasteHandler {
   private processHTML(innerHTML: string): PasteData[] {
     const { Tools } = this.Blok;
 
-    const wrapper = dom$.make('DIV');
-
-    wrapper.innerHTML = innerHTML;
+    const wrapper = parseUntrustedHtml(innerHTML);
 
     // Normalize legacy <b> → <strong> on the DETACHED wrapper, before the block
     // is rendered and the caret lands inside the pasted content. The live bold

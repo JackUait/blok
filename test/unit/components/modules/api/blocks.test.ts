@@ -288,6 +288,17 @@ type BlokStub = {
     t: ReturnType<typeof vi.fn>;
   };
   API: Record<string, unknown>;
+  // Left OUT of the base stub on purpose: single-player tests must exercise the
+  // "no Collaboration module at all" shape, which is what the wholesale-replace
+  // gate's optional chaining has to survive.
+  Collaboration?: {
+    isEnabled: boolean;
+  };
+  // Also left out of the base stub: the anchor lookup must survive an editor
+  // whose UI module has not mounted a holder yet.
+  UI?: {
+    nodes: { holder: HTMLElement };
+  };
 };
 
 const createBlokStub = (
@@ -746,6 +757,115 @@ describe('BlocksAPI', () => {
     });
   });
 
+  /**
+   * The wholesale-replace guard (Phase 3 plan, decision 6 / risk R1).
+   *
+   * render() and clear() replace the WHOLE document from local data. Under
+   * collaboration the document belongs to the sync service, and the framework
+   * adapters call render() whenever a controlled `data` prop changes — which
+   * would re-seed the shared document and re-arm exactly the dual-seeding
+   * corruption sync-first load exists to prevent. Both refuse; every other
+   * block operation stays legal.
+   */
+  describe('wholesale-replace guard under collaboration', () => {
+    const collaborating = {
+      blokOverrides: { Collaboration: { isEnabled: true } },
+      configOverrides: { collaboration: { doc: 'my-doc' } },
+    };
+
+    it('refuses render() and names the reset endpoint for the configured doc', async () => {
+      const { blocksApi } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.render({ blocks: [] })).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+      await expect(blocksApi.render({ blocks: [] })).rejects.toThrow(/blocks\.insert\(\)/);
+    });
+
+    it('does not touch the document when render() is refused', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.render({
+        blocks: [ { id: 'id-1',
+          type: 'paragraph',
+          data: { text: 'text' } } ],
+      })).rejects.toThrow();
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.Renderer.render).not.toHaveBeenCalled();
+      expect(blok.ModificationsObserver.disable).not.toHaveBeenCalled();
+      // Saver.save is the echo-equality check inside render(). Not calling it
+      // pins the guard ABOVE that check: a refused call does zero work.
+      expect(blok.Saver.save).not.toHaveBeenCalled();
+    });
+
+    it('refuses clear() and leaves the blocks in place', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi({
+        ...collaborating,
+        blocks: [ createBlockStub(), createBlockStub() ],
+      });
+
+      await expect(blocksApi.clear()).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(blockManager.blocks).toHaveLength(2);
+    });
+
+    it('keeps insert(), update() and delete() legal under collaboration', async () => {
+      const existing = createBlockStub({ id: 'to-update' });
+      const { blocksApi, blockManager } = createBlocksApi({
+        ...collaborating,
+        blocks: [ existing ],
+      });
+
+      blocksApi.insert('paragraph', { text: 'added' });
+      expect(blockManager.insert).toHaveBeenCalled();
+
+      await blocksApi.update('to-update', { text: 'changed' });
+      expect(blockManager.update).toHaveBeenCalled();
+
+      await blocksApi.delete(0);
+      expect(blockManager.removeBlock).toHaveBeenCalled();
+    });
+
+    it('refuses renderFromHTML(), the third wholesale-replace path', async () => {
+      const { blocksApi } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.renderFromHTML('<p>hi</p>')).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+    });
+
+    it('refuses importMarkdown() naming the method the caller actually invoked', async () => {
+      // importMarkdown delegates to render(), so the refusal used to blame
+      // `blocks.render()` — a method the caller never touched.
+      const { blocksApi, blok, blockManager } = createBlocksApi(collaborating);
+
+      await expect(blocksApi.importMarkdown('# Title')).rejects.toThrow(/blocks\.importMarkdown\(\)/);
+      await expect(blocksApi.importMarkdown('# Title')).rejects.toThrow(/POST \/sync\/my-doc\/reset/);
+
+      expect(blockManager.clear).not.toHaveBeenCalled();
+      expect(blok.Renderer.render).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a placeholder doc segment when the config carries no doc', async () => {
+      const { blocksApi } = createBlocksApi({ blokOverrides: { Collaboration: { isEnabled: true } } });
+
+      await expect(blocksApi.clear()).rejects.toThrow(/POST \/sync\/\{doc\}\/reset/);
+    });
+
+    it('leaves render() and clear() untouched when collaboration is configured off', async () => {
+      const { blocksApi, blockManager, blok } = createBlocksApi({
+        blokOverrides: { Collaboration: { isEnabled: false } },
+      });
+
+      await blocksApi.render({ blocks: [ { id: 'id-1',
+        type: 'paragraph',
+        data: { text: 'text' } } ] });
+      expect(blok.Renderer.render).toHaveBeenCalled();
+
+      await blocksApi.clear();
+      expect(blockManager.clear).toHaveBeenCalledWith(true);
+    });
+  });
+
   describe('deferred hash scroll after render()', () => {
     let originalScrollTo: typeof window.scrollTo;
     let originalQuerySelector: typeof document.querySelector;
@@ -1039,6 +1159,42 @@ describe('BlocksAPI', () => {
       expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
       expect(el.classList.contains('blok-block--target')).toBe(true);
       expect(mockAnnounce).toHaveBeenCalledWith('a11y.navigatedToBlock');
+    });
+
+    it('resolves a heading anchor when no block carries that id', () => {
+      /**
+       * Imported documents link to their own sections by the anchor the source
+       * HTML carried (#h.2y1ok8y7pef0 from a Google Docs table of contents).
+       * The block-id lookup misses it, so the heading itself has to answer —
+       * and selection must land on the block that owns the heading.
+       */
+      const holder = document.createElement('div');
+      const blockEl = document.createElement('div');
+      const heading = stubElement(240);
+
+      heading.id = 'h.2y1ok8y7pef0';
+      blockEl.setAttribute('data-blok-id', 'block-1');
+      blockEl.appendChild(heading);
+      holder.appendChild(blockEl);
+      document.body.appendChild(holder);
+
+      const targetBlock = createBlockStub({ id: 'block-1' });
+      const { blocksApi, blok, blockManager } = createBlocksApi({
+        blocks: [ targetBlock ],
+        blokOverrides: { UI: { nodes: { holder } } },
+      });
+
+      blockManager.getBlockById.mockImplementation((id: string) =>
+        id === 'block-1' ? targetBlock : undefined
+      );
+
+      blocksApi.methods.scrollToBlock?.('h.2y1ok8y7pef0');
+
+      expect(mockScrollTo).toHaveBeenCalledWith({ top: 240, behavior: 'smooth' });
+      expect(blok.BlockSelection.selectBlock).toHaveBeenCalledWith(targetBlock);
+      expect(heading.classList.contains('blok-block--target')).toBe(true);
+
+      holder.remove();
     });
 
     it('applies the configured topOffset', () => {

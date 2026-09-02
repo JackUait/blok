@@ -276,7 +276,7 @@ export function applyPrismHighlight(el: HTMLElement, highlightedHtml: string, la
 
   return () => {
     // eslint-disable-next-line no-param-reassign -- intentional DOM mutation to restore plain text
-    el.innerHTML = plainText;
+    el.textContent = plainText;
     el.classList.remove('blok-code');
     if (lang) {
       el.classList.remove(`lang-${lang}`);

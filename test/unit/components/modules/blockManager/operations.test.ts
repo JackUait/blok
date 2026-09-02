@@ -156,6 +156,7 @@ const createMockDependencies = (): BlockOperationsDependencies => {
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
+      continueUndoEntryThatCreated: vi.fn(),
       transact: vi.fn((fn: () => void) => fn()),
       toJSON: vi.fn(() => []),
       getBlockById: vi.fn(() => undefined),

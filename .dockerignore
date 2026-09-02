@@ -20,6 +20,8 @@ blob-report
 all-blob-reports
 .server-release-dist
 .server-release-smoke
+.server-test-results
+.server-coverage
 .superpowers
 *.log
 .DS_Store

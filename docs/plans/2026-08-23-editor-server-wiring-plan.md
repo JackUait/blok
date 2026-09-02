@@ -1,9 +1,36 @@
 # Editor Server Wiring Implementation Plan
 
-> **Status amendment:** the wire contract remains, but the server target is the C# host
-> or in-process ASP.NET routes. Tickets apply only when requests cross into a standalone
-> host; in-process routes use the consumer's existing identity. Bookmark degradation is
-> already implemented. See
+> **DONE 2026-08-29.** Every task is implemented, committed and pushed. The gate ran
+> clean: unit suite across all 8 shards, `yarn lint` 0 errors, `tsc` clean, docs suite
+> 1400/1400.
+>
+> **What the plan did not anticipate, and what was done instead:**
+>
+> - **Task 1's import direction was backwards.** Taking `fetchStorage` from
+>   `@bloklabs/presets` would have made the editor depend on a package that depends on it,
+>   and the editor ships zero runtime dependencies. The implementation MOVED into the
+>   editor (`src/components/utils/fetch-uploader.ts` + `upload-xhr.ts`), and `fetchStorage`
+>   now delegates to it, keeping `FetchStorageOptions` declared where the mirror law
+>   expects. One copy, dependency pointing the right way.
+> - **A new config key is not one edit.** Each of `server` / `ticket` / `persistence` also
+>   needs registering in `packages/react/src/config-keys.ts`,
+>   `packages/vue/src/config-keys.ts` AND a Vue prop declaration in
+>   `packages/vue/src/BlokEditor.ts` — the adapters' exhaustiveness guards fail `tsc`
+>   otherwise. Nothing in this plan said so.
+> - **Task 2 grew a prerequisite:** the bookmark tool's `headers` could not hold a live
+>   pass. Widened to the same union `fetchStorage` accepts, resolved per request in
+>   `MetadataFetcher`.
+> - **Task 5 could not use `data`.** That key is read synchronously while the config is
+>   normalized, so it cannot hold a promise. The editor takes the load once, in `render()`,
+>   and only when the host supplied no data of their own.
+> - **Task 3 tripped an EIGHTH registration point** nobody listed:
+>   `test/unit/architecture/server-release-wiring.test.ts` pinned the package as
+>   wrapper-only. It now pins the opposite — everything `exports` points at must be built
+>   by the release — and is mutation-verified.
+> - **Task 4 was already done** before this session started.
+>
+> Tickets apply only when requests cross into a standalone host; in-process ASP.NET routes
+> use the consumer's existing identity. See
 > [`2026-08-23-blok-dotnet-library-design.md`](2026-08-23-blok-dotnet-library-design.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -23,7 +50,7 @@
 - **Published-types law:** no file under `types/` may import from a module resolving into `src/`. Hand-author the signatures.
 - **`Blok` class ⊇ API parity:** a new public config key that has a runtime setter must be reachable the same way the existing ones are.
 - **Persistence targets the consumer's endpoint.** The service stores no documents; nothing in this plan may point save/load at `server`.
-- **Version lockstep** with the family (currently `1.10.1`).
+- **Version lockstep** with the family (currently `1.12.0`).
 
 ---
 
@@ -35,8 +62,10 @@
 | `src/components/utils/access-pass.ts` | Fetches and caches the access pass |
 | `src/components/utils/persistence.ts` | Load on mount, debounced save, in-flight race handling |
 | `types/configs/blok-config.d.ts` | `server`, `ticket`, `persistence` declarations |
-| `packages/server/src/ticket.ts` | `blokTicket()` — mints a pass in the consumer's backend |
-| `src/tools/link/bookmark/index.ts` | Graceful degradation to a plain link |
+| `packages/server/src/ticket.ts` | `blokTicket()` — mints a pass in the consumer's backend. **The package ships `files: ["bin"]` today: this is the first built JS in it, so Task 3 carries a full build setup.** |
+| `src/tools/link/bookmark/index.ts` | Graceful degradation to a plain link — **done** |
+| `types/tools/bookmark.d.ts`, `src/tools/link/metadata-fetcher.ts` | Widen `headers` to accept a function, so previews share the cached pass instead of freezing one at construction |
+| `docs/src/components/server/server-data.ts` | The standalone-path example whose hand-written wiring these keys replace |
 
 ---
 
@@ -51,7 +80,7 @@
 - Consumes: `fetchStorage` from `@bloklabs/presets`.
 - Produces: `expandServerConfig(config: BlokConfig): BlokConfig` — pure, returns a new object, never mutates its input.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/server-config.test.ts`:
 
@@ -126,7 +155,7 @@ describe('expandServerConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/server-config.test.ts
@@ -134,7 +163,7 @@ yarn test test/unit/components/utils/server-config.test.ts
 
 Expected: FAIL — the module does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/server-config.ts`:
 
@@ -200,14 +229,14 @@ Declare the key in `types/configs/blok-config.d.ts`:
   server?: string;
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/components/utils/server-config.test.ts
 yarn lint src/components/utils/server-config.ts types/configs/blok-config.d.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/server-config.ts src/components/core.ts types/configs/blok-config.d.ts test/unit/components/utils/server-config.test.ts
@@ -227,7 +256,7 @@ git commit -m "feat(config): expand the server option into uploader and unfurl e
 - Consumes: nothing.
 - Produces: `createPassSource(options: { endpoint: string; now?: () => number }): () => Promise<Record<string, string>>` — a headers function suitable for `fetchStorage({ headers })`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/access-pass.test.ts`:
 
@@ -298,13 +327,13 @@ describe('createPassSource', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/access-pass.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/access-pass.ts`:
 
@@ -387,13 +416,33 @@ function readExpiry(token: string): number {
 
 Extend `expandServerConfig` so a `ticket` option feeds `fetchStorage({ headers })` and the bookmark tool's `headers` config, and declare `ticket?: string` in `types/configs/blok-config.d.ts`.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+**A gap found 2026-08-29 that this step must close first: the bookmark tool cannot accept a
+live pass.** The two sides disagree today —
+
+| | type |
+|---|---|
+| `fetchStorage` (`packages/presets/types/index.d.ts:67`) | `Record<string, string> \| (() => Promise<Record<string, string>>)` |
+| bookmark (`types/tools/bookmark.d.ts:30`, read at `src/tools/link/metadata-fetcher.ts:48`) | `Record<string, string>` only |
+
+So a pass handed to the bookmark tool is resolved **once, at editor construction, and then
+frozen** — link previews start failing the moment it expires, while uploads keep working.
+This is not hypothetical: the documented example in
+`docs/src/components/server/server-data.ts` writes exactly that
+(`bookmark: { config: { endpoint, headers: await authHeaders() } }`), and its passes live an
+hour.
+
+Widen bookmark's `headers` to the same union as `fetchStorage`, resolve it per request in
+`MetadataFetcher`, and cover it with a test that mints two different values and asserts the
+second request carries the second one. Then one `createPassSource` instance feeds both sides
+and the whole editor shares one cached pass.
+
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
-yarn test test/unit/components/utils/access-pass.test.ts test/unit/components/utils/server-config.test.ts
+yarn test test/unit/components/utils/access-pass.test.ts test/unit/components/utils/server-config.test.ts test/unit/tools/link/metadata-fetcher.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/access-pass.ts src/components/utils/server-config.ts types/configs/blok-config.d.ts test/unit/components/utils/access-pass.test.ts
@@ -404,18 +453,62 @@ git commit -m "feat(config): fetch and cache access passes for the server option
 
 ### Task 3: `blokTicket()` — minting a pass in the consumer's backend
 
+> **Re-scoped 2026-08-29.** The original justification — "it lives beside the Go verifier, so
+> a change to either is one diff" — rests on two dead premises. The verifier is now
+> `packages/server/dotnet/Blok.Server/TicketVerifier.cs`, and `packages/server/package.json`
+> declares `files: ["bin"]` with no `scripts` block at all: **the package has never shipped
+> built JS, only the launcher.** The location still holds, for a weaker but sufficient
+> reason — one function, in a package that already exists and is already in
+> `release-manifest.mjs`'s `FAMILY`. But the signer is now the small half of this task and
+> the build wiring is the large half. Budget accordingly.
+>
+> **Backends that are not JavaScript get no signer.** Task 6 documents the raw contract
+> instead. One signer per language is the option this project's design deliberately rejected,
+> and the audience that most needs a ticket — the serverless path — is JavaScript by
+> definition.
+
 **Files:**
-- Create: `packages/server/src/ticket.ts`
-- Modify: `packages/server/package.json` (add the `./ticket` export and `dist` to `files`)
+- Create: `packages/server/src/ticket.ts`, `packages/server/vite.config.mjs`,
+  `packages/server/types/index.d.ts`, `packages/server/src/ticket.conformance.test.ts`
+- Modify: `packages/server/package.json` (`scripts.build`, `scripts.test`, `exports`, `files`),
+  `scripts/build-all.mjs`, `test/unit/scripts/build-all.test.ts`, `.github/workflows/ci.yml`,
+  `test/unit/architecture/ci-critical-path-law.test.ts`,
+  `scripts/release-manifest.mjs` (its `@bloklabs/server` comment says "Ships only the npm
+  wrapper (bin/)" — that stops being true)
 - Test: `packages/server/src/ticket.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces: `blokTicket(secret: string, claims: { user: string; doc?: string; write?: boolean; ttlSeconds?: number }): string`
 
-It lives beside the Go verifier deliberately: the signer and the verifier must agree byte for byte, and keeping them in one package means a change to either is one diff. This is pure JavaScript — the package's binary is not involved.
+**The wire contract, and two couplings that fail silently if broken:**
 
-- [ ] **Step 1: Write the failing test**
+1. **The header segment is compared as a string, not parsed.** `TicketVerifier.TryVerify`
+   holds a hard-coded constant (`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9`) and rejects anything
+   else ordinally. So the signer must emit byte-exact `{"alg":"HS256","typ":"JWT"}` — that
+   key order, no spaces. A reordered header is a KNOWN failing case, already fixtured as
+   `noncanonicalHeaderTicket`.
+2. **Claim names are `user` / `doc` / `write` / `exp`** (`TicketPayload`'s
+   `[JsonPropertyName]` attributes). The payload is parsed, so its key order does not matter
+   to the verifier — but it does matter to the byte-comparison in Step 5, so emit them in
+   that order.
+
+The minimum secret length is **32**, enforced at `BlokServerOptions.cs:61`, which refuses to
+start rather than warn.
+
+- [x] **Step 0: Give the package a test runner**
+
+`packages/server/package.json` has **no `scripts` block at all**, so Step 2 has nothing to run.
+Before writing the test, add `"test": "yarn run -T vitest run"` and a `vitest.config.ts`
+copied from `packages/presets` — keep its `cacheDir` redirect, which exists because
+`packages/*/node_modules` is not gitignored. Nothing else: the build half stays in Step 4,
+where a working signer can drive it.
+
+Do not run it yet. Vitest exits 1 when it finds no test files, and none of these configs set
+`passWithNoTests` — so an empty package looks identical to a broken one. Step 2 is the first
+meaningful run, and what it must show is a failing assertion, not a missing command.
+
+- [x] **Step 1: Write the failing test**
 
 `packages/server/src/ticket.test.ts`:
 
@@ -479,24 +572,28 @@ describe('blokTicket', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn workspace @bloklabs/server test src/ticket.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `packages/server/src/ticket.ts`:
 
 ```typescript
 import { createHmac } from 'node:crypto';
 
-/** Must match `minSecretLen` in internal/config/config.go, or the service rejects every pass. */
+/** Must match the check at BlokServerOptions.cs:61, or the service refuses to start. */
 const MIN_SECRET_LENGTH = 32;
 const DEFAULT_TTL_SECONDS = 300;
 
-/** Fixed, never negotiated: the verifier accepts exactly this header. */
+/**
+ * Byte-exact, never negotiated: TicketVerifier compares the encoded header segment
+ * against a hard-coded constant ORDINALLY. Reordering these two keys, or adding a
+ * space, is rejected — see the noncanonicalHeaderTicket fixture.
+ */
 const HEADER = '{"alg":"HS256","typ":"JWT"}';
 
 export interface BlokTicketClaims {
@@ -533,27 +630,70 @@ function b64(value: string): string {
 }
 ```
 
-- [ ] **Step 4: Verify against the Go verifier, not only against itself**
+- [x] **Step 4: Make the package able to ship JavaScript**
 
-A signer that agrees only with its own tests is worthless. Add a Go test that reads passes minted by this file:
+This is the part with no precedent in `packages/server`. Mirror `packages/presets`, which is
+the closest shape — a published, zero-runtime-dependency package.
+
+- `packages/server/package.json`: add `"type": "module"`, `sideEffects: false`, a `build`
+  script (`yarn run -T vite build --mode production`), an `exports` map with a `./ticket`
+  subpath, and extend `files` to `["bin", "dist", "types"]`. (`test` landed in Step 0.) **Re-run `npx @bloklabs/server --help` from the packed
+  tarball afterwards** — the launcher is the package's existing product and must not regress.
+- `packages/server/vite.config.mjs`: copy the presets one. Keep `node:crypto` external — this code runs in the consumer's backend, never in a browser.
+- `packages/server/types/index.d.ts`: hand-authored, per the published-types law. It must not
+  reference anything under `src/`.
+
+Then the registration lists. **Nothing iterates `packages/*`** — each of these is explicit,
+and two of them are pinned by tests that go red the moment you touch the thing they pin:
+
+| Where | What | Pinned by |
+|---|---|---|
+| `scripts/build-all.mjs` | a `server` build task | `test/unit/scripts/build-all.test.ts` pins task-graph LENGTHS — 10 at `:79`, 14 at `:125` |
+| `.github/workflows/ci.yml` | a `yarn workspace @bloklabs/server test` step, beside the presets one at `:349` | `test/unit/architecture/ci-critical-path-law.test.ts` snapshots CI's exact ordered steps |
+| `scripts/release-manifest.mjs` | `FAMILY` **already has** `@bloklabs/server` — no entry to add, but its comment is now wrong | — |
+| `test/unit/architecture/package-metadata-law.test.ts` | already lists the package; check whether the new fields trip any of its assertions | itself |
+
+**Verify the release path actually builds `dist` before `release-manifest` packs
+`packages/server`.** This package has never needed a build step, so that ordering has never
+been exercised — a green local `yarn build` proves nothing about it. Pack the tarball and
+list its contents.
+
+- [x] **Step 5: Verify against the real verifier, not only against itself**
+
+A signer that agrees only with its own tests is worthless. The cross-language fixtures
+already exist on the JS side: **`test/unit/server-conformance/fixtures/tickets.json`** —
+a secret plus five passes (`compatible`, `expired`, `malformed`, `tampered`,
+`noncanonicalHeaderTicket`), the same file the C# suites read.
+
+`packages/server/src/ticket.conformance.test.ts` freezes the clock, mints with that fixture's
+secret and the claims baked into `compatible` (`user: 'u1'`, `doc: 'doc-42'`, `write: true`,
+`exp: 4102444800`), and asserts **byte equality with the fixture string**. Not "the verifier
+accepts it" — equality, so a drift in header bytes or payload key order fails here rather
+than in production.
 
 ```bash
-cd packages/server && node -e "import('./dist/ticket.mjs').then(m => console.log(m.blokTicket('s3cret-value-at-least-32-chars-long!', {user:'u1', ttlSeconds: 3600})))" > /tmp/pass.txt
-go test ./internal/ticket/ -run CrossLanguage -v
+yarn workspace @bloklabs/server test
 ```
 
-Write `TestCrossLanguagePassFromJS` in `internal/ticket/verify_test.go` reading `BLOK_JS_PASS` from the environment and skipping when unset, so CI can pipe the value in and the default `go test` run stays hermetic.
+Do not add a copy of the fixture under `packages/server`. One file, two readers: the copies
+you will find under `bin/` are build output.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
-git add packages/server
+git add packages/server scripts test .github
 git commit -m "feat(server): mint access passes from the consumer's backend"
 ```
 
 ---
 
-### Task 4: Bookmarks degrade to a plain link
+### Task 4: Bookmarks degrade to a plain link — ✅ DONE
+
+> Shipped. Verified in the code 2026-08-29: `ToolState` is `'EMPTY' | 'LOADING' | 'RENDERED'`
+> — the `'ERROR'` member is gone entirely, both catch branches set `'RENDERED'`, and
+> `test/unit/tools/link/bookmark.test.ts` exists. Step 3's optional cleanup was taken: no
+> `tools.bookmark.error` key survives in any locale. The steps below are kept as the record of
+> what was done; nothing here is outstanding.
 
 **Files:**
 - Modify: `src/tools/link/bookmark/index.ts:118-152`
@@ -565,7 +705,7 @@ git commit -m "feat(server): mint access passes from the consumer's backend"
 
 Today a failed fetch sets `state = 'ERROR'` and renders a placeholder. But `save()` (`:94`) never persists that state, and the constructor (`:44`) treats any saved `url` as `RENDERED` — so **the same block shows an error placeholder before a reload and a card after one.** This task removes the inconsistency and implements the spec's degradation in one change.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `test/unit/tools/link/bookmark.test.ts` (create it following the conventions in `test/unit/tools/`):
 
@@ -638,7 +778,7 @@ describe('Bookmark — failed metadata fetch', () => {
 
 `createBookmarkTool` and `pasteUrl` are local helpers in the test file: the first constructs the tool with a stub `api` exposing `i18n.t`, the second dispatches the pattern paste event `onPaste` expects and awaits a microtask flush.
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/tools/link/bookmark.test.ts
@@ -646,7 +786,7 @@ yarn test test/unit/tools/link/bookmark.test.ts
 
 Expected: FAIL — an error placeholder is rendered, and the third test shows the two roots differ.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `startFetch`, replace the catch branch:
 
@@ -670,14 +810,14 @@ grep -rn "'ERROR'" src/tools/link/bookmark/index.ts
 grep -rn "tools.bookmark.error" src/ | head
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/tools/link/bookmark.test.ts
 yarn lint src/tools/link/bookmark/index.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/link/bookmark/index.ts test/unit/tools/link/bookmark.test.ts
@@ -706,7 +846,7 @@ interface PersistenceConfig {
 
 Callbacks rather than a URL: the consumer's endpoint shape, auth, and document id are theirs, and a URL template would need to grow options for each. Two functions cost them three lines and cost us no configuration surface.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `test/unit/components/utils/persistence.test.ts`:
 
@@ -795,13 +935,13 @@ describe('expandPersistenceConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 yarn test test/unit/components/utils/persistence.test.ts
 ```
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/components/utils/persistence.ts`:
 
@@ -871,14 +1011,14 @@ Declare `persistence?: PersistenceConfig` in `types/configs/blok-config.d.ts`, h
 
 Confirm that `config.data` accepts a promise; if it does not, resolve `load()` before construction in `core.ts` and set `data` from the result, keeping `expandPersistenceConfig` pure by returning the promise for the caller to await.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 yarn test test/unit/components/utils/persistence.test.ts
 yarn lint src/components/utils/persistence.ts types/configs/blok-config.d.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/utils/persistence.ts src/components/utils/server-config.ts types/configs/blok-config.d.ts test/unit/components/utils/persistence.test.ts
@@ -890,14 +1030,19 @@ git commit -m "feat(config): add persistence wiring against the consumer's own e
 ### Task 6: Documentation
 
 **Files:**
-- Modify: `docs/src/components/api/api-data.ts`, the docs route table
-- Test: `docs/src/components/api/api-data.test.ts`
+- Modify: `docs/src/components/api/api-data.ts`, the docs route table,
+  **`docs/src/components/server/server-data.ts`**
+- Test: `docs/src/components/api/api-data.test.ts`,
+  `docs/src/components/server/server-data.test.ts`
+
+`server-data.ts` is the plain-language source of truth for the four consumer paths, and it
+already carries **hand-written wiring that these tasks make obsolete** — see Step 5.
 
 **Interfaces:**
 - Consumes: everything above.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, it } from 'vitest';
@@ -920,23 +1065,50 @@ describe('server wiring docs', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and watch it fail**
+- [x] **Step 2: Run the test and watch it fail**
 
 ```bash
 cd docs && yarn test src/components/api/api-data.test.ts
 ```
 
-- [ ] **Step 3: Write the entries**
+- [x] **Step 3: Write the entries**
 
 Three entries, each with the precedence rule stated plainly: anything set explicitly beats `server`. The `server` description must say it does **not** configure document storage — that is the single most likely wrong assumption a reader will bring, given the name.
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 ```bash
 cd docs && yarn test src/components/api/api-data.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Replace the hand-written wiring in `server-data.ts`**
+
+This file documents the standalone-host path with working code, and three pieces of it are
+superseded:
+
+| What it shows today | After these tasks |
+|---|---|
+| `appRoute` — a Next.js handler that builds the JWT by hand with `createHmac` and two `b64` calls | `blokTicket(process.env.BLOK_SECRET, { user: session.userId, write: true })` |
+| `editorConfig` — `uploader: fetchStorage({ baseUrl })` plus a `bookmark.config.endpoint` | one `server` key, plus `ticket` |
+| `authHeaders` — refetches a pass **before every upload**, and freezes a second one for bookmarks with `await authHeaders()` | `createPassSource` caches, refreshes ahead of expiry, and feeds both sides |
+
+**Keep the hand-rolled version, moved and relabelled** — it is the contract for backends that
+are not JavaScript, and its own comment already makes that argument ("Every language has a
+one-line library for this; it is spelled out here so you can see there is no magic in it").
+State the contract explicitly beside it: HS256, claims `user` / `doc` / `write` / `exp`,
+secret at least 32 characters, header keys in that order.
+
+Pin it: extend `server-data.test.ts` so the standalone path's editor config uses `server` and
+the raw contract entry names all four claims. That file already asserts things at this
+granularity — it checks which flags the binary parses and which limits are stated.
+
+- [x] **Step 6: Run the docs tests and watch them pass**
+
+```bash
+cd docs && yarn test src/components/api/api-data.test.ts src/components/server/server-data.test.ts
+```
+
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs
@@ -947,6 +1119,18 @@ git commit -m "docs: document server, ticket, and persistence config keys"
 
 ## Dependencies between the three plans
 
-- This plan's Task 1 imports `fetchStorage` from `@bloklabs/presets`, so the **presets plan lands first**.
-- Task 3's cross-language check runs against the Go verifier, so the **service plan's Task 6 lands first**.
+**Both upstream plans have shipped — nothing here is blocked.** `@bloklabs/presets` and
+`@bloklabs/server` are published at 1.12.0.
+
+- This plan's Task 1 imports `fetchStorage` from `@bloklabs/presets`. **Satisfied.**
+- Task 3's cross-language check ran against the Go verifier in the original plan. Go is gone:
+  it now checks against `test/unit/server-conformance/fixtures/tickets.json`, which already
+  exists and is already read by the C# suites. **Satisfied.**
+
+## Suggested order
+
+Tasks 1 → 2 → 5 are one run of work on the editor and share `expandServerConfig`. Task 3 is
+independent and can go in parallel, but it is the longest — its weight is the package build
+and the pinned lists, not the signer. Task 6 last, since it documents all of them. Task 4 is
+done.
 - Tasks 4, 5, and 6 depend on neither and can be done at any time. Task 4 in particular is a standing inconsistency in shipped behaviour and is worth doing on its own.

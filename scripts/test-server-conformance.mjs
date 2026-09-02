@@ -85,6 +85,8 @@ async function main() {
       'run',
       '--project=unit',
       'test/unit/server-conformance/server-contract.test.ts',
+      'test/unit/server-conformance/sync-contract.test.ts',
+      'test/unit/server-conformance/blok-client-contract.test.ts',
     ];
 
     if (options.testNamePattern !== undefined) {

@@ -344,3 +344,35 @@ describe('hasMarkdownSignals', () => {
     expect(hasMarkdownSignals('I have $50 and $30')).toBe(false);
   });
 });
+
+/**
+ * `hasMarkdownSignals` runs on EVERY plain-text paste, so a quadratic signal
+ * pattern is a paste-time freeze. `/\[.+?\]\(.+?\)/` retried from every `[`:
+ * 400k opening brackets took ~45s.
+ */
+describe('markdown link signal cost', () => {
+  it('still detects ordinary links', () => {
+    expect(hasMarkdownSignals('see [docs](https://x.io/a?q=1#f) here')).toBe(true);
+    expect(hasMarkdownSignals('[a](b(c))')).toBe(true);
+    expect(hasMarkdownSignals('![img](u)')).toBe(true);
+  });
+
+  it('does not treat bare brackets as a link', () => {
+    expect(hasMarkdownSignals('[](x)')).toBe(false);
+    expect(hasMarkdownSignals('plain text, no link')).toBe(false);
+  });
+
+  /**
+   * Sized so the old pattern FAILS rather than hangs: 20k brackets cost it
+   * ~150ms. `'[a]('.repeat(5000)` is the worse shape — it ran past 60s — but a
+   * test that hangs on regression is a worse signal than one that fails.
+   */
+  it('stays fast on a long run of opening brackets', () => {
+    const hostile = '['.repeat(20_000);
+    const started = performance.now();
+
+    hasMarkdownSignals(hostile);
+
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+});

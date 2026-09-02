@@ -14,13 +14,13 @@ import {
   extractPastedContent,
 } from '../list/paste-handler';
 import type { ListItemStyle } from '../list/types';
+import { trimTrailingBreaks } from '../../components/utils/trailing-breaks';
 
 export type CellBlockInsert =
   | { tool: 'paragraph'; data: { text: string } }
   | { tool: 'list'; data: { text: string; style: ListItemStyle; checked: boolean; depth: number } };
 
 const BR_SPLIT_RE = /<br\s*\/?>/i;
-const TRAILING_BR_RE = /(?:<br\s*\/?>|\s)+$/i;
 
 const splitInlineSegments = (html: string): string[] =>
   html.split(BR_SPLIT_RE).map(segment => segment.trim()).filter(Boolean);
@@ -51,7 +51,7 @@ const listElementToInserts = (list: HTMLElement): CellBlockInsert[] =>
 
     return {
       tool: 'list' as const,
-      data: { text: text.replace(TRAILING_BR_RE, '').trim(), style, checked, depth },
+      data: { text: trimTrailingBreaks(text).trim(), style, checked, depth },
     };
   });
 

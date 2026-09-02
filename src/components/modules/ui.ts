@@ -19,6 +19,7 @@ import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
+import { decodeHashFragment } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 
 // Controllers and handlers
@@ -1235,16 +1236,19 @@ export class UI extends Module<UINodes> {
       return false;
     }
 
-    if (!BlockManager.lastBlock) {
-      return false;
-    }
-
     /**
      * Insert a default-block at the bottom if:
-     * - last-block is not a default-block (Text)
+     * - there is no block at all
+     * - Or, last-block is not a default-block (Text)
      * - Or, default-block is not empty
+     *
+     * The no-block case only exists under collaboration: single-player keeps a
+     * floor of one block at all times. A collaboration editor legitimately sits
+     * at zero — a room nobody has written in yet, seen by someone whose write
+     * access arrived late — and refusing here left the only gesture that makes
+     * a block doing nothing, with no way out of an empty document.
      */
-    if (!BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
+    if (!BlockManager.lastBlock || !BlockManager.lastBlock.tool.isDefault || !BlockManager.lastBlock.isEmpty) {
       BlockManager.insertAtEnd();
     }
 
@@ -1366,6 +1370,22 @@ export class UI extends Module<UINodes> {
    */
   private openLink(href: string): void {
     if (hasUnsafeScheme(href)) {
+      return;
+    }
+
+    /**
+     * A bare fragment addresses THIS document — the link tool even labels it
+     * "Jump to section". Opening it in a new tab would reload the page instead
+     * of moving to the section, so hand it to the blocks API, which resolves
+     * both block ids and heading anchors.
+     */
+    if (href.startsWith('#')) {
+      const fragment = decodeHashFragment(href.slice(1));
+
+      if (fragment !== '') {
+        this.Blok.BlocksAPI.scrollToBlock(fragment);
+      }
+
       return;
     }
 

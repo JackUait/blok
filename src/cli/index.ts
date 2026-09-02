@@ -62,7 +62,9 @@ export const run = async (argv: string[], version: string): Promise<void> => {
 
       const { convertHtml } = await import('./commands/convert-html/index');
       const fs = await import('node:fs');
-      const html = fs.readFileSync('/dev/stdin', 'utf-8');
+      // fd 0, not '/dev/stdin': reopening the path fails with ENXIO on Linux when
+      // the writer has already closed the pipe (any non-shell caller passing input).
+      const html = fs.readFileSync(0, 'utf-8');
       const json = convertHtml(html);
 
       writeOutput(json, output);
@@ -78,7 +80,9 @@ export const run = async (argv: string[], version: string): Promise<void> => {
 
       const { convertGdocs } = await import('./commands/convert-gdocs/index');
       const fs = await import('node:fs');
-      const html = fs.readFileSync('/dev/stdin', 'utf-8');
+      // fd 0, not '/dev/stdin': reopening the path fails with ENXIO on Linux when
+      // the writer has already closed the pipe (any non-shell caller passing input).
+      const html = fs.readFileSync(0, 'utf-8');
       const json = convertGdocs(html);
 
       writeOutput(json, output);

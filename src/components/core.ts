@@ -1,15 +1,35 @@
-import type { BlokConfig } from '../../types';
+import type { BlokConfig, OutputData } from '../../types';
+import type { PersistedDocument } from '../../types/configs/blok-config';
 import type { BlokModules } from '../types-internal/blok-modules';
 
 import { Dom as $ } from './dom';
 import { CriticalError } from './errors/critical';
 import type { BlokEventMap } from './events';
 import { Modules } from './modules';
+import type { Collaboration } from './modules/collaboration';
 import type { Renderer } from './modules/renderer';
 import { LogLevels, isEmpty, isFunction, isObject, isString, log, setLogLevel } from './utils';
 import { cloneOutputBlocks } from './utils/clone-output-blocks';
+import { expandPersistenceConfig, unwrapPersistedDocument } from './utils/persistence';
+import { expandServerConfig } from './utils/server-config';
 import { normalizeOutputBlocks } from '../shared/output-data';
 import { EventsDispatcher } from './utils/events';
+
+/**
+ * A collaboration `doc` becomes one path segment of the sync URL, so it must be
+ * a single segment: not empty, no `/` (raw or `%2f`/`%2F`), and not a `.`/`..`
+ * dot segment — any of which would retarget the request at another document or
+ * the whole collection. Mirrors the server's `IsSingleSegment` guard. Accepts
+ * `unknown` so a JS consumer dropping `doc` is refused, not a crash.
+ * @param doc - the configured document id
+ */
+const isSingleDocSegment = (doc: unknown): boolean =>
+  typeof doc === 'string' &&
+  doc.length > 0 &&
+  !doc.includes('/') &&
+  !doc.toLowerCase().includes('%2f') &&
+  doc !== '.' &&
+  doc !== '..';
 
 /**
  * Blok core class. Bootstraps modules.
@@ -60,7 +80,15 @@ export class Core {
           UI.checkEmptiness();
           ModificationsObserver.enable();
 
-          if ((this.configuration).autofocus === true && this.configuration.readOnly !== true) {
+          /**
+           * A collaboration session is still empty at this point — its blocks
+           * arrive with the first sync — so there is nothing to focus yet.
+           */
+          if (
+            (this.configuration).autofocus === true &&
+            this.configuration.readOnly !== true &&
+            BlockManager.blocks.length > 0
+          ) {
             Caret.setToBlock(BlockManager.blocks[0], Caret.positions.START);
           }
 
@@ -81,6 +109,13 @@ export class Core {
    * Setting for configuration
    * @param {BlokConfig|string|undefined} config - Blok's config to set
    */
+  /**
+   * One-shot document load, consumed by the first render. Null once used, so a
+   * re-render never re-fetches. Resolves with either shape a store may answer
+   * with — the envelope is unwrapped where it is awaited.
+   */
+  private pendingPersistedLoad: (() => Promise<OutputData | PersistedDocument | null>) | null = null;
+
   public set configuration(config: BlokConfig|string|undefined) {
     /**
      * Place config into the class property
@@ -99,6 +134,35 @@ export class Core {
         holder: config as string | undefined,
       };
     }
+
+    /**
+     * Refuse a broken `collaboration` config here, before any expansion runs,
+     * so a refused config never builds a persistence save queue it will not use.
+     */
+    this.validateCollaborationConfig();
+
+    /**
+     * `server` is sugar over options that already exist. Expanding it here —
+     * before validate() and before any module reads the config — is what keeps
+     * the rest of the editor from ever learning the key.
+     */
+    this.config = expandServerConfig(this.config);
+
+    this.config = expandPersistenceConfig(this.config);
+
+    /**
+     * Read BEFORE `data` is defaulted below — after that every config has data
+     * and "the host supplied none" is no longer answerable. Loading over data
+     * the host passed would discard it, so persistence only fills a gap.
+     *
+     * Bound from the EXPANDED config: the expansion wraps `load` to record the
+     * document version the next save has to report back.
+     */
+    const persistence = this.config.persistence;
+
+    this.pendingPersistedLoad = persistence !== undefined && this.config.data == null
+      ? persistence.load.bind(persistence)
+      : null;
 
     /**
      * If holder is empty then set a default value
@@ -211,9 +275,16 @@ export class Core {
     this.config.inlineToolbar = this.config.inlineToolbar !== undefined ? this.config.inlineToolbar : true;
 
     /**
-     * Initialize default Block to pass data to the Renderer
+     * Initialize default Block to pass data to the Renderer.
+     *
+     * NOT under collaboration: the document arrives from the sync service, and
+     * a default block injected here would be rendered as "last known" on the
+     * offline degrade path — a phantom paragraph the server never had.
      */
-    if (isEmpty(this.config.data) || this.config.data.blocks.length === 0) {
+    if (
+      this.config.collaboration === undefined &&
+      (isEmpty(this.config.data) || this.config.data.blocks.length === 0)
+    ) {
       this.config.data = { blocks: [ defaultBlockData ] };
     }
 
@@ -226,6 +297,38 @@ export class Core {
    */
   public get configuration(): BlokConfig {
     return this.config;
+  }
+
+  /**
+   * Refuse a misconfigured `collaboration` block: the sync service owns the
+   * document round-trip, so it cannot be paired with a persistence endpoint; it
+   * derives the sync URL from `server`; and its `doc` becomes one path segment
+   * of that URL. Refuse-don't-warn — throwing rejects the ready promise.
+   */
+  private validateCollaborationConfig(): void {
+    const { collaboration } = this.config;
+
+    if (collaboration === undefined) {
+      return;
+    }
+
+    if (this.config.persistence !== undefined) {
+      throw new Error('collaboration and persistence cannot be combined: the sync service owns the document round-trip');
+    }
+
+    if (this.config.server === undefined) {
+      throw new Error('collaboration requires the server option');
+    }
+
+    if (!isSingleDocSegment(collaboration.doc)) {
+      throw new Error('collaboration.doc must be a single path segment');
+    }
+
+    // Silently ignoring a non-boolean would leave the host believing their
+    // document survives a reload when nothing is being cached at all.
+    if (collaboration.offline !== undefined && typeof collaboration.offline !== 'boolean') {
+      throw new Error('collaboration.offline must be a boolean');
+    }
   }
 
   /**
@@ -321,10 +424,46 @@ export class Core {
       throw new CriticalError('Blok data is not initialized');
     }
 
+    const data = this.config.data;
+    const load = this.pendingPersistedLoad;
+
+    this.pendingPersistedLoad = null;
+
+    const collaboration = this.moduleInstances['Collaboration' as keyof BlokModules] as Collaboration | undefined;
+
+    /**
+     * Sync-first load: the sync service owns the document, so NOTHING is seeded
+     * here — not the Yjs document from `config.data`, not a default block. The
+     * editor comes up empty and read-only, and the blocks materialise through
+     * the ordinary remote path when the first sync lands. `config.data` is
+     * handed over as last-known, for the read-only degrade while offline.
+     *
+     * `pendingPersistedLoad` is always null here: the config setter refuses
+     * collaboration combined with persistence.
+     */
+    if (collaboration?.isEnabled === true) {
+      return collaboration.load(normalizeOutputBlocks(data.blocks));
+    }
+
     // Idempotent re-normalization: `config.data` is declared with the loose
     // wire type, but prepare() already normalized it — this narrows the type
     // without a cast.
-    return renderer.render(normalizeOutputBlocks(this.config.data.blocks));
+    if (load === null) {
+      return renderer.render(normalizeOutputBlocks(data.blocks));
+    }
+
+    return load().then((result) => {
+      const loaded = unwrapPersistedDocument(result);
+      const blocks = loaded?.blocks;
+
+      if (blocks !== undefined && blocks.length > 0) {
+        this.config.data = { ...loaded, blocks: cloneOutputBlocks(normalizeOutputBlocks(blocks)) };
+
+        return renderer.render(normalizeOutputBlocks(blocks));
+      }
+
+      return renderer.render(normalizeOutputBlocks(data.blocks));
+    });
   }
 
   /**

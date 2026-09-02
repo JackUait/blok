@@ -1,21 +1,48 @@
 import * as Y from 'yjs';
 
+import { logLabeled } from '../../utils';
 import {
   LOCAL_ORIGIN_TAGS,
   type BlockChangeEvent,
   type BlockChangeCallback,
+  type DocumentScope,
   type LocalOriginTag,
   type TransactionOrigin,
 } from './types';
 
 /**
+ * Per-transaction classification buckets.
+ */
+interface ChangeBuckets {
+  adds: string[];
+  removes: string[];
+  orderTouched: Set<string>;
+  updates: Set<string>;
+}
+
+/**
+ * Event type observed on either root. The union is nominal — every branch
+ * narrows by identity/instanceof, never by this annotation.
+ */
+type ObservedEvent = Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>;
+
+/**
  * BlockObserver observes Yjs events and emits domain events.
  *
- * Responsibilities:
- * - Observes Yjs changes on the blocks array
- * - Maps transaction origins to domain origins
- * - Emits BlockChangeEvent to registered callbacks
- * - Detects and reports move operations
+ * Doc schema v2 mapping:
+ * - blocks-map key add/delete → 'add'/'remove' (the key IS the block id)
+ * - order-array edits (root order or a contentIds array) whose id was not
+ *   added/removed in the same transaction → 'move'
+ * - any other nested event — nested Y.Maps AND nested Y.Arrays (per-cell
+ *   grids) — → 'update' on the owning block via the identity walk
+ *
+ * EMISSION-ORDER CONTRACT: within one transaction, events are emitted
+ * moves → add/batch-add → removes → updates, regardless of which root each
+ * change came through. Both roots' deep observers only CLASSIFY into a
+ * per-transaction buffer; the ordered dispatch runs once per transaction
+ * from the doc's 'afterTransaction' hook (still synchronous, inside the
+ * same transaction cleanup). Do not rely on yjs firing plain observers
+ * before deep ones — that is an internal, not a contract.
  */
 export class BlockObserver {
   /**
@@ -24,9 +51,14 @@ export class BlockObserver {
   private changeCallbacks: BlockChangeCallback[] = [];
 
   /**
-   * Yjs blocks array being observed
+   * Blocks map being observed (id → block Y.Map)
    */
-  private yblocks: Y.Array<Y.Map<unknown>> | null = null;
+  private blocksMap: Y.Map<Y.Map<unknown>> | null = null;
+
+  /**
+   * Root order array being observed (top-level ids)
+   */
+  private rootOrder: Y.Array<string> | null = null;
 
   /**
    * Undo manager reference (needed to detect undo/redo state)
@@ -34,19 +66,51 @@ export class BlockObserver {
   private undoManager: Y.UndoManager | null = null;
 
   /**
+   * The observed doc — source of the 'afterTransaction' dispatch hook.
+   */
+  private doc: Y.Doc | null = null;
+
+  /**
+   * Classifications buffered per transaction between the deep-observer
+   * callbacks and the 'afterTransaction' dispatch. WeakMap so a
+   * transaction whose dispatch never runs (doc torn down mid-cleanup)
+   * cannot leak its buckets.
+   */
+  private readonly pendingBuckets = new WeakMap<Y.Transaction, ChangeBuckets>();
+
+  /**
+   * The single deep observer registered on BOTH roots (kept for detach).
+   */
+  private deepObserver:
+    | ((events: ObservedEvent[], transaction: Y.Transaction) => void)
+    | null = null;
+
+  /**
+   * The per-transaction dispatch hook (kept for detach).
+   */
+  private afterTransactionHandler: ((transaction: Y.Transaction) => void) | null = null;
+
+  /**
    * Set up Yjs observers for change tracking.
    */
-  public observe(yblocks: Y.Array<Y.Map<unknown>>, undoManager: Y.UndoManager): void {
-    this.yblocks = yblocks;
+  public observe(scope: DocumentScope, undoManager: Y.UndoManager): void {
+    this.blocksMap = scope.blocksMap;
+    this.rootOrder = scope.rootOrder;
     this.undoManager = undoManager;
+    this.doc = scope.blocksMap.doc;
 
-    this.yblocks.observeDeep((events, transaction) => {
-      const origin = this.mapTransactionOrigin(transaction.origin);
+    const deepObserver = (events: ObservedEvent[], transaction: Y.Transaction): void => {
+      this.collectTransactionEvents(events, transaction);
+    };
 
-      for (const event of events) {
-        this.handleYjsEvent(event as Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>, origin);
-      }
-    });
+    this.deepObserver = deepObserver;
+    scope.blocksMap.observeDeep(deepObserver);
+    scope.rootOrder.observeDeep(deepObserver);
+
+    this.afterTransactionHandler = (transaction: Y.Transaction): void => {
+      this.dispatchTransaction(transaction);
+    };
+    this.doc?.on('afterTransaction', this.afterTransactionHandler);
   }
 
   /**
@@ -129,185 +193,216 @@ export class BlockObserver {
   }
 
   /**
-   * Handle a single Yjs event.
+   * Deep-observer callback for either root: classify this root's events
+   * into the transaction's buckets. Emits nothing — the ordered dispatch
+   * runs once per transaction in `dispatchTransaction`.
    */
-  private handleYjsEvent(
-    event: Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>,
-    origin: TransactionOrigin
+  private collectTransactionEvents(
+    events: ObservedEvent[],
+    transaction: Y.Transaction
   ): void {
-    if (this.yblocks === null) {
-      return;
-    }
+    const buckets = this.pendingBuckets.get(transaction) ?? {
+      adds: [],
+      removes: [],
+      orderTouched: new Set<string>(),
+      updates: new Set<string>(),
+    };
 
-    if (event.target === this.yblocks) {
-      this.handleArrayEvent(event as Y.YArrayEvent<Y.Map<unknown>>, origin);
-      return;
-    }
+    this.pendingBuckets.set(transaction, buckets);
 
-    if (event.target instanceof Y.Map) {
-      this.handleMapEvent(event.target, origin);
+    for (const event of events) {
+      // One bad event must not desync the rest of the transaction's blocks
+      // — remote payloads are untrusted input.
+      try {
+        this.collectEvent(event, buckets);
+      } catch (error) {
+        logLabeled('Failed to process a document change event.', 'error', error);
+      }
     }
   }
 
   /**
-   * Handle array-level changes (add/remove/move).
-   * Detects moves by finding block IDs that appear in both adds and removes.
+   * Sort one event into the buckets:
+   * - target === blocksMap → key adds/deletes/updates (the key is the id)
+   * - target === rootOrder, or a block's contentIds Y.Array → the id
+   *   STRINGS in its delta are move candidates
+   * - any other target reachable from a block — nested Y.Maps AND nested
+   *   Y.Arrays (grid rows/cells) — → 'update' for the owning block
+   * - targets that never reach a block Y.Map (hostile shapes) drop silently
    */
-  private handleArrayEvent(
-    yArrayEvent: Y.YArrayEvent<Y.Map<unknown>>,
-    origin: TransactionOrigin
-  ): void {
-    // Collect added and removed block IDs
-    const adds: string[] = [];
-    const removes: string[] = [];
+  private collectEvent(event: ObservedEvent, buckets: ChangeBuckets): void {
+    if (this.blocksMap === null || this.rootOrder === null) {
+      return;
+    }
 
-    // Extract IDs from added items
-    yArrayEvent.changes.added.forEach((item) => {
-      const content = item.content.getContent();
+    // Widen before comparing: the nominal event annotation says nothing
+    // about which shared type actually changed.
+    const target: unknown = event.target;
 
-      for (const yblock of content) {
-        if (!(yblock instanceof Y.Map)) {
-          continue;
+    if (target === this.blocksMap) {
+      event.changes.keys.forEach((change, key) => {
+        if (change.action === 'add') {
+          buckets.adds.push(key);
+        } else if (change.action === 'delete') {
+          buckets.removes.push(key);
+        } else {
+          buckets.updates.add(key);
         }
+      });
 
-        const id: unknown = yblock.get('id');
+      return;
+    }
 
-        if (typeof id === 'string') {
-          adds.push(id);
-        }
+    const isOrderArray =
+      target === this.rootOrder ||
+      (target instanceof Y.Array && this.isContentIdsArray(target));
+
+    if (isOrderArray) {
+      for (const id of this.extractStrings(event.changes.added)) {
+        buckets.orderTouched.add(id);
       }
-    });
 
-    // Extract IDs from deleted items
-    yArrayEvent.changes.deleted.forEach((item) => {
-      const blockId = this.extractBlockIdFromDeletedItem(item);
-
-      if (blockId !== undefined) {
-        removes.push(blockId);
+      for (const id of this.extractStrings(event.changes.deleted)) {
+        buckets.orderTouched.add(id);
       }
-    });
 
-    // Use Set for O(1) lookups
-    const addSet = new Set(adds);
-    const removeSet = new Set(removes);
+      return;
+    }
 
-    // Detect moves: same ID appears in both adds and removes
-    const moveIds = adds.filter((id) => removeSet.has(id));
-    const pureAdds = adds.filter((id) => !removeSet.has(id));
-    const pureRemoves = removes.filter((id) => !addSet.has(id));
+    const yblock = this.walkToOwningBlock(target);
 
-    // Emit move events first (so DOM can reposition before other changes)
-    for (const blockId of moveIds) {
+    if (yblock === null) {
+      return;
+    }
+
+    const id: unknown = yblock.get('id');
+
+    if (typeof id === 'string') {
+      buckets.updates.add(id);
+    }
+  }
+
+  /**
+   * Whether the array is a block's `contentIds` — the array directly under
+   * a block Y.Map, stored under the 'contentIds' key. Any other nested
+   * Y.Array (grid rows/cells, tool data) is block content, not order.
+   */
+  private isContentIdsArray(target: Y.Array<unknown>): boolean {
+    const parentBlock: unknown = target.parent;
+
+    return (
+      parentBlock instanceof Y.Map &&
+      parentBlock.parent === this.blocksMap &&
+      parentBlock.get('contentIds') === target
+    );
+  }
+
+  /**
+   * Ordered dispatch for one transaction: moves → adds → removes → updates,
+   * so the DOM can reposition before other changes land. Runs from the
+   * doc's 'afterTransaction' hook — after BOTH roots' deep observers have
+   * classified, still synchronously inside the transaction cleanup.
+   */
+  private dispatchTransaction(transaction: Y.Transaction): void {
+    const buckets = this.pendingBuckets.get(transaction);
+
+    if (buckets === undefined) {
+      return;
+    }
+
+    // Pop BEFORE emitting: a subscriber may legally grow the doc
+    // mid-dispatch (yjs-sync inserts a remote block → a container tool's
+    // rendered() hook inserts a child); those writes open a NEW transaction
+    // that must classify into fresh buckets.
+    this.pendingBuckets.delete(transaction);
+
+    const origin = this.mapTransactionOrigin(transaction.origin);
+    const addSet = new Set(buckets.adds);
+    const removeSet = new Set(buckets.removes);
+    const moves = [...buckets.orderTouched]
+      .filter((id) => !addSet.has(id) && !removeSet.has(id));
+
+    for (const blockId of moves) {
       this.emitChange({ type: 'move', blockId, origin });
     }
 
     // Emit pure adds — batch when there are multiple so that parent and
     // child blocks can be registered in BlockManager before any lifecycle
     // hooks (like Table.rendered → initializeCells) fire.
-    if (pureAdds.length === 1) {
-      this.emitChange({ type: 'add', blockId: pureAdds[0], origin });
+    if (buckets.adds.length === 1) {
+      this.emitChange({ type: 'add', blockId: buckets.adds[0], origin });
     }
 
-    if (pureAdds.length > 1) {
-      this.emitChange({ type: 'batch-add', blockIds: pureAdds, origin });
+    if (buckets.adds.length > 1) {
+      this.emitChange({ type: 'batch-add', blockIds: buckets.adds, origin });
     }
 
-    // Emit pure removes
-    for (const blockId of pureRemoves) {
+    for (const blockId of buckets.removes) {
       this.emitChange({ type: 'remove', blockId, origin });
     }
+
+    const updates = [...buckets.updates]
+      .filter((id) => !addSet.has(id) && !removeSet.has(id));
+
+    for (const blockId of updates) {
+      this.emitChange({ type: 'update', blockId, origin });
+    }
   }
 
   /**
-   * Extract block id from a deleted Y.Map item.
+   * Extract string values from an event delta's item set. Deleted items
+   * keep their content readable via `getContent()`.
    */
-  private extractBlockIdFromDeletedItem(item: Y.Item): string | undefined {
-    const content = item.content.getContent();
+  private extractStrings(items: Set<Y.Item>): string[] {
+    const result: string[] = [];
 
-    if (content.length === 0) {
-      return undefined;
-    }
-
-    const yblock: unknown = content[0];
-
-    if (!(yblock instanceof Y.Map)) {
-      return undefined;
-    }
-
-    // Access the internal _map to get the id since the Y.Map is deleted
-    const idEntry: unknown = yblock._map.get('id');
-    const idContent: unknown = idEntry instanceof Y.Item && idEntry.content?.getContent()[0];
-
-    return typeof idContent === 'string' ? idContent : undefined;
-  }
-
-  /**
-   * Handle map-level changes (data update, tunes update, or top-level
-   * yblock key changes like `parentId` / `contentIds`).
-   *
-   * When a remote client reparents a block, the changed Y.Map is the
-   * yblock itself — not a nested `data`/`tunes` sub-map. Detect both
-   * cases so we always emit an update event for the affected block id.
-   */
-  private handleMapEvent(ymap: Y.Map<unknown>, origin: TransactionOrigin): void {
-    if (this.yblocks === null) {
-      return;
-    }
-
-    // Direct yblock change (e.g. parentId/contentIds written on the yblock itself).
-    if (this.isTopLevelYblock(ymap)) {
-      const id: unknown = ymap.get('id');
-
-      if (typeof id === 'string') {
-        this.emitChange({
-          type: 'update',
-          blockId: id,
-          origin,
-        });
+    items.forEach((item) => {
+      for (const value of item.content.getContent()) {
+        if (typeof value === 'string') {
+          result.push(value);
+        }
       }
-
-      return;
-    }
-
-    const yblock = this.findParentBlock(ymap);
-
-    if (yblock === undefined) {
-      return;
-    }
-
-    this.emitChange({
-      type: 'update',
-      blockId: yblock.get('id') as string,
-      origin,
     });
+
+    return result;
   }
 
   /**
-   * Returns true if the given Y.Map is one of the top-level yblocks tracked
-   * in the blocks array.
+   * Resolve the yblock owning a changed nested type BY IDENTITY: walk the
+   * node up its parent chain until the parent is the blocks map.
+   *
+   * NOT by `event.path`: yjs freezes every event's path BEFORE dispatch
+   * (events are sorted by path length and `YEvent.path` memoizes), while a
+   * subscriber may legally grow the doc mid-dispatch (yjs-sync inserts a
+   * remote block → a container tool's rendered() hook inserts a child). A
+   * frozen key resolved against the live map then points at the wrong
+   * block. The parent chain is immune to sibling structural writes.
+   *
+   * Returns null when the chain never reaches the blocks map, or when the
+   * member directly under it is not a Y.Map (hostile shapes drop silently).
+   *
+   * Any shared type is a legal STARTING node — a foreign client can nest a
+   * Y.Text under block data, and its delta events target the Y.Text itself;
+   * rejecting it here silently diverges the doc from the DOM. The
+   * member-under-blocks-must-be-a-Y.Map gate below is what keeps hostile
+   * shapes out, not this check.
    */
-  private isTopLevelYblock(ymap: Y.Map<unknown>): boolean {
-    if (this.yblocks === null) {
-      return false;
+  private walkToOwningBlock(node: unknown): Y.Map<unknown> | null {
+    if (this.blocksMap === null) {
+      return null;
     }
 
-    return this.yblocks.toArray().includes(ymap);
-  }
-
-  /**
-   * Find the parent block Y.Map for a nested Y.Map (data or tunes).
-   */
-  private findParentBlock(ymap: Y.Map<unknown>): Y.Map<unknown> | undefined {
-    if (this.yblocks === null) {
-      return undefined;
+    if (!(node instanceof Y.AbstractType)) {
+      return null;
     }
 
-    return this.yblocks.toArray().find((yblock) => {
-      const ydata = yblock.get('data');
-      const ytunes = yblock.get('tunes');
+    const parent: unknown = node.parent;
 
-      return ydata === ymap || ytunes === ymap;
-    });
+    if (parent === this.blocksMap) {
+      return node instanceof Y.Map ? node : null;
+    }
+
+    return this.walkToOwningBlock(parent);
   }
 
   /**
@@ -320,16 +415,46 @@ export class BlockObserver {
    */
   private emitChange(event: BlockChangeEvent): void {
     for (const callback of this.changeCallbacks) {
-      callback(event);
+      try {
+        callback(event);
+      } catch (error) {
+        logLabeled('A block-change subscriber threw.', 'error', error);
+      }
     }
+  }
+
+  /**
+   * Detach from the observed document, KEEPING the change subscribers.
+   *
+   * This is the half of `destroy` a lineage reset needs: the Y.Doc is being
+   * swapped, but every subscriber (BlockYjsSync above all) must survive the
+   * swap — re-registering them would mean reaching into BlockManager to rebuild
+   * a subscription that never had to break. Pair it with a fresh `observe`.
+   */
+  public unobserve(): void {
+    if (this.deepObserver !== null) {
+      this.blocksMap?.unobserveDeep(this.deepObserver);
+      this.rootOrder?.unobserveDeep(this.deepObserver);
+    }
+
+    if (this.afterTransactionHandler !== null) {
+      this.doc?.off('afterTransaction', this.afterTransactionHandler);
+    }
+
+    this.blocksMap = null;
+    this.rootOrder = null;
+    this.undoManager = null;
+    this.doc = null;
+    this.deepObserver = null;
+    this.afterTransactionHandler = null;
   }
 
   /**
    * Cleanup on destroy.
    */
   public destroy(): void {
+    this.unobserve();
+
     this.changeCallbacks = [];
-    this.yblocks = null;
-    this.undoManager = null;
   }
 }

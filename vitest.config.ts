@@ -33,6 +33,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      thresholds: {
+        statements: 85,
+        lines: 85,
+        functions: 84,
+        branches: 80,
+      },
       include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/**/*.d.ts', 'src/**/__module.ts', 'src/**/index.ts', 'test/**', 'node_modules/**']
     },

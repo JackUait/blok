@@ -128,4 +128,19 @@ describe('TrustedBy', () => {
       expect(card!.classList.contains('is-touch-active')).toBe(false);
     });
   });
+
+  // Each reel renders 0-9 plus a wrap digit, so the two stats put 66 loose
+  // digits into the extracted text of the home page. The real value is already
+  // carried once by the sr-only sibling; the reel is pure animation.
+  it('excludes the animated digit reels from search snippets', () => {
+    renderTrustedBy();
+    const stats = screen.getByTestId('trusted-stats');
+
+    const reels = stats.querySelectorAll('[aria-hidden="true"]');
+
+    expect(reels.length).toBeGreaterThan(0);
+    for (const reel of reels) {
+      expect(reel.closest('[data-nosnippet]')).not.toBeNull();
+    }
+  });
 });

@@ -30,6 +30,6 @@ describe("MigrationMove", () => {
 
   it("links to the reference page", () => {
     renderMove();
-    expect(screen.getByRole("link", { name: new RegExp(en.migration.moveReferenceLink) })).toHaveAttribute("href", "/migration/reference");
+    expect(screen.getByRole("link", { name: new RegExp(en.migration.moveReferenceLink) })).toHaveAttribute("href", "/migration/reference/");
   });
 });

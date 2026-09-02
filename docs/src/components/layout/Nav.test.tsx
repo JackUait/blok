@@ -77,6 +77,20 @@ describe('Nav', () => {
     expect(logo).toBeInTheDocument();
   });
 
+  // `h-7 w-auto` gives the browser a height but no width until the PNG's
+  // header arrives, so the brand row jumped sideways on first paint.
+  it('reserves the wordmark box before the image loads', () => {
+    render(
+      <TestWrapper>
+        <Nav links={mockLinks} />
+      </TestWrapper>
+    );
+
+    const wordmark = screen.getByTestId('nav-wordmark');
+    expect(wordmark).toHaveAttribute('width');
+    expect(wordmark).toHaveAttribute('height');
+  });
+
   it('should mark the active link based on current path', () => {
     render(
       <TestWrapper initialPath="/demo">

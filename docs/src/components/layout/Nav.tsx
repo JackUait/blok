@@ -191,7 +191,7 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        Skip to content
+        {t("common.skipToContent")}
       </a>
       <nav
         ref={navRef}
@@ -224,7 +224,16 @@ export const Nav: React.FC<NavProps> = ({ links, keepExpanded = false, staticPos
             className="nav-brand flex shrink-0 items-center gap-1.5 font-display text-xl font-extrabold tracking-tight"
           >
             <Logo size={42} className="nav-brand-mascot" />
-            <img src="/logo-wordmark.png" alt="" className="nav-brand-wordmark h-7 w-auto" />
+            {/* `h-7 w-auto` alone leaves the width unknown until the PNG header
+                arrives; the intrinsic size lets the browser reserve it up front. */}
+            <img
+              src="/logo-wordmark.png"
+              alt=""
+              width={154}
+              height={72}
+              className="nav-brand-wordmark h-7 w-auto"
+              data-blok-testid="nav-wordmark"
+            />
           </Link>
 
           {/* Center search — Airbnb-style pill: dark prompt on the left, a coral

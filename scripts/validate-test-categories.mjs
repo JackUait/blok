@@ -3,8 +3,8 @@
 /**
  * Test Categorization Validation Script
  *
- * Ensures all E2E test files are categorized in playwright.config.ts.
- * This prevents tests from being accidentally excluded or miscategorized.
+ * Ensures all E2E test files belong to exactly one CI execution tier.
+ * The catch-all Chromium project owns files that need no special tier.
  *
  * Usage:
  *   node scripts/validate-test-categories.mjs
@@ -49,6 +49,7 @@ function getTestPatterns() {
 
   const crossBrowserMatch = configContent.match(/const CROSS_BROWSER_TESTS = \[([\s\S]*?)\] as const/);
   const logicMatch = configContent.match(/const LOGIC_TESTS = \[([\s\S]*?)\] as const/);
+  const visualMatch = configContent.match(/const VISUAL_TESTS = \[([\s\S]*?)\] as const/);
 
   const extractPatterns = (match) => {
     if (!match) return [];
@@ -61,6 +62,7 @@ function getTestPatterns() {
   return {
     crossBrowser: extractPatterns(crossBrowserMatch),
     logic: extractPatterns(logicMatch),
+    visual: extractPatterns(visualMatch),
   };
 }
 
@@ -119,10 +121,11 @@ function main() {
   const testFiles = getTestFiles();
   const patterns = getTestPatterns();
 
-  const uncategorized = [];
   const duplicates = [];
   const crossBrowserFiles = [];
   const logicFiles = [];
+  const visualFiles = [];
+  const defaultFiles = [];
 
   for (const file of testFiles) {
     const inCrossBrowser = matchesPatterns(file, patterns.crossBrowser);
@@ -134,40 +137,28 @@ function main() {
       crossBrowserFiles.push(file);
     } else if (inLogic) {
       logicFiles.push(file);
+    } else if (matchesPatterns(file, patterns.visual)) {
+      visualFiles.push(file);
     } else {
-      uncategorized.push(file);
+      defaultFiles.push(file);
     }
   }
 
-  // Report results
   console.log(`Found ${testFiles.length} test files:\n`);
   console.log(`  Cross-browser tests: ${crossBrowserFiles.length}`);
   console.log(`  Logic-only tests:    ${logicFiles.length}`);
-
-  let hasErrors = false;
-
-  if (uncategorized.length > 0) {
-    hasErrors = true;
-    console.log(`\n${uncategorized.length} UNCATEGORIZED test(s) found:`);
-    uncategorized.forEach(file => console.log(`  - ${file}`));
-    console.log('\nAdd these to CROSS_BROWSER_TESTS or LOGIC_TESTS in playwright.config.ts');
-    console.log('  - CROSS_BROWSER_TESTS: Tests involving browser-specific behavior');
-    console.log('  - LOGIC_TESTS: Pure JavaScript/API tests (browser-agnostic)');
-  }
+  console.log(`  Visual tests:        ${visualFiles.length}`);
+  console.log(`  Chromium default:    ${defaultFiles.length}`);
 
   if (duplicates.length > 0) {
-    hasErrors = true;
     console.log(`\n${duplicates.length} DUPLICATE categorization(s) found:`);
     duplicates.forEach(file => console.log(`  - ${file}`));
     console.log('\nRemove duplicates - each test should be in only one category.');
-  }
-
-  if (hasErrors) {
     console.log('\nValidation FAILED');
     process.exit(1);
   }
 
-  console.log('\nAll tests properly categorized!');
+  console.log('\nAll tests are assigned to a CI project!');
   process.exit(0);
 }
 

@@ -1,8 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BlokUploader } from '../../../types/configs/uploader';
 import { fetchStorage } from './fetch-endpoint';
-import * as xhr from './upload-xhr';
+import * as xhr from '../../../src/components/utils/upload-xhr';
 
+/**
+ * The upload behaviour itself is covered where it lives, in
+ * `test/unit/components/utils/fetch-uploader.test.ts`. What is left to prove
+ * here is the published surface: that `fetchStorage` still returns a working
+ * uploader and hands every option through.
+ * @param uploader - the uploader under test
+ */
 function requireUploadByFile(uploader: BlokUploader): NonNullable<BlokUploader['uploadByFile']> {
   const { uploadByFile } = uploader;
 
@@ -13,14 +20,17 @@ function requireUploadByFile(uploader: BlokUploader): NonNullable<BlokUploader['
   return uploadByFile;
 }
 
-function requireUploadByUrl(uploader: BlokUploader): NonNullable<BlokUploader['uploadByUrl']> {
-  const { uploadByUrl } = uploader;
+/**
+ * @param uploader - the uploader under test
+ */
+function requireDelete(uploader: BlokUploader): NonNullable<BlokUploader['delete']> {
+  const remove = uploader.delete;
 
-  if (!uploadByUrl) {
-    throw new Error('expected uploadByUrl to be defined');
+  if (!remove) {
+    throw new Error('expected delete to be defined');
   }
 
-  return uploadByUrl;
+  return remove;
 }
 
 describe('fetchStorage', () => {
@@ -30,85 +40,59 @@ describe('fetchStorage', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  it('posts multipart to <baseUrl>/upload and returns the parsed url', async () => {
+  it('uploads to <baseUrl>/upload and returns the parsed url', async () => {
     const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({
       status: 200,
       text: '{"url":"https://cdn.example.com/a.png","fileName":"a.png"}',
     });
 
     const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
-    const result = await requireUploadByFile(uploader)(new File(['x'], 'a.png', { type: 'image/png' }), {
-      kind: 'image',
-    });
+    const result = await requireUploadByFile(uploader)(new File(['x'], 'a.png'), { kind: 'image' });
 
     expect(result).toEqual({ url: 'https://cdn.example.com/a.png', fileName: 'a.png' });
     expect(spy.mock.calls[0][0].url).toBe('https://blok.example.com/upload');
-    expect(spy.mock.calls[0][0].method).toBe('POST');
   });
 
-  it('sends the file under the default "file" multipart field', async () => {
+  it('passes the field and headers options through', async () => {
     const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
-    const file = new File(['x'], 'a.png', { type: 'image/png' });
+    const file = new File(['x'], 'a.png');
 
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
+    const uploader = fetchStorage({
+      baseUrl: 'https://blok.example.com',
+      field: 'upload',
+      headers: { Authorization: 'Bearer pass-1' },
+    });
+
     await requireUploadByFile(uploader)(file, { kind: 'image' });
 
     const body = spy.mock.calls[0][0].body as FormData;
-    expect(body.get('file')).toBe(file);
-  });
 
-  it('sends the file under a custom field name from the field option', async () => {
-    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
-    const file = new File(['x'], 'a.png', { type: 'image/png' });
-
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com', field: 'upload' });
-    await requireUploadByFile(uploader)(file, { kind: 'image' });
-
-    const body = spy.mock.calls[0][0].body as FormData;
     expect(body.get('upload')).toBe(file);
-    expect(body.get('file')).toBeNull();
+    expect(spy.mock.calls[0][0].headers).toEqual({ Authorization: 'Bearer pass-1' });
   });
 
-  it('strips a trailing slash from baseUrl instead of producing a double slash', async () => {
-    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
-
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com/' });
-
-    await requireUploadByFile(uploader)(new File(['x'], 'a.png'), { kind: 'image' });
-
-    expect(spy.mock.calls[0][0].url).toBe('https://blok.example.com/upload');
+  it('declares uploadByUrl, which a browser-only preset cannot offer', () => {
+    expect(fetchStorage({ baseUrl: 'https://blok.example.com' }).uploadByUrl).toBeTypeOf('function');
   });
 
-  it('resolves headers from a function on every call', async () => {
-    const spy = vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"url":"u"}' });
-    const headers = vi.fn().mockResolvedValue({ Authorization: 'Bearer pass-1' });
-
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com', headers });
-    const uploadByFile = requireUploadByFile(uploader);
-
-    await uploadByFile(new File(['x'], 'a.png'), { kind: 'image' });
-    await uploadByFile(new File(['y'], 'b.png'), { kind: 'image' });
-
-    expect(headers).toHaveBeenCalledTimes(2);
-    expect(spy.mock.calls[1][0].headers).toEqual({ Authorization: 'Bearer pass-1' });
-  });
-
-  it('posts JSON to <baseUrl>/upload-by-url for uploadByUrl', async () => {
-    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
-      Promise.resolve({
-        ok: true,
-        text: async () => JSON.stringify({ url: 'https://cdn.example.com/rehosted.png' }),
-      })
-    );
+  it('posts the url to <baseUrl>/delete with the headers minted for that request', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve({ ok: true, status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
-    const result = await requireUploadByUrl(uploader)('https://elsewhere.example.net/i.png', { kind: 'image' });
+    const headers = vi.fn().mockResolvedValue({ Authorization: 'Bearer pass-1' });
+    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com', headers });
 
-    expect(result.url).toBe('https://cdn.example.com/rehosted.png');
-    expect(fetchMock.mock.calls[0][0]).toBe('https://blok.example.com/upload-by-url');
+    await requireDelete(uploader)('https://cdn.example.com/a.png', { kind: 'image', tool: 'image' });
+
+    expect(headers).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://blok.example.com/delete');
+
+    const sent = fetchMock.mock.calls[0][1]?.headers as Record<string, string>;
+
+    expect(sent.Authorization).toBe('Bearer pass-1');
 
     const body = fetchMock.mock.calls[0][1]?.body;
 
@@ -116,63 +100,17 @@ describe('fetchStorage', () => {
       throw new Error('expected a string body');
     }
 
-    expect(JSON.parse(body)).toEqual({ url: 'https://elsewhere.example.net/i.png' });
-
-    vi.unstubAllGlobals();
+    expect(JSON.parse(body)).toEqual({ url: 'https://cdn.example.com/a.png' });
   });
 
-  it('does not let caller headers override the JSON Content-Type on upload-by-url', async () => {
-    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
-      Promise.resolve({
-        ok: true,
-        text: async () => JSON.stringify({ url: 'https://cdn.example.com/rehosted.png' }),
-      })
-    );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const uploader = fetchStorage({
-      baseUrl: 'https://blok.example.com',
-      headers: { 'Content-Type': 'text/plain' },
-    });
-
-    await requireUploadByUrl(uploader)('https://elsewhere.example.net/i.png', { kind: 'image' });
-
-    const headers = fetchMock.mock.calls[0][1]?.headers as Record<string, string>;
-    expect(headers['Content-Type']).toBe('application/json');
-
-    vi.unstubAllGlobals();
-  });
-
-  it('wraps a malformed upload-by-url response in the same friendly error as the file path', async () => {
-    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
-      Promise.resolve({ ok: true, text: async () => 'not json' })
-    );
+  it('throws with the status when the endpoint rejects the delete', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve({ ok: false, status: 403 }));
     vi.stubGlobal('fetch', fetchMock);
 
     const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
 
-    await expect(
-      requireUploadByUrl(uploader)('https://elsewhere.example.net/i.png', { kind: 'image' })
-    ).rejects.toThrow(/malformed response/);
-
-    vi.unstubAllGlobals();
-  });
-
-  it('throws with the status when the endpoint rejects the upload', async () => {
-    vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 413, text: 'file too large' });
-
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
-
-    await expect(requireUploadByFile(uploader)(new File(['x'], 'a.png'), { kind: 'image' })).rejects.toThrow(
-      'Fetch endpoint upload failed with status 413'
+    await expect(requireDelete(uploader)('https://cdn.example.com/a.png', { kind: 'image' })).rejects.toThrow(
+      'Fetch endpoint delete failed with status 403'
     );
-  });
-
-  it('throws when the endpoint answers 200 with a body carrying no url', async () => {
-    vi.spyOn(xhr, 'uploadWithProgress').mockResolvedValue({ status: 200, text: '{"ok":true}' });
-
-    const uploader = fetchStorage({ baseUrl: 'https://blok.example.com' });
-
-    await expect(requireUploadByFile(uploader)(new File(['x'], 'a.png'), { kind: 'image' })).rejects.toThrow(/url/i);
   });
 });

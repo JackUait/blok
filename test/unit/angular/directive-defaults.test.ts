@@ -91,4 +91,15 @@ describe('BlokContentDirective honors provideBlok defaults (escape hatch)', () =
 
     expect(config.theme).toBe('light');
   });
+
+  // Angular declares no dedicated input for server/ticket/persistence/collaboration
+  // (decision 17): they ride the `[config]` escape hatch and reach core untouched,
+  // so a new BlokConfig key needs no adapter edit.
+  it('forwards the collaboration escape-hatch key to core', async () => {
+    const collaboration = { doc: 'my-doc', user: { name: 'Ada' } };
+    const config = await mount([], { server: 'https://blok.example.com', collaboration });
+
+    expect(config.collaboration).toEqual(collaboration);
+    expect(config.server).toBe('https://blok.example.com');
+  });
 });

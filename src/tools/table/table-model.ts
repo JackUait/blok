@@ -1643,7 +1643,7 @@ export class TableModel {
 
     const seen = new Set<string>();
 
-    return content.map(row =>
+    const grid = content.map(row =>
       (row ?? []).map(c => {
         const normalized = this.normalizeCell(c);
 
@@ -1659,6 +1659,18 @@ export class TableModel {
         return normalized;
       })
     );
+
+    // Concurrent col-insert + row-insert can merge into a ragged grid; pad
+    // short rows to the widest row (cols and column ops derive from row 0).
+    const maxCols = grid.reduce((max, row) => Math.max(max, row.length), 0);
+
+    for (const row of grid) {
+      while (row.length < maxCols) {
+        row.push({ blocks: [] });
+      }
+    }
+
+    return grid;
   }
 
   /**

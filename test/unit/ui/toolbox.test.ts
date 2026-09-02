@@ -3151,6 +3151,24 @@ describe('Toolbox', () => {
       expect(mockPopoverInstance.setActiveDescendantHost).toHaveBeenCalledWith(ce);
     });
 
+    it('restores an existing contentEditable label on close', () => {
+      const toolbox = new Toolbox({
+        api: mocks.api,
+        tools: mocks.tools,
+        i18nLabels,
+        i18n: mockI18n,
+        listboxId: 'blok-toolbox-popover',
+      });
+      const ce = mocks.blockAPI.holder.querySelector<HTMLElement>('[contenteditable="true"]');
+
+      ce?.setAttribute('aria-label', 'Title');
+      toolbox.open();
+      expect(ce?.getAttribute('aria-label')).toBe(i18nLabels.slashSearchPlaceholder);
+
+      toolbox.close();
+      expect(ce?.getAttribute('aria-label')).toBe('Title');
+    });
+
     it('clears combobox roles and activeDescendant host on close', () => {
       const toolbox = new Toolbox({
         api: mocks.api,

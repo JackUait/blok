@@ -2,6 +2,19 @@ import { desiredRegistrations, registrationDelta, PAYLOAD_SCRIPT_ID, BANNER_SCRI
 import { buildRedirectRules, resolveRedirectTargets } from './lib/dnr.mjs';
 import { tabsToReload, shouldReloadForPayload } from './lib/reload-targets.mjs';
 
+// Startup and messages may sync together; Chrome rejects duplicate IDs.
+const serialize = (operation) => {
+  let tail = Promise.resolve();
+
+  return () => {
+    const run = tail.then(operation, operation);
+
+    tail = run.catch(() => {});
+
+    return run;
+  };
+};
+
 const readCurrent = async () => {
   try {
     const res = await fetch(chrome.runtime.getURL('payload/current.json'), { cache: 'no-store' });
@@ -32,7 +45,7 @@ const reloadOrigins = async (origins) => {
   await reloadTabs(tabsToReload(await chrome.tabs.query({}), origins));
 };
 
-const syncRegistrations = async () => {
+const syncRegistrationsNow = async () => {
   const [armedOrigins, current] = await Promise.all([readArmed(), readCurrent()]);
   const payloadFile = current?.file ?? null;
   const desired = desiredRegistrations(armedOrigins, payloadFile);
@@ -46,6 +59,8 @@ const syncRegistrations = async () => {
   }
   await propagateRebuild(armedOrigins, payloadFile);
 };
+
+const syncRegistrations = serialize(syncRegistrationsNow);
 
 // `yarn override:sync --watch` restages the payload under a new filename; armed
 // pages pick it up on their own from here. The baseline is written BEFORE the
@@ -80,7 +95,7 @@ const disarm = async (origin) => {
   await reloadOrigins([origin]);
 };
 
-const syncRedirects = async () => {
+const syncRedirectsNow = async () => {
   const { redirects = [] } = await chrome.storage.local.get('redirects');
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   await chrome.declarativeNetRequest.updateDynamicRules({
@@ -88,6 +103,8 @@ const syncRedirects = async () => {
     addRules: buildRedirectRules(resolveRedirectTargets(redirects, chrome.runtime.getURL('payload/dist/'))),
   });
 };
+
+const syncRedirects = serialize(syncRedirectsNow);
 
 const setRedirects = async (redirects, tabId = null) => {
   await chrome.storage.local.set({ redirects });

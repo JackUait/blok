@@ -8,6 +8,7 @@ import { loadEditorSettings, saveEditorSettings, type EditorSettings } from '../
 import { NAV_LINKS } from '../utils/constants';
 import { useI18n } from '../contexts/I18nContext';
 import { ShortcutKeys } from '../components/common/KeyIcon';
+import { Link } from '../components/common/Link';
 import { Typo } from '../components/common/Typo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -211,10 +212,24 @@ const EditorCard: React.FC = () => {
 
 /** The interactive playground body — editor + JSON output, no page chrome. */
 export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
+  return (
+    <div className={cn('mx-auto w-full max-w-6xl px-6', inline ? 'pt-8 pb-12 sm:pt-10' : 'py-12 sm:py-16')}>
+          <DemoIntro />
+
+          <EditorCard />
+
+          <DemoTips />
+
+          <DemoHints />
+        </div>
+  );
+};
+
+/** Badge, the page's single h1, and the one-line pitch. */
+const DemoIntro: React.FC = () => {
   const { t } = useI18n();
 
   return (
-    <div className={cn('mx-auto w-full max-w-6xl px-6', inline ? 'pt-8 pb-12 sm:pt-10' : 'py-12 sm:py-16')}>
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-primary">
               <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
@@ -229,9 +244,14 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
               <Typo>{t('demo.subtitleRest')}</Typo>
             </p>
           </div>
+  );
+};
 
-          <EditorCard />
+/** The four keyboard shortcuts worth knowing before you start typing. */
+const DemoTips: React.FC = () => {
+  const { t } = useI18n();
 
+  return (
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground shadow-sm">
               <ShortcutKeys keys={['/']} />
@@ -250,7 +270,14 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
               <span><Typo>{t('demo.tipBoldText')}</Typo></span>
             </div>
           </div>
+  );
+};
 
+/** Three cards on what the editor is, below the playground. */
+const DemoHints: React.FC = () => {
+  const { t } = useI18n();
+
+  return (
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-card-hover" data-hint-card>
               <div className="mb-4 inline-flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -292,7 +319,67 @@ export const DemoContent: React.FC<DemoContentProps> = ({ inline = false }) => {
               </div>
             </div>
           </div>
-        </div>
+  );
+};
+
+/** The five things the playground is actually for. */
+const TRY_ITEMS = [
+  { titleKey: 'demo.trySlashTitle', descKey: 'demo.trySlashDesc' },
+  { titleKey: 'demo.tryDragTitle', descKey: 'demo.tryDragDesc' },
+  { titleKey: 'demo.tryLayoutTitle', descKey: 'demo.tryLayoutDesc' },
+  { titleKey: 'demo.tryReadOnlyTitle', descKey: 'demo.tryReadOnlyDesc' },
+  { titleKey: 'demo.tryJsonTitle', descKey: 'demo.tryJsonDesc' },
+];
+
+/** Link labels come from the docs nav dictionary, so they can never drift. */
+const NEXT_LINKS = [
+  { to: '/docs/quick-start', labelKey: 'api.links.quickStart', descKey: 'demo.nextQuickStartDesc' },
+  { to: '/docs/config', labelKey: 'api.links.configuration', descKey: 'demo.nextConfigDesc' },
+  { to: '/docs/output-data', labelKey: 'api.links.outputData', descKey: 'demo.nextOutputDataDesc' },
+  { to: '/docs/blok-editor', labelKey: 'api.sections.adapters', descKey: 'demo.nextAdaptersDesc' },
+];
+
+/** Prose the standalone /demo page carries even with JavaScript disabled. */
+const DemoGuide: React.FC = () => {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <section aria-labelledby="demo-try-heading" className="mt-12">
+        <h2 id="demo-try-heading" className="text-center font-display text-2xl font-extrabold tracking-tight text-foreground">
+          <Typo>{t('demo.tryTitle')}</Typo>
+        </h2>
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TRY_ITEMS.map(({ titleKey, descKey }) => (
+            <li key={titleKey} className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <strong className="block text-base font-bold text-foreground"><Typo>{t(titleKey)}</Typo></strong>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground"><Typo>{t(descKey)}</Typo></p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <DemoHints />
+
+      <section aria-labelledby="demo-next-heading" className="mt-12">
+        <h2 id="demo-next-heading" className="text-center font-display text-2xl font-extrabold tracking-tight text-foreground">
+          <Typo>{t('demo.nextTitle')}</Typo>
+        </h2>
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+          {NEXT_LINKS.map(({ to, labelKey, descKey }) => (
+            <li key={to}>
+              <Link
+                to={to}
+                className="block h-full rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover"
+              >
+                <strong className="block text-base font-bold text-foreground"><Typo>{t(labelKey)}</Typo></strong>
+                <span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground"><Typo>{t(descKey)}</Typo></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
   );
 };
 
@@ -332,21 +419,40 @@ export const DemoPage: React.FC = () => {
       <div className="flex min-h-screen flex-col bg-background">
         <Nav links={NAV_LINKS} keepExpanded staticPosition />
         <main className="flex min-h-0 flex-1 flex-col">
-          <h1 className="sr-only">
-            <Typo>{t('demo.title')}</Typo> <Typo>{t('demo.titleGradient')}</Typo>
-          </h1>
+          <div className="mx-auto w-full max-w-6xl px-6 pt-10 sm:pt-12">
+            <DemoIntro />
+          </div>
+          {/* React never reconciles <noscript> children on the client, so this
+              only ever renders in the prerendered file — which is exactly the
+              copy a reader with JavaScript off is left with. */}
+          <noscript>
+            <div className="mx-auto w-full max-w-2xl px-6 pb-4 text-center text-sm text-muted-foreground">
+              <strong className="text-foreground"><Typo>{t('demo.noscriptTitle')}</Typo></strong>{' '}
+              <Typo>{t('demo.noscriptBody')}</Typo>{' '}
+              <Link to="/docs" className="font-semibold text-primary underline">
+                <Typo>{t('demo.noscriptLink')}</Typo>
+              </Link>
+            </div>
+          </noscript>
           {/* Below xl, keep the generous flat padding so the block toolbar's
               ~60px left gutter always has room. From xl up, the max-w-6xl box
               is wide enough that these padding values put the block content's
               left edge exactly under the Nav's logo (same px-4 outer / px-6
-              inner / max-w-6xl centering math as Nav.tsx). */}
+              inner / max-w-6xl centering math as Nav.tsx).
+              The min-height keeps the editor usable now that prose sits both
+              above and below it — flex-1 alone hands it nothing once the page
+              is taller than the viewport. */}
           <div
-            className="min-h-0 w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16 xl:px-4"
+            className="min-h-[60vh] w-full flex-1 overflow-auto px-6 pb-8 pt-10 sm:px-16 xl:px-4"
             data-blok-testid="demo-editor-container"
           >
             <div className="mx-auto w-full max-w-6xl px-6">
               <EditorWrapper settings={editorSettings} onEditorReady={handleEditorReady} />
             </div>
+          </div>
+          <div className="mx-auto w-full max-w-6xl px-6 pb-16">
+            <DemoTips />
+            <DemoGuide />
           </div>
           <SettingsPanel settings={editorSettings} onSettingsChange={handleSettingsChange} />
         </main>

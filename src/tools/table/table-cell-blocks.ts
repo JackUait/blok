@@ -42,6 +42,11 @@ interface TableCellBlocksOptions {
   onNavigateToCell?: CellNavigationCallback;
   /** When true, handleBlockMutation defers events instead of processing immediately. */
   isStructuralOpActive?: () => boolean;
+  /**
+   * Called when a cell stops referencing a block — the one table data change
+   * nothing else announces. See {@link TableCellBlocks.signalCellReferenceDropped}.
+   */
+  onCellReferenceDropped?: () => void;
 }
 
 /**
@@ -85,6 +90,9 @@ export class TableCellBlocks {
   /** Callback to check if a structural operation is active on the parent Table. */
   private isStructuralOpActive: () => boolean;
 
+  /** Tells the parent Table its cell references changed. */
+  private onCellReferenceDropped?: () => void;
+
   /** Events deferred during structural operations, replayed or discarded afterward. */
   private deferredEvents: Array<unknown> = [];
 
@@ -101,6 +109,7 @@ export class TableCellBlocks {
     this.model = options.model;
     this.onNavigateToCell = options.onNavigateToCell;
     this.isStructuralOpActive = options.isStructuralOpActive ?? (() => false);
+    this.onCellReferenceDropped = options.onCellReferenceDropped;
 
     this.api.events.on('block changed', this.handleBlockMutation);
     this.gridElement.addEventListener('click', this.handleCellBlankSpaceClick);
@@ -1362,6 +1371,7 @@ export class TableCellBlocks {
     }
 
     this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
+    this.signalCellReferenceDropped();
     const affectedCell = this.getCell(cellPos.row, cellPos.col);
 
     if (affectedCell) {
@@ -1402,6 +1412,22 @@ export class TableCellBlocks {
     }
 
     this.model.removeBlockFromCell(cellPos.row, cellPos.col, blockId);
+    this.signalCellReferenceDropped();
+  }
+
+  /**
+   * Tell the table its own data changed.
+   *
+   * Dropping a cell reference is the one table data change nothing else
+   * announces: `onParentChanged` → `scheduleParentSync` only fires when a block
+   * GAINS a parent, so an add or an in-table reorder is covered and a removal is
+   * not. It used to ride the cell container's childList record reaching the
+   * table's mutation observer, but that container is `data-blok-mutation-free`
+   * (see table-core) so the record is scored inert. The table answers with
+   * `block.dispatchChange()`, which is exempt from that scoring by design.
+   */
+  private signalCellReferenceDropped(): void {
+    this.onCellReferenceDropped?.();
   }
 
   /**

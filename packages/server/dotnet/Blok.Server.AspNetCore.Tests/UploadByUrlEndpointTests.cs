@@ -48,6 +48,41 @@ public sealed class UploadByUrlEndpointTests
   }
 
   [Theory]
+  [InlineData(null)]
+  [InlineData("text/plain")]
+  [InlineData("application/problem+json")]
+  [InlineData("application/json-patch+json")]
+  [InlineData("application/json; charset=utf-8; charset=iso-8859-1")]
+  public async Task RejectsUnsupportedOrConflictingMediaTypesBeforeFetching(
+      string? contentType)
+  {
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var content = new ByteArrayContent(
+        """{"url":"https://source.example.test/file"}"""u8.ToArray());
+
+    if (contentType is not null)
+    {
+      content.Headers.TryAddWithoutValidation("Content-Type", contentType);
+    }
+
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        content);
+
+    await AssertError(
+        response,
+        HttpStatusCode.UnsupportedMediaType,
+        "expected application/json\n");
+    Assert.Equal(0, fetcher.CallCount);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Theory]
   [MemberData(nameof(MalformedEnvelopes))]
   public async Task RejectsMalformedOrOversizedEnvelopesBeforeFetching(
       string body)
@@ -126,6 +161,54 @@ public sealed class UploadByUrlEndpointTests
         Json(body));
 
     Assert.Equal((8 << 10) + 1, Encoding.UTF8.GetByteCount(body));
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "expected {\"url\": \"...\"}\n");
+    Assert.Equal(0, fetcher.CallCount);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task RejectsAnOversizedEnvelopeWhoseFirstEightKiBAreValidJson()
+  {
+    const string envelope =
+        "{\"url\":\"https://source.example.test/file\"}";
+    var body = envelope.PadRight(8 << 10, ' ') + "x";
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(body));
+
+    Assert.Equal((8 << 10) + 1, Encoding.UTF8.GetByteCount(body));
+    await AssertError(
+        response,
+        HttpStatusCode.BadRequest,
+        "expected {\"url\": \"...\"}\n");
+    Assert.Equal(0, fetcher.CallCount);
+    Assert.Equal(0, store.PutCalls);
+  }
+
+  [Fact]
+  public async Task RejectsATrailingJsonValueBeforeFetching()
+  {
+    const string body =
+        "{\"url\":\"https://source.example.test/file\"} {}";
+    var fetcher = new StubFetcher
+    {
+      Response = SuccessfulResponse(),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json(body));
+
     await AssertError(
         response,
         HttpStatusCode.BadRequest,
@@ -403,6 +486,29 @@ public sealed class UploadByUrlEndpointTests
     Assert.Throws<ObjectDisposedException>(() => store.Input.ReadByte());
   }
 
+  [Fact]
+  public async Task DisposesFetchedResponseAfterStorageFinishes()
+  {
+    using var permit = new SemaphoreSlim(0, 1);
+    var fetcher = new StubFetcher
+    {
+      Response = new GuardedResponse(
+          "imagebytes"u8.ToArray(),
+          "image/png",
+          "https://example.test/file.png",
+          StatusCodes.Status200OK,
+          permit),
+    };
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(fetcher, store);
+    using var response = await app.GetTestClient().PostAsync(
+        "/upload-by-url",
+        Json("""{"url":"https://source.example.test/file"}"""));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True(permit.Wait(0));
+  }
+
   private static GuardedResponse SuccessfulResponse(
       byte[]? body = null,
       string finalUrl = "https://example.test/file.png",
@@ -427,9 +533,9 @@ public sealed class UploadByUrlEndpointTests
   }
 
   private static async Task WaitUntilCancelledAsync(
-      CancellationToken cancellationToken,
       TaskCompletionSource cancelled,
-      string dependency)
+      string dependency,
+      CancellationToken cancellationToken)
   {
     using var timeout = new CancellationTokenSource(
         TimeSpan.FromSeconds(6));
@@ -547,9 +653,9 @@ public sealed class UploadByUrlEndpointTests
       Entered.TrySetResult();
 
       await WaitUntilCancelledAsync(
-          cancellationToken,
           Cancelled,
-          "fetcher");
+          "fetcher",
+          cancellationToken);
 
       return Response ??
           throw new InvalidOperationException(
@@ -588,9 +694,9 @@ public sealed class UploadByUrlEndpointTests
       {
         Entered.TrySetResult();
         await WaitUntilCancelledAsync(
-            cancellationToken,
             Cancelled,
-            "store");
+            "store",
+            cancellationToken);
       }
 
       using var bytes = new MemoryStream();

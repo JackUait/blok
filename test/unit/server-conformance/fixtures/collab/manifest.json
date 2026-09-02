@@ -1,0 +1,93 @@
+{
+  "generatedBy": "scripts/generate-collab-fixtures.mjs",
+  "cases": [
+    {
+      "name": "nested-data-maps",
+      "description": "nested data objects become nested Y.Maps at any depth; empty objects and null leaves survive"
+    },
+    {
+      "name": "keyed-grid",
+      "description": "arrays of arrays take the keyed __rows/__rowKeys shape; empty rows and [[],[]] stay grids; grids nest"
+    },
+    {
+      "name": "array-kinds",
+      "description": "convertible arrays (all objects) become Y.Arrays; primitive, mixed and empty arrays stay atomic leaves"
+    },
+    {
+      "name": "tunes",
+      "description": "tunes are emitted only when the Y.Map is non-empty; {} and absent both read back as absent"
+    },
+    {
+      "name": "hierarchy-3-deep",
+      "description": "flat order is DFS from root through contentIds, independent of input order"
+    },
+    {
+      "name": "cycle",
+      "description": "parent cycles: the smallest id keeps its parent, the rest go to root; a self-parent is always broken"
+    },
+    {
+      "name": "duplicate-id",
+      "description": "an id in two order arrays is emitted at its first PARENT-AGREEING occurrence; repeats in one array are kept"
+    },
+    {
+      "name": "orphans",
+      "description": "unreached blocks append in two sorted passes: tops (no parent entry) first, then the rest; sort is UTF-16 code-unit order"
+    },
+    {
+      "name": "dangling",
+      "description": "a parentId with no map entry is kept; a content id with no map entry is kept in content and skipped in order"
+    },
+    {
+      "name": "parent-null",
+      "description": "parent: null is written as a doc-side null, reads back as no parent, and is NOT in the root order (orphan tail)"
+    },
+    {
+      "name": "edit-metadata",
+      "description": "lastEditedAt survives only as a number, lastEditedBy only as a string"
+    },
+    {
+      "name": "paragraph-normalization",
+      "description": "an empty paragraph data {} becomes { text: \"\" }; other tools and non-empty paragraphs are untouched"
+    },
+    {
+      "name": "unicode-text",
+      "description": "non-ASCII text, emoji (incl. ZWJ sequences), combining marks, RTL and escapes in values, keys and ids"
+    },
+    {
+      "name": "content-string-code-points",
+      "description": "a string content spreads by code point (Y.Array.from): a surrogate pair is one entry, a combining sequence stays two"
+    },
+    {
+      "name": "database-rows",
+      "description": "arrays of plain objects (schema, views, options) are element-wise Y.Arrays, never grids; rows are child blocks"
+    },
+    {
+      "name": "grid-normalization",
+      "description": "doc-only: duplicated row key → first wins; key without a row → dropped; rows absent from the order → appended sorted by key"
+    },
+    {
+      "name": "legacy-bare-grid",
+      "description": "doc-only: a bare Y.Array of row Y.Arrays (pre-keyed docs) still reads back as rows"
+    },
+    {
+      "name": "empty-doc",
+      "description": "an empty block list seeds an empty doc"
+    },
+    {
+      "name": "malformed-blocks",
+      "description": "a non-string id is skipped entirely; non-string content entries and parents pass through the type checks"
+    },
+    {
+      "name": "proto-key",
+      "description": "a __proto__ key is an ordinary own key in data, tunes and nested objects; other Object.prototype names are ordinary too"
+    },
+    {
+      "name": "lenient-seed",
+      "description": "malformed records fromJSON tolerates: Object.entries leniency for data/tunes, iterable content, non-object entries skipped"
+    },
+    {
+      "name": "malformed-doc-blocks",
+      "description": "doc-only: a block whose id or type is not a string, or whose data is not a map, is skipped on export (its order slot with it); a value nested past 256 levels exports as null"
+    }
+  ]
+}

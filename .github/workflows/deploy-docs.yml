@@ -1,11 +1,10 @@
 name: Deploy Docs
 
 on:
-  push:
-    branches: ["**"]
-    paths:
-      - "docs/**"
-      - "CHANGELOG.md"
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -17,23 +16,27 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   docs-tests:
     name: Docs Unit Tests
+    if: >-
+      github.event_name != 'workflow_run'
+      || (github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.head_sha == github.sha)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -47,42 +50,63 @@ jobs:
   verify-release:
     name: Verify Package Family Release
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' || inputs.release_tag != ''
+    if: >-
+      (github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.head_sha == github.sha)
+      || github.event_name == 'release'
+      || inputs.release_tag != ''
     timeout-minutes: 10
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
 
       - name: Verify published package family
         env:
           RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}
-        run: node scripts/verify-docs-release.mjs "$RELEASE_TAG"
+        run: |
+          tag="${RELEASE_TAG:-v$(node -p "require('./package.json').version")}"
+          node scripts/verify-docs-release.mjs "$tag"
 
   build:
     name: Build Docs
     runs-on: ubuntu-latest
     needs: [docs-tests, verify-release]
     timeout-minutes: 15
-    # Deploy on releases, manual runs, and docs pushes to main. A skipped
-    # `needs` job skips its dependents by default, so a docs-only deploy (where
-    # verify-release never runs) has to accept 'skipped' explicitly.
+    outputs:
+      marker: ${{ steps.marker.outputs.path }}
+    permissions:
+      contents: read
+      pages: read
+    # Main deploys arrive only from a successful CI workflow_run. Tagged and
+    # manual releases keep the package-family verification path below.
     if: >-
       ${{ !cancelled()
       && needs.docs-tests.result == 'success'
       && (needs.verify-release.result == 'success' || needs.verify-release.result == 'skipped')
-      && (github.event_name != 'push' || github.ref == 'refs/heads/main') }}
+      && (github.event_name != 'workflow_run'
+      || (github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.head_sha == github.sha)) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag || github.ref }}
+          # generate-seo-artifacts.mjs dates every page from `git log -1` on its
+          # sources. A shallow clone has no such history, so all 148 sitemap
+          # lastmod values collapse to the deploy date.
+          fetch-depth: 0
 
       - name: Setup Node.js and Dependencies
         uses: ./.github/actions/setup-node-deps
@@ -116,13 +140,27 @@ jobs:
           test -s docs/dist/client/sitemap.xml
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       # React Router's framework build splits its output into dist/client (the
       # prerendered HTML + assets) and dist/server; only the client half is the
       # site, so the artifact root moved one level down.
+      # Names one content-hashed file from this exact build. The smoke test polls
+      # for it, because a 200 on `/` only proves the PREVIOUS deploy is alive.
+      - name: Record deploy marker
+        id: marker
+        run: |
+          asset="$(find docs/dist/client/assets -name 'client-*.js' -print -quit)"
+          # Empty would silently turn the smoke test's readiness poll into a
+          # no-op, and it would then pass against the previous deploy.
+          if [ -z "$asset" ]; then
+            echo "No content-hashed client asset found; the build output shape changed" >&2
+            exit 1
+          fi
+          echo "path=/${asset#docs/dist/client/}" >> "$GITHUB_OUTPUT"
+
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: docs/dist/client/
 
@@ -145,4 +183,30 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+  # Everything else in this repo verifies bytes on the runner. This verifies
+  # what the host serves: status codes, redirects, a real 404, and whether the
+  # sitemap's dates survived the checkout. Both of the worst SEO defects this
+  # repo shipped were invisible until someone curled production.
+  seo-smoke:
+    name: Verify Live Docs
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Verify the live site
+        env:
+          DEPLOY_MARKER: ${{ needs.build.outputs.marker }}
+        run: node scripts/verify-live-docs.mjs "https://blokeditor.com"

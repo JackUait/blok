@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { uploadWithProgress } from './upload-xhr';
+import { uploadWithProgress } from '../../../../src/components/utils/upload-xhr';
 
 class FakeXhr {
   public static instances: FakeXhr[] = [];

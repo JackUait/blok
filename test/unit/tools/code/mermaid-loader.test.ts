@@ -60,6 +60,16 @@ describe('mermaid-loader', () => {
     expect(html).toContain('Mermaid render error');
   });
 
+  it('escapes markup in Mermaid error messages', async () => {
+    mockRender.mockRejectedValueOnce(new Error('<img src=x onerror=alert(1)>'));
+
+    const { renderMermaid } = await import('../../../../src/tools/code/mermaid-loader');
+    const html = await renderMermaid('invalid%%%');
+
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img');
+  });
+
   it('returns error HTML when mermaid.parse() returns false (invalid syntax)', async () => {
     mockParse.mockResolvedValueOnce(false);
 

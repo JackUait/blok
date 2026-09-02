@@ -29,6 +29,14 @@ if (!string.Equals(
       $"Embedded runtime hash {actualRuntimeHash} did not match {expectedRuntimeHash}.");
 }
 
+// The engine is managed, so a consumer restores no native package at all.
+if (Array.Exists(
+      coreAssembly.GetReferencedAssemblies(),
+      reference => reference.Name?.StartsWith("YDotNet", StringComparison.Ordinal) == true))
+{
+  throw new InvalidOperationException("Blok.Server still references a YDotNet assembly.");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddAuthentication("package-fixture")

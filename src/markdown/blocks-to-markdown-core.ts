@@ -139,8 +139,30 @@ const readTableGrid = (data: BlockToolData): Array<Array<Record<string, unknown>
  * escaped and hard line breaks become `<br>` (GFM cells are single-line).
  * @param markdown - the cell's Markdown
  */
-const escapeTableCell = (markdown: string): string =>
-  markdown.replace(/\|/g, '\\|').replace(/\n/g, '<br>');
+const escapeTableCell = (markdown: string): string => {
+  const segments = markdown.split('|');
+
+  /**
+   * A `\` run before a `|` must be doubled before the escaping `\` is added,
+   * otherwise `a\|b` exports as `a\\|b` — a literal backslash plus a LIVE
+   * delimiter — and re-importing splits the cell in two.
+   */
+  return segments
+    .map((segment, index) => (index === segments.length - 1 ? segment : doubleTrailingBackslashes(segment)))
+    .join('\\|')
+    .replace(/\n/g, '<br>');
+};
+
+/**
+ * Double the trailing `\` run of a cell segment.
+ * @param segment - cell Markdown between two `|` characters
+ * @returns the segment with its trailing backslash run doubled
+ */
+const doubleTrailingBackslashes = (segment: string): string => {
+  const run = Array.from(segment).reduce((count, character) => (character === '\\' ? count + 1 : 0), 0);
+
+  return segment + '\\'.repeat(run);
+};
 
 /**
  * Serialize one cell child block plus its structural descendants.

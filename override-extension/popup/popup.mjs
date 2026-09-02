@@ -688,7 +688,7 @@ const versionCombobox = (entries, chosenKey) => {
         openPanel();
       }
     },
-  }, chosenKey ? chosenKey.replace('|', '@') : 'No versions');
+  }, chosenKey ? chosenKey.replaceAll('|', '@') : 'No versions');
 
   const input = h('input', {
     class: 'combo-search',

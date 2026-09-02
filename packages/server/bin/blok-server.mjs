@@ -4,11 +4,11 @@
  *
  * The package ships no binary. On first run it resolves the archive published
  * for this platform on the matching GitHub release, verifies checksums.txt,
- * unpacks it into a cache directory, and execs it. Later runs use the cache.
+ * unpacks it into a cache directory, and runs it. Later runs use the cache.
  *
  * The release and npm package use the same family version.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const REPO = 'https://github.com/JackUait/blok';
 const IMAGE = 'ghcr.io/jackuait/blok-server';
 const CHECKSUMS_FILE = 'checksums.txt';
+const DOWNLOAD_TIMEOUT_MS = 30_000;
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -30,24 +31,41 @@ const RUNTIMES = {
 };
 
 /**
+ * @param {{ header?: { glibcVersionRuntime?: string } }} [report] Node process report.
+ * @returns {'glibc' | 'musl'} Linux C library.
+ */
+export function detectLinuxLibc(
+  report = process.report === undefined ? undefined : process.report.getReport(),
+) {
+  return report?.header?.glibcVersionRuntime === undefined ? 'musl' : 'glibc';
+}
+
+/**
  * @param {string} platform - process.platform
  * @param {string} arch - process.arch
+ * @param {'glibc' | 'musl'} [libc] Linux C library.
  * @returns {{ os: string, arch: string, rid: string, archive: string, binary: string } | null}
  */
-export function resolveTarget(platform, arch) {
+export function resolveTarget(platform, arch, libc = 'glibc') {
   const os = PLATFORMS[platform];
   const archiveArch = ARCHITECTURES[arch];
-  const rid = RUNTIMES[platform]?.[arch];
+  const rid = platform === 'linux' && libc === 'musl'
+    ? RUNTIMES.linux?.[arch]?.replace('linux-', 'linux-musl-')
+    : RUNTIMES[platform]?.[arch];
 
   if (os === undefined || archiveArch === undefined || rid === undefined) {
     return null;
   }
 
+  const archiveOs = platform === 'linux' && libc === 'musl'
+    ? 'linux_musl'
+    : os;
+
   return {
     os,
     arch: archiveArch,
     rid,
-    archive: `blok-server_${os}_${archiveArch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
+    archive: `blok-server_${archiveOs}_${archiveArch}.${os === 'windows' ? 'zip' : 'tar.gz'}`,
     binary: os === 'windows' ? 'blok-server.exe' : 'blok-server',
   };
 }
@@ -103,32 +121,44 @@ export function cacheRoot(env, platform) {
 }
 
 /**
- * First of the candidate roots that actually accepts a write. A cache that
- * cannot be written is not an error yet — the temp directory is a fine second
- * home for a single run — so this only throws when nothing is writable.
+ * Use the persistent cache when it is writable. Otherwise make a private,
+ * per-run directory so another local user cannot predict the launcher path.
  *
- * @param {string[]} candidates
- * @returns {string}
+ * @param {string} persistentRoot
+ * @param {string} temporaryParent
+ * @returns {{ root: string, temporary: boolean }}
  */
-function firstWritable(candidates) {
-  const failures = [];
+export function prepareInstallRoot(persistentRoot, temporaryParent = tmpdir()) {
+  let persistentFailure;
 
-  for (const candidate of candidates) {
-    try {
-      mkdirSync(candidate, { recursive: true });
+  try {
+    mkdirSync(persistentRoot, { recursive: true });
 
-      const probe = join(candidate, `.write-probe-${process.pid}`);
+    const probe = mkdtempSync(join(persistentRoot, '.write-probe-'));
 
-      writeFileSync(probe, '');
-      rmSync(probe, { force: true });
+    rmSync(probe, { recursive: true, force: true });
 
-      return candidate;
-    } catch (error) {
-      failures.push(`${candidate} (${error.message})`);
-    }
+    return { root: persistentRoot, temporary: false };
+  } catch (error) {
+    persistentFailure = `${persistentRoot} (${error.message})`;
   }
 
-  throw new Error(`no writable cache directory: ${failures.join('; ')}`);
+  let temporaryRoot;
+
+  try {
+    temporaryRoot = mkdtempSync(join(temporaryParent, 'blok-server-'));
+    chmodSync(temporaryRoot, 0o700);
+
+    return { root: temporaryRoot, temporary: true };
+  } catch (error) {
+    if (temporaryRoot !== undefined) {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
+
+    throw new Error(
+      `no writable cache directory: ${persistentFailure}; ${temporaryParent} (${error.message})`,
+    );
+  }
 }
 
 /**
@@ -137,7 +167,9 @@ function firstWritable(candidates) {
  * @returns {Promise<Buffer>}
  */
 async function download(url, fetchImpl) {
-  const response = await fetchImpl(url);
+  const response = await fetchImpl(url, {
+    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+  });
 
   if (!response.ok) {
     throw new Error(`GET ${url} → ${response.status} ${response.statusText}`);
@@ -222,6 +254,38 @@ export async function installBinary({ version, target, destination, fetchImpl = 
 }
 
 /**
+ * Run the native host while keeping the npm wrapper responsive to termination.
+ *
+ * @param {string} binary
+ * @param {string[]} args
+ * @returns {Promise<{ code: number | null, signal: NodeJS.Signals | null }>}
+ */
+export function runBinary(binary, args) {
+  const child = spawn(binary, args, { stdio: 'inherit' });
+
+  return new Promise((resolvePromise, reject) => {
+    const forwardSigint = () => child.kill('SIGINT');
+    const forwardSigterm = () => child.kill('SIGTERM');
+    const removeSignalHandlers = () => {
+      process.off('SIGINT', forwardSigint);
+      process.off('SIGTERM', forwardSigterm);
+    };
+
+    process.on('SIGINT', forwardSigint);
+    process.on('SIGTERM', forwardSigterm);
+
+    child.once('error', (error) => {
+      removeSignalHandlers();
+      reject(error);
+    });
+    child.once('exit', (code, signal) => {
+      removeSignalHandlers();
+      resolvePromise({ code, signal });
+    });
+  });
+}
+
+/**
  * @param {string} version
  * @param {string} reason
  * @returns {string}
@@ -231,9 +295,7 @@ export function fallbackMessage(version, reason) {
     `blok-server: ${reason}`,
     '',
     'The same build is published as a container image — run that instead:',
-    // The service defaults to loopback, which nothing outside the container can
-    // reach, so the published port needs an explicit bind address to match.
-    `  docker run -p 4000:4000 ${IMAGE}:${version} --listen 0.0.0.0:4000`,
+    `  docker run --network host ${IMAGE}:${version} --listen 127.0.0.1:4000 --auth proxy`,
     '',
     `Or download it by hand: ${REPO}/releases/tag/v${version}`,
   ].join('\n');
@@ -241,7 +303,8 @@ export function fallbackMessage(version, reason) {
 
 async function main() {
   const { version } = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf-8'));
-  const target = resolveTarget(process.platform, process.arch);
+  const libc = process.platform === 'linux' ? detectLinuxLibc() : 'glibc';
+  const target = resolveTarget(process.platform, process.arch, libc);
 
   if (target === null) {
     console.error(fallbackMessage(
@@ -252,31 +315,47 @@ async function main() {
   }
 
   let binary;
+  let temporaryRoot;
 
   try {
-    const root = firstWritable([
-      join(cacheRoot(process.env, process.platform), version),
-      join(tmpdir(), 'blok-server', version),
-    ]);
+    const prepared = prepareInstallRoot(
+      join(cacheRoot(process.env, process.platform), version, target.rid),
+    );
 
-    binary = join(root, target.binary);
+    binary = join(prepared.root, target.binary);
+    temporaryRoot = prepared.temporary ? prepared.root : undefined;
 
     if (!existsSync(binary)) {
       await installBinary({ version, target, destination: binary });
     }
   } catch (error) {
+    if (temporaryRoot !== undefined) {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
+
     console.error(fallbackMessage(version, error.message));
     process.exit(1);
   }
 
-  const result = spawnSync(binary, process.argv.slice(2), { stdio: 'inherit' });
+  let result;
 
-  if (result.error) {
-    console.error(fallbackMessage(version, `could not start ${binary}: ${result.error.message}`));
+  try {
+    result = await runBinary(binary, process.argv.slice(2));
+  } catch (error) {
+    console.error(fallbackMessage(version, `could not start ${binary}: ${error.message}`));
     process.exit(1);
+  } finally {
+    if (temporaryRoot !== undefined) {
+      rmSync(temporaryRoot, { recursive: true, force: true });
+    }
   }
 
-  process.exit(result.status ?? 1);
+  if (result.signal !== null) {
+    process.kill(process.pid, result.signal);
+    return;
+  }
+
+  process.exit(result.code ?? 1);
 }
 
 // Importing this file (the unit tests do) must not start a download.

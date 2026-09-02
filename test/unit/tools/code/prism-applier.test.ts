@@ -38,6 +38,18 @@ describe('prism-applier', () => {
       expect(codeEl.innerHTML).toBe(original);
     });
 
+    it('restores markup-like code as text when highlighting is disposed', () => {
+      const original = '<img src=x onerror="window.__x=1">';
+      codeEl.textContent = original;
+
+      const dispose = applyPrismHighlight(codeEl, '<span class="token tag">&lt;img&gt;</span>');
+
+      dispose();
+
+      expect(codeEl.querySelector('img')).toBeNull();
+      expect(codeEl.textContent).toBe(original);
+    });
+
     it('injects a stylesheet with token color rules', () => {
       applyPrismHighlight(codeEl, '<span class="token keyword">if</span>');
       expect(document.adoptedStyleSheets.length).toBeGreaterThan(0);

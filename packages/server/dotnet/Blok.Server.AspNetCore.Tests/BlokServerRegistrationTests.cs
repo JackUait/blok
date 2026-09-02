@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Blok.Server.AspNetCore;
+using Blok.Server.Collab;
 using Blok.Server.Outbound;
 using Blok.Server.Storage;
 using Microsoft.AspNetCore.Authentication;
@@ -17,32 +18,296 @@ namespace Blok.Server.AspNetCore.Tests;
 
 public sealed class BlokServerRegistrationTests
 {
+  private static readonly string[] HealthMethods = ["GET", "HEAD"];
+  private static readonly string[] ReadMethods = ["GET", "OPTIONS"];
+  private static readonly string[] WriteMethods = ["OPTIONS", "POST"];
+
   [Fact]
-  public async Task AddsTheEmbeddedRuntimeAndDenyByDefaultAuthorizationOnce()
+  public void DoesNotRegisterUnusedFutureServices()
   {
     var services = new ServiceCollection();
 
     services.AddBlokServer();
     services.AddBlokServer();
 
-    var runtimeDescriptor = Assert.Single(
+    Assert.DoesNotContain(
         services,
         descriptor => descriptor.ServiceType.FullName == "Blok.Server.Runtime.IBlokRuntime");
-    Assert.Equal(ServiceLifetime.Singleton, runtimeDescriptor.Lifetime);
-    Assert.NotNull(runtimeDescriptor.ImplementationFactory);
+    Assert.DoesNotContain(
+        services,
+        descriptor =>
+            descriptor.ServiceType.FullName == "Blok.Server.AspNetCore.IBlokAuthorization");
     Assert.Single(
         services,
         descriptor => descriptor.ServiceType == typeof(IBlobStore));
+  }
+
+  [Fact]
+  public void RegistersCollabServiceFactoriesOnce()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer();
+    services.AddBlokServer();
+
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(ICollabWorkingSetStore));
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType == typeof(ICollabRoomManager));
+  }
+
+  [Fact]
+  public void CollabServicesThrowWhenCollaborationIsDisabled()
+  {
+    var services = new ServiceCollection();
+    services.AddBlokServer();
+    using var provider = services.BuildServiceProvider();
+
+    var store = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+    Assert.Equal("Collaboration is disabled.", store.Message);
+
+    var rooms = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<ICollabRoomManager>());
+    Assert.Equal("Collaboration is disabled.", rooms.Message);
+  }
+
+  [Fact]
+  public void RejectsCollabWithoutADocEndpoint()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options => options.CollabEnabled = true));
+
+    Assert.Contains(
+        "--collab needs --doc-endpoint",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsADocEndpointWithoutCollab()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.DocEndpoint = "https://app.example.com/api/blok-docs"));
+
+    Assert.Contains(
+        "--doc-endpoint needs --collab",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("app.example.com/api/blok-docs")]
+  [InlineData("/api/blok-docs")]
+  [InlineData("ftp://app.example.com/api/blok-docs")]
+  [InlineData("https://user@app.example.com/api/blok-docs")]
+  [InlineData("https://app.example.com/api/blok-docs?mode=test")]
+  [InlineData("https://app.example.com/api/blok-docs#fragment")]
+  public void RejectsUnsafeDocEndpoints(string docEndpoint)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = docEndpoint;
+        }));
+
+    Assert.Contains("--doc-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("credentials", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsNonLoopbackHttpDocEndpoints()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "http://app.example.com/api/blok-docs";
+        }));
+
+    Assert.Contains("--doc-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("HTTPS", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://app.example.com/api/blok-docs")]
+  [InlineData("https://app.example.com")]
+  [InlineData("http://127.0.0.1:5100/api/blok-docs")]
+  [InlineData("http://localhost:5100/api/blok-docs")]
+  public void AllowsFullDocEndpoints(string docEndpoint)
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = docEndpoint;
+    });
+  }
+
+  [Theory]
+  [InlineData("/srv/blok/uploads")]
+  [InlineData("/srv/blok/uploads/")]
+  [InlineData("/srv/blok/uploads/working-set")]
+  [InlineData("/srv/blok/collab/../uploads/working-set")]
+  public void RejectsCollabDirectoriesInsideTheStorageDirectory(string collabDirectory)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.StorageDirectory = "/srv/blok/uploads";
+          options.PublicUrl = "/files";
+          options.CollabDirectory = collabDirectory;
+        }));
+
+    Assert.Contains("--collab-dir", error.Message, StringComparison.Ordinal);
+    Assert.Contains("--storage-dir", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsACollabDirectoryEqualToATrailingSlashStorageDirectory()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.StorageDirectory = "/srv/blok/uploads/";
+          options.PublicUrl = "/files";
+          options.CollabDirectory = "/srv/blok/uploads";
+        }));
+
+    Assert.Contains("--collab-dir", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsACollabDirectoryBesideTheStorageDirectory()
+  {
+    var services = new ServiceCollection();
+
+    // Shares the storage path as a raw string prefix; only a
+    // separator-aware check keeps this sibling directory legal.
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.StorageDirectory = "/srv/blok/uploads";
+      options.PublicUrl = "/files";
+      options.CollabDirectory = "/srv/blok/uploads-collab";
+    });
+  }
+
+  [Fact]
+  public void RegistersTheLocalCollabStoreWhenACollabDirectoryIsConfigured()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabDirectory = "/srv/blok/collab";
+    });
 
     using var provider = services.BuildServiceProvider();
-    var runtime = provider.GetService(runtimeDescriptor.ServiceType);
-    Assert.NotNull(runtime);
-    Assert.Equal("Blok.Server.Runtime.JintBlokRuntime", runtime.GetType().FullName);
 
-    var authorization = provider.GetRequiredService<IBlokAuthorization>();
-    var user = new ClaimsPrincipal();
-    Assert.False(await authorization.CanReadDocumentAsync(user, "document-1"));
-    Assert.False(await authorization.CanWriteDocumentAsync(user, "document-1"));
+    Assert.IsType<LocalCollabStore>(
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+  }
+
+  [Fact]
+  public void RegistersTheS3CollabStoreWhenAPrefixIsConfigured()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabS3Prefix = "collab/";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.IsType<S3CollabStore>(
+        provider.GetRequiredService<ICollabWorkingSetStore>());
+  }
+
+  [Fact]
+  public void RejectsACollabS3PrefixWithoutCollab()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.CollabS3Prefix = "collab/"));
+
+    Assert.Contains(
+        "--collab-s3-prefix needs --collab",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsACollabS3PrefixWithoutAnS3Bucket()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.CollabEnabled = true;
+          options.DocEndpoint = "https://app.example.com/api/blok-docs";
+          options.CollabS3Prefix = "collab/";
+        }));
+
+    Assert.Contains(
+        "--collab-s3-prefix needs --s3-bucket",
+        error.Message,
+        StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsACollabS3PrefixWithTheFullS3Battery()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.CollabEnabled = true;
+      options.DocEndpoint = "https://app.example.com/api/blok-docs";
+      options.CollabS3Prefix = "collab/";
+      options.S3Endpoint = "https://s3.example.com";
+      options.S3Region = "eu-central-1";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "https://cdn.example.com/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
   }
 
   [Fact]
@@ -67,7 +332,7 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
-  public void ReplacesTheDefaultAuthorization()
+  public void RegistersCustomAuthorizationForCompatibility()
   {
     var services = new ServiceCollection();
 
@@ -99,6 +364,229 @@ public sealed class BlokServerRegistrationTests
           options.PublicUrl = "https://uploads.example/%zz";
         }));
     Assert.Contains("PublicUrl", malformed.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("javascript:alert(1)")]
+  [InlineData("data:text/plain,payload")]
+  [InlineData("//evil.example/files")]
+  [InlineData("/\\evil.example/files")]
+  [InlineData("/files\\nested")]
+  [InlineData("https://user@uploads.example.com/files")]
+  [InlineData("files")]
+  public void RejectsUnsafeLocalPublicUrls(string publicUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.StorageDirectory = "/local/storage";
+          options.PublicUrl = publicUrl;
+        }));
+
+    Assert.Contains("PublicUrl", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("javascript:alert(1)")]
+  [InlineData("data:text/plain,payload")]
+  [InlineData("ftp://cdn.example.com/media")]
+  [InlineData("//evil.example/media")]
+  [InlineData("/media")]
+  [InlineData("https://user@cdn.example.com/media")]
+  [InlineData("https://cdn.example.com/%zz")]
+  public void RejectsUnsafeS3BucketUrls(string bucketUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = bucketUrl;
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-bucket-url", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://user@s3.example.com")]
+  [InlineData("https://s3.example.com/path")]
+  [InlineData("https://s3.example.com?mode=test")]
+  [InlineData("https://s3.example.com#fragment")]
+  public void RejectsUnsafeS3Endpoints(string endpoint)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = endpoint;
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-endpoint", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void RejectsNonLoopbackHttpS3Endpoints()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "http://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = "https://cdn.example.com/media";
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-endpoint", error.Message, StringComparison.Ordinal);
+    Assert.Contains("HTTPS", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsLoopbackHttpS3Endpoints()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.S3Endpoint = "http://127.0.0.1:9000";
+      options.S3Region = "local";
+      options.S3Bucket = "media";
+      options.S3BucketUrl = "http://127.0.0.1:9000/media";
+      options.S3AccessKey = "access-key";
+      options.S3SecretKey = "secret-key";
+    });
+  }
+
+  [Fact]
+  public void RejectsUploadLimitsLargerThanManagedArraysWhenRemoteUploadsAreEnabled()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.MaxUploadBytes = (long)Array.MaxLength + 1;
+          options.PublicUrl = "/files";
+          options.StorageDirectory = "/local/storage";
+          options.UnfurlDisabled = false;
+        }));
+
+    Assert.Contains("--max-upload", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AllowsUploadLimitsLargerThanManagedArraysWhenRemoteUploadsAreDisabled()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.MaxUploadBytes = (long)Array.MaxLength + 1;
+      options.PublicUrl = "/files";
+      options.StorageDirectory = "/local/storage";
+      options.UnfurlDisabled = true;
+    });
+  }
+
+  [Fact]
+  public void AllowsUploadLimitsLargerThanManagedArraysWithoutStorage()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.MaxUploadBytes = (long)Array.MaxLength + 1;
+      options.UnfurlDisabled = false;
+    });
+  }
+
+  [Fact]
+  public void RejectsNegativeRateLimits()
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+            options.RateLimitPerMinute = -1));
+
+    Assert.Contains("--rate-limit", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("internal.example:4000")]
+  [InlineData("example.test:0")]
+  public void RejectsDnsListenHostsThatKestrelWouldTreatAsWildcards(
+      string listenAddress)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.AllowedOrigins = ["https://app.example.com"];
+          options.Auth = "ticket";
+          options.ListenAddress = listenAddress;
+          options.Secret = new string('s', 32);
+        }));
+
+    Assert.Contains("DNS host", error.Message, StringComparison.Ordinal);
+    Assert.Contains("every network interface", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://uploads.example.com/files?download=1")]
+  [InlineData("/files#latest")]
+  public void RejectsQueryOrFragmentInLocalPublicUrls(string publicUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.StorageDirectory = "/local/storage";
+          options.PublicUrl = publicUrl;
+        }));
+
+    Assert.Contains("PublicUrl", error.Message, StringComparison.Ordinal);
+    Assert.Contains("query or fragment", error.Message, StringComparison.Ordinal);
+  }
+
+  [Theory]
+  [InlineData("https://cdn.example.com/media?download=1")]
+  [InlineData("https://cdn.example.com/media#latest")]
+  public void RejectsQueryOrFragmentInS3BucketUrls(string bucketUrl)
+  {
+    var services = new ServiceCollection();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        services.AddBlokServer(options =>
+        {
+          options.S3Endpoint = "https://s3.example.com";
+          options.S3Region = "eu-central-1";
+          options.S3Bucket = "media";
+          options.S3BucketUrl = bucketUrl;
+          options.S3AccessKey = "access-key";
+          options.S3SecretKey = "secret-key";
+        }));
+
+    Assert.Contains("--s3-bucket-url", error.Message, StringComparison.Ordinal);
+    Assert.Contains("query or fragment", error.Message, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -151,6 +639,44 @@ public sealed class BlokServerRegistrationTests
 
     Assert.Same(registeredOptions, provider.GetRequiredService<BlokServerOptions>());
     Assert.IsType<LocalBlobStore>(provider.GetRequiredService<IBlobStore>());
+  }
+
+  [Fact]
+  public async Task ValidatesPreRegisteredOptionsBeforeMappingRoutes()
+  {
+    var builder = WebApplication.CreateBuilder();
+    builder.WebHost.UseTestServer();
+    builder.Services.AddSingleton(new BlokServerOptions
+    {
+      RateLimitPerMinute = -1,
+    });
+    builder.Services.AddBlokServer();
+    await using var app = builder.Build();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        app.MapBlokServer());
+
+    Assert.Contains("--rate-limit", error.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void ValidatesPreRegisteredOptionsBeforeResolvingStorage()
+  {
+    var services = new ServiceCollection();
+    services.AddSingleton(new BlokServerOptions
+    {
+      MaxUploadBytes = (long)Array.MaxLength + 1,
+      PublicUrl = "/files",
+      StorageDirectory = "/effective/local/storage",
+      UnfurlDisabled = false,
+    });
+    services.AddBlokServer();
+    using var provider = services.BuildServiceProvider();
+
+    var error = Assert.Throws<InvalidOperationException>(() =>
+        provider.GetRequiredService<IBlobStore>());
+
+    Assert.Contains("--max-upload", error.Message, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -268,7 +794,7 @@ public sealed class BlokServerRegistrationTests
         enableGuardedRoutes: false);
     app.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(app, "/blok/health"));
+    Assert.Equal(HealthMethods, GetMethods(app, "/blok/health"));
     Assert.Empty(GetMethods(app, "/blok/unfurl"));
     Assert.Empty(GetMethods(app, "/blok/upload"));
     Assert.Empty(GetMethods(app, "/blok/upload-by-url"));
@@ -280,15 +806,15 @@ public sealed class BlokServerRegistrationTests
     await using var enabled = BuildApplication(_ => { });
     enabled.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "HEAD" }, GetMethods(enabled, "/blok/health"));
-    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(enabled, "/blok/unfurl"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(enabled, "/blok/upload-by-url"));
+    Assert.Equal(HealthMethods, GetMethods(enabled, "/blok/health"));
+    Assert.Equal(ReadMethods, GetMethods(enabled, "/blok/unfurl"));
+    Assert.Equal(WriteMethods, GetMethods(enabled, "/blok/upload"));
+    Assert.Equal(WriteMethods, GetMethods(enabled, "/blok/upload-by-url"));
 
     await using var noStorage = BuildApplication(options => options.StorageDirectory = "");
     noStorage.MapBlokServer("/blok");
 
-    Assert.Equal(new[] { "GET", "OPTIONS" }, GetMethods(noStorage, "/blok/unfurl"));
+    Assert.Equal(ReadMethods, GetMethods(noStorage, "/blok/unfurl"));
     Assert.Empty(GetMethods(noStorage, "/blok/upload"));
     Assert.Empty(GetMethods(noStorage, "/blok/upload-by-url"));
 
@@ -296,7 +822,7 @@ public sealed class BlokServerRegistrationTests
     noUnfurl.MapBlokServer("/blok");
 
     Assert.Empty(GetMethods(noUnfurl, "/blok/unfurl"));
-    Assert.Equal(new[] { "OPTIONS", "POST" }, GetMethods(noUnfurl, "/blok/upload"));
+    Assert.Equal(WriteMethods, GetMethods(noUnfurl, "/blok/upload"));
     Assert.Empty(GetMethods(noUnfurl, "/blok/upload-by-url"));
   }
 

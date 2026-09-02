@@ -64,4 +64,16 @@ describe('shared katex renderer', () => {
 
     expect(html).toContain('KaTeX parse error');
   });
+
+  it('escapes markup in KaTeX error messages', async () => {
+    mockRenderToString.mockImplementationOnce(() => {
+      throw new Error('<img src=x onerror=alert(1)>');
+    });
+
+    const { renderLatex } = await import('../../../src/shared/katex');
+    const html = await renderLatex('\\invalid');
+
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).not.toContain('<img');
+  });
 });

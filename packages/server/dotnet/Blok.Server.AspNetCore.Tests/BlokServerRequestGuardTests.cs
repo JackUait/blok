@@ -16,18 +16,22 @@ public sealed class BlokServerRequestGuardTests
   private const string AllowedOrigin = "https://app.example.com";
   private const string DisallowedOrigin = "https://evil.example.net";
   private const string RemoteAddressHeader = "X-Test-Remote-Address";
+  private static readonly string[] CorsPreflightVaryHeaders =
+      ["Access-Control-Request-Headers", "Origin"];
+  private static readonly string[] CorsVaryHeaders = ["Origin"];
   private static readonly DateTimeOffset FixedNow =
       DateTimeOffset.FromUnixTimeSeconds(1_700_000_000);
 
   [Theory]
-  [InlineData("none", HttpStatusCode.BadRequest, "application/json", "{\"success\":0}\n")]
-  [InlineData("proxy", HttpStatusCode.BadRequest, "application/json", "{\"success\":0}\n")]
-  [InlineData("ticket", HttpStatusCode.Forbidden, "text/plain; charset=utf-8", "origin not allowed\n")]
-  public async Task SettlesOriginBeforeAuthorization(
+  [InlineData("none", DisallowedOrigin)]
+  [InlineData("none", "null")]
+  [InlineData("proxy", DisallowedOrigin)]
+  [InlineData("proxy", "null")]
+  [InlineData("ticket", DisallowedOrigin)]
+  [InlineData("ticket", "null")]
+  public async Task RejectsEveryPresentDisallowedOrigin(
       string auth,
-      HttpStatusCode rejectedStatus,
-      string rejectedContentType,
-      string rejectedBody)
+      string origin)
   {
     var fixture = LoadFixture();
     await using var app = await StartApplication(auth, rateLimit: 0);
@@ -35,22 +39,76 @@ public sealed class BlokServerRequestGuardTests
     var authorization = auth == "ticket"
       ? $"Bearer {fixture.Compatible}"
       : null;
+    using var response = await SendUnfurl(
+        client,
+        origin,
+        authorization);
 
-    using (var allowed = await SendUnfurl(client, AllowedOrigin, authorization))
-    {
-      await AssertShellResponse(allowed);
-      AssertAllowedCors(allowed);
-    }
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    Assert.Equal(
+        "text/plain; charset=utf-8",
+        response.Content.Headers.ContentType?.ToString());
+    Assert.Equal(
+        "origin not allowed\n",
+        await response.Content.ReadAsStringAsync());
+    AssertNoCors(response);
+  }
 
-    foreach (var origin in new[] { DisallowedOrigin, null })
-    {
-      using var rejected = await SendUnfurl(client, origin, authorization: null);
+  [Theory]
+  [InlineData("none")]
+  [InlineData("proxy")]
+  public async Task RejectsOriginlessCrossSiteBrowserRequests(string auth)
+  {
+    await using var app = await StartApplication(auth, rateLimit: 0);
+    using var client = app.GetTestClient();
+    using var response = await SendUnfurl(
+        client,
+        origin: null,
+        authorization: null,
+        secFetchSite: "cross-site");
 
-      Assert.Equal(rejectedStatus, rejected.StatusCode);
-      Assert.Equal(rejectedContentType, rejected.Content.Headers.ContentType?.ToString());
-      Assert.Equal(rejectedBody, await rejected.Content.ReadAsStringAsync());
-      AssertNoCors(rejected);
-    }
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    Assert.Equal(
+        "text/plain; charset=utf-8",
+        response.Content.Headers.ContentType?.ToString());
+    Assert.Equal(
+        "origin not allowed\n",
+        await response.Content.ReadAsStringAsync());
+    AssertNoCors(response);
+  }
+
+  [Theory]
+  [InlineData("none")]
+  [InlineData("proxy")]
+  public async Task PreservesGenuinelyOriginlessBackendRequests(string auth)
+  {
+    await using var app = await StartApplication(auth, rateLimit: 0);
+    using var client = app.GetTestClient();
+    using var response = await SendUnfurl(
+        client,
+        origin: null,
+        authorization: null);
+
+    await AssertShellResponse(response);
+    AssertNoCors(response);
+  }
+
+  [Fact]
+  public async Task TicketModeStillRequiresAnAllowedOrigin()
+  {
+    var fixture = LoadFixture();
+    await using var app = await StartApplication("ticket", rateLimit: 0);
+    using var client = app.GetTestClient();
+    using var response = await SendUnfurl(
+        client,
+        origin: null,
+        authorization: $"Bearer {fixture.Compatible}");
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    Assert.Equal(
+        "origin not allowed\n",
+        await response.Content.ReadAsStringAsync());
+    AssertNoCors(response);
   }
 
   [Fact]
@@ -138,9 +196,7 @@ public sealed class BlokServerRequestGuardTests
       Assert.Equal(
           "600",
           Assert.Single(accepted.Headers.GetValues("Access-Control-Max-Age")));
-      Assert.Equal(
-          new[] { "Access-Control-Request-Headers", "Origin" },
-          accepted.Headers.Vary);
+      Assert.Equal(CorsPreflightVaryHeaders, accepted.Headers.Vary);
     }
 
     foreach (var origin in new[] { DisallowedOrigin, null })
@@ -160,6 +216,51 @@ public sealed class BlokServerRequestGuardTests
           await rejected.Content.ReadAsStringAsync());
       AssertNoCors(rejected);
     }
+  }
+
+  [Theory]
+  [InlineData("/upload")]
+  [InlineData("/upload-by-url")]
+  public async Task RejectsReadOnlyTicketsOnWriteRoutes(string path)
+  {
+    var fixture = LoadFixture();
+    var ticket = SignPayload(
+        fixture.Secret,
+        "{\"user\":\"reader\",\"doc\":\"doc-42\",\"write\":false,\"exp\":4102444800}");
+    await using var app = await StartApplication(
+        "ticket",
+        rateLimit: 0,
+        storageEnabled: true);
+    using var client = app.GetTestClient();
+    using var response = await SendWriteRequest(
+        client,
+        path,
+        ticket);
+
+    Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    Assert.Equal(
+        "write access required\n",
+        await response.Content.ReadAsStringAsync());
+    AssertAllowedCors(response);
+  }
+
+  [Fact]
+  public async Task AllowsReadOnlyTicketsToUnfurl()
+  {
+    var fixture = LoadFixture();
+    var ticket = SignPayload(
+        fixture.Secret,
+        "{\"user\":\"reader\",\"doc\":\"doc-42\",\"write\":false,\"exp\":4102444800}");
+    await using var app = await StartApplication(
+        "ticket",
+        rateLimit: 0);
+    using var client = app.GetTestClient();
+    using var response = await SendUnfurl(
+        client,
+        AllowedOrigin,
+        $"Bearer {ticket}");
+
+    await AssertShellResponse(response);
   }
 
   [Fact]
@@ -461,7 +562,8 @@ public sealed class BlokServerRequestGuardTests
       HttpClient client,
       string? origin,
       string? authorization,
-      string? remoteAddress = null)
+      string? remoteAddress = null,
+      string? secFetchSite = null)
   {
     using var request = new HttpRequestMessage(HttpMethod.Get, "/unfurl");
 
@@ -479,6 +581,25 @@ public sealed class BlokServerRequestGuardTests
     {
       request.Headers.TryAddWithoutValidation(RemoteAddressHeader, remoteAddress);
     }
+
+    if (secFetchSite is not null)
+    {
+      request.Headers.TryAddWithoutValidation("Sec-Fetch-Site", secFetchSite);
+    }
+
+    return await client.SendAsync(request);
+  }
+
+  private static async Task<HttpResponseMessage> SendWriteRequest(
+      HttpClient client,
+      string path,
+      string ticket)
+  {
+    using var request = new HttpRequestMessage(HttpMethod.Post, path);
+    request.Headers.TryAddWithoutValidation("Origin", AllowedOrigin);
+    request.Headers.TryAddWithoutValidation(
+        "Authorization",
+        $"Bearer {ticket}");
 
     return await client.SendAsync(request);
   }
@@ -533,7 +654,7 @@ public sealed class BlokServerRequestGuardTests
     Assert.Equal(
         AllowedOrigin,
         Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
-    Assert.Equal(new[] { "Origin" }, response.Headers.Vary);
+    Assert.Equal(CorsVaryHeaders, response.Headers.Vary);
   }
 
   private static void AssertNoCors(HttpResponseMessage response)

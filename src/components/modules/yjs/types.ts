@@ -1,3 +1,40 @@
+import type * as Y from 'yjs';
+
+/**
+ * Shared types the Y.UndoManager tracks: the blocks map and the root
+ * order array. contentIds arrays nest inside blocks-map values, so these
+ * two roots cover every block write.
+ */
+export type UndoScopeType = Y.Map<Y.Map<unknown>> | Y.Array<string>;
+
+/**
+ * The two top-level shared types of doc schema v2, handed to the observer.
+ */
+export interface DocumentScope {
+  blocksMap: Y.Map<Y.Map<unknown>>;
+  rootOrder: Y.Array<string>;
+}
+
+/**
+ * Where a block sits: its parent (null = root) and the sibling it follows
+ * (null = first child). Index-free, so it survives concurrent edits.
+ */
+export interface BlockPlacement {
+  parentId: string | null;
+  afterId: string | null;
+}
+
+/**
+ * Presence delta from y-protocols Awareness: the client ids whose state was
+ * added, changed, or dropped since the last emission. Client ids are Yjs
+ * `doc.clientID` numbers, not block ids.
+ */
+export interface AwarenessChange {
+  added: number[];
+  updated: number[];
+  removed: number[];
+}
+
 /**
  * Event emitted when blocks change.
  *
@@ -27,15 +64,11 @@ export type TransactionOrigin =
 /**
  * Whitelist of raw origin tags that our own code passes to `Y.Doc.transact`.
  *
- * Adding a new local-authored origin tag? You MUST:
- *   1. Add it here.
- *   2. Handle it explicitly in `BlockObserver.mapTransactionOrigin`.
- *
- * The mapper's exhaustiveness check and the `block-observer.test.ts`
- * enumeration test will otherwise fail CI — preventing a repeat of the
- * table-row-removal bug where `'no-capture'` silently fell through to
- * `'remote'` and made `BlockYjsSync` clobber the authoring tool's state
- * with stale Yjs data mid-operation.
+ * A new local-authored tag MUST be added here AND handled explicitly in
+ * `BlockObserver.mapTransactionOrigin` (the mapper's exhaustiveness check and
+ * the `block-observer.test.ts` enumeration fail otherwise). A tag that falls
+ * through classifies as 'remote', and `BlockYjsSync` then overwrites the
+ * authoring tool's state with stale doc data mid-operation.
  */
 export const LOCAL_ORIGIN_TAGS = [
   'local',
@@ -78,20 +111,33 @@ export interface CaretHistoryEntry {
 }
 
 /**
+ * Replays one recorded move step during move-undo/move-redo: restore the
+ * block to `placement` (doc write + in-memory reparent). Owned by
+ * YjsManager; must not record its own history entry.
+ */
+export type MoveReplayCallback = (
+  blockId: string,
+  placement: BlockPlacement,
+  origin: 'move-undo' | 'move-redo'
+) => void;
+
+/**
  * Represents a single move operation within a move group.
  *
- * Drag-reparent flows attach `fromParentId`/`toParentId` so that undo/redo
- * can restore the parent relationship atomically alongside the array move.
- * Without this, a drag-reparent splits across two history stacks
- * (`moveUndoStack` for the array move, Y.UndoManager for the parentId write)
- * and requires two Cmd+Z presses to fully reverse.
+ * Both sides are full placements (parent + preceding sibling), captured
+ * from the doc BEFORE/AFTER the mutation, so replay is index-free and
+ * survives concurrent remote edits that shift flat indices. A parent
+ * change recorded mid-group rides the same entry — without this, a
+ * drag-reparent splits across two history stacks (`moveUndoStack` for the
+ * position, Y.UndoManager for the parentId write) and requires two Cmd+Z
+ * presses to fully reverse.
  */
 export interface SingleMoveEntry {
   blockId: string;
-  fromIndex: number;
-  toIndex: number;
-  fromParentId?: string | null;
-  toParentId?: string | null;
+  /** Placement before the move; undo restores this side */
+  from: BlockPlacement;
+  /** Placement after the move; redo restores this side */
+  to: BlockPlacement;
 }
 
 /**

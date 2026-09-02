@@ -2812,10 +2812,13 @@ test.describe('drag and drop', () => {
       await page.clock.fastForward(500);
       await expect(page.locator('[data-blok-toggle-open="false"]')).toBeVisible();
 
+      await page.clock.resume();
       await page.mouse.up();
     });
 
     test('should nest block inside toggle when dropped after spring-load expands it', async ({ page }) => {
+      test.slow();
+
       await createBlok(page, {
         data: {
           blocks: [

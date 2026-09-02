@@ -6,6 +6,10 @@ inputs:
     description: "Node.js version to use"
     required: false
     default: "26.5.0"
+  install-docs:
+    description: "Whether to install docs dependencies"
+    required: false
+    default: "true"
 
 outputs:
   cache-hit:
@@ -27,7 +31,7 @@ runs:
 
     - name: Setup Node.js
       id: setup-node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: "yarn"
@@ -37,6 +41,7 @@ runs:
       run: yarn install --immutable
 
     - name: Install docs dependencies
+      if: inputs.install-docs == 'true'
       shell: bash
       run: |
         if [ -f docs/package.json ]; then

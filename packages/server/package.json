@@ -26,16 +26,32 @@
     "sidecar",
     "ssrf"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./ticket": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/ticket.mjs",
+      "require": "./dist/ticket.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "blok-server": "bin/blok-server.mjs"
   },
   "files": [
-    "bin"
+    "bin",
+    "dist",
+    "types"
   ],
   "engines": {
     "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "yarn run -T vite build --mode production",
+    "test": "yarn run -T vitest run"
   }
 }

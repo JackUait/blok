@@ -349,9 +349,7 @@ test.describe('semantic contracts', () => {
       await expect(colGrip).toHaveAttribute('tabindex', '0');
     });
 
-    // Defect 4: a grip locked by a merge is given aria-disabled while still
-    // having no role at all, so the state hangs off a plain generic element.
-    test('a merge-locked grip states its disabled state on an element with a role', async ({ page }) => {
+    test('a merge-locked grip keeps its menu operable', async ({ page }) => {
       await createBlok(page, {
         data: {
           blocks: [
@@ -380,8 +378,13 @@ test.describe('semantic contracts', () => {
       const lockedGrip = page.locator('[data-blok-table-grip-drag-disabled]').first();
 
       await expect(lockedGrip).toBeVisible();
-      await expect(lockedGrip).toHaveAttribute('aria-disabled', 'true');
-      await expect(lockedGrip).toHaveAttribute('role', /.+/);
+      await expect(lockedGrip).toHaveAttribute('role', 'button');
+      await expect(lockedGrip).toHaveAttribute('aria-haspopup', 'menu');
+      await expect(lockedGrip).not.toHaveAttribute('aria-disabled', /.+/);
+
+      await lockedGrip.click();
+
+      await expect(page.getByText('Insert row above', { exact: true })).toBeVisible();
     });
   });
 

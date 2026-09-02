@@ -15,10 +15,10 @@
  * @param html - raw clipboard HTML string
  * @returns preprocessed HTML string (unchanged when not Notion)
  */
-export function preprocessNotionHtml(html: string): string {
-  const wrapper = document.createElement('div');
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
-  wrapper.innerHTML = html;
+export function preprocessNotionHtml(html: string): string {
+  const wrapper = parseUntrustedHtml(html);
 
   if (!isNotionClipboard(wrapper)) {
     return html;
@@ -59,7 +59,9 @@ function isNotionClipboard(wrapper: HTMLElement): boolean {
  */
 function normalizeInlineMarks(wrapper: HTMLElement): void {
   wrapper.querySelectorAll('del, strike').forEach((el) => {
-    const s = document.createElement('s');
+    // Created in el's own (inert) document: a live <s> would load whatever the
+    // pasted markup carries the moment its innerHTML is written.
+    const s = el.ownerDocument.createElement('s');
 
     s.innerHTML = el.innerHTML;
     el.replaceWith(s);

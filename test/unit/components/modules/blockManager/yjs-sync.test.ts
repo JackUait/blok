@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { BlockYjsSync, type SyncHandlers, type BlockYjsSyncDependencies } from '../../../../../src/components/modules/blockManager/yjs-sync';
 import { BlockRepository } from '../../../../../src/components/modules/blockManager/repository';
 import { BlockFactory } from '../../../../../src/components/modules/blockManager/factory';
@@ -6,7 +6,7 @@ import { Blocks } from '../../../../../src/components/blocks';
 import type { Block } from '../../../../../src/components/block';
 import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
-import type { Map as YMap } from 'yjs';
+import { Map as YMap, Doc as YDoc, type Array as YArray } from 'yjs';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { API } from '../../../../../src/components/modules/api';
@@ -14,6 +14,7 @@ import { ToolsCollection } from '../../../../../src/components/tools/collection'
 import type { BlockToolAdapter } from '../../../../../src/components/tools/block';
 import type { BlocksStore } from '../../../../../src/components/modules/blockManager/types';
 import { validateHierarchy } from '../../../../../src/components/utils/hierarchy-invariant';
+import * as utils from '../../../../../src/components/utils';
 
 /**
  * Create a mock Block for testing
@@ -24,6 +25,8 @@ const createMockBlock = (options: {
   contentIds?: string[];
   data?: Record<string, unknown>;
   tunes?: Record<string, unknown>;
+  tool?: Partial<BlockToolAdapter>;
+  name?: string;
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
@@ -46,8 +49,8 @@ const createMockBlock = (options: {
     setData: mockSetData as Block['setData'],
     call: mockCall,
     destroy: mockDestroy,
-    name: 'paragraph',
-    tool: {} as BlockToolAdapter,
+    name: options.name ?? 'paragraph',
+    tool: (options.tool ?? {}) as BlockToolAdapter,
     settings: {},
     tunes: new ToolsCollection<BlockToolAdapter>(),
     config: {},
@@ -67,26 +70,34 @@ const createMockBlock = (options: {
  * Note: YjsManager has many properties; this mock provides only the methods used by tests.
  * Using unknown assertion to satisfy TypeScript for missing internal properties.
  */
-const createMockYjsManager = (): YjsManager => ({
-  addBlock: vi.fn(),
-  removeBlock: vi.fn(),
-  moveBlock: vi.fn(),
-  updateBlockData: vi.fn(),
-  updateBlockTune: vi.fn(),
-  stopCapturing: vi.fn(),
-  transact: vi.fn((fn: () => void) => fn()),
-  toJSON: vi.fn(() => []),
-  getBlockById: vi.fn(() => undefined),
-  onBlocksChanged: vi.fn(() => vi.fn()),
-  fromJSON: vi.fn(),
-  yMapToObject: vi.fn((yMap: YMap<unknown>) => {
-    const obj: Record<string, unknown> = {};
-    yMap.forEach((value, key) => {
-      obj[key] = value;
-    });
-    return obj;
-  }),
-} as unknown as YjsManager);
+const createMockYjsManager = (): YjsManager => {
+  const toJSON = vi.fn((): Array<{ id?: string }> => []);
+
+  return {
+    addBlock: vi.fn(),
+    removeBlock: vi.fn(),
+    moveBlock: vi.fn(),
+    updateBlockData: vi.fn(),
+    updateBlockTune: vi.fn(),
+    stopCapturing: vi.fn(),
+    transact: vi.fn((fn: () => void) => fn()),
+    transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+    toJSON,
+    // The reconciler reads order through orderedIds(); tests drive it via toJSON.
+    orderedIds: vi.fn((): string[] =>
+      toJSON().map((block) => block.id).filter((id): id is string => typeof id === 'string')),
+    getBlockById: vi.fn(() => undefined),
+    onBlocksChanged: vi.fn(() => vi.fn()),
+    fromJSON: vi.fn(),
+    yMapToObject: vi.fn((yMap: YMap<unknown>) => {
+      const obj: Record<string, unknown> = {};
+      yMap.forEach((value, key) => {
+        obj[key] = value;
+      });
+      return obj;
+    }),
+  } as unknown as YjsManager;
+};
 
 /**
  * Helper to access mock methods on YjsManager
@@ -129,7 +140,23 @@ const createMockYMap = (data: Record<string, unknown>): YMap<unknown> => {
     _data: data, // Store reference for test access
   } as unknown as YMap<unknown>;
 
+  // The reconciler admits a record's data/tunes only when they ARE Y.Maps.
+  Object.setPrototypeOf(yMap, YMap.prototype);
+
   return yMap;
+};
+
+/**
+ * A doc-backed Y.Array of child ids. Every block Y.Map in a real doc carries
+ * one (a prelim `new Y.Array()` reads back empty), and the reconciler reads a
+ * parent's children from it.
+ */
+const createDocArray = (ids: string[]): YArray<string> => {
+  const array = new YDoc().getArray<string>('contentIds');
+
+  array.push(ids);
+
+  return array;
 };
 
 /**
@@ -169,6 +196,14 @@ const createMockBlockFactory = (): BlockFactory => {
   };
   const mockEventsDispatcher = new EventsDispatcher<BlokEventMap>();
   const mockTools = new ToolsCollection<BlockToolAdapter>();
+
+  // The reconciler refuses to materialise a tool this registry lacks, so the
+  // tools these tests name must be registered even though every test stubs
+  // composeBlock itself.
+  for (const toolName of ['paragraph', 'toggle', 'callout', 'table']) {
+    mockTools.set(toolName, {} as BlockToolAdapter);
+  }
+
   const bindBlockEvents = vi.fn();
 
   return new BlockFactory({
@@ -185,12 +220,8 @@ const createMockBlockFactory = (): BlockFactory => {
  * Create mock SyncHandlers
  */
 const createMockSyncHandlers = (): SyncHandlers => ({
-  addToDom: vi.fn(),
-  removeFromDom: vi.fn(),
-  moveInDom: vi.fn(),
   getBlockIndex: vi.fn(() => 0),
   insertDefaultBlock: vi.fn(() => createMockBlock()),
-  updateIndentation: vi.fn(),
   setBlockParent: vi.fn(),
   replaceBlock: vi.fn(),
   onBlockRemoved: vi.fn(),
@@ -258,6 +289,42 @@ describe('BlockYjsSync', () => {
     });
   });
 
+  describe('isReconciling', () => {
+    it('is false for every block while nothing is syncing', () => {
+      expect(yjsSync.isReconciling(repository.blocks[0])).toBe(false);
+    });
+
+    it('is true for every block during an unscoped operation', () => {
+      yjsSync.withAtomicOperation(() => {
+        expect(yjsSync.isReconciling(repository.blocks[0])).toBe(true);
+        expect(yjsSync.isReconciling(repository.blocks[2])).toBe(true);
+      });
+    });
+
+    it('is true only for the reconciled block and its descendants during a scoped operation', () => {
+      const parent = createMockBlock({ id: 'p', contentIds: ['c'] });
+      const child = createMockBlock({ id: 'c', parentId: 'p' });
+      const grandchild = createMockBlock({ id: 'g', parentId: 'c' });
+      const other = createMockBlock({ id: 'o' });
+
+      blocksStore = createBlocksStore([parent, child, grandchild, other]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, blocksStore);
+
+      yjsSync.withAtomicOperation(() => {
+        expect(yjsSync.isSyncingFromYjs).toBe(true);
+        expect(yjsSync.isReconciling(parent)).toBe(true);
+        expect(yjsSync.isReconciling(child)).toBe(true);
+        expect(yjsSync.isReconciling(grandchild)).toBe(true);
+        expect(yjsSync.isReconciling(other)).toBe(false);
+      }, { blockId: 'p' });
+
+      expect(yjsSync.isSyncingFromYjs).toBe(false);
+      expect(yjsSync.isReconciling(parent)).toBe(false);
+    });
+  });
+
   describe('withAtomicOperation', () => {
     it('executes function and decrements sync count even if error is thrown', () => {
       const error = new Error('Test error');
@@ -306,81 +373,6 @@ describe('BlockYjsSync', () => {
       const unsubscribe = yjsSync.subscribe();
 
       expect(unsubscribe).toBe(mockUnsubscribe);
-    });
-  });
-
-  describe('updateBlocksStore', () => {
-    it('updates the internal blocks store reference', () => {
-      const newBlocks = [createMockBlock({ id: 'new-block' })];
-      const newBlocksStore = createBlocksStore(newBlocks);
-
-      yjsSync.updateBlocksStore(newBlocksStore);
-
-      // The updated blocks store should be used for subsequent operations
-      // This is verified implicitly by other operations using the correct blocks
-    });
-  });
-
-  describe('syncBlockDataToYjs', () => {
-    it('syncs block data to YjsManager', async () => {
-      const block = createMockBlock({ id: 'test-block' });
-      const savedData = { data: { text: 'Hello', level: 2 } };
-
-      await yjsSync.syncBlockDataToYjs(block, savedData);
-
-      expect(mockYjsManager.updateBlockData).toHaveBeenCalledWith('test-block', 'text', 'Hello');
-      expect(mockYjsManager.updateBlockData).toHaveBeenCalledWith('test-block', 'level', 2);
-    });
-
-    it('does not sync when savedData is undefined', async () => {
-      const block = createMockBlock({ id: 'test-block' });
-
-      await yjsSync.syncBlockDataToYjs(block, undefined as unknown as { data: Record<string, unknown> });
-
-      expect(mockYjsManager.updateBlockData).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('isBlockDataChanged', () => {
-    it('returns true when block does not exist in Yjs', () => {
-      mockGetBlockById(mockYjsManager).mockReturnValue(undefined);
-
-      const result = yjsSync.isBlockDataChanged('unknown-block', 'text', 'value');
-
-      expect(result).toBe(true);
-    });
-
-    it('returns true when value differs from Yjs value', () => {
-      const ydata = createMockYMap({ text: 'old value' });
-      const yblock = createMockYMap({ data: ydata });
-
-      mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
-
-      const result = yjsSync.isBlockDataChanged('block-1', 'text', 'new value');
-
-      expect(result).toBe(true);
-    });
-
-    it('returns false when value matches Yjs value', () => {
-      const ydata = createMockYMap({ text: 'same value' });
-      const yblock = createMockYMap({ data: ydata });
-
-      mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
-
-      const result = yjsSync.isBlockDataChanged('block-1', 'text', 'same value');
-
-      expect(result).toBe(false);
-    });
-
-    it('handles undefined values in Yjs', () => {
-      const ydata = createMockYMap({ text: undefined });
-      const yblock = createMockYMap({ data: ydata });
-
-      mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
-
-      const result = yjsSync.isBlockDataChanged('block-1', 'text', 'value');
-
-      expect(result).toBe(true);
     });
   });
 
@@ -1018,6 +1010,7 @@ describe('BlockYjsSync', () => {
           type: 'paragraph',
           data: parentYdata,
           tunes: createMockYMap({}),
+          contentIds: createDocArray(['child-block']),
         });
 
         const childYblock = createMockYMap({
@@ -1477,12 +1470,13 @@ describe('BlockYjsSync', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      it('treats missing parentId key as no-op (Fix 4)', async () => {
+      it('treats a missing parentId key as reparent-to-root on history replays too', async () => {
         /**
-         * Fix 4 regression: when the Yjs record has no `parentId` key at
-         * all (key never written), handleYjsUpdate must NOT call
-         * setBlockParent — missing key means "no authoritative value",
-         * not "reparent to root".
+         * A deleted key IS the doc saying "root" (the serializer never
+         * writes null), and that reading is origin-independent. Undo/redo
+         * once deferred to UndoHistory's placement callback, but that only
+         * fires for DRAG moves — undoing a reparent written by the plain
+         * captured path left the block parented in memory forever.
          */
         const childBlock = createMockBlock({
           id: 'child-1',
@@ -1519,13 +1513,11 @@ describe('BlockYjsSync', () => {
         mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
         mockHandlers.getBlockIndex = vi.fn(() => 0);
 
-        callback({ blockId: 'child-1', type: 'update', origin: 'remote' });
+        callback({ blockId: 'child-1', type: 'update', origin: 'undo' });
 
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
-        // Local state untouched.
-        expect(childBlock.parentId).toBe('callout-1');
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, null);
       });
 
       it('treats explicit null parentId as reparent-to-root (Fix 4)', async () => {
@@ -1581,32 +1573,106 @@ describe('BlockYjsSync', () => {
     });
 
     describe('handleYjsMove', () => {
-      it('batches move operations using microtask', () => {
-        // Create mock blocks for the mockHandler to reference
-        void [
-          createMockBlock({ id: 'block-1' }),
-          createMockBlock({ id: 'block-2' }),
-          createMockBlock({ id: 'block-3' }),
-        ];
+      it('batches the move events of one transaction into a single order resync', async () => {
         mockToJSON(mockYjsManager).mockReturnValue([
           { id: 'block-2' },
           { id: 'block-1' },
           { id: 'block-3' },
         ]);
-        mockHandlers.getBlockIndex = vi.fn((block: Block) => {
-          const indexMap: Record<string, number> = {
-            'block-1': 0,
-            'block-2': 1,
-            'block-3': 2,
-          };
-          return indexMap[block.id];
-        });
 
-        // Trigger multiple move events
         callback({ blockId: 'block-1', type: 'move', origin: 'undo' });
         callback({ blockId: 'block-2', type: 'move', origin: 'undo' });
 
-        // Moves should be batched
+        expect(mockToJSON(mockYjsManager)).not.toHaveBeenCalled();
+
+        await Promise.resolve();
+
+        expect(mockToJSON(mockYjsManager)).toHaveBeenCalledTimes(1);
+        expect(repository.blocks.map((block) => block.id)).toEqual(['block-2', 'block-1', 'block-3']);
+      });
+
+      /**
+       * The doc may legally hold ids memory does not: a peer's block whose
+       * parent has not arrived yet (`applyPlacement`'s orphan tolerance), or
+       * a block a local replace dropped from memory while the doc kept it.
+       * Every such id shifts the doc's flat indices past it, so consuming
+       * them as MEMORY indices reorders blocks nobody touched — an undo in
+       * one column silently rearranged the other column's blocks.
+       */
+      it('ignores doc ids absent from memory instead of shifting every later block', async () => {
+        const memoryIds = ['cl1', 'c1', 'h1', 'body1', 'author1', 'c2', 'h2', 'body2'];
+        const newBlocksStore = createBlocksStore(memoryIds.map((id) => createMockBlock({ id })));
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // The doc still holds 'slot' — the paragraph a replace dropped from
+        // memory — between h1 and body1.
+        mockToJSON(mockYjsManager).mockReturnValue(
+          ['cl1', 'c1', 'h1', 'slot', 'body1', 'author1', 'c2', 'h2', 'body2'].map((id) => ({ id }))
+        );
+        mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+
+        callback({ blockId: 'slot', type: 'move', origin: 'undo' });
+
+        await Promise.resolve();
+
+        expect(repository.blocks.map((block) => block.id)).toEqual(memoryIds);
+      });
+
+      /**
+       * Every remote move resyncs the whole order. Asking the store for each
+       * block's index is a linear scan per block — quadratic per move.
+       */
+      it('reorders a large document without asking the store for each block\'s index', async () => {
+        const ids = Array.from({ length: 5000 }, (_, index) => `b${index}`);
+        const newBlocksStore = createBlocksStore(ids.map((id) => createMockBlock({ id })));
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // A peer moved the last block to the front.
+        const docOrder = [ids[ids.length - 1], ...ids.slice(0, -1)];
+
+        mockToJSON(mockYjsManager).mockReturnValue(docOrder.map((id) => ({ id })));
+        mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+
+        callback({ blockId: docOrder[0], type: 'move', origin: 'remote' });
+
+        await Promise.resolve();
+
+        expect(repository.blocks.map((block) => block.id)).toEqual(docOrder);
+        expect(mockHandlers.getBlockIndex).not.toHaveBeenCalled();
       });
     });
 
@@ -1710,6 +1776,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-id']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -1738,7 +1805,7 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'toggle-id');
       });
 
-      it('calls setBlockParent handler (not just updateIndentation) when parentId is defined', () => {
+      it('calls setBlockParent handler when parentId is defined', () => {
         /**
          * Regression test for Fix 2:
          * When a Yjs 'add' event fires for a block with a parentId (redo restoring a
@@ -1790,8 +1857,6 @@ describe('BlockYjsSync', () => {
         // and update parent's contentIds
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock, 'toggle-id');
 
-        // updateIndentation should NOT be called separately (setBlockParent handles it)
-        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
       });
 
       it('does not call setBlockParent when parentId is not defined', () => {
@@ -1811,7 +1876,6 @@ describe('BlockYjsSync', () => {
         callback({ blockId: 'new-block', type: 'add', origin: 'redo' });
 
         expect(mockHandlers.setBlockParent).not.toHaveBeenCalled();
-        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
       });
 
       it('does not create block if it already exists', () => {
@@ -1882,6 +1946,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-id']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -2136,7 +2201,7 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.onBlockAdded).toHaveBeenCalledWith(childBlock, expect.any(Number));
       });
 
-      it('calls setBlockParent (not updateIndentation) for each block with parentId', () => {
+      it('calls setBlockParent for each block with parentId', () => {
         /**
          * Regression test for Fix 2 (batch-add path):
          * When multiple blocks are restored via batch-add (e.g. toggle + its children),
@@ -2184,8 +2249,6 @@ describe('BlockYjsSync', () => {
         // setBlockParent must be called for the child block with parentId
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childBlock2, 'toggle-1');
 
-        // updateIndentation should NOT be called separately (setBlockParent handles it)
-        expect(mockHandlers.updateIndentation).not.toHaveBeenCalled();
 
         // setBlockParent should NOT be called for the toggle block (no parentId)
         expect(mockHandlers.setBlockParent).not.toHaveBeenCalledWith(toggleBlock, expect.anything());
@@ -2264,7 +2327,70 @@ describe('BlockYjsSync', () => {
 
         callback({ blockId: 'last', type: 'remove', origin: 'undo' });
 
-        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true);
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-last');
+      });
+
+      it('does not author the repair block when the local client may not write', () => {
+        /**
+         * A read-only collaborator (a write-denied member: collaboration
+         * arbitrates that into editor read-only) watching a peer empty the
+         * document must author NOTHING. The write would be dropped by the
+         * server and the viewer would diverge from the room forever; the
+         * memory-only block left behind would be just as invisible to the doc.
+         * The writable peer's repair arrives through the ordinary remote add.
+         */
+        const lastBlock = createMockBlock({ id: 'only-block' });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.insertDefaultBlock = vi.fn(() => createMockBlock({ id: 'default' }));
+
+        repository = new BlockRepository();
+        repository.initialize(createBlocksStore([lastBlock]));
+
+        yjsSync = new BlockYjsSync(
+          {
+            ...createMockDependencies(mockYjsManager),
+            isReadOnly: () => true,
+          },
+          repository,
+          factory,
+          mockHandlers,
+          createBlocksStore([lastBlock])
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
+
+        expect(mockHandlers.insertDefaultBlock).not.toHaveBeenCalled();
+        expect(mockYjsManager.addBlock).not.toHaveBeenCalled();
+        expect(mockYjsManager.transactWithoutCapture).not.toHaveBeenCalled();
+      });
+
+      it('still repairs an emptied document for a writable client', () => {
+        const lastBlock = createMockBlock({ id: 'only-block' });
+
+        mockHandlers.getBlockIndex = vi.fn(() => 0);
+        mockHandlers.insertDefaultBlock = vi.fn(() => createMockBlock({ id: 'default' }));
+
+        repository = new BlockRepository();
+        repository.initialize(createBlocksStore([lastBlock]));
+
+        yjsSync = new BlockYjsSync(
+          {
+            ...createMockDependencies(mockYjsManager),
+            isReadOnly: () => false,
+          },
+          repository,
+          factory,
+          mockHandlers,
+          createBlocksStore([lastBlock])
+        );
+        yjsSync.subscribe();
+
+        callback({ blockId: 'only-block', type: 'remove', origin: 'remote' });
+
+        expect(mockHandlers.insertDefaultBlock).toHaveBeenCalledWith(true, 'after-only-block');
+        expect(mockYjsManager.addBlock).toHaveBeenCalled();
       });
 
       it('keeps Yjs sync state active while removing a block', () => {
@@ -2310,7 +2436,8 @@ describe('BlockYjsSync', () => {
           // After synchronous return, still true (RAF extension)
           expect(yjsSync.isSyncingFromYjs).toBe(true);
           // After RAF fires, drops to false
-          rafCallback!(0);
+          expect(rafCallback).toBeDefined();
+          rafCallback?.(0);
           expect(yjsSync.isSyncingFromYjs).toBe(false);
         } finally {
           globalThis.requestAnimationFrame = originalRAF;
@@ -2365,7 +2492,7 @@ describe('BlockYjsSync', () => {
 
           // After RAF fires, isSyncingFromYjs should drop to false
           expect(rafCallback).toBeDefined();
-          rafCallback!(0);
+          rafCallback?.(0);
           expect(yjsSync.isSyncingFromYjs).toBe(false);
         } finally {
           globalThis.requestAnimationFrame = originalRAF;
@@ -2537,6 +2664,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-a', 'child-b']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -2562,6 +2690,62 @@ describe('BlockYjsSync', () => {
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childA, 'toggle-id');
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childB, 'toggle-id');
       });
+
+      /**
+       * The doc names a parent's children in its contentIds; scanning every
+       * block in memory for a matching parentId instead costs a doc lookup per
+       * block on every add and every type or tune change.
+       */
+      it('consults only the restored block\'s listed children, not every block in memory', () => {
+        const bystanders = Array.from({ length: 200 }, (_, index) => createMockBlock({ id: `other-${index}` }));
+        const child = createMockBlock({ id: 'child-a', parentId: null });
+        const testBlocksStore = createBlocksStore([...bystanders, child]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const records: Record<string, YMap<unknown>> = {
+          'toggle-id': createMockYMap({
+            type: 'toggle',
+            data: createMockYMap({}),
+            contentIds: createDocArray(['child-a']),
+          }),
+          'child-a': createMockYMap({
+            type: 'paragraph',
+            data: createMockYMap({}),
+            parentId: 'toggle-id',
+          }),
+        };
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+        mockToJSON(mockYjsManager).mockReturnValue(
+          ['toggle-id', 'child-a', ...bystanders.map((block) => block.id)].map((id) => ({ id }))
+        );
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(createMockBlock({ id: 'toggle-id' }));
+
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'remote' });
+
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(child, 'toggle-id');
+
+        const consulted = mockGetBlockById(mockYjsManager).mock.calls.map((call) => String(call[0]));
+
+        expect(consulted.filter((id) => id.startsWith('other-'))).toHaveLength(0);
+      });
     });
   });
 
@@ -2580,28 +2764,446 @@ describe('BlockYjsSync', () => {
       yjsSync.subscribe();
     });
 
-    it('syncs on undo origin', () => {
-      void createMockBlock({ id: 'test', data: {}, tunes: {} });
-      const ydata = createMockYMap({});
-      const yblock = createMockYMap({ data: ydata, tunes: createMockYMap({}) });
+    const serveUpdate = (): Block => {
+      mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+        type: 'paragraph',
+        data: createMockYMap({ text: 'from doc' }),
+        tunes: createMockYMap({}),
+      }));
 
-      mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+      const block = repository.getBlockById('block-1');
 
-      expect(() => {
-        callback({ blockId: 'test', type: 'update', origin: 'undo' });
-      }).not.toThrow();
+      if (block === undefined) {
+        throw new Error('fixture: block-1 missing');
+      }
+
+      return block;
+    };
+
+    it.each(['undo', 'redo', 'remote'] as const)('applies an update with origin %s', async (origin) => {
+      const block = serveUpdate();
+
+      callback({ blockId: 'block-1', type: 'update', origin });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(block.setData).toHaveBeenCalledWith({ text: 'from doc' });
     });
 
-    it('syncs on redo origin', () => {
-      void createMockBlock({ id: 'test', data: {}, tunes: {} });
-      const ydata = createMockYMap({});
-      const yblock = createMockYMap({ data: ydata, tunes: createMockYMap({}) });
+    it.each(['local', 'load', 'move'] as const)('ignores an update with origin %s', async (origin) => {
+      const block = serveUpdate();
 
-      mockGetBlockById(mockYjsManager).mockReturnValue(yblock);
+      callback({ blockId: 'block-1', type: 'update', origin });
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(() => {
-        callback({ blockId: 'test', type: 'update', origin: 'redo' });
-      }).not.toThrow();
+      expect(block.setData).not.toHaveBeenCalled();
+    });
+  });
+  describe('destroy', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let unsubscribe: ReturnType<typeof vi.fn>;
+
+    /**
+     * Put block-2's holder BEFORE block-1's, so the holder-order reconcile has
+     * something to repair and its run (or absence) is observable.
+     */
+    const divergeHolders = (): HTMLElement[] => {
+      const first = repository.blocks[0].holder;
+      const second = repository.blocks[1].holder;
+
+      first.parentElement?.insertBefore(second, first);
+
+      return [ first, second ];
+    };
+
+    const domOrder = (holders: HTMLElement[]): number[] =>
+      holders.map((holder) => Array.from(holder.parentElement?.children ?? []).indexOf(holder));
+
+    beforeEach(() => {
+      unsubscribe = vi.fn();
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return unsubscribe;
+      });
+
+      yjsSync.subscribe();
+    });
+
+    it('unsubscribes from Yjs changes', () => {
+      yjsSync.destroy();
+
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a reconcile scheduled before destroy when the editor is still alive', async () => {
+      const holders = divergeHolders();
+
+      // A remove of a block this mirror never had: it schedules the batch's
+      // reconcile without disturbing the holders under test.
+      callback({ blockId: 'already-gone', type: 'remove', origin: 'undo' });
+
+      await Promise.resolve();
+
+      expect(domOrder(holders)).toEqual([ 0, 1 ]);
+    });
+
+    it('drops a reconcile scheduled before destroy', async () => {
+      const holders = divergeHolders();
+
+      callback({ blockId: 'already-gone', type: 'remove', origin: 'undo' });
+      yjsSync.destroy();
+
+      await Promise.resolve();
+
+      // A torn-down editor has nothing to reconcile — and nothing to assert
+      // about, which is what made the dev tripwire throw out of band.
+      expect(domOrder(holders)).toEqual([ 1, 0 ]);
+    });
+
+    it('drops a move resync scheduled before destroy', async () => {
+      const before = repository.blocks.map((block) => block.id);
+
+      mockToJSON(mockYjsManager).mockReturnValue([...before].reverse().map((id) => ({ id })));
+
+      callback({ blockId: before[0], type: 'move', origin: 'remote' });
+      yjsSync.destroy();
+
+      await Promise.resolve();
+
+      expect(mockToJSON(mockYjsManager)).not.toHaveBeenCalled();
+      expect(repository.blocks.map((block) => block.id)).toEqual(before);
+    });
+  });
+
+  /**
+   * `childTools` is enforced on the local insert and move paths only. A
+   * remote child the container denies is materialised as-is — demoting it
+   * here would write back and loop against the peer — but the host must be
+   * told, once, so the doc-authored shape is not a silent surprise.
+   */
+  describe('childTools on remote children', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let warn: ReturnType<typeof vi.spyOn>;
+    let container: Block;
+
+    beforeEach(() => {
+      container = createMockBlock({ id: 'box', tool: { childTools: { deny: ['paragraph'] } } });
+      blocksStore = createBlocksStore([container]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, blocksStore);
+
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+      vi.spyOn(factory, 'composeBlock').mockImplementation(
+        (options) => createMockBlock({ id: options.id, name: options.tool, parentId: options.parentId })
+      );
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('materialises a denied remote child under its container and warns once', () => {
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'paragraph', data: createMockYMap({ text: 'hi' }), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue([{ id: 'box' }, { id: 'kid' }]);
+
+      callback({ blockId: 'kid', type: 'add', origin: 'remote' });
+
+      const kid = repository.getBlockById('kid');
+
+      expect(kid).toBeDefined();
+      expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(kid, 'box');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('kid');
+      expect(warn.mock.calls[0][0]).toContain('box');
+      expect(warn.mock.calls[0][1]).toBe('warn');
+      expect(mockYjsManager.transactWithoutCapture).not.toHaveBeenCalled();
+      expect(mockYjsManager.updateBlockData).not.toHaveBeenCalled();
+    });
+
+    it('warns once when a remote reparent moves a denied child into the container', async () => {
+      const kid = createMockBlock({ id: 'kid' });
+
+      blocksStore.push(kid);
+
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'paragraph', data: createMockYMap({ text: 'hi' }), tunes: createMockYMap({}), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+
+      callback({ blockId: 'kid', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(kid, 'box');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('kid');
+    });
+
+    it('stays silent for a child the container allows', () => {
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'toggle', data: createMockYMap({}), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue([{ id: 'box' }, { id: 'kid' }]);
+
+      callback({ blockId: 'kid', type: 'add', origin: 'remote' });
+
+      expect(repository.getBlockById('kid')).toBeDefined();
+      expect(warn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tunes read off the doc', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+
+    beforeEach(() => {
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+    });
+
+    /**
+     * Data off the doc is sanitized; tunes come off the same untrusted doc
+     * and reach the tool the same way.
+     */
+    it('strips executable URL schemes from tunes before the block is rebuilt', async () => {
+      mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+        type: 'paragraph',
+        data: createMockYMap({ text: 'hi' }),
+        tunes: createMockYMap({ footer: '<a href="javascript:alert(1)">x</a>' }),
+      }));
+
+      const composeBlock = vi.spyOn(factory, 'composeBlock').mockImplementation((options) => createMockBlock({ id: options.id }));
+
+      callback({ blockId: 'block-1', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(composeBlock).toHaveBeenCalledTimes(1);
+
+      const { tunes } = composeBlock.mock.calls[0][0];
+
+      expect(JSON.stringify(tunes)).not.toContain('javascript:');
+      expect(tunes).toEqual({ footer: '<a>x</a>' });
+    });
+
+    it('does not rebuild the block when only key order of object tunes differs', async () => {
+      const block = createMockBlock({ id: 'tuned', tunes: { box: { a: 1, b: 2 } } });
+
+      blocksStore.push(block);
+
+      mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+        type: 'paragraph',
+        data: createMockYMap({ text: 'hi' }),
+        tunes: createMockYMap({ box: { b: 2, a: 1 } }),
+      }));
+
+      const composeBlock = vi.spyOn(factory, 'composeBlock');
+
+      callback({ blockId: 'tuned', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(block.setData).toHaveBeenCalledWith({ text: 'hi' });
+    });
+  });
+
+  describe('update fallback after the block was removed', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+
+    beforeEach(() => {
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+    });
+
+    /**
+     * `setData` is awaited; a remove of the same block can land meanwhile.
+     * The recreate fallback then has no slot to replace into — composing a
+     * block for it leaks the block and throws out of a voided promise.
+     */
+    it('does not recreate a block that left the store while setData was pending', async () => {
+      const block = repository.getBlockById('block-2');
+
+      if (block === undefined) {
+        throw new Error('fixture: block-2 missing');
+      }
+
+      let resolveSetData: (success: boolean) => void = () => undefined;
+
+      (block.setData as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise<boolean>((resolve) => {
+          resolveSetData = resolve;
+        })
+      );
+
+      mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+        type: 'paragraph',
+        data: createMockYMap({ text: 'peer text' }),
+      }));
+
+      const composeBlock = vi.spyOn(factory, 'composeBlock');
+
+      callback({ blockId: 'block-2', type: 'update', origin: 'remote' });
+      await Promise.resolve();
+
+      blocksStore.remove(repository.getBlockIndex(block));
+      resolveSetData(false);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * A peer can write any shape into the blocks map. A record the reconciler
+   * cannot read must be refused like an unknown tool — warned about, left
+   * doc-only — never thrown on, because a throw inside the observer takes
+   * every other block in the same dispatch down with it.
+   */
+  describe('malformed block records', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let warn: ReturnType<typeof vi.spyOn>;
+
+    const legitimate = (): YMap<unknown> => createMockYMap({
+      id: 'r1',
+      type: 'paragraph',
+      data: createMockYMap({ text: 'hi' }),
+    });
+
+    const serveRecords = (records: Record<string, YMap<unknown>>): void => {
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue(Object.keys(records).map((id) => ({ id })));
+    };
+
+    const stubCompose = (): ReturnType<typeof vi.spyOn> =>
+      vi.spyOn(factory, 'composeBlock').mockImplementation((options) => createMockBlock({ id: options.id }));
+
+    beforeEach(() => {
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('refuses an add whose data is not a Y.Map, then materialises the next legitimate add', () => {
+      serveRecords({
+        x: createMockYMap({ id: 'x', type: 'paragraph', data: 'junk' }),
+        r1: legitimate(),
+      });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+      callback({ blockId: 'r1', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).toHaveBeenCalledTimes(1);
+      expect(composeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+      expect(repository.getBlockById('x')).toBeUndefined();
+      expect(repository.getBlockById('r1')).toBeDefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('x');
+      expect(warn.mock.calls[0][1]).toBe('warn');
+    });
+
+    it('drops only the malformed record from a batch add', () => {
+      serveRecords({
+        x: createMockYMap({ id: 'x', type: 'paragraph', data: 'junk' }),
+        r1: legitimate(),
+      });
+      const composeBlock = stubCompose();
+
+      callback({ blockIds: ['x', 'r1'], type: 'batch-add', origin: 'remote' });
+
+      expect(composeBlock).toHaveBeenCalledTimes(1);
+      expect(composeBlock).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+      expect(repository.getBlockById('r1')).toBeDefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('x');
+    });
+
+    it('refuses an update whose data is not a Y.Map and keeps the current view', async () => {
+      const block = repository.getBlockById('block-1');
+
+      serveRecords({ 'block-1': createMockYMap({ id: 'block-1', type: 'paragraph', data: 'junk' }) });
+
+      callback({ blockId: 'block-1', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(block?.setData).not.toHaveBeenCalled();
+      expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('block-1');
+    });
+
+    it('refuses a record whose type is not a string', () => {
+      serveRecords({ x: createMockYMap({ id: 'x', type: 42, data: createMockYMap({}) }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('«x»');
+    });
+
+    it('refuses a record whose tunes is not a Y.Map', () => {
+      serveRecords({ x: createMockYMap({ id: 'x', type: 'paragraph', data: createMockYMap({}), tunes: 'junk' }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a record whose id is present but not a string', () => {
+      serveRecords({ x: createMockYMap({ id: 7, type: 'paragraph', data: createMockYMap({}) }) });
+      const composeBlock = stubCompose();
+
+      callback({ blockId: 'x', type: 'add', origin: 'remote' });
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
     });
   });
 });

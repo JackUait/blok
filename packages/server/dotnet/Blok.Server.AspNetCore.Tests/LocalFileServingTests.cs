@@ -14,7 +14,7 @@ namespace Blok.Server.AspNetCore.Tests;
 public sealed class LocalFileServingTests : IDisposable
 {
   private const string StoredKey = "0123456789abcdef0123456789abcdef.html";
-  private const string RangeKey = "0123456789abcdef0123456789abcdef.png";
+  private const string RangeKey = "0123456789abcdef0123456789abcdef.png"; // gitleaks:allow
   private readonly string directory =
       Path.Combine(Path.GetTempPath(), $"blok-local-files-{Guid.NewGuid():N}");
 
@@ -75,6 +75,27 @@ public sealed class LocalFileServingTests : IDisposable
         response.Content.Headers.ContentLength);
     Assert.Equal(
         string.Equals(method, "HEAD", StringComparison.Ordinal) ? "" : expectedBody,
+        await response.Content.ReadAsStringAsync());
+  }
+
+  [Fact]
+  public async Task RejectsMoreThanSixteenByteRanges()
+  {
+    await using var app = await StartRangeApplicationAsync();
+    using var client = app.GetTestClient();
+    var ranges = string.Join(
+        ',',
+        Enumerable.Repeat("0-0", 17));
+    using var response = await SendRangeAsync(
+        client,
+        "GET",
+        $"bytes={ranges}");
+
+    Assert.Equal(
+        HttpStatusCode.RequestedRangeNotSatisfiable,
+        response.StatusCode);
+    Assert.Equal(
+        "too many ranges\n",
         await response.Content.ReadAsStringAsync());
   }
 
@@ -415,6 +436,29 @@ public sealed class LocalFileServingTests : IDisposable
     Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync());
   }
 
+  [Fact]
+  public async Task ServesDirectFilesFromARootRelativePublicUrl()
+  {
+    Directory.CreateDirectory(directory);
+    await File.WriteAllTextAsync(
+        Path.Combine(directory, StoredKey),
+        "root file",
+        CancellationToken.None);
+    await using var app = BuildApplication(options =>
+    {
+      options.StorageDirectory = directory;
+      options.PublicUrl = "/";
+    });
+    app.MapBlokServer("/blok");
+    await app.StartAsync();
+
+    using var client = app.GetTestClient();
+    using var response = await client.GetAsync($"/{StoredKey}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal("root file", await response.Content.ReadAsStringAsync());
+  }
+
   [Theory]
   [InlineData(".env")]
   [InlineData("config.json")]
@@ -446,7 +490,7 @@ public sealed class LocalFileServingTests : IDisposable
   [Fact]
   public async Task DoesNotSniffAnExtensionlessFileAsHtml()
   {
-    const string extensionlessKey = "abcdef0123456789abcdef0123456789";
+    const string extensionlessKey = "abcdef0123456789abcdef0123456789"; // gitleaks:allow
     Directory.CreateDirectory(directory);
     await File.WriteAllTextAsync(
         Path.Combine(directory, extensionlessKey),

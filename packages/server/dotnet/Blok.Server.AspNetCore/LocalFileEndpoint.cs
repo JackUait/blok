@@ -11,6 +11,7 @@ namespace Blok.Server.AspNetCore;
 
 internal static class LocalFileEndpoint
 {
+  private const int MaximumRanges = 16;
   private static readonly FileExtensionContentTypeProvider ContentTypes = new();
 
   internal static void Map(
@@ -29,8 +30,10 @@ internal static class LocalFileEndpoint
       return;
     }
 
+    var route = prefix == "/" ? "/{fileName}" : $"{prefix}/{{fileName}}";
+
     endpoints.MapMethods(
-        $"{prefix}/{{fileName}}",
+        route,
         ["GET", "HEAD"],
         context => ServeAsync(
             context,
@@ -243,6 +246,18 @@ internal static class LocalFileEndpoint
     {
       error = "invalid range";
       return false;
+    }
+
+    var rangeList = header.AsSpan(6);
+    var rangeCount = 1;
+
+    foreach (var character in rangeList)
+    {
+      if (character == ',' && ++rangeCount > MaximumRanges)
+      {
+        error = "too many ranges";
+        return false;
+      }
     }
 
     var noOverlap = false;

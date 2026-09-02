@@ -163,7 +163,7 @@ describe('package metadata law', () => {
     expect(description).not.toMatch(/\bGo\b/);
     expect(readme).toContain('dotnet add package Blok.Server.AspNetCore');
     expect(readme).toContain('AddBlokServer');
-    expect(readme).toContain('UseAuthorization<');
+    expect(readme).not.toContain('UseAuthorization<');
     expect(readme).toContain('MapBlokServer');
     expect(readme).toContain('npx @bloklabs/server');
     expect(readme).toContain('ghcr.io/jackuait/blok-server');

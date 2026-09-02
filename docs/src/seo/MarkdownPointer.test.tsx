@@ -26,4 +26,22 @@ describe('MarkdownPointer', () => {
 
     expect(container.textContent).toContain(`${SITE_URL}/ru/demo.md`);
   });
+
+  // `sr-only` and `aria-hidden` hide the sentence from people; neither hides it
+  // from a search engine, and this div is the FIRST text node in the body — so
+  // it headed every snippet. `data-nosnippet` is the only attribute Google
+  // honours for excluding an element from snippet text.
+  it('is excluded from search snippets', () => {
+    const { container } = render(<MarkdownPointer pathname="/" />);
+
+    expect(container.firstElementChild?.hasAttribute('data-nosnippet')).toBe(true);
+  });
+
+  // The build emits no mirror for a noindex route, and none at all for a path
+  // that is not a route, so naming one here would advertise a 404.
+  it('renders nothing where no mirror is written', () => {
+    expect(render(<MarkdownPointer pathname="/tools" />).container.firstChild).toBeNull();
+    expect(render(<MarkdownPointer pathname="/ru/tools" />).container.firstChild).toBeNull();
+    expect(render(<MarkdownPointer pathname="/not-a-real-page" />).container.firstChild).toBeNull();
+  });
 });

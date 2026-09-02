@@ -112,9 +112,9 @@ test.describe('list multi-select keyboard nesting (Notion parity)', () => {
 
     await expect.poll(() => layout(page)).toEqual(['a/root', 'b@1/nested', 'c/root']);
 
-    // Select the nested 'b' and the root 'c' together, then Shift+Tab.
-    await page.getByText('b', { exact: true }).click();
-    await page.keyboard.press('Shift+ArrowDown');
+    // Select the root 'c' and nested 'b' upward across their parent boundary.
+    await page.getByText('c', { exact: true }).click();
+    await page.keyboard.press('Shift+ArrowUp');
     await page.keyboard.press('Shift+Tab');
 
     // 'b' outdents to the root; 'c' (already leftmost) stays put — no all-or-nothing.

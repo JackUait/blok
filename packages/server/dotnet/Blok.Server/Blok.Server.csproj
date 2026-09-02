@@ -10,23 +10,32 @@
     <Description>Shared server services and embedded document runtime for Blok.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://blokeditor.com</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JackUait/blok.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.5.0" />
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+    <PackageReference Include="AngleSharp" Version="1.7.2" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageReference Include="Jint" Version="4.16.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
     <EmbeddedResource Include="Generated/blok-server-runtime.js"
                       LogicalName="Blok.Server.Runtime.blok-server-runtime.js" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../src/**/*.ts" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../types/**/*.d.ts" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../package.json" />
+    <BlokServerRuntimeInput Include="$(MSBuildThisFileDirectory)../../../../yarn.lock" />
   </ItemGroup>
 
   <Target Name="BuildBlokServerRuntime"
           BeforeTargets="PrepareResourceNames"
+          Inputs="@(BlokServerRuntimeInput)"
+          Outputs="$(MSBuildThisFileDirectory)Generated/blok-server-runtime.js"
           Condition="'$(SkipBlokServerRuntimeBuild)' != 'true'">
     <Exec Command="node &quot;$(MSBuildThisFileDirectory)../../../../scripts/build-server-runtime.mjs&quot;" />
   </Target>

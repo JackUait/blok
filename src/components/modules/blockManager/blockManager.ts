@@ -21,7 +21,6 @@ import { BlockChanged } from '../../events';
 import { generateBlockId, logLabeled } from '../../utils';
 import { assertHierarchy, validateHierarchy } from '../../utils/hierarchy-invariant';
 import { getBlockNestingDepth } from '../drag/utils/depthUtils';
-import * as Y from 'yjs';
 
 // Imported modules
 import { BlockEventBinder } from './event-binder';
@@ -439,25 +438,18 @@ export class BlockManager extends Module {
       {
         YjsManager: this.Blok.YjsManager,
         operations: this.operations,
+        sanitizer: this.config.sanitizer,
+        // Lazy: `ReadOnly` arbitrates the host's wish against collaboration's
+        // veto, and that answer changes over the editor's life (a ticket
+        // refresh can revoke write access), so it must be read per call.
+        isReadOnly: () => this.Blok.ReadOnly.isEnabled,
       },
       this.repository,
       this.factory,
       {
-        addToDom: (block, index) => {
-          this.blocksStore.insert(index, block);
-        },
-        removeFromDom: (index) => {
-          this.blocksStore.remove(index);
-        },
-        moveInDom: (toIndex, fromIndex) => {
-          this.blocksStore.move(toIndex, fromIndex);
-        },
         getBlockIndex: (block) => this.repository.getBlockIndex(block),
-        insertDefaultBlock: (skipYjsSync) => {
-          return this.insert({ skipYjsSync });
-        },
-        updateIndentation: (block) => {
-          this.hierarchy.updateBlockIndentation(block);
+        insertDefaultBlock: (skipYjsSync, id) => {
+          return this.insert({ skipYjsSync, id });
         },
         setBlockParent: (block, parentId) => {
           this.hierarchy.setBlockParent(block, parentId);
@@ -1089,22 +1081,20 @@ export class BlockManager extends Module {
   /**
    * Sets the parent of a block, updating both the block's parentId and the parent's contentIds.
    *
-   * Fix 1: the Yjs-side contentIds Y.Arrays on the old and new parents must be
-   * updated in the SAME transaction as the child's parentId write. Previously,
-   * only `yblock.set('parentId', …)` was synced to Yjs, so:
-   *   - Two concurrent peers reparenting siblings would drift on both parents
-   *     because neither ever learned the move through CRDT.
-   *   - Undo snapshots captured the parentId change but left stale contentIds
-   *     on the old/new parents, so redo could restore a child that no parent
-   *     actually claimed.
-   * The companion writes keep the persistent Yjs store consistent with the
-   * in-memory hierarchy at every transaction boundary.
+   * The doc write delegates to `YjsManager.applyBlockPlacement` — ONE
+   * transaction owning the parentId set/delete AND order-array membership
+   * (old parent's contentIds, new parent's contentIds, and the root order).
+   * The parentId write and the order writes must never split across
+   * transactions: concurrent peers reparenting siblings would drift on both
+   * parents, and undo snapshots would restore a child no parent claims.
+   * BlockManager itself never touches contentIds Y.Arrays — DocumentStore
+   * owns every order-array write.
    * @param block - the block to reparent
    * @param newParentId - the new parent block id, or null for root level
    */
   public setBlockParent(block: Block, newParentId: string | null): void {
     // Capture the old parent id BEFORE hierarchy.setBlockParent mutates it —
-    // we need it to remove the child from the old parent's Yjs contentIds.
+    // the BlockMoved emission guard below compares against it.
     const oldParentId = block.parentId;
 
     this.hierarchy.setBlockParent(block, newParentId);
@@ -1186,41 +1176,70 @@ export class BlockManager extends Module {
       }
     }
 
-    // Drag-reparent path: when a move group is open (DragController wraps
-    // its drop handler in `YjsManager.transactMoves`), route the Yjs write
-    // through `transactWithoutCapture` so Y.UndoManager does not record it
-    // as a separate stack item. Attach the parent change to the in-flight
-    // move entry instead — on undo/redo we rewind both atomically.
-    if (this.Blok.YjsManager.isInMoveGroup) {
-      this.Blok.YjsManager.transactWithoutCapture(() => {
-        if (newParentId !== null) {
-          yblock.set('parentId', newParentId);
-        } else {
-          yblock.delete('parentId');
-        }
+    // Doc write: ONE applyPlacement transaction owning the parentId
+    // set/delete + order-array membership (old parent, new parent, AND the
+    // root array — the delegation is what retires the stale-root-entry
+    // hole and the addBlock/helper double-writer). The placement's afterId
+    // comes from the in-memory hierarchy, which `hierarchy.setBlockParent`
+    // above already updated. The REQUESTED newParentId goes to the doc even
+    // when the hierarchy sanitized a dangling parent to null in memory —
+    // the doc's orphan tolerance keeps the relationship for when the parent
+    // arrives from a peer.
+    const placement = this.resolveYjsPlacement(block, newParentId);
 
-        this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
-      });
-      this.Blok.YjsManager.recordParentChangeForPendingMove(
-        block.id,
-        oldParentId,
-        newParentId
-      );
+    // Drag-reparent path: when a move group is open (DragController wraps
+    // its drop handler in `YjsManager.transactMoves`), the write must not
+    // land on Y.UndoManager as a separate stack item — no-capture, and the
+    // parent change attaches to the in-flight move entry instead so
+    // undo/redo rewinds both atomically.
+    if (this.Blok.YjsManager.isInMoveGroup) {
+      // From-placement must be read BEFORE the write below mutates the doc.
+      const fromPlacement = this.Blok.YjsManager.getBlockPlacement(block.id);
+
+      this.Blok.YjsManager.applyBlockPlacement(block.id, placement, { capture: false });
+
+      if (fromPlacement !== null) {
+        this.Blok.YjsManager.recordParentChangeForPendingMove(block.id, fromPlacement, placement);
+      }
 
       return;
     }
 
-    // Wrap parentId + parent contentIds updates in a single Yjs transaction so
-    // they land atomically on remote peers and in the undo stack.
-    this.Blok.YjsManager.transact(() => {
-      if (newParentId !== null) {
-        yblock.set('parentId', newParentId);
-      } else {
-        yblock.delete('parentId');
+    this.Blok.YjsManager.applyBlockPlacement(block.id, placement, { capture: true });
+  }
+
+  /**
+   * The block's placement per the in-memory hierarchy: its parent plus the
+   * sibling it follows (null = first). For root placement the preceding
+   * sibling is the nearest ROOT-LEVEL block before it in the flat order.
+   * @param block - the block whose placement to resolve
+   * @param parentId - the block's (already updated) parent id, or null for root
+   */
+  private resolveYjsPlacement(block: Block, parentId: string | null): { parentId: string | null; afterId: string | null } {
+    if (parentId !== null) {
+      const siblings = this.repository.getBlockById(parentId)?.contentIds ?? [];
+      const position = siblings.indexOf(block.id);
+
+      if (position > 0) {
+        return { parentId, afterId: siblings[position - 1] };
       }
 
-      this.syncParentContentIdsToYjs(block.id, oldParentId, newParentId);
-    });
+      // Not listed (dangling in-memory state) → append after the last sibling.
+      if (position === -1 && siblings.length > 0) {
+        return { parentId, afterId: siblings[siblings.length - 1] };
+      }
+
+      return { parentId, afterId: null };
+    }
+
+    const blocks = this.repository.blocks;
+    const index = blocks.indexOf(block);
+    const precedingRootBlock = blocks
+      .slice(0, Math.max(index, 0))
+      .reverse()
+      .find((candidate) => candidate.parentId === null);
+
+    return { parentId: null, afterId: precedingRootBlock?.id ?? null };
   }
 
   /**
@@ -1273,84 +1292,6 @@ export class BlockManager extends Module {
         structural: true,
       });
     }, { extendThroughRAF: true });
-  }
-
-  /**
-   * Fix 1 helper: update the old and new parents' Yjs `contentIds` Y.Arrays
-   * so the persistent store mirrors the in-memory hierarchy after a reparent.
-   * Extracted from {@link setBlockParent} to keep block nesting shallow.
-   * @param childId - id of the block being reparented
-   * @param oldParentId - parent id before the reparent (may be null)
-   * @param newParentId - parent id after the reparent (may be null)
-   */
-  private syncParentContentIdsToYjs(
-    childId: string,
-    oldParentId: string | null,
-    newParentId: string | null
-  ): void {
-    if (oldParentId !== null && oldParentId !== newParentId) {
-      this.removeChildFromParentYContent(oldParentId, childId);
-    }
-    if (newParentId !== null) {
-      this.appendChildToParentYContent(newParentId, childId);
-    }
-  }
-
-  /**
-   * Fix 1 helper: remove a child id from a parent block's Yjs `contentIds`
-   * Y.Array if it is present. No-op when the parent or its contentIds are
-   * missing from Yjs.
-   * @param parentId - parent block id
-   * @param childId - child block id to remove
-   */
-  private removeChildFromParentYContent(parentId: string, childId: string): void {
-    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
-
-    if (parentYBlock === undefined) {
-      return;
-    }
-    const content = parentYBlock.get('contentIds');
-
-    if (!(content instanceof Y.Array)) {
-      return;
-    }
-    const idx = (content.toArray() as string[]).indexOf(childId);
-
-    if (idx !== -1) {
-      content.delete(idx, 1);
-    }
-  }
-
-  /**
-   * Fix 1 helper: append a child id to a parent block's Yjs `contentIds`
-   * Y.Array, creating the Y.Array on the parent yblock if missing. Inserts at
-   * the index the child occupies in the in-memory parent so remote peers see
-   * the same ordering as the local editor.
-   * @param parentId - parent block id
-   * @param childId - child block id to append
-   */
-  private appendChildToParentYContent(parentId: string, childId: string): void {
-    const parentYBlock = this.Blok.YjsManager.getBlockById(parentId);
-
-    if (parentYBlock === undefined) {
-      return;
-    }
-    const existing = parentYBlock.get('contentIds');
-    const content: Y.Array<string> = existing instanceof Y.Array
-      ? (existing as Y.Array<string>)
-      : new Y.Array<string>();
-
-    if (!(existing instanceof Y.Array)) {
-      parentYBlock.set('contentIds', content);
-    }
-    if ((content.toArray()).includes(childId)) {
-      return;
-    }
-    const parentBlock = this.repository.getBlockById(parentId);
-    const memoryIndex = parentBlock !== undefined ? parentBlock.contentIds.indexOf(childId) : -1;
-    const insertAt = memoryIndex === -1 ? content.length : Math.min(memoryIndex, content.length);
-
-    content.insert(insertAt, [childId]);
   }
 
   /**
@@ -1776,6 +1717,10 @@ export class BlockManager extends Module {
     // Unregister keyboard shortcuts
     this.shortcuts.unregister();
 
+    // Before the blocks go: a reconcile queued for the current batch would
+    // otherwise run against the half-dismantled DOM below.
+    this.yjsSync.destroy();
+
     await Promise.all(this.blocks.map((block) => {
       return block.destroy();
     }));
@@ -1835,10 +1780,12 @@ export class BlockManager extends Module {
     });
 
     // Sync content changes to Yjs for undo/redo support
-    // Skip if we're currently syncing from Yjs (undo/redo) to avoid corrupting the undo stack.
+    // Skip the reconciler's own echo (undo/redo/remote) to avoid corrupting the undo stack.
     // Also skip if a pointer drag is active — the browser can mutate contenteditable DOM across
     // cell boundaries during a drag, and we must not write that corrupted state to Yjs.
-    if (mutationType === BlockChangedMutationType && !this.yjsSync.isSyncingFromYjs && !this._isPointerDragActive) {
+    const isEcho = this.yjsSync.isSyncingFromYjs && this.yjsSync.isReconciling(block);
+
+    if (mutationType === BlockChangedMutationType && !isEcho && !this._isPointerDragActive) {
       void this.syncBlockDataToYjs(block);
     }
 
@@ -2008,11 +1955,10 @@ export class BlockManager extends Module {
   /**
    * Sync block data to Yjs after DOM mutation.
    *
-   * Only writes metadata (lastEditedAt / lastEditedBy) if at least one data field
-   * actually changed. This preserves the invariant "no data change → no Yjs write →
-   * no undo entry." Without this guard, a spurious metadata-only transaction lands
-   * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
-   * only the metadata entry instead of the actual data change.
+   * The save() + equality diff stay per-mutation, but the resulting writes go
+   * through YjsManager's coalescing buffer: the first write of an idle block
+   * flushes immediately (today's timing), follow-ups coalesce into one trailing
+   * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
   private async syncBlockDataToYjs(block: Block): Promise<void> {
     const savedData = await block.save();
@@ -2021,6 +1967,25 @@ export class BlockManager extends Module {
       return;
     }
 
+    this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
+      return this.flushBlockDataWrites(block, entries);
+    });
+  }
+
+  /**
+   * Flush body for coalesced block data writes.
+   *
+   * Only writes metadata (lastEditedAt / lastEditedBy) if at least one data field
+   * actually changed. This preserves the invariant "no data change → no Yjs write →
+   * no undo entry." Without this guard, a spurious metadata-only transaction lands
+   * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
+   * only the metadata entry instead of the actual data change.
+   * @param block - the block whose buffered writes are being flushed
+   * @param entries - coalesced {key → latest value} data entries
+   * @returns whether any Yjs write actually happened — the buffer skips its
+   *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
+   */
+  private flushBlockDataWrites(block: Block, entries: ReadonlyMap<string, unknown>): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
     // and fires a stack-item-added event, which runs caret capture that may
@@ -2030,7 +1995,7 @@ export class BlockManager extends Module {
     const dataChangedRef = { value: false };
 
     this.Blok.YjsManager.transact(() => {
-      for (const [key, value] of Object.entries(savedData.data)) {
+      for (const [key, value] of entries) {
         // A list item structurally nested under another list item derives its
         // `depth` from the parentId chain (getStructuralListDepth), so persisting
         // depth to the CRDT is redundant — and harmful: the derived value lands as
@@ -2040,7 +2005,8 @@ export class BlockManager extends Module {
         // still reports depth for the public output and reload re-derives it from
         // structure, so skipping the CRDT write is safe. Flat-carrier list items
         // (authored/drag-nested via data.depth with no LIST parent) keep depth as
-        // their source of truth and are left untouched.
+        // their source of truth and are left untouched. Evaluated at FLUSH so a
+        // Tab-nesting that happened mid-window uses the block's current parent.
         if (key === 'depth' && this.isStructurallyNestedListItem(block)) {
           continue;
         }
@@ -2063,6 +2029,8 @@ export class BlockManager extends Module {
 
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
     });
+
+    return dataChangedRef.value;
   }
 
   /**

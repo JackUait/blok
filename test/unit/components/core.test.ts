@@ -297,6 +297,19 @@ describe('Core', () => {
 
       expect(core.configuration.onChange).toBeUndefined();
     });
+
+    // `server` must be gone by the time anything downstream reads the config —
+    // no module is allowed to learn the key exists.
+    it('expands the server shorthand into the options that already exist', async () => {
+      const core = await createReadyCore({ holder: 'holder', server: 'https://blok.example.com/' });
+      const bookmark = core.configuration.tools?.bookmark;
+      const bookmarkConfig = typeof bookmark === 'object' && bookmark !== null && 'config' in bookmark
+        ? bookmark.config
+        : undefined;
+
+      expect(core.configuration.uploader?.uploadByFile).toBeTypeOf('function');
+      expect(bookmarkConfig?.endpoint).toBe('https://blok.example.com/unfurl');
+    });
   });
 
   describe('validate', () => {
@@ -382,6 +395,192 @@ describe('Core', () => {
       });
 
       await expect(core.start()).rejects.toThrow('read-only failure');
+    });
+  });
+
+  describe('persistence', () => {
+    const SAVED = {
+      blocks: [{ id: 'p1', type: 'paragraph', data: { text: 'saved' } }],
+    };
+
+    it('renders the persisted document instead of the default block', async () => {
+      const load = vi.fn().mockResolvedValue(SAVED);
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(core.configuration.data?.blocks).toEqual([expect.objectContaining({ data: { text: 'saved' } })]);
+      expect(mockRendererRender).toHaveBeenCalledWith([expect.objectContaining({ data: { text: 'saved' } })]);
+    });
+
+    // Data the host passed is theirs and wins; loading over it would discard it.
+    it('does not load when the host supplied data', async () => {
+      const load = vi.fn().mockResolvedValue(SAVED);
+
+      await createReadyCore({
+        holder: 'holder',
+        data: { blocks: [{ id: 'h1', type: 'paragraph', data: { text: 'host' } }] },
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    // A failed load must NOT degrade to an empty document: one keystroke later
+    // autosave would write that emptiness over the user's real document.
+    it('fails the boot when the document cannot be loaded', async () => {
+      const core = new Core({
+        holder: 'holder',
+        persistence: {
+          load: async (): Promise<null> => {
+            throw new Error('offline');
+          },
+          save: async (): Promise<void> => {},
+        },
+      });
+
+      await expect(core.isReady).rejects.toThrow('offline');
+    });
+
+    it('falls back to the default block when nothing is saved yet', async () => {
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+      });
+
+      expect(core.configuration.data?.blocks).toHaveLength(1);
+      expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
+    });
+
+    // A store that versions its documents answers with an envelope around the
+    // document. What renders is what is inside it.
+    it('renders the document a versioned load wrapped', async () => {
+      const load = vi.fn().mockResolvedValue({ data: SAVED, version: 'v1' });
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: { load, save: async (): Promise<void> => {} },
+      });
+
+      expect(core.configuration.data?.blocks).toEqual([expect.objectContaining({ data: { text: 'saved' } })]);
+      expect(mockRendererRender).toHaveBeenCalledWith([expect.objectContaining({ data: { text: 'saved' } })]);
+    });
+
+    // `{ data: null }` is "nothing saved yet", not "an empty document that has
+    // a version" — rendering the envelope would put a blank document on screen
+    // and autosave would then write it over whatever the store really holds.
+    it('treats a versioned envelope holding no document as nothing saved yet', async () => {
+      const core = await createReadyCore({
+        holder: 'holder',
+        persistence: {
+          load: async () => ({ data: null, version: 'v1' }),
+          save: async (): Promise<void> => {},
+        },
+      });
+
+      expect(core.configuration.data?.blocks).toHaveLength(1);
+      expect(core.configuration.data?.blocks[0]?.type).toBe('paragraph');
+    });
+  });
+
+  describe('collaboration config validation', () => {
+    const withHolder = (extra: Record<string, unknown>): BlokConfig =>
+      ({ holder: 'holder', ...extra });
+
+    // The sync service owns the document round-trip, so pairing it with a
+    // persistence endpoint would give the document two owners.
+    it('refuses collaboration combined with persistence', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc' },
+          server: 'https://blok.example.com',
+          persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+        });
+      }).toThrow('collaboration and persistence cannot be combined: the sync service owns the document round-trip');
+    });
+
+    // The sync URL is derived from `server`, so collaboration cannot work without it.
+    it('refuses collaboration without the server option', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({ collaboration: { doc: 'my-doc' } });
+      }).toThrow('collaboration requires the server option');
+    });
+
+    it.each(['', 'a/b', 'a%2fb', 'a%2Fb', '.', '..'])(
+      'refuses a doc that is not a single path segment: "%s"',
+      async (doc) => {
+        const core = await createReadyCore();
+
+        expect(() => {
+          core.configuration = withHolder({
+            collaboration: { doc },
+            server: 'https://blok.example.com',
+          });
+        }).toThrow('collaboration.doc must be a single path segment');
+      }
+    );
+
+    // A silently-ignored `offline: 'yes'` would leave the host believing their
+    // document survives a reload when it does not — refuse, like every other
+    // key in this block.
+    it.each([['yes'], [1], [null]])('refuses a non-boolean collaboration.offline: %s', async (offline) => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc', offline },
+          server: 'https://blok.example.com',
+        });
+      }).toThrow('collaboration.offline must be a boolean');
+    });
+
+    // A JS consumer can drop `doc` entirely; that is still an invalid segment,
+    // not a crash.
+    it('refuses collaboration whose doc is missing entirely', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: {},
+          server: 'https://blok.example.com',
+        });
+      }).toThrow('collaboration.doc must be a single path segment');
+    });
+
+    // The refusal rides the same isReady rejection contract as every other
+    // config error, not just a synchronous setter throw.
+    it('rejects the boot when collaboration is misconfigured', async () => {
+      const core = new Core(withHolder({
+        collaboration: { doc: 'my-doc' },
+        persistence: { load: async (): Promise<null> => null, save: async (): Promise<void> => {} },
+      }));
+
+      await expect(core.isReady).rejects.toThrow(
+        'collaboration and persistence cannot be combined: the sync service owns the document round-trip'
+      );
+    });
+
+    // The passing boundary of the matrix: server present, single-segment doc,
+    // no persistence — accepted and retained unchanged.
+    it('accepts collaboration with a server and a single-segment doc', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc', user: { name: 'Ada', color: '#ff0000' } },
+          server: 'https://blok.example.com',
+        });
+      }).not.toThrow();
+
+      expect(core.configuration.collaboration).toEqual({
+        doc: 'my-doc',
+        user: { name: 'Ada', color: '#ff0000' },
+      });
     });
   });
 

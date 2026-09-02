@@ -584,10 +584,7 @@ internal static class UploadEndpoint
         contentLength--;
         appendLineEnding = false;
 
-        if (!StartsWithLineEnding(suffix, encodedLength) &&
-            !(suffix == encodedLength &&
-              contentLength > 0 &&
-              _endOfInput))
+        if (!StartsWithLineEnding(suffix, encodedLength))
         {
           _pendingError ??= new InvalidDataException(
               "invalid bytes after quoted-printable soft break");
@@ -608,9 +605,7 @@ internal static class UploadEndpoint
           continue;
         }
 
-        if (value == '=' &&
-            (index + 1 >= contentLength ||
-             _encodedLine[index + 1] is (byte)'\r' or (byte)'\n'))
+        if (value == '=')
         {
           _pendingError ??= new InvalidDataException(
               "invalid quoted-printable hex byte");
@@ -719,21 +714,37 @@ internal static class UploadEndpoint
 
     public override bool CanRead => !_disposed && inner.CanRead;
 
-    public override bool CanSeek => false;
+    public override bool CanSeek => !_disposed && inner.CanSeek;
 
     public override bool CanWrite => false;
 
-    public override long Length => throw new NotSupportedException();
+    public override long Length
+    {
+      get
+      {
+        ThrowIfDisposed();
+        return inner.Length;
+      }
+    }
 
     public override long Position
     {
-      get => throw new NotSupportedException();
-      set => throw new NotSupportedException();
+      get
+      {
+        ThrowIfDisposed();
+        return inner.Position;
+      }
+      set
+      {
+        ThrowIfDisposed();
+        inner.Position = value;
+      }
     }
 
     public override void Flush()
     {
       ThrowIfDisposed();
+      inner.Flush();
     }
 
     public override int Read(
@@ -743,7 +754,7 @@ internal static class UploadEndpoint
     {
       ThrowIfDisposed();
       var read = inner.Read(buffer, offset, count);
-      BytesRead += read;
+      Count(read);
 
       return read;
     }
@@ -752,7 +763,7 @@ internal static class UploadEndpoint
     {
       ThrowIfDisposed();
       var read = inner.Read(buffer);
-      BytesRead += read;
+      Count(read);
 
       return read;
     }
@@ -774,14 +785,15 @@ internal static class UploadEndpoint
     {
       ThrowIfDisposed();
       var read = await inner.ReadAsync(buffer, cancellationToken);
-      BytesRead += read;
+      Count(read);
 
       return read;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-      throw new NotSupportedException();
+      ThrowIfDisposed();
+      return inner.Seek(offset, origin);
     }
 
     public override void SetLength(long value)
@@ -801,6 +813,13 @@ internal static class UploadEndpoint
     {
       _disposed = true;
       base.Dispose(disposing);
+    }
+
+    private void Count(int read)
+    {
+      BytesRead = inner.CanSeek
+        ? Math.Max(BytesRead, inner.Position)
+        : BytesRead + read;
     }
 
     private void ThrowIfDisposed()

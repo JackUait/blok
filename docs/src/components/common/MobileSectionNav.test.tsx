@@ -66,11 +66,11 @@ describe('MobileSectionNav', () => {
     fireEvent.click(screen.getByTestId('mobile-section-nav-trigger'));
     expect(screen.getByTestId('mobile-section-nav-item-events-api')).toHaveAttribute(
       'href',
-      '/docs/events-api',
+      '/docs/events-api/',
     );
     expect(screen.getByTestId('mobile-section-nav-item-caret-api')).toHaveAttribute(
       'href',
-      '/docs/caret-api',
+      '/docs/caret-api/',
     );
   });
 

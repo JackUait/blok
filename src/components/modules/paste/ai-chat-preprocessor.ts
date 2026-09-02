@@ -1,4 +1,5 @@
 import { CODE_LANGUAGE_ATTR } from './constants';
+import { parseUntrustedHtml } from '../../utils/inert-html';
 
 /**
  * Pre-process clipboard HTML copied out of an AI chat app (ChatGPT, Gemini)
@@ -23,9 +24,7 @@ import { CODE_LANGUAGE_ATTR } from './constants';
  * @returns preprocessed HTML string (unchanged when not an AI chat app)
  */
 export function preprocessAiChatHtml(html: string): string {
-  const wrapper = document.createElement('div');
-
-  wrapper.innerHTML = html;
+  const wrapper = parseUntrustedHtml(html);
 
   const source = detectSource(wrapper);
 

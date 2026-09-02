@@ -95,10 +95,11 @@ describe('buildMetaDescriptors', () => {
     });
   });
 
-  it('advertises a mirror on noindex routes too, since agents still fetch them', () => {
-    expect(find(buildMetaDescriptors('/tools'), 'type', 'text/markdown')?.href).toBe(
-      `${SITE_URL}/tools.md`,
-    );
+  // The build writes a mirror only for routes it puts in the sitemap, so a
+  // noindex route has no file to point at.
+  it('advertises no mirror on a noindex route, in either locale tree', () => {
+    expect(find(buildMetaDescriptors('/tools'), 'type', 'text/markdown')).toBeUndefined();
+    expect(find(buildMetaDescriptors('/ru/tools'), 'type', 'text/markdown')).toBeUndefined();
   });
 
   it('falls back to the site defaults on an unknown path', () => {
@@ -162,12 +163,6 @@ describe('JSON-LD', () => {
       { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
       { '@type': 'ListItem', position: 2, name: 'Docs', item: `${SITE_URL}/docs/` },
       { '@type': 'ListItem', position: 3, name: 'Editing', item: `${SITE_URL}/docs/caret-api/` },
-      {
-        '@type': 'ListItem',
-        position: 4,
-        name: ROUTE_METADATA['/docs/caret-api'].h1,
-        item: `${SITE_URL}/docs/caret-api/`,
-      },
     ]);
   });
 

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "db",
+    "type": "database",
+    "data": {
+      "name": "Tasks",
+      "schema": [
+        {
+          "id": "title",
+          "name": "Title",
+          "type": "title"
+        },
+        {
+          "id": "status",
+          "name": "Status",
+          "type": "select",
+          "options": [
+            {
+              "id": "todo",
+              "label": "To do"
+            },
+            {
+              "id": "done",
+              "label": "Done"
+            }
+          ]
+        }
+      ],
+      "views": [
+        {
+          "id": "v1",
+          "type": "table",
+          "visible": [
+            "title",
+            "status"
+          ]
+        }
+      ]
+    },
+    "content": [
+      "row-1",
+      "row-2"
+    ]
+  },
+  {
+    "id": "row-1",
+    "type": "database-row",
+    "data": {
+      "properties": {
+        "title": "Write fixtures",
+        "status": "done",
+        "tags": []
+      }
+    },
+    "parent": "db",
+    "content": [
+      "row-1-body"
+    ]
+  },
+  {
+    "id": "row-1-body",
+    "type": "paragraph",
+    "data": {
+      "text": "body text"
+    },
+    "parent": "row-1"
+  },
+  {
+    "id": "row-2",
+    "type": "database-row",
+    "data": {
+      "properties": {
+        "title": "Ship",
+        "status": "todo",
+        "tags": [
+          "a"
+        ]
+      }
+    },
+    "parent": "db"
+  }
+]

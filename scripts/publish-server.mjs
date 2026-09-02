@@ -9,10 +9,11 @@ import { gzipSync } from 'node:zlib';
 
 import JSZip from 'jszip';
 
+import { isReleaseVersion } from './release-version.mjs';
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const projectPath = 'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj';
 const defaultOutput = '.server-release-dist';
-const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 export const TARGETS = [
   {
@@ -41,6 +42,20 @@ export const TARGETS = [
     arch: 'arm64',
     rid: 'linux-arm64',
     archive: 'blok-server_linux_arm64.tar.gz',
+    binary: 'blok-server',
+  },
+  {
+    platform: 'linux',
+    arch: 'x64',
+    rid: 'linux-musl-x64',
+    archive: 'blok-server_linux_musl_amd64.tar.gz',
+    binary: 'blok-server',
+  },
+  {
+    platform: 'linux',
+    arch: 'arm64',
+    rid: 'linux-musl-arm64',
+    archive: 'blok-server_linux_musl_arm64.tar.gz',
     binary: 'blok-server',
   },
   {
@@ -108,7 +123,7 @@ export function parseArgs(args, cwd = process.cwd()) {
     throw new Error('--version is required');
   }
 
-  if (!versionPattern.test(version)) {
+  if (!isReleaseVersion(version)) {
     throw new Error(`invalid version: ${version}`);
   }
 

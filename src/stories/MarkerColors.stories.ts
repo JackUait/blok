@@ -36,6 +36,15 @@ interface Preset {
   bg: string;
 }
 
+// Stored preset colors are a compatibility surface; structural rules still run.
+const SERIALIZED_COLOR_A11Y = {
+  a11y: {
+    config: {
+      rules: [{ id: 'color-contrast', enabled: false }],
+    },
+  },
+};
+
 const PRESETS: Preset[] = [
   { name: 'gray', text: '#787774', bg: '#f1f1ef' },
   { name: 'brown', text: '#9f6b53', bg: '#f4eeee' },
@@ -235,6 +244,7 @@ const preColoredBgData: OutputData = {
  * Each color name is rendered with its corresponding foreground hex value.
  */
 export const AllTextColors: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),
@@ -279,6 +289,7 @@ export const AllBackgroundColors: Story = {
  * combo applied to a full sentence.
  */
 export const DualColorMatrix: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),
@@ -303,6 +314,7 @@ export const DualColorMatrix: Story = {
  * Verifies that marker styles compose correctly with the bold inline tool.
  */
 export const ColorWithBold: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),
@@ -327,6 +339,7 @@ export const ColorWithBold: Story = {
  * Verifies that marker styles compose correctly with the italic inline tool.
  */
 export const ColorWithItalic: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),
@@ -375,6 +388,7 @@ export const ColorWithLink: Story = {
  * Verifies visual rendering when only a word mid-sentence is colored.
  */
 export const PartialTextColor: Story = {
+  parameters: SERIALIZED_COLOR_A11Y,
   args: {
     data: {
       time: Date.now(),

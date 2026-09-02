@@ -31,7 +31,7 @@ try {
     {
       encoding: 'utf8',
       stdio: ['ignore', 'ignore', 'inherit'],
-      env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: jsonPath },
+      env: { ...process.env, BLOK_VISUAL: '1', PLAYWRIGHT_JSON_OUTPUT_NAME: jsonPath },
     }
   );
 } catch (err) {

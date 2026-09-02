@@ -7,11 +7,14 @@ import { cn } from "@/lib/utils";
  * A single comparison row. `blok` is highlighted as the hero column; the
  * competitor cells are short, neutral, verifiable tokens ("Built-in",
  * "Plugins", "—") describing each library's out-of-the-box default. A `true`
- * value renders a check, otherwise the literal string is shown.
+ * value renders a check, otherwise the cell value is looked up in the
+ * catalogue: these cells are the page's densest body prose, and leaving them as
+ * English literals is what made the Russian home page read as an English one.
  */
 interface ComparisonRow {
   /** i18n key suffix under home.whyBlok (e.g. "rowSlash"). */
   labelKey: string;
+  /** Each cell is a key suffix under home.whyBlok.cells, or `true` for a check. */
   blok: string | true;
   editorjs: string | true;
   tiptap: string | true;
@@ -24,31 +27,31 @@ const COMPETITORS = ["Editor.js", "TipTap", "Lexical"] as const;
 const ROWS: ComparisonRow[] = [
   {
     labelKey: "rowOutput",
-    blok: "Typed JSON",
-    editorjs: "JSON",
-    tiptap: "HTML / JSON",
-    lexical: "JSON",
+    blok: "typedJson",
+    editorjs: "json",
+    tiptap: "htmlOrJson",
+    lexical: "json",
   },
   {
     labelKey: "rowEverythingBlock",
     blok: true,
-    editorjs: "Flat",
-    tiptap: "Nodes",
-    lexical: "Nodes",
+    editorjs: "flat",
+    tiptap: "nodes",
+    lexical: "nodes",
   },
   {
     labelKey: "rowBlocks",
-    blok: "20 built-in",
-    editorjs: "Paragraph only",
-    tiptap: "Basics only",
-    lexical: "Primitives",
+    blok: "builtInCount",
+    editorjs: "paragraphOnly",
+    tiptap: "basicsOnly",
+    lexical: "primitives",
   },
   {
     labelKey: "rowMarkdown",
-    blok: "Built-in",
-    editorjs: "Plugin",
-    tiptap: "Add-on",
-    lexical: "Add-on",
+    blok: "builtIn",
+    editorjs: "plugin",
+    tiptap: "addOn",
+    lexical: "addOn",
   },
   {
     labelKey: "rowTypeScript",
@@ -59,24 +62,24 @@ const ROWS: ComparisonRow[] = [
   },
   {
     labelKey: "rowBindings",
-    blok: "React / Vue / Angular",
-    editorjs: "Community",
-    tiptap: "React / Vue / Svelte",
-    lexical: "React",
+    blok: "reactVueAngular",
+    editorjs: "community",
+    tiptap: "reactVueSvelte",
+    lexical: "react",
   },
   {
     labelKey: "rowI18n",
-    blok: "69 locales",
-    editorjs: "Manual",
-    tiptap: "Manual",
-    lexical: "Manual",
+    blok: "locales",
+    editorjs: "manual",
+    tiptap: "manual",
+    lexical: "manual",
   },
   {
     labelKey: "rowA11y",
-    blok: "Built-in",
-    editorjs: "Limited",
-    tiptap: "DIY",
-    lexical: "First-class",
+    blok: "builtIn",
+    editorjs: "limited",
+    tiptap: "diy",
+    lexical: "firstClass",
   },
 ];
 
@@ -97,16 +100,22 @@ const Check: React.FC = () => (
   </svg>
 );
 
-const Cell: React.FC<{ value: string | true; emphasize?: boolean }> = ({ value, emphasize }) =>
-  value === true ? (
+const Cell: React.FC<{ valueKey: string | true; emphasize?: boolean }> = ({
+  valueKey,
+  emphasize,
+}) => {
+  const { t } = useI18n();
+
+  return valueKey === true ? (
     <span className={emphasize ? "text-primary" : "text-foreground"}>
       <Check />
     </span>
   ) : (
     <span className={cn(emphasize ? "font-semibold text-foreground" : "text-muted-foreground")}>
-      {value}
+      {t(`home.whyBlok.cells.${valueKey}`)}
     </span>
   );
+};
 
 /**
  * "Why Blok over the alternatives" — a capability matrix that contrasts Blok's
@@ -155,6 +164,7 @@ export const WhyBlok: React.FC = () => {
                     <th
                       key={name}
                       scope="col"
+                      data-lang-exempt
                       className="px-5 py-4 text-center font-semibold text-muted-foreground"
                     >
                       {name}
@@ -175,16 +185,16 @@ export const WhyBlok: React.FC = () => {
                       <Typo>{t(`home.whyBlok.${row.labelKey}`)}</Typo>
                     </th>
                     <td className="bg-primary/[0.06] px-5 py-4 text-center">
-                      <Cell value={row.blok} emphasize />
+                      <Cell valueKey={row.blok} emphasize />
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <Cell value={row.editorjs} />
+                      <Cell valueKey={row.editorjs} />
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <Cell value={row.tiptap} />
+                      <Cell valueKey={row.tiptap} />
                     </td>
                     <td className="px-5 py-4 text-center">
-                      <Cell value={row.lexical} />
+                      <Cell valueKey={row.lexical} />
                     </td>
                   </tr>
                 ))}

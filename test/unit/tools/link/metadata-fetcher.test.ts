@@ -13,6 +13,24 @@ describe('MetadataFetcher', () => {
     vi.restoreAllMocks();
   });
 
+  // A static object freezes whatever pass was resolved when the editor was
+  // built. A function is re-resolved per request, so a refreshed pass is used.
+  it('resolves a headers function on every request', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(okResponse({ success: 1, meta: {} }));
+    const headers = vi.fn()
+      .mockResolvedValueOnce({ Authorization: 'Bearer pass-1' })
+      .mockResolvedValueOnce({ Authorization: 'Bearer pass-2' });
+    const fetcher = new MetadataFetcher({ endpoint: 'https://api.test/unfurl', headers });
+
+    await fetcher.fetch('https://example.com/a');
+    await fetcher.fetch('https://example.com/b');
+
+    expect(headers).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[1]?.[1]?.headers).toEqual({ Authorization: 'Bearer pass-2' });
+  });
+
   it('GETs the configured endpoint with the encoded url and custom headers', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

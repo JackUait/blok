@@ -69,6 +69,13 @@ public sealed class S3TargetResolverTests
           "media.minio.internal:9000"
         },
         {
+          "https://minio.internal:9000",
+          "team.assets",
+          "virtual",
+          "https://team.assets.minio.internal:9000/key.png",
+          "team.assets.minio.internal:9000"
+        },
+        {
           "https://s3.example.com:443",
           "media",
           "",
@@ -111,6 +118,7 @@ public sealed class S3TargetResolverTests
         { "https://s3.example.com", "media/../secrets", "" },
         { "https://ünïcode.example.com", "media", "" },
         { "https://s3.example.com", "media", "dns" },
+        { "https://s3.example.com", "my_bucket", "virtual" },
         { "https://gateway.example.com/s3", "media", "" },
         { "https://s3.example.com/s3/..", "media", "" },
         { "https://s3.example.com/s3/%2e%2e", "media", "" },
@@ -205,6 +213,27 @@ public sealed class S3BlobStoreRequestTests
       new(2025, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
   [Fact]
+  public void RejectsInvalidTargetConfigurationAtConstruction()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    var options = new S3BlobStoreOptions(
+        "https://s3.example.com/prefix",
+        "eu-central-1",
+        "media",
+        "AKIAEXAMPLE",
+        "wJalrXUtnFEMI/K7MDENG",
+        "https://cdn.example.com/media",
+        "path",
+        1024,
+        temporaryDirectory.Path);
+
+    Assert.Throws<InvalidOperationException>(() =>
+        new S3BlobStore(
+            options,
+            new FrozenTimeProvider(FrozenTime)));
+  }
+
+  [Fact]
   public async Task PutsASeekableBodyWithKnownLengthAndReturnsThePublicUrl()
   {
     using var temporaryDirectory = new TemporaryDirectory();
@@ -237,6 +266,7 @@ public sealed class S3BlobStoreRequestTests
     Assert.Equal("s3.example.com", captured.Headers["Host"]);
     Assert.Equal("5", captured.ContentHeaders["Content-Length"]);
     Assert.Equal("image/png", captured.ContentHeaders["Content-Type"]);
+    Assert.Equal("attachment", captured.ContentHeaders["Content-Disposition"]);
     Assert.Equal(
         "277089d91c0bdf4f2e6862ba7e4a07605119431f5d13f726dd352b06f1b206a9",
         captured.Headers["x-amz-content-sha256"]);
@@ -445,6 +475,9 @@ public sealed class S3BlobStoreRequestTests
 
     Assert.NotNull(captured);
     Assert.DoesNotContain("Content-Type", captured.ContentHeaders.Keys);
+    Assert.Equal(
+        "attachment",
+        captured.ContentHeaders["Content-Disposition"]);
     Assert.DoesNotContain(
         "content-type",
         captured.Headers["Authorization"],
@@ -922,6 +955,33 @@ public sealed class S3BlobStoreRequestTests
   }
 
   [Fact]
+  public async Task DoesNotReadASuccessfulResponseBody()
+  {
+    using var temporaryDirectory = new TemporaryDirectory();
+    var responseBody = new ProbeStream(
+        "accepted"u8.ToArray(),
+        totalLength: 8);
+    using var store = CreateStore(
+        temporaryDirectory.Path,
+        (request, cancellationToken) =>
+        {
+          return Task.FromResult(
+              new HttpResponseMessage(HttpStatusCode.OK)
+              {
+                Content = new StreamContent(responseBody),
+              });
+        });
+
+    await store.PutAsync(
+        ".bin",
+        "application/octet-stream",
+        new MemoryStream("bytes"u8.ToArray()),
+        CancellationToken.None);
+
+    Assert.Equal(0, responseBody.BytesRead);
+  }
+
+  [Fact]
   public async Task RetainsAnErrorPrefixWhenItsResponseReadFails()
   {
     using var temporaryDirectory = new TemporaryDirectory();
@@ -962,7 +1022,7 @@ public sealed class S3BlobStoreRequestTests
         (request, cancellationToken) =>
         {
           return Task.FromResult(
-              new HttpResponseMessage(HttpStatusCode.OK)
+              new HttpResponseMessage(HttpStatusCode.Forbidden)
               {
                 Content = new StreamContent(
                     new CancellingResponseStream(cancellation)),
@@ -987,7 +1047,7 @@ public sealed class S3BlobStoreRequestTests
         (request, cancellationToken) =>
         {
           return Task.FromResult(
-              new HttpResponseMessage(HttpStatusCode.OK)
+              new HttpResponseMessage(HttpStatusCode.Forbidden)
               {
                 Content = new StreamContent(
                     new CancellingFailingResponseStream(cancellation)),
@@ -1047,7 +1107,7 @@ public sealed class S3BlobStoreRequestTests
     const string dateStamp = "20250102";
     const string region = "eu-central-1";
     const string accessKey = "AKIAEXAMPLE";
-    const string secretKey = "wJalrXUtnFEMI/K7MDENG";
+    const string secretKey = "wJalrXUtnFEMI/K7MDENG"; // gitleaks:allow
     var canonicalHeaders = contentType is null
       ? $"host:{host}\n" +
         $"x-amz-content-sha256:{payloadHash}\n" +
@@ -1291,6 +1351,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }
@@ -1351,6 +1412,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }
@@ -1406,6 +1468,7 @@ public sealed class S3BlobStoreRequestTests
     public override async ValueTask DisposeAsync()
     {
       await inner.DisposeAsync();
+      await base.DisposeAsync();
       GC.SuppressFinalize(this);
     }
   }
@@ -1622,7 +1685,7 @@ public sealed class S3BlobStoreRequestTests
     }
 
     private static bool EndsWithHeaderTerminator(
-        IReadOnlyList<byte> bytes)
+        List<byte> bytes)
     {
       return bytes.Count >= 4 &&
           bytes[^4] == '\r' &&

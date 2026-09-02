@@ -380,7 +380,6 @@ export class TableRowColControls {
     // opens its menu on click — insert/delete remain valid there.
     if (isDragLocked) {
       grip.setAttribute(GRIP_DRAG_DISABLED_ATTR, '');
-      grip.setAttribute('aria-disabled', 'true');
       grip.style.cursor = 'not-allowed';
     }
 

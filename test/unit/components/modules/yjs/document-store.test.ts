@@ -4,9 +4,34 @@ import { DocumentStore } from '../../../../../src/components/modules/yjs/documen
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import type { OutputBlockData } from '../../../../../types/data-formats/output-data';
 
+const serializer = new YBlockSerializer();
+
 const createDocumentStore = (): DocumentStore => {
-  const serializer = new YBlockSerializer();
-  return new DocumentStore(serializer);
+  return new DocumentStore(new YBlockSerializer());
+};
+
+/**
+ * The Y container holding the cells of the row at `displayIndex`. Rows are
+ * keyed, so display position is a lookup through the order array, never the
+ * row's own storage slot.
+ */
+const getRow = (store: DocumentStore, blockId: string, displayIndex: number): unknown => {
+  const yblock = store.getBlockById(blockId) as Y.Map<unknown>;
+  const grid = (yblock.get('data') as Y.Map<unknown>).get('content') as Y.Map<unknown>;
+  const key = serializer.gridRowKeys(grid)[displayIndex];
+
+  return (grid.get('__rows') as Y.Map<unknown>).get(key);
+};
+
+/** The block's Y.Map, failing the test loudly when it is missing. */
+const requireBlock = (documentStore: DocumentStore, id: string): Y.Map<unknown> => {
+  const yblock = documentStore.getBlockById(id);
+
+  if (yblock === undefined) {
+    throw new Error(`block ${id} missing`);
+  }
+
+  return yblock;
 };
 
 describe('DocumentStore', () => {
@@ -19,7 +44,9 @@ describe('DocumentStore', () => {
   describe('initialization', () => {
     it('creates Y.Doc on construction', () => {
       expect((store as unknown as { ydoc: unknown }).ydoc).toBeDefined();
-      expect(store.yblocks).toBeDefined();
+      expect(store.blocksMap).toBeDefined();
+      expect(store.rootOrder).toBeDefined();
+      expect(store.undoScope).toEqual([store.blocksMap, store.rootOrder]);
     });
 
     it('starts with empty blocks array', () => {
@@ -145,7 +172,7 @@ describe('DocumentStore', () => {
     it('is a single undo entry that restores the original type and data', () => {
       store.fromJSON([{ id: 'block1', type: 'list', data: { text: 'Item', style: 'unordered' } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -174,7 +201,7 @@ describe('DocumentStore', () => {
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      store.moveBlock('block3', 0, 'local');
+      store.moveBlock('block3', 0);
 
       const result = store.toJSON();
 
@@ -188,7 +215,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
       ]);
 
-      store.moveBlock('nonexistent', 0, 'local');
+      store.moveBlock('nonexistent', 0);
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
@@ -198,7 +225,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
       ]);
 
-      store.moveBlock('block1', 0, 'local');
+      store.moveBlock('block1', 0);
 
       expect(store.toJSON()[0].id).toBe('block1');
     });
@@ -213,7 +240,7 @@ describe('DocumentStore', () => {
       // toIndex 3 was valid before delete, but after deleting block1
       // the array is length 2, so insert at index 3 would exceed bounds.
       // Should clamp to index 2 (end of array).
-      store.moveBlock('block1', 3, 'local');
+      store.moveBlock('block1', 3);
 
       const result = store.toJSON();
 
@@ -231,7 +258,7 @@ describe('DocumentStore', () => {
       // Moving block2 (at index 1) to index 2:
       // After delete, array is length 1, index 2 exceeds bounds.
       // Should clamp to index 1 (end).
-      store.moveBlock('block2', 2, 'local');
+      store.moveBlock('block2', 2);
 
       const result = store.toJSON();
 
@@ -246,7 +273,7 @@ describe('DocumentStore', () => {
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      store.moveBlock('block3', -1, 'local');
+      store.moveBlock('block3', -1);
 
       const result = store.toJSON();
 
@@ -304,7 +331,7 @@ describe('DocumentStore', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { content: originalContent } }]);
 
       // Create a Y.UndoManager to track whether new undo entries are created
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -330,7 +357,7 @@ describe('DocumentStore', () => {
     it('skips update when simple array value is deeply equal but reference-different', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { colWidths: [100, 200, 150] } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -347,7 +374,7 @@ describe('DocumentStore', () => {
     it('still updates when array value has actually changed', () => {
       store.fromJSON([{ id: 'block1', type: 'table', data: { content: [{ blocks: ['p1'] }] } }]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
 
@@ -373,7 +400,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
       ]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
       const initialStackLength = undoManager.undoStack.length;
@@ -392,7 +419,7 @@ describe('DocumentStore', () => {
         { id: 'block1', type: 'database-row', data: { properties: { status: 'todo', priority: 1 } } },
       ]);
 
-      const undoManager = new Y.UndoManager(store.yblocks, {
+      const undoManager = new Y.UndoManager(store.undoScope, {
         trackedOrigins: new Set(['local']),
       });
       const initialStackLength = undoManager.undoStack.length;
@@ -458,21 +485,6 @@ describe('DocumentStore', () => {
       const yblock = store.getBlockById('nonexistent');
 
       expect(yblock).toBeUndefined();
-    });
-  });
-
-  describe('findBlockIndex', () => {
-    it('returns index of existing block', () => {
-      store.fromJSON([
-        { id: 'block1', type: 'paragraph', data: { text: 'First' } },
-        { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
-      ]);
-
-      expect(store.findBlockIndex('block2')).toBe(1);
-    });
-
-    it('returns -1 for nonexistent block', () => {
-      expect(store.findBlockIndex('nonexistent')).toBe(-1);
     });
   });
 
@@ -563,13 +575,13 @@ describe('DocumentStore', () => {
     it('wraps operations in a transaction', () => {
       let transactionOrigin: string | null = null;
 
-      // Track the origin by observing the yblocks
-      store.yblocks.observe((event) => {
+      // Track the origin by observing the root order
+      store.rootOrder.observe((event) => {
         transactionOrigin = event.transaction.origin as string;
       });
 
       store.transact(() => {
-        store.yblocks.push([new Y.Map()]);
+        store.rootOrder.push(['some-id']);
       }, 'local');
 
       expect(transactionOrigin).toBe('local');
@@ -619,7 +631,7 @@ describe('DocumentStore', () => {
 
       store.updateBlockMetadata('block1', 1700000000000, 'Alice');
 
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBe(1700000000000);
       expect(yblock.get('lastEditedBy')).toBe('Alice');
@@ -634,7 +646,7 @@ describe('DocumentStore', () => {
       // Now call with null — lastEditedBy should retain its previous value
       store.updateBlockMetadata('block1', 1700000001000, null);
 
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBe(1700000001000);
       expect(yblock.get('lastEditedBy')).toBe('Alice');
@@ -647,9 +659,499 @@ describe('DocumentStore', () => {
       store.updateBlockMetadata('nonexistent', 1700000000000, 'Alice');
 
       // Original block is unaffected
-      const yblock = store.getBlockById('block1')!;
+      const yblock = requireBlock(store, 'block1');
 
       expect(yblock.get('lastEditedAt')).toBeUndefined();
+    });
+  });
+
+  describe('per-cell grids — representation', () => {
+    type CellShape = { blocks: string[] };
+
+    const grid = (): CellShape[][] => [
+      [{ blocks: ['c00'] }, { blocks: ['c01'] }, { blocks: ['c02'] }],
+      [{ blocks: ['c10'] }, { blocks: ['c11'] }, { blocks: ['c12'] }],
+      [{ blocks: ['c20'] }, { blocks: ['c21'] }, { blocks: ['c22'] }],
+    ];
+
+    const getDataMap = (id: string): Y.Map<unknown> => {
+      const yblock = store.getBlockById(id) as Y.Map<unknown>;
+
+      return yblock.get('data') as Y.Map<unknown>;
+    };
+
+    it('stores a table grid as keyed rows → Y.Array(cells) → Y.Map, with plain blocks arrays', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+
+      const content = getDataMap('t1').get('content');
+
+      expect(serializer.isGridMap(content)).toBe(true);
+
+      const row = getRow(store, 't1', 0) as Y.Array<unknown>;
+
+      expect(row instanceof Y.Array).toBe(true);
+
+      const cellMap = row.get(0) as Y.Map<unknown>;
+
+      expect(cellMap instanceof Y.Map).toBe(true);
+      expect(Array.isArray(cellMap.get('blocks'))).toBe(true);
+    });
+
+    it('keeps colWidths a plain atomic array through load and write', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid(), colWidths: [100, 200, 150] } }]);
+
+      expect(Array.isArray(getDataMap('t1').get('colWidths'))).toBe(true);
+
+      store.updateBlockData('t1', 'colWidths', [110, 200, 150]);
+
+      expect(Array.isArray(getDataMap('t1').get('colWidths'))).toBe(true);
+      expect(store.toJSON()[0].data.colWidths).toEqual([110, 200, 150]);
+    });
+
+    it('keeps a populated cell blocks array plain (representation-flip hole stays closed)', () => {
+      const initial = grid();
+
+      initial[1][1] = { blocks: [] };
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: initial } }]);
+
+      const next = grid();
+
+      next[1][1] = { blocks: ['p9'] };
+      store.updateBlockData('t1', 'content', next);
+
+      const cellMap = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+
+      expect(Array.isArray(cellMap.get('blocks'))).toBe(true);
+      expect(cellMap.get('blocks')).toEqual(['p9']);
+    });
+
+    it('upgrades an empty content array to a keyed grid on the first qualifying write', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: [] } }]);
+
+      // Empty arrays stay plain atomic leaves on load
+      expect(Array.isArray(getDataMap('t1').get('content'))).toBe(true);
+
+      store.updateBlockData('t1', 'content', grid());
+
+      expect(serializer.isGridMap(getDataMap('t1').get('content'))).toBe(true);
+      expect(store.toJSON()[0].data.content).toEqual(grid());
+    });
+
+    it('downshifts to a plain empty array when the grid empties', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+
+      store.updateBlockData('t1', 'content', []);
+
+      expect(Array.isArray(getDataMap('t1').get('content'))).toBe(true);
+      expect(store.toJSON()[0].data.content).toEqual([]);
+    });
+  });
+
+  describe('per-cell grids — write granularity', () => {
+    // Wave 2 extends these with two-doc convergence laws through the binary seam.
+    type CellShape = { blocks: string[] };
+
+    const grid = (): CellShape[][] => [
+      [{ blocks: ['c00'] }, { blocks: ['c01'] }, { blocks: ['c02'] }],
+      [{ blocks: ['c10'] }, { blocks: ['c11'] }, { blocks: ['c12'] }],
+      [{ blocks: ['c20'] }, { blocks: ['c21'] }, { blocks: ['c22'] }],
+    ];
+
+    // event.changes must be computed INSIDE the handler (yjs forbids lazy
+    // computation after dispatch), so capture plain snapshots per event.
+    type CapturedEvent = {
+      target: unknown;
+      keys: string[];
+      delta: { insert?: unknown[] | string; retain?: number; delete?: number }[];
+    };
+
+    let batches: CapturedEvent[][];
+
+    const observe = (): void => {
+      store.blocksMap.observeDeep((events) => {
+        batches.push(events.map((event) => ({
+          target: event.target,
+          keys: Array.from(event.changes.keys.keys()),
+          delta: event.changes.delta.map((op) => ({ ...op })),
+        })));
+      });
+    };
+
+    const getGridMap = (id: string): Y.Map<unknown> => {
+      const yblock = store.getBlockById(id) as Y.Map<unknown>;
+
+      return (yblock.get('data') as Y.Map<unknown>).get('content') as Y.Map<unknown>;
+    };
+
+    const getOrderArray = (id: string): Y.Array<string> => {
+      return getGridMap(id).get('__rowKeys') as Y.Array<string>;
+    };
+
+    beforeEach(() => {
+      batches = [];
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+    });
+
+    it('editing one cell touches only that cell Y.Map', () => {
+      const cell11 = (getRow(store, 't1', 1) as Y.Array<unknown>).get(1) as Y.Map<unknown>;
+
+      observe();
+
+      const next = grid();
+
+      next[1][1] = { blocks: ['c11', 'extra'] };
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      expect(events).toHaveLength(1);
+      // Same Y.Map identity — the edit lands INSIDE the existing cell map
+      expect(events[0].target).toBe(cell11);
+
+      expect(events[0].keys).toEqual(['blocks']);
+    });
+
+    it('inserting a row adds one row container and one key, touching no existing row', () => {
+      const order = getOrderArray('t1');
+      const rowsMap = getGridMap('t1').get('__rows');
+      const untouched = [0, 1, 2].map((index) => getRow(store, 't1', index));
+
+      observe();
+
+      const next = grid();
+
+      next.splice(1, 0, [{ blocks: ['n0'] }, { blocks: ['n1'] }, { blocks: ['n2'] }]);
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      // One key inserted in the order array, one container added to the rows
+      // map — and NOTHING on the existing rows, which is what lets a peer's
+      // concurrent typing in any of them survive.
+      expect(events).toHaveLength(2);
+
+      const orderEvent = events.find((event) => event.target === order);
+      const rowsEvent = events.find((event) => event.target === rowsMap);
+
+      expect(orderEvent).toBeDefined();
+      expect(rowsEvent).toBeDefined();
+      expect(rowsEvent?.keys).toHaveLength(1);
+
+      const inserts = (orderEvent?.delta ?? []).filter((op) => op.insert !== undefined);
+      const deletes = (orderEvent?.delta ?? []).filter((op) => op.delete !== undefined);
+
+      expect(inserts).toHaveLength(1);
+      expect(deletes).toHaveLength(0);
+      expect((inserts[0].insert as unknown[]).length).toBe(1);
+
+      expect(getRow(store, 't1', 0)).toBe(untouched[0]);
+      expect(getRow(store, 't1', 2)).toBe(untouched[1]);
+      expect(getRow(store, 't1', 3)).toBe(untouched[2]);
+    });
+
+    it('deleting a row drops one row container and one key, touching no other row', () => {
+      const order = getOrderArray('t1');
+      const rowsMap = getGridMap('t1').get('__rows');
+      const untouched = [0, 2].map((index) => getRow(store, 't1', index));
+
+      observe();
+
+      const next = grid();
+
+      next.splice(1, 1);
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      expect(events).toHaveLength(2);
+
+      const orderEvent = events.find((event) => event.target === order);
+      const rowsEvent = events.find((event) => event.target === rowsMap);
+
+      expect(rowsEvent?.keys).toHaveLength(1);
+
+      const deletes = (orderEvent?.delta ?? []).filter((op) => op.delete !== undefined);
+
+      expect(deletes).toHaveLength(1);
+      expect(deletes[0].delete).toBe(1);
+
+      expect(getRow(store, 't1', 0)).toBe(untouched[0]);
+      expect(getRow(store, 't1', 1)).toBe(untouched[1]);
+    });
+
+    it('moving a row rewrites only the key sequence: no row container is recreated', () => {
+      const order = getOrderArray('t1');
+      const rows = [0, 1, 2].map((index) => getRow(store, 't1', index));
+
+      observe();
+
+      const next = grid();
+
+      next.push(next.shift() as { blocks: string[] }[]);
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      // The order array is the ONLY thing that changes — reordering costs a
+      // few key strings, never a row's CRDT identity.
+      expect(events).toHaveLength(1);
+      expect(events[0].target).toBe(order);
+
+      expect(getRow(store, 't1', 0)).toBe(rows[1]);
+      expect(getRow(store, 't1', 1)).toBe(rows[2]);
+      expect(getRow(store, 't1', 2)).toBe(rows[0]);
+    });
+
+    it('a deep-equal grid write emits zero events and returns false', () => {
+      observe();
+
+      const changed = store.updateBlockData('t1', 'content', grid());
+
+      expect(changed).toBe(false);
+      expect(batches).toHaveLength(0);
+    });
+
+    it('a changed grid write creates exactly one undo entry', () => {
+      const undoManager = new Y.UndoManager(store.undoScope, {
+        trackedOrigins: new Set(['local']),
+      });
+      const initialStackLength = undoManager.undoStack.length;
+
+      const next = grid();
+
+      next[2][0] = { blocks: ['c20', 'more'] };
+      store.updateBlockData('t1', 'content', next);
+
+      expect(undoManager.undoStack.length).toBe(initialStackLength + 1);
+
+      undoManager.destroy();
+    });
+
+    it('inserting a column rewrites each row with one splice (row-wise writes, accepted)', () => {
+      const order = getOrderArray('t1');
+      const rows = [0, 1, 2].map((index) => getRow(store, 't1', index));
+
+      observe();
+
+      const next = grid();
+
+      for (const row of next) {
+        row.splice(1, 0, { blocks: [] });
+      }
+      store.updateBlockData('t1', 'content', next);
+
+      expect(batches).toHaveLength(1);
+
+      const events = batches[0];
+
+      // One Y.Array splice per row, no cell-map events and no order churn —
+      // every row is still paired to its own key even though all three changed.
+      expect(events).toHaveLength(3);
+
+      for (const event of events) {
+        expect(event.target instanceof Y.Array).toBe(true);
+        expect(event.target === order).toBe(false);
+      }
+
+      expect(rows.every((row, index) => getRow(store, 't1', index) === row)).toBe(true);
+    });
+  });
+
+  describe('per-cell grids — blast-radius round-trips', () => {
+    it('round-trips table content through updateBlockData and toJSON', () => {
+      store.fromJSON([
+        {
+          id: 't1',
+          type: 'table',
+          data: {
+            withHeadings: true,
+            colWidths: [120, 240],
+            content: [
+              [{ blocks: ['p1'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+              [{ blocks: ['p2'] }, { blocks: ['p3'] }],
+            ],
+          },
+        },
+      ]);
+
+      const next = [
+        [{ blocks: ['p1'], colspan: 2 }, { blocks: [], mergedInto: [0, 0] }],
+        [{ blocks: ['p2'] }, { blocks: ['p3', 'p4'] }],
+        [{ blocks: [] }, { blocks: ['p5'] }],
+      ];
+
+      store.updateBlockData('t1', 'content', next);
+
+      expect(store.toJSON()[0].data.content).toEqual(next);
+    });
+
+    it('round-trips database schema and views through updateBlockData and toJSON', () => {
+      const schema = [
+        { id: 'p-title', name: 'Name', type: 'title', position: 'a0' },
+        {
+          id: 'p-status',
+          name: 'Status',
+          type: 'select',
+          position: 'a1',
+          config: { options: [{ id: 'o1', label: 'Todo', color: 'gray' }] },
+        },
+      ];
+      const views = [
+        { id: 'v1', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-title'] },
+      ];
+
+      store.fromJSON([{ id: 'db1', type: 'database', data: { schema, views, activeViewId: 'v1' } }]);
+
+      // Schema and views convert per-element
+      const yblock = store.getBlockById('db1') as Y.Map<unknown>;
+      const ydata = yblock.get('data') as Y.Map<unknown>;
+
+      expect(ydata.get('schema') instanceof Y.Array).toBe(true);
+      expect((ydata.get('schema') as Y.Array<unknown>).get(0) instanceof Y.Map).toBe(true);
+
+      const nextSchema = [
+        ...schema,
+        { id: 'p-due', name: 'Due', type: 'date', position: 'a2' },
+      ];
+      const nextViews = [
+        {
+          id: 'v1',
+          name: 'All',
+          type: 'table',
+          position: 'a0',
+          sorts: [{ propertyId: 'p-due', direction: 'desc' }],
+          filters: [],
+          visibleProperties: ['p-title', 'p-due'],
+        },
+      ];
+
+      store.updateBlockData('db1', 'schema', nextSchema);
+      store.updateBlockData('db1', 'views', nextViews);
+
+      const result = store.toJSON()[0].data;
+
+      expect(result.schema).toEqual(nextSchema);
+      expect(result.views).toEqual(nextViews);
+    });
+
+    it('round-trips list data and keeps primitive arrays in data atomic', () => {
+      store.fromJSON([
+        { id: 'l1', type: 'list', data: { text: 'Item', style: 'ordered', depth: 0 } },
+      ]);
+
+      store.updateBlockData('l1', 'style', 'checklist');
+      store.updateBlockData('l1', 'checked', true);
+
+      expect(store.toJSON()[0].data).toEqual({ text: 'Item', style: 'checklist', depth: 0, checked: true });
+
+      // A primitive string array in data (like cell.blocks) is an atomic plain leaf
+      store.updateBlockData('l1', 'tags', ['a', 'b']);
+
+      const yblock = store.getBlockById('l1') as Y.Map<unknown>;
+      const ydata = yblock.get('data') as Y.Map<unknown>;
+
+      expect(Array.isArray(ydata.get('tags'))).toBe(true);
+      expect(store.toJSON()[0].data.tags).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('per-cell grids — undo restores nested writes', () => {
+    type CellShape = { blocks: string[] };
+
+    const grid = (): CellShape[][] => [
+      [{ blocks: ['c00'] }, { blocks: ['c01'] }],
+      [{ blocks: ['c10'] }, { blocks: ['c11'] }],
+    ];
+
+    const createUndoManager = (): Y.UndoManager => {
+      return new Y.UndoManager(store.undoScope, {
+        trackedOrigins: new Set(['local']),
+      });
+    };
+
+    it('undo of a cell edit restores the original grid', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+
+      const undoManager = createUndoManager();
+      const next = grid();
+
+      next[1][1] = { blocks: ['c11', 'extra'] };
+      store.updateBlockData('t1', 'content', next);
+
+      undoManager.undo();
+
+      expect(store.toJSON()[0].data.content).toEqual(grid());
+
+      undoManager.destroy();
+    });
+
+    it('undo of a row insert restores the original grid (splice reversal)', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+
+      const undoManager = createUndoManager();
+      const next = grid();
+
+      next.splice(1, 0, [{ blocks: ['n0'] }, { blocks: ['n1'] }]);
+      store.updateBlockData('t1', 'content', next);
+
+      undoManager.undo();
+
+      expect(store.toJSON()[0].data.content).toEqual(grid());
+
+      undoManager.destroy();
+    });
+
+    it('undo of a row delete restores the deleted row', () => {
+      store.fromJSON([{ id: 't1', type: 'table', data: { content: grid() } }]);
+
+      const undoManager = createUndoManager();
+      const next = grid();
+
+      next.splice(0, 1);
+      store.updateBlockData('t1', 'content', next);
+
+      undoManager.undo();
+
+      expect(store.toJSON()[0].data.content).toEqual(grid());
+
+      undoManager.destroy();
+    });
+
+    it('undo of schema and views edits restores both', () => {
+      const schema = [{ id: 'p-title', name: 'Name', type: 'title', position: 'a0' }];
+      const views = [
+        { id: 'v1', name: 'All', type: 'table', position: 'a0', sorts: [], filters: [], visibleProperties: ['p-title'] },
+      ];
+
+      store.fromJSON([{ id: 'db1', type: 'database', data: { schema, views, activeViewId: 'v1' } }]);
+
+      const undoManager = createUndoManager();
+
+      store.updateBlockData('db1', 'schema', [
+        ...schema,
+        { id: 'p-due', name: 'Due', type: 'date', position: 'a1' },
+      ]);
+      store.updateBlockData('db1', 'views', [
+        { ...views[0], sorts: [{ propertyId: 'p-due', direction: 'asc' }] },
+      ]);
+
+      // Both writes land within captureTimeout — one undo reverses both
+      undoManager.undo();
+
+      const result = store.toJSON()[0].data;
+
+      expect(result.schema).toEqual(schema);
+      expect(result.views).toEqual(views);
+
+      undoManager.destroy();
     });
   });
 
@@ -657,8 +1159,7 @@ describe('DocumentStore', () => {
     it('destroys the Yjs document', () => {
       store.destroy();
 
-      // After destroy, the doc should be destroyed
-      // We can't directly test this, but we can verify no errors occur
+      expect((store as unknown as { ydoc: Y.Doc }).ydoc.isDestroyed).toBe(true);
       expect(() => store.toJSON()).not.toThrow();
     });
   });

@@ -56,7 +56,16 @@ const isPlaintextRule = (rule: DeepSanitizerRule): boolean => {
 /**
  * Recursive type for data that can contain nested arrays
  */
-type DeepData = string | Record<string, unknown> | Array<DeepData>;
+type DeepData = string | Record<string, unknown> | Array<DeepData> | null;
+
+/**
+ * Nesting past this many levels reads back as `null`. Block data comes off a
+ * shared document that any peer can write, and the two recursive walks
+ * below (tag allowlisting, URL-scheme pass) have no other bound. The same
+ * cap governs the doc serializer and the server export, so all three agree
+ * on what a too-deep value becomes.
+ */
+const MAX_SANITIZE_DEPTH = 256;
 
 /**
  * Fallback (no-DOM) matcher for href/src attributes: captures the attribute
@@ -82,9 +91,14 @@ export const sanitizeBlocks = (
     const rules: DeepSanitizerRule = (toolConfig ?? {}) as SanitizerConfig;
 
     if (isObject(rules) && isEmpty(rules) && isEmpty(globalSanitizer)) {
-      // No rules to apply, but never hand the caller's object back by
-      // reference — downstream consumers must not retain caller-owned data.
-      return { ...block };
+      /**
+       * Tag allowlisting is opt-in per tool, but URL hardening is not: this
+       * path carries forged `application/x-blok` clipboard JSON, and a tool
+       * that declares no sanitize config still renders `data.text`.
+       * Never hands the caller's object back by reference either.
+       */
+      return { ...block,
+        data: stripUnsafeUrlsDeep(block.data) };
     }
 
     return {
@@ -119,7 +133,14 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
    */
   const sanitizerInstance = new HTMLJanitor(sanitizerConfig);
 
-  return sanitizerInstance.clean(taintString);
+  /**
+   * html-janitor allowlists the `href`/`src` ATTRIBUTE and never looks at its
+   * value, so an allowlisted anchor keeps whatever scheme it carried. The
+   * scheme pass belongs here rather than at each call site: `clean()` is the
+   * public sanitizer (`api.sanitizer.clean`) and every caller that forgot it
+   * shipped a live `javascript:` link.
+   */
+  return stripUnsafeUrls(sanitizerInstance.clean(taintString));
 };
 
 /**
@@ -131,8 +152,13 @@ export const clean = (taintString: string, customConfig: SanitizerConfig = {}): 
 const deepSanitize = (
   dataToSanitize: DeepData,
   rules: DeepSanitizerRule,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth = 0
 ): DeepData => {
+  if (depth > MAX_SANITIZE_DEPTH) {
+    return null;
+  }
+
   /**
    * BlockData It may contain 3 types:
    *  - Array
@@ -143,14 +169,14 @@ const deepSanitize = (
     /**
      * Array: call sanitize for each item
      */
-    return cleanArray(dataToSanitize, rules, globalRules);
+    return cleanArray(dataToSanitize, rules, globalRules, depth);
   }
 
   if (isObject(dataToSanitize)) {
     /**
      * Objects: just clean object deeper.
      */
-    return cleanObject(dataToSanitize, rules, globalRules);
+    return cleanObject(dataToSanitize, rules, globalRules, depth);
   }
 
   /**
@@ -174,9 +200,10 @@ const deepSanitize = (
 const cleanArray = (
   array: Array<DeepData>,
   ruleForItem: DeepSanitizerRule,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth: number
 ): Array<DeepData> => {
-  return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules));
+  return array.map((arrayItem) => deepSanitize(arrayItem, ruleForItem, globalRules, depth + 1));
 };
 
 /**
@@ -189,7 +216,8 @@ const cleanArray = (
 const cleanObject = (
   object: Record<string, unknown>,
   rules: DeepSanitizerRule | Record<string, DeepSanitizerRule>,
-  globalRules: SanitizerConfig
+  globalRules: SanitizerConfig,
+  depth: number
 ): Record<string, unknown> => {
   const cleanData: Record<string, DeepData> = {};
   const objectRecord = object;
@@ -212,7 +240,7 @@ const cleanObject = (
       ? ruleCandidate
       : rules;
 
-    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules);
+    cleanData[fieldName] = deepSanitize(currentIterationItem as DeepData, ruleForItem as DeepSanitizerRule, globalRules, depth + 1);
   }
 
   return cleanData;
@@ -244,13 +272,13 @@ const cleanOneItem = (
   if (effectiveRule) {
     const cleaned = clean(taintString, effectiveRule);
 
-    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, effectiveRule)));
+    return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, effectiveRule));
   }
 
   if (!isEmpty(globalRules)) {
     const cleaned = clean(taintString, globalRules);
 
-    return normalizeInlineMarkupHtml(stripUnsafeUrls(applyAttributeOverrides(cleaned, globalRules)));
+    return normalizeInlineMarkupHtml(applyAttributeOverrides(cleaned, globalRules));
   }
 
   return normalizeInlineMarkupHtml(stripUnsafeUrls(taintString));
@@ -266,7 +294,16 @@ const isRule = (config: DeepSanitizerRule): boolean => {
   return isObject(config) || isBoolean(config) || isFunction(config) || isPlaintextRule(config);
 };
 
-const stripUnsafeUrls = (value: string): string => {
+/**
+ * Remove `href`/`src` values whose scheme can execute (`javascript:`, `data:`).
+ *
+ * `clean()` already applies this. Exported for the paths that harden URLs
+ * WITHOUT tag allowlisting — stored block data whose tool declares no sanitize
+ * config (see {@link stripUnsafeUrlsDeep}).
+ * @param value - HTML to harden
+ * @returns the HTML with executable-scheme URL attributes removed
+ */
+export const stripUnsafeUrls = (value: string): string => {
   if (!value || value.indexOf('<') === -1) {
     return value;
   }
@@ -322,9 +359,13 @@ export const stripUnsafeUrlsDeep = (
   return stripUnsafeUrlsDeepValue(data, rules as DeepSanitizerRule) as BlockToolData;
 };
 
-const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): DeepData => {
+const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule, depth = 0): DeepData => {
+  if (depth > MAX_SANITIZE_DEPTH) {
+    return null;
+  }
+
   if (Array.isArray(value)) {
-    return value.map((item) => stripUnsafeUrlsDeepValue(item, rules));
+    return value.map((item) => stripUnsafeUrlsDeepValue(item, rules, depth + 1));
   }
 
   if (isObject(value)) {
@@ -335,7 +376,7 @@ const stripUnsafeUrlsDeepValue = (value: DeepData, rules?: DeepSanitizerRule): D
       const ruleCandidate = rulesRecord?.[key];
       const ruleForItem = ruleCandidate !== undefined && isRule(ruleCandidate) ? ruleCandidate : rules;
 
-      result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem);
+      result[key] = stripUnsafeUrlsDeepValue(item as DeepData, ruleForItem, depth + 1);
     });
 
     return result;

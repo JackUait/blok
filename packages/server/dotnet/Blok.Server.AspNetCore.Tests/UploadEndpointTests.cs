@@ -327,10 +327,14 @@ public sealed class UploadEndpointTests
   }
 
   [Theory]
-  [InlineData(false)]
-  [InlineData(true)]
+  [InlineData(false, "=")]
+  [InlineData(true, "=")]
+  [InlineData(false, "=GG")]
+  [InlineData(false, "=A")]
+  [InlineData(false, "a=")]
   public async Task RejectsMalformedQuotedPrintableInDiscardedPartsBeforeStorage(
-      bool laterFile)
+      bool laterFile,
+      string encoded)
   {
     var store = new RecordingBlobStore();
     await using var app = await StartApplication(store);
@@ -340,13 +344,13 @@ public sealed class UploadEndpointTests
           "file",
           "later.txt",
           null,
-          Encoding.UTF8.GetBytes("="),
+          Encoding.UTF8.GetBytes(encoded),
           "quoted-printable")
       : new MultipartPart(
           "note",
           null,
           null,
-          Encoding.UTF8.GetBytes("="),
+          Encoding.UTF8.GetBytes(encoded),
           "quoted-printable");
     var body = BuildMultipart(
         new MultipartPart(
@@ -475,6 +479,21 @@ public sealed class UploadEndpointTests
         await response.Content.ReadAsStringAsync());
     Assert.False(payload.RootElement.TryGetProperty("size", out _));
     Assert.Empty(Assert.Single(store.Puts).Bytes);
+  }
+
+  [Fact]
+  public async Task PassesTheExistingSpoolAsASeekableStreamToStorage()
+  {
+    var store = new RecordingBlobStore();
+    await using var app = await StartApplication(store);
+    using var client = app.GetTestClient();
+    var body = BuildMultipart(
+        new MultipartPart("file", "photo.png", "image/png", [1, 2, 3]));
+
+    using var response = await client.SendAsync(CreateUploadRequest(body));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True(store.InputCanSeek);
   }
 
   [Fact]
@@ -753,6 +772,8 @@ public sealed class UploadEndpointTests
 
     public Stream? Input { get; private set; }
 
+    public bool InputCanSeek { get; private set; }
+
     public TaskCompletionSource Entered { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -770,6 +791,7 @@ public sealed class UploadEndpointTests
     {
       PutCalls++;
       Input = content;
+      InputCanSeek = content.CanSeek;
       Entered.TrySetResult();
 
       if (WaitForCancellation)

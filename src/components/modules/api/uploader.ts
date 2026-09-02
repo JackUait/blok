@@ -8,6 +8,7 @@ import {
   uploadAssetUrl,
   type AssetUploaderSources,
 } from '../../utils/asset-uploader';
+import { orphanSweepFor } from '../../utils/orphan-sweep';
 
 /**
  * Routes asset uploads by asset kind instead of by the tool that asked, so a
@@ -31,6 +32,12 @@ export class UploaderAPI extends Module {
    * `tools.update()` that swaps an uploader takes effect immediately.
    */
   private get sources(): AssetUploaderSources {
-    return collectAssetUploaderSources(this.Blok.Tools.blockTools.values(), this.config.uploader);
+    return collectAssetUploaderSources(
+      this.Blok.Tools.blockTools.values(),
+      this.config.uploader,
+      // Keyed off this editor's own expanded `persistence`, so an asset it
+      // uploads can never be swept by another editor on the same page.
+      orphanSweepFor(this.config.persistence)
+    );
   }
 }

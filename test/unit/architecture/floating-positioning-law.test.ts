@@ -110,6 +110,7 @@ const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
  * even when it is locally contained rather than root mounted.
  */
 const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
+  'components/modules/collaboration/presence-carets.ts': 'Remote carets convert a measured Range rect into offsets local to the block holder they are appended to; nothing is written against the root.',
   'components/modules/drag/preview/DragPreview.ts': 'Fixed pointer-following preview; root coordinates refresh on every drag pointer update.',
   'components/modules/drag/utils/ColumnDropAnimation.ts': 'Ephemeral fixed drag preview animates to a viewport target rect and is then removed.',
   'components/modules/rectangleSelection.ts': 'Selection rectangle converts pointer coordinates into its measured local overlay container.',
@@ -137,6 +138,8 @@ const MANUAL_POSITION_CLASSIFICATIONS: Record<string, string> = {
 const DYNAMIC_STYLE_ACCESS_CLASSIFICATIONS: Record<string, string> = {
   'components/marks/mark-engine.ts': 'Writes/strips the style properties a MarkSpec declares while applying, splitting and sanitizing marks.',
   'components/modules/blockManager/hierarchy.ts': 'Writes the block-depth multiplier custom property; the indent itself is resolved by the stylesheet, never as a coordinate.',
+  'components/modules/collaboration/presence-avatars.ts': 'Writes one presence colour custom property per avatar disc (gutter face and editor-wide stack alike), validated hex-only; where the strip and the stack sit is decided entirely by presence.css.',
+  'components/modules/collaboration/presence-carets.ts': 'Writes one presence colour custom property per caret, validated hex-only; the caret line is shaped entirely by presence.css.',
   'components/utils/color-migration.ts': 'Writes a validated CSS custom-property name during legacy color migration.',
   'components/utils/notifier/draw.ts': 'Writes notifier CSS custom properties selected by the notifier layout implementation.',
   'components/utils/popover/popover-desktop.ts': 'Writes named popover CSS variables; physical top/left placement stays inventoried separately.',

@@ -111,6 +111,17 @@ describe('CodeBlock', () => {
     expect(screen.getByText('Terminal')).toBeInTheDocument();
   });
 
+  // "Terminal" is a word, not a product name, so it has to follow the locale.
+  it('localizes the terminal label', () => {
+    render(
+      <I18nProvider locale="ru">
+        <CodeBlock code="echo hello" language="bash" />
+      </I18nProvider>,
+    );
+    expect(screen.getByText('Терминал')).toBeInTheDocument();
+    expect(screen.queryByText('Terminal')).not.toBeInTheDocument();
+  });
+
   it('hides the language label when embedded, since the host shell labels itself', () => {
     renderWithI18n(<CodeBlock code="echo hello" language="bash" embedded />);
     expect(screen.queryByText('Terminal')).not.toBeInTheDocument();

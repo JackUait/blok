@@ -138,6 +138,55 @@ describe('YjsManager', () => {
     });
   });
 
+  describe('applyBlockPlacement', () => {
+    beforeEach(() => {
+      manager.fromJSON([
+        { id: 'parent1', type: 'paragraph', data: { text: 'Parent' } },
+        { id: 'child1', type: 'paragraph', data: { text: 'Child' } },
+      ]);
+    });
+
+    it('nests the block: parentId + membership move from root to the parent in one step', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+
+      const result = manager.toJSON();
+
+      expect(result.map((block) => block.id)).toEqual(['parent1', 'child1']);
+      expect(result[1].parent).toBe('parent1');
+      expect(result[0].content).toEqual(['child1']);
+    });
+
+    it('detaches the block to root: parentId key deleted, root membership restored', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+      manager.applyBlockPlacement('child1', { parentId: null, afterId: 'parent1' });
+
+      const result = manager.toJSON();
+
+      expect(result.map((block) => block.id)).toEqual(['parent1', 'child1']);
+      expect(result[1].parent).toBeUndefined();
+      expect(result[0].content).toBeUndefined();
+    });
+
+    it('captured flavor is undoable', () => {
+      expect(manager.canUndo()).toBe(false);
+
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null });
+
+      expect(manager.canUndo()).toBe(true);
+
+      manager.undo();
+
+      expect(manager.toJSON()[1].parent).toBeUndefined();
+    });
+
+    it('no-capture flavor records nothing on the undo stack', () => {
+      manager.applyBlockPlacement('child1', { parentId: 'parent1', afterId: null }, { capture: false });
+
+      expect(manager.toJSON()[1].parent).toBe('parent1');
+      expect(manager.canUndo()).toBe(false);
+    });
+  });
+
   describe('updateBlockData', () => {
     it('should update a single property in block data', () => {
       manager.fromJSON([
@@ -515,23 +564,27 @@ describe('YjsManager', () => {
       expect(() => manager.toJSON()).not.toThrow();
     });
 
-    it('can be nested (uses counter for isMoveGroupActive)', () => {
+    it('keeps a nested group inside the outermost one, so one undo reverses both moves', () => {
       manager.fromJSON([
         { id: 'block1', type: 'paragraph', data: { text: 'First' } },
         { id: 'block2', type: 'paragraph', data: { text: 'Second' } },
         { id: 'block3', type: 'paragraph', data: { text: 'Third' } },
       ]);
 
-      // Nested transactMoves - outermost one controls the group
       manager.transactMoves(() => {
         manager.moveBlock('block3', 0);
         manager.transactMoves(() => {
           manager.moveBlock('block2', 1);
         });
+        expect(manager.isInMoveGroup).toBe(true);
       });
 
-      // Both moves should be recorded
       expect(manager.toJSON().map((b) => b.id)).toEqual(['block3', 'block2', 'block1']);
+
+      manager.undo();
+
+      expect(manager.toJSON().map((b) => b.id)).toEqual(['block1', 'block2', 'block3']);
+      expect(manager.canUndo()).toBe(false);
     });
   });
 

@@ -63,7 +63,7 @@ describe('DocsCtaCard', () => {
     // forward), so the accessible name reads "Open the docs". \s matches NBSP.
     const link = screen.getByRole('link', { name: /open\s+the\s+docs/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/docs');
+    expect(link).toHaveAttribute('href', '/docs/');
   });
 
   it('should render the description', () => {

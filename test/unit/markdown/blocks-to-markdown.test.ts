@@ -245,6 +245,23 @@ describe('blocksToMarkdown: table', () => {
     expect(md).toBe('| a | b |\n| --- | --- |\n| c \\| d | e |');
   });
 
+  it('preserves a backslash before a pipe inside one table cell', async () => {
+    const md = blocksToMarkdown(makeTable([
+      [p('left'), p('right')],
+      [p(String.raw`a\|b`), p('safe')],
+    ]));
+
+    expect(md).toBe(String.raw`| left | right |
+| --- | --- |
+| a\\\|b | safe |`);
+
+    const blocks = await markdownToBlocks(md);
+    const table = blocks.find((block) => block.type === 'table');
+    const tableData = table?.data as { content: Array<Array<{ blocks: string[] }>> };
+
+    expect(tableData.content[1]).toHaveLength(2);
+  });
+
   it('degrades merged cells: spans are dropped, origin content kept, covered cells empty', () => {
     // GFM pipe tables cannot express colspan/rowspan. The documented degradation
     // keeps the grid rectangular: the origin cell's content stays in place and the

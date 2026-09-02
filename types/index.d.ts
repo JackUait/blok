@@ -52,7 +52,7 @@ import { BlockAddedMutationType, BlockAddedEvent } from './events/block/BlockAdd
 import { BlockChangedMutationType, BlockChangedEvent } from './events/block/BlockChanged';
 import { BlockMovedMutationType, BlockMovedEvent } from './events/block/BlockMoved';
 import { BlockRemovedMutationType, BlockRemovedEvent } from './events/block/BlockRemoved';
-import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload } from './events/editor-events';
+import { BlokEditorEventMap, BlockRenderedPayload, BlocksRenderedPayload, BlockChildrenMountedPayload, I18nChangedPayload, CollaborationPeer, CollaborationStatusChangedPayload, CollaborationTerminalReason } from './events/editor-events';
 
 /**
  * Interfaces used for development
@@ -121,6 +121,9 @@ export {
   BlokUploader,
   UploadContext,
   UploadedAsset,
+  PersistedDocument,
+  SaveContext,
+  SaveResult,
 } from './configs';
 
 export * from './utils/popover';
@@ -198,6 +201,9 @@ export {
   BlocksRenderedPayload,
   BlockChildrenMountedPayload,
   I18nChangedPayload,
+  CollaborationPeer,
+  CollaborationTerminalReason,
+  CollaborationStatusChangedPayload,
 }
 
 /**

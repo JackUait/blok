@@ -148,6 +148,8 @@ vi.mock('../../src/components/polyfills', () => ({}));
 // Import Blok after mocks are set up
 import { Blok, EditorJS } from '../../src/blok';
 import DefaultExport from '../../src/blok';
+import { expandPersistenceConfig } from '../../src/components/utils/persistence';
+import type { API } from '../../types';
 
 describe('Blok', () => {
   // Get mocked instances
@@ -930,6 +932,53 @@ describe('Blok', () => {
 
       // Should not throw
       expect(() => blok.destroy()).not.toThrow();
+    });
+
+    // The persistence queue's beforeunload listener hangs off window, not off a
+    // module, so the loop above cannot reach it. Left behind, it asks the user
+    // to confirm every later navigation in a single-page app on behalf of an
+    // editor that no longer exists.
+    it('should release the persistence save queue so no unload guard survives', async () => {
+      const fireBeforeUnload = (): boolean => {
+        const event = new Event('beforeunload', { cancelable: true });
+
+        window.dispatchEvent(event);
+
+        return event.defaultPrevented;
+      };
+
+      const coreModule = await import('../../src/components/core') as {
+        lastInstance?: () => Core | undefined;
+      };
+
+      const blok = new Blok();
+
+      await blok.isReady;
+
+      const core = coreModule.lastInstance?.();
+
+      if (core === undefined) {
+        throw new Error('Core instance was not created');
+      }
+
+      // The config the real Core hands every module: the expansion built it,
+      // and the expanded `persistence` block is the handle the queue is keyed by.
+      const expanded = expandPersistenceConfig({
+        persistence: {
+          load: async () => null,
+          save: () => new Promise<void>(() => {}),
+        },
+      });
+
+      core.config = expanded;
+
+      expanded.onSave?.({ blocks: [] }, {} as API);
+
+      expect(fireBeforeUnload()).toBe(true);
+
+      blok.destroy();
+
+      expect(fireBeforeUnload()).toBe(false);
     });
 
     it('should handle modules without destroy method', async () => {

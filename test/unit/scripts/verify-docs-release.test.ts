@@ -19,11 +19,18 @@ describe('docs release verification', () => {
     expect(releaseVersionFromTag('v2.3.4-beta.5')).toBe('2.3.4-beta.5');
   });
 
-  it('rejects tags that are not canonical package versions', async () => {
+  it('rejects tags that are not valid release versions', async () => {
     const { releaseVersionFromTag } = await loadVerifier();
 
-    expect(() => releaseVersionFromTag('docs-2.3.4')).toThrow('Invalid package release tag');
-    expect(() => releaseVersionFromTag('v2.3')).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('docs-2.3.4');
+    }).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('v2.3');
+    }).toThrow('Invalid package release tag');
+    expect(() => {
+      releaseVersionFromTag('v2.3.4+build.1');
+    }).toThrow('Invalid package release tag');
   });
 
   it('requires every lockstep manifest to match the release version', async () => {
@@ -86,7 +93,7 @@ describe('docs release verification', () => {
     })).rejects.toThrow('@bloklabs/vue published 2.3.3');
   });
 
-  it('pins the two NuGet packages, six host archives, and checksums', async () => {
+  it('pins the two NuGet packages, eight host archives, and checksums', async () => {
     const { SERVER_NUGET_PACKAGES, SERVER_RELEASE_ASSETS } = await loadVerifier();
 
     expect(SERVER_NUGET_PACKAGES).toEqual([
@@ -98,10 +105,63 @@ describe('docs release verification', () => {
       'blok-server_darwin_arm64.tar.gz',
       'blok-server_linux_amd64.tar.gz',
       'blok-server_linux_arm64.tar.gz',
+      'blok-server_linux_musl_amd64.tar.gz',
+      'blok-server_linux_musl_arm64.tar.gz',
       'blok-server_windows_amd64.zip',
       'blok-server_windows_arm64.zip',
       'checksums.txt',
     ]);
+  });
+
+  // Adding an asset to the list retroactively invalidated every release
+  // published before it existed. musl archives landed two days after v1.12.0
+  // shipped, so verifying v1.12.0 — which is what a main push does, since it
+  // reads the version out of package.json — demanded two files that release
+  // could never have had. The docs then stopped deploying entirely for three
+  // days: the failure took the whole workflow down with it.
+  describe('requiredAssetsFor', () => {
+    it('does not demand an asset from a release published before it existed', async () => {
+      const { requiredAssetsFor } = await loadVerifier();
+
+      expect(requiredAssetsFor('1.12.0')).not.toContain('blok-server_linux_musl_amd64.tar.gz');
+      expect(requiredAssetsFor('1.12.0')).not.toContain('blok-server_linux_musl_arm64.tar.gz');
+    });
+
+    it('still demands the assets that release did ship', async () => {
+      const { requiredAssetsFor } = await loadVerifier();
+
+      expect(requiredAssetsFor('1.12.0')).toEqual([
+        'blok-server_darwin_amd64.tar.gz',
+        'blok-server_darwin_arm64.tar.gz',
+        'blok-server_linux_amd64.tar.gz',
+        'blok-server_linux_arm64.tar.gz',
+        'blok-server_windows_amd64.zip',
+        'blok-server_windows_arm64.zip',
+        'checksums.txt',
+      ]);
+    });
+
+    it('demands them from the first release that ships them onward', async () => {
+      const { requiredAssetsFor, SERVER_RELEASE_ASSETS } = await loadVerifier();
+
+      expect(requiredAssetsFor('1.13.0')).toEqual(SERVER_RELEASE_ASSETS);
+      expect(requiredAssetsFor('2.0.0')).toEqual(SERVER_RELEASE_ASSETS);
+    });
+
+    it('compares versions numerically, not as strings', async () => {
+      const { requiredAssetsFor } = await loadVerifier();
+
+      // '1.9.0' > '1.13.0' lexically, and that inversion is the whole bug class.
+      expect(requiredAssetsFor('1.9.0')).not.toContain('blok-server_linux_musl_amd64.tar.gz');
+    });
+
+    it('treats a prerelease as older than the release it leads to', async () => {
+      const { requiredAssetsFor } = await loadVerifier();
+
+      expect(requiredAssetsFor('1.13.0-beta.1')).not.toContain(
+        'blok-server_linux_musl_amd64.tar.gz',
+      );
+    });
   });
 
   it('looks up an exact version in the public NuGet flat-container index', async () => {
@@ -161,7 +221,7 @@ describe('docs release verification', () => {
       'https://ghcr.io/v2/jackuait/blok-server/manifests/2.3.4',
       {
         headers: {
-          accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+          accept: 'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
           authorization: 'Bearer registry-token',
         },
       },

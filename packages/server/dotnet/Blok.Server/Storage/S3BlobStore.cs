@@ -36,6 +36,7 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
     ArgumentNullException.ThrowIfNull(options);
     ArgumentNullException.ThrowIfNull(handler);
     ArgumentNullException.ThrowIfNull(timeProvider);
+    S3TargetResolver.Resolve(options, "validation");
 
     this.options = options;
     this.timeProvider = timeProvider;
@@ -72,6 +73,8 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         payload.Content,
         payload.Length,
         payload.Hash,
+        readBody: false,
+        allowNotFound: false,
         cancellationToken);
 
     return $"{options.PublicUrl.TrimEnd('/')}/{key}";
@@ -99,6 +102,75 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         Stream.Null,
         0,
         EmptyPayloadHash,
+        readBody: false,
+        allowNotFound: false,
+        cancellationToken);
+  }
+
+  // Key-addressed object access for the collab working-set store. Unlike
+  // the URL-addressed IBlobStore surface, callers pass raw keys under an
+  // operator-configured prefix; nothing here is reachable from consumer
+  // input.
+  internal async Task<byte[]?> GetObjectAsync(
+      string key,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(key);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    // Real S3 answers 403 (not 404) for a missing key when the credentials
+    // lack s3:ListBucket. Only a true 404 may read as absent — a 403 is a
+    // configuration problem and must stay loud.
+    return await SendAsync(
+        HttpMethod.Get,
+        key,
+        "",
+        Stream.Null,
+        0,
+        EmptyPayloadHash,
+        readBody: true,
+        allowNotFound: true,
+        cancellationToken);
+  }
+
+  internal async Task PutObjectAsync(
+      string key,
+      byte[] content,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(key);
+    ArgumentNullException.ThrowIfNull(content);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    await using var payload = new MemoryStream(content, writable: false);
+    await SendAsync(
+        HttpMethod.Put,
+        key,
+        "application/octet-stream",
+        payload,
+        content.Length,
+        S3RequestSigner.Sha256Hex(content),
+        readBody: false,
+        allowNotFound: false,
+        cancellationToken);
+  }
+
+  internal Task DeleteObjectAsync(
+      string key,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(key);
+    cancellationToken.ThrowIfCancellationRequested();
+
+    return SendAsync(
+        HttpMethod.Delete,
+        key,
+        "",
+        Stream.Null,
+        0,
+        EmptyPayloadHash,
+        readBody: false,
+        allowNotFound: false,
         cancellationToken);
   }
 
@@ -107,13 +179,15 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
     client.Dispose();
   }
 
-  private async Task SendAsync(
+  private async Task<byte[]?> SendAsync(
       HttpMethod method,
       string key,
       string mimeType,
       Stream content,
       long contentLength,
       string payloadHash,
+      bool readBody,
+      bool allowNotFound,
       CancellationToken cancellationToken)
   {
     var target = S3TargetResolver.Resolve(options, key);
@@ -139,6 +213,12 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
               responseHeaderTimeout)),
     };
 
+    if (method == HttpMethod.Put)
+    {
+      request.Content.Headers.ContentDisposition =
+          new ContentDispositionHeaderValue("attachment");
+    }
+
     if (mimeType != "")
     {
       request.Content.Headers.TryAddWithoutValidation(
@@ -159,22 +239,31 @@ internal sealed class S3BlobStore : IBlobStore, IDisposable
         responseHeaderCancellation.Token);
     responseHeaderCancellation.CancelAfter(
         Timeout.InfiniteTimeSpan);
+    if (response.IsSuccessStatusCode)
+    {
+      return readBody
+        ? await response.Content.ReadAsByteArrayAsync(
+            requestCancellation.Token)
+        : [];
+    }
+
+    if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
+    {
+      return null;
+    }
+
     var responseBody = await ReadResponsePrefixAsync(
         response,
         requestCancellation.Token);
-
-    if (!response.IsSuccessStatusCode)
-    {
-      throw new HttpRequestException(
-          $"blobstore: s3 {method.Method} returned " +
-          $"{(int)response.StatusCode}: " +
-          Encoding.UTF8.GetString(responseBody).Trim(),
-          inner: null,
-          response.StatusCode);
-    }
+    throw new HttpRequestException(
+        $"blobstore: s3 {method.Method} returned " +
+        $"{(int)response.StatusCode}: " +
+        Encoding.UTF8.GetString(responseBody).Trim(),
+        inner: null,
+        response.StatusCode);
   }
 
-  private static HttpMessageHandler CreateHandler()
+  private static SocketsHttpHandler CreateHandler()
   {
     return new SocketsHttpHandler
     {

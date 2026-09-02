@@ -3,8 +3,15 @@ import * as Y from 'yjs';
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
-import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
-import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntry } from './types';
+import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS } from './serializer';
+import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
+
+type StackItem = Y.UndoManager['undoStack'][number];
+
+interface StackItemEvent {
+  type: 'undo' | 'redo';
+  stackItem: StackItem;
+}
 
 /**
  * UndoHistory manages all undo/redo state.
@@ -17,14 +24,21 @@ import type { CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, SingleMoveEntr
  */
 export class UndoHistory {
   /**
-   * Yjs blocks array (for move operations)
+   * Undo manager for history operations.
+   *
+   * Backed by a field rather than a readonly property because a lineage reset
+   * swaps the whole Y.Doc: an UndoManager is bound to its scope's document at
+   * construction, so it has to be rebuilt (see {@link rebindScope}).
    */
-  private yblocks: Y.Array<Y.Map<unknown>>;
+  private currentUndoManager: Y.UndoManager;
 
   /**
-   * Undo manager for history operations
+   * The live undo manager. Callers MUST read it through this getter rather
+   * than caching it — `rebindScope` replaces the instance.
    */
-  public readonly undoManager: Y.UndoManager;
+  public get undoManager(): Y.UndoManager {
+    return this.currentUndoManager;
+  }
 
   /**
    * Blok modules (for caret operations)
@@ -32,10 +46,9 @@ export class UndoHistory {
   private blok: BlokModules;
 
   /**
-   * Custom move history stack for undo.
-   * Yjs UndoManager doesn't handle array moves correctly when implemented as delete+insert,
-   * so we track moves separately and handle undo/redo at the application level.
-   * Each entry is an array of moves that should be undone together.
+   * Move history, kept apart from Y.UndoManager: to yjs a move is a
+   * delete+insert, which undoes as a resurrection rather than a move. Each
+   * entry is one group undone together.
    */
   private moveUndoStack: MoveHistoryEntry[] = [];
 
@@ -73,6 +86,27 @@ export class UndoHistory {
   private hasPendingCaret = false;
 
   /**
+   * The caret entry recorded for each yjs stack item, by identity. One
+   * `undo()` can pop SEVERAL items — yjs skips an item whose changes a peer
+   * has since deleted and keeps popping until one performs a change — so
+   * the caret stacks shed exactly the entries whose items left the yjs
+   * stack, never "the top one".
+   */
+  private readonly entryByStackItem = new WeakMap<StackItem, CaretHistoryEntry>();
+
+  /**
+   * The item the in-flight undo/redo transaction added to the opposite yjs
+   * stack; the caret entry carried across is keyed to it.
+   */
+  private replayStackItem: StackItem | null = null;
+
+  /**
+   * The popped item that actually changed the document during the in-flight
+   * undo/redo — the one whose caret entry is worth restoring.
+   */
+  private poppedStackItem: StackItem | null = null;
+
+  /**
    * Flag to skip caret stack updates during explicit undo/redo operations.
    * When true, the stack-item-added listener won't modify caret stacks.
    */
@@ -97,60 +131,79 @@ export class UndoHistory {
   private boundaryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * Callback to execute move operations.
-   * Set by YjsManager to delegate move operations.
-   */
-  private moveCallback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void;
-
-  /**
-   * Callback to restore a block's parent during move-undo/move-redo.
+   * The ONE placement callback replaying a recorded move step (parent
+   * restore + position) during move-undo/move-redo.
    *
    * Must not record its own history entry — the call is part of replaying
-   * an existing `SingleMoveEntry`. Set by YjsManager to route through
-   * `transactWithoutCapture` + a direct in-memory reparent.
+   * an existing `SingleMoveEntry`. Set by YjsManager.
    */
-  private parentRestoreCallback: (blockId: string, parentId: string | null) => void;
+  private placementCallback: MoveReplayCallback;
+
+  /**
+   * Flush barrier for coalesced typing writes (see BlockWriteBuffer). Runs at
+   * the START of stopCapturing/undo/redo so buffered writes join the capture
+   * group being closed or unwound. Living here (not only on YjsManager) is
+   * load-bearing: the 100ms word-boundary timer calls stopCapturing internally,
+   * and without the flush-first ordering a 400ms trailing write could land
+   * AFTER the boundary split it belongs before.
+   */
+  private flushPendingWritesHook: () => void = () => {
+    // No-op until YjsManager wires the write buffer.
+  };
 
   constructor(
-    yblocks: Y.Array<Y.Map<unknown>>,
+    scope: UndoScopeType[],
     blok: BlokModules
   ) {
-    this.yblocks = yblocks;
     this.blok = blok;
 
-    this.undoManager = new Y.UndoManager(this.yblocks, {
-      captureTimeout: CAPTURE_TIMEOUT_MS,
-      trackedOrigins: new Set(['local']),
-    });
+    this.currentUndoManager = this.createUndoManager(scope);
 
     this.setupCaretTracking();
 
-    // Move callback will be set by YjsManager
-    this.moveCallback = () => {
-      // Placeholder, will be set by setMoveCallback
-    };
-    this.parentRestoreCallback = () => {
-      // Placeholder, will be set by setParentRestoreCallback
+    // Placement callback will be set by YjsManager
+    this.placementCallback = () => {
+      // Placeholder, will be set by setPlacementCallback
     };
   }
 
   /**
-   * Set the move callback. Called by YjsManager to enable move operations.
+   * Build an UndoManager over the given roots. One place, so the constructor
+   * and {@link rebindScope} can never drift on captureTimeout / trackedOrigins.
+   * @param scope - the shared types to track
    */
-  public setMoveCallback(
-    callback: (blockId: string, toIndex: number, origin: 'local' | 'move-undo' | 'move-redo') => void
-  ): void {
-    this.moveCallback = callback;
+  private createUndoManager(scope: UndoScopeType[]): Y.UndoManager {
+    return new Y.UndoManager(scope, {
+      captureTimeout: CAPTURE_TIMEOUT_MS,
+      trackedOrigins: new Set(['local']),
+    });
   }
 
   /**
-   * Set the parent-restore callback used by move-undo/move-redo to rewind
-   * drag-reparent side effects. See `parentRestoreCallback`.
+   * Rebuild the undo manager over a NEW document's roots (lineage reset).
+   *
+   * Deliberately does NOT call `clear()`: `Y.UndoManager.clear` transacts on its
+   * document, and by the time this runs the old document is already destroyed.
+   * The caller clears the history BEFORE the swap — see
+   * `YjsManager.resetForRelineage`, whose step order this method depends on.
+   *
+   * Caret tracking is re-armed here because its listeners live on the manager
+   * instance that is being replaced.
+   * @param scope - the fresh document's shared types
    */
-  public setParentRestoreCallback(
-    callback: (blockId: string, parentId: string | null) => void
-  ): void {
-    this.parentRestoreCallback = callback;
+  public rebindScope(scope: UndoScopeType[]): void {
+    this.currentUndoManager.destroy();
+    this.currentUndoManager = this.createUndoManager(scope);
+
+    this.setupCaretTracking();
+  }
+
+  /**
+   * Set the placement callback used by move-undo/move-redo to replay
+   * recorded moves. See `placementCallback`.
+   */
+  public setPlacementCallback(callback: MoveReplayCallback): void {
+    this.placementCallback = callback;
   }
 
   /**
@@ -161,15 +214,25 @@ export class UndoHistory {
   }
 
   /**
+   * Set the flush barrier for coalesced typing writes.
+   * See `flushPendingWritesHook`.
+   */
+  public setFlushPendingWritesHook(hook: () => void): void {
+    this.flushPendingWritesHook = hook;
+  }
+
+  /**
    * Set up caret tracking via Yjs UndoManager events.
    * Captures caret position after each undoable change.
    */
   private setupCaretTracking(): void {
-    this.undoManager.on('stack-item-added', (event: { type: 'undo' | 'redo' }) => {
+    this.undoManager.on('stack-item-added', (event: StackItemEvent) => {
       // Skip if we're in the middle of an explicit undo/redo operation.
       // During redo, Yjs fires stack-item-added with type='undo' which would
       // incorrectly add entries to our caret stack.
       if (this.isPerformingUndoRedo) {
+        this.replayStackItem = event.stackItem;
+
         return;
       }
 
@@ -181,6 +244,7 @@ export class UndoHistory {
           kind: 'edit',
         };
 
+        this.entryByStackItem.set(event.stackItem, entry);
         this.caretUndoStack.push(entry);
         // Clear redo stack on new action (standard undo/redo behavior)
         this.caretRedoStack = [];
@@ -197,9 +261,13 @@ export class UndoHistory {
       this.resetPendingCaretState();
     });
 
+    this.undoManager.on('stack-item-popped', (event: StackItemEvent) => {
+      this.poppedStackItem = event.stackItem;
+    });
+
     // Listen for stack-item-updated to update the 'after' position when changes
     // are merged into an existing stack item (due to captureTimeout batching).
-    this.undoManager.on('stack-item-updated', (event: { type: 'undo' | 'redo' }) => {
+    this.undoManager.on('stack-item-updated', (event: StackItemEvent) => {
       if (this.isPerformingUndoRedo) {
         return;
       }
@@ -279,6 +347,9 @@ export class UndoHistory {
    * Restores caret position after the undo operation.
    */
   public undo(): void {
+    // Land buffered typing writes first so they are part of the group we pop.
+    this.flushPendingWritesHook();
+
     // Save scroll position before DOM manipulation. Removing focused elements
     // from the DOM (e.g., undoing an Enter in a table cell removes cell paragraph
     // blocks) can cause the browser to scroll to the top. We restore scroll after
@@ -300,11 +371,10 @@ export class UndoHistory {
       // Reverse all moves in the group, in reverse order.
       // This is crucial for multi-block moves to restore correctly.
       //
-      // Drag-reparent entries may additionally carry `fromParentId`; restore
-      // the parent BEFORE the position so the block lands in the correct
-      // flat-array slot relative to its (soon-to-be-restored) parent siblings.
+      // Each entry replays its full FROM placement (parent + preceding
+      // sibling) through the one placement callback.
       [...lastMoveGroup].reverse().forEach((move) => {
-        this.replayMoveUndo(move);
+        this.placementCallback(move.blockId, move.from, 'move-undo');
       });
 
       // Pop caret entry only after move succeeds
@@ -319,8 +389,7 @@ export class UndoHistory {
     // No move to undo, delegate to Yjs UndoManager
     this.performYjsUndoRedo(() => this.undoManager.undo());
 
-    // Pop caret entry only after Yjs undo succeeds
-    const caretEntry = this.caretUndoStack.pop();
+    const caretEntry = this.settleReplayedEntries(this.caretUndoStack, this.undoManager.undoStack);
 
     this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
     this.restoreScrollIfJumped(savedScrollY);
@@ -332,6 +401,9 @@ export class UndoHistory {
    * Restores caret position after the redo operation.
    */
   public redo(): void {
+    // Same barrier as undo: buffered writes must not outlive the replay.
+    this.flushPendingWritesHook();
+
     // Save scroll position before DOM manipulation (same rationale as undo).
     const savedScrollY = window.scrollY;
 
@@ -345,12 +417,10 @@ export class UndoHistory {
       // Push back to undo stack
       this.moveUndoStack.push(lastMoveGroup);
 
-      // Redo all moves in the group, in original order. Drag-reparent
-      // entries restore the destination parent AFTER the position so that
-      // the flat-array splice settles first and the parent's contentIds
-      // then re-attach cleanly.
+      // Redo all moves in the group, in original order: each entry
+      // replays its full TO placement through the placement callback.
       for (const move of lastMoveGroup) {
-        this.replayMoveRedo(move);
+        this.placementCallback(move.blockId, move.to, 'move-redo');
       }
 
       // Pop caret entry only after move succeeds
@@ -365,11 +435,36 @@ export class UndoHistory {
     // No move to redo, delegate to Yjs UndoManager
     this.performYjsUndoRedo(() => this.undoManager.redo());
 
-    // Pop caret entry only after Yjs redo succeeds
-    const caretEntry = this.caretRedoStack.pop();
+    const caretEntry = this.settleReplayedEntries(this.caretRedoStack, this.undoManager.redoStack);
 
     this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
     this.restoreScrollIfJumped(savedScrollY);
+  }
+
+  /**
+   * After a yjs undo/redo: drop every non-move entry whose stack item is no
+   * longer on `live` (move entries belong to the move stacks and stay), and
+   * return the entry to carry to the opposite caret stack — the popped
+   * item's own when one performed a change, else the newest shed entry.
+   * That entry is keyed to the item the replay added, so the next press in
+   * the other direction can settle it the same way.
+   * @param entries - the caret stack that was just unwound
+   * @param live - the yjs stack it mirrors, after the replay
+   */
+  private settleReplayedEntries(entries: CaretHistoryEntry[], live: readonly StackItem[]): CaretHistoryEntry | undefined {
+    const liveEntries = new Set(live.map((item) => this.entryByStackItem.get(item)));
+    const shed = new Set(entries.filter((entry) => entry.kind !== 'move' && !liveEntries.has(entry)));
+
+    entries.splice(0, entries.length, ...entries.filter((entry) => !shed.has(entry)));
+
+    const performed = this.poppedStackItem === null ? undefined : this.entryByStackItem.get(this.poppedStackItem);
+    const carried = performed ?? [...shed].at(-1);
+
+    if (carried !== undefined && this.replayStackItem !== null) {
+      this.entryByStackItem.set(this.replayStackItem, carried);
+    }
+
+    return carried;
   }
 
   /**
@@ -399,42 +494,14 @@ export class UndoHistory {
   }
 
   /**
-   * Replay a single move entry in the undo direction.
-   * Parent restore runs BEFORE the position restore so the block lands in
-   * the correct slot relative to its (soon-to-be-restored) parent siblings.
-   */
-  private replayMoveUndo(move: SingleMoveEntry): void {
-    if (move.fromParentId !== undefined) {
-      this.parentRestoreCallback(move.blockId, move.fromParentId);
-    }
-
-    if (move.fromIndex !== -1) {
-      this.moveCallback(move.blockId, move.fromIndex, 'move-undo');
-    }
-  }
-
-  /**
-   * Replay a single move entry in the redo direction.
-   * Position restore runs BEFORE the parent restore so the flat-array splice
-   * settles first and the destination parent's contentIds re-attach cleanly.
-   */
-  private replayMoveRedo(move: SingleMoveEntry): void {
-    if (move.toIndex !== -1) {
-      this.moveCallback(move.blockId, move.toIndex, 'move-redo');
-    }
-
-    if (move.toParentId !== undefined) {
-      this.parentRestoreCallback(move.blockId, move.toParentId);
-    }
-  }
-
-  /**
    * Execute a Yjs UndoManager operation with the isPerformingUndoRedo flag set.
    * This prevents the stack-item-added listener from modifying caret stacks during
    * explicit undo/redo operations.
    */
   private performYjsUndoRedo(operation: () => void): void {
     this.isPerformingUndoRedo = true;
+    this.replayStackItem = null;
+    this.poppedStackItem = null;
     try {
       operation();
     } finally {
@@ -443,10 +510,68 @@ export class UndoHistory {
   }
 
   /**
+   * Re-anchor the capture-merge clock to when the change actually happened.
+   *
+   * A coalesced trailing flush transacts up to 400ms after the typing it
+   * carries; Y.UndoManager stamps `lastChange` with the FLUSH time, so the
+   * captureTimeout would measure the next action's gap from the flush and
+   * merge actions the user separated by more than the capture window (two
+   * typing pauses, or typing followed by a tune change). Rewind only —
+   * never push the clock forward, and never touch the `0` sentinel a
+   * stopCapturing leaves (`0` means "always split next"; every real
+   * timestamp exceeds a rewind target).
+   * @param toTime - the wall-clock time of the flushed writes' last enqueue
+   */
+  public rewindCaptureClock(toTime: number): void {
+    if (this.undoManager.lastChange > toTime) {
+      this.undoManager.lastChange = toTime;
+    }
+  }
+
+  /**
+   * Re-open the newest undo entry when the block about to be replaced is one
+   * that very entry created.
+   *
+   * A replace-insert removes the block it replaces (see `BlockInsertion`), and
+   * Y.UndoManager only skips resurrecting a deleted item when the SAME stack
+   * item also holds its insertion. A scaffold slot — the empty paragraph the
+   * plus button builds before the toolbox opens — is created in one entry and
+   * replaced in the next as soon as the user takes longer than `captureTimeout`
+   * to pick a tool, so undoing the pick brought the scaffold back and the
+   * gesture needed two presses. Merging the two makes it one press again, and
+   * redo then restores only the chosen block.
+   *
+   * The check is exact, not a heuristic: only a block whose creation is still
+   * the newest entry never existed as a state of its own. A slot the user made
+   * earlier (their own Enter, then typing) or one that came from the loaded
+   * document is buried under later entries — no merge, and undo restores it.
+   * @param creationId - id of the Y item holding the block, or null when the
+   *   block is not in the doc
+   */
+  public continueEntryThatCreated(creationId: Y.ID | null): void {
+    const { undoStack } = this.undoManager;
+    const newestEntry = undoStack[undoStack.length - 1];
+
+    if (creationId === null || newestEntry === undefined) {
+      return;
+    }
+
+    if (!Y.isDeleted(newestEntry.insertions, creationId)) {
+      return;
+    }
+
+    this.undoManager.lastChange = Date.now();
+  }
+
+  /**
    * Stop capturing changes into current undo group.
    * Call this to force next change into a new undo entry.
    */
   public stopCapturing(): void {
+    // Flush BEFORE closing the group: a word-boundary checkpoint must carry
+    // the buffered tail of the word it ends (100ms boundary vs 400ms trailing).
+    this.flushPendingWritesHook();
+
     this.undoManager.stopCapturing();
   }
 
@@ -527,6 +652,14 @@ export class UndoHistory {
    * @param fn - Function containing move operations to execute atomically
    */
   public transactMoves(fn: () => void): void {
+    // A nested call rides the open group; starting another would discard
+    // the moves collected so far.
+    if (this.pendingMoveGroup !== null) {
+      fn();
+
+      return;
+    }
+
     this.startMoveGroup();
     try {
       fn();
@@ -537,46 +670,39 @@ export class UndoHistory {
 
   /**
    * Record a move operation. Called by YjsManager during moveBlock.
-   * @param blockId - Block being moved
-   * @param fromIndex - Original index
-   * @param toIndex - Target index
+   * The entry's `from` placement must be captured from the doc BEFORE the
+   * mutation and `to` after it.
+   * @param entry - Move entry carrying both placements
    * @param isGrouped - Whether this is part of a grouped move operation
    */
-  public recordMove(
-    blockId: string,
-    fromIndex: number,
-    toIndex: number,
-    isGrouped: boolean
-  ): void {
-    const moveEntry: SingleMoveEntry = { blockId, fromIndex, toIndex };
-
+  public recordMove(entry: SingleMoveEntry, isGrouped: boolean): void {
     if (isGrouped && this.pendingMoveGroup !== null) {
       // Grouped move: collect into pending group
-      this.pendingMoveGroup.push(moveEntry);
+      this.pendingMoveGroup.push(entry);
     } else {
       // Single move: record immediately
       this.markCaretBeforeChange();
-      this.recordMoveForUndo([moveEntry]);
+      this.recordMoveForUndo([entry]);
     }
   }
 
   /**
-   * Attach a parent change to the in-flight move entry (or create a
-   * parent-only entry if the block hasn't been moved inside the group yet).
+   * Attach a reparent to the in-flight move entry (or create a parent-only
+   * entry if the block hasn't been moved inside the group yet).
    *
    * Used by drag-reparent so that `undo` restores the parent relationship
-   * atomically with the array move. The caller (`BlockManager.setBlockParent`
+   * atomically with the position. The caller (`BlockManager.setBlockParent`
    * when `YjsManager.isInMoveGroup` is true) is responsible for writing the
-   * parentId/contentIds to Yjs through `transactWithoutCapture` so the
-   * Y.UndoManager does not also record the change.
+   * placement to Yjs through the no-capture flavor so the Y.UndoManager
+   * does not also record the change.
    * @param blockId - id of the reparented block
-   * @param fromParentId - parent id before the reparent (null for root)
-   * @param toParentId - parent id after the reparent (null for root)
+   * @param from - the block's doc placement BEFORE the reparent write
+   * @param to - the placement the reparent wrote
    */
   public recordParentChangeForPendingMove(
     blockId: string,
-    fromParentId: string | null,
-    toParentId: string | null
+    from: BlockPlacement,
+    to: BlockPlacement
   ): void {
     if (this.pendingMoveGroup === null) {
       // Not inside a move group — nothing to attach to. Drop the hint.
@@ -588,28 +714,18 @@ export class UndoHistory {
     );
 
     if (existing !== undefined) {
-      // Preserve the earliest known `fromParentId` (first write wins — that's
-      // the parent BEFORE the drag started). Always update `toParentId` to
-      // the most recent write.
-      if (existing.fromParentId === undefined) {
-        existing.fromParentId = fromParentId;
-      }
-      existing.toParentId = toParentId;
+      // `from` is first-write-wins: the entry's existing `from` is the
+      // placement BEFORE the drag started (a mid-group flat move already
+      // displaced the block, so `from` here would be wrong). Only `to`
+      // advances to the most recent write.
+      existing.to = to;
 
       return;
     }
 
-    // No matching move entry yet (e.g. a same-index reparent within a toggle
+    // No matching move entry yet (e.g. a same-slot reparent within a toggle
     // body, where DragController calls setBlockParent without a prior move).
-    // Push a parent-only entry with identical from/to indices so the undo
-    // walker still has something to unwind.
-    this.pendingMoveGroup.push({
-      blockId,
-      fromIndex: -1,
-      toIndex: -1,
-      fromParentId,
-      toParentId,
-    });
+    this.pendingMoveGroup.push({ blockId, from, to });
   }
 
   /**
@@ -850,11 +966,6 @@ export class UndoHistory {
   }
 
   /**
-   * Export isBoundaryCharacter for use by YjsManager
-   */
-  public static readonly isBoundaryCharacter = isBoundaryCharacter;
-
-  /**
    * Clear all history stacks (move, caret, and Yjs UndoManager) and pending state.
    * Used when loading new data or destroying the manager.
    */
@@ -867,6 +978,8 @@ export class UndoHistory {
     this.pendingCaretBefore = null;
     this.hasPendingCaret = false;
     this.isPerformingUndoRedo = false;
+    this.replayStackItem = null;
+    this.poppedStackItem = null;
     // Clear smart grouping state
     this.clearBoundary();
     this.undoManager.clear();

@@ -15,6 +15,8 @@ import { Blok } from '../../src/blok';
 import { ListItem } from '../../src/tools/list';
 import { Paragraph } from '../../src/tools/paragraph';
 
+const editors: Blok[] = [];
+
 const createEditor = async (config: Record<string, unknown> = {}): Promise<Blok> => {
   const holder = document.createElement('div');
 
@@ -26,6 +28,7 @@ const createEditor = async (config: Record<string, unknown> = {}): Promise<Blok>
     ...config,
   });
 
+  editors.push(editor);
   await editor.isReady;
 
   return editor;
@@ -91,7 +94,12 @@ describe('Blok i18n runtime API', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    for (const editor of editors) {
+      await editor.isReady;
+      editor.destroy();
+    }
+    editors.length = 0;
     document.body.innerHTML = '';
     vi.restoreAllMocks();
   });
@@ -102,6 +110,8 @@ describe('Blok i18n runtime API', () => {
     document.body.appendChild(holder);
 
     const editor = new Blok({ holder, minHeight: 50 });
+
+    editors.push(editor);
 
     expect(typeof editor.i18n.update).toBe('function');
     expect(typeof editor.i18n.t).toBe('function');
@@ -533,6 +543,8 @@ describe('Blok i18n runtime API', () => {
     document.body.appendChild(holder);
 
     const editor = new Blok({ holder, minHeight: 50 });
+
+    editors.push(editor);
 
     await editor.i18n.update({ locale: 'ru' });
     await editor.isReady;

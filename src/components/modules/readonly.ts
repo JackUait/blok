@@ -1,6 +1,9 @@
 import { Module } from '../__module';
 import { CriticalError } from '../errors/critical';
+import { log } from '../utils';
 import { normalizeReadOnlyConfig } from '../utils/readonly-config';
+
+import type { CaretSnapshot } from './yjs/types';
 
 /**
  * @module ReadOnly
@@ -27,6 +30,28 @@ export class ReadOnly extends Module {
    * @type {boolean}
    */
   private readOnlyEnabled = false;
+
+  /**
+   * The HOST's own wish, remembered separately from the applied state.
+   *
+   * Collaboration can force read-only on (unsynced, write-denied, terminally
+   * disconnected) without erasing what the host asked for — so when its veto
+   * lifts, the editor returns to the host's answer rather than to "editable".
+   */
+  private hostRequestedReadOnly = false;
+
+  /**
+   * Where the caret stood when read-only turned on; restored on the way out.
+   */
+  private caretBeforeReadOnly: CaretSnapshot | null = null;
+
+  /**
+   * Collaboration's half of the arbitration: true while editing is impossible
+   * whatever the host wants. False (and free) in a single-player editor.
+   */
+  private get isEditingBlockedByCollaboration(): boolean {
+    return this.Blok.Collaboration?.isEditingBlocked ?? false;
+  }
 
   /**
    * Returns state of read only mode
@@ -81,7 +106,10 @@ export class ReadOnly extends Module {
 
     const { enabled: readOnlyRequested } = normalizeReadOnlyConfig(this.config.readOnly);
 
-    if (readOnlyRequested && toolsDontSupportReadOnly.length > 0) {
+    // Against the state that will be APPLIED, not the one that was asked for:
+    // a collaboration session boots read-only whatever the host wrote, and a
+    // tool that cannot render read-only must still fail the contract loudly.
+    if ((readOnlyRequested || this.isEditingBlockedByCollaboration) && toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }
 
@@ -91,15 +119,63 @@ export class ReadOnly extends Module {
   /**
    * Set read-only mode or toggle current state
    * Call all Modules `toggleReadOnly` method and re-render Blok
+   *
+   * Effective read-only is the host's wish OR collaboration's veto. Turning it
+   * OFF while collaboration blocks editing is refused outright rather than
+   * silently ignored: an editor that reports itself editable while nothing it
+   * accepts can be saved is the worse lie.
    * @param state - (optional) read-only state or toggle
    * @param isInitial - (optional) true when blok is initializing
    */
   public async toggle(state = !this.readOnlyEnabled, isInitial = false): Promise<boolean> {
+    // `isInitial` is the boot call, which is the module APPLYING the arbitrated
+    // state, not a host asking for one — refusing it would leave boot unapplied.
+    if (!state && !isInitial && this.isEditingBlockedByCollaboration) {
+      log('Read-only cannot be turned off yet: the collaboration session is not synced, or grants no write access.', 'warn');
+
+      return this.readOnlyEnabled;
+    }
+
+    this.hostRequestedReadOnly = state;
+
+    return this.applyReadOnly(state || this.isEditingBlockedByCollaboration, isInitial);
+  }
+
+  /**
+   * Re-derives the effective state after collaboration's veto changed — the
+   * first sync landing, or a ticket refresh flipping the write grant. The
+   * host's own wish is untouched, so `set(true)` before a sync still wins after
+   * it. Called by the Collaboration module; nothing else should.
+   */
+  public async reapplyCollaborationArbitration(): Promise<boolean> {
+    const derived = this.hostRequestedReadOnly || this.isEditingBlockedByCollaboration;
+
+    // A status blip with no state change (an offline flicker while editable)
+    // must not run the cascade — BlockSelection would kill a live caret.
+    if (derived === this.readOnlyEnabled) {
+      return this.readOnlyEnabled;
+    }
+
+    return this.applyReadOnly(derived, false);
+  }
+
+  /**
+   * Applies an already-arbitrated read-only state.
+   * @param state - the state to apply
+   * @param isInitial - true when blok is initializing
+   */
+  private async applyReadOnly(state: boolean, isInitial: boolean): Promise<boolean> {
     if (state && this.toolsDontSupportReadOnly.length > 0) {
       this.throwCriticalError();
     }
 
     const oldState = this.readOnlyEnabled;
+
+    // Before the cascade: BlockSelection.toggleReadOnly removes all ranges,
+    // destroying the selection this reads.
+    if (state && !oldState) {
+      this.captureCaretBeforeReadOnly();
+    }
 
     this.readOnlyEnabled = state;
 
@@ -149,6 +225,10 @@ export class ReadOnly extends Module {
       }
 
       this.Blok.ModificationsObserver.enable();
+
+      if (!state) {
+        this.restoreCaretAfterReadOnly();
+      }
 
       return this.readOnlyEnabled;
     }
@@ -202,9 +282,69 @@ export class ReadOnly extends Module {
       window.scrollTo(0, savedScrollY);
     }
 
+    if (!state) {
+      this.restoreCaretAfterReadOnly();
+    }
+
     this.Blok.ModificationsObserver.enable();
 
     return this.readOnlyEnabled;
+  }
+
+  /**
+   * Remembers the caret so leaving read-only can put it back. Only a caret
+   * that lives inside this editor's wrapper is worth keeping — a selection
+   * elsewhere on the page is not ours to restore.
+   */
+  private captureCaretBeforeReadOnly(): void {
+    this.caretBeforeReadOnly = null;
+
+    // Optional chains: boot applies read-only before UI builds its nodes.
+    const wrapper = this.Blok.UI?.nodes.wrapper;
+    const anchorNode = window.getSelection()?.anchorNode ?? null;
+
+    if (wrapper === undefined || anchorNode === null || !wrapper.contains(anchorNode)) {
+      return;
+    }
+
+    this.caretBeforeReadOnly = this.Blok.YjsManager?.captureCaretSnapshot() ?? null;
+  }
+
+  /**
+   * Puts the caret back where capture left it. Block ids survive both toggle
+   * paths (the renderer reuses incoming ids), so the snapshot resolves even
+   * after the save/clear/render cycle.
+   */
+  private restoreCaretAfterReadOnly(): void {
+    const snapshot = this.caretBeforeReadOnly;
+
+    this.caretBeforeReadOnly = null;
+
+    if (snapshot === null) {
+      return;
+    }
+
+    // The user focused something else while read-only — don't steal it back.
+    const wrapper = this.Blok.UI?.nodes.wrapper;
+    const activeElement = document.activeElement;
+    const focusMovedOutside = activeElement !== null
+      && activeElement !== document.body
+      && wrapper !== undefined
+      && !wrapper.contains(activeElement);
+
+    if (focusMovedOutside) {
+      return;
+    }
+
+    const input: HTMLElement | undefined =
+      this.Blok.BlockManager.getBlockById(snapshot.blockId)?.inputs[snapshot.inputIndex];
+
+    if (input === undefined || !input.isConnected) {
+      return;
+    }
+
+    // DEFAULT + offset clamps an overlong offset instead of throwing.
+    this.Blok.Caret.setToInput(input, this.Blok.Caret.positions.DEFAULT, snapshot.offset);
   }
 
   /**

@@ -1,5 +1,6 @@
 import type { AssetKind } from '@/types/tools/block-tool';
 import type { BlokUploader, UploadContext, UploadedAsset } from '@/types/configs/uploader';
+import type { OrphanSweep } from './orphan-sweep';
 
 /**
  * Where uploaders can come from, in the order they are consulted.
@@ -16,6 +17,12 @@ export interface AssetUploaderSources {
    * `tools.image.config.uploader` lands under `image`.
    */
   byKind: Partial<Record<AssetKind, BlokUploader>>;
+  /**
+   * This editor's orphan-sweep candidate set, when it saves through
+   * `persistence`. Absent means nothing is recorded: without a save that
+   * reports success there is no moment at which an asset is known abandoned.
+   */
+  sweep?: OrphanSweep;
 }
 
 /**
@@ -40,7 +47,8 @@ export interface AssetUploaderToolLike {
  */
 export function collectAssetUploaderSources(
   blockTools: Iterable<AssetUploaderToolLike>,
-  editorUploader?: BlokUploader
+  editorUploader?: BlokUploader,
+  sweep?: OrphanSweep
 ): AssetUploaderSources {
   const byKind: Partial<Record<AssetKind, BlokUploader>> = {};
 
@@ -56,6 +64,7 @@ export function collectAssetUploaderSources(
   }
 
   return {
+    sweep,
     editor: editorUploader,
     byKind,
   };
@@ -95,6 +104,16 @@ export function resolveAssetUploader(kind: AssetKind, sources: AssetUploaderSour
     resolved.uploadByUrl = (u, ctx) => uploadByUrl.call(urlFrom, u, ctx);
   }
 
+  // A deletion routes exactly like the upload that stored the asset: cover art
+  // an audio block posted to the image pipeline has to be deleted through that
+  // same pipeline, not through the host's audio endpoint.
+  const deleteFrom = owner?.delete !== undefined ? owner : sources.editor;
+  const deleteAsset = deleteFrom?.delete;
+
+  if (deleteFrom !== undefined && deleteAsset !== undefined) {
+    resolved.delete = (u, ctx) => deleteAsset.call(deleteFrom, u, ctx);
+  }
+
   return resolved;
 }
 
@@ -120,6 +139,32 @@ export function hasAssetUploader(
 }
 
 /**
+ * Offer an asset this session just uploaded to the orphan sweep.
+ *
+ * Only an asset whose uploader can delete is worth remembering: with no
+ * `delete` there is nothing the sweep could ever do with the URL, and the
+ * `blob:` fallback stores nothing to clean up.
+ * @param asset - what the uploader answered with
+ * @param ctx - what was uploaded and on whose behalf
+ * @param uploader - the uploader resolved for the asset's kind
+ * @param sweep - this editor's candidate set, when it has one
+ */
+function recordForSweep(
+  asset: UploadedAsset,
+  ctx: UploadContext,
+  uploader: BlokUploader,
+  sweep?: OrphanSweep
+): void {
+  const deleteAsset = uploader.delete;
+
+  if (deleteAsset === undefined || sweep === undefined) {
+    return;
+  }
+
+  sweep.record(asset.url, (url) => deleteAsset(url, { kind: ctx.kind, tool: ctx.tool }));
+}
+
+/**
  * Store a file through the uploader that owns its kind.
  *
  * With no uploader configured the file becomes an in-memory `blob:` URL — the
@@ -134,10 +179,15 @@ export async function uploadAssetFile(
   ctx: UploadContext,
   sources: AssetUploaderSources
 ): Promise<UploadedAsset> {
-  const upload = resolveAssetUploader(ctx.kind, sources).uploadByFile;
+  const uploader = resolveAssetUploader(ctx.kind, sources);
+  const upload = uploader.uploadByFile;
 
   if (upload) {
-    return upload(file, ctx);
+    const asset = await upload(file, ctx);
+
+    recordForSweep(asset, ctx, uploader, sources.sweep);
+
+    return asset;
   }
 
   return {
@@ -159,10 +209,15 @@ export async function uploadAssetUrl(
   ctx: UploadContext,
   sources: AssetUploaderSources
 ): Promise<UploadedAsset> {
-  const upload = resolveAssetUploader(ctx.kind, sources).uploadByUrl;
+  const uploader = resolveAssetUploader(ctx.kind, sources);
+  const upload = uploader.uploadByUrl;
 
   if (upload) {
-    return upload(url, ctx);
+    const asset = await upload(url, ctx);
+
+    recordForSweep(asset, ctx, uploader, sources.sweep);
+
+    return asset;
   }
 
   return { url };

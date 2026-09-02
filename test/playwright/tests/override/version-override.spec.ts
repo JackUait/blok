@@ -28,6 +28,38 @@ const launch = async (): Promise<{ context: BrowserContext, sw: Worker }> => {
 };
 
 test.describe('blok version override', () => {
+  test('serializes concurrent extension state synchronization', async () => {
+    const { context, sw } = await launch();
+
+    try {
+      const syncCompleted = await sw.evaluate(async () => {
+        const hooks = globalThis as unknown as {
+          armOriginForTests: (origin: string) => Promise<void>;
+          setRedirectsForTests: (redirects: { from: string; to: string }[]) => Promise<void>;
+        };
+        const origin = 'https://concurrent.example';
+        const redirects = [
+          { from: 'https://cdn.concurrent.example/', to: 'https://local.concurrent.example/' },
+        ];
+
+        await Promise.all([
+          hooks.armOriginForTests(origin),
+          hooks.armOriginForTests(origin),
+        ]);
+        await Promise.all([
+          hooks.setRedirectsForTests(redirects),
+          hooks.setRedirectsForTests(redirects),
+        ]);
+
+        return true;
+      });
+
+      expect(syncCompleted).toBe(true);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('arming an origin swaps the page blok for the local payload', async () => {
     // Two full loads of a multi-MB module graph (the fixture's dist build, then
     // the dev payload) — legitimately heavier than the default budget.
@@ -120,7 +152,16 @@ test.describe('blok version override', () => {
 
       // Flipping the switch is the whole interaction: the extension reloads
       // the page itself and the popup catches up with no button to press.
-      await expect(page.getByTestId('blok-editor')).toHaveAttribute('data-blok-version', /-dev\./);
+      //
+      // This one assertion covers strictly more than its sibling at :31, which
+      // arms the origin through the service worker directly: here a popup click
+      // has to reach the worker and come back before the reload even starts,
+      // and only then does the multi-MB dev payload evaluate. `test.slow()`
+      // triples the TEST budget and leaves `expect` on the global 5s, which the
+      // whole chain does not fit into on a loaded runner — the test then fails
+      // once and passes on retry, which `failOnFlakyTests` counts as a failure.
+      await expect(page.getByTestId('blok-editor'))
+        .toHaveAttribute('data-blok-version', /-dev\./, { timeout: 15_000 });
       await expect(popup.getByRole('button', { name: 'Reload' })).toHaveCount(0);
       await expect(popup.getByText('Running your build')).toBeVisible();
 
@@ -145,6 +186,7 @@ test.describe('blok version override', () => {
   // The one page the extension must NOT keep reloading: the payload is in the
   // realm and this blok predates the seam, so no reload will ever swap it.
   test('a page whose blok predates the seam is reported, never reloaded in circles', async () => {
+    test.slow();
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;
@@ -196,6 +238,7 @@ test.describe('blok version override', () => {
   });
 
   test('popup routes a detected CDN script to the local build in one click', async () => {
+    test.slow();
     const { context, sw } = await launch();
     try {
       const extensionId = new URL(sw.url()).host;

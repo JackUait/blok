@@ -43,6 +43,20 @@ describe('server runtime boundary', () => {
     expect(html).toBe('<p>Hi <b>there</b></p>');
   });
 
+  it('preserves the renderer parentId hierarchy alias', async () => {
+    const html = await invoke(
+      'blocksToHtml',
+      JSON.stringify({
+        blocks: [
+          { id: 'toggle', type: 'toggle', data: { text: 'Parent', isOpen: true } },
+          { id: 'child', type: 'paragraph', parentId: 'toggle', data: { text: 'Child' } },
+        ],
+      })
+    );
+
+    expect(html).toBe('<details open><summary>Parent</summary><p>Child</p></details>');
+  });
+
   it('renders a serialized document to plain text', async () => {
     const plainText = await invoke(
       'blocksToPlainText',

@@ -85,8 +85,8 @@ test.describe('Pasting multi-block content into a column', () => {
       'text/html': '<h2>Pasted header</h2><p>Pasted paragraph</p><ul><li>Pasted item</li></ul>',
     });
 
-    // The header is the new sentinel; wait for the column to grow.
-    await waitForChildCount(page, 'c1', 2);
+    // Wait until the original and all three pasted blocks belong to the column.
+    await waitForChildCount(page, 'c1', 4);
 
     const saved = await saveBlok(page);
 
@@ -127,7 +127,7 @@ test.describe('Pasting multi-block content into a column', () => {
       'text/html': '<p>Alpha line</p><p>Beta line</p><p>Gamma line</p>',
     });
 
-    await waitForChildCount(page, 'c1', 2);
+    await waitForChildCount(page, 'c1', 4);
 
     const saved = await saveBlok(page);
 

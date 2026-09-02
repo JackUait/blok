@@ -39,9 +39,11 @@ const DISALLOWED_ORIGIN = 'https://evil.example.net';
 
 interface TicketFixture {
   compatible: string;
+  docMismatch: string;
   expired: string;
   malformed: string;
   noncanonicalHeaderTicket: string;
+  readOnly: string;
   secret: string;
   tampered: string;
   userTwo: string;
@@ -54,8 +56,17 @@ function isTicketFixture(value: unknown): value is TicketFixture {
 
   const fixture = value as Record<string, unknown>;
 
-  return ['compatible', 'expired', 'malformed', 'noncanonicalHeaderTicket', 'secret', 'tampered', 'userTwo']
-    .every((key) => typeof fixture[key] === 'string');
+  return [
+    'compatible',
+    'docMismatch',
+    'expired',
+    'malformed',
+    'noncanonicalHeaderTicket',
+    'readOnly',
+    'secret',
+    'tampered',
+    'userTwo',
+  ].every((key) => typeof fixture[key] === 'string');
 }
 
 function loadTickets(): TicketFixture {
@@ -367,7 +378,7 @@ it.each([
     name: 'none',
     args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'application/json',
       status: 400,
       text: '{"success":0}\n',
@@ -377,7 +388,7 @@ it.each([
     name: 'proxy',
     args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
     token: undefined,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'application/json',
       status: 400,
       text: '{"success":0}\n',
@@ -387,17 +398,26 @@ it.each([
     name: 'ticket',
     args: ticketArgs('--rate-limit', '0'),
     token: tickets.compatible,
-    rejectedRequest: {
+    missingRequest: {
       contentType: 'text/plain; charset=utf-8',
       status: 403,
       text: 'origin not allowed\n',
     },
   },
-])('$name mode handles allowed, disallowed, and missing origins', async (testCase) => {
+])('$name mode handles allowed and missing origins', async (testCase) => {
   await withServer(testCase.args, async (server) => {
     const allowed = await server.request('GET', '/unfurl', {
       headers: requestHeaders(ALLOWED_ORIGIN, testCase.token),
       parseJson: true,
+    });
+    const missingRequest = await server.request('GET', '/unfurl', {
+      headers: requestHeaders(undefined, testCase.token),
+    });
+    const missingPreflight = await server.request('OPTIONS', '/unfurl', {
+      headers: {
+        ...requestHeaders(),
+        'Access-Control-Request-Method': 'GET',
+      },
     });
 
     expect(allowed).toMatchObject({
@@ -407,34 +427,75 @@ it.each([
       text: '{"success":0}\n',
     });
     expect(allowed.rawHeaders.vary).toEqual(['Origin']);
+    expect(missingRequest).toMatchObject({
+      status: testCase.missingRequest.status,
+      headers: { 'content-type': testCase.missingRequest.contentType },
+      text: testCase.missingRequest.text,
+    });
+    expectNoCors(missingRequest.headers);
+    expect(missingPreflight).toMatchObject({
+      status: 403,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      text: 'origin not allowed\n',
+    });
+    expectNoCors(missingPreflight.headers);
+  });
+});
 
-    for (const [name, origin] of [
-      ['disallowed', DISALLOWED_ORIGIN],
-      ['missing', undefined],
-    ] as const) {
-      const rejectedRequest = await server.request('GET', '/unfurl', {
+it.each([
+  {
+    name: 'none',
+    args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+  },
+  {
+    name: 'proxy',
+    args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+    token: undefined,
+  },
+  {
+    name: 'ticket',
+    args: ticketArgs('--rate-limit', '0'),
+    token: tickets.compatible,
+  },
+])('$name mode rejects every present disallowed origin', async (testCase) => {
+  await withServer(testCase.args, async (server) => {
+    for (const origin of [DISALLOWED_ORIGIN, 'null']) {
+      const response = await server.request('GET', '/unfurl', {
         headers: requestHeaders(origin, testCase.token),
       });
-      const rejectedPreflight = await server.request('OPTIONS', '/unfurl', {
-        headers: {
-          ...requestHeaders(origin),
-          'Access-Control-Request-Method': 'GET',
-        },
-      });
 
-      expect(rejectedRequest, name).toMatchObject({
-        status: testCase.rejectedRequest.status,
-        headers: { 'content-type': testCase.rejectedRequest.contentType },
-        text: testCase.rejectedRequest.text,
-      });
-      expectNoCors(rejectedRequest.headers);
-      expect(rejectedPreflight, name).toMatchObject({
+      expect(response, JSON.stringify(origin)).toMatchObject({
         status: 403,
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         text: 'origin not allowed\n',
       });
-      expectNoCors(rejectedPreflight.headers);
+      expectNoCors(response.headers);
     }
+  });
+});
+
+it.each([
+  {
+    name: 'none',
+    args: serverArgs('--auth', 'none', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+  },
+  {
+    name: 'proxy',
+    args: serverArgs('--auth', 'proxy', '--allow-origin', ALLOWED_ORIGIN, '--rate-limit', '0'),
+  },
+])('$name mode rejects an originless cross-site browser request', async (testCase) => {
+  await withServer(testCase.args, async (server) => {
+    const response = await server.request('GET', '/unfurl', {
+      headers: { 'Sec-Fetch-Site': 'cross-site' },
+    });
+
+    expect(response).toMatchObject({
+      status: 403,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+      text: 'origin not allowed\n',
+    });
+    expectNoCors(response.headers);
   });
 });
 
@@ -788,7 +849,7 @@ it.each([
       'https://uploads.example.test',
     ],
     exitCode: 1,
-    stderr: '--s3-endpoint must be a full URL with a scheme and a host',
+    stderr: '--s3-endpoint must be a full HTTP(S) origin without credentials, a path, a query or a fragment',
     env: {
       BLOK_S3_ACCESS_KEY: 'access-key',
       BLOK_S3_SECRET_KEY: 'secret-key',
@@ -1443,6 +1504,32 @@ it('reports an upstream unfurl timeout as success zero', async () => {
   }
 }, 15_000);
 
+it('requires the exact application/json media type for upload-by-url', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      for (const contentType of [
+        undefined,
+        'text/plain',
+        'application/problem+json',
+        'application/json-patch+json',
+      ]) {
+        const response = await server.request('POST', '/upload-by-url', {
+          body: '{"url":"https://source.example.test/file"}',
+          headers: contentType === undefined ? {} : { 'Content-Type': contentType },
+        });
+
+        expect(response, contentType).toMatchObject({
+          status: 415,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+          text: 'expected application/json\n',
+        });
+      }
+
+      expect(await readdir(directory)).toEqual([]);
+    });
+  });
+});
+
 it('stores redirected upload-by-url bytes with final response metadata', async () => {
   const origin = await startFixtureOrigin();
 
@@ -1719,4 +1806,106 @@ it('bounds and validates the upload-by-url JSON envelope', async () => {
   } finally {
     await origin.stop();
   }
+});
+
+it('deletes a stored asset and refuses a URL it did not issue', async () => {
+  await withTemporaryDirectory(async (directory) => {
+    await withServer(serverArgs('--storage-dir', directory), async (server) => {
+      const bytes = Buffer.from('asset to be swept');
+      const upload = createMultipartUpload({ bytes, fileName: 'photo.png', mimeType: 'image/png' });
+      const stored = await server.request('POST', '/upload', {
+        body: upload.body,
+        headers: { 'Content-Type': upload.contentType },
+        parseJson: true,
+      });
+      const payload = requireUploadResponse(stored.json);
+      const storedPath = new URL(payload.url).pathname;
+      const storedName = storedPath.split('/').at(-1) ?? '';
+
+      expect(stored.status).toBe(200);
+      expect(await readdir(directory)).toEqual([storedName]);
+
+      const foreign = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `https://cdn.example.test/files/${storedName}` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const ungenerated = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `${server.baseUrl}/files/notes.txt` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const traversal = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: `${server.baseUrl}/files/../${storedName}` }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const wrongMedia = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'text/plain' },
+      });
+      const malformed = await server.request('POST', '/delete', {
+        body: '{}',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      for (const response of [foreign, ungenerated, traversal]) {
+        expect(response).toMatchObject({
+          status: 404,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+          text: 'not found\n',
+        });
+      }
+      expect(wrongMedia).toMatchObject({
+        status: 415,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'expected application/json\n',
+      });
+      expect(malformed).toMatchObject({
+        status: 400,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+        text: 'expected {"url": "..."}\n',
+      });
+      expect(await readdir(directory)).toEqual([storedName]);
+
+      const deleted = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'application/json' },
+        parseJson: true,
+      });
+
+      expect(deleted).toMatchObject({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        json: { success: 1 },
+        text: '{"success":1}\n',
+      });
+      expect(await readdir(directory)).toEqual([]);
+      expect(await server.request('GET', storedPath)).toMatchObject({ status: 404 });
+
+      const repeated = await server.request('POST', '/delete', {
+        body: JSON.stringify({ url: payload.url }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      expect(repeated.status).toBeLessThan(500);
+      expect(repeated).toMatchObject({ status: deleted.status, text: deleted.text });
+    });
+  });
+});
+
+it('unregisters the delete route when storage is absent', async () => {
+  await withServer(serverArgs('--storage-dir', ''), async (server) => {
+    const requests = await Promise.all([
+      server.request('POST', '/delete', {
+        body: '{"url":"https://cdn.example.test/files/x"}',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      server.request('OPTIONS', '/delete', { headers: requestHeaders(ALLOWED_ORIGIN) }),
+    ]);
+
+    for (const response of requests) {
+      expect(response).toMatchObject({
+        status: 404,
+        text: '404 page not found\n',
+      });
+    }
+  });
 });

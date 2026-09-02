@@ -72,8 +72,14 @@ function renderWith(
  */
 function errorMarkup(error: unknown): string {
   const message = error instanceof Error ? error.message : 'Unknown error';
+  const escaped = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
-  return `<span class="text-red-500 text-sm">${message}</span>`;
+  return `<span class="text-red-500 text-sm">${escaped}</span>`;
 }
 
 /**

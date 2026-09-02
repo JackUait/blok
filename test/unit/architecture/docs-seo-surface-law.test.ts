@@ -201,22 +201,37 @@ describe.each(TREES)('docs SEO surface law — %s copy', (_locale, metadata) => 
     expect(empty, `routes with no H1 — the strongest on-page relevance signal: ${empty.join(', ')}`).toEqual([]);
   });
 
-  it('keeps every title within 60 characters', () => {
+  /**
+   * These bounds catch a broken template, not a long sentence.
+   *
+   * Google documents no length limit for either field — "there's no limit on
+   * how long a `<title>` element can be" / "There's no limit on how long a meta
+   * description can be" — and truncation is by pixel width per device, which no
+   * character count expresses. Length is also absent from Google's list of
+   * reasons it rewrites a title. The old 60/155 bars were an SEO-tool
+   * convention, and enforcing them cost real quality: `route-metadata.ru.ts`
+   * still carries a comment about compressing Russian titles to fit a "budget"
+   * that does not exist, and a compressed title is likelier to trip the
+   * rewrite condition Google DOES document (an inaccurate title) than a long
+   * one is. Uniqueness and presence stay hard failures below; they are
+   * documented.
+   */
+  it('catches a title long enough to be a template bug', () => {
     const tooLong = entries()
-      .filter(([, meta]) => meta.title.length > 60)
+      .filter(([, meta]) => meta.title.length > 120)
       .map(([path, meta]) => `${path} (${meta.title.length}): ${meta.title}`);
 
-    expect(tooLong, `titles Google will truncate in the result: ${tooLong.join(' | ')}`).toEqual([]);
+    expect(tooLong, `titles this long are a generator bug: ${tooLong.join(' | ')}`).toEqual([]);
   });
 
-  it('keeps every description between 70 and 155 characters', () => {
+  it('catches a description that is empty or runaway', () => {
     const outOfBounds = entries()
-      .filter(([, meta]) => meta.description.length < 70 || meta.description.length > 155)
+      .filter(([, meta]) => meta.description.trim().length < 50 || meta.description.length > 320)
       .map(([path, meta]) => `${path} (${meta.description.length}): ${meta.description}`);
 
     expect(
       outOfBounds,
-      `descriptions too thin to be used or long enough to be truncated: ${outOfBounds.join(' | ')}`,
+      `descriptions with nothing in them, or long enough to be a generator bug: ${outOfBounds.join(' | ')}`,
     ).toEqual([]);
   });
 

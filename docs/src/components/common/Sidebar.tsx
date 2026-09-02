@@ -1,5 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback, type ReactNode } from 'react';
 import { Link } from './Link';
+import { useI18n } from '../../contexts/I18nContext';
 import { cn } from '@/lib/utils';
 
 export interface SidebarLink {
@@ -40,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   buildHref,
   header,
 }) => {
+  const { t } = useI18n();
   const asideRef = useRef<HTMLElement>(null);
 
   // Fade the scroll container's content toward the page background at whichever
@@ -152,7 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <nav
         className="flex flex-col gap-2"
-        aria-label="Documentation sections"
+        aria-label={t('common.docsSections')}
         data-blok-testid={`${variant}-sidebar-nav`}
       >
         {sections.map((section, idx) => {

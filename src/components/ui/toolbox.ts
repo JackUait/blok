@@ -250,6 +250,11 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
   private currentContentEditable: Element | null = null;
 
   /**
+   * Accessible name replaced while the contentEditable owns the listbox.
+   */
+  private previousContentEditableAriaLabel: string | null = null;
+
+  /**
    * Tool names hidden for the duration of this opening because the block being
    * inserted would land somewhere that does not permit them — a table cell
    * (the Table tool's `restrictedTools`) or a container declaring
@@ -1452,6 +1457,8 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     host.setAttribute('aria-expanded', 'true');
     host.setAttribute('aria-autocomplete', 'list');
     host.setAttribute('aria-haspopup', 'listbox');
+    this.previousContentEditableAriaLabel = host.getAttribute('aria-label');
+    host.setAttribute('aria-label', this.i18nLabels.slashSearchPlaceholder);
 
     if (this.listboxId !== undefined) {
       host.setAttribute('aria-controls', this.listboxId);
@@ -1468,6 +1475,12 @@ export class Toolbox extends EventsDispatcher<ToolboxEventMap> {
     host.removeAttribute('aria-expanded');
     host.removeAttribute('aria-autocomplete');
     host.removeAttribute('aria-haspopup');
+    if (this.previousContentEditableAriaLabel === null) {
+      host.removeAttribute('aria-label');
+    } else {
+      host.setAttribute('aria-label', this.previousContentEditableAriaLabel);
+    }
+    this.previousContentEditableAriaLabel = null;
     host.removeAttribute('aria-controls');
     host.removeAttribute('aria-activedescendant');
   }

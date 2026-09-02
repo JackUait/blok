@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 var hostArguments = args;
@@ -61,13 +62,24 @@ if (parsed.SecretFromFlag)
       "set BLOK_SECRET in the environment instead");
 }
 
+if (parsed.DocEndpointAuthFromFlag)
+{
+  Console.Error.WriteLine(
+      "warning: --doc-endpoint-auth puts the credential in this machine's process list; " +
+      "set BLOK_DOC_ENDPOINT_AUTH in the environment instead");
+}
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
 builder.Logging.ClearProviders();
 var listenAddress = options.ListenAddress.StartsWith(':')
   ? $"0.0.0.0{options.ListenAddress}"
   : options.ListenAddress;
 builder.WebHost.UseUrls($"http://{listenAddress}");
-HostRequestTimeouts.Configure(builder, TimeSpan.FromMinutes(10));
+HostRequestTimeouts.Configure(
+    builder,
+    HostRequestTimeouts.DefaultRequestTimeout,
+    HostRequestTimeouts.DefaultKeepAliveTimeout);
+HostCollab.Configure(builder, options);
 var blokServer = builder.Services.AddBlokServer(options);
 #if BLOK_SERVER_CONFORMANCE
 if (conformance.Origin is not null)
@@ -80,14 +92,15 @@ if (conformance.Origin is not null)
 
 var app = builder.Build();
 HostRequestTimeouts.Use(app);
+HostCollab.Use(app, options);
 app.MapBlokServer();
-
-Console.Error.WriteLine(
-    $"blok-server {options.Version} listening on {options.ListenAddress} (--auth {options.Auth})");
 
 try
 {
-  await app.RunAsync();
+  await app.StartAsync();
+  Console.Error.WriteLine(
+      $"blok-server {options.Version} listening on {options.ListenAddress} (--auth {options.Auth})");
+  await app.WaitForShutdownAsync();
   return 0;
 }
 catch (Exception error)
@@ -100,20 +113,29 @@ namespace Blok.Server.Host
 {
   internal static class HostRequestTimeouts
   {
+    internal static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromMinutes(10);
+
+    internal static readonly TimeSpan DefaultKeepAliveTimeout = TimeSpan.FromMinutes(2);
+
+    // Neither window applies to a sync socket: the endpoint opts out of the
+    // request-timeout policy, and Kestrel's keep-alive timer only runs
+    // between HTTP requests, not on an upgraded connection. Both are pinned
+    // by HostCollabTests against real Kestrel with shortened windows.
     internal static void Configure(
         WebApplicationBuilder builder,
-        TimeSpan timeout)
+        TimeSpan requestTimeout,
+        TimeSpan keepAliveTimeout)
     {
       builder.WebHost.ConfigureKestrel(kestrel =>
       {
         kestrel.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10);
-        kestrel.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+        kestrel.Limits.KeepAliveTimeout = keepAliveTimeout;
       });
       builder.Services.AddRequestTimeouts(timeouts =>
       {
         timeouts.DefaultPolicy = new RequestTimeoutPolicy
         {
-          Timeout = timeout,
+          Timeout = requestTimeout,
           TimeoutStatusCode = StatusCodes.Status504GatewayTimeout,
         };
       });

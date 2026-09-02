@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MutationHandler } from '../../../../src/components/block/mutation-handler';
+import { DATA_ATTR } from '../../../../src/components/constants/data-attributes';
 import { EventsDispatcher } from '../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../src/components/events';
 import { RedactorDomChanged } from '../../../../src/components/events';
+import { createPresenceRenderer } from '../../../../src/components/modules/collaboration/presence-renderer';
+import type { PresenceState } from '../../../../src/components/modules/collaboration/presence';
+import { isMutationBelongsToElement } from '../../../../src/components/utils/mutations';
+import { Column } from '../../../../src/tools/column';
+import { ColumnList } from '../../../../src/tools/column-list';
+import { TableGrid } from '../../../../src/tools/table/table-core';
+import type { API, BlockToolConstructorOptions } from '../../../../types';
 
 describe('MutationHandler', () => {
   let toolElement: HTMLElement | null;
@@ -684,4 +692,158 @@ describe('MutationHandler — parent writes on a child holder', () => {
     expect(onMutation).toHaveBeenCalledTimes(1);
     expect(handler.handleMutation([attributeRecord(childTool)]).shouldFireUpdate).toBe(true);
   });
+});
+
+/**
+ * Remote presence draws on a peer's block by stamping its HOLDER and appending
+ * one label inside it. That is a legal child-holder decoration, so it must be
+ * inert for change tracking — otherwise every nesting container holding an
+ * edited block fires UPDATED + BlockChanged on every awareness frame (up to
+ * ~10/s per peer), which reaches the host as onChange and a full Saver pass.
+ *
+ * The three containers below are the ones whose `[data-blok-nested-blocks]`
+ * slot had no `data-blok-mutation-free`, so this drives their REAL rendered DOM
+ * rather than a hand-built stand-in.
+ */
+describe('MutationHandler — a remote presence stamp inside a nesting container', () => {
+  const toolApi = {
+    styles: { block: 'blok-block' },
+    i18n: { t: (key: string) => key, has: () => false },
+    blocks: {
+      getChildren: vi.fn().mockReturnValue([]),
+      getBlockIndex: vi.fn().mockReturnValue(0),
+      insert: vi.fn(),
+      insertInsideParent: vi.fn(),
+      setBlockParent: vi.fn(),
+    },
+    caret: { setToBlock: vi.fn() },
+  } as unknown as API;
+
+  const toolOptions = (id: string): BlockToolConstructorOptions<never> => ({
+    data: {},
+    config: {},
+    api: toolApi,
+    readOnly: false,
+    block: { id, holder: document.createElement('div') },
+  } as unknown as BlockToolConstructorOptions<never>);
+
+  /** Every container's REAL tool root paired with its REAL child slot. */
+  const containers = (): { name: string; toolRoot: HTMLElement; slot: HTMLElement }[] => {
+    const columnRoot = new Column(toolOptions('col-1')).render();
+    const columnListRoot = new ColumnList(toolOptions('cl-1')).render();
+    const tableRoot = new TableGrid({ readOnly: false }).createGrid(1, 1);
+
+    const slotOf = (root: HTMLElement): HTMLElement => {
+      const slot = root.matches(`[${DATA_ATTR.nestedBlocks}]`)
+        ? root
+        : root.querySelector<HTMLElement>(`[${DATA_ATTR.nestedBlocks}]`);
+
+      if (slot === null) {
+        throw new Error('container rendered no child slot');
+      }
+
+      return slot;
+    };
+
+    return [
+      { name: 'column', toolRoot: columnRoot, slot: slotOf(columnRoot) },
+      { name: 'column-list', toolRoot: columnListRoot, slot: slotOf(columnListRoot) },
+      { name: 'table cell', toolRoot: tableRoot, slot: slotOf(tableRoot) },
+    ];
+  };
+
+  /** Core's child mount: slot > holder > [element-content] > tool root. */
+  const mountChild = (slot: HTMLElement): { holder: HTMLElement; childTool: HTMLElement } => {
+    const childHolder = document.createElement('div');
+    const content = document.createElement('div');
+    const childTool = document.createElement('div');
+
+    childHolder.setAttribute(DATA_ATTR.element, '');
+    content.setAttribute(DATA_ATTR.elementContent, '');
+    content.appendChild(childTool);
+    childHolder.appendChild(content);
+    slot.appendChild(childHolder);
+
+    return { holder: childHolder, childTool };
+  };
+
+  /** The records a real MutationObserver sees for one presence pass. */
+  const recordsFor = async (root: HTMLElement, write: () => void): Promise<MutationRecord[]> => {
+    const collected: MutationRecord[] = [];
+    const observer = new MutationObserver((records) => collected.push(...records));
+
+    observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true });
+    write();
+    await Promise.resolve();
+    collected.push(...observer.takeRecords());
+    observer.disconnect();
+
+    return collected;
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it.each(containers().map(({ name }) => name))(
+    'leaves the %s container inert across paint, repaint and peer-leave',
+    async (name) => {
+      const { toolRoot, slot } = containers().find((entry) => entry.name === name) as {
+        toolRoot: HTMLElement;
+        slot: HTMLElement;
+      };
+      const host = document.createElement('div');
+
+      host.appendChild(toolRoot);
+      document.body.appendChild(host);
+
+      const { holder, childTool } = mountChild(slot);
+      const renderer = createPresenceRenderer({
+        host,
+        resolveHolder: () => holder,
+        resolveInputs: () => [childTool],
+      });
+      const containerHandler = new MutationHandler(() => toolRoot, null, () => undefined);
+      const peer = (peerName: string): PresenceState[] => [
+        {
+          clientId: 9,
+          state: {
+            user: { name: peerName },
+            blockId: 'b1',
+            // The caret is what presence writes on a holder now, so it is what
+            // this law has to stay inert for.
+            caret: { blockId: 'b1', inputIndex: 0, anchor: 0, head: 0 },
+          },
+        },
+      ];
+
+      /**
+       * One presence pass, judged straight away.
+       *
+       * Judged straight away because `isMutationBelongsToElement` asks
+       * `contains()`, which answers about the tree AS IT IS WHEN ASKED — and
+       * presence records name the caret element, which the next pass takes back
+       * out. Collecting every pass and filtering at the end would ask about a
+       * torn-down tree and quietly drop the records under test. Production
+       * never does that: MutationHandler is handed its records inside the
+       * observer callback, while the DOM they describe is still current.
+       * @param write - the presence pass to record
+       */
+      const expectInert = async (write: () => void): Promise<void> => {
+        const records = await recordsFor(host, write);
+        const forContainer = records.filter((record) => isMutationBelongsToElement(record, toolRoot));
+
+        // The child never even sees its own decoration…
+        expect(records.filter((record) => isMutationBelongsToElement(record, childTool))).toEqual([]);
+        // …and the container sees it but scores it mutation-free.
+        expect(forContainer.length).toBeGreaterThan(0);
+        expect(containerHandler.handleMutation(forContainer).shouldFireUpdate).toBe(false);
+      };
+
+      await expectInert(() => renderer.render(peer('Ada'), 1));
+      await expectInert(() => renderer.render(peer('Ada Lovelace'), 1));
+      await expectInert(() => renderer.render([], 1));
+    }
+  );
 });

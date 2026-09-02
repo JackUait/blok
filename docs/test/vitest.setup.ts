@@ -3,8 +3,11 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 import { vi } from 'vitest';
 import { configure } from '@testing-library/dom';
 
-// Configure Testing Library to recognize data-blok-testid as a test ID attribute
-configure({ testIdAttribute: 'data-blok-testid' });
+// Coverage transforms can delay lazy UI on two-core CI runners.
+configure({
+  asyncUtilTimeout: 5000,
+  testIdAttribute: 'data-blok-testid',
+});
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);

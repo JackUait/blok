@@ -10,6 +10,7 @@
     <Description>ASP.NET Core registration and endpoint mapping for Blok server services.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://blokeditor.com</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/JackUait/blok.git</RepositoryUrl>
   </PropertyGroup>
@@ -20,5 +21,10 @@
 
   <ItemGroup>
     <ProjectReference Include="../Blok.Server/Blok.Server.csproj" />
+    <InternalsVisibleTo Include="Blok.Server.AspNetCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 </Project>

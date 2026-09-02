@@ -6,10 +6,10 @@ import { DocsHub } from './DocsHub';
 import { MODULE_ORDER } from './api-nav';
 import { TOOL_SECTIONS } from '../tools/tools-data';
 
-const renderHub = () =>
+const renderHub = (locale: 'en' | 'ru' = 'en', at = '/docs') =>
   render(
-    <MemoryRouter>
-      <I18nProvider>
+    <MemoryRouter initialEntries={[at]}>
+      <I18nProvider locale={locale}>
         <DocsHub />
       </I18nProvider>
     </MemoryRouter>,
@@ -31,7 +31,7 @@ describe('DocsHub', () => {
     );
 
     for (const id of MODULE_ORDER) {
-      expect(hrefs).toContain(`/docs/${id}`);
+      expect(hrefs).toContain(`/docs/${id}/`);
     }
   });
 
@@ -43,7 +43,7 @@ describe('DocsHub', () => {
     );
 
     for (const tool of TOOL_SECTIONS) {
-      expect(hrefs).toContain(`/docs/${tool.id}`);
+      expect(hrefs).toContain(`/docs/${tool.id}/`);
     }
   });
 
@@ -59,7 +59,29 @@ describe('DocsHub', () => {
   it('gives each link a short description so the page is not a bare list', () => {
     renderHub();
     const quickStart = screen.getByTestId('docs-hub-entry-quick-start');
-    expect(within(quickStart).getByRole('link')).toHaveAttribute('href', '/docs/quick-start');
+    expect(within(quickStart).getByRole('link')).toHaveAttribute('href', '/docs/quick-start/');
     expect(quickStart).toHaveTextContent(/get up and running/i);
+  });
+
+  // The hub took its H1 from route metadata for English only, and fell back to
+  // a hardcoded English literal for every other locale — so /ru/docs/ shipped
+  // `lang="ru"`, a Russian <title>, and "Blok documentation" as its heading.
+  // Google reads the visible content to decide a page's language and ignores
+  // `lang`, so the Russian hub was published as an English page.
+  it('takes its heading from route metadata in every locale', () => {
+    renderHub('ru', '/ru/docs');
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Документация Blok');
+  });
+
+  it('introduces the hub in the reader\'s language, not English', () => {
+    const { container } = renderHub('ru', '/ru/docs');
+    const intro = container.querySelector('h1 + p, p');
+
+    expect(intro?.textContent ?? '').not.toMatch(/Guides, the full API reference/);
+    expect(intro?.textContent ?? '').toMatch(/[А-Яа-я]/);
   });
 });

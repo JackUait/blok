@@ -120,6 +120,18 @@ describe('SelectionController', () => {
       expect(onSpy).toHaveBeenCalledWith(document, 'selectionchange', expect.any(Function));
     });
 
+    it('does not handle a queued selection change after disable', () => {
+      const { controller } = createSelectionController();
+      const anchorElementSpy = vi.spyOn(Selection, 'anchorElement', 'get');
+
+      controller.enable();
+      document.dispatchEvent(new Event('selectionchange'));
+      controller.disable();
+      vi.runAllTimers();
+
+      expect(anchorElementSpy).not.toHaveBeenCalled();
+    });
+
     it('binds pointerup listener on enable', () => {
       const { controller } = createSelectionController();
 

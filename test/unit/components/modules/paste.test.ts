@@ -1709,7 +1709,7 @@ describe('Paste module', () => {
 
       await paste.prepare();
 
-      const cleanSpy = vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html.replace(/<script>.*?<\/script>/g, ''));
+      const cleanSpy = vi.spyOn(sanitizer, 'clean').mockImplementation((html: string) => html.replace(/<script>.*?<\/script>/gi, ''));
 
       mocks.BlockManager.currentBlock = {
         tool: {

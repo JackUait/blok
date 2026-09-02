@@ -440,21 +440,21 @@ describe('link registry', () => {
     });
 
     it('matches a legacy Google Forms link without the e/ segment', () => {
-      const result = matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform');
+      const result = matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform'); // gitleaks:allow
 
       expect(result?.service).toBe('googleforms');
-      expect(result?.embedUrl).toBe('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform?embedded=true');
+      expect(result?.embedUrl).toBe('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/viewform?embedded=true'); // gitleaks:allow
     });
 
     it('does not match forms.gle short links or form editor links', () => {
       expect(matchEmbedService('https://forms.gle/Ab3dEfGh12')).toBeNull();
-      expect(matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/edit')).toBeNull();
+      expect(matchEmbedService('https://docs.google.com/forms/d/1r5zrO4VnIu8NGfNVIbjkWjRqsBubSh-JgehSL1vDm1k/edit')).toBeNull(); // gitleaks:allow
     });
   });
 
   describe('Published Google Workspace (d/e/2PACX) URL variants', () => {
-    const DOCS_TOKEN = '2PACX-1vQpBF5Z9a02DALDxXD652Vic622H';
-    const SHEETS_TOKEN = '2PACX-1vTFW5Q43lfOxIM3DkQU68ROWGR2NKo';
+    const DOCS_TOKEN = '2PACX-1vQpBF5Z9a02DALDxXD652Vic622H'; // gitleaks:allow
+    const SHEETS_TOKEN = '2PACX-1vTFW5Q43lfOxIM3DkQU68ROWGR2NKo'; // gitleaks:allow
 
     it('embeds a published Google Doc via its pub?embedded=true endpoint', () => {
       const result = matchEmbedService(`https://docs.google.com/document/d/e/${DOCS_TOKEN}/pub`);

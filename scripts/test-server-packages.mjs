@@ -69,7 +69,7 @@ function parseArgs(args) {
 const { packageDirectory, packageVersion } = parseArgs(process.argv.slice(2));
 const packageProjects = {
   'Blok.Server': {
-    description: 'Shared server services and embedded document runtime for Blok.',
+    description: 'Shared server services for Blok.',
     path: join(
       repositoryRoot,
       'packages/server/dotnet/Blok.Server/Blok.Server.csproj',
@@ -113,6 +113,30 @@ function sha256(bytes) {
 
 function withTrailingSeparator(path) {
   return path.endsWith(sep) ? path : `${path}${sep}`;
+}
+
+function stripXmlComments(xml) {
+  let cursor = 0;
+  let result = '';
+
+  while (cursor < xml.length) {
+    const start = xml.indexOf('<!--', cursor);
+
+    if (start < 0) {
+      return result + xml.slice(cursor);
+    }
+
+    const end = xml.indexOf('-->', start + 4);
+
+    if (end < 0) {
+      return result + xml.slice(cursor);
+    }
+
+    result += xml.slice(cursor, start);
+    cursor = end + 3;
+  }
+
+  return result;
 }
 
 function decodeXml(value) {
@@ -163,8 +187,10 @@ async function readPackedPackage(feed, packageId) {
 
   const dllPath = `lib/net10.0/${packageId}.dll`;
   const dll = await archive.file(dllPath)?.async('nodebuffer');
+  const readme = await archive.file('README.md')?.async('string');
 
   assert.notEqual(dll, undefined, `${packageId} package is missing ${dllPath}`);
+  assert.notEqual(readme, undefined, `${packageId} package is missing README.md`);
 
   return { dll, nuspec };
 }
@@ -182,6 +208,7 @@ function assertPackageMetadata(packageId, nuspec) {
   assert.equal(xmlAttributes(license).type, 'expression');
   assert.equal(xmlText(nuspec, 'license'), 'Apache-2.0');
   assert.equal(xmlText(nuspec, 'projectUrl'), 'https://blokeditor.com/');
+  assert.equal(xmlText(nuspec, 'readme'), 'README.md');
 
   const repository = xmlAttributes(xmlTag(nuspec, 'repository'));
   assert.equal(repository.type, 'git');
@@ -211,8 +238,8 @@ function assertPackageMetadata(packageId, nuspec) {
         .map(({ id, version }) => ({ id, version }))
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
-        { id: 'AngleSharp', version: '1.5.0' },
-        { id: 'BouncyCastle.Cryptography', version: '2.6.2' },
+        { id: 'AngleSharp', version: '1.7.2' },
+        { id: 'BouncyCastle.Cryptography', version: '2.7.0' },
         { id: 'Jint', version: '4.16.1' },
       ],
       'Blok.Server must retain its exact direct package dependencies',
@@ -601,8 +628,7 @@ async function main() {
 
   try {
     for (const [packageId, project] of Object.entries(packageProjects)) {
-      const projectXml = (await readFile(project.path, 'utf8'))
-        .replace(/<!--[\s\S]*?-->/g, '');
+      const projectXml = stripXmlComments(await readFile(project.path, 'utf8'));
 
       assert.doesNotMatch(
         projectXml,
@@ -611,8 +637,7 @@ async function main() {
       );
     }
 
-    const hostProjectXml = (await readFile(hostProject, 'utf8'))
-      .replace(/<!--[\s\S]*?-->/g, '');
+    const hostProjectXml = stripXmlComments(await readFile(hostProject, 'utf8'));
     const hostPackableValues = [
       ...hostProjectXml.matchAll(
         /<IsPackable\b[^>]*>([\s\S]*?)<\/IsPackable>/g,

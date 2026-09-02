@@ -13,6 +13,7 @@ import { announce } from '../../utils/announcer';
 import { cloneOutputBlocks } from '../../utils/clone-output-blocks';
 import { normalizeTableChildParents } from '../../utils/data-model-transform';
 import { equalsOutputData, normalizeOutputBlocks } from '../../../shared/output-data';
+import { resolveHashTarget } from '../../utils/hash-target';
 import { highlightBlockArrival } from '../../utils/highlight-block-arrival';
 
 import { logLabeled } from './../../utils';
@@ -219,9 +220,43 @@ export class BlocksAPI extends Module {
   }
 
   /**
+   * Refuses a whole-document replacement while collaboration is on.
+   *
+   * `render()` and `clear()` rebuild the document from local data. In a
+   * collaboration session the document belongs to the sync service, so
+   * rebuilding it here would push one client's copy over everybody else's —
+   * the dual-seeding corruption the sync-first load exists to prevent. The
+   * sanctioned wholesale-replace is the server's reset endpoint.
+   *
+   * Zero cost single-player: `Collaboration` is undefined in a stubbed harness
+   * and `isEnabled` is false whenever the `collaboration` key is absent.
+   * @param method - the refused API, named back to the caller
+   */
+  private refuseWholesaleReplace(method: 'render' | 'clear' | 'renderFromHTML' | 'importMarkdown'): void {
+    if (!this.Blok.Collaboration?.isEnabled) {
+      return;
+    }
+
+    // The gate is the module; the doc id is only for the message, so a config
+    // that cannot supply one still produces a readable endpoint.
+    const doc = this.config.collaboration?.doc ?? '{doc}';
+
+    throw new Error(
+      `blocks.${method}() is not allowed while collaboration is on. ` +
+      'The document lives on the sync service and is shared with everyone editing it, ' +
+      'so replacing it from this editor would overwrite their work. ' +
+      `To replace the whole document, call POST /sync/${doc}/reset on your server: ` +
+      'it reloads the document from your own document endpoint and every open editor picks it up. ' +
+      'To change part of the document, use blocks.insert(), blocks.update() or blocks.delete().'
+    );
+  }
+
+  /**
    * Clear Blok's area
    */
   public async clear(): Promise<void> {
+    this.refuseWholesaleReplace('clear');
+
     await this.Blok.BlockManager.clear(true);
     this.Blok.InlineToolbar.close();
   }
@@ -231,6 +266,10 @@ export class BlocksAPI extends Module {
    * @param {OutputData} data — Saved Blok data
    */
   public async render(data: OutputData | LooseOutputData): Promise<void> {
+    // Before the data check and before the echo-equality save(): a refused
+    // wholesale replace must do no work at all.
+    this.refuseWholesaleReplace('render');
+
     if (data === undefined || data.blocks === undefined) {
       throw new Error('Incorrect data passed to the render() method');
     }
@@ -279,6 +318,8 @@ export class BlocksAPI extends Module {
    * @returns {Promise<void>}
    */
   public async renderFromHTML(data: string): Promise<void> {
+    this.refuseWholesaleReplace('renderFromHTML');
+
     this.Blok.Renderer.markRenderStart();
 
     try {
@@ -297,6 +338,11 @@ export class BlocksAPI extends Module {
    * @param options - Optional configuration for tool mapping and extensions
    */
   public async importMarkdown(md: string, options?: MarkdownImportConfig): Promise<OutputData> {
+    // Refuse HERE, not in the render() this delegates to: the message names the
+    // method the caller actually invoked, and a refused call never pays for the
+    // converter's lazy chunk.
+    this.refuseWholesaleReplace('importMarkdown');
+
     const { markdownToBlocks } = await import('../../../markdown/index');
     const blocks = await markdownToBlocks(md, options);
     const data: OutputData = { blocks };
@@ -747,11 +793,18 @@ export class BlocksAPI extends Module {
    * @param id - target block id
    */
   public scrollToBlock(id: string): void {
-    const el = document.querySelector(`[data-blok-id="${CSS.escape(id)}"]`);
+    /**
+     * `id` is a block id for every caller that knows one, but the deferred
+     * boot-time hash lands here too — and that hash can be a heading anchor
+     * from imported HTML rather than a block id.
+     */
+    const target = resolveHashTarget(id, this.Blok.UI?.nodes.holder);
 
-    if (el === null) {
+    if (target === null) {
       return;
     }
+
+    const el = target.element;
 
     /**
      * A public scroll to this exact block consumes any deferred boot-time hash
@@ -767,7 +820,9 @@ export class BlocksAPI extends Module {
 
     window.scrollTo({ top: y, behavior: 'smooth' });
 
-    const block = this.Blok.BlockManager.getBlockById(id);
+    const block = target.blockId === null
+      ? undefined
+      : this.Blok.BlockManager.getBlockById(target.blockId);
 
     if (block !== undefined) {
       this.Blok.BlockSelection.selectBlock(block);

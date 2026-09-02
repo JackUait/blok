@@ -89,8 +89,8 @@ test.describe('Inline code styling', () => {
 
       const styles = await readInlineCodeStyles(page);
 
-      // --blok-color-red-text light: #d44c47 → rgb(212, 76, 71)
-      expect(styles.color).toBe('rgb(212, 76, 71)');
+      // --blok-inline-code-text light: #b93a35 → rgb(185, 58, 53)
+      expect(styles.color).toBe('rgb(185, 58, 53)');
 
       // Background must be visible (not transparent)
       expect(styles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
@@ -122,8 +122,8 @@ test.describe('Inline code styling', () => {
 
       const styles = await readInlineCodeStyles(page);
 
-      // --blok-color-red-text dark: #dd5e5a → rgb(221, 94, 90)
-      expect(styles.color).toBe('rgb(221, 94, 90)');
+      // --blok-inline-code-text dark: #ea8480 → rgb(234, 132, 128)
+      expect(styles.color).toBe('rgb(234, 132, 128)');
 
       // Background must be visible (not transparent)
       expect(styles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');

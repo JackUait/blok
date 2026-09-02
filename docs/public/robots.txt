@@ -3,9 +3,10 @@
 # Everything on this property is public documentation and is open to every
 # crawler, including AI training and AI-answer crawlers.
 #
-# Nothing under /assets/ is disallowed on purpose: Googlebot and Applebot are
-# the only crawlers that execute JavaScript, and this is a client-rendered SPA,
-# so blocking its JS/CSS bundles would stop them rendering any page at all.
+# Nothing under /assets/ is disallowed on purpose. Every route is prerendered to
+# a real HTML file, so a crawler that runs no JavaScript already sees the prose —
+# but the bundles still carry interactive content and the client-side router, and
+# a crawler that does render is entitled to the same page a reader gets.
 
 User-agent: *
 Allow: /
@@ -16,32 +17,22 @@ Allow: /
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
 # --- AI answer engines / retrieval crawlers (explicit opt-in) ---
+#
+# One group, many tokens: RFC 9309 says a crawler obeys only the most specific
+# group matching its token, so a named agent never reads the `*` group above.
+# Listing them here without repeating Content-Signal would have told each of
+# them nothing.
 
 User-agent: OAI-SearchBot
-Allow: /
-
 User-agent: ChatGPT-User
-Allow: /
-
 User-agent: GPTBot
-Allow: /
-
 User-agent: Claude-SearchBot
-Allow: /
-
 User-agent: Claude-User
-Allow: /
-
 User-agent: ClaudeBot
-Allow: /
-
 User-agent: PerplexityBot
-Allow: /
-
 User-agent: Google-Extended
-Allow: /
-
 User-agent: Applebot-Extended
 Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 
 Sitemap: https://blokeditor.com/sitemap.xml

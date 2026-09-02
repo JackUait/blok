@@ -56,9 +56,10 @@ export const FAMILY = [
     packDir: 'packages/presets',
   },
   {
-    // Ships only the npm wrapper (bin/). The tag workflow publishes the shared
-    // C# host archives and container image. No `@bloklabs/core` peer, so it
-    // sits with cli and presets rather than under the ordering rule above.
+    // Ships the npm wrapper (bin/) plus the ticket signer (dist/). The tag
+    // workflow publishes the shared C# host archives and container image. No
+    // `@bloklabs/core` peer, so it sits with cli and presets rather than under
+    // the ordering rule above.
     npmName: '@bloklabs/server',
     gprName: '@dodopizza/blok-server',
     manifestPath: 'packages/server/package.json',

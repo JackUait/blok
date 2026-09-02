@@ -39,11 +39,11 @@ describe('HowToCustomToolContent', () => {
     const { container } = renderHowTo();
     expect(screen.getByRole('link', { name: 'Tools API' })).toHaveAttribute(
       'href',
-      '/docs/tools-api',
+      '/docs/tools-api/',
     );
     expect(screen.getByRole('link', { name: 'BlockData' })).toHaveAttribute(
       'href',
-      '/docs/block-data',
+      '/docs/block-data/',
     );
     expect(container.querySelector('a[href^="#"]')).toBeNull();
   });

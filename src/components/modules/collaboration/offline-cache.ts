@@ -153,6 +153,46 @@ const toAdoptableMeta = (value: unknown): OfflineCacheMeta | null => {
   };
 };
 
+/** `abort()` throws once a transaction has finished or already aborted itself. */
+const abortQuietly = (transaction: IDBTransaction): void => {
+  try {
+    transaction.abort();
+  } catch {
+    // Already finished: nothing left to roll back.
+  }
+};
+
+/**
+ * Runs one batch of requests on a single transaction, so they commit or roll
+ * back together.
+ *
+ * `issue` creates every request synchronously — awaiting one request before
+ * issuing the next lets the transaction go inactive. A request that throws on
+ * the way in leaves the earlier ones queued, and those would still auto-commit,
+ * so the transaction is aborted by hand. Promises are attached only once every
+ * request exists: an abort rejects a pending request, and a promise nobody
+ * awaits would surface as an unhandled rejection.
+ * @param transaction - the readwrite transaction the batch runs on
+ * @param issue - creates the requests, in order
+ */
+const writeTogether = async (transaction: IDBTransaction, issue: () => IDBRequest[]): Promise<void> => {
+  const requests: IDBRequest[] = [];
+
+  try {
+    requests.push(...issue());
+  } catch (error) {
+    abortQuietly(transaction);
+    throw error;
+  }
+
+  try {
+    await Promise.all(requests.map((request) => idb.rtop(request)));
+  } catch (error) {
+    abortQuietly(transaction);
+    throw error;
+  }
+};
+
 /**
  * The lock manager to compact under, or null when the environment has none.
  * @param supplied - a lock manager the caller injected
@@ -412,36 +452,41 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
       }
 
       await enqueue(async (db) => {
-        const [metaStore] = idb.transact(db, [META_STORE]);
+        // Counted up front, on its own transaction: the write below must not
+        // await anything between its two requests.
+        const [countStore] = idb.transact(db, [UPDATES_STORE], 'readonly');
+        const rows = tag.lineage === state.lineage
+          ? state.rows
+          : (await rowsUnder(countStore, tag.lineage)).bytes.length;
 
-        await idb.rtop(metaStore.put({
-          format: tag.format,
-          epoch: tag.epoch,
-          lineage: tag.lineage,
-          writeDenied,
-          savedAt: Date.now(),
-        }, META_KEY));
+        // Meta and snapshot land together or not at all. Meta is the adoption
+        // gate, and a meta with no snapshot behind it would adopt an EMPTY
+        // document as editable.
+        const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
 
-        if (tag.lineage !== state.lineage) {
-          state.lineage = tag.lineage;
+        await writeTogether(metaStore.transaction, () => {
+          const requests: IDBRequest[] = [
+            metaStore.put({
+              format: tag.format,
+              epoch: tag.epoch,
+              lineage: tag.lineage,
+              writeDenied,
+              savedAt: Date.now(),
+            }, META_KEY),
+          ];
 
-          const [countStore] = idb.transact(db, [UPDATES_STORE], 'readonly');
+          if (snapshot !== undefined) {
+            requests.push(updatesStore.add({
+              lineage: tag.lineage,
+              bytes: snapshot,
+            }));
+          }
 
-          state.rows = (await rowsUnder(countStore, tag.lineage)).bytes.length;
-        }
+          return requests;
+        });
 
-        if (snapshot === undefined) {
-          return;
-        }
-
-        const [store] = idb.transact(db, [UPDATES_STORE]);
-
-        await idb.rtop(store.add({
-          lineage: tag.lineage,
-          bytes: snapshot,
-        }));
-
-        state.rows += 1;
+        state.lineage = tag.lineage;
+        state.rows = rows + (snapshot === undefined ? 0 : 1);
       });
     },
 

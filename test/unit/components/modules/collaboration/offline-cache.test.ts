@@ -8,7 +8,7 @@
  * sequence and runs under the Web Lock when one exists; and every IndexedDB
  * failure degrades to "no cache", never to a thrown session.
  */
-import { IDBFactory } from 'fake-indexeddb';
+import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
@@ -323,6 +323,31 @@ describe('collaboration — offline cache', () => {
 
       expect(adopted?.updates).toHaveLength(2);
       expect(materialize(adopted?.updates ?? [])).toEqual({ 'block-1': 'one', 'block-2': 'two' });
+    });
+  });
+
+  describe('meta and its snapshot', () => {
+    /**
+     * The dangerous direction. Meta is the adoption gate, and a meta with no
+     * snapshot behind it adopts an EMPTY document as editable: the user types
+     * into nothing, and on reconnect their new root blocks merge beside the
+     * real ones. The pair has to land together or not at all.
+     */
+    it('leaves no meta behind when the snapshot cannot be stored', async () => {
+      const writer = cacheWith();
+
+      await writer.open();
+
+      vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementationOnce(() => {
+        throw new DOMException('quota', 'QuotaExceededError');
+      });
+
+      await writer.saveMeta(tagWith(LINEAGE_A), false, updateWith('block-1', 'first'));
+      writer.close();
+
+      const reader = cacheWith();
+
+      expect(await reader.open()).toBeNull();
     });
   });
 

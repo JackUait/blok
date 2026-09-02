@@ -16,6 +16,7 @@ internal sealed class YDoc
   public YDoc(uint? clientId = null)
   {
     ClientId = clientId ?? NewClientId();
+    UpdateEncoder = UpdateV1Encoder.FromTransaction;
   }
 
   /// <summary>Raised once per transaction that changed anything.</summary>
@@ -38,8 +39,8 @@ internal sealed class YDoc
   public bool HasPending => Store.PendingStructs is not null || Store.PendingDs is not null;
 
   /// <summary>
-  /// Task 3.3 fills this with the v1 encoder. While it is null a transaction
-  /// emits nothing, which is what keeps this task's tests free of an encoder.
+  /// What a finished transaction is turned into; the v1 encoder by default.
+  /// A test replaces it to watch a transaction without an update being built.
   /// </summary>
   internal Func<YTransaction, byte[]?>? UpdateEncoder { get; set; }
 
@@ -84,6 +85,28 @@ internal sealed class YDoc
   public byte[] EncodeStateVector()
   {
     return Store.GetStateVector().Encode();
+  }
+
+  /// <summary>
+  /// Everything <paramref name="targetStateVector"/> has not seen, as one v1
+  /// update — yjs's encodeStateAsUpdate. An empty span means "has seen
+  /// nothing", which is also what yjs's one-byte empty vector means.
+  ///
+  /// Parked structs are part of the answer (Locked Decision 4), and the
+  /// delete set is the store's whole history plus what is parked, regardless
+  /// of the target: a deletion names clocks the target may already hold.
+  /// </summary>
+  public byte[] EncodeStateAsUpdate(ReadOnlySpan<byte> targetStateVector = default)
+  {
+    var target = targetStateVector.IsEmpty
+        ? StateVector.Empty
+        : StateVector.Decode(targetStateVector);
+    var writer = new Lib0Writer();
+
+    UpdateV1Encoder.WriteRuns(writer, PendingNormalizer.AllRuns(Store, target));
+    DeletedSoFar().Write(writer);
+
+    return writer.ToArray();
   }
 
   /// <summary>
@@ -132,6 +155,35 @@ internal sealed class YDoc
   public byte[]? Transact(Action<YTransaction> body)
   {
     return Transact(body, local: true);
+  }
+
+  /// <summary>
+  /// yjs's createDeleteSetFromStructStore plus whatever deletions are still
+  /// parked. Built fresh on every call so nothing here can mutate PendingDs.
+  /// </summary>
+  private DeleteSet DeletedSoFar()
+  {
+    var deletions = new DeleteSet();
+
+    foreach (var (client, structs) in Store.Clients)
+    {
+      foreach (var current in structs)
+      {
+        if (current.IsDeleted)
+        {
+          deletions.Add(client, current.Id.Clock, (ulong)current.Length);
+        }
+      }
+    }
+
+    if (Store.PendingDs is { } parked)
+    {
+      CopyRanges(parked, deletions);
+    }
+
+    deletions.SortAndMerge();
+
+    return deletions;
   }
 
   private static ulong NewClientId()

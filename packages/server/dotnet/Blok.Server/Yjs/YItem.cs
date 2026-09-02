@@ -7,6 +7,19 @@ namespace Blok.Server.Yjs;
 /// </summary>
 internal sealed class YItem : YStruct
 {
+  private const byte OriginBit = 0x80;
+
+  private const byte RightOriginBit = 0x40;
+
+  private const byte ParentSubBit = 0x20;
+
+  private const byte ContentRefMask = 0x1F;
+
+  /// <summary>Parent info: 1 names a root by string, 0 names an item by id.</summary>
+  private const ulong RootParentInfo = 1;
+
+  private const ulong NestedParentInfo = 0;
+
   public YId? Origin { get; set; }
 
   public YId? RightOrigin { get; set; }
@@ -26,6 +39,14 @@ internal sealed class YItem : YStruct
   /// <summary>The map key this item is a value for; null for list content.</summary>
   public string? ParentSub { get; set; }
 
+  /// <summary>
+  /// The info byte's parentSub bit as the wire spelled it. yjs takes the bit
+  /// from the WRITER's item and an origin suppresses the parentSub bytes, so a
+  /// decoded item can be flagged for a parentSub it does not carry; without
+  /// the flag a decode then re-encode drops the bit.
+  /// </summary>
+  public bool WireParentSubBit { get; set; }
+
   public required YContent Content { get; set; }
 
   public bool Deleted { get; set; }
@@ -40,6 +61,51 @@ internal sealed class YItem : YStruct
   public void MarkDeleted()
   {
     Deleted = true;
+  }
+
+  /// <summary>
+  /// yjs's Item.write. An <paramref name="offset"/> re-origins the item onto
+  /// the tick before it, which is what lets a reader that already holds the
+  /// head of a run take only the tail.
+  ///
+  /// The parent and the parentSub are on the wire only when NEITHER origin is:
+  /// with a neighbour to inherit from, a reader copies them at integration.
+  /// </summary>
+  public void Write(Lib0Writer writer, int offset)
+  {
+    ArgumentNullException.ThrowIfNull(writer);
+
+    var origin = offset > 0
+        ? new YId(Id.Client, Id.Clock + (ulong)offset - 1)
+        : Origin;
+
+    writer.WriteUint8((byte)(
+        (Content.Ref & ContentRefMask) |
+        (origin is null ? 0 : OriginBit) |
+        (RightOrigin is null ? 0 : RightOriginBit) |
+        (ParentSub is null && !WireParentSubBit ? 0 : ParentSubBit)));
+
+    if (origin is { } left)
+    {
+      WriteId(writer, left);
+    }
+
+    if (RightOrigin is { } right)
+    {
+      WriteId(writer, right);
+    }
+
+    if (origin is null && RightOrigin is null)
+    {
+      WriteParent(writer);
+
+      if (ParentSub is { } key)
+      {
+        writer.WriteVarString(key);
+      }
+    }
+
+    Content.Write(writer, offset);
   }
 
   /// <summary>
@@ -324,6 +390,50 @@ internal sealed class YItem : YStruct
     }
 
     Left = left;
+  }
+
+  /// <summary>
+  /// A root parent is its name, a nested one its owning item's id. A parked
+  /// item still holds the wire's spelling, which is the normal case rather
+  /// than an edge one: nothing resolves a parent until integration.
+  /// </summary>
+  private void WriteParent(Lib0Writer writer)
+  {
+    switch (Parent)
+    {
+      case YAbstractType { Item: null } root:
+        writer.WriteVarUint(RootParentInfo);
+        writer.WriteVarString(
+            root.RootName ??
+            throw new InvalidOperationException(
+                $"yjs: {Id.Client}:{Id.Clock} has a root parent with no name."));
+        break;
+
+      case YAbstractType nested:
+        writer.WriteVarUint(NestedParentInfo);
+        WriteId(writer, nested.Item.Id);
+        break;
+
+      case string name:
+        writer.WriteVarUint(RootParentInfo);
+        writer.WriteVarString(name);
+        break;
+
+      case YId parent:
+        writer.WriteVarUint(NestedParentInfo);
+        WriteId(writer, parent);
+        break;
+
+      default:
+        throw new InvalidOperationException(
+            $"yjs: {Id.Client}:{Id.Clock} has no parent to write.");
+    }
+  }
+
+  private static void WriteId(Lib0Writer writer, YId id)
+  {
+    writer.WriteVarUint(id.Client);
+    writer.WriteVarUint(id.Clock);
   }
 
   /// <summary>Head of the chain a new item without a left neighbour joins.</summary>

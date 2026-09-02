@@ -21,6 +21,8 @@ internal sealed record IntegrationRest(
 /// </summary>
 internal static class Integrator
 {
+  private const byte ParentSubBit = 0x20;
+
   /// <summary>
   /// The wire's structs as runtime structs, one pass per decode. A parent
   /// root stays the wire's NAME: the root it belongs to may not have been
@@ -180,6 +182,11 @@ internal static class Integrator
           RightOrigin = decoded.RightOrigin,
           Parent = (object?)decoded.ParentRoot ?? decoded.ParentId,
           ParentSub = decoded.ParentSub,
+
+          // The wire flags a parentSub the item does not carry whenever an
+          // origin suppressed the parent bytes; kept so re-encoding it is
+          // byte-identical, since ParentSub alone cannot say.
+          WireParentSubBit = (decoded.Info & ParentSubBit) != 0,
 
           // Copied because integration splices content in place; the decoded
           // update stays re-appliable.

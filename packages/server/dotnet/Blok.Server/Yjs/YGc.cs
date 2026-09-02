@@ -9,6 +9,15 @@ internal sealed class YGc : YStruct
 {
   public override bool IsDeleted => true;
 
+  /// <summary>Info byte 0, then the remaining run length.</summary>
+  public void Write(Lib0Writer writer, int offset)
+  {
+    ArgumentNullException.ThrowIfNull(writer);
+
+    writer.WriteUint8(0);
+    writer.WriteVarUint((ulong)(Length - offset));
+  }
+
   /// <summary>
   /// Files the run. <paramref name="offset"/> is the part the store already
   /// has, so the run starts where the store's knowledge ends.

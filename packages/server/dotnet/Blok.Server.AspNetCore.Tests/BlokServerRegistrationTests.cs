@@ -30,9 +30,16 @@ public sealed class BlokServerRegistrationTests
     services.AddBlokServer();
     services.AddBlokServer();
 
-    Assert.DoesNotContain(
+    // The runtime is no longer a future service: IBlokDocumentConverter runs it.
+    // What still has to hold is that a second AddBlokServer does not register a
+    // second engine pool — each one parses the embedded bundle into every
+    // engine it holds.
+    Assert.Single(
         services,
         descriptor => descriptor.ServiceType.FullName == "Blok.Server.Runtime.IBlokRuntime");
+    Assert.Single(
+        services,
+        descriptor => descriptor.ServiceType.FullName == "Blok.Server.Documents.IBlokDocumentConverter");
     Assert.DoesNotContain(
         services,
         descriptor =>

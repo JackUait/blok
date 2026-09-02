@@ -42,7 +42,7 @@ Run the self-contained host through npm:
 npx @bloklabs/server --listen 127.0.0.1:4000
 ```
 
-The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published.
+The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published. The host is fully managed: every archive and the NuGet package are one managed build for every runtime; no native library, no extraction directory, nothing to set for a service account with no home.
 
 The same host is available at the existing image name. In proxy mode it must stay on loopback, so this example uses the host network. The named volume keeps uploads in the image's writable `/data` directory:
 
@@ -94,7 +94,7 @@ docker run \
   --doc-endpoint https://myapp.com/api/documents
 ```
 
-`--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app the service loads a document from and writes it back to; `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives; it holds document content, so it must not be publicly readable and may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
+`--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app the service loads a document from and writes it back to; `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call, and it has to be a single line: a value carrying a carriage return or newline refuses to start rather than losing the header on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives; it holds document content, so it must not be publicly readable and may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()`.
 
 ## Point the editor at it
 
@@ -157,7 +157,7 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
-A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
+A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ## Quality gates
 

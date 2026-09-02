@@ -486,6 +486,39 @@ describe('createCollabProvider', () => {
       expect(harness.statuses.at(-1)?.status).toBe('connected');
     });
 
+    // The onmessage guard (provider.ts) must treat these exactly like
+    // `unknown`: the codec (task 1.2) decodes them, but nothing wires them
+    // into the provider yet (task 4.4). Without the guard, an operation/
+    // acknowledgement/rejection frame arriving in `awaiting-control` would
+    // reach `bufferInbound` and count toward MAX_BUFFERED_INBOUND — so a peer
+    // sending 64+ of them would force the same teardown+reconnect the cap
+    // test above exists for, over frames this provider does nothing with.
+    it('drops v2 operation/acknowledgement/rejection frames before the control frame instead of buffering them', () => {
+      const harness = createHarness();
+      const operationId = LINEAGE_B;
+      const v2Frames: SyncWireFrame[] = [
+        { type: 'operation', lineage: LINEAGE_A, operationId, update: new Uint8Array([1]) },
+        { type: 'acknowledgement', lineage: LINEAGE_A, operationId, serverSequence: '1' },
+        { type: 'rejection', lineage: LINEAGE_A, operationId, code: 'not-synced' },
+      ];
+
+      harness.provider.connect();
+      harness.socket().open();
+
+      // 70 > MAX_BUFFERED_INBOUND (64): if any of these were buffered, the
+      // cap would trip and close the socket, exactly like the test above.
+      for (let index = 0; index < 70; index += 1) {
+        harness.socket().deliver(v2Frames[index % v2Frames.length]);
+      }
+
+      expect(harness.socket().closedWith).toBeNull();
+      expect(harness.statuses.some((entry) => entry.status === 'offline')).toBe(false);
+
+      harness.socket().deliver(controlFrame());
+
+      expect(harness.provider.tag).toEqual({ format: 1, epoch: 0, lineage: LINEAGE_A });
+    });
+
     it('reads frames delivered as an ArrayBuffer', () => {
       const harness = createHarness();
 

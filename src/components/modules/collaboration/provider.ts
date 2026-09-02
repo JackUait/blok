@@ -589,10 +589,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       case 'limits':
         state.announcedMaxBytes = frame.maxMessageBytes;
         break;
-      // blok-sync.v2 (packages/server/protocol/blok-sync-v2.md). The codec
-      // decodes these; wiring durable-operation handling into the provider
-      // is a separate task, so for now they are dropped here exactly like an
-      // `unknown`/`malformed` frame was before this union grew.
+      // blok-sync.v2 (packages/server/protocol/blok-sync-v2.md). `onmessage`
+      // now filters these out before they ever reach this function (same
+      // early return as `unknown`/`malformed`, so one arriving before the
+      // control frame never counts toward MAX_BUFFERED_INBOUND) — these three
+      // cases exist ONLY so a future edit that wires durable-operation
+      // handling into the provider (a separate task) gets a compile error
+      // here rather than silently falling into a catch-all default.
       case 'operation':
       case 'acknowledgement':
       case 'rejection':
@@ -873,7 +876,22 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
         // `unknown` is forward compatibility; `malformed` is a frame we refuse to
         // guess at. Neither is worth dropping the connection over.
-        if (frame === null || frame.type === 'unknown' || frame.type === 'malformed') {
+        //
+        // blok-sync.v2 operation/acknowledgement/rejection frames are decoded
+        // by the codec (task 1.2) but not yet handled by this provider (task
+        // 4.4 wires them in). Until then they MUST be exactly as inert as an
+        // `unknown` frame — in particular, one arriving before the control
+        // frame must NOT reach `bufferInbound` below: it would count toward
+        // MAX_BUFFERED_INBOUND and a peer sending 64+ of them would force a
+        // teardown + reconnect over frames this provider does nothing with.
+        if (
+          frame === null ||
+          frame.type === 'unknown' ||
+          frame.type === 'malformed' ||
+          frame.type === 'operation' ||
+          frame.type === 'acknowledgement' ||
+          frame.type === 'rejection'
+        ) {
           return;
         }
 

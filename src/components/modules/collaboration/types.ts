@@ -32,8 +32,8 @@ export interface WorkingSetTag {
  *   operation is durable; `serverSequence` is a decimal string (its ceiling is
  *   2^64 − 1, which no `number` holds exactly) and is at least `"1"`.
  * - `rejection` (message type 104, v2, server→client) refuses an operation.
- *   `code` is an OPEN set — see {@link blok-sync-v2.md} section 6: the six
- *   named codes are stable, but any string matching
+ *   `code` is an OPEN set — see packages/server/protocol/blok-sync-v2.md
+ *   section 6: the six named codes are stable, but any string matching
  *   `^[a-z][a-z0-9-]{0,63}$` decodes successfully, and a receiver MUST treat
  *   an unrecognised one as a final rejection rather than refusing the frame.
  */
@@ -58,11 +58,11 @@ export type SyncWireFrame =
  * decode NEVER throws: hostile or truncated input becomes `malformed`, not an
  * exception, so a bad frame can never take a WebSocket handler down with it.
  *
- * `rule` is the blok-sync-v2.md section-5 decoder rule number attributed to a
- * v2 (type 102-104) refusal, plus the shared rule-1 outer-varuint check every
- * frame goes through first. It is undefined for the v1-only refusal paths
- * (malformed sync/awareness/auth/control/limits payloads), which predate the
- * rule numbering and are not asserted against it.
+ * `rule` is the decoder rule number (packages/server/protocol/blok-sync-v2.md
+ * section 5) attributed to a v2 (type 102-104) refusal, plus the shared
+ * rule-1 outer-varuint check every frame goes through first. It is undefined
+ * for the v1-only refusal paths (malformed sync/awareness/auth/control/limits
+ * payloads), which predate the rule numbering and are not asserted against it.
  */
 export type SyncWireDecodeResult =
   | SyncWireFrame

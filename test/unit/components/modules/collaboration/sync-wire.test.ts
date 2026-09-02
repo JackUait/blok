@@ -592,6 +592,24 @@ describe('sync-wire codec — v2 operations, acknowledgements and rejections', (
     expect(result.rule).toBe(4);
   });
 
+  it('attributes rule 5 (trailing bytes) over a metadata rule the same frame also violates', () => {
+    // The rule-4-vs-6 case above pins the ordering fix within one section
+    // (102's own update section). This pins it across the LAST-section
+    // framing check specifically: type(103) varstring(len=1, 0xff — invalid
+    // UTF-8, rule 6) plus one trailing byte (rule 5). requireEndV2 runs
+    // before decodeV2Metadata in decodeAcknowledgement, so the frame is never
+    // even UTF-8-decoded before rule 5 is found.
+    const result = decode(bytes('6701ff00'));
+
+    expect(result.type).toBe('malformed');
+
+    if (result.type !== 'malformed') {
+      throw new Error('unreachable');
+    }
+
+    expect(result.rule).toBe(5);
+  });
+
   it('keeps every v1 fixture byte-identical', () => {
     for (const frame of fixture.frames) {
       const decoded = goodFrame(decode(bytes(frame.frameHex)));

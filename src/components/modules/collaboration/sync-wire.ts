@@ -750,7 +750,7 @@ function writeSync(encoder: encoding.Encoder, subType: number, payload: Uint8Arr
 
 function requirePayload(payload: Uint8Array): Uint8Array {
   if (payload.length === 0) {
-    throw new Error('collab: sync and awareness payloads must not be empty.');
+    throw new Error('collab: sync, awareness and operation-update payloads must not be empty.');
   }
 
   return payload;

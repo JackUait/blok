@@ -4,6 +4,7 @@ import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
 import { createTicketSource, type TicketRequest } from '../../utils/access-pass';
+import { logLabeled } from '../../utils/logger';
 
 import { readCaretPosition } from './caret-position';
 import { createPresence, type Presence } from './presence';
@@ -847,16 +848,23 @@ export class Collaboration extends Module {
 
     const detail = this.lastStatusDetail;
 
-    this.eventsDispatcher.emit(CollaborationStatusChanged, {
-      status: this.status,
-      peers: Array.from(this.Blok.YjsManager.getAwarenessStates().entries())
-        .filter(([clientId]) => clientId !== localClientId)
-        .map(([clientId, state]) => toPeer(clientId, state))
-        .filter((peer): peer is CollaborationPeer => peer !== null),
-      ...(detail?.error === undefined ? {} : { error: detail.error }),
-      ...(detail?.code === undefined ? {} : { code: detail.code }),
-      ...(detail?.reason === undefined ? {} : { reason: detail.reason }),
-      ...(detail?.retryInMs === undefined ? {} : { retryInMs: detail.retryInMs }),
-    });
+    // A host listener that throws must not reach the frame handler above this
+    // (where it would end the session) or skip the arbitration that follows a
+    // status transition. Its failure is its own.
+    try {
+      this.eventsDispatcher.emit(CollaborationStatusChanged, {
+        status: this.status,
+        peers: Array.from(this.Blok.YjsManager.getAwarenessStates().entries())
+          .filter(([clientId]) => clientId !== localClientId)
+          .map(([clientId, state]) => toPeer(clientId, state))
+          .filter((peer): peer is CollaborationPeer => peer !== null),
+        ...(detail?.error === undefined ? {} : { error: detail.error }),
+        ...(detail?.code === undefined ? {} : { code: detail.code }),
+        ...(detail?.reason === undefined ? {} : { reason: detail.reason }),
+        ...(detail?.retryInMs === undefined ? {} : { retryInMs: detail.retryInMs }),
+      });
+    } catch (thrown) {
+      logLabeled('a collaboration:status listener threw', 'warn', thrown);
+    }
   }
 }

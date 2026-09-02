@@ -1163,6 +1163,59 @@ describe('collaboration — sync-first load', () => {
     });
   });
 
+  // `emitStatus` runs inside the awareness change callback, inside the frame
+  // handler: a host listener that throws must not end the session, and one that
+  // throws on the `connected` transition must not stop arbitration behind it.
+  describe('a throwing collaboration:status listener', () => {
+    it('does not end the session when it throws on an awareness frame', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const harness = await boot();
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', () => {
+        throw new Error('host listener blew up');
+      });
+
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.setAwarenessField('user', { name: 'Ada' });
+      socket.deliver({ type: 'awareness', update: peer.encodeAwarenessUpdate() });
+      peer.destroy();
+
+      expect(collabAttr(harness.core)).toBe('connected');
+      expect(socket.closedWith).toBeNull();
+
+      // Positive proof the session is live: a later doc frame still materialises.
+      const late = peerWith([{ id: 'late', type: 'paragraph', data: { text: 'late' } }]);
+
+      socket.deliver({ type: 'update', update: late.encodeStateAsUpdate() });
+      late.destroy();
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 2, 'a later remote block');
+    });
+
+    it('still lifts read-only after the first sync when it throws on the connected transition', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const harness = await boot();
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', () => {
+        throw new Error('host listener blew up');
+      });
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+      await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editable after the first sync');
+
+      expect(collabAttr(harness.core)).toBe('connected');
+    });
+  });
+
   describe('teardown', () => {
     it('is registered before YjsManager so the socket closes before the document dies', () => {
       const names = Object.keys(Modules);

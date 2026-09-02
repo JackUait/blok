@@ -1118,6 +1118,44 @@ describe('createCollabProvider', () => {
     });
   });
 
+  // One peer's malformed presence must not end everybody else's session: the
+  // server relays awareness after reading only the client count, so any
+  // pass-holder can put bytes y-protocols cannot decode on every other member's
+  // wire. Doc frames stay terminal (the three tests above); presence is dropped.
+  describe('a presence frame the seam cannot apply', () => {
+    const hostilePayloads: { name: string; bytes: number[] }[] = [
+      { name: 'truncated after the client count', bytes: [1, 0xff] },
+      { name: 'carrying a state that is not JSON', bytes: [1, 5, 0, 3, 97, 98, 99] },
+    ];
+
+    for (const { name, bytes } of hostilePayloads) {
+      it(`drops an awareness frame ${name} and stays connected`, () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const harness = createHarness();
+        const peer = new DocumentStore(new YBlockSerializer());
+
+        stores.push(peer);
+        peer.addBlock({ id: 'p1', type: 'paragraph', data: { text: 'one' } });
+
+        const socket = connectAndHandshake(harness);
+
+        completeFirstSync(harness, socket, peer);
+        socket.deliver({ type: 'awareness', update: new Uint8Array(bytes) });
+
+        expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
+        expect(harness.provider.status).toBe('connected');
+        expect(socket.closedWith).toBeNull();
+        expect(warn).toHaveBeenCalled();
+
+        // Positive proof the connection is still live: a later doc frame applies.
+        peer.addBlock({ id: 'p2', type: 'paragraph', data: { text: 'two' } });
+        socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate(harness.store.getStateVector()) });
+
+        expect(harness.store.toJSON().map((block) => block.id)).toEqual(['p1', 'p2']);
+      });
+    }
+  });
+
   describe('close-code policy', () => {
     const terminalCases: { code: number; error: string }[] = [
       { code: 4400, error: 'bad-request' },

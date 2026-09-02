@@ -534,7 +534,25 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Handles one validated frame on a negotiated connection.
+   * Runs one presence frame, dropping it if it throws. Never terminal: the
+   * server relays awareness after reading only the client count, so a
+   * malformed frame from any pass-holder would otherwise end every other
+   * member's session — and a host listener that throws on the peer list rides
+   * this same path. Nothing later depends on a presence frame, so a drop
+   * stalls nothing.
+   * @param apply - the presence work to run
+   */
+  const dropOnThrow = (apply: () => void): void => {
+    try {
+      apply();
+    } catch (thrown) {
+      logLabeled(`collaboration dropped a presence frame for ${docId}`, 'warn', thrown);
+    }
+  };
+
+  /**
+   * Handles one validated frame on a negotiated connection. Only the doc
+   * frames may end the session by throwing (see the `onmessage` catch).
    * @param socket - the connection it arrived on
    * @param origin - this generation's origin object
    * @param frame - the decoded frame
@@ -552,10 +570,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         answerResync(socket, frame.stateVector);
         break;
       case 'awareness':
-        yjs.applyAwarenessUpdate(frame.update, origin);
+        dropOnThrow(() => yjs.applyAwarenessUpdate(frame.update, origin));
         break;
       case 'queryAwareness':
-        scheduleAwareness(true);
+        dropOnThrow(() => scheduleAwareness(true));
         break;
       case 'permissionDenied':
         // Inert by design: the server simply drops a read-only member's writes,
@@ -855,9 +873,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
         handleFrame(socket, origin, frame);
       } catch (thrown) {
-        // The seam could not materialise this frame. The same frame would throw
-        // again on a retry, and skipping it parks every later update on the one
-        // that is missing — so the document wedges either way. End the session
+        // The seam could not materialise a DOC frame (presence frames are
+        // dropped inside `handleFrame`). The same frame would throw again on a
+        // retry, and skipping it parks every later update on the one that is
+        // missing — so the document wedges either way. End the session
         // instead: an editor whose document never loaded must not look live.
         logLabeled(`collaboration could not apply a frame for ${docId}`, 'error', thrown);
         terminate('apply-failed', {

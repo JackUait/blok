@@ -164,8 +164,9 @@ export type CollabStatus = 'connecting' | 'connected' | 'offline' | 'error';
  * - `oversized-update` — a frame we must send is bigger than the server takes:
  *   either close 1009 twice since the last sync, or a resync answer we refused
  *   to write because it repeats a size already refused.
- * - `apply-failed` — the seam threw on an inbound frame; the document did not
- *   materialise, and the same frame would throw again.
+ * - `apply-failed` — the seam threw on an inbound DOC frame (SyncStep2 or
+ *   Update); the document did not materialise, and the same frame would throw
+ *   again. A presence frame that throws is dropped, never terminal.
  *
  * A stale lineage is deliberately NOT here: close 4409 and a changed lineage are
  * recoverable through {@link CollabDocSeam.resetForRelineage} plus a reconnect.

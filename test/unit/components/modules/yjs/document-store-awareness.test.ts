@@ -159,6 +159,12 @@ describe('DocumentStore awareness seam', () => {
       expect(() => store.encodeAwarenessUpdate()).toThrow(/not enabled/);
     });
 
+    it('onAwarenessUpdate throws before enableAwareness', () => {
+      const store = track(createStore());
+
+      expect(() => store.onAwarenessUpdate(() => undefined)).toThrow(/not enabled/);
+    });
+
     it('mutators and reads no-op before enableAwareness', () => {
       const store = track(createStore());
 

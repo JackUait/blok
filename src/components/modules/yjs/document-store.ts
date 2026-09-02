@@ -1679,7 +1679,9 @@ export class DocumentStore {
    *    before the reset keeps working (and its unsubscribe still detaches,
    *    because the closure reads `this.ydoc` at call time);
    * 6. rebuild Awareness only if it existed, restoring the local state so a
-   *    reset does not silently drop this peer's presence.
+   *    reset does not silently drop this peer's presence. Its subscriptions
+   *    are NOT carried over (they were bound to the destroyed instance);
+   *    callers re-subscribe.
    *
    * The new doc's clientID is Yjs's own random one — never seeded, so two peers
    * that reset at the same moment cannot collide.

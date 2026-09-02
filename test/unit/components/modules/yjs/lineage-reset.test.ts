@@ -170,6 +170,27 @@ describe('lineage reset', () => {
       expect(() => store.encodeAwarenessUpdate()).not.toThrow();
     });
 
+    it('drops awareness subscriptions with the old Awareness — callers re-subscribe', () => {
+      const store = createStore();
+      const listener = vi.fn();
+
+      store.enableAwareness();
+      store.onAwarenessChange(listener);
+      store.resetForRelineage();
+      listener.mockClear();
+
+      store.setAwarenessField('user', { name: 'after the reset' });
+
+      expect(listener).not.toHaveBeenCalled();
+
+      const resubscribed = vi.fn();
+
+      store.onAwarenessChange(resubscribed);
+      store.setAwarenessField('user', { name: 'seen by the new subscription' });
+
+      expect(resubscribed).toHaveBeenCalledTimes(1);
+    });
+
     it('leaves awareness OFF when it was never enabled', () => {
       const store = createStore();
 

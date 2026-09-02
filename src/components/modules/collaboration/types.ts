@@ -55,10 +55,11 @@ export type SyncWireDecodeResult =
  * with no adapter. Declared here so the Collaboration module (and any test
  * harness) can see exactly what it must satisfy.
  *
- * PRE-ENABLE CONTRACT: `onAwarenessChange` and `encodeAwarenessUpdate` THROW
- * until `enableAwareness()` has been called; the other awareness methods no-op.
+ * PRE-ENABLE CONTRACT: `onAwarenessChange`, `onAwarenessUpdate` and
+ * `encodeAwarenessUpdate` THROW until `enableAwareness()` has been called; the
+ * other awareness methods no-op.
  * The provider calls `enableAwareness()` once a connection is negotiated, before
- * it touches either of those two.
+ * it touches any of those three.
  *
  * ECHO CONTRACT: the origin handed to `applyRemoteUpdate` is remembered forever
  * (the suppression set is never pruned), so the provider passes ONE long-lived
@@ -103,8 +104,10 @@ export interface CollabDocSeam {
    * carries nothing, and the client id is new — so the reconnect that follows
    * can leak no pre-reset history.
    *
-   * Every subscription taken through this seam (`onDocUpdate`, `onAwarenessUpdate`)
-   * survives the swap; the implementation re-binds them.
+   * Doc subscriptions taken through this seam (`onDocUpdate`) survive the swap;
+   * the implementation re-binds them. Awareness subscriptions
+   * (`onAwarenessChange`, `onAwarenessUpdate`) do NOT — the Awareness is
+   * rebuilt on the fresh doc — so re-subscribe after this call.
    */
   resetForRelineage(): void;
 }

@@ -14,10 +14,8 @@ namespace Blok.Server.Tests.Yjs;
 public sealed class UpdateInspectorTests
 {
   /// <summary>
-  /// The doc that aborts this process through YDotNet: one block whose
-  /// blocks-map key and id are "a\0b", written by yjs. Copied from
-  /// YDocConverterHardeningTests.HostileNulUpdateAbortsTheProcess, whose
-  /// [Fact] is skipped forever because reading it panics inside yrs.
+  /// One block whose blocks-map key and id are "a\0b", written by yjs. Shared
+  /// with YDocConverterHardeningTests.HostileNulUpdateExportsTheNulIntact.
   /// </summary>
   private const string NulCanary =
       "AQfV8oK8AwAnAQZibG9ja3MDYQBiASgA1fKCvAMAAmlkAXcDYQBiKADV8oK8AwAE" +

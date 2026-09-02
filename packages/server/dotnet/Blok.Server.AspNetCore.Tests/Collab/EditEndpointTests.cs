@@ -127,10 +127,9 @@ public sealed class EditEndpointTests
   }
 
   /// <summary>
-  /// A NUL read back through yffi aborts the process, so the request parser
-  /// refuses one before it can reach a document at all. Escaped in the JSON
-  /// rather than written raw: a raw NUL is not valid inside a JSON string, so
-  /// the reader would refuse it before the NUL screen ever ran.
+  /// The request parser refuses a NUL before it can reach a document. Escaped
+  /// in the JSON rather than written raw: a raw NUL is not valid inside a JSON
+  /// string, so the reader would refuse it before the NUL screen ever ran.
   /// </summary>
   [Fact]
   public async Task ANulInTheRequestIsRefused()

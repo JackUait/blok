@@ -9,7 +9,5 @@
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
-    <!-- YDotNet.Native.Linux 0.6.0 packs its musl-x64 build into the invalid linux-x64-musl RID folder. -->
-    <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
   </PropertyGroup>
 </Project>

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -151,7 +151,6 @@ export function publishCommand(target, version, publishDirectory) {
       '--output',
       publishDirectory,
       '-p:PublishSingleFile=true',
-      '-p:IncludeNativeLibrariesForSelfExtract=true',
       '-p:DebugType=None',
       '-p:DebugSymbols=false',
       '-p:AssemblyName=blok-server',
@@ -159,32 +158,6 @@ export function publishCommand(target, version, publishDirectory) {
       '-p:ContinuousIntegrationBuild=true',
     ],
   };
-}
-
-/**
- * The packaged musl libyrs.so is broken upstream (wrong arch on x64, none
- * on arm64), so a musl publish without the CI-built override would embed a
- * native that crashes at first use.
- *
- * @param {typeof TARGETS} targets
- * @param {string} root
- */
-export function assertMuslOverridesPresent(targets, root = repositoryRoot) {
-  const missing = targets
-    .filter((target) => target.rid.startsWith('linux-musl-'))
-    .map((target) => join(
-      'packages/server/dotnet/Blok.Server.Host/runtimes',
-      target.rid,
-      'native/libyrs.so',
-    ))
-    .filter((override) => !existsSync(join(root, override)));
-
-  if (missing.length > 0) {
-    throw new Error(
-      `missing musl libyrs override(s): ${missing.join(', ')} — ` +
-      'stage the build-musl-yffi job outputs before publishing musl targets',
-    );
-  }
 }
 
 /**
@@ -292,8 +265,6 @@ export async function publishArtifacts(options) {
 
     return;
   }
-
-  assertMuslOverridesPresent(TARGETS);
 
   const scratch = mkdtempSync(join(tmpdir(), 'blok-server-publish-'));
   const archives = [];

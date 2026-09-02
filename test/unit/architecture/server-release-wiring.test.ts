@@ -491,7 +491,7 @@ describe('server release wiring', () => {
     expect(dockerfile).not.toContain('--runtime linux-x64');
     expect(dockerfile).toContain('--self-contained true');
     expect(dockerfile).toContain('-p:PublishSingleFile=true');
-    expect(dockerfile).toContain('-p:IncludeNativeLibrariesForSelfExtract=true');
+    expect(dockerfile).not.toContain('IncludeNativeLibrariesForSelfExtract');
     expect(dockerfile).not.toContain('SkipBlokServerRuntimeBuild');
     expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
     expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
@@ -504,15 +504,10 @@ describe('server release wiring', () => {
     expect(runtimeStage).not.toContain('useradd');
     expect(runtimeStage).toContain('COPY --from=publish --chown=65532:65532 /data /data');
 
-    // USER 65532 has no home and no writable /, so the single-file host's
-    // self-extraction fails ("Default extraction directory [/] ... not
-    // accessible") unless it is pointed somewhere the user can write. NOT
-    // under /data — LocalFileEndpoint serves that publicly.
-    expect(runtimeStage).toMatch(
-      /^ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=\/var\/tmp\/\.net$/m,
-    );
-    expect(runtimeStage).toContain('chown 65532:65532 /var/tmp/.net');
-    expect(runtimeStage).not.toMatch(/DOTNET_BUNDLE_EXTRACT_BASE_DIR=\/data/);
+    // The managed single-file host bundles no natives, so it never extracts:
+    // USER 65532 needs no writable base directory at all.
+    expect(runtimeStage).not.toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+    expect(runtimeStage).not.toContain('/var/tmp/.net');
     expect(runtimeStage).toMatch(/^WORKDIR \/data$/m);
     expect(runtimeStage).toMatch(/^USER 65532:65532$/m);
     expect(dockerfile).toContain('EXPOSE 4000');
@@ -603,143 +598,22 @@ describe('server release wiring', () => {
     expect(wrapper).toMatch(/realpathSync\(process\.argv\[1\]\)/);
   });
 
-  /**
-   * YDotNet.Native.Linux 0.6.0 mispacks its musl natives (wrong-arch asset
-   * for linux-musl-x64, none for linux-musl-arm64), so the release builds
-   * yffi from the yrs tag YDotNet 0.6.0 was built against and swaps it in.
-   * The pin, the swap, and the smokes are all release-only — these pins are
-   * the only thing that keeps them from silently rotting.
-   */
-  describe('musl libyrs override', () => {
-    const YRS_PIN = 'release-v0.19.1';
-    const MUSL_BUILD_JOB = 'build-musl-yffi';
-    const HOST_CSPROJ = 'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj';
-    const HOST_RUNTIMES_DIR = 'packages/server/dotnet/Blok.Server.Host/runtimes';
-    const CACHE_ACTION = 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9';
-    const UPLOAD_ACTION = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
-    const DOWNLOAD_ACTION = 'actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c';
+  describe('release smokes on Alpine and as USER 65532', () => {
+    const loadJobs = (): Record<string, { steps?: WorkflowStep[] }> =>
+      (parse(read(RELEASE_WORKFLOW)) as Workflow).jobs;
 
-    type MuslJob = {
-      if?: string;
-      'runs-on'?: string;
-      needs?: string | string[];
-      permissions?: Record<string, string>;
-      env?: Record<string, string>;
-      strategy?: { matrix?: { include?: Record<string, string>[] } };
-      steps?: WorkflowStep[];
-    };
-
-    const loadJobs = (): Record<string, MuslJob> =>
-      (parse(read(RELEASE_WORKFLOW)) as { jobs: Record<string, MuslJob> }).jobs;
-
-    it('builds both musl natives from the pinned yrs release in rust:alpine', () => {
-      const job = loadJobs()[MUSL_BUILD_JOB];
-
-      expect(job).toBeDefined();
-      expect(job?.if).toContain('github.repository');
-      expect(job?.permissions).toEqual({ contents: 'read' });
-      expect(job?.['runs-on']).toBe('${{ matrix.runner }}');
-      expect(job?.env?.YRS_PIN).toBe(YRS_PIN);
-      expect(job?.strategy?.matrix?.include).toEqual([
-        {
-          rid: 'linux-musl-x64',
-          target: 'x86_64-unknown-linux-musl',
-          runner: 'ubuntu-latest',
-          machine: 'x86-64',
-          loader: 'libc.musl-x86_64.so.1',
-        },
-        {
-          rid: 'linux-musl-arm64',
-          target: 'aarch64-unknown-linux-musl',
-          runner: 'ubuntu-24.04-arm',
-          machine: 'ARM aarch64',
-          loader: 'libc.musl-aarch64.so.1',
-        },
-      ]);
-
-      const runs = (job?.steps ?? []).map((step) => step.run ?? '').join('\n');
-
-      expect(runs).toContain('rust:alpine');
-      expect(runs).toContain('https://github.com/y-crdt/y-crdt.git');
-      expect(runs).toContain('--branch "$YRS_PIN"');
-      expect(runs).toContain('RUSTFLAGS="-C target-feature=-crt-static"');
-      expect(runs).toContain('cargo build --release -p yffi --target ${{ matrix.target }}');
-    });
-
-    it('caches by the yrs pin and refuses partial restores', () => {
-      const steps = loadJobs()[MUSL_BUILD_JOB]?.steps ?? [];
-      const cache = steps.find((step) => (step.uses ?? '').startsWith('actions/cache@'));
-
-      expect(cache?.uses).toBe(CACHE_ACTION);
-      expect(String(cache?.with?.key)).toContain('${{ matrix.target }}');
-      expect(String(cache?.with?.key)).toContain('${{ env.YRS_PIN }}');
-      expect(cache?.with?.['restore-keys']).toBeUndefined();
-
-      const build = steps.find((step) => (step.run ?? '').includes('cargo build'));
-
-      expect(build?.if).toContain('cache-hit');
-    });
-
-    it('verifies architecture and musl linkage before uploading each native', () => {
-      const steps = loadJobs()[MUSL_BUILD_JOB]?.steps ?? [];
-      const runs = steps.map((step) => step.run ?? '').join('\n');
-
-      expect(runs).toContain("grep -F 'ELF 64-bit LSB shared object'");
-      expect(runs).toContain("grep -F '${{ matrix.machine }}'");
-      expect(runs).toContain('readelf -d');
-      expect(runs).toContain("grep -F '${{ matrix.loader }}'");
-
-      const upload = steps.find((step) => (step.uses ?? '').startsWith('actions/upload-artifact@'));
-
-      expect(upload?.uses).toBe(UPLOAD_ACTION);
-      expect(upload?.with?.name).toBe('libyrs-${{ matrix.rid }}');
-      expect(upload?.with?.['if-no-files-found']).toBe('error');
-    });
-
-    it('stages both overrides into the host project before any publish', () => {
-      const jobs = loadJobs();
-      const release = jobs['release-server'];
-
-      expect(release?.needs).toBe(MUSL_BUILD_JOB);
-
-      const steps = release?.steps ?? [];
-      const downloadIndex = steps.findIndex(
-        (step) => (step.uses ?? '').startsWith('actions/download-artifact@'),
-      );
-      const stageIndex = steps.findIndex(
-        (step) => (step.run ?? '').includes(`${HOST_RUNTIMES_DIR}/$rid/native/libyrs.so`),
-      );
-      const buildIndex = steps.findIndex(
-        (step) => step.name === 'Build NuGet and host artifacts',
-      );
-
-      expect(steps[downloadIndex]?.uses).toBe(DOWNLOAD_ACTION);
-      expect(steps[downloadIndex]?.with?.pattern).toBe('libyrs-linux-musl-*');
-      expect(stageIndex).toBeGreaterThan(downloadIndex);
-      expect(buildIndex).toBeGreaterThan(stageIndex);
-      expect(steps[stageIndex]?.run).toContain('linux-musl-x64 linux-musl-arm64');
-      expect(steps[stageIndex]?.run).toContain('install -D');
-    });
-
-    it('names the upstream mispack and the bump rule in the workflow', () => {
-      const source = read(RELEASE_WORKFLOW);
-
-      expect(source).toContain('YDotNet.Native.Linux');
-      expect(source).toContain('build-binaries.yml');
-      expect(source).toMatch(/YDotNet (version )?bump/);
-      expect(source.match(new RegExp(YRS_PIN, 'g'))?.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('smokes the musl-amd64 archive with a real native load on Alpine', () => {
+    it('starts the musl-amd64 archive on Alpine with no extraction directory', () => {
       const steps = loadJobs()['release-server']?.steps ?? [];
       const smoke = steps.find((step) => step.name === 'Smoke musl-amd64 archive on Alpine');
 
       expect(smoke?.run).toContain('blok-server_linux_musl_amd64.tar.gz');
       expect(smoke?.run).toContain('runtime-deps:10.0-alpine');
       expect(smoke?.run).toContain('--platform linux/amd64');
-      expect(smoke?.run).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
       expect(smoke?.run).toContain('/blok-server --help');
-      expect(smoke?.run).toContain('/lib/ld-musl-x86_64.so.1 --list');
+      // The host is fully managed: nothing is unpacked and no native is loaded.
+      expect(smoke?.run).not.toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+      expect(smoke?.run).not.toContain('libyrs.so');
+      expect(smoke?.run).not.toContain('ld-musl');
 
       const source = read(RELEASE_WORKFLOW);
 
@@ -747,62 +621,29 @@ describe('server release wiring', () => {
         .toBeGreaterThan(source.indexOf('node scripts/publish-server.mjs --version'));
     });
 
-    it('smokes single-file extraction and native load as USER 65532 in the image', () => {
+    it('starts the image as USER 65532 with an unwritable home and no extraction directory', () => {
       const steps = loadJobs()['release-server']?.steps ?? [];
       const smoke = steps.find(
-        (step) => step.name === 'Smoke image native extraction as USER 65532',
+        (step) => step.name ===
+          'Smoke image starts as USER 65532 without an extraction directory',
       );
 
-      expect(smoke?.run).toContain('id -u');
-      expect(smoke?.run).toContain('65532');
-      expect(smoke?.run).toContain('test ! -w "${HOME:-/}"');
-      // The image must carry the extraction directory itself: a smoke that
-      // exports the variable would pass on an image that cannot start.
-      expect(smoke?.run).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
-      expect(smoke?.run).toContain('/var/tmp/.net');
-      expect(smoke?.run).not.toContain('export DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+      expect(smoke?.run).toContain('--env HOME=/nonexistent');
+      expect(smoke?.run).toContain('test "$(id -u)" = "65532"');
+      expect(smoke?.run).toContain('test ! -w "$HOME"');
       expect(smoke?.run).toContain('/blok-server --help');
-      expect(smoke?.run).toContain('libyrs.so');
-      expect(smoke?.run).toContain('ldd');
+      expect(smoke?.run).not.toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+      expect(smoke?.run).not.toContain('libyrs.so');
 
       const source = read(RELEASE_WORKFLOW);
-      const smokeIndex = source.indexOf('Smoke image native extraction as USER 65532');
+      const smokeIndex = source.indexOf(
+        'Smoke image starts as USER 65532 without an extraction directory',
+      );
 
       expect(smokeIndex).toBeGreaterThan(
         source.indexOf('docker build --platform linux/amd64'),
       );
       expect(smokeIndex).toBeLessThan(source.indexOf('Log in to GHCR'));
-    });
-
-    it('overrides the packaged native per musl RID in the host project', () => {
-      const csproj = read(HOST_CSPROJ);
-
-      for (const rid of ['linux-musl-x64', 'linux-musl-arm64']) {
-        expect(csproj).toContain(
-          `<ItemGroup Condition="'$(RuntimeIdentifier)' == '${rid}'">`,
-        );
-        expect(csproj).toContain(`runtimes/${rid}/native/libyrs.so`);
-      }
-
-      expect(csproj).toContain('Link="libyrs.so"');
-      expect(csproj).toContain('CopyToPublishDirectory="PreserveNewest"');
-      expect(csproj).toContain('<NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"');
-      expect(csproj).toContain(
-        '<RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)"',
-      );
-
-      expect(read('.gitignore')).toContain(`${HOST_RUNTIMES_DIR}/`);
-    });
-
-    it('hard-fails a real musl publish before dotnet when an override is absent', () => {
-      const script = read('scripts/publish-server.mjs');
-      const dryRunBranch = script.indexOf('if (options.dryRun)');
-      const guardCall = script.indexOf('assertMuslOverridesPresent(TARGETS)');
-      const publishLoop = script.indexOf('spawnSync(command.command');
-
-      expect(dryRunBranch).toBeGreaterThan(-1);
-      expect(guardCall).toBeGreaterThan(dryRunBranch);
-      expect(guardCall).toBeLessThan(publishLoop);
     });
   });
 });

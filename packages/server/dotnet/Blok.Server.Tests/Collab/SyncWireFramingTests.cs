@@ -2,42 +2,17 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Transactions;
-using YDotNet.Protocol;
 
 namespace Blok.Server.Tests.Collab;
 
 /*
- * R2a DECISION (spike B2, 2026-08-31): HAND-ROLL the y-protocols framing in
- * Blok.Server/Collab/SyncWire.cs. YDotNet.Protocol (YDotNet 0.6.0) is NOT
- * adopted for the wire.
- *
- * Evidence. Fixtures in test/unit/server-conformance/fixtures/sync-frames.json
- * are produced by the REAL reference encoders (y-protocols 1.0.7 + lib0
- * 0.2.117 + yjs 13.6.32, scripts/generate-sync-frames.mjs). Each was decoded
- * with YDotNet.Protocol's Decoder and re-encoded with its Encoder:
- *
- *   sync 0/0 SyncStep1   decode OK, re-encode byte-identical      PASS
- *   sync 0/1 SyncStep2   decode OK, re-encode byte-identical      PASS
- *   sync 0/2 Update      decode OK, re-encode byte-identical      PASS
- *   awareness 1          decode OK (client/clock/state match),
- *                        re-encode byte-identical                 PASS
- *   auth 2               ENCODE matches y-protocols ([2][0][str]),
- *                        DECODE -> UnknownMessage(2)              FAIL
- *   queryAwareness 3     DECODE -> UnknownMessage(3);
- *                        ENCODE writes [0x01] (the AWARENESS type;
- *                        QueryAwarenessMessage.Identifier = 1)
- *                        instead of [0x03]                        FAIL
- *   blok control 100     UnknownMessage(100), no typed support    FAIL (expected)
- *
- * The queryAwareness mis-encode is disqualifying on its own: plan decision 11
- * broadcasts queryAwareness on join, and a stock client would parse YDotNet's
- * [0x01] as an empty awareness update and never reply. Further gaps: no
- * buffer-backed Decoder in core (only BufferEncoder), varuint reading is
- * unbounded (no 64-bit cap), array lengths are trusted before the bytes exist,
- * and one-message-per-frame / trailing-byte rejection is not enforced.
+ * The y-protocols framing in Blok.Server/Collab/SyncWire.cs is hand-rolled.
+ * The fixtures in test/unit/server-conformance/fixtures/sync-frames.json come
+ * from the REAL reference encoders (y-protocols 1.0.7 + lib0 0.2.117 + yjs
+ * 13.6.32, scripts/generate-sync-frames.mjs), so these tests are the only
+ * thing keeping the framing byte-compatible with stock clients.
  *
  * What SyncWire pins (C1 shapes around this):
  *   - exactly ONE message per WebSocket frame; trailing bytes are rejected, so
@@ -49,9 +24,6 @@ namespace Blok.Server.Tests.Collab;
  *     unknown sync/auth SUB-types are malformed;
  *   - control frame 100 = var-string JSON {"epoch":N,"format":N}, exactly those
  *     two keys in that order, format >= 1, epoch >= 0.
- *
- * The YDotNet canaries at the bottom pin the observed mismatches; if a YDotNet
- * upgrade flips them, revisit this decision.
  */
 public sealed class SyncWireFramingTests
 {
@@ -89,23 +61,13 @@ public sealed class SyncWireFramingTests
   {
     var message = Decode<SyncStep1Frame>("syncStep1");
 
-    using var seeded = SeededDoc();
-    using var advanced = SeededDoc();
+    var seeded = SeededDoc();
+    var advanced = SeededDoc();
     Apply(advanced, Fixture.IncrementalUpdate);
 
-    using (var transaction = seeded.ReadTransaction())
-    {
-      Assert.Equal(transaction.StateVectorV1(), message.StateVector);
-    }
+    Assert.Equal(seeded.EncodeStateVector(), message.StateVector);
 
-    byte[] diff;
-
-    using (var transaction = advanced.ReadTransaction())
-    {
-      diff = transaction.StateDiffV1(message.StateVector);
-    }
-
-    Apply(seeded, diff);
+    Apply(seeded, advanced.EncodeStateAsUpdate(message.StateVector));
     Assert.Equal(Fixture.Expected.TextAfterIncremental, ContentText(seeded));
   }
 
@@ -114,17 +76,12 @@ public sealed class SyncWireFramingTests
   {
     var message = Decode<SyncStep2Frame>("syncStep2");
 
-    using var replica = new Doc();
+    var replica = new YDoc();
     Apply(replica, message.Update);
 
     Assert.Equal(Fixture.Expected.TextAfterSeed, ContentText(replica));
-
-    // Resolve the root before opening the transaction: Doc.Map needs its own.
-    var meta = replica.Map("meta");
-    using var transaction = replica.ReadTransaction();
-    Assert.Equal(
-        Fixture.Expected.MetaKindAfterSeed,
-        meta.Get(transaction, "kind")?.String);
+    Assert.True(replica.GetMap("meta").TryGet("kind", out var kind));
+    Assert.Equal(Fixture.Expected.MetaKindAfterSeed, Assert.IsType<string>(kind));
   }
 
   [Fact]
@@ -134,7 +91,7 @@ public sealed class SyncWireFramingTests
 
     Assert.Equal(Fixture.IncrementalUpdate, message.Update);
 
-    using var seeded = SeededDoc();
+    var seeded = SeededDoc();
     Apply(seeded, message.Update);
 
     Assert.Equal(Fixture.Expected.TextAfterIncremental, ContentText(seeded));
@@ -223,87 +180,6 @@ public sealed class SyncWireFramingTests
     Assert.Equal(0UL, Frame("permissionDenied").AuthType);
   }
 
-  // ---- YDotNet.Protocol 0.6.0 canaries: the evidence behind the decision. ----
-
-  [Theory]
-  [InlineData("syncStep1")]
-  [InlineData("syncStep2")]
-  [InlineData("update")]
-  [InlineData("awareness")]
-  public async Task YDotNetProtocolRoundTripsSyncAndAwarenessFramesByteForByte(string name)
-  {
-    var frame = Frame(name);
-    var decoder = new ArrayDecoder(frame.Bytes);
-    var message = await decoder.ReadNextMessageAsync(CancellationToken.None);
-    var encoder = new BufferEncoder();
-
-    switch (message)
-    {
-      case SyncStep1Message step1:
-        await encoder.WriteAsync(step1, CancellationToken.None);
-        break;
-      case SyncStep2Message step2:
-        await encoder.WriteAsync(step2, CancellationToken.None);
-        break;
-      case SyncUpdateMessage update:
-        await encoder.WriteAsync(update, CancellationToken.None);
-        break;
-      case AwarenessMessage awareness:
-        var client = Assert.Single(awareness.Clients);
-        Assert.Equal(frame.Awareness?.ClientId, client.ClientId);
-        Assert.Equal(frame.Awareness?.Clock, client.Clock);
-        Assert.Equal(frame.Awareness?.StateJson, client.State);
-        await encoder.WriteAsync(awareness, CancellationToken.None);
-        break;
-      default:
-        Assert.Fail($"YDotNet.Protocol decoded {name} as {message}");
-        break;
-    }
-
-    Assert.True(decoder.AtEnd);
-    Assert.Equal(frame.Bytes, encoder.ToArray());
-  }
-
-  [Fact]
-  public async Task YDotNetProtocolMisencodesQueryAwarenessAsTheAwarenessType()
-  {
-    var encoder = new BufferEncoder();
-
-    await encoder.WriteAsync(new QueryAwarenessMessage(), CancellationToken.None);
-
-    Assert.Equal(new byte[] { 0x01 }, encoder.ToArray());
-    Assert.Equal(new byte[] { 0x03 }, Frame("queryAwareness").Bytes);
-  }
-
-  [Theory]
-  [InlineData("permissionDenied", 2UL)]
-  [InlineData("queryAwareness", 3UL)]
-  [InlineData("blokControl", 100UL)]
-  [InlineData("blokLimits", 101UL)]
-  public async Task YDotNetProtocolLeavesAuthQueryAndControlFramesUndecoded(
-      string name,
-      ulong identifier)
-  {
-    var decoder = new ArrayDecoder(Frame(name).Bytes);
-
-    var message = await decoder.ReadNextMessageAsync(CancellationToken.None);
-
-    Assert.Equal(new UnknownMessage(identifier), message);
-  }
-
-  [Fact]
-  public async Task YDotNetProtocolEncodesPermissionDeniedLikeYProtocols()
-  {
-    var frame = Frame("permissionDenied");
-    var encoder = new BufferEncoder();
-
-    await encoder.WriteAsync(
-        new AuthErrorMessage(frame.Reason ?? ""),
-        CancellationToken.None);
-
-    Assert.Equal(frame.Bytes, encoder.ToArray());
-  }
-
   private static T Decode<T>(string name)
       where T : SyncWireMessage
   {
@@ -312,26 +188,22 @@ public sealed class SyncWireFramingTests
     return Assert.IsType<T>(message);
   }
 
-  private static Doc SeededDoc()
+  private static YDoc SeededDoc()
   {
-    var doc = new Doc();
+    var doc = new YDoc();
     Apply(doc, Fixture.SeedUpdate);
 
     return doc;
   }
 
-  private static void Apply(Doc doc, byte[] update)
+  private static void Apply(YDoc doc, byte[] update)
   {
-    using var transaction = doc.WriteTransaction();
-    Assert.Equal(TransactionUpdateResult.Ok, transaction.ApplyV1(update));
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(update).Outcome);
   }
 
-  private static string ContentText(Doc doc)
+  private static string ContentText(YDoc doc)
   {
-    var text = doc.Text("content");
-    using var transaction = doc.ReadTransaction();
-
-    return text.String(transaction);
+    return doc.GetText("content").ToString();
   }
 
   private static FrameFixture Frame(string name)
@@ -366,36 +238,6 @@ public sealed class SyncWireFramingTests
 
     throw new DirectoryNotFoundException(
         "Could not locate the Blok.Server solution root.");
-  }
-
-  private sealed class ArrayDecoder(byte[] bytes) : YDotNet.Protocol.Decoder
-  {
-    private int position;
-
-    public bool AtEnd => position == bytes.Length;
-
-    protected override ValueTask<byte> ReadByteAsync(CancellationToken ct)
-    {
-      if (position >= bytes.Length)
-      {
-        throw new EndOfStreamException();
-      }
-
-      return ValueTask.FromResult(bytes[position++]);
-    }
-
-    protected override ValueTask ReadBytesAsync(Memory<byte> target, CancellationToken ct)
-    {
-      if (position + target.Length > bytes.Length)
-      {
-        throw new EndOfStreamException();
-      }
-
-      bytes.AsMemory(position, target.Length).CopyTo(target);
-      position += target.Length;
-
-      return ValueTask.CompletedTask;
-    }
   }
 
   private sealed record SyncFramesFixture(

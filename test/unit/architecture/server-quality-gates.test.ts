@@ -53,8 +53,9 @@ describe('server quality gates', () => {
     expect(props).toContain('<NuGetAuditMode>all</NuGetAuditMode>');
     expect(props).toContain('<NuGetAuditLevel>low</NuGetAuditLevel>');
     expect(props).toContain('NU1901;NU1902;NU1903;NU1904');
-    expect(props).toContain('<NoWarn>$(NoWarn);NETSDK1206</NoWarn>');
-    expect(props.match(/<NoWarn>/g)).toHaveLength(1);
+    // The managed engine packs no native RID assets, so nothing is suppressed.
+    expect(props).not.toContain('NETSDK1206');
+    expect(props).not.toContain('<NoWarn>');
   });
 
   it('keeps unit, integration, end-to-end, and coverage gates in CI', () => {

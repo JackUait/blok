@@ -1,42 +1,26 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Tests.Collab;
 using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Options;
-using YDotNet.Document.Transactions;
 
 namespace Blok.Server.Tests.Yjs;
 
 internal sealed record YrsCompatCase(string Name, byte[] Update, JsonArray Canonical);
 
 /// <summary>
-/// The yrs-encoded corpus. Every working set ever persisted by this server
-/// was encoded by yrs through YDotNet, and yrs bytes are spec-compliant but
-/// not byte-identical to yjs. Once YDotNet is deleted no such bytes can be
-/// produced again, so they are captured here while the package is still
-/// referenced and committed as a fixture the managed engine is pinned to.
+/// The yrs-encoded corpus: working-set bytes captured from yrs while the
+/// native binding was still referenced. yrs bytes are spec-compliant but not
+/// byte-identical to yjs, and no more can ever be produced now that the
+/// binding is gone, so the committed file is read-only history.
 ///
-/// Run with BLOK_CAPTURE_YRS_CORPUS=1 to (re)capture; without it the tests
-/// only read the committed file. The capture branch dies with YDotNet; the
-/// file outlives it.
-///
-/// A recapture is NOT byte-identical: YDocConverter.Seed mints random grid
-/// row keys. That changes the bytes, never the exported JSON — which is why
-/// the replay test compares canonicalised JSON and not the raw update.
-///
-/// Only the 20 collab fixtures go in. The NUL-bearing canary in
-/// YDocConverterHardeningTests must never be captured: reading it panics
-/// inside yrs and aborts the whole test host.
+/// A recapture would not have been byte-identical anyway: YDocConverter.Seed
+/// mints random grid row keys. That changes the bytes, never the exported
+/// JSON — which is why the replay test compares canonicalised JSON.
 /// </summary>
 public sealed class YrsCompatCorpusTests
 {
-  private const string CaptureVariable = "BLOK_CAPTURE_YRS_CORPUS";
   private const string CorpusFileName = "yrs-compat.json";
-  private const string YrsVersion = "0.19.1 via YDotNet 0.6.0";
 
   /// <summary>Anchor for the walk up from the test output; it always exists.</summary>
   private const string CollabManifest =
@@ -45,31 +29,26 @@ public sealed class YrsCompatCorpusTests
   private const string RelativeRoot =
       "test/unit/server-conformance/fixtures/yjs-engine";
 
-  /// <summary>Pinned so a recapture differs only where Seed is random.</summary>
-  private const uint CaptureClientId = 1;
-
   private const uint ReplayClientId = 2;
 
-  private static readonly byte[] EmptyStateVector = [0];
+  private static readonly Lazy<IReadOnlyList<YrsCompatCase>> Corpus = new(Read);
 
-  /// <summary>Relaxed so base64 keeps its "+" and the sibling Node-written fixtures match.</summary>
-  private static readonly JsonSerializerOptions IndentedJson = new()
-  {
-    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    WriteIndented = true,
-  };
-
-  private static readonly Lazy<IReadOnlyList<YrsCompatCase>> Corpus = new(LoadCorpus);
-
+  /// <summary>
+  /// A subset check, not an equality one: the corpus can only shrink. A new
+  /// collab fixture gets no entry because yrs bytes can no longer be produced.
+  /// </summary>
   [Fact]
-  public void CorpusHoldsEveryCollabFixture()
+  public void EveryCorpusEntryNamesACollabFixture()
   {
     var cases = Corpus.Value;
+    var known = YDocConverterFixtures.CaseNames().ToHashSet(StringComparer.Ordinal);
 
-    Assert.Equal(
-        YDocConverterFixtures.CaseNames().Order(StringComparer.Ordinal),
-        cases.Select(entry => entry.Name));
-    Assert.All(cases, entry => Assert.NotEmpty(entry.Update));
+    Assert.NotEmpty(cases);
+    Assert.All(cases, entry =>
+    {
+      Assert.Contains(entry.Name, known);
+      Assert.NotEmpty(entry.Update);
+    });
   }
 
   /// <summary>
@@ -77,7 +56,7 @@ public sealed class YrsCompatCorpusTests
   /// the same JSON the client's own fixture says.
   /// </summary>
   [Fact]
-  public void CapturedUpdatesApplyBackAndExportTheCanonicalJson()
+  public void CapturedUpdatesApplyIntoTheEngineAndExportTheCanonicalJson()
   {
     foreach (var entry in Corpus.Value)
     {
@@ -96,69 +75,6 @@ public sealed class YrsCompatCorpusTests
     }
   }
 
-  private static YrsCompatCase[] LoadCorpus()
-  {
-    if (string.Equals(
-        Environment.GetEnvironmentVariable(CaptureVariable),
-        "1",
-        StringComparison.Ordinal))
-    {
-      Capture();
-    }
-
-    return Read();
-  }
-
-  private static void Capture()
-  {
-    var cases = new JsonArray();
-
-    foreach (var name in YDocConverterFixtures.CaseNames().Order(StringComparer.Ordinal))
-    {
-      var fixture = YDocConverterFixtures.Load(name);
-      var source = new YDoc(CaptureClientId);
-
-      YDocConverter.Seed(source, fixture.Input);
-
-      // Round-tripped through yrs so the bytes are YRS's, not the engine's:
-      // that is the whole point of the corpus.
-      using var doc = new Doc(new DocOptions { Id = CaptureClientId });
-
-      using (var transaction = doc.WriteTransaction())
-      {
-        Assert.Equal(
-            TransactionUpdateResult.Ok,
-            transaction.ApplyV1(source.EncodeStateAsUpdate()));
-      }
-
-      byte[] update;
-
-      using (var transaction = doc.ReadTransaction())
-      {
-        update = transaction.StateDiffV1(EmptyStateVector);
-      }
-
-      cases.Add(new JsonObject
-      {
-        ["name"] = name,
-        ["update"] = Convert.ToBase64String(update),
-        ["canonical"] = fixture.Canonical.DeepClone(),
-      });
-    }
-
-    var corpus = new JsonObject
-    {
-      ["yrs"] = YrsVersion,
-      ["cases"] = cases,
-    };
-
-    var directory = LocateRoot();
-    Directory.CreateDirectory(directory);
-    File.WriteAllText(
-        Path.Combine(directory, CorpusFileName),
-        corpus.ToJsonString(IndentedJson) + "\n");
-  }
-
   private static YrsCompatCase[] Read()
   {
     var path = Path.Combine(LocateRoot(), CorpusFileName);
@@ -166,8 +82,7 @@ public sealed class YrsCompatCorpusTests
     if (!File.Exists(path))
     {
       throw new FileNotFoundException(
-          $"the yrs corpus is missing: run the suite once with " +
-          $"{CaptureVariable}=1 while YDotNet is still referenced",
+          "the yrs corpus is missing and cannot be recaptured: restore it from git",
           path);
     }
 

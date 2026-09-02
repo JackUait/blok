@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { gunzipSync } from 'node:zlib';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 import JSZip from 'jszip';
@@ -10,7 +10,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   TARGETS,
-  assertMuslOverridesPresent,
   createArchive,
   parseArgs,
   publishCommand,
@@ -170,7 +169,6 @@ describe('publish-server', () => {
         '--output',
         '/scratch/osx-x64',
         '-p:PublishSingleFile=true',
-        '-p:IncludeNativeLibrariesForSelfExtract=true',
         '-p:DebugType=None',
         '-p:DebugSymbols=false',
         '-p:AssemblyName=blok-server',
@@ -257,31 +255,5 @@ describe('publish-server', () => {
       expect(lines.some((line) => line.includes(`--runtime ${target.rid}`))).toBe(true);
       expect(lines.some((line) => line.includes(target.archive))).toBe(true);
     }
-  });
-
-  it('refuses a musl publish while a CI-built libyrs override is missing', () => {
-    const check = (): void => assertMuslOverridesPresent(TARGETS, temporaryDirectory);
-
-    expect(check).toThrow(
-      'packages/server/dotnet/Blok.Server.Host/runtimes/linux-musl-x64/native/libyrs.so',
-    );
-    expect(check).toThrow(
-      'packages/server/dotnet/Blok.Server.Host/runtimes/linux-musl-arm64/native/libyrs.so',
-    );
-    expect(check).toThrow('build-musl-yffi');
-  });
-
-  it('accepts a publish once both musl overrides are staged', () => {
-    for (const rid of ['linux-musl-x64', 'linux-musl-arm64']) {
-      const override = join(
-        temporaryDirectory,
-        `packages/server/dotnet/Blok.Server.Host/runtimes/${rid}/native/libyrs.so`,
-      );
-
-      mkdirSync(dirname(override), { recursive: true });
-      writeFileSync(override, 'stub');
-    }
-
-    expect(() => assertMuslOverridesPresent(TARGETS, temporaryDirectory)).not.toThrow();
   });
 });

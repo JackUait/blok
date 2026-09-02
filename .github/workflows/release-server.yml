@@ -9,82 +9,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # YDotNet.Native.Linux 0.6.0 mispacks its musl natives (upstream bug in
-  # native/YDotNet.Native.Linux/YDotNet.Native.Linux.csproj, still on main):
-  # the aarch64 musl lib is packed into runtimes/linux-musl-x64/native (wrong
-  # architecture), the x64 musl build lands in runtimes/linux-x64-musl (an
-  # invalid RID .NET never matches) and is glibc-linked anyway, and
-  # linux-musl-arm64 has no asset at all (the RID graph silently substitutes
-  # the glibc arm64 lib). So this job compiles yffi ourselves and
-  # Blok.Server.Host swaps the packaged libyrs.so for exactly those two RIDs.
-  # The yrs pin must match the tag YDotNet builds its own natives from: on
-  # EVERY YDotNet version bump, re-read y-crdt/ydotnet's build-binaries.yml
-  # and move the release-v0.19.1 pin here and in server-release-wiring.
-  build-musl-yffi:
-    name: Build musl libyrs (${{ matrix.rid }})
-    if: github.repository == 'JackUait/blok'
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-    env:
-      YRS_PIN: release-v0.19.1
-    strategy:
-      matrix:
-        include:
-          - rid: linux-musl-x64
-            target: x86_64-unknown-linux-musl
-            runner: ubuntu-latest
-            machine: x86-64
-            loader: libc.musl-x86_64.so.1
-          - rid: linux-musl-arm64
-            target: aarch64-unknown-linux-musl
-            runner: ubuntu-24.04-arm
-            machine: ARM aarch64
-            loader: libc.musl-aarch64.so.1
-    steps:
-      # No restore-keys: a lib restored from another pin must never be reused.
-      - name: Restore the cached libyrs build
-        id: libyrs-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: yffi-out
-          key: libyrs-${{ matrix.target }}-${{ env.YRS_PIN }}
-
-      # -crt-static off is what makes the build a shared musl-linked .so;
-      # rust:alpine's default toolchain already targets the musl triple.
-      - name: Build yffi in a rust:alpine container
-        if: steps.libyrs-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p yffi-out
-          docker run --rm --env YRS_PIN --volume "$PWD/yffi-out:/out" rust:alpine sh -euc '
-            apk add --no-cache build-base git musl-dev
-            git clone --depth 1 --branch "$YRS_PIN" https://github.com/y-crdt/y-crdt.git /src
-            cd /src
-            export RUSTFLAGS="-C target-feature=-crt-static"
-            cargo build --release -p yffi --target ${{ matrix.target }}
-            cp "target/${{ matrix.target }}/release/libyrs.so" /out/libyrs.so
-          '
-
-      # The exact failure this whole job exists to prevent is a wrong-arch or
-      # glibc-linked lib in a musl RID folder, so prove both properties.
-      - name: Verify the library is ${{ matrix.machine }} and musl-linked
-        run: |
-          file yffi-out/libyrs.so
-          file yffi-out/libyrs.so | grep -F 'ELF 64-bit LSB shared object'
-          file yffi-out/libyrs.so | grep -F '${{ matrix.machine }}'
-          readelf -d yffi-out/libyrs.so | grep -F '${{ matrix.loader }}'
-
-      - name: Upload the override native
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: libyrs-${{ matrix.rid }}
-          path: yffi-out/libyrs.so
-          if-no-files-found: error
-
   release-server:
     name: Release server
     if: github.repository == 'JackUait/blok'
-    needs: build-musl-yffi
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -152,19 +79,6 @@ jobs:
           dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release
           dotnet format packages/server/dotnet/Blok.Server.slnx --verify-no-changes
 
-      - name: Fetch the musl libyrs overrides
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: libyrs-linux-musl-*
-          path: .libyrs-overrides
-
-      - name: Stage the musl libyrs overrides
-        run: |
-          for rid in linux-musl-x64 linux-musl-arm64; do
-            install -D ".libyrs-overrides/libyrs-$rid/libyrs.so" \
-              "packages/server/dotnet/Blok.Server.Host/runtimes/$rid/native/libyrs.so"
-          done
-
       - name: Build NuGet and host artifacts
         run: |
           rm -rf .server-release-dist
@@ -188,10 +102,8 @@ jobs:
           tar -xzf .server-release-dist/blok-server_linux_amd64.tar.gz -C .server-release-smoke
           .server-release-smoke/blok-server --help
 
-      # Startup extracts the bundled natives, and musl ldd IS the dynamic
-      # loader, so listing the extracted libyrs.so actually loads it — a
-      # wrong-arch or glibc-linked lib fails right here instead of on the
-      # first collab call on a user's Alpine box.
+      # The host is fully managed, so the single-file binary unpacks nothing:
+      # this proves it starts on musl with no writable extraction directory.
       - name: Smoke musl-amd64 archive on Alpine
         run: |
           mkdir -p .server-release-smoke/musl
@@ -199,11 +111,7 @@ jobs:
           docker run --rm --platform linux/amd64 \
             --volume "$PWD/.server-release-smoke/musl:/smoke:ro" \
             mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine sh -euc '
-              export DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp/blok-extract
               /smoke/blok-server --help >/dev/null
-              so="$(find /tmp/blok-extract -type f -name libyrs.so | head -n 1)"
-              test -n "$so"
-              /lib/ld-musl-x86_64.so.1 --list "$so"
             '
 
       - name: Publish NuGet packages
@@ -298,23 +206,17 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:4000/missing)" = "404"
 
-      # The spike proved single-file extraction as root only; this proves it
-      # for the image's real user 65532 with no writable home (default
-      # /var/tmp base). If it ever fails, set DOTNET_BUNDLE_EXTRACT_BASE_DIR
-      # in the Dockerfile — do not give the user a home directory.
-      - name: Smoke image native extraction as USER 65532
+      # The image's user has no home and cannot write /, and the managed host
+      # needs neither: it must start with nowhere to unpack into.
+      - name: Smoke image starts as USER 65532 without an extraction directory
         run: |
           image="ghcr.io/jackuait/blok-server"
-          docker run --rm --entrypoint /bin/sh "$image:$BLOK_SERVER_VERSION" -euc '
-            test "$(id -u)" = "65532"
-            test ! -w "${HOME:-/}"
-            test "$DOTNET_BUNDLE_EXTRACT_BASE_DIR" = "/var/tmp/.net"
-            test -w /var/tmp/.net
-            /blok-server --help >/dev/null
-            so="$(find "$DOTNET_BUNDLE_EXTRACT_BASE_DIR" -type f -name libyrs.so | head -n 1)"
-            test -n "$so"
-            ldd "$so"
-          '
+          docker run --rm --env HOME=/nonexistent \
+            --entrypoint /bin/sh "$image:$BLOK_SERVER_VERSION" -euc '
+              test "$(id -u)" = "65532"
+              test ! -w "$HOME"
+              /blok-server --help >/dev/null
+            '
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0

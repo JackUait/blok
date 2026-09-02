@@ -18,11 +18,9 @@ public sealed class YDocConverterHardeningTests
   private const ulong ForeignClient = 999;
 
   /// <summary>
-  /// A doc a JS peer can produce and this process once could not read: the
-  /// blocks map carries a key with a NUL, which yffi's <c>YMapEntry::new</c>
-  /// unwrapped into a process abort. The managed engine treats NUL as
-  /// ordinary data, so the update applies and the NUL reaches the export
-  /// intact (Locked Decision 9).
+  /// A doc a JS peer can produce: the blocks map carries a key with a NUL.
+  /// NUL is ordinary data to the engine, so the update applies and the NUL
+  /// reaches the export intact (Locked Decision 9).
   /// </summary>
   [Fact]
   public void HostileNulUpdateExportsTheNulIntact()

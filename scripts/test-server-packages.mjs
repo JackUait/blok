@@ -233,8 +233,6 @@ function assertPackageMetadata(packageId, nuspec) {
       [
         { id: 'AngleSharp', version: '1.7.2' },
         { id: 'BouncyCastle.Cryptography', version: '2.7.0' },
-        { id: 'YDotNet', version: '0.6.0' },
-        { id: 'YDotNet.Native', version: '0.6.0' },
       ],
       'Blok.Server must retain its exact direct package dependencies',
     );
@@ -718,7 +716,6 @@ async function main() {
     <packageSource key="nuget.org">
       <package pattern="AngleSharp" />
       <package pattern="BouncyCastle.Cryptography" />
-      <package pattern="YDotNet*" />
     </packageSource>
   </packageSourceMapping>
 </configuration>

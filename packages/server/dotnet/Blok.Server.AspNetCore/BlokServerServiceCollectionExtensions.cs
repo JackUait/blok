@@ -94,7 +94,14 @@ public static class BlokServerServiceCollectionExtensions
           "The collaboration working set needs CollabDirectory or CollabS3Prefix.");
     });
 
-    services.TryAddSingleton<SyncHandshake>();
+    // The store is optional: GetService (not GetRequiredService) returns null on
+    // a server with no ICollabOperationStore registered, which SyncHandshake
+    // then treats the same as v2 being switched off.
+    services.TryAddSingleton<SyncHandshake>(provider => new SyncHandshake(
+        provider.GetRequiredService<BlokServerOptions>(),
+        provider.GetRequiredService<FixedWindowRateLimiter>(),
+        provider.GetRequiredService<TimeProvider>(),
+        provider.GetService<ICollabOperationStore>()));
     services.TryAddSingleton<SyncConnectionTable>();
 
     services.TryAddSingleton<CollabRoomManager>(provider =>

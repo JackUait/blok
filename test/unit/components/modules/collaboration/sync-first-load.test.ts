@@ -98,6 +98,8 @@ class MockSocket {
 
   public readyState = 0;
 
+  public protocol = '';
+
   public onopen: ((event: unknown) => void) | null = null;
 
   public onmessage: ((event: { data: unknown }) => void) | null = null;
@@ -121,7 +123,9 @@ class MockSocket {
     this.readyState = 3;
   }
 
-  public open(): void {
+  /** Mirrors a real WebSocket: `.protocol` is set before `onopen` fires. */
+  public open(protocol = 'blok-sync.v1'): void {
+    this.protocol = protocol;
     this.readyState = 1;
     this.onopen?.({});
   }

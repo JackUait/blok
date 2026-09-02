@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Security.Claims;
+using Blok.Server.Collab;
 using Blok.Server.Tickets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -42,9 +43,24 @@ internal sealed record SyncAccepted(string? SubProtocol, bool CanWrite, string? 
 internal sealed class SyncHandshake(
     BlokServerOptions options,
     FixedWindowRateLimiter rateLimiter,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ICollabOperationStore? operationStore = null)
 {
   internal const string Protocol = "blok-sync.v1";
+  internal const string ProtocolV2 = "blok-sync.v2";
+
+  /// <summary>
+  /// v2 needs this AND a registered <see cref="ICollabOperationStore"/>; either
+  /// alone is not enough. Stays off until Task 3.3 lands the journal-before-
+  /// broadcast commit path — flipped earlier, a room with Wave 2's store but
+  /// not Wave 3's commit path would select a protocol it cannot durably serve.
+  /// `static readonly`, not `const`: a compile-time constant here would fold
+  /// the guarded branch below to unreachable code (CS0162) under this repo's
+  /// TreatWarningsAsErrors.
+  /// </summary>
+#pragma warning disable CA1805 // explicit `= false` documents the OFF state Task 3.3 flips; it is not dead code.
+  private static readonly bool AdvertiseV2 = false;
+#pragma warning restore CA1805
 
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {
@@ -101,7 +117,7 @@ internal sealed class SyncHandshake(
     }
 
     var offers = ProtocolOffers(context.Request);
-    var subProtocol = offers.Contains(Protocol, StringComparer.Ordinal) ? Protocol : null;
+    var subProtocol = SelectSubProtocol(offers);
     var rateLimitKey = addressKey;
     string? principal = null;
     var canWrite = true;
@@ -123,7 +139,7 @@ internal sealed class SyncHandshake(
             "blok-sync.v1 must be offered in Sec-WebSocket-Protocol\n"), rateLimitKey);
       }
 
-      var candidates = offers.Where(offer => offer != Protocol).ToArray();
+      var candidates = offers.Where(offer => offer != Protocol && offer != ProtocolV2).ToArray();
 
       if (candidates.Length == 0)
       {
@@ -190,6 +206,21 @@ internal sealed class SyncHandshake(
     var name = identity.Name ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     return string.IsNullOrEmpty(name) ? null : $"app:{name}";
+  }
+
+  /// <summary>
+  /// The highest version both sides support, or null if neither is offered.
+  /// v2 requires the advertise switch AND a registered store; short of that,
+  /// v1 is the only thing this server ever selects.
+  /// </summary>
+  private string? SelectSubProtocol(string[] offers)
+  {
+    if (AdvertiseV2 && operationStore is not null && offers.Contains(ProtocolV2, StringComparer.Ordinal))
+    {
+      return ProtocolV2;
+    }
+
+    return offers.Contains(Protocol, StringComparer.Ordinal) ? Protocol : null;
   }
 
   /// <summary>Both header shapes: one comma-joined value and repeated header lines.</summary>

@@ -140,6 +140,8 @@ export interface CollabDocSeam {
 export interface WebSocketLike {
   binaryType: string;
   readonly readyState: number;
+  /** The subprotocol the server selected, empty until then — mirrors DOM `WebSocket.protocol`. */
+  readonly protocol: string;
   onopen: ((event: unknown) => void) | null;
   onmessage: ((event: { data: unknown }) => void) | null;
   onclose: ((event: { code: number; reason: string }) => void) | null;

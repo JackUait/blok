@@ -34,8 +34,15 @@ import type {
  * No DOM, no module wiring: the Collaboration module owns those.
  */
 
-/** Subprotocol every Blok client offers; the server echoes it in every auth mode. */
-const SYNC_SUBPROTOCOL = 'blok-sync.v1';
+/**
+ * Version tokens this client offers, in order, before the ticket (if any).
+ * Stays `['blok-sync.v1']` until Task 4.5 changes it to
+ * `['blok-sync.v2', 'blok-sync.v1']` once this provider can drain v2
+ * operation/acknowledgement/rejection frames. Offering v2 before then gets
+ * the client selected into a protocol it cannot honour, and its edits stop
+ * being acknowledged.
+ */
+const SYNC_SUBPROTOCOL_OFFERS = ['blok-sync.v1'];
 
 /** CRDT schema this client speaks. A control frame naming another is terminal. */
 const SUPPORTED_FORMAT = 1;
@@ -809,7 +816,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * @param token - the connection ticket, if the host mints them
    */
   const openSocket = (generation: number, token: string | null): void => {
-    const protocols = token === null ? [SYNC_SUBPROTOCOL] : [SYNC_SUBPROTOCOL, token];
+    const protocols = token === null ? [...SYNC_SUBPROTOCOL_OFFERS] : [...SYNC_SUBPROTOCOL_OFFERS, token];
 
     // The try covers the factory call ALONE: a throw while attaching handlers
     // would leave a half-wired socket in `state`, which is the strand this

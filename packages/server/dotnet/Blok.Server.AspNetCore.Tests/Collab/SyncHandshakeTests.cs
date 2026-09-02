@@ -112,6 +112,66 @@ public sealed class SyncHandshakeTests
     await app.AssertRefusedAsync(HttpStatusCode.BadRequest, protocols: [fixture.Compatible]);
   }
 
+  // --- v2 negotiation (Task 1.4) ----------------------------------------
+  //
+  // AdvertiseV2 stays off until Task 3.3 lands the commit path, so every case
+  // here still selects v1 — "v1 only" and "v1+ticket" are already pinned by
+  // the tests above; these cover the remaining matrix rows: v2 offered
+  // alongside v1 (with and without a registered operation store), and the
+  // ticket search excluding both protocol tokens.
+
+  [Fact]
+  public async Task OffersV2ThenV1ThenTicketJoinAtV1WhenNoOperationStoreIsRegistered()
+  {
+    await using var app = await SyncApp.StartAsync("ticket");
+
+    Assert.Null(app.App.Services.GetService<ICollabOperationStore>());
+
+    await using var client = await app.ConnectAsync(
+        protocols: [SyncApp.ProtocolV2, SyncApp.Protocol, fixture.Compatible]);
+
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
+  }
+
+  [Fact]
+  public async Task OffersV2ThenV1ThenTicketStillJoinAtV1WithAnOperationStoreRegisteredBecauseTheAdvertiseSwitchIsOff()
+  {
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        services: services => services.AddSingleton<ICollabOperationStore, FakeCollabOperationStore>());
+
+    Assert.NotNull(app.App.Services.GetService<ICollabOperationStore>());
+
+    await using var client = await app.ConnectAsync(
+        protocols: [SyncApp.ProtocolV2, SyncApp.Protocol, fixture.Compatible]);
+
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
+  }
+
+  [Fact]
+  public async Task TicketSearchExcludesBothProtocolTokensSoTwoProtocolsWithNoTicketIsAMissingPassNotAnInvalidOne()
+  {
+    await using var app = await SyncApp.StartAsync("ticket");
+    await using var client = await app.ConnectAsync(
+        protocols: [SyncApp.Protocol, SyncApp.ProtocolV2]);
+
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    Assert.Equal((4401, "missing pass"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
+  public async Task AnInvalidTicketBetweenTheTwoProtocolTokensIsStillFoundAndRejected()
+  {
+    await using var app = await SyncApp.StartAsync("ticket");
+    await using var client = await app.ConnectAsync(
+        protocols: [SyncApp.Protocol, fixture.Expired, SyncApp.ProtocolV2]);
+
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    Assert.Equal((4401, "invalid pass"), await client.ReceiveCloseAsync());
+  }
+
   [Fact]
   public async Task ADocumentIdWithAnEncodedSlashIsClosed4400InsteadOfLookingLikeAPassMismatch()
   {

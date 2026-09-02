@@ -35,6 +35,8 @@ class MockSocket {
 
   public readyState = 0;
 
+  public protocol = '';
+
   public onopen: ((event: unknown) => void) | null = null;
 
   public onmessage: ((event: { data: unknown }) => void) | null = null;
@@ -66,7 +68,9 @@ class MockSocket {
 
   // ---- test drivers ----
 
-  public open(): void {
+  /** Mirrors a real WebSocket: `.protocol` is set before `onopen` fires. */
+  public open(protocol = PROTOCOL): void {
+    this.protocol = protocol;
     this.readyState = 1;
     this.onopen?.({});
   }
@@ -272,6 +276,32 @@ describe('createCollabProvider', () => {
       await flushMicrotasks();
 
       expect(harness.socket().protocols).toEqual([PROTOCOL, 'tok-1']);
+    });
+
+    // TRAP (Task 1.4): the offer list must stay exactly [v1] / [v1, ticket]
+    // until Task 4.5 adds v2 once this provider can drain v2 operation
+    // frames. Offering v2 earlier gets the client selected into a protocol
+    // it cannot honour, and its edits stop being acknowledged.
+    it('never offers blok-sync.v2, with or without a ticket', async () => {
+      const ticketSource = vi.fn(() => Promise.resolve('tok-1'));
+      const noTicket = createHarness();
+      const withTicket = createHarness({ ticketSource });
+
+      noTicket.provider.connect();
+      withTicket.provider.connect();
+      await flushMicrotasks();
+
+      expect(noTicket.socket().protocols).toEqual([PROTOCOL]);
+      expect(withTicket.socket().protocols).toEqual([PROTOCOL, 'tok-1']);
+    });
+
+    it('exposes the server-selected subprotocol once the socket opens', () => {
+      const harness = createHarness();
+
+      harness.provider.connect();
+      harness.socket().open();
+
+      expect(harness.socket().protocol).toBe(PROTOCOL);
     });
 
     it('reports connecting and asks for binary frames', () => {

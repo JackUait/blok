@@ -106,6 +106,21 @@ internal sealed class FakeClock : TimeProvider
 
 internal sealed record StoredWorkingSet(byte[] Frames, CollabWorkingSetTag Tag);
 
+/// <summary>
+/// Proves only that an operation store is REGISTERED — nothing in
+/// <c>SyncHandshake</c> calls a store this wave, since v2 selection stays off
+/// until Task 3.3 lands the commit path that could actually serve it.
+/// </summary>
+internal sealed class FakeCollabOperationStore : ICollabOperationStore
+{
+  public ValueTask<CollabDocumentOpen> OpenAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    throw new NotSupportedException();
+  }
+}
+
 internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 {
   private readonly Dictionary<string, StoredWorkingSet> documents = new(StringComparer.Ordinal);
@@ -444,6 +459,9 @@ internal sealed class SyncApp : IAsyncDisposable
   internal const string AllowedOrigin = "https://app.example.com";
   internal const string Doc = "doc-42";
   internal const string Protocol = "blok-sync.v1";
+
+  /// <summary>Never selected in this wave — see AdvertiseV2 on SyncHandshake.</summary>
+  internal const string ProtocolV2 = "blok-sync.v2";
 
   private readonly WebApplication app;
   private readonly string pattern;

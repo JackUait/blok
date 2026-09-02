@@ -24,8 +24,25 @@ internal sealed class SyncSocketMember : ICollabMember
 {
   private const int ReceiveBufferSize = 16 * 1024;
 
+  /// <summary>
+  /// Every receive costs a loop turn however few bytes it carries, so a
+  /// message sent as empty or one-byte fragments would spend the server's
+  /// CPU for almost nothing — and the budget only sees a message once it
+  /// ends. A message may therefore take this many receives plus one per
+  /// <see cref="MinBytesPerReceive"/> of its bytes: far more than any real
+  /// transport needs (a stream read hands back at least a TCP segment),
+  /// and the flood is closed at the seventeenth fragment.
+  /// </summary>
+  private const int ReceiveSlack = 16;
+
+  private const int MinBytesPerReceive = 64;
+
   /// <summary>How long a peer gets to answer our close before the socket is torn down.</summary>
   private static readonly TimeSpan DefaultCloseGrace = TimeSpan.FromSeconds(5);
+
+  /// <summary>The wire is binary; a text frame can only come from a non-Blok client.</summary>
+  private static readonly SyncCloseFrame TextFrame =
+      new(WebSocketCloseStatus.InvalidMessageType, "binary frames only");
 
   private readonly Channel<Outbound> outbound = Channel.CreateUnbounded<Outbound>(
       new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
@@ -203,6 +220,7 @@ internal sealed class SyncSocketMember : ICollabMember
     // After a close was requested (or with no membership) frames are read
     // only to reach the peer's close.
     var discarding = membership is null;
+    var receives = 0;
 
     try
     {
@@ -222,7 +240,25 @@ internal sealed class SyncSocketMember : ICollabMember
           continue;
         }
 
-        if (message.Length + result.Count > maxMessageBytes)
+        if (result.MessageType == WebSocketMessageType.Text)
+        {
+          RequestClose(TextFrame);
+          discarding = true;
+
+          continue;
+        }
+
+        var received = message.Length + result.Count;
+
+        if (++receives > ReceiveSlack + (received / MinBytesPerReceive))
+        {
+          RequestClose(SyncClose.InboundRateExceeded);
+          discarding = true;
+
+          continue;
+        }
+
+        if (received > maxMessageBytes)
         {
           RequestClose(SyncClose.TooBig);
           discarding = true;
@@ -239,6 +275,7 @@ internal sealed class SyncSocketMember : ICollabMember
 
         var frame = message.ToArray();
         message.SetLength(0);
+        receives = 0;
 
         if (inbound?.Allows(frame) == false)
         {

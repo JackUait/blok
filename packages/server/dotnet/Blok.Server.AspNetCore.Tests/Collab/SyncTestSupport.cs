@@ -13,6 +13,7 @@ using Blok.Server.Collab;
 using Blok.Server.Yjs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -296,9 +297,23 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
 
   internal Task SendRawAsync(byte[] frame)
   {
+    return SendFragmentAsync(frame, endOfMessage: true);
+  }
+
+  internal Task SendFragmentAsync(byte[] fragment, bool endOfMessage)
+  {
     return socket.SendAsync(
-        new ArraySegment<byte>(frame),
+        new ArraySegment<byte>(fragment),
         WebSocketMessageType.Binary,
+        endOfMessage,
+        Deadline.Token());
+  }
+
+  internal Task SendTextAsync(string text)
+  {
+    return socket.SendAsync(
+        new ArraySegment<byte>(Encoding.UTF8.GetBytes(text)),
+        WebSocketMessageType.Text,
         endOfMessage: true,
         Deadline.Token());
   }
@@ -410,9 +425,12 @@ internal sealed class UpgradeRefusedException(int statusCode) : Exception($"upgr
 }
 
 /// <summary>
-/// A TestServer-hosted Blok server with collaboration on and the room
-/// manager built from in-memory fakes (the DI factory would need a real doc
-/// endpoint). The FakeDocEndpoint holds <see cref="Doc"/> as "seeded".
+/// A Blok server with collaboration on and the room manager built from
+/// in-memory fakes (the DI factory would need a real doc endpoint). The
+/// FakeDocEndpoint holds <see cref="Doc"/> as "seeded". TestServer by
+/// default; <c>kestrel: true</c> listens on a real loopback port, which is
+/// the only way to get real WebSocket framing and TCP backpressure — the
+/// TestServer socket delivers every send as one receive and never blocks.
 /// </summary>
 internal sealed class SyncApp : IAsyncDisposable
 {
@@ -422,11 +440,13 @@ internal sealed class SyncApp : IAsyncDisposable
 
   private readonly WebApplication app;
   private readonly string pattern;
+  private readonly bool kestrel;
 
-  private SyncApp(WebApplication app, string pattern, SyncFakes fakes)
+  private SyncApp(WebApplication app, string pattern, bool kestrel, SyncFakes fakes)
   {
     this.app = app;
     this.pattern = pattern;
+    this.kestrel = kestrel;
     Fakes = fakes;
   }
 
@@ -441,12 +461,22 @@ internal sealed class SyncApp : IAsyncDisposable
       Action<WebApplication>? configureApp = null,
       string pattern = "",
       bool requireAuthorization = false,
-      SyncFakes? fakes = null)
+      SyncFakes? fakes = null,
+      bool kestrel = false)
   {
     fakes ??= new SyncFakes();
     var fixture = TicketFixture.Load();
     var builder = WebApplication.CreateBuilder();
-    builder.WebHost.UseTestServer();
+
+    if (kestrel)
+    {
+      builder.WebHost.UseUrls("http://127.0.0.1:0");
+    }
+    else
+    {
+      builder.WebHost.UseTestServer();
+    }
+
     builder.Services.AddSingleton(fakes.Manager);
     builder.Services.AddBlokServer(options =>
     {
@@ -463,6 +493,13 @@ internal sealed class SyncApp : IAsyncDisposable
     services?.Invoke(builder.Services);
 
     var app = builder.Build();
+
+    // TestServer supplies the WebSocket feature itself; Kestrel needs the middleware.
+    if (kestrel)
+    {
+      app.UseWebSockets();
+    }
+
     configureApp?.Invoke(app);
     var routes = app.MapBlokServer(pattern);
 
@@ -473,7 +510,7 @@ internal sealed class SyncApp : IAsyncDisposable
 
     await app.StartAsync();
 
-    return new SyncApp(app, pattern, fakes);
+    return new SyncApp(app, pattern, kestrel, fakes);
   }
 
   internal HttpClient CreateClient()
@@ -488,6 +525,16 @@ internal sealed class SyncApp : IAsyncDisposable
       string? origin = AllowedOrigin,
       Action<HttpRequest>? configure = null)
   {
+    if (kestrel)
+    {
+      if (configure is not null)
+      {
+        throw new NotSupportedException("request configuration is TestServer-only");
+      }
+
+      return await ConnectOverTcpAsync(doc, protocols, origin);
+    }
+
     var client = app.GetTestServer().CreateWebSocketClient();
 
     foreach (var protocol in protocols ?? [])
@@ -516,6 +563,43 @@ internal sealed class SyncApp : IAsyncDisposable
     catch (InvalidOperationException error) when (
         Regex.Match(error.Message, @"\d{3}") is { Success: true } status)
     {
+      throw new UpgradeRefusedException(
+          int.Parse(status.Value, CultureInfo.InvariantCulture));
+    }
+  }
+
+  private async Task<SyncClient> ConnectOverTcpAsync(
+      string doc,
+      IEnumerable<string>? protocols,
+      string? origin)
+  {
+    var socket = new ClientWebSocket();
+
+    foreach (var protocol in protocols ?? [])
+    {
+      socket.Options.AddSubProtocol(protocol);
+    }
+
+    if (origin is not null)
+    {
+      socket.Options.SetRequestHeader("Origin", origin);
+    }
+
+    var authority = new Uri(app.Urls.Single()).Authority;
+
+    try
+    {
+      await socket.ConnectAsync(
+          new Uri($"ws://{authority}{pattern}/sync/{Uri.EscapeDataString(doc)}"),
+          Deadline.Token());
+
+      return new SyncClient(socket);
+    }
+    catch (WebSocketException error) when (
+        Regex.Match(error.Message, @"\d{3}") is { Success: true } status)
+    {
+      socket.Dispose();
+
       throw new UpgradeRefusedException(
           int.Parse(status.Value, CultureInfo.InvariantCulture));
     }

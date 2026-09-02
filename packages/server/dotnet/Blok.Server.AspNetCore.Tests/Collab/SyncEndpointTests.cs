@@ -306,6 +306,44 @@ public sealed class SyncEndpointTests
     Assert.Equal(1021, (await bob.ReceiveAsync<AwarenessFrame>()).Update.Length);
   }
 
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task ATextFrameIsClosed1003BeforeItIsParsed(bool kestrel)
+  {
+    await using var app = await SyncApp.StartAsync(kestrel: kestrel);
+    await using var client = await app.ConnectAsync();
+
+    await client.SendTextAsync("hello");
+
+    Assert.Equal((1003, "binary frames only"), await client.ReceiveCloseAsync());
+  }
+
+  /// <summary>
+  /// One message carried as thousands of empty continuation frames costs
+  /// the sender six bytes a frame and the server a receive a frame; nothing
+  /// else meters it, because the budget only sees a message once it ends.
+  /// </summary>
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task AFloodOfEmptyContinuationFramesCloses1008(bool kestrel)
+  {
+    await using var app = await SyncApp.StartAsync(kestrel: kestrel);
+    await using var client = await app.ConnectAsync();
+
+    await client.SendFragmentAsync([1], endOfMessage: false);
+
+    for (var index = 0; index < 10_000; index++)
+    {
+      await client.SendFragmentAsync([], endOfMessage: false);
+    }
+
+    await client.SendFragmentAsync([0], endOfMessage: true);
+
+    Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
+  }
+
   [Fact]
   public async Task AnInboundBurstOverTheBudgetCloses1008()
   {

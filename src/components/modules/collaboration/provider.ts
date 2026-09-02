@@ -112,13 +112,21 @@ interface ProviderState {
   /** A queryAwareness reply (or a reconnect) needs every state, not just the deltas. */
   awarenessFull: boolean;
   attempt: number;
-  /** Every counter here runs since the LAST COMPLETED SYNC, not since the last close. */
+  /** Counters run since the LAST COMPLETED SYNC, not since the last close. */
   unauthorizedSinceSync: number;
+  /**
+   * Since the last resync answer that SHIPPED, not since the last sync: the
+   * server's SyncStep2 lands before its SyncStep1, so a sync completing
+   * proves nothing about the answer that follows it. See `answerResync`.
+   */
   oversizedSinceSync: number;
   handshakeTimeoutsSinceSync: number;
   /** Largest frame written on the CURRENT connection, in encoded bytes. */
   largestSentBytes: number;
-  /** Smallest frame size the server has refused as too big, if it has. */
+  /**
+   * Smallest frame size the server has refused as too big, if it has. Cleared
+   * with `oversizedSinceSync`, by a shipped resync answer.
+   */
   refusedFrameBytes: number | null;
   /**
    * The cap the server ANNOUNCED in its limits frame, in bytes — fact, not
@@ -464,19 +472,18 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       return;
     }
 
-    // A completed sync is the ONLY thing that clears the failure memory: it is
-    // the proof that the ticket is accepted, that this endpoint speaks the
-    // protocol, and that our frames fit — including the refused-size bound,
-    // which would otherwise keep refusing legitimate frames in a healed session.
-    // The ANNOUNCED cap is deliberately NOT cleared here: it is the server's
-    // stated fact, not an inference a sync could disprove.
+    // A completed sync is the proof that the ticket is accepted and that this
+    // endpoint speaks the protocol, so those counters and the backoff clear
+    // here. NOT the size memory: the server sends SyncStep2 BEFORE its own
+    // SyncStep1, so clearing the refused bound on the sync let the answer
+    // that followed re-ship the refused bytes every time — 1009, reconnect,
+    // repeat, never terminal. `answerResync` clears it once an answer ships.
+    // The ANNOUNCED cap is never cleared: it is the server's stated fact.
     state.synced = true;
     state.firstSyncTimer = clearTimer(state.firstSyncTimer);
     state.attempt = 0;
     state.unauthorizedSinceSync = 0;
-    state.oversizedSinceSync = 0;
     state.handshakeTimeoutsSinceSync = 0;
-    state.refusedFrameBytes = null;
     report('connected');
   };
 
@@ -501,6 +508,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * the refused connection, not the server's real cap, so a frame between the
    * two still ships and still draws the second 1009 through the ordinary path.
    * It is a loop-breaker, not a limit oracle.
+   *
+   * An answer that ships is what clears the bound and the 1009 count: the
+   * stranded bytes either went out or were refused here, and either way the
+   * memory has done its job.
    * @param socket - the connection it arrived on
    * @param stateVector - what the server says it already has
    */
@@ -531,6 +542,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }
 
     sendBytes(socket, bytes);
+    state.refusedFrameBytes = null;
+    state.oversizedSinceSync = 0;
   };
 
   /**
@@ -699,12 +712,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Applies the close-code policy. Both counters here — and the refused-frame
-   * bound they sit beside — run SINCE THE LAST COMPLETED SYNC, and only
-   * {@link markSynced} clears them. An unrelated close in
-   * between (a dropped connection, a restart) says nothing about whether the
-   * ticket is accepted or our frames fit, and clearing the count on one let a
-   * flapping server hide a permanently rejected ticket forever.
+   * Applies the close-code policy. The counters here run since the last
+   * proof that clears them — a completed sync for the ticket count
+   * ({@link markSynced}), a shipped resync answer for the size count and the
+   * refused-frame bound beside it ({@link answerResync}). An unrelated close
+   * in between (a dropped connection, a restart) says nothing about whether
+   * the ticket is accepted or our frames fit, and clearing the count on one
+   * let a flapping server hide a permanently rejected ticket forever.
    * @param code - the WebSocket close code
    * @param reason - the close reason, for the status detail
    */

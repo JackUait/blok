@@ -1485,7 +1485,48 @@ describe('createCollabProvider', () => {
         expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
-      it('forgets the refused size once a sync completes', () => {
+      // The real server answers our SyncStep1 with SyncStep2 FIRST, then its
+      // own SyncStep1 (CollabRoom.AnswerSyncStep1Locked). Against a server
+      // that announces no cap, clearing the learned bound on that SyncStep2
+      // let the answer re-ship the refused bytes on every reconnect: 1009,
+      // back in ~1s, repeat — and no terminal ever fired.
+      it('is terminal on the reconnect when SyncStep2 precedes SyncStep1 (the real server order)', () => {
+        const harness = createHarness();
+        const room = new DocumentStore(new YBlockSerializer());
+
+        stores.push(room);
+        refuseAfterWriting(harness, room, [{ id: 'huge', text: 'x'.repeat(8192) }]);
+
+        // The room never took the refused bytes, so its state vector still
+        // lacks them and a shipped answer draws the 1009 again.
+        for (const _round of [0, 1, 2]) {
+          vi.advanceTimersByTime(60_000);
+
+          const socket = harness.socket();
+
+          socket.open();
+          socket.deliver(controlFrame());
+          socket.deliver({ type: 'syncStep2', update: room.encodeStateAsUpdate(harness.store.getStateVector()) });
+          socket.deliver({ type: 'syncStep1', stateVector: room.getStateVector() });
+
+          if (harness.provider.status === 'error') {
+            break;
+          }
+
+          socket.serverClose(1009, 'message too big');
+        }
+
+        expect(harness.statuses.at(-1)).toEqual({
+          status: 'error',
+          detail: expect.objectContaining({ error: 'oversized-update' }),
+        });
+        expect(harness.sockets).toHaveLength(2);
+      });
+
+      // The bound is a loop-breaker for the answer that follows a 1009. Once
+      // an answer has shipped, a later resync — a state vector that lacks the
+      // once-refused bytes — is answered in full again.
+      it('forgets the refused size once a resync answer ships', () => {
         const harness = createHarness();
         const room = new DocumentStore(new YBlockSerializer());
         const fresh = new DocumentStore(new YBlockSerializer());
@@ -1498,13 +1539,18 @@ describe('createCollabProvider', () => {
 
         second.open();
         second.deliver(controlFrame());
+
+        // The room holds everything we have, so the resync answer is a few bytes.
+        room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
         completeFirstSync(harness, second, room);
 
         expect(harness.statuses.at(-1)?.status).toBe('connected');
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
 
         second.deliver({ type: 'syncStep1', stateVector: fresh.getStateVector() });
 
-        expect(second.frames.at(-1)?.type).toBe('syncStep2');
+        expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2', 'syncStep2']);
+        expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       });
 
       // A 1009 before we wrote anything says nothing about our own frames; a
@@ -1529,19 +1575,32 @@ describe('createCollabProvider', () => {
       });
     });
 
-    it('lets a completed sync clear the failure counters', () => {
+    // The 1009 count clears with the bound, on a shipped resync answer — not
+    // on the sync alone, which lands BEFORE the answer on a real server.
+    it('lets a shipped resync answer clear the failure counters', () => {
       const harness = createHarness();
-      const peer = new DocumentStore(new YBlockSerializer());
+      const room = new DocumentStore(new YBlockSerializer());
 
-      stores.push(peer);
+      stores.push(room);
 
-      connectAndHandshake(harness).serverClose(1009, 'message too big');
+      const first = connectAndHandshake(harness);
+
+      harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'x'.repeat(512) } });
+      first.serverClose(1009, 'message too big');
       vi.advanceTimersByTime(1000);
 
-      harness.socket().open();
-      harness.socket().deliver(controlFrame());
-      completeFirstSync(harness, harness.socket(), peer);
-      harness.socket().serverClose(1009, 'message too big');
+      const second = harness.socket();
+
+      second.open();
+      second.deliver(controlFrame());
+
+      // The room holds b1, so the answer to its SyncStep1 is a few bytes.
+      room.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), { source: 'room' });
+      completeFirstSync(harness, second, room);
+
+      expect(second.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+
+      second.serverClose(1009, 'message too big');
 
       expect(harness.statuses.at(-1)?.status).toBe('offline');
     });

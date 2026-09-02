@@ -339,22 +339,57 @@ public sealed class YDocConverterLawTests
     AssertJson("""{"__rows":{"k1":"row"}}""", data?["rowsOnly"]);
   }
 
+  /// <summary>
+  /// LOCKSTEP RULE with the client's toJSON: a block whose id or type is not
+  /// a string, or whose data is not a map, is skipped with a warning naming
+  /// its map key. The order is derived before any block is read, so the rest
+  /// of the document survives — a child of the skipped block included, still
+  /// naming it as parent.
+  /// </summary>
   [Fact]
-  public void ExportRejectsABlockWithoutAStringIdAStringTypeOrAMapData()
+  public void ExportSkipsABlockWithoutAStringIdAStringTypeOrAMapDataAndWarns()
   {
-    var badId = BuildDoc(
-        ["a"],
-        ("a", MapOf(("id", 1.0), ("type", "paragraph"), ("data", MapOf()))));
-    var badType = BuildDoc(
-        ["a"],
-        ("a", MapOf(("id", "a"), ("type", null), ("data", MapOf()))));
-    var badData = BuildDoc(
-        ["a"],
-        ("a", MapOf(("id", "a"), ("type", "paragraph"), ("data", new AnyObject()))));
+    var doc = BuildDoc(
+        ["bad-id", "bad-type", "bad-data", "good"],
+        ("bad-id", MapOf(
+            ("id", 1.0),
+            ("type", "paragraph"),
+            ("data", MapOf()),
+            ("contentIds", ArrayOf("kid")))),
+        ("kid", Block("kid", parentId: "bad-id")),
+        ("bad-type", MapOf(("id", "bad-type"), ("type", null), ("data", MapOf()))),
+        ("bad-data", MapOf(("id", "bad-data"), ("type", "paragraph"), ("data", new AnyObject()))),
+        ("good", Block("good")));
+    var warnings = new List<string>();
 
-    Assert.Throws<InvalidDataException>(() => YDocConverter.Export(badId));
-    Assert.Throws<InvalidDataException>(() => YDocConverter.Export(badType));
-    Assert.Throws<InvalidDataException>(() => YDocConverter.Export(badData));
+    var exported = YDocConverter.Export(doc, warnings.Add);
+
+    Assert.Equal(["kid", "good"], Ids(exported));
+    Assert.Equal("bad-id", BlockNamed(exported, "kid")["parent"]?.GetValue<string>());
+    Assert.Collection(
+        warnings,
+        warning => Assert.Contains("\"bad-id\"", warning, StringComparison.Ordinal),
+        warning => Assert.Contains("\"bad-type\"", warning, StringComparison.Ordinal),
+        warning => Assert.Contains("\"bad-data\"", warning, StringComparison.Ordinal));
+  }
+
+  /// <summary>
+  /// A blocks-map entry that is not a map at all — a peer's Y.XmlFragment,
+  /// say — is not a block: it is dropped from the order without a warning,
+  /// and never reaches the block reader that warns.
+  /// </summary>
+  [Fact]
+  public void ExportDropsANonMapBlocksEntryWithoutWarning()
+  {
+    var doc = BuildDoc(["frag", "good"], ("good", Block("good")));
+    var blockMap = doc.GetMap("blocks");
+
+    doc.Transact(transaction => blockMap.Set(transaction, "frag", new YXmlFragment()));
+
+    var warnings = new List<string>();
+
+    Assert.Equal(["good"], Ids(YDocConverter.Export(doc, warnings.Add)));
+    Assert.Empty(warnings);
   }
 
   [Fact]

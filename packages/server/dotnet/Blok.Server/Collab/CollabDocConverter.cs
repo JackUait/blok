@@ -8,7 +8,9 @@ namespace Blok.Server.Collab;
 /// room's <see cref="ICollabDocConverter"/>: unwraps the OutputData object
 /// on the way in and rebuilds one (time + blocks) on the way out.
 /// </summary>
-internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDocConverter
+internal sealed class CollabDocConverter(
+    TimeProvider timeProvider,
+    Action<string>? log = null) : ICollabDocConverter
 {
   public void Seed(YDoc doc, JsonNode outputData)
   {
@@ -37,7 +39,7 @@ internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDoc
     return new JsonObject
     {
       ["time"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
-      ["blocks"] = YDocConverter.Export(doc),
+      ["blocks"] = YDocConverter.Export(doc, log),
     };
   }
 }

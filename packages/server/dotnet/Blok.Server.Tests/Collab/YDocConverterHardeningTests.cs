@@ -165,6 +165,11 @@ public sealed class YDocConverterHardeningTests
     });
   }
 
+  /// <summary>
+  /// The depth accounting both sides share: data is level 1 and only
+  /// CONTAINERS are counted, so the scalar inside the deepest allowed map
+  /// is read back whole.
+  /// </summary>
   [Fact]
   public void SeedAndExportHandleDataNestedToTheLimit()
   {
@@ -177,6 +182,10 @@ public sealed class YDocConverterHardeningTests
       var exported = YDocConverter.Export(doc);
 
       Assert.Single(exported);
+
+      var deepest = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth - 1);
+
+      Assert.Equal(1L, deepest["v"]?.GetValue<long>());
     });
   }
 
@@ -190,40 +199,106 @@ public sealed class YDocConverterHardeningTests
     Assert.Contains("nested", error.Message, StringComparison.OrdinalIgnoreCase);
   }
 
+  /// <summary>
+  /// LOCKSTEP RULE with the client: a container nested past the cap exports
+  /// as null, and the block — and the document — still export. The map at
+  /// level 256 is the last one read; its child container is the null.
+  /// </summary>
   [Fact]
-  public void ExportRejectsDocDataNestedPastTheLimit()
+  public void ExportWritesNullForADocValueNestedPastTheLimit()
   {
     var doc = new YDoc();
-    var blockMap = doc.GetMap("blocks");
-    var rootOrder = doc.GetArray("root");
 
-    static YMap Nested(int depth)
-    {
-      var current = new YMap([new KeyValuePair<string, object?>("v", 1d)]);
+    WriteBlock(doc, "deep", ("data", NestedMaps(YDocConverter.MaxValueDepth + 5)));
 
-      for (var index = 0; index < depth; index++)
-      {
-        current = new YMap([new KeyValuePair<string, object?>("a", current)]);
-      }
+    var exported = YDocConverter.Export(doc);
 
-      return current;
-    }
+    var last = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth - 1);
 
-    doc.Transact(transaction =>
-    {
-      blockMap.Set(transaction, "deep", new YMap(
-      [
-        new KeyValuePair<string, object?>("id", "deep"),
-        new KeyValuePair<string, object?>("type", "paragraph"),
-        new KeyValuePair<string, object?>("data", Nested(YDocConverter.MaxValueDepth + 5)),
-        new KeyValuePair<string, object?>("contentIds", new YArray([])),
-      ]));
-      rootOrder.Insert(transaction, 0, ["deep"]);
-    });
+    Assert.True(last.ContainsKey("a"));
+    Assert.Null(last["a"]);
+  }
+
+  /// <summary>
+  /// The two value kinds no Blok client writes but a peer can. A Uint8Array
+  /// is the index-keyed object JSON.stringify writes for one. A SUBDOC is
+  /// where this engine and the client part company: ContentDoc.GetContent
+  /// hands back the guid STRING, indistinguishable here from any other
+  /// string, so it exports as that guid where the client writes {}.
+  /// </summary>
+  [Fact]
+  public void ExportRendersPeerMintedBytesAsAnIndexKeyedObjectAndASubdocAsItsGuid()
+  {
+    var doc = new YDoc();
+
+    WriteBlock(doc, "n1");
+
+    var data = Assert.IsType<YMap>(
+        Entry(Assert.IsType<YMap>(Entry(doc.GetMap("blocks"), "n1")), "data"));
+
+    doc.Transact(transaction => data.Set(transaction, "blob", new byte[] { 1, 2, 3 }));
+    ApplyForeign(doc, Keyed(0, data, "sub", new ContentDoc("sub-guid", null)));
+
+    var exported = YDocConverter.Export(doc)[0]!["data"]!;
+
+    AssertJson("""{"0":1,"1":2,"2":3}""", exported["blob"]);
+    Assert.Equal("sub-guid", exported["sub"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// A peer's malformed blocks are skipped and named; the rest of the
+  /// document exports. Received the way a peer's update is, so the shapes
+  /// are the ones that really survive the wire.
+  /// </summary>
+  [Fact]
+  public void ExportSkipsPeerMintedMalformedBlocksAndKeepsTheRest()
+  {
+    var source = new YDoc();
+
+    WriteBlock(source, "str-data", ("data", "nope"));
+    WriteBlock(source, "num-id", ("id", 7d));
+    WriteBlock(source, "deep", ("data", NestedMaps(300)));
+    WriteBlock(source, "fine");
+
+    var replica = new YDoc();
+
+    Assert.Equal(
+        ApplyOutcome.Applied,
+        replica.ApplyUpdate(source.EncodeStateAsUpdate()).Outcome);
+
+    var warnings = new List<string>();
+
+    var exported = YDocConverter.Export(replica, warnings.Add);
+
+    Assert.Equal(["deep", "fine"], exported.Select(block => block!["id"]!.GetValue<string>()));
+    Assert.Collection(
+        warnings,
+        warning => Assert.Contains("\"str-data\"", warning, StringComparison.Ordinal),
+        warning => Assert.Contains("\"num-id\"", warning, StringComparison.Ordinal));
+  }
+
+  /// <summary>
+  /// What a reader still refuses names the block and the key path it failed
+  /// at, instead of reporting only the value. The one shape that reaches it
+  /// here is yjs's LEGACY JSON content (ref 2), which reads back as a
+  /// System.Text.Json node the value switch has no case for.
+  /// </summary>
+  [Fact]
+  public void ExportNamesTheBlockAndPathWhenAReaderErrorRemains()
+  {
+    var doc = new YDoc();
+
+    WriteBlock(doc, "n1");
+
+    var data = Assert.IsType<YMap>(
+        Entry(Assert.IsType<YMap>(Entry(doc.GetMap("blocks"), "n1")), "data"));
+
+    ApplyForeign(doc, Keyed(0, data, "legacy", new ContentJson(["""{"a":1}"""])));
 
     var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Export(doc));
 
-    Assert.Contains("nested", error.Message, StringComparison.OrdinalIgnoreCase);
+    Assert.Contains("block \"n1\"", error.Message, StringComparison.Ordinal);
+    Assert.Contains("data.legacy", error.Message, StringComparison.Ordinal);
   }
 
   /// <summary>
@@ -338,6 +413,66 @@ public sealed class YDocConverterHardeningTests
     Assert.True(map.TryGet(key, out var value), $"no entry {key}");
 
     return value;
+  }
+
+  /// <summary>
+  /// A paragraph block in the doc and in the root order; each override
+  /// replaces one of its fields, as a peer's write would.
+  /// </summary>
+  private static void WriteBlock(YDoc doc, string id, params (string Key, object? Value)[] overrides)
+  {
+    var fields = new List<KeyValuePair<string, object?>>
+    {
+      new("id", id),
+      new("type", "paragraph"),
+      new("data", new YMap([new KeyValuePair<string, object?>("text", id)])),
+      new("contentIds", new YArray([])),
+    };
+
+    // The map constructor overwrites a repeated key in place, so an override
+    // keeps the field's original position.
+    fields.AddRange(overrides.Select(
+        entry => new KeyValuePair<string, object?>(entry.Key, entry.Value)));
+
+    var blockMap = doc.GetMap("blocks");
+    var rootOrder = doc.GetArray("root");
+
+    doc.Transact(transaction =>
+    {
+      blockMap.Set(transaction, id, new YMap(fields));
+      rootOrder.Insert(transaction, rootOrder.Count, [id]);
+    });
+  }
+
+  /// <summary><paramref name="depth"/> nested maps, the innermost holding v: 1.</summary>
+  private static YMap NestedMaps(int depth)
+  {
+    var current = new YMap([new KeyValuePair<string, object?>("v", 1d)]);
+
+    for (var index = 1; index < depth; index++)
+    {
+      current = new YMap([new KeyValuePair<string, object?>("a", current)]);
+    }
+
+    return current;
+  }
+
+  /// <summary>Follows key "a" <paramref name="steps"/> times.</summary>
+  private static JsonObject Descend(JsonObject node, int steps)
+  {
+    for (var index = 0; index < steps; index++)
+    {
+      node = node["a"]!.AsObject();
+    }
+
+    return node;
+  }
+
+  private static void AssertJson(string expected, JsonNode? actual)
+  {
+    Assert.Equal(
+        YDocConverterFixtures.Canonicalize(JsonNode.Parse(expected)),
+        YDocConverterFixtures.Canonicalize(actual));
   }
 
   private static void AssertSeedRejects(JsonArray blocks)

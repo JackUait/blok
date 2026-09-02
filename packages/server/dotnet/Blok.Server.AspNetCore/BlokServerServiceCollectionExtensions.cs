@@ -108,7 +108,7 @@ public static class BlokServerServiceCollectionExtensions
                   new Uri(effectiveOptions.DocEndpoint),
                   effectiveOptions.DocEndpointAuth,
                   DocEndpointRequestTimeout)),
-          new CollabDocConverter(timeProvider),
+          new CollabDocConverter(timeProvider, CollabLog(provider)),
           new CollabRoomOptions
           {
             AnnouncedMaxMessageBytes = effectiveOptions.CollabMaxMessageBytes,

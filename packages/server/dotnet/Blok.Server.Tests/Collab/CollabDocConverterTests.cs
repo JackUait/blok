@@ -28,6 +28,30 @@ public sealed class CollabDocConverterTests
     Assert.Equal("hi", block["data"]?["text"]?.GetValue<string>());
   }
 
+  /// <summary>
+  /// The skip warning is the operator's only sign that a peer put a block
+  /// the export cannot read into the room, so it must reach the room's log.
+  /// </summary>
+  [Fact]
+  public void ForwardsExportWarningsToTheLog()
+  {
+    var doc = new YDoc();
+    var warnings = new List<string>();
+    var converter = new CollabDocConverter(time, warnings.Add);
+    var blocks = doc.GetMap("blocks");
+
+    doc.Transact(transaction => blocks.Set(transaction, "bad", new YMap(
+    [
+      new KeyValuePair<string, object?>("id", 1d),
+      new KeyValuePair<string, object?>("type", "paragraph"),
+      new KeyValuePair<string, object?>("data", new YMap([])),
+    ])));
+
+    converter.Export(doc);
+
+    Assert.Contains(warnings, warning => warning.Contains("\"bad\"", StringComparison.Ordinal));
+  }
+
   [Theory]
   [InlineData("[]")]
   [InlineData("\"text\"")]

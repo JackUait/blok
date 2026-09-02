@@ -720,17 +720,33 @@ export class DocumentStore {
   }
 
   /**
-   * Delete occurrences back-to-front so earlier indices stay valid.
+   * One read, then deletes back-to-front so earlier indices stay valid, a
+   * contiguous run per delete. Never recurse or re-read per occurrence:
+   * concurrent moves can leave thousands of duplicates in one array.
    */
   private removeAllOccurrences(order: Y.Array<string>, id: string): void {
-    const index = order.toArray().lastIndexOf(id);
+    // Walked from the right, so runs come out highest-index first and each
+    // run grows leftwards.
+    const runs = order.toArray().reduceRight<Array<{ start: number; length: number }>>((acc, entryId, index) => {
+      if (entryId !== id) {
+        return acc;
+      }
 
-    if (index === -1) {
-      return;
+      const current = acc.at(-1);
+
+      if (current !== undefined && current.start === index + 1) {
+        current.start = index;
+        current.length += 1;
+      } else {
+        acc.push({ start: index, length: 1 });
+      }
+
+      return acc;
+    }, []);
+
+    for (const run of runs) {
+      order.delete(run.start, run.length);
     }
-
-    order.delete(index, 1);
-    this.removeAllOccurrences(order, id);
   }
 
   /**

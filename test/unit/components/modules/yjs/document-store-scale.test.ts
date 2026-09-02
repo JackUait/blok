@@ -131,3 +131,29 @@ describe('DocumentStore — flat-document insert and move cost', () => {
     expect(store.rootOrder.toArray().at(-1)).toBe('f0');
   }, SLOW);
 });
+
+/**
+ * Duplicate order entries accumulate when concurrent moves merge; removing
+ * the block must clear every one of them. Deleting back-to-front by
+ * recursion re-copied the array per occurrence: 20k duplicates stalled for
+ * tens of seconds and then overflowed the stack with the transaction
+ * half-committed (map entry gone, thousands of entries dangling).
+ */
+describe('DocumentStore — removing a block with many duplicate order entries', () => {
+  it('removes 20k duplicate root entries, leaving none dangling', () => {
+    const store = createStore();
+
+    store.fromJSON([
+      { id: 'dup', type: 'paragraph', data: { text: '' } },
+      { id: 'keep', type: 'paragraph', data: { text: '' } },
+    ]);
+    store.transact(() => {
+      store.rootOrder.insert(1, Array.from({ length: 20_000 }, () => 'dup'));
+    }, 'local');
+
+    store.removeBlock('dup');
+
+    expect(store.blocksMap.has('dup')).toBe(false);
+    expect(store.rootOrder.toArray()).toEqual(['keep']);
+  }, SLOW);
+});

@@ -782,10 +782,14 @@ export class DocumentStore {
     flatIds: string[],
     desiredFlatIndex: number
   ): number {
-    return order.toArray().reduce<number>((slot, entryId, position) => {
-      const flatIndex = flatIds.indexOf(entryId);
+    // Indexed once: an indexOf per order entry made one Enter in a flat 10k
+    // document cost seconds.
+    const flatIndexOf = new Map(flatIds.map((id, index) => [id, index]));
 
-      return flatIndex !== -1 && flatIndex < desiredFlatIndex ? position + 1 : slot;
+    return order.toArray().reduce<number>((slot, entryId, position) => {
+      const flatIndex = flatIndexOf.get(entryId);
+
+      return flatIndex !== undefined && flatIndex < desiredFlatIndex ? position + 1 : slot;
     }, 0);
   }
 

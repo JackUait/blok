@@ -91,3 +91,43 @@ describe('DocumentStore — deep document shapes terminate', () => {
     expect(store.getBlockById('b0')?.get('parentId')).toBeUndefined();
   }, SLOW);
 });
+
+/**
+ * One Enter in a large flat document must stay cheap. The slot translation
+ * used to look every order entry up in the flat list (O(n²): ~3 s at 10k);
+ * the bound below is deliberately loose — it catches a quadratic regression,
+ * not a slow machine.
+ */
+describe('DocumentStore — flat-document insert and move cost', () => {
+  const FLAT_LENGTH = 10_000;
+  const LOOSE_BOUND_MS = 1_000;
+
+  const flat = (): OutputBlockData[] =>
+    Array.from({ length: FLAT_LENGTH }, (_, index) => ({ id: `f${index}`, type: 'paragraph', data: { text: '' } }));
+
+  it('adds a block at the end of 10k flat blocks well under a second', () => {
+    const store = createStore();
+
+    store.fromJSON(flat());
+
+    const startedAt = performance.now();
+
+    store.addBlock({ id: 'new', type: 'paragraph', data: { text: '' } });
+
+    expect(performance.now() - startedAt).toBeLessThan(LOOSE_BOUND_MS);
+    expect(store.rootOrder.toArray().at(-1)).toBe('new');
+  }, SLOW);
+
+  it('moves the first of 10k flat blocks to the end well under a second', () => {
+    const store = createStore();
+
+    store.fromJSON(flat());
+
+    const startedAt = performance.now();
+
+    store.moveBlock('f0', FLAT_LENGTH - 1, 'local');
+
+    expect(performance.now() - startedAt).toBeLessThan(LOOSE_BOUND_MS);
+    expect(store.rootOrder.toArray().at(-1)).toBe('f0');
+  }, SLOW);
+});

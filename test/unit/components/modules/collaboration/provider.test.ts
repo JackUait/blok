@@ -195,6 +195,22 @@ const completeFirstSync = (harness: Harness, socket: MockSocket, peer: DocumentS
   socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
 };
 
+/**
+ * Advances exactly to the reconnect the last `offline` status announced. The
+ * handshake deadline is armed when a socket is CREATED, so jumping far past the
+ * reconnect would let the new, still-unopened socket time out first.
+ * @param harness - the provider under test
+ */
+const advanceToReconnect = (harness: Harness): void => {
+  const retryInMs = harness.statuses.at(-1)?.detail?.retryInMs;
+
+  if (retryInMs === undefined) {
+    throw new Error('no reconnect is pending');
+  }
+
+  vi.advanceTimersByTime(retryInMs);
+};
+
 /** A harness whose seam records every lineage reset the provider asks for. */
 const createResetHarness = (
   overrides: Partial<CollabProviderOptions> = {}
@@ -344,7 +360,7 @@ describe('createCollabProvider', () => {
 
       // The transport recovers and the provider is still trying.
       broken.now = false;
-      vi.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(statuses.at(-1)?.detail?.retryInMs ?? 0);
 
       expect(sockets).toHaveLength(2);
     });
@@ -457,7 +473,7 @@ describe('createCollabProvider', () => {
         detail: expect.objectContaining({ reason: expect.stringContaining('before its control frame') }),
       });
 
-      vi.advanceTimersByTime(60_000);
+      advanceToReconnect(harness);
 
       const second = harness.socket();
 
@@ -530,6 +546,26 @@ describe('createCollabProvider', () => {
       expect(harness.sockets).toHaveLength(2);
     });
 
+    // Browsers put no deadline on the opening handshake: a server that accepts
+    // the TCP connection and never completes the upgrade would park the client
+    // in `connecting` forever — no reconnect, no degrade view.
+    it('retries with backoff when the socket never opens', () => {
+      const harness = createHarness({ handshakeTimeoutMs: 5000 });
+
+      harness.provider.connect();
+      vi.advanceTimersByTime(5000);
+
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ retryInMs: 1000 }),
+      });
+      expect(harness.socket().closedWith).not.toBeNull();
+
+      vi.advanceTimersByTime(1000);
+
+      expect(harness.sockets).toHaveLength(2);
+    });
+
     it('recovers when the server answers the retried handshake', () => {
       const harness = createHarness({ handshakeTimeoutMs: 5000 });
       const peer = new DocumentStore(new YBlockSerializer());
@@ -561,7 +597,7 @@ describe('createCollabProvider', () => {
 
         expect(harness.statuses.at(-1)?.status).toBe('offline');
 
-        vi.advanceTimersByTime(60_000);
+        advanceToReconnect(harness);
       }
 
       harness.socket().open();
@@ -587,14 +623,14 @@ describe('createCollabProvider', () => {
       for (const _attempt of [0, 1]) {
         harness.socket().open();
         vi.advanceTimersByTime(5000);
-        vi.advanceTimersByTime(60_000);
+        advanceToReconnect(harness);
       }
 
       harness.socket().open();
       harness.socket().deliver(controlFrame());
       completeFirstSync(harness, harness.socket(), peer);
       harness.socket().serverClose(4503, '');
-      vi.advanceTimersByTime(60_000);
+      advanceToReconnect(harness);
 
       harness.socket().open();
       vi.advanceTimersByTime(5000);
@@ -621,7 +657,7 @@ describe('createCollabProvider', () => {
       expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
       expect(second.closedWith).not.toBeNull();
 
-      vi.advanceTimersByTime(120_000);
+      advanceToReconnect(harness);
 
       expect(harness.sockets).toHaveLength(3);
     });
@@ -635,7 +671,7 @@ describe('createCollabProvider', () => {
       harness.socket().open();
       harness.socket().deliver(controlFrame({ lineage: LINEAGE_B, epoch: 1 }));
 
-      vi.advanceTimersByTime(120_000);
+      advanceToReconnect(harness);
 
       const third = harness.socket();
 
@@ -1191,7 +1227,7 @@ describe('createCollabProvider', () => {
       expect(harness.store.toJSON()).toEqual([]);
       expect(harness.statuses.at(-1)?.status).toBe('offline');
 
-      vi.advanceTimersByTime(120_000);
+      advanceToReconnect(harness);
 
       expect(harness.sockets).toHaveLength(2);
       expect(harness.statuses.map((entry) => entry.status)).not.toContain('error');
@@ -1203,7 +1239,7 @@ describe('createCollabProvider', () => {
 
       harness.store.addBlock({ id: 'stale', type: 'paragraph', data: { text: 'must never be resent' } });
       socket.serverClose(4409, 'the room was reset');
-      vi.advanceTimersByTime(120_000);
+      advanceToReconnect(harness);
 
       const second = harness.socket();
 
@@ -1443,7 +1479,7 @@ describe('createCollabProvider', () => {
           { id: 'kept', text: 'y'.repeat(2048) },
           { id: 'huge', text: 'x'.repeat(8192) },
         ]);
-        vi.advanceTimersByTime(30_000);
+        advanceToReconnect(harness);
 
         const second = harness.socket();
 
@@ -1500,7 +1536,7 @@ describe('createCollabProvider', () => {
         // The room never took the refused bytes, so its state vector still
         // lacks them and a shipped answer draws the 1009 again.
         for (const _round of [0, 1, 2]) {
-          vi.advanceTimersByTime(60_000);
+          advanceToReconnect(harness);
 
           const socket = harness.socket();
 
@@ -1616,7 +1652,7 @@ describe('createCollabProvider', () => {
       harness.socket().open();
       harness.socket().deliver(controlFrame());
       harness.socket().serverClose(4503, '');
-      vi.advanceTimersByTime(30_000);
+      advanceToReconnect(harness);
 
       harness.socket().open();
       harness.socket().deliver(controlFrame());
@@ -1634,12 +1670,12 @@ describe('createCollabProvider', () => {
       const harness = createHarness();
 
       connectAndHandshake(harness).serverClose(4401, 'invalid pass');
-      vi.advanceTimersByTime(30_000);
+      advanceToReconnect(harness);
 
       harness.socket().open();
       harness.socket().deliver(controlFrame());
       harness.socket().serverClose(1006, 'connection lost');
-      vi.advanceTimersByTime(30_000);
+      advanceToReconnect(harness);
 
       harness.socket().open();
       harness.socket().deliver(controlFrame());
@@ -1809,7 +1845,7 @@ describe('createCollabProvider', () => {
       for (const _attempt of Array.from({ length: 8 })) {
         harness.socket().serverClose(4503, '');
         delays.push(harness.statuses.at(-1)?.detail?.retryInMs ?? 0);
-        vi.advanceTimersByTime(60_000);
+        advanceToReconnect(harness);
         harness.socket().open();
         harness.socket().deliver(controlFrame());
       }

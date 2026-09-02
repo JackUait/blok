@@ -775,7 +775,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * The socket opened and the control frame never came.
+   * The control frame never came — the socket never opened, or it opened and
+   * the server sent nothing.
    *
    * Retried like any other transient failure rather than ended outright: this
    * is an inference from silence, not the server's verdict, and a cold start or
@@ -844,6 +845,15 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // limits frame; a server that sends none leaves the learned-bound fallback.
     state.announcedMaxBytes = null;
 
+    // Armed at creation, not at `onopen`: browsers put no deadline on the
+    // opening handshake, so a server that accepts the TCP connection and never
+    // completes the upgrade would otherwise park the client in `connecting`
+    // for good.
+    state.handshakeTimer = setTimeout(() => {
+      state.handshakeTimer = null;
+      handleHandshakeTimeout();
+    }, handshakeTimeoutMs);
+
     socket.onopen = (): void => {
       if (isStale(generation)) {
         return;
@@ -851,11 +861,6 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
       // A state vector carries no history, so it is safe before validation.
       send(socket, { type: 'syncStep1', stateVector: yjs.getStateVector() });
-
-      state.handshakeTimer = setTimeout(() => {
-        state.handshakeTimer = null;
-        handleHandshakeTimeout();
-      }, handshakeTimeoutMs);
     };
 
     socket.onmessage = (event): void => {

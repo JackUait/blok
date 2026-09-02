@@ -1118,6 +1118,19 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    if (exportDirty)
+    {
+      // Same reasoning for the consumer's record: a room dropped with an
+      // export owed hydrates clean from the blob next time and never exports
+      // what the endpoint missed.
+      exportFailures++;
+      log?.Invoke(
+          $"collab: room \"{DocId}\" is staying loaded until its export lands");
+      UpdateEvictionLocked(Backoff(exportFailures));
+
+      return;
+    }
+
     CloseLocked(null);
   }
 

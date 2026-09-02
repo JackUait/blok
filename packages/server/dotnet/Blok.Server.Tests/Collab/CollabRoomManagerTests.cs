@@ -624,6 +624,52 @@ public sealed class CollabRoomManagerTests
   }
 
   /// <summary>
+  /// The endpoint is down while the room empties. Dropping the room once
+  /// the blob was written would leave the consumer's record trailing the
+  /// working set for a whole session: the next open hydrates from the blob,
+  /// is not dirty, and never exports — one log line as the only trace.
+  /// </summary>
+  [Fact]
+  public async Task AnEndpointOutageAtEvictionKeepsTheRoomLoadedUntilTheExportLands()
+  {
+    var log = new List<string>();
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager(
+        new CollabRoomOptions
+        {
+          ExportDebounce = TimeSpan.FromMinutes(5),
+          ExportMaxDelay = TimeSpan.FromMinutes(5),
+        },
+        log: log);
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    endpoint.NextSaveFailure = new DocEndpointException("collab: the doc endpoint PUT returned 502.", 502);
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Single(endpoint.Saves);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.True(time.ArmedTimerCount > 0, "the eviction has to be retried");
+    Assert.Contains(log, line => line.Contains("export", StringComparison.Ordinal));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromMinutes(1),
+        () => manager.LiveRoomCount == 0,
+        "the retried eviction");
+
+    Assert.Equal(2, endpoint.Saves.Count);
+    Assert.Equal("hello!", endpoint.Saves[^1].Data["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
   /// An S3 timeout surfaces as TaskCanceledException. The room's failure
   /// filters used to exempt every OperationCanceledException — they exist for
   /// the room's own lifetime token — so a timeout escaped the eviction flush,

@@ -141,10 +141,10 @@ public interface ICollabOperationStore
 /// THE FENCE IS THE SAFETY PROPERTY OF THIS SEAM. While this session lives it
 /// is the only writer of the document. If another process takes the fence, this
 /// session is stale, and every method here MUST then fail with
-/// <see cref="CollabOperationFenceLostException"/> rather than write anything —
-/// a file lock is advisory, and a holder with a stale descriptor can still
-/// reach the bytes, so the fence has to be re-verified on each write rather
-/// than assumed from the open.
+/// <see cref="CollabOperationFenceLostException"/> rather than write, or
+/// answer, as if it still owned the document — a file lock is advisory, and a
+/// holder with a stale descriptor can still reach the bytes, so the fence has
+/// to be re-verified on every call rather than assumed from the open.
 /// </para>
 /// <para>
 /// The session is a single lane: the caller serialises its own use of it. An
@@ -172,6 +172,51 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// the session writes.
   /// </summary>
   CollabOperationOpenResult OpenResult { get; }
+
+  /// <summary>
+  /// Reports what this lineage already holds for an operation id, without
+  /// writing anything.
+  /// </summary>
+  /// <param name="operationId">32 lowercase hexadecimal characters.</param>
+  /// <param name="digest">
+  /// The digest the caller would commit under that id — the same value it would
+  /// put on a <see cref="CollabOperationCandidate"/>. It is what separates a
+  /// retry from a reused id.
+  /// </param>
+  /// <param name="cancellationToken">The caller's token.</param>
+  /// <returns>
+  /// <see cref="CollabOperationLookupOutcome.NotCommitted"/> with sequence 0 for
+  /// an id this lineage has never committed;
+  /// <see cref="CollabOperationLookupOutcome.Duplicate"/> or
+  /// <see cref="CollabOperationLookupOutcome.Conflict"/> with the committed
+  /// sequence otherwise. A store that answers Duplicate or Conflict here must
+  /// answer the same for an <see cref="AppendAsync"/> of the same id.
+  /// </returns>
+  /// <remarks>
+  /// <para>
+  /// THE ANSWER MAY NOT BE STALE. It must account for every operation this
+  /// session has committed, including one committed a moment ago, and not only
+  /// for what existed when the session opened. A cache that lags behind the
+  /// journal makes this check worthless.
+  /// </para>
+  /// <para>
+  /// This exists so the caller can settle an operation id BEFORE it mutates the
+  /// live document. Learning about a conflict only from
+  /// <see cref="AppendAsync"/> is too late: the document has already been
+  /// changed with bytes the journal then refuses, and the room's only exit is
+  /// to discard itself and reload — which would turn a per-operation refusal
+  /// into a close for everyone in the room, on any writer's say-so.
+  /// </para>
+  /// <para>
+  /// The lookup covers the CURRENT lineage only. Operations from a superseded
+  /// lineage remain history but can never be replayed, so their ids are not
+  /// answered for here.
+  /// </para>
+  /// </remarks>
+  ValueTask<CollabOperationLookup> FindCommittedAsync(
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Appends one operation, assigning the next server sequence, or reports that

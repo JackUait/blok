@@ -139,6 +139,39 @@ public sealed record CollabOperationCandidate(
     ReadOnlyMemory<byte> Update,
     ReadOnlyMemory<byte> Digest);
 
+/// <summary>What a store already holds for one operation id.</summary>
+public enum CollabOperationLookupOutcome
+{
+  /// <summary>
+  /// No operation with this id is committed on this lineage. An append would
+  /// assign it a new sequence.
+  /// </summary>
+  NotCommitted,
+
+  /// <summary>
+  /// Already committed with the same digest — the producer is retrying work
+  /// that is already durable.
+  /// </summary>
+  Duplicate,
+
+  /// <summary>
+  /// Already committed with a DIFFERENT digest, so it cannot mean the same
+  /// work. The caller refuses the operation with <c>operation-id-conflict</c>.
+  /// </summary>
+  Conflict,
+}
+
+/// <summary>The answer to a lookup.</summary>
+/// <param name="Outcome">What the store already holds for the id.</param>
+/// <param name="ServerSequence">
+/// The sequence at which the id is committed, or 0 for
+/// <see cref="CollabOperationLookupOutcome.NotCommitted"/> — sequences start at
+/// 1, so 0 can only mean "nothing".
+/// </param>
+public sealed record CollabOperationLookup(
+    CollabOperationLookupOutcome Outcome,
+    ulong ServerSequence);
+
 /// <summary>How an append resolved.</summary>
 public enum CollabOperationAppendOutcome
 {

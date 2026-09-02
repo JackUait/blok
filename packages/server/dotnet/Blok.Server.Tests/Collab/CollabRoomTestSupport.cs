@@ -851,6 +851,28 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
     public CollabOperationOpenResult OpenResult => openResult;
 
+    public ValueTask<CollabOperationLookup> FindCommittedAsync(
+        string operationId,
+        ReadOnlyMemory<byte> digest,
+        CancellationToken cancellationToken = default)
+    {
+      ArgumentNullException.ThrowIfNull(operationId);
+      cancellationToken.ThrowIfCancellationRequested();
+
+      lock (store.guard)
+      {
+        var existing = Committed(Fenced(), operationId);
+
+        return ValueTask.FromResult(existing is null
+          ? new CollabOperationLookup(CollabOperationLookupOutcome.NotCommitted, 0)
+          : new CollabOperationLookup(
+              digest.Span.SequenceEqual(existing.Digest.Span)
+                ? CollabOperationLookupOutcome.Duplicate
+                : CollabOperationLookupOutcome.Conflict,
+              existing.ServerSequence));
+      }
+    }
+
     public async ValueTask<CollabOperationAppendResult> AppendAsync(
         CollabOperationCandidate candidate,
         CancellationToken cancellationToken = default)
@@ -870,8 +892,7 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       lock (store.guard)
       {
         var document = Fenced();
-        var existing = document.Records.Find(record =>
-            string.Equals(record.OperationId, candidate.OperationId, StringComparison.Ordinal));
+        var existing = Committed(document, candidate.OperationId);
 
         if (existing is not null)
         {
@@ -973,6 +994,14 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       }
 
       return ValueTask.CompletedTask;
+    }
+
+    private static CollabOperationRecord? Committed(
+        FakeOperationDocument document,
+        string operationId)
+    {
+      return document.Records.Find(record =>
+          string.Equals(record.OperationId, operationId, StringComparison.Ordinal));
     }
 
     private FakeOperationDocument Fenced()

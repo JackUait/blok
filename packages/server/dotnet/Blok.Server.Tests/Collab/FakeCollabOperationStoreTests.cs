@@ -30,6 +30,28 @@ public sealed class FakeCollabOperationStoreTests
   }
 
   [Fact]
+  public async Task ReportsWhetherAnOperationIdIsAlreadyCommitted()
+  {
+    var store = new FakeCollabOperationStore();
+    await using var session = await OpenSeededAsync(store);
+
+    var unseen = await session.FindCommittedAsync("a", Digest(1));
+    await session.AppendAsync(Candidate("a", update: 1));
+    var retry = await session.FindCommittedAsync("a", Digest(1));
+    var reused = await session.FindCommittedAsync("a", Digest(9));
+
+    Assert.Equal(CollabOperationLookupOutcome.NotCommitted, unseen.Outcome);
+    Assert.Equal(0UL, unseen.ServerSequence);
+    Assert.Equal(CollabOperationLookupOutcome.Duplicate, retry.Outcome);
+    Assert.Equal(1UL, retry.ServerSequence);
+    Assert.Equal(CollabOperationLookupOutcome.Conflict, reused.Outcome);
+    Assert.Equal(1UL, reused.ServerSequence);
+    // The answer covers this session's own commit, not the state at open —
+    // a lookup that lagged behind the append would not be worth making.
+    Assert.Empty(session.OpenResult.Tail);
+  }
+
+  [Fact]
   public async Task DeduplicatesARetryAndConflictsOnADifferentDigest()
   {
     var store = new FakeCollabOperationStore();
@@ -118,7 +140,7 @@ public sealed class FakeCollabOperationStoreTests
   }
 
   [Fact]
-  public async Task RefusesEveryWriteOnceTheFenceIsLost()
+  public async Task RefusesEveryCallOnceTheFenceIsLost()
   {
     var store = new FakeCollabOperationStore();
     await using var session = await OpenSeededAsync(store);
@@ -130,6 +152,8 @@ public sealed class FakeCollabOperationStoreTests
         await session.WriteCheckpointAsync(new CollabOperationCheckpoint(1, new byte[] { 7 })));
     await Assert.ThrowsAsync<CollabOperationFenceLostException>(async () =>
         await session.ResetAsync(Reset(epoch: 2)));
+    await Assert.ThrowsAsync<CollabOperationFenceLostException>(async () =>
+        await session.FindCommittedAsync("a", Digest(1)));
     Assert.Empty(store.Committed(DocId));
   }
 
@@ -206,6 +230,11 @@ public sealed class FakeCollabOperationStoreTests
         ActorId: "actor",
         CollabOperationSource.ClientV2,
         new byte[] { update },
-        System.Security.Cryptography.SHA256.HashData([update]));
+        Digest(update));
+  }
+
+  private static ReadOnlyMemory<byte> Digest(byte update)
+  {
+    return System.Security.Cryptography.SHA256.HashData([update]);
   }
 }

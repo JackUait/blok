@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
 namespace Blok.Server.Yjs;
 
 /// <summary>
@@ -11,6 +14,15 @@ namespace Blok.Server.Yjs;
 /// </summary>
 internal abstract class YContent
 {
+  /// <summary>
+  /// How deep a JSON payload may nest. JSON.parse has no limit of its own, but
+  /// everything downstream of a decoded value walks it recursively, so the
+  /// ceiling is set once here and reused wherever the raw string is parsed
+  /// back. It sits above the converter's own value depth, so nothing this
+  /// accepts is later refused for being too deep.
+  /// </summary>
+  internal static readonly JsonDocumentOptions JsonLimits = new() { MaxDepth = 512 };
+
   /// <summary>The wire's content ref, 1..9.</summary>
   public abstract byte Ref { get; }
 
@@ -86,14 +98,51 @@ internal abstract class YContent
       2 => ContentJson.Read(ref reader),
       3 => new ContentBinary(reader.ReadVarBytes().ToArray()),
       4 => new ContentString(reader.ReadVarString()),
-      5 => new ContentEmbed(reader.ReadVarString()),
-      6 => new ContentFormat(reader.ReadVarString(), reader.ReadVarString()),
+      5 => new ContentEmbed(ReadJson(ref reader, "ContentEmbed")),
+      6 => new ContentFormat(reader.ReadVarString(), ReadJson(ref reader, "ContentFormat")),
       7 => ContentType.Read(ref reader),
       8 => ContentAny.Read(ref reader),
       9 => ContentDoc.Read(ref reader),
       _ => throw new Lib0FormatException(
           $"yjs: {contentRef} at {reader.Position - 1} is not an item content ref."),
     };
+  }
+
+  /// <summary>
+  /// A payload v1 spells as JSON. yjs's decoder runs JSON.parse on it, so a
+  /// string that is not JSON is refused by every yjs peer and must be refused
+  /// here too: a struct no peer can read would be persisted and re-sent
+  /// forever.
+  ///
+  /// Only the syntax is checked and the wire's own string is returned. v1
+  /// carries JSON.stringify's output, which System.Text.Json re-escapes
+  /// differently, so re-encoding has to replay the original bytes.
+  /// <see cref="JsonDocument"/> is what does the checking because its reader
+  /// walks iteratively and agrees with JSON.parse — including on a lone
+  /// surrogate escape, duplicate keys and an overflowing exponent, all of
+  /// which a browser accepts and <see cref="JsonNode"/> does not.
+  /// </summary>
+  internal static string ReadJson(ref Lib0Reader reader, string what)
+  {
+    var raw = reader.ReadVarString();
+
+    ValidateJson(raw, reader.Position, what);
+
+    return raw;
+  }
+
+  /// <inheritdoc cref="ReadJson"/>
+  internal static void ValidateJson(string raw, int position, string what)
+  {
+    try
+    {
+      using var parsed = JsonDocument.Parse(raw, JsonLimits);
+    }
+    catch (JsonException failure)
+    {
+      throw new Lib0FormatException(
+          $"yjs: the {what} at {position} is not JSON: {failure.Message}");
+    }
   }
 
   /// <summary>

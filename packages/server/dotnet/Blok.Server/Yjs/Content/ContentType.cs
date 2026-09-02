@@ -87,14 +87,21 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
   {
     ArgumentNullException.ThrowIfNull(transaction);
 
-    for (var item = Type.Start; item is not null; item = item.Right)
-    {
-      Cascade(transaction, item);
-    }
+    var pending = new Stack<YAbstractType>();
 
-    foreach (var head in Type.Map.Values)
+    pending.Push(Type);
+
+    while (pending.TryPop(out var type))
     {
-      Cascade(transaction, head);
+      for (var item = type.Start; item is not null; item = item.Right)
+      {
+        Cascade(transaction, item, pending);
+      }
+
+      foreach (var head in type.Map.Values)
+      {
+        Cascade(transaction, head, pending);
+      }
     }
   }
 
@@ -105,22 +112,29 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
   /// </summary>
   public override void Gc(StructStore store)
   {
-    for (var item = Type.Start; item is not null; item = item.Right)
-    {
-      item.Gc(store, true);
-    }
+    var pending = new Stack<YAbstractType>();
 
-    Type.Start = null;
+    pending.Push(Type);
 
-    foreach (var head in Type.Map.Values)
+    while (pending.TryPop(out var type))
     {
-      for (YItem? item = head; item is not null; item = item.Left)
+      for (var item = type.Start; item is not null; item = item.Right)
       {
-        item.Gc(store, true);
+        Collect(item, store, pending);
       }
-    }
 
-    Type.Map.Clear();
+      type.Start = null;
+
+      foreach (var head in type.Map.Values)
+      {
+        for (YItem? item = head; item is not null; item = item.Left)
+        {
+          Collect(item, store, pending);
+        }
+      }
+
+      type.Map.Clear();
+    }
   }
 
   public override YContent Copy()
@@ -168,16 +182,49 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
     };
   }
 
-  private static void Cascade(YTransaction transaction, YItem item)
+  /// <summary>
+  /// Deletes one child. A child that is itself a nested type is marked here
+  /// and its subtree handed to <paramref name="pending"/> rather than entered:
+  /// the chain is as deep as the document, and the CLR cannot catch the
+  /// overflow that recursing would eventually cause. Ordering does not change
+  /// — the transaction's delete set is sorted and merged at cleanup.
+  /// </summary>
+  private static void Cascade(
+      YTransaction transaction, YItem item, Stack<YAbstractType> pending)
   {
-    if (!item.Deleted)
+    if (item.Deleted)
     {
-      item.Delete(transaction);
+      if (item.Id.Clock < transaction.BeforeState.Get(item.Id.Client))
+      {
+        transaction.MergeStructs.Add(item);
+      }
+
+      return;
     }
-    else if (item.Id.Clock < transaction.BeforeState.Get(item.Id.Client))
+
+    if (item.Content is ContentType nested)
     {
-      transaction.MergeStructs.Add(item);
+      item.DeleteHere(transaction);
+      pending.Push(nested.Type);
+
+      return;
     }
+
+    item.Delete(transaction);
+  }
+
+  /// <inheritdoc cref="Cascade"/>
+  private static void Collect(YItem item, StructStore store, Stack<YAbstractType> pending)
+  {
+    if (item.Content is ContentType nested)
+    {
+      pending.Push(nested.Type);
+      item.CollectHere(store, true);
+
+      return;
+    }
+
+    item.Gc(store, true);
   }
 
   internal static ContentType Read(ref Lib0Reader reader)

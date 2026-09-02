@@ -205,7 +205,7 @@ public sealed class UpdateV1DecoderTests
   [Fact]
   public void EveryHandBuiltContentRefSurvivesAWriteBack()
   {
-    foreach (var (what, update) in NulBearingUpdates())
+    foreach (var (what, update) in NulBearingUpdates().Concat(JsonPayloadUpdates()))
     {
       var written = ReEncode(UpdateV1Decoder.Decode(update));
 
@@ -256,6 +256,52 @@ public sealed class UpdateV1DecoderTests
         "past int.MaxValue",
         // A GC length lib0 accepts and no buffer can back.
         RawStruct(0, writer => writer.WriteVarUint(1UL << 32)));
+  }
+
+  /// <summary>
+  /// yjs's v1 decoder runs JSON.parse on ContentJSON, ContentEmbed and
+  /// ContentFormat, so every yjs peer refuses a payload that is not JSON.
+  /// Accepting one here puts a struct in the store that no peer can read: the
+  /// room persists the frame and re-sends it, so every joiner's sync answer
+  /// fails from then on, across restarts.
+  /// </summary>
+  [Fact]
+  public void RefusesRawJsonContentNoYjsPeerCanParse()
+  {
+    AssertRefused("is not JSON", SingleStruct(0x02, "m", "k", writer =>
+    {
+      writer.WriteVarUint(1);
+      writer.WriteVarString("{not json");
+    }));
+
+    AssertRefused("is not JSON", SingleStruct(0x05, "m", "k", writer => writer.WriteVarString("nope")));
+
+    AssertRefused("is not JSON", SingleStruct(0x06, "m", "k", writer =>
+    {
+      writer.WriteVarString("bold");
+      writer.WriteVarString("nope");
+    }));
+  }
+
+  /// <summary>
+  /// The check is JSON.parse's, not System.Text.Json's defaults: a lone
+  /// surrogate escape is exactly what JSON.stringify writes for an unpaired
+  /// surrogate, and a browser round-trips duplicate keys, an overflowing
+  /// exponent and deep nesting without complaint. Refusing any of these would
+  /// drop an update the sender then resends forever.
+  /// </summary>
+  [Theory]
+  [InlineData("\"\\ud800\"")]
+  [InlineData("{\"a\":1,\"a\":2}")]
+  [InlineData("1e999")]
+  [InlineData("[[[[[[[[[[1]]]]]]]]]]")]
+  [InlineData("\"undefined\"")]
+  public void AcceptsEveryRawJsonPayloadABrowserAccepts(string json)
+  {
+    var decoded = UpdateV1Decoder.Decode(
+        SingleStruct(0x05, "m", "k", writer => writer.WriteVarString(json)));
+
+    Assert.Single(decoded.Structs);
   }
 
   [Fact]
@@ -401,6 +447,23 @@ public sealed class UpdateV1DecoderTests
   // Hand-assembled updates
   // ---------------------------------------------------------------------
 
+  /// <summary>
+  /// Refs 2 and 5, whose payload is JSON and so cannot carry a raw NUL. They
+  /// live here rather than in the NUL corpus so the write side of both is
+  /// still exercised.
+  /// </summary>
+  private static IEnumerable<(string What, byte[] Update)> JsonPayloadUpdates()
+  {
+    yield return ("a ContentEmbed payload", SingleStruct(0x05, "t", null, writer =>
+        writer.WriteVarString("\"a\\u0000b\"")));
+
+    yield return ("a ContentJSON payload", SingleStruct(0x02, "m", "k", writer =>
+    {
+      writer.WriteVarUint(1);
+      writer.WriteVarString("\"a\\u0000b\"");
+    }));
+  }
+
   /// <summary>One root-parented map item per NUL-bearing wire position.</summary>
   private static IEnumerable<(string What, byte[] Update)> NulBearingUpdates()
   {
@@ -426,15 +489,9 @@ public sealed class UpdateV1DecoderTests
       writer.WriteVarString("true");
     }));
 
-    yield return ("a ContentEmbed payload", SingleStruct(0x05, "t", null, writer =>
-        writer.WriteVarString("\"a\0b\"")));
-
-    yield return ("a ContentJSON payload", SingleStruct(0x02, "m", "k", writer =>
-    {
-      writer.WriteVarUint(1);
-      writer.WriteVarString("\"a\0b\"");
-    }));
-
+    // ContentEmbed and ContentJSON payloads are JSON, and JSON.stringify
+    // always escapes a NUL, so a raw one can only come from a payload every
+    // yjs peer refuses. Their write side is exercised by JsonPayloadUpdates.
     yield return ("an XmlElement node name", SingleStruct(0x07, "m", "k", writer =>
     {
       writer.WriteVarUint(3);

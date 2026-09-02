@@ -123,23 +123,25 @@ internal sealed class YItem : YStruct
     ArgumentNullException.ThrowIfNull(transaction);
     ArgumentNullException.ThrowIfNull(store);
 
-    if (Origin is { } origin &&
-        origin.Client != Id.Client &&
-        origin.Clock >= store.GetState(origin.Client))
+    // yjs skips the store lookup when the dependency names the item's own
+    // client, because a well-formed update always carries the earlier clock
+    // first. Bytes that are well formed but dishonest need not, and the
+    // lookup below would then throw mid-integration and leave the document
+    // half-changed. Checking the clock costs nothing in the honest case: a
+    // same-client dependency the store already holds is always behind its
+    // state.
+    if (Origin is { } origin && origin.Clock >= store.GetState(origin.Client))
     {
       return origin.Client;
     }
 
     if (RightOrigin is { } rightOrigin &&
-        rightOrigin.Client != Id.Client &&
         rightOrigin.Clock >= store.GetState(rightOrigin.Client))
     {
       return rightOrigin.Client;
     }
 
-    if (Parent is YId parentId &&
-        parentId.Client != Id.Client &&
-        parentId.Clock >= store.GetState(parentId.Client))
+    if (Parent is YId parentId && parentId.Clock >= store.GetState(parentId.Client))
     {
       return parentId.Client;
     }
@@ -293,9 +295,26 @@ internal sealed class YItem : YStruct
   {
     ArgumentNullException.ThrowIfNull(transaction);
 
+    if (DeleteHere(transaction))
+    {
+      Content.Delete(transaction);
+    }
+  }
+
+  /// <summary>
+  /// The delete without the cascade a nested type would run, and false when
+  /// the item was already deleted.
+  ///
+  /// <see cref="ContentType"/> deletes its children through this and walks
+  /// their subtrees from a work stack of its own: nesting depth belongs to the
+  /// document, and a chain deep enough would exhaust the CLR stack — which,
+  /// unlike a browser's, takes the process with it.
+  /// </summary>
+  internal bool DeleteHere(YTransaction transaction)
+  {
     if (Deleted)
     {
-      return;
+      return false;
     }
 
     if (Parent is not YAbstractType parent)
@@ -311,7 +330,8 @@ internal sealed class YItem : YStruct
 
     MarkDeleted();
     transaction.DeleteSet.Add(Id.Client, Id.Clock, (ulong)Length);
-    Content.Delete(transaction);
+
+    return true;
   }
 
   /// <summary>
@@ -323,13 +343,17 @@ internal sealed class YItem : YStruct
   {
     ArgumentNullException.ThrowIfNull(store);
 
-    if (!Deleted)
-    {
-      throw new InvalidOperationException(
-          $"yjs: {Id.Client}:{Id.Clock} is still live and cannot be collected.");
-    }
-
+    // Checked before the cascade, not only in CollectHere: a live item must
+    // not collect its subtree on the way to being refused.
+    RequireDeleted();
     Content.Gc(store);
+    CollectHere(store, parentCollected);
+  }
+
+  /// <inheritdoc cref="DeleteHere"/>
+  internal void CollectHere(StructStore store, bool parentCollected)
+  {
+    RequireDeleted();
 
     if (parentCollected)
     {
@@ -338,6 +362,15 @@ internal sealed class YItem : YStruct
     else
     {
       Content = new ContentDeleted(Length);
+    }
+  }
+
+  private void RequireDeleted()
+  {
+    if (!Deleted)
+    {
+      throw new InvalidOperationException(
+          $"yjs: {Id.Client}:{Id.Clock} is still live and cannot be collected.");
     }
   }
 

@@ -63,7 +63,16 @@ internal sealed class ContentJson(IReadOnlyList<string> values) : YContent
 
     for (var index = 0; index < count; index++)
     {
-      values.Add(reader.ReadVarString());
+      // 'undefined' is yjs's sentinel and is deliberately not JSON, so it is
+      // the one element that skips the check.
+      var raw = reader.ReadVarString();
+
+      if (!string.Equals(raw, "undefined", StringComparison.Ordinal))
+      {
+        ValidateJson(raw, reader.Position, "ContentJSON element");
+      }
+
+      values.Add(raw);
     }
 
     return new ContentJson(values);

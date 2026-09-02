@@ -30,7 +30,9 @@ internal sealed record SyncAccepted(string? SubProtocol, bool CanWrite, string? 
 /// <summary>
 /// The sync door (plan decisions 7, 9, 18). Order: WebSocket plumbing →
 /// origin → ticket (from the Sec-WebSocket-Protocol offer) → doc claim →
-/// application authorization → rate limit.
+/// rate limit → application authorization. The limit runs BEFORE the hook
+/// because the hook is the consumer's database call, the very cost the limit
+/// exists to bound.
 ///
 /// Unlike the HTTP routes, a REJECTED handshake spends the rate limit too: a
 /// rejection still costs an accepted WebSocket and a close frame, so without
@@ -45,22 +47,27 @@ internal sealed class SyncHandshake(
 
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {
-    var (result, rateLimitKey) = await EvaluateAsync(context, doc);
+    var (admission, rateLimitKey) = Admit(context, doc);
 
     // A refusal answers with a plain status and costs nothing to serve; an
     // accepted OR rejected handshake costs a socket, so both spend the window.
-    if (result is not SyncRefused && !rateLimiter.Allow(rateLimitKey))
+    if (admission is SyncRefused)
+    {
+      return admission;
+    }
+
+    if (!rateLimiter.Allow(rateLimitKey))
     {
       return new SyncRefused(StatusCodes.Status429TooManyRequests, "rate limit exceeded\n");
     }
 
-    return result;
+    return admission is SyncCandidate candidate
+      ? await AuthorizeAsync(context, doc, candidate)
+      : admission;
   }
 
-  /// <summary>The outcome and the key its cost is billed to.</summary>
-  private async ValueTask<(SyncHandshakeResult Result, string RateLimitKey)> EvaluateAsync(
-      HttpContext context,
-      string doc)
+  /// <summary>Everything the door decides on its own, and the key its cost is billed to.</summary>
+  private (SyncHandshakeResult Result, string RateLimitKey) Admit(HttpContext context, string doc)
   {
     var addressKey = $"addr:{context.Connection.RemoteIpAddress}";
 
@@ -142,20 +149,29 @@ internal sealed class SyncHandshake(
 
     principal ??= SignedInPrincipal(context);
 
+    return (new SyncCandidate(subProtocol, canWrite, principal, user), rateLimitKey);
+  }
+
+  private static async ValueTask<SyncHandshakeResult> AuthorizeAsync(
+      HttpContext context,
+      string doc,
+      SyncCandidate candidate)
+  {
     var authorization = context.RequestServices.GetService<IBlokAuthorization>();
+    var canWrite = candidate.CanWrite;
 
     if (authorization is not null)
     {
-      if (!await authorization.CanReadDocumentAsync(user, doc, context.RequestAborted))
+      if (!await authorization.CanReadDocumentAsync(candidate.User, doc, context.RequestAborted))
       {
-        return (new SyncRejected(subProtocol, SyncClose.Forbidden), rateLimitKey);
+        return new SyncRejected(candidate.SubProtocol, SyncClose.Forbidden);
       }
 
       canWrite = canWrite &&
-          await authorization.CanWriteDocumentAsync(user, doc, context.RequestAborted);
+          await authorization.CanWriteDocumentAsync(candidate.User, doc, context.RequestAborted);
     }
 
-    return (new SyncAccepted(subProtocol, canWrite, principal), rateLimitKey);
+    return new SyncAccepted(candidate.SubProtocol, canWrite, candidate.Principal);
   }
 
   /// <summary>The application's authenticated user (the RequireAuthorization path), if any.</summary>
@@ -197,6 +213,13 @@ internal sealed class SyncHandshake(
 
     return false;
   }
+
+  /// <summary>Past the door's own checks; only the application's hook is still to run.</summary>
+  private sealed record SyncCandidate(
+      string? SubProtocol,
+      bool CanWrite,
+      string? Principal,
+      ClaimsPrincipal User) : SyncHandshakeResult;
 }
 
 /// <summary>

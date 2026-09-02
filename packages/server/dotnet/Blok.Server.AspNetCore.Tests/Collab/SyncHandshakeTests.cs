@@ -267,6 +267,28 @@ public sealed class SyncHandshakeTests
   }
 
   [Fact]
+  public async Task ASpentWindowIsRefusedBeforeTheApplicationAuthorizationHookRuns()
+  {
+    var authorization = new RecordingAuthorization();
+    await using var app = await SyncApp.StartAsync(
+        "ticket",
+        options => options.RateLimitPerMinute = 1,
+        services: services => services.AddSingleton<IBlokAuthorization>(authorization));
+
+    await using var accepted = await app.ConnectWithTicketAsync(fixture.Compatible);
+    AssertFreshTag((await accepted.ReceiveAsync<BlokControlFrame>()).Tag);
+    var callsAfterTheFirstJoin = authorization.Calls.Count;
+
+    // The limiter exists to bound the hook's cost, so a spent window must
+    // never reach it.
+    await app.AssertRefusedAsync(
+        HttpStatusCode.TooManyRequests,
+        protocols: [SyncApp.Protocol, fixture.Compatible]);
+
+    Assert.Equal(callsAfterTheFirstJoin, authorization.Calls.Count);
+  }
+
+  [Fact]
   public async Task ARejectedHandshakeIsTornDownWithoutWaitingOutAPeerThatNeverAnswers()
   {
     var served = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

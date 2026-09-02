@@ -69,7 +69,7 @@ function parseArgs(args) {
 const { packageDirectory, packageVersion } = parseArgs(process.argv.slice(2));
 const packageProjects = {
   'Blok.Server': {
-    description: 'Shared server services for Blok.',
+    description: 'Shared server services and embedded document runtime for Blok.',
     path: join(
       repositoryRoot,
       'packages/server/dotnet/Blok.Server/Blok.Server.csproj',

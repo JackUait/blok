@@ -87,12 +87,10 @@ public static class BlokServerServiceCollectionExtensions
 
       if (effectiveOptions.CollabDirectory != "")
       {
-        // UseCollabOperationStore<T>() cannot cancel this registration itself:
-        // it runs after AddBlokServer, so TryAddSingleton has already claimed
-        // the service type, and WHICH branch applies is only known once the
-        // effective options resolve. The claim therefore lands here. IsService
-        // asks about the registration without constructing the consumer's
-        // store. Task 1.4 needs the same predicate.
+        // The claim lands here, not in UseCollabOperationStore<T>(): that runs
+        // after TryAddSingleton has already taken the service type, and which
+        // branch applies is only known once the options resolve. IsService
+        // answers without constructing the consumer's store.
         if (provider.GetRequiredService<IServiceProviderIsService>()
             .IsService(typeof(ICollabOperationStore)))
         {

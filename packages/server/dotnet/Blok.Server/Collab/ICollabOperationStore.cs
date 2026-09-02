@@ -148,8 +148,8 @@ public interface ICollabOperationStore
 /// </para>
 /// <para>
 /// The session is a single lane: the caller serialises its own use of it. An
-/// implementation MAY group-commit concurrent appends, as long as every
-/// completion still means durable.
+/// implementation MAY group-commit appends from several documents' sessions
+/// into one write, as long as every completion still means durable.
 /// </para>
 /// <para>
 /// After <see cref="System.IAsyncDisposable.DisposeAsync"/> every method throws
@@ -158,9 +158,9 @@ public interface ICollabOperationStore
 /// already lost.
 /// </para>
 /// <para>
-/// CANCELLATION: only <paramref name="cancellationToken"/> being cancelled may
-/// produce an <see cref="OperationCanceledException"/>. A store-side timeout or
-/// abort MUST surface as some other exception — the caller reads a cancellation
+/// CANCELLATION: only the caller's own token being cancelled may produce an
+/// <see cref="OperationCanceledException"/>. A store-side timeout or abort MUST
+/// surface as some other exception — the caller reads a cancellation
 /// it did not ask for as its own shutdown and stops cleanly instead of treating
 /// the document as unavailable.
 /// </para>
@@ -244,9 +244,18 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// nothing has been committed on the new lineage yet.
   /// </returns>
   /// <remarks>
+  /// <para>
   /// Completion means the new baseline is durable. Operations from the old
   /// lineage remain history and keep their ids, but they can never be replayed
   /// into the new one; an open after a reset returns only the new lineage.
+  /// </para>
+  /// <para>
+  /// The caller owns the epoch law and passes an epoch above the current head's.
+  /// A store MAY verify that from the head it already holds and refuse a
+  /// regression with <see cref="ArgumentOutOfRangeException"/>; it MUST NOT
+  /// invent an epoch of its own. Lineage novelty is not something a store can
+  /// check, and is not checked.
+  /// </para>
   /// </remarks>
   ValueTask<CollabDocumentHead> ResetAsync(
       CollabOperationReset reset,

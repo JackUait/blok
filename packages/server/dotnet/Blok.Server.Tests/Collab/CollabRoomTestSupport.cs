@@ -742,7 +742,11 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
   /// <summary>Awaited inside every append before it commits — a slow store.</summary>
   internal Func<Task>? BeforeAppend { get; set; }
 
-  /// <summary>When it answers non-null for a doc, that doc's AppendAsync throws it.</summary>
+  /// <summary>
+  /// When it answers non-null for a doc, that doc's AppendAsync throws it. An
+  /// id that is already committed still answers Duplicate/Conflict: the lookup
+  /// succeeds even where the write would not.
+  /// </summary>
   internal Func<string, Exception?>? FailAppends { get; set; }
 
   /// <summary>

@@ -1608,8 +1608,12 @@ export class DocumentStore {
    */
   public encodeAwarenessUpdate(clients?: number[]): Uint8Array {
     const awareness = this.requireAwareness('encodeAwarenessUpdate');
+    // A client `pruneAwarenessMeta` dropped has no row for y-protocols to
+    // read, and the provider may still list it (it queues removed ids for a
+    // deferred broadcast).
+    const known = (clients ?? Array.from(awareness.getStates().keys())).filter((id) => awareness.meta.has(id));
 
-    return encodeAwarenessUpdate(awareness, clients ?? Array.from(awareness.getStates().keys()));
+    return encodeAwarenessUpdate(awareness, known);
   }
 
   /**
@@ -1623,7 +1627,26 @@ export class DocumentStore {
       return;
     }
 
+    this.pruneAwarenessMeta(this.awareness);
     applyAwarenessUpdate(this.awareness, update, origin);
+  }
+
+  /**
+   * y-protocols keeps a meta row (clock, last seen) for every client id it
+   * has ever heard of, and its outdated sweep removes STATES only — so a
+   * flood of fake client ids grows `meta` forever. Drop the rows of remote
+   * clients that hold no state.
+   *
+   * Runs at the start of each inbound apply, NOT on 'change': the provider
+   * encodes a change's removed ids later (deferred broadcast) and needs
+   * their rows until then.
+   */
+  private pruneAwarenessMeta(awareness: Awareness): void {
+    for (const clientId of Array.from(awareness.meta.keys())) {
+      if (clientId !== awareness.clientID && !awareness.states.has(clientId)) {
+        awareness.meta.delete(clientId);
+      }
+    }
   }
 
   /**

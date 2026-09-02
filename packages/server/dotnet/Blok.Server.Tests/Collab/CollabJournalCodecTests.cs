@@ -34,13 +34,13 @@ public sealed class CollabJournalCodecTests
   [Fact]
   public void RejectsOversizedLengthsBeforeAllocating()
   {
-    // The outer record length is a hostile absolute value; only a handful of
-    // bytes follow it. Must be rejected without trying to read/allocate that many bytes.
-    var hostileOuterLength = new byte[LengthPrefixSize + 10];
-    BinaryPrimitives.WriteInt32LittleEndian(hostileOuterLength, int.MaxValue);
+    // The header is honest (its own checksum is correct) but declares an
+    // absurd body length; only a handful of bytes follow it. Must be
+    // rejected without trying to read/allocate that many bytes.
+    var outerAttack = Concat(BuildValidHeader(bodyLength: int.MaxValue), new byte[10]);
 
     var outerStatus = CollabJournalCodec.TryDecodeRecord(
-        hostileOuterLength,
+        outerAttack,
         out var outerRecord,
         out var outerConsumed,
         out var outerError);
@@ -51,9 +51,9 @@ public sealed class CollabJournalCodecTests
     // Pins WHICH check fired, not just that some check did: a misaligned
     // hand-built attack buffer could trip an earlier, unrelated check and
     // still report Invalid without ever reaching the length comparison.
-    Assert.Contains("record length", outerError);
+    Assert.Contains("body length", outerError);
 
-    // The outer length is honest and small, and the checksum is genuinely
+    // The header is honest and small, and the body checksum is genuinely
     // computed over what is present — but the inner update length claims far
     // more bytes than actually remain before the checksum trailer. A codec
     // that trusted this length before checking it against the remaining
@@ -164,31 +164,54 @@ public sealed class CollabJournalCodecTests
     var second = CollabJournalCodec.EncodeRecord(MakeRecord(serverSequence: 2));
     var journal = Concat(first, second);
 
-    // Flip a byte inside the first record's operationId field (a different
-    // region than DetectsPayloadDigestMismatch touches), well before its own
-    // checksum trailer. The file is not truncated: the second record is
-    // still fully and correctly present right after it.
-    journal[LengthPrefixSize + 2] ^= 0xFF;
+    // Flip a byte inside the first record's operationId field (in the body,
+    // a different region than DetectsPayloadDigestMismatch touches), well
+    // before its own checksum trailer. The file is not truncated: the
+    // second record is still fully and correctly present right after it.
+    var bodyCorrupted = (byte[])journal.Clone();
+    bodyCorrupted[HeaderSize + 2] ^= 0xFF;
 
-    var statusFirst = CollabJournalCodec.TryDecodeRecord(
-        journal.AsSpan(0), out var recordFirst, out _, out var error);
+    var statusBodyCorrupted = CollabJournalCodec.TryDecodeRecord(
+        bodyCorrupted.AsSpan(0), out var recordBodyCorrupted, out _, out var bodyError);
 
     // Invalid, never Incomplete: an Incomplete verdict would invite a store
     // to truncate here, which would silently discard the good record that
     // follows. Only a full refusal is safe once bytes are simply wrong.
-    Assert.Equal(CollabJournalRecordStatus.Invalid, statusFirst);
-    Assert.Null(recordFirst);
-    Assert.NotEqual("", error);
+    Assert.Equal(CollabJournalRecordStatus.Invalid, statusBodyCorrupted);
+    Assert.Null(recordBodyCorrupted);
+    Assert.NotEqual("", bodyError);
 
-    // The second record, read from its own (untouched) position, is proof
-    // the corruption is confined to the middle record and not a length that
-    // walked off the rails — which is exactly what a naive "skip and keep
-    // going" reader would be tempted to exploit, and exactly what fail-closed forbids.
-    var statusSecond = CollabJournalCodec.TryDecodeRecord(
-        journal.AsSpan(first.Length), out var recordSecond, out _, out _);
+    // The case that motivated the header checksum: corrupt the LENGTH PREFIX
+    // itself, not the content. Before the header checksum existed, a
+    // corrupted length that happened to exceed the remaining bytes was
+    // indistinguishable from an honest torn tail — this is exactly the hole
+    // that let mid-file corruption masquerade as a recoverable crash.
+    var lengthCorrupted = (byte[])journal.Clone();
+    lengthCorrupted[2] ^= 0xFF;
 
-    Assert.Equal(CollabJournalRecordStatus.Ok, statusSecond);
-    Assert.Equal(2UL, recordSecond!.ServerSequence);
+    var statusLengthCorrupted = CollabJournalCodec.TryDecodeRecord(
+        lengthCorrupted.AsSpan(0), out var recordLengthCorrupted, out _, out var lengthError);
+
+    Assert.Equal(CollabJournalRecordStatus.Invalid, statusLengthCorrupted);
+    Assert.Null(recordLengthCorrupted);
+    Assert.Contains("header checksum", lengthError);
+
+    // In both cases, the second record — read from its own untouched
+    // position — is proof the corruption is confined to the first record and
+    // not a length that walked off the rails. That is exactly what a naive
+    // "skip and keep going" reader would be tempted to exploit, and exactly
+    // what fail-closed forbids: neither corruption may be treated as
+    // "truncate here," because good, unacknowledged-nothing-lost data
+    // follows both of them.
+    var statusSecondAfterBodyCorruption = CollabJournalCodec.TryDecodeRecord(
+        bodyCorrupted.AsSpan(first.Length), out var recordSecondAfterBodyCorruption, out _, out _);
+    var statusSecondAfterLengthCorruption = CollabJournalCodec.TryDecodeRecord(
+        lengthCorrupted.AsSpan(first.Length), out var recordSecondAfterLengthCorruption, out _, out _);
+
+    Assert.Equal(CollabJournalRecordStatus.Ok, statusSecondAfterBodyCorruption);
+    Assert.Equal(2UL, recordSecondAfterBodyCorruption!.ServerSequence);
+    Assert.Equal(CollabJournalRecordStatus.Ok, statusSecondAfterLengthCorruption);
+    Assert.Equal(2UL, recordSecondAfterLengthCorruption!.ServerSequence);
   }
 
   [Fact]
@@ -203,9 +226,15 @@ public sealed class CollabJournalCodecTests
     Assert.Null(decoded!.ActorId);
   }
 
-  private const int LengthPrefixSize = sizeof(int);
+  // Mirrors of the codec's own (private) layout constants, needed to hand-build
+  // attack buffers. Kept in sync manually; if they drift, BuildValidHeader
+  // checksums the wrong bytes and RejectsOversizedLengthsBeforeAllocating's
+  // Assert.Contains("body length" / "update length") assertions fail.
+  private const int BodyLengthFieldSize = sizeof(int);
+  private const int HeaderChecksumSize = 32;
+  private const int HeaderSize = BodyLengthFieldSize + 1 + 1 + HeaderChecksumSize;
   private const int DigestSize = 32;
-  private const int ChecksumSize = 32;
+  private const int BodyChecksumSize = 32;
 
   private static CollabOperationRecord MakeRecord(
       string operationId = OperationId,
@@ -256,47 +285,65 @@ public sealed class CollabJournalCodecTests
   }
 
   /// <summary>
-  /// Hand-assembles a record whose checksum is honestly computed over the
-  /// bytes actually present, but whose inner update-length field lies about
-  /// how many update bytes follow. This is what EncodeRecord can never
-  /// produce (it always writes a consistent length) but what bytes written
-  /// directly to disk by a hostile actor could.
+  /// A structurally valid 38-byte header (honest checksum) for a chosen,
+  /// possibly-hostile <paramref name="bodyLength"/>. Isolates "the header is
+  /// intact" from "the body length is a sane value" so a test can attack the
+  /// second without also failing the first.
+  /// </summary>
+  private static byte[] BuildValidHeader(
+      int bodyLength,
+      byte version = CollabJournalCodec.CurrentVersion,
+      byte source = (byte)CollabOperationSource.ClientV2)
+  {
+    var header = new byte[HeaderSize];
+    BinaryPrimitives.WriteInt32LittleEndian(header, bodyLength);
+    header[BodyLengthFieldSize] = version;
+    header[BodyLengthFieldSize + 1] = source;
+    SHA256.HashData(
+        header.AsSpan(0, BodyLengthFieldSize + 2),
+        header.AsSpan(BodyLengthFieldSize + 2, HeaderChecksumSize));
+
+    return header;
+  }
+
+  /// <summary>
+  /// Hand-assembles a full record whose header AND body checksum are both
+  /// honestly computed over the bytes actually present, but whose inner
+  /// update-length field lies about how many update bytes follow. This is
+  /// what EncodeRecord can never produce (it always writes a consistent
+  /// length) but what bytes written directly to disk by a hostile actor
+  /// could — a checksum proves the bytes weren't altered, not that a length
+  /// field inside them is honest.
   /// </summary>
   private static byte[] BuildRecordWithLyingUpdateLength(int declaredUpdateLength, int actualUpdateBytes)
   {
-    const int fixedContentSize = 1 + 1 + 16 + sizeof(ulong) + sizeof(long) + sizeof(int) + DigestSize + sizeof(int);
-    var contentToHashLength = fixedContentSize + actualUpdateBytes;
-    var contentToHash = new byte[contentToHashLength];
+    const int fixedBodyContentSize = 16 + sizeof(ulong) + sizeof(long) + sizeof(int) + DigestSize + sizeof(int);
+    var bodyContentLength = fixedBodyContentSize + actualUpdateBytes;
+    var bodyContent = new byte[bodyContentLength];
     var offset = 0;
 
-    contentToHash[offset++] = CollabJournalCodec.CurrentVersion;
-    contentToHash[offset++] = (byte)CollabOperationSource.ClientV2;
-    Convert.FromHexString(OperationId).CopyTo(contentToHash, offset);
+    Convert.FromHexString(OperationId).CopyTo(bodyContent, offset);
     offset += 16;
-    BinaryPrimitives.WriteUInt64LittleEndian(contentToHash.AsSpan(offset), 1);
+    BinaryPrimitives.WriteUInt64LittleEndian(bodyContent.AsSpan(offset), 1);
     offset += sizeof(ulong);
-    BinaryPrimitives.WriteInt64LittleEndian(contentToHash.AsSpan(offset), CommittedAt.UtcTicks);
+    BinaryPrimitives.WriteInt64LittleEndian(bodyContent.AsSpan(offset), CommittedAt.UtcTicks);
     offset += sizeof(long);
-    BinaryPrimitives.WriteInt32LittleEndian(contentToHash.AsSpan(offset), -1); // no actor
+    BinaryPrimitives.WriteInt32LittleEndian(bodyContent.AsSpan(offset), -1); // no actor
     offset += sizeof(int);
-    new byte[DigestSize].CopyTo(contentToHash, offset); // digest content is irrelevant to this attack
+    new byte[DigestSize].CopyTo(bodyContent, offset); // digest content is irrelevant to this attack
     offset += DigestSize;
-    BinaryPrimitives.WriteInt32LittleEndian(contentToHash.AsSpan(offset), declaredUpdateLength); // the lie
+    BinaryPrimitives.WriteInt32LittleEndian(bodyContent.AsSpan(offset), declaredUpdateLength); // the lie
     offset += sizeof(int);
 
     for (var index = 0; index < actualUpdateBytes; index++)
     {
-      contentToHash[offset + index] = (byte)(0xC0 + index);
+      bodyContent[offset + index] = (byte)(0xC0 + index);
     }
 
-    var checksum = SHA256.HashData(contentToHash);
-    var content = Concat(contentToHash, checksum);
-    var recordLength = content.Length;
-    var buffer = new byte[LengthPrefixSize + recordLength];
+    var bodyChecksum = SHA256.HashData(bodyContent);
+    var body = Concat(bodyContent, bodyChecksum);
+    var header = BuildValidHeader(body.Length);
 
-    BinaryPrimitives.WriteInt32LittleEndian(buffer, recordLength);
-    content.CopyTo(buffer, LengthPrefixSize);
-
-    return buffer;
+    return Concat(header, body);
   }
 }

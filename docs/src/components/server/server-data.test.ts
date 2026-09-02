@@ -296,6 +296,31 @@ describe('server docs data', () => {
     expect([...new Set(named)].filter((flag) => !known.includes(flag))).toEqual([]);
   });
 
+  // Three guards the managed engine removed, plus the delivery shape it
+  // replaced. The NUL screen (close 4400 "update contains U+0000") and the
+  // 4503 stored-NUL seed failure belonged to the old native binding and are
+  // gone: the room applies such an update like any other. The native library,
+  // its extraction directory and the runtimes that needed one are gone too.
+  // Each of these read as a real operator hazard, so any of them drifting back
+  // into the prose sends a reader chasing something the service cannot do.
+  it('does not describe guards or delivery the managed engine removed', () => {
+    const prose = [
+      ...serverPaths.flatMap((path) => [
+        path.description,
+        path.situation,
+        ...path.failureModes.flatMap((mode) => [mode.symptom, mode.cause, mode.fix]),
+      ]),
+      ...serverLimits.map((limit) => `${limit.title} ${limit.body}`),
+      serverCoverageNote,
+    ].join('\n');
+
+    expect(prose).not.toMatch(/U\+0000/);
+    expect(prose).not.toMatch(/\bNUL\b/);
+    expect(prose).not.toMatch(/YDotNet/i);
+    expect(prose).not.toMatch(/native librar/i);
+    expect(prose).not.toMatch(/extraction director/i);
+  });
+
   it('documents the validated option bounds and standalone rate defaults', () => {
     const prose = [
       ...serverPaths.flatMap((path) => [

@@ -16,6 +16,14 @@ import type { SyncWireDecodeResult, SyncWireFrame, WorkingSetTag } from './types
  *   queryAwareness  [3]
  *   blok control    [100][varuint len]{"epoch":N,"format":N,"lineage":"<32 hex>"}
  *   blok limits     [101][varuint len]{"maxMessageBytes":N}
+ *   operation       [102][varuint len]{"lineage":..,"operationId":..}[varuint len][update]
+ *   acknowledgement [103][varuint len]{"lineage":..,"operationId":..,"serverSequence":"<decimal>"}
+ *   rejection       [104][varuint len]{"lineage":..,"operationId":..,"code":"<code>"}
+ *
+ * Types 102-104 (blok-sync.v2, see packages/server/protocol/blok-sync-v2.md)
+ * are decoded strictly per that spec's section-5 rule order; a v2 `malformed`
+ * result carries the violated rule number so a caller can assert WHY, not
+ * just that a frame was refused.
  */
 
 const MESSAGE_SYNC = 0;
@@ -24,6 +32,9 @@ const MESSAGE_AUTH = 2;
 const MESSAGE_QUERY_AWARENESS = 3;
 const MESSAGE_BLOK_CONTROL = 100;
 const MESSAGE_BLOK_LIMITS = 101;
+const MESSAGE_OPERATION = 102;
+const MESSAGE_ACKNOWLEDGEMENT = 103;
+const MESSAGE_REJECTION = 104;
 
 const SYNC_STEP1 = 0;
 const SYNC_STEP2 = 1;
@@ -35,6 +46,22 @@ const MAX_VARUINT_BYTES = 10;
 
 const LINEAGE_PATTERN = /^[0-9a-f]{32}$/;
 const CONTROL_KEYS = ['epoch', 'format', 'lineage'] as const;
+
+// v2 metadata grammar (blok-sync-v2.md section 4.1). `lineage` and
+// `operationId` share one 32-lowercase-hex shape; kept separate from
+// LINEAGE_PATTERN so v1's control-frame validation and v2's id validation
+// never accidentally couple.
+const V2_ID_PATTERN = /^[0-9a-f]{32}$/;
+const V2_CODE_PATTERN = /^[a-z][a-z0-9-]{0,63}$/;
+const V2_SERVER_SEQUENCE_PATTERN = /^(0|[1-9][0-9]*)$/;
+const V2_MAX_SERVER_SEQUENCE = BigInt('18446744073709551615');
+// The 4 bytes JSON permits as whitespace (rule 8) — spelled out by code
+// point rather than `\s`, which also matches non-JSON-whitespace codepoints.
+const V2_JSON_WHITESPACE_PATTERN = /[\x20\x09\x0a\x0d]/;
+
+const OPERATION_KEYS = ['lineage', 'operationId'] as const;
+const ACKNOWLEDGEMENT_KEYS = ['lineage', 'operationId', 'serverSequence'] as const;
+const REJECTION_KEYS = ['lineage', 'operationId', 'code'] as const;
 
 // `fatal` rejects invalid UTF-8 (the server decodes strictly too); `ignoreBOM`
 // keeps a leading U+FEFF in the output instead of silently stripping it, so a
@@ -82,6 +109,22 @@ export function encode(frame: SyncWireFrame): Uint8Array {
       encoding.writeVarUint(encoder, MESSAGE_BLOK_LIMITS);
       encoding.writeVarString(encoder, encodeLimits(frame.maxMessageBytes));
       break;
+    case 'operation':
+      encoding.writeVarUint(encoder, MESSAGE_OPERATION);
+      encoding.writeVarString(encoder, encodeOperationMetadata(frame.lineage, frame.operationId));
+      encoding.writeVarUint8Array(encoder, requirePayload(frame.update));
+      break;
+    case 'acknowledgement':
+      encoding.writeVarUint(encoder, MESSAGE_ACKNOWLEDGEMENT);
+      encoding.writeVarString(
+        encoder,
+        encodeAcknowledgementMetadata(frame.lineage, frame.operationId, frame.serverSequence),
+      );
+      break;
+    case 'rejection':
+      encoding.writeVarUint(encoder, MESSAGE_REJECTION);
+      encoding.writeVarString(encoder, encodeRejectionMetadata(frame.lineage, frame.operationId, frame.code));
+      break;
   }
 
   return encoding.toUint8Array(encoder);
@@ -97,7 +140,7 @@ export function decode(bytes: Uint8Array): SyncWireDecodeResult {
   const type = readVarUint(decoder);
 
   if (type === null) {
-    return malformed('the message type is missing or malformed');
+    return malformedV2(1, 'the message type is missing or malformed');
   }
 
   switch (type) {
@@ -146,6 +189,12 @@ export function decode(bytes: Uint8Array): SyncWireDecodeResult {
 
       return requireEnd(decoder) ?? { type: 'limits', maxMessageBytes: limits.maxMessageBytes };
     }
+    case MESSAGE_OPERATION:
+      return decodeOperation(decoder);
+    case MESSAGE_ACKNOWLEDGEMENT:
+      return decodeAcknowledgement(decoder);
+    case MESSAGE_REJECTION:
+      return decodeRejection(decoder);
     default:
       // Unknown OUTER type: ignorable, and the payload is left unread — so no
       // trailing-byte check here, matching the server (SyncWire.cs TryDecode).
@@ -317,6 +366,288 @@ function decodeLimits(json: Uint8Array): LimitsResult {
   return { ok: true, maxMessageBytes };
 }
 
+// --- v2: operation (102) / acknowledgement (103) / rejection (104) ---
+// blok-sync-v2.md section 5's decoder rules are evaluated in ascending
+// numeric order and the FIRST one violated is reported, so every helper below
+// returns the rule number alongside its verdict rather than just ok/fail.
+
+type SectionResult = { ok: true; bytes: Uint8Array } | { ok: false; rule: 2 | 3 };
+
+/**
+ * Reads one length-prefixed section required by rules 2 and 3. Zero bytes
+ * remaining at the read position means the section is missing entirely (rule
+ * 3, e.g. `operationMissingUpdateSection`). Otherwise a length prefix that is
+ * unreadable or exceeds what remains is rule 2 either way — section 5 has no
+ * separate code for a corrupt-format prefix, and `readVarBytes` already does
+ * the exceeds-remaining bounds check before any allocation.
+ */
+function readRequiredSection(decoder: decoding.Decoder): SectionResult {
+  if (!decoding.hasContent(decoder)) {
+    return { ok: false, rule: 3 };
+  }
+
+  const bytes = readVarBytes(decoder);
+
+  if (bytes === null) {
+    return { ok: false, rule: 2 };
+  }
+
+  return { ok: true, bytes };
+}
+
+/** Malformed unless the whole v2 frame was consumed — rule 5. */
+function requireEndV2(decoder: decoding.Decoder): { type: 'malformed'; reason: string; rule: number } | null {
+  return decoding.hasContent(decoder)
+    ? malformedV2(5, `${decoder.arr.length - decoder.pos} trailing byte(s) after the message`)
+    : null;
+}
+
+type V2MetadataResult =
+  | { ok: true; text: string; fields: Record<string, unknown> }
+  | { ok: false; rule: number; reason: string };
+
+/**
+ * Rules 6-11: UTF-8, no backslash, no JSON whitespace, exactly one JSON
+ * object, and its key set exactly matches `requiredKeys` with no repeats.
+ * Value-level checks (rule 12) are the caller's job, once the key set itself
+ * is known good — matching the spec's evaluation order.
+ */
+function decodeV2Metadata(bytes: Uint8Array, requiredKeys: readonly string[]): V2MetadataResult {
+  const text = tryDecodeUtf8(bytes);
+
+  if (text === null) {
+    return { ok: false, rule: 6, reason: 'the metadata section is not valid UTF-8' };
+  }
+
+  if (text.includes('\\')) {
+    return { ok: false, rule: 7, reason: 'the metadata section contains an escape' };
+  }
+
+  if (V2_JSON_WHITESPACE_PATTERN.test(text)) {
+    return { ok: false, rule: 8, reason: 'the metadata section contains whitespace' };
+  }
+
+  const parsed = tryParseJson(text);
+
+  if (!parsed.ok) {
+    return { ok: false, rule: 9, reason: 'the metadata section is not exactly one JSON value' };
+  }
+
+  const record = parsed.value;
+
+  if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+    return { ok: false, rule: 10, reason: 'the metadata section is not a JSON object' };
+  }
+
+  const fields = record as Record<string, unknown>;
+  const keys = Object.keys(fields);
+
+  const missingKey = requiredKeys.find((key) => !(key in fields));
+
+  if (missingKey !== undefined) {
+    return { ok: false, rule: 11, reason: `the metadata section is missing "${missingKey}"` };
+  }
+
+  const unknownKey = keys.find((key) => !requiredKeys.includes(key));
+
+  if (unknownKey !== undefined) {
+    return { ok: false, rule: 11, reason: `the metadata section has an unknown key "${unknownKey}"` };
+  }
+
+  // With no backslash and no whitespace (rules 7-8 already passed), the
+  // closing quote of a VALUE is always followed by "," or "}", never ":" — so
+  // ONLY an actual key occurrence can produce the substring `"key":`. This is
+  // what keeps the scan exact even though a `code` value may itself spell a
+  // key name (e.g. a rejection code of "lineage").
+  const duplicateKey = requiredKeys.find((key) => occurrences(text, `"${key}":`) > 1);
+
+  if (duplicateKey !== undefined) {
+    return { ok: false, rule: 11, reason: `the metadata section repeats "${duplicateKey}"` };
+  }
+
+  return { ok: true, text, fields };
+}
+
+/** Rule 12: `lineage`/`operationId` must be exactly 32 lowercase hex characters. */
+function validateV2Id(value: unknown, field: string): { ok: true; value: string } | { ok: false; reason: string } {
+  if (typeof value !== 'string' || !V2_ID_PATTERN.test(value)) {
+    return { ok: false, reason: `${field} must be 32 lowercase hex characters` };
+  }
+
+  return { ok: true, value };
+}
+
+/**
+ * Rule 12: `serverSequence` is a decimal string (no sign, no leading zero, no
+ * fraction/exponent) at most 18446744073709551615 (the u64 ceiling — no
+ * `number` holds that exactly) and, in an acknowledgement, at least 1.
+ */
+function validateServerSequence(value: unknown): { ok: true; value: string } | { ok: false; reason: string } {
+  if (typeof value !== 'string' || !V2_SERVER_SEQUENCE_PATTERN.test(value)) {
+    return { ok: false, reason: 'serverSequence must be a decimal string with no sign, leading zero or exponent' };
+  }
+
+  const numeric = BigInt(value);
+
+  if (numeric > V2_MAX_SERVER_SEQUENCE) {
+    return { ok: false, reason: 'serverSequence exceeds the u64 ceiling 18446744073709551615' };
+  }
+
+  if (numeric === BigInt(0)) {
+    return { ok: false, reason: 'serverSequence must be at least 1 in an acknowledgement' };
+  }
+
+  return { ok: true, value };
+}
+
+/**
+ * All three v2 decoders read framing (rules 2-5) to completion BEFORE looking
+ * at metadata content (rules 6-12) at all — never interleaved section by
+ * section. Evaluation order is normative (section 5), and rule 5 ("after the
+ * last section... one or more bytes remain") is itself defined in terms of
+ * every section, so a frame that is malformed in BOTH ways (e.g. a
+ * non-UTF-8 metadata section that also has trailing bytes) must report the
+ * lower-numbered framing rule, not the metadata rule found by decoding first.
+ */
+function decodeOperation(decoder: decoding.Decoder): SyncWireDecodeResult {
+  const metadataSection = readRequiredSection(decoder);
+
+  if (!metadataSection.ok) {
+    return malformedV2(metadataSection.rule, 'the operation metadata section is missing or truncated');
+  }
+
+  const updateSection = readRequiredSection(decoder);
+
+  if (!updateSection.ok) {
+    return malformedV2(updateSection.rule, 'the operation update section is missing or truncated');
+  }
+
+  if (updateSection.bytes.length === 0) {
+    return malformedV2(4, 'the operation update must not be empty');
+  }
+
+  const end = requireEndV2(decoder);
+
+  if (end !== null) {
+    return end;
+  }
+
+  const metadata = decodeV2Metadata(metadataSection.bytes, OPERATION_KEYS);
+
+  if (!metadata.ok) {
+    return malformedV2(metadata.rule, metadata.reason);
+  }
+
+  const lineage = validateV2Id(metadata.fields.lineage, 'lineage');
+
+  if (!lineage.ok) {
+    return malformedV2(12, lineage.reason);
+  }
+
+  const operationId = validateV2Id(metadata.fields.operationId, 'operationId');
+
+  if (!operationId.ok) {
+    return malformedV2(12, operationId.reason);
+  }
+
+  return {
+    type: 'operation',
+    lineage: lineage.value,
+    operationId: operationId.value,
+    update: updateSection.bytes,
+  };
+}
+
+function decodeAcknowledgement(decoder: decoding.Decoder): SyncWireDecodeResult {
+  const metadataSection = readRequiredSection(decoder);
+
+  if (!metadataSection.ok) {
+    return malformedV2(metadataSection.rule, 'the acknowledgement metadata section is missing or truncated');
+  }
+
+  const end = requireEndV2(decoder);
+
+  if (end !== null) {
+    return end;
+  }
+
+  const metadata = decodeV2Metadata(metadataSection.bytes, ACKNOWLEDGEMENT_KEYS);
+
+  if (!metadata.ok) {
+    return malformedV2(metadata.rule, metadata.reason);
+  }
+
+  const lineage = validateV2Id(metadata.fields.lineage, 'lineage');
+
+  if (!lineage.ok) {
+    return malformedV2(12, lineage.reason);
+  }
+
+  const operationId = validateV2Id(metadata.fields.operationId, 'operationId');
+
+  if (!operationId.ok) {
+    return malformedV2(12, operationId.reason);
+  }
+
+  const serverSequence = validateServerSequence(metadata.fields.serverSequence);
+
+  if (!serverSequence.ok) {
+    return malformedV2(12, serverSequence.reason);
+  }
+
+  return {
+    type: 'acknowledgement',
+    lineage: lineage.value,
+    operationId: operationId.value,
+    serverSequence: serverSequence.value,
+  };
+}
+
+function decodeRejection(decoder: decoding.Decoder): SyncWireDecodeResult {
+  const metadataSection = readRequiredSection(decoder);
+
+  if (!metadataSection.ok) {
+    return malformedV2(metadataSection.rule, 'the rejection metadata section is missing or truncated');
+  }
+
+  const end = requireEndV2(decoder);
+
+  if (end !== null) {
+    return end;
+  }
+
+  const metadata = decodeV2Metadata(metadataSection.bytes, REJECTION_KEYS);
+
+  if (!metadata.ok) {
+    return malformedV2(metadata.rule, metadata.reason);
+  }
+
+  const lineage = validateV2Id(metadata.fields.lineage, 'lineage');
+
+  if (!lineage.ok) {
+    return malformedV2(12, lineage.reason);
+  }
+
+  const operationId = validateV2Id(metadata.fields.operationId, 'operationId');
+
+  if (!operationId.ok) {
+    return malformedV2(12, operationId.reason);
+  }
+
+  const code = metadata.fields.code;
+
+  if (typeof code !== 'string' || !V2_CODE_PATTERN.test(code)) {
+    return malformedV2(12, 'code must match ^[a-z][a-z0-9-]{0,63}$');
+  }
+
+  return {
+    type: 'rejection',
+    lineage: lineage.value,
+    operationId: operationId.value,
+    code,
+  };
+}
+
 type PayloadResult = { type: 'bytes'; bytes: Uint8Array } | { type: 'error'; reason: string };
 
 /** Reads a length-prefixed payload, rejecting an empty one (sync + awareness). */
@@ -450,6 +781,35 @@ function encodeLimits(maxMessageBytes: number): string {
   return JSON.stringify({ maxMessageBytes });
 }
 
+function encodeOperationMetadata(lineage: string, operationId: string): string {
+  if (!V2_ID_PATTERN.test(lineage) || !V2_ID_PATTERN.test(operationId)) {
+    throw new Error('collab: an operation frame needs a 32-lowercase-hex lineage and operationId.');
+  }
+
+  // Key order {lineage, operationId} — the fixture pins these bytes.
+  return JSON.stringify({ lineage, operationId });
+}
+
+function encodeAcknowledgementMetadata(lineage: string, operationId: string, serverSequence: string): string {
+  const sequence = validateServerSequence(serverSequence);
+
+  if (!V2_ID_PATTERN.test(lineage) || !V2_ID_PATTERN.test(operationId) || !sequence.ok) {
+    throw new Error('collab: an acknowledgement frame needs a 32-lowercase-hex lineage/operationId and a serverSequence >= 1.');
+  }
+
+  // Key order {lineage, operationId, serverSequence} — the fixture pins these bytes.
+  return JSON.stringify({ lineage, operationId, serverSequence });
+}
+
+function encodeRejectionMetadata(lineage: string, operationId: string, code: string): string {
+  if (!V2_ID_PATTERN.test(lineage) || !V2_ID_PATTERN.test(operationId) || !V2_CODE_PATTERN.test(code)) {
+    throw new Error('collab: a rejection frame needs a 32-lowercase-hex lineage/operationId and a code matching ^[a-z][a-z0-9-]{0,63}$.');
+  }
+
+  // Key order {lineage, operationId, code} — the fixture pins these bytes.
+  return JSON.stringify({ lineage, operationId, code });
+}
+
 function tryDecodeUtf8(bytes: Uint8Array): string | null {
   try {
     return strictUtf8.decode(bytes);
@@ -473,4 +833,9 @@ function occurrences(haystack: string, needle: string): number {
 
 function malformed(reason: string): { type: 'malformed'; reason: string } {
   return { type: 'malformed', reason };
+}
+
+/** Malformed with the section-5 rule number a v2 caller asserts against a fixture's `rule`. */
+function malformedV2(rule: number, reason: string): { type: 'malformed'; reason: string; rule: number } {
+  return { type: 'malformed', reason, rule };
 }

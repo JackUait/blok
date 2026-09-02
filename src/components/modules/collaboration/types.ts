@@ -25,6 +25,17 @@ export interface WorkingSetTag {
  * - `limits` is the Blok-only message-size announcement (message type 101): the
  *   server's cap in bytes, sent right after the control frame so the client can
  *   refuse an oversized frame before writing it instead of learning from a 1009.
+ * - `operation` (message type 102, v2, client→server) carries one durable edit:
+ *   the raw Yjs update plus the `lineage`/`operationId` that let the server
+ *   journal and acknowledge it by exact id.
+ * - `acknowledgement` (message type 103, v2, server→client) confirms an
+ *   operation is durable; `serverSequence` is a decimal string (its ceiling is
+ *   2^64 − 1, which no `number` holds exactly) and is at least `"1"`.
+ * - `rejection` (message type 104, v2, server→client) refuses an operation.
+ *   `code` is an OPEN set — see {@link blok-sync-v2.md} section 6: the six
+ *   named codes are stable, but any string matching
+ *   `^[a-z][a-z0-9-]{0,63}$` decodes successfully, and a receiver MUST treat
+ *   an unrecognised one as a final rejection rather than refusing the frame.
  */
 export type SyncWireFrame =
   | { type: 'syncStep1'; stateVector: Uint8Array }
@@ -34,7 +45,10 @@ export type SyncWireFrame =
   | { type: 'queryAwareness' }
   | { type: 'permissionDenied'; reason: string }
   | { type: 'control'; tag: WorkingSetTag }
-  | { type: 'limits'; maxMessageBytes: number };
+  | { type: 'limits'; maxMessageBytes: number }
+  | { type: 'operation'; lineage: string; operationId: string; update: Uint8Array }
+  | { type: 'acknowledgement'; lineage: string; operationId: string; serverSequence: string }
+  | { type: 'rejection'; lineage: string; operationId: string; code: string };
 
 /**
  * What {@link decode} returns. Either a frame this codec understands, an
@@ -43,11 +57,17 @@ export type SyncWireFrame =
  *
  * decode NEVER throws: hostile or truncated input becomes `malformed`, not an
  * exception, so a bad frame can never take a WebSocket handler down with it.
+ *
+ * `rule` is the blok-sync-v2.md section-5 decoder rule number attributed to a
+ * v2 (type 102-104) refusal, plus the shared rule-1 outer-varuint check every
+ * frame goes through first. It is undefined for the v1-only refusal paths
+ * (malformed sync/awareness/auth/control/limits payloads), which predate the
+ * rule numbering and are not asserted against it.
  */
 export type SyncWireDecodeResult =
   | SyncWireFrame
   | { type: 'unknown'; messageType: number }
-  | { type: 'malformed'; reason: string };
+  | { type: 'malformed'; reason: string; rule?: number };
 
 /**
  * The slice of YjsManager the provider talks to — the binary doc seam plus the

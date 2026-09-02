@@ -33,8 +33,47 @@ interface FixtureFrame {
   limits?: { maxMessageBytes: number };
 }
 
+interface V2Metadata {
+  lineage: string;
+  operationId: string;
+  serverSequence?: string;
+  code?: string;
+}
+
+interface V2FrameFixture {
+  name: string;
+  messageType: number;
+  canonical: boolean;
+  description: string;
+  frameHex: string;
+  metadataJson: string;
+  metadata: V2Metadata;
+  updateHex?: string;
+}
+
+interface V2NegativeFixture {
+  name: string;
+  messageType?: number;
+  expect: 'malformed' | 'unknown';
+  rule?: number;
+  description: string;
+  frameHex: string;
+  metadataJson?: string;
+}
+
+interface V2Fixture {
+  protocol: string;
+  lineage: string;
+  operationId: string;
+  rejectionCodes: string[];
+  rejectionCodePattern: string;
+  frames: V2FrameFixture[];
+  negative: V2NegativeFixture[];
+}
+
 interface Fixture {
   frames: FixtureFrame[];
+  v2: V2Fixture;
 }
 
 const fixture = JSON.parse(
@@ -67,6 +106,16 @@ const frameByName = (name: string): FixtureFrame => {
 
   if (found === undefined) {
     throw new Error(`fixture is missing frame "${name}"`);
+  }
+
+  return found;
+};
+
+const v2FrameByName = (name: string): V2FrameFixture => {
+  const found = fixture.v2.frames.find((frame) => frame.name === name);
+
+  if (found === undefined) {
+    throw new Error(`fixture is missing v2 frame "${name}"`);
   }
 
   return found;
@@ -377,5 +426,191 @@ describe('sync-wire codec — fuzz / hostile input never throws', () => {
       }, `random input ${hex(input)}`).not.toThrow();
       expect(known.has(result?.type ?? ''), `random input ${hex(input)}`).toBe(true);
     }
+  });
+});
+
+describe('sync-wire codec — v2 operations, acknowledgements and rejections', () => {
+  it('the fixture carries every v2 positive frame this codec speaks', () => {
+    const expectedNames = [
+      'operation',
+      'acknowledgement',
+      'acknowledgementMaxSequence',
+      'acknowledgementKeysOutOfOrder',
+      'rejection:lineage-mismatch',
+      'rejection:read-only',
+      'rejection:not-synced',
+      'rejection:invalid-update',
+      'rejection:oversized-update',
+      'rejection:operation-id-conflict',
+      'rejectionUnrecognisedCode',
+      'rejectionCodeMaxLength',
+    ];
+
+    expect(fixture.v2.frames.map((frame) => frame.name).sort()).toEqual(expectedNames.sort());
+  });
+
+  it('round-trips an operation byte-identically', () => {
+    const frame = v2FrameByName('operation');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded.type).toBe('operation');
+
+    if (decoded.type !== 'operation') {
+      throw new Error('unreachable');
+    }
+
+    expect(decoded.lineage).toBe(frame.metadata.lineage);
+    expect(decoded.operationId).toBe(frame.metadata.operationId);
+    expect(hex(decoded.update)).toBe(frame.updateHex);
+    expect(hex(encode(decoded))).toBe(frame.frameHex);
+  });
+
+  it('round-trips an exact acknowledgement with a decimal server sequence', () => {
+    for (const name of ['acknowledgement', 'acknowledgementMaxSequence']) {
+      const frame = v2FrameByName(name);
+      const decoded = decode(bytes(frame.frameHex));
+
+      expect(decoded.type, name).toBe('acknowledgement');
+
+      if (decoded.type !== 'acknowledgement') {
+        throw new Error('unreachable');
+      }
+
+      expect(decoded.lineage, name).toBe(frame.metadata.lineage);
+      expect(decoded.operationId, name).toBe(frame.metadata.operationId);
+      // A decimal STRING, not a number — the u64 ceiling doesn't fit a double.
+      expect(typeof decoded.serverSequence, name).toBe('string');
+      expect(decoded.serverSequence, name).toBe(frame.metadata.serverSequence);
+      expect(hex(encode(decoded)), name).toBe(frame.frameHex);
+    }
+  });
+
+  it('decodes an acknowledgement whose metadata keys arrived out of order, decode-only', () => {
+    // canonical: false — an encoder fed these fields would rightly emit the
+    // canonical key order, so re-encoding is never asserted for this fixture.
+    const frame = v2FrameByName('acknowledgementKeysOutOfOrder');
+
+    expect(frame.canonical).toBe(false);
+
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded).toEqual({
+      type: 'acknowledgement',
+      lineage: frame.metadata.lineage,
+      operationId: frame.metadata.operationId,
+      serverSequence: frame.metadata.serverSequence,
+    });
+  });
+
+  it('round-trips every stable rejection code', () => {
+    expect(fixture.v2.rejectionCodes.length).toBe(6);
+
+    for (const code of fixture.v2.rejectionCodes) {
+      const frame = v2FrameByName(`rejection:${code}`);
+      const decoded = decode(bytes(frame.frameHex));
+
+      expect(decoded.type, code).toBe('rejection');
+
+      if (decoded.type !== 'rejection') {
+        throw new Error('unreachable');
+      }
+
+      expect(decoded.lineage, code).toBe(frame.metadata.lineage);
+      expect(decoded.operationId, code).toBe(frame.metadata.operationId);
+      expect(decoded.code, code).toBe(code);
+      expect(hex(encode(decoded)), code).toBe(frame.frameHex);
+    }
+  });
+
+  it('accepts a rejection code outside the stable six as a final rejection, not malformed', () => {
+    const frame = v2FrameByName('rejectionUnrecognisedCode');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded.type).toBe('rejection');
+
+    if (decoded.type !== 'rejection') {
+      throw new Error('unreachable');
+    }
+
+    expect(decoded.code).toBe(frame.metadata.code);
+    expect(fixture.v2.rejectionCodes).not.toContain(decoded.code);
+    expect(hex(encode(decoded))).toBe(frame.frameHex);
+  });
+
+  it('round-trips a rejection code at the 64-character grammar ceiling', () => {
+    const frame = v2FrameByName('rejectionCodeMaxLength');
+    const decoded = decode(bytes(frame.frameHex));
+
+    expect(decoded.type).toBe('rejection');
+
+    if (decoded.type !== 'rejection') {
+      throw new Error('unreachable');
+    }
+
+    expect(decoded.code.length).toBe(64);
+    expect(hex(encode(decoded))).toBe(frame.frameHex);
+  });
+
+  it('rejects every malformed v2 fixture', () => {
+    const malformedFixtures = fixture.v2.negative.filter((entry) => entry.expect === 'malformed');
+
+    // Every rule 1-12 in the spec has at least one vector; this keeps the loop
+    // below from silently covering nothing if the fixture ever shrinks.
+    expect(malformedFixtures.length).toBeGreaterThanOrEqual(12);
+
+    for (const negative of malformedFixtures) {
+      const result = decode(bytes(negative.frameHex));
+
+      expect(result.type, negative.name).toBe('malformed');
+
+      if (result.type !== 'malformed') {
+        throw new Error('unreachable');
+      }
+
+      // The rule attribution IS the assertion: a decoder that refuses every
+      // vector for the wrong reason must not pass this test.
+      expect(result.rule, `${negative.name}: ${negative.description}`).toBe(negative.rule);
+    }
+  });
+
+  it('attributes the lower-numbered framing rule over a metadata rule the same frame also violates', () => {
+    // No fixture pins this (every fixture violates exactly one rule, or a
+    // documented pair within 6-12). type(102) varstring(len=1, 0xff — invalid
+    // UTF-8, rule 6) varbytes(len=0 — empty update, rule 4). A decoder that
+    // checks framing section-by-section (read metadata, decode it, THEN read
+    // the update) finds rule 6 first; the spec's normative ascending order
+    // means every framing rule (1-5) is decided before any metadata rule
+    // (6-12), so the correct answer is rule 4.
+    const result = decode(bytes('6601ff00'));
+
+    expect(result.type).toBe('malformed');
+
+    if (result.type !== 'malformed') {
+      throw new Error('unreachable');
+    }
+
+    expect(result.rule).toBe(4);
+  });
+
+  it('keeps every v1 fixture byte-identical', () => {
+    for (const frame of fixture.frames) {
+      const decoded = goodFrame(decode(bytes(frame.frameHex)));
+
+      expect(hex(encode(decoded)), frame.name).toBe(frame.frameHex);
+    }
+  });
+
+  it('ignores an unknown outer type', () => {
+    const negative = fixture.v2.negative.find((entry) => entry.name === 'unknownOuterType');
+
+    if (negative === undefined) {
+      throw new Error('fixture is missing negative "unknownOuterType"');
+    }
+
+    expect(negative.expect).toBe('unknown');
+
+    const decoded = decode(bytes(negative.frameHex));
+
+    expect(decoded).toEqual({ type: 'unknown', messageType: negative.messageType });
   });
 });

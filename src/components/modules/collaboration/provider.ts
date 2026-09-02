@@ -589,6 +589,14 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       case 'limits':
         state.announcedMaxBytes = frame.maxMessageBytes;
         break;
+      // blok-sync.v2 (packages/server/protocol/blok-sync-v2.md). The codec
+      // decodes these; wiring durable-operation handling into the provider
+      // is a separate task, so for now they are dropped here exactly like an
+      // `unknown`/`malformed` frame was before this union grew.
+      case 'operation':
+      case 'acknowledgement':
+      case 'rejection':
+        break;
     }
   };
 

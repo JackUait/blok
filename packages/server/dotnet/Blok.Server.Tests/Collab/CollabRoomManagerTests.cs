@@ -391,6 +391,95 @@ public sealed class CollabRoomManagerTests
   }
 
   [Fact]
+  public async Task AHeadlessEditPersistsExportsAfterTheDebounceAndEvictsAfterTheLinger()
+  {
+    endpoint.Holds(DocId, "a", version: "v1");
+    var manager = CreateManager();
+
+    var result = await manager.EditAsync(DocId, [Insert("b")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal("ab", YDocs.Replay(store.FramesOf(DocId)));
+    Assert.Equal(1, manager.LiveRoomCount);
+    // The export debounce and the eviction linger.
+    Assert.Equal(2, time.ArmedTimerCount);
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the debounced export");
+    await manager.SettleAsync();
+
+    var save = Assert.Single(endpoint.Saves);
+    Assert.Equal("ab", save.Data["text"]?.GetValue<string>());
+    Assert.Equal("v1", save.Version);
+    Assert.Equal(1, time.ArmedTimerCount);
+
+    time.Advance(TimeSpan.FromSeconds(28));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+    Assert.Single(endpoint.Saves);
+    Assert.Equal("ab", YDocs.Replay(store.FramesOf(DocId)));
+  }
+
+  [Fact]
+  public async Task ARefusedEditWritesNothingAndTheRoomStillEvicts()
+  {
+    endpoint.Holds(DocId, "a");
+    converter.EditFailure = new CollabEditException("collab: op 0: refused.");
+    var manager = CreateManager();
+
+    var result = await manager.EditAsync(DocId, [Insert("b")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Invalid, result.Status);
+    Assert.IsType<CollabEditException>(result.Error);
+    Assert.Equal(1, store.Writes);
+    Assert.Equal("a", YDocs.Replay(store.FramesOf(DocId)));
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal(1, time.ArmedTimerCount);
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+    Assert.Empty(endpoint.Saves);
+  }
+
+  /// <summary>
+  /// An edit can queue behind an eviction that is mid-flush. When the room
+  /// closes underneath it the edit answers null and the manager retries on
+  /// a fresh room, hydrated from the blob the eviction just wrote.
+  /// </summary>
+  [Fact]
+  public async Task AnEditQueuedBehindAClosingRoomIsRetriedOnAFreshOne()
+  {
+    endpoint.Holds(DocId, "a");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateManager(new CollabRoomOptions
+    {
+      ExportDebounce = TimeSpan.FromMinutes(5),
+      ExportMaxDelay = TimeSpan.FromMinutes(5),
+    });
+    var member = new FakeMember();
+    var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
+    var client = await SyncedAsync(membership, member);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
+        CancellationToken.None);
+    await Waits.UntilAsync(() => store.FramesOf(DocId).Count == 2, "the working set to catch up");
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the eviction's export to start");
+
+    var edit = manager.EditAsync(DocId, [Insert("c")], CancellationToken.None).AsTask();
+    endpoint.SaveGate.SetResult();
+    endpoint.SaveGate = null;
+    var result = await edit;
+
+    Assert.Equal(CollabEditStatus.Applied, result.Status);
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal(2, store.Reads);
+    Assert.Equal("abc", YDocs.Replay(store.FramesOf(DocId)));
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  [Fact]
   public async Task ResetRaisesTheEpochClosesEveryMemberAndReseedsOnTheNextJoin()
   {
     endpoint.Holds(DocId, "old");

@@ -1,39 +1,31 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Cells;
-using YDotNet.Document.Transactions;
-using JsonArray = System.Text.Json.Nodes.JsonArray;
-using JsonObject = System.Text.Json.Nodes.JsonObject;
 
 namespace Blok.Server.Tests.Collab;
 
 /// <summary>
 /// What the converter must survive when the JSON or the doc is hostile
-/// rather than merely malformed: NUL characters (which abort the process on
-/// read — see the YDocConverter header), depth that would overflow the
-/// stack, and shared types no Blok client writes.
+/// rather than merely malformed: NUL characters, depth that would overflow
+/// the stack, and shared types no Blok client writes.
 /// </summary>
 public sealed class YDocConverterHardeningTests
 {
   private const string NUL = "\0";
 
+  /// <summary>The peer that writes shapes the engine's own API cannot.</summary>
+  private const ulong ForeignClient = 999;
+
   /// <summary>
-  /// A doc a JS peer can produce and this process CANNOT read: the blocks map
-  /// carries a key with a NUL, and yffi's <c>YMapEntry::new</c> unwraps a
-  /// <c>CString::new</c> over it. Skipped forever — running it aborts the
-  /// whole test host, taking every other test with it. It exists so the
-  /// hazard stays visible and reproducible.
-  ///
-  /// Reproduce by hand:
-  ///   dotnet test --filter FullyQualifiedName~HostileNulUpdateAbortsTheProcess
-  /// after deleting the Skip. Expect SIGABRT (exit 134) and
-  ///   panicked at yffi/src/lib.rs:216:36:
-  ///   called `Result::unwrap()` on an `Err` value: NulError(1, [97, 0, 98])
+  /// A doc a JS peer can produce and this process once could not read: the
+  /// blocks map carries a key with a NUL, which yffi's <c>YMapEntry::new</c>
+  /// unwrapped into a process abort. The managed engine treats NUL as
+  /// ordinary data, so the update applies and the NUL reaches the export
+  /// intact (Locked Decision 9).
   /// </summary>
-  [Fact(Skip = "Aborts the process: reading a NUL key panics inside yrs. See the doc comment.")]
-  public void HostileNulUpdateAbortsTheProcess()
+  [Fact]
+  public void HostileNulUpdateExportsTheNulIntact()
   {
     // A doc with one block whose blocks-map key and id are "a\0b", written by
     // yjs (the JS side round-trips NUL happily).
@@ -42,16 +34,17 @@ public sealed class YDocConverterHardeningTests
         "dHlwZQF3CXBhcmFncmFwaCcA1fKCvAMABGRhdGEBJwDV8oK8AwAKY29udGVudElk" +
         "cwAoANXygrwDAwR0ZXh0AXcBeAgBBHJvb3QBdwNhAGIA";
 
-    using var doc = new Doc();
+    var doc = new YDoc();
 
-    using (var transaction = doc.WriteTransaction())
-    {
-      // ApplyV1 itself succeeds — nothing decodes the strings yet.
-      Assert.Equal(TransactionUpdateResult.Ok, transaction.ApplyV1(Convert.FromBase64String(Update)));
-    }
+    Assert.Equal(
+        ApplyOutcome.Applied,
+        doc.ApplyUpdate(Convert.FromBase64String(Update)).Outcome);
 
-    // This line never returns. It aborts.
-    YDocConverter.Export(doc);
+    var exported = YDocConverter.Export(doc);
+    var block = Assert.Single(exported);
+
+    Assert.Equal($"a{NUL}b", block!["id"]!.GetValue<string>());
+    Assert.Equal("x", block["data"]!["text"]!.GetValue<string>());
   }
 
   [Theory]
@@ -120,15 +113,14 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
-  /// Truncation is what makes this a data-loss bug rather than a nuisance:
-  /// yffi cuts every string at the first NUL, so without the guard the
-  /// server would PUT a silently shortened record back to the consumer.
+  /// The endpoint contract, unchanged by the engine: a seeded document is one
+  /// a consumer PUT, and NUL is refused there rather than silently stored.
   /// </summary>
   [Fact]
-  public void SeedWouldOtherwiseTruncateAtTheFirstNul()
+  public void SeedNamesTheNulInItsRefusal()
   {
     var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(
-        new Doc(),
+        new YDoc(),
         Blocks("""
           { "id": "n1", "type": "paragraph", "data": { "text": "a\u0000b" } }
           """)));
@@ -137,13 +129,13 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
-  /// Only NUL is fatal — every other control character round-trips, so the
+  /// Only NUL is screened — every other control character round-trips, so the
   /// guard must not widen into "reject control characters".
   /// </summary>
   [Fact]
   public void SeedAcceptsEveryOtherControlCharacter()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "n1", "type": "paragraph", "data": { "text": "a\u0001b\u001Fc\td" } }"""));
@@ -162,7 +154,7 @@ public sealed class YDocConverterHardeningTests
   {
     const int Length = 20000;
 
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, ParentChain(Length));
 
@@ -178,7 +170,7 @@ public sealed class YDocConverterHardeningTests
   [Fact]
   public void SeedAndExportHandleDataNestedToTheLimit()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     RunOnAOneMegabyteStack(() =>
     {
@@ -193,7 +185,7 @@ public sealed class YDocConverterHardeningTests
   [Fact]
   public void SeedRejectsDataNestedPastTheLimit()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
     var error = Assert.Throws<InvalidDataException>(
         () => YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 1)));
 
@@ -203,58 +195,33 @@ public sealed class YDocConverterHardeningTests
   [Fact]
   public void ExportRejectsDocDataNestedPastTheLimit()
   {
-    using var doc = new Doc();
-    var blockMap = doc.Map("blocks");
-    var rootOrder = doc.Array("root");
-    var inputs = new List<Input>();
+    var doc = new YDoc();
+    var blockMap = doc.GetMap("blocks");
+    var rootOrder = doc.GetArray("root");
 
-    Input Nested(int depth)
+    static YMap Nested(int depth)
     {
-      var current = Track(Input.Map(new Dictionary<string, Input>(StringComparer.Ordinal)
-      {
-        ["v"] = Track(Input.Double(1)),
-      }));
+      var current = new YMap([new KeyValuePair<string, object?>("v", 1d)]);
 
       for (var index = 0; index < depth; index++)
       {
-        current = Track(Input.Map(new Dictionary<string, Input>(StringComparer.Ordinal)
-        {
-          ["a"] = current,
-        }));
+        current = new YMap([new KeyValuePair<string, object?>("a", current)]);
       }
 
       return current;
     }
 
-    Input Track(Input input)
+    doc.Transact(transaction =>
     {
-      inputs.Add(input);
-
-      return input;
-    }
-
-    try
-    {
-      using (var transaction = doc.WriteTransaction())
-      {
-        blockMap.Insert(transaction, "deep", Track(Input.Map(
-            new Dictionary<string, Input>(StringComparer.Ordinal)
-            {
-              ["id"] = Track(Input.String("deep")),
-              ["type"] = Track(Input.String("paragraph")),
-              ["data"] = Nested(YDocConverter.MaxValueDepth + 5),
-              ["contentIds"] = Track(Input.Array([])),
-            })));
-        rootOrder.InsertRange(transaction, 0, [Track(Input.String("deep"))]);
-      }
-    }
-    finally
-    {
-      foreach (var input in inputs)
-      {
-        input.Dispose();
-      }
-    }
+      blockMap.Set(transaction, "deep", new YMap(
+      [
+        new KeyValuePair<string, object?>("id", "deep"),
+        new KeyValuePair<string, object?>("type", "paragraph"),
+        new KeyValuePair<string, object?>("data", Nested(YDocConverter.MaxValueDepth + 5)),
+        new KeyValuePair<string, object?>("contentIds", new YArray([])),
+      ]));
+      rootOrder.Insert(transaction, 0, ["deep"]);
+    });
 
     var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Export(doc));
 
@@ -263,45 +230,49 @@ public sealed class YDocConverterHardeningTests
 
   /// <summary>
   /// A non-Blok peer inserting a Y.Text must not brick the room forever. The
-  /// JS client renders these as their string form (Y.Text and Y.XmlText: the
-  /// text; Y.XmlElement: its XML), so the converter does too.
+  /// JS client renders these as their string form, so Y.Text and Y.XmlText
+  /// render their text here too. The XML CONTAINERS render "" instead of
+  /// their markup (Locked Decision 8): they are placeholders in this engine,
+  /// and no Blok client writes one.
   /// </summary>
   [Theory]
-  [InlineData("text")]
-  [InlineData("xmltext")]
-  [InlineData("xmlelement")]
-  public void ExportReadsAForeignSharedTypeAsItsStringForm(string kind)
+  [InlineData("text", "hello world")]
+  [InlineData("xmltext", "xml text")]
+  [InlineData("xmlelement", "")]
+  [InlineData("xmlfragment", "")]
+  [InlineData("xmlhook", "")]
+  public void ExportReadsAForeignSharedTypeAsItsStringForm(string kind, string expected)
   {
-    using var doc = new Doc();
-    var blockMap = doc.Map("blocks");
-    var rootOrder = doc.Array("root");
-    var expected = kind switch
-    {
-      "text" => "hello world",
-      "xmltext" => "xml text",
-      _ => "<p></p>",
-    };
+    var doc = new YDoc();
+    var blockMap = doc.GetMap("blocks");
+    var rootOrder = doc.GetArray("root");
 
-    using (var id = Input.String("n1"))
-    using (var type = Input.String("paragraph"))
-    using (var rich = ForeignInput(kind))
-    using (var data = Input.Map(new Dictionary<string, Input>(StringComparer.Ordinal)
+    doc.Transact(transaction =>
     {
-      ["rich"] = rich,
-    }))
-    using (var contentIds = Input.Array([]))
-    using (var block = Input.Map(new Dictionary<string, Input>(StringComparer.Ordinal)
+      blockMap.Set(transaction, "n1", new YMap(
+      [
+        new KeyValuePair<string, object?>("id", "n1"),
+        new KeyValuePair<string, object?>("type", "paragraph"),
+        new KeyValuePair<string, object?>("data", new YMap([])),
+        new KeyValuePair<string, object?>("contentIds", new YArray([])),
+      ]));
+      rootOrder.Insert(transaction, 0, ["n1"]);
+    });
+
+    var data = Assert.IsType<YMap>(Entry(Assert.IsType<YMap>(Entry(blockMap, "n1")), "data"));
+
+    if (kind == "xmltext")
     {
-      ["id"] = id,
-      ["type"] = type,
-      ["data"] = data,
-      ["contentIds"] = contentIds,
-    }))
-    using (var orderEntry = Input.String("n1"))
-    using (var transaction = doc.WriteTransaction())
+      // A Y.XmlText with content: the engine has no write API for one, so it
+      // arrives the way it really does, as a peer's update.
+      ApplyForeign(
+          doc,
+          Keyed(0, data, "rich", new ContentType(6, null)),
+          Listed(1, new YId(ForeignClient, 0), new ContentString("xml text")));
+    }
+    else
     {
-      blockMap.Insert(transaction, "n1", block);
-      rootOrder.InsertRange(transaction, 0, [orderEntry]);
+      doc.Transact(transaction => data.Set(transaction, "rich", ForeignType(kind)));
     }
 
     var exported = YDocConverter.Export(doc);
@@ -309,19 +280,71 @@ public sealed class YDocConverterHardeningTests
     Assert.Equal(expected, exported[0]!["data"]!["rich"]!.GetValue<string>());
   }
 
-  private static Input ForeignInput(string kind)
+  private static YAbstractType ForeignType(string kind)
   {
     return kind switch
     {
-      "text" => Input.Text("hello world"),
-      "xmltext" => Input.XmlText("xml text"),
-      _ => Input.XmlElement("p"),
+      "text" => new YText("hello world"),
+      "xmlelement" => new YXmlElement("p"),
+      "xmlfragment" => new YXmlFragment(),
+      _ => new YXmlHook("h"),
     };
+  }
+
+  /// <summary>One client's structs, applied as a peer's update would be.</summary>
+  private static void ApplyForeign(YDoc doc, params DecodedStruct[] structs)
+  {
+    var update = new DecodedUpdate(
+        new Dictionary<ulong, IReadOnlyList<DecodedStruct>> { [ForeignClient] = structs },
+        new DeleteSet());
+
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(update).Outcome);
+  }
+
+  /// <summary>A struct writing one key of an already-integrated map.</summary>
+  private static DecodedStruct Keyed(
+      ulong clock, YAbstractType target, string key, YContent content)
+  {
+    return new DecodedStruct(
+        new YId(ForeignClient, clock),
+        content.Length,
+        DecodedStructKind.Item,
+        null,
+        null,
+        null,
+        target.Item?.Id ??
+            throw new InvalidOperationException("the target map is not integrated"),
+        key,
+        content,
+        0x20);
+  }
+
+  /// <summary>A struct appended to the list of the type at <paramref name="parent"/>.</summary>
+  private static DecodedStruct Listed(ulong clock, YId parent, YContent content)
+  {
+    return new DecodedStruct(
+        new YId(ForeignClient, clock),
+        content.Length,
+        DecodedStructKind.Item,
+        null,
+        null,
+        null,
+        parent,
+        null,
+        content,
+        0);
+  }
+
+  private static object? Entry(YMap map, string key)
+  {
+    Assert.True(map.TryGet(key, out var value), $"no entry {key}");
+
+    return value;
   }
 
   private static void AssertSeedRejects(JsonArray blocks)
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, blocks));
   }

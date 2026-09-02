@@ -43,11 +43,11 @@ internal abstract record CollabEditOp
 /// The edit request wire: <c>{ "ops": [ … ] }</c>, at least one op, every op
 /// a closed schema so a typo cannot be silently dropped.
 ///
-/// This is also the NUL gate for the endpoint. A NUL read back through yffi
-/// PANICS and ABORTS THE PROCESS (see <see cref="YDocConverter"/>), so EVERY
-/// string in the request — ids, block type, data and tunes keys and values at
-/// any depth — is screened here, before anything reaches the doc. The
-/// converter's own NoNul stays as the second gate for the seed path.
+/// This is also the NUL gate for the endpoint. The endpoint contract has
+/// never accepted a NUL in a record (see <see cref="YDocConverter"/>), so
+/// EVERY string in the request — ids, block type, data and tunes keys and
+/// values at any depth — is screened here, before anything reaches the doc.
+/// The converter's own NoNul stays as the second gate for the seed path.
 /// </summary>
 internal static class CollabEditOps
 {
@@ -255,8 +255,7 @@ internal static class CollabEditOps
     {
       throw Refused(
           index,
-          "a string contains a NUL character, which yrs truncates on write " +
-          "and aborts the process on read");
+          "a string contains a NUL character, which this endpoint does not accept");
     }
   }
 

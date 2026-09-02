@@ -28,7 +28,7 @@ public sealed class EditEndpointTests
 
     // Synced first: an update is a DIFF, so a document that never received
     // the room's state cannot render one.
-    using var mirror = YDocs.NewClient();
+    var mirror = YDocs.NewClient();
 
     await open.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
     YDocs.Apply(mirror, (await open.ReceiveAsync<SyncStep2Frame>()).Update);

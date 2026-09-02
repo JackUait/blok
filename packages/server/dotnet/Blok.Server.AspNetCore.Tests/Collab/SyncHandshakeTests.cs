@@ -133,14 +133,14 @@ public sealed class SyncHandshakeTests
     await using var writer = await app.ConnectWithTicketAsync(fixture.Compatible);
     AssertFreshTag((await reader.ReceiveAsync<BlokControlFrame>()).Tag);
     AssertFreshTag((await writer.ReceiveAsync<BlokControlFrame>()).Tag);
-    using var readerDoc = await SyncedAsync(reader);
+    var readerDoc = await SyncedAsync(reader);
 
     await reader.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(readerDoc, " stolen")));
     // The reader's own frames are handled in order, so this answer proves the
     // update above was already dropped.
     Assert.Equal("seeded", await SyncedTextAsync(reader));
 
-    using var writerDoc = await SyncedAsync(writer);
+    var writerDoc = await SyncedAsync(writer);
     var update = YDocs.UpdateAppending(writerDoc, " ok");
     await writer.SendAsync(new SyncUpdateFrame(update));
     var relayed = await reader.ReceiveAsync<SyncUpdateFrame>();
@@ -171,7 +171,7 @@ public sealed class SyncHandshakeTests
     await using var client = await app.ConnectAsync(origin: null);
 
     Assert.Null(client.SubProtocol);
-    using var doc = YDocs.NewClient();
+    var doc = YDocs.NewClient();
     await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
     var first = await client.ReceiveAsync();
     var step2 = Assert.IsType<SyncStep2Frame>(first);
@@ -314,7 +314,7 @@ public sealed class SyncHandshakeTests
         services: services => services.AddSingleton<IBlokAuthorization>(authorization));
     await using var client = await app.ConnectWithTicketAsync(fixture.Compatible);
     AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
-    using var doc = await SyncedAsync(client);
+    var doc = await SyncedAsync(client);
 
     await client.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(doc, " stolen")));
 
@@ -386,7 +386,7 @@ public sealed class SyncHandshakeTests
     return request => request.Headers[HeaderAuthenticationHandler.Header] = user;
   }
 
-  private static async Task<YDotNet.Document.Doc> SyncedAsync(SyncClient client)
+  private static async Task<Blok.Server.Yjs.YDoc> SyncedAsync(SyncClient client)
   {
     var doc = YDocs.NewClient();
     await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
@@ -399,7 +399,7 @@ public sealed class SyncHandshakeTests
 
   private static async Task<string> SyncedTextAsync(SyncClient client)
   {
-    using var doc = await SyncedAsync(client);
+    var doc = await SyncedAsync(client);
 
     return YDocs.Text(doc);
   }

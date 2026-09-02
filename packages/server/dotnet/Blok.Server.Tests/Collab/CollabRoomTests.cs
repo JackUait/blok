@@ -1,6 +1,6 @@
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -21,7 +21,7 @@ public sealed class CollabRoomTests
     var manager = CreateManager();
     var member = new FakeMember();
     var membership = await Join(manager, member);
-    using var client = YDocs.NewClient();
+    var client = YDocs.NewClient();
 
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
@@ -46,7 +46,7 @@ public sealed class CollabRoomTests
     var membership = await Join(manager, writer);
     await Join(manager, other);
     var framesBefore = store.FramesOf(DocId).Count;
-    using var client = await SyncedClientAsync(manager, "hello");
+    var client = await SyncedClientAsync(manager, "hello");
     var update = YDocs.UpdateAppending(client, " world");
     writer.Received.Clear();
     other.Received.Clear();
@@ -74,7 +74,7 @@ public sealed class CollabRoomTests
     var late = new FakeMember();
     await Join(manager, early);
     var membership = await Join(manager, late);
-    using var offline = await SyncedClientAsync(manager, "hello");
+    var offline = await SyncedClientAsync(manager, "hello");
     var edit = YDocs.UpdateAppending(offline, "!");
     early.Received.Clear();
 
@@ -96,7 +96,7 @@ public sealed class CollabRoomTests
     var membership = await Join(manager, reader);
     await Join(manager, writer);
     var framesBefore = store.FramesOf(DocId).Count;
-    using var client = await SyncedClientAsync(manager, "hello");
+    var client = await SyncedClientAsync(manager, "hello");
     var edit = YDocs.UpdateAppending(client, " hacked");
     reader.Received.Clear();
     writer.Received.Clear();
@@ -309,6 +309,63 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// The pre-apply screen refuses only Malformed and TooDeep, and refusing is
+  /// a DROP: the member keeps its connection, because one bad frame is not
+  /// evidence the rest of the session is bad.
+  /// </summary>
+  [Fact]
+  public async Task AMalformedUpdateIsDroppedWithoutClosingTheMember()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var framesBefore = store.FramesOf(DocId).Count;
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame([0xde, 0xad, 0xbe, 0xef, 0x01])),
+        CancellationToken.None);
+
+    Assert.Empty(writer.Closes);
+    Assert.Empty(other.Closes);
+    Assert.Empty(other.Received);
+    Assert.Equal(framesBefore, store.FramesOf(DocId).Count);
+  }
+
+  /// <summary>
+  /// Locked Decision 9: NUL is ordinary data. Refusing an update that carries
+  /// one would not remove it — the sender's state vector already covers it,
+  /// so every following SyncStep2 would resend it forever.
+  /// </summary>
+  [Fact]
+  public async Task ARoomAppliesANulBearingUpdateAndExportsItIntact()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var framesBefore = store.FramesOf(DocId).Count;
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "a\0b"))),
+        CancellationToken.None);
+
+    Assert.Empty(writer.Closes);
+    Assert.Contains(other.Received, frame => frame is SyncUpdateFrame);
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == framesBefore + 1,
+        "the working set to catch up");
+    Assert.Equal("helloa\0b", await ExportedTextAsync(manager));
+  }
+
   [Fact]
   public async Task ExportsAfterTheDebounceAndNotBefore()
   {
@@ -436,7 +493,7 @@ public sealed class CollabRoomTests
   [Fact]
   public async Task CompactsAnOversizedWorkingSetOnLoadByFrameCount()
   {
-    using var source = YDocs.NewClient();
+    var source = YDocs.NewClient();
     var updates = new List<byte[]>();
 
     foreach (var piece in new[] { "a", "b", "c", "d", "e" })
@@ -452,7 +509,7 @@ public sealed class CollabRoomTests
     var frames = store.FramesOf(DocId);
     Assert.Single(frames);
     Assert.Equal(Tags.At(2), store.Stored(DocId).Tag);
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, frames[0]);
     Assert.Equal("abcde", YDocs.Text(replica));
     Assert.Equal(0, endpoint.Loads);
@@ -461,7 +518,7 @@ public sealed class CollabRoomTests
   [Fact]
   public async Task CompactsAnOversizedWorkingSetOnLoadByByteSize()
   {
-    using var source = YDocs.NewClient();
+    var source = YDocs.NewClient();
     var updates = new List<byte[]>
     {
       YDocs.UpdateAppending(source, new string('a', 200)),
@@ -479,7 +536,7 @@ public sealed class CollabRoomTests
   [Fact]
   public async Task LeavesASmallWorkingSetAloneOnLoad()
   {
-    using var source = YDocs.NewClient();
+    var source = YDocs.NewClient();
     var updates = new List<byte[]>
     {
       YDocs.UpdateAppending(source, "a"),
@@ -531,7 +588,7 @@ public sealed class CollabRoomTests
     var other = new FakeMember();
     var membership = await Join(manager, writer);
     await Join(manager, other);
-    using var client = await SyncedClientAsync(manager, "hello");
+    var client = await SyncedClientAsync(manager, "hello");
     var update = YDocs.UpdateAppending(client, "!");
     other.Received.Clear();
     store.FailWrites = _ => new TaskCanceledException("s3 timed out");
@@ -565,7 +622,7 @@ public sealed class CollabRoomTests
     var other = new FakeMember();
     var membership = await Join(manager, writer);
     await Join(manager, other);
-    using var client = await SyncedClientAsync(manager, "hello");
+    var client = await SyncedClientAsync(manager, "hello");
     other.Received.Clear();
     var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     store.BeforeWrite = () => stuck.Task;
@@ -599,7 +656,7 @@ public sealed class CollabRoomTests
     endpoint.Holds(DocId, "");
     var manager = CreateManager(new CollabRoomOptions { CompactionFrameThreshold = 4 });
     var membership = await Join(manager, new FakeMember());
-    using var client = await SyncedClientAsync(manager, "");
+    var client = await SyncedClientAsync(manager, "");
 
     for (var edit = 0; edit < 60; edit++)
     {
@@ -616,8 +673,12 @@ public sealed class CollabRoomTests
     Assert.True(
         store.MostFramesWritten <= 4,
         $"a write carried {store.MostFramesWritten} frames");
+    // The engine does not merge items (Global Constraints), so the compacted
+    // state is one struct per inserted character — fatter than the yrs state
+    // this budget was first written against. What it guards is that a write
+    // is bounded by the DOC, never by the history.
     Assert.True(
-        store.LargestWriteBytes < 400,
+        store.LargestWriteBytes < 600,
         $"the largest write was {store.LargestWriteBytes} bytes");
     Assert.True(
         store.WrittenBytes < 60 * 400,
@@ -625,39 +686,34 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// DOCUMENTED LIMITATION, not a wish. An update that arrives before the one
-  /// it depends on is held pending by yrs: ApplyV1 answers Ok, the state
-  /// vector does not move (probe: still `00`) and StateDiffV1 against zero
-  /// returns the 2-byte empty state — so compaction, which replaces the log
-  /// with that diff, silently drops it (probe over 30 runs: the compacting
-  /// side reads "ab", a replica hydrated from the compacted blob reads "a").
-  /// YDotNet 0.6.0 exposes no pending-update API, so the room cannot detect
-  /// this; over a socket, frames from one member arrive in order and each
-  /// member's updates depend only on state the server already has, so a
-  /// pending update means a buggy or hostile client.
+  /// An update that arrives before the one it depends on is PARKED, and the
+  /// engine writes what is parked into every diff it encodes (Locked
+  /// Decisions 4 and 5). So compaction, which replaces the log with the
+  /// doc's whole state, no longer loses it: a late joiner hydrated from the
+  /// compacted blob converges the moment the dependency arrives.
   /// </summary>
   [Fact]
-  public void CompactionDropsAnUpdateThatIsStillPending()
+  public void CompactionKeepsAnUpdateThatIsStillPending()
   {
-    using var source = YDocs.NewClient();
+    var source = YDocs.NewClient();
     var first = YDocs.UpdateAppending(source, "a");
     var second = YDocs.UpdateAppending(source, "b");
-    using var server = YDocs.NewClient();
+    var server = YDocs.NewClient();
 
     YDocs.Apply(server, second);
     var compacted = YDocs.FullState(server);
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, compacted);
     YDocs.Apply(replica, first);
 
-    Assert.Equal(2, compacted.Length);
+    Assert.True(server.HasPending);
     Assert.Equal("", YDocs.Text(server));
-    Assert.Equal("a", YDocs.Text(replica));
+    Assert.Equal("ab", YDocs.Text(replica));
   }
 
   private static string Replays(IReadOnlyList<byte[]> frames)
   {
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
 
     foreach (var frame in frames)
     {
@@ -714,7 +770,7 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>A client doc holding the room's current state, obtained the way a stock client would.</summary>
-  private static async Task<Doc> SyncedClientAsync(CollabRoomManager manager, string expectedText)
+  private static async Task<YDoc> SyncedClientAsync(CollabRoomManager manager, string expectedText)
   {
     var probe = new FakeMember(canWrite: false);
     var membership = await Join(manager, probe);
@@ -731,7 +787,7 @@ public sealed class CollabRoomTests
 
   private static async Task Edit(CollabRoomManager manager, CollabMembership membership, string value)
   {
-    using var client = await SyncedClientAsync(manager, await ExportedTextAsync(manager));
+    var client = await SyncedClientAsync(manager, await ExportedTextAsync(manager));
     var update = YDocs.UpdateAppending(client, value);
 
     await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
@@ -743,7 +799,7 @@ public sealed class CollabRoomTests
     var membership = await Join(manager, probe);
     await membership.ReceiveAsync(SyncWire.Encode(new SyncStep1Frame([0])), CancellationToken.None);
     await membership.LeaveAsync();
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(probe.Received.First(frame => frame is SyncStep2Frame)).Update);
 
     return YDocs.Text(replica);
@@ -762,7 +818,7 @@ public sealed class CollabRoomTests
     endpoint.Holds(DocId, "hello");
     var manager = CreateManager();
     var membership = await Join(manager, new FakeMember());
-    using var client = await SyncedClientAsync(manager, "hello");
+    var client = await SyncedClientAsync(manager, "hello");
 
     // Gate the off-lane write so the edit's persist is still in flight.
     var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

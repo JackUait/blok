@@ -1,24 +1,28 @@
+using System.Numerics;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Cells;
-using JsonArray = System.Text.Json.Nodes.JsonArray;
-using JsonObject = System.Text.Json.Nodes.JsonObject;
 
 namespace Blok.Server.Tests.Collab;
 
 /// <summary>
 /// One test per law of DocumentStore.toJSON/fromJSON and YBlockSerializer,
-/// driven against docs built directly with YDotNet — the only way to reach
+/// driven against docs built directly with the engine — the only way to reach
 /// shapes (cycles, duplicated grid keys) that fromJSON never produces.
 /// </summary>
 public sealed class YDocConverterLawTests
 {
+  /// <summary>
+  /// The writer of shapes the engine's own API cannot produce. A different id
+  /// from anything BuildDoc used, so its clocks start at 0 with no overlap.
+  /// </summary>
+  private const ulong ForeignClient = 999;
+
   [Fact]
   public void ParentIdIsTheMembershipArbiter()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         ["a", "b"],
         ("a", Block("a", contentIds: ["x"])),
         ("b", Block("b", contentIds: ["x"])),
@@ -37,7 +41,7 @@ public sealed class YDocConverterLawTests
   {
     // x sits first under a (disagreeing) and then under b (agreeing): the
     // skip must not mark it seen, or the later agreeing slot loses it.
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         ["a", "b"],
         ("a", Block("a", contentIds: ["x", "y"])),
         ("y", Block("y", parentId: "a")),
@@ -50,7 +54,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void CycleBreakLetsTheSmallestIdKeepItsParent()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         [],
         ("q", Block("q", parentId: "p", contentIds: ["p"])),
         ("p", Block("p", parentId: "q", contentIds: ["q"])));
@@ -69,7 +73,7 @@ public sealed class YDocConverterLawTests
   {
     // 'Ａ' (U+FF21) is a smaller code point than '😀' (U+1F600) but a LARGER
     // UTF-16 code unit than its high surrogate, so the emoji is the keeper.
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         [],
         ("Ａ", Block("Ａ", parentId: "😀")),
         ("😀", Block("😀", parentId: "Ａ")));
@@ -83,7 +87,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void ASelfParentIsAlwaysBroken()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         [],
         ("a", Block("a", parentId: "a", contentIds: ["a"])));
 
@@ -97,7 +101,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void ADuplicateIdEmitsOnceAtItsFirstAgreeingOccurrence()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         ["a", "a"],
         ("a", Block("a", contentIds: ["k", "k"])),
         ("k", Block("k", parentId: "a")));
@@ -115,7 +119,7 @@ public sealed class YDocConverterLawTests
     // Pass one: tops (no parent, or a parent with no entry), sorted, each
     // descending into its listed children. Pass two: whatever is left,
     // sorted — which can emit a child ahead of its own orphaned parent.
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         [],
         ("y", Block("y", parentId: "ghost", contentIds: ["y-kid"])),
         ("y-kid", Block("y-kid", parentId: "y")),
@@ -129,7 +133,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void TheOrphanTailSortsByUtf16CodeUnit()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         [],
         ("Ａ", Block("Ａ", parentId: "ghost")),
         ("😀", Block("😀", parentId: "ghost")),
@@ -142,7 +146,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void ADanglingParentIdIsKept()
   {
-    using var doc = BuildDoc([], ("a", Block("a", parentId: "not-yet-arrived")));
+    var doc = BuildDoc([], ("a", Block("a", parentId: "not-yet-arrived")));
 
     Assert.Equal(
         "not-yet-arrived",
@@ -152,7 +156,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void ADanglingContentIdStaysInContentButNotInTheOrder()
   {
-    using var doc = BuildDoc(["a"], ("a", Block("a", contentIds: ["missing"])));
+    var doc = BuildDoc(["a"], ("a", Block("a", contentIds: ["missing"])));
 
     var exported = YDocConverter.Export(doc);
 
@@ -163,7 +167,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void NonStringContentEntriesPassThroughVerbatim()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" }, "content": [7, "b"] }""",
@@ -178,44 +182,28 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void SeedCreatesContentIdsEagerlyEvenWhenEmpty()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" } }"""));
 
-    var blocks = doc.Map("blocks");
+    var contentIds = Assert.IsType<YArray>(Entry(BlockOf(doc, "a"), "contentIds"));
 
-    using (var transaction = doc.ReadTransaction())
-    {
-      var contentIds = blocks.Get(transaction, "a")?.Map.Get(transaction, "contentIds");
-
-      Assert.NotNull(contentIds);
-      Assert.Equal(OutputTag.Array, contentIds.Tag);
-      Assert.Equal(0u, contentIds.Array.Length(transaction));
-    }
-
+    Assert.Equal(0, contentIds.Count);
     Assert.Null(BlockNamed(YDocConverter.Export(doc), "a")["content"]);
   }
 
   [Fact]
   public void SeedWritesTunesWheneverTheKeyIsPresentAndExportOmitsEmptyOnes()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "text": "a" }, "tunes": {} }""",
         """{ "id": "b", "type": "paragraph", "data": { "text": "b" } }"""));
 
-    var blocks = doc.Map("blocks");
-
-    using (var transaction = doc.ReadTransaction())
-    {
-      var tunes = blocks.Get(transaction, "a")?.Map.Get(transaction, "tunes");
-
-      Assert.NotNull(tunes);
-      Assert.Equal(OutputTag.Map, tunes.Tag);
-      Assert.Null(blocks.Get(transaction, "b")?.Map.Get(transaction, "tunes"));
-    }
+    Assert.IsType<YMap>(Entry(BlockOf(doc, "a"), "tunes"));
+    Assert.False(BlockOf(doc, "b").TryGet("tunes", out _));
 
     var exported = YDocConverter.Export(doc);
 
@@ -226,7 +214,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void SeedNormalizesEmptyParagraphDataOnly()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "p", "type": "paragraph", "data": {} }""",
@@ -243,7 +231,7 @@ public sealed class YDocConverterLawTests
   {
     // fromJSON tests `parent === undefined`, so a present null is not a top-
     // level block; it lands in the orphan tail and reads back parentless.
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "first", "type": "paragraph", "data": { "text": "1" } }""",
@@ -259,38 +247,34 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void SeedWritesNumbersAsDoublesNeverLongs()
   {
-    // A Long becomes a lib0 BigInt (tag 122), which the JS client reads as a
-    // BigInt: `typeof x === 'number'` fails and JSON.stringify throws.
-    using var doc = new Doc();
+    // A BigInteger becomes a lib0 BigInt (tag 122), which the JS client reads
+    // as a BigInt: `typeof x === 'number'` fails and JSON.stringify throws.
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "a", "type": "paragraph", "data": { "n": 5, "big": 1735689600000, "f": 2.5 }, "lastEditedAt": 1735689600000 }"""));
 
-    var blocks = doc.Map("blocks");
-    using var transaction = doc.ReadTransaction();
-    var block = blocks.Get(transaction, "a")?.Map;
+    var block = BlockOf(doc, "a");
+    var data = Assert.IsType<YMap>(Entry(block, "data"));
 
-    Assert.NotNull(block);
-
-    var data = block.Get(transaction, "data")?.Map;
-
-    Assert.NotNull(data);
-    Assert.Equal(OutputTag.Double, data.Get(transaction, "n")?.Tag);
-    Assert.Equal(OutputTag.Double, data.Get(transaction, "big")?.Tag);
-    Assert.Equal(OutputTag.Double, data.Get(transaction, "f")?.Tag);
-    Assert.Equal(OutputTag.Double, block.Get(transaction, "lastEditedAt")?.Tag);
+    Assert.IsType<double>(Entry(data, "n"));
+    Assert.IsType<double>(Entry(data, "big"));
+    Assert.IsType<double>(Entry(data, "f"));
+    Assert.IsType<double>(Entry(block, "lastEditedAt"));
   }
 
   [Fact]
-  public void ExportWritesIntegralNumbersAsIntegersAndReadsLongsToo()
+  public void ExportWritesIntegralNumbersAsIntegersAndReadsBigIntegersToo()
   {
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         ["a"],
-        ("a", Table(
-            "a",
-            ("whole", Input.Double(3.0)),
-            ("fraction", Input.Double(2.5)),
-            ("long", Input.Long(7)))));
+        ("a", Table("a", ("whole", 3.0), ("fraction", 2.5))));
+
+    // Only a peer can put one there: the engine's map API refuses a bigint
+    // on the write side (Locked Decision 2), so it arrives as an update.
+    ApplyForeign(
+        doc,
+        Keyed(0, DataOf(doc, "a"), "long", new ContentAny([new BigInteger(7)])));
 
     AssertJson(
         """{"whole":3,"fraction":2.5,"long":7}""",
@@ -300,42 +284,38 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void TheArrayRuleDecidesBetweenYArraysAndAtomicLeaves()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "a", "type": "widget", "data": { "objects": [{ "k": 1 }], "primitives": [1, 2], "empty": [], "mixed": [1, {}], "grid": [[{ "k": 1 }]] } }"""));
 
-    var blocks = doc.Map("blocks");
-    using var transaction = doc.ReadTransaction();
-    var data = blocks.Get(transaction, "a")?.Map.Get(transaction, "data")?.Map;
+    var data = Assert.IsType<YMap>(Entry(BlockOf(doc, "a"), "data"));
 
-    Assert.NotNull(data);
-    Assert.Equal(OutputTag.Array, data.Get(transaction, "objects")?.Tag);
-    Assert.Equal(OutputTag.JsonArray, data.Get(transaction, "primitives")?.Tag);
-    Assert.Equal(OutputTag.JsonArray, data.Get(transaction, "empty")?.Tag);
-    Assert.Equal(OutputTag.JsonArray, data.Get(transaction, "mixed")?.Tag);
+    Assert.IsType<YArray>(Entry(data, "objects"));
+    Assert.IsType<AnyArray>(Entry(data, "primitives"));
+    Assert.IsType<AnyArray>(Entry(data, "empty"));
+    Assert.IsType<AnyArray>(Entry(data, "mixed"));
 
-    var grid = data.Get(transaction, "grid");
+    var grid = Assert.IsType<YMap>(Entry(data, "grid"));
 
-    Assert.NotNull(grid);
-    Assert.Equal(OutputTag.Map, grid.Tag);
-    Assert.Equal(OutputTag.Map, grid.Map.Get(transaction, "__rows")?.Tag);
-    Assert.Equal(OutputTag.Array, grid.Map.Get(transaction, "__rowKeys")?.Tag);
-    Assert.Equal(1u, grid.Map.Get(transaction, "__rowKeys")?.Array.Length(transaction));
+    Assert.IsType<YMap>(Entry(grid, "__rows"));
+    Assert.Equal(1, Assert.IsType<YArray>(Entry(grid, "__rowKeys")).Count);
   }
 
   [Fact]
   public void GridRowKeysNormalizeFirstWinsDropStraysAppendOrphansSorted()
   {
-    var rows = MapOf(
-        ("k1", Row("r1")),
-        ("k2", Row("r2")),
-        ("zz", Row("orphan z")),
-        ("aa", Row("orphan a")));
-    var order = ArrayOf(Str("k1"), Str("stray"), Str("k2"), Str("k1"));
-    using var doc = BuildDoc(
+    var doc = BuildDoc(
         ["t"],
-        ("t", Table("t", ("content", MapOf(("__rows", rows), ("__rowKeys", order))))));
+        ("t", Table(
+            "t",
+            ("content", MapOf(
+                ("__rows", MapOf(
+                    ("k1", Row("r1")),
+                    ("k2", Row("r2")),
+                    ("zz", Row("orphan z")),
+                    ("aa", Row("orphan a")))),
+                ("__rowKeys", ArrayOf("k1", "stray", "k2", "k1")))))));
 
     AssertJson(
         """[[{"text":"r1"}],[{"text":"r2"}],[{"text":"orphan a"}],[{"text":"orphan z"}]]""",
@@ -346,10 +326,10 @@ public sealed class YDocConverterLawTests
   public void AMapReadsAsAGridOnlyWithBothContainerKeysInShape()
   {
     var plainKeys = MapOf(
-        ("__rows", MapOf(("k1", Str("row")))),
-        ("__rowKeys", Input.Collection([Str("k1")])));
-    var rowsOnly = MapOf(("__rows", MapOf(("k1", Str("row")))));
-    using var doc = BuildDoc(
+        ("__rows", MapOf(("k1", "row"))),
+        ("__rowKeys", PlainArray("k1")));
+    var rowsOnly = MapOf(("__rows", MapOf(("k1", "row"))));
+    var doc = BuildDoc(
         ["t"],
         ("t", Table("t", ("plainKeys", plainKeys), ("rowsOnly", rowsOnly))));
 
@@ -362,15 +342,15 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void ExportRejectsABlockWithoutAStringIdAStringTypeOrAMapData()
   {
-    using var badId = BuildDoc(
+    var badId = BuildDoc(
         ["a"],
-        ("a", MapOf(("id", Input.Double(1)), ("type", Str("paragraph")), ("data", MapOf()))));
-    using var badType = BuildDoc(
+        ("a", MapOf(("id", 1.0), ("type", "paragraph"), ("data", MapOf()))));
+    var badType = BuildDoc(
         ["a"],
-        ("a", MapOf(("id", Str("a")), ("type", Input.Null()), ("data", MapOf()))));
-    using var badData = BuildDoc(
+        ("a", MapOf(("id", "a"), ("type", null), ("data", MapOf()))));
+    var badData = BuildDoc(
         ["a"],
-        ("a", MapOf(("id", Str("a")), ("type", Str("paragraph")), ("data", Input.Object(new Dictionary<string, Input>())))));
+        ("a", MapOf(("id", "a"), ("type", "paragraph"), ("data", new AnyObject()))));
 
     Assert.Throws<InvalidDataException>(() => YDocConverter.Export(badId));
     Assert.Throws<InvalidDataException>(() => YDocConverter.Export(badType));
@@ -380,7 +360,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void SeedSkipsBlocksWithoutAStringId()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": 42, "type": "paragraph", "data": { "text": "skipped" } }""",
@@ -393,7 +373,7 @@ public sealed class YDocConverterLawTests
   [Fact]
   public void SeedReplacesWhateverTheDocHeldBefore()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, Blocks(
         """{ "id": "old", "type": "paragraph", "data": { "text": "old" } }"""));
@@ -403,83 +383,136 @@ public sealed class YDocConverterLawTests
     Assert.Equal(["new"], Ids(YDocConverter.Export(doc)));
   }
 
-  private static Doc BuildDoc(
+  private static YDoc BuildDoc(
       string[] rootOrder,
-      params (string Id, Input Block)[] blocks)
+      params (string Id, YMap Block)[] blocks)
   {
-    var doc = new Doc();
-    var blockMap = doc.Map("blocks");
-    var root = doc.Array("root");
+    var doc = new YDoc();
+    var blockMap = doc.GetMap("blocks");
+    var root = doc.GetArray("root");
 
-    using (var transaction = doc.WriteTransaction())
+    doc.Transact(transaction =>
     {
       foreach (var (id, block) in blocks)
       {
-        blockMap.Insert(transaction, id, block);
+        blockMap.Set(transaction, id, block);
       }
 
       if (rootOrder.Length > 0)
       {
-        root.InsertRange(transaction, 0, rootOrder.Select(Str).ToArray());
+        root.Insert(transaction, 0, rootOrder);
       }
-    }
+    });
 
     return doc;
   }
 
-  private static Input Block(
+  /// <summary>One client's structs, applied as a peer's update would be.</summary>
+  private static void ApplyForeign(YDoc doc, params DecodedStruct[] structs)
+  {
+    var update = new DecodedUpdate(
+        new Dictionary<ulong, IReadOnlyList<DecodedStruct>> { [ForeignClient] = structs },
+        new DeleteSet());
+
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(update).Outcome);
+  }
+
+  /// <summary>
+  /// A struct writing one key of an already-integrated map. Info carries the
+  /// parentSub bit because that is what the wire would set.
+  /// </summary>
+  private static DecodedStruct Keyed(ulong clock, YAbstractType target, string key, YContent content)
+  {
+    return new DecodedStruct(
+        new YId(ForeignClient, clock),
+        content.Length,
+        DecodedStructKind.Item,
+        null,
+        null,
+        null,
+        target.Item?.Id ??
+            throw new InvalidOperationException("the target map is not integrated"),
+        key,
+        content,
+        0x20);
+  }
+
+  private static YMap DataOf(YDoc doc, string id)
+  {
+    return Assert.IsType<YMap>(Entry(BlockOf(doc, id), "data"));
+  }
+
+  private static YMap BlockOf(YDoc doc, string id)
+  {
+    return Assert.IsType<YMap>(Entry(doc.GetMap("blocks"), id));
+  }
+
+  private static object? Entry(YMap map, string key)
+  {
+    Assert.True(map.TryGet(key, out var value), $"no entry {key}");
+
+    return value;
+  }
+
+  private static YMap Block(
       string id,
       string? parentId = null,
       string[]? contentIds = null)
   {
-    var entries = new List<(string, Input)>
+    var entries = new List<(string, object?)>
     {
-      ("id", Str(id)),
-      ("type", Str("paragraph")),
-      ("data", MapOf(("text", Str(id)))),
-      ("contentIds", ArrayOf((contentIds ?? []).Select(Str).ToArray())),
+      ("id", id),
+      ("type", "paragraph"),
+      ("data", MapOf(("text", id))),
+      ("contentIds", ArrayOf(contentIds ?? [])),
     };
 
     if (parentId is not null)
     {
-      entries.Add(("parentId", Str(parentId)));
+      entries.Add(("parentId", parentId));
     }
 
-    return MapOf(entries.ToArray());
+    return MapOf([.. entries]);
   }
 
   /// <summary>A table block whose data holds the given entries.</summary>
-  private static Input Table(string id, params (string Key, Input Value)[] data)
+  private static YMap Table(string id, params (string Key, object? Value)[] data)
   {
     return MapOf(
-        ("id", Str(id)),
-        ("type", Str("table")),
+        ("id", id),
+        ("type", "table"),
         ("data", MapOf(data)),
         ("contentIds", ArrayOf()));
   }
 
   /// <summary>One grid row holding a single text cell.</summary>
-  private static Input Row(string text)
+  private static YArray Row(string text)
   {
-    return ArrayOf(MapOf(("text", Str(text))));
+    return new YArray([MapOf(("text", text))]);
   }
 
-  private static Input MapOf(params (string Key, Input Value)[] entries)
+  private static YMap MapOf(params (string Key, object? Value)[] entries)
   {
-    return Input.Map(entries.ToDictionary(
-        entry => entry.Key,
-        entry => entry.Value,
-        StringComparer.Ordinal));
+    return new YMap(entries.Select(
+        entry => new KeyValuePair<string, object?>(entry.Key, entry.Value)));
   }
 
-  private static Input ArrayOf(params Input[] items)
+  private static YArray ArrayOf(params string[] items)
   {
-    return Input.Array(items);
+    return new YArray(items);
   }
 
-  private static Input Str(string value)
+  /// <summary>A plain (non-shared) array, what a bare ymap.set stores.</summary>
+  private static AnyArray PlainArray(params string[] items)
   {
-    return Input.String(value);
+    var array = new AnyArray();
+
+    foreach (var item in items)
+    {
+      array.Add(item);
+    }
+
+    return array;
   }
 
   private static JsonArray Blocks(params string[] blockJson)

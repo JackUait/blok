@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -13,7 +13,7 @@ public sealed class CollabDocConverterTests
   [Fact]
   public void SeedsTheBlocksOfAnOutputDataObjectAndExportsThemBackWithATimestamp()
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
     var converter = new CollabDocConverter(time);
     var document = JsonNode.Parse(
         """{"time":1,"blocks":[{"id":"a","type":"paragraph","data":{"text":"hi"}}],"version":"1.12.0"}""")!;
@@ -35,7 +35,7 @@ public sealed class CollabDocConverterTests
   [InlineData("""{"blocks":{}}""")]
   public void RefusesADocumentWithoutABlocksArray(string body)
   {
-    using var doc = new Doc();
+    var doc = new YDoc();
     var converter = new CollabDocConverter(time);
 
     Assert.Throws<InvalidDataException>(() => converter.Seed(doc, JsonNode.Parse(body)!));

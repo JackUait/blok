@@ -1,9 +1,5 @@
 using System.Buffers.Binary;
-using System.Security.Cryptography;
-using YDotNet.Document;
-using YDotNet.Document.Events;
-using YDotNet.Document.Options;
-using YDotNet.Document.Transactions;
+using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
 
@@ -45,20 +41,18 @@ internal sealed class CollabMembership
 }
 
 /// <summary>
-/// One doc's sync room: a single-lane actor around a YDotNet <see cref="Doc"/>
-/// (the Doc is not thread-safe, so EVERY doc access — load, seed, apply,
+/// One doc's sync room: a single-lane actor around a <see cref="YDoc"/>
+/// (the doc is not thread-safe, so EVERY doc access — load, seed, apply,
 /// observe, export, compaction, eviction — runs inside <see cref="RunAsync{T}"/>).
 /// Methods suffixed "Locked" assume the lane is held and must never re-enter it.
 ///
-/// Echo suppression: yrs update events carry no origin, so
-/// <see cref="applyingRemote"/> is raised around every ApplyV1 and the
-/// observer only records LOCAL commits (the seed). Remote updates are
-/// appended and relayed by the receive path itself, which knows the sender.
+/// Echo suppression: an emitted update says whether the transaction that made
+/// it was LOCAL, and only those are recorded here (the seed and edit ops).
+/// Remote updates are appended and relayed by the receive path itself, which
+/// knows the sender.
 /// </summary>
 internal sealed class CollabRoom : IDisposable
 {
-  // lib0 encoding of an empty state vector: a diff against it is the whole doc.
-  private static readonly byte[] EmptyStateVector = [0];
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
 
@@ -83,9 +77,7 @@ internal sealed class CollabRoom : IDisposable
       CollabWorkingSetTag.SchemaV2,
       0,
       CollabWorkingSetTag.NoLineage);
-  private Doc? doc;
-  private IDisposable? updates;
-  private bool applyingRemote;
+  private YDoc? doc;
   private int frameCount;
 
   // The blob is behind the doc while blobVersion != persistedVersion; that
@@ -253,9 +245,9 @@ internal sealed class CollabRoom : IDisposable
   /// already closed — the caller should retry on a fresh room.
   ///
   /// Materializes the doc the way a join does, so "edit a document nobody has
-  /// open" works. The write happens INSIDE the lane and without the
-  /// applying-remote flag, so the update observer appends it to the log and
-  /// broadcasts it to every member with no relay code here — but that observer
+  /// open" works. The write happens INSIDE the lane as a LOCAL transaction, so
+  /// the update observer appends it to the log and broadcasts it to every
+  /// member with no relay code here — but that observer
   /// does not run what a member write gets afterwards, so the trio is invoked
   /// explicitly or the edit reaches the connected tabs and nothing else: not
   /// the blob, not the consumer's endpoint.
@@ -399,10 +391,12 @@ internal sealed class CollabRoom : IDisposable
     lifetime.Cancel();
     lifetime.Dispose();
     frameSection.Dispose();
-    updates?.Dispose();
-    updates = null;
-    doc?.Dispose();
-    doc = null;
+
+    if (doc is not null)
+    {
+      doc.UpdateEmitted -= OnLocalUpdate;
+      doc = null;
+    }
   }
 
   private static void WriteFramePrefix(Stream stream, int length)
@@ -482,14 +476,10 @@ internal sealed class CollabRoom : IDisposable
   {
     try
     {
-      // YDotNet's default client id is not unique across Docs (a 50-doc
-      // probe yielded 15 distinct ids); two replicas sharing an id corrupt
-      // the doc. Browsers draw a random uint32, so the seed does the same.
-      doc = new Doc(new DocOptions
-      {
-        Id = BitConverter.ToUInt32(RandomNumberGenerator.GetBytes(sizeof(uint))),
-      });
-      updates = doc.ObserveUpdatesV1(OnLocalUpdate);
+      // A random uint32 client id by construction, as a browser draws: two
+      // replicas sharing an id would corrupt the doc.
+      doc = new YDoc();
+      doc.UpdateEmitted += OnLocalUpdate;
 
       var stored = await store.ReadAsync(DocId, lifetime.Token);
 
@@ -564,9 +554,11 @@ internal sealed class CollabRoom : IDisposable
     await PersistLocked(lifetime.Token);
   }
 
-  private void OnLocalUpdate(UpdateEvent updateEvent)
+  private void OnLocalUpdate(YUpdateEvent updateEvent)
   {
-    if (applyingRemote)
+    // A remote update is appended and relayed by the receive path, which knows
+    // who sent it; echoing it here would send it back to its own author.
+    if (!updateEvent.Local)
     {
       return;
     }
@@ -575,25 +567,32 @@ internal sealed class CollabRoom : IDisposable
     BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(updateEvent.Update)), null);
   }
 
+  /// <summary>
+  /// The pre-apply screen and the apply. Only Malformed and TooDeep are
+  /// refused, and refusing is a log-and-DROP with no close; a NUL-bearing
+  /// update is applied like any other (Locked Decision 9).
+  /// </summary>
   private bool ApplyRemoteLocked(byte[] update)
   {
-    applyingRemote = true;
+    var inspection = UpdateInspector.Inspect(update);
+
+    if (inspection.Verdict != UpdateVerdict.Ok || inspection.Decoded is null)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped an update it could not read: {inspection.Reason}");
+
+      return false;
+    }
 
     try
     {
-      using var transaction = doc!.WriteTransaction();
-
-      return transaction.ApplyV1(update) == TransactionUpdateResult.Ok;
+      return doc!.ApplyUpdate(inspection.Decoded).Outcome == ApplyOutcome.Applied;
     }
     catch (Exception error)
     {
       log?.Invoke($"collab: room \"{DocId}\" dropped an update it could not apply: {error.Message}");
 
       return false;
-    }
-    finally
-    {
-      applyingRemote = false;
     }
   }
 
@@ -740,19 +739,14 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// Replaces the log with the doc's whole state. An update yrs is still
-  /// holding PENDING (it arrived before the one it depends on) is not in that
-  /// state and is dropped — YDotNet 0.6.0 exposes no way to see pending
-  /// updates; see CompactionDropsAnUpdateThatIsStillPending.
+  /// Replaces the log with the doc's whole state, which INCLUDES whatever the
+  /// engine is still holding pending (Locked Decisions 4 and 5): an update
+  /// that arrived before the one it depends on survives compaction and lands
+  /// on a late joiner, which converges once the dependency arrives.
   /// </summary>
   private void CompactLocked()
   {
-    byte[] whole;
-
-    using (var transaction = doc!.ReadTransaction())
-    {
-      whole = transaction.StateDiffV1(EmptyStateVector);
-    }
+    var whole = doc!.EncodeStateAsUpdate();
 
     frameSection.SetLength(0);
     frameCount = 0;
@@ -833,12 +827,12 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      using var transaction = doc!.ReadTransaction();
-      diff = transaction.StateDiffV1(peerStateVector);
-      stateVector = transaction.StateVectorV1();
+      diff = doc!.EncodeStateAsUpdate(peerStateVector);
+      stateVector = doc.EncodeStateVector();
     }
-    catch (Exception error)
+    catch (FormatException error)
     {
+      // The peer's state vector is the only thing here that can be malformed.
       log?.Invoke($"collab: room \"{DocId}\" dropped a SyncStep1 it could not answer: {error.Message}");
 
       return;

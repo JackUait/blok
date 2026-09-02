@@ -1,6 +1,6 @@
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -35,7 +35,7 @@ public sealed class CollabRoomManagerTests
     var frames = store.FramesOf(DocId);
     Assert.Single(frames);
     Tags.AssertMinted(0, store.Stored(DocId).Tag);
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, frames[0]);
     Assert.Equal("seeded", YDocs.Text(replica));
   }
@@ -43,7 +43,7 @@ public sealed class CollabRoomManagerTests
   [Fact]
   public async Task AStoredWorkingSetHydratesTheRoomWithoutTouchingTheEndpoint()
   {
-    using var source = YDocs.NewClient();
+    var source = YDocs.NewClient();
     var updates = new List<byte[]>
     {
       YDocs.UpdateAppending(source, "from "),
@@ -61,7 +61,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(0, endpoint.Loads);
     Assert.Equal(0, converter.Seeds);
     Assert.Equal(Tags.At(3), result.Membership.Tag);
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
     Assert.Equal("from disk", YDocs.Text(replica));
   }
@@ -123,7 +123,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal(0, converter.Seeds);
     Assert.Empty(store.FramesOf(DocId));
     Tags.AssertMinted(0, store.Stored(DocId).Tag);
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, Assert.IsType<SyncStep2Frame>(member.Received[0]).Update);
     Assert.Equal("", YDocs.Text(replica));
   }
@@ -152,7 +152,7 @@ public sealed class CollabRoomManagerTests
     {
       foreach (var membership in memberships)
       {
-        using var client = YDocs.NewClient();
+        var client = YDocs.NewClient();
         var update = YDocs.UpdateAppending(client, "x");
         storm.Add(membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None).AsTask());
         storm.Add(membership.ReceiveAsync(SyncWire.Encode(new SyncStep1Frame([0])), CancellationToken.None).AsTask());
@@ -243,7 +243,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager(new CollabRoomOptions { ExportDebounce = TimeSpan.FromMinutes(5), ExportMaxDelay = TimeSpan.FromMinutes(5) });
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
 
     foreach (var piece in new[] { "b", "c", "d" })
     {
@@ -262,7 +262,7 @@ public sealed class CollabRoomManagerTests
     await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
 
     var compacted = Assert.Single(store.FramesOf(DocId));
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, compacted);
     Assert.Equal("abcd", YDocs.Text(replica));
     var save = Assert.Single(endpoint.Saves);
@@ -283,7 +283,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager();
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
         CancellationToken.None);
@@ -305,7 +305,7 @@ public sealed class CollabRoomManagerTests
 
     Assert.Single(endpoint.Saves);
     var compacted = Assert.Single(store.FramesOf(DocId));
-    using var replica = YDocs.NewClient();
+    var replica = YDocs.NewClient();
     YDocs.Apply(replica, compacted);
     Assert.Equal("ab", YDocs.Text(replica));
   }
@@ -317,7 +317,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager();
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     var framesBefore = store.FramesOf(DocId).Count;
 
     await membership.LeaveAsync();
@@ -361,7 +361,7 @@ public sealed class CollabRoomManagerTests
     Assert.Equal([CollabCloseReason.Reset], second.Closes);
     Assert.Equal(0, manager.LiveRoomCount);
 
-    using var client = YDocs.NewClient();
+    var client = YDocs.NewClient();
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "late"))),
         CancellationToken.None);
@@ -410,7 +410,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager();
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     store.BeforeWrite = () => stuck.Task;
     await membership.ReceiveAsync(
@@ -439,7 +439,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager();
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "b"))),
         CancellationToken.None);
@@ -468,7 +468,7 @@ public sealed class CollabRoomManagerTests
     var memberB = new FakeMember(canWrite: false);
     var membershipA = (await manager.JoinAsync("doc-a", memberA, CancellationToken.None)).Membership!;
     await manager.JoinAsync("doc-b", memberB, CancellationToken.None);
-    using var client = await SyncedAsync(membershipA, memberA);
+    var client = await SyncedAsync(membershipA, memberA);
     await membershipA.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
         CancellationToken.None);
@@ -563,7 +563,7 @@ public sealed class CollabRoomManagerTests
     var manager = CreateManager(log: log);
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     store.FailWrites = _ => new IOException("disk full");
 
     await membership.ReceiveAsync(
@@ -588,7 +588,7 @@ public sealed class CollabRoomManagerTests
         () => manager.LiveRoomCount == 0,
         "the retried eviction");
 
-    using var stored = YDocs.NewClient();
+    var stored = YDocs.NewClient();
     YDocs.Apply(stored, Assert.Single(store.FramesOf(DocId)));
     Assert.Equal("hello!", YDocs.Text(stored));
     Assert.Single(endpoint.Saves);
@@ -619,7 +619,7 @@ public sealed class CollabRoomManagerTests
         log: log);
     var member = new FakeMember();
     var membership = (await manager.JoinAsync(DocId, member, CancellationToken.None)).Membership!;
-    using var client = await SyncedAsync(membership, member);
+    var client = await SyncedAsync(membership, member);
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
         CancellationToken.None);
@@ -666,8 +666,8 @@ public sealed class CollabRoomManagerTests
     var memberB = new FakeMember();
     var membershipA = (await manager.JoinAsync("doc-a", memberA, CancellationToken.None)).Membership!;
     var membershipB = (await manager.JoinAsync("doc-b", memberB, CancellationToken.None)).Membership!;
-    using var clientA = await SyncedAsync(membershipA, memberA);
-    using var clientB = await SyncedAsync(membershipB, memberB);
+    var clientA = await SyncedAsync(membershipA, memberA);
+    var clientB = await SyncedAsync(membershipB, memberB);
     await membershipA.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(clientA, "!"))),
         CancellationToken.None);
@@ -707,7 +707,7 @@ public sealed class CollabRoomManagerTests
   }
 
   /// <summary>A client doc synced to the room through the member's own connection.</summary>
-  private static async Task<Doc> SyncedAsync(CollabMembership membership, FakeMember member)
+  private static async Task<YDoc> SyncedAsync(CollabMembership membership, FakeMember member)
   {
     var client = YDocs.NewClient();
     await membership.ReceiveAsync(
@@ -718,7 +718,7 @@ public sealed class CollabRoomManagerTests
     return client;
   }
 
-  private static async Task<Doc> ReplicaAsync(CollabRoomManager manager)
+  private static async Task<YDoc> ReplicaAsync(CollabRoomManager manager)
   {
     var probe = new FakeMember(canWrite: false);
     var result = await manager.JoinAsync(DocId, probe, CancellationToken.None);

@@ -1,11 +1,8 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
-using YDotNet.Document.Cells;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using JsonArray = System.Text.Json.Nodes.JsonArray;
-using JsonObject = System.Text.Json.Nodes.JsonObject;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -22,7 +19,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void InsertsFirstWhenAfterIsNull()
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
 
     Apply(doc, """{ "op": "insert", "id": "new", "block": { "type": "header", "data": {} } }""");
 
@@ -32,7 +29,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void InsertsAfterTheNamedSibling()
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
 
     Apply(
         doc,
@@ -55,7 +52,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void InsertsUnderAParentAndLinksItBothWays()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "root", "type": "toggle", "data": {}, "content": ["kid"] }""",
         """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "root" }""");
 
@@ -75,7 +72,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void LaterOpsSeeTheEffectsOfEarlierOnes()
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
 
     Apply(
         doc,
@@ -92,7 +89,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void UpdateReplacesTheDataWholesale()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "root", "type": "paragraph", "data": { "text": "old", "level": 3 } }""");
 
     Apply(doc, """{ "op": "update", "id": "root", "data": { "text": "new" } }""");
@@ -105,7 +102,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void UpdateKeepsTheBlockTypeAndItsPlace()
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
 
     Apply(doc, """{ "op": "update", "id": "second", "data": { "text": "new" } }""");
 
@@ -117,7 +114,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemoveTakesTheWholeSubtreeAndTheParentsEntry()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "root", "type": "toggle", "data": {}, "content": ["kid", "other"] }""",
         """{ "id": "kid", "type": "toggle", "data": {}, "parent": "root", "content": ["grandkid"] }""",
         """{ "id": "grandkid", "type": "paragraph", "data": {}, "parent": "kid" }""",
@@ -138,7 +135,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemoveTakesABlockParentedToItEvenWhenItIsNotListed()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         Root,
         """{ "id": "gone", "type": "toggle", "data": {} }""",
         """{ "id": "stray", "type": "paragraph", "data": {}, "parent": "gone" }""");
@@ -155,7 +152,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemoveKeepsAListedBlockThatNamesAnotherParent()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "root", "type": "toggle", "data": {}, "content": ["x"] }""",
         """{ "id": "x", "type": "paragraph", "data": {}, "parent": "root" }""",
         """{ "id": "gone", "type": "toggle", "data": {}, "content": ["x"] }""");
@@ -174,7 +171,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemoveDropsTheRootOrderEntrySoTheIdCanBeUsedAgain()
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
 
     Apply(
         doc,
@@ -193,15 +190,15 @@ public sealed class YDocConverterEditTests
   /// A peer can put anything in the blocks map through an ordinary update,
   /// and the room applies remote updates without inspecting them. A step that
   /// throws mid-transaction is the one way a partial edit could be written:
-  /// the transaction COMMITS on dispose — yrs has no rollback — so members
-  /// would see half an edit that was never persisted or exported.
+  /// the throw emits no update and does not undo what it wrote, so the
+  /// document would hold half an edit no member ever sees.
   /// </summary>
   [Theory]
   [InlineData("""{ "op": "update", "id": "poison", "data": { "text": "x" } }""")]
   [InlineData("""{ "op": "insert", "id": "new", "parent": "poison", "block": { "type": "p", "data": {} } }""")]
   public void RefusesAnOpAimedAtSomethingThatIsNotABlock(string op)
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
 
     Poison(doc, "poison");
 
@@ -227,7 +224,7 @@ public sealed class YDocConverterEditTests
           $$"""{ "id": "n{{index}}", "type": "paragraph", "data": { "text": "x" } }"""));
     }
 
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, blocks);
 
@@ -253,7 +250,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemoveClearsTheEntryOfABlockThatListsItWithoutParentingIt()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "lister", "type": "toggle", "data": {}, "content": ["kid"] }""",
         """{ "id": "owner", "type": "toggle", "data": {}, "content": ["kid"] }""",
         """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "owner" }""");
@@ -274,14 +271,11 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RemovesTheRightEntryWhenTheRootOrderHoldsSomethingThatIsNotAnId()
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
 
-    var rootOrder = doc.Array("root");
+    var rootOrder = doc.GetArray("root");
 
-    using (var transaction = doc.WriteTransaction())
-    {
-      rootOrder.InsertRange(transaction, 0, [Input.Double(1)]);
-    }
+    doc.Transact(transaction => rootOrder.Insert(transaction, 0, [1d]));
 
     Apply(doc, """{ "op": "remove", "id": "root" }""");
 
@@ -291,14 +285,11 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RefusesAnAfterThatTheDocumentOrderDoesNotList()
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
 
-    var order = doc.Array("root");
+    var order = doc.GetArray("root");
 
-    using (var transaction = doc.WriteTransaction())
-    {
-      order.RemoveRange(transaction, 0, order.Length(transaction));
-    }
+    doc.Transact(transaction => order.Delete(transaction, 0, order.Count));
 
     var message = Refused(
         doc,
@@ -313,7 +304,7 @@ public sealed class YDocConverterEditTests
   [InlineData("update id")]
   public void RefusesANulInAnIdThatIsOnlyEverCompared(string position)
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
 
     var op = position == "after"
       ? new CollabEditOp.Insert(
@@ -330,13 +321,11 @@ public sealed class YDocConverterEditTests
   }
 
   /// <summary>Writes a non-block into the blocks map, as a peer can.</summary>
-  private static void Poison(Doc doc, string id)
+  private static void Poison(YDoc doc, string id)
   {
-    // YDotNet refuses doc.Map/doc.Array while a transaction is open.
-    var blocks = doc.Map("blocks");
-    using var transaction = doc.WriteTransaction();
+    var blocks = doc.GetMap("blocks");
 
-    blocks.Insert(transaction, id, Input.String("not a block"));
+    doc.Transact(transaction => blocks.Set(transaction, id, "not a block"));
   }
 
   [Theory]
@@ -353,7 +342,7 @@ public sealed class YDocConverterEditTests
   [InlineData("""{ "op": "remove", "id": "ghost" }""", "ghost")]
   public void RefusesAnOpThatDisagreesWithTheDocAndWritesNothing(string op, string mentions)
   {
-    using var doc = SeededDoc(Root, Second);
+    var doc = SeededDoc(Root, Second);
     var before = Canonical(doc);
 
     var message = Refused(doc, op);
@@ -367,7 +356,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RefusesAnAfterThatIsNotAChildOfTheTargetParent()
   {
-    using var doc = SeededDoc(
+    var doc = SeededDoc(
         """{ "id": "root", "type": "toggle", "data": {}, "content": ["kid"] }""",
         """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "root" }""");
 
@@ -382,7 +371,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void WritesNothingWhenALaterOpIsInvalid()
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
     var before = Canonical(doc);
 
     var message = Refused(
@@ -397,7 +386,7 @@ public sealed class YDocConverterEditTests
   [Fact]
   public void RefusesDataNestedDeeperThanTheValueLimit()
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
     var deep = new StringBuilder();
 
     for (var level = 0; level < YDocConverter.MaxValueDepth + 2; level++)
@@ -416,8 +405,8 @@ public sealed class YDocConverterEditTests
 
   /// <summary>
   /// The request parser is the first NUL gate; this is the second one, for
-  /// any caller that reaches the converter directly. A NUL read back through
-  /// yffi aborts the process, so it must never reach a write.
+  /// any caller that reaches the converter directly: the endpoint contract
+  /// has never accepted a NUL in a record.
   /// </summary>
   [Theory]
   [InlineData("insert id")]
@@ -429,7 +418,7 @@ public sealed class YDocConverterEditTests
   [InlineData("remove id")]
   public void RefusesANulThatDidNotComeThroughTheRequestParser(string position)
   {
-    using var doc = SeededDoc(Root);
+    var doc = SeededDoc(Root);
 
     var message = Assert.Throws<CollabEditException>(
         () => YDocConverter.ApplyOps(doc, [NulOp(position)])).Message;
@@ -497,9 +486,9 @@ public sealed class YDocConverterEditTests
         throw new InvalidOperationException("not a block");
   }
 
-  private static Doc SeededDoc(params string[] blockJson)
+  private static YDoc SeededDoc(params string[] blockJson)
   {
-    var doc = new Doc();
+    var doc = new YDoc();
     YDocConverter.Seed(
         doc,
         new JsonArray(blockJson.Select(json => JsonNode.Parse(json)).ToArray()));
@@ -507,12 +496,12 @@ public sealed class YDocConverterEditTests
     return doc;
   }
 
-  private static void Apply(Doc doc, params string[] opJson)
+  private static void Apply(YDoc doc, params string[] opJson)
   {
     YDocConverter.ApplyOps(doc, Ops(opJson));
   }
 
-  private static string Refused(Doc doc, params string[] opJson)
+  private static string Refused(YDoc doc, params string[] opJson)
   {
     return Assert.Throws<CollabEditException>(
         () => YDocConverter.ApplyOps(doc, Ops(opJson))).Message;
@@ -525,7 +514,7 @@ public sealed class YDocConverterEditTests
         Encoding.UTF8.GetBytes($$"""{ "ops": [{{string.Join(",", opJson)}}] }"""));
   }
 
-  private static string Canonical(Doc doc)
+  private static string Canonical(YDoc doc)
   {
     return YDocConverterFixtures.Canonicalize(YDocConverter.Export(doc));
   }

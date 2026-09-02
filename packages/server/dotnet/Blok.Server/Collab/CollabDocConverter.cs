@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using YDotNet.Document;
+using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
 
@@ -10,7 +10,7 @@ namespace Blok.Server.Collab;
 /// </summary>
 internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDocConverter
 {
-  public void Seed(Doc doc, JsonNode outputData)
+  public void Seed(YDoc doc, JsonNode outputData)
   {
     ArgumentNullException.ThrowIfNull(outputData);
 
@@ -27,12 +27,12 @@ internal sealed class CollabDocConverter(TimeProvider timeProvider) : ICollabDoc
     YDocConverter.Seed(doc, blocks);
   }
 
-  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  public void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops)
   {
     YDocConverter.ApplyOps(doc, ops);
   }
 
-  public JsonNode Export(Doc doc)
+  public JsonNode Export(YDoc doc)
   {
     return new JsonObject
     {

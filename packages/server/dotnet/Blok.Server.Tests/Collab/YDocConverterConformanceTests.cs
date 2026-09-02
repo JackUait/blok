@@ -1,14 +1,13 @@
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Transactions;
 
 namespace Blok.Server.Tests.Collab;
 
 /// <summary>
 /// Three directions per fixture: JSON→doc→JSON (Seed mirrors fromJSON),
 /// client update→doc→JSON (Export reads what the JS client wrote), and
-/// Seed→StateDiffV1→ApplyV1→Export (the C# encoder round-trips).
+/// Seed→EncodeStateAsUpdate→ApplyUpdate→Export (the C# encoder round-trips).
 /// </summary>
 public sealed class YDocConverterConformanceTests
 {
@@ -33,7 +32,7 @@ public sealed class YDocConverterConformanceTests
   public void SeedingInputJsonExportsCanonicalJson(string name)
   {
     var fixture = YDocConverterFixtures.Load(name);
-    using var doc = new Doc();
+    var doc = new YDoc();
 
     YDocConverter.Seed(doc, fixture.Input);
 
@@ -45,14 +44,9 @@ public sealed class YDocConverterConformanceTests
   public void ApplyingTheClientUpdateExportsCanonicalJson(string name)
   {
     var fixture = YDocConverterFixtures.Load(name);
-    using var doc = new Doc();
+    var doc = new YDoc();
 
-    using (var transaction = doc.WriteTransaction())
-    {
-      Assert.Equal(
-          TransactionUpdateResult.Ok,
-          transaction.ApplyV1(fixture.Update));
-    }
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(fixture.Update).Outcome);
 
     AssertJsonEqual(fixture.Canonical, YDocConverter.Export(doc));
   }
@@ -62,29 +56,14 @@ public sealed class YDocConverterConformanceTests
   public void SeedRoundTripsThroughStateDiffIntoASecondDoc(string name)
   {
     var fixture = YDocConverterFixtures.Load(name);
-    using var source = new Doc();
-    using var replica = new Doc();
+    var source = new YDoc();
+    var replica = new YDoc();
 
     YDocConverter.Seed(source, fixture.Input);
 
-    byte[] replicaVector;
+    var diff = source.EncodeStateAsUpdate(replica.EncodeStateVector());
 
-    using (var transaction = replica.ReadTransaction())
-    {
-      replicaVector = transaction.StateVectorV1();
-    }
-
-    byte[] diff;
-
-    using (var transaction = source.ReadTransaction())
-    {
-      diff = transaction.StateDiffV1(replicaVector);
-    }
-
-    using (var transaction = replica.WriteTransaction())
-    {
-      Assert.Equal(TransactionUpdateResult.Ok, transaction.ApplyV1(diff));
-    }
+    Assert.Equal(ApplyOutcome.Applied, replica.ApplyUpdate(diff).Outcome);
 
     var exported = YDocConverter.Export(replica);
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Tests.Collab;
+using Blok.Server.Yjs;
 using Xunit;
 using YDotNet.Document;
 using YDotNet.Document.Options;
@@ -45,9 +46,9 @@ public sealed class YrsCompatCorpusTests
       "test/unit/server-conformance/fixtures/yjs-engine";
 
   /// <summary>Pinned so a recapture differs only where Seed is random.</summary>
-  private const ulong CaptureClientId = 1;
+  private const uint CaptureClientId = 1;
 
-  private const ulong ReplayClientId = 2;
+  private const uint ReplayClientId = 2;
 
   private static readonly byte[] EmptyStateVector = [0];
 
@@ -71,19 +72,18 @@ public sealed class YrsCompatCorpusTests
     Assert.All(cases, entry => Assert.NotEmpty(entry.Update));
   }
 
+  /// <summary>
+  /// The pin: yrs bytes, decoded and integrated by the managed engine, export
+  /// the same JSON the client's own fixture says.
+  /// </summary>
   [Fact]
-  public void CapturedUpdatesApplyBackIntoYDotNetAndExportTheCanonicalJson()
+  public void CapturedUpdatesApplyBackAndExportTheCanonicalJson()
   {
     foreach (var entry in Corpus.Value)
     {
-      using var doc = new Doc(new DocOptions { Id = ReplayClientId });
+      var doc = new YDoc(ReplayClientId);
 
-      using (var transaction = doc.WriteTransaction())
-      {
-        Assert.Equal(
-            TransactionUpdateResult.Ok,
-            transaction.ApplyV1(entry.Update));
-      }
+      Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(entry.Update).Outcome);
 
       var expected = YDocConverterFixtures.Canonicalize(entry.Canonical);
       var actual = YDocConverterFixtures.Canonicalize(YDocConverter.Export(doc));
@@ -116,9 +116,20 @@ public sealed class YrsCompatCorpusTests
     foreach (var name in YDocConverterFixtures.CaseNames().Order(StringComparer.Ordinal))
     {
       var fixture = YDocConverterFixtures.Load(name);
+      var source = new YDoc(CaptureClientId);
+
+      YDocConverter.Seed(source, fixture.Input);
+
+      // Round-tripped through yrs so the bytes are YRS's, not the engine's:
+      // that is the whole point of the corpus.
       using var doc = new Doc(new DocOptions { Id = CaptureClientId });
 
-      YDocConverter.Seed(doc, fixture.Input);
+      using (var transaction = doc.WriteTransaction())
+      {
+        Assert.Equal(
+            TransactionUpdateResult.Ok,
+            transaction.ApplyV1(source.EncodeStateAsUpdate()));
+      }
 
       byte[] update;
 

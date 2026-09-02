@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using YDotNet.Document;
+using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
 
@@ -16,15 +16,15 @@ internal interface ICollabDocConverter
   /// seed update. Throws on a malformed document; the room then fails the
   /// seed closed.
   /// </summary>
-  void Seed(Doc doc, JsonNode outputData);
+  void Seed(YDoc doc, JsonNode outputData);
 
   /// <summary>Reads the doc back as a bare OutputData object.</summary>
-  JsonNode Export(Doc doc);
+  JsonNode Export(YDoc doc);
 
   /// <summary>
   /// Applies block-level edit ops in ONE write transaction, validating every
   /// op against the doc FIRST — a refusal (<see cref="CollabEditException"/>)
   /// leaves the doc untouched.
   /// </summary>
-  void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops);
+  void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops);
 }

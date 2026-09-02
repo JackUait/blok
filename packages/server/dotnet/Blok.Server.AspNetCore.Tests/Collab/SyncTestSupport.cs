@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Blok.Server.Collab;
+using Blok.Server.Yjs;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -18,9 +19,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
-using YDotNet.Document;
-using YDotNet.Document.Options;
-using YDotNet.Document.Transactions;
 
 namespace Blok.Server.AspNetCore.Tests.Collab;
 
@@ -193,11 +191,12 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 /// <summary>Stand-in for YDocConverter over one "content" text root and a {"text": ...} shape.</summary>
 internal sealed class FakeDocConverter : ICollabDocConverter
 {
-  public void Seed(Doc doc, JsonNode outputData)
+  public void Seed(YDoc doc, JsonNode outputData)
   {
-    var text = doc.Text("content");
-    using var transaction = doc.WriteTransaction();
-    text.Insert(transaction, 0, outputData["text"]?.GetValue<string>() ?? "");
+    var text = doc.GetText("content");
+
+    doc.Transact(transaction =>
+        text.Insert(transaction, 0, outputData["text"]?.GetValue<string>() ?? ""));
   }
 
   /// <summary>
@@ -206,39 +205,40 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   /// The real block laws are the converter's own tests; here the point is that
   /// a write reaches the doc, the log and the members.
   /// </summary>
-  public void ApplyOps(Doc doc, IReadOnlyList<CollabEditOp> ops)
+  public void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops)
   {
-    var text = doc.Text("content");
+    var text = doc.GetText("content");
 
     foreach (var op in ops)
     {
-      using var transaction = doc.WriteTransaction();
-
-      switch (op)
+      doc.Transact(transaction =>
       {
-        case CollabEditOp.Insert insert:
-          text.Insert(
-              transaction,
-              text.Length(transaction),
-              insert.Block["data"]?["text"]?.GetValue<string>() ?? "");
+        switch (op)
+        {
+          case CollabEditOp.Insert insert:
+            text.Insert(
+                transaction,
+                text.ToString().Length,
+                insert.Block["data"]?["text"]?.GetValue<string>() ?? "");
 
-          break;
+            break;
 
-        case CollabEditOp.Update update:
-          text.RemoveRange(transaction, 0, text.Length(transaction));
-          text.Insert(transaction, 0, update.Data["text"]?.GetValue<string>() ?? "");
+          case CollabEditOp.Update update:
+            text.Delete(transaction, 0, text.ToString().Length);
+            text.Insert(transaction, 0, update.Data["text"]?.GetValue<string>() ?? "");
 
-          break;
+            break;
 
-        default:
-          text.RemoveRange(transaction, 0, text.Length(transaction));
+          default:
+            text.Delete(transaction, 0, text.ToString().Length);
 
-          break;
-      }
+            break;
+        }
+      });
     }
   }
 
-  public JsonNode Export(Doc doc)
+  public JsonNode Export(YDoc doc)
   {
     return new JsonObject { ["text"] = YDocs.Text(doc) };
   }
@@ -249,48 +249,34 @@ internal static class YDocs
 {
   private static long nextClientId = 2_000_000;
 
-  /// <summary>Unique client ids: YDotNet's defaults collide and yrs drops repeated (client, clock) pairs.</summary>
-  internal static Doc NewClient()
+  /// <summary>Unique client ids: yjs drops a repeated (client, clock) pair.</summary>
+  internal static YDoc NewClient()
   {
-    return new Doc(new DocOptions
-    {
-      Id = (ulong)Interlocked.Increment(ref nextClientId),
-    });
+    return new YDoc((uint)Interlocked.Increment(ref nextClientId));
   }
 
-  internal static byte[] UpdateAppending(Doc doc, string value)
+  internal static byte[] UpdateAppending(YDoc doc, string value)
   {
-    var text = doc.Text("content");
-    byte[]? captured = null;
-    using var subscription = doc.ObserveUpdatesV1(updateEvent => captured = updateEvent.Update);
+    var text = doc.GetText("content");
 
-    using (var transaction = doc.WriteTransaction())
-    {
-      text.Insert(transaction, text.Length(transaction), value);
-    }
-
-    return captured ?? throw new InvalidOperationException("no update was observed");
+    return doc.Transact(
+            transaction => text.Insert(transaction, text.ToString().Length, value)) ??
+        throw new InvalidOperationException("no update was emitted");
   }
 
-  internal static byte[] StateVector(Doc doc)
+  internal static byte[] StateVector(YDoc doc)
   {
-    using var transaction = doc.ReadTransaction();
-
-    return transaction.StateVectorV1();
+    return doc.EncodeStateVector();
   }
 
-  internal static void Apply(Doc doc, byte[] update)
+  internal static void Apply(YDoc doc, byte[] update)
   {
-    using var transaction = doc.WriteTransaction();
-    Assert.Equal(TransactionUpdateResult.Ok, transaction.ApplyV1(update));
+    Assert.Equal(ApplyOutcome.Applied, doc.ApplyUpdate(update).Outcome);
   }
 
-  internal static string Text(Doc doc)
+  internal static string Text(YDoc doc)
   {
-    var text = doc.Text("content");
-    using var transaction = doc.ReadTransaction();
-
-    return text.String(transaction);
+    return doc.GetText("content").ToString();
   }
 }
 

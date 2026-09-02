@@ -140,8 +140,8 @@ public sealed class SyncEndpointTests
     await using var app = await SyncApp.StartAsync();
     await using var alice = await app.ConnectAsync();
     await using var bob = await app.ConnectAsync();
-    using var aliceDoc = await SyncedAsync(alice);
-    using var bobDoc = await SyncedAsync(bob);
+    var aliceDoc = await SyncedAsync(alice);
+    var bobDoc = await SyncedAsync(bob);
 
     var update = YDocs.UpdateAppending(aliceDoc, " from alice");
     await alice.SendAsync(new SyncUpdateFrame(update));
@@ -158,12 +158,12 @@ public sealed class SyncEndpointTests
   {
     await using var app = await SyncApp.StartAsync();
     await using var alice = await app.ConnectAsync();
-    using var aliceDoc = await SyncedAsync(alice);
+    var aliceDoc = await SyncedAsync(alice);
     await alice.SendAsync(new SyncUpdateFrame(YDocs.UpdateAppending(aliceDoc, " early")));
     Assert.Equal("seeded early", await SyncedTextAsync(alice));
 
     await using var late = await app.ConnectAsync();
-    using var lateDoc = YDocs.NewClient();
+    var lateDoc = YDocs.NewClient();
     await late.SendAsync(new SyncStep1Frame(YDocs.StateVector(lateDoc)));
 
     var step2 = await late.ReceiveAsync<SyncStep2Frame>();
@@ -364,7 +364,7 @@ public sealed class SyncEndpointTests
     await using var app = await SyncApp.StartAsync(
         services: services => services.AddSingleton<TimeProvider>(clock));
     await using var client = await app.ConnectAsync();
-    using var doc = YDocs.NewClient();
+    var doc = YDocs.NewClient();
     var resync = new SyncStep1Frame(YDocs.StateVector(doc));
 
     // Twelve frames is nothing to the 100-frame burst; every one of them asks
@@ -449,7 +449,7 @@ public sealed class SyncEndpointTests
     await using var app = await SyncApp.StartAsync(
         services: services => services.AddSingleton<TimeProvider>(clock));
     await using var client = await app.ConnectAsync();
-    using var doc = await SyncedAsync(client);
+    var doc = await SyncedAsync(client);
     var paste = YDocs.UpdateAppending(doc, new string('x', 100_000));
 
     for (var index = 0; index < 6; index++)
@@ -467,7 +467,7 @@ public sealed class SyncEndpointTests
     await using var app = await SyncApp.StartAsync(
         services: services => services.AddSingleton<TimeProvider>(clock));
     await using var client = await app.ConnectAsync();
-    using var doc = await SyncedAsync(client);
+    var doc = await SyncedAsync(client);
     var update = YDocs.UpdateAppending(doc, " once");
 
     for (var index = 0; index < 12; index++)
@@ -507,7 +507,7 @@ public sealed class SyncEndpointTests
     await app.AssertRefusedAsync(HttpStatusCode.ServiceUnavailable);
   }
 
-  private static async Task<YDotNet.Document.Doc> SyncedAsync(SyncClient client)
+  private static async Task<Blok.Server.Yjs.YDoc> SyncedAsync(SyncClient client)
   {
     var doc = YDocs.NewClient();
     await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
@@ -520,7 +520,7 @@ public sealed class SyncEndpointTests
 
   private static async Task<string> SyncedTextAsync(SyncClient client)
   {
-    using var doc = await SyncedAsync(client);
+    var doc = await SyncedAsync(client);
 
     return YDocs.Text(doc);
   }

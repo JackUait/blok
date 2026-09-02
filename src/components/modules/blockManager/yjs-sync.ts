@@ -925,29 +925,23 @@ export class BlockYjsSync {
    * After undo, Yjs restores the original parent (this block) but children in
    * memory still reference the now-removed replacement block — they are orphaned.
    *
-   * This method scans all blocks in the repository and fixes any whose Yjs
-   * parentId matches the restored blockId but whose in-memory parentId does not.
+   * The doc names the restored block's children in its contentIds; each one
+   * that exists in memory, says parentId = restored block in the doc, and says
+   * otherwise in memory is re-homed.
    *
    * @param restoredBlockId - the ID of the block that was just re-added to the DOM
    */
   private reconcileOrphanedChildren(restoredBlockId: string): boolean {
-    const orphanedChildren = Array.from(this.repository.blocks).filter((block) => {
-      if (block.parentId === restoredBlockId) {
-        // Already pointing to the correct parent — no action needed.
-        return false;
-      }
+    const contentIds = this.dependencies.YjsManager.getBlockById(restoredBlockId)?.get('contentIds');
 
-      // Check the authoritative Yjs state for this block's parentId.
-      const yblock = this.dependencies.YjsManager.getBlockById(block.id);
+    if (!(contentIds instanceof YArray)) {
+      return false;
+    }
 
-      if (yblock === undefined) {
-        return false;
-      }
-
-      const yjsParentId = yblock.get('parentId') as string | undefined;
-
-      return yjsParentId === restoredBlockId;
-    });
+    const orphanedChildren = contentIds.toArray()
+      .map((childId) => (typeof childId === 'string' ? this.repository.getBlockById(childId) : undefined))
+      .filter((child): child is Block => child !== undefined && child.parentId !== restoredBlockId)
+      .filter((child) => this.dependencies.YjsManager.getBlockById(child.id)?.get('parentId') === restoredBlockId);
 
     // In-memory state is stale — use setBlockParent to fully restore:
     // moves DOM into toggle container, updates parent's contentIds,
@@ -1273,12 +1267,7 @@ export class BlockYjsSync {
    * Re-syncs the entire block order from Yjs to handle multiple simultaneous moves correctly
    */
   private syncBlockOrderFromYjs(): void {
-    // Build id→block map for O(1) lookups instead of O(n) getBlockById calls
-    const blockById = new Map<string, Block>();
-
-    for (const block of this.repository.blocks) {
-      blockById.set(block.id, block);
-    }
+    const blockById = new Map(this.repository.blocks.map((block) => [block.id, block]));
 
     // Doc order filtered to memory (see docOrderKnownToMemory): enumerating the
     // raw doc order would make every doc-only id shift the indices of
@@ -1288,13 +1277,25 @@ export class BlockYjsSync {
       .map((id) => blockById.get(id))
       .filter((block): block is Block => block !== undefined);
 
-    orderedBlocks.forEach((block, targetIndex) => {
-      const currentIndex = this.handlers.getBlockIndex(block);
+    // Asking the store for each block's index is a scan per block, quadratic
+    // per resync. Index once, and again only after a move: `Blocks.move`
+    // also re-sorts the moved block's nested blocks, so the array after a
+    // move cannot be predicted from the two indices alone.
+    orderedBlocks.reduce((positions, block, targetIndex) => {
+      const currentIndex = positions.get(block);
 
-      if (currentIndex !== targetIndex) {
-        this.blocksStore.move(targetIndex, currentIndex);
+      if (currentIndex === undefined || currentIndex === targetIndex) {
+        return positions;
       }
-    });
+
+      this.blocksStore.move(targetIndex, currentIndex);
+
+      return this.indexBlockPositions();
+    }, this.indexBlockPositions());
+  }
+
+  private indexBlockPositions(): Map<Block, number> {
+    return new Map(this.repository.blocks.map((block, index) => [block, index]));
   }
 
   /**

@@ -6,7 +6,7 @@ import { Blocks } from '../../../../../src/components/blocks';
 import type { Block } from '../../../../../src/components/block';
 import type { BlockChangeEvent } from '../../../../../src/components/modules/yjs/types';
 import type { YjsManager } from '../../../../../src/components/modules/yjs';
-import { Map as YMap } from 'yjs';
+import { Map as YMap, Doc as YDoc, type Array as YArray } from 'yjs';
 import { EventsDispatcher } from '../../../../../src/components/utils/events';
 import type { BlokEventMap } from '../../../../../src/components/events';
 import type { API } from '../../../../../src/components/modules/api';
@@ -142,6 +142,19 @@ const createMockYMap = (data: Record<string, unknown>): YMap<unknown> => {
   Object.setPrototypeOf(yMap, YMap.prototype);
 
   return yMap;
+};
+
+/**
+ * A doc-backed Y.Array of child ids. Every block Y.Map in a real doc carries
+ * one (a prelim `new Y.Array()` reads back empty), and the reconciler reads a
+ * parent's children from it.
+ */
+const createDocArray = (ids: string[]): YArray<string> => {
+  const array = new YDoc().getArray<string>('contentIds');
+
+  array.push(ids);
+
+  return array;
 };
 
 /**
@@ -1018,6 +1031,7 @@ describe('BlockYjsSync', () => {
           type: 'paragraph',
           data: parentYdata,
           tunes: createMockYMap({}),
+          contentIds: createDocArray(['child-block']),
         });
 
         const childYblock = createMockYMap({
@@ -1651,6 +1665,46 @@ describe('BlockYjsSync', () => {
 
         expect(repository.blocks.map((block) => block.id)).toEqual(memoryIds);
       });
+
+      /**
+       * Every remote move resyncs the whole order. Asking the store for each
+       * block's index is a linear scan per block — quadratic per move.
+       */
+      it('reorders a large document without asking the store for each block\'s index', async () => {
+        const ids = Array.from({ length: 5000 }, (_, index) => `b${index}`);
+        const newBlocksStore = createBlocksStore(ids.map((id) => createMockBlock({ id })));
+
+        repository = new BlockRepository();
+        repository.initialize(newBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          newBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        // A peer moved the last block to the front.
+        const docOrder = [ids[ids.length - 1], ...ids.slice(0, -1)];
+
+        mockToJSON(mockYjsManager).mockReturnValue(docOrder.map((id) => ({ id })));
+        mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+
+        callback({ blockId: docOrder[0], type: 'move', origin: 'remote' });
+
+        await Promise.resolve();
+
+        expect(repository.blocks.map((block) => block.id)).toEqual(docOrder);
+        expect(mockHandlers.getBlockIndex).not.toHaveBeenCalled();
+      });
     });
 
     describe('handleYjsAdd', () => {
@@ -1753,6 +1807,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-id']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -1925,6 +1980,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-id']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -2643,6 +2699,7 @@ describe('BlockYjsSync', () => {
         const toggleYblock = createMockYMap({
           type: 'toggle',
           data: createMockYMap({}),
+          contentIds: createDocArray(['child-a', 'child-b']),
         });
 
         mockGetBlockById(mockYjsManager).mockImplementation((id: string) => {
@@ -2667,6 +2724,62 @@ describe('BlockYjsSync', () => {
         // setBlockParent must be called for EACH orphaned child
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childA, 'toggle-id');
         expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(childB, 'toggle-id');
+      });
+
+      /**
+       * The doc names a parent's children in its contentIds; scanning every
+       * block in memory for a matching parentId instead costs a doc lookup per
+       * block on every add and every type or tune change.
+       */
+      it('consults only the restored block\'s listed children, not every block in memory', () => {
+        const bystanders = Array.from({ length: 200 }, (_, index) => createMockBlock({ id: `other-${index}` }));
+        const child = createMockBlock({ id: 'child-a', parentId: null });
+        const testBlocksStore = createBlocksStore([...bystanders, child]);
+
+        repository = new BlockRepository();
+        repository.initialize(testBlocksStore);
+
+        yjsSync = new BlockYjsSync(
+          createMockDependencies(mockYjsManager),
+          repository,
+          factory,
+          mockHandlers,
+          testBlocksStore
+        );
+
+        mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+          callback = cb as (event: BlockChangeEvent) => void;
+
+          return vi.fn();
+        });
+        yjsSync.subscribe();
+
+        const records: Record<string, YMap<unknown>> = {
+          'toggle-id': createMockYMap({
+            type: 'toggle',
+            data: createMockYMap({}),
+            contentIds: createDocArray(['child-a']),
+          }),
+          'child-a': createMockYMap({
+            type: 'paragraph',
+            data: createMockYMap({}),
+            parentId: 'toggle-id',
+          }),
+        };
+
+        mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+        mockToJSON(mockYjsManager).mockReturnValue(
+          ['toggle-id', 'child-a', ...bystanders.map((block) => block.id)].map((id) => ({ id }))
+        );
+        vi.spyOn(factory, 'composeBlock').mockReturnValue(createMockBlock({ id: 'toggle-id' }));
+
+        callback({ blockId: 'toggle-id', type: 'add', origin: 'remote' });
+
+        expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(child, 'toggle-id');
+
+        const consulted = mockGetBlockById(mockYjsManager).mock.calls.map((call) => String(call[0]));
+
+        expect(consulted.filter((id) => id.startsWith('other-'))).toHaveLength(0);
       });
     });
   });

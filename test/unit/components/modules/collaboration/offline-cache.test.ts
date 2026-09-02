@@ -265,8 +265,10 @@ describe('collaboration — offline cache', () => {
      * with a different encoding sharing `format: 1`, or a torn write. The
      * adoption replay applies every row it is handed, so one such row would
      * throw out of `load()` on every boot of that document in that browser.
+     * Sweeping just that row is not enough either: when it was the snapshot,
+     * what is left adopts an EMPTY document as editable.
      */
-    it('sweeps a row yjs cannot decode, like a row from another lineage', async () => {
+    it('discards the whole copy when a row under its lineage cannot be decoded', async () => {
       const writer = cacheWith();
 
       await writer.open();
@@ -280,9 +282,32 @@ describe('collaboration — offline cache', () => {
       await plantRow({ lineage: LINEAGE_A, bytes: garbage });
 
       const reader = cacheWith();
+
+      expect(await reader.open()).toBeNull();
+      reader.close();
+
+      expect(await storedRows()).toHaveLength(0);
+
+      // Nothing is left to adopt on the next boot either: the meta went too.
+      const again = cacheWith();
+
+      expect(await again.open()).toBeNull();
+      again.close();
+    });
+
+    it('still adopts a copy whose only bad row belongs to another lineage', async () => {
+      const writer = cacheWith();
+
+      await writer.open();
+      await writer.saveMeta(tagWith(LINEAGE_A), false);
+      await writer.append(updateWith('block-1', 'good'));
+      writer.close();
+
+      await plantRow({ lineage: LINEAGE_B, bytes: new Uint8Array([255, 255, 255, 255, 7, 0, 3]) });
+
+      const reader = cacheWith();
       const adopted = await reader.open();
 
-      expect(adopted?.updates).toHaveLength(1);
       expect(materialize(adopted?.updates ?? [])).toEqual({ 'block-1': 'good' });
       reader.close();
 

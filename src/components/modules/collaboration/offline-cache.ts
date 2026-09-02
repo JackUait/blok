@@ -316,29 +316,35 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
   };
 
   /**
-   * Rows currently stored under one lineage, with their keys. A row that is
-   * not under it — or that yjs cannot decode — is a stranger, and every
-   * reader here sweeps strangers the same way.
+   * Rows currently stored under one lineage, with their keys. A row under
+   * another lineage is a stranger, and every reader here sweeps strangers the
+   * same way. A row under THIS lineage that yjs cannot decode is reported
+   * apart: the copy it belongs to has a hole in it, and a hole where the
+   * snapshot was would adopt an empty document as editable.
    * @param store - the updates object store to read
    * @param under - the lineage to match
    */
   const rowsUnder = async (
     store: IDBObjectStore,
     under: string
-  ): Promise<{ keys: IDBValidKey[]; bytes: Uint8Array[]; strangers: IDBValidKey[] }> => {
+  ): Promise<{ keys: IDBValidKey[]; bytes: Uint8Array[]; strangers: IDBValidKey[]; undecodable: number }> => {
     const keys: IDBValidKey[] = [];
     const bytes: Uint8Array[] = [];
     const strangers: IDBValidKey[] = [];
+    const counter = { undecodable: 0 };
 
     for (const pair of await idb.getAllKeysValues(store)) {
       const key = pair.k as IDBValidKey;
       const row = pair.v as Partial<CachedRow> | null;
       const rowBytes = toBytes(row?.bytes);
 
-      if (row?.lineage === under && rowBytes !== null && isReplayable(rowBytes)) {
+      if (row?.lineage !== under) {
+        strangers.push(key);
+      } else if (rowBytes !== null && isReplayable(rowBytes)) {
         keys.push(key);
         bytes.push(rowBytes);
       } else {
+        counter.undecodable += 1;
         strangers.push(key);
       }
     }
@@ -347,6 +353,7 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
       keys,
       bytes,
       strangers,
+      undecodable: counter.undecodable,
     };
   };
 
@@ -431,7 +438,21 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         }
 
         const [readStore] = idb.transact(state.db, [UPDATES_STORE], 'readonly');
-        const { bytes, strangers } = await rowsUnder(readStore, meta.lineage);
+        const { bytes, strangers, undecodable } = await rowsUnder(readStore, meta.lineage);
+
+        // A row of this copy that will not decode means the copy is not whole.
+        // Adopting the rest would boot a document with a hole in it — an empty
+        // one, when the hole is the snapshot — as editable, so the copy goes
+        // the way a lineage change sends it: dropped, meta included, and this
+        // boot syncs from the room.
+        if (undecodable > 0) {
+          const [updatesStore, metaStore] = idb.transact(state.db, [UPDATES_STORE, META_STORE]);
+
+          await idb.rtop(updatesStore.clear());
+          await idb.rtop(metaStore.delete(META_KEY));
+
+          return null;
+        }
 
         if (strangers.length > 0) {
           const [sweepStore] = idb.transact(state.db, [UPDATES_STORE]);

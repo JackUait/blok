@@ -265,6 +265,7 @@
         "name": "operationUppercaseLineage",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 12,
         "description": "Lineage in uppercase hex; IDs are lowercase-only.",
         "metadataJson": "{\"lineage\":\"5F3A9C1E7B04D28A6CF1E0937B52D84A\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "665f7b226c696e65616765223a223546334139433145374230344432384136434631453039333742353244383441222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
@@ -273,6 +274,7 @@
         "name": "operationShortOperationId",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 12,
         "description": "operationId is 31 hex characters, one short of 128 bits.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8\"}",
         "frameHex": "665e7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a2239623263346436653866306131623363356437653966306132623463366438227d130101e8071084e8070e0820616e6420796a7300"
@@ -281,6 +283,7 @@
         "name": "operationMissingOperationId",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 11,
         "description": "The operationId key is absent.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\"}",
         "frameHex": "662e7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d130101e8071084e8070e0820616e6420796a7300"
@@ -289,6 +292,7 @@
         "name": "operationExtraKey",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 11,
         "description": "A serverSequence key, which belongs to 103 and not to 102.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"1\"}",
         "frameHex": "66747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2231227d130101e8071084e8070e0820616e6420796a7300"
@@ -297,14 +301,43 @@
         "name": "operationEscapedDuplicateKey",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 7,
         "description": "An escaped \"lineage\" ahead of the real one: the key is present twice while the literal token appears once, so only the no-backslash rule catches it.",
         "metadataJson": "{\"lin\\u0065age\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "6691017b226c696e5c7530303635616765223a223566336139633165376230346432386136636631653039333762353264383461222c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
       },
       {
+        "name": "operationWhitespaceDuplicateKey",
+        "messageType": 102,
+        "expect": "malformed",
+        "rule": 8,
+        "description": "One space before the second colon. No backslash, valid UTF-8, one JSON object, correct key set — and the token \"lineage\": occurs once, so a textual duplicate scan misses it and last-wins hands the attacker the lineage. Only the no-whitespace rule catches this.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"lineage\" :\"00000000000000000000000000000000\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "668d017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226c696e6561676522203a223030303030303030303030303030303030303030303030303030303030303030222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationMetadataNotJson",
+        "messageType": 102,
+        "expect": "malformed",
+        "rule": 9,
+        "description": "Metadata that is not JSON at all. No space in it: a space would trip rule 8 first and this case would stop testing rule 9.",
+        "metadataJson": "notjson",
+        "frameHex": "66076e6f746a736f6e130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationMetadataArray",
+        "messageType": 102,
+        "expect": "malformed",
+        "rule": 10,
+        "description": "Metadata that parses as a JSON array. Every rule below this one assumes an object.",
+        "metadataJson": "[1,2,3]",
+        "frameHex": "66075b312c322c335d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
         "name": "operationEmptyUpdate",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 4,
         "description": "Valid metadata, then a zero-length update section.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d00"
@@ -313,6 +346,7 @@
         "name": "operationInvalidUtf8Metadata",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 6,
         "description": "A lone 0xff inside the metadata section; otherwise a valid operation.",
         "frameHex": "665f7b226c696e65616765223a22ff66336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
       },
@@ -320,6 +354,7 @@
         "name": "operationMissingUpdateSection",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 3,
         "description": "The frame ends after the metadata, so it is shaped like 100/101. A decoder that stops at one section accepts this.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
@@ -328,22 +363,43 @@
         "name": "operationTruncatedUpdate",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 2,
         "description": "The update length prefix claims 16 bytes and only 3 follow.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d10010203"
       },
       {
+        "name": "operationHugeUpdateLength",
+        "messageType": 102,
+        "expect": "malformed",
+        "rule": 2,
+        "description": "The update length prefix claims 2 GiB on a frame a few dozen bytes long. The bounds check must refuse it without allocating; this is the second section, whose prefix has no counterpart in 100/101.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d8080808008"
+      },
+      {
         "name": "operationTrailingByte",
         "messageType": 102,
         "expect": "malformed",
+        "rule": 5,
         "description": "A complete operation plus one byte; one frame per message.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a730000"
       },
       {
+        "name": "acknowledgementUppercaseOperationId",
+        "messageType": 103,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "The id grammar is shared across 102, 103 and 104; this pins it on a 103 so a decoder cannot validate ids only where it first met them.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9B2C4D6E8F0A1B3C5D7E9F0A2B4C6D8E\",\"serverSequence\":\"42\"}",
+        "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223942324334443645384630413142334335443745394630413242344336443845222c2273657276657253657175656e6365223a223432227d"
+      },
+      {
         "name": "acknowledgementDuplicateKey",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 11,
         "description": "The lineage key appears twice, unescaped.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"42\"}",
         "frameHex": "67a2017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223432227d"
@@ -352,6 +408,7 @@
         "name": "acknowledgementNumericServerSequence",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 12,
         "description": "serverSequence sent as a JSON number instead of a decimal string.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":42}",
         "frameHex": "67737b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a34327d"
@@ -360,6 +417,7 @@
         "name": "acknowledgementLeadingZeroServerSequence",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 12,
         "description": "serverSequence \"0042\": two texts would denote one value.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"0042\"}",
         "frameHex": "67777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2230303432227d"
@@ -368,6 +426,7 @@
         "name": "acknowledgementNegativeServerSequence",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 12,
         "description": "serverSequence \"-1\"; the pattern allows no sign.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"-1\"}",
         "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a222d31227d"
@@ -376,6 +435,7 @@
         "name": "acknowledgementOverRangeServerSequence",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 12,
         "description": "serverSequence one past the u64 ceiling (18446744073709551616).",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"18446744073709551616\"}",
         "frameHex": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363136227d"
@@ -384,6 +444,7 @@
         "name": "acknowledgementMissingServerSequence",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 11,
         "description": "The 102 key set on a 103 frame; serverSequence is absent.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
         "frameHex": "675f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
@@ -392,15 +453,26 @@
         "name": "acknowledgementTrailingByte",
         "messageType": 103,
         "expect": "malformed",
+        "rule": 5,
         "description": "A complete acknowledgement plus one byte.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"42\"}",
         "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223432227d00"
       },
       {
+        "name": "rejectionShortLineage",
+        "messageType": 104,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "A 31-hex lineage on a 104, pinning the shared id grammar on the third type.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"read-only\"}",
+        "frameHex": "68717b226c696e65616765223a2235663361396331653762303464323861366366316530393337623532643834222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561642d6f6e6c79227d"
+      },
+      {
         "name": "rejectionEscapedCode",
         "messageType": 104,
         "expect": "malformed",
-        "description": "An escaped code that parses to the valid read-only; only the no-backslash rule rejects it.",
+        "rule": 7,
+        "description": "An escaped code that parses to the valid read-only. Now that codes are an open set, the no-backslash rule is the only thing that refuses it.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"read\\u002donly\"}",
         "frameHex": "68777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561645c75303032646f6e6c79227d"
       },
@@ -408,7 +480,8 @@
         "name": "rejectionCodeEmpty",
         "messageType": 104,
         "expect": "malformed",
-        "description": "An empty code. The shape rule needs at least one character, and an empty string is the classic value a decoder mistakes for an absent key.",
+        "rule": 12,
+        "description": "An empty code. The grammar needs at least one character, and an empty string is the classic value a decoder mistakes for an absent key.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"\"}",
         "frameHex": "68697b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22227d"
       },
@@ -416,23 +489,59 @@
         "name": "rejectionCodeUppercase",
         "messageType": 104,
         "expect": "malformed",
-        "description": "Code \"Read-Only\": the shape rule is lowercase-only, so a case variant of a stable code is not that code.",
+        "rule": 12,
+        "description": "The grammar is lowercase-only, so a case variant of a stable code is not that code.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"Read-Only\"}",
         "frameHex": "68727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22526561642d4f6e6c79227d"
+      },
+      {
+        "name": "rejectionCodeUnderscore",
+        "messageType": 104,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "An underscore: outside the character class, and not caught by a case check.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"read_only\"}",
+        "frameHex": "68727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561645f6f6e6c79227d"
+      },
+      {
+        "name": "rejectionCodeLeadingDigit",
+        "messageType": 104,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "A leading digit; the grammar requires a letter first.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"1nvalid\"}",
+        "frameHex": "68707b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22316e76616c6964227d"
+      },
+      {
+        "name": "rejectionCodeLeadingHyphen",
+        "messageType": 104,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "A leading hyphen; legal later in a code, never first.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"-read-only\"}",
+        "frameHex": "68737b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a222d726561642d6f6e6c79227d"
       },
       {
         "name": "rejectionCodeOverLength",
         "messageType": 104,
         "expect": "malformed",
-        "description": "A 65-character code, one past the shape rule; rejectionCodeMaxLength pins the other side of the same boundary.",
+        "rule": 12,
+        "description": "A 65-character code, one past the grammar; rejectionCodeMaxLength pins the other side of the same boundary.",
         "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"code-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
         "frameHex": "68aa017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22636f64652d616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161227d"
+      },
+      {
+        "name": "outerVarUintTooLong",
+        "expect": "malformed",
+        "rule": 1,
+        "description": "Eleven varuint bytes — ten continuations then a terminator — encoding the small type 0. lib0 own readVarUint accepts this; the 10-byte ceiling must refuse it before any type dispatch. No messageType: the frame never reaches one.",
+        "frameHex": "8080808080808080808000"
       },
       {
         "name": "unknownOuterType",
         "messageType": 105,
         "expect": "unknown",
-        "description": "Type 105 carrying an operation-shaped section. An unknown OUTER type is ignorable, never malformed, and its payload is left unread.",
+        "description": "Type 105 carrying an operation-shaped section. An unknown OUTER type is ignorable, never malformed, and its payload is left unread. No rule: it violates none.",
         "frameHex": "695f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
       }
     ]

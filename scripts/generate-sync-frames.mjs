@@ -278,35 +278,48 @@ operationReplica.destroy();
 // of it. lib0 still does the outer framing, so the only thing wrong with each
 // frame is the one defect its name states.
 // ---------------------------------------------------------------------------
-const L = CONTROL.lineage;
+const LINEAGE = CONTROL.lineage;
 
 // One helper per shape so the metadata text is written ONCE per case:
 // `metadataJson` has to describe exactly the bytes in `frameHex`, and a second
-// copy of the same template literal is how those two drift apart.
-const badOperation = (name, description, metadataJson, update = incrementalUpdate) => ({
+// copy of the same template literal is how those two drift apart. `rule` is the
+// numbered decoder rule in blok-sync-v2.md section 5 that the case violates, so
+// a codec test can assert the REASON a frame was refused, not just that it was.
+const badOperation = (name, rule, description, metadataJson, update = incrementalUpdate) => ({
   name,
   messageType: MESSAGE_BLOK_OPERATION,
   expect: 'malformed',
+  rule,
   description,
   metadataJson,
   frameHex: hex(v2Frame(MESSAGE_BLOK_OPERATION, utf8(metadataJson), update)),
 });
 
 // 103 and 104 have no second section, so their crafted frames are metadata only.
-const badMetadataOnly = (name, messageType, description, metadataJson) => ({
+const badMetadataOnly = (name, messageType, rule, description, metadataJson) => ({
   name,
   messageType,
   expect: 'malformed',
+  rule,
   description,
   metadataJson,
   frameHex: hex(v2Frame(messageType, utf8(metadataJson))),
 });
 
+const badCode = (name, code, description) =>
+  badMetadataOnly(
+    name,
+    MESSAGE_BLOK_REJECTION,
+    12,
+    description,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","code":"${code}"}`,
+  );
+
 // One lineage hex character overwritten with a lone 0xff: no UTF-8 sequence
 // starts with that byte, so strict decoding fails before any JSON parse.
 const invalidUtf8Metadata = Uint8Array.from(utf8(OPERATION_METADATA));
 
-invalidUtf8Metadata[OPERATION_METADATA.indexOf(L)] = 0xff;
+invalidUtf8Metadata[OPERATION_METADATA.indexOf(LINEAGE)] = 0xff;
 
 // [102][len][metadata] then an update length prefix claiming 16 bytes over 3.
 const truncatedUpdate = concat(
@@ -314,34 +327,66 @@ const truncatedUpdate = concat(
   Uint8Array.from([0x10, 0x01, 0x02, 0x03]),
 );
 
+// Same shape, but the update length prefix is varuint(2^31). The bounds check
+// has to run BEFORE any allocation; truncatedUpdate above is too small to tell
+// a lazy implementation from a correct one.
+const hugeUpdateLength = concat(
+  v2Frame(MESSAGE_BLOK_OPERATION, utf8(OPERATION_METADATA)),
+  Uint8Array.from([0x80, 0x80, 0x80, 0x80, 0x08]),
+);
+
 const negative = [
   badOperation(
     'operationUppercaseLineage',
+    12,
     'Lineage in uppercase hex; IDs are lowercase-only.',
-    `{"lineage":"${L.toUpperCase()}","operationId":"${OPERATION_ID}"}`,
+    `{"lineage":"${LINEAGE.toUpperCase()}","operationId":"${OPERATION_ID}"}`,
   ),
   badOperation(
     'operationShortOperationId',
+    12,
     'operationId is 31 hex characters, one short of 128 bits.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID.slice(0, 31)}"}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID.slice(0, 31)}"}`,
   ),
   badOperation(
     'operationMissingOperationId',
+    11,
     'The operationId key is absent.',
-    `{"lineage":"${L}"}`,
+    `{"lineage":"${LINEAGE}"}`,
   ),
   badOperation(
     'operationExtraKey',
+    11,
     'A serverSequence key, which belongs to 103 and not to 102.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":"1"}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"1"}`,
   ),
   badOperation(
     'operationEscapedDuplicateKey',
+    7,
     'An escaped "lineage" ahead of the real one: the key is present twice while the literal token appears once, so only the no-backslash rule catches it.',
-    `{"lin\\u0065age":"${L}","lineage":"${L}","operationId":"${OPERATION_ID}"}`,
+    `{"lin\\u0065age":"${LINEAGE}","lineage":"${LINEAGE}","operationId":"${OPERATION_ID}"}`,
+  ),
+  badOperation(
+    'operationWhitespaceDuplicateKey',
+    8,
+    'One space before the second colon. No backslash, valid UTF-8, one JSON object, correct key set — and the token "lineage": occurs once, so a textual duplicate scan misses it and last-wins hands the attacker the lineage. Only the no-whitespace rule catches this.',
+    `{"lineage":"${LINEAGE}","lineage" :"${'0'.repeat(32)}","operationId":"${OPERATION_ID}"}`,
+  ),
+  badOperation(
+    'operationMetadataNotJson',
+    9,
+    'Metadata that is not JSON at all. No space in it: a space would trip rule 8 first and this case would stop testing rule 9.',
+    'notjson',
+  ),
+  badOperation(
+    'operationMetadataArray',
+    10,
+    'Metadata that parses as a JSON array. Every rule below this one assumes an object.',
+    '[1,2,3]',
   ),
   badOperation(
     'operationEmptyUpdate',
+    4,
     'Valid metadata, then a zero-length update section.',
     OPERATION_METADATA,
     new Uint8Array(0),
@@ -350,6 +395,7 @@ const negative = [
     name: 'operationInvalidUtf8Metadata',
     messageType: MESSAGE_BLOK_OPERATION,
     expect: 'malformed',
+    rule: 6,
     description: 'A lone 0xff inside the metadata section; otherwise a valid operation.',
     frameHex: hex(v2Frame(MESSAGE_BLOK_OPERATION, invalidUtf8Metadata, incrementalUpdate)),
   },
@@ -357,6 +403,7 @@ const negative = [
     name: 'operationMissingUpdateSection',
     messageType: MESSAGE_BLOK_OPERATION,
     expect: 'malformed',
+    rule: 3,
     description:
       'The frame ends after the metadata, so it is shaped like 100/101. A decoder that stops at one section accepts this.',
     metadataJson: OPERATION_METADATA,
@@ -366,51 +413,76 @@ const negative = [
     name: 'operationTruncatedUpdate',
     messageType: MESSAGE_BLOK_OPERATION,
     expect: 'malformed',
+    rule: 2,
     description: 'The update length prefix claims 16 bytes and only 3 follow.',
     metadataJson: OPERATION_METADATA,
     frameHex: hex(truncatedUpdate),
   },
   {
+    name: 'operationHugeUpdateLength',
+    messageType: MESSAGE_BLOK_OPERATION,
+    expect: 'malformed',
+    rule: 2,
+    description:
+      'The update length prefix claims 2 GiB on a frame a few dozen bytes long. The bounds check must refuse it without allocating; this is the second section, whose prefix has no counterpart in 100/101.',
+    metadataJson: OPERATION_METADATA,
+    frameHex: hex(hugeUpdateLength),
+  },
+  {
     name: 'operationTrailingByte',
     messageType: MESSAGE_BLOK_OPERATION,
     expect: 'malformed',
+    rule: 5,
     description: 'A complete operation plus one byte; one frame per message.',
     metadataJson: OPERATION_METADATA,
     frameHex: hex(concat(operation, Uint8Array.from([0x00]))),
   },
   badMetadataOnly(
+    'acknowledgementUppercaseOperationId',
+    MESSAGE_BLOK_ACK,
+    12,
+    'The id grammar is shared across 102, 103 and 104; this pins it on a 103 so a decoder cannot validate ids only where it first met them.',
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID.toUpperCase()}","serverSequence":"${SERVER_SEQUENCE}"}`,
+  ),
+  badMetadataOnly(
     'acknowledgementDuplicateKey',
     MESSAGE_BLOK_ACK,
+    11,
     'The lineage key appears twice, unescaped.',
-    `{"lineage":"${L}","lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":"${SERVER_SEQUENCE}"}`,
+    `{"lineage":"${LINEAGE}","lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"${SERVER_SEQUENCE}"}`,
   ),
   badMetadataOnly(
     'acknowledgementNumericServerSequence',
     MESSAGE_BLOK_ACK,
+    12,
     'serverSequence sent as a JSON number instead of a decimal string.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":${SERVER_SEQUENCE}}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":${SERVER_SEQUENCE}}`,
   ),
   badMetadataOnly(
     'acknowledgementLeadingZeroServerSequence',
     MESSAGE_BLOK_ACK,
+    12,
     'serverSequence "0042": two texts would denote one value.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":"0042"}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"0042"}`,
   ),
   badMetadataOnly(
     'acknowledgementNegativeServerSequence',
     MESSAGE_BLOK_ACK,
+    12,
     'serverSequence "-1"; the pattern allows no sign.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":"-1"}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"-1"}`,
   ),
   badMetadataOnly(
     'acknowledgementOverRangeServerSequence',
     MESSAGE_BLOK_ACK,
+    12,
     'serverSequence one past the u64 ceiling (18446744073709551616).',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","serverSequence":"18446744073709551616"}`,
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"18446744073709551616"}`,
   ),
   badMetadataOnly(
     'acknowledgementMissingServerSequence',
     MESSAGE_BLOK_ACK,
+    11,
     'The 102 key set on a 103 frame; serverSequence is absent.',
     OPERATION_METADATA,
   ),
@@ -418,48 +490,80 @@ const negative = [
     name: 'acknowledgementTrailingByte',
     messageType: MESSAGE_BLOK_ACK,
     expect: 'malformed',
+    rule: 5,
     description: 'A complete acknowledgement plus one byte.',
     metadataJson: ackMetadata(SERVER_SEQUENCE),
     frameHex: hex(concat(acknowledgement, Uint8Array.from([0x00]))),
   },
   badMetadataOnly(
+    'rejectionShortLineage',
+    MESSAGE_BLOK_REJECTION,
+    12,
+    'A 31-hex lineage on a 104, pinning the shared id grammar on the third type.',
+    `{"lineage":"${LINEAGE.slice(0, 31)}","operationId":"${OPERATION_ID}","code":"read-only"}`,
+  ),
+  badMetadataOnly(
     'rejectionEscapedCode',
     MESSAGE_BLOK_REJECTION,
-    'An escaped code that parses to the valid read-only; only the no-backslash rule rejects it.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"read\\u002donly"}`,
+    7,
+    'An escaped code that parses to the valid read-only. Now that codes are an open set, the no-backslash rule is the only thing that refuses it.',
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","code":"read\\u002donly"}`,
   ),
-  badMetadataOnly(
+  badCode(
     'rejectionCodeEmpty',
-    MESSAGE_BLOK_REJECTION,
-    'An empty code. The shape rule needs at least one character, and an empty string is the classic value a decoder mistakes for an absent key.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":""}`,
+    '',
+    'An empty code. The grammar needs at least one character, and an empty string is the classic value a decoder mistakes for an absent key.',
   ),
-  badMetadataOnly(
+  badCode(
     'rejectionCodeUppercase',
-    MESSAGE_BLOK_REJECTION,
-    'Code "Read-Only": the shape rule is lowercase-only, so a case variant of a stable code is not that code.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"Read-Only"}`,
+    'Read-Only',
+    'The grammar is lowercase-only, so a case variant of a stable code is not that code.',
   ),
-  badMetadataOnly(
+  badCode(
+    'rejectionCodeUnderscore',
+    'read_only',
+    'An underscore: outside the character class, and not caught by a case check.',
+  ),
+  badCode(
+    'rejectionCodeLeadingDigit',
+    '1nvalid',
+    'A leading digit; the grammar requires a letter first.',
+  ),
+  badCode(
+    'rejectionCodeLeadingHyphen',
+    '-read-only',
+    'A leading hyphen; legal later in a code, never first.',
+  ),
+  badCode(
     'rejectionCodeOverLength',
-    MESSAGE_BLOK_REJECTION,
-    'A 65-character code, one past the shape rule; rejectionCodeMaxLength pins the other side of the same boundary.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"${OVER_LENGTH_CODE}"}`,
+    OVER_LENGTH_CODE,
+    'A 65-character code, one past the grammar; rejectionCodeMaxLength pins the other side of the same boundary.',
   ),
+  {
+    name: 'outerVarUintTooLong',
+    expect: 'malformed',
+    rule: 1,
+    description:
+      'Eleven varuint bytes — ten continuations then a terminator — encoding the small type 0. lib0 own readVarUint accepts this; the 10-byte ceiling must refuse it before any type dispatch. No messageType: the frame never reaches one.',
+    frameHex: hex(Uint8Array.from([
+      0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00,
+    ])),
+  },
   {
     name: 'unknownOuterType',
     messageType: MESSAGE_UNKNOWN_OUTER,
     expect: 'unknown',
     description:
-      'Type 105 carrying an operation-shaped section. An unknown OUTER type is ignorable, never malformed, and its payload is left unread.',
+      'Type 105 carrying an operation-shaped section. An unknown OUTER type is ignorable, never malformed, and its payload is left unread. No rule: it violates none.',
     frameHex: hex(v2Frame(MESSAGE_UNKNOWN_OUTER, utf8(OPERATION_METADATA))),
   },
 ];
 
-// `canonical: true` = the bytes a conformant emitter produces, so a decoder
-// must re-encode them byte-for-byte. `canonical: false` = valid on the wire but
-// never emitted, so it is decode-only: asserting a byte-identical re-encode on
-// it would wrongly demand that encoders preserve a foreign key order.
+// `canonical: true` = the bytes a conformant emitter produces, so an encoder
+// fed this frame's decoded fields MUST reproduce its bytes. `canonical: false`
+// = valid on the wire but never emitted, so it is decode-only: a round-trip
+// assertion on it would wrongly demand that encoders preserve a foreign key
+// order.
 const v2Frames = [
   {
     name: 'operation',

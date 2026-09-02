@@ -16,8 +16,9 @@ import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
 import { createOfflineCache } from '../../../../../src/components/modules/collaboration/offline-cache';
 import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
+import * as collabProvider from '../../../../../src/components/modules/collaboration/provider';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
-import type { SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
+import type { CollabDocSeam, SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import { YjsManager } from '../../../../../src/components/modules/yjs';
@@ -852,6 +853,36 @@ describe('collaboration — sync-first load', () => {
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
 
       expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the binary seam', () => {
+    it('delivers a remote update through onAnyDocUpdate but not onDocUpdate', async () => {
+      // seam() is private and nothing calls its onAnyDocUpdate yet (the offline
+      // cache reaches YjsManager directly), so only the object handed to the
+      // provider proves the seam still carries the method. Spy calls through.
+      const createProviderSpy = vi.spyOn(collabProvider, 'createCollabProvider');
+
+      const harness = await boot();
+      const [firstCall] = createProviderSpy.mock.calls;
+
+      if (firstCall === undefined) {
+        throw new Error('Collaboration never built a provider');
+      }
+
+      const seam: CollabDocSeam = firstCall[0].yjs;
+      const anyUpdates: unknown[] = [];
+      const localUpdates: unknown[] = [];
+
+      seam.onAnyDocUpdate((update) => anyUpdates.push(update));
+      seam.onDocUpdate((update) => localUpdates.push(update));
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'from the server' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      expect(anyUpdates.length).toBeGreaterThan(0);
+      expect(localUpdates).toEqual([]);
     });
   });
 

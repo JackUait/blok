@@ -1,7 +1,8 @@
 // Generates the y-protocols wire-frame fixtures the C# sync codec is pinned to.
 // Run once per y-protocols/yjs bump; the output is committed under
 // test/unit/server-conformance/fixtures/sync-frames.json (beside tickets.json;
-// NOT under fixtures/collab/, which generate-collab-fixtures.mjs wipes wholesale).
+// NOT under fixtures/collab/, whose case directories generate-collab-fixtures.mjs
+// owns and rewrites).
 //
 //   node scripts/generate-sync-frames.mjs
 //

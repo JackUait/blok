@@ -5,6 +5,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 vi.mock('../../../src/blok', async () => await import('./mock-blok'));
 
 import { blokRegistry } from './mock-blok';
+import type { MockBlokInstance } from './mock-blok';
 import { useBlok } from '../../../packages/vue/src/useBlok';
 import type { UseBlokConfig } from '../../../packages/vue/src/types';
 import type { OutputData } from '@/types';
@@ -16,6 +17,16 @@ function doc(text: string): OutputData {
 const COLLABORATION: UseBlokConfig = {
   server: 'https://blok.example',
   collaboration: { doc: 'notes' },
+};
+
+const lastBlok = (): MockBlokInstance => {
+  const last = blokRegistry.last;
+
+  if (last === undefined) {
+    throw new Error('no Blok instance was constructed');
+  }
+
+  return last;
 };
 
 async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConfig }> {
@@ -30,7 +41,7 @@ async function mountReady(initial: UseBlokConfig): Promise<{ config: UseBlokConf
   });
 
   mount(Harness);
-  blokRegistry.last!.resolveReady();
+  lastBlok().resolveReady();
   await flushPromises();
 
   return { config };
@@ -58,14 +69,14 @@ describe('useBlok controlled data under collaboration', () => {
   it('seeds data at mount without rendering or warning', async () => {
     await mountReady({ ...COLLABORATION, data: doc('seed') });
 
-    expect(blokRegistry.last!.config.data).toEqual(doc('seed'));
-    expect(blokRegistry.last!.render).not.toHaveBeenCalled();
+    expect(lastBlok().config.data).toEqual(doc('seed'));
+    expect(lastBlok().render).not.toHaveBeenCalled();
     expect(collaborationWarnings()).toHaveLength(0);
   });
 
   it('skips the controlled re-render and warns once across repeated data changes', async () => {
     const { config } = await mountReady({ ...COLLABORATION, data: doc('a') });
-    const instance = blokRegistry.last!;
+    const instance = lastBlok();
 
     // A render the adapter must never reach: reaching it would also surface an
     // unhandled rejection, which is the bug this guard removes.
@@ -91,7 +102,7 @@ describe('useBlok controlled data under collaboration', () => {
     // lets the change fall through into render(), which rejects with nothing
     // surfaced.
     const { config } = await mountReady({ ...COLLABORATION, data: doc('a') });
-    const instance = blokRegistry.last!;
+    const instance = lastBlok();
 
     instance.render.mockRejectedValue(new Error('blocks.render() is not allowed while collaboration is on'));
 
@@ -111,7 +122,7 @@ describe('useBlok controlled data under collaboration', () => {
 
   it('still re-renders on a data change when collaboration is off', async () => {
     const { config } = await mountReady({ data: doc('a') });
-    const instance = blokRegistry.last!;
+    const instance = lastBlok();
 
     config.data = doc('b');
     await flushPromises();

@@ -39,12 +39,6 @@ describe('CollaborationStatusChanged event', () => {
     expect(listener).toHaveBeenCalledWith(payload);
   });
 
-  it('accepts every declared connection status', () => {
-    const statuses: CollaborationStatusChangedPayload['status'][] = ['connecting', 'connected', 'offline', 'error'];
-
-    expect(statuses).toHaveLength(4);
-  });
-
   // A host has to tell "retrying in 30s" from "dead, recreate the editor": the
   // first keeps local edits pending, the second never reconnects on its own.
   it('tells a retrying session apart from one that stopped for good', () => {

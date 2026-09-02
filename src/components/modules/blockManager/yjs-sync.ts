@@ -1333,6 +1333,11 @@ export class BlockYjsSync {
     // Use queueMicrotask to defer sync until all move events are processed
     queueMicrotask(() => {
       this.moveSyncScheduled = false;
+
+      if (this.destroyed) {
+        return;
+      }
+
       this.syncBlockOrderFromYjs();
     });
   }

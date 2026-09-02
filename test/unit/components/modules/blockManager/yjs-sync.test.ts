@@ -2922,6 +2922,20 @@ describe('BlockYjsSync', () => {
       // about, which is what made the dev tripwire throw out of band.
       expect(domOrder(holders)).toEqual([ 1, 0 ]);
     });
+
+    it('drops a move resync scheduled before destroy', async () => {
+      const before = repository.blocks.map((block) => block.id);
+
+      mockToJSON(mockYjsManager).mockReturnValue([...before].reverse().map((id) => ({ id })));
+
+      callback({ blockId: before[0], type: 'move', origin: 'remote' });
+      yjsSync.destroy();
+
+      await Promise.resolve();
+
+      expect(mockToJSON(mockYjsManager)).not.toHaveBeenCalled();
+      expect(repository.blocks.map((block) => block.id)).toEqual(before);
+    });
   });
 
   describe('update fallback after the block was removed', () => {

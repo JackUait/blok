@@ -19,6 +19,7 @@ internal sealed class LocalCollabStore(
       UnixFileMode.UserRead |
       UnixFileMode.UserWrite |
       UnixFileMode.UserExecute;
+  private int modeWarned;
 
   public Task<CollabWorkingSet?> ReadAsync(
       string docId,
@@ -210,6 +211,7 @@ internal sealed class LocalCollabStore(
     else
     {
       Directory.CreateDirectory(directory, PrivateDirectoryMode);
+      TightenExistingDirectory();
     }
 
     var finalPath = PathFor(docId);
@@ -278,6 +280,29 @@ internal sealed class LocalCollabStore(
       throw new AggregateException(
           "collab: the working-set write failed and cleanup also failed.",
           [primaryError, .. cleanupErrors]);
+    }
+  }
+
+  /// <summary>
+  /// CreateDirectory leaves an existing directory's mode alone. chmod needs
+  /// ownership, which a bind mount may not give this process, so a refusal
+  /// is one warning, never a failed write.
+  /// </summary>
+  [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
+  private void TightenExistingDirectory()
+  {
+    try
+    {
+      File.SetUnixFileMode(directory, PrivateDirectoryMode);
+    }
+    catch (UnauthorizedAccessException)
+    {
+      if (Interlocked.Exchange(ref modeWarned, 1) == 0)
+      {
+        log?.Invoke(
+            $"collab: could not make \"{directory}\" private (this process does not own it); " +
+            "its mode is left as found.");
+      }
     }
   }
 

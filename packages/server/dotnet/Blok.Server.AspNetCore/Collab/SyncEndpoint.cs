@@ -85,11 +85,10 @@ internal static class SyncEndpoint
       return;
     }
 
-    var lease = accepted.Principal is null
-      ? NoLease.Instance
-      : connections.TryReserve(doc, accepted.Principal);
+    // No principal (anonymous in none/proxy mode) means no per-user cap, so no lease.
+    var lease = accepted.Principal is null ? null : connections.TryReserve(doc, accepted.Principal);
 
-    if (lease is null)
+    if (accepted.Principal is not null && lease is null)
     {
       await RefuseAsync(context, StatusCodes.Status429TooManyRequests, "too many connections\n");
 
@@ -180,16 +179,6 @@ internal static class SyncEndpoint
         lease: null,
         context.RequestAborted);
     socket.Abort();
-  }
-
-  /// <summary>Stands in for a slot when the connection has no identity to cap on.</summary>
-  private sealed class NoLease : IDisposable
-  {
-    internal static readonly NoLease Instance = new();
-
-    public void Dispose()
-    {
-    }
   }
 
   private static Task<WebSocket> AcceptAsync(

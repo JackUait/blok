@@ -104,11 +104,12 @@ public sealed class SyncHandshakeTests
   [Fact]
   public async Task TicketModeRequiresTheSyncProtocolInTheOffer()
   {
+    // A 101 that echoes none of the offered protocols is failed by every
+    // browser before any close code is delivered, so this one is a plain
+    // refusal rather than an accept-then-close.
     await using var app = await SyncApp.StartAsync("ticket");
-    await using var client = await app.ConnectAsync(protocols: [fixture.Compatible]);
 
-    Assert.Null(client.SubProtocol);
-    Assert.Equal((4401, "blok-sync.v1 required"), await client.ReceiveCloseAsync());
+    await app.AssertRefusedAsync(HttpStatusCode.BadRequest, protocols: [fixture.Compatible]);
   }
 
   [Fact]

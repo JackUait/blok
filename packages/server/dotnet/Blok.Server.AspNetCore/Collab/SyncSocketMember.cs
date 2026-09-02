@@ -158,7 +158,6 @@ internal sealed class SyncSocketMember : ICollabMember
     return error is WebSocketException
         or IOException
         or ObjectDisposedException
-        or InvalidOperationException
         or OperationCanceledException;
   }
 
@@ -217,9 +216,9 @@ internal sealed class SyncSocketMember : ICollabMember
   {
     var buffer = ArrayPool<byte>.Shared.Rent(ReceiveBufferSize);
     using var message = new MemoryStream();
-    // After a close was requested (or with no membership) frames are read
-    // only to reach the peer's close.
-    var discarding = membership is null;
+    // With no membership (a rejected handshake), or once a close was
+    // requested, frames are read only to reach the peer's close.
+    var discarding = false;
     var receives = 0;
 
     try
@@ -233,7 +232,7 @@ internal sealed class SyncSocketMember : ICollabMember
           return;
         }
 
-        if (discarding || RequestedClose is not null)
+        if (membership is null || discarding || RequestedClose is not null)
         {
           discarding = true;
 
@@ -285,7 +284,7 @@ internal sealed class SyncSocketMember : ICollabMember
           continue;
         }
 
-        await membership!.ReceiveAsync(frame, cancellationToken);
+        await membership.ReceiveAsync(frame, cancellationToken);
       }
     }
     catch (Exception error) when (IsSocketGone(error))

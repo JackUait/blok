@@ -15,11 +15,6 @@ internal static class TicketVerifier
 {
   private const string HeaderSegment = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
 
-  private static readonly JsonSerializerOptions JsonOptions = new()
-  {
-    PropertyNameCaseInsensitive = true,
-  };
-
   internal static bool TryVerify(
       string secret,
       string ticket,
@@ -54,7 +49,7 @@ internal static class TicketVerifier
         Encoding.UTF8.GetBytes(secret),
         Encoding.UTF8.GetBytes(signingInput));
 
-    if (!SignatureMatches(signature, expectedSignature) ||
+    if (!CryptographicOperations.FixedTimeEquals(signature, expectedSignature) ||
         !TryDecodeBase64Url(segments[1], out var payload))
     {
       return false;
@@ -64,7 +59,7 @@ internal static class TicketVerifier
 
     try
     {
-      parsed = JsonSerializer.Deserialize<TicketPayload>(payload, JsonOptions);
+      parsed = JsonSerializer.Deserialize<TicketPayload>(payload);
     }
     catch (JsonException)
     {
@@ -102,6 +97,8 @@ internal static class TicketVerifier
         .Replace('_', '/')
         .PadRight(value.Length + ((4 - (value.Length % 4)) % 4), '=');
 
+    // FromBase64String accepts non-zero trailing bits, so several encodings
+    // of one signature verify: never key anything on the token string.
     try
     {
       decoded = Convert.FromBase64String(base64);
@@ -112,19 +109,6 @@ internal static class TicketVerifier
     {
       return false;
     }
-  }
-
-  private static bool SignatureMatches(
-      ReadOnlySpan<byte> supplied,
-      ReadOnlySpan<byte> expected)
-  {
-    Span<byte> normalized = stackalloc byte[32];
-    supplied[..Math.Min(supplied.Length, normalized.Length)].CopyTo(normalized);
-
-    var sameLength = supplied.Length == expected.Length;
-    var equal = CryptographicOperations.FixedTimeEquals(normalized, expected);
-
-    return sameLength & equal;
   }
 
   private sealed class TicketPayload

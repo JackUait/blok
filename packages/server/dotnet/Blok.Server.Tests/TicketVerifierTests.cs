@@ -80,6 +80,62 @@ public sealed class TicketVerifierTests
   }
 
   [Fact]
+  public void ReadsClaimKeysCaseSensitively()
+  {
+    var fixture = LoadFixture();
+    var shouted = SignPayload(
+        fixture.Secret,
+        "{\"USER\":\"u1\",\"DOC\":\"doc-42\",\"write\":true,\"exp\":4102444800}");
+
+    // Signed, so harmless — but the contract names lower-case keys and
+    // nothing else; "DOC" must not quietly name a document.
+    Assert.True(TicketVerifier.TryVerify(fixture.Secret, shouted, FixedNow, out var claims));
+    Assert.Equal("", claims.User);
+    Assert.Equal("", claims.Document);
+  }
+
+  [Fact]
+  public void RejectsAPaddedSignatureSegment()
+  {
+    var fixture = LoadFixture();
+
+    Assert.False(TicketVerifier.TryVerify(fixture.Secret, fixture.Compatible + "=", FixedNow, out _));
+  }
+
+  [Fact]
+  public void RejectsTheStandardBase64AlphabetInTheSignature()
+  {
+    var fixture = LoadFixture();
+    var lastDot = fixture.Compatible.LastIndexOf('.');
+    var signature = fixture.Compatible[(lastDot + 1)..];
+    Assert.Contains('-', signature);
+    Assert.Contains('_', signature);
+    var standard = fixture.Compatible[..(lastDot + 1)] +
+        signature.Replace('-', '+').Replace('_', '/');
+
+    Assert.False(TicketVerifier.TryVerify(fixture.Secret, standard, FixedNow, out _));
+  }
+
+  [Fact]
+  public void RejectsAPayloadWithoutExp()
+  {
+    var fixture = LoadFixture();
+    var eternal = SignPayload(fixture.Secret, "{\"user\":\"u1\",\"doc\":\"doc-42\",\"write\":true}");
+
+    Assert.False(TicketVerifier.TryVerify(fixture.Secret, eternal, FixedNow, out _));
+  }
+
+  [Fact]
+  public void RejectsAnOverLongSignature()
+  {
+    var fixture = LoadFixture();
+    // Four more characters decode to three more bytes: a 35-byte "HMAC".
+    var overLong = fixture.Compatible + "AAAA";
+
+    Assert.False(TicketVerifier.TryVerify(fixture.Secret, overLong, FixedNow, out _));
+  }
+
+  [Fact]
   public void RejectsAnEmptyOrWrongSecret()
   {
     var fixture = LoadFixture();

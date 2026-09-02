@@ -139,7 +139,7 @@ public static class BlokServerServiceCollectionExtensions
     var effectiveOptions = provider.GetRequiredService<BlokServerOptions>();
     effectiveOptions.Validate();
 
-    if (!effectiveOptions.HasCollab)
+    if (!effectiveOptions.CollabEnabled)
     {
       throw new InvalidOperationException("Collaboration is disabled.");
     }

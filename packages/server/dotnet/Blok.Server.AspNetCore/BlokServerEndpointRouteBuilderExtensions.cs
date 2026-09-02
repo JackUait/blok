@@ -52,7 +52,7 @@ public static class BlokServerEndpointRouteBuilderExtensions
       }
     }
 
-    if (options.HasCollab)
+    if (options.CollabEnabled)
     {
       // Not behind Guard: the handshake is its own door (ticket rides in
       // the subprotocol offer). A live socket must outlast any request

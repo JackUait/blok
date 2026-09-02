@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 
-/** Must match the check at BlokServerOptions.cs:61, or the service refuses to start. */
+/** Must match the floor BlokServerOptions.Validate enforces, or the service refuses to start. */
 const MIN_SECRET_LENGTH = 32;
 const DEFAULT_TTL_SECONDS = 300;
 

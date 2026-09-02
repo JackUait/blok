@@ -122,9 +122,13 @@ internal sealed class SyncHandshake(
 
     if (options.Auth == "ticket")
     {
+      // A 101 echoing none of the offered protocols is failed by every
+      // browser before any close code is delivered: a plain refusal instead.
       if (subProtocol is null)
       {
-        return (new SyncRejected(null, SyncClose.ProtocolRequired), rateLimitKey);
+        return (new SyncRefused(
+            StatusCodes.Status400BadRequest,
+            "blok-sync.v1 must be offered in Sec-WebSocket-Protocol\n"), rateLimitKey);
       }
 
       var candidates = offers.Where(offer => offer != Protocol).ToArray();

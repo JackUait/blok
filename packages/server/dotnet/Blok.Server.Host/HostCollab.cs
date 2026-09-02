@@ -10,8 +10,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Blok.Server.Host;
 
 /// <summary>
-/// The host's side of --collab (plan decisions 17 and 19). Everything here
-/// is gated on the flag so a host without it composes exactly as before.
+/// The host's side of --collab (plan decisions 17 and 19). The shutdown
+/// timeout is set for every host; the rest is gated on the flag.
 /// </summary>
 internal static class HostCollab
 {
@@ -59,19 +59,8 @@ internal static class HostCollab
       return;
     }
 
-    // The accept context sets the same values per socket; these are the
-    // fallback for any accept that does not.
-    var webSockets = new WebSocketOptions
-    {
-      KeepAliveInterval = options.CollabKeepAliveInterval,
-    };
-
-    if (options.CollabKeepAliveInterval > TimeSpan.Zero)
-    {
-      webSockets.KeepAliveTimeout = options.CollabKeepAliveInterval * 2;
-    }
-
-    app.UseWebSockets(webSockets);
+    // The only accept in the process sets its own keep-alive per socket.
+    app.UseWebSockets();
   }
 }
 

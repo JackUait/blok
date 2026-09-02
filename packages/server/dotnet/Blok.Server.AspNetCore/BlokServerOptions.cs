@@ -103,8 +103,6 @@ public sealed class BlokServerOptions
 
   internal bool HasStorage => StorageDirectory != "" || S3Bucket != "";
 
-  internal bool HasCollab => CollabEnabled;
-
   internal string LocalPublicPath { get; private set; } = "";
 
   public void Validate()

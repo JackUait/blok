@@ -67,6 +67,26 @@ public sealed class SyncEndpointTests
     Assert.Contains(option, error.Message, StringComparison.Ordinal);
   }
 
+  [Theory]
+  [InlineData("Bearer doc-secret\n")]
+  [InlineData("Bearer doc-secret\r\n")]
+  [InlineData("Bearer\rdoc-secret")]
+  public void RejectsADocEndpointAuthWithALineBreak(string value)
+  {
+    // The usual cause is `echo` or a file feeding the environment variable;
+    // the client would silently send no Authorization header at all.
+    var options = new BlokServerOptions
+    {
+      CollabEnabled = true,
+      DocEndpoint = "https://app.example.com/api/blok-docs",
+      DocEndpointAuth = value,
+    };
+
+    var error = Assert.Throws<InvalidOperationException>(options.Validate);
+
+    Assert.Contains("trailing newline", error.Message, StringComparison.Ordinal);
+  }
+
   [Fact]
   public void DefaultsTheCollabLimitsToThePlannedValues()
   {

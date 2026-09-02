@@ -329,6 +329,13 @@ public sealed class BlokServerOptions
           $"--doc-endpoint must use HTTPS unless it targets loopback for local development (got \"{DocEndpoint}\")");
     }
 
+    if (DocEndpointAuth.AsSpan().IndexOfAny('\r', '\n') >= 0)
+    {
+      throw new InvalidOperationException(
+          "--doc-endpoint-auth must not contain a line break (a trailing newline from `echo` or a file is " +
+          "the usual cause): the header would be silently dropped from every doc-endpoint request");
+    }
+
     if (CollabS3Prefix != "" && S3Bucket == "")
     {
       throw new InvalidOperationException(

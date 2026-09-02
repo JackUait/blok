@@ -214,6 +214,13 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   /// <summary>When it answers non-null for a doc, that doc's WriteAsync throws it instead of storing.</summary>
   internal Func<string, Exception?>? FailWrites { get; set; }
 
+  /// <summary>
+  /// Runs after a reset has been stored and before ResetAsync honours its
+  /// token — the way a PUT can land and the awaiting task still throw for a
+  /// token that flipped meanwhile.
+  /// </summary>
+  internal Action? AfterReset { get; set; }
+
   internal void Seed(string docId, IReadOnlyList<byte[]> updates, CollabWorkingSetTag tag)
   {
     lock (guard)
@@ -307,6 +314,9 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     {
       documents[docId] = new StoredWorkingSet([], newTag);
     }
+
+    AfterReset?.Invoke();
+    cancellationToken.ThrowIfCancellationRequested();
   }
 
   private Entry Enter()

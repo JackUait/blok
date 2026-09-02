@@ -362,7 +362,15 @@ internal sealed class CollabRoom : IDisposable
               current.Format,
               current.Epoch + 1,
               CollabWorkingSetTag.NewLineage());
-          await store.ResetAsync(DocId, next, cancellationToken);
+
+          // The caller's token bounds the wait and the read, not the write:
+          // a store PUT can land and the awaiting task still throw for a
+          // token that flipped meanwhile, and a throw here would leave a
+          // Ready room at the old tag to write the old log back over the
+          // reset. Checked once, then the write runs under the room's own
+          // lifetime and the close follows regardless.
+          cancellationToken.ThrowIfCancellationRequested();
+          await store.ResetAsync(DocId, next, lifetime.Token);
           CloseLocked(CollabCloseReason.Reset);
 
           return next;

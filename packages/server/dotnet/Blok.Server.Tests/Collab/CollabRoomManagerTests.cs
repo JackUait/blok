@@ -482,6 +482,38 @@ public sealed class CollabRoomManagerTests
     Assert.Empty(store.FramesOf(DocId));
   }
 
+  /// <summary>
+  /// The reset endpoint hands the room the request's RequestAborted token.
+  /// A store PUT can land and the awaiting task still throw for that token;
+  /// if the throw leaves the lane before CloseLocked, the store holds the
+  /// reset while a Ready room at the old tag keeps its members and writes
+  /// the old log back on its next persist.
+  /// </summary>
+  [Fact]
+  public async Task ARequestAbortAfterTheStoreResetLandedStillClosesTheRoom()
+  {
+    endpoint.Holds(DocId, "old");
+    var manager = CreateManager();
+    var member = new FakeMember();
+    await manager.JoinAsync(DocId, member, CancellationToken.None);
+    using var request = new CancellationTokenSource();
+    store.AfterReset = () => request.Cancel();
+
+    try
+    {
+      await manager.ResetAsync(DocId, request.Token);
+    }
+    catch (OperationCanceledException)
+    {
+      // Either outcome is acceptable for the caller; the room must not stay open.
+    }
+
+    Assert.Equal(1, store.Resets);
+    Assert.Equal(1, store.Stored(DocId).Tag.Epoch);
+    Assert.Equal([CollabCloseReason.Reset], member.Closes);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
   [Fact]
   public async Task ResetAbandonsAnInFlightExportInsteadOfLettingItLandAfterwards()
   {

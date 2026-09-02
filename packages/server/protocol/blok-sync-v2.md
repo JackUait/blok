@@ -239,14 +239,23 @@ on it — when any of the following holds. What a peer then does with the
 connection is left to the implementation; the two dispositions this document
 does fix are the `1008` close in section 7 and the `4503` close in section 6.1.
 
+**Evaluation order is normative: a decoder checks these rules in ascending
+numeric order and reports the first one the frame violates.** One frame can
+break several rules — `{"lineage":…,"lineage" :…}` breaks both rule 8 and rule
+11 — so without a fixed order two conformant decoders would attribute the same
+bytes to different rules, and the `rule` field on every negative vector would
+mean nothing. Order matters only for *attribution*; the frame is malformed
+either way. A decoder that reports no rule at all is still conformant, but one
+that reports a rule MUST report the lowest-numbered one.
+
 **Framing**
 
 **Rule 1.** The outer type varuint is missing, truncated, longer than 10 bytes,
 or does not fit 64 bits.
 
 **Rule 2.** Any length prefix exceeds the bytes remaining in the message. The
-bounds check MUST happen **before** any allocation, so a 2 GiB length prefix on
-a 40-byte message allocates nothing.
+bounds check MUST happen **before** any allocation, so the 2 GiB update-length
+prefix on the 102-byte `operationHugeUpdateLength` vector allocates nothing.
 
 **Rule 3.** A section is missing entirely — in particular a type-102 message
 that ends after its metadata section.
@@ -453,7 +462,7 @@ hand-edited. Its `v2` object is:
 | `rejectionCodes` | The six stable codes of section 6, in order |
 | `rejectionCodePattern` | `^[a-z][a-z0-9-]{0,63}$` — read it from here rather than retyping it |
 | `frames` | Frames a decoder MUST accept |
-| `negative` | Frames a decoder MUST NOT accept as valid |
+| `negative` | Crafted frames, each carrying the outcome a decoder MUST produce for it |
 
 ### `v2.frames` entries
 
@@ -475,7 +484,7 @@ hand-edited. Its `v2` object is:
 | `name` | string | Stable identifier |
 | `messageType` | integer, optional | The outer type, when the frame reaches one. Absent on `outerVarUintTooLong`, which fails before any type is read |
 | `expect` | `"malformed"` \| `"unknown"` | The outcome a decoder MUST produce. `"unknown"` means accepted and ignored, not refused |
-| `rule` | integer, optional | The numbered section-5 decoder rule the frame violates. Absent when `expect` is `"unknown"`, which violates none |
+| `rule` | integer, optional | The **lowest-numbered** section-5 decoder rule the frame violates, per that section's evaluation order. Absent when `expect` is `"unknown"`, which violates none |
 | `description` | string | What is wrong, and why the case exists |
 | `frameHex` | hex string | The complete WebSocket message |
 | `metadataJson` | string, optional | The metadata text, when the section is valid UTF-8 |
@@ -483,7 +492,17 @@ hand-edited. Its `v2` object is:
 Every one of the twelve rules in section 5 has at least one negative vector, so
 a decoder can be exercised rule by rule rather than in aggregate. A decoder that
 refuses every negative vector is not yet conformant: it must refuse each one for
-the `rule` the entry names. Several vectors are crafted so
-that exactly one rule catches them — `operationWhitespaceDuplicateKey` and
-`rejectionEscapedCode` both parse to structurally valid metadata and are
-refused only by rules 8 and 7 respectively.
+the `rule` the entry names.
+
+`rule` is always the **lowest-numbered** rule the frame violates, per the
+evaluation order in section 5. Two vectors deliberately violate more than one:
+
+| Vector | Rules violated | `rule` |
+| --- | --- | --- |
+| `operationEscapedDuplicateKey` | 7, 11 | 7 |
+| `operationWhitespaceDuplicateKey` | 8, 11 | 8 |
+
+Both carry the key `lineage` twice, so a decoder that detects duplicates
+structurally sees rule 11 as well — which is correct, and is exactly why the
+order is normative rather than advisory. Every other vector violates exactly
+one rule.

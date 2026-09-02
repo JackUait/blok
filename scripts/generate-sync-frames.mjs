@@ -283,8 +283,10 @@ const LINEAGE = CONTROL.lineage;
 // One helper per shape so the metadata text is written ONCE per case:
 // `metadataJson` has to describe exactly the bytes in `frameHex`, and a second
 // copy of the same template literal is how those two drift apart. `rule` is the
-// numbered decoder rule in blok-sync-v2.md section 5 that the case violates, so
-// a codec test can assert the REASON a frame was refused, not just that it was.
+// LOWEST-numbered decoder rule in blok-sync-v2.md section 5 that the case
+// violates -- that section fixes ascending evaluation order, so a codec test can
+// assert the REASON a frame was refused, not just that it was. Two cases break a
+// second rule as well (7+11 and 8+11); the order is what makes them one answer.
 const badOperation = (name, rule, description, metadataJson, update = incrementalUpdate) => ({
   name,
   messageType: MESSAGE_BLOK_OPERATION,

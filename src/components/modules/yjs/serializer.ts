@@ -83,6 +83,20 @@ export const GRID_ORDER_KEY = '__rowKeys';
 const ROW_KEY_LENGTH = 10;
 
 /**
+ * Deepest value level read back from a block's `data`/`tunes`; anything
+ * nested further exports as `null`. A peer can write thousands of nested
+ * maps in one small update, and the readers run inside the observer during
+ * `Y.applyUpdate` — a stack overflow there ends every member's session.
+ *
+ * Levels count on the PLAIN shape, which the C# converter mirrors: a value
+ * directly inside `data` is level 1, each enclosing object or array adds one,
+ * a keyed grid is ONE level (its two wrapper maps do not exist in JSON), and
+ * an atomic leaf (primitive array included) is one value at its level.
+ * Matches the server update inspector's 256.
+ */
+export const MAX_VALUE_DEPTH = 256;
+
+/**
  * Type alias for OutputBlockData with concrete types for the Yjs serializer.
  * Uses Record<string, unknown> for data to avoid the default `any` type.
  */
@@ -184,30 +198,32 @@ export class YBlockSerializer {
   }
 
   /**
-   * Convert a Y.Map block to YjsOutputBlockData.
-   * Includes type validation to ensure data integrity.
+   * Whether a blocks-map value can be exported: a Y.Map whose `id` and `type`
+   * are strings and whose `data` is a Y.Map. Anything else is a foreign
+   * writer's shape and is skipped — never thrown on, since the readers run
+   * inside the observer. Shared by `yBlockToOutputData` and
+   * `DocumentStore.orderedIds`, so the id-only order and the export agree.
    */
-  public yBlockToOutputData(yblock: Y.Map<unknown>): YjsOutputBlockData {
-    const id = yblock.get('id');
-    const type = yblock.get('type');
-    const data = yblock.get('data');
+  public isWellFormedBlock(yblock: unknown): yblock is Y.Map<unknown> {
+    return yblock instanceof Y.Map &&
+      typeof yblock.get('id') === 'string' &&
+      typeof yblock.get('type') === 'string' &&
+      yblock.get('data') instanceof Y.Map;
+  }
 
-    if (typeof id !== 'string') {
-      throw new Error('Block id must be a string');
-    }
-
-    if (typeof type !== 'string') {
-      throw new Error('Block type must be a string');
-    }
-
-    if (!(data instanceof Y.Map)) {
-      throw new Error('Block data must be a Y.Map');
+  /**
+   * Convert a Y.Map block to YjsOutputBlockData, or null for a malformed one
+   * (see `isWellFormedBlock`).
+   */
+  public yBlockToOutputData(yblock: Y.Map<unknown>): YjsOutputBlockData | null {
+    if (!this.isWellFormedBlock(yblock)) {
+      return null;
     }
 
     const block: YjsOutputBlockData = {
-      id,
-      type,
-      data: this.yMapToObject(data),
+      id: yblock.get('id') as string,
+      type: yblock.get('type') as string,
+      data: this.yMapToObject(yblock.get('data') as Y.Map<unknown>),
     };
 
     const tunes = yblock.get('tunes');
@@ -343,12 +359,13 @@ export class YBlockSerializer {
   }
 
   /**
-   * Read a keyed grid wrapper back as a plain array of rows.
+   * Read a keyed grid wrapper back as a plain array of rows. The grid is one
+   * level (`depth`); its rows are the next.
    */
-  public gridMapToPlain(gridMap: Y.Map<unknown>): unknown[] {
+  public gridMapToPlain(gridMap: Y.Map<unknown>, depth = 0): unknown[] {
     const rows = gridMap.get(GRID_ROWS_KEY) as Y.Map<unknown>;
 
-    return this.gridRowKeys(gridMap).map((key) => this.yValueToPlain(rows.get(key)));
+    return this.gridRowKeys(gridMap).map((key) => this.yValueToPlain(rows.get(key), depth + 1));
   }
 
   /**
@@ -406,12 +423,12 @@ export class YBlockSerializer {
    * `objectToYMap` writes it into the doc — the C# converter mirroring this
    * file keeps it, and read-back must too or the two sides disagree.
    */
-  public yMapToObject(ymap: Y.Map<unknown>): Record<string, unknown> {
+  public yMapToObject(ymap: Y.Map<unknown>, depth = 0): Record<string, unknown> {
     const obj: Record<string, unknown> = {};
 
     ymap.forEach((value, key) => {
       Object.defineProperty(obj, key, {
-        value: this.yValueToPlain(value),
+        value: this.yValueToPlain(value, depth + 1),
         writable: true,
         enumerable: true,
         configurable: true,
@@ -426,18 +443,24 @@ export class YBlockSerializer {
    * grid IS a Y.Map, and reading it as an object would leak the row keys into
    * OutputData. Bare Y.Arrays of rows (a doc created before rows were keyed)
    * still read back through `yArrayToPlain`.
+   * @param depth - this value's level (see `MAX_VALUE_DEPTH`); past the cap
+   *   the value reads as null instead of recursing
    */
-  public yValueToPlain(value: unknown): unknown {
+  public yValueToPlain(value: unknown, depth = 0): unknown {
+    if (depth > MAX_VALUE_DEPTH) {
+      return null;
+    }
+
     if (this.isGridMap(value)) {
-      return this.gridMapToPlain(value);
+      return this.gridMapToPlain(value, depth);
     }
 
     if (value instanceof Y.Map) {
-      return this.yMapToObject(value);
+      return this.yMapToObject(value, depth);
     }
 
     if (value instanceof Y.Array) {
-      return this.yArrayToPlain(value);
+      return this.yArrayToPlain(value, depth);
     }
 
     // The v1 serializer never writes a Y.Text, but a foreign or
@@ -453,8 +476,8 @@ export class YBlockSerializer {
   /**
    * Convert Y.Array to a plain array, recursing into Y.Map/Y.Array elements.
    */
-  public yArrayToPlain(yarray: Y.Array<unknown>): unknown[] {
-    return yarray.toArray().map((element) => this.yValueToPlain(element));
+  public yArrayToPlain(yarray: Y.Array<unknown>, depth = 0): unknown[] {
+    return yarray.toArray().map((element) => this.yValueToPlain(element, depth + 1));
   }
 
   /**

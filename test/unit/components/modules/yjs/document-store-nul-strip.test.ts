@@ -86,7 +86,13 @@ describe('NUL strip — serializer chokepoints', () => {
 
     array.push([serializer.outputDataToYBlock(block)]);
 
-    return serializer.yBlockToOutputData(array.get(0) as Y.Map<unknown>);
+    const readBack = serializer.yBlockToOutputData(array.get(0) as Y.Map<unknown>);
+
+    if (readBack === null) {
+      throw new Error('expected a well-formed block');
+    }
+
+    return readBack;
   };
 
   it('strips NUL from a string data value (plainToYValue leaf)', () => {

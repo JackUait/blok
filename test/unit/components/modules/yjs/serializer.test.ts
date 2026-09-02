@@ -11,6 +11,17 @@ describe('YBlockSerializer', () => {
     serializer = new YBlockSerializer();
   });
 
+  /** First block of `yblocks`, which the test expects to be well-formed. */
+  const readBack = (yblocks: Y.Array<unknown>): NonNullable<ReturnType<YBlockSerializer['yBlockToOutputData']>> => {
+    const block = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+
+    if (block === null) {
+      throw new Error('expected a well-formed block');
+    }
+
+    return block;
+  };
+
   describe('outputDataToYBlock and yBlockToOutputData round-trip', () => {
     it('maintains data integrity through conversion cycle when using Y.Doc', () => {
       const yblocks = ydoc.getArray('test');
@@ -25,7 +36,7 @@ describe('YBlockSerializer', () => {
       const yblock = serializer.outputDataToYBlock(original);
       yblocks.push([yblock]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(converted).toEqual(original);
     });
@@ -45,7 +56,7 @@ describe('YBlockSerializer', () => {
       const yblock = serializer.outputDataToYBlock(original);
       yblocks.push([yblock]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(converted.data).toEqual(original.data);
     });
@@ -61,7 +72,7 @@ describe('YBlockSerializer', () => {
       });
 
       yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const data = readBack(yblocks);
 
       expect(data.tunes).toEqual({ alignment: 'center' });
     });
@@ -77,7 +88,7 @@ describe('YBlockSerializer', () => {
       });
 
       yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const data = readBack(yblocks);
 
       expect(data.parent).toBe('b0');
     });
@@ -93,7 +104,7 @@ describe('YBlockSerializer', () => {
       });
 
       yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const data = readBack(yblocks);
 
       expect(data.content).toEqual(['b2', 'b3']);
     });
@@ -108,7 +119,7 @@ describe('YBlockSerializer', () => {
       });
 
       yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const data = readBack(yblocks);
 
       expect(data.data).toEqual({ text: '' });
     });
@@ -123,12 +134,14 @@ describe('YBlockSerializer', () => {
       });
 
       yblocks.push([yblock]);
-      const data = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const data = readBack(yblocks);
 
       expect(data.data).toEqual({});
     });
 
-    it('throws when id is not a string', () => {
+    // A peer can write any shape; a throw here would end every member's
+    // session from inside the observer, so malformed blocks read as null.
+    it('returns null when id is not a string', () => {
       const yblocks = ydoc.getArray('test');
 
       const yblock = serializer.outputDataToYBlock({
@@ -140,12 +153,10 @@ describe('YBlockSerializer', () => {
       yblock.set('id', 123 as unknown as string);
       yblocks.push([yblock]);
 
-      expect(() =>
-        serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)
-      ).toThrow('Block id must be a string');
+      expect(serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)).toBeNull();
     });
 
-    it('throws when type is not a string', () => {
+    it('returns null when type is not a string', () => {
       const yblocks = ydoc.getArray('test');
 
       const yblock = serializer.outputDataToYBlock({
@@ -157,12 +168,10 @@ describe('YBlockSerializer', () => {
       yblock.set('type', 123 as unknown as string);
       yblocks.push([yblock]);
 
-      expect(() =>
-        serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)
-      ).toThrow('Block type must be a string');
+      expect(serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)).toBeNull();
     });
 
-    it('throws when data is not a Y.Map', () => {
+    it('returns null when data is not a Y.Map', () => {
       const yblocks = ydoc.getArray('test');
 
       const yblock = serializer.outputDataToYBlock({
@@ -174,9 +183,7 @@ describe('YBlockSerializer', () => {
       yblock.set('data', 'not a map' as unknown as Y.Map<unknown>);
       yblocks.push([yblock]);
 
-      expect(() =>
-        serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)
-      ).toThrow('Block data must be a Y.Map');
+      expect(serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>)).toBeNull();
     });
   });
 
@@ -228,7 +235,7 @@ describe('YBlockSerializer', () => {
       const yblock = serializer.outputDataToYBlock(blockData);
       yblocks.push([yblock]);
 
-      const output = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const output = readBack(yblocks);
 
       expect(output.lastEditedAt).toBe(1712880000000);
       expect(output.lastEditedBy).toBe('Jack Uait');
@@ -246,7 +253,7 @@ describe('YBlockSerializer', () => {
       const yblock = serializer.outputDataToYBlock(blockData);
       yblocks.push([yblock]);
 
-      const output = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const output = readBack(yblocks);
 
       expect(output.lastEditedAt).toBeUndefined();
       expect(output.lastEditedBy).toBeUndefined();
@@ -365,7 +372,7 @@ describe('YBlockSerializer', () => {
 
       yblocks.push([serializer.outputDataToYBlock(original)]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(converted).toEqual(original);
     });
@@ -405,7 +412,7 @@ describe('YBlockSerializer', () => {
 
       yblocks.push([serializer.outputDataToYBlock(original)]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(converted).toEqual(original);
     });
@@ -425,7 +432,7 @@ describe('YBlockSerializer', () => {
 
       yblocks.push([serializer.outputDataToYBlock(original)]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(converted).toEqual(original);
     });
@@ -507,7 +514,7 @@ describe('YBlockSerializer', () => {
 
       yblocks.push([serializer.outputDataToYBlock(original)]);
 
-      const converted = serializer.yBlockToOutputData(yblocks.get(0) as Y.Map<unknown>);
+      const converted = readBack(yblocks);
 
       expect(JSON.parse(JSON.stringify(converted))).toEqual(JSON.parse(JSON.stringify(original)));
     });

@@ -704,11 +704,8 @@ export class BlockYjsSync {
   private docOrderKnownToMemory(materializing?: ReadonlySet<string>): string[] {
     const inMemory = new Set(this.repository.blocks.map((block) => block.id));
 
-    return this.dependencies.YjsManager.toJSON()
-      .map((yjsBlock) => yjsBlock.id)
-      .filter((id): id is string => (
-        id !== undefined && (inMemory.has(id) || materializing?.has(id) === true)
-      ));
+    return this.dependencies.YjsManager.orderedIds()
+      .filter((id) => inMemory.has(id) || materializing?.has(id) === true);
   }
 
   /**
@@ -1148,7 +1145,7 @@ export class BlockYjsSync {
       return;
     }
 
-    if (this.blocksStore.length > 0 || this.dependencies.YjsManager.toJSON().length > 0) {
+    if (this.blocksStore.length > 0 || this.dependencies.YjsManager.orderedIds().length > 0) {
       return;
     }
 

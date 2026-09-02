@@ -67,27 +67,34 @@ const createMockBlock = (options: {
  * Note: YjsManager has many properties; this mock provides only the methods used by tests.
  * Using unknown assertion to satisfy TypeScript for missing internal properties.
  */
-const createMockYjsManager = (): YjsManager => ({
-  addBlock: vi.fn(),
-  removeBlock: vi.fn(),
-  moveBlock: vi.fn(),
-  updateBlockData: vi.fn(),
-  updateBlockTune: vi.fn(),
-  stopCapturing: vi.fn(),
-  transact: vi.fn((fn: () => void) => fn()),
-  transactWithoutCapture: vi.fn((fn: () => void) => fn()),
-  toJSON: vi.fn(() => []),
-  getBlockById: vi.fn(() => undefined),
-  onBlocksChanged: vi.fn(() => vi.fn()),
-  fromJSON: vi.fn(),
-  yMapToObject: vi.fn((yMap: YMap<unknown>) => {
-    const obj: Record<string, unknown> = {};
-    yMap.forEach((value, key) => {
-      obj[key] = value;
-    });
-    return obj;
-  }),
-} as unknown as YjsManager);
+const createMockYjsManager = (): YjsManager => {
+  const toJSON = vi.fn((): Array<{ id?: string }> => []);
+
+  return {
+    addBlock: vi.fn(),
+    removeBlock: vi.fn(),
+    moveBlock: vi.fn(),
+    updateBlockData: vi.fn(),
+    updateBlockTune: vi.fn(),
+    stopCapturing: vi.fn(),
+    transact: vi.fn((fn: () => void) => fn()),
+    transactWithoutCapture: vi.fn((fn: () => void) => fn()),
+    toJSON,
+    // The reconciler reads order through orderedIds(); tests drive it via toJSON.
+    orderedIds: vi.fn((): string[] =>
+      toJSON().map((block) => block.id).filter((id): id is string => typeof id === 'string')),
+    getBlockById: vi.fn(() => undefined),
+    onBlocksChanged: vi.fn(() => vi.fn()),
+    fromJSON: vi.fn(),
+    yMapToObject: vi.fn((yMap: YMap<unknown>) => {
+      const obj: Record<string, unknown> = {};
+      yMap.forEach((value, key) => {
+        obj[key] = value;
+      });
+      return obj;
+    }),
+  } as unknown as YjsManager;
+};
 
 /**
  * Helper to access mock methods on YjsManager

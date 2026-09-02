@@ -260,6 +260,16 @@ export class YjsManager extends Module {
   }
 
   /**
+   * The ids `toJSON` would emit, in order, without serializing block data.
+   * Same barrier as `toJSON` so the reconciler keeps its flush timing.
+   */
+  public orderedIds(): string[] {
+    this.flushPendingBlockWrites();
+
+    return this.documentStore.orderedIds();
+  }
+
+  /**
    * Add a new block.
    * @param blockData - Block data to add
    * @param index - Optional index to insert at

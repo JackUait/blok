@@ -3,6 +3,9 @@ import * as Y from 'yjs';
 
 import { GRID_ORDER_KEY, GRID_ROWS_KEY, stripNul, stripNulDeep, type YBlockSerializer, type YjsOutputBlockData, stripNulIfString } from './serializer';
 import { LOCAL_ORIGIN_TAGS, type AwarenessChange, type BlockPlacement, type LocalOriginTag, type UndoScopeType } from './types';
+// The narrow module, not the utils barrel: the collab fixture generator
+// bundles this file for node.
+import { logLabeled } from '../../utils/logger';
 import { equals } from '../../utils/object';
 
 // Re-export YjsOutputBlockData as DocumentStoreBlockData for consistency
@@ -137,10 +140,29 @@ export class DocumentStore {
   public toJSON(): DocumentStoreBlockData[] {
     const hierarchy = this.hierarchyView();
 
-    return this.deriveOrderedIds(hierarchy)
-      .map((id) => this.yBlocksMap.get(id))
-      .filter((yblock): yblock is Y.Map<unknown> => yblock instanceof Y.Map)
-      .map((yblock) => this.projectHierarchy(this.serializer.yBlockToOutputData(yblock), hierarchy));
+    return this.deriveOrderedIds(hierarchy).flatMap((id) => {
+      const yblock = this.yBlocksMap.get(id);
+      const block = yblock instanceof Y.Map ? this.serializer.yBlockToOutputData(yblock) : null;
+
+      // A peer can write any shape; the readers run inside the observer, so a
+      // malformed block is skipped (order slot included), never thrown on.
+      if (block === null) {
+        logLabeled(`Block «${id}» is malformed (id/type must be strings, data a map) and was skipped`, 'warn');
+
+        return [];
+      }
+
+      return [this.projectHierarchy(block, hierarchy)];
+    });
+  }
+
+  /**
+   * The ids `toJSON` would emit, in the same order, without serializing any
+   * block data. For readers that run per remote event and need only the
+   * order. Silent about malformed blocks — `toJSON` owns the warning.
+   */
+  public orderedIds(): string[] {
+    return this.deriveOrderedIds().filter((id) => this.serializer.isWellFormedBlock(this.yBlocksMap.get(id)));
   }
 
   /**
@@ -781,10 +803,17 @@ export class DocumentStore {
       return false;
     }
 
+    const ydata = yblock.get('data');
+
+    // A peer may have written a non-map `data`; such a block is unreadable and
+    // never materialised, so there is nothing to update.
+    if (!(ydata instanceof Y.Map)) {
+      return false;
+    }
+
     // Scrub the data KEY once — a NUL key aborts the .NET server's yrs read.
     const dataKey = stripNul(key);
-    const ydata = yblock.get('data') as Y.Map<unknown>;
-    const currentValue = ydata.get(dataKey);
+    const currentValue: unknown = ydata.get(dataKey);
 
     const valueIsPlainObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -1321,9 +1350,11 @@ export class DocumentStore {
    * @returns The tunes Y.Map
    */
   private getOrCreateTunesMap(yblock: Y.Map<unknown>): Y.Map<unknown> {
-    const existing = yblock.get('tunes') as Y.Map<unknown> | undefined;
+    const existing = yblock.get('tunes');
 
-    if (existing !== undefined) {
+    // A peer may have written a non-map `tunes`; the local tune write
+    // replaces it, the same way an absent one is created.
+    if (existing instanceof Y.Map) {
       return existing;
     }
 

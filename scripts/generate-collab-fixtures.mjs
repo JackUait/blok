@@ -405,6 +405,47 @@ const CASES = [
       [],
     ],
   },
+  {
+    name: 'malformed-doc-blocks',
+    // Shapes only a foreign writer can put in the doc; both readers must stay
+    // total on them. Levels count on the PLAIN shape: a value directly inside
+    // data is level 1, each enclosing object or array adds one, a keyed grid
+    // is one level.
+    description: 'doc-only: a block whose id or type is not a string, or whose data is not a map, is skipped on export (its order slot with it); a value nested past 256 levels exports as null',
+    input: [
+      paragraph('keeper-1', 'first kept'),
+      { id: 'deep', type: 'widget', data: {} },
+      paragraph('keeper-2', 'last kept'),
+    ],
+    mutate(store) {
+      const raw = (fields) => {
+        const map = new Y.Map();
+
+        for (const [key, value] of Object.entries(fields)) {
+          map.set(key, value);
+        }
+
+        return map;
+      };
+
+      store.blocksMap.set('string-data', raw({ id: 'string-data', type: 'paragraph', data: 'junk', contentIds: new Y.Array() }));
+      store.blocksMap.set('numeric-id', raw({ id: 42, type: 'paragraph', data: new Y.Map(), contentIds: new Y.Array() }));
+      store.blocksMap.set('numeric-type', raw({ id: 'numeric-type', type: 7, data: new Y.Map(), contentIds: new Y.Array() }));
+      store.rootOrder.insert(1, ['string-data', 'numeric-id', 'numeric-type']);
+
+      // One integrated map per step, so yjs itself never recurses.
+      let current = store.getBlockById('deep').get('data');
+
+      for (let level = 0; level < 300; level++) {
+        const next = new Y.Map();
+
+        current.set('n', next);
+        current = next;
+      }
+
+      current.set('leaf', 'past the cap');
+    },
+  },
 ];
 
 const deepEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);

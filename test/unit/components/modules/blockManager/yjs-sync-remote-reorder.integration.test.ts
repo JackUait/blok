@@ -103,6 +103,7 @@ describe('BlockYjsSync — remote contentIds-only reorder (integration)', () => 
     const yjsManagerFacade = {
       onBlocksChanged: observer.onBlocksChanged.bind(observer),
       toJSON: (): ReturnType<DocumentStore['toJSON']> => store.toJSON(),
+      orderedIds: (): string[] => store.orderedIds(),
       getBlockById: (id: string): Y.Map<unknown> | undefined => store.getBlockById(id),
       yMapToObject: (ymap: Y.Map<unknown>): Record<string, unknown> => serializer.yMapToObject(ymap),
     } as unknown as YjsManager;

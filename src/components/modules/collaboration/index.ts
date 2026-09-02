@@ -354,6 +354,13 @@ export class Collaboration extends Module {
     this.lastKnown = lastKnown;
     this.setStateAttribute('connecting');
 
+    // Whatever the cache setting: a dying tab has to land the write buffer on
+    // the wire, and the cache is opt-in.
+    this.flushOnPageHide = (): void => {
+      this.Blok.YjsManager.flushPendingBlockWrites();
+    };
+    window.addEventListener('pagehide', this.flushOnPageHide);
+
     // Before subscribing: `onAwarenessChange` throws until awareness exists.
     // Collab-gated, so "absent = zero cost" still holds.
     this.Blok.YjsManager.enableAwareness();
@@ -439,11 +446,6 @@ export class Collaboration extends Module {
       void cache.append(update);
     });
 
-    this.flushOnPageHide = (): void => {
-      this.Blok.YjsManager.flushPendingBlockWrites();
-    };
-    window.addEventListener('pagehide', this.flushOnPageHide);
-
     if (contents === null) {
       return undefined;
     }
@@ -468,23 +470,24 @@ export class Collaboration extends Module {
    * and a live awareness to clear.
    */
   public destroy(): void {
+    if (this.settings === null) {
+      return;
+    }
+
     // Presence first: awareness prunes a vanished peer only after 30 seconds,
     // so the outlines and the stack have to come down now, not then.
     this.presence?.stop();
     this.presence = null;
     this.awarenessUnhook?.();
     this.awarenessUnhook = null;
+
+    // BEFORE the provider comes down: the coalescing write buffer may still
+    // hold the last thing typed, and YjsManager.destroy — which flushes it —
+    // runs AFTER this module, once nothing listens for the wire or the cache.
+    this.Blok.YjsManager.flushPendingBlockWrites();
+
     this.provider?.destroy();
     this.provider = null;
-
-    // Before the tap comes off: the coalescing write buffer may still hold
-    // the last thing typed, and YjsManager.destroy — which flushes it — runs
-    // AFTER this module. `pagehide` covers a dying tab; this covers an editor
-    // torn down while the page lives on.
-    if (this.cache !== null) {
-      this.Blok.YjsManager.flushPendingBlockWrites();
-    }
-
     this.cacheUnhook?.();
     this.cacheUnhook = null;
 

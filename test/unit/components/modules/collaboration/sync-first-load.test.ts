@@ -14,7 +14,7 @@ import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
 import { createOfflineCache } from '../../../../../src/components/modules/collaboration/offline-cache';
-import { encode } from '../../../../../src/components/modules/collaboration/sync-wire';
+import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
 import type { SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
@@ -314,6 +314,31 @@ const firstSync = (harness: Harness, blocks: OutputBlockData[]): MockSocket => {
 
 const collabAttr = (core: Core): string | null =>
   core.moduleInstances.UI.nodes.wrapper.getAttribute('data-blok-collab');
+
+/**
+ * What the server would hold: `base` plus every update frame the client wrote.
+ * @param socket - the client's transport
+ * @param base - the document as it stood before the writes under test
+ */
+const firstBlockTextOnTheWire = (socket: MockSocket, base: Uint8Array): string | undefined => {
+  const replay = new DocumentStore(new YBlockSerializer());
+
+  replay.applyRemoteUpdate(base);
+
+  for (const bytes of socket.sent) {
+    const frame = decode(bytes);
+
+    if (frame.type === 'update') {
+      replay.applyRemoteUpdate(frame.update);
+    }
+  }
+
+  const text = (replay.toJSON()[0]?.data as { text?: string } | undefined)?.text;
+
+  replay.destroy();
+
+  return text;
+};
 
 const blockTexts = (core: Core): string[] =>
   core.moduleInstances.BlockManager.blocks.map((block) => block.holder.textContent ?? '');
@@ -1213,6 +1238,58 @@ describe('collaboration — sync-first load', () => {
       await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editable after the first sync');
 
       expect(collabAttr(harness.core)).toBe('connected');
+    });
+  });
+
+  // The coalescing write buffer holds the last ~400ms of typing. Whatever ends
+  // the session — a host unmounting the editor, the tab closing — that buffer
+  // has to reach the WIRE, not just the local document, and the offline cache
+  // is opt-in so its flush cannot be the only one.
+  describe('the write buffer reaches the wire', () => {
+    /** Two writes: the first lands on the leading edge, the second stays pending. */
+    const enqueueLeadingAndTrailing = (harness: Harness): Uint8Array => {
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const base = yjs.encodeStateAsUpdate();
+      const flush = (entries: ReadonlyMap<string, unknown>): boolean => {
+        let wrote = false;
+
+        for (const [key, value] of entries) {
+          wrote = yjs.updateBlockData('b1', key, value) || wrote;
+        }
+
+        return wrote;
+      };
+
+      yjs.enqueueBlockDataWrite('b1', { text: 'leading' }, flush);
+      yjs.enqueueBlockDataWrite('b1', { text: 'trailing' }, flush);
+
+      return base;
+    };
+
+    it('ships the pending write when the editor is destroyed, without the offline cache', async () => {
+      const harness = await boot();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      const base = enqueueLeadingAndTrailing(harness);
+
+      destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
+
+      expect(firstBlockTextOnTheWire(socket, base)).toBe('trailing');
+    });
+
+    it('ships the pending write on pagehide, without the offline cache', async () => {
+      const harness = await boot();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      const base = enqueueLeadingAndTrailing(harness);
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(firstBlockTextOnTheWire(socket, base)).toBe('trailing');
     });
   });
 

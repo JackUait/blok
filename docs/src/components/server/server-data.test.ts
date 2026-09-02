@@ -188,6 +188,22 @@ describe('server docs data', () => {
     expect(prose).toMatch(/refus/i);
   });
 
+  // In-process only: with collaboration on, no passes and no document check,
+  // MapBlokServer logs one warning naming the three sync routes. The standalone
+  // host validates none mode as loopback-only and never shows it.
+  it('explains the warning when nothing guards the sync routes in-process', () => {
+    const modes = serverPaths.find((p) => p.id === 'dotnet')?.failureModes ?? [];
+    const prose = modes.map((m) => `${m.symptom} ${m.cause} ${m.fix}`).join('\n');
+
+    expect(prose).toMatch(/open to anyone/i);
+    expect(prose).toMatch(/three routes/i);
+    expect(prose).toMatch(/reset/);
+    expect(prose).toMatch(/edit/);
+    expect(prose).toMatch(/RequireAuthorization\(\)/);
+    // The description pin bans the type name from prose; the sample carries it.
+    expect(prose).not.toContain('IBlokAuthorization');
+  });
+
   it('passes WebSocket upgrades through the forwarding route', () => {
     const route = serverPaths.find((p) => p.id === 'own-server')?.appRoute[0]?.code ?? '';
 
@@ -446,6 +462,10 @@ describe('server docs data', () => {
 
     expect(body).toContain('BLOK_DOC_ENDPOINT_AUTH');
     expect(body).toMatch(/verbatim/i);
+    // A CR or LF in the value refuses to start, because a header carrying one
+    // would be dropped from every doc-endpoint call with nothing to see.
+    expect(body).toMatch(/single line/i);
+    expect(body).toMatch(/carriage return|newline|line break/i);
   });
 
   // The seed call treats null as "nothing saved yet" and anything non-2xx as a

@@ -198,6 +198,12 @@ new Blok({
         fix: 'Use a safe public URL, keep remote S3 endpoints on HTTPS, lower the buffered-upload limit when required, and bind an IP address, localhost or an explicit wildcard.',
       },
       {
+        symptom: 'The log warns at startup that the collaboration routes are open to anyone who can reach the app.',
+        cause:
+          'Collaboration is on, the service is not using passes, and no document check is registered, so nothing decides who may open which document. The warning names the three routes it covers: the sync connection, its reset and its edit.',
+        fix: 'Register the document check shown above, or switch the service to passes. It is written once, at registration, and cannot see your policy, so a mapped group that already carries RequireAuthorization() gets the warning too — the sentence says as much itself.',
+      },
+      {
         symptom: 'Opening a document for live collaboration fails at once with a message about WebSockets.',
         cause:
           'The app never called UseWebSockets(), so the long-lived connection collaboration needs cannot be opened. The service refuses with a message naming the missing call rather than letting the editor time out.',
@@ -517,7 +523,7 @@ export const serverLimits: ServerLimit[] = [
   {
     id: 'doc-endpoint-auth',
     title: 'Your document endpoint keeps its own login check',
-    body: 'The service calls your document endpoint twice over: it loads a document the first time someone opens it, and it writes changes back while people edit. If that endpoint requires login — and it should — put the header value it already expects into the BLOK_DOC_ENDPOINT_AUTH environment variable, Bearer and all. The service sends it verbatim on every call. Your route, your auth scheme, nothing new to build.',
+    body: 'The service calls your document endpoint twice over: it loads a document the first time someone opens it, and it writes changes back while people edit. If that endpoint requires login — and it should — put the header value it already expects into the BLOK_DOC_ENDPOINT_AUTH environment variable, Bearer and all. The service sends it verbatim on every call. Your route, your auth scheme, nothing new to build. One rule on the value: it must be a single line. A carriage return or newline in it stops the service from starting and says so — a trailing newline from `echo` or from a file is the usual cause — because a header carrying one would be dropped from every call with nothing to see anywhere. The same value can be passed as --doc-endpoint-auth instead, but the service warns against that: a flag puts the credential in the machine’s process list.',
   },
   {
     id: 'collab-new-documents',

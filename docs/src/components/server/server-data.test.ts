@@ -542,7 +542,7 @@ describe('server docs data', () => {
   // Kestrel's default is unlimited; the host pins 1,024 only with --collab on,
   // and only in the standalone host. It sits right after the per-person cap so
   // "no cap at all" on the proxy path is not read as "no ceiling either".
-  it('states the per-process ceiling on live connections, and leaves the in-app number to Kestrel', () => {
+  it('states the per-process ceiling on live connections, and names the in-app knob with Kestrel underneath', () => {
     const limits = serverLimits.map((l) => l.id);
     const body = serverLimits.find((l) => l.id === 'collab-connection-ceiling')?.body ?? '';
 

@@ -202,7 +202,7 @@ export class DocumentStore {
     const state = new Map<string, 'visiting' | 'done'>();
 
     for (const id of this.yBlocksMap.keys()) {
-      this.markParentChain(id, [], state, broken);
+      this.markParentChain(id, state, broken);
     }
 
     return broken;
@@ -212,41 +212,42 @@ export class DocumentStore {
    * Colour one parentId chain: 'visiting' while it is on the current path,
    * 'done' once its top (root, dangling parent, or a cycle) is known. Meeting
    * a 'visiting' node closes a loop, and everything from that node onward on
-   * the path IS the cycle.
-   * @param id - block whose chain to follow
-   * @param path - ids currently on the walk, innermost last
+   * the path IS the cycle. Iterative: a peer can write a chain deeper than
+   * the stack, and this runs inside the observer.
+   * @param start - block whose chain to follow
    * @param state - per-block colour, shared across the whole sweep
    * @param broken - collects the members that lose their parent link
    */
   private markParentChain(
-    id: string,
-    path: string[],
+    start: string,
     state: Map<string, 'visiting' | 'done'>,
     broken: Set<string>
   ): void {
-    const colour = state.get(id);
+    const path: string[] = [];
+    const cursor: { id: string | null } = { id: start };
 
-    if (colour === 'visiting') {
-      this.breakCycle(path.slice(path.indexOf(id)), broken);
+    while (cursor.id !== null) {
+      const id = cursor.id;
+      const colour = state.get(id);
 
-      return;
+      if (colour === 'visiting') {
+        // Only this walk's own path is 'visiting', so the node is on it.
+        this.breakCycle(path.slice(path.indexOf(id)), broken);
+        break;
+      }
+
+      if (colour === 'done' || !this.yBlocksMap.has(id)) {
+        break;
+      }
+
+      state.set(id, 'visiting');
+      path.push(id);
+      cursor.id = this.rawParentId(id);
     }
 
-    if (colour === 'done' || !this.yBlocksMap.has(id)) {
-      return;
+    for (const member of path) {
+      state.set(member, 'done');
     }
-
-    state.set(id, 'visiting');
-    path.push(id);
-
-    const parentId = this.rawParentId(id);
-
-    if (parentId !== null) {
-      this.markParentChain(parentId, path, state, broken);
-    }
-
-    path.pop();
-    state.set(id, 'done');
   }
 
   /**
@@ -368,10 +369,13 @@ export class DocumentStore {
   }
 
   /**
-   * DFS step: emit the id (first occurrence only, only when a map entry
+   * DFS from one id: emit it (first occurrence only, only when a map entry
    * exists, and only when its effective parent is the one whose order array
    * we are walking), then descend into its contentIds. The seen-set makes
-   * cycles terminate.
+   * cycles terminate. Iterative with an explicit stack — a peer can nest
+   * content deeper than the call stack, and this runs inside the observer.
+   * Children are pushed in reverse and checked when popped, so the emitted
+   * order and the duplicate handling match a recursive pre-order walk.
    */
   private visitBlock(
     id: unknown,
@@ -380,31 +384,35 @@ export class DocumentStore {
     seen: Set<string>,
     ordered: string[]
   ): void {
-    if (typeof id !== 'string' || seen.has(id)) {
-      return;
-    }
+    const stack: Array<{ id: unknown; parentId: string | null }> = [{ id, parentId: expectedParentId }];
 
-    const yblock = this.yBlocksMap.get(id);
+    while (stack.length > 0) {
+      const next = stack.pop();
 
-    if (!(yblock instanceof Y.Map)) {
-      return;
-    }
+      if (next === undefined || typeof next.id !== 'string' || seen.has(next.id)) {
+        continue;
+      }
 
-    if ((hierarchy.get(id) ?? null) !== expectedParentId) {
-      return;
-    }
+      const yblock = this.yBlocksMap.get(next.id);
 
-    seen.add(id);
-    ordered.push(id);
+      if (!(yblock instanceof Y.Map) || (hierarchy.get(next.id) ?? null) !== next.parentId) {
+        continue;
+      }
 
-    const contentIds = yblock.get('contentIds');
+      seen.add(next.id);
+      ordered.push(next.id);
 
-    if (!(contentIds instanceof Y.Array)) {
-      return;
-    }
+      const contentIds = yblock.get('contentIds');
 
-    for (const childId of contentIds.toArray()) {
-      this.visitBlock(childId, id, hierarchy, seen, ordered);
+      if (!(contentIds instanceof Y.Array)) {
+        continue;
+      }
+
+      const children: unknown[] = contentIds.toArray();
+
+      for (const childId of children.slice().reverse()) {
+        stack.push({ id: childId, parentId: next.id });
+      }
     }
   }
 
@@ -618,16 +626,22 @@ export class DocumentStore {
    * revisits a node — a pre-existing cycle disqualifies the reparent too.
    * Mirrors `BlockHierarchy.wouldFormCycle` against the doc instead of memory.
    */
-  private wouldFormCycle(id: string, targetParentId: string, visited = new Set<string>()): boolean {
-    if (targetParentId === id || visited.has(targetParentId)) {
-      return true;
+  private wouldFormCycle(id: string, targetParentId: string): boolean {
+    const visited = new Set<string>();
+    const cursor: { id: string | null } = { id: targetParentId };
+
+    // A loop, not recursion: this is the local drag path, and the chain can
+    // be as deep as a peer made it.
+    while (cursor.id !== null) {
+      if (cursor.id === id || visited.has(cursor.id)) {
+        return true;
+      }
+
+      visited.add(cursor.id);
+      cursor.id = this.rawParentId(cursor.id);
     }
 
-    visited.add(targetParentId);
-
-    const nextParentId = this.rawParentId(targetParentId);
-
-    return nextParentId !== null && this.wouldFormCycle(id, nextParentId, visited);
+    return false;
   }
 
   /**

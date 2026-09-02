@@ -5,6 +5,7 @@
  * how often, and how it learns which awareness client id is its own. The DOM
  * half lives in presence-renderer.test.ts.
  */
+import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -20,6 +21,8 @@ import {
 } from '../../../../../src/components/modules/collaboration/presence';
 import type { CaretPosition } from '../../../../../src/components/modules/collaboration/caret-position';
 import type { PresenceRenderer } from '../../../../../src/components/modules/collaboration/presence-renderer';
+import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
+import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 import type { AwarenessChange } from '../../../../../src/components/modules/yjs/types';
 
 /**
@@ -284,6 +287,25 @@ const at = (blockId: string, head: number, anchor = head): CaretPosition => ({
 /** A caret move the browser would report. */
 const moveCaret = (target: EventTarget): void => {
   target.dispatchEvent(new Event('selectionchange'));
+};
+
+/**
+ * One awareness frame naming `clientId` at `clock`, encoded the way
+ * y-protocols reads it — what any pass-holder can put on the wire, since the
+ * server relays awareness after reading only the client count.
+ * @param clientId - the client whose state the frame claims to carry
+ * @param clock - a clock high enough to beat the genuine one
+ * @param state - the state the frame plants
+ */
+const forgedAwarenessFrame = (clientId: number, clock: number, state: Record<string, unknown>): Uint8Array => {
+  const encoder = encoding.createEncoder();
+
+  encoding.writeVarUint(encoder, 1);
+  encoding.writeVarUint(encoder, clientId);
+  encoding.writeVarUint(encoder, clock);
+  encoding.writeVarString(encoder, JSON.stringify(state));
+
+  return encoding.toUint8Array(encoder);
 };
 
 describe('presence — local awareness upkeep', () => {
@@ -761,6 +783,81 @@ describe('presence — local awareness upkeep', () => {
       moveCaret(target);
 
       expect(seam.localState().blockId).toBe('block-2');
+    });
+  });
+
+  /**
+   * y-protocols guards only the REMOVAL of the local state against remote
+   * frames. A frame naming this client's id with a higher clock replaces the
+   * local state outright, and every later local write spreads that state back
+   * onto the wire under this client's real id. Real stores here, not the fake:
+   * the overwrite is y-protocols' own behaviour.
+   */
+  describe('a peer overwriting the local state', () => {
+    const stores: DocumentStore[] = [];
+
+    const realStore = (): DocumentStore => {
+      const store = new DocumentStore(new YBlockSerializer());
+
+      store.enableAwareness();
+      stores.push(store);
+
+      return store;
+    };
+
+    afterEach(() => {
+      stores.splice(0).forEach((store) => store.destroy());
+    });
+
+    it('republishes the configured identity, block and caret, and wins on the wire', () => {
+      const victim = realStore();
+      const observer = realStore();
+      const presence = createPresence({
+        yjs: victim,
+        user: { name: 'Ada', color: '#0b6e99' },
+        currentBlockId: () => 'block-1',
+        currentCaret: () => at('block-1', 4),
+        eventTarget: new EventTarget(),
+      });
+
+      started.push(presence);
+      presence.start();
+
+      const victimId = presence.localClientId;
+
+      if (victimId === null) {
+        throw new Error('the local client id was never latched');
+      }
+
+      observer.applyAwarenessUpdate(victim.encodeAwarenessUpdate([victimId]), 'remote');
+
+      const forged = forgedAwarenessFrame(victimId, 1000, {
+        user: { name: 'HOSTILE', color: '#000000' },
+        blockId: 'block-9',
+        caret: null,
+      });
+
+      // The attack lands on every peer first — that is the whole reason the
+      // republish has to be louder than the forgery.
+      observer.applyAwarenessUpdate(forged, 'remote');
+
+      expect(observer.getAwarenessStates().get(victimId)).toMatchObject({ user: { name: 'HOSTILE' } });
+
+      victim.applyAwarenessUpdate(forged, 'remote');
+
+      expect(victim.getAwarenessStates().get(victimId)).toMatchObject({
+        user: { name: 'Ada', color: '#0b6e99' },
+        blockId: 'block-1',
+        caret: { blockId: 'block-1', head: 4 },
+      });
+
+      observer.applyAwarenessUpdate(victim.encodeAwarenessUpdate([victimId]), 'remote');
+
+      expect(observer.getAwarenessStates().get(victimId)).toMatchObject({
+        user: { name: 'Ada', color: '#0b6e99' },
+        blockId: 'block-1',
+        caret: { blockId: 'block-1', head: 4 },
+      });
     });
   });
 });

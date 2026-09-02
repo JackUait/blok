@@ -325,6 +325,24 @@ export const createPresence = (options: PresenceOptions): Presence => {
   };
 
   /**
+   * Put this client's own state back after a remote frame replaced it.
+   *
+   * y-protocols guards only the REMOVAL of the local state against remote
+   * frames: one naming this client's id with a higher clock replaces the state
+   * outright, and every later local write spreads that state back onto the
+   * wire under this client's real id. Republishing every field bumps the clock
+   * past the forgery, so peers take the genuine state again. The dedupe keys
+   * are cleared first, or the unchanged block and caret would be skipped.
+   */
+  const restoreLocalState = (): void => {
+    state.publishedBlockId = undefined;
+    state.publishedCaret = undefined;
+    publishBlockId();
+    publishCaret();
+    publishUser();
+  };
+
+  /**
    * Repaint whenever a change touched anyone else.
    *
    * The remote test cannot be "origin !== 'local'": a disconnect clears every
@@ -337,6 +355,8 @@ export const createPresence = (options: PresenceOptions): Presence => {
   const onAwarenessChange = (changes: AwarenessChange, origin: unknown): void => {
     if (origin === 'local') {
       latchLocalClientId(changes);
+    } else if (state.localClientId !== null && [...changes.added, ...changes.updated].includes(state.localClientId)) {
+      restoreLocalState();
     }
 
     const touchedSomeoneElse = [...changes.added, ...changes.updated, ...changes.removed]

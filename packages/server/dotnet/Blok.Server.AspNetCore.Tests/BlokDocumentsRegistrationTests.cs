@@ -1,6 +1,7 @@
 using Blok.Server.Documents;
 using Blok.Server.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Blok.Server.AspNetCore.Tests;
@@ -46,6 +47,92 @@ public sealed class BlokDocumentsRegistrationTests
     Assert.Same(
         provider.GetRequiredService<IBlokDocumentConverter>(),
         provider.GetRequiredService<IBlokDocumentConverter>());
+  }
+
+  /// <summary>
+  /// Building the converter parses the embedded bundle into every engine of its
+  /// pool and costs about a second. Registered as a plain singleton that is a
+  /// cost the first request after a deploy pays; warming up moves it to
+  /// startup, where nobody is waiting on it.
+  /// </summary>
+  [Fact]
+  public async Task BuildsTheConverterAtStartupInsteadOfOnTheFirstRequest()
+  {
+    var services = new ServiceCollection();
+    var built = false;
+
+    // Registered first so `TryAddSingleton` inside AddBlokDocuments stands down
+    // and the warm-up resolves this one — which is how the resolve is observed
+    // without the real pool's second of work.
+    services.AddSingleton<IBlokDocumentConverter>(_ =>
+    {
+      built = true;
+
+      return new StubConverter();
+    });
+    services.AddBlokDocuments();
+
+    using var provider = services.BuildServiceProvider();
+    Assert.False(built);
+
+    foreach (var service in provider.GetServices<IHostedService>())
+    {
+      await service.StartAsync(CancellationToken.None);
+    }
+
+    Assert.True(built);
+  }
+
+  [Fact]
+  public void SkipsTheWarmUpWhenItIsNotWanted()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokDocuments(warmUp: false);
+
+    Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+  }
+
+  /// <summary>
+  /// A host that both maps the server routes and converts documents registers
+  /// the warm-up once, not once per call.
+  /// </summary>
+  [Fact]
+  public void RegistersOneWarmUpAcrossRepeatedAndMixedRegistration()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokDocuments();
+    services.AddBlokDocuments();
+    services.AddBlokServer(options =>
+    {
+      options.StorageDirectory = "/local/storage";
+      options.PublicUrl = "https://uploads.example";
+    });
+
+    Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+  }
+
+  private sealed class StubConverter : IBlokDocumentConverter
+  {
+    public ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult("0.0.0");
+
+    public ValueTask<BlokMarkdownConversion> ToMarkdownAsync(
+        string documentJson,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<string> ToPlainTextAsync(string documentJson, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<BlokImportConversion> FromMarkdownAsync(
+        string markdown,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
   }
 
   [Fact]

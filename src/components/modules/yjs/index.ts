@@ -645,6 +645,10 @@ export class YjsManager extends Module {
    * @param fn - Function containing Yjs operations to execute
    */
   public transactWithoutCapture(fn: () => void): void {
+    // Barrier first: yjs keeps the OUTER origin for a nested transact, so a
+    // buffered typing write drained inside this one would land untracked.
+    this.flushPendingBlockWrites();
+
     this.documentStore.transactWithoutCapture(fn);
   }
 

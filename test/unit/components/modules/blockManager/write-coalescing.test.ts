@@ -380,6 +380,32 @@ describe('typing write coalescing', () => {
       expect(textInsideTransact).toBe('ab');
     });
 
+    /**
+     * Yjs keeps the OUTER origin for a nested transact, so a buffered write
+     * drained INSIDE a 'no-capture' transaction lands untracked — the user's
+     * own typing silently leaves the undo history.
+     */
+    it('transactWithoutCapture flushes buffered writes first, so they stay on the undo stack', async () => {
+      const harness = createHarness();
+
+      await arm(harness);
+
+      let textInsideTransact: unknown;
+
+      harness.yjsManager.transactWithoutCapture(() => {
+        textInsideTransact = harness.readText();
+        harness.yjsManager.updateBlockData('b1', 'repair', 1);
+      });
+
+      expect(textInsideTransact).toBe('ab');
+
+      harness.yjsManager.undo();
+      expect(harness.readText()).toBe('');
+
+      harness.yjsManager.redo();
+      expect(harness.readText()).toBe('ab');
+    });
+
     it('transactMoves flushes buffered writes before running the callback', async () => {
       const harness = createHarness();
 

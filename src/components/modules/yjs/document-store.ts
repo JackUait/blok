@@ -440,7 +440,9 @@ export class DocumentStore {
 
       this.yBlocksMap.set(id, yblock);
 
-      const target = this.resolveTargetOrder(blockData.parent);
+      // Stripped like the map key and the yblock's parentId field, or a NUL in the
+      // parent id misses the parent and orphans the child.
+      const target = this.resolveTargetOrder(stripNulIfString(blockData.parent));
 
       if (target !== null) {
         target.insert(this.orderSlotForFlatIndex(target, flatIds, desired), [id]);

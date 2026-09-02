@@ -217,6 +217,17 @@ describe('NUL strip — DocumentStore chokepoints', () => {
     expect(store.toJSON().find((block) => block.id === 'child')?.parent).toBe('parent');
   });
 
+  it('addBlock resolves the parent by the STRIPPED id, so the child lands in its contentIds', () => {
+    const store = createStore();
+
+    store.fromJSON([{ id: `pa${NUL}rent`, type: 'paragraph', data: {} }]);
+    store.addBlock({ id: 'child', type: 'paragraph', data: {}, parent: `pa${NUL}rent` });
+
+    expect(scanRawDoc(store)).toEqual([]);
+    expect(store.toJSON().find((block) => block.id === 'parent')?.content).toEqual(['child']);
+    expect(store.rootOrder.toArray()).toEqual(['parent']);
+  });
+
   it('refuses a placement whose parentId strips down to the block\'s own id', () => {
     const store = createStore();
 

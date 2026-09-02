@@ -8,7 +8,9 @@
  * Same two guarantees as the caret layer: everything is written on the block
  * HOLDER (never at or below a tool root, per the child-holder decoration law),
  * and every field arrived from another browser, so a name only reaches the DOM
- * through `textContent` and a colour only through the hex gate.
+ * as an attribute value and a colour only through the hex gate. A third one is
+ * this layer's own: the strip sits INSIDE the holder, so it contributes no
+ * text nodes — a copied block carries every text node its holder has.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +22,7 @@ import {
 
 const GUTTER_ATTR = 'data-blok-presence-gutter';
 const FACE_ATTR = 'data-blok-presence-face';
+const INITIALS_ATTR = 'data-blok-presence-initials';
 const COLOR_PROPERTY = '--blok-presence-color';
 
 interface Harness {
@@ -172,8 +175,21 @@ describe('avatar layer — what it draws', () => {
     const [face] = harness.facesIn('block-1');
 
     // Blok's presence identity is a name and a colour — there is no photo to
-    // show, so the initials stand in for one.
-    expect(face?.textContent).toBe('AL');
+    // show, so the initials stand in for one. They ride an ATTRIBUTE that the
+    // stylesheet paints, never a text node: the strip lives inside the holder,
+    // and a copied block carries every text node the holder has.
+    expect(face?.getAttribute(INITIALS_ATTR)).toBe('AL');
+    expect(face?.textContent).toBe('');
+  });
+
+  it('leaves the holder text exactly as the tool wrote it', () => {
+    const harness = setup({ maxFaces: 2 });
+    const crowd = [1, 2, 3, 4, 5].map((id) => peer(id, { name: `Peer ${id}` }));
+
+    harness.layer.render(crowd);
+
+    expect(harness.facesIn('block-1')).toHaveLength(2);
+    expect(harness.holderOf('block-1').textContent).toBe('hello world');
   });
 
   it('names the peer in a title, so hovering identifies them', () => {
@@ -203,7 +219,7 @@ describe('avatar layer — what it draws', () => {
     // configuration. They still get a face; it just has no monogram and no
     // tooltip claiming an empty name.
     expect(face).toBeDefined();
-    expect(face?.textContent).toBe('');
+    expect(face?.hasAttribute(INITIALS_ATTR)).toBe(false);
     expect(face?.hasAttribute('title')).toBe(false);
   });
 
@@ -282,7 +298,7 @@ describe('avatar layer — several peers', () => {
     harness.layer.render(crowd);
 
     expect(harness.facesIn('block-1')).toHaveLength(2);
-    expect(harness.gutterOf('block-1')?.querySelector('[data-blok-presence-face-overflow]')?.textContent)
+    expect(harness.gutterOf('block-1')?.querySelector('[data-blok-presence-face-overflow]')?.getAttribute(INITIALS_ATTR))
       .toBe('+3');
   });
 

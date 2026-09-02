@@ -8115,11 +8115,19 @@
   text-transform: uppercase;
 }
 
+[data-blok-presence-face]::after, [data-blok-presence-face-overflow]::after {
+  content: attr(data-blok-presence-initials);
+}
+
 [data-blok-presence-face-overflow] {
   border-color: transparent;
   background: transparent;
   color: var(--blok-text-secondary);
   font-size: 10px;
+}
+
+[data-blok-interface="drag-preview"] [data-blok-presence-gutter] {
+  display: none;
 }
 
 [data-blok-presence-stack] {

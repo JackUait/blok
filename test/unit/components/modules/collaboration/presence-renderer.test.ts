@@ -5,8 +5,8 @@
  * writes on a block's HOLDER and appends its own label there, never at or below
  * the tool root and never around the holder. Second R5: every field of a peer's
  * state is written by another browser, so the name only ever reaches the DOM
- * through `textContent` and the colour only reaches CSS after passing a strict
- * pattern.
+ * as text or as an attribute value and the colour only reaches CSS after
+ * passing a strict pattern.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,8 +20,10 @@ import {
   createPresenceRenderer,
   type PresenceRenderer,
 } from '../../../../../src/components/modules/collaboration/presence-renderer';
+import { clean } from '../../../../../src/components/utils/sanitizer';
 
 const PRESENCE_COLOR = '--blok-presence-color';
+const INITIALS_ATTR = 'data-blok-presence-initials';
 
 interface Harness {
   host: HTMLElement;
@@ -168,7 +170,7 @@ describe('presence renderer', () => {
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe('#0b6e99');
       // Identity rides the gutter face, not the caret: monogram on it, full
       // name in its title.
-      expect(face(holder)?.textContent).toBe('GH');
+      expect(face(holder)?.getAttribute(INITIALS_ATTR)).toBe('GH');
       expect(face(holder)?.getAttribute('title')).toBe('Grace Hopper');
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].getAttribute('title')).toBe('Grace Hopper');
@@ -186,6 +188,29 @@ describe('presence renderer', () => {
       expect(toolRoot.outerHTML).toBe(before);
       expect(caret(holder)?.parentElement).toBe(holder);
       expect(holder.parentElement?.hasAttribute('data-blok-presence-caret')).toBe(false);
+    });
+
+    /**
+     * Block-select → copy sanitizes `holder.innerHTML` (blockSelection.ts) with
+     * a tag whitelist that unwraps the gutter strip and keeps whatever TEXT it
+     * held. Presence chrome inside a holder must therefore carry no text nodes
+     * at all — a monogram or a `+N` in one pastes into the next document.
+     */
+    it('adds no text to a copied block, however many peers sit on it', () => {
+      const harness = setup();
+      const crowd = Array.from({ length: 5 }, (_unused, index) =>
+        named(100 + index, 'Grace Hopper', 'block-2'));
+
+      harness.renderer.render(crowd, 42);
+
+      const holder = harness.holderOf('block-2');
+      const copied = document.createElement('div');
+
+      copied.innerHTML = clean(holder.innerHTML, { p: {}, b: {}, i: {}, a: { href: true } });
+
+      expect(holder.querySelectorAll('[data-blok-presence-face]').length).toBeGreaterThan(0);
+      expect(copied.textContent).toBe('hello');
+      expect(holder.textContent).toBe('hello');
     });
 
     it('marks the label inert so it never joins the caret or a copied selection', () => {
@@ -215,7 +240,7 @@ describe('presence renderer', () => {
       expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       // A face in their colour, with no monogram and no title claiming a name.
       expect(face(holder)).not.toBeNull();
-      expect(face(holder)?.textContent).toBe('');
+      expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
       expect(face(holder)?.hasAttribute('title')).toBe(false);
     });
 
@@ -282,7 +307,7 @@ describe('presence renderer', () => {
       // The cap has to hold on the TITLE too: a hostile name is safe as an
       // attribute value, but a megabyte of it is still a megabyte.
       expect((element?.getAttribute('title') ?? '').length).toBeLessThanOrEqual(64);
-      expect((element?.textContent ?? '').length).toBeLessThanOrEqual(2);
+      expect((element?.getAttribute(INITIALS_ATTR) ?? '').length).toBeLessThanOrEqual(2);
     });
 
     it.each([

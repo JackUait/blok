@@ -160,12 +160,25 @@
   text-transform: uppercase;
 }
 
+/* The monogram is painted from an attribute, never written as text: the strip
+   sits inside the holder, and block copy sanitizes `holder.innerHTML`, which
+   unwraps the strip and keeps every text node it held. */
+[data-blok-presence-face]::after,
+[data-blok-presence-face-overflow]::after {
+  content: attr(data-blok-presence-initials);
+}
+
 /* A count, not a person: no ring, so it never reads as another face. */
 [data-blok-presence-face-overflow] {
   border-color: transparent;
   background: transparent;
   color: var(--blok-text-secondary);
   font-size: 10px;
+}
+
+/* The drag ghost clones the content wrapper the strip is mounted on. */
+[data-blok-interface="drag-preview"] [data-blok-presence-gutter] {
+  display: none;
 }
 
 [data-blok-presence-stack] {

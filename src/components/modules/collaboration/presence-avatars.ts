@@ -36,6 +36,14 @@ export interface AvatarLayer {
 const GUTTER_ATTR = 'data-blok-presence-gutter';
 const FACE_ATTR = 'data-blok-presence-face';
 const OVERFLOW_ATTR = 'data-blok-presence-face-overflow';
+/**
+ * The monogram (or the `+N`), painted by presence.css through `content:
+ * attr()`. An attribute and NOT a text node, because the strip sits inside the
+ * holder: block-select → copy sanitizes `holder.innerHTML`, unwraps the strip
+ * and keeps every text node it held, so a monogram written as text would paste
+ * into the next document.
+ */
+const INITIALS_ATTR = 'data-blok-presence-initials';
 const COLOR_PROPERTY = '--blok-presence-color';
 
 /**
@@ -92,10 +100,10 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
     // A peer who published no name is drawn as their colour alone: no monogram,
     // and no tooltip claiming an empty name.
     if (peer.name !== '') {
-      // An attribute value is never parsed as markup, so a hostile name is as
-      // safe here as it is in textContent.
+      // Attribute values are never parsed as markup, so a hostile name is safe
+      // in both.
       face.setAttribute('title', peer.name);
-      face.textContent = initialsOf(peer.name);
+      face.setAttribute(INITIALS_ATTR, initialsOf(peer.name));
     }
 
     return face;
@@ -107,7 +115,7 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
     // Deliberately NOT a face: it is a count, and anything asking "how many
     // people are on this block" must not get this one back.
     overflow.setAttribute(OVERFLOW_ATTR, '');
-    overflow.textContent = `+${hidden}`;
+    overflow.setAttribute(INITIALS_ATTR, `+${hidden}`);
 
     return overflow;
   };

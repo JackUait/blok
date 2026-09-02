@@ -526,8 +526,14 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // writes the real one per block from the MEASURED first line (a heading's
     // line is 39px against a paragraph's 24px, so no constant centres both).
     // Bumps the multiplier to 1.4631.
+    // 2026-09-02: presence monograms moved off text nodes — the gutter face
+    // and its `+N` now carry the monogram in an attribute that presence.css
+    // paints through `content: attr()` (block copy sanitizes `holder.innerHTML`
+    // and kept the text), plus the rule that hides the strip inside the drag
+    // ghost, which clones the wrapper the strip is mounted on (~0.4KB). Bumps
+    // the multiplier to 1.4641.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4631);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4641);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

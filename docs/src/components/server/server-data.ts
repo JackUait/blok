@@ -172,6 +172,8 @@ builder.Services.AddBlokServer(options => { /* as above */ })
 
 // Registers the converter on its own. AddBlokServer includes it, but a service
 // that only reads documents does not have to configure a bucket to get one.
+// Its engine pool is built at startup, so no reader waits a second for it;
+// pass warmUp: false in a test host that starts often and converts rarely.
 builder.Services.AddBlokDocuments();
 
 // Anywhere you already have the saved JSON — an MCP tool, an agent, an export.
@@ -190,6 +192,27 @@ public sealed class ArticleExport(IBlokDocumentConverter blok)
     return conversion.Markdown;
   }
 }`,
+      },
+      {
+        label: 'Translate a document without giving a model its JSON',
+        language: 'csharp',
+        code: `// A model handed a document's JSON breaks the structure — dropped ids,
+// reordered blocks, invented fields. Hand it a flat list of strings instead.
+var texts = await blok.ExtractTextsAsync(documentJson, cancellationToken: ct);
+var translated = await TranslateAsync(texts, ct);
+var document = await blok.InjectTextsAsync(documentJson, translated, cancellationToken: ct);
+
+// The list is in document order, holds no URLs and no file names, and skips
+// empty values. A count that does not match the document throws rather than
+// misplacing a translation.
+
+// The version a saved document carries is whatever wrote it, so ask for the
+// one the editor stamps rather than inventing a number.
+var version = await blok.GetVersionAsync(ct);
+
+// The saved format as JSON Schema, for constraining a model's structured
+// output or validating an import.
+var schema = await blok.GetSchemaAsync(ct);`,
       },
     ],
     editorConfig: {

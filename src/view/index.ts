@@ -16,6 +16,9 @@ export type {
 } from './blocks-to-html';
 export type { ViewInlineElement, ViewInlineRenderer } from './inline-renderers';
 export { blocksToPlainText } from './blocks-to-plain-text';
+export { blokDocumentSchema } from './document-schema';
+export { extractTexts, injectTexts } from './document-texts';
+export type { DocumentTextsOptions } from './document-texts';
 export { blocksToMarkdown, blocksToMarkdownWithReport } from './blocks-to-markdown';
 export type { MarkdownDegradation, MarkdownSerializationResult } from './blocks-to-markdown';
 export { htmlTextContent } from './html-text';

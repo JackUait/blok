@@ -7,6 +7,9 @@ import { blocksToHtml } from './blocks-to-html';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
 import { blocksToPlainText } from './blocks-to-plain-text';
+import { blokDocumentSchema } from './document-schema';
+import type { DocumentTextsOptions } from './document-texts';
+import { extractTexts, injectTexts } from './document-texts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -102,6 +105,55 @@ const skippedBlockWarning = (skipped: number): MarkdownDegradation => ({
   detail: skipped === 1 ? '1 malformed block was skipped' : `${skipped} malformed blocks were skipped`,
 });
 
+/**
+ * The translation operations carry options and a translation list beside the
+ * document, so their input wraps it rather than being it. Deliberately NOT
+ * routed through `parseDocument`: it drops a block it cannot read, and
+ * `injectTexts` returns the document that gets STORED.
+ * @param inputJson - the serialized request
+ */
+const parseTextsRequest = (inputJson: string): {
+  document: unknown;
+  texts: string[];
+  options: DocumentTextsOptions;
+} => {
+  const input = parseRecord(inputJson);
+  const texts = Array.isArray(input.texts) ? input.texts : [];
+
+  if (texts.some((text) => typeof text !== 'string')) {
+    throw new TypeError('injectTexts input requires `texts` to be strings.');
+  }
+
+  return {
+    document: input.document,
+    texts: texts as string[],
+    options: { includeCode: input.includeCode === true },
+  };
+};
+
+/**
+ * Wraps its result because the one failure a caller can cause — a translation
+ * list that does not match the document — has to cross the host boundary as
+ * data. An engine exception would arrive as whatever the host makes of a
+ * JavaScript error; a count is a count.
+ * @param inputJson - the serialized request
+ */
+const injectTextsResult = (inputJson: string): string => {
+  const { document, texts, options } = parseTextsRequest(inputJson);
+
+  try {
+    return JSON.stringify({ document: injectTexts(document, texts, options) });
+  } catch (error) {
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+
+    return JSON.stringify({
+      mismatch: { expected: extractTexts(document, options).length, received: texts.length },
+    });
+  }
+};
+
 export const invoke = async (operation: string, inputJson: string): Promise<string> => {
   switch (operation) {
     case 'markdownToBlocks':
@@ -132,6 +184,20 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
      */
     case 'version':
       return getBlokVersion();
+    /**
+     * The saved format described as JSON Schema, for a caller that has to
+     * constrain something else — a model's structured output, an import — to
+     * what Blok actually stores.
+     */
+    case 'schema':
+      return JSON.stringify(blokDocumentSchema);
+    case 'extractTexts': {
+      const { document, options } = parseTextsRequest(inputJson);
+
+      return JSON.stringify(extractTexts(document, options));
+    }
+    case 'injectTexts':
+      return injectTextsResult(inputJson);
     default:
       throw new TypeError(`Unsupported Blok runtime operation: ${operation}`);
   }

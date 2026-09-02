@@ -72,10 +72,49 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 | `ToHtmlAsync` | the document's HTML |
 | `ToPlainTextAsync` | the document's readable text |
 | `FromMarkdownAsync` | the saved document, plus what Markdown could not carry into it |
+| `ExtractTextsAsync` / `InjectTextsAsync` | the document's translatable strings, and the document with them put back |
+| `GetVersionAsync` | the `version` the editor stamps into a saved document |
+| `GetSchemaAsync` | the saved format as JSON Schema (draft 2020-12) |
+
+### Translate a document without handing a model its JSON
+
+A model asked to translate a document's JSON breaks the structure — it drops
+ids, reorders blocks, invents fields. Take the strings out instead, translate
+the list, and put it back; the model never sees the structure, so it cannot
+break it.
+
+```csharp
+var texts = await blok.ExtractTextsAsync(documentJson, cancellationToken: ct);
+var translated = await TranslateAsync(texts, ct);       // your own model call
+var document = await blok.InjectTextsAsync(documentJson, translated, cancellationToken: ct);
+```
+
+The list is in document order, skips empty values, and holds no URLs — nor a
+file's name, which is what the reader downloads rather than prose. Code blocks
+are out by default; pass `includeCode: true` to both calls if you want them.
+A list whose length does not match the document is an `ArgumentException`
+rather than a silently misplaced translation, and a block too malformed to read
+is carried through untouched — the result of `InjectTextsAsync` is what you
+store.
+
+### Stamp the version the editor stamps
+
+`version` in a saved document is whatever wrote it. A service writing documents
+outside the browser should ask rather than invent a number, or the same column
+ends up holding two different answers:
+
+```csharp
+var document = new JsonObject
+{
+  ["time"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+  ["blocks"] = blocks,
+  ["version"] = await blok.GetVersionAsync(ct),
+};
+```
 
 Markdown cannot express every block — a callout becomes a blockquote, columns flatten, a spacer disappears — so both directions report what changed. A caller handing the result to something that cannot ask a follow-up question, an export or a model, should read that report rather than assume the round trip was lossless.
 
-An instance holds a pool of engines and is expensive to construct, so register one for the lifetime of the process. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout and a recursion limit, so a pathological document fails rather than wedging the process.
+An instance holds a pool of engines and is expensive to construct — every engine parses the embedded bundle, about a second in total — so register one for the lifetime of the process. `AddBlokDocuments` builds it at startup rather than during the first request; pass `warmUp: false` where a host starts often and converts rarely, such as a test host. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout and a recursion limit, so a pathological document fails rather than wedging the process.
 
 ## Standalone
 

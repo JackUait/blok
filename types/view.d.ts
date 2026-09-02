@@ -195,6 +195,46 @@ export declare function blocksToPlainText(
   options?: BlocksToHtmlOptions
 ): string;
 
+/** Options for {@link extractTexts} / {@link injectTexts}. */
+export interface DocumentTextsOptions {
+  /**
+   * Include a code block's source. Default `false` — code is not prose, and a
+   * translator handed it will "fix" it.
+   */
+  includeCode?: boolean;
+}
+
+/**
+ * Every translatable string in a saved document, in document order.
+ *
+ * Made for translating a document without handing a model its JSON: translate
+ * the returned list, then put it back with {@link injectTexts}. The model never
+ * sees the structure, so it cannot break it.
+ *
+ * Empty and whitespace-only values are skipped. URLs are never included, and
+ * neither is a file's name — it is what the reader downloads, not prose.
+ *
+ * @param data - a saved document; anything that is not one yields an empty list
+ * @param options - what counts as translatable
+ */
+export declare function extractTexts(data: unknown, options?: DocumentTextsOptions): string[];
+
+/**
+ * Put translated strings back where {@link extractTexts} found them, returning
+ * a new document. The input is not modified, and a block too malformed to read
+ * is carried through untouched rather than dropped.
+ *
+ * @param data - the same document {@link extractTexts} was given
+ * @param texts - the translations, in the order they were extracted
+ * @param options - the SAME options {@link extractTexts} ran with
+ * @throws RangeError when `texts` does not match what this document extracts
+ */
+export declare function injectTexts(
+  data: unknown,
+  texts: readonly string[],
+  options?: DocumentTextsOptions
+): OutputData;
+
 /**
  * A construct Markdown could not express as-is (see
  * {@link blocksToMarkdownWithReport}).
@@ -457,3 +497,15 @@ export declare function createLatexRenderer(): Promise<
 
 export { defineBlokSchema, composeBaseSanitizeConfig } from './index';
 export type { BlokViewSchema, DefinedBlokSchema, BlokSchemaConfig, ResolvedSchemaTool } from './index';
+
+/**
+ * JSON Schema (draft 2020-12) for Blok's saved document format — what
+ * `save()` writes and what you store.
+ *
+ * Typed loosely on purpose: it is data to hand to a validator or to a model's
+ * structured-output setting, not a shape to write code against. `type` stays an
+ * open string and each built-in tool's `data` is attached with an `if`/`then`
+ * branch, so a block belonging to a custom tool validates with an
+ * unconstrained `data` rather than being rejected.
+ */
+export declare const blokDocumentSchema: Readonly<Record<string, unknown>>;

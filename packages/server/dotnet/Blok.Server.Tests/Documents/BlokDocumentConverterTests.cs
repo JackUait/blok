@@ -32,6 +32,92 @@ public sealed class BlokDocumentConverterTests
     Assert.NotEqual("dev", version);
   }
 
+  /// <summary>
+  /// Handed to a model's structured-output setting, or to a validator, by a
+  /// caller that has to constrain something to what Blok actually stores. The
+  /// alternative is a hand-kept copy, which drifts.
+  /// </summary>
+  [Fact]
+  public async Task DescribesTheSavedFormatAsJsonSchema()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    using var schema = JsonDocument.Parse(await converter.GetSchemaAsync());
+
+    Assert.Equal(
+        "https://json-schema.org/draft/2020-12/schema",
+        schema.RootElement.GetProperty("$schema").GetString());
+    Assert.True(schema.RootElement.GetProperty("$defs").TryGetProperty("paragraph", out _));
+  }
+
+  /// <summary>
+  /// Handing a model a document's JSON makes it break the structure, so a
+  /// translator takes the strings out, translates the list, and puts it back.
+  /// A URL is not prose and never appears in the list.
+  /// </summary>
+  [Fact]
+  public async Task ExtractsTheStringsWorthTranslating()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var texts = await converter.ExtractTextsAsync("""
+        {"blocks":[
+          {"id":"h1","type":"header","data":{"text":"Title","level":2}},
+          {"id":"i1","type":"image","data":{"url":"https://cdn/x.png","caption":"A cat"}},
+          {"id":"c1","type":"code","data":{"code":"var a = 1;"}}
+        ]}
+        """);
+
+    Assert.Equal(["Title", "A cat"], texts);
+  }
+
+  [Fact]
+  public async Task IncludesCodeOnlyWhenAsked()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string Document = """{"blocks":[{"id":"c1","type":"code","data":{"code":"var a = 1;"}}]}""";
+
+    Assert.Empty(await converter.ExtractTextsAsync(Document));
+    Assert.Equal(["var a = 1;"], await converter.ExtractTextsAsync(Document, includeCode: true));
+  }
+
+  /// <summary>
+  /// The result of this one is STORED, so a block too malformed to read is
+  /// carried through rather than dropped — dropping it would silently delete
+  /// part of an article.
+  /// </summary>
+  [Fact]
+  public async Task PutsTranslationsBackWithoutLosingAnythingElse()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var translated = await converter.InjectTextsAsync(
+        """{"time":1700000000000,"version":"9.9.9","blocks":[{"id":"p1","type":"paragraph","data":{"text":"Hello"}},7]}""",
+        ["Привет"]);
+
+    using var document = JsonDocument.Parse(translated);
+    var root = document.RootElement;
+
+    Assert.Equal("9.9.9", root.GetProperty("version").GetString());
+    Assert.Equal(1700000000000, root.GetProperty("time").GetInt64());
+    Assert.Equal("Привет", root.GetProperty("blocks")[0].GetProperty("data").GetProperty("text").GetString());
+    Assert.Equal(7, root.GetProperty("blocks")[1].GetInt32());
+  }
+
+  [Fact]
+  public async Task RefusesATranslationListThatDoesNotMatchTheDocument()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var failure = await Assert.ThrowsAsync<ArgumentException>(async () =>
+        await converter.InjectTextsAsync(
+            """{"blocks":[{"id":"p1","type":"paragraph","data":{"text":"Hello"}}]}""",
+            ["Привет", "Лишнее"]));
+
+    Assert.Contains("1", failure.Message, StringComparison.Ordinal);
+    Assert.Contains("2", failure.Message, StringComparison.Ordinal);
+  }
+
   [Fact]
   public async Task ConvertsADocumentToMarkdown()
   {

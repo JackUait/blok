@@ -123,6 +123,22 @@ public sealed class BlokDocumentsRegistrationTests
         CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
+    public ValueTask<string> GetSchemaAsync(CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<IReadOnlyList<string>> ExtractTextsAsync(
+        string documentJson,
+        bool includeCode = false,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
+    public ValueTask<string> InjectTextsAsync(
+        string documentJson,
+        IReadOnlyList<string> texts,
+        bool includeCode = false,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 

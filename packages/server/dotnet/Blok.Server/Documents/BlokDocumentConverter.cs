@@ -31,6 +31,78 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         ?? throw new InvalidOperationException("The Blok runtime returned no Markdown conversion.");
   }
 
+  private string? schema;
+
+  // Constant for the life of the bundle, and large, so it is fetched once.
+  public async ValueTask<string> GetSchemaAsync(CancellationToken cancellationToken = default)
+  {
+    return schema ??= await runtime.InvokeAsync("schema", "{}", cancellationToken);
+  }
+
+  public async ValueTask<IReadOnlyList<string>> ExtractTextsAsync(
+      string documentJson,
+      bool includeCode = false,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+
+    var output = await runtime.InvokeAsync(
+        "extractTexts",
+        TextsRequest(documentJson, texts: null, includeCode),
+        cancellationToken);
+
+    return JsonSerializer.Deserialize<string[]>(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no texts.");
+  }
+
+  public async ValueTask<string> InjectTextsAsync(
+      string documentJson,
+      IReadOnlyList<string> texts,
+      bool includeCode = false,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentNullException.ThrowIfNull(documentJson);
+    ArgumentNullException.ThrowIfNull(texts);
+
+    var output = await runtime.InvokeAsync(
+        "injectTexts",
+        TextsRequest(documentJson, texts, includeCode),
+        cancellationToken);
+
+    var result = JsonNode.Parse(output)
+        ?? throw new InvalidOperationException("The Blok runtime returned no document.");
+
+    if (result["mismatch"] is JsonNode mismatch)
+    {
+      throw new ArgumentException(
+          $"This document yields {mismatch["expected"]} translatable strings, but {mismatch["received"]} were given.",
+          nameof(texts));
+    }
+
+    return result["document"]?.ToJsonString()
+        ?? throw new InvalidOperationException("The Blok runtime returned no document.");
+  }
+
+  /// <summary>
+  /// The translation operations carry options and a translation list beside the
+  /// document, so the document is a field rather than the whole request.
+  /// </summary>
+  private static string TextsRequest(string documentJson, IReadOnlyList<string>? texts, bool includeCode)
+  {
+    var request = new JsonObject
+    {
+      ["document"] = JsonNode.Parse(documentJson),
+      ["includeCode"] = includeCode,
+    };
+
+    if (texts is not null)
+    {
+      request["texts"] = new JsonArray([.. texts.Select(text => JsonValue.Create(text))]);
+    }
+
+    return request.ToJsonString();
+  }
+
   public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(documentJson);

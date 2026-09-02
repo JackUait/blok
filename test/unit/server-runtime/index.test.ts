@@ -132,6 +132,75 @@ describe('server runtime boundary', () => {
     expect(output).toContain('Kept');
   });
 
+  it('hands out the saved format as JSON Schema', async () => {
+    const schema = JSON.parse(await invoke('schema', '{}')) as Record<string, Record<string, unknown>>;
+
+    expect(schema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
+    expect(schema.$defs.paragraph).toBeDefined();
+  });
+
+  it('extracts a document\'s translatable strings', async () => {
+    const output = JSON.parse(await invoke('extractTexts', JSON.stringify({
+      document: {
+        blocks: [
+          { id: 'h', type: 'header', data: { text: 'Title' } },
+          { id: 'i', type: 'image', data: { url: 'u', caption: 'A cat' } },
+          { id: 'c', type: 'code', data: { code: 'const a = 1;' } },
+        ],
+      },
+    }))) as unknown;
+
+    expect(output).toEqual(['Title', 'A cat']);
+  });
+
+  it('includes code only when asked', async () => {
+    const document = { blocks: [{ id: 'c', type: 'code', data: { code: 'const a = 1;' } }] };
+
+    expect(JSON.parse(await invoke('extractTexts', JSON.stringify({ document, includeCode: true }))))
+      .toEqual(['const a = 1;']);
+  });
+
+  /**
+   * The one operation whose output is STORED. `parseDocument` drops a block it
+   * cannot read, which is right for the read-only operations and would be a
+   * silently deleted block here — so this one never goes through it.
+   */
+  it('injects translations without dropping a block it cannot read', async () => {
+    const output = JSON.parse(await invoke('injectTexts', JSON.stringify({
+      document: {
+        time: 1700000000000,
+        version: '1.12.0',
+        blocks: [
+          { id: 'p', type: 'paragraph', data: { text: 'Hello' } },
+          7,
+          { id: 'n', data: { text: 'No type' } },
+        ],
+      },
+      texts: ['Привет'],
+    }))) as unknown;
+
+    expect(output).toEqual({
+      document: {
+        time: 1700000000000,
+        version: '1.12.0',
+        blocks: [
+          { id: 'p', type: 'paragraph', data: { text: 'Привет' } },
+          7,
+          { id: 'n', data: { text: 'No type' } },
+        ],
+      },
+    });
+  });
+
+  it('reports a translation list that does not match the document', async () => {
+    const output = JSON.parse(await invoke('injectTexts', JSON.stringify({
+      document: { blocks: [{ id: 'p', type: 'paragraph', data: { text: 'Hello' } }] },
+      texts: ['Привет', 'Лишнее'],
+    }))) as unknown;
+
+    expect(output).toEqual({ mismatch: { expected: 1, received: 2 } });
+  });
+
   /**
    * Compared against the editor's own function, not a literal: the point of the
    * operation is that both sides stamp the SAME version, and a literal here

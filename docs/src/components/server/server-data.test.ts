@@ -347,6 +347,10 @@ describe('server docs data', () => {
     // window: whatever else reads your records is that far behind the tab.
     expect(body).toMatch(/trails|behind/i);
     expect(body).toMatch(/export|report|another service/i);
+    // A refused write-back backs off and retries, and eviction refuses to drop
+    // a room that still owes one — so an endpoint outage is a delay, not a loss.
+    expect(body).toMatch(/retried/i);
+    expect(body).toMatch(/stays loaded/i);
   });
 
   // Two ways to give the document a second owner, one entry: the refused
@@ -373,6 +377,12 @@ describe('server docs data', () => {
     expect(body).toContain('--collab-s3-prefix');
     expect(body).toMatch(/publicly/i);
     expect(body).toMatch(/uploads directory|uploads folder/i);
+    // What the store does with files it cannot use: rename aside and re-seed,
+    // sweep stale temp files at startup, and fail the open on a format it does
+    // not read (a reset keeps the stored format, so it is not the lever here).
+    expect(body).toContain('.unreadable-');
+    expect(body).toMatch(/temporary files/i);
+    expect(body).toMatch(/format this service does not read/i);
   });
 
   // Two ways in, and the entry has to make the choice between them obvious:
@@ -398,6 +408,12 @@ describe('server docs data', () => {
     // close the reset-vs-export race without knowing it exists.
     expect(body).toContain('Blok-Doc-Version');
     expect(body).toMatch(/409/);
+    // 204 comes after the working-copy write, and the planner refuses two
+    // shapes outright rather than placing the block somewhere unasked-for.
+    expect(body).toMatch(/204/);
+    expect(body).toContain('has no children list, so nothing can be placed under it.');
+    expect(body).toContain('is not in the document order, so nothing can be placed after it.');
+    expect(body).toMatch(/422/);
   });
 
   // Shape is checked at the door, meaning is not. Each of these is a known

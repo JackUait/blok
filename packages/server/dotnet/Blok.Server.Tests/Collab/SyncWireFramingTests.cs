@@ -336,6 +336,31 @@ public sealed class SyncWireFramingTests
     Assert.Equal(negative.Rule, rule);
   }
 
+  // Covers the [JsonRequired] fix above: a canonical: true entry that lost
+  // its "canonical" key must fail loudly (JsonException) rather than
+  // silently deserialise to false and quietly drop out of
+  // CanonicalV2FrameNames, disabling its byte-for-byte re-encode assertion
+  // with no test failure anywhere.
+  [Fact]
+  public void V2FrameFixtureRequiresAnExplicitCanonicalValue()
+  {
+    const string withoutCanonical = """
+      {
+        "name": "operation",
+        "messageType": 102,
+        "description": "missing canonical on purpose",
+        "frameHex": "00",
+        "metadataJson": "{}",
+        "metadata": {"lineage": "0", "operationId": "0"}
+      }
+      """;
+
+    var exception = Assert.Throws<JsonException>(
+        () => JsonSerializer.Deserialize<V2FrameFixture>(withoutCanonical));
+
+    Assert.Contains("canonical", exception.Message, StringComparison.OrdinalIgnoreCase);
+  }
+
   private static V2FrameFixture V2Frame(string name)
   {
     return Fixture.V2.Frames.Single(frame => frame.Name == name);
@@ -461,9 +486,12 @@ public sealed class SyncWireFramingTests
   private sealed record V2FrameFixture(
       [property: JsonPropertyName("name")] string Name,
       [property: JsonPropertyName("messageType")] ulong MessageType,
-      // Non-nullable: present on every v2.frames entry so a missing value
-      // cannot silently default to false and disable a re-encode assertion.
-      [property: JsonPropertyName("canonical")] bool Canonical,
+      // [JsonRequired] is what actually enforces presence: plain non-nullable
+      // bool with no default still deserialises a MISSING key to false with
+      // no exception (verified on net10.0 with the plain Deserialize call
+      // this file uses), which would silently drop a canonical: true entry
+      // out of CanonicalV2FrameNames below instead of failing loudly.
+      [property: JsonPropertyName("canonical"), JsonRequired] bool Canonical,
       [property: JsonPropertyName("description")] string Description,
       [property: JsonPropertyName("frameHex")] string FrameHex,
       [property: JsonPropertyName("metadataJson")] string MetadataJson,

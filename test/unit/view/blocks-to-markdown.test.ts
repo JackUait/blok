@@ -126,6 +126,31 @@ describe('blocksToMarkdown (view)', () => {
       expect(md).toBe('**Details**\n\nHidden');
     });
 
+    /**
+     * A container claims every descendant, not just its direct children, but
+     * used to render only the direct ones — so anything deeper vanished with
+     * no warning. A list inside a toggle is the everyday shape of that.
+     */
+    it('renders a grandchild instead of dropping it', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'tg', type: 'toggle', data: { text: 'More' } },
+        { id: 'l1', type: 'list', data: { text: 'a', style: 'unordered' }, parent: 'tg' },
+        { id: 'l2', type: 'list', data: { text: 'b', style: 'unordered' }, parent: 'l1' },
+      ]));
+
+      expect(md).toBe('**More**\n\n- a\n    - b');
+    });
+
+    it('lets a nested container render its own children once', () => {
+      const md = blocksToMarkdown(doc([
+        { id: 'cal', type: 'callout', data: { emoji: '💡' } },
+        { id: 'tg', type: 'toggle', data: { text: 'More' }, parent: 'cal' },
+        { id: 'p1', type: 'paragraph', data: { text: 'Deep' }, parent: 'tg' },
+      ]));
+
+      expect(md).toBe('> 💡 **More**\n> \n> Deep');
+    });
+
     it('flattens columns into their blocks in reading order', () => {
       const md = blocksToMarkdown(doc([
         { id: 'cl', type: 'column_list', data: {} },

@@ -296,6 +296,46 @@ const sequenceToMarkdown = (blocks: SerializableBlock[], context: SerializationC
 };
 
 /**
+ * Every descendant a container has to render itself, in document order.
+ *
+ * `collectOwnedIds` claims descendants transitively, so a block deeper than one
+ * level is never emitted at top level — rendering only the direct children
+ * dropped it with nothing to show for it. A nested container is included but
+ * not descended into: it renders its own subtree, and walking past it would
+ * emit those blocks twice.
+ * @param block - the container block
+ * @param context - the serialization context
+ */
+const ownedSubtree = (block: SerializableBlock, context: SerializationContext): SerializableBlock[] => {
+  const collected: SerializableBlock[] = [];
+  const seen = new Set<string>();
+
+  /**
+   * Append one parent's children, then their own, depth first.
+   * @param parentId - id whose children to append
+   */
+  const walk = (parentId: string): void => {
+    if (seen.has(parentId)) {
+      return;
+    }
+
+    seen.add(parentId);
+
+    for (const child of context.childrenOf.get(parentId) ?? []) {
+      collected.push(child);
+
+      if (child.id !== undefined && !CONTAINER_TOOLS.has(child.tool)) {
+        walk(child.id);
+      }
+    }
+  };
+
+  walk(block.id ?? '');
+
+  return collected;
+};
+
+/**
  * Serialize a container's structural children as a Markdown run.
  *
  * Children are re-based to indent 0 relative to their container: a container
@@ -306,7 +346,7 @@ const sequenceToMarkdown = (blocks: SerializableBlock[], context: SerializationC
  * @param context - the serialization context
  */
 const childrenToMarkdown = (block: SerializableBlock, context: SerializationContext): string => {
-  const children = context.childrenOf.get(block.id ?? '') ?? [];
+  const children = ownedSubtree(block, context);
   /**
    * Re-base against the container's ORIGINAL indent, not the copy's: a nested
    * container (a column inside a column list) is itself rendered from a copy

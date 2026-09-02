@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Threading.Channels;
 using Jint;
+using Jint.Runtime;
 
 namespace Blok.Server.Runtime;
 
@@ -8,15 +9,19 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 {
   private const string BundleResourceName = "Blok.Server.Runtime.blok-server-runtime.js";
 
+  private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
+
   private readonly string script;
+  private readonly TimeSpan timeout;
   private readonly Channel<Engine> engines;
 
-  internal JintBlokRuntime(string script, int poolSize)
+  internal JintBlokRuntime(string script, int poolSize, TimeSpan? timeout = null)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(script);
     ArgumentOutOfRangeException.ThrowIfLessThan(poolSize, 1);
 
     this.script = script;
+    this.timeout = timeout ?? DefaultTimeout;
     engines = Channel.CreateBounded<Engine>(new BoundedChannelOptions(poolSize)
     {
       FullMode = BoundedChannelFullMode.Wait,
@@ -33,7 +38,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     }
   }
 
-  internal static JintBlokRuntime FromEmbeddedResource(int? poolSize = null)
+  internal static JintBlokRuntime FromEmbeddedResource(int? poolSize = null, TimeSpan? timeout = null)
   {
     using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(BundleResourceName)
         ?? throw new InvalidOperationException($"Embedded resource '{BundleResourceName}' was not found.");
@@ -42,7 +47,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     var resolvedPoolSize = poolSize
         ?? Math.Max(1, Math.Min(Environment.ProcessorCount, 4));
 
-    return new JintBlokRuntime(reader.ReadToEnd(), resolvedPoolSize);
+    return new JintBlokRuntime(reader.ReadToEnd(), resolvedPoolSize, timeout);
   }
 
   public async ValueTask<string> InvokeAsync(
@@ -66,14 +71,33 @@ internal sealed class JintBlokRuntime : IBlokRuntime
           operation,
           inputJson)).AsString();
     }
-    catch (OperationCanceledException)
+    catch (Exception exception) when (exception is OperationCanceledException
+        or TimeoutException
+        or RecursionDepthOverflowException
+        or MemoryLimitExceededException)
     {
       reusable = false;
       throw;
     }
     finally
     {
-      var returnedEngine = reusable ? engine : CreateEngine();
+      /**
+       * The pool is fixed size, so a slot that is not refilled is gone for
+       * good and the pool eventually blocks forever. Building the replacement
+       * can itself fail — the bundle load is bounded by the same timeout — so
+       * a failure here puts the spent engine back rather than losing the slot,
+       * and never throws over whatever brought us into this block.
+       */
+      Engine returnedEngine;
+
+      try
+      {
+        returnedEngine = reusable ? engine : CreateEngine();
+      }
+      catch (Exception)
+      {
+        returnedEngine = engine;
+      }
 
       returned = engines.Writer.TryWrite(returnedEngine);
     }
@@ -86,8 +110,14 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     return result;
   }
 
+  // The recursion limit has to trip before the CLR stack runs out: a .NET
+  // StackOverflowException cannot be caught and kills the whole process.
   private Engine CreateEngine()
   {
-    return new Engine().Execute(script);
+    return new Engine(options => options
+        .TimeoutInterval(timeout)
+        .LimitRecursion(64)
+        .LimitMemory(64 * 1024 * 1024))
+      .Execute(script);
   }
 }

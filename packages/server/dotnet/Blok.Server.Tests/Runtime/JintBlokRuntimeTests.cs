@@ -107,6 +107,58 @@ public sealed class JintBlokRuntimeTests
     Assert.Equal("ok", output);
   }
 
+  [Fact]
+  public async Task TimesOutInsteadOfHanging()
+  {
+    const string script = """
+      globalThis.blokServerInvoke = function () {
+        for (;;) {}
+      };
+      """;
+    var runtime = new JintBlokRuntime(script, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
+
+    await Assert.ThrowsAnyAsync<Exception>(
+        async () => await runtime.InvokeAsync("blocksToMarkdown", "{}"));
+  }
+
+  [Fact]
+  public async Task ThrowsACatchableExceptionOnDeepRecursion()
+  {
+    const string script = """
+      globalThis.blokServerInvoke = function () {
+        const recurse = (depth) => depth === 0 ? 0 : recurse(depth - 1);
+        return String(recurse(10000));
+      };
+      """;
+    var runtime = new JintBlokRuntime(script, poolSize: 1);
+
+    await Assert.ThrowsAnyAsync<Exception>(
+        async () => await runtime.InvokeAsync("blocksToMarkdown", "{}"));
+  }
+
+  [Fact]
+  public async Task KeepsServingAfterATimeout()
+  {
+    const string script = """
+      globalThis.blokServerInvoke = function (operation) {
+        if (operation === 'spin') { for (;;) {} }
+        return 'ok';
+      };
+      """;
+    var runtime = new JintBlokRuntime(script, poolSize: 1, timeout: TimeSpan.FromMilliseconds(200));
+
+    // Repeated, not once: the pool is fixed size, so a slot that goes
+    // unreturned even on the third failure leaves every later caller waiting
+    // on a reader that will never be written to again.
+    for (var attempt = 0; attempt < 3; attempt++)
+    {
+      await Assert.ThrowsAnyAsync<Exception>(
+          async () => await runtime.InvokeAsync("spin", "{}"));
+
+      Assert.Equal("ok", await runtime.InvokeAsync("blocksToMarkdown", "{}"));
+    }
+  }
+
   private static JsonElement FirstBlock(string output)
   {
     using var document = JsonDocument.Parse(output);

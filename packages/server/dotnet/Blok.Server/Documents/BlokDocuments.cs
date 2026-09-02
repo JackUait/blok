@@ -14,8 +14,14 @@ public static class BlokDocuments
   /// How many documents may convert concurrently; further callers wait for a
   /// free engine. Defaults to the processor count, capped at four.
   /// </param>
-  public static IBlokDocumentConverter Create(int? poolSize = null)
+  /// <param name="timeout">
+  /// How long one conversion may run before it is abandoned and its engine
+  /// replaced. It also bounds loading the bundle into each engine, so a value
+  /// under a second or so fails here rather than at conversion time. Defaults
+  /// to ten seconds.
+  /// </param>
+  public static IBlokDocumentConverter Create(int? poolSize = null, TimeSpan? timeout = null)
   {
-    return new BlokDocumentConverter(JintBlokRuntime.FromEmbeddedResource(poolSize));
+    return new BlokDocumentConverter(JintBlokRuntime.FromEmbeddedResource(poolSize, timeout));
   }
 }

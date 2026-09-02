@@ -75,9 +75,9 @@ describe('buildTasks', () => {
     expect(cmds).toContain('yarn workspace @bloklabs/vue build');
     expect(cmds).toContain('yarn workspace @bloklabs/presets build');
     expect(cmds).toContain('yarn workspace @bloklabs/server build');
-    expect(cmds).not.toContain('node scripts/build-server-runtime.mjs');
+    expect(cmds).toContain('node scripts/build-server-runtime.mjs');
     expect(cmds).toContain('node scripts/override/generate-override-entries.mjs');
-    expect(cmds).toHaveLength(11);
+    expect(cmds).toHaveLength(12);
   });
 
   it('orders dist/ writers after the main build (which empties dist/) and everything after fonts', () => {
@@ -123,8 +123,8 @@ describe('buildTasks', () => {
     expect(tasks.get('override-payload')?.cmd).toBe('node scripts/override/sync.mjs');
     expect(tasks.get('presets')?.cmd).toBe('yarn workspace @bloklabs/presets build');
     expect(tasks.get('server')?.cmd).toBe('yarn workspace @bloklabs/server build');
-    expect(tasks.has('server-runtime')).toBe(false);
-    expect(buildTasks({ mode: 'test' })).toHaveLength(15);
+    expect(tasks.get('server-runtime')?.cmd).toBe('node scripts/build-server-runtime.mjs');
+    expect(buildTasks({ mode: 'test' })).toHaveLength(16);
   });
 
   it('test mode stages the override payload only after every dist writer', () => {

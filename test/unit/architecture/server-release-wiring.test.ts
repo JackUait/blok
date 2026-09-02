@@ -149,11 +149,22 @@ describe('server release wiring', () => {
     expect(steps.some((step) => step.run === `yarn workspace ${SERVER_NPM_NAME} test`)).toBe(true);
   });
 
-  it('does not ship an unused generated JavaScript runtime', () => {
-    expect(existsSync(join(
-      repoRoot,
-      'packages/server/dotnet/Blok.Server/Generated/blok-server-runtime.js',
-    ))).toBe(false);
+  /**
+   * The runtime was once deleted for being an artifact nothing loaded. It is
+   * back because Blok.Server.Documents runs it, so what has to hold now is not
+   * its absence but that a consumer still reads it — an embedded resource
+   * nobody loads is dead weight in every consumer's package.
+   */
+  it('ships the generated JavaScript runtime only with a consumer that loads it', () => {
+    const csproj = read('packages/server/dotnet/Blok.Server/Blok.Server.csproj');
+    const runtime = read('packages/server/dotnet/Blok.Server/Runtime/JintBlokRuntime.cs');
+    const converter = read('packages/server/dotnet/Blok.Server/Documents/BlokDocumentConverter.cs');
+
+    expect(csproj).toContain('<EmbeddedResource Include="Generated/blok-server-runtime.js"');
+    expect(csproj).toContain('LogicalName="Blok.Server.Runtime.blok-server-runtime.js"');
+    expect(runtime).toContain('Blok.Server.Runtime.blok-server-runtime.js');
+    expect(converter).toContain('IBlokRuntime');
+    expect(read('scripts/build-all.mjs')).toContain('node scripts/build-server-runtime.mjs');
   });
 
   it('keeps the server package on the family version', () => {
@@ -475,12 +486,15 @@ describe('server release wiring', () => {
     expect(dockerfile).toMatch(
       /^FROM --platform=\$BUILDPLATFORM mcr\.microsoft\.com\/dotnet\/sdk:10\.0[^\n]* AS publish/m,
     );
+    // The .NET SDK image has no node, so the JavaScript runtime is built in a
+    // stage of its own and copied in; without that stage the embedded bundle
+    // is missing from the image and every conversion fails at load.
     expect(dockerfile).toContain(
-      'COPY packages/server/dotnet/ packages/server/dotnet/',
+      'COPY --from=runtime-build /workspace/packages/server/dotnet/ packages/server/dotnet/',
     );
-    expect(dockerfile).not.toContain('FROM node:');
-    expect(dockerfile).not.toContain('yarn install');
-    expect(dockerfile).not.toContain('build-server-runtime');
+    expect(dockerfile).toMatch(/^FROM --platform=\$BUILDPLATFORM node:\d+[^\n]* AS runtime-build/m);
+    expect(dockerfile).toContain('yarn install --immutable');
+    expect(dockerfile).toContain('node scripts/build-server-runtime.mjs');
     expect(dockerfile).toContain(
       'packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj',
     );
@@ -492,7 +506,7 @@ describe('server release wiring', () => {
     expect(dockerfile).toContain('--self-contained true');
     expect(dockerfile).toContain('-p:PublishSingleFile=true');
     expect(dockerfile).not.toContain('IncludeNativeLibrariesForSelfExtract');
-    expect(dockerfile).not.toContain('SkipBlokServerRuntimeBuild');
+    expect(dockerfile).toContain('-p:SkipBlokServerRuntimeBuild=true');
     expect(dockerfile).toContain('ARG BLOK_SERVER_VERSION');
     expect(dockerfile).toContain('-p:BlokServerVersion=$BLOK_SERVER_VERSION');
     expect(dockerfile).toMatch(/^FROM mcr\.microsoft\.com\/dotnet\/runtime-deps:10\.0/m);

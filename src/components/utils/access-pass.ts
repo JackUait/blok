@@ -59,30 +59,36 @@ function composeEndpoint(endpoint: string, doc: string | undefined): string {
 }
 
 /**
- * Reads `exp` out of a pass's payload segment. A pass we cannot read is treated
- * as expiring now, so it is used once and never assumed still valid.
+ * Decodes a pass's payload segment. Null when the pass is not dot-joined
+ * segments, the payload is not base64url JSON, or the JSON is not an object;
+ * each caller decides what an unreadable pass means for it.
  * @param token - the pass as the host app minted it
  */
-function readExpiry(token: string): number {
+export function readTicketClaims(token: string): Record<string, unknown> | null {
   const payload = token.split('.')[1];
 
   if (payload === undefined) {
-    return 0;
+    return null;
   }
 
   try {
     const decoded: unknown = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
 
-    if (typeof decoded !== 'object' || decoded === null) {
-      return 0;
-    }
-
-    const exp = (decoded as { exp?: unknown }).exp;
-
-    return typeof exp === 'number' ? exp * 1000 : 0;
+    return typeof decoded === 'object' && decoded !== null ? (decoded as Record<string, unknown>) : null;
   } catch {
-    return 0;
+    return null;
   }
+}
+
+/**
+ * Reads `exp` out of a pass's payload segment. A pass we cannot read is treated
+ * as expiring now, so it is used once and never assumed still valid.
+ * @param token - the pass as the host app minted it
+ */
+function readExpiry(token: string): number {
+  const exp = readTicketClaims(token)?.exp;
+
+  return typeof exp === 'number' ? exp * 1000 : 0;
 }
 
 /**

@@ -81,7 +81,6 @@ const TERMINAL_CLOSE_CODES: Record<number, CollabTerminalError> = {
 /** Identifies the transactions this connection applied, for echo suppression. */
 interface ProviderOrigin {
   readonly provider: 'blok-collab';
-  readonly generation: number;
 }
 
 type Phase = 'idle' | 'connecting' | 'awaiting-control' | 'ready' | 'offline' | 'terminal';
@@ -314,7 +313,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    */
   const hookSeam = (origin: ProviderOrigin): void => {
     state.unhookDoc = yjs.onDocUpdate((update, updateOrigin) => {
-      if (updateOrigin === origin || state.socket === null || state.phase !== 'ready') {
+      if (updateOrigin === origin || state.socket === null) {
         return;
       }
 
@@ -351,18 +350,6 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * Closes a socket that may already be gone; a throw here means it was.
-   * @param socket - the transport to close
-   */
-  const closeQuietly = (socket: WebSocketLike): void => {
-    try {
-      socket.close(CLOSE_NORMAL);
-    } catch {
-      // Already closed — nothing to do.
-    }
-  };
-
-  /**
    * Ends one connection generation: unhook the seam, cancel its timers, drop
    * remote presence, and detach (optionally close) the socket. The seam is
    * unhooked BEFORE presence is cleared so the local removals are not broadcast
@@ -388,9 +375,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       socket.onmessage = null;
       socket.onclose = null;
       socket.onerror = null;
+    }
 
-      if (closeSocket) {
-        closeQuietly(socket);
+    if (socket !== null && closeSocket) {
+      try {
+        socket.close(CLOSE_NORMAL);
+      } catch {
+        // Already closed — nothing to do.
       }
     }
 
@@ -832,7 +823,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     }
 
     const socket = attempt.socket;
-    const origin: ProviderOrigin = { provider: 'blok-collab', generation };
+    const origin: ProviderOrigin = { provider: 'blok-collab' };
 
     socket.binaryType = 'arraybuffer';
     state.socket = socket;

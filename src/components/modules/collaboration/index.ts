@@ -3,7 +3,7 @@ import type { CollaborationPeer } from '../../../../types/events/editor-events';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
-import { createTicketSource, type TicketRequest } from '../../utils/access-pass';
+import { createTicketSource, readTicketClaims, type TicketRequest } from '../../utils/access-pass';
 import { logLabeled } from '../../utils/logger';
 
 import { readCaretPosition } from './caret-position';
@@ -104,25 +104,7 @@ const seedBlockId = (doc: string): string =>
  * someone type because we could not parse their ticket is the worse failure.
  * @param token - the raw ticket the host's endpoint minted
  */
-const grantsWrite = (token: string): boolean => {
-  const payload = token.split('.')[1];
-
-  if (payload === undefined) {
-    return true;
-  }
-
-  try {
-    const decoded: unknown = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-
-    if (typeof decoded !== 'object' || decoded === null) {
-      return true;
-    }
-
-    return (decoded as { write?: unknown }).write !== false;
-  } catch {
-    return true;
-  }
-};
+const grantsWrite = (token: string): boolean => readTicketClaims(token)?.write !== false;
 
 /**
  * Turns the `server` option into the document's sync URL.

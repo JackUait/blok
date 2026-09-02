@@ -235,6 +235,119 @@ describe('UndoHistory', () => {
       expect(getText('b1')).toBe('');
     });
 
+    /**
+     * One `undo()` can pop SEVERAL yjs stack items: yjs skips an item whose
+     * changes a peer has since deleted and keeps popping until one performs
+     * a change. The caret stacks must shed exactly the entries whose items
+     * left the yjs stack, or every later press is one step out of phase.
+     */
+    it('sheds every caret entry whose stack item yjs skipped after a peer deleted the edited block', () => {
+      const seedBlock = (id: string): Y.Map<unknown> => {
+        const block = new Y.Map<unknown>();
+
+        block.set('id', id);
+        block.set('text', `${id.toLowerCase()}0`);
+
+        return block;
+      };
+
+      ydoc.transact(() => {
+        yblocks.insert(0, [seedBlock('A'), seedBlock('B'), seedBlock('C')]);
+      });
+
+      const blockManager = blok.BlockManager as unknown as {
+        currentBlock: unknown;
+        getBlockById: ReturnType<typeof vi.fn>;
+      };
+      const caret = blok.Caret as unknown as { setToBlock: ReturnType<typeof vi.fn> };
+      const setCaretIn = (id: string): void => {
+        blockManager.currentBlock = { id, currentInputIndex: 0, currentInput: undefined, inputs: [] };
+      };
+
+      blockManager.getBlockById.mockImplementation((id: string) => ({ id, inputs: [], parentId: null }));
+
+      const label = (entries: CaretHistoryEntry[]): string[] =>
+        entries.map((entry) => `${entry.kind}:${entry.before?.blockId ?? '-'}`);
+      // Read lazily: a new action REPLACES the redo stack array.
+      const stacks = history as unknown as { caretUndoStack: CaretHistoryEntry[]; caretRedoStack: CaretHistoryEntry[] };
+      const undoEntries = (): CaretHistoryEntry[] => stacks.caretUndoStack;
+      const redoEntries = (): CaretHistoryEntry[] => stacks.caretRedoStack;
+      const order = (): string[] => yblocks.toArray().map((b) => b.get('id') as string);
+
+      // E1: edit A.
+      setCaretIn('A');
+      history.markCaretBeforeChange();
+      ydoc.transact(() => {
+        getBlock('A').set('text', 'a1');
+      }, 'local');
+      history.stopCapturing();
+
+      // M: move C to the front. `recordMove` only records; the doc move
+      // itself is untracked, as YjsManager.moveBlock's is.
+      setCaretIn('C');
+      ydoc.transact(() => {
+        const moved = getBlock('C').toJSON();
+
+        yblocks.delete(order().indexOf('C'), 1);
+
+        const copy = new Y.Map<unknown>();
+
+        Object.entries(moved).forEach(([key, value]) => {
+          copy.set(key, value);
+        });
+        yblocks.insert(0, [copy]);
+      });
+      history.recordMove(rootMove('C', 'B', null), false);
+      history.stopCapturing();
+
+      // E2: edit B.
+      setCaretIn('B');
+      history.markCaretBeforeChange();
+      ydoc.transact(() => {
+        getBlock('B').set('text', 'b1');
+      }, 'local');
+
+      expect(label(undoEntries())).toEqual(['edit:A', 'move:C', 'edit:B']);
+      expect(order()).toEqual(['C', 'A', 'B']);
+
+      // A peer deletes B: E2's changes are gone from the document.
+      ydoc.transact(() => {
+        yblocks.delete(order().indexOf('B'), 1);
+      }, 'remote');
+
+      // Press 1: yjs pops E2 (no-op) AND E1 in the same call.
+      history.undo();
+
+      expect(getText('A')).toBe('a0');
+      expect(label(undoEntries())).toEqual(['move:C']);
+      expect(label(redoEntries())).toEqual(['edit:A']);
+      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
+
+      // Press 2: the move.
+      history.undo();
+
+      expect(order()).toEqual(['A', 'C']);
+      expect(history.canUndo()).toBe(false);
+      expect(undoEntries()).toHaveLength(0);
+
+      // Press 3: nothing left — no caret jump to a stale position.
+      caret.setToBlock.mockClear();
+      history.undo();
+
+      expect(caret.setToBlock).not.toHaveBeenCalled();
+      expect(undoEntries()).toHaveLength(0);
+
+      // Redo walks back forward in the same order: the move, then E1.
+      history.redo();
+      expect(order()).toEqual(['C', 'A']);
+
+      history.redo();
+      expect(getText('A')).toBe('a1');
+      expect(caret.setToBlock).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'A' }), expect.anything());
+      expect(label(undoEntries())).toEqual(['move:C', 'edit:A']);
+      expect(history.canRedo()).toBe(false);
+    });
+
     function getBlock(id: string): Y.Map<unknown> {
       const block = yblocks.toArray().find((b) => b.get('id') === id);
 

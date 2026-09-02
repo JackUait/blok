@@ -6,6 +6,13 @@ import type { BlokModules } from '../../../types-internal/blok-modules';
 import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
 import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
+type StackItem = Y.UndoManager['undoStack'][number];
+
+interface StackItemEvent {
+  type: 'undo' | 'redo';
+  stackItem: StackItem;
+}
+
 /**
  * UndoHistory manages all undo/redo state.
  *
@@ -78,6 +85,27 @@ export class UndoHistory {
    * Flag indicating we have a pending caret snapshot.
    */
   private hasPendingCaret = false;
+
+  /**
+   * The caret entry recorded for each yjs stack item, by identity. One
+   * `undo()` can pop SEVERAL items — yjs skips an item whose changes a peer
+   * has since deleted and keeps popping until one performs a change — so
+   * the caret stacks shed exactly the entries whose items left the yjs
+   * stack, never "the top one".
+   */
+  private readonly entryByStackItem = new WeakMap<StackItem, CaretHistoryEntry>();
+
+  /**
+   * The item the in-flight undo/redo transaction added to the opposite yjs
+   * stack; the caret entry carried across is keyed to it.
+   */
+  private replayStackItem: StackItem | null = null;
+
+  /**
+   * The popped item that actually changed the document during the in-flight
+   * undo/redo — the one whose caret entry is worth restoring.
+   */
+  private poppedStackItem: StackItem | null = null;
 
   /**
    * Flag to skip caret stack updates during explicit undo/redo operations.
@@ -199,11 +227,13 @@ export class UndoHistory {
    * Captures caret position after each undoable change.
    */
   private setupCaretTracking(): void {
-    this.undoManager.on('stack-item-added', (event: { type: 'undo' | 'redo' }) => {
+    this.undoManager.on('stack-item-added', (event: StackItemEvent) => {
       // Skip if we're in the middle of an explicit undo/redo operation.
       // During redo, Yjs fires stack-item-added with type='undo' which would
       // incorrectly add entries to our caret stack.
       if (this.isPerformingUndoRedo) {
+        this.replayStackItem = event.stackItem;
+
         return;
       }
 
@@ -215,6 +245,7 @@ export class UndoHistory {
           kind: 'edit',
         };
 
+        this.entryByStackItem.set(event.stackItem, entry);
         this.caretUndoStack.push(entry);
         // Clear redo stack on new action (standard undo/redo behavior)
         this.caretRedoStack = [];
@@ -231,9 +262,13 @@ export class UndoHistory {
       this.resetPendingCaretState();
     });
 
+    this.undoManager.on('stack-item-popped', (event: StackItemEvent) => {
+      this.poppedStackItem = event.stackItem;
+    });
+
     // Listen for stack-item-updated to update the 'after' position when changes
     // are merged into an existing stack item (due to captureTimeout batching).
-    this.undoManager.on('stack-item-updated', (event: { type: 'undo' | 'redo' }) => {
+    this.undoManager.on('stack-item-updated', (event: StackItemEvent) => {
       if (this.isPerformingUndoRedo) {
         return;
       }
@@ -355,8 +390,7 @@ export class UndoHistory {
     // No move to undo, delegate to Yjs UndoManager
     this.performYjsUndoRedo(() => this.undoManager.undo());
 
-    // Pop caret entry only after Yjs undo succeeds
-    const caretEntry = this.caretUndoStack.pop();
+    const caretEntry = this.settleReplayedEntries(this.caretUndoStack, this.undoManager.undoStack);
 
     this.pushCaretAndRestore(caretEntry, this.caretRedoStack, 'before');
     this.restoreScrollIfJumped(savedScrollY);
@@ -402,11 +436,36 @@ export class UndoHistory {
     // No move to redo, delegate to Yjs UndoManager
     this.performYjsUndoRedo(() => this.undoManager.redo());
 
-    // Pop caret entry only after Yjs redo succeeds
-    const caretEntry = this.caretRedoStack.pop();
+    const caretEntry = this.settleReplayedEntries(this.caretRedoStack, this.undoManager.redoStack);
 
     this.pushCaretAndRestore(caretEntry, this.caretUndoStack, 'after');
     this.restoreScrollIfJumped(savedScrollY);
+  }
+
+  /**
+   * After a yjs undo/redo: drop every non-move entry whose stack item is no
+   * longer on `live` (move entries belong to the move stacks and stay), and
+   * return the entry to carry to the opposite caret stack — the popped
+   * item's own when one performed a change, else the newest shed entry.
+   * That entry is keyed to the item the replay added, so the next press in
+   * the other direction can settle it the same way.
+   * @param entries - the caret stack that was just unwound
+   * @param live - the yjs stack it mirrors, after the replay
+   */
+  private settleReplayedEntries(entries: CaretHistoryEntry[], live: readonly StackItem[]): CaretHistoryEntry | undefined {
+    const liveEntries = new Set(live.map((item) => this.entryByStackItem.get(item)));
+    const shed = new Set(entries.filter((entry) => entry.kind !== 'move' && !liveEntries.has(entry)));
+
+    entries.splice(0, entries.length, ...entries.filter((entry) => !shed.has(entry)));
+
+    const performed = this.poppedStackItem === null ? undefined : this.entryByStackItem.get(this.poppedStackItem);
+    const carried = performed ?? [...shed].at(-1);
+
+    if (carried !== undefined && this.replayStackItem !== null) {
+      this.entryByStackItem.set(this.replayStackItem, carried);
+    }
+
+    return carried;
   }
 
   /**
@@ -457,6 +516,8 @@ export class UndoHistory {
    */
   private performYjsUndoRedo(operation: () => void): void {
     this.isPerformingUndoRedo = true;
+    this.replayStackItem = null;
+    this.poppedStackItem = null;
     try {
       operation();
     } finally {
@@ -930,6 +991,8 @@ export class UndoHistory {
     this.pendingCaretBefore = null;
     this.hasPendingCaret = false;
     this.isPerformingUndoRedo = false;
+    this.replayStackItem = null;
+    this.poppedStackItem = null;
     // Clear smart grouping state
     this.clearBoundary();
     this.undoManager.clear();

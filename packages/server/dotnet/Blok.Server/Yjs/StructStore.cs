@@ -91,12 +91,6 @@ internal sealed class StructStore
   /// The item that starts exactly at <paramref name="id"/>, splitting the one
   /// that covers it when it starts earlier.
   /// </summary>
-  public YItem GetItemCleanStart(YId id)
-  {
-    return GetItemCleanStart(null, id);
-  }
-
-  /// <inheritdoc cref="GetItemCleanStart(YId)"/>
   public YItem GetItemCleanStart(YTransaction? transaction, YId id)
   {
     return GetStructCleanStart(transaction, id) as YItem ??
@@ -125,12 +119,6 @@ internal sealed class StructStore
   /// that covers it when it ends later. A GC is returned whole: it has no
   /// content to divide, and the integrator tests for that.
   /// </summary>
-  public YStruct GetItemCleanEnd(YId id)
-  {
-    return GetItemCleanEnd(null, id);
-  }
-
-  /// <inheritdoc cref="GetItemCleanEnd(YId)"/>
   public YStruct GetItemCleanEnd(YTransaction? transaction, YId id)
   {
     var structs = Structs(id.Client);

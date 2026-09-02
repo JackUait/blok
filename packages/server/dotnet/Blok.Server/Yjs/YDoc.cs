@@ -33,8 +33,6 @@ internal sealed class YDoc
   /// <summary>Content GC of deleted items; on by default (Global Constraints).</summary>
   public bool Gc { get; init; } = true;
 
-  public IReadOnlyDictionary<string, YAbstractType> Share => share;
-
   /// <summary>The health signal: structs or deletions this document cannot apply yet.</summary>
   public bool HasPending => Store.PendingStructs is not null || Store.PendingDs is not null;
 

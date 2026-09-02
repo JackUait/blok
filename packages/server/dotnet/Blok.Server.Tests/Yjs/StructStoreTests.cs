@@ -92,7 +92,7 @@ public sealed class StructStoreTests
 
     store.AddStruct(left);
 
-    var right = store.GetItemCleanStart(new YId(Client, 3));
+    var right = store.GetItemCleanStart(null, new YId(Client, 3));
 
     Assert.NotSame(left, right);
     Assert.Equal(new YId(Client, 2), left.LastId);
@@ -111,7 +111,7 @@ public sealed class StructStoreTests
     Assert.Same(right, store.Find(new YId(Client, 3)));
 
     // A clock that already starts a struct never splits again.
-    Assert.Same(right, store.GetItemCleanStart(new YId(Client, 3)));
+    Assert.Same(right, store.GetItemCleanStart(null, new YId(Client, 3)));
     Assert.Equal(2, store.Clients[Client].Count);
   }
 
@@ -123,7 +123,7 @@ public sealed class StructStoreTests
 
     store.AddStruct(collected);
 
-    Assert.Same(collected, store.GetItemCleanEnd(new YId(Client, 2)));
+    Assert.Same(collected, store.GetItemCleanEnd(null, new YId(Client, 2)));
     Assert.Single(store.Clients[Client]);
     Assert.Equal(5, collected.Length);
 
@@ -134,7 +134,7 @@ public sealed class StructStoreTests
 
     // The clean end hands back the LEFT half: the caller asked for the struct
     // that now ends at that clock.
-    Assert.Same(item, items.GetItemCleanEnd(new YId(Client, 2)));
+    Assert.Same(item, items.GetItemCleanEnd(null, new YId(Client, 2)));
     Assert.Equal(2, items.Clients[Client].Count);
     Assert.Equal(3, item.Length);
     Assert.Equal(new YId(Client, 2), item.LastId);

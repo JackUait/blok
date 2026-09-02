@@ -2,12 +2,14 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using System.Text.Json.Nodes;
+using Blok.Server.Yjs;
 
-namespace Blok.Server.Yjs;
+namespace Blok.Server.Tests.Yjs;
 
 /// <summary>
 /// The C# twin of scripts/yjs-engine-render.mjs, and the only oracle a
-/// document is compared against.
+/// document is compared against. It lives here rather than beside the engine
+/// because nothing but a test ever renders a document this way.
 ///
 /// A plain <c>toJSON</c> cannot be that oracle: a root created by integration
 /// is untyped and serialises to nothing, JSON has no bigint and erases
@@ -87,6 +89,11 @@ internal static class JsonRenderer
         // Content that kept the wire's raw JSON; already in the shape the
         // Node renderer produces for a plain value.
         return node.DeepClone();
+
+      // JSON.stringify of a Y.Doc is {}, which is what the Node renderer and
+      // the converter both write for a subdoc.
+      case YSubdoc:
+        return new JsonObject();
 
       default:
         throw new InvalidOperationException(

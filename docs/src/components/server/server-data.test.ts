@@ -297,7 +297,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-eight service limits the design refuses to bury', () => {
+  it('states the twenty-nine service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -317,6 +317,7 @@ describe('server docs data', () => {
       'collab-connection-ceiling',
       'collab-scale-out',
       'collab-what-is-not-limited',
+      'collab-what-is-not-checked',
       'collab-connection-states',
       'collab-offline-reload',
       'collab-merge-granularity',
@@ -389,6 +390,34 @@ describe('server docs data', () => {
     expect(body).toMatch(/nobody has open/i);
     expect(body).toMatch(/wins|overwritten/i);
     expect(body).toMatch(/open tab/i);
+    // Inserts apply one after another against the document as it stands, so
+    // two naming the same anchor land reversed; a reader chaining them by
+    // hand needs to know.
+    expect(body).toMatch(/same `?after`?/);
+    expect(body).toMatch(/reverse order/i);
+    // The write-back already carries the version header; the consumer cannot
+    // close the reset-vs-export race without knowing it exists.
+    expect(body).toContain('Blok-Doc-Version');
+    expect(body).toMatch(/409/);
+  });
+
+  // Shape is checked at the door, meaning is not. Each of these is a known
+  // pass-through, stated so nobody discovers it from a support ticket.
+  it('names what passes through unchecked: lone surrogates, pending updates, denied children', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-what-is-not-checked')?.body ?? '';
+
+    expect(limits.indexOf('collab-what-is-not-checked')).toBe(
+      limits.indexOf('collab-what-is-not-limited') + 1,
+    );
+    expect(body).toMatch(/U\+FFFD/);
+    expect(body).toMatch(/surrogate/i);
+    expect(body).toMatch(/integrates nothing|never integrate/i);
+    expect(body).toMatch(/not refused|relayed/i);
+    expect(body).toMatch(/evict/i);
+    expect(body).toContain('childTools');
+    expect(body).toMatch(/warning/i);
+    expect(body).toMatch(/does not demote|not demoted/i);
   });
 
   it('documents how the service signs in to the document endpoint', () => {

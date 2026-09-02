@@ -322,9 +322,11 @@ clean.
   `data: {text: ''}` — a divergence between two write paths in a file whose
   whole premise is lockstep with the client.
 - Two inserts naming the same `after` in one request land in reverse order;
-  undocumented rather than wrong.
+  undocumented rather than wrong. DOCUMENTED (wp-h): the /server
+  `collab-reset` entry says to chain `after` to append in order.
 - `writeDenied` restored from the cache has no reset path other than a ticket
   source, so a host that removes `ticket` after a member was denied leaves them
-  read-only until they clear site data.
+  read-only until they clear site data. CLOSED (wp-a): a cached verdict is
+  honoured only while `ticket` is configured.
 - `InputWriter`'s doc comment was split when the planner was pasted into the
   middle of it; cosmetic, in a file whose comments carry laws.

@@ -681,6 +681,15 @@ export interface BlokMountOptions {
    * would give the document two owners. Requires {@link BlokMountOptions.server}
    * — the sync URL is derived from it. Both are refused at construction.
    *
+   * Once connected: `collaboration:status` lists at most 50 peers, chosen
+   * after a bounded scan of the presence map; destroying the editor, and
+   * `pagehide`, flush pending typing to the wire; a block a peer wrote with a
+   * non-string `id`/`type` or a non-map `data` is skipped on save with one
+   * console warning naming it; a value nested past 256 levels saves as
+   * `null`; and an `apply-failed` terminal means a DOCUMENT frame failed to
+   * apply — a presence frame that fails is dropped with a warning and the
+   * session goes on.
+   *
    * Fixed for the editor's life; changing it requires recreating the editor.
    */
   collaboration?: {
@@ -718,6 +727,13 @@ export interface BlokMountOptions {
      * never be mistaken for the live document. Nothing is cached until the
      * first successful sync, so an editor that never reached the service still
      * cannot come up editable from a copy of its own.
+     *
+     * Three more things about the copy: an `oversized-update` terminal
+     * discards it (the status `reason` says so) so the next load syncs from
+     * the server; a copy that cannot be replayed is discarded with a warning
+     * and the editor boots read-only until synced; and a cached write-denied
+     * verdict is honoured only while `ticket` is configured — without a
+     * ticket source the cached document comes up editable.
      *
      * IT IS NOT SCOPED TO A PERSON. The copy belongs to the browser, so on a
      * shared profile the next person to open that page sees the previous

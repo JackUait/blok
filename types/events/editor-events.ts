@@ -69,7 +69,7 @@ export interface CollaborationPeer {
     name: string;
 
     /**
-     * CSS color used for the peer's cursor / avatar outline.
+     * CSS color used for the peer's cursor, avatar and gutter face.
      */
     color: string;
   };
@@ -104,8 +104,9 @@ export interface CollaborationPeer {
  * - `oversized-update` — the document cannot be shipped: a frame the editor must
  *   send is larger than the server accepts. The content is still in the tab, so
  *   offer the user a copy before the page is closed.
- * - `apply-failed` — an incoming change could not be applied, so the document
- *   never materialised.
+ * - `apply-failed` — an incoming DOCUMENT frame could not be applied, so the
+ *   document never materialised. A presence frame that fails to apply is
+ *   dropped with a warning and is never terminal.
  *
  * A reset room is deliberately NOT here: the editor drops its copy and
  * reconnects, reporting `offline` while it does.

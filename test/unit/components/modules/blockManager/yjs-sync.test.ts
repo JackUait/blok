@@ -25,6 +25,8 @@ const createMockBlock = (options: {
   contentIds?: string[];
   data?: Record<string, unknown>;
   tunes?: Record<string, unknown>;
+  tool?: Partial<BlockToolAdapter>;
+  name?: string;
 } = {}): Block => {
   const holder = document.createElement('div');
   holder.setAttribute('data-blok-element', '');
@@ -47,8 +49,8 @@ const createMockBlock = (options: {
     setData: mockSetData as Block['setData'],
     call: mockCall,
     destroy: mockDestroy,
-    name: 'paragraph',
-    tool: {} as BlockToolAdapter,
+    name: options.name ?? 'paragraph',
+    tool: (options.tool ?? {}) as BlockToolAdapter,
     settings: {},
     tunes: new ToolsCollection<BlockToolAdapter>(),
     config: {},
@@ -2935,6 +2937,101 @@ describe('BlockYjsSync', () => {
 
       expect(mockToJSON(mockYjsManager)).not.toHaveBeenCalled();
       expect(repository.blocks.map((block) => block.id)).toEqual(before);
+    });
+  });
+
+  /**
+   * `childTools` is enforced on the local insert and move paths only. A
+   * remote child the container denies is materialised as-is — demoting it
+   * here would write back and loop against the peer — but the host must be
+   * told, once, so the doc-authored shape is not a silent surprise.
+   */
+  describe('childTools on remote children', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+    let warn: ReturnType<typeof vi.spyOn>;
+    let container: Block;
+
+    beforeEach(() => {
+      container = createMockBlock({ id: 'box', tool: { childTools: { deny: ['paragraph'] } } });
+      blocksStore = createBlocksStore([container]);
+      repository = new BlockRepository();
+      repository.initialize(blocksStore);
+      yjsSync = new BlockYjsSync(createMockDependencies(mockYjsManager), repository, factory, mockHandlers, blocksStore);
+
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      warn = vi.spyOn(utils, 'logLabeled').mockImplementation(() => undefined);
+      vi.spyOn(factory, 'composeBlock').mockImplementation(
+        (options) => createMockBlock({ id: options.id, name: options.tool, parentId: options.parentId })
+      );
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('materialises a denied remote child under its container and warns once', () => {
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'paragraph', data: createMockYMap({ text: 'hi' }), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue([{ id: 'box' }, { id: 'kid' }]);
+
+      callback({ blockId: 'kid', type: 'add', origin: 'remote' });
+
+      const kid = repository.getBlockById('kid');
+
+      expect(kid).toBeDefined();
+      expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(kid, 'box');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('kid');
+      expect(warn.mock.calls[0][0]).toContain('box');
+      expect(warn.mock.calls[0][1]).toBe('warn');
+      expect(mockYjsManager.transactWithoutCapture).not.toHaveBeenCalled();
+      expect(mockYjsManager.updateBlockData).not.toHaveBeenCalled();
+    });
+
+    it('warns once when a remote reparent moves a denied child into the container', async () => {
+      const kid = createMockBlock({ id: 'kid' });
+
+      blocksStore.push(kid);
+
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'paragraph', data: createMockYMap({ text: 'hi' }), tunes: createMockYMap({}), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+
+      callback({ blockId: 'kid', type: 'update', origin: 'remote' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockHandlers.setBlockParent).toHaveBeenCalledWith(kid, 'box');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('kid');
+    });
+
+    it('stays silent for a child the container allows', () => {
+      const records: Record<string, YMap<unknown>> = {
+        box: createMockYMap({ type: 'paragraph', data: createMockYMap({}), contentIds: createDocArray(['kid']) }),
+        kid: createMockYMap({ type: 'toggle', data: createMockYMap({}), parentId: 'box' }),
+      };
+
+      mockGetBlockById(mockYjsManager).mockImplementation((id: string) => records[id]);
+      mockToJSON(mockYjsManager).mockReturnValue([{ id: 'box' }, { id: 'kid' }]);
+
+      callback({ blockId: 'kid', type: 'add', origin: 'remote' });
+
+      expect(repository.getBlockById('kid')).toBeDefined();
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 

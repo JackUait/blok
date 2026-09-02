@@ -9,6 +9,7 @@ import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
 import { logLabeled } from '../../utils';
+import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
@@ -629,6 +630,7 @@ export class BlockYjsSync {
           this.reconcileParentChildOrderFromDoc(remoteParentId);
         });
         this.batchReparentedInto.add(remoteParentId);
+        this.warnIfChildToolDenied(block, remoteParentId);
       }
     } else if (block.parentId !== null) {
       /**
@@ -869,6 +871,29 @@ export class BlockYjsSync {
   }
 
   /**
+   * `childTools` is enforced on the local insert and move paths only. A
+   * child the container denies that arrives through the doc is placed as
+   * the doc says — demoting it here would write back and loop against the
+   * peer — so the host is told instead.
+   */
+  private warnIfChildToolDenied(child: Block, parentId: string | null | undefined): void {
+    if (parentId === null || parentId === undefined) {
+      return;
+    }
+
+    const parent = this.repository.getBlockById(parentId);
+
+    if (parent === undefined || isChildToolAllowed(parent, child.name)) {
+      return;
+    }
+
+    logLabeled(
+      `Block «${child.id}» (${child.name}) was placed under «${parentId}» by the document, but that container's childTools does not allow it.`,
+      'warn'
+    );
+  }
+
+  /**
    * Handle block add from Yjs (undo/redo - restoring a removed block, or a remote insert)
    */
   private handleYjsAdd(blockId: string): void {
@@ -932,6 +957,7 @@ export class BlockYjsSync {
       if (parentId !== undefined) {
         this.handlers.setBlockParent(block, parentId);
         this.reconcileParentChildOrderFromDoc(parentId);
+        this.warnIfChildToolDenied(block, parentId);
       }
 
       // Reconcile orphaned children: when a parent block is restored via undo,
@@ -1133,6 +1159,7 @@ export class BlockYjsSync {
         if (parentId !== undefined) {
           this.handlers.setBlockParent(block, parentId);
           this.reconcileParentChildOrderFromDoc(parentId);
+          this.warnIfChildToolDenied(block, parentId);
         }
       }
     }, { extendThroughRAF: true });

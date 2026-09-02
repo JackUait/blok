@@ -2439,14 +2439,6 @@
       "tls-termination": {
         "title": "Terminate TLS before internet traffic reaches the service",
         "body": "The standalone host speaks plain HTTP and does not terminate TLS or manage certificates. An internet-facing deployment must sit behind a reverse proxy or hosting platform that accepts HTTPS and forwards HTTP over a private or loopback connection. Never send a ticket over plain internet traffic."
-      },
-      "alpine-nuget": {
-        "title": "On Alpine, install with npx, Docker or the archives — not NuGet",
-        "body": "On Alpine Linux, install the service with npx, Docker or the release archives — all three carry a build made for Alpine. The NuGet package on Alpine x64 does not: it ships a native library built against the standard Linux C library, which Alpine does not use — a packaging gap in an upstream dependency, not something a setting fixes. The service notices at startup and refuses with a message naming the install methods that work, instead of failing somewhere later."
-      },
-      "service-account-home": {
-        "title": "A service account with no home directory needs DOTNET_BUNDLE_EXTRACT_BASE_DIR",
-        "body": "The release archive ships the service as a single file that unpacks itself on first start, into a folder under the home directory of the account running it. A service account with no home directory has nowhere to unpack, so the process dies before the service starts, complaining that the default extraction directory is not accessible: set DOTNET_BUNDLE_EXTRACT_BASE_DIR to a directory that account can write — and not the uploads directory, because everything there is served. The Docker image already sets it (/var/tmp/.net)."
       }
     }
   }

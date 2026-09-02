@@ -297,7 +297,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-nine service limits the design refuses to bury', () => {
+  it('states the twenty-seven service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -326,8 +326,6 @@ describe('server docs data', () => {
       'collab-presence-room-size',
       'collab-doc-id-shape',
       'tls-termination',
-      'alpine-nuget',
-      'service-account-home',
     ]);
     for (const limit of serverLimits) {
       expect(limit.title.length).toBeGreaterThan(0);
@@ -671,32 +669,6 @@ describe('server docs data', () => {
     expect(body).toContain('document ids must be a single path segment');
     expect(body).toMatch(/opaque ids/i);
     expect(body).toMatch(/token/i);
-  });
-
-  it('admits the NuGet package does not run on Alpine x64', () => {
-    const body = serverLimits.find((l) => l.id === 'alpine-nuget')?.body ?? '';
-
-    expect(body).toContain('Alpine');
-    expect(body).toContain('NuGet');
-    expect(body).toMatch(/npx/);
-    expect(body).toMatch(/Docker/);
-    expect(body).toMatch(/refus|startup/i);
-  });
-
-  // The .NET host unpacks the single-file archive under $HOME before any
-  // service code runs, so this is not the service refusing — it never starts.
-  // Docker sets the base dir already; the archives cannot, hence the entry.
-  it('tells a home-less service account where the archive must unpack', () => {
-    const limits = serverLimits.map((l) => l.id);
-    const body = serverLimits.find((l) => l.id === 'service-account-home')?.body ?? '';
-
-    expect(limits.indexOf('service-account-home')).toBe(limits.indexOf('alpine-nuget') + 1);
-    expect(body).toMatch(/home directory/i);
-    expect(body).toContain('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
-    expect(body).toMatch(/can write/i);
-    expect(body).toMatch(/Docker/);
-    expect(body).toContain('/var/tmp/.net');
-    expect(body).not.toMatch(/refuses/i);
   });
 
   it('warns that uploaded files belong on a different origin than the app', () => {

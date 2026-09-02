@@ -53,6 +53,15 @@ public sealed class BlokServerOptions
 
   public int CollabMaxConnectionsPerUserPerDoc { get; set; } = 8;
 
+  /// <summary>
+  /// Live sync connections the whole process may hold, everybody together
+  /// (0 = no ceiling). Past it an upgrade is refused 503 BEFORE the room is
+  /// seeded. Set it to the same number as Kestrel's
+  /// MaxConcurrentUpgradedConnections: Kestrel's own refusal comes only after
+  /// the seed, as a 500.
+  /// </summary>
+  public long CollabMaxConnections { get; set; }
+
   public int CollabMaxMessageBytes { get; set; } = 1 << 20;
 
   public TimeSpan CollabKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(15);
@@ -232,6 +241,12 @@ public sealed class BlokServerOptions
       throw new InvalidOperationException(
           $"CollabMaxConnectionsPerUserPerDoc must be a positive number (got {CollabMaxConnectionsPerUserPerDoc}): " +
           "a zero cap refuses every sync connection");
+    }
+
+    if (CollabMaxConnections < 0)
+    {
+      throw new InvalidOperationException(
+          $"CollabMaxConnections must be zero (no ceiling) or greater (got {CollabMaxConnections})");
     }
 
     if (CollabMaxMessageBytes <= 0)

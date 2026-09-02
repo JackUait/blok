@@ -160,7 +160,12 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 {
   private readonly Dictionary<string, LoadedDocument> documents = new(StringComparer.Ordinal);
 
+  private int gets;
+
   internal Exception? LoadFailure { get; set; }
+
+  /// <summary>Seed GETs so far; every one costs the consumer a request.</summary>
+  internal int Gets => Volatile.Read(ref gets);
 
   internal void Holds(string docId, string text)
   {
@@ -169,6 +174,8 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 
   public Task<LoadedDocument> LoadAsync(string docId, CancellationToken cancellationToken)
   {
+    Interlocked.Increment(ref gets);
+
     if (LoadFailure is not null)
     {
       throw LoadFailure;

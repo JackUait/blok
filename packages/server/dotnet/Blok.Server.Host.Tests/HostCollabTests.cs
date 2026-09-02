@@ -262,8 +262,10 @@ public sealed class HostCollabTests
       using var second = await ConnectAsync(listen);
       await HandshakeAsync(second);
 
+      // The service's own count answers 503 before a room is seeded; Kestrel's
+      // limit behind it would have let the room seed and then answered 500.
       var refused = await Assert.ThrowsAsync<WebSocketException>(() => ConnectAsync(listen));
-      Assert.Contains("status code", refused.Message, StringComparison.Ordinal);
+      Assert.Contains("503", refused.Message, StringComparison.Ordinal);
 
       // Kestrel frees the slot when the closed connection ends, a moment
       // after the client sees the close acknowledged — so retry to a deadline.
@@ -280,30 +282,36 @@ public sealed class HostCollabTests
   [Fact]
   public void BoundsUpgradedConnectionsOnlyWithCollab()
   {
+    var collabOptions = new BlokServerOptions
+    {
+      CollabDirectory = UniqueDirectory("blok-host-upgrade-default"),
+      CollabEnabled = true,
+      DocEndpoint = "https://app.example.test/api/blok-docs",
+      ListenAddress = "127.0.0.1:0",
+      StorageDirectory = "",
+    };
+    var plainOptions = new BlokServerOptions
+    {
+      ListenAddress = "127.0.0.1:0",
+      StorageDirectory = "",
+    };
     using var withCollab = BuildHost(
-        new BlokServerOptions
-        {
-          CollabDirectory = UniqueDirectory("blok-host-upgrade-default"),
-          CollabEnabled = true,
-          DocEndpoint = "https://app.example.test/api/blok-docs",
-          ListenAddress = "127.0.0.1:0",
-          StorageDirectory = "",
-        },
+        collabOptions,
         HostRequestTimeouts.DefaultRequestTimeout,
         HostRequestTimeouts.DefaultKeepAliveTimeout,
         maxUpgradedConnections: null);
     using var withoutCollab = BuildHost(
-        new BlokServerOptions
-        {
-          ListenAddress = "127.0.0.1:0",
-          StorageDirectory = "",
-        },
+        plainOptions,
         HostRequestTimeouts.DefaultRequestTimeout,
         HostRequestTimeouts.DefaultKeepAliveTimeout,
         maxUpgradedConnections: null);
 
     Assert.Equal(1024, MaxUpgradedConnections(withCollab));
     Assert.Null(MaxUpgradedConnections(withoutCollab));
+    // The service counts against the same number, so it can answer 503
+    // itself instead of letting Kestrel fail the upgrade after the seed.
+    Assert.Equal(1024, collabOptions.CollabMaxConnections);
+    Assert.Equal(0, plainOptions.CollabMaxConnections);
   }
 
   private static long? MaxUpgradedConnections(WebApplication app)

@@ -69,6 +69,22 @@ internal static class SyncEndpoint
     var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
     var connections = context.RequestServices.GetRequiredService<SyncConnectionTable>();
     var rooms = context.RequestServices.GetRequiredService<CollabRoomManager>();
+
+    // Held until the request ends, which is when Kestrel frees its own slot;
+    // the per-principal lease below is freed earlier, before the close is
+    // answered, so a reconnecting client never races its own slot.
+    using var slot = connections.TryEnter();
+
+    if (slot is null)
+    {
+      await RefuseAsync(
+          context,
+          StatusCodes.Status503ServiceUnavailable,
+          "too many connections on this server\n");
+
+      return;
+    }
+
     var lease = accepted.Principal is null
       ? NoLease.Instance
       : connections.TryReserve(doc, accepted.Principal);

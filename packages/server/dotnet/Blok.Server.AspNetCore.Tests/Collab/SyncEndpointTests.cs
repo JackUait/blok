@@ -25,6 +25,7 @@ public sealed class SyncEndpointTests
   [InlineData("CollabInboundBurstFrames", -1)]
   [InlineData("CollabInboundResyncsPerMinute", -1)]
   [InlineData("CollabInboundAwarenessBytesPerSecond", -1)]
+  [InlineData("CollabMaxConnections", -1)]
   public void RejectsNonPositiveCollabLimits(string option, int value)
   {
     var options = new BlokServerOptions
@@ -37,6 +38,9 @@ public sealed class SyncEndpointTests
     {
       case "CollabMaxConnectionsPerUserPerDoc":
         options.CollabMaxConnectionsPerUserPerDoc = value;
+        break;
+      case "CollabMaxConnections":
+        options.CollabMaxConnections = value;
         break;
       case "CollabMaxMessageBytes":
         options.CollabMaxMessageBytes = value;
@@ -75,6 +79,49 @@ public sealed class SyncEndpointTests
     Assert.Equal(100, options.CollabInboundBurstFrames);
     Assert.Equal(60, options.CollabInboundResyncsPerMinute);
     Assert.Equal(128 << 10, options.CollabInboundAwarenessBytesPerSecond);
+    // In-process the process-wide ceiling is the host's own Kestrel setting.
+    Assert.Equal(0, options.CollabMaxConnections);
+  }
+
+  [Fact]
+  public async Task AtTheProcessCeilingAnUpgradeIs503BeforeTheRoomIsSeeded()
+  {
+    await using var app = await SyncApp.StartAsync(
+        configure: options => options.CollabMaxConnections = 1);
+    await using var held = await app.ConnectAsync();
+    Assert.Equal("seeded", await SyncedTextAsync(held));
+    var getsWhileHeld = app.Fakes.Endpoint.Gets;
+
+    // A different document, so a join would have to seed it: the refusal
+    // must come before the consumer is asked for anything.
+    await app.AssertRefusedAsync(HttpStatusCode.ServiceUnavailable, doc: "doc-43");
+    Assert.Equal(getsWhileHeld, app.Fakes.Endpoint.Gets);
+
+    await held.CloseAsync();
+    Assert.Equal((1000, ""), await held.ReceiveCloseAsync());
+
+    // The slot is freed once the request ends, a moment after the close is
+    // answered — the same moment Kestrel frees its own — so retry to a deadline.
+    await using var admitted = await ConnectWhenAdmittedAsync(app);
+    Assert.Equal("seeded", await SyncedTextAsync(admitted));
+  }
+
+  private static async Task<SyncClient> ConnectWhenAdmittedAsync(SyncApp app)
+  {
+    var deadline = Deadline.Token();
+
+    while (true)
+    {
+      try
+      {
+        return await app.ConnectAsync();
+      }
+      catch (UpgradeRefusedException refused) when (
+          refused.StatusCode == (int)HttpStatusCode.ServiceUnavailable)
+      {
+        await Task.Delay(20, deadline);
+      }
+    }
   }
 
   [Fact]

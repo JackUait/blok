@@ -44,6 +44,9 @@ internal static class HostCollab
 
     builder.WebHost.ConfigureKestrel(kestrel =>
         kestrel.Limits.MaxConcurrentUpgradedConnections = maxUpgradedConnections);
+    // The same number for the service's own count, which refuses 503 before
+    // a room is seeded; Kestrel's limit is the backstop and answers 500.
+    options.CollabMaxConnections = maxUpgradedConnections;
     builder.Logging.AddProvider(new CollabStandardErrorLoggerProvider());
     builder.Services.AddHostedService<CollabDrainService>();
   }

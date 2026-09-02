@@ -87,19 +87,6 @@ public static class BlokServerServiceCollectionExtensions
 
       if (effectiveOptions.CollabDirectory != "")
       {
-        // The claim lands here, not in UseCollabOperationStore<T>(): that runs
-        // after TryAddSingleton has already taken the service type, and which
-        // branch applies is only known once the options resolve. IsService
-        // answers without constructing the consumer's store.
-        if (provider.GetRequiredService<IServiceProviderIsService>()
-            .IsService(typeof(ICollabOperationStore)))
-        {
-          throw new InvalidOperationException(
-              "the registered ICollabOperationStore owns " +
-              $"\"{effectiveOptions.CollabDirectory}\": a working-set store " +
-              "would be a second writer of the same document bytes");
-        }
-
         return new LocalCollabStore(effectiveOptions.CollabDirectory);
       }
 

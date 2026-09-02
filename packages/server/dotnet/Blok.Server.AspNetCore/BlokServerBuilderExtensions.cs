@@ -18,13 +18,10 @@ public static class BlokServerBuilderExtensions
   }
 
   /// <summary>
-  /// Keeps this server's collaboration history in <typeparamref name="T"/>.
+  /// Registers <typeparamref name="T"/> as this server's collaboration
+  /// operation store, replacing one registered earlier. It is resolved as a
+  /// singleton.
   /// </summary>
-  /// <remarks>
-  /// The store also claims the configured collaboration directory: the built-in
-  /// working-set store is no longer created for it, because two writers of the
-  /// same document bytes is exactly what the journal replaces.
-  /// </remarks>
   public static BlokServerBuilder UseCollabOperationStore<T>(this BlokServerBuilder builder)
       where T : class, ICollabOperationStore
   {

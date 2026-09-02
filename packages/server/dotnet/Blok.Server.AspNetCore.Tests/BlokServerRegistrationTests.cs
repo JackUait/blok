@@ -326,59 +326,6 @@ public sealed class BlokServerRegistrationTests
   }
 
   [Fact]
-  public void StopsTheLocalWorkingSetStoreWhenAnOperationStoreOwnsTheSameDirectory()
-  {
-    var services = new ServiceCollection();
-
-    services
-        .AddBlokServer(options =>
-        {
-          options.CollabEnabled = true;
-          options.DocEndpoint = "https://app.example.com/api/blok-docs";
-          options.CollabDirectory = "/srv/blok/collab";
-        })
-        .UseCollabOperationStore<UnbuildableCollabOperationStore>();
-
-    using var provider = services.BuildServiceProvider();
-
-    // The stub's constructor throws its own message, so this also proves the
-    // working-set factory answers from the registration without building the
-    // consumer's store.
-    var error = Assert.Throws<InvalidOperationException>(() =>
-        provider.GetRequiredService<ICollabWorkingSetStore>());
-    Assert.Contains("/srv/blok/collab", error.Message, StringComparison.Ordinal);
-    Assert.Contains("ICollabOperationStore", error.Message, StringComparison.Ordinal);
-  }
-
-  [Fact]
-  public void KeepsTheS3WorkingSetStoreWhenAnOperationStoreIsRegistered()
-  {
-    var services = new ServiceCollection();
-
-    services
-        .AddBlokServer(options =>
-        {
-          options.CollabEnabled = true;
-          options.DocEndpoint = "https://app.example.com/api/blok-docs";
-          options.CollabS3Prefix = "collab/";
-          options.S3Endpoint = "https://s3.example.com";
-          options.S3Region = "eu-central-1";
-          options.S3Bucket = "media";
-          options.S3BucketUrl = "https://cdn.example.com/media";
-          options.S3AccessKey = "access-key";
-          options.S3SecretKey = "secret-key";
-        })
-        .UseCollabOperationStore<UnbuildableCollabOperationStore>();
-
-    using var provider = services.BuildServiceProvider();
-
-    // Only the local directory is shared with the journal; an S3 working set
-    // shares no bytes with it and stays registered.
-    Assert.IsType<S3CollabStore>(
-        provider.GetRequiredService<ICollabWorkingSetStore>());
-  }
-
-  [Fact]
   public void RejectsACollabS3PrefixWithoutCollab()
   {
     var services = new ServiceCollection();
@@ -1122,25 +1069,6 @@ public sealed class BlokServerRegistrationTests
 
   private sealed class SecondStubCollabOperationStore : ICollabOperationStore
   {
-    public ValueTask<CollabDocumentOpen> OpenAsync(
-        string documentId,
-        CancellationToken cancellationToken = default)
-    {
-      throw new NotSupportedException();
-    }
-  }
-
-  /// <summary>
-  /// Fails on construction, so a test that resolves something else can prove
-  /// the operation store was never built.
-  /// </summary>
-  private sealed class UnbuildableCollabOperationStore : ICollabOperationStore
-  {
-    public UnbuildableCollabOperationStore()
-    {
-      throw new InvalidOperationException("the operation store was constructed");
-    }
-
     public ValueTask<CollabDocumentOpen> OpenAsync(
         string documentId,
         CancellationToken cancellationToken = default)

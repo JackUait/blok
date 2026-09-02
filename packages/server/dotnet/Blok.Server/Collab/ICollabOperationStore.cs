@@ -7,9 +7,11 @@ public enum CollabDocumentOpenOutcome
   Opened,
 
   /// <summary>
-  /// Another live process holds this document. One process per document is the
+  /// A LIVE process holds this document. One process per document is the
   /// standing rule; the caller refuses the join as unavailable rather than
-  /// waiting or forcing the fence.
+  /// waiting or forcing the fence. See
+  /// <see cref="ICollabOperationStore.OpenAsync"/> for what a store owes a
+  /// holder that has died.
   /// </summary>
   DocumentOpenElsewhere,
 }
@@ -119,14 +121,38 @@ public interface ICollabOperationStore
   /// <param name="cancellationToken">The caller's token.</param>
   /// <returns>
   /// An open session, or
-  /// <see cref="CollabDocumentOpen.DocumentOpenElsewhere"/> when another live
-  /// process holds the document. A held document is an ordinary answer, not an
-  /// error.
+  /// <see cref="CollabDocumentOpen.DocumentOpenElsewhere"/> when a live process
+  /// holds the document. A held document is an ordinary answer, not an error.
   /// </returns>
   /// <remarks>
+  /// <para>
+  /// LIVENESS IS THE STORE'S JOB, and it is half of the fence rule. The other
+  /// half is stated here because a stranger cannot derive it: a store MUST NOT
+  /// take the fence from a holder that is still live, and it MUST be able to
+  /// reclaim the fence of a holder that has died. Refusing whenever a holder
+  /// record exists satisfies the first half and locks the document forever the
+  /// first time a process is killed — nothing else in this seam releases a dead
+  /// holder's fence. How liveness is decided is the implementation's own
+  /// business: the built-in local store gets it from an OS file lock, which the
+  /// kernel drops when the process ends; a store over SQL needs a lease with an
+  /// expiry it renews. Whatever the mechanism, a holder that is merely slow can
+  /// be judged dead, which is why the session re-verifies the fence on every
+  /// call instead of trusting the open.
+  /// </para>
+  /// <para>
+  /// THE READ-BACK IS LINEARIZABLE. The open must observe every operation,
+  /// checkpoint and reset committed under any earlier fence — including one
+  /// committed microseconds before the previous holder died. A store whose read
+  /// may lag its own writes will hand back a stale head, and the caller will
+  /// then reassign a sequence that is already taken and answer
+  /// <see cref="CollabOperationLookupOutcome.NotCommitted"/> for an id that is
+  /// committed. An eventually-consistent read is not sufficient here.
+  /// </para>
+  /// <para>
   /// A document that has never been seeded opens successfully with a null
   /// <see cref="CollabOperationOpenResult.Head"/>; the caller seeds it through
   /// <see cref="ICollabOperationSession.ResetAsync"/>.
+  /// </para>
   /// </remarks>
   ValueTask<CollabDocumentOpen> OpenAsync(
       string documentId,
@@ -139,8 +165,10 @@ public interface ICollabOperationStore
 /// <remarks>
 /// <para>
 /// THE FENCE IS THE SAFETY PROPERTY OF THIS SEAM. While this session lives it
-/// is the only writer of the document. If another process takes the fence, this
-/// session is stale, and every method here MUST then fail with
+/// is the only writer of the document. If another process reclaims the fence —
+/// which it may only do once this holder is judged dead, see
+/// <see cref="ICollabOperationStore.OpenAsync"/> — this session is stale, and
+/// every method here MUST then fail with
 /// <see cref="CollabOperationFenceLostException"/> rather than write, or
 /// answer, as if it still owned the document — a file lock is advisory, and a
 /// holder with a stale descriptor can still reach the bytes, so the fence has
@@ -153,9 +181,13 @@ public interface ICollabOperationStore
 /// </para>
 /// <para>
 /// After <see cref="System.IAsyncDisposable.DisposeAsync"/> every method throws
-/// <see cref="ObjectDisposedException"/>. Disposal releases the fence so another
-/// process may open the document, and never throws because the fence was
-/// already lost.
+/// <see cref="ObjectDisposedException"/>. Disposal runs on the same single lane
+/// as everything else — the caller never disposes while another call is in
+/// flight, which is what the failure path (throw, discard the room, dispose)
+/// already does. It releases the fence so another process may open the
+/// document, and never throws because the fence was already lost. A session
+/// that HAS lost the fence releases nothing: the fence it would release now
+/// belongs to somebody else.
 /// </para>
 /// <para>
 /// CANCELLATION: only the caller's own token being cancelled may produce an
@@ -194,10 +226,13 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// </returns>
   /// <remarks>
   /// <para>
-  /// THE ANSWER MAY NOT BE STALE. It must account for every operation this
-  /// session has committed, including one committed a moment ago, and not only
-  /// for what existed when the session opened. A cache that lags behind the
-  /// journal makes this check worthless.
+  /// THE ANSWER COMES FROM THE DURABLE INDEX, never from a memo of what this
+  /// session has appended. Those differ in exactly the case this method exists
+  /// for: an append that threw may still have committed, so the session's own
+  /// idea of what it wrote is precisely what is wrong after an unknown outcome,
+  /// and the retry that follows is the one lookup that must not be answered
+  /// from memory. Reading through to storage also covers the ordinary case (an
+  /// id committed a moment ago through this same session) for free.
   /// </para>
   /// <para>
   /// This exists so the caller can settle an operation id BEFORE it mutates the
@@ -246,8 +281,9 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// be committed twice.
   /// </para>
   /// <para>
-  /// Appending to a document that has never been seeded is a caller error; the
-  /// document needs a lineage from <see cref="ResetAsync"/> first.
+  /// Appending to a document that has never been seeded is a caller error: the
+  /// document needs a lineage from <see cref="ResetAsync"/> first, and a store
+  /// reports the mistake with <see cref="InvalidOperationException"/>.
   /// </para>
   /// <para>
   /// A failure — including an outcome the store cannot determine, such as a
@@ -271,8 +307,12 @@ public interface ICollabOperationSession : IAsyncDisposable
   /// next open. History is not touched: the operations it covers, and their ids,
   /// stay in the journal. A store rejects a
   /// <see cref="CollabOperationCheckpoint.Through"/> that is not a committed
-  /// sequence, or that is below an already published one, with
-  /// <see cref="ArgumentOutOfRangeException"/>.
+  /// sequence, or that is strictly BELOW an already published one, with
+  /// <see cref="ArgumentOutOfRangeException"/>. Republishing at the sequence
+  /// already published succeeds and changes nothing: it is the natural retry
+  /// after a checkpoint whose outcome was unknown, and what a periodic
+  /// checkpointer does when nothing has advanced, so it must not force every
+  /// caller to track state it should not need.
   /// </remarks>
   ValueTask WriteCheckpointAsync(
       CollabOperationCheckpoint checkpoint,

@@ -205,6 +205,74 @@ public sealed class FakeCollabOperationStoreTests
         await session.WriteCheckpointAsync(new CollabOperationCheckpoint(2, new byte[] { 42 })));
   }
 
+  [Fact]
+  public async Task AcceptsARepublishedCheckpointAtTheSameSequence()
+  {
+    var store = new FakeCollabOperationStore();
+    await using var session = await OpenSeededAsync(store);
+    await session.AppendAsync(Candidate("a", update: 1));
+    await session.AppendAsync(Candidate("b", update: 2));
+    await session.WriteCheckpointAsync(new CollabOperationCheckpoint(2, new byte[] { 42 }));
+
+    // The retry after a checkpoint whose outcome was unknown, and what a
+    // periodic checkpointer does when nothing advanced.
+    await session.WriteCheckpointAsync(new CollabOperationCheckpoint(2, new byte[] { 42 }));
+
+    await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+        await session.WriteCheckpointAsync(new CollabOperationCheckpoint(1, new byte[] { 42 })));
+  }
+
+  [Fact]
+  public async Task ForgetsOperationIdsFromASupersededLineage()
+  {
+    var store = new FakeCollabOperationStore();
+    await using var session = await OpenSeededAsync(store);
+    await session.AppendAsync(Candidate("a", update: 1));
+
+    var head = await session.ResetAsync(Reset(epoch: 1, lineage: new string('b', 32)));
+    var lookup = await session.FindCommittedAsync("a", Digest(1));
+
+    Assert.Equal(1L, head.Epoch);
+    Assert.Equal(0UL, head.DurableThrough);
+    Assert.Equal(CollabOperationLookupOutcome.NotCommitted, lookup.Outcome);
+    Assert.Equal(
+        1UL,
+        (await session.AppendAsync(Candidate("a", update: 1))).ServerSequence);
+  }
+
+  [Fact]
+  public async Task ReleasesNothingOnDisposeOnceTheFenceIsLost()
+  {
+    var store = new FakeCollabOperationStore();
+    var session = await OpenSeededAsync(store);
+    store.StealFence(DocId);
+
+    await session.DisposeAsync();
+
+    // The fence belongs to whoever reclaimed it; a stale session must not hand
+    // the document back on its way out.
+    Assert.Equal(
+        CollabDocumentOpenOutcome.DocumentOpenElsewhere,
+        (await store.OpenAsync(DocId)).Outcome);
+  }
+
+  [Fact]
+  public async Task ThrowsObjectDisposedOnEveryCallAfterDisposal()
+  {
+    var store = new FakeCollabOperationStore();
+    var session = await OpenSeededAsync(store);
+    await session.DisposeAsync();
+
+    await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await session.FindCommittedAsync("a", Digest(1)));
+    await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await session.AppendAsync(Candidate("a", update: 1)));
+    await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await session.WriteCheckpointAsync(new CollabOperationCheckpoint(1, new byte[] { 7 })));
+    await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await session.ResetAsync(Reset(epoch: 1)));
+  }
+
   private static async Task<ICollabOperationSession> OpenSeededAsync(
       FakeCollabOperationStore store)
   {
@@ -214,12 +282,12 @@ public sealed class FakeCollabOperationStoreTests
     return session;
   }
 
-  private static CollabOperationReset Reset(long epoch)
+  private static CollabOperationReset Reset(long epoch, string? lineage = null)
   {
     return new CollabOperationReset(
         CollabWorkingSetTag.SchemaV2,
         epoch,
-        new string('a', CollabWorkingSetTag.LineageLength),
+        lineage ?? new string('a', CollabWorkingSetTag.LineageLength),
         []);
   }
 

@@ -943,15 +943,19 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
         if (checkpoint.Through == 0 ||
             checkpoint.Through > (document.Head?.DurableThrough ?? 0) ||
-            checkpoint.Through <= (document.Checkpoint?.Through ?? 0))
+            checkpoint.Through < (document.Checkpoint?.Through ?? 0))
         {
           throw new ArgumentOutOfRangeException(
               nameof(checkpoint),
               checkpoint.Through,
-              "a checkpoint must name a committed sequence above the published one");
+              "a checkpoint must name a committed sequence at or above the published one");
         }
 
-        document.Checkpoint = checkpoint;
+        // Republishing the sequence already published is an accepted no-op.
+        if (checkpoint.Through != document.Checkpoint?.Through)
+        {
+          document.Checkpoint = checkpoint;
+        }
       }
 
       return ValueTask.CompletedTask;
@@ -989,7 +993,14 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
         lock (store.guard)
         {
-          store.Document(documentId).IsOpen = false;
+          var document = store.Document(documentId);
+
+          // A session that lost the fence releases nothing: the hold it would
+          // clear now belongs to whoever reclaimed the document.
+          if (document.Fence == fence)
+          {
+            document.IsOpen = false;
+          }
         }
       }
 

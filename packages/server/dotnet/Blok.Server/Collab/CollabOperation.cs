@@ -18,7 +18,10 @@ public enum CollabOperationSource
 
   /// <summary>
   /// A blok-sync.v1 or stock y-websocket client. Its writes are journalled
-  /// like any other, but it has no stable operation id and gets no receipt.
+  /// like any other, but the client has no operation id of its own, so the
+  /// SERVER mints one per update before the candidate is built. That id is
+  /// never re-sent by the client, so a v1 write cannot be retried into the same
+  /// id and gets no durability receipt.
   /// </summary>
   ClientV1 = 1,
 
@@ -69,7 +72,8 @@ public sealed record CollabDocumentHead(
 /// </remarks>
 /// <param name="Through">
 /// The server sequence this state includes. It always names a committed
-/// sequence, and never moves backwards across publications.
+/// sequence and never moves backwards across publications; republishing at the
+/// sequence already published is an accepted no-op.
 /// </param>
 /// <param name="State">
 /// Encoded document state covering the baseline plus every operation up to and
@@ -116,8 +120,11 @@ public sealed record CollabOperationRecord(
 /// candidate is built.
 /// </summary>
 /// <param name="OperationId">
-/// 32 lowercase hexadecimal characters, generated once by the producer and
-/// reused unchanged on every retry. It is the idempotency key.
+/// 32 lowercase hexadecimal characters. It is the idempotency key: a v2 client
+/// generates it once and re-sends it unchanged on every retry, and for a
+/// producer that carries no id of its own
+/// (<see cref="CollabOperationSource.ClientV1"/>) the server mints one per
+/// update.
 /// </param>
 /// <param name="ActorId">
 /// Server-derived identity of the writer, or null when none could be verified.

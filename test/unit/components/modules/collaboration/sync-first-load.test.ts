@@ -639,6 +639,28 @@ describe('collaboration — sync-first load', () => {
     }, 20_000);
 
     /**
+     * `writeDenied` is only ever re-derived from a ticket mint. A session with
+     * no ticket endpoint has no mint, so a cached verdict would hold — and be
+     * re-persisted on every `connected` — for the rest of that browser's life.
+     */
+    it('ignores a cached write-denied verdict when there is no ticket source', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const snapshot = peerWith([{ id: 'b1', type: 'paragraph', data: { text: 'cached' } }]);
+      const seed = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+
+      await seed.open();
+      await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, true, snapshot.encodeStateAsUpdate());
+      seed.close();
+      snapshot.destroy();
+
+      const harness = await boot({ offline: true });
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+      await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editable');
+    }, 20_000);
+
+    /**
      * The replay applies rows through the same document the cache is
      * subscribed to. Without the origin check every boot writes the whole
      * document straight back, so the store grows by a copy per reload.

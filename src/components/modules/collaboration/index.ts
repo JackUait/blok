@@ -452,8 +452,10 @@ export class Collaboration extends Module {
 
     // The member's last known write verdict: without it an offline reload
     // hands a read-only member an editable document whose edits the server
-    // will refuse the moment it reconnects.
-    this.writeDenied = contents.meta.writeDenied;
+    // will refuse the moment it reconnects. Only with a ticket source, which
+    // is the one thing that can ever re-derive it — restored without one it
+    // would hold, and be re-persisted, for the rest of this browser's life.
+    this.writeDenied = settings.ticketEndpoint !== undefined && contents.meta.writeDenied;
     this.cacheAdopted = true;
     this.cacheSeeded = true;
 

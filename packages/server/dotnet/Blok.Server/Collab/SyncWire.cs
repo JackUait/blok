@@ -67,6 +67,9 @@ internal static class SyncWire
   // lib0 varuints are unbounded; 64 bits is ten LEB128 bytes.
   private const int MaxVarUintBytes = 10;
 
+  // Room for the control and limits JSON, which top out near 90 bytes.
+  private const int JsonPayloadBytes = 96;
+
   private static readonly UTF8Encoding StrictUtf8 = new(
       encoderShouldEmitUTF8Identifier: false,
       throwOnInvalidBytes: true);
@@ -75,7 +78,7 @@ internal static class SyncWire
   {
     ArgumentNullException.ThrowIfNull(message);
 
-    var writer = new ArrayBufferWriter<byte>();
+    var writer = new ArrayBufferWriter<byte>(SizeHint(message));
 
     switch (message)
     {
@@ -115,6 +118,25 @@ internal static class SyncWire
     }
 
     return writer.WrittenSpan.ToArray();
+  }
+
+  /// <summary>
+  /// Header varuints plus the payload, so a frame is written without the
+  /// writer growing and copying a large update on the way.
+  /// </summary>
+  private static int SizeHint(SyncWireMessage message)
+  {
+    var payload = message switch
+    {
+      SyncStep1Frame step1 => step1.StateVector?.Length ?? 0,
+      SyncStep2Frame step2 => step2.Update?.Length ?? 0,
+      SyncUpdateFrame update => update.Update?.Length ?? 0,
+      AwarenessFrame awareness => awareness.Update?.Length ?? 0,
+      PermissionDeniedFrame denied => Encoding.UTF8.GetMaxByteCount(denied.Reason?.Length ?? 0),
+      _ => JsonPayloadBytes,
+    };
+
+    return (3 * MaxVarUintBytes) + payload;
   }
 
   internal static bool TryDecode(
@@ -415,7 +437,7 @@ internal static class SyncWire
           nameof(tag));
     }
 
-    var buffer = new ArrayBufferWriter<byte>();
+    var buffer = new ArrayBufferWriter<byte>(JsonPayloadBytes);
 
     // Key order matters: the client writes {epoch, format, lineage} and the
     // fixture pins the bytes.
@@ -440,7 +462,7 @@ internal static class SyncWire
           nameof(maxMessageBytes));
     }
 
-    var buffer = new ArrayBufferWriter<byte>();
+    var buffer = new ArrayBufferWriter<byte>(JsonPayloadBytes);
 
     using (var json = new Utf8JsonWriter(buffer))
     {

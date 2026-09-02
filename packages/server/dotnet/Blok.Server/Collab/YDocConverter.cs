@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Blok.Server.Yjs;
@@ -48,11 +49,20 @@ internal static class YDocConverter
   /// contentIds walks are unbounded but ITERATIVE — a document legitimately
   /// nests thousands of blocks deep, and cycles are already broken.
   ///
-  /// Accounting shared with the client: <c>data</c> is level 1, only
-  /// containers count, so the scalar inside the deepest allowed map is read.
-  /// Seed refuses a deeper record; Export reads a deeper container as null.
+  /// Accounting shared with the client: a value INSIDE <c>data</c> is level
+  /// 1 (see <see cref="BlockFieldDepth"/>), each enclosing object or array
+  /// adds one, and only containers count — so the scalar inside the deepest
+  /// allowed map is read. A seed takes 256 levels inside data and refuses the
+  /// 257th; Export reads the 257th container as null.
   /// </summary>
   internal const int MaxValueDepth = 256;
+
+  /// <summary>
+  /// The level of the <c>data</c>/<c>tunes</c> map itself. Its VALUES are
+  /// level 1 — the client counts a value inside data as the first level, and
+  /// the malformed-doc-blocks fixture pins the boundary across both walks.
+  /// </summary>
+  private const int BlockFieldDepth = 0;
 
   /// <summary>
   /// MaxDepth for every System.Text.Json reader and writer on the collab
@@ -307,6 +317,14 @@ internal static class YDocConverter
     }
   }
 
+  /// <summary>Empty paragraph data becomes { text: "" }; nothing else changes.</summary>
+  private static JsonObject NormalizeBlockData(string? type, JsonObject data)
+  {
+    return type == "paragraph" && data.Count == 0
+      ? new JsonObject { ["text"] = "" }
+      : data;
+  }
+
   private static JsonValue? NumberNode(double value)
   {
     if (!double.IsFinite(value))
@@ -380,6 +398,9 @@ internal static class YDocConverter
     /// </summary>
     private readonly Dictionary<string, List<string>?> contents = new(StringComparer.Ordinal);
 
+    /// <summary>Each block's type, for the normalization an update shares with a seed.</summary>
+    private readonly Dictionary<string, string?> types = new(StringComparer.Ordinal);
+
     /// <summary>Blocks the removal walks dequeued; linear in the subtree, never the document.</summary>
     internal int Visited { get; private set; }
 
@@ -425,9 +446,10 @@ internal static class YDocConverter
           continue;
         }
 
-        var parentId = ReadParentId(block);
+        var parentId = ReadString(block, "parentId");
 
         parents[id] = parentId;
+        types[id] = ReadString(block, "type");
         Index(id, parentId);
 
         var listed = ReadContentIds(block);
@@ -498,9 +520,9 @@ internal static class YDocConverter
       bucket.Add(id);
     }
 
-    private static string? ReadParentId(YMap block)
+    private static string? ReadString(YMap block, string key)
     {
-      return Value(block, "parentId") as string;
+      return Value(block, key) as string;
     }
 
     private List<EditStep> PlanOne(CollabEditOp op, int index)
@@ -590,6 +612,7 @@ internal static class YDocConverter
       var composed = InputWriter.Block(NoNul(op.Id, "a block id"), block);
 
       parents[op.Id] = op.Parent;
+      types[op.Id] = TryGetString(op.Block, "type", out var type) ? type : null;
       Index(op.Id, op.Parent);
       contents[op.Id] = [];
 
@@ -641,7 +664,9 @@ internal static class YDocConverter
 
       RefuseUnlessBlockMap(op.Id, index);
 
-      return [EditStep.ReplaceData(op.Id, InputWriter.DataMap(op.Data))];
+      return [EditStep.ReplaceData(
+          op.Id,
+          InputWriter.DataMap(NormalizeBlockData(types.GetValueOrDefault(op.Id), op.Data)))];
     }
 
     /// <summary>
@@ -698,6 +723,7 @@ internal static class YDocConverter
 
         parents.Remove(id);
         children.Remove(id);
+        types.Remove(id);
         steps.Add(EditStep.RemoveBlock(id));
 
         // What it listed no longer has it as a holder.
@@ -896,29 +922,34 @@ internal static class YDocConverter
     /// <summary>A block's <c>data</c> map on its own, for an edit that replaces it.</summary>
     internal static YMap DataMap(JsonObject data)
     {
-      return ObjectToYMap(data, 1);
+      return ObjectToYMap(data, BlockFieldDepth);
     }
 
     internal static YMap Block(string id, JsonObject block)
     {
+      // Export skips such a block, so accepting it here would PUT the record
+      // back a block shorter.
+      if (!TryGetString(block, "type", out var type))
+      {
+        throw new InvalidDataException($"collab: block \"{id}\" type is not a string.");
+      }
+
       var entries = new List<KeyValuePair<string, object?>>
       {
         Pair("id", id),
-        Pair("type", Atomic(block["type"], 1)),
+        Pair("type", NoNul(type, $"block \"{id}\" type")),
         Pair(
             "data",
             ObjectToYMap(
-                NormalizeBlockData(
-                    block["type"],
-                    ObjectEntries(block["data"], $"block \"{id}\" data")),
-                1)),
+                NormalizeBlockData(type, ObjectEntries(block["data"], $"block \"{id}\" data")),
+                BlockFieldDepth)),
       };
 
       if (block.TryGetPropertyValue("tunes", out var tunes))
       {
         entries.Add(Pair(
             "tunes",
-            ObjectToYMap(ObjectEntries(tunes, $"block \"{id}\" tunes"), 1)));
+            ObjectToYMap(ObjectEntries(tunes, $"block \"{id}\" tunes"), BlockFieldDepth)));
       }
 
       if (block.TryGetPropertyValue("parent", out var parent))
@@ -961,30 +992,14 @@ internal static class YDocConverter
 
         case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
           return new YArray(scalar.GetValue<string>()
-              .Select(character => (object?)NoNul(
-                  character.ToString(),
+              .EnumerateRunes()
+              .Select(rune => (object?)NoNul(
+                  rune.ToString(),
                   $"block \"{id}\" content")));
 
         default:
           throw new InvalidDataException($"collab: block \"{id}\" has non-iterable content.");
       }
-    }
-
-    /// <summary>
-    /// Empty paragraph data becomes { text: "" }; nothing else changes.
-    /// </summary>
-    private static JsonObject NormalizeBlockData(JsonNode? type, JsonObject data)
-    {
-      var isParagraph = type is JsonValue value &&
-          value.GetValueKind() == JsonValueKind.String &&
-          value.GetValue<string>() == "paragraph";
-
-      if (isParagraph && data.Count == 0)
-      {
-        return new JsonObject { ["text"] = "" };
-      }
-
-      return data;
     }
 
     private static YMap ObjectToYMap(JsonObject value, int depth)
@@ -1403,7 +1418,10 @@ internal static class YDocConverter
 
       foreach (var entry in rootOrder.Enumerate())
       {
-        VisitBlock(entry, null, hierarchy, seen, ordered);
+        if (entry is string id)
+        {
+          VisitBlock(id, null, hierarchy, seen, ordered);
+        }
       }
 
       foreach (var id in Unreached(seen))
@@ -1430,19 +1448,6 @@ internal static class YDocConverter
           .Where(id => !seen.Contains(id))
           .Order(StringComparer.Ordinal)
           .ToList();
-    }
-
-    private void VisitBlock(
-        object? entry,
-        string? expectedParentId,
-        Dictionary<string, string?> hierarchy,
-        HashSet<string> seen,
-        List<string> ordered)
-    {
-      if (entry is string id)
-      {
-        VisitBlock(id, expectedParentId, hierarchy, seen, ordered);
-      }
     }
 
     /// <summary>
@@ -1518,7 +1523,7 @@ internal static class YDocConverter
       {
         ["id"] = id,
         ["type"] = type,
-        ["data"] = YMapToObject(data, 1),
+        ["data"] = YMapToObject(data, BlockFieldDepth),
       };
 
       Leave();
@@ -1526,7 +1531,7 @@ internal static class YDocConverter
       if (Value(entry.Map, "tunes") is YMap { Count: > 0 } tunes)
       {
         Enter("tunes");
-        block["tunes"] = YMapToObject(tunes, 1);
+        block["tunes"] = YMapToObject(tunes, BlockFieldDepth);
         Leave();
       }
 

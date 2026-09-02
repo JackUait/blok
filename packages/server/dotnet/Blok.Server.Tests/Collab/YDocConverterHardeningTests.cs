@@ -127,6 +127,28 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
+  /// The engine's transaction has no rollback — a throwing body skips the
+  /// cleanup that emits, and the writes it already made stay in the store —
+  /// so a refused seed must never have opened one.
+  /// </summary>
+  [Fact]
+  public void ARefusedSeedLeavesTheDocAsItWas()
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, Blocks(
+        """{ "id": "old", "type": "paragraph", "data": { "text": "old" } }"""));
+
+    Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(
+        """{ "id": "good", "type": "paragraph", "data": { "text": "good" } }""",
+        """{ "id": "bad", "type": "paragraph", "data": { "text": "a\u0000b" } }""")));
+
+    var exported = YDocConverter.Export(doc);
+
+    Assert.Equal("old", Assert.Single(exported)!["id"]!.GetValue<string>());
+  }
+
+  /// <summary>
   /// Only NUL is screened — every other control character round-trips, so the
   /// guard must not widen into "reject control characters".
   /// </summary>
@@ -166,9 +188,9 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
-  /// The depth accounting both sides share: data is level 1 and only
-  /// CONTAINERS are counted, so the scalar inside the deepest allowed map
-  /// is read back whole.
+  /// The depth accounting both sides share: a value INSIDE data is level 1
+  /// and only CONTAINERS are counted, so the scalar inside the deepest
+  /// allowed map is read back whole.
   /// </summary>
   [Fact]
   public void SeedAndExportHandleDataNestedToTheLimit()
@@ -177,13 +199,14 @@ public sealed class YDocConverterHardeningTests
 
     RunOnAOneMegabyteStack(() =>
     {
-      YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth));
+      // data plus MaxValueDepth levels inside it: the deepest record a seed takes.
+      YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 1));
 
       var exported = YDocConverter.Export(doc);
 
       Assert.Single(exported);
 
-      var deepest = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth - 1);
+      var deepest = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth);
 
       Assert.Equal(1L, deepest["v"]?.GetValue<long>());
     });
@@ -194,7 +217,7 @@ public sealed class YDocConverterHardeningTests
   {
     var doc = new YDoc();
     var error = Assert.Throws<InvalidDataException>(
-        () => YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 1)));
+        () => YDocConverter.Seed(doc, NestedData(YDocConverter.MaxValueDepth + 2)));
 
     Assert.Contains("nested", error.Message, StringComparison.OrdinalIgnoreCase);
   }
@@ -213,7 +236,7 @@ public sealed class YDocConverterHardeningTests
 
     var exported = YDocConverter.Export(doc);
 
-    var last = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth - 1);
+    var last = Descend(exported[0]!["data"]!.AsObject(), YDocConverter.MaxValueDepth);
 
     Assert.True(last.ContainsKey("a"));
     Assert.Null(last["a"]);

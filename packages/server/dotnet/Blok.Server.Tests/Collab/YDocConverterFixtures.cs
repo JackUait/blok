@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Blok.Server.Collab;
 
 namespace Blok.Server.Tests.Collab;
 
@@ -66,7 +67,8 @@ internal static class YDocConverterFixtures
   internal static string Canonicalize(JsonNode? node)
   {
     using var document = JsonDocument.Parse(
-        node?.ToJsonString() ?? "null");
+        node?.ToJsonString() ?? "null",
+        new JsonDocumentOptions { MaxDepth = YDocConverter.JsonMaxDepth });
     var builder = new StringBuilder();
 
     Write(document.RootElement, builder);
@@ -143,7 +145,12 @@ internal static class YDocConverterFixtures
 
   private static JsonArray ReadBlocks(string path)
   {
-    return JsonNode.Parse(File.ReadAllText(path))?.AsArray() ??
+    // The converter accepts values nested past System.Text.Json's default
+    // depth of 64, so a fixture pinning that must be loadable too.
+    return JsonNode.Parse(
+            File.ReadAllText(path),
+            documentOptions: new JsonDocumentOptions { MaxDepth = YDocConverter.JsonMaxDepth })
+        ?.AsArray() ??
         throw new InvalidDataException($"{path} does not hold a JSON array");
   }
 

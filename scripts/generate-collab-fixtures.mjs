@@ -262,6 +262,13 @@ const CASES = [
     ],
   },
   {
+    name: 'content-string-code-points',
+    description: 'a string content spreads by code point (Y.Array.from): a surrogate pair is one entry, a combining sequence stays two',
+    input: [
+      { id: 'cp', type: 'widget', data: { k: 1 }, content: 'a😀e\u0301' },
+    ],
+  },
+  {
     name: 'database-rows',
     description: 'arrays of plain objects (schema, views, options) are element-wise Y.Arrays, never grids; rows are child blocks',
     input: [

@@ -9,31 +9,12 @@ public sealed class SyncWireTests
   private const string Lineage = "0123456789abcdef0123456789abcdef";
   private static readonly CollabWorkingSetTag Tag = new(CollabWorkingSetTag.SchemaV2, 7, Lineage);
 
-  // Keyed by name because SyncWireMessage is internal and xunit theory
-  // parameters must be public.
+  // Only what sync-frames.json does not carry (SyncWireFramingTests pins
+  // the rest). Keyed by name because SyncWireMessage is internal and xunit
+  // theory parameters must be public.
   private static readonly Dictionary<string, (SyncWireMessage Message, byte[] Frame)> Layouts = new()
   {
-    ["syncStep1"] = (new SyncStep1Frame([0x00]), [0x00, 0x00, 0x01, 0x00]),
-    ["syncStep2"] = (new SyncStep2Frame([0x00, 0x00]), [0x00, 0x01, 0x02, 0x00, 0x00]),
-    ["update"] = (new SyncUpdateFrame([0xaa, 0xbb, 0xcc]), [0x00, 0x02, 0x03, 0xaa, 0xbb, 0xcc]),
-    ["awareness"] = (new AwarenessFrame([0x00]), [0x01, 0x01, 0x00]),
     ["permissionDenied empty"] = (new PermissionDeniedFrame(""), [0x02, 0x00, 0x00]),
-    ["permissionDenied"] = (new PermissionDeniedFrame("no"), [0x02, 0x00, 0x02, (byte)'n', (byte)'o']),
-    ["queryAwareness"] = (new QueryAwarenessFrame(), [0x03]),
-    ["blokControl"] = (
-      new BlokControlFrame(new CollabWorkingSetTag(1, 0, Lineage)),
-      [
-        0x64,
-        0x43,
-        .. "{\"epoch\":0,\"format\":1,\"lineage\":\"0123456789abcdef0123456789abcdef\"}"u8,
-      ]),
-    ["blokLimits"] = (
-      new BlokLimitsFrame(1048576),
-      [
-        0x65,
-        0x1b,
-        .. "{\"maxMessageBytes\":1048576}"u8,
-      ]),
   };
 
   public static TheoryData<string> LayoutNames

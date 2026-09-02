@@ -54,6 +54,10 @@
       "description": "non-ASCII text, emoji (incl. ZWJ sequences), combining marks, RTL and escapes in values, keys and ids"
     },
     {
+      "name": "content-string-code-points",
+      "description": "a string content spreads by code point (Y.Array.from): a surrogate pair is one entry, a combining sequence stays two"
+    },
+    {
       "name": "database-rows",
       "description": "arrays of plain objects (schema, views, options) are element-wise Y.Arrays, never grids; rows are child blocks"
     },
@@ -80,6 +84,10 @@
     {
       "name": "lenient-seed",
       "description": "malformed records fromJSON tolerates: Object.entries leniency for data/tunes, iterable content, non-object entries skipped"
+    },
+    {
+      "name": "malformed-doc-blocks",
+      "description": "doc-only: a block whose id or type is not a string, or whose data is not a map, is skipped on export (its order slot with it); a value nested past 256 levels exports as null"
     }
   ]
 }

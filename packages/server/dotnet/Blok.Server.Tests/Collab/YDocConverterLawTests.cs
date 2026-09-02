@@ -408,6 +408,37 @@ public sealed class YDocConverterLawTests
     Assert.Contains("\"a\"", error.Message, StringComparison.Ordinal);
   }
 
+  /// <summary>
+  /// Export skips a block whose type is not a string, so a seed that took
+  /// one would PUT the consumer's record back a block shorter. Refused
+  /// instead, like a NUL.
+  /// </summary>
+  [Theory]
+  [InlineData("""{ "id": "a", "type": 5, "data": {} }""")]
+  [InlineData("""{ "id": "a", "type": null, "data": {} }""")]
+  [InlineData("""{ "id": "a", "data": {} }""")]
+  public void SeedRefusesABlockWhoseTypeIsNotAString(string block)
+  {
+    var doc = new YDoc();
+
+    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(block)));
+
+    Assert.Contains("\"a\"", error.Message, StringComparison.Ordinal);
+    Assert.Contains("type", error.Message, StringComparison.Ordinal);
+  }
+
+  /// <summary>Y.Array.from(string) spreads by code point: a surrogate pair is one entry.</summary>
+  [Fact]
+  public void AStringContentSpreadsByCodePoint()
+  {
+    var doc = new YDoc();
+
+    YDocConverter.Seed(doc, Blocks(
+        """{ "id": "w", "type": "widget", "data": { "k": 1 }, "content": "a😀b" }"""));
+
+    AssertJson("""["a","😀","b"]""", BlockNamed(YDocConverter.Export(doc), "w")["content"]);
+  }
+
   [Fact]
   public void SeedSkipsBlocksWithoutAStringId()
   {

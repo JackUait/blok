@@ -99,6 +99,28 @@ public sealed class YDocConverterEditTests
     Assert.Null(data?["level"]);
   }
 
+  /// <summary>Same normalization as a seed, for a block read from the doc and one inserted in the request.</summary>
+  [Fact]
+  public void UpdateNormalizesEmptyParagraphDataLikeASeed()
+  {
+    var doc = SeededDoc(
+        """{ "id": "p", "type": "paragraph", "data": { "text": "x" } }""",
+        """{ "id": "h", "type": "header", "data": { "text": "x" } }""");
+
+    Apply(
+        doc,
+        """{ "op": "update", "id": "p", "data": {} }""",
+        """{ "op": "update", "id": "h", "data": {} }""",
+        """{ "op": "insert", "id": "q", "block": { "type": "paragraph", "data": { "text": "q" } } }""",
+        """{ "op": "update", "id": "q", "data": {} }""");
+
+    var exported = YDocConverter.Export(doc);
+
+    Assert.Equal("", BlockNamed(exported, "p")["data"]?["text"]?.GetValue<string>());
+    Assert.Equal("", BlockNamed(exported, "q")["data"]?["text"]?.GetValue<string>());
+    Assert.Empty(BlockNamed(exported, "h")["data"]!.AsObject());
+  }
+
   [Fact]
   public void UpdateKeepsTheBlockTypeAndItsPlace()
   {

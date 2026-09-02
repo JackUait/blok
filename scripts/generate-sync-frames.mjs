@@ -6,12 +6,14 @@
 //
 //   node scripts/generate-sync-frames.mjs
 //
-// Every frame under `frames` and `v2.frames` is produced by the REAL reference
-// encoders (y-protocols + lib0 + yjs), so the fixture is the protocol as stock
-// y-websocket clients speak it. The `v2.negative` cases are the one exception:
-// malformed bytes have no reference encoder, so their metadata JSON is written
-// by hand and, where a length prefix or a trailing byte has to lie, the frame
-// bytes are spliced by hand too. Observed framing (lib0 varuint = LEB128, 7
+// Every frame under `frames`, and every `canonical: true` frame under
+// `v2.frames`, is produced by the REAL reference encoders (y-protocols + lib0 +
+// yjs), so the fixture is the protocol as stock y-websocket clients speak it.
+// Two groups are hand-written because no conformant encoder emits them: the
+// `v2.negative` cases (malformed bytes have no reference encoder, and where a
+// length prefix or a trailing byte has to lie the frame bytes are spliced by
+// hand too) and the single `canonical: false` v2 frame, whose keys are a valid
+// set in an order an emitter never writes. Observed framing (lib0 varuint = LEB128, 7
 // bits per byte, high bit = continuation; byte arrays and strings = varuint
 // byte length + raw bytes):
 //
@@ -93,6 +95,9 @@ const SERVER_SEQUENCE = '42';
 // u64 max: the documented ceiling, pinned positively so a decoder that parses
 // serverSequence into a signed 64-bit integer fails a fixture instead of ours.
 const MAX_SERVER_SEQUENCE = '18446744073709551615';
+// The stable set. A decoder must ACCEPT any other code matching
+// REJECTION_CODE_PATTERN: refusing one would leave a client unable to learn its
+// operation was rejected, so it would redrive the same outbox row forever.
 const REJECTION_CODES = [
   'lineage-mismatch',
   'read-only',
@@ -101,6 +106,11 @@ const REJECTION_CODES = [
   'oversized-update',
   'operation-id-conflict',
 ];
+const REJECTION_CODE_PATTERN = '^[a-z][a-z0-9-]{0,63}$';
+const UNRECOGNISED_CODE = 'teapot';
+// 5 + 59 = 64 characters, the pattern's ceiling; one more must be refused.
+const MAX_LENGTH_CODE = `code-${'a'.repeat(59)}`;
+const OVER_LENGTH_CODE = `${MAX_LENGTH_CODE}a`;
 
 const hex = (bytes) => Buffer.from(bytes).toString('hex');
 const utf8 = (text) => new TextEncoder().encode(text);
@@ -211,6 +221,13 @@ const rejections = REJECTION_CODES.map((code) => ({
   json: rejectionMetadata(code),
   bytes: v2Frame(MESSAGE_BLOK_REJECTION, utf8(rejectionMetadata(code))),
 }));
+const rejectionUnrecognised = rejectionMetadata(UNRECOGNISED_CODE);
+const rejectionMaxLength = rejectionMetadata(MAX_LENGTH_CODE);
+
+// Hand-written: JSON.stringify cannot emit a non-canonical key order, and no
+// conformant emitter would. Decoders validate the key SET, not the sequence.
+const ACK_METADATA_OUT_OF_ORDER =
+  `{"operationId":"${OPERATION_ID}","serverSequence":"${SERVER_SEQUENCE}","lineage":"${CONTROL.lineage}"}`;
 
 // Self-check: the fixtures must replay through the reference decoders.
 const replica = new Y.Doc();
@@ -412,10 +429,22 @@ const negative = [
     `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"read\\u002donly"}`,
   ),
   badMetadataOnly(
-    'rejectionUnknownCode',
+    'rejectionCodeEmpty',
     MESSAGE_BLOK_REJECTION,
-    'A code outside the six stable ones.',
-    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"teapot"}`,
+    'An empty code. The shape rule needs at least one character, and an empty string is the classic value a decoder mistakes for an absent key.',
+    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":""}`,
+  ),
+  badMetadataOnly(
+    'rejectionCodeUppercase',
+    MESSAGE_BLOK_REJECTION,
+    'Code "Read-Only": the shape rule is lowercase-only, so a case variant of a stable code is not that code.',
+    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"Read-Only"}`,
+  ),
+  badMetadataOnly(
+    'rejectionCodeOverLength',
+    MESSAGE_BLOK_REJECTION,
+    'A 65-character code, one past the shape rule; rejectionCodeMaxLength pins the other side of the same boundary.',
+    `{"lineage":"${L}","operationId":"${OPERATION_ID}","code":"${OVER_LENGTH_CODE}"}`,
   ),
   {
     name: 'unknownOuterType',
@@ -427,10 +456,99 @@ const negative = [
   },
 ];
 
+// `canonical: true` = the bytes a conformant emitter produces, so a decoder
+// must re-encode them byte-for-byte. `canonical: false` = valid on the wire but
+// never emitted, so it is decode-only: asserting a byte-identical re-encode on
+// it would wrongly demand that encoders preserve a foreign key order.
+const v2Frames = [
+  {
+    name: 'operation',
+    messageType: MESSAGE_BLOK_OPERATION,
+    canonical: true,
+    description:
+      'Client operation: var-string metadata {lineage, operationId} then the Yjs update as a var-uint-length-prefixed byte string.',
+    frameHex: hex(operation),
+    metadataJson: OPERATION_METADATA,
+    metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID },
+    updateHex: hex(incrementalUpdate),
+  },
+  {
+    name: 'acknowledgement',
+    messageType: MESSAGE_BLOK_ACK,
+    canonical: true,
+    description:
+      'Server acknowledgement: var-string metadata {lineage, operationId, serverSequence}.',
+    frameHex: hex(acknowledgement),
+    metadataJson: ackMetadata(SERVER_SEQUENCE),
+    metadata: {
+      lineage: CONTROL.lineage,
+      operationId: OPERATION_ID,
+      serverSequence: SERVER_SEQUENCE,
+    },
+  },
+  {
+    name: 'acknowledgementMaxSequence',
+    messageType: MESSAGE_BLOK_ACK,
+    canonical: true,
+    description:
+      'Acknowledgement at the documented u64 ceiling; a decoder parsing serverSequence as a signed 64-bit integer or a double fails here.',
+    frameHex: hex(acknowledgementMax),
+    metadataJson: ackMetadata(MAX_SERVER_SEQUENCE),
+    metadata: {
+      lineage: CONTROL.lineage,
+      operationId: OPERATION_ID,
+      serverSequence: MAX_SERVER_SEQUENCE,
+    },
+  },
+  {
+    name: 'acknowledgementKeysOutOfOrder',
+    messageType: MESSAGE_BLOK_ACK,
+    canonical: false,
+    description:
+      'The 103 key set in the order {operationId, serverSequence, lineage}. Decoders validate the key SET and MUST accept this; the fixed order is an emitter rule, and most JSON libraries never expose key order to a decoder at all.',
+    frameHex: hex(v2Frame(MESSAGE_BLOK_ACK, utf8(ACK_METADATA_OUT_OF_ORDER))),
+    metadataJson: ACK_METADATA_OUT_OF_ORDER,
+    metadata: {
+      lineage: CONTROL.lineage,
+      operationId: OPERATION_ID,
+      serverSequence: SERVER_SEQUENCE,
+    },
+  },
+  ...rejections.map(({ code, json, bytes }) => ({
+    name: `rejection:${code}`,
+    messageType: MESSAGE_BLOK_REJECTION,
+    canonical: true,
+    description: `Server rejection with the stable code ${code}.`,
+    frameHex: hex(bytes),
+    metadataJson: json,
+    metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID, code },
+  })),
+  {
+    name: 'rejectionUnrecognisedCode',
+    messageType: MESSAGE_BLOK_REJECTION,
+    canonical: true,
+    description:
+      'A shape-conforming code outside the stable six. A decoder MUST accept it; refusing it would hide the rejection from the client, which would then redrive the same outbox row forever. The receiver treats it as a FINAL rejection.',
+    frameHex: hex(v2Frame(MESSAGE_BLOK_REJECTION, utf8(rejectionUnrecognised))),
+    metadataJson: rejectionUnrecognised,
+    metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID, code: UNRECOGNISED_CODE },
+  },
+  {
+    name: 'rejectionCodeMaxLength',
+    messageType: MESSAGE_BLOK_REJECTION,
+    canonical: true,
+    description:
+      'A 64-character code, the shape rule ceiling; rejectionCodeOverLength pins the other side of the same boundary.',
+    frameHex: hex(v2Frame(MESSAGE_BLOK_REJECTION, utf8(rejectionMaxLength))),
+    metadataJson: rejectionMaxLength,
+    metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID, code: MAX_LENGTH_CODE },
+  },
+];
+
 // Self-check: every recorded metadataJson must be the exact text of its frame's
-// metadata section. The helpers above derive one from the other, but the
-// byte-spliced cases pair them by hand.
-for (const entry of negative) {
+// metadata section. The helpers derive one from the other, but the byte-spliced
+// negatives and the out-of-order positive pair them by hand.
+for (const entry of [...v2Frames, ...negative]) {
   if (entry.metadataJson === undefined) {
     continue;
   }
@@ -539,52 +657,8 @@ const fixture = {
     lineage: CONTROL.lineage,
     operationId: OPERATION_ID,
     rejectionCodes: REJECTION_CODES,
-    frames: [
-      {
-        name: 'operation',
-        messageType: MESSAGE_BLOK_OPERATION,
-        description:
-          'Client operation: var-string metadata {lineage, operationId} then the Yjs update as a var-uint-length-prefixed byte string.',
-        frameHex: hex(operation),
-        metadataJson: OPERATION_METADATA,
-        metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID },
-        updateHex: hex(incrementalUpdate),
-      },
-      {
-        name: 'acknowledgement',
-        messageType: MESSAGE_BLOK_ACK,
-        description:
-          'Server acknowledgement: var-string metadata {lineage, operationId, serverSequence}.',
-        frameHex: hex(acknowledgement),
-        metadataJson: ackMetadata(SERVER_SEQUENCE),
-        metadata: {
-          lineage: CONTROL.lineage,
-          operationId: OPERATION_ID,
-          serverSequence: SERVER_SEQUENCE,
-        },
-      },
-      {
-        name: 'acknowledgementMaxSequence',
-        messageType: MESSAGE_BLOK_ACK,
-        description:
-          'Acknowledgement at the documented u64 ceiling; a decoder parsing serverSequence as a signed 64-bit integer or a double fails here.',
-        frameHex: hex(acknowledgementMax),
-        metadataJson: ackMetadata(MAX_SERVER_SEQUENCE),
-        metadata: {
-          lineage: CONTROL.lineage,
-          operationId: OPERATION_ID,
-          serverSequence: MAX_SERVER_SEQUENCE,
-        },
-      },
-      ...rejections.map(({ code, json, bytes }) => ({
-        name: `rejection:${code}`,
-        messageType: MESSAGE_BLOK_REJECTION,
-        description: `Server rejection with the stable code ${code}.`,
-        frameHex: hex(bytes),
-        metadataJson: json,
-        metadata: { lineage: CONTROL.lineage, operationId: OPERATION_ID, code },
-      })),
-    ],
+    rejectionCodePattern: REJECTION_CODE_PATTERN,
+    frames: v2Frames,
     negative,
   },
 };

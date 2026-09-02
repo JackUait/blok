@@ -538,8 +538,14 @@ internal sealed class CollabRoom : IDisposable
 
     // A seed is a brand-new CRDT history, so it gets a new lineage — the
     // epoch alone cannot tell it apart from the history a client cached
-    // before the blob was lost or reset (see CollabWorkingSetTag).
-    tag = tag with { Lineage = CollabWorkingSetTag.NewLineage() };
+    // before the blob was lost or reset (see CollabWorkingSetTag). A null
+    // document re-seeded under a lineage the store still holds creates no
+    // history: minting one there would make every client that synced under
+    // it throw away its offline edits.
+    if (loaded.Data is not null || tag.Lineage == CollabWorkingSetTag.NoLineage)
+    {
+      tag = tag with { Lineage = CollabWorkingSetTag.NewLineage() };
+    }
 
     // A null document is the endpoint's "nothing saved yet": an empty doc
     // with an empty log, which re-seeds on the next open. Never seed empty

@@ -128,6 +128,30 @@ public sealed class CollabRoomManagerTests
     Assert.Equal("", YDocs.Text(replica));
   }
 
+  /// <summary>
+  /// A null seed persists a zero-frame log, so the next open re-seeds. That
+  /// re-seed creates no new history — the client that synced under the first
+  /// lineage and then edited offline must still be able to ship those edits,
+  /// which a fresh lineage would make it throw away.
+  /// </summary>
+  [Fact]
+  public async Task AReSeedOfANullDocumentKeepsTheLineageItPersisted()
+  {
+    endpoint.HoldsNothing(DocId);
+    var manager = CreateManager();
+    var first = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+    var lineage = Tags.AssertMinted(0, first.Tag);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    var second = (await manager.JoinAsync(DocId, new FakeMember(), CancellationToken.None)).Membership!;
+
+    Assert.Equal(2, endpoint.Loads);
+    Assert.Equal(Tags.At(0, lineage), second.Tag);
+    Assert.Equal(Tags.At(0, lineage), store.Stored(DocId).Tag);
+  }
+
   [Fact]
   public async Task EveryDocAccessGoesThroughOneLane()
   {

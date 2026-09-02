@@ -7,7 +7,13 @@ import { createTicketSource, type TicketRequest } from '../../utils/access-pass'
 import { logLabeled } from '../../utils/logger';
 
 import { readCaretPosition } from './caret-position';
-import { createPresence, type Presence } from './presence';
+import {
+  createPresence,
+  selectDrawableStates,
+  type DrawableState,
+  type Presence,
+  type PresenceState,
+} from './presence';
 import { createPresenceRenderer } from './presence-renderer';
 import { createOfflineCache, type OfflineCache } from './offline-cache';
 import { createCollabProvider } from './provider';
@@ -139,28 +145,15 @@ const syncUrl = (server: string, doc: string): string => {
 };
 
 /**
- * Maps one awareness state to the peer shape the host renders.
- *
- * A state with no `user` object at all is not a peer anybody can draw. A NAME is
- * not required: `collaboration.user` is optional, so requiring one hid every
+ * Maps one drawable awareness state to the peer shape the host renders. A NAME
+ * is not required: `collaboration.user` is optional, so requiring one hid every
  * peer in a default-configured room from every other peer. A nameless peer is
  * published with an empty `name`, which is what "anonymous" looks like in a
  * shape whose `name` is a string.
- *
- * The LOCAL client is filtered out by client id BEFORE this runs — presence
- * publishes an identity for it too, so "no identity" stopped being an accidental
- * exclusion the moment C3 landed.
- * @param clientId - awareness client id
- * @param state - the raw, untrusted state that client broadcast
+ * @param entry - one peer's raw, untrusted state, already known to carry a `user`
  */
-const toPeer = (clientId: number, state: Record<string, unknown>): CollaborationPeer | null => {
-  const user = state.user;
-
-  if (typeof user !== 'object' || user === null) {
-    return null;
-  }
-
-  const { name, color } = user as { name?: unknown; color?: unknown };
+const toPeer = ({ clientId, state }: DrawableState): CollaborationPeer => {
+  const { name, color } = state.user;
   const blockId = state.blockId;
 
   return {
@@ -172,6 +165,17 @@ const toPeer = (clientId: number, state: Record<string, unknown>): Collaboration
     blockId: typeof blockId === 'string' ? blockId : null,
   };
 };
+
+/**
+ * Awareness map entries as the presence selector reads them, pulled lazily so
+ * a fabricated map is never materialised past the cap.
+ * @param states - the awareness map
+ */
+function* presenceStates(states: Map<number, Record<string, unknown>>): Generator<PresenceState> {
+  for (const [clientId, state] of states) {
+    yield { clientId, state };
+  }
+}
 
 interface CollabSettings {
   doc: string;
@@ -866,12 +870,15 @@ export class Collaboration extends Module {
       return;
     }
 
-    // Presence publishes a display identity for THIS client too, so the local
-    // state now satisfies `toPeer` and would otherwise show up in the host's own
-    // peer list. This is the explicit exclusion `toPeer` was waiting for.
-    const localClientId = this.presence?.localClientId ?? null;
-
     const detail = this.lastStatusDetail;
+
+    // The walk the presence renderer takes: not this client, carrying an
+    // identity, at most MAX_PEERS after a bounded scan — so one hostile frame
+    // full of fabricated states cannot hand the host a list its size.
+    const peers = selectDrawableStates(
+      presenceStates(this.Blok.YjsManager.getAwarenessStates()),
+      this.presence?.localClientId ?? null
+    ).map(toPeer);
 
     // A host listener that throws must not reach the frame handler above this
     // (where it would end the session) or skip the arbitration that follows a
@@ -879,10 +886,7 @@ export class Collaboration extends Module {
     try {
       this.eventsDispatcher.emit(CollaborationStatusChanged, {
         status: this.status,
-        peers: Array.from(this.Blok.YjsManager.getAwarenessStates().entries())
-          .filter(([clientId]) => clientId !== localClientId)
-          .map(([clientId, state]) => toPeer(clientId, state))
-          .filter((peer): peer is CollaborationPeer => peer !== null),
+        peers,
         ...(detail?.error === undefined ? {} : { error: detail.error }),
         ...(detail?.code === undefined ? {} : { code: detail.code }),
         ...(detail?.reason === undefined ? {} : { reason: detail.reason }),

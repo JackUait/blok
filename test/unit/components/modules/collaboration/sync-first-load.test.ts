@@ -8,12 +8,14 @@
  * `collaboration` absent, not one byte of that machinery may be allocated.
  */
 import { IDBFactory } from 'fake-indexeddb';
+import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
 import { createOfflineCache } from '../../../../../src/components/modules/collaboration/offline-cache';
+import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
 import type { SyncWireFrame } from '../../../../../src/components/modules/collaboration/types';
 import { DocumentStore } from '../../../../../src/components/modules/yjs/document-store';
@@ -1258,6 +1260,39 @@ describe('collaboration — sync-first load', () => {
       expect(states).toHaveLength(1);
       expect(states[0].user).toMatchObject({ name: 'Me' });
       expect(seen.at(-1)?.peers).toEqual([]);
+    });
+
+    // A hostile frame can carry thousands of fabricated client states, and
+    // every awareness change re-walks the map. The host's peer list is built
+    // through the same cap the presence renderer applies.
+    it('caps the published peer list at MAX_PEERS however many states a frame carries', async () => {
+      const harness = await boot();
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      // Hand-encoded: y-protocols only encodes states an Awareness holds.
+      const fabricated = 500;
+      const encoder = encoding.createEncoder();
+
+      encoding.writeVarUint(encoder, fabricated);
+
+      for (const index of Array.from({ length: fabricated }, (_, position) => position)) {
+        encoding.writeVarUint(encoder, 1_000_000 + index);
+        encoding.writeVarUint(encoder, 1);
+        encoding.writeVarString(encoder, JSON.stringify({ user: { name: `peer ${index}` } }));
+      }
+
+      socket.deliver({ type: 'awareness', update: encoding.toUint8Array(encoder) });
+
+      expect(harness.core.moduleInstances.YjsManager.getAwarenessStates().size).toBeGreaterThan(MAX_PEERS);
+      expect(seen.at(-1)?.peers.length).toBeLessThanOrEqual(MAX_PEERS);
     });
   });
 

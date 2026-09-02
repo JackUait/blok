@@ -304,11 +304,17 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
       HttpRequestMessage request,
       CancellationToken cancellationToken)
   {
-    if (options.Authorization != "")
+    // Refused, not dropped: TryAddWithoutValidation accepts a value with a
+    // CR or LF (a stray newline from a shell-quoted secret) and HttpHeaders
+    // then discards it when the header is read, so every request used to go
+    // out unauthenticated with the endpoint's 401 as the only clue.
+    if (options.Authorization != "" &&
+        (options.Authorization.AsSpan().IndexOfAny('\r', '\n') >= 0 ||
+            !request.Headers.TryAddWithoutValidation("Authorization", options.Authorization)))
     {
-      request.Headers.TryAddWithoutValidation(
-          "Authorization",
-          options.Authorization);
+      throw new DocEndpointException(
+          "collab: the doc endpoint Authorization value cannot be sent as a header " +
+          "(a stray newline?).");
     }
 
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(

@@ -42,6 +42,27 @@ public sealed class DocEndpointClientTests
     Assert.DoesNotContain("Authorization", Assert.Single(recorder.Requests).Headers.Keys);
   }
 
+  /// <summary>
+  /// TryAddWithoutValidation refuses a value it cannot put on the wire (a
+  /// stray newline from a shell-quoted secret) and used to do so silently:
+  /// every request went out unauthenticated and the endpoint's 401 was the
+  /// only clue.
+  /// </summary>
+  [Theory]
+  [InlineData("Bearer secret\n")]
+  [InlineData("Bearer\r\nsecret")]
+  public async Task RefusesAnAuthorizationValueTheHeaderCannotCarry(string authorization)
+  {
+    var recorder = new RequestRecorder(_ => Json("""{"blocks":[]}"""));
+    using var client = CreateClient(recorder, authorization: authorization);
+
+    var error = await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.LoadAsync("doc", CancellationToken.None));
+
+    Assert.Contains("Authorization", error.Message, StringComparison.Ordinal);
+    Assert.Empty(recorder.Requests);
+  }
+
   [Fact]
   public async Task LoadReadsABareOutputDataDocument()
   {

@@ -2775,6 +2775,60 @@ describe('BlockYjsSync', () => {
     });
   });
 
+  describe('update fallback after the block was removed', () => {
+    let callback: (event: BlockChangeEvent) => void = () => {
+      // No-op default implementation
+    };
+
+    beforeEach(() => {
+      mockOnBlocksChanged(mockYjsManager).mockImplementation((cb) => {
+        callback = cb as (event: BlockChangeEvent) => void;
+
+        return vi.fn();
+      });
+      yjsSync.subscribe();
+      mockHandlers.getBlockIndex = vi.fn((block: Block) => repository.getBlockIndex(block));
+    });
+
+    /**
+     * `setData` is awaited; a remove of the same block can land meanwhile.
+     * The recreate fallback then has no slot to replace into — composing a
+     * block for it leaks the block and throws out of a voided promise.
+     */
+    it('does not recreate a block that left the store while setData was pending', async () => {
+      const block = repository.getBlockById('block-2');
+
+      if (block === undefined) {
+        throw new Error('fixture: block-2 missing');
+      }
+
+      let resolveSetData: (success: boolean) => void = () => undefined;
+
+      (block.setData as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise<boolean>((resolve) => {
+          resolveSetData = resolve;
+        })
+      );
+
+      mockGetBlockById(mockYjsManager).mockReturnValue(createMockYMap({
+        type: 'paragraph',
+        data: createMockYMap({ text: 'peer text' }),
+      }));
+
+      const composeBlock = vi.spyOn(factory, 'composeBlock');
+
+      callback({ blockId: 'block-2', type: 'update', origin: 'remote' });
+      await Promise.resolve();
+
+      blocksStore.remove(repository.getBlockIndex(block));
+      resolveSetData(false);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(composeBlock).not.toHaveBeenCalled();
+      expect(mockHandlers.replaceBlock).not.toHaveBeenCalled();
+    });
+  });
+
   /**
    * A peer can write any shape into the blocks map. A record the reconciler
    * cannot read must be refused like an unknown tool — warned about, left

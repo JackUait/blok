@@ -677,6 +677,13 @@ export class BlockYjsSync {
 
         if (!success) {
           const blockIndex = this.handlers.getBlockIndex(block);
+
+          // A remove of this block can land while setData is pending; there
+          // is then no slot to replace into.
+          if (this.repository.getBlockById(blockId) !== block || blockIndex === -1) {
+            return;
+          }
+
           const newBlock = this.factory.composeBlock({
             id: block.id,
             tool: block.name,

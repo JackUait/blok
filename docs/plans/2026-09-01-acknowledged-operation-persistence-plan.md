@@ -6,7 +6,7 @@
 
 **Architecture:** `blok-sync.v2` carries stable operation IDs. The client queues before sending; the room appends before broadcasting or acknowledging; the operation journal is authoritative and whole-document JSON is only a projection. The same path is used with one user or many users.
 
-**Tech Stack:** TypeScript, Yjs, lib0/IndexedDB, WebSocket/y-protocols, .NET 10.0, YDotNet, ASP.NET Core, Vitest, xUnit.
+**Tech Stack:** TypeScript, Yjs, lib0/IndexedDB, WebSocket/y-protocols, .NET 10.0, the managed `Blok.Server.Yjs` engine, ASP.NET Core, Vitest, xUnit.
 
 **Spec:** `docs/plans/2026-09-01-acknowledged-operation-persistence-design.md`
 
@@ -23,7 +23,9 @@
 - Run ESLint only on changed files. Never run project-wide ESLint.
 - Do not modify any `package.json`, TypeScript/Vite/Vitest/Playwright/ESLint
   config, or `.env` file.
-- Do not advertise or negotiate v2 until the YDotNet safety gate passes.
+- Wave 0's dependency gates are CLOSED (see the Wave 0 note): the managed
+  engine replaced YDotNet, so v2 may be negotiated as soon as the server path
+  is green.
 - Types 0–3 and 100/101 remain byte-for-byte unchanged. Never add a field to a
   strict type-100 or type-101 payload.
 - `connected` is content synchronization, not durable save confirmation.
@@ -37,10 +39,12 @@
 
 ## Risk Order
 
-1. **Native process safety:** a hostile but authenticated raw Yjs update can
-   currently abort YDotNet on a NUL string. This is a stop gate.
-2. **Checkpoint completeness:** YDotNet does not expose pending updates; skipping
-   journal records after an incomplete full-state checkpoint can lose data.
+1. ~~**Native process safety**~~ — CLOSED. A NUL string cannot abort anything:
+   the engine is managed, NUL is ordinary data, and `UpdateInspector` screens
+   every inbound update before it is applied.
+2. ~~**Checkpoint completeness**~~ — CLOSED. `YDoc.HasPending` exposes parked
+   structs and `EncodeStateAsUpdate` includes them, so a checkpoint can be
+   gated on an empty pending set instead of guessing.
 3. **Commit ordering:** today's room broadcasts before persistence. The new path
    must never expose an unjournalled update.
 4. **v2 bootstrap:** today's symmetric SyncStep2 reply can upload offline edits
@@ -123,8 +127,6 @@
 
 ### Changed server files
 
-- `packages/server/dotnet/Blok.Server/Blok.Server.csproj` (YDotNet only, if the
-  safety-gate version passes)
 - `packages/server/dotnet/Blok.Server/Collab/CollabRoom.cs`
 - `packages/server/dotnet/Blok.Server/Collab/CollabRoomManager.cs`
 - `packages/server/dotnet/Blok.Server/Collab/CollabRoomOptions.cs`
@@ -168,82 +170,24 @@
 
 ## Wave 0 — Dependency and Baseline Gates
 
-### Task 0.1: Prove YDotNet can reject NUL without killing the host
-
-**Files:**
-
-- Modify: `packages/server/dotnet/Blok.Server.Tests/Collab/YDotNetRuntimeProbeTests.cs`
-- Modify: `packages/server/dotnet/Blok.Server.Tests/Collab/YDocConverterHardeningTests.cs`
-- Modify only after a candidate passes: `packages/server/dotnet/Blok.Server/Blok.Server.csproj`
-
-- [ ] Add a child-process test named
-  `RawUpdateWithNulReturnsARejectionAndTheProcessStaysAlive`. The child applies a
-  crafted raw update, tries the same read/export path that currently aborts,
-  emits a managed result, and then successfully performs a second harmless Yjs
-  operation.
-- [ ] Run only that test against YDotNet 0.6.0 and record the red result: the
-  child exits/aborts instead of reporting a managed rejection.
-
-```bash
-dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
-  --filter 'FullyQualifiedName~RawUpdateWithNulReturnsARejectionAndTheProcessStaysAlive'
-```
-
-- [ ] Test the latest released YDotNet/YDotNet.Native pair in the existing
-  runtime probe. Accept it only if the test turns green on every native RID the
-  repository ships.
-- [ ] If no released pair passes, stop this implementation. Keep v2 absent from
-  the handshake and record the upstream blocker; do not substitute a client-only
-  check, subprocess-per-update path, or unreviewed native fork.
-  **2026-09-02 amendment:** the probe found no released pair passes and no
-  native decode-without-apply exists; the sync path itself is NUL-safe, only
-  read-back aborts. `2026-09-02-ydotnet-replacement-research.md` §6 replaces
-  this stop with: patch the yffi build CI already produces (reviewed, sent
-  upstream) and add a managed v1 decoder as the pre-apply screen. Task 0.2 is
-  `supported` through a `DllImport` of the shipped `ytransaction_pending_update`.
-- [ ] If a released pair passes, update the two package references together and
-  rerun all YDotNet runtime/hardening tests.
-
-```bash
-dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
-  --filter 'FullyQualifiedName~YDotNetRuntimeProbeTests|FullyQualifiedName~YDocConverterHardeningTests'
-```
-
-### Task 0.2: Prove checkpoints can observe pending updates
-
-**Files:**
-
-- Modify: `packages/server/dotnet/Blok.Server.Tests/Collab/YDotNetRuntimeProbeTests.cs`
-- Modify: `packages/server/dotnet/Blok.Server/Collab/YDocConverter.cs`
-- Modify: `packages/server/dotnet/Blok.Server/Collab/ICollabDocConverter.cs`
-
-- [ ] Add `PendingUpdateIsVisibleUntilItsDependencyArrives`: apply a dependency-
-  missing update, assert the converter reports pending state, apply its
-  dependency, and assert pending becomes empty.
-- [ ] Run it against the selected binding and record the initial failure caused
-  by the missing managed API.
-- [ ] Add the smallest converter method that exposes only the boolean/count the
-  checkpoint gate needs. Do not expose the raw YDoc or add a general YDotNet
-  abstraction.
-- [ ] Add `CheckpointCursorDoesNotAdvanceWhilePendingExists` to
-  `CollabRoomTests.cs` before any checkpoint implementation, and update the doc
-  comment of the existing `CompactionDropsAnUpdateThatIsStillPending` (same
-  file), which already pins this data-loss shape; do not add a test that
-  contradicts it.
-- [ ] Run the two focused tests until green.
-
-```bash
-dotnet test packages/server/dotnet/Blok.Server.Tests/Blok.Server.Tests.csproj \
-  --filter 'FullyQualifiedName~PendingUpdateIsVisibleUntilItsDependencyArrives|FullyQualifiedName~CheckpointCursorDoesNotAdvanceWhilePendingExists'
-```
-
-- [ ] If the selected released binding cannot expose pending state, record
-  `checkpoint advancement disabled`: the first release then ships without
-  checkpoints at all — no `WriteCheckpointAsync` on the public interface, no
-  `checkpoint`/`checkpointThrough` in the head, unbounded journal replay, and
-  Task 5.1 is skipped. A public method that can never legally be called is
-  worse than an absent one; it is added later as a default interface member.
-  This does not relax Task 0.1; NUL safety remains a hard stop.
+> **2026-09-02: Tasks 0.1 and 0.2 are CLOSED, and not the way this plan
+> expected.** Probing YDotNet 0.6.0 showed the NUL abort is unfixable inside
+> the binding (its only decode-without-apply export aborts on the same input)
+> and that no released pair passes. The research
+> (`2026-09-02-ydotnet-replacement-research.md`) and the engine plan
+> (`2026-09-02-yjs-engine-plan.md`) replaced the dependency with a managed C#
+> Yjs engine, landed 2026-09-02. Both gates now hold by construction:
+>
+> - **NUL safety (0.1):** the engine is managed; a NUL is a byte in a
+>   varstring and a `char` in a string. `UpdateInspector.Inspect` decodes an
+>   update standalone before it is applied and refuses only malformed or
+>   over-deep bytes. Nothing in the server can abort on document data.
+> - **Pending visibility (0.2):** `YDoc.HasPending` reports parked structs and
+>   a parked delete set, and `EncodeStateAsUpdate` folds them into every diff,
+>   so `checkpointThrough` can be gated on an empty pending set. The
+>   compaction data loss this task was written around no longer exists.
+>
+> Task 0.3 (the `onAnyDocUpdate` seam repair) still stands and is unrelated.
 
 ### Task 0.3: Repair the existing binary-seam baseline
 
@@ -275,9 +219,8 @@ yarn lint:types
 
 ### Wave 0 gate
 
-- [ ] Confirm NUL safety is green, or stop the whole plan with v2 unadvertised.
-- [ ] Confirm the pending-state result is recorded as either `supported` or
-  `checkpoint advancement disabled`.
+- [ ] Both dependency gates are closed by the managed engine; only Task 0.3
+  remains in this wave.
 - [ ] Run the full .NET collaboration core tests and the two affected client
   tests.
 - [ ] Commit and push Wave 0 only.
@@ -427,7 +370,8 @@ yarn test test/unit/components/modules/collaboration/provider.test.ts
 - Modify: `packages/server/dotnet/Blok.Server.AspNetCore/BlokServerBuilderExtensions.cs`
 - Modify: `packages/server/dotnet/Blok.Server.AspNetCore/BlokServerServiceCollectionExtensions.cs`
 
-The public shape must carry these semantics without exposing YDotNet:
+The public shape must carry these semantics without exposing the engine's
+internal types:
 
 ```csharp
 public interface ICollabOperationStore
@@ -497,7 +441,7 @@ dotnet test packages/server/dotnet/Blok.Server.AspNetCore.Tests/Blok.Server.AspN
   - `FailsClosedOnMiddleCorruption`;
   - `PreservesUnknownActorAsNull`.
 - [ ] Implement bounded length-prefixed records, explicit codec version, SHA-256
-  digest, and a completion/checksum field. Do not serialize YDotNet objects.
+  digest, and a completion/checksum field. Do not serialize engine objects.
 - [ ] Run only the new codec tests.
 
 ```bash
@@ -1170,8 +1114,8 @@ Skip this task entirely if Task 0.2 recorded `checkpoint advancement disabled`.
   - `CrashBeforeManifestPublishUsesTheOldCheckpointAndFullTail`.
 - [ ] Trigger checkpoint work from the existing frame/byte thresholds, but write
   only committed state.
-- [ ] If Task 0.2 recorded `checkpoint advancement disabled`, retain the full
-  journal and skip cursor advancement; never guess that pending state is empty.
+- [ ] Gate every cursor advance on `YDoc.HasPending` being false; never guess
+  that pending state is empty.
 - [ ] Run focused room/store tests.
 
 ### Task 5.2: Prove hard-kill recovery
@@ -1362,10 +1306,10 @@ yarn --cwd docs test server-data.test.ts i18n ru-language-purity
   raw HTTP operation route, speculative S3 path, or per-block audit parser that
   entered the implementation.
 - [ ] Verify the public TypeScript types do not import `src/`.
-- [ ] Verify every new server public type has XML docs and neither a YDotNet
-  type nor an `internal` type (such as `CollabWorkingSetTag`) in its signature.
-- [ ] Verify no change touched a prohibited config/package file except the
-  explicitly planned YDotNet `.csproj` reference.
+- [ ] Verify every new server public type has XML docs and no `internal` type
+  (such as `CollabWorkingSetTag`, or any `Blok.Server.Yjs` type) in its
+  signature.
+- [ ] Verify no change touched a prohibited config or package file.
 
 ### Task 7.2: Run final gates
 
@@ -1435,7 +1379,7 @@ node scripts/test-server-conformance.mjs --target csharp
 
 Use parallel subagents only where file ownership is disjoint:
 
-- **Wave 0:** YDotNet probe and client seam baseline may run in parallel.
+- **Wave 0:** only the client seam baseline (Task 0.3) remains.
 - **Wave 1:** TypeScript wire fixtures/codecs and C# codecs may run in parallel
   after the fixture schema is frozen; handshake follows both.
 - **Wave 2:** public interface/registration and journal codec may run in

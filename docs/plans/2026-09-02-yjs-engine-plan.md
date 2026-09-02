@@ -10,6 +10,27 @@
 
 **Spec:** `docs/plans/2026-09-02-ydotnet-replacement-research.md` (§2 inventory, §3 engine design, §4 wire facts and traps, §5–6 decision). Reviewed 2026-09-02 by three parallel read-only agents; their verified corrections are folded in.
 
+## Status (2026-09-02)
+
+Waves 0–5 are on `main`. YDotNet is gone: the server is one managed build for
+every runtime, with no native library, no per-RID matrix and no single-file
+extraction.
+
+| Wave | Commit | What landed |
+|---|---|---|
+| 0 | `4507c835` | real-yjs fixtures (56 files, sentinel oracle, 50 fuzz seeds), the node replay harness, the yrs-encoded corpus |
+| 1 | `25fcf320` | lib0 and Any codecs, pinned to lib0 goldens |
+| 2 | `453fd0b6` | standalone v1 decoder and `UpdateInspector` |
+| 3.1 | `1d3d0097` | structs, shared types, struct store, state vectors |
+| 3.2 | `6039af2a` | transactions, YATA integration, delete sets, pending retention |
+| 3.3–3.4 | `e39f7d5b` | v1 encoder, diffs, pending normaliser, fuzz corpus |
+| 4 | `bd1b00a7` | map/array/text write API (391 of 391 engine writes byte-identical to yjs) |
+| 5.1–5.2 | `8fc7b428` | converter and room on the engine |
+| 5.3 | `b91cadc7` | YDotNet, the musl yffi job and the native flags deleted |
+
+Left: Wave 6 (documentation and the final gates). Two `serverLimits` entries
+describe hazards that no longer exist and are deleted there.
+
 ## Global Constraints
 
 - Work directly on `main`. No branch, worktree, detached checkout, or stash.

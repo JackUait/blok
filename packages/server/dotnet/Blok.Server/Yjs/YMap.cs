@@ -56,7 +56,14 @@ internal sealed class YMap : YAbstractType
       return false;
     }
 
-    value = head.Content.GetContent()[head.Length - 1];
+    var content = head.Content.GetContent();
+    var last = head.Length - 1;
+
+    // yjs indexes the same slot and JavaScript answers undefined when it is
+    // not there — a formatting mark occupies a tick and holds no value, and an
+    // empty run holds none at all. Throwing here would take down every read of
+    // the document, not just this key.
+    value = last >= 0 && last < content.Count ? content[last] : YUndefined.Instance;
 
     return true;
   }

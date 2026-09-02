@@ -1764,6 +1764,12 @@ internal static class YDocConverter
 
           return true;
 
+        // Wire refs 2 and 5 hand back parsed JSON. No Blok client writes
+        // either, but a legacy or non-JS peer does, and the client reads them
+        // as ordinary values.
+        case JsonNode node:
+          return TryReadWireJson(node, out plain);
+
         case YUndefined:
           return false;
 
@@ -1783,6 +1789,30 @@ internal static class YDocConverter
       }
 
       return result;
+    }
+
+    /// <summary>
+    /// A wire JSON value, materialised now rather than when the export is
+    /// written. System.Text.Json parses lazily, and it refuses to materialise
+    /// a string a browser can legitimately put on the wire — an unpaired
+    /// surrogate, which JSON.stringify escapes rather than drops. Left lazy,
+    /// that failure lands in the save call, outside every guard here, and
+    /// costs the whole record rather than the one value.
+    /// </summary>
+    private static bool TryReadWireJson(JsonNode node, out JsonNode? plain)
+    {
+      plain = null;
+
+      try
+      {
+        plain = JsonNode.Parse(node.ToJsonString());
+      }
+      catch (InvalidOperationException)
+      {
+        return false;
+      }
+
+      return true;
     }
 
     /// <summary>

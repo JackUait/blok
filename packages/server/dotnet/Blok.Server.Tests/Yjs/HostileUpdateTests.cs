@@ -48,6 +48,34 @@ public sealed class HostileUpdateTests
   }
 
   /// <summary>
+  /// A live map head whose content holds no value for its own last tick. yjs
+  /// indexes the same slot and JavaScript hands back undefined; indexing it
+  /// here threw, and the converter reads every key of the blocks map through
+  /// this call, so one such item made the whole document unexportable. The
+  /// room treats a failed export as retryable, so it went on accepting and
+  /// relaying edits while nothing was ever persisted again.
+  /// </summary>
+  [Theory]
+  [InlineData("a formatting mark", "AQHoBwAmAQFtAWsEYm9sZAR0cnVlAA==")]
+  [InlineData("an empty string", "AQHoBwAkAQFtAWsAAA==")]
+  [InlineData("an empty value run", "AQHoBwAoAQFtAWsAAA==")]
+  [InlineData("an empty JSON run", "AQHoBwAiAQFtAWsAAA==")]
+  public void AMapKeyWithNoValueReadsAsUndefined(string what, string update)
+  {
+    Assert.NotNull(what);
+
+    var doc = new YDoc(1000);
+
+    Assert.Equal(
+        ApplyOutcome.Applied,
+        doc.ApplyUpdate(Convert.FromBase64String(update)).Outcome);
+
+    // The key exists, as yjs's has() reports, and reading it yields nothing.
+    Assert.True(doc.GetMap("m").TryGet("k", out var value));
+    Assert.Same(YUndefined.Instance, value);
+  }
+
+  /// <summary>
   /// Two client groups where the second names an unreachable dependency. The
   /// integrator takes the higher client id first, so the first group is
   /// already in the store when the second is reached: a throw here left the

@@ -300,27 +300,59 @@ public sealed class YDocConverterHardeningTests
   }
 
   /// <summary>
-  /// What a reader still refuses names the block and the key path it failed
-  /// at, instead of reporting only the value. The one shape that reaches it
-  /// here is yjs's LEGACY JSON content (ref 2), which reads back as a
-  /// System.Text.Json node the value switch has no case for.
+  /// yjs's LEGACY JSON content (ref 2) and a Y.Text embed (ref 5) read back as
+  /// System.Text.Json nodes, which the value switch had no case for — so one
+  /// of them threw out of the export. No Blok client writes either, but a
+  /// legacy or non-JS peer does, and the JS client reads them as ordinary
+  /// values. The room treats a failed export as retryable, so a single such
+  /// value stopped the document from ever being persisted again while edits
+  /// went on being accepted and relayed.
   /// </summary>
   [Fact]
-  public void ExportNamesTheBlockAndPathWhenAReaderErrorRemains()
+  public void ExportReadsWireJsonContentAsAnOrdinaryValue()
   {
     var doc = new YDoc();
 
     WriteBlock(doc, "n1");
 
-    var data = Assert.IsType<YMap>(
-        Entry(Assert.IsType<YMap>(Entry(doc.GetMap("blocks"), "n1")), "data"));
+    ApplyForeign(
+        doc,
+        Keyed(0, DataOf(doc, "n1"), "legacy", new ContentJson(["""{"a":1}"""])),
+        Keyed(1, DataOf(doc, "n1"), "embed", new ContentEmbed("""{"kind":"image"}""")));
 
-    ApplyForeign(doc, Keyed(0, data, "legacy", new ContentJson(["""{"a":1}"""])));
+    var block = Assert.Single(YDocConverter.Export(doc));
 
-    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Export(doc));
+    Assert.Equal("""{"a":1}""", block!["data"]!["legacy"]!.ToJsonString());
+    Assert.Equal("""{"kind":"image"}""", block["data"]!["embed"]!.ToJsonString());
+  }
 
-    Assert.Contains("block \"n1\"", error.Message, StringComparison.Ordinal);
-    Assert.Contains("data.legacy", error.Message, StringComparison.Ordinal);
+  /// <summary>
+  /// JSON.stringify escapes an unpaired surrogate rather than dropping it, so
+  /// a browser can put one on the wire; System.Text.Json parses lazily and
+  /// then refuses to materialise it. Left lazy that failure lands in the save
+  /// call, outside every guard in the converter, and costs the whole record —
+  /// so the value is dropped here instead, as the client drops what it cannot
+  /// read.
+  /// </summary>
+  [Fact]
+  public void ExportSkipsAWireJsonValueItCannotMaterialise()
+  {
+    var doc = new YDoc();
+
+    WriteBlock(doc, "n1");
+
+    ApplyForeign(doc, Keyed(0, DataOf(doc, "n1"), "lone", new ContentEmbed("\"\\ud800\"")));
+
+    var block = Assert.Single(YDocConverter.Export(doc));
+
+    Assert.Equal("n1", block!["data"]!["text"]!.GetValue<string>());
+    Assert.False(block["data"]!.AsObject().ContainsKey("lone"));
+  }
+
+  private static YMap DataOf(YDoc doc, string id)
+  {
+    return Assert.IsType<YMap>(
+        Entry(Assert.IsType<YMap>(Entry(doc.GetMap("blocks"), id)), "data"));
   }
 
   /// <summary>

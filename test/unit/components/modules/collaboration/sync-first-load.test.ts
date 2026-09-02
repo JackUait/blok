@@ -804,6 +804,42 @@ describe('collaboration — sync-first load', () => {
       expect(reloaded.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
     }, 20_000);
 
+    /**
+     * The cache checks a row's TYPE, not its content. One row yjs cannot
+     * decode made the replay throw, `load()` reject, and every reload fail
+     * the same way until the user cleared site data.
+     */
+    it('boots unadopted and syncs from the room when a cached row cannot be replayed', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const seed = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+
+      await seed.open();
+      await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, false, new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]));
+      seed.close();
+
+      const harness = await boot({ offline: true });
+
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
+
+      await waitFor(async () => {
+        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const contents = await probe.open();
+
+        probe.close();
+
+        return contents === null;
+      }, 'the cache to be cleared');
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'from the room' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'the room');
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+
+      expect(blockTexts(harness.core)).toEqual(['from the room']);
+    }, 20_000);
+
     it('allocates nothing when the host did not ask for it', async () => {
       const factory = new IDBFactory();
       const openSpy = vi.spyOn(factory, 'open');

@@ -454,6 +454,22 @@ export class Collaboration extends Module {
       return undefined;
     }
 
+    try {
+      for (const update of contents.updates) {
+        this.Blok.YjsManager.applyRemoteUpdate(update, CACHE_ORIGIN);
+      }
+    } catch (thrown) {
+      // A row yjs cannot decode would otherwise fail `load()` on every reload
+      // until site data is cleared. The rows before it may already be in the
+      // document, so it is thrown away whole — the same lever a lineage
+      // change pulls, which also drops the cache — and this boot goes on
+      // unadopted: read-only until the first sync, like a boot with no cache.
+      logLabeled(`collaboration discarded an unreadable offline copy of ${settings.doc}`, 'warn', thrown);
+      this.resetForRelineage();
+
+      return undefined;
+    }
+
     // The member's last known write verdict: without it an offline reload
     // hands a read-only member an editable document whose edits the server
     // will refuse the moment it reconnects. Only with a ticket source, which
@@ -462,10 +478,6 @@ export class Collaboration extends Module {
     this.writeDenied = settings.ticketEndpoint !== undefined && contents.meta.writeDenied;
     this.cacheAdopted = true;
     this.cacheSeeded = true;
-
-    for (const update of contents.updates) {
-      this.Blok.YjsManager.applyRemoteUpdate(update, CACHE_ORIGIN);
-    }
 
     return contents.meta.lineage;
   }

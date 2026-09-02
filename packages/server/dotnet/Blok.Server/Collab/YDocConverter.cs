@@ -359,6 +359,14 @@ internal static class YDocConverter
     /// </summary>
     private readonly Dictionary<string, List<string>> listedBy = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Each block's contentIds (string entries), null where the block has no
+    /// array at all — a peer can write one that way. A child is placed
+    /// against this picture before the transaction opens, so "after" is
+    /// refused unless the parent actually lists it.
+    /// </summary>
+    private readonly Dictionary<string, List<string>?> contents = new(StringComparer.Ordinal);
+
     internal List<EditStep> Plan(IReadOnlyList<CollabEditOp> ops)
     {
       ReadDoc();
@@ -406,7 +414,11 @@ internal static class YDocConverter
         parents[id] = parentId;
         Index(id, parentId);
 
-        foreach (var childId in ReadContentIds(block))
+        var listed = ReadContentIds(block);
+
+        contents[id] = listed;
+
+        foreach (var childId in listed ?? [])
         {
           ListedBy(childId).Add(id);
         }
@@ -432,15 +444,15 @@ internal static class YDocConverter
       return holders;
     }
 
-    /// <summary>The string entries of a block's contentIds; empty when it has no array.</summary>
-    private static List<string> ReadContentIds(YMap block)
+    /// <summary>The string entries of a block's contentIds; null when it has no array.</summary>
+    private static List<string>? ReadContentIds(YMap block)
     {
-      var ids = new List<string>();
-
       if (Value(block, "contentIds") is not YArray contentIds)
       {
-        return ids;
+        return null;
       }
+
+      var ids = new List<string>();
 
       foreach (var entry in contentIds.Enumerate())
       {
@@ -527,9 +539,26 @@ internal static class YDocConverter
         }
       }
 
+      List<string>? siblings = null;
+
       if (op.Parent is not null)
       {
         RefuseUnlessBlockMap(op.Parent, index);
+
+        if (!contents.TryGetValue(op.Parent, out siblings) || siblings is null)
+        {
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.Parent}\" has no children list, so nothing can be placed under it."));
+        }
+
+        if (op.After is not null && !siblings.Contains(op.After))
+        {
+          throw new CollabEditException(Where(
+              index,
+              $"block \"{op.After}\" is not in the document order, so nothing can be " +
+              "placed after it."));
+        }
       }
 
       // Built here, not at apply time: composing the block is what runs the
@@ -546,6 +575,7 @@ internal static class YDocConverter
 
       parents[op.Id] = op.Parent;
       Index(op.Id, op.Parent);
+      contents[op.Id] = [];
 
       if (op.Parent is not null)
       {
@@ -574,8 +604,9 @@ internal static class YDocConverter
         order.Insert(at, op.Id);
         steps.Add(EditStep.InsertRootOrder(at, op.Id));
       }
-      else
+      else if (siblings is not null)
       {
+        siblings.Insert(op.After is null ? 0 : siblings.IndexOf(op.After) + 1, op.Id);
         steps.Add(EditStep.LinkChild(op.Parent, op.Id, op.After));
       }
 
@@ -651,6 +682,18 @@ internal static class YDocConverter
         children.Remove(id);
         steps.Add(EditStep.RemoveBlock(id));
 
+        // What it listed no longer has it as a holder.
+        if (contents.Remove(id, out var listed))
+        {
+          foreach (var childId in listed ?? [])
+          {
+            if (listedBy.TryGetValue(childId, out var holdersOfChild))
+            {
+              holdersOfChild.Remove(id);
+            }
+          }
+        }
+
         // Every occurrence: a duplicate entry left behind is a permanent
         // dangling id in the order.
         for (var at = order.LastIndexOf(id); at >= 0; at = order.LastIndexOf(id))
@@ -669,6 +712,7 @@ internal static class YDocConverter
           {
             if (!doomed.Contains(holder))
             {
+              contents.GetValueOrDefault(holder)?.Remove(id);
               steps.Add(EditStep.UnlinkChild(holder, id));
             }
           }
@@ -759,21 +803,19 @@ internal static class YDocConverter
     }
 
     /// <summary>
-    /// Adds the child to its parent's contentIds. Read at apply time, not
-    /// planned: the array is a live shared type, and an earlier step in this
-    /// same transaction may have changed its length.
+    /// Adds the child to its parent's contentIds. The index is read at apply
+    /// time, not planned: the array is a live shared type, and an earlier
+    /// step in this same transaction may have changed its length. That the
+    /// array exists and lists <paramref name="afterId"/> was checked while
+    /// planning.
     /// </summary>
     internal static EditStep LinkChild(string parentId, string childId, string? afterId)
     {
       return new EditStep((transaction, blockMap, _) =>
       {
-        var contentIds = ContentIdsOf(blockMap, parentId);
-
-        if (contentIds is null)
-        {
-          return;
-        }
-
+        var contentIds = ContentIdsOf(blockMap, parentId) ??
+            throw new InvalidOperationException(
+                $"collab: block \"{parentId}\" has no children list to place \"{childId}\" in.");
         var at = afterId is null ? 0 : IndexOf(contentIds, afterId) + 1;
 
         contentIds.Insert(transaction, at, [childId]);

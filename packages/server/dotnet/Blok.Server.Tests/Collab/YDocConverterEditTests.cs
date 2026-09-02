@@ -352,6 +352,57 @@ public sealed class YDocConverterEditTests
     Assert.Contains("document order", message, StringComparison.Ordinal);
   }
 
+  /// <summary>
+  /// A peer can write a block with no contentIds array. Placing a child
+  /// under it silently linked nothing, leaving a block whose parentId names
+  /// a parent that never lists it.
+  /// </summary>
+  [Fact]
+  public void RefusesAnInsertUnderAParentThatHasNoChildrenList()
+  {
+    var doc = SeededDoc(Root);
+    var blocks = doc.GetMap("blocks");
+
+    doc.Transact(transaction => blocks.Set(transaction, "bare", new YMap(
+    [
+      new KeyValuePair<string, object?>("id", "bare"),
+      new KeyValuePair<string, object?>("type", "toggle"),
+      new KeyValuePair<string, object?>("data", new YMap([])),
+    ])));
+
+    var before = Canonical(doc);
+
+    var message = Refused(
+        doc,
+        """{ "op": "insert", "id": "new", "parent": "bare", "block": { "type": "p", "data": {} } }""");
+
+    Assert.Contains("children", message, StringComparison.Ordinal);
+    Assert.Equal(before, Canonical(doc));
+  }
+
+  /// <summary>
+  /// "after" has to be in the parent's order, not merely parented to it;
+  /// the child used to be placed FIRST instead.
+  /// </summary>
+  [Fact]
+  public void RefusesAnAfterThatTheParentsChildrenListDoesNotHold()
+  {
+    var doc = SeededDoc(
+        """{ "id": "root", "type": "toggle", "data": {} }""",
+        """{ "id": "kid", "type": "paragraph", "data": {}, "parent": "root" }""");
+    var before = Canonical(doc);
+
+    var message = Refused(
+        doc,
+        """
+        { "op": "insert", "id": "new", "parent": "root", "after": "kid",
+          "block": { "type": "p", "data": {} } }
+        """);
+
+    Assert.Contains("document order", message, StringComparison.Ordinal);
+    Assert.Equal(before, Canonical(doc));
+  }
+
   /// <summary>The NUL screen covers every compared id, not merely some.</summary>
   [Theory]
   [InlineData("after")]

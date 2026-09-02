@@ -287,22 +287,21 @@ public sealed class SyncEndpointTests
     await second.ReceiveAsync<BlokControlFrame>();
   }
 
-  [Fact]
-  public async Task ATicketWithoutAUserIsCappedByAddress()
+  [Theory]
+  [InlineData("{\"user\":\"\",\"doc\":\"doc-42\",\"write\":true,\"exp\":4102444800}")]
+  [InlineData("{\"doc\":\"doc-42\",\"write\":true,\"exp\":4102444800}")]
+  public async Task ATicketWithoutAUserIsClosed4401(string payload)
   {
-    // Ticket mode is the public mode: a user-less pass must not open
-    // unlimited sockets. Under TestServer every connection shares one address.
-    var ticket = fixture.Sign(
-        "{\"user\":\"\",\"doc\":\"doc-42\",\"write\":true,\"exp\":4102444800}");
-    await using var app = await SyncApp.StartAsync(
-        "ticket",
-        options => options.CollabMaxConnectionsPerUserPerDoc = 1);
-    await using var first = await app.ConnectWithTicketAsync(ticket);
-    await first.ReceiveAsync<BlokControlFrame>();
+    // Ticket mode is the public mode and its docs require a proxy in front,
+    // so the client address is the proxy's: keying the cap or the rate
+    // window on it would throttle every user-less holder together. A pass
+    // that names nobody is turned away instead.
+    var ticket = fixture.Sign(payload);
+    await using var app = await SyncApp.StartAsync("ticket");
+    await using var client = await app.ConnectWithTicketAsync(ticket);
 
-    await app.AssertRefusedAsync(
-        HttpStatusCode.TooManyRequests,
-        protocols: [SyncApp.Protocol, ticket]);
+    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    Assert.Equal((4401, "pass names no user"), await client.ReceiveCloseAsync());
 
     await using var named = await app.ConnectWithTicketAsync(fixture.Compatible);
     await named.ReceiveAsync<BlokControlFrame>();

@@ -12,7 +12,11 @@ const DEFAULT_TTL_SECONDS = 300;
 const HEADER = '{"alg":"HS256","typ":"JWT"}';
 
 export interface BlokTicketClaims {
-  /** Your own user id. The service stores it but never interprets it. */
+  /**
+   * Your own user id. The service never interprets it, but a collaboration
+   * pass must name one: the sync door turns an empty user away (4401),
+   * because per-user limits cannot key on an address that is the proxy's.
+   */
   user: string;
   /**
    * Scope the pass to one document for sync (collaboration) access. The HTTP

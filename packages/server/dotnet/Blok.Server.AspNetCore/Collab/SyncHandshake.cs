@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using System.Security.Claims;
 using Blok.Server.Tickets;
 using Microsoft.AspNetCore.Http;
@@ -20,10 +21,10 @@ internal sealed record SyncRejected(string? SubProtocol, SyncCloseFrame Close) :
 
 /// <summary>
 /// <paramref name="Principal"/> is what the connection cap keys on. Ticket
-/// mode (the public mode) always has one: the ticket's user, else the client
-/// address. Otherwise it is the signed-in application user, else null —
-/// uncapped, because in none/proxy mode every socket shares one loopback or
-/// proxy address and a cap on it would be a per-doc cap for everyone.
+/// mode (the public mode) always has one: the ticket's user. Otherwise it is
+/// the signed-in application user, else null — uncapped, because in
+/// none/proxy mode every socket shares one loopback or proxy address and a
+/// cap on it would be a per-doc cap for everyone.
 /// </summary>
 internal sealed record SyncAccepted(string? SubProtocol, bool CanWrite, string? Principal) : SyncHandshakeResult;
 
@@ -44,6 +45,14 @@ internal sealed class SyncHandshake(
     TimeProvider timeProvider)
 {
   internal const string Protocol = "blok-sync.v1";
+
+  /// <summary>
+  /// Ticket mode runs behind a proxy, so the client address is the proxy's:
+  /// a pass naming nobody would share one cap and one rate window with
+  /// every other such pass. Refused rather than keyed on the address.
+  /// </summary>
+  private static readonly SyncCloseFrame UserlessPass =
+      new((WebSocketCloseStatus)4401, "pass names no user");
 
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {
@@ -136,15 +145,15 @@ internal sealed class SyncHandshake(
         return (new SyncRejected(subProtocol, SyncClose.OtherDocument), rateLimitKey);
       }
 
-      canWrite = claims.Write;
-      principal = addressKey;
-      user = TicketPrincipal.For(claims);
-
-      if (claims.User.Length > 0)
+      if (claims.User.Length == 0)
       {
-        principal = $"user:{claims.User}";
-        rateLimitKey = principal;
+        return (new SyncRejected(subProtocol, UserlessPass), rateLimitKey);
       }
+
+      canWrite = claims.Write;
+      principal = $"user:{claims.User}";
+      rateLimitKey = principal;
+      user = TicketPrincipal.For(claims);
     }
 
     principal ??= SignedInPrincipal(context);

@@ -127,10 +127,16 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
     try
     {
-      hold = TryHold(Path.Combine(docDirectory, LockName));
+      hold = TryHold(Path.Combine(docDirectory, LockName), out var refusal);
 
       if (hold is null)
       {
+        // .NET's HResult for a lock conflict is the raw errno on Unix, which
+        // differs per platform, so a disk fault that also throws IOException
+        // cannot be told apart from a live holder here. The reason is logged
+        // rather than swallowed, so an operator is not left guessing.
+        log?.Invoke($"collab: \"{documentId}\" is held elsewhere: {refusal}");
+
         return CollabDocumentOpen.DocumentOpenElsewhere;
       }
 
@@ -173,7 +179,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       {
         baseline = ReadBaseline(docDirectory, fenced, documentId);
         journal = OpenJournal(JournalPath(docDirectory, fenced.Generation));
-        records = ScanForward(journal, index, documentId);
+        records = ScanForward(journal, index, documentId, repair: true);
 
         if (fenced.CheckpointThrough > index.DurableThrough)
         {
@@ -268,8 +274,10 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     SyncDirectory(directory);
   }
 
-  private static FileStream? TryHold(string lockPath)
+  private static FileStream? TryHold(string lockPath, out string refusal)
   {
+    refusal = "";
+
     try
     {
       return new FileStream(lockPath, CreateOptions(FileAccess.ReadWrite, FileMode.OpenOrCreate, FileShare.None));
@@ -277,6 +285,8 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     catch (IOException error)
         when (error is not (FileNotFoundException or DirectoryNotFoundException or PathTooLongException))
     {
+      refusal = error.Message;
+
       return null;
     }
   }
@@ -437,17 +447,23 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   }
 
   /// <summary>
-  /// Walks every record written since the last scan. A torn tail is truncated —
-  /// it was never acknowledged, and leaving it would put the next append after
-  /// a hole. Corruption anywhere else throws: the codec consumes nothing from an
-  /// invalid record, so no linear reader can find the record that follows it, and
-  /// a scanner that tried to resynchronise would be silently discarding
-  /// acknowledged history.
+  /// Walks every record written since the last scan. Corruption throws: the
+  /// codec consumes nothing from an invalid record, so no linear reader can find
+  /// the record that follows it, and a scanner that tried to resynchronise would
+  /// be silently discarding acknowledged history.
   /// </summary>
+  /// <param name="repair">
+  /// Whether a torn tail may be truncated. Only the paths that are about to
+  /// WRITE the journal pass true — the tail was never acknowledged, and leaving
+  /// it would put the next append after a hole. A lookup passes false, because
+  /// the seam says it writes nothing; it stops at the tail and the append that
+  /// follows clears it.
+  /// </param>
   private static List<CollabOperationRecord> ScanForward(
       FileStream journal,
       JournalIndex index,
-      string documentId)
+      string documentId,
+      bool repair)
   {
     var records = new List<CollabOperationRecord>();
     var length = journal.Length;
@@ -480,8 +496,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
       if (status == CollabJournalRecordStatus.Incomplete)
       {
-        journal.SetLength(index.ScannedThrough + offset);
-        journal.Flush(flushToDisk: true);
+        if (repair)
+        {
+          journal.SetLength(index.ScannedThrough + offset);
+          journal.Flush(flushToDisk: true);
+        }
 
         break;
       }
@@ -734,6 +753,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     private FileStream? journal;
     private Manifest manifest;
     private bool disposed;
+    private bool faulted;
 
     internal Session(
         LocalCollabOperationStore store,
@@ -768,7 +788,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       cancellationToken.ThrowIfCancellationRequested();
 
       RequireFence();
-      Refresh();
+      Refresh(repair: false);
 
       return ValueTask.FromResult(index.ById.TryGetValue(operationId, out var existing)
         ? new CollabOperationLookup(
@@ -791,7 +811,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       cancellationToken.ThrowIfCancellationRequested();
 
       RequireFence();
-      Refresh();
+      Refresh(repair: true);
 
       if (index.ById.TryGetValue(candidate.OperationId, out var existing))
       {
@@ -828,9 +848,26 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
           candidate.Update,
           candidate.Digest));
 
-      journal.Seek(0, SeekOrigin.End);
-      journal.Write(bytes);
-      journal.Flush(flushToDisk: true);
+      var lengthBefore = journal.Length;
+
+      try
+      {
+        journal.Seek(0, SeekOrigin.End);
+        journal.Write(bytes);
+        journal.Flush(flushToDisk: true);
+      }
+      catch (IOException)
+      {
+        // The record is in the page cache but not on disk, and Linux marks the
+        // dirty pages clean after a failed fsync, so no later flush retries
+        // them. Left in place, the retry the caller is contracted to make would
+        // read it back through that same cache and be told Duplicate — an
+        // acknowledgement of something no disk holds. Put the file back to
+        // "not committed" instead; nothing was acknowledged, so nothing is lost.
+        RollBack(lengthBefore);
+
+        throw;
+      }
 
       // Re-read after the flush, because the fence check above and this write
       // are not one atomic step: a holder judged dead in between could have
@@ -854,7 +891,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       cancellationToken.ThrowIfCancellationRequested();
 
       RequireFence();
-      Refresh();
+      Refresh(repair: false);
 
       if (checkpoint.Through == 0 ||
           checkpoint.Through > index.DurableThrough ||
@@ -1000,6 +1037,24 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     /// judged dead to take the document — after which this publication would
     /// overwrite the new holder's fence with this session's older one.
     /// </summary>
+    /// <summary>
+    /// When even the roll-back cannot be flushed, this session can no longer
+    /// say what disk holds, so it stops answering at all: every later call
+    /// throws and the caller reopens the document from committed data.
+    /// </summary>
+    private void RollBack(long length)
+    {
+      try
+      {
+        journal!.SetLength(length);
+        journal.Flush(flushToDisk: true);
+      }
+      catch (IOException)
+      {
+        faulted = true;
+      }
+    }
+
     private void Republish(Manifest next)
     {
       RequireFence();
@@ -1018,6 +1073,15 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     {
       ObjectDisposedException.ThrowIf(disposed, this);
 
+      if (faulted)
+      {
+        // Not OperationCanceledException: the caller reads a cancellation it
+        // did not ask for as its own shutdown.
+        throw new IOException(
+            $"collab: the journal for \"{documentId}\" could not be flushed and this " +
+            "session can no longer say what is durable; reopen the document.");
+      }
+
       var onDisk = ReadManifest(Path.Combine(docDirectory, ManifestName), documentId);
 
       if (onDisk is null ||
@@ -1034,11 +1098,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     /// still have committed, so the retry after an unknown outcome is the one
     /// lookup that must not be answered from memory.
     /// </summary>
-    private void Refresh()
+    private void Refresh(bool repair)
     {
       if (journal is not null)
       {
-        _ = ScanForward(journal, index, documentId);
+        _ = ScanForward(journal, index, documentId, repair);
       }
     }
 

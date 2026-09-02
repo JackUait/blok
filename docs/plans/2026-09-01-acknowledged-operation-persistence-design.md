@@ -300,13 +300,19 @@ information uses new outer types:
   `{lineage, operationId, serverSequence}`;
 - **104 Rejection:** strict metadata `{lineage, operationId, code}`.
 
-Metadata uses the existing lib0 var-string framing with canonical JSON, exact
-key sets in exactly the order written above (the fixtures pin the bytes), full
-input consumption, lowercase 32-hex IDs, and strict UTF-8. 102 is two
-length-prefixed sections: the metadata string, then the update as a
-var-uint-length-prefixed byte string — a shape 100/101 do not have.
-`serverSequence` matches `^(0|[1-9][0-9]*)$` and never exceeds
-`18446744073709551615`. The decoders reject any backslash in metadata and any
+Metadata uses the existing lib0 var-string framing with canonical JSON: the
+exact key set above, full input consumption, lowercase 32-hex IDs, and strict
+UTF-8. Key order is an emitter rule, not a decoder one — an emitter MUST write
+the keys in the order shown above (the fixtures pin those bytes), but a
+decoder validates the key *set* and never the order, matching how the
+type-100/101 decoders already work; most JSON libraries never expose key
+order to a decoder in the first place, and a language-neutral backend is a
+promised deliverable of this plan. 102 is two length-prefixed sections: the
+metadata string, then the update as a var-uint-length-prefixed byte string —
+a shape 100/101 do not have. `serverSequence` matches `^(0|[1-9][0-9]*)$` and
+never exceeds `18446744073709551615`. Sequences start at 1, so `0` means no
+operation has been committed on the lineage yet; a type-103 frame carrying
+`"0"` is malformed. The decoders reject any backslash in metadata and any
 repeated key, as the 100/101 decoders already do.
 
 A raw SyncStep2/SyncUpdate write on a v2 socket carries no operation ID, so it
@@ -321,6 +327,17 @@ Stable rejection codes are:
 - `invalid-update`;
 - `oversized-update`;
 - `operation-id-conflict`.
+
+These six are the stable set, not a closed one: a receiver MUST accept any
+other code matching `^[a-z][a-z0-9-]{0,63}$` and treat it as a final
+rejection, handled exactly like `read-only`. Refusing an unrecognised code as
+malformed is a liveness hole with no way out — an older client would never
+learn its operation was rejected and would redrive it forever against a
+server that keeps refusing the same frame.
+
+`not-synced` is the one transient code: the room was not ready, and the
+operation was never judged invalid. A receiver keeps it pending and redrives
+it once the sync phase completes; it MUST NOT quarantine it.
 
 A transient journal failure produces no rejection and no acknowledgement. The
 server closes every member with the existing 4503 status and the reason

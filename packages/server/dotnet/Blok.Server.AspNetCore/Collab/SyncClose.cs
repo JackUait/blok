@@ -47,12 +47,16 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame SeedFailed =
       new((WebSocketCloseStatus)4503, "document unavailable");
 
+  internal static readonly SyncCloseFrame BadAwareness =
+      new(WebSocketCloseStatus.PolicyViolation, "malformed awareness");
+
   internal static SyncCloseFrame For(CollabCloseReason reason)
   {
     return reason switch
     {
       CollabCloseReason.Reset => Reset,
       CollabCloseReason.Draining => Draining,
+      CollabCloseReason.BadAwareness => BadAwareness,
       _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
     };
   }

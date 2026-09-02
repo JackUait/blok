@@ -127,9 +127,10 @@ public sealed class CollabRoomTests
     await Join(manager, other);
     reader.Received.Clear();
     other.Received.Clear();
+    var stock = SyncFrames.Payload("awareness");
 
     await membership.ReceiveAsync(
-        SyncWire.Encode(new AwarenessFrame([1, 2, 3])),
+        SyncWire.Encode(new AwarenessFrame(stock)),
         CancellationToken.None);
     await membership.ReceiveAsync(
         SyncWire.Encode(new QueryAwarenessFrame()),
@@ -138,8 +139,41 @@ public sealed class CollabRoomTests
     Assert.Empty(reader.Received);
     Assert.Collection(
         other.Received,
-        frame => Assert.Equal([1, 2, 3], Assert.IsType<AwarenessFrame>(frame).Update),
+        frame => Assert.Equal(stock, Assert.IsType<AwarenessFrame>(frame).Update),
         frame => Assert.IsType<QueryAwarenessFrame>(frame));
+  }
+
+  /// <summary>
+  /// A stock client JSON.parses every state in a relayed awareness frame and
+  /// its provider ends the session when that throws, so one member's bad
+  /// frame must never reach the others. A third one closes the sender: a
+  /// stock client never produces these.
+  /// </summary>
+  [Theory]
+  [InlineData(new byte[] { 0x01, 0x02, 0x03 })]
+  [InlineData(new byte[] { 0x01, 0x02, 0x03, 0x01, (byte)'{' })]
+  public async Task DropsAMalformedAwarenessFrameAndClosesTheSenderOnTheThird(byte[] payload)
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var sender = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, sender);
+    await Join(manager, other);
+    other.Received.Clear();
+    var frame = SyncWire.Encode(new AwarenessFrame(payload));
+
+    await membership.ReceiveAsync(frame, CancellationToken.None);
+    await membership.ReceiveAsync(frame, CancellationToken.None);
+    Assert.Empty(sender.Closes);
+    await membership.ReceiveAsync(frame, CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(SyncFrames.Payload("awareness"))),
+        CancellationToken.None);
+
+    Assert.Equal([CollabCloseReason.BadAwareness], sender.Closes);
+    Assert.Empty(other.Received);
+    Assert.Contains(log, line => line.Contains("malformed awareness", StringComparison.Ordinal));
   }
 
   [Fact]
@@ -175,13 +209,20 @@ public sealed class CollabRoomTests
     await membership.ReceiveAsync(
         SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(4))),
         CancellationToken.None);
-    await membership.ReceiveAsync(
-        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(5))),
-        CancellationToken.None);
+
+    // Over the cap is a best-effort drop, never a strike: a genuinely huge
+    // room answers every queryAwareness with every state it knows.
+    for (var attempt = 0; attempt < 3; attempt++)
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(5))),
+          CancellationToken.None);
+    }
 
     Assert.Equal(
         AwarenessClaiming(4),
         Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+    Assert.Empty(sender.Closes);
   }
 
   /// <summary>
@@ -724,18 +765,27 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// An awareness payload that CLAIMS <paramref name="clients"/> entries.
-  /// y-protocols writes [varuint clients]{[clientId][clock][varstring state]}*
-  /// and never checks that a sender owns the ids it encodes, so the count is
-  /// free to lie: 100_000 fabricated peers fit one frame under the message
-  /// cap. The room reads the count and nothing else, so one entry of filler
-  /// stands in for the bodies.
+  /// A well-formed awareness payload carrying <paramref name="clients"/>
+  /// entries: y-protocols writes [varuint clients]{[clientId][clock][varstring
+  /// state]}* and never checks that a sender owns the ids it encodes, so
+  /// 100_000 fabricated peers fit one frame under the message cap.
   /// </summary>
   private static byte[] AwarenessClaiming(ulong clients)
   {
     var payload = new List<byte>();
-    var value = clients;
+    WriteVarUint(payload, clients);
 
+    for (var client = 0UL; client < clients; client++)
+    {
+      WriteVarUint(payload, 1000 + client);
+      payload.AddRange([0x01, 0x02, (byte)'{', (byte)'}']);
+    }
+
+    return [.. payload];
+  }
+
+  private static void WriteVarUint(List<byte> payload, ulong value)
+  {
     do
     {
       var current = (byte)(value & 0x7f);
@@ -743,10 +793,6 @@ public sealed class CollabRoomTests
       payload.Add(value == 0 ? current : (byte)(current | 0x80));
     }
     while (value != 0);
-
-    payload.AddRange([0xe8, 0x07, 0x01, 0x02, (byte)'{', (byte)'}']);
-
-    return [.. payload];
   }
 
   private CollabRoomManager CreateManager(CollabRoomOptions? options = null)

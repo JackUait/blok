@@ -589,6 +589,48 @@ internal static class YDocs
   }
 }
 
+/// <summary>
+/// Frames from test/unit/server-conformance/fixtures/sync-frames.json, as a
+/// stock y-websocket + y-protocols client wrote them.
+/// </summary>
+internal static class SyncFrames
+{
+  internal static byte[] Payload(string name)
+  {
+    var fixture = JsonNode.Parse(File.ReadAllText(FixturePath())) ??
+        throw new InvalidDataException("sync-frames.json is empty");
+
+    foreach (var frame in fixture["frames"]!.AsArray())
+    {
+      if (frame?["name"]?.GetValue<string>() == name)
+      {
+        return Convert.FromHexString(frame["payloadHex"]!.GetValue<string>());
+      }
+    }
+
+    throw new InvalidDataException($"sync-frames.json has no frame named {name}");
+  }
+
+  private static string FixturePath()
+  {
+    for (var current = new DirectoryInfo(AppContext.BaseDirectory);
+         current is not null;
+         current = current.Parent)
+    {
+      if (File.Exists(Path.Combine(current.FullName, "Blok.Server.slnx")))
+      {
+        return Path.GetFullPath(Path.Combine(
+            current.FullName,
+            "..", "..", "..",
+            "test", "unit", "server-conformance", "fixtures",
+            "sync-frames.json"));
+      }
+    }
+
+    throw new DirectoryNotFoundException("Could not locate the Blok.Server solution root.");
+  }
+}
+
 internal static class Waits
 {
   private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);

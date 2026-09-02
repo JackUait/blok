@@ -617,4 +617,69 @@ internal static class SyncWire
 
     return true;
   }
+
+  /// <summary>
+  /// Structural walk of an awareness payload
+  /// (<c>[varuint clients]{[clientId][clock][varstring state]}*</c>) plus a
+  /// skip-parse of every state as JSON. Presence is still relayed verbatim
+  /// and never interpreted (plan decision 11); what is checked is exactly
+  /// what a stock y-protocols client would throw on — its
+  /// applyAwarenessUpdate JSON.parses each state, an empty one included, and
+  /// the provider ends the session on a throw. <paramref name="clientCount"/>
+  /// is the count the head claims, set as soon as it is read, so a caller can
+  /// tell a frame over the cap from a malformed one.
+  /// </summary>
+  internal static bool TryValidateAwarenessUpdate(
+      ReadOnlySpan<byte> payload,
+      int maxClients,
+      out int clientCount)
+  {
+    clientCount = 0;
+
+    if (!TryReadVarUint(ref payload, out var claimed))
+    {
+      return false;
+    }
+
+    clientCount = claimed > int.MaxValue ? int.MaxValue : (int)claimed;
+
+    if (claimed > (ulong)maxClients)
+    {
+      return false;
+    }
+
+    for (var entry = 0UL; entry < claimed; entry++)
+    {
+      if (!TryReadVarUint(ref payload, out _) ||
+          !TryReadVarUint(ref payload, out _) ||
+          !TryReadVarBytes(ref payload, out var state) ||
+          !IsJsonDocument(state))
+      {
+        return false;
+      }
+    }
+
+    return payload.IsEmpty;
+  }
+
+  private static bool IsJsonDocument(ReadOnlySpan<byte> json)
+  {
+    try
+    {
+      var reader = new Utf8JsonReader(json);
+
+      if (!reader.Read())
+      {
+        return false;
+      }
+
+      reader.Skip();
+
+      return !reader.Read();
+    }
+    catch (JsonException)
+    {
+      return false;
+    }
+  }
 }

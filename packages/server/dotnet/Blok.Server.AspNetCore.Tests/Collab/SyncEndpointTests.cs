@@ -296,7 +296,7 @@ public sealed class SyncEndpointTests
 
     Assert.IsType<QueryAwarenessFrame>(await alice.ReceiveAsync<QueryAwarenessFrame>());
 
-    byte[] awareness = [1, 2, 3, 4, 5];
+    var awareness = Presence(2);
     await alice.SendAsync(new AwarenessFrame(awareness));
     Assert.Equal(awareness, (await bob.ReceiveAsync<AwarenessFrame>()).Update);
 
@@ -411,7 +411,7 @@ public sealed class SyncEndpointTests
     await using var alice = await app.ConnectAsync();
     await using var bob = await app.ConnectAsync();
     // [1][varuint 1021][payload] = 1 + 2 + 1021 bytes.
-    var frame = SyncWire.Encode(new AwarenessFrame(new byte[1021]));
+    var frame = SyncWire.Encode(new AwarenessFrame(PresenceOfLength(1021)));
     Assert.Equal(1024, frame.Length);
 
     await alice.SendRawAsync(frame);
@@ -473,7 +473,7 @@ public sealed class SyncEndpointTests
     // The clock never moves, so nothing refills: the eleventh frame is over.
     for (var index = 0; index < 12; index++)
     {
-      await client.SendAsync(new AwarenessFrame([(byte)index]));
+      await client.SendAsync(new AwarenessFrame(Presence((byte)index)));
     }
 
     Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
@@ -497,15 +497,13 @@ public sealed class SyncEndpointTests
     // over the rate. Bob's copy is the proof each one reached the room.
     for (var index = 0; index < 30; index++)
     {
-      await alice.SendAsync(new AwarenessFrame([(byte)index]));
-      Assert.Equal([(byte)index], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+      await alice.SendAsync(new AwarenessFrame(Presence((byte)index)));
+      Assert.Equal(Presence((byte)index), (await bob.ReceiveAsync<AwarenessFrame>()).Update);
       clock.Advance(TimeSpan.FromMilliseconds(100));
     }
 
-    // A payload's first byte is the client-count varuint, so a one-byte
-    // sentinel has to stay under the continuation bit.
-    await alice.SendAsync(new AwarenessFrame([0x7f]));
-    Assert.Equal([0x7f], (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+    await alice.SendAsync(new AwarenessFrame(Presence(0x7f)));
+    Assert.Equal(Presence(0x7f), (await bob.ReceiveAsync<AwarenessFrame>()).Update);
   }
 
   [Fact]
@@ -587,7 +585,7 @@ public sealed class SyncEndpointTests
     // inbound — together they are 600 KB of presence in one instant.
     for (var index = 0; index < 6; index++)
     {
-      await client.SendAsync(new AwarenessFrame(new byte[100_000]));
+      await client.SendAsync(new AwarenessFrame(PresenceOfLength(100_000)));
     }
 
     Assert.Equal((1008, "inbound rate exceeded"), await client.ReceiveCloseAsync());
@@ -650,7 +648,7 @@ public sealed class SyncEndpointTests
     await using var stalled = await app.ConnectAsync();
     await using var healthy = await app.ConnectAsync();
     Assert.Equal("seeded", await SyncedTextAsync(writer));
-    var presence = new AwarenessFrame(new byte[200 * 1024]);
+    var presence = new AwarenessFrame(PresenceOfLength(200 * 1024));
 
     // ~19 MiB at a peer reading nothing: past 8 × the message cap by more
     // than loopback TCP and Kestrel's output pipe can absorb. Lock-step
@@ -741,5 +739,60 @@ public sealed class SyncEndpointTests
         .SelectMany(endpoint => endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [])
         .Order()
         .ToArray();
+  }
+
+  /// <summary>
+  /// A well-formed one-client awareness payload — the room walks the
+  /// y-protocols shape before relaying, so filler bytes no longer pass.
+  /// [count 1][clientId][clock 1][varstring "{}"].
+  /// </summary>
+  private static byte[] Presence(byte clientId)
+  {
+    return [1, clientId, 1, 2, (byte)'{', (byte)'}'];
+  }
+
+  /// <summary>One client (id 1000, clock 1) whose state is a JSON string sized so the payload is exactly <paramref name="length"/> bytes.</summary>
+  private static byte[] PresenceOfLength(int length)
+  {
+    const int Head = 4;
+
+    for (var prefix = 1; prefix <= 4; prefix++)
+    {
+      var stateLength = length - Head - prefix;
+
+      if (stateLength >= 2 && VarUintLength(stateLength) == prefix)
+      {
+        var payload = new List<byte> { 1, 0xe8, 0x07, 1 };
+        var value = stateLength;
+
+        do
+        {
+          var current = (byte)(value & 0x7f);
+          value >>= 7;
+          payload.Add(value == 0 ? current : (byte)(current | 0x80));
+        }
+        while (value != 0);
+
+        payload.Add((byte)'"');
+        payload.AddRange(Enumerable.Repeat((byte)'x', stateLength - 2));
+        payload.Add((byte)'"');
+
+        return [.. payload];
+      }
+    }
+
+    throw new ArgumentOutOfRangeException(nameof(length));
+  }
+
+  private static int VarUintLength(int value)
+  {
+    var bytes = 1;
+
+    while ((value >>= 7) != 0)
+    {
+      bytes++;
+    }
+
+    return bytes;
   }
 }

@@ -8,6 +8,12 @@ internal enum CollabCloseReason
 
   /// <summary>The server is shutting down; close 1001.</summary>
   Draining,
+
+  /// <summary>
+  /// The member kept sending awareness frames a stock client cannot parse;
+  /// close 1008, after which the client reconnects with its usual backoff.
+  /// </summary>
+  BadAwareness,
 }
 
 /// <summary>

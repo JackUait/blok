@@ -46,4 +46,15 @@ public sealed class SyncSocketMemberTests
     Assert.Equal(1001, (int)draining.RequestedClose!.Value.Status);
     Assert.Equal("server shutting down", draining.RequestedClose.Value.Reason);
   }
+
+  [Fact]
+  public void RepeatedBadAwarenessClosesAsAPolicyViolation()
+  {
+    var member = new SyncSocketMember(canWrite: false, acceptsControlFrames: true, maxQueuedBytes: 10);
+
+    member.Close(CollabCloseReason.BadAwareness);
+
+    Assert.Equal(1008, (int)member.RequestedClose!.Value.Status);
+    Assert.Equal("malformed awareness", member.RequestedClose.Value.Reason);
+  }
 }

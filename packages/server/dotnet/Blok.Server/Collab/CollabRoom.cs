@@ -27,6 +27,9 @@ internal sealed class CollabMembership
   /// <summary>The working-set tag the member joined under (already sent as the control frame when negotiated).</summary>
   internal CollabWorkingSetTag Tag { get; }
 
+  /// <summary>Room-owned, touched only under the lane.</summary>
+  internal int MalformedAwarenessFrames { get; set; }
+
   public ValueTask ReceiveAsync(
       byte[] frame,
       CancellationToken cancellationToken = default)
@@ -53,6 +56,9 @@ internal sealed class CollabMembership
 /// </summary>
 internal sealed class CollabRoom : IDisposable
 {
+  /// <summary>Malformed awareness frames one member may send before it is closed.</summary>
+  private const int MalformedAwarenessLimit = 3;
+
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
 
@@ -791,30 +797,33 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// Presence is relayed verbatim and never decoded (plan decision 11) —
+  /// Presence is relayed verbatim and never interpreted (plan decision 11) —
   /// from read-only members too, because a viewer belongs in the presence
-  /// stack. Only the entry COUNT is read, from the head of the payload,
-  /// because that count is what every OTHER member pays: y-protocols never
-  /// checks that a sender owns the client ids it encodes, so one member can
-  /// fabricate a hundred thousand peers inside a frame that is still under
-  /// the message cap, and the room would hand it to everyone.
+  /// stack. It is still walked before the relay, because the frame is what
+  /// every OTHER member pays: a stock client parses each entry and ends its
+  /// session on one it cannot, and y-protocols never checks that a sender
+  /// owns the client ids it encodes, so one member could fabricate a hundred
+  /// thousand peers inside a frame under the message cap.
   ///
   /// Over the cap the frame is dropped, not the connection: presence is
   /// best-effort, so a genuinely huge room degrades to no presence instead
-  /// of a reconnect loop, and the log keeps the abuse visible. The
-  /// connection-level budget is what closes a member that keeps it up.
+  /// of a reconnect loop, and the log keeps it visible. A MALFORMED frame is
+  /// something no stock client sends, so it counts against the sender and
+  /// the third one closes it.
   /// </summary>
   private void RelayAwarenessLocked(CollabMembership membership, AwarenessFrame awareness)
   {
-    if (!SyncWire.TryReadAwarenessClientCount(awareness.Update, out var clients))
+    if (SyncWire.TryValidateAwarenessUpdate(
+          awareness.Update,
+          options.MaxAwarenessClients,
+          out var clients))
     {
-      log?.Invoke(
-          $"collab: room \"{DocId}\" dropped an awareness frame with no readable client count");
+      BroadcastLocked(SyncWire.Encode(awareness), membership);
 
       return;
     }
 
-    if (clients > (ulong)options.MaxAwarenessClients)
+    if (clients > options.MaxAwarenessClients)
     {
       log?.Invoke(
           $"collab: room \"{DocId}\" dropped an awareness frame claiming {clients} clients " +
@@ -823,7 +832,15 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    BroadcastLocked(SyncWire.Encode(awareness), membership);
+    membership.MalformedAwarenessFrames++;
+    log?.Invoke(
+        $"collab: room \"{DocId}\" dropped a malformed awareness frame " +
+        $"({membership.MalformedAwarenessFrames} of {MalformedAwarenessLimit} from this member)");
+
+    if (membership.MalformedAwarenessFrames >= MalformedAwarenessLimit)
+    {
+      ExpelLocked(membership, CollabCloseReason.BadAwareness);
+    }
   }
 
   private void AnswerSyncStep1Locked(CollabMembership membership, byte[] peerStateVector)
@@ -867,6 +884,26 @@ internal sealed class CollabRoom : IDisposable
     CompactIfOversizedLocked();
     SchedulePersistLocked();
     MarkDirtyLocked();
+  }
+
+  /// <summary>Stops serving one member and closes it; the room may be left empty, so the linger is re-armed.</summary>
+  private void ExpelLocked(CollabMembership membership, CollabCloseReason reason)
+  {
+    members.Remove(membership);
+    UpdateEvictionLocked();
+    CloseMember(membership, reason);
+  }
+
+  private void CloseMember(CollabMembership membership, CollabCloseReason reason)
+  {
+    try
+    {
+      membership.Member.Close(reason);
+    }
+    catch (Exception error)
+    {
+      log?.Invoke($"collab: room \"{DocId}\" could not close a member: {error.Message}");
+    }
   }
 
   private void BroadcastLocked(byte[] frame, CollabMembership? except)
@@ -1144,14 +1181,7 @@ internal sealed class CollabRoom : IDisposable
     {
       foreach (var membership in members)
       {
-        try
-        {
-          membership.Member.Close(reason.Value);
-        }
-        catch (Exception error)
-        {
-          log?.Invoke($"collab: room \"{DocId}\" could not close a member: {error.Message}");
-        }
+        CloseMember(membership, reason.Value);
       }
     }
 

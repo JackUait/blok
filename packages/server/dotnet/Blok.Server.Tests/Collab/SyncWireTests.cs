@@ -269,6 +269,56 @@ public sealed class SyncWireTests
     Assert.True(input.IsEmpty);
   }
 
+  [Fact]
+  public void ValidatesTheStockAwarenessFixtureAsOneClient()
+  {
+    var payload = SyncFrames.Payload("awareness");
+
+    Assert.True(SyncWire.TryValidateAwarenessUpdate(payload, 256, out var clients));
+    Assert.Equal(1, clients);
+  }
+
+  [Theory]
+  [InlineData(new byte[] { 0x00 }, 0)]
+  [InlineData(new byte[] { 0x01, 0xe8, 0x07, 0x01, 0x02, 0x7b, 0x7d }, 1)]
+  [InlineData(new byte[] { 0x01, 0xe8, 0x07, 0x01, 0x04, 0x6e, 0x75, 0x6c, 0x6c }, 1)]
+  [InlineData(new byte[] { 0x02, 0x01, 0x01, 0x02, 0x7b, 0x7d, 0x02, 0x01, 0x02, 0x7b, 0x7d }, 2)]
+  public void ValidatesAWellFormedAwarenessPayload(byte[] payload, int expected)
+  {
+    Assert.True(SyncWire.TryValidateAwarenessUpdate(payload, 256, out var clients));
+    Assert.Equal(expected, clients);
+  }
+
+  public static TheoryData<string, byte[]> MalformedAwarenessPayloads => new()
+  {
+    { "empty payload", [] },
+    { "unterminated count", [0x80] },
+    { "truncated after the clock", [0x01, 0x02, 0x03] },
+    { "truncated inside the state", [0x01, 0x02, 0x03, 0x05, 0x7b, 0x7d] },
+    { "state that is not JSON", [0x01, 0x02, 0x03, 0x01, 0x7b] },
+    { "empty state", [0x01, 0x02, 0x03, 0x00] },
+    { "state with trailing JSON", [0x01, 0x02, 0x03, 0x03, 0x7b, 0x7d, 0x31] },
+    { "fewer entries than the count", [0x02, 0x02, 0x03, 0x02, 0x7b, 0x7d] },
+    { "bytes after the last entry", [0x01, 0x02, 0x03, 0x02, 0x7b, 0x7d, 0xff] },
+  };
+
+  /// <summary>Each of these makes a stock y-protocols applyAwarenessUpdate throw, or would if relayed.</summary>
+  [Theory]
+  [MemberData(nameof(MalformedAwarenessPayloads))]
+  public void RefusesAMalformedAwarenessPayload(string description, byte[] payload)
+  {
+    Assert.False(SyncWire.TryValidateAwarenessUpdate(payload, 256, out _), description);
+  }
+
+  [Fact]
+  public void RefusesAnAwarenessPayloadOverTheClientCapButStillReportsTheClaimedCount()
+  {
+    byte[] payload = [0xa0, 0x8d, 0x06, 0xe8, 0x07, 0x01, 0x02, 0x7b, 0x7d];
+
+    Assert.False(SyncWire.TryValidateAwarenessUpdate(payload, 256, out var clients));
+    Assert.Equal(100_000, clients);
+  }
+
   private static string Control(long epoch, int format, string lineage)
   {
     return $"{{\"epoch\":{epoch},\"format\":{format},\"lineage\":\"{lineage}\"}}";

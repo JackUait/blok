@@ -582,6 +582,12 @@ describe('server docs data', () => {
     // Presence draws a cursor, the way Notion does. An entry still promising a
     // highlighted block describes a version of the editor that no longer ships.
     expect(body).not.toMatch(/outline/i);
+    // The caret carries no name flag: identity is a monogram face in the
+    // margin with the name on hover, and the caret pulses once idle.
+    expect(body).not.toMatch(/flag/i);
+    expect(body).toMatch(/margin|gutter|beside the block/i);
+    expect(body).toMatch(/pulse/i);
+    expect(body).toMatch(/hover/i);
     expect(body).toMatch(/collaboration/);
     expect(body).toMatch(/name/i);
     expect(body).toMatch(/colou?r/i);

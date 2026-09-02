@@ -1,8 +1,8 @@
 # @bloklabs/server
 
-Blok's shared C# server handles file uploads and link previews. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
+Blok's shared C# server handles file uploads, link previews and live collaboration. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-The current packages store no documents and include no database-block or MySQL integration. Those features follow this delivery migration.
+Documents stay yours: saving and loading them is a small endpoint in your own app, and that endpoint remains the record. With live collaboration on, the service keeps only a working copy of each open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. The packages include no database-block or MySQL integration; those follow this delivery migration.
 
 ## ASP.NET Core
 
@@ -74,6 +74,28 @@ docker run --rm \
 
 Set `BLOK_SECRET` to a random value of at least 32 characters. Put the service behind a reverse proxy or hosting platform that terminates TLS before forwarding plain HTTP to it; the host does not manage certificates. The process refuses unsafe public configurations instead of starting with a warning.
 
+The same service, with live collaboration:
+
+```bash
+docker run \
+  -p 127.0.0.1:4000:4000 \
+  --mount type=volume,source=blok-server-data,target=/data \
+  --mount type=volume,source=blok-collab,target=/collab \
+  -e BLOK_SECRET \
+  -e BLOK_DOC_ENDPOINT_AUTH \
+  ghcr.io/jackuait/blok-server \
+  --listen 0.0.0.0:4000 \
+  --auth ticket \
+  --allow-origin https://myapp.com \
+  --storage-dir /data \
+  --public-url https://blok.myapp.com/files \
+  --collab \
+  --collab-dir /collab \
+  --doc-endpoint https://myapp.com/api/documents
+```
+
+`--collab` turns the sync routes on. `--doc-endpoint` names the routes in your own app the service loads a document from and writes it back to; `BLOK_DOC_ENDPOINT_AUTH` holds the header value those routes expect, sent verbatim on every call. `--collab-dir` (or `--collab-s3-prefix`) is where the working copy lives; it holds document content, so it must not be publicly readable and may not sit inside `--storage-dir`, where everything is served. In-process, the same switches are `options.CollabEnabled` and `options.DocEndpoint`, and the app must call `app.UseWebSockets()` before `MapBlokServer`.
+
 ## Point the editor at it
 
 ```ts
@@ -129,10 +151,13 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `GET /unfurl?url=…` | Reads title, description, and image metadata |
 | `POST /upload` | Stores an uploaded file |
 | `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
+| `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
+| `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
+| `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, and reaches every open tab |
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
-A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl`; both upload routes require `write: true`. The `doc` claim is reserved for future document-scoped routes and does not scope today’s file or unfurl routes.
+A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
 ## Quality gates
 

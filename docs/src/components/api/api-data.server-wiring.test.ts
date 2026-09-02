@@ -71,6 +71,17 @@ describe("server wiring config keys", () => {
     expect(description).toMatch(/attribution|credit/i);
   });
 
+  // `offline` is the one collaboration key a host turns on deliberately, and
+  // presence draws a caret plus a face in the gutter — no block outline.
+  it("names the offline copy and describes presence as it ships", () => {
+    const description = row("collaboration")?.description ?? "";
+
+    expect(row("collaboration")?.type).toContain("offline?: boolean");
+    expect(description).toMatch(/offline/);
+    expect(description).toMatch(/hex/i);
+    expect(description).not.toMatch(/outline/i);
+  });
+
   it("names the event a host renders its indicator from", () => {
     expect(row("collaboration")?.description).toContain("collaboration:status");
   });

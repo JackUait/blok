@@ -254,6 +254,43 @@ describe('presence renderer', () => {
     });
   });
 
+  /**
+   * A caret is published only from a measurable input. On an image, an embed,
+   * a divider or a table cell's native field the publisher sends `caret: null`
+   * with `blockId` still naming the block — and a client from before carets
+   * shipped sends no caret field at all. Both are ABSENT, not malformed, and
+   * block-level presence is the decision for every block.
+   */
+  describe('a peer on a block with no measurable caret', () => {
+    it.each([
+      ['a null caret', { user: { name: 'Grace' }, blockId: 'block-2', caret: null }],
+      ['no caret field at all', { user: { name: 'Grace' }, blockId: 'block-2' }],
+    ])('still gets a face on their block with %s', (_label, state) => {
+      const harness = setup();
+
+      harness.renderer.render([peer(99, state)], 42);
+
+      const holder = harness.holderOf('block-2');
+
+      expect(face(holder)?.getAttribute('title')).toBe('Grace');
+      expect(caret(holder)).toBeNull();
+      expect(avatars(harness.host)).toHaveLength(1);
+    });
+
+    it('gets no face when the caret is present but malformed', () => {
+      const harness = setup();
+
+      // Rejected whole: a face parked from the sibling field would sit beside
+      // a block whose caret this client refused to draw.
+      harness.renderer.render([
+        peer(99, { user: { name: 'Grace' }, blockId: 'block-2', caret: { nope: true } }),
+      ], 42);
+
+      expect(face(harness.holderOf('block-2'))).toBeNull();
+      expect(caret(harness.holderOf('block-2'))).toBeNull();
+    });
+  });
+
   describe('the local user', () => {
     it('is never drawn on their own block', () => {
       const harness = setup();

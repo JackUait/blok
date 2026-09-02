@@ -635,7 +635,7 @@ export class Collaboration extends Module {
     // REPLACED, never merged — including with `undefined`. A merge would carry
     // the previous transition's `retryInMs` onto the `connected` that ended the
     // wait, telling the host a live session is about to reconnect.
-    this.lastStatusDetail = detail;
+    this.lastStatusDetail = this.discardCacheIfOversized(detail);
     // 'error' is the provider's last word — it never reports again — so this
     // only ever latches on.
     this.terminal = status === 'error';
@@ -665,6 +665,26 @@ export class Collaboration extends Module {
     if (status === 'offline' || status === 'error') {
       await this.renderLastKnown();
     }
+  }
+
+  /**
+   * An oversized update that ended the session is in the cache too: every
+   * later boot would replay it, and the resync answer would carry it back into
+   * the same refusal — a permanent lockout for this browser. Dropping the cache
+   * makes the next load sync from the room, as it would without one.
+   * @param detail - what the provider said about the transition
+   */
+  private discardCacheIfOversized(detail: CollabStatusDetail | undefined): CollabStatusDetail | undefined {
+    if (this.cache === null || detail?.error !== 'oversized-update') {
+      return detail;
+    }
+
+    void this.cache.clear();
+
+    const note = 'the offline copy was discarded so the next load syncs from the server';
+    const reason = detail.reason === undefined || detail.reason === '' ? note : `${detail.reason}; ${note}`;
+
+    return { ...detail, reason };
   }
 
   /**

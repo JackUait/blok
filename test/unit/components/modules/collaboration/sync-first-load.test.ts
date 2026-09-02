@@ -729,6 +729,57 @@ describe('collaboration — sync-first load', () => {
       expect(text).toBe('trailing');
     }, 30_000);
 
+    /**
+     * The oversized update is in the cache too. Every later boot replays it,
+     * the server's SyncStep1 draws it back into the resync answer, and the
+     * announced cap refuses it again: a permanent lockout for this browser.
+     * The terminal has to take the cache with it, so the next load syncs from
+     * the room exactly as the no-cache path does.
+     */
+    it('clears the cache on an oversized-update terminal, so the next boot syncs from the room', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      socket.deliver({ type: 'limits', maxMessageBytes: 200 });
+      harness.core.moduleInstances.YjsManager.addBlock({
+        id: 'huge',
+        type: 'paragraph',
+        data: { text: 'x'.repeat(8192) },
+      });
+
+      await waitFor(() => collabAttr(harness.core) === 'error', 'the terminal');
+
+      expect(seen.at(-1)?.error).toBe('oversized-update');
+      expect(seen.at(-1)?.reason).toContain('offline copy was discarded');
+
+      await waitFor(async () => {
+        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const contents = await probe.open();
+
+        probe.close();
+
+        return contents === null;
+      }, 'the cache to be cleared');
+
+      destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
+
+      const reloaded = await boot({ offline: true });
+
+      expect(reloaded.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+      expect(reloaded.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
+    }, 20_000);
+
     it('allocates nothing when the host did not ask for it', async () => {
       const factory = new IDBFactory();
       const openSpy = vi.spyOn(factory, 'open');

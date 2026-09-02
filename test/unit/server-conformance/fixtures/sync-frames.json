@@ -88,5 +88,288 @@
         "maxMessageBytes": 1048576
       }
     }
-  ]
+  ],
+  "v2": {
+    "protocol": "blok-sync.v2",
+    "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+    "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+    "rejectionCodes": [
+      "lineage-mismatch",
+      "read-only",
+      "not-synced",
+      "invalid-update",
+      "oversized-update",
+      "operation-id-conflict"
+    ],
+    "frames": [
+      {
+        "name": "operation",
+        "messageType": 102,
+        "description": "Client operation: var-string metadata {lineage, operationId} then the Yjs update as a var-uint-length-prefixed byte string.",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e"
+        },
+        "updateHex": "0101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "acknowledgement",
+        "messageType": 103,
+        "description": "Server acknowledgement: var-string metadata {lineage, operationId, serverSequence}.",
+        "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223432227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"42\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "serverSequence": "42"
+        }
+      },
+      {
+        "name": "acknowledgementMaxSequence",
+        "messageType": 103,
+        "description": "Acknowledgement at the documented u64 ceiling; a decoder parsing serverSequence as a signed 64-bit integer or a double fails here.",
+        "frameHex": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363135227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"18446744073709551615\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "serverSequence": "18446744073709551615"
+        }
+      },
+      {
+        "name": "rejection:lineage-mismatch",
+        "messageType": 104,
+        "description": "Server rejection with the stable code lineage-mismatch.",
+        "frameHex": "68797b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a226c696e656167652d6d69736d61746368227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"lineage-mismatch\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "lineage-mismatch"
+        }
+      },
+      {
+        "name": "rejection:read-only",
+        "messageType": 104,
+        "description": "Server rejection with the stable code read-only.",
+        "frameHex": "68727b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561642d6f6e6c79227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"read-only\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "read-only"
+        }
+      },
+      {
+        "name": "rejection:not-synced",
+        "messageType": 104,
+        "description": "Server rejection with the stable code not-synced.",
+        "frameHex": "68737b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a226e6f742d73796e636564227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"not-synced\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "not-synced"
+        }
+      },
+      {
+        "name": "rejection:invalid-update",
+        "messageType": 104,
+        "description": "Server rejection with the stable code invalid-update.",
+        "frameHex": "68777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22696e76616c69642d757064617465227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"invalid-update\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "invalid-update"
+        }
+      },
+      {
+        "name": "rejection:oversized-update",
+        "messageType": 104,
+        "description": "Server rejection with the stable code oversized-update.",
+        "frameHex": "68797b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a226f76657273697a65642d757064617465227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"oversized-update\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "oversized-update"
+        }
+      },
+      {
+        "name": "rejection:operation-id-conflict",
+        "messageType": 104,
+        "description": "Server rejection with the stable code operation-id-conflict.",
+        "frameHex": "687e7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a226f7065726174696f6e2d69642d636f6e666c696374227d",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"operation-id-conflict\"}",
+        "metadata": {
+          "lineage": "5f3a9c1e7b04d28a6cf1e0937b52d84a",
+          "operationId": "9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e",
+          "code": "operation-id-conflict"
+        }
+      }
+    ],
+    "negative": [
+      {
+        "name": "operationUppercaseLineage",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "Lineage in uppercase hex; IDs are lowercase-only.",
+        "metadataJson": "{\"lineage\":\"5F3A9C1E7B04D28A6CF1E0937B52D84A\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223546334139433145374230344432384136434631453039333742353244383441222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationShortOperationId",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "operationId is 31 hex characters, one short of 128 bits.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8\"}",
+        "frameHex": "665e7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a2239623263346436653866306131623363356437653966306132623463366438227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationMissingOperationId",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "The operationId key is absent.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\"}",
+        "frameHex": "662e7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationExtraKey",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "A serverSequence key, which belongs to 103 and not to 102.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"1\"}",
+        "frameHex": "66747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2231227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationEscapedDuplicateKey",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "An escaped \"lineage\" ahead of the real one: the key is present twice while the literal token appears once, so only the no-backslash rule catches it.",
+        "metadataJson": "{\"lin\\u0065age\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "6691017b226c696e5c7530303635616765223a223566336139633165376230346432386136636631653039333762353264383461222c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationEmptyUpdate",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "Valid metadata, then a zero-length update section.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d00"
+      },
+      {
+        "name": "operationInvalidUtf8Metadata",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "A lone 0xff inside the metadata section; otherwise a valid operation.",
+        "frameHex": "665f7b226c696e65616765223a22ff66336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a7300"
+      },
+      {
+        "name": "operationMissingUpdateSection",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "The frame ends after the metadata, so it is shaped like 100/101. A decoder that stops at one section accepts this.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
+      },
+      {
+        "name": "operationTruncatedUpdate",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "The update length prefix claims 16 bytes and only 3 follow.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d10010203"
+      },
+      {
+        "name": "operationTrailingByte",
+        "messageType": 102,
+        "expect": "malformed",
+        "description": "A complete operation plus one byte; one frame per message.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d130101e8071084e8070e0820616e6420796a730000"
+      },
+      {
+        "name": "acknowledgementDuplicateKey",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "The lineage key appears twice, unescaped.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"42\"}",
+        "frameHex": "67a2017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223432227d"
+      },
+      {
+        "name": "acknowledgementNumericServerSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "serverSequence sent as a JSON number instead of a decimal string.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":42}",
+        "frameHex": "67737b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a34327d"
+      },
+      {
+        "name": "acknowledgementLeadingZeroServerSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "serverSequence \"0042\": two texts would denote one value.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"0042\"}",
+        "frameHex": "67777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2230303432227d"
+      },
+      {
+        "name": "acknowledgementNegativeServerSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "serverSequence \"-1\"; the pattern allows no sign.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"-1\"}",
+        "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a222d31227d"
+      },
+      {
+        "name": "acknowledgementOverRangeServerSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "serverSequence one past the u64 ceiling (18446744073709551616).",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"18446744073709551616\"}",
+        "frameHex": "6787017b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223138343436373434303733373039353531363136227d"
+      },
+      {
+        "name": "acknowledgementMissingServerSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "The 102 key set on a 103 frame; serverSequence is absent.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "675f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
+      },
+      {
+        "name": "acknowledgementTrailingByte",
+        "messageType": 103,
+        "expect": "malformed",
+        "description": "A complete acknowledgement plus one byte.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"42\"}",
+        "frameHex": "67757b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a223432227d00"
+      },
+      {
+        "name": "rejectionEscapedCode",
+        "messageType": 104,
+        "expect": "malformed",
+        "description": "An escaped code that parses to the valid read-only; only the no-backslash rule rejects it.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"read\\u002donly\"}",
+        "frameHex": "68777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22726561645c75303032646f6e6c79227d"
+      },
+      {
+        "name": "rejectionUnknownCode",
+        "messageType": 104,
+        "expect": "malformed",
+        "description": "A code outside the six stable ones.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"code\":\"teapot\"}",
+        "frameHex": "686f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c22636f6465223a22746561706f74227d"
+      },
+      {
+        "name": "unknownOuterType",
+        "messageType": 105,
+        "expect": "unknown",
+        "description": "Type 105 carrying an operation-shaped section. An unknown OUTER type is ignorable, never malformed, and its payload is left unread.",
+        "frameHex": "695f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d"
+      }
+    ]
+  }
 }

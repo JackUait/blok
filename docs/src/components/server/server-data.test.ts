@@ -248,6 +248,7 @@ describe('server docs data', () => {
       '--collab-dir',
       '--collab-s3-prefix',
       '--doc-endpoint',
+      '--doc-endpoint-auth',
       '--listen',
       '--max-upload',
       '--no-unfurl',
@@ -463,6 +464,12 @@ describe('server docs data', () => {
     expect(body).toMatch(/address/i);
     expect(body).toMatch(/proxy/i);
     expect(body).toMatch(/no cap/i);
+    // The sync door refuses a pass with an empty user (SyncClose.UserlessPass),
+    // so the cap and the rate window key on the user alone. The old sentence
+    // promised a per-network-address fallback that no longer exists.
+    expect(body).toContain('pass names no user');
+    expect(body).toMatch(/4401/);
+    expect(body).not.toMatch(/network address/i);
   });
 
   // Kestrel's default is unlimited; the host pins 1,024 only with --collab on,
@@ -481,6 +488,11 @@ describe('server docs data', () => {
     expect(body).toMatch(/until one of the open ones closes/i);
     expect(body).toMatch(/ASP\.NET/);
     expect(body).toContain('MaxConcurrentUpgradedConnections');
+    // The service counts upgrades itself and refuses BEFORE the room is seeded;
+    // Kestrel's limit stays underneath and answers 500 after the seed.
+    expect(body).toMatch(/503/);
+    expect(body).toContain('CollabMaxConnections');
+    expect(body).toMatch(/500/);
   });
 
   // The design promised a documented sharding pattern instead of scaling
@@ -539,6 +551,12 @@ describe('server docs data', () => {
     // oversized send itself instead of learning the cap from a disconnect.
     expect(body).toMatch(/tells the editor the message-size limit when it connects/);
     expect(body).toMatch(/refuses to send something too big/);
+    // A message may take 16 receives plus one per 64 bytes (SyncSocketMember),
+    // and a text frame is refused outright — both are connection-level rules a
+    // non-Blok client can trip.
+    expect(body).toContain('binary frames only');
+    expect(body).toMatch(/1003/);
+    expect(body).toMatch(/sixteen pieces/i);
   });
 
   // The two halves of the door are deliberately asymmetric: nothing is editable
@@ -744,6 +762,7 @@ describe('server docs data', () => {
     expect(body).toMatch(/also names the document/i);
     expect(body).toMatch(/names no document/i);
     expect(body).toMatch(/turned away|refused/i);
+    expect(body).toMatch(/name its user/i);
     expect(body).toMatch(/your own app|your app/i);
   });
 

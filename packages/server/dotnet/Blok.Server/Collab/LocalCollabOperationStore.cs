@@ -12,8 +12,8 @@ namespace Blok.Server.Collab;
 /// </summary>
 /// <remarks>
 /// <para>
-/// LAYOUT. <c>&lt;directory&gt;/&lt;CollabDocKey&gt;/</c> holds <c>lock</c>,
-/// <c>manifest</c>, <c>journal.&lt;generation&gt;</c>,
+/// LAYOUT. <c>&lt;directory&gt;/&lt;CollabDocKey&gt;.journal/</c> holds
+/// <c>lock</c>, <c>manifest</c>, <c>journal.&lt;generation&gt;</c>,
 /// <c>baseline.&lt;generation&gt;</c> and
 /// <c>checkpoint.&lt;generation&gt;.&lt;through&gt;</c>. The generation counts
 /// resets, and naming the per-lineage files after it is what makes a reset
@@ -23,10 +23,15 @@ namespace Blok.Server.Collab;
 /// the single step that switches lineages.
 /// </para>
 /// <para>
-/// This store needs a directory of its OWN, NOT the working-set directory:
-/// <see cref="LocalCollabStore"/> keeps today's whole-document file at
+/// THE <c>.journal</c> SUFFIX IS LOAD-BEARING, and it is why this store shares
+/// one collab directory with <see cref="LocalCollabStore"/> instead of needing
+/// its own. That store keeps today's whole-document file at
 /// <c>&lt;dir&gt;/&lt;CollabDocKey&gt;</c>, and no filesystem lets a directory
-/// share that name with a file.
+/// share a name with a file — so an unsuffixed per-document directory would
+/// throw for every document that already has a working set, and migration
+/// would have nowhere to read the old bytes from. With the suffix the two sit
+/// side by side under one configured path, which is also what keeps
+/// one-process-per-directory covering both.
 /// </para>
 /// <para>
 /// THE ACKNOWLEDGEMENT BOUNDARY IS ONE FLUSH. An append writes its record to a
@@ -63,6 +68,10 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
   private const string LockName = "lock";
   private const string ManifestName = "manifest";
+
+  // Distinguishes the journal directory from LocalCollabStore's whole-document
+  // file, which sits at the unsuffixed key in the same directory.
+  private const string JournalDirectorySuffix = ".journal";
 
   // open(2) O_RDONLY; the same value on Linux and macOS.
   private const int ReadOnlyFlags = 0;
@@ -118,7 +127,9 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
   private CollabDocumentOpen Open(string documentId)
   {
-    var docDirectory = Path.Combine(directory, CollabDocKey.For(documentId));
+    var docDirectory = Path.Combine(
+        directory,
+        CollabDocKey.For(documentId) + JournalDirectorySuffix);
     EnsureDirectory(docDirectory);
 
     FileStream? hold = null;

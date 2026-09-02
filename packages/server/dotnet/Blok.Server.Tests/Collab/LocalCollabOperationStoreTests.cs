@@ -620,7 +620,43 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
         (await reopened.FindCommittedAsync(OperationId(1), firstDigest)).Outcome);
   }
 
-  private string DocDirectory => Path.Combine(root, CollabDocKey.For(DocId));
+  [Fact]
+  public async Task CoexistsWithTodaysWholeDocumentFileInOneDirectory()
+  {
+    // The suffix is what makes this possible: LocalCollabStore's file sits at
+    // the unsuffixed key, and a directory cannot share a name with a file, so
+    // an unsuffixed journal directory would throw for every document that
+    // already has a working set — and Task 2.4's migration would have nothing
+    // to read the old bytes from.
+    var workingSet = new LocalCollabStore(root, logs.Add);
+    var frames = CollabWorkingSetCodec.EncodeFrames([[0x0a, 0x0b]]);
+    await workingSet.WriteAsync(DocId, frames, new CollabWorkingSetTag(
+        CollabWorkingSetTag.SchemaV2,
+        3,
+        CollabWorkingSetTag.NewLineage()), CancellationToken.None);
+
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+      await session.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    // The old file is untouched and still readable.
+    var stored = await workingSet.ReadAsync(DocId, CancellationToken.None);
+    Assert.NotNull(stored);
+    Assert.Equal(frames, stored.Updates);
+
+    Assert.Equal(
+        Path.Combine(root, CollabDocKey.For(DocId)),
+        Assert.Single(Directory.GetFiles(root)));
+    Assert.Equal(DocDirectory, Assert.Single(Directory.GetDirectories(root)));
+
+    await using var reopened = await OpenAsync();
+    Assert.Equal(1ul, reopened.OpenResult.Head!.DurableThrough);
+  }
+
+  private string DocDirectory =>
+      Path.Combine(root, CollabDocKey.For(DocId) + ".journal");
 
   private string ManifestPath => Path.Combine(DocDirectory, "manifest");
 

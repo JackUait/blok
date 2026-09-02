@@ -333,5 +333,51 @@ describe('lineage reset', () => {
 
       manager.destroy();
     });
+
+    it('lands no stale typing in the fresh doc when the reset runs INSIDE a flush body', () => {
+      vi.useFakeTimers();
+
+      try {
+        const manager = createManager();
+        const room = createStore();
+        const localWritesAfterReset: unknown[] = [];
+        const flushInto = (blockId: string) => (entries: ReadonlyMap<string, unknown>): boolean =>
+          Array.from(entries).reduce(
+            (wrote, [key, value]) => manager.updateBlockData(blockId, key, value) || wrote,
+            false
+          );
+
+        manager.addBlock(paragraph('b1', 'a'));
+        manager.addBlock(paragraph('b2', 'x'));
+        // b1: leading write, then a pending trailing write with its timer armed.
+        manager.enqueueBlockDataWrite('b1', { text: 'b' }, flushInto('b1'));
+        manager.enqueueBlockDataWrite('b1', { text: 'c' }, flushInto('b1'));
+
+        // b2's leading flush performs the reset from inside the dispatch,
+        // where the buffer's own flushAll barrier is a no-op.
+        manager.enqueueBlockDataWrite('b2', { text: 'y' }, (entries) => {
+          const wrote = flushInto('b2')(entries);
+
+          manager.resetForRelineage();
+
+          return wrote;
+        });
+
+        manager.onDocUpdate((update) => localWritesAfterReset.push(update));
+
+        // The reset room re-seeds the same block id through the ordinary sync path.
+        room.addBlock(paragraph('b1', 'from the reset room'));
+        manager.applyRemoteUpdate(room.encodeStateAsUpdate(), { source: 'room' });
+
+        vi.advanceTimersByTime(2000);
+
+        expect(localWritesAfterReset).toEqual([]);
+        expect(manager.toJSON()).toEqual([paragraph('b1', 'from the reset room')]);
+
+        manager.destroy();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

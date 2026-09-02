@@ -246,16 +246,27 @@ break several rules — `{"lineage":…,"lineage" :…}` breaks both rule 8 and 
 bytes to different rules, and the `rule` field on every negative vector would
 mean nothing. Order matters only for *attribution*; the frame is malformed
 either way. A decoder that reports no rule at all is still conformant, but one
-that reports a rule MUST report the lowest-numbered one.
+that reports a rule MUST report the lowest-numbered one. Concretely, this
+means all of rules 1-5 resolve, across every section of the frame, before any
+of rules 6-12 are evaluated at all — a decoder MUST NOT read framing for one
+section, then metadata content for that same section, then framing for the
+next: a type-102 frame with a non-UTF-8 metadata section (rule 6) and an empty
+update section (rule 4) — bytes `6601ff00` — MUST report rule 4, not rule 6,
+because the empty-update framing check on the second section outranks the
+metadata-content check on the first.
 
 **Framing**
 
 **Rule 1.** The outer type varuint is missing, truncated, longer than 10 bytes,
 or does not fit 64 bits.
 
-**Rule 2.** Any length prefix exceeds the bytes remaining in the message. The
-bounds check MUST happen **before** any allocation, so the 2 GiB update-length
-prefix on the 102-byte `operationHugeUpdateLength` vector allocates nothing.
+**Rule 2.** A length prefix cannot be read as a varuint, or it can be read but
+exceeds the bytes remaining in the message. The first case covers a present
+but corrupt prefix — for example an unterminated continuation sequence, as on
+the `operationUnterminatedUpdateLength` vector, where every remaining byte
+carries the continuation bit and none terminates it. The bounds check MUST
+happen **before** any allocation, so the 2 GiB update-length prefix on the
+102-byte `operationHugeUpdateLength` vector allocates nothing.
 
 **Rule 3.** A section is missing entirely — in particular a type-102 message
 that ends after its metadata section.

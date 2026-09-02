@@ -337,6 +337,17 @@ const hugeUpdateLength = concat(
   Uint8Array.from([0x80, 0x80, 0x80, 0x80, 0x08]),
 );
 
+// Same shape again, but the update length prefix itself never terminates:
+// three continuation bytes (high bit set) and the message ends there, with no
+// byte carrying a clear high bit. Distinct from truncatedUpdate and
+// hugeUpdateLength above, where the prefix is a complete, valid varuint that
+// merely claims more than remains -- here the prefix cannot be read as a
+// varuint at all. Rule 2 covers both shapes (blok-sync-v2.md section 5).
+const unterminatedUpdateLength = concat(
+  v2Frame(MESSAGE_BLOK_OPERATION, utf8(OPERATION_METADATA)),
+  Uint8Array.from([0x80, 0x80, 0x80]),
+);
+
 const negative = [
   badOperation(
     'operationUppercaseLineage',
@@ -429,6 +440,16 @@ const negative = [
       'The update length prefix claims 2 GiB on a frame a few dozen bytes long. The bounds check must refuse it without allocating; this is the second section, whose prefix has no counterpart in 100/101.',
     metadataJson: OPERATION_METADATA,
     frameHex: hex(hugeUpdateLength),
+  },
+  {
+    name: 'operationUnterminatedUpdateLength',
+    messageType: MESSAGE_BLOK_OPERATION,
+    expect: 'malformed',
+    rule: 2,
+    description:
+      'The update length prefix is three continuation bytes and nothing after: a valid-so-far LEB128 sequence that never terminates, so it cannot be read as a varuint at all -- distinct from operationTruncatedUpdate and operationHugeUpdateLength, where the prefix decodes fine and only the claimed length is wrong.',
+    metadataJson: OPERATION_METADATA,
+    frameHex: hex(unterminatedUpdateLength),
   },
   {
     name: 'operationTrailingByte',

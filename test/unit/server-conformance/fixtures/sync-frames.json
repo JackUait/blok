@@ -378,6 +378,15 @@
         "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d8080808008"
       },
       {
+        "name": "operationUnterminatedUpdateLength",
+        "messageType": 102,
+        "expect": "malformed",
+        "rule": 2,
+        "description": "The update length prefix is three continuation bytes and nothing after: a valid-so-far LEB128 sequence that never terminates, so it cannot be read as a varuint at all -- distinct from operationTruncatedUpdate and operationHugeUpdateLength, where the prefix decodes fine and only the claimed length is wrong.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\"}",
+        "frameHex": "665f7b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865227d808080"
+      },
+      {
         "name": "operationTrailingByte",
         "messageType": 102,
         "expect": "malformed",

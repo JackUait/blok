@@ -212,10 +212,12 @@ public sealed class YDocConverterEditTests
   /// The removal walk is linear in the SUBTREE, not in the document: it used
   /// to rescan every block per step, which cost 37 seconds on a 20,000-block
   /// document — inside the room's single lane, with every member frozen.
+  /// Pinned by counting the walk's steps, never by the clock.
   /// </summary>
   [Fact]
   public void RemovesFromALargeDocumentWithoutRescanningItPerStep()
   {
+    const int ChainLength = 10;
     var blocks = new JsonArray();
 
     for (var index = 0; index < 4000; index++)
@@ -224,22 +226,23 @@ public sealed class YDocConverterEditTests
           $$"""{ "id": "n{{index}}", "type": "paragraph", "data": { "text": "x" } }"""));
     }
 
+    // n0 owns a chain c1 → c2 → … by parentId alone.
+    for (var index = 1; index <= ChainLength; index++)
+    {
+      var parent = index == 1 ? "n0" : $"c{index - 1}";
+
+      blocks.Add(JsonNode.Parse(
+          $$"""{ "id": "c{{index}}", "type": "paragraph", "data": {}, "parent": "{{parent}}" }"""));
+    }
+
     var doc = new YDoc();
 
     YDocConverter.Seed(doc, blocks);
 
-    var started = System.Diagnostics.Stopwatch.StartNew();
-
-    Apply(doc, """{ "op": "remove", "id": "n0" }""");
-    started.Stop();
+    YDocConverter.ApplyOps(doc, Ops("""{ "op": "remove", "id": "n0" }"""), out var visited);
 
     Assert.Equal(3999, YDocConverter.Export(doc).Count);
-
-    // Generous next to the quadratic version's seconds, tight enough that a
-    // return to a per-step document scan fails here.
-    Assert.True(
-        started.ElapsedMilliseconds < 2000,
-        $"removing one block of 4000 took {started.ElapsedMilliseconds}ms");
+    Assert.Equal(ChainLength + 1, visited);
   }
 
   /// <summary>

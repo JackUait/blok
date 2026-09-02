@@ -151,6 +151,16 @@ internal static class YDocConverter
   /// </summary>
   internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops)
   {
+    ApplyOps(doc, ops, out _);
+  }
+
+  /// <summary>
+  /// <paramref name="visited"/> counts the blocks the removal walks stepped
+  /// through, for the test that pins them linear in the subtree.
+  /// </summary>
+  internal static void ApplyOps(YDoc doc, IReadOnlyList<CollabEditOp> ops, out int visited)
+  {
+    visited = 0;
     ArgumentNullException.ThrowIfNull(doc);
     ArgumentNullException.ThrowIfNull(ops);
 
@@ -161,7 +171,10 @@ internal static class YDocConverter
 
     var blockMap = doc.GetMap(BlocksRoot);
     var rootOrder = doc.GetArray(OrderRoot);
-    var steps = new EditPlanner(blockMap, rootOrder).Plan(ops);
+    var planner = new EditPlanner(blockMap, rootOrder);
+    var steps = planner.Plan(ops);
+
+    visited = planner.Visited;
 
     try
     {
@@ -366,6 +379,9 @@ internal static class YDocConverter
     /// refused unless the parent actually lists it.
     /// </summary>
     private readonly Dictionary<string, List<string>?> contents = new(StringComparer.Ordinal);
+
+    /// <summary>Blocks the removal walks dequeued; linear in the subtree, never the document.</summary>
+    internal int Visited { get; private set; }
 
     internal List<EditStep> Plan(IReadOnlyList<CollabEditOp> ops)
     {
@@ -653,6 +669,8 @@ internal static class YDocConverter
       // index makes it linear in the SUBTREE rather than the document.
       while (pending.Count > 0)
       {
+        Visited++;
+
         if (!children.TryGetValue(pending.Dequeue(), out var bucket))
         {
           continue;

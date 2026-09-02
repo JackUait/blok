@@ -392,6 +392,22 @@ public sealed class YDocConverterLawTests
     Assert.Empty(warnings);
   }
 
+  /// <summary>
+  /// fromJSON reads Object.entries(block.data), which throws for null and
+  /// undefined — the one data shape a seed refuses outright.
+  /// </summary>
+  [Theory]
+  [InlineData("""{ "id": "a", "type": "paragraph" }""")]
+  [InlineData("""{ "id": "a", "type": "paragraph", "data": null }""")]
+  public void SeedRefusesABlockWhoseDataIsAbsentOrNull(string block)
+  {
+    var doc = new YDoc();
+
+    var error = Assert.Throws<InvalidDataException>(() => YDocConverter.Seed(doc, Blocks(block)));
+
+    Assert.Contains("\"a\"", error.Message, StringComparison.Ordinal);
+  }
+
   [Fact]
   public void SeedSkipsBlocksWithoutAStringId()
   {

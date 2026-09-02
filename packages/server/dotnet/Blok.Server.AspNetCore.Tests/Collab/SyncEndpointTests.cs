@@ -562,6 +562,44 @@ public sealed class SyncEndpointTests
     Assert.Equal("seeded once", await SyncedTextAsync(client));
   }
 
+  /// <summary>
+  /// Real Kestrel, because only a real socket blocks the pump behind a full
+  /// TCP window. A peer that stops reading cannot see its own close, so it
+  /// resumes afterwards: the backlog first, then the 1008.
+  /// </summary>
+  [Fact]
+  public async Task APeerThatStopsReadingIsClosed1008WhileTheOthersKeepReceiving()
+  {
+    const int frames = 96;
+    await using var app = await SyncApp.StartAsync(
+        configure: options =>
+        {
+          options.CollabMaxMessageBytes = 256 * 1024;
+          options.CollabInboundFramesPerSecond = 0;
+          options.CollabInboundAwarenessBytesPerSecond = 0;
+        },
+        kestrel: true);
+    await using var writer = await app.ConnectAsync();
+    await using var stalled = await app.ConnectAsync();
+    await using var healthy = await app.ConnectAsync();
+    Assert.Equal("seeded", await SyncedTextAsync(writer));
+    var presence = new AwarenessFrame(new byte[200 * 1024]);
+
+    // ~19 MiB at a peer reading nothing: past 8 × the message cap by more
+    // than loopback TCP and Kestrel's output pipe can absorb. Lock-step
+    // with the healthy peer, whose copy of each frame is also the proof
+    // that the same relay was enqueued at the stalled one.
+    for (var index = 0; index < frames; index++)
+    {
+      await writer.SendAsync(presence);
+      Assert.Equal(
+          presence.Update.Length,
+          (await healthy.ReceiveAsync<AwarenessFrame>()).Update.Length);
+    }
+
+    Assert.Equal((1008, "outbound queue overflow"), await stalled.ReceiveCloseAsync());
+  }
+
   [Fact]
   public async Task ASeedFailureIsAcceptedThenClosed4503()
   {

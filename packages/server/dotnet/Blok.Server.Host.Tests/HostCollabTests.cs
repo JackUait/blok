@@ -279,6 +279,68 @@ public sealed class HostCollabTests
     }
   }
 
+  /// <summary>
+  /// A frozen tab neither reads nor answers pings, and once its send window
+  /// is full the pump is stuck in SendAsync — so the keep-alive has to abort
+  /// a socket whose own ping may be queued behind that blocked send. The
+  /// process ceiling is the outside view of "left the room": the probe is
+  /// refused while the peer holds its slot and admitted once it is gone.
+  /// </summary>
+  [Fact]
+  public async Task APeerThatStopsReadingAndAnsweringPingsLeavesTheRoom()
+  {
+    var keepAlive = TimeSpan.FromSeconds(1);
+    var collabDirectory = UniqueDirectory("blok-host-dead-peer");
+    await using var endpoint = await FixtureDocEndpoint.StartAsync();
+    await using var app = await StartCollabHostAsync(
+        endpoint,
+        collabDirectory,
+        requestTimeout: TimeSpan.FromMinutes(10),
+        keepAliveTimeout: TimeSpan.FromMinutes(2),
+        maxUpgradedConnections: 2,
+        configure: options =>
+        {
+          options.CollabKeepAliveInterval = keepAlive;
+          options.CollabMaxMessageBytes = 256 * 1024;
+          options.CollabInboundFramesPerSecond = 0;
+          options.CollabInboundAwarenessBytesPerSecond = 0;
+        });
+
+    try
+    {
+      var listen = ListenAddress(app);
+      using var writer = await ConnectAsync(listen);
+      await HandshakeAsync(writer);
+      using var stalled = await ConnectAsync(listen);
+      await HandshakeAsync(stalled);
+
+      // ~19 MiB relayed at a peer that reads nothing: its pump is blocked
+      // behind a full TCP window before the writer's next answer arrives.
+      var presence = SyncFrames.Awareness(new byte[200 * 1024]);
+
+      for (var index = 0; index < 96; index++)
+      {
+        await SendAsync(writer, presence);
+      }
+
+      await HandshakeAsync(writer);
+
+      var refused = await Assert.ThrowsAsync<WebSocketException>(() => ConnectAsync(listen));
+      Assert.Contains("503", refused.Message, StringComparison.Ordinal);
+
+      // The ping goes out after one interval and times out two intervals
+      // later, so the peer is gone by three; the rest is slack for a loaded
+      // machine, not a measurement. With the keep-alive off the slot is
+      // never freed at all, so the multiple still proves what evicted it.
+      using var admitted = await ConnectWhenAdmittedAsync(listen, keepAlive * 8);
+      await HandshakeAsync(admitted);
+    }
+    finally
+    {
+      DeleteDirectory(collabDirectory);
+    }
+  }
+
   [Fact]
   public void BoundsUpgradedConnectionsOnlyWithCollab()
   {
@@ -330,18 +392,21 @@ public sealed class HostCollabTests
       TimeSpan requestTimeout,
       TimeSpan keepAliveTimeout,
       string storageDirectory = "",
-      long? maxUpgradedConnections = null)
+      long? maxUpgradedConnections = null,
+      Action<BlokServerOptions>? configure = null)
   {
+    var options = new BlokServerOptions
+    {
+      CollabDirectory = collabDirectory,
+      CollabEnabled = true,
+      DocEndpoint = endpoint.Url,
+      ListenAddress = "127.0.0.1:0",
+      PublicUrl = "http://127.0.0.1/files",
+      StorageDirectory = storageDirectory,
+    };
+    configure?.Invoke(options);
     var app = BuildHost(
-        new BlokServerOptions
-        {
-          CollabDirectory = collabDirectory,
-          CollabEnabled = true,
-          DocEndpoint = endpoint.Url,
-          ListenAddress = "127.0.0.1:0",
-          PublicUrl = "http://127.0.0.1/files",
-          StorageDirectory = storageDirectory,
-        },
+        options,
         requestTimeout,
         keepAliveTimeout,
         maxUpgradedConnections);
@@ -462,9 +527,10 @@ public sealed class HostCollabTests
   }
 
   /// <summary>Retries the upgrade until the server admits it or the deadline passes.</summary>
-  private static async Task<ClientWebSocket> ConnectWhenAdmittedAsync(string listen)
+  private static async Task<ClientWebSocket> ConnectWhenAdmittedAsync(string listen, TimeSpan? within = null)
   {
-    var deadline = DateTime.UtcNow + Deadline;
+    var allowed = within ?? Deadline;
+    var deadline = DateTime.UtcNow + allowed;
     WebSocketException? lastRefusal = null;
 
     while (DateTime.UtcNow < deadline)
@@ -481,7 +547,7 @@ public sealed class HostCollabTests
       await Task.Delay(50);
     }
 
-    throw new TimeoutException($"the server kept refusing upgrades for {Deadline}: {lastRefusal?.Message}");
+    throw new TimeoutException($"the server kept refusing upgrades for {allowed}: {lastRefusal?.Message}");
   }
 
   private static async Task CloseAsync(ClientWebSocket socket)
@@ -641,6 +707,16 @@ internal static class SyncFrames
     var frame = new List<byte> { 0, UpdateType };
     WriteVarUint(frame, (ulong)update.Length);
     frame.AddRange(update);
+
+    return [.. frame];
+  }
+
+  /// <summary>Awareness (type 1) is [varuint 1][varuint length][payload]; a zero payload is "no clients".</summary>
+  internal static byte[] Awareness(byte[] payload)
+  {
+    var frame = new List<byte> { 1 };
+    WriteVarUint(frame, (ulong)payload.Length);
+    frame.AddRange(payload);
 
     return [.. frame];
   }

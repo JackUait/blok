@@ -514,6 +514,7 @@ export class Collaboration extends Module {
         yjs.applyRemoteUpdate(update, origin);
       },
       onDocUpdate: (callback) => yjs.onDocUpdate(callback),
+      onAnyDocUpdate: (callback) => yjs.onAnyDocUpdate(callback),
       getStateVector: () => yjs.getStateVector(),
       encodeStateAsUpdate: (stateVector) => yjs.encodeStateAsUpdate(stateVector),
       enableAwareness: () => yjs.enableAwareness(),

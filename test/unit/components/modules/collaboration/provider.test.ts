@@ -100,6 +100,7 @@ class MockSocket {
 const seamFor = (store: DocumentStore): CollabDocSeam => ({
   applyRemoteUpdate: (update, origin) => store.applyRemoteUpdate(update, origin),
   onDocUpdate: (callback) => store.onUpdate(callback),
+  onAnyDocUpdate: (callback) => store.onAnyUpdate(callback),
   getStateVector: () => store.getStateVector(),
   encodeStateAsUpdate: (stateVector) => store.encodeStateAsUpdate(stateVector),
   enableAwareness: () => store.enableAwareness(),

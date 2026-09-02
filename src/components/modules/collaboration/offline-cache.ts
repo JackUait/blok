@@ -1,3 +1,9 @@
+// `rtop` (request → promise) rather than lib0's add/put/del helpers: their
+// hand-written types accept only `string | number | ArrayBuffer | Date` as an
+// item and a narrower key union than `IDBValidKey`, so an object row or a key
+// read back from the store does not type-check. The helpers are one-line
+// `rtop(store.<op>(...))` aliases, so this is the same call with the real
+// IndexedDB types.
 import * as idb from 'lib0/indexeddb';
 import * as Y from 'yjs';
 
@@ -299,14 +305,14 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
     const merged = Y.mergeUpdates(bytes);
     const [writeStore] = idb.transact(state.db, [UPDATES_STORE]);
 
-    await idb.addAutoKey(writeStore, {
+    await idb.rtop(writeStore.add({
       lineage: current,
       bytes: merged,
-    });
+    }));
 
     const [deleteStore] = idb.transact(state.db, [UPDATES_STORE]);
 
-    await Promise.all(keys.map((key) => idb.del(deleteStore, key)));
+    await Promise.all(keys.map((key) => idb.rtop(deleteStore.delete(key))));
 
     state.rows = 1;
   };
@@ -358,7 +364,7 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         if (strangers.length > 0) {
           const [sweepStore] = idb.transact(state.db, [UPDATES_STORE]);
 
-          await Promise.all(strangers.map((key) => idb.del(sweepStore, key)));
+          await Promise.all(strangers.map((key) => idb.rtop(sweepStore.delete(key))));
         }
 
         state.lineage = meta.lineage;
@@ -385,10 +391,10 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
 
         const [store] = idb.transact(db, [UPDATES_STORE]);
 
-        await idb.addAutoKey(store, {
+        await idb.rtop(store.add({
           lineage: current,
           bytes: update,
-        });
+        }));
 
         state.rows += 1;
 
@@ -408,13 +414,13 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
       await enqueue(async (db) => {
         const [metaStore] = idb.transact(db, [META_STORE]);
 
-        await idb.put(metaStore, {
+        await idb.rtop(metaStore.put({
           format: tag.format,
           epoch: tag.epoch,
           lineage: tag.lineage,
           writeDenied,
           savedAt: Date.now(),
-        }, META_KEY);
+        }, META_KEY));
 
         if (tag.lineage !== state.lineage) {
           state.lineage = tag.lineage;
@@ -430,10 +436,10 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
 
         const [store] = idb.transact(db, [UPDATES_STORE]);
 
-        await idb.addAutoKey(store, {
+        await idb.rtop(store.add({
           lineage: tag.lineage,
           bytes: snapshot,
-        });
+        }));
 
         state.rows += 1;
       });
@@ -452,7 +458,7 @@ export const createOfflineCache = (options: OfflineCacheOptions): OfflineCache =
         const [updatesStore, metaStore] = idb.transact(db, [UPDATES_STORE, META_STORE]);
 
         await idb.rtop(updatesStore.clear());
-        await idb.del(metaStore, META_KEY);
+        await idb.rtop(metaStore.delete(META_KEY));
       });
     },
 

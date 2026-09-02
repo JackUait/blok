@@ -180,7 +180,7 @@ varuint(104)  varstring(metadata)
 | --- | --- | --- |
 | `lineage` | JSON string | `^[0-9a-f]{32}$`. The working-set lineage announced by the type-100 control frame. |
 | `operationId` | JSON string | `^[0-9a-f]{32}$`. 128 CSPRNG bits, generated once per local update, persisted with the bytes before the first send, and never regenerated on retry. |
-| `serverSequence` | JSON **string** | `^(0\|[1-9][0-9]*)$` and numerically at most `18446744073709551615`. A gap-free, server-assigned position within the lineage. The first committed operation on a lineage is `1`. |
+| `serverSequence` | JSON **string** | `^(0\|[1-9][0-9]*)$` and numerically at most `18446744073709551615`. A gap-free, server-assigned position within the lineage. In a type-103 frame it MUST be at least 1. |
 | `code` | JSON string | `^[a-z][a-z0-9-]{0,63}$`. The six codes in section 6 are the stable set, but a decoder MUST accept any other code matching this pattern. |
 
 `serverSequence` is carried as a decimal **string**, not a JSON number: its
@@ -192,10 +192,16 @@ value and two implementations always agree on it.
 **Sequences start at 1.** The first operation committed on a lineage is
 acknowledged with `serverSequence` `"1"`, the next with `"2"`, and so on with
 no gaps. `0` therefore means *no operation has been committed on this lineage
-yet*: it is the empty value for a durable-through or high-water mark, and it
-never appears in a type-103 frame. Without this, a gap-detecting client and a
-foreign server disagree about whether the first acknowledgement should have
-been `0` or `1`.
+yet*: it is the empty value for a durable-through or high-water mark. Without
+this, a gap-detecting client and a foreign server disagree about whether the
+first acknowledgement should have been `0` or `1`.
+
+**In a type-103 frame `serverSequence` MUST be at least 1**, because an
+acknowledgement by definition acknowledges a committed operation and `0` is
+reserved for "nothing committed". A type-103 frame carrying `"0"` is malformed
+under rule 12. This is a range rule layered on the grammar, not a change to it:
+`^(0|[1-9][0-9]*)$` still accepts `0`, which stays a legal value of a
+durable-through field, where it means something.
 
 ### 4.2 Canonical JSON
 
@@ -289,7 +295,8 @@ number, boolean or `null` is malformed).
 pattern in section 4.1 — including uppercase hex, an ID shorter or longer than
 32 characters, a `serverSequence` sent as a JSON number, a `serverSequence`
 with a leading zero or a sign, a `serverSequence` above
-`18446744073709551615`, or a `code` that does not match
+`18446744073709551615`, a `serverSequence` of `0` in a type-103 frame, or a
+`code` that does not match
 `^[a-z][a-z0-9-]{0,63}$` (empty, uppercase, over 64 characters, or carrying a
 character outside that class).
 

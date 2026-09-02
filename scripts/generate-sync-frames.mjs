@@ -466,6 +466,13 @@ const negative = [
     `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"0042"}`,
   ),
   badMetadataOnly(
+    'acknowledgementZeroSequence',
+    MESSAGE_BLOK_ACK,
+    12,
+    'serverSequence "0" on an acknowledgement. The grammar allows 0 — it is the durable-through "nothing committed on this lineage yet" value — but an acknowledgement always acknowledges a committed operation, so it can never carry it.',
+    `{"lineage":"${LINEAGE}","operationId":"${OPERATION_ID}","serverSequence":"0"}`,
+  ),
+  badMetadataOnly(
     'acknowledgementNegativeServerSequence',
     MESSAGE_BLOK_ACK,
     12,

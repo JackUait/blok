@@ -423,6 +423,15 @@
         "frameHex": "67777b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2230303432227d"
       },
       {
+        "name": "acknowledgementZeroSequence",
+        "messageType": 103,
+        "expect": "malformed",
+        "rule": 12,
+        "description": "serverSequence \"0\" on an acknowledgement. The grammar allows 0 — it is the durable-through \"nothing committed on this lineage yet\" value — but an acknowledgement always acknowledges a committed operation, so it can never carry it.",
+        "metadataJson": "{\"lineage\":\"5f3a9c1e7b04d28a6cf1e0937b52d84a\",\"operationId\":\"9b2c4d6e8f0a1b3c5d7e9f0a2b4c6d8e\",\"serverSequence\":\"0\"}",
+        "frameHex": "67747b226c696e65616765223a223566336139633165376230346432386136636631653039333762353264383461222c226f7065726174696f6e4964223a223962326334643665386630613162336335643765396630613262346336643865222c2273657276657253657175656e6365223a2230227d"
+      },
+      {
         "name": "acknowledgementNegativeServerSequence",
         "messageType": 103,
         "expect": "malformed",

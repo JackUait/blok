@@ -42,7 +42,7 @@ Run the self-contained host through npm:
 npx @bloklabs/server --listen 127.0.0.1:4000
 ```
 
-The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published. The host is fully managed: every archive and the NuGet package are one managed build for every runtime; no native library, no extraction directory, nothing to set for a service account with no home.
+The npm package is a small wrapper. On first run it downloads the C# host for macOS, Windows or Linux (including Alpine/musl), verifies it against `checksums.txt`, and caches it. Both x64 and arm64 are published. The host is fully managed: every archive and the NuGet package are built from managed code alone, with no native library, so there is no extraction directory and nothing to set for a service account with no home.
 
 The same host is available at the existing image name. In proxy mode it must stay on loopback, so this example uses the host network. The named volume keeps uploads in the image's writable `/data` directory:
 

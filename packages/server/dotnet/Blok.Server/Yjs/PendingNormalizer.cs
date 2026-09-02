@@ -155,9 +155,18 @@ internal static class PendingNormalizer
 
       if (parked.Id.Clock > boundary && written.Count > 0)
       {
-        var gap = parked.Id.Clock - boundary;
+        // A Skip's length is an int here and an unbounded varuint on the wire,
+        // and a peer can park a struct billions of clocks ahead without
+        // forging anything. Consecutive Skips name one hole, so an oversized
+        // gap is written as several rather than refused — refusing it took
+        // down every sync answer and every compaction for the room's life.
+        for (var hole = boundary; hole < parked.Id.Clock;)
+        {
+          var span = (int)Math.Min(parked.Id.Clock - hole, int.MaxValue);
 
-        written.Add((new YSkip { Id = new YId(parked.Id.Client, boundary), Length = Length(gap) }, 0));
+          written.Add((new YSkip { Id = new YId(parked.Id.Client, hole), Length = span }, 0));
+          hole += (ulong)span;
+        }
       }
 
       var offset = parked.Id.Clock < boundary ? boundary - parked.Id.Clock : 0;
@@ -214,13 +223,5 @@ internal static class PendingNormalizer
   private static ulong End((YStruct Struct, int Offset) written)
   {
     return written.Struct.Id.Clock + (ulong)written.Struct.Length;
-  }
-
-  private static int Length(ulong ticks)
-  {
-    return ticks <= int.MaxValue
-        ? (int)ticks
-        : throw new InvalidOperationException(
-            $"yjs: a {ticks}-clock gap is past int.MaxValue and cannot be written.");
   }
 }

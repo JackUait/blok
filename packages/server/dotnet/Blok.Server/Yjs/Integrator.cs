@@ -245,7 +245,19 @@ internal static class Integrator
       if (pending.TryGetValue(client, out var refs))
       {
         refs.Index--;
-        rest[client] = refs.Refs.GetRange(refs.Index, refs.Refs.Count - refs.Index);
+
+        // A Skip names a hole its sender is not filling, and nothing that
+        // reads the parked set wants one: integration ignores Skips, and the
+        // diff writer re-derives every hole from the gaps between what is
+        // parked. Keeping one lets it stand in for content — the merge that
+        // folds a later delivery in measures coverage by clock range, so a
+        // parked Skip makes the real content for those clocks look like a
+        // duplicate and it is dropped. The struct that failed is never a
+        // Skip, so the range still starts on real content.
+        rest[client] = refs.Refs
+            .GetRange(refs.Index, refs.Refs.Count - refs.Index)
+            .Where(waiting => waiting is not YSkip)
+            .ToList();
         pending.Remove(client);
         refs.Index = 0;
         refs.Refs = [];
@@ -254,20 +266,22 @@ internal static class Integrator
       {
         rest[client] = [parked];
       }
-
-      ids.Remove(client);
     }
 
     stack.Clear();
   }
 
+  /// <summary>
+  /// The next client to read from, highest id first. A client Park struck off
+  /// is simply no longer in <paramref name="pending"/> — dropping it from the
+  /// id list there instead would be a scan per park, and one legal frame can
+  /// carry tens of thousands of clients.
+  /// </summary>
   private static ClientRefs? NextTarget(List<ulong> ids, Dictionary<ulong, ClientRefs> pending)
   {
     while (ids.Count > 0)
     {
-      var target = pending[ids[^1]];
-
-      if (target.Refs.Count != target.Index)
+      if (pending.TryGetValue(ids[^1], out var target) && target.Refs.Count != target.Index)
       {
         return target;
       }

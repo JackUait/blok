@@ -14,9 +14,16 @@ internal sealed class Lib0Writer
   /// <summary>lib0 never writes a number above Number.MAX_SAFE_INTEGER.</summary>
   private const double MaxSafeInteger = 9007199254740991d;
 
-  private static readonly UTF8Encoding StrictUtf8 = new(
+  /// <summary>
+  /// lib0 encodes through TextEncoder, which substitutes U+FFFD for an
+  /// unpaired surrogate. Throwing instead would refuse a diff whose first
+  /// struct starts on the low half of an astral character, which any peer's
+  /// state vector can ask for. Reading stays strict — that is a separate
+  /// encoder, in Lib0Reader.
+  /// </summary>
+  private static readonly UTF8Encoding SubstitutingUtf8 = new(
       encoderShouldEmitUTF8Identifier: false,
-      throwOnInvalidBytes: true);
+      throwOnInvalidBytes: false);
 
   private readonly ArrayBufferWriter<byte> buffer = new();
 
@@ -72,10 +79,10 @@ internal sealed class Lib0Writer
   {
     ArgumentNullException.ThrowIfNull(value);
 
-    var length = StrictUtf8.GetByteCount(value);
+    var length = SubstitutingUtf8.GetByteCount(value);
 
     WriteVarUint((ulong)length);
-    StrictUtf8.GetBytes(value, buffer.GetSpan(length));
+    SubstitutingUtf8.GetBytes(value, buffer.GetSpan(length));
     buffer.Advance(length);
   }
 

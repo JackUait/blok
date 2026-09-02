@@ -256,6 +256,20 @@ public sealed class UpdateV1DecoderTests
         "past int.MaxValue",
         // A GC length lib0 accepts and no buffer can back.
         RawStruct(0, writer => writer.WriteVarUint(1UL << 32)));
+
+    // yjs spreads a subdoc's options into a Doc constructor, so null and
+    // undefined are a TypeError there. Its own writer always emits an object.
+    AssertRefused("subdocument options", SingleStruct(0x09, "m", "k", writer =>
+    {
+      writer.WriteVarString("g");
+      writer.WriteUint8(126);
+    }));
+
+    AssertRefused("subdocument options", SingleStruct(0x09, "m", "k", writer =>
+    {
+      writer.WriteVarString("g");
+      writer.WriteUint8(127);
+    }));
   }
 
   /// <summary>
@@ -501,7 +515,11 @@ public sealed class UpdateV1DecoderTests
     yield return ("a ContentDoc guid", SingleStruct(0x09, "m", "k", writer =>
     {
       writer.WriteVarString("g\0d");
-      writer.WriteUint8(126);
+
+      // An empty object, which is what yjs's own writer emits: null options
+      // are a TypeError on every yjs peer and are refused at decode.
+      writer.WriteUint8(118);
+      writer.WriteVarUint(0);
     }));
   }
 

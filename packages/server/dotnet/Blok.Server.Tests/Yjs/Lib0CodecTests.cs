@@ -127,6 +127,22 @@ public sealed class Lib0CodecTests
     Assert.Equal(WithNul, reader.ReadVarString());
   }
 
+  /// <summary>
+  /// lib0 encodes through TextEncoder, which substitutes U+FFFD for an
+  /// unpaired surrogate rather than refusing the string. Refusing it here made
+  /// a diff throw whenever a peer's state vector landed in the middle of an
+  /// astral character — and the exception was not one the sync answer catches.
+  /// </summary>
+  [Fact]
+  public void WritesALoneSurrogateAsTheReplacementCharacter()
+  {
+    var writer = new Lib0Writer();
+
+    writer.WriteVarString("\ud800");
+
+    Assert.Equal(new byte[] { 0x03, 0xEF, 0xBF, 0xBD }, writer.ToArray());
+  }
+
   [Fact]
   public void ReadsFloatsBigEndian()
   {

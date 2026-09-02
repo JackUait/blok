@@ -43,7 +43,19 @@ internal sealed class ContentDoc(string guid, object? options) : YContent
   internal static ContentDoc Read(ref Lib0Reader reader)
   {
     var guid = reader.ReadVarString();
+    var options = AnyCodec.Read(ref reader);
 
-    return new ContentDoc(guid, AnyCodec.Read(ref reader));
+    // yjs spreads these into a Doc constructor and reads shouldLoad off them,
+    // so null and undefined are a TypeError on every yjs peer. Its own writer
+    // always emits an object, so refusing here refuses nothing real — and
+    // accepting would put a struct in the store no peer can read.
+    if (options is null or YUndefined)
+    {
+      throw new Lib0FormatException(
+          $"yjs: the subdocument options at {reader.Position} are " +
+          $"{(options is null ? "null" : "undefined")}; yjs writes an object.");
+    }
+
+    return new ContentDoc(guid, options);
   }
 }

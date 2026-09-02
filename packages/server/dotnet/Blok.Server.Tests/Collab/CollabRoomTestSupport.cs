@@ -725,3 +725,261 @@ internal static class Waits
     }
   }
 }
+
+/// <summary>
+/// In-memory <see cref="ICollabOperationStore"/>. Appends really do deduplicate
+/// by operation id and really do assign sequences from 1, so a test that drives
+/// it exercises the contract rather than a stub; the knobs reproduce the three
+/// store behaviours a room has to survive — slow, failing, and "committed but
+/// could not say so".
+/// </summary>
+internal sealed class FakeCollabOperationStore : ICollabOperationStore
+{
+  private readonly Dictionary<string, FakeOperationDocument> documents =
+      new(StringComparer.Ordinal);
+  private readonly Lock guard = new();
+
+  /// <summary>Awaited inside every append before it commits — a slow store.</summary>
+  internal Func<Task>? BeforeAppend { get; set; }
+
+  /// <summary>When it answers non-null for a doc, that doc's AppendAsync throws it.</summary>
+  internal Func<string, Exception?>? FailAppends { get; set; }
+
+  /// <summary>
+  /// With <see cref="FailAppends"/> set, journal the record before throwing:
+  /// the UNKNOWN outcome — durable to the store, failed to the caller. Retrying
+  /// the same operation id must then read as a duplicate.
+  /// </summary>
+  internal bool CommitBeforeFailing { get; set; }
+
+  /// <summary>Committed records for a doc, oldest first.</summary>
+  internal IReadOnlyList<CollabOperationRecord> Committed(string docId)
+  {
+    lock (guard)
+    {
+      return documents.TryGetValue(docId, out var document)
+        ? [.. document.Records]
+        : [];
+    }
+  }
+
+  internal CollabDocumentHead? Head(string docId)
+  {
+    lock (guard)
+    {
+      return documents.TryGetValue(docId, out var document) ? document.Head : null;
+    }
+  }
+
+  /// <summary>Another process takes the fence while a session is still live.</summary>
+  internal void StealFence(string docId)
+  {
+    lock (guard)
+    {
+      Document(docId).Fence++;
+    }
+  }
+
+  public ValueTask<CollabDocumentOpen> OpenAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    cancellationToken.ThrowIfCancellationRequested();
+
+    lock (guard)
+    {
+      var document = Document(documentId);
+
+      if (document.IsOpen)
+      {
+        return ValueTask.FromResult(CollabDocumentOpen.DocumentOpenElsewhere);
+      }
+
+      document.IsOpen = true;
+      document.Fence++;
+
+      var openResult = new CollabOperationOpenResult(
+          document.Head,
+          [.. document.Baseline],
+          document.Checkpoint,
+          [.. document.Records.Where(record =>
+              record.ServerSequence > (document.Checkpoint?.Through ?? 0))]);
+
+      return ValueTask.FromResult(
+          CollabDocumentOpen.Opened(
+              new FakeOperationSession(this, documentId, document.Fence, openResult)));
+    }
+  }
+
+  private FakeOperationDocument Document(string docId)
+  {
+    if (!documents.TryGetValue(docId, out var document))
+    {
+      document = new FakeOperationDocument();
+      documents[docId] = document;
+    }
+
+    return document;
+  }
+
+  private sealed class FakeOperationDocument
+  {
+    internal CollabDocumentHead? Head { get; set; }
+
+    internal List<ReadOnlyMemory<byte>> Baseline { get; set; } = [];
+
+    internal CollabOperationCheckpoint? Checkpoint { get; set; }
+
+    internal List<CollabOperationRecord> Records { get; } = [];
+
+    internal long Fence { get; set; }
+
+    internal bool IsOpen { get; set; }
+  }
+
+  private sealed class FakeOperationSession(
+      FakeCollabOperationStore store,
+      string documentId,
+      long fence,
+      CollabOperationOpenResult openResult) : ICollabOperationSession
+  {
+    private bool disposed;
+
+    public CollabOperationOpenResult OpenResult => openResult;
+
+    public async ValueTask<CollabOperationAppendResult> AppendAsync(
+        CollabOperationCandidate candidate,
+        CancellationToken cancellationToken = default)
+    {
+      ArgumentNullException.ThrowIfNull(candidate);
+      cancellationToken.ThrowIfCancellationRequested();
+
+      var pause = store.BeforeAppend;
+
+      if (pause is not null)
+      {
+        await pause();
+      }
+
+      var failure = store.FailAppends?.Invoke(documentId);
+
+      lock (store.guard)
+      {
+        var document = Fenced();
+        var existing = document.Records.Find(record =>
+            string.Equals(record.OperationId, candidate.OperationId, StringComparison.Ordinal));
+
+        if (existing is not null)
+        {
+          return new CollabOperationAppendResult(
+              candidate.Digest.Span.SequenceEqual(existing.Digest.Span)
+                ? CollabOperationAppendOutcome.Duplicate
+                : CollabOperationAppendOutcome.Conflict,
+              existing.ServerSequence);
+        }
+
+        if (failure is not null && !store.CommitBeforeFailing)
+        {
+          throw failure;
+        }
+
+        var head = document.Head ?? throw new InvalidOperationException(
+            $"collab: \"{documentId}\" was never seeded; reset it first");
+        var sequence = head.DurableThrough + 1;
+
+        document.Records.Add(new CollabOperationRecord(
+            candidate.OperationId,
+            sequence,
+            DateTimeOffset.UnixEpoch.AddSeconds(sequence),
+            candidate.ActorId,
+            candidate.Source,
+            candidate.Update,
+            candidate.Digest));
+        document.Head = head with { DurableThrough = sequence };
+
+        return failure is not null
+          ? throw failure
+          : new CollabOperationAppendResult(
+              CollabOperationAppendOutcome.Committed,
+              sequence);
+      }
+    }
+
+    public ValueTask WriteCheckpointAsync(
+        CollabOperationCheckpoint checkpoint,
+        CancellationToken cancellationToken = default)
+    {
+      ArgumentNullException.ThrowIfNull(checkpoint);
+      cancellationToken.ThrowIfCancellationRequested();
+
+      lock (store.guard)
+      {
+        var document = Fenced();
+
+        if (checkpoint.Through == 0 ||
+            checkpoint.Through > (document.Head?.DurableThrough ?? 0) ||
+            checkpoint.Through <= (document.Checkpoint?.Through ?? 0))
+        {
+          throw new ArgumentOutOfRangeException(
+              nameof(checkpoint),
+              checkpoint.Through,
+              "a checkpoint must name a committed sequence above the published one");
+        }
+
+        document.Checkpoint = checkpoint;
+      }
+
+      return ValueTask.CompletedTask;
+    }
+
+    public ValueTask<CollabDocumentHead> ResetAsync(
+        CollabOperationReset reset,
+        CancellationToken cancellationToken = default)
+    {
+      ArgumentNullException.ThrowIfNull(reset);
+      cancellationToken.ThrowIfCancellationRequested();
+
+      lock (store.guard)
+      {
+        var document = Fenced();
+
+        document.Baseline = [.. reset.Baseline];
+        document.Checkpoint = null;
+        document.Records.Clear();
+        document.Head = new CollabDocumentHead(
+            reset.Format,
+            reset.Epoch,
+            reset.Lineage,
+            DurableThrough: 0);
+
+        return ValueTask.FromResult(document.Head);
+      }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+      if (!disposed)
+      {
+        disposed = true;
+
+        lock (store.guard)
+        {
+          store.Document(documentId).IsOpen = false;
+        }
+      }
+
+      return ValueTask.CompletedTask;
+    }
+
+    private FakeOperationDocument Fenced()
+    {
+      ObjectDisposedException.ThrowIf(disposed, this);
+
+      var document = store.Document(documentId);
+
+      return document.Fence == fence
+        ? document
+        : throw new CollabOperationFenceLostException();
+    }
+  }
+}

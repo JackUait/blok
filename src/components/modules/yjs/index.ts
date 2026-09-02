@@ -829,11 +829,10 @@ export class YjsManager extends Module {
     this.documentStore.clearRemoteAwarenessStates();
   }
 
-  // ========== Internal Helpers (exposed for UndoHistory) ==========
+  // ========== Internal Helpers ==========
 
   /**
-   * Convert Y.Map to plain object.
-   * Exposed for internal use.
+   * Convert Y.Map to plain object (used by BlockYjsSync).
    * @param ymap - Y.Map to convert
    * @returns Plain object representation
    */

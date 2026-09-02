@@ -248,12 +248,8 @@ describe('BlockYjsSync — redo of a mid-column insert keeps child order (integr
     } as unknown as BlockFactory;
 
     const handlers = {
-      addToDom: vi.fn(),
-      removeFromDom: vi.fn(),
-      moveInDom: vi.fn(),
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(),
-      updateIndentation: vi.fn(),
       setBlockParent: setBlockParentLikeHierarchy,
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),

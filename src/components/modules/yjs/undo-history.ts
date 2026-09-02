@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { getCaretOffset } from '../../../components/utils/caret/index';
 import type { BlokModules } from '../../../types-internal/blok-modules';
 
-import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS, isBoundaryCharacter } from './serializer';
+import { CAPTURE_TIMEOUT_MS, BOUNDARY_TIMEOUT_MS } from './serializer';
 import type { BlockPlacement, CaretSnapshot, CaretHistoryEntry, MoveHistoryEntry, MoveReplayCallback, SingleMoveEntry, UndoScopeType } from './types';
 
 type StackItem = Y.UndoManager['undoStack'][number];
@@ -46,10 +46,9 @@ export class UndoHistory {
   private blok: BlokModules;
 
   /**
-   * Custom move history stack for undo.
-   * Yjs UndoManager doesn't handle array moves correctly when implemented as delete+insert,
-   * so we track moves separately and handle undo/redo at the application level.
-   * Each entry is an array of moves that should be undone together.
+   * Move history, kept apart from Y.UndoManager: to yjs a move is a
+   * delete+insert, which undoes as a resurrection rather than a move. Each
+   * entry is one group undone together.
    */
   private moveUndoStack: MoveHistoryEntry[] = [];
 
@@ -375,7 +374,7 @@ export class UndoHistory {
       // Each entry replays its full FROM placement (parent + preceding
       // sibling) through the one placement callback.
       [...lastMoveGroup].reverse().forEach((move) => {
-        this.replayMoveUndo(move);
+        this.placementCallback(move.blockId, move.from, 'move-undo');
       });
 
       // Pop caret entry only after move succeeds
@@ -421,7 +420,7 @@ export class UndoHistory {
       // Redo all moves in the group, in original order: each entry
       // replays its full TO placement through the placement callback.
       for (const move of lastMoveGroup) {
-        this.replayMoveRedo(move);
+        this.placementCallback(move.blockId, move.to, 'move-redo');
       }
 
       // Pop caret entry only after move succeeds
@@ -492,21 +491,6 @@ export class UndoHistory {
       : entry.after ?? entry.before;
 
     this.restoreCaretSnapshot(snapshot);
-  }
-
-  /**
-   * Replay a single move entry in the undo direction: restore the FROM
-   * side. The placement callback owns the parent-before-position ordering.
-   */
-  private replayMoveUndo(move: SingleMoveEntry): void {
-    this.placementCallback(move.blockId, move.from, 'move-undo');
-  }
-
-  /**
-   * Replay a single move entry in the redo direction: restore the TO side.
-   */
-  private replayMoveRedo(move: SingleMoveEntry): void {
-    this.placementCallback(move.blockId, move.to, 'move-redo');
   }
 
   /**
@@ -980,11 +964,6 @@ export class UndoHistory {
       this.clearBoundary();
     }
   }
-
-  /**
-   * Export isBoundaryCharacter for use by YjsManager
-   */
-  public static readonly isBoundaryCharacter = isBoundaryCharacter;
 
   /**
    * Clear all history stacks (move, caret, and Yjs UndoManager) and pending state.

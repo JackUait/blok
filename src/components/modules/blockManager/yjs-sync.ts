@@ -11,6 +11,7 @@ import type { Block } from '../../block';
 import { logLabeled } from '../../utils';
 import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
+import { equals } from '../../utils/object';
 import { sanitizeBlocks, stripUnsafeUrlsDeep } from '../../utils/sanitizer';
 import type { YjsManager } from '../yjs';
 import type { BlockChangeEvent } from '../yjs/types';
@@ -69,12 +70,6 @@ interface AtomicOperationOptions {
  * Sync handler callbacks for DOM updates
  */
 export interface SyncHandlers {
-  /** Called when a block needs to be added to DOM */
-  addToDom: (block: Block, index: number) => void;
-  /** Called when a block needs to be removed from DOM */
-  removeFromDom: (index: number) => void;
-  /** Called when blocks need to be reordered */
-  moveInDom: (toIndex: number, fromIndex: number) => void;
   /** Called to get current block index */
   getBlockIndex: (block: Block) => number;
   /**
@@ -83,8 +78,6 @@ export interface SyncHandlers {
    * reacting to the same removal converge on ONE block.
    */
   insertDefaultBlock: (skipYjsSync: boolean, id?: string) => Block;
-  /** Called to update block indentation */
-  updateIndentation: (block: Block) => void;
   /** Called to set the parent of a block, updating contentIds and DOM placement */
   setBlockParent: (block: Block, parentId: string | null) => void;
   /** Called to replace a block at a specific index with a new block instance */
@@ -229,16 +222,6 @@ export class BlockYjsSync {
   }
 
   /**
-   * Execute a function within a sync context where:
-   * - Yjs auto-sync is suppressed (DOM changes won't trigger sync back to Yjs)
-   * - stopCapturing is suppressed (block index changes won't break undo grouping)
-   *
-   * Use this for operations that need to update both Yjs and DOM atomically.
-   *
-   * @param fn - Function to execute
-   * @param options - Options for controlling the atomic operation behavior
-   */
-  /**
    * Begin an atomic operation by incrementing sync count and suppressing stop capturing.
    *
    * @returns cleanup function to call when operation completes
@@ -291,6 +274,12 @@ export class BlockYjsSync {
     }
   }
 
+  /**
+   * Run `fn` with the write-back to Yjs and `stopCapturing` both suppressed,
+   * for work that updates Yjs and the DOM together.
+   * @param fn - Function to execute
+   * @param options - Scope and RAF extension of the sync window
+   */
   public withAtomicOperation<T>(fn: () => T, options?: AtomicOperationOptions): T {
     const cleanup = this.beginAtomicOperation(options?.blockId);
 
@@ -593,33 +582,16 @@ export class BlockYjsSync {
 
     const yjsType = record.type;
     const data = this.sanitizeToolData(yjsType, this.dependencies.YjsManager.yMapToObject(record.data));
-    const tunes = record.tunes !== undefined ? this.dependencies.YjsManager.yMapToObject(record.tunes) : {};
+    const tunes = record.tunes !== undefined
+      ? stripUnsafeUrlsDeep(this.dependencies.YjsManager.yMapToObject(record.tunes))
+      : {};
     const { lastEditedAt, lastEditedBy } = record;
 
-    /**
-     * Angle 1 fix: reconcile parentId drift BEFORE data/tunes updates.
-     *
-     * A remote client may have reparented this block (e.g. dragged it into a
-     * callout) and the Yjs record now reflects the new `parentId`, but the
-     * local mirror's `block.parentId` is stale. Without this reconciliation
-     * the next save runs hierarchy validation, finds the parent's contentIds
-     * does not list the child, and ejects the child from its parent — the
-     * same corruption family as the callout paste bug.
-     *
-     * Route through the canonical setBlockParent handler so contentIds, DOM
-     * placement, and indentation all stay consistent. Must run BEFORE any
-     * composeBlock fallback below, otherwise the replacement would carry
-     * over the stale `block.parentId`.
-     *
-     * Fix 4: distinguish "key missing" from "explicit null". A missing
-     * `parentId` key means the Yjs record has no authoritative value —
-     * treat as a no-op. Explicit null means "reparent to root".
-     *
-     * Fix 3: run the reconcile inside withAtomicOperation so
-     * isSyncingFromYjs is true for the duration. Without this, the
-     * hierarchy's onParentChanged listener echoes a fresh Yjs write,
-     * polluting the undo stack and potentially looping.
-     */
+    // Mirror a parentId the doc changed BEFORE any recreate below, so a
+    // replacement never carries a stale parent. A missing key is "no
+    // authoritative value" (no-op); explicit null is "root". Runs inside the
+    // sync window so the hierarchy's parent-change listener does not echo a
+    // fresh doc write.
     if (yblock.has('parentId')) {
       const rawParentId = yblock.get('parentId');
       const remoteParentId = typeof rawParentId === 'string' ? rawParentId : null;
@@ -633,23 +605,12 @@ export class BlockYjsSync {
         this.warnIfChildToolDenied(block, remoteParentId);
       }
     } else if (block.parentId !== null) {
-      /**
-       * A non-root → root move DELETES the parentId key (the serializer never
-       * writes null for root), so the branch above cannot see it.
-       *
-       * Every replay origin lands here, not just 'remote'. UndoHistory's
-       * placement callback restores the parent for DRAG moves only (writes
-       * made inside a move group); a reparent from the plain captured path —
-       * the blocks API, keyboard Tab/Shift+Tab nesting, the toolbox's
-       * insert-into-a-container — carries no placement record, so undoing it
-       * left the block parented in memory while the doc said root. The flat
-       * array followed the doc, contentIds and the DOM did not, and save()
-       * then emitted a document that did not match the screen.
-       *
-       * Idempotent where the placement callback DID run: it reparents in
-       * memory before the visible transaction, so `block.parentId` is already
-       * null by the time this sees the event.
-       */
+      // A non-root → root move DELETES the parentId key (the serializer never
+      // writes null for root), so the branch above cannot see it. Every replay
+      // origin lands here: only DRAG moves restore the parent through
+      // UndoHistory's placement callback; a reparent from the captured path
+      // (blocks API, Tab nesting, toolbox insert) has no placement record.
+      // Idempotent where the callback DID run — block.parentId is already null.
       this.withAtomicOperation(() => {
         this.handlers.setBlockParent(block, null);
       });
@@ -671,117 +632,75 @@ export class BlockYjsSync {
         return;
       }
 
-      const blockIndex = this.handlers.getBlockIndex(block);
-      const newBlock = this.factory.composeBlock({
-        id: block.id,
-        tool: yjsType,
-        data,
-        tunes,
-        contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
-        parentId: block.parentId ?? undefined,
-        bindEventsImmediately: true,
-        /**
-         * Everything this reconciler builds is a RE-MATERIALISATION — an
-         * undo/redo replay or a remote peer's change — never a creation. A
-         * restored container's children arrive through their OWN add events,
-         * which land after its rendered() hook runs, so it sees a transiently
-         * empty getChildren(); without this signal it seeds phantom children
-         * beside the real ones ("2 columns silently became 4"). Every
-         * TransactionOrigin the observer classifies (undo/redo/remote/load/move)
-         * collapses to the same answer here: do not seed.
-         */
-        origin: 'replay',
-        lastEditedAt,
-        lastEditedBy,
-      });
-
       this.withAtomicOperation(() => {
-        this.handlers.replaceBlock(blockIndex, newBlock);
-
-        const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
-
-        if (hadOrphanedChildren) {
-          newBlock.call(BlockToolAPI.RENDERED);
-        }
+        this.rematerialize(block, { tool: yjsType, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
 
       return;
     }
 
-    // Check if tunes have changed - if so, we need to recreate the block
-    // because tunes are instantiated during block construction
-    const currentTunes = block.preservedTunes;
-    const tuneKeys = Object.keys(tunes);
-    const currentKeys = Object.keys(currentTunes);
-    const tunesChanged = tuneKeys.length !== currentKeys.length ||
-      tuneKeys.some(key => tunes[key] !== currentTunes[key]);
-
-    if (tunesChanged) {
-      // Recreate block with updated tunes
-      const blockIndex = this.handlers.getBlockIndex(block);
-      const newBlock = this.factory.composeBlock({
-        id: block.id,
-        tool: block.name,
-        data,
-        tunes,
-        contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
-        parentId: block.parentId ?? undefined,
-        bindEventsImmediately: true,
-        origin: 'replay',
-        lastEditedAt,
-        lastEditedBy,
-      });
-
-      // Use atomic operation with RAF extension to prevent DOM mutation observers
-      // from syncing back to Yjs after block replacement
+    // Tunes are instantiated during block construction, so a tune change
+    // means a recreate.
+    if (!equals(tunes, block.preservedTunes)) {
       this.withAtomicOperation(() => {
-        this.handlers.replaceBlock(blockIndex, newBlock);
-
-        const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
-
-        if (hadOrphanedChildren) {
-          newBlock.call(BlockToolAPI.RENDERED);
-        }
+        this.rematerialize(block, { tool: block.name, data, tunes, lastEditedAt, lastEditedBy });
       }, { extendThroughRAF: true, blockId });
-    } else {
-      // Update data in-place; if tool can't handle it, recreate the block.
-      // Use async atomic operation with RAF extension to keep isSyncingFromYjs
-      // true through the entire setData lifecycle + one RAF frame, preventing
-      // DOM mutation observers from writing back to Yjs and clearing the redo stack.
-      void this.withAtomicOperationAsync(async () => {
-        const success = await block.setData(data);
 
-        if (!success) {
-          const blockIndex = this.handlers.getBlockIndex(block);
+      return;
+    }
 
-          // A remove of this block can land while setData is pending; there
-          // is then no slot to replace into.
-          if (this.repository.getBlockById(blockId) !== block || blockIndex === -1) {
-            return;
-          }
+    // Update data in-place; if the tool can't take it, recreate the block.
+    // The window stays open through setData and one RAF so the DOM mutation
+    // observers cannot write back to Yjs and clear the redo stack.
+    void this.withAtomicOperationAsync(async () => {
+      const success = await block.setData(data);
 
-          const newBlock = this.factory.composeBlock({
-            id: block.id,
-            tool: block.name,
-            data,
-            tunes: block.preservedTunes,
-            contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
-            parentId: block.parentId ?? undefined,
-            bindEventsImmediately: true,
-            origin: 'replay',
-            lastEditedAt,
-            lastEditedBy,
-          });
+      if (!success) {
+        this.rematerialize(block, { tool: block.name, data, tunes: block.preservedTunes, lastEditedAt, lastEditedBy });
+      }
+    }, { extendThroughRAF: true, blockId });
+  }
 
-          this.handlers.replaceBlock(blockIndex, newBlock);
+  /**
+   * Replace `block` in place with a freshly composed one carrying the doc's
+   * current record. Everything this reconciler builds is a RE-MATERIALISATION
+   * — an undo/redo replay or a remote peer's change — never a creation: a
+   * restored container's children arrive through their OWN add events, after
+   * its rendered() hook runs, so without `origin: 'replay'` it would seed
+   * phantom children beside the real ones ("2 columns became 4").
+   *
+   * A remove of the block can land while an awaited setData is pending; there
+   * is then no slot to replace into, so nothing is composed.
+   */
+  private rematerialize(
+    block: Block,
+    record: { tool: string; data: BlockToolData; tunes: Record<string, unknown>; lastEditedAt: number | undefined; lastEditedBy: string | null }
+  ): void {
+    const blockIndex = this.handlers.getBlockIndex(block);
 
-          const hadOrphanedChildren = this.reconcileOrphanedChildren(blockId);
+    if (this.repository.getBlockById(block.id) !== block || blockIndex === -1) {
+      return;
+    }
 
-          if (hadOrphanedChildren) {
-            newBlock.call(BlockToolAPI.RENDERED);
-          }
-        }
-      }, { extendThroughRAF: true, blockId });
+    const newBlock = this.factory.composeBlock({
+      id: block.id,
+      tool: record.tool,
+      data: record.data,
+      tunes: record.tunes,
+      contentIds: block.contentIds.length > 0 ? [...block.contentIds] : undefined,
+      parentId: block.parentId ?? undefined,
+      bindEventsImmediately: true,
+      origin: 'replay',
+      lastEditedAt: record.lastEditedAt,
+      lastEditedBy: record.lastEditedBy,
+    });
+
+    this.handlers.replaceBlock(blockIndex, newBlock);
+
+    // Children re-homed here were not there when the insert's rendered()
+    // fired; a second call lets the container see them.
+    if (this.reconcileOrphanedChildren(block.id)) {
+      newBlock.call(BlockToolAPI.RENDERED);
     }
   }
 
@@ -1425,33 +1344,5 @@ export class BlockYjsSync {
     );
 
     return stripUnsafeUrlsDeep(sanitized.data, toolSanitizeConfig);
-  }
-
-  /**
-   * Update the blocks store (used when blocks store changes)
-   * @param blocksStore - New blocks store
-   */
-  public updateBlocksStore(blocksStore: BlocksStore): void {
-    this.blocksStore = blocksStore;
-  }
-
-  /**
-   * Check if block data is different from Yjs data
-   * @param blockId - Block id
-   * @param key - Data key
-   * @param value - New value
-   * @returns true if value is different
-   */
-  public isBlockDataChanged(blockId: string, key: string, value: unknown): boolean {
-    const yblock = this.dependencies.YjsManager.getBlockById(blockId);
-
-    if (yblock === undefined) {
-      return true;
-    }
-
-    const ydata = yblock.get('data') as YMap<unknown>;
-    const currentValue = ydata.get(key);
-
-    return currentValue !== value;
   }
 }

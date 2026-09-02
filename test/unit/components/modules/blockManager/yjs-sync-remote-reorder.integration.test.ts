@@ -109,12 +109,8 @@ describe('BlockYjsSync — remote contentIds-only reorder (integration)', () => 
     } as unknown as YjsManager;
 
     const handlers = {
-      addToDom: vi.fn(),
-      removeFromDom: vi.fn(),
-      moveInDom: vi.fn(),
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(),
-      updateIndentation: vi.fn(),
       setBlockParent: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),

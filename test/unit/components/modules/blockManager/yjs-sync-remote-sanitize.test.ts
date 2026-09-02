@@ -123,12 +123,8 @@ describe('BlockYjsSync — remote data sanitization and root promotion', () => {
     }, vi.fn());
 
     handlers = {
-      addToDom: vi.fn(),
-      removeFromDom: vi.fn(),
-      moveInDom: vi.fn(),
       getBlockIndex: vi.fn((block: Block) => repository.getBlockIndex(block)),
       insertDefaultBlock: vi.fn(() => createMockBlock({ id: 'default' })),
-      updateIndentation: vi.fn(),
       setBlockParent: vi.fn((block: Block, parentId: string | null) => {
         const target = block as { parentId: string | null };
 

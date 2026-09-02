@@ -41,9 +41,8 @@ type ObservedEvent = Y.YEvent<Y.Array<Y.Map<unknown>> | Y.Map<unknown>>;
  * change came through. Both roots' deep observers only CLASSIFY into a
  * per-transaction buffer; the ordered dispatch runs once per transaction
  * from the doc's 'afterTransaction' hook (still synchronous, inside the
- * same transaction cleanup). This replaces the earlier two-dispatch design
- * whose cross-root ordering rested on yjs firing plain observers before
- * deep ones — an internal, not a contract.
+ * same transaction cleanup). Do not rely on yjs firing plain observers
+ * before deep ones — that is an internal, not a contract.
  */
 export class BlockObserver {
   /**

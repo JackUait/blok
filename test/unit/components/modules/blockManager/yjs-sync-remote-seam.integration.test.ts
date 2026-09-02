@@ -183,9 +183,6 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
     } as unknown as BlockFactory;
 
     handlers = {
-      addToDom: vi.fn(),
-      removeFromDom: vi.fn(),
-      moveInDom: vi.fn(),
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn((_skipYjsSync: boolean, id?: string) => {
         const block = createStubBlock({ id: id ?? 'default' });
@@ -194,7 +191,6 @@ describe('BlockYjsSync — remote reconciliation through the binary seam (integr
 
         return block;
       }),
-      updateIndentation: vi.fn(),
       setBlockParent: vi.fn((block: Block, parentId: string | null) => {
         inMemoryReparent(block, parentId);
       }),

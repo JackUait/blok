@@ -142,12 +142,8 @@ describe('BlockYjsSync — local write-back while a peer update is being reconci
     } as unknown as BlokModules;
 
     const handlers: SyncHandlers = {
-      addToDom: vi.fn(),
-      removeFromDom: vi.fn(),
-      moveInDom: vi.fn(),
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn(() => createStubBlock('default', '')),
-      updateIndentation: vi.fn(),
       setBlockParent: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: vi.fn(),

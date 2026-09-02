@@ -500,25 +500,6 @@ describe('UndoHistory', () => {
   });
 
   describe('smart grouping', () => {
-    describe('isBoundaryCharacter', () => {
-      it.each([
-        [' ', true],
-        ['\t', true],
-        ['.', true],
-        ['?', true],
-        ['!', true],
-        [',', true],
-        [';', true],
-        [':', true],
-        ['a', false],
-        ['1', false],
-        ['@', false],
-        ['-', false],
-      ])('should return %s for "%s"', (char, expected) => {
-        expect(UndoHistory.isBoundaryCharacter(char)).toBe(expected);
-      });
-    });
-
     it('hasPendingBoundary returns false initially', () => {
       expect(history.hasPendingBoundary()).toBe(false);
     });

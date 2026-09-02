@@ -149,15 +149,6 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
 
     // Handlers wired exactly as BlockManager.prepare() wires them into BlockYjsSync.
     const handlers: SyncHandlers = {
-      addToDom: (block, index) => {
-        blocksStore.insert(index, block);
-      },
-      removeFromDom: (index) => {
-        blocksStore.remove(index);
-      },
-      moveInDom: (toIndex, fromIndex) => {
-        blocksStore.move(toIndex, fromIndex);
-      },
       getBlockIndex: (block: Block): number => repository.getBlockIndex(block),
       insertDefaultBlock: vi.fn((_skipYjsSync: boolean, id?: string) => {
         const block = createStubBlock(id ?? 'default');
@@ -166,7 +157,6 @@ describe('BlockYjsSync — remote reconcile fires host onChange (integration)', 
 
         return block;
       }),
-      updateIndentation: vi.fn(),
       setBlockParent: vi.fn(),
       replaceBlock: vi.fn(),
       onBlockRemoved: (block, index) => {

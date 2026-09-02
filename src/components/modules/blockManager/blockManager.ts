@@ -447,21 +447,9 @@ export class BlockManager extends Module {
       this.repository,
       this.factory,
       {
-        addToDom: (block, index) => {
-          this.blocksStore.insert(index, block);
-        },
-        removeFromDom: (index) => {
-          this.blocksStore.remove(index);
-        },
-        moveInDom: (toIndex, fromIndex) => {
-          this.blocksStore.move(toIndex, fromIndex);
-        },
         getBlockIndex: (block) => this.repository.getBlockIndex(block),
         insertDefaultBlock: (skipYjsSync, id) => {
           return this.insert({ skipYjsSync, id });
-        },
-        updateIndentation: (block) => {
-          this.hierarchy.updateBlockIndentation(block);
         },
         setBlockParent: (block, parentId) => {
           this.hierarchy.setBlockParent(block, parentId);

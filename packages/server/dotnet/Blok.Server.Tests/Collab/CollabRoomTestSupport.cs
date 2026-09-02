@@ -442,6 +442,9 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   /// <summary>Set to make the next ApplyOps refuse, as an invalid op would.</summary>
   internal CollabEditException? EditFailure { get; set; }
 
+  /// <summary>Thrown by the next Export only, as the real converter does on a block whose shape a peer broke.</summary>
+  internal Exception? NextExportFailure { get; set; }
+
   public void Seed(YDoc doc, JsonNode outputData)
   {
     Seeds++;
@@ -509,6 +512,14 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   public JsonNode Export(YDoc doc)
   {
     Exports++;
+
+    if (NextExportFailure is not null)
+    {
+      var failure = NextExportFailure;
+      NextExportFailure = null;
+
+      throw failure;
+    }
 
     return new JsonObject { ["text"] = YDocs.Text(doc) };
   }

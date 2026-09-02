@@ -991,14 +991,29 @@ internal sealed class CollabRoom : IDisposable
       return Task.CompletedTask;
     }
 
-    var snapshot = converter.Export(doc!);
-    exportDirty = false;
-    dirtySince = null;
+    Task<string?> save;
 
     // Only the JSON snapshot is taken under the lane; the PUT runs beside
     // it so a slow endpoint never stalls sync. Single flight keeps PUTs
-    // ordered.
-    var save = endpoint.SaveAsync(DocId, snapshot, version, lifetime.Token);
+    // ordered. A converter that refuses the doc (a peer wrote a shape it
+    // cannot read) is a failed export like any other: backed off and
+    // retried, never left for the next edit to re-arm.
+    try
+    {
+      save = endpoint.SaveAsync(DocId, converter.Export(doc!), version, lifetime.Token);
+    }
+    catch (Exception error)
+    {
+      log?.Invoke($"collab: room \"{DocId}\" could not export, retrying: {error.Message}");
+      exportFailures++;
+      exportRetryAt = timeProvider.GetUtcNow() + Backoff(exportFailures);
+      ScheduleExportLocked();
+
+      return Task.CompletedTask;
+    }
+
+    exportDirty = false;
+    dirtySince = null;
     inFlightSave = save;
     _ = ObserveSaveAsync(save);
 

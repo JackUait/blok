@@ -469,6 +469,38 @@ public sealed class CollabRoomTests
     Assert.Equal(2, store.FramesOf(DocId).Count);
   }
 
+  /// <summary>
+  /// A peer can write a shape the converter refuses. The export must not
+  /// stall until somebody edits again: it is retried with the backoff a
+  /// failed PUT gets, and the log names the block the converter refused.
+  /// </summary>
+  [Fact]
+  public async Task RetriesAnExportTheConverterRefusedWithBackoff()
+  {
+    endpoint.Holds(DocId, "hello");
+    converter.NextExportFailure = new InvalidDataException(
+        "collab: block \"b-1\" has data that is not a map.");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember());
+    await Edit(manager, membership, "!");
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    await manager.SettleAsync();
+
+    Assert.Equal(1, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+    Assert.Contains(log, line => line.Contains("b-1", StringComparison.Ordinal));
+    Assert.DoesNotContain(log, line => line.Contains("background work failed", StringComparison.Ordinal));
+    Assert.True(time.ArmedTimerCount > 0, "the export has to be retried");
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(2),
+        () => endpoint.Saves.Count == 1,
+        "the retried export");
+    Assert.Equal("hello!", endpoint.Saves[0].Data["text"]?.GetValue<string>());
+  }
+
   [Fact]
   public async Task CoalescesEditsMadeDuringAnInFlightExportIntoTheNextOne()
   {

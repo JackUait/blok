@@ -11,9 +11,38 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
   /// <summary>0 Array, 1 Map, 2 Text, 3 XmlElement, 4 XmlFragment, 5 XmlHook, 6 XmlText.</summary>
   private const int MaxTypeRef = 6;
 
+  private const int ArrayRef = 0;
+
+  private const int MapRef = 1;
+
+  private const int TextRef = 2;
+
   private const int XmlElementRef = 3;
 
+  private const int XmlFragmentRef = 4;
+
   private const int XmlHookRef = 5;
+
+  private const int XmlTextRef = 6;
+
+  /// <summary>
+  /// The write side: an instance the caller built, rather than one this
+  /// content creates from a wire ref. The type must not already be in a
+  /// document — yjs would integrate it twice and fork its children.
+  /// </summary>
+  public ContentType(YAbstractType type)
+      : this(RefOf(type), NameOf(type))
+  {
+    if (type.Doc is not null)
+    {
+      throw new ArgumentException(
+          "yjs: this shared type already belongs to a document.", nameof(type));
+    }
+
+    // The chained constructor built an instance from the ref; it is replaced
+    // here, because the caller's own instance is the one holding the content.
+    Type = type;
+  }
 
   public override byte Ref => 7;
 
@@ -43,6 +72,10 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
     ArgumentNullException.ThrowIfNull(transaction);
 
     Type.Integrate(transaction.Doc, item);
+
+    // Top-down, and inside this transaction: a prelim type's own content is
+    // written only once its owner holds a clock, so the children come after it.
+    Type.IntegratePrelim(transaction);
   }
 
   /// <summary>
@@ -103,6 +136,36 @@ internal sealed class ContentType(int typeRef, string? name) : YContent
     {
       writer.WriteVarString(name);
     }
+  }
+
+  /// <summary>The wire's numbering for a type instance; the inverse of CreateType.</summary>
+  private static int RefOf(YAbstractType type)
+  {
+    ArgumentNullException.ThrowIfNull(type);
+
+    return type switch
+    {
+      YArray => ArrayRef,
+      YMap => MapRef,
+      YText => TextRef,
+      YXmlElement => XmlElementRef,
+      YXmlFragment => XmlFragmentRef,
+      YXmlHook => XmlHookRef,
+      YXmlText => XmlTextRef,
+      _ => throw new ArgumentException(
+          $"yjs: {type.GetType().Name} has no shared type ref.", nameof(type)),
+    };
+  }
+
+  /// <summary>The extra string refs 3 and 5 carry; null for every other kind.</summary>
+  private static string? NameOf(YAbstractType type)
+  {
+    return type switch
+    {
+      YXmlElement element => element.NodeName,
+      YXmlHook hook => hook.HookName,
+      _ => null,
+    };
   }
 
   private static void Cascade(YTransaction transaction, YItem item)

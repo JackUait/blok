@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -59,16 +60,212 @@ internal static class ScenarioSupport
   }
 
   /// <summary>
-  /// The op grammar the generator recorded. Applying one is the write API,
-  /// which lands in Task 4.1; until then a scenario substitutes the mirror
-  /// document's bytes for the engine's own write.
+  /// The op grammar the generator recorded, performed through the write API in
+  /// one transaction, and answering the update that transaction emitted. Every
+  /// op the generator writes changes something, so null is a bug.
+  ///
+  /// Only the ops the ENGINE performs are covered: a peer's op reaches the
+  /// engine as bytes, never as a call.
   /// </summary>
-  internal static void ApplyOp(YDoc doc, JsonObject op)
+  internal static byte[]? ApplyOp(YDoc doc, JsonObject op)
   {
+    ArgumentNullException.ThrowIfNull(doc);
     ArgumentNullException.ThrowIfNull(op);
 
-    throw new NotSupportedException(
-        $"the write API is Task 4.1; \"{op["op"]}\" cannot be performed on the engine yet");
+    var target = Target(doc, op);
+    var kind = String(op["op"]);
+
+    if (op["attributes"] is not null)
+    {
+      throw new NotSupportedException(
+          $"\"{kind}\" carries attributes; the engine's Y.Text has no formatting API");
+    }
+
+    return doc.Transact(transaction =>
+    {
+      switch (kind)
+      {
+        case "map.set":
+          Map(target).Set(transaction, String(op["key"]), BuildValue(op["value"]));
+          break;
+
+        case "map.delete":
+          Map(target).Remove(transaction, String(op["key"]));
+          break;
+
+        case "array.insert":
+          Array(target).Insert(
+              transaction, Number(op["index"]), [.. Values(op["values"]).Select(BuildValue)]);
+          break;
+
+        case "array.delete":
+          Array(target).Delete(transaction, Number(op["index"]), Number(op["length"]));
+          break;
+
+        case "text.insert":
+          Text(target).Insert(transaction, Number(op["index"]), String(op["text"]));
+          break;
+
+        case "text.delete":
+          Text(target).Delete(transaction, Number(op["index"]), Number(op["length"]));
+          break;
+
+        default:
+          throw new NotSupportedException($"\"{kind}\" is not an op the engine performs");
+      }
+    });
+  }
+
+  /// <summary>
+  /// The generator's value descriptors as engine values: JSON as it stands,
+  /// plus the sentinels for what JSON cannot hold and for a nested shared
+  /// type, which becomes a prelim instance the parent item integrates.
+  /// </summary>
+  internal static object? BuildValue(JsonNode? descriptor)
+  {
+    switch (descriptor)
+    {
+      case null:
+        return null;
+
+      case JsonArray items:
+        var list = new AnyArray();
+
+        foreach (var item in items)
+        {
+          list.Add(BuildValue(item));
+        }
+
+        return list;
+
+      case JsonObject members:
+        return BuildDescribedValue(members);
+
+      case JsonValue value:
+        return value.TryGetValue<string>(out var text) ? text
+            : value.TryGetValue<bool>(out var flag) ? flag
+
+            // Locked Decision 2: every JSON number is a double, so the Any tag
+            // follows lib0's rule rather than what the parser guessed.
+            : value.GetValue<double>();
+
+      default:
+        throw new InvalidDataException($"{descriptor.GetType().Name} is not a value descriptor");
+    }
+  }
+
+  private static object? BuildDescribedValue(JsonObject members)
+  {
+    if (members["$num"] is { } number)
+    {
+      return String(number) switch
+      {
+        "NaN" => double.NaN,
+        "-0" => -0d,
+        "Infinity" => double.PositiveInfinity,
+        "-Infinity" => double.NegativeInfinity,
+        var other => throw new InvalidDataException($"\"{other}\" is not a $num sentinel"),
+      };
+    }
+
+    if (members["$bigint"] is { } big)
+    {
+      return BigInteger.Parse(String(big), CultureInfo.InvariantCulture);
+    }
+
+    if (members["$u8"] is { } bytes)
+    {
+      return Convert.FromBase64String(String(bytes));
+    }
+
+    if (members["$undefined"] is not null)
+    {
+      return YUndefined.Instance;
+    }
+
+    if (members["$ymap"] is JsonObject nested)
+    {
+      return new YMap(nested.Select(
+          entry => new KeyValuePair<string, object?>(entry.Key, BuildValue(entry.Value))));
+    }
+
+    if (members["$yarray"] is JsonArray items)
+    {
+      return new YArray(items.Select(BuildValue));
+    }
+
+    if (members["$ytext"] is { } characters)
+    {
+      return new YText(String(characters));
+    }
+
+    foreach (var key in members.Select(entry => entry.Key))
+    {
+      if (key.StartsWith("$yxml", StringComparison.Ordinal))
+      {
+        throw new NotSupportedException($"\"{key}\" is a placeholder type the engine never writes");
+      }
+    }
+
+    var built = new AnyObject();
+
+    foreach (var (key, value) in members)
+    {
+      built.Add(key, BuildValue(value));
+    }
+
+    return built;
+  }
+
+  /// <summary>The root the op names, walked down through its nested-map path.</summary>
+  private static YAbstractType Target(YDoc doc, JsonObject op)
+  {
+    var root = String(op["root"]);
+    YAbstractType target = String(op["rootKind"]) switch
+    {
+      "map" => doc.GetMap(root),
+      "array" => doc.GetArray(root),
+      "text" => doc.GetText(root),
+      var other => throw new InvalidDataException($"\"{other}\" is not a root kind"),
+    };
+
+    foreach (var segment in op["path"]?.AsArray() ?? [])
+    {
+      var key = String(segment);
+
+      target = Map(target).TryGet(key, out var nested) && nested is YAbstractType child
+          ? child
+          : throw new InvalidDataException($"\"{key}\" does not hold a nested shared type");
+    }
+
+    return target;
+  }
+
+  private static YMap Map(YAbstractType target)
+  {
+    return target as YMap ?? throw new InvalidDataException("the op's target is not a Y.Map");
+  }
+
+  private static YArray Array(YAbstractType target)
+  {
+    return target as YArray ?? throw new InvalidDataException("the op's target is not a Y.Array");
+  }
+
+  private static YText Text(YAbstractType target)
+  {
+    return target as YText ?? throw new InvalidDataException("the op's target is not a Y.Text");
+  }
+
+  private static JsonArray Values(JsonNode? node)
+  {
+    return node?.AsArray() ??
+        throw new InvalidDataException("an insert op carries no values array");
+  }
+
+  private static int Number(JsonNode? node)
+  {
+    return node?.GetValue<int>() ??
+        throw new InvalidDataException("a fixture field that must be a number is missing");
   }
 
   /// <summary>
@@ -354,7 +551,10 @@ internal sealed class ScenarioRunner
   {
     ArgumentNullException.ThrowIfNull(step);
 
-    if (step is { Id: { } id, Update: { } bytes })
+    // An engineWrites step registers what the ENGINE produced, not the
+    // fixture's mirror copy, so a later delivery replays the engine's own
+    // bytes; Write below files them.
+    if (step is { Kind: not "engineWrites", Id: { } id, Update: { } bytes })
     {
       emitted[id] = bytes;
     }
@@ -370,10 +570,7 @@ internal sealed class ScenarioRunner
         break;
 
       case "engineWrites":
-        // Task 4.1 performs step.Op through the write API instead. Until then
-        // the mirror document's bytes stand in: it carries the engine's own
-        // pinned client id, so they are the bytes the engine would have sent.
-        Apply(step, step.Update);
+        Write(step);
         break;
 
       case "deliver":
@@ -395,6 +592,53 @@ internal sealed class ScenarioRunner
     {
       Check(expect);
     }
+  }
+
+  /// <summary>
+  /// The engine performs the op itself. The fixture's <c>update</c> is the
+  /// mirror document's copy — real yjs, the same pinned client id, the same
+  /// state — so the two must be the same bytes; that equality is the tightest
+  /// oracle this suite has for the write API.
+  /// </summary>
+  private void Write(ScenarioStep step)
+  {
+    var written = ScenarioSupport.ApplyOp(
+        Doc,
+        step.Op ?? throw new InvalidDataException($"step \"{step.Id}\" carries no op"));
+
+    Assert.NotNull(written);
+    AssertMirrorBytes(step, written);
+
+    if (step.Id is { } id)
+    {
+      emitted[id] = written;
+    }
+  }
+
+  private void AssertMirrorBytes(ScenarioStep step, byte[] written)
+  {
+    var mirror = step.Update ??
+        throw new InvalidDataException($"step \"{step.Id}\" carries no mirror update");
+    var where = $"{testCase.Name} step \"{step.Id}\" ({step.Op?.ToJsonString()})";
+
+    for (var index = 0; index < Math.Min(mirror.Length, written.Length); index++)
+    {
+      if (mirror[index] != written[index])
+      {
+        Assert.Fail(
+            $"{where}: byte {index} is 0x{written[index]:x2}, yjs wrote 0x{mirror[index]:x2} " +
+            $"(engine {Convert.ToBase64String(written)}, yjs {Convert.ToBase64String(mirror)})");
+      }
+    }
+
+    if (mirror.Length != written.Length)
+    {
+      Assert.Fail(
+          $"{where}: the engine wrote {written.Length} bytes, yjs wrote {mirror.Length} " +
+          $"(engine {Convert.ToBase64String(written)}, yjs {Convert.ToBase64String(mirror)})");
+    }
+
+    Checks++;
   }
 
   private void Apply(ScenarioStep step, byte[]? update)

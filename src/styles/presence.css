@@ -217,3 +217,12 @@
   background: var(--blok-text-secondary);
   text-transform: none;
 }
+
+/* `pointer-events` inherits, and the strip and the stack are transparent so the
+   +/⠿ hover zone beneath them is untouched. The discs opt back in: a face's
+   `title` is the only thing that names the peer, and a tooltip needs a hover
+   target. */
+[data-blok-presence-face],
+[data-blok-presence-avatar] {
+  pointer-events: auto;
+}

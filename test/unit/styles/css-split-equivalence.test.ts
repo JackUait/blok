@@ -530,10 +530,12 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // and its `+N` now carry the monogram in an attribute that presence.css
     // paints through `content: attr()` (block copy sanitizes `holder.innerHTML`
     // and kept the text), plus the rule that hides the strip inside the drag
-    // ghost, which clones the wrapper the strip is mounted on (~0.4KB). Bumps
-    // the multiplier to 1.4641.
+    // ghost, which clones the wrapper the strip is mounted on, and the
+    // `pointer-events: auto` opt-in on the face and avatar discs (the strip
+    // and the stack are transparent, `pointer-events` inherits, and a `title`
+    // tooltip needs a hover target) (~0.7KB). Bumps the multiplier to 1.4649.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4641);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4649);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

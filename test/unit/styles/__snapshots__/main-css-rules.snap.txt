@@ -8166,6 +8166,10 @@
   text-transform: none;
 }
 
+[data-blok-presence-face], [data-blok-presence-avatar] {
+  pointer-events: auto;
+}
+
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
 }

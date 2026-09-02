@@ -145,6 +145,24 @@ describe('presence stylesheet', () => {
       );
     });
 
+    /**
+     * `pointer-events` inherits. The strip and the stack are transparent so
+     * the +/⠿ hover zone under them is untouched — but a face whose only
+     * identification is its `title` has to be hoverable, or the tooltip the
+     * avatar tests pin can never appear.
+     */
+    it('is hoverable for its tooltip while its strip stays transparent', () => {
+      const harness = setup();
+
+      harness.renderer.render([grace(99)], 42);
+
+      const strip = query(harness.holder, '[data-blok-presence-gutter]');
+      const face = query(strip, '[data-blok-presence-face]');
+
+      expect(getComputedStyle(strip).pointerEvents).toBe('none');
+      expect(getComputedStyle(face).pointerEvents).toBe('auto');
+    });
+
     it('does not ride along in the drag ghost', () => {
       const harness = setup();
 
@@ -161,6 +179,20 @@ describe('presence stylesheet', () => {
 
       expect(getComputedStyle(ghostStrip).display).toBe('none');
       expect(getComputedStyle(query(harness.holder, '[data-blok-presence-gutter]')).display).not.toBe('none');
+    });
+  });
+
+  describe('the avatar stack', () => {
+    it('is hoverable per avatar for its tooltip while the stack stays transparent', () => {
+      const harness = setup();
+
+      harness.renderer.render([grace(99)], 42);
+
+      const stack = query(harness.root, '[data-blok-presence-stack]');
+      const avatar = query(stack, '[data-blok-presence-avatar]');
+
+      expect(getComputedStyle(stack).pointerEvents).toBe('none');
+      expect(getComputedStyle(avatar).pointerEvents).toBe('auto');
     });
   });
 });

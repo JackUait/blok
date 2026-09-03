@@ -206,6 +206,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         SyncDirectory(docDirectory);
       }
 
+      if (!fenced.Seeded)
+      {
+        fenced = ImportWorkingSet(docDirectory, manifestFile, documentId, fenced);
+      }
+
       var index = new JournalIndex();
       IReadOnlyList<CollabOperationRecord> records = [];
       IReadOnlyList<ReadOnlyMemory<byte>> baseline = [];
@@ -299,6 +304,116 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
       throw;
     }
+  }
+
+  /// <summary>
+  /// Adopts <see cref="LocalCollabStore"/>'s whole-document file, at the
+  /// unsuffixed key in this same directory, as this document's sequence-zero
+  /// baseline — keeping its format, epoch, lineage and the exact bytes of its
+  /// frame section. A document with no such file is left unseeded for the
+  /// caller to seed. Working sets held in any OTHER
+  /// <see cref="ICollabWorkingSetStore"/>, S3's included, are not read here.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// THE MANIFEST PUBLICATION IS THE WHOLE OF THE MIGRATION, and everything
+  /// before it writes files the manifest does not name yet. So a crash at any
+  /// earlier step leaves the document exactly as it was — the old file
+  /// untouched, the journal directory still unseeded — and the next open
+  /// migrates again from the same source. That ordering is also why the old
+  /// file is not removed once publication lands: nothing reads it any more,
+  /// and leaving it is what makes a half-finished migration cost nothing.
+  /// </para>
+  /// <para>
+  /// A FILE THAT DOES NOT DECODE THROWS, and is never treated as absent the
+  /// way <see cref="CollabWorkingSetLaw.DecodeOrAbsent"/> treats it next door.
+  /// Absent means unseeded, the caller then seeds an empty document, and the
+  /// first edit overwrites the only copy of the user's content with a blank
+  /// page. Refusing to open keeps the bytes there to be repaired from.
+  /// </para>
+  /// </remarks>
+  private Manifest ImportWorkingSet(
+      string docDirectory,
+      FileStream manifestFile,
+      string documentId,
+      Manifest fenced)
+  {
+    byte[] document;
+
+    try
+    {
+      document = File.ReadAllBytes(Path.Combine(directory, CollabDocKey.For(documentId)));
+    }
+    catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+    {
+      return fenced;
+    }
+
+    if (!CollabWorkingSetCodec.TryDecodeDocument(
+        document,
+        out var tag,
+        out var frameSection,
+        out var reason))
+    {
+      throw new InvalidDataException(
+          $"collab: the working set for \"{documentId}\" is unreadable ({reason}), " +
+          "so it cannot be imported; refusing to open the document as a new, empty one.");
+    }
+
+    var generation = fenced.Generation + 1;
+
+    // The minting fence is in both names for the same reason it is in
+    // ResetAsync's — see the type's remarks. A retry after a crash runs at a
+    // new fence and so writes new names; the abandoned attempt's files are
+    // left where they are, named after a fence nothing references.
+    var mintedBy = fenced.Fence;
+
+    // The frame section is stored exactly as it was read, not re-derived from
+    // the frames or reduced to one full-state update.
+    WriteSealed(
+        BaselinePath(docDirectory, generation, mintedBy),
+        BaselineMagic,
+        0,
+        frameSection);
+
+    using (var journal = OpenJournal(
+        JournalPath(docDirectory, generation, mintedBy),
+        FileMode.OpenOrCreate))
+    {
+      // Only ever this session's own abandoned earlier attempt at the same
+      // fence and generation, because the name carries both.
+      RequireFence(docDirectory, documentId, fenced);
+      journal.SetLength(0);
+      journal.Flush(flushToDisk: true);
+    }
+
+    SyncDirectory(docDirectory);
+
+    var published = fenced with
+    {
+      WriteCounter = fenced.WriteCounter + 1,
+      Generation = generation,
+      GenerationFence = mintedBy,
+      CheckpointFence = 0,
+      Seeded = true,
+      Format = tag.Format,
+      Epoch = tag.Epoch,
+      Lineage = tag.Lineage,
+      CheckpointThrough = 0,
+    };
+
+    // Re-verified immediately before the slot write, because reading and
+    // sealing the old document is not instantaneous: a holder judged dead in
+    // that window would have taken the document, and this publication would
+    // then overwrite its fence with this session's older one.
+    RequireFence(docDirectory, documentId, fenced);
+    Publish(manifestFile, published);
+
+    log?.Invoke(
+        $"collab: imported the working set for \"{documentId}\" as the baseline of " +
+        $"lineage {tag.Lineage} at epoch {tag.Epoch}; the old file is left in place.");
+
+    return published;
   }
 
   private static string JournalPath(string docDirectory, ulong generation, ulong mintedBy)

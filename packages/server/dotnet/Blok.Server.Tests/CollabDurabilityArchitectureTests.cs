@@ -39,6 +39,7 @@ public sealed class CollabDurabilityArchitectureTests
     ("Publish", "manifestFile", "Write"),
     ("WriteSealed", "file", "Write"),
     ("ResetAsync", "swapped", "SetLength"),
+    ("ImportWorkingSet", "journal", "SetLength"),
   ];
 
   /// <summary>
@@ -60,6 +61,21 @@ public sealed class CollabDurabilityArchitectureTests
   [
     ("WriteCheckpointAsync", ["WriteSealed", "SyncDirectory", "Republish"]),
     ("ResetAsync", ["WriteSealed", "SyncDirectory", "Republish"]),
+
+    // The migration's publication is what switches a document from today's
+    // whole-document file to the journal, so it must come last. Publishing
+    // first would name a baseline a crash could leave unwritten, and the
+    // document would then be unopenable with its old copy already ignored.
+    // No behavioural test can see this: a reconstructed crash is built from
+    // whatever order the code actually wrote in.
+    //
+    // RequireFence is in the list because the import publishes directly rather
+    // than through Republish, which carries its own. Sealing a whole document
+    // is long enough for a holder judged dead to take it, and publishing then
+    // overwrites the new holder's fence with this session's older one.
+    (
+      "ImportWorkingSet",
+      ["WriteSealed", "SyncDirectory", "RequireFence", "Publish"]),
   ];
 
   /// <summary>
@@ -108,6 +124,7 @@ public sealed class CollabDurabilityArchitectureTests
     ("ResetAsync", true, ""),
     ("ScanForward", true, ""),
     ("RollBack", true, ""),
+    ("ImportWorkingSet", true, ""),
   ];
 
   [Fact]

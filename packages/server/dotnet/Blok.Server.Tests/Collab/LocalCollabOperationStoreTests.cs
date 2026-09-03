@@ -24,7 +24,16 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   private const int ActorIdLengthOffset = 32;
   private const int ManifestSlotSize = 128;
   private const int ManifestSlotContentSize = 96;
+  private const int SeededOffset = 5;
+  private const int WriteCounterOffset = 8;
   private const byte ForeignManifestVersion = 1;
+
+  /// <summary>
+  /// A schema version this build never mints, so a migration that carried the
+  /// stored format over is told apart from one that hard-coded
+  /// <see cref="CollabWorkingSetTag.SchemaV2"/>.
+  /// </summary>
+  private const int LegacyFormat = CollabWorkingSetTag.SchemaV2 + 1;
 
   private readonly string root = Path.Combine(
       Path.GetTempPath(),
@@ -865,7 +874,10 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
     await using (var session = await OpenAsync())
     {
-      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+      // The open imports that file, so the epoch it carries is now the
+      // document's and a reset has to rise above it.
+      Assert.Equal(3L, session.OpenResult.Head!.Epoch);
+      await session.ResetAsync(Reset(4, CollabWorkingSetTag.NewLineage()));
       await session.AppendAsync(Candidate(OperationId(1), [0x01]));
     }
 
@@ -882,6 +894,246 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     await using var reopened = await OpenAsync();
     Assert.Equal(1ul, reopened.OpenResult.Head!.DurableThrough);
   }
+
+  [Theory]
+  [InlineData(3)] // frames in an order that a merge or a reversal would lose
+  [InlineData(0)] // what LocalCollabStore.ResetAsync writes: a header, no frames
+  public async Task ImportsBkw2WithoutChangingFormatEpochLineageOrFrameOrder(int frameCount)
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var frames = LegacyFrames(frameCount);
+    var legacy = await WriteLegacyAsync(LegacyFormat, 7, lineage, frames);
+
+    await using (var migrated = await OpenAsync())
+    {
+      var head = Assert.IsType<CollabDocumentHead>(migrated.OpenResult.Head);
+
+      // The document's identity moves across unchanged. A format this build
+      // never mints is the only way to tell "carried over" from "hard-coded to
+      // the one schema version there is".
+      Assert.Equal(LegacyFormat, head.Format);
+      Assert.Equal(7L, head.Epoch);
+      Assert.Equal(lineage, head.Lineage);
+
+      Assert.Equal<byte[][]>(
+          [.. frames],
+          [.. migrated.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+      Assert.Equal(0ul, head.DurableThrough);
+      Assert.Empty(migrated.OpenResult.Tail);
+      Assert.Null(migrated.OpenResult.Checkpoint);
+    }
+
+    // The source is still there, byte for byte: publication switched the
+    // document over, it did not consume the old copy.
+    Assert.Equal(legacy, File.ReadAllBytes(LegacyPath));
+
+    // Importing again would be a second migration of an already-migrated
+    // document; the epoch and lineage would move and clients would be told to
+    // drop their caches.
+    await using var reopened = await OpenAsync();
+    Assert.Equal(LegacyFormat, reopened.OpenResult.Head!.Format);
+    Assert.Equal(7L, reopened.OpenResult.Head.Epoch);
+    Assert.Equal(lineage, reopened.OpenResult.Head.Lineage);
+    Assert.Equal<byte[][]>(
+        [.. frames],
+        [.. reopened.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+
+    var first = await reopened.AppendAsync(Candidate(OperationId(1), [0x01]));
+    Assert.Equal(CollabOperationAppendOutcome.Committed, first.Outcome);
+    Assert.Equal(1ul, first.ServerSequence);
+  }
+
+  [Fact]
+  public async Task DoesNotInventHistoryActorsForBkw2Frames()
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var frames = LegacyFrames(3);
+    await WriteLegacyAsync(LegacyFormat, 7, lineage, frames);
+
+    await using (var migrated = await OpenAsync())
+    {
+      // Anchored first. Without an import at all, every assertion below is
+      // vacuously true of an unseeded document.
+      var head = Assert.IsType<CollabDocumentHead>(migrated.OpenResult.Head);
+      Assert.Equal(lineage, head.Lineage);
+      Assert.Equal(3, migrated.OpenResult.Baseline.Count);
+
+      // Imported content has no known author and its frame boundaries were
+      // never operations, so nothing is committed and nobody is named. The
+      // empty journal is what carries this: a record fabricated from a frame
+      // has to be IN it, whatever id or actor was invented for it.
+      Assert.Equal(0ul, head.DurableThrough);
+      Assert.Empty(migrated.OpenResult.Tail);
+      Assert.Equal(0, new FileInfo(JournalPath(1)).Length);
+
+      await migrated.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    // Attribution begins at the first real operation, and it is the actor the
+    // server passed in.
+    await using var reopened = await OpenAsync();
+    var record = Assert.Single(reopened.OpenResult.Tail);
+    Assert.Equal(1ul, record.ServerSequence);
+    Assert.Equal("user-1", record.ActorId);
+  }
+
+  [Fact]
+  public async Task MigrationCrashBeforePublishRetriesIdempotently()
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var frames = LegacyFrames(3);
+    var legacy = await WriteLegacyAsync(LegacyFormat, 7, lineage, frames);
+
+    await using (var migrated = await OpenAsync())
+    {
+      Assert.Equal(lineage, migrated.OpenResult.Head!.Lineage);
+    }
+
+    // THE PUBLICATION THAT NEVER LANDED, reconstructed rather than mocked. The
+    // open takes the fence into slot 1 (write counter 1) and the import
+    // publishes into slot 0 (write counter 2), so slot 1 still holds the exact
+    // pre-import state the real code wrote — and a slot the import never
+    // reached holds the zeros the manifest was created with.
+    var manifest = File.ReadAllBytes(ManifestPath);
+    Assert.Equal(1, manifest[SeededOffset]);
+    Assert.Equal(2ul, ReadWriteCounter(manifest, slot: 0));
+    Assert.Equal(0, manifest[ManifestSlotSize + SeededOffset]);
+    Assert.Equal(1ul, ReadWriteCounter(manifest, slot: 1));
+    manifest.AsSpan(0, ManifestSlotSize).Clear();
+    File.WriteAllBytes(ManifestPath, manifest);
+
+    // Before the publication, the document is still exactly the old one: the
+    // old file is intact and the old store still reads it.
+    Assert.Equal(legacy, File.ReadAllBytes(LegacyPath));
+    var asItWas = await new LocalCollabStore(root, logs.Add)
+        .ReadAsync(DocId, CancellationToken.None);
+    Assert.NotNull(asItWas);
+    Assert.Equal(CollabWorkingSetCodec.EncodeFrames(frames), asItWas.Updates);
+
+    await using (var retried = await OpenAsync())
+    {
+      var head = Assert.IsType<CollabDocumentHead>(retried.OpenResult.Head);
+      Assert.Equal(LegacyFormat, head.Format);
+      Assert.Equal(7L, head.Epoch);
+      Assert.Equal(lineage, head.Lineage);
+      Assert.Equal(0ul, head.DurableThrough);
+      Assert.Empty(retried.OpenResult.Tail);
+      Assert.Equal<byte[][]>(
+          [.. frames],
+          [.. retried.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+
+      await retried.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    // The retry runs at a new fence, so it writes new names instead of
+    // rewriting what the crashed attempt left — which is still on disk,
+    // because nothing here deletes.
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "baseline.1.1")));
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "journal.1.1")));
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "baseline.1.2")));
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "journal.1.2")));
+
+    await using var reopened = await OpenAsync();
+    Assert.Equal(lineage, reopened.OpenResult.Head!.Lineage);
+    Assert.Equal(1ul, reopened.OpenResult.Head.DurableThrough);
+  }
+
+  [Fact]
+  public async Task MigrationCrashAfterPublishOpensBkw3()
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var frames = LegacyFrames(3);
+    await WriteLegacyAsync(LegacyFormat, 7, lineage, frames);
+
+    await using (var migrated = await OpenAsync())
+    {
+      Assert.Equal(lineage, migrated.OpenResult.Head!.Lineage);
+      await migrated.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    // Publication is the last step of the import, so a process that died right
+    // after it leaves the old file exactly where it was. What must hold from
+    // then on is that nothing reads it: replace it with a perfectly valid,
+    // entirely different document at a much higher epoch.
+    await new LocalCollabStore(root, logs.Add).WriteAsync(
+        DocId,
+        CollabWorkingSetCodec.EncodeFrames([[0xff, 0xff]]),
+        new CollabWorkingSetTag(LegacyFormat + 1, 99, CollabWorkingSetTag.NewLineage()),
+        CancellationToken.None);
+
+    await using (var afterTheSwap = await OpenAsync())
+    {
+      var head = Assert.IsType<CollabDocumentHead>(afterTheSwap.OpenResult.Head);
+      Assert.Equal(LegacyFormat, head.Format);
+      Assert.Equal(7L, head.Epoch);
+      Assert.Equal(lineage, head.Lineage);
+      Assert.Equal<byte[][]>(
+          [.. frames],
+          [.. afterTheSwap.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+      Assert.Equal(1ul, head.DurableThrough);
+    }
+
+    // And a source that has since rotted cannot take the migrated document
+    // down with it.
+    File.WriteAllBytes(LegacyPath, [0xde, 0xad, 0xbe, 0xef]);
+
+    await using var afterTheRot = await OpenAsync();
+    Assert.Equal(lineage, afterTheRot.OpenResult.Head!.Lineage);
+    Assert.Equal(1ul, afterTheRot.OpenResult.Head.DurableThrough);
+    Assert.Equal<byte[][]>(
+        [.. frames],
+        [.. afterTheRot.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+  }
+
+  [Theory]
+  [InlineData("magic")]
+  [InlineData("frame-length")]
+  [InlineData("header-truncated")]
+  public async Task CorruptBkw2FailsClosedInsteadOfReseeding(string mode)
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var frames = LegacyFrames(3);
+    var intact = await WriteLegacyAsync(LegacyFormat, 7, lineage, frames);
+    var damaged = Damage(intact, mode);
+    File.WriteAllBytes(LegacyPath, damaged);
+
+    // Reseeding here would hand the user a blank page where their document
+    // was, and the first edit would then overwrite the only copy of it.
+    var failure = await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
+    Assert.Contains(DocId, failure.Message, StringComparison.Ordinal);
+    Assert.Contains("unreadable", failure.Message, StringComparison.Ordinal);
+
+    // Nothing was written, moved aside or seeded: the document did not become
+    // a new, empty one, and the bytes are still there to be repaired.
+    Assert.Equal(damaged, File.ReadAllBytes(LegacyPath));
+    Assert.Empty(Directory.GetFiles(DocDirectory, "baseline.*"));
+    Assert.Empty(Directory.GetFiles(DocDirectory, "journal.*"));
+    Assert.Equal(
+        Path.Combine(root, CollabDocKey.For(DocId)),
+        Assert.Single(Directory.GetFiles(root)));
+
+    // The refused open released its hold, so the retry reports the same
+    // refusal rather than "held elsewhere".
+    var retry = await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
+    Assert.Contains("unreadable", retry.Message, StringComparison.Ordinal);
+
+    // And the refusal is recoverable, which is the point of refusing: restore
+    // the bytes from a backup and the document migrates as it always would.
+    File.WriteAllBytes(LegacyPath, intact);
+
+    await using var repaired = await OpenAsync();
+    Assert.Equal(lineage, repaired.OpenResult.Head!.Lineage);
+    Assert.Equal(7L, repaired.OpenResult.Head.Epoch);
+    Assert.Equal<byte[][]>(
+        [.. frames],
+        [.. repaired.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+  }
+
+  private string LegacyPath => Path.Combine(root, CollabDocKey.For(DocId));
 
   private string DocDirectory =>
       Path.Combine(root, CollabDocKey.For(DocId) + ".journal");
@@ -902,6 +1154,25 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     return Assert.Single(Directory.GetFiles(
         DocDirectory,
         string.Create(CultureInfo.InvariantCulture, $"journal.{generation}.*")));
+  }
+
+  /// <summary>
+  /// Writes today's whole-document file through the store that owns that
+  /// format, so what the migration reads is what a real deployment holds.
+  /// </summary>
+  private async Task<byte[]> WriteLegacyAsync(
+      int format,
+      long epoch,
+      string lineage,
+      IReadOnlyList<byte[]> frames)
+  {
+    await new LocalCollabStore(root, logs.Add).WriteAsync(
+        DocId,
+        CollabWorkingSetCodec.EncodeFrames(frames),
+        new CollabWorkingSetTag(format, epoch, lineage),
+        CancellationToken.None);
+
+    return File.ReadAllBytes(LegacyPath);
   }
 
   private async Task<ICollabOperationSession> OpenAsync()
@@ -941,6 +1212,50 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   private static string OperationId(int ordinal)
   {
     return ordinal.ToString("x32", CultureInfo.InvariantCulture);
+  }
+
+  /// <summary>
+  /// Frames of distinct lengths and contents, so a reordering, a dropped frame
+  /// and a merge into one full-state frame are all separately visible.
+  /// </summary>
+  private static List<byte[]> LegacyFrames(int count)
+  {
+    return [.. Enumerable
+        .Range(1, count)
+        .Select(n => Enumerable.Repeat((byte)(0xa0 + n), n).ToArray())];
+  }
+
+  private static ulong ReadWriteCounter(byte[] manifest, int slot)
+  {
+    return BinaryPrimitives.ReadUInt64LittleEndian(
+        manifest.AsSpan((slot * ManifestSlotSize) + WriteCounterOffset));
+  }
+
+  private static byte[] Damage(byte[] document, string mode)
+  {
+    var damaged = document.ToArray();
+
+    switch (mode)
+    {
+      case "magic":
+        damaged[0] ^= 0xff;
+
+        return damaged;
+
+      case "frame-length":
+        // The first frame claims more bytes than the section holds.
+        BinaryPrimitives.WriteInt32LittleEndian(
+            damaged.AsSpan(CollabWorkingSetCodec.HeaderLength),
+            int.MaxValue);
+
+        return damaged;
+
+      case "header-truncated":
+        return damaged[..(CollabWorkingSetCodec.HeaderLength - 1)];
+
+      default:
+        throw new ArgumentOutOfRangeException(nameof(mode), mode, "unknown damage mode");
+    }
   }
 
   private static void AppendRaw(string path, byte[] bytes)

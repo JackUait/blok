@@ -28,6 +28,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # Blok.Server.csproj builds the JS document runtime with vite before it
+      # compiles, so the C# leg needs the workspace installed like ci.yml's
+      # Server job does. Without it every dotnet build here dies on ERR_MODULE_NOT_FOUND.
+      - name: Setup Node.js and Dependencies
+        if: matrix.language == 'csharp'
+        uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "false"
+
       - name: Setup .NET
         if: matrix.language == 'csharp'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0

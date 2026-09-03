@@ -179,8 +179,9 @@ internal sealed class CollabRoom : IDisposable
   internal string DocId { get; }
 
   /// <summary>
-  /// True when the room stopped because an append failed or its outcome could
-  /// not be determined. Read by the manager when <see cref="Closed"/> fires, to
+  /// True when the room stopped because it could not commit: an append that
+  /// failed, one whose outcome cannot be known, or a store that could not
+  /// answer at all. Read by the manager when <see cref="Closed"/> fires, to
   /// hold the document off until the store has had time to recover.
   /// </summary>
   internal bool CommitUnavailable { get; private set; }
@@ -1119,8 +1120,9 @@ internal sealed class CollabRoom : IDisposable
     switch (committed.Outcome)
     {
       case CollabOperationLookupOutcome.Duplicate:
-        // A retry of work that is already durable: the bytes are applied and
-        // were relayed when they landed, so only the lost receipt is re-sent.
+        // A retry of work that is already durable. The bytes are in the
+        // document, so every member has them from the broadcast or from its
+        // own sync; only the lost receipt is re-sent.
         AcknowledgeLocked(membership, operation, committed.ServerSequence);
 
         return;
@@ -1229,10 +1231,10 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// A commit that failed, or that may have landed without saying so. The
-  /// document now holds bytes the journal may not, so the room stops here: it
-  /// closes every member with the retryable close and discards itself, and a
-  /// fresh room reloads committed data only.
+  /// A commit the room could not complete. The document may already hold bytes
+  /// the journal does not, so the room stops here rather than guess: it closes
+  /// every member with the retryable close and discards itself, and a fresh
+  /// room reloads committed data only.
   /// </summary>
   private async Task FailCommitLocked(string what, Exception error)
   {

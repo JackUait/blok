@@ -234,8 +234,17 @@ export const parseChangelog = (markdown: string): Release[] => {
       continue;
     }
 
-    // Check for change item (inside a category)
-    if (line.trim().startsWith("- ") && currentRelease.categories.length > 0) {
+    if (currentRelease.categories.length === 0) {
+      continue;
+    }
+
+    // An indented bullet belongs to the change above it, not to the category
+    if (/^\s+-\s/.test(line)) {
+      handleDetailItem(line, currentRelease);
+      continue;
+    }
+
+    if (line.startsWith("- ")) {
       handleChangeItem(line, currentRelease);
     }
   }
@@ -288,6 +297,26 @@ const handleChangeItem = (
     category: currentCategory.category,
     description,
   });
+};
+
+/**
+ * Handle an indented sub-bullet by appending it to the change above it
+ */
+const handleDetailItem = (
+  line: string,
+  currentRelease: ReleaseHeader & { categories: ParsedCategory[] },
+): void => {
+  const detail = parseChangeItem(line.trim());
+  if (!detail) {
+    return;
+  }
+
+  const currentChange = currentRelease.categories.at(-1)?.changes.at(-1);
+  if (!currentChange) {
+    return;
+  }
+
+  currentChange.details = [...(currentChange.details ?? []), detail];
 };
 
 /**

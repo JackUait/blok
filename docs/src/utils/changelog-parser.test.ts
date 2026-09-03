@@ -398,6 +398,91 @@ describe('changelog-parser', () => {
       expect(crdtChange!.description).toBe('implement Conflict-Free Replicated Data Type (CRDT) undo/redo');
     });
 
+    it('attaches an indented sub-bullet to the change above it as a detail', () => {
+      const markdown = `
+# Changelog
+
+## [0.5.0](url) (2026-01-23)
+
+### ✨ Features
+- **Live collaboration** — Real-time multiplayer editing.
+  - Two editors on the same doc see each other's carets.
+  - \`offline: true\` keeps a local copy across reloads.
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[0].details).toEqual([
+        "Two editors on the same doc see each other's carets.",
+        '`offline: true` keeps a local copy across reloads.',
+      ]);
+    });
+
+    it('does not turn an indented sub-bullet into a change of its own', () => {
+      const markdown = `
+# Changelog
+
+## [0.5.0](url) (2026-01-23)
+
+### ✨ Features
+- **Live collaboration** — Real-time multiplayer editing.
+  - Two editors on the same doc see each other's carets.
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes).toHaveLength(1);
+    });
+
+    it('leaves details undefined for a change written without sub-bullets', () => {
+      const markdown = `
+# Changelog
+
+## [0.5.0](url) (2026-01-23)
+
+### ✨ Features
+- a plain one-line feature
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[0].details).toBeUndefined();
+    });
+
+    it('strips trailing PR and commit links from a sub-bullet', () => {
+      const markdown = `
+# Changelog
+
+## [0.5.0](url) (2026-01-23)
+
+### ✨ Features
+- **Live collaboration** — Real-time multiplayer editing.
+  - carets are drawn per peer ([#33](https://github.com/JackUait/blok/pull/33))
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[0].details).toEqual(['carets are drawn per peer']);
+    });
+
+    it('starts a fresh detail list for the next change', () => {
+      const markdown = `
+# Changelog
+
+## [0.5.0](url) (2026-01-23)
+
+### ✨ Features
+- first feature
+  - detail of the first
+- second feature
+  - detail of the second
+`;
+
+      const result = parseChangelog(markdown);
+
+      expect(result[0].changes[1].details).toEqual(['detail of the second']);
+    });
+
     it('should correctly categorize all emoji categories from the real sample', () => {
       const result = parseChangelog(REAL_CHANGELOG_SAMPLE);
       const changes = result[0].changes;

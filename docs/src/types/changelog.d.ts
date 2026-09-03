@@ -12,6 +12,8 @@ export type ReleaseType = 'major' | 'minor' | 'patch';
 export interface Change {
   category: ChangeCategory;
   description: string;
+  /** Indented sub-bullets written under the change, in source order. */
+  details?: string[];
   link?: string;
 }
 

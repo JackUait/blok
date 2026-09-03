@@ -100,18 +100,6 @@ const Icons = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
-  sparkles: () => (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3l2 4 4 2-4 2-2 4-2-4-4-2 4-2 2-4zM5 16l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2zM19 16l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z" />
-    </svg>
-  ),
   external: () => (
     <svg
       viewBox="0 0 24 24"
@@ -175,7 +163,7 @@ const formatDescription = (text: string): React.ReactNode => {
   const parts = text.split(/\s*—\s*/);
   const hasEmDash = parts.length > 1;
 
-  const formatPart = (part: string, key: number): React.ReactNode => {
+  function formatPart(part: string, key: number): React.ReactNode {
     // Match **bold** and `code` patterns
     const regex = /(\*\*[^*]+\*\*)|(`[^`]+`)/g;
     const matches = Array.from(part.matchAll(regex));
@@ -190,9 +178,11 @@ const formatDescription = (text: string): React.ReactNode => {
       const isCode = matched.startsWith("`") && matched.endsWith("`");
 
       if (isBold) {
+        // A title routinely names an API, so the code spans inside the bold
+        // run have to be formatted too rather than printed with their backticks
         return (
           <strong key={`${key}-${matchIndex}`} className="font-semibold text-foreground">
-            {matched.slice(2, -2)}
+            {formatPart(matched.slice(2, -2), matchIndex)}
           </strong>
         );
       }
@@ -233,7 +223,7 @@ const formatDescription = (text: string): React.ReactNode => {
     }
 
     return tokens;
-  };
+  }
 
   if (hasEmDash) {
     return (
@@ -358,17 +348,6 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                     release.highlight ? "border-primary/30" : "border-border",
                   )}
                 >
-                  {release.highlight && (
-                    <div className="mb-5 flex items-start gap-2.5 rounded-xl bg-secondary/60 p-4">
-                      <span className="mt-0.5 size-4 shrink-0 text-primary [&>svg]:size-full" aria-hidden="true">
-                        <Icons.sparkles />
-                      </span>
-                      <p className="text-sm leading-relaxed text-foreground">
-                        {formatDescription(release.highlight)}
-                      </p>
-                    </div>
-                  )}
-
                   <div className="flex flex-col gap-px">
                     {release.changes
                       .filter((change) => change.description.trim().length > 0)
@@ -385,20 +364,34 @@ const ChangelogContent: React.FC<ChangelogContentProps> = ({ inline = false }) =
                               </span>
                               {translateOr(`changelog.category.${change.category}`, change.category)}
                             </Badge>
-                            <span className="text-sm leading-relaxed text-muted-foreground">
-                              {formatDescription(change.description)}
-                              {change.link && (
-                                <Link
-                                  to={change.link}
-                                  className="ml-1.5 inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
-                                >
-                                  <Typo>{t('changelog.viewDocs')}</Typo>
-                                  <span className="size-3 [&>svg]:size-full" aria-hidden="true">
-                                    <Icons.external />
-                                  </span>
-                                </Link>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm leading-relaxed text-muted-foreground">
+                                {formatDescription(change.description)}
+                                {change.link && (
+                                  <Link
+                                    to={change.link}
+                                    className="ml-1.5 inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+                                  >
+                                    <Typo>{t('changelog.viewDocs')}</Typo>
+                                    <span className="size-3 [&>svg]:size-full" aria-hidden="true">
+                                      <Icons.external />
+                                    </span>
+                                  </Link>
+                                )}
+                              </p>
+                              {change.details && change.details.length > 0 && (
+                                <ul className="mt-3 space-y-2">
+                                  {change.details.map((detail, detailIndex) => (
+                                    <li
+                                      key={detailIndex}
+                                      className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:top-[0.6em] before:size-1.5 before:rounded-full before:bg-border"
+                                    >
+                                      {formatDescription(detail)}
+                                    </li>
+                                  ))}
+                                </ul>
                               )}
-                            </span>
+                            </div>
                           </div>
                         </div>
                       ))}

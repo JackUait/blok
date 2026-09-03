@@ -21,7 +21,9 @@ const FIXTURE_CHANGELOG = vi.hoisted(
 
 ### ✨ Features
 
-- Initial release
+- **Initial release with \`config.uploader\`** — The first stable cut.
+  - Blocks are stored as JSON.
+  - The toolbar can sit on either side.
 
 ## [0.9.1](https://github.com/JackUait/blok/compare/v0.9.0...v0.9.1) (2023-12-01)
 
@@ -83,6 +85,25 @@ describe('ChangelogPage', () => {
       // route's HTML at its loading state and ship no prose to crawlers.
       expect(screen.getByText('v1.0.0')).toBeInTheDocument();
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('renders a code span nested inside a bold title as code', () => {
+      renderChangelogPage();
+
+      expect(screen.getByText('config.uploader').tagName).toBe('CODE');
+    });
+
+    it('renders each sub-bullet of a change as its own list item', () => {
+      renderChangelogPage();
+
+      expect(screen.getByText('Blocks are stored as JSON.').tagName).toBe('LI');
+      expect(screen.getByText('The toolbar can sit on either side.').tagName).toBe('LI');
+    });
+
+    it('prints the leading change once rather than repeating it as a highlight', () => {
+      renderChangelogPage();
+
+      expect(screen.getAllByText('The first stable cut.')).toHaveLength(1);
     });
 
     it('renders the hero title in English by default', () => {

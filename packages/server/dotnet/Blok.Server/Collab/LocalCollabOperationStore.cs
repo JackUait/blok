@@ -13,14 +13,32 @@ namespace Blok.Server.Collab;
 /// <remarks>
 /// <para>
 /// LAYOUT. <c>&lt;directory&gt;/&lt;CollabDocKey&gt;.journal/</c> holds
-/// <c>lock</c>, <c>manifest</c>, <c>journal.&lt;generation&gt;</c>,
-/// <c>baseline.&lt;generation&gt;</c> and
-/// <c>checkpoint.&lt;generation&gt;.&lt;through&gt;</c>. The generation counts
-/// resets, and naming the per-lineage files after it is what makes a reset
-/// atomic without an intent log: every file is written under its final name
-/// exactly once, so a half-written one is simply a name the manifest does not
-/// mention yet, and the manifest publication that names the new generation is
-/// the single step that switches lineages.
+/// <c>lock</c>, <c>manifest</c>,
+/// <c>journal.&lt;generation&gt;.&lt;mintingFence&gt;</c>,
+/// <c>baseline.&lt;generation&gt;.&lt;mintingFence&gt;</c> and
+/// <c>checkpoint.&lt;generation&gt;.&lt;through&gt;.&lt;writingFence&gt;</c>.
+/// The manifest publication that names a generation is the single step that
+/// switches lineages, so a file the manifest does not mention yet is inert.
+/// </para>
+/// <para>
+/// THE FENCE IN EACH NAME IS WHAT MAKES A RESET SAFE, and the generation is
+/// not. This paragraph once said the opposite — that naming per-lineage files
+/// after the generation alone made a reset atomic, every file being written
+/// under its final name exactly once — and that belief is precisely what put a
+/// data-loss bug in <c>ResetAsync</c>. The generation is
+/// <c>current + 1</c>, which a NEW holder computes identically: a session that
+/// stalled after its fence check resumed to replace the baseline the new
+/// holder had published and truncate the journal it had already acknowledged
+/// operations into. No check-then-act guard closes that, because the stall can
+/// happen after the check. Two holders never share a fence, so putting it in
+/// the name removes the collision instead of narrowing it.
+/// </para>
+/// <para>
+/// "Written exactly once" is therefore also false, and deliberately so: a
+/// RETRIED reset runs at the same fence and generation and so rewrites its own
+/// names, which is why <c>SetLength(0)</c> and <c>FileMode.Create</c> still
+/// have to be there. What is true is that a name can only ever be rewritten by
+/// the session that first wrote it.
 /// </para>
 /// <para>
 /// THE <c>.journal</c> SUFFIX IS LOAD-BEARING, and it is why this store shares
@@ -212,12 +230,18 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
           // checking File.Exists first is not.
           journal = OpenJournal(journalPath, FileMode.Open);
         }
-        catch (Exception error)
-            when (error is FileNotFoundException or DirectoryNotFoundException)
+        catch (FileNotFoundException error)
         {
           throw new InvalidDataException(
               $"collab: \"{documentId}\" names {Path.GetFileName(journalPath)}, " +
               "which is not there.",
+              error);
+        }
+        catch (DirectoryNotFoundException error)
+        {
+          throw new InvalidDataException(
+              $"collab: the journal directory for \"{documentId}\" is gone, " +
+              $"so {Path.GetFileName(journalPath)} cannot be read.",
               error);
         }
         records = ScanForward(
@@ -441,18 +465,37 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     }
 
     Manifest? best = null;
+    byte? foreignVersion = null;
 
     for (var slot = 0; slot < 2; slot++)
     {
-      if (TryDecodeSlot(bytes.AsSpan(slot * ManifestSlotSize, ManifestSlotSize), out var candidate) &&
+      var span = bytes.AsSpan(slot * ManifestSlotSize, ManifestSlotSize);
+
+      if (TryDecodeSlot(span, out var candidate) &&
           (best is null || candidate.WriteCounter > best.Value.WriteCounter))
       {
         best = candidate;
       }
+      else if (span[..ManifestMagic.Length].SequenceEqual(ManifestMagic) &&
+          span[4] != ManifestVersion)
+      {
+        foreignVersion = span[4];
+      }
     }
 
-    return best ?? throw new InvalidDataException(
-        $"collab: neither manifest slot for \"{documentId}\" decodes.");
+    if (best is not null)
+    {
+      return best;
+    }
+
+    // Said apart because they call for opposite first moves during an incident:
+    // a version this build does not know is a deployment problem, and telling
+    // an operator the manifest "does not decode" sends them hunting a disk
+    // fault instead.
+    throw new InvalidDataException(foreignVersion is { } version
+      ? $"collab: the manifest for \"{documentId}\" is version {version}, and " +
+        $"this build writes version {ManifestVersion}."
+      : $"collab: neither manifest slot for \"{documentId}\" decodes.");
   }
 
   private static void EncodeSlot(Manifest manifest, Span<byte> slot)
@@ -1028,12 +1071,20 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       });
 
       // Only after the publication that made the new checkpoint current: an
-      // earlier sweep would delete the state the manifest still names.
+      // earlier sweep would delete the state the manifest still names. And only
+      // names ending in THIS session's fence: the glob covers every fence, so
+      // an unscoped sweep is a delete of another holder's live checkpoint, with
+      // no fence check in front of it and invisible to a law that looks for
+      // truncation. Another holder's orphans are left for a collector that can
+      // prove they are orphans.
+      var mine = string.Create(CultureInfo.InvariantCulture, $".{manifest.Fence}");
+
       foreach (var stale in Directory.GetFiles(
           docDirectory,
           string.Create(CultureInfo.InvariantCulture, $"checkpoint.{manifest.Generation}.*")))
       {
-        if (!string.Equals(stale, path, StringComparison.Ordinal))
+        if (!string.Equals(stale, path, StringComparison.Ordinal) &&
+            stale.EndsWith(mine, StringComparison.Ordinal))
         {
           TryDelete(stale);
         }

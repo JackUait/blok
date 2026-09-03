@@ -22,6 +22,8 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   private const int SequenceOffset = 16;
   private const int CommittedAtOffset = 24;
   private const int ActorIdLengthOffset = 32;
+  private const int ManifestSlotSize = 128;
+  private const int ManifestSlotContentSize = 96;
 
   private readonly string root = Path.Combine(
       Path.GetTempPath(),
@@ -414,28 +416,93 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
       await second.ResetAsync(Reset(3, CollabWorkingSetTag.NewLineage()));
     }
 
-    var names = Directory
-        .GetFiles(DocDirectory, "journal.*")
-        .Select(Path.GetFileName)
-        .ToArray();
-    Assert.Equal(names.Length, names.Distinct(StringComparer.Ordinal).Count());
-    Assert.Contains(
-        Path.GetFileName(mintedByTheFirstOpen),
-        names,
-        StringComparer.Ordinal);
-
-    // Every generation the second session minted carries ITS fence, not the
-    // first session's.
-    Assert.All(
-        Directory.GetFiles(DocDirectory, "journal.2.*"),
-        path => Assert.EndsWith(
-            ".2",
-            Path.GetFileName(path),
-            StringComparison.Ordinal));
+    // EXACT names, and generation 3 above all. Every weaker form of this
+    // assertion passes with the fix reverted: counting distinct results of
+    // Directory.GetFiles is vacuous, .NET's glob translation makes
+    // "journal.3.*" match a bare "journal.3", and generation 2 happens to be
+    // minted at fence 2, so nothing about it can tell a fence from a
+    // generation. journal.3.2 is the one name where the two differ.
+    Assert.Equal("journal.1.1", Path.GetFileName(mintedByTheFirstOpen));
+    Assert.Equal(
+        "journal.2.2",
+        Path.GetFileName(Assert.Single(Directory.GetFiles(DocDirectory, "journal.2.*"))));
+    Assert.Equal(
+        "journal.3.2",
+        Path.GetFileName(Assert.Single(Directory.GetFiles(DocDirectory, "journal.3.*"))));
+    Assert.Equal(
+        "baseline.3.2",
+        Path.GetFileName(Assert.Single(Directory.GetFiles(DocDirectory, "baseline.3.*"))));
 
     await using var reopened = await OpenAsync();
     Assert.Equal(3L, reopened.OpenResult.Head!.Epoch);
     Assert.Equal(0ul, reopened.OpenResult.Head.DurableThrough);
+  }
+
+  [Fact]
+  public async Task AManifestFromAnotherVersionSaysSoInsteadOfReadingAsCorruption()
+  {
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+    }
+
+    // Both slots restamped to a version this build does not write, each
+    // re-checksummed so the bytes are honest — the file is fine, the version
+    // is not.
+    var manifest = File.ReadAllBytes(ManifestPath);
+
+    for (var slot = 0; slot < 2; slot++)
+    {
+      var span = manifest.AsSpan(slot * ManifestSlotSize, ManifestSlotSize);
+      span[4] = 1;
+      SHA256.HashData(span[..ManifestSlotContentSize], span[ManifestSlotContentSize..]);
+    }
+
+    File.WriteAllBytes(ManifestPath, manifest);
+
+    var failure = await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
+
+    // "neither slot decodes" would send an operator hunting a disk fault during
+    // an incident that is really a deployment problem.
+    Assert.Contains("is version 1", failure.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("decodes", failure.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task TheCheckpointSweepCollectsOnlyThisSessionsOwnFiles()
+  {
+    await using (var first = await OpenAsync())
+    {
+      await first.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+
+      for (var n = 1; n <= 5; n++)
+      {
+        await first.AppendAsync(Candidate(OperationId(n), [(byte)n]));
+      }
+
+      await first.WriteCheckpointAsync(new CollabOperationCheckpoint(3, new byte[] { 0xc3 }));
+    }
+
+    var leftByTheFirstSession = Path.Combine(DocDirectory, "checkpoint.1.3.1");
+    Assert.True(File.Exists(leftByTheFirstSession));
+
+    await using var second = await OpenAsync();
+    await second.WriteCheckpointAsync(new CollabOperationCheckpoint(4, new byte[] { 0xc4 }));
+
+    // The sweep globs every fence, so an unscoped one would take the first
+    // session's file — a delete of another holder's checkpoint with no fence
+    // check in front of it.
+    Assert.True(File.Exists(leftByTheFirstSession));
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "checkpoint.1.4.2")));
+
+    await second.WriteCheckpointAsync(new CollabOperationCheckpoint(5, new byte[] { 0xc5 }));
+
+    // It does still collect its OWN superseded checkpoint.
+    Assert.False(File.Exists(Path.Combine(DocDirectory, "checkpoint.1.4.2")));
+    Assert.True(File.Exists(Path.Combine(DocDirectory, "checkpoint.1.5.2")));
+    Assert.True(File.Exists(leftByTheFirstSession));
   }
 
   [Fact]
@@ -503,7 +570,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     Assert.Equal(journalBefore, File.ReadAllBytes(JournalPath(1)));
     Assert.Equal(manifestBefore, File.ReadAllBytes(ManifestPath));
     Assert.Single(Directory.GetFiles(DocDirectory, "journal.*"));
-    Assert.Empty(Directory.GetFiles(DocDirectory, "baseline.2"));
+    Assert.Empty(Directory.GetFiles(DocDirectory, "baseline.2.*"));
   }
 
   [Fact]
@@ -786,7 +853,10 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
   /// <summary>
   /// Resolved by generation, because the rest of the name is the fence that
-  /// minted it — the thing that stops two holders writing one file.
+  /// minted it. NOT a naming assertion: .NET translates this glob so that
+  /// "journal.1.*" also matches a bare "journal.1", so it would resolve happily
+  /// against a store that had dropped the fence from the name. Assert exact
+  /// names where the naming is the thing under test.
   /// </summary>
   private string JournalPath(int generation)
   {

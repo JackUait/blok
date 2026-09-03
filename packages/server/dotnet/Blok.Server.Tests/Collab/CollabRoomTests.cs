@@ -1697,6 +1697,18 @@ public sealed class CollabRoomTests
     Assert.Equal(second, record.Update.ToArray());
     Assert.Equal(second, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
 
+    // Parked state is the ONLY condition under which the no-op skip does not
+    // fire, so it is the only condition under which a refused apply could
+    // reach the journal. Journalled bytes the engine cannot read are a poison
+    // pill: the next load hydrates them and throws.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame([0xde, 0xad, 0xbe, 0xef, 0x01])),
+        CancellationToken.None);
+
+    Assert.Single(operations.Committed(DocId));
+    Assert.Single(other.Received);
+    Assert.Empty(stock.Closes);
+
     // Still parked: the update was journalled for what it carries, not for
     // what it changed.
     Assert.Equal("hello", await ExportedTextAsync(manager));

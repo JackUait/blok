@@ -1245,7 +1245,7 @@ internal sealed class CollabRoom : IDisposable
 
     if (appended.Outcome == CollabOperationAppendOutcome.Conflict)
     {
-      // The id was settled as free before the apply and the append says
+      // The id was free as far as this room knew and the append says
       // otherwise. The document is already mutated by bytes that will never
       // be journalled.
       await FailCommitLocked(
@@ -1258,8 +1258,8 @@ internal sealed class CollabRoom : IDisposable
 
     if (appended.Outcome == CollabOperationAppendOutcome.Duplicate)
     {
-      // Safe — a duplicate is the same bytes by digest — but the id was
-      // settled as free before the apply, and nothing else would show that
+      // Safe — a duplicate is the same bytes by digest — but the id was free
+      // as far as this room knew, and nothing else would show that
       // contradiction to whoever has to debug it.
       log?.Invoke(
           $"collab: room \"{DocId}\" appended operation \"{operationId}\" as a duplicate");

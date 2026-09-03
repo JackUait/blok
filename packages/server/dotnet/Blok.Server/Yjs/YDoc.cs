@@ -252,8 +252,10 @@ internal sealed class YDoc
   }
 
   /// <summary>
-  /// How many distinct clocks the store has PARKED: waiting structs and
-  /// waiting deletions, both counted as a union.
+  /// How much the store has PARKED: the clocks covered by waiting structs,
+  /// plus the clocks covered by waiting deletions. Each half is a union, and
+  /// the two are ADDED — a clock parked as a struct and also named by a
+  /// parked deletion counts once on each side, deliberately.
   /// </summary>
   /// <remarks>
   /// <para>
@@ -305,6 +307,13 @@ internal sealed class YDoc
     return UnionLength(structs) + UnionLength(deletions);
   }
 
+  /// <summary>
+  /// Total clocks the ranges cover, overlaps counted once. MUTATES what it is
+  /// handed — <see cref="DeleteSet.SortAndMerge"/> runs in place — so it may
+  /// only ever be passed a scratch set. Handing it
+  /// <see cref="StructStore.PendingDs"/> would rewrite the document's parked
+  /// state from what reads as a measurement.
+  /// </summary>
   private static ulong UnionLength(DeleteSet ranges)
   {
     ranges.SortAndMerge();

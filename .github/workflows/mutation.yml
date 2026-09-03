@@ -4,11 +4,6 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
-    inputs:
-      full:
-        description: "Rebuild the whole baseline instead of measuring the diff (takes hours)"
-        type: boolean
-        default: false
 
 # Runs queue instead of cancelling one another. Two runs would race over the
 # survivor ledger, and a cancelled run's commits would never be measured at all.
@@ -25,7 +20,7 @@ jobs:
   mutation:
     name: Mutation
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,6 +41,7 @@ jobs:
       - name: Restore mutation state
         env:
           GH_TOKEN: ${{ github.token }}
+          BASELINE_TAG: mutation-baseline
         run: |
           run_id=$(gh run list --workflow mutation.yml --branch main \
             --status success --limit 1 --json databaseId -q '.[0].databaseId' || true)
@@ -53,21 +49,20 @@ jobs:
           if [ -n "$run_id" ] && gh run download "$run_id" \
             --name mutation-state --dir .mutation-state; then
             echo "Restored mutation state from run $run_id"
+          elif gh release download "$BASELINE_TAG" \
+            --pattern mutation-state.tar.gz --dir .; then
+            mkdir -p .mutation-state
+            tar -xzf mutation-state.tar.gz -C .mutation-state
+            echo "Restored mutation state from release $BASELINE_TAG"
           else
-            echo "No previous mutation state. Seed it locally with 'yarn mutate --full'."
+            echo "No mutation state anywhere. Build one with 'yarn mutate:seed'."
           fi
 
       - name: Run mutation testing
-        # TODO: drop continue-on-error once the ratchet has held for two weeks.
+        # TODO: drop continue-on-error once the baseline release exists and the
+        # ratchet has held for two weeks.
         continue-on-error: true
-        env:
-          FULL_SWEEP: ${{ inputs.full }}
-        run: |
-          if [ "$FULL_SWEEP" = "true" ]; then
-            yarn mutate --full
-          else
-            yarn mutate
-          fi
+        run: yarn mutate
 
       # Always: a broken ratchet still leaves a valid ledger, and losing it would
       # make the next run start from nothing.
@@ -76,6 +71,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mutation-state
-          path: .mutation-state/
+          # The HTML report weighs about as much as the ledger itself and
+          # nothing downstream reads it.
+          path: |
+            .mutation-state/
+            !.mutation-state/report.html
           if-no-files-found: warn
           retention-days: 90

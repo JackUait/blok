@@ -163,6 +163,7 @@
     "test:coverage": "vitest run --coverage --project=unit",
     "mutate": "node scripts/mutation-scope.mjs run",
     "mutate:plan": "node scripts/mutation-scope.mjs plan",
+    "mutate:seed": "node scripts/mutation-scope.mjs seed",
     "jscpd": "jscpd src/ test/",
     "jscpd:report": "jscpd . --reporters html,json --output .jscpd-report",
     "prepublishOnly": "yarn build",

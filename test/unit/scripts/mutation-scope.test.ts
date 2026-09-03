@@ -7,6 +7,7 @@ import {
   checkRatchet,
   collectSurvivors,
   resolveDiffBase,
+  splitByBudget,
   updateSurvivorAges,
 } from '../../../scripts/mutation-scope.mjs';
 
@@ -376,6 +377,44 @@ describe('mutation-scope', () => {
     });
   });
 
+  describe('splitByBudget', () => {
+    const weights: Record<string, number> = {
+      'src/a.ts': 10,
+      'src/b.ts': 20,
+      'src/c.ts': 30,
+    };
+    const weightOf = (file: string): number => weights[file];
+
+    it('measures every file when the whole list fits in one run', () => {
+      expect(splitByBudget({ files: ['src/a.ts', 'src/b.ts'], weightOf, budget: 100 })).toEqual({
+        batch: ['src/a.ts', 'src/b.ts'],
+        pending: [],
+      });
+    });
+
+    // Carrying the rest forward is what keeps a big push from timing out and
+    // leaving the recorded commit behind, which makes the next range bigger yet.
+    it('leaves what does not fit for the next run', () => {
+      expect(splitByBudget({
+        files: ['src/a.ts', 'src/b.ts', 'src/c.ts'],
+        weightOf,
+        budget: 35,
+      })).toEqual({
+        batch: ['src/a.ts', 'src/b.ts'],
+        pending: ['src/c.ts'],
+      });
+    });
+
+    // A file heavier than the entire budget would otherwise never be measured
+    // and would block everything queued behind it.
+    it('takes one oversized file rather than measuring nothing', () => {
+      expect(splitByBudget({ files: ['src/c.ts', 'src/a.ts'], weightOf, budget: 5 })).toEqual({
+        batch: ['src/c.ts'],
+        pending: ['src/a.ts'],
+      });
+    });
+  });
+
   describe('checkRatchet', () => {
     it('passes when the survivor count holds steady', () => {
       expect(checkRatchet({ previousTotal: 12, currentTotal: 12 })).toEqual({
@@ -395,6 +434,15 @@ describe('mutation-scope', () => {
       expect(checkRatchet({ previousTotal: 12, currentTotal: 14 })).toEqual({
         ok: false,
         delta: 2,
+      });
+    });
+
+    // Seeding walks the repository a batch at a time, and every batch adds
+    // files the ledger has never seen. Growth there is the job, not a regression.
+    it('holds its fire while the baseline is still being seeded', () => {
+      expect(checkRatchet({ previousTotal: 12, currentTotal: 400, seeding: true })).toEqual({
+        ok: true,
+        delta: 388,
       });
     });
 

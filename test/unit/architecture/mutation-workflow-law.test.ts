@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 type Step = { name?: string; with?: Record<string, unknown>; run?: string };
 
 type Workflow = {
+  on?: { workflow_dispatch?: { inputs?: Record<string, unknown> } };
   concurrency?: { group?: string; 'cancel-in-progress'?: boolean };
   jobs: Record<string, { steps?: Step[]; 'timeout-minutes'?: number }>;
 };
@@ -36,6 +37,36 @@ describe('mutation workflow', () => {
     const checkout = steps.find((step) => step.name === 'Checkout code');
 
     expect(checkout?.with?.['fetch-depth']).toBe(0);
+  });
+
+  // The artifact expires after ninety days and a quiet period on main is enough
+  // to lose it. The release asset is the floor the chain always falls back to,
+  // and without it a lost artifact costs another hand-built baseline.
+  it('falls back to the release asset when the artifact is gone', () => {
+    const restore = steps.find((step) => step.name === 'Restore mutation state');
+
+    expect(restore?.run).toContain('gh run download');
+    expect(restore?.run).toContain('gh release download');
+  });
+
+  // The HTML report is about a kilobyte per mutant, same as the ledger itself,
+  // and nothing downstream reads it. Uploading it doubles the artifact.
+  it('keeps the HTML report out of the uploaded ledger', () => {
+    const upload = steps.find((step) => step.name === 'Upload mutation state');
+
+    expect(String(upload?.with?.path)).toContain('!.mutation-state/report.html');
+  });
+
+  // A full sweep is hours of work and cannot finish inside any job timeout we
+  // would accept. Offering the button only invites a run that dies at the cap.
+  it('offers no full sweep it could not finish', () => {
+    expect(workflow.on?.workflow_dispatch?.inputs ?? {}).not.toHaveProperty('full');
+  });
+
+  // One budgeted batch is about ten minutes of mutants on top of install and
+  // the dry run. Cutting it finer would park work every single run.
+  it('leaves room for a budgeted batch to finish', () => {
+    expect(workflow.jobs.mutation['timeout-minutes']).toBeGreaterThanOrEqual(60);
   });
 
   // A broken ratchet still leaves a valid ledger. Dropping it would make the

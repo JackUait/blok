@@ -5,10 +5,13 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
+// Source bytes per run. The first four measured files came to ~60 bytes per
+// mutant at ~0.6 s each, so this is roughly a thousand mutants, ten minutes.
+const DEFAULT_BUDGET = 60000;
 const SOURCE_PREFIX = 'src/';
 const TEST_PREFIX = 'test/unit/';
 const TEST_SUFFIX = /\.test\.tsx?$/;
@@ -156,6 +159,31 @@ export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false })
 };
 
 /**
+ * Splits a list of files into what this run measures and what waits for the
+ * next one. Weight stands in for mutant count, and source bytes track it
+ * closely enough: the first four measured files came to ~60 bytes per mutant.
+ * A file heavier than the whole budget still goes in alone, or it would sit in
+ * the queue for ever and hold up everything behind it.
+ */
+export const splitByBudget = ({ files, weightOf, budget }) => {
+  const batch = [];
+  let spent = 0;
+
+  for (const file of files) {
+    const weight = weightOf(file);
+
+    if (batch.length > 0 && spent + weight > budget) {
+      break;
+    }
+
+    batch.push(file);
+    spent += weight;
+  }
+
+  return { batch, pending: files.slice(batch.length) };
+};
+
+/**
  * Reads the survivors out of a Stryker JSON report. Uncovered mutants count as
  * survivors: a branch no test enters is the same gap as one no test asserts on.
  */
@@ -210,14 +238,16 @@ export const updateSurvivorAges = ({ previousAges, survivors, sha, timestamp }) 
  * The gate. Absolute scores would be red from the first day, so the rule is that
  * the survivor count may not grow. Fixing old ones lowers the bar for good.
  */
-export const checkRatchet = ({ previousTotal, currentTotal }) => {
+export const checkRatchet = ({ previousTotal, currentTotal, seeding = false }) => {
   if (previousTotal === null || previousTotal === undefined) {
     return { ok: true, delta: 0 };
   }
 
   const delta = currentTotal - previousTotal;
 
-  return { ok: delta <= 0, delta };
+  // Seeding walks the repository a batch at a time, so every batch brings files
+  // the ledger has never seen. Growth there is the work, not a regression.
+  return { ok: seeding || delta <= 0, delta };
 };
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -242,27 +272,83 @@ const isReachable = (sha) => {
   }
 };
 
-const plan = (stateDir) => {
-  const state = readJson(join(stateDir, 'state.json'), {});
-  const base = resolveDiffBase(state, isReachable);
+const trackedFiles = () => {
   const tracked = gitLines('ls-files');
-  const sourceFiles = tracked.filter(
-    (path) => path.startsWith(SOURCE_PREFIX) && SOURCE_SUFFIX.test(path) && !path.endsWith('.d.ts'),
-  );
-  const testFiles = tracked.filter((path) => TEST_SUFFIX.test(path));
 
-  if (base.mode === 'full') {
-    return { ...base, mutate: sourceFiles, testFiles, skipped: [] };
-  }
-
-  return { ...base, ...buildScope({
-    changedPaths: gitLines('diff', '--name-only', base.from, 'HEAD'),
-    sourceFiles,
-    testFiles,
-  }) };
+  return {
+    sourceFiles: tracked.filter(
+      (path) => path.startsWith(SOURCE_PREFIX) && SOURCE_SUFFIX.test(path) && !path.endsWith('.d.ts'),
+    ),
+    testFiles: tracked.filter((path) => TEST_SUFFIX.test(path)),
+  };
 };
 
-const record = (stateDir, reportPath) => {
+const sizeOf = (path) => {
+  try {
+    return statSync(path).size;
+  } catch {
+    return 0;
+  }
+};
+
+const plan = (stateDir, budget) => {
+  const state = readJson(join(stateDir, 'state.json'), {});
+  const base = resolveDiffBase(state, isReachable);
+  const { sourceFiles, testFiles } = trackedFiles();
+
+  if (base.mode === 'full') {
+    return { ...base, mutate: sourceFiles, testFiles, skipped: [], pending: [] };
+  }
+
+  // Files parked by an earlier run join this run's diff. Both are plain source
+  // paths, so buildScope pairs them the same way and drops any that went away.
+  const queued = Array.isArray(state.pending) ? state.pending : [];
+  const wanted = buildScope({
+    changedPaths: [...gitLines('diff', '--name-only', base.from, 'HEAD'), ...queued],
+    sourceFiles,
+    testFiles,
+  });
+  const { batch, pending } = splitByBudget({ files: wanted.mutate, weightOf: sizeOf, budget });
+
+  return {
+    ...base,
+    ...buildScope({ changedPaths: batch, sourceFiles, testFiles }),
+    skipped: wanted.skipped,
+    pending,
+  };
+};
+
+/**
+ * Parks every source the pairing rule can measure, so the baseline can be built
+ * one budgeted batch at a time instead of as one sweep that a sleeping laptop
+ * would lose.
+ */
+const seed = (stateDir) => {
+  const { sourceFiles, testFiles } = trackedFiles();
+  const { mutate, skipped } = buildScope({
+    changedPaths: sourceFiles,
+    sourceFiles,
+    testFiles,
+  });
+  const state = readJson(join(stateDir, 'state.json'), {});
+
+  mkdirSync(stateDir, { recursive: true });
+  writeFileSync(
+    join(stateDir, 'state.json'),
+    `${JSON.stringify({
+      lastCheckedSha: git('rev-parse', 'HEAD'),
+      survivorTotal: state.survivorTotal ?? null,
+      pending: mutate,
+    }, null, 2)}\n`,
+  );
+
+  process.stdout.write(
+    `Parked ${mutate.length} of ${sourceFiles.length} source file(s); ` +
+    `${skipped.length} cannot be paired with a test.\n`,
+  );
+};
+
+const record = (stateDir, reportPath, pending) => {
   const state = readJson(join(stateDir, 'state.json'), {});
   const previousAges = readJson(join(stateDir, 'ages.json'), {});
   const report = readJson(reportPath, null);
@@ -273,9 +359,14 @@ const record = (stateDir, reportPath) => {
 
   const survivors = collectSurvivors(report);
   const sha = git('rev-parse', 'HEAD');
+  // A run that parked files measured only part of its scope, so growth here
+  // cannot be read as a regression. The cost is that a real one hides until the
+  // queue drains, which is why the budget should stay big enough that ordinary
+  // pushes never park anything.
   const ratchet = checkRatchet({
     previousTotal: state.survivorTotal ?? null,
     currentTotal: survivors.length,
+    seeding: pending.length > 0,
   });
 
   const ages = updateSurvivorAges({
@@ -289,13 +380,17 @@ const record = (stateDir, reportPath) => {
   writeFileSync(join(stateDir, 'ages.json'), `${JSON.stringify(ages, null, 2)}\n`);
   writeFileSync(
     join(stateDir, 'state.json'),
-    `${JSON.stringify({ lastCheckedSha: sha, survivorTotal: survivors.length }, null, 2)}\n`,
+    `${JSON.stringify({
+      lastCheckedSha: sha,
+      survivorTotal: survivors.length,
+      pending,
+    }, null, 2)}\n`,
   );
 
-  return { survivors, ages, ratchet };
+  return { survivors, ages, ratchet, pending };
 };
 
-const summarise = ({ survivors, ages, ratchet }) => {
+const summarise = ({ survivors, ages, ratchet, pending }) => {
   const oldest = survivors
     .map((survivor) => ({ ...survivor, ...ages[survivor.key] }))
     .sort((a, b) => a.firstSeenAt.localeCompare(b.firstSeenAt))
@@ -304,6 +399,10 @@ const summarise = ({ survivors, ages, ratchet }) => {
   process.stdout.write(
     `Survivors: ${survivors.length} (${ratchet.delta >= 0 ? '+' : ''}${ratchet.delta})\n`,
   );
+
+  if (pending.length > 0) {
+    process.stdout.write(`${pending.length} file(s) parked for the next run.\n`);
+  }
 
   for (const survivor of oldest) {
     process.stdout.write(
@@ -320,8 +419,8 @@ const summarise = ({ survivors, ages, ratchet }) => {
  * already landed, so the run is an alarm, and re-baselining keeps it from
  * staying red forever.
  */
-const run = (stateDir, allowFull) => {
-  const scope = plan(stateDir);
+const run = (stateDir, allowFull, budget) => {
+  const scope = plan(stateDir, budget);
   const args = buildStrykerArgs({ ...scope, allowFull });
 
   process.stdout.write(
@@ -344,7 +443,7 @@ const run = (stateDir, allowFull) => {
     stdio: 'inherit',
   });
 
-  const result = record(stateDir, join(stateDir, 'report.json'));
+  const result = record(stateDir, join(stateDir, 'report.json'), scope.pending);
 
   summarise(result);
 
@@ -356,22 +455,30 @@ const run = (stateDir, allowFull) => {
 const main = () => {
   const args = process.argv.slice(2);
   const allowFull = args.includes('--full');
-  const [command, ...rest] = args.filter((arg) => arg !== '--full');
+  const budgetArg = args.find((arg) => arg.startsWith('--budget='));
+  const budget = budgetArg === undefined ? DEFAULT_BUDGET : Number(budgetArg.slice(9));
+  const [command, ...rest] = args.filter((arg) => !arg.startsWith('--'));
   const stateDir = rest[0] ?? '.mutation-state';
 
   if (command === 'run') {
-    run(stateDir, allowFull);
+    run(stateDir, allowFull, budget);
 
     return;
   }
 
   if (command === 'plan') {
-    process.stdout.write(`${JSON.stringify(plan(stateDir), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(plan(stateDir, budget), null, 2)}\n`);
 
     return;
   }
 
-  throw new Error('Usage: node scripts/mutation-scope.mjs <run|plan> [stateDir]');
+  if (command === 'seed') {
+    seed(stateDir);
+
+    return;
+  }
+
+  throw new Error('Usage: node scripts/mutation-scope.mjs <run|plan|seed> [stateDir] [--budget=N]');
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

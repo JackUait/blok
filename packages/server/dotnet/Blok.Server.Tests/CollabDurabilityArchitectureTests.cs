@@ -42,6 +42,19 @@ public sealed class CollabDurabilityArchitectureTests
   ];
 
   /// <summary>
+  /// Publication orders: each method must call these in this order. The flush
+  /// law checks a method's BODY, which cannot see whether anyone calls it —
+  /// deleting a <c>SyncDirectory</c> call site was green across every law and
+  /// every test, and a missing directory fsync is invisible without real power
+  /// loss, which is the exact failure those laws exist to catch.
+  /// </summary>
+  private static readonly (string Method, string[] InOrder)[] PublicationOrders =
+  [
+    ("WriteCheckpointAsync", ["WriteSealed", "SyncDirectory", "Republish"]),
+    ("ResetAsync", ["WriteSealed", "SyncDirectory", "Republish"]),
+  ];
+
+  /// <summary>
   /// Every method allowed to SHORTEN a file, and whether its truncation must be
   /// fence-guarded.
   /// </summary>
@@ -62,6 +75,12 @@ public sealed class CollabDurabilityArchitectureTests
       "Only ever GROWS, and only a manifest that is short of its two slots: " +
       "the call sits behind a length comparison, and a manifest has no " +
       "committed history in it to lose."),
+    (
+      "TryDelete",
+      false,
+      "The only File.Delete in the store, and its one caller sweeps only names " +
+      "ending in its own fence, so a session can collect nothing but its own " +
+      "superseded checkpoints."),
     (
       "WriteSealed",
       false,
@@ -116,6 +135,78 @@ public sealed class CollabDurabilityArchitectureTests
         violations.Count == 0,
         $"{StorePath} stopped checking its directory sync.\n" +
         string.Join("\n", violations));
+  }
+
+  [Fact]
+  public void EveryPublicationCallsItsDurableStepsInOrder()
+  {
+    var source = ReadStore();
+    var violations = PublicationOrders
+        .SelectMany(order => FindOrderViolations(source, order.Method, order.InOrder))
+        .ToList();
+
+    Assert.True(
+        violations.Count == 0,
+        $"{StorePath} no longer performs a publication's durable steps, or " +
+        "performs them out of order. A publication that names a file whose " +
+        "directory entry was never synced is an acknowledgement of something a " +
+        "power cut discards.\n" + string.Join("\n", violations));
+  }
+
+  [Fact]
+  public void DetectsAMissingDurableStep()
+  {
+    var violation = Assert.Single(FindOrderViolations(
+        """
+        class Session
+        {
+          void ResetAsync()
+          {
+            WriteSealed(path, magic, 0, bytes);
+            Republish(next);
+          }
+        }
+        """,
+        "ResetAsync",
+        ["WriteSealed", "SyncDirectory", "Republish"]));
+
+    Assert.Contains("SyncDirectory", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void DetectsDurableStepsOutOfOrder()
+  {
+    Assert.Single(FindOrderViolations(
+        """
+        class Session
+        {
+          void ResetAsync()
+          {
+            WriteSealed(path, magic, 0, bytes);
+            Republish(next);
+            SyncDirectory(docDirectory);
+          }
+        }
+        """,
+        "ResetAsync",
+        ["WriteSealed", "SyncDirectory", "Republish"]));
+  }
+
+  [Fact]
+  public void DetectsADeleteInAMethodThatMayNotDestroyData()
+  {
+    var violation = Assert.Single(FindTruncationViolations(
+        """
+        class Session
+        {
+          void WriteCheckpointAsync()
+          {
+            File.Delete(stale);
+          }
+        }
+        """));
+
+    Assert.Contains("WriteCheckpointAsync", violation, StringComparison.Ordinal);
   }
 
   [Fact]
@@ -470,13 +561,15 @@ public sealed class CollabDurabilityArchitectureTests
     var violations = new List<string>();
     var root = Parse(source);
 
-    // SetLength is not the only way to shorten a file: FileMode.Create and
+    // SetLength is not the only way to destroy data: FileMode.Create and
     // FileMode.Truncate discard whatever the name already held, which is how
-    // WriteSealed replaces a baseline.
+    // WriteSealed replaces a baseline, and File.Delete takes the whole file.
     var shortenings = root.DescendantNodes()
         .OfType<InvocationExpressionSyntax>()
-        .Where(invocation => NameOf(invocation) == "SetLength")
-        .Select(invocation => (Node: (SyntaxNode)invocation, Truncates: true))
+        .Where(invocation => NameOf(invocation) is "SetLength" or "Delete")
+        .Select(invocation => (
+            Node: (SyntaxNode)invocation,
+            Truncates: NameOf(invocation) == "SetLength"))
         .Concat(root.DescendantNodes()
             .OfType<MemberAccessExpressionSyntax>()
             .Where(access =>
@@ -522,6 +615,47 @@ public sealed class CollabDurabilityArchitectureTests
             $"{name} must confirm the fence in the same block, before its " +
             "SetLength.");
       }
+    }
+
+    return violations;
+  }
+
+  private static List<string> FindOrderViolations(
+      string source,
+      string method,
+      string[] inOrder)
+  {
+    var violations = new List<string>();
+    var methods = Methods(source, method);
+
+    if (methods.Count != 1)
+    {
+      violations.Add(
+          $"there is no single {method} to check ({methods.Count} found).");
+
+      return violations;
+    }
+
+    var calls = methods[0].DescendantNodes()
+        .OfType<InvocationExpressionSyntax>()
+        .ToList();
+    var previous = -1;
+
+    foreach (var step in inOrder)
+    {
+      var call = calls.FirstOrDefault(candidate =>
+          NameOf(candidate) == step && candidate.SpanStart > previous);
+
+      if (call is null)
+      {
+        violations.Add(
+            $"{method} must call {string.Join(" then ", inOrder)}; " +
+            $"{step} is missing or out of order.");
+
+        return violations;
+      }
+
+      previous = call.SpanStart;
     }
 
     return violations;

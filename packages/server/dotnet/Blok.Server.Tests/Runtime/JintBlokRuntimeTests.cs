@@ -121,19 +121,31 @@ public sealed class JintBlokRuntimeTests
         async () => await runtime.InvokeAsync("blocksToMarkdown", "{}"));
   }
 
+  /// <summary>
+  /// The protection that matters is that the process survives: a .NET
+  /// StackOverflowException cannot be caught and takes the host with it. The
+  /// stack guard converts it into an ordinary JavaScript error, which means the
+  /// engine is still usable afterwards — so the pool must NOT treat it as
+  /// poison, and the second call here is what proves the slot was not lost.
+  /// </summary>
   [Fact]
-  public async Task ThrowsACatchableExceptionOnDeepRecursion()
+  public async Task SurvivesRunawayRecursionAndKeepsServing()
   {
     const string script = """
-      globalThis.blokServerInvoke = function () {
-        const recurse = (depth) => depth === 0 ? 0 : recurse(depth - 1);
-        return String(recurse(10000));
+      globalThis.blokServerInvoke = function (operation) {
+        if (operation === 'runaway') {
+          const recurse = (depth) => depth === 0 ? 0 : recurse(depth - 1) + 1;
+          return String(recurse(1000000));
+        }
+        return 'ok';
       };
       """;
     var runtime = new JintBlokRuntime(script, poolSize: 1);
 
     await Assert.ThrowsAnyAsync<Exception>(
-        async () => await runtime.InvokeAsync("blocksToMarkdown", "{}"));
+        async () => await runtime.InvokeAsync("runaway", "{}"));
+
+    Assert.Equal("ok", await runtime.InvokeAsync("blocksToMarkdown", "{}"));
   }
 
   [Fact]
@@ -161,19 +173,21 @@ public sealed class JintBlokRuntimeTests
 
   /// <summary>
   /// A long article has to convert under the engine's own memory limit. Joining
-  /// the finished segments by repeated concatenation allocates the whole
-  /// document again for every block, which is quadratic: a document of a few
-  /// hundred kilobytes allocates tens of megabytes and trips the limit, so the
-  /// conversion fails outright rather than merely running slowly.
+  /// the finished segments by repeated concatenation allocated the whole
+  /// document again for every block, which is quadratic: 250 KB already
+  /// allocated past 64 MB and the conversion failed outright rather than merely
+  /// running slowly. Sized at 600 KB deliberately — well past where the old
+  /// shape died — so the limit is proven to scale with the document rather than
+  /// merely to have been nudged.
   /// </summary>
   [Theory]
   [InlineData("blocksToPlainText")]
   [InlineData("blocksToMarkdown")]
   public async Task ConvertsALongArticleWithoutExhaustingTheMemoryLimit(string operation)
   {
-    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(2));
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(5));
     var paragraph = string.Join(' ', Enumerable.Repeat("слово", 30));
-    var blocks = Enumerable.Range(0, 1200).Select(index => new
+    var blocks = Enumerable.Range(0, 3600).Select(index => new
     {
       id = $"b{index}",
       type = "paragraph",
@@ -181,11 +195,38 @@ public sealed class JintBlokRuntimeTests
     });
     var input = JsonSerializer.Serialize(new { blocks });
 
-    Assert.True(input.Length > 200_000, $"the document has to be long enough to matter: {input.Length}");
+    Assert.True(input.Length > 600_000, $"the document has to be long enough to matter: {input.Length}");
 
     var output = await runtime.InvokeAsync(operation, input);
 
     Assert.Contains(paragraph, output, StringComparison.Ordinal);
+  }
+
+  /// <summary>
+  /// A deeply indented outline has to convert. The readers recurse once per
+  /// nesting level, and a frame COUNT on one function definition cannot tell an
+  /// ordinary nested list from a runaway recursion — it stops both. The
+  /// protection that matters is that the process survives, and that is a
+  /// property of the native stack, not of a frame count.
+  /// </summary>
+  [Theory]
+  [InlineData("blocksToPlainText")]
+  [InlineData("blocksToMarkdown")]
+  public async Task ConvertsADeeplyNestedOutline(string operation)
+  {
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(2));
+    var blocks = Enumerable.Range(0, 120).Select(depth => new
+    {
+      id = $"n{depth}",
+      parent = depth == 0 ? null : $"n{depth - 1}",
+      type = "list",
+      data = new { style = "unordered", text = $"level {depth}" },
+    });
+    var input = JsonSerializer.Serialize(new { blocks });
+
+    var output = await runtime.InvokeAsync(operation, input);
+
+    Assert.Contains("level 119", output, StringComparison.Ordinal);
   }
 
   private static JsonElement FirstBlock(string output)

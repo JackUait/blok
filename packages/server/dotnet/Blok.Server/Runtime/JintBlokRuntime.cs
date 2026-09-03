@@ -71,9 +71,13 @@ internal sealed class JintBlokRuntime : IBlokRuntime
           operation,
           inputJson)).AsString();
     }
+    /**
+     * Only what leaves an engine mid-execution is poison. Runaway recursion is
+     * deliberately absent: the stack guard turns it into an ordinary JavaScript
+     * error, so the engine finished normally and goes straight back in the pool.
+     */
     catch (Exception exception) when (exception is OperationCanceledException
         or TimeoutException
-        or RecursionDepthOverflowException
         or MemoryLimitExceededException)
     {
       reusable = false;
@@ -110,14 +114,22 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     return result;
   }
 
-  // The recursion limit has to trip before the CLR stack runs out: a .NET
-  // StackOverflowException cannot be caught and kills the whole process.
+  /**
+   * `StackOverflowGuard` rather than a recursion limit, for the same reason the
+   * limit was there: an uncatchable .NET StackOverflowException kills the whole
+   * process. The guard measures the remaining native stack instead of counting
+   * one function definition's frames, so it keeps that protection while letting
+   * an ordinary deeply indented outline through — the readers recurse once per
+   * nesting level, and a frame count cannot tell those two apart.
+   */
   private Engine CreateEngine()
   {
-    return new Engine(options => options
-        .TimeoutInterval(timeout)
-        .LimitRecursion(64)
-        .LimitMemory(64 * 1024 * 1024))
+    return new Engine(options =>
+      {
+        options.TimeoutInterval(timeout);
+        options.LimitMemory(64 * 1024 * 1024);
+        options.Constraints.StackOverflowGuard = true;
+      })
       .Execute(script);
   }
 }

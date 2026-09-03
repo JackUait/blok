@@ -1443,11 +1443,6 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// Frame 102 is a v2 frame. A member that negotiated v1 gets no answer to
-  /// one — an acknowledgement or a rejection is a frame its client cannot
-  /// parse, and a stock provider ends the session on those.
-  /// </summary>
-  /// <summary>
   /// The refusal happens before a room exists. Refusing from inside one would
   /// leave the room the reset itself constructed registered forever: nothing
   /// forgets it, and a room that never turned Ready arms no eviction timer.
@@ -1466,6 +1461,80 @@ public sealed class CollabRoomTests
     Assert.Equal(0, endpoint.Loads);
   }
 
+  /// <summary>
+  /// Depth for the manager's check: the room is what would perform the reset,
+  /// and one new caller reaching it would close every client with 4409 while
+  /// the journal the next room loads keeps its lineage.
+  /// </summary>
+  [Fact]
+  public async Task TheRoomItselfRefusesAResetOnAJournalBackedDocument()
+  {
+    endpoint.Holds(DocId, "hello");
+    using var room = new CollabRoom(
+        DocId,
+        store,
+        endpoint,
+        converter,
+        new CollabRoomOptions(),
+        time,
+        log.Add,
+        operations);
+
+    await Assert.ThrowsAsync<CollabResetUnavailableException>(
+        async () => await room.ResetAsync(CancellationToken.None));
+
+    Assert.Equal(0, store.Resets);
+    Assert.Equal(0, store.Reads);
+  }
+
+  /// <summary>
+  /// DisposeAsync carries no token, so nothing ends the wait if a store hangs
+  /// there — and it runs on the failure path with the lane held, which the
+  /// drain waits on with no token of its own. The bound abandons the session
+  /// instead: the fence stays held until its liveness signal lapses, so the
+  /// document is briefly unavailable rather than permanently wedged.
+  /// </summary>
+  [Fact]
+  public async Task ASessionThatHangsInDisposeDoesNotWedgeTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(
+        new CollabRoomOptions { CommitTimeout = TimeSpan.FromSeconds(5) });
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeDispose = () =>
+    {
+      entered.TrySetResult();
+
+      return never.Task;
+    };
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    var receive = membership
+        .ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    time.Advance(TimeSpan.FromSeconds(5));
+    await receive.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal(0, manager.LiveRoomCount);
+
+    // The trade the bound makes, stated as an assertion: the abandoned session
+    // still holds the fence.
+    var reopened = await operations.OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.DocumentOpenElsewhere, reopened.Outcome);
+  }
+
+  /// <summary>
+  /// Frame 102 is a v2 frame. A member that negotiated v1 gets no answer to
+  /// one — an acknowledgement or a rejection is a frame its client cannot
+  /// parse, and a stock provider ends the session on those.
+  /// </summary>
   [Fact]
   public async Task AnOperationFrameFromAV1MemberIsDroppedWithoutJournalling()
   {

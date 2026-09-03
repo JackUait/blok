@@ -40,11 +40,12 @@ internal sealed class CollabRoomOptions
 
   /// <summary>
   /// How long the room waits for ONE operation-store call on the commit path —
-  /// the id lookup, and the append — before it stops waiting. Both run with
-  /// the room's lane held, so an unbounded wait wedges that document. When it
-  /// ends an append, the outcome is UNKNOWN (the write may still land), so it
-  /// is a commit failure rather than a refusal of the operation. It does not
-  /// bound the load path.
+  /// the id lookup, the append, and the session disposal that follows a
+  /// failure. Each runs with the room's lane held, so an unbounded wait wedges
+  /// that document. When it ends an append, the outcome is UNKNOWN (the write
+  /// may still land), so it is a commit failure rather than a refusal of the
+  /// operation. It bounds nothing outside that path: the load and reset paths
+  /// still run their store and endpoint calls on the room's lifetime alone.
   /// </summary>
   public TimeSpan CommitTimeout { get; init; } = TimeSpan.FromSeconds(10);
 

@@ -802,6 +802,13 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
   /// </summary>
   internal Func<Task>? BeforeLookup { get; set; }
 
+  /// <summary>
+  /// Awaited inside DisposeAsync. Deliberately token-free, because
+  /// IAsyncDisposable is: the caller has no token to hand it, which is what
+  /// makes an unbounded dispose a lane wedge.
+  /// </summary>
+  internal Func<Task>? BeforeDispose { get; set; }
+
   /// <summary>Documents opened, so a test can see what a rejoin did NOT re-read.</summary>
   internal int Opens => Volatile.Read(ref opens);
 
@@ -1065,11 +1072,18 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
       if (!disposed)
       {
         disposed = true;
+
+        var pause = store.BeforeDispose;
+
+        if (pause is not null)
+        {
+          await pause();
+        }
 
         lock (store.guard)
         {
@@ -1083,8 +1097,6 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
           }
         }
       }
-
-      return ValueTask.CompletedTask;
     }
 
     private static CollabOperationRecord? Committed(

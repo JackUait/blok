@@ -370,9 +370,10 @@ internal sealed class CollabRoom : IDisposable
 
   /// <summary>
   /// Null when the room has already closed — the caller should retry on a
-  /// fresh room. This resets the WORKING SET; an operation-store room never
-  /// gets here, because the manager refuses the reset before it builds a room
-  /// (see <see cref="CollabResetUnavailableException"/>).
+  /// fresh room. This resets the WORKING SET, so an operation-store room
+  /// refuses instead (see <see cref="CollabResetUnavailableException"/>); the
+  /// manager refuses ahead of it, which is what keeps the room it would have
+  /// built from being stranded.
   /// </summary>
   internal Task<CollabWorkingSetTag?> ResetAsync(CancellationToken cancellationToken)
   {
@@ -382,6 +383,16 @@ internal sealed class CollabRoom : IDisposable
           if (state == RoomState.Closed)
           {
             return null;
+          }
+
+          // Depth, not duplication. The manager refuses first and MUST, or the
+          // room it built to get here is stranded; but the reset below is what
+          // would actually run, and it closes every client with 4409 — read as
+          // "relineage, discard your pending work" — while the journal that
+          // the next room loads keeps its lineage and its content.
+          if (operationStore is not null)
+          {
+            throw new CollabResetUnavailableException(DocId);
           }
 
           var current = tag;
@@ -1175,11 +1186,11 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      // Its own budget, like the lookup's: no store call ON THIS PATH may
-      // outlast CommitTimeout. The load path's calls are still unbounded. By
-      // OUR token, which is the only cancellation the seam permits us to
-      // cause; the lane is held for the whole wait, so a slow store
-      // backpressures this document.
+      // Its own budget, like the lookup's and like the session disposal in
+      // CloseRoomLocked: every store call the commit path makes is bounded by
+      // CommitTimeout. The LOAD path's are not. By OUR token, which is the
+      // only cancellation the seam permits us to cause; the lane is held for
+      // the whole wait, so a slow store backpressures this document.
       using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
       using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
           lifetime.Token,
@@ -1608,6 +1619,14 @@ internal sealed class CollabRoom : IDisposable
   /// locked to a process that has stopped serving it. Disposed first, and
   /// never while one of its calls is in flight — every caller here has awaited
   /// its own, the failure path included.
+  ///
+  /// The wait is bounded because <see cref="IAsyncDisposable"/> carries no
+  /// token, so not even the room's lifetime ends it, and this runs with the
+  /// lane held — which <see cref="DrainAsync"/> waits on with no token of its
+  /// own. Past the bound the session is ABANDONED rather than waited out: it
+  /// keeps the fence until its liveness signal lapses, so a fresh room sees
+  /// DocumentOpenElsewhere for a bounded time and then recovers, which beats
+  /// never recovering.
   /// </summary>
   private async Task CloseRoomLocked(CollabCloseReason? reason)
   {
@@ -1617,7 +1636,7 @@ internal sealed class CollabRoom : IDisposable
 
       try
       {
-        await closing.DisposeAsync();
+        await closing.DisposeAsync().AsTask().WaitAsync(options.CommitTimeout, timeProvider);
       }
       catch (Exception error)
       {

@@ -129,6 +129,25 @@ describe('blocksToPlainText', () => {
     expect(text).toBe('More\n\nHidden');
   });
 
+  /**
+   * A container carries no text of its own, so its children are the whole of
+   * it. A consumer's hand-written extractor missed this by looking for a
+   * `columns` block that Blok has never saved, and every word written in a
+   * column was invisible to its search index.
+   */
+  it('reads text out of a column list through its children', () => {
+    const text = blocksToPlainText(doc([
+      { id: 'cl', type: 'column_list', data: {} },
+      { id: 'c1', type: 'column', parent: 'cl', data: {} },
+      { id: 'p1', type: 'paragraph', parent: 'c1', data: { text: 'Left' } },
+      { id: 'c2', type: 'column', parent: 'cl', data: {} },
+      { id: 'p2', type: 'paragraph', parent: 'c2', data: { text: 'Right' } },
+    ]));
+
+    expect(text).toContain('Left');
+    expect(text).toContain('Right');
+  });
+
   it('tolerates loose input', () => {
     expect(blocksToPlainText(null)).toBe('');
     expect(blocksToPlainText({} as unknown as OutputData)).toBe('');

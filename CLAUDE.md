@@ -66,6 +66,8 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 Before declaring done: run quality gates (`yarn lint`, `yarn test`), push, clean up local state, and hand off context. Run the checklist above.
 
+Scope note: lint and test only the files you changed while iterating. The full-project `yarn lint` and `yarn test` are the FINAL gate before done, and they are not optional here — the scoped run has blind spots.
+
 ## Breaking Changes
 
 Blok is a published library. A change that alters a public surface lands on real consumers, and the user decides the version bump and the release notes.
@@ -114,51 +116,20 @@ Before designing any new feature, ask: **"Is this a block?"** If it represents c
 
 ## Commands
 
-```bash
-# Core
-yarn serve          # Dev playground + collaboration backend (--no-server for the playground alone)
-yarn build          # Production build
-yarn build:test     # Test build for E2E
-yarn lint           # ESLint + TypeScript
-yarn test           # Unit tests (Vitest)
-yarn e2e            # E2E tests (Playwright)
-yarn storybook      # Storybook
+Scripts live in `package.json`. Two things it does not tell you:
 
-# Docs (React documentation site)
-yarn serve:docs     # Docs dev server
-yarn serve:docs:prod # Serve production docs build
-```
-
-Single test: `yarn test [file]`, `yarn test -t "pattern"`, or `yarn e2e [file] -g "pattern"`
+- `yarn serve` starts the collaboration backend alongside the playground. Pass `--no-server` for the playground alone.
+- Single test: `yarn test [file]`, `yarn test -t "pattern"`, or `yarn e2e [file] -g "pattern"`
 
 ## Releasing
 
-```bash
-yarn release 1.0.0                # stable release
-yarn release 1.0.0-beta.1         # beta release (auto-detected from version)
-```
-
-See `scripts/release.mjs` for the full workflow. Publish happens **before** git push.
-
-### GitHub Release Notes
-
-- **Never use `--generate-notes`** for GitHub releases — it dumps everything under "Other Changes"
-- **Always write categorized release notes** with these sections:
-  - **Features** — new functionality, with PR numbers
-  - **Bug Fixes** — fixes, one line each
-  - **Maintenance** — dependency upgrades, tooling, tests, chores
-- Group related commits into single bullet points (e.g. multiple marker commits → one "Marker Inline Tool" feature)
-- Reference PR numbers where available
+Run `yarn release <version>`. Publish happens **before** git push. Full workflow and the release-notes rules: `/release:release`.
 
 ## Architecture
 
 DOM nesting per block: `holder` → `contentElement` → `toolRenderedElement`
 
 ## Tools
-
-Tools implement the `BlockTool` interface (`types/tools/block-tool.d.ts`).
-
-See `src/tools/` for examples: paragraph/, header/, list/
 
 **Toolbox**: Triggered by "/" in empty paragraph or clicking + button. Uses Popover component.
 
@@ -220,23 +191,9 @@ The law applies to **tags and downstream parsing too**, not just attributes:
 
 ### Patterns
 
-**Mocking modules** (see `test/unit/blok.test.ts`):
-```typescript
-vi.mock('../../src/components/core', () => {
-  const mockModuleInstances = { API: { methods: {} }, Toolbar: {} };
-  class MockCore { public moduleInstances = mockModuleInstances; public isReady = Promise.resolve(); }
-  return { Core: MockCore, mockModuleInstances };
-});
-```
+**Mocking modules**: copy the pattern in `test/unit/blok.test.ts`.
 
-**Factory fixtures** (see `test/unit/components/modules/blockManager.test.ts`):
-```typescript
-const createBlockStub = (options: { id?: string } = {}): Block => ({
-  id: options.id ?? `block-${Math.random()}`,
-  name: 'paragraph',
-  holder: document.createElement('div'),
-} as unknown as Block);
-```
+**Factory fixtures**: copy the pattern in `test/unit/components/modules/blockManager.test.ts`.
 
 **E2E locators** (priority order):
 1. Role-based: `page.getByRole('button', { name: 'Submit' })`
@@ -244,52 +201,11 @@ const createBlockStub = (options: { id?: string } = {}): Block => ({
 3. Test ID: `page.getByTestId('block-settings')` (uses `data-blok-testid`)
 4. NEVER: CSS class selectors
 
-**Custom tools** (inject via classCode):
-```typescript
-const CUSTOM_TOOL = `(() => {
-  return class CustomTool {
-    static get toolbox() { return { icon: '', title: 'Custom' }; }
-    render() { return document.createElement('div'); }
-    save(element) { return { text: element.innerHTML }; }
-  };
-})();
-`;
-```
-
-### What to Test vs Not
-
-**DO Test:**
-- Public API contracts
-- User-facing behavior
-- Event emissions
-- Data transformations
-- Error conditions
-- Module integration
-
-**DO NOT Test:**
-- Private methods
-- Third-party libraries
-- TypeScript types
-- Obvious framework behavior
-- Cosmetic styling
-
-### Common Pitfalls
-
-| Pitfall | Solution |
-|---------|----------|
-| Flaky E2E with arbitrary waits | Use Playwright's auto-waiting |
-| Mock pollution between tests | `vi.clearAllMocks()` in beforeEach, `vi.restoreAllMocks()` in afterEach |
-| DOM elements leak | Clean up in afterEach or use destroy() |
-| Over-mocking | Mock dependencies, test real behavior |
-| Forgetting assertions | Always verify expected outcome |
-| Not testing errors | Test both happy path and error cases |
+**Custom tools** in E2E: inject the class source as a string via `classCode`, not as a module import.
 
 ## Accessibility
 
-- Semantic HTML (`<button>` for actions, `<a>` for navigation)
-- Keyboard-accessible interactive elements
-- `aria-*` attributes for dynamic content
-- Accessibility checks via `@axe-core/playwright`
+Accessibility checks run via `@axe-core/playwright`.
 
 ## Documentation
 
@@ -304,10 +220,6 @@ The docs are a separate React app in `docs/` (own `package.json`, Vitest + React
 **DO NOT modify** without explicit request: `vite.config.mjs`, `vitest.config.ts`, `playwright.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `package.json`, `.env`
 
 ## Types
-
-- **Public**: `types/` directory - exported to consumers
-- **Internal**: `src/types-internal/` - used within codebase
-- Key internal type: `BlokModules` interface
 
 **Published-types law**: `types/*.d.ts` is the hand-authored public type surface (the build emits only JS bundles — no `.d.ts` generation), so `exports` points every subpath's `types` at a file under `types/`. NO file under `types/` may re-export/import from a module that resolves into `src/`. A consumer's `tsc` follows the declaration graph from `types/`, and a `../src/...` specifier drags raw implementation `.ts` into their program — which then needs packages blok never declares as runtime `dependencies` (transitive type-only deps like `micromark-util-types`/`@types/mdast`), exploding their build with TS2307/TS7006 (this is what shipped in 0.24.0 via `react.d.ts` → `markdown.d.ts` → `../src/markdown`). To expose a value implemented in `src/`, hand-author its signature in `types/` (see `types/markdown.d.ts`) or generate a self-contained declaration (see `types/icons.d.ts` + `scripts/generate-icons-dts.mjs`) — never re-export from `../src/`. Mechanically enforced by `test/unit/architecture/published-types-no-src-refs.test.ts`.
 

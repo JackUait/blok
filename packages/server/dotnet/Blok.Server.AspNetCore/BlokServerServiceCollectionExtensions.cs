@@ -42,7 +42,14 @@ public static class BlokServerServiceCollectionExtensions
 
     services.TryAddSingleton(options);
     services.TryAddSingleton(TimeProvider.System);
-    services.AddBlokDocuments();
+    /**
+     * Registered, but NOT warmed. This call is about uploads, link previews and
+     * collaboration; an app that mapped those may never convert a document, and
+     * warming builds a whole engine pool and converts through it. An app that
+     * does convert says so by calling `AddBlokDocuments` itself, and that is
+     * what turns the warm-up on.
+     */
+    services.AddBlokDocuments(warmUp: false);
     services.TryAddSingleton<IGuardedOutboundPolicy, GuardedOutboundPolicy>();
     services.TryAddSingleton<IGuardedOutboundFetcher>(provider =>
         new GuardedOutboundFetcher(

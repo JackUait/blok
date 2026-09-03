@@ -51,9 +51,9 @@ public sealed class BlokDocumentsRegistrationTests
 
   /// <summary>
   /// Building the converter parses the embedded bundle into every engine of its
-  /// pool and costs about a second. Registered as a plain singleton that is a
-  /// cost the first request after a deploy pays; warming up moves it to
-  /// startup, where nobody is waiting on it.
+  /// pool. Registered as a plain singleton that is a cost the first request
+  /// after a deploy pays; warming up moves it to startup, where nobody is
+  /// waiting on it.
   /// </summary>
   [Fact]
   public async Task BuildsTheConverterAtStartupInsteadOfOnTheFirstRequest()
@@ -81,6 +81,68 @@ public sealed class BlokDocumentsRegistrationTests
     }
 
     Assert.True(built);
+  }
+
+  /// <summary>
+  /// Building the engines is not the whole cost. The first conversion in the
+  /// process also pays for the .NET tiered JIT to promote the interpreter's hot
+  /// paths: measured on this runtime, that first call costs 1135-1557 ms of CPU
+  /// against 200-300 ms once warm, and switching tiered compilation off cuts it
+  /// by 61% — which is what identifies it. So the warm-up has to CONVERT
+  /// something, not merely resolve the converter.
+  /// </summary>
+  [Fact]
+  public async Task ConvertsSomethingAtStartupRatherThanOnlyBuildingThePool()
+  {
+    var services = new ServiceCollection();
+    var converter = new CountingConverter();
+
+    services.AddSingleton<IBlokDocumentConverter>(converter);
+    services.AddBlokDocuments();
+
+    using var provider = services.BuildServiceProvider();
+
+    foreach (var service in provider.GetServices<IHostedService>())
+    {
+      await service.StartAsync(CancellationToken.None);
+
+      /**
+       * Awaited here, not by startup: warming runs in the background so a slow
+       * conversion can never delay or fail an application's start.
+       */
+      if (service is BlokDocumentWarmUp warmUp)
+      {
+        await warmUp.Warmed;
+      }
+    }
+
+    Assert.True(converter.Conversions >= 1, "the warm-up ran no conversion");
+
+    /**
+     * A tiny document runs the same functions but not enough times to promote
+     * them: measured, a 1.3 KB warm-up left the first real conversion at
+     * 1230-1507 ms, statistically the same as no warm-up at all.
+     */
+    Assert.True(
+        converter.LongestDocument >= 30_000,
+        $"the warm-up document is too small to promote anything: {converter.LongestDocument}");
+  }
+
+  private sealed class CountingConverter : StubConverter
+  {
+    public int Conversions { get; private set; }
+
+    public int LongestDocument { get; private set; }
+
+    public override ValueTask<string> ToPlainTextAsync(
+        string documentJson,
+        CancellationToken cancellationToken = default)
+    {
+      Conversions++;
+      LongestDocument = Math.Max(LongestDocument, documentJson.Length);
+
+      return ValueTask.FromResult(string.Empty);
+    }
   }
 
   /// <summary>
@@ -151,7 +213,29 @@ public sealed class BlokDocumentsRegistrationTests
     Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
   }
 
-  private sealed class StubConverter : IBlokDocumentConverter
+  /// <summary>
+  /// Mapping the server routes must not warm the converter. Warming builds the
+  /// whole engine pool and converts a document through it, and an app that
+  /// mapped uploads and link previews may never convert anything — on a loaded
+  /// host, building that pool can reach the runtime's own timeout, so it is not
+  /// a cost to impose on an app that did not ask for it.
+  /// </summary>
+  [Fact]
+  public void MappingTheServerRoutesDoesNotWarmTheConverter()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokServer(options =>
+    {
+      options.StorageDirectory = "/local/storage";
+      options.PublicUrl = "https://uploads.example";
+    });
+
+    Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IBlokDocumentConverter));
+    Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+  }
+
+  private class StubConverter : IBlokDocumentConverter
   {
     public ValueTask<string> GetVersionAsync(CancellationToken cancellationToken = default) =>
         ValueTask.FromResult("0.0.0");
@@ -180,8 +264,11 @@ public sealed class BlokDocumentsRegistrationTests
     public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
-    public ValueTask<string> ToPlainTextAsync(string documentJson, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException();
+    /** The one method the warm-up calls, so it answers rather than throwing. */
+    public virtual ValueTask<string> ToPlainTextAsync(
+        string documentJson,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(string.Empty);
 
     public ValueTask<BlokImportConversion> FromMarkdownAsync(
         string markdown,

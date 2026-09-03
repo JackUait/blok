@@ -1,3 +1,4 @@
+using System.Text;
 using Blok.Server.Documents;
 using Blok.Server.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,10 +27,13 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// same code costs in a browser, and it grows with the document.
   /// </param>
   /// <param name="warmUp">
-  /// Build the converter at startup rather than on the first conversion.
-  /// Building it parses the embedded bundle into every engine of its pool and
-  /// costs about a second; warming up moves that off the first request after a
-  /// deploy. Pass <c>false</c> for a host that starts many times and converts
+  /// Build the converter at startup rather than on the first conversion, and
+  /// run one conversion through it in the background. Building it parses the
+  /// embedded bundle into every engine of its pool; the first conversion
+  /// additionally warms the .NET JIT for the interpreter's hot paths, which
+  /// costs far more than the parse. Warming up moves both off the first request
+  /// after a deploy. It never delays or fails startup — it is started, not
+  /// awaited. Pass <c>false</c> for a host that starts many times and converts
   /// rarely — a test host, for instance.
   /// </param>
   /// <returns>The same collection, for chaining.</returns>
@@ -54,18 +58,81 @@ public static class BlokDocumentsServiceCollectionExtensions
 }
 
 /// <summary>
-/// Resolves the converter once at startup so its engine pool is built before
-/// the first request rather than during it.
+/// Builds the engine pool at startup AND converts one document through it, so
+/// the first request pays for neither.
 /// </summary>
-/// <param name="converter">Resolved for its construction cost, not called.</param>
+/// <remarks>
+/// Resolving the converter alone is not enough. Building the engines parses the
+/// bundle; the first CONVERSION additionally pays for the .NET tiered JIT to
+/// promote the interpreter's hot paths, which was measured at 1135-1557 ms of
+/// CPU against 200-300 ms once warm — and running with tiered compilation off
+/// cuts that first call by 61%, which is what identifies it as the JIT rather
+/// than anything inside the engine. The document has to be a realistic size for
+/// the same reason: a 1.3 KB warm-up runs the same functions but not enough
+/// times to promote them, and left the first real conversion no faster than no
+/// warm-up at all.
+/// </remarks>
+/// <param name="converter">Resolved for its construction cost, then exercised.</param>
 internal sealed class BlokDocumentWarmUp(IBlokDocumentConverter converter) : IHostedService
 {
+  /// <summary>The warm-up run, so a test can wait for what startup does not.</summary>
+  internal Task Warmed { get; private set; } = Task.CompletedTask;
+
+  /**
+   * Started, not awaited, and its failure is swallowed. Warming is an
+   * optimization: an application must not refuse to start because a conversion
+   * was slow, and on a loaded host that conversion can reach the runtime's own
+   * timeout. Racing the first request is the situation warming exists to
+   * improve, so losing that race is no worse than not warming at all.
+   */
   public Task StartAsync(CancellationToken cancellationToken)
   {
-    _ = converter;
+    Warmed = Task.Run(
+        async () =>
+        {
+          try
+          {
+            await converter.ToPlainTextAsync(WarmUpDocument(), cancellationToken);
+          }
+          catch (Exception)
+          {
+            // Deliberately ignored; see above.
+          }
+        },
+        cancellationToken);
 
     return Task.CompletedTask;
   }
 
   public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+  /// <summary>
+  /// A document shaped like a long article — inline markup, an entity, and a
+  /// list — because the paths worth promoting are the ones a real document
+  /// takes. Built rather than embedded so the package carries no literal of it.
+  /// </summary>
+  private static string WarmUpDocument()
+  {
+    const string paragraph = "Warm up <b>the</b> reader with <a href=\\\"https://example.com\\\">a link</a> "
+        + "and enough plain prose after it to be worth reading, paragraph ";
+    var blocks = new StringBuilder("{\"blocks\":[");
+
+    for (var index = 0; index < 220; index++)
+    {
+      if (index > 0)
+      {
+        blocks.Append(',');
+      }
+
+      blocks.Append("{\"id\":\"w").Append(index).Append('"');
+
+      blocks.Append(index % 7 == 0
+          ? ",\"type\":\"list\",\"data\":{\"style\":\"unordered\",\"text\":\"item &amp; more "
+          : ",\"type\":\"paragraph\",\"data\":{\"text\":\"" + paragraph);
+
+      blocks.Append(index).Append("\"}}");
+    }
+
+    return blocks.Append("]}").ToString();
+  }
 }

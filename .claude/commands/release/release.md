@@ -26,10 +26,17 @@ The script aborts on a dirty tree: it checks `git status --porcelain` before wri
 
 ## CHANGELOG entries
 
-The docs site parses `CHANGELOG.md` and renders one entry as one block of text, so an entry has to carry its own structure. Every entry is a single markdown line — a continuation line is dropped by the parser.
+The docs site parses `CHANGELOG.md`, so an entry's markdown shape is what the page renders. An entry is one line with the summary, followed by indented sub-bullets:
 
-1. **Bold title, em-dash, body.** The title is a noun phrase naming the thing, not a sentence.
-2. **The first sentence after the dash says what a reader gets, in under 25 words.** It has to stand alone, because it is the part most people read.
-3. **The body caps at about 70 words.** One idea per sentence. Keep the constraint, the gotcha and the opt-in flag; cut the history and the reasoning about why the old way was wrong.
+```markdown
+- **Live collaboration** — Real-time multiplayer editing, turned on with `collaboration: { doc }`.
+  - Two editors on the same `doc` see each other's edits, carets and avatars.
+  - `server` is required, and `persistence` may not be set alongside it.
+```
+
+1. **Bold title, em-dash, summary.** The title is a noun phrase naming the thing, not a sentence.
+2. **The summary says what a reader gets, in under 25 words.** It has to stand alone, because it is the part most people read.
+3. **One fact per sub-bullet, three to seven of them.** Keep the constraint, the gotcha and the opt-in flag; cut the history and the reasoning about why the old way was wrong.
 4. **Keep every public name.** Config keys, methods, flags and routes stay in backticks, so a reader can find the API from the entry.
 5. **Nothing that only matters to a contributor.** No file paths, no counts of alerts triaged, and no measurements unless they change a decision.
+6. **No em-dash inside a sub-bullet.** The page splits on the first one and styles what precedes it as a title.

@@ -252,8 +252,8 @@ internal sealed class YDoc
   }
 
   /// <summary>
-  /// How much the store has PARKED: the clock span of every waiting struct
-  /// plus the clock span of every waiting deletion.
+  /// How many distinct clocks the store has PARKED: waiting structs and
+  /// waiting deletions, both counted as a union.
   /// </summary>
   /// <remarks>
   /// <para>
@@ -267,45 +267,59 @@ internal sealed class YDoc
   /// Reference identity and object counts both answer "yes, changed" there.
   /// </para>
   /// <para>
-  /// Ranges are merged into a COPY before measuring: a redelivery that
-  /// overlaps what is already parked must not add to the total, while a range
-  /// that extends one already parked must. Merging the stored set in place
-  /// would edit the document's own parked state from a read.
+  /// BOTH halves must be a union, and neither may be a sum of lengths.
+  /// Overlapping runs really do park: <c>MergeParked</c> drops only a run
+  /// FULLY covered by one kept before it, so two partially overlapping runs
+  /// are both kept; and a parked delete set is stored exactly as it arrived
+  /// (<c>PendingDs = unappliedNow</c>), while <see cref="DeleteSet.Read"/>
+  /// appends when a client is listed twice. A length sum then counts shared
+  /// clocks twice, and an arrival that unions those runs — covering MORE
+  /// clocks with the SAME total — reads as "nothing new". That is a false
+  /// negative: the update is applied to the live document and then journalled
+  /// nowhere and relayed to nobody.
+  /// </para>
+  /// <para>
+  /// The merge runs on a COPY. Merging the stored collections in place would
+  /// edit the document's own parked state from what is supposed to be a read.
   /// </para>
   /// </remarks>
   private ulong ParkedCoverage()
   {
-    var coverage = 0UL;
+    var structs = new DeleteSet();
 
     foreach (var waiting in Store.PendingStructs ?? [])
     {
-      coverage += (ulong)waiting.Length;
+      structs.Add(waiting.Id.Client, waiting.Id.Clock, (ulong)waiting.Length);
     }
 
-    if (Store.PendingDs is { } deletions)
+    var deletions = new DeleteSet();
+
+    if (Store.PendingDs is { } parked)
     {
-      var merged = new DeleteSet();
+      CopyRanges(parked, deletions);
+    }
 
-      foreach (var (client, ranges) in deletions.Clients)
+    // Two unions, added — never one. A clock can be parked as a struct AND as
+    // a deletion, and those are different facts; folding them together would
+    // let an arriving deletion of an already-parked clock read as nothing new.
+    return UnionLength(structs) + UnionLength(deletions);
+  }
+
+  private static ulong UnionLength(DeleteSet ranges)
+  {
+    ranges.SortAndMerge();
+
+    var length = 0UL;
+
+    foreach (var (_, merged) in ranges.Clients)
+    {
+      foreach (var range in merged)
       {
-        foreach (var range in ranges)
-        {
-          merged.Add(client, range.Clock, range.Length);
-        }
-      }
-
-      merged.SortAndMerge();
-
-      foreach (var (_, ranges) in merged.Clients)
-      {
-        foreach (var range in ranges)
-        {
-          coverage += range.Length;
-        }
+        length += range.Length;
       }
     }
 
-    return coverage;
+    return length;
   }
 
   /// <summary>

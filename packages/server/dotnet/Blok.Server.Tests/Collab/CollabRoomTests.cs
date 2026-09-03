@@ -1722,6 +1722,55 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// Ten bytes prove the union in <c>ParkedCoverage</c> is load-bearing, and
+  /// load-bearing in the UNSAFE direction.
+  ///
+  /// <see cref="DeleteSet.Read"/> appends when a client is listed twice — its
+  /// own comment says so — and a parked delete set is stored exactly as it
+  /// arrived (<c>PendingDs = unappliedNow</c>), with no merge. So one update
+  /// can park [1,5) and [2,6) for the same client: raw lengths 8, covering 5
+  /// clocks. A later [1,9) covers 8 clocks for the same raw 8. Summing
+  /// lengths instead of unioning them therefore reads the second update as
+  /// "nothing new" — and it is applied to the live document, journalled
+  /// nowhere and relayed to nobody.
+  /// </summary>
+  [Fact]
+  public async Task ADeletionThatOnlyWidensParkedRangesIsStillJournalled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+
+    // No struct groups; a delete set naming client 7 twice, which appends.
+    byte[] overlapping = [0x00, 0x02, 0x07, 0x01, 0x01, 0x04, 0x07, 0x01, 0x02, 0x04];
+
+    // One range over the union of those two: the same raw total, more clocks.
+    byte[] widening = [0x00, 0x01, 0x07, 0x01, 0x01, 0x08];
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(overlapping)),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(widening)),
+        CancellationToken.None);
+
+    Assert.Equal(2, operations.Committed(DocId).Count);
+    Assert.Equal(
+        widening,
+        Assert.IsType<SyncUpdateFrame>(Assert.Single(
+            other.Received,
+            frame => frame is SyncUpdateFrame update && update.Update.Length == widening.Length))
+            .Update);
+    Assert.Empty(stock.Received);
+    Assert.Empty(stock.Closes);
+  }
+
+  /// <summary>
   /// A parked delete set is not a corner case, and while one exists EVERY
   /// apply rebuilds it: <c>DeleteSet.Apply</c> opens with
   /// <c>new DeleteSet()</c> and always allocates, and

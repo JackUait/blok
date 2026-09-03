@@ -33,11 +33,13 @@ internal enum ApplyOutcome
 /// journal, relay or persist an update decide on this, never on its size.
 /// </para>
 /// <para>
-/// WHAT IT CANNOT SEE: the parked half is measured as a clock-span total
-/// before and after (<c>ParkedCoverage</c>), so parked content that changes
-/// shape without changing span does not register. A false TRUE is safe here —
-/// a caller journals a no-op — and a false FALSE is not, so any doubt should
-/// be resolved towards reporting a change.
+/// WHAT IT CANNOT SEE: the parked half counts how many distinct clocks are
+/// parked (<c>ParkedCoverage</c>), so parked content that rearranges itself
+/// over the same clocks does not register. A false TRUE is safe here — a
+/// caller journals a no-op — and a false FALSE is not: the update is applied
+/// to the live document and then journalled nowhere and relayed to nobody. Any
+/// doubt is resolved towards reporting a change, and a cheaper measure than a
+/// union has twice turned out to be a false FALSE.
 /// </para>
 /// </remarks>
 internal readonly record struct ApplyResult(

@@ -30,30 +30,47 @@ public sealed class CollabDurabilityArchitectureTests
   private const string StorePath = "Blok.Server/Collab/LocalCollabOperationStore.cs";
 
   /// <summary>
-  /// Every boundary where a completion means "durable". <c>AppendAsync</c> is
-  /// the acknowledgement boundary; <c>Publish</c> is what makes a reset's
-  /// lineage switch and a checkpoint's publication durable; <c>WriteSealed</c>
-  /// covers the baseline and checkpoint bytes those publications name.
+  /// Every boundary where a completion means "durable", as
+  /// (method, handle, the call the flush must follow).
   /// </summary>
-  private static readonly (string Method, string Handle)[] Boundaries =
+  private static readonly (string Method, string Handle, string After)[] Boundaries =
   [
-    ("AppendAsync", "journal"),
-    ("Publish", "manifestFile"),
-    ("WriteSealed", "file"),
+    ("AppendAsync", "journal", "Write"),
+    ("Publish", "manifestFile", "Write"),
+    ("WriteSealed", "file", "Write"),
+    ("ResetAsync", "swapped", "SetLength"),
   ];
 
   /// <summary>
-  /// The only methods allowed to shorten a file, and whether the truncation
-  /// must be fence-guarded. <c>OpenManifest</c> and <c>ResetAsync</c> size a
-  /// file that nothing references yet, so there is no committed history to
-  /// take; the other two can shorten a LIVE journal.
+  /// Every method allowed to SHORTEN a file, and whether its truncation must be
+  /// fence-guarded.
   /// </summary>
-  private static readonly (string Method, bool NeedsFence)[] Truncations =
+  /// <remarks>
+  /// EXEMPTIONS CARRY REASONS, AND THE REASONS ARE CHECKED. This list is where
+  /// this law has already failed once: <c>ResetAsync</c> sat here as
+  /// <c>NeedsFence: false</c> under "nothing references it yet", which was
+  /// false — it truncated a journal a new holder had published and acknowledged
+  /// operations into. An exemption list without written reasons is where the
+  /// next hole hides, so an empty justification on an exempt entry is itself a
+  /// failure (see <see cref="EveryExemptionCarriesAReason"/>).
+  /// </remarks>
+  private static readonly (string Method, bool NeedsFence, string Reason)[] Shortenings =
   [
-    ("OpenManifest", false),
-    ("ResetAsync", false),
-    ("ScanForward", true),
-    ("RollBack", true),
+    (
+      "OpenManifest",
+      false,
+      "Only ever GROWS, and only a manifest that is short of its two slots: " +
+      "the call sits behind a length comparison, and a manifest has no " +
+      "committed history in it to lose."),
+    (
+      "WriteSealed",
+      false,
+      "FileMode.Create can only truncate a name THIS session already " +
+      "abandoned, because every baseline and checkpoint name carries the " +
+      "fence of the session that wrote it and two holders never share a fence."),
+    ("ResetAsync", true, ""),
+    ("ScanForward", true, ""),
+    ("RollBack", true, ""),
   ];
 
   [Fact]
@@ -61,7 +78,8 @@ public sealed class CollabDurabilityArchitectureTests
   {
     var source = ReadStore();
     var violations = Boundaries
-        .SelectMany(boundary => FindFlushViolations(source, boundary.Method, boundary.Handle))
+        .SelectMany(boundary =>
+            FindFlushViolations(source, boundary.Method, boundary.Handle, boundary.After))
         .ToList();
 
     Assert.True(
@@ -87,6 +105,100 @@ public sealed class CollabDurabilityArchitectureTests
         "every record the new holder acknowledged in that window, not just its " +
         "own. This cannot be driven deterministically in-process, so the guard " +
         "is pinned here instead.\n" + string.Join("\n", violations));
+  }
+
+  [Fact]
+  public void TheDirectorySyncChecksItsResult()
+  {
+    var violations = FindDirectorySyncViolations(ReadStore());
+
+    Assert.True(
+        violations.Count == 0,
+        $"{StorePath} stopped checking its directory sync.\n" +
+        string.Join("\n", violations));
+  }
+
+  [Fact]
+  public void EveryExemptionCarriesAReason()
+  {
+    var undocumented = Shortenings
+        .Where(entry => !entry.NeedsFence && string.IsNullOrWhiteSpace(entry.Reason))
+        .Select(entry => entry.Method)
+        .ToList();
+
+    Assert.True(
+        undocumented.Count == 0,
+        "Every method exempted from the fence guard must say WHY in one " +
+        "sentence. ResetAsync was once exempt under a reason that was simply " +
+        "untrue, and an unexplained exemption is where the next one hides: " +
+        string.Join(", ", undocumented));
+  }
+
+  [Fact]
+  public void DetectsADiscardedDirectorySyncResult()
+  {
+    Assert.Single(FindDirectorySyncViolations(
+        """
+        class Store
+        {
+          static void SyncDirectory(string path)
+          {
+            var descriptor = Open(path, 0);
+            _ = Fsync(descriptor);
+            Close(descriptor);
+          }
+        }
+        """));
+  }
+
+  [Fact]
+  public void DetectsADirectorySyncThatTestsButDoesNotThrow()
+  {
+    Assert.Single(FindDirectorySyncViolations(
+        """
+        class Store
+        {
+          static void SyncDirectory(string path)
+          {
+            if (Fsync(descriptor) != 0)
+            {
+              log("could not flush");
+            }
+          }
+        }
+        """));
+  }
+
+  [Fact]
+  public void DetectsATruncatingFileModeInAMethodThatMayNotShorten()
+  {
+    var violation = Assert.Single(FindTruncationViolations(
+        """
+        class Store
+        {
+          static void PublishSomething(string path)
+          {
+            using var file = new FileStream(path, FileMode.Create);
+          }
+        }
+        """));
+
+    Assert.Contains("PublishSomething", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void IgnoresATruncatingFileModeThatIsOnlyTested()
+  {
+    Assert.Empty(FindTruncationViolations(
+        """
+        class Store
+        {
+          static bool CanCreate(FileMode mode)
+          {
+            return mode is FileMode.CreateNew or FileMode.Create;
+          }
+        }
+        """));
   }
 
   [Fact]
@@ -309,23 +421,26 @@ public sealed class CollabDurabilityArchitectureTests
   private static List<string> FindFlushViolations(
       string source,
       string method,
-      string handle)
+      string handle,
+      string after = "Write")
   {
     var violations = new List<string>();
-    var scope = Method(source, method);
+    var methods = Methods(source, method);
 
-    if (scope is null)
+    if (methods.Count != 1)
     {
-      violations.Add($"there is no single {method} to check.");
+      violations.Add(
+          $"there is no single {method} to check ({methods.Count} found).");
 
       return violations;
     }
 
-    var write = CallOn(scope, handle, "Write").FirstOrDefault();
+    var scope = methods[0];
+    var write = CallOn(scope, handle, after).FirstOrDefault();
 
     if (write is null)
     {
-      violations.Add($"{method} no longer writes to {handle}.");
+      violations.Add($"{method} no longer calls {handle}.{after}.");
 
       return violations;
     }
@@ -340,7 +455,7 @@ public sealed class CollabDurabilityArchitectureTests
     {
       violations.Add(
           $"{method} must call {handle}.Flush(flushToDisk: true) after its " +
-          "write, in the same block.");
+          $"{handle}.{after}, in the same block.");
     }
 
     return violations;
@@ -348,18 +463,33 @@ public sealed class CollabDurabilityArchitectureTests
 
   private static List<string> FindTruncationViolations(string source)
   {
-    var allowed = Truncations.ToDictionary(
+    var allowed = Shortenings.ToDictionary(
         entry => entry.Method,
         entry => entry.NeedsFence,
         StringComparer.Ordinal);
     var violations = new List<string>();
     var root = Parse(source);
 
-    foreach (var truncation in root.DescendantNodes()
+    // SetLength is not the only way to shorten a file: FileMode.Create and
+    // FileMode.Truncate discard whatever the name already held, which is how
+    // WriteSealed replaces a baseline.
+    var shortenings = root.DescendantNodes()
         .OfType<InvocationExpressionSyntax>()
-        .Where(invocation => NameOf(invocation) == "SetLength"))
+        .Where(invocation => NameOf(invocation) == "SetLength")
+        .Select(invocation => (Node: (SyntaxNode)invocation, Truncates: true))
+        .Concat(root.DescendantNodes()
+            .OfType<MemberAccessExpressionSyntax>()
+            .Where(access =>
+                access.Expression is IdentifierNameSyntax { Identifier.ValueText: "FileMode" } &&
+                access.Name.Identifier.ValueText is "Create" or "Truncate" &&
+
+                // A pattern TESTS a mode, it does not open anything with it.
+                access.FirstAncestorOrSelf<PatternSyntax>() is null)
+            .Select(access => (Node: (SyntaxNode)access, Truncates: false)));
+
+    foreach (var (node, isSetLength) in shortenings)
     {
-      var owner = truncation.FirstAncestorOrSelf<MethodDeclarationSyntax>();
+      var owner = node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
       var name = owner?.Identifier.ValueText ?? "<no method>";
 
       if (!allowed.TryGetValue(name, out var needsFence))
@@ -371,18 +501,20 @@ public sealed class CollabDurabilityArchitectureTests
         continue;
       }
 
-      if (!needsFence)
+      // Only a SetLength is checked for a guard: a FileMode is an argument, and
+      // what makes those safe is the name it opens, not a check in front of it.
+      if (!needsFence || !isSetLength)
       {
         continue;
       }
 
-      var guarded = Block(truncation) is { } block &&
+      var guarded = Block(node) is { } block &&
           block.DescendantNodes()
               .OfType<InvocationExpressionSyntax>()
               .Any(call =>
                   NameOf(call)?.Contains("Fence", StringComparison.Ordinal) == true &&
                   Block(call) == block &&
-                  call.SpanStart < truncation.SpanStart);
+                  call.SpanStart < node.SpanStart);
 
       if (!guarded)
       {
@@ -395,12 +527,58 @@ public sealed class CollabDurabilityArchitectureTests
     return violations;
   }
 
-  private static MethodDeclarationSyntax? Method(string source, string name)
+  /// <summary>
+  /// SyncDirectory is the third durability boundary and the only one that is
+  /// not a FileStream flush, so the shape above cannot see it. What matters is
+  /// that the fsync result is TESTED: the working-set store next door discards
+  /// it deliberately, which is right for a best-effort projection write and
+  /// exactly wrong here, where a checkpoint or a reset acknowledges on it.
+  /// </summary>
+  private static List<string> FindDirectorySyncViolations(string source)
+  {
+    var violations = new List<string>();
+    var methods = Methods(source, "SyncDirectory");
+
+    if (methods.Count != 1)
+    {
+      violations.Add(
+          $"there is no single SyncDirectory to check ({methods.Count} found).");
+
+      return violations;
+    }
+
+    var fsync = methods[0].DescendantNodes()
+        .OfType<InvocationExpressionSyntax>()
+        .FirstOrDefault(invocation => NameOf(invocation) == "Fsync");
+
+    if (fsync is null)
+    {
+      violations.Add("SyncDirectory no longer calls Fsync.");
+
+      return violations;
+    }
+
+    var tested = fsync.FirstAncestorOrSelf<IfStatementSyntax>() is { } guard &&
+        guard.Condition.Contains(fsync) &&
+        guard.Statement.DescendantNodesAndSelf().OfType<ThrowStatementSyntax>().Any();
+
+    if (!tested)
+    {
+      violations.Add(
+          "SyncDirectory must test the Fsync result and throw on failure; a " +
+          "discarded result is an acknowledgement of something not durable.");
+    }
+
+    return violations;
+  }
+
+  private static List<MethodDeclarationSyntax> Methods(string source, string name)
   {
     return Parse(source)
         .DescendantNodes()
         .OfType<MethodDeclarationSyntax>()
-        .SingleOrDefault(method => method.Identifier.ValueText == name);
+        .Where(method => method.Identifier.ValueText == name)
+        .ToList();
   }
 
   private static SyntaxNode Parse(string source)

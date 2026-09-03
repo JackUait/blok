@@ -62,6 +62,7 @@ internal sealed class CollabRoom : IDisposable
       SyncWire.Encode(new QueryAwarenessFrame());
 
   private readonly ICollabWorkingSetStore store;
+  private readonly ICollabOperationStore? operationStore;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -114,10 +115,12 @@ internal sealed class CollabRoom : IDisposable
       ICollabDocConverter converter,
       CollabRoomOptions options,
       TimeProvider timeProvider,
-      Action<string>? log)
+      Action<string>? log,
+      ICollabOperationStore? operationStore = null)
   {
     DocId = docId;
     this.store = store;
+    this.operationStore = operationStore;
     this.endpoint = endpoint;
     this.converter = converter;
     this.options = options;
@@ -758,10 +761,7 @@ internal sealed class CollabRoom : IDisposable
 
   private TimeSpan Backoff(int failures)
   {
-    var steps = Math.Min(Math.Max(failures - 1, 0), 16);
-    var delay = options.RetryBackoff * Math.Pow(2, steps);
-
-    return delay < options.RetryBackoffCap ? delay : options.RetryBackoffCap;
+    return options.Backoff(failures);
   }
 
   /// <summary>True when the log was replaced by one full-state frame.</summary>

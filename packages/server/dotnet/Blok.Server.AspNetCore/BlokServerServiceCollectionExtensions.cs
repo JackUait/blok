@@ -129,7 +129,8 @@ public static class BlokServerServiceCollectionExtensions
             AnnouncedMaxMessageBytes = effectiveOptions.CollabMaxMessageBytes,
           },
           timeProvider,
-          CollabLog(provider));
+          CollabLog(provider),
+          provider.GetService<ICollabOperationStore>());
     });
 
     // The endpoints need the concrete manager; the interface is the host's

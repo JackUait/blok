@@ -9,6 +9,14 @@ internal enum CollabJoinStatus
 
   /// <summary>The server is shutting down; new sessions are refused.</summary>
   Draining,
+
+  /// <summary>
+  /// The document cannot be served right now and nothing is wrong with the
+  /// request: another live process holds its journal, or a commit failure put
+  /// this document in its retry cooldown. The endpoint closes 4503 and the
+  /// client comes back.
+  /// </summary>
+  Unavailable,
 }
 
 internal sealed record CollabJoinResult(
@@ -28,6 +36,13 @@ internal enum CollabEditStatus
 
   /// <summary>The doc endpoint could not seed the room; the endpoint answers 503.</summary>
   SeedFailed,
+
+  /// <summary>
+  /// The document cannot be served right now: another live process holds its
+  /// journal, or a commit failure put it in its retry cooldown. The endpoint
+  /// answers 503.
+  /// </summary>
+  Unavailable,
 }
 
 internal sealed record CollabEditResult(CollabEditStatus Status, Exception? Error);
@@ -43,6 +58,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager
 
   private readonly Dictionary<string, CollabRoom> rooms = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
+  private readonly ICollabOperationStore? operationStore;
   private readonly IDocEndpointClient endpoint;
   private readonly ICollabDocConverter converter;
   private readonly CollabRoomOptions options;
@@ -56,7 +72,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       ICollabDocConverter converter,
       CollabRoomOptions options,
       TimeProvider timeProvider,
-      Action<string>? log = null)
+      Action<string>? log = null,
+      ICollabOperationStore? operationStore = null)
   {
     ArgumentNullException.ThrowIfNull(store);
     ArgumentNullException.ThrowIfNull(endpoint);
@@ -70,6 +87,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     this.options = options;
     this.timeProvider = timeProvider;
     this.log = log;
+    this.operationStore = operationStore;
   }
 
   internal int LiveRoomCount
@@ -241,7 +259,8 @@ internal sealed class CollabRoomManager : ICollabRoomManager
             converter,
             options,
             timeProvider,
-            log);
+            log,
+            operationStore);
         room.Closed += OnRoomClosed;
         rooms[docId] = room;
       }

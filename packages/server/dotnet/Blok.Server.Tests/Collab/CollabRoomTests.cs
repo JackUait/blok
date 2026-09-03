@@ -8,7 +8,13 @@ namespace Blok.Server.Tests.Collab;
 public sealed class CollabRoomTests
 {
   private const string DocId = "doc-1";
+
+  // 32 lowercase hex, the operation-id shape the v2 codec enforces.
+  private const string OpOne = "0123456789abcdef0123456789abcdef";
+  private const string OpTwo = "fedcba9876543210fedcba9876543210";
+
   private readonly FakeWorkingSetStore store = new();
+  private readonly FakeCollabOperationStore operations = new();
   private readonly FakeDocEndpoint endpoint = new();
   private readonly FakeDocConverter converter = new();
   private readonly ManualTimeProvider time = new();
@@ -651,6 +657,10 @@ public sealed class CollabRoomTests
   /// update earned still happens. An S3 timeout arrives as
   /// TaskCanceledException, which the room used to mistake for its own
   /// shutdown and swallow whole — losing the export as well.
+  ///
+  /// A working-set-only room, deliberately: the blob is the only durable copy
+  /// there, so its write failing is a retry. A journal-backed room's commit
+  /// failure is not (see AppendFailureClosesEveryMemberWithCommitUnavailable).
   /// </summary>
   [Fact]
   public async Task AStoreTimeoutDuringAnApplyIsLoggedRetriedAndStillExports()
@@ -685,7 +695,11 @@ public sealed class CollabRoomTests
         "the retried persist");
   }
 
-  /// <summary>The blob is written beside the lane: a stuck store must not stop sync.</summary>
+  /// <summary>
+  /// The blob is written beside the lane: a stuck store must not stop sync.
+  /// This is the working-set-only path; a journal-backed room awaits its
+  /// commit INSIDE the lane, so a stuck journal does hold that document up.
+  /// </summary>
   [Fact]
   public async Task ASlowStoreDoesNotStallTheLane()
   {
@@ -825,6 +839,589 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The journal is the record of what happened, so nothing an operation did
+  /// may be visible before the append says it is durable — not to another
+  /// member, and not as a receipt to the writer.
+  /// </summary>
+  [Fact]
+  public async Task DoesNotAckOrBroadcastBeforeAppendCompletes()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      entered.TrySetResult();
+
+      return release.Task;
+    };
+
+    var receive = membership
+        .ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Received);
+    Assert.Empty(operations.Committed(DocId));
+
+    release.SetResult();
+    await receive;
+
+    Assert.Contains(other.Received, frame => frame is SyncUpdateFrame);
+    Assert.Contains(writer.Received, frame => frame is AcknowledgementFrame);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  [Fact]
+  public async Task AcknowledgesAndBroadcastsToEveryV2MemberIncludingTheSubmitterAfterCommit()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member("user-7");
+    var other = V2Member("user-9");
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    Assert.Collection(
+        writer.Received,
+        frame => Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(frame).Update),
+        frame =>
+        {
+          var ack = Assert.IsType<AcknowledgementFrame>(frame);
+
+          Assert.Equal(membership.Tag.Lineage, ack.Lineage);
+          Assert.Equal(OpOne, ack.OperationId);
+          Assert.Equal(1UL, ack.ServerSequence);
+        });
+    var record = Assert.Single(operations.Committed(DocId));
+    Assert.Equal(OpOne, record.OperationId);
+    Assert.Equal(1UL, record.ServerSequence);
+    Assert.Equal("user-7", record.ActorId);
+    Assert.Equal(CollabOperationSource.ClientV2, record.Source);
+    Assert.Equal(update, record.Update.ToArray());
+  }
+
+  [Fact]
+  public async Task AppendFailureClosesEveryMemberWithCommitUnavailable()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], other.Closes);
+  }
+
+  [Fact]
+  public async Task AppendFailureClosesAndDiscardsTheRoomWithoutObservation()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(0, manager.LiveRoomCount);
+
+    // The fence goes with the room, or the document stays locked to a process
+    // that is no longer serving it.
+    var reopened = await operations.OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.Opened, reopened.Outcome);
+    await reopened.Session!.DisposeAsync();
+  }
+
+  /// <summary>
+  /// An append that commits and then fails to say so is the case the whole
+  /// idempotency key exists for: the room discards itself having observed
+  /// nothing, and the client's retry of the same id reads back as a duplicate.
+  /// </summary>
+  [Fact]
+  public async Task UnknownCommitOutcomeClosesAndRetryResolvesById()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+    operations.CommitBeforeFailing = true;
+    operations.FailAppends = _ => new IOException("the journal could not answer");
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Received);
+    Assert.Single(operations.Committed(DocId));
+
+    operations.FailAppends = null;
+    operations.CommitBeforeFailing = false;
+    time.Advance(TimeSpan.FromSeconds(2));
+    var retryMember = V2Member();
+    var retry = await Join(manager, retryMember);
+    retryMember.Received.Clear();
+
+    await retry.ReceiveAsync(Operation(retry, OpOne, update), CancellationToken.None);
+
+    var ack = Assert.IsType<AcknowledgementFrame>(Assert.Single(retryMember.Received));
+    Assert.Equal(OpOne, ack.OperationId);
+    Assert.Equal(1UL, ack.ServerSequence);
+    Assert.Single(operations.Committed(DocId));
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// A store that keeps failing would otherwise reload baseline and tail on
+  /// every reconnect of every member, so the document pays for the outage.
+  /// </summary>
+  [Fact]
+  public async Task RepeatedAppendFailureDoesNotReloadTheDocumentPerRetry()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+    var opensAfterFailure = operations.Opens;
+
+    for (var attempt = 0; attempt < 4; attempt++)
+    {
+      var refused = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+      Assert.Equal(CollabJoinStatus.Unavailable, refused.Status);
+    }
+
+    Assert.Equal(opensAfterFailure, operations.Opens);
+    Assert.Equal(1, endpoint.Loads);
+
+    // One join gets through when the cooldown expires, and failing again
+    // doubles the wait rather than restarting it.
+    time.Advance(TimeSpan.FromSeconds(2));
+    var second = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+    Assert.Equal(CollabJoinStatus.Joined, second.Status);
+    await second.Membership!.ReceiveAsync(
+        Operation(second.Membership, OpTwo, update),
+        CancellationToken.None);
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    Assert.Equal(
+        CollabJoinStatus.Unavailable,
+        (await manager.JoinAsync(DocId, V2Member(), CancellationToken.None)).Status);
+
+    time.Advance(TimeSpan.FromSeconds(2));
+    Assert.Equal(
+        CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, V2Member(), CancellationToken.None)).Status);
+    Assert.Equal(1, endpoint.Loads);
+  }
+
+  /// <summary>
+  /// A store that never answers leaves the outcome unknown, which is the
+  /// commit-unavailable case — not a refusal of the operation.
+  /// </summary>
+  [Fact]
+  public async Task AnAppendPastTheStoreTimeoutIsCommitUnavailable()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(
+        new CollabRoomOptions { CommitTimeout = TimeSpan.FromSeconds(5) });
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      entered.TrySetResult();
+
+      return never.Task;
+    };
+
+    var receive = membership
+        .ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    time.Advance(TimeSpan.FromSeconds(5));
+    await receive;
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], other.Closes);
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Received);
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// One process per document: a second one refuses the join instead of
+  /// waiting for the fence or forcing it.
+  /// </summary>
+  [Fact]
+  public async Task OpenElsewhereRefusesTheJoinAsUnavailable()
+  {
+    endpoint.Holds(DocId, "hello");
+    var held = await operations.OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.Opened, held.Outcome);
+    var manager = CreateJournalManager();
+
+    var refused = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Unavailable, refused.Status);
+    Assert.Null(refused.Membership);
+    // Nothing was seeded behind the holder's back.
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+
+    await held.Session!.DisposeAsync();
+
+    Assert.Equal(
+        CollabJoinStatus.Joined,
+        (await manager.JoinAsync(DocId, V2Member(), CancellationToken.None)).Status);
+  }
+
+  /// <summary>
+  /// The client re-sends an operation whose acknowledgement it never saw. The
+  /// commit already happened, so it is answered from the journal — and the
+  /// other members must not see the update a second time.
+  /// </summary>
+  [Fact]
+  public async Task LostAckRetryReturnsTheSameCommitWithoutRebroadcast()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    var ack = Assert.IsType<AcknowledgementFrame>(Assert.Single(writer.Received));
+    Assert.Equal(OpOne, ack.OperationId);
+    Assert.Equal(1UL, ack.ServerSequence);
+    Assert.Empty(other.Received);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
+  /// The lookup runs BEFORE the provisional apply for exactly this input.
+  /// Discovering the conflict from the append instead would leave the document
+  /// holding bytes that will never be journalled, whose only cure is closing
+  /// the room — so any writer could kill the room for everyone by re-sending
+  /// one id with different bytes.
+  /// </summary>
+  [Fact]
+  public async Task SameIdDifferentBytesRejectsWithoutApply()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    var different = YDocs.UpdateAppending(client, "?");
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, different), CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(writer.Received));
+    Assert.Equal(OpOne, rejection.OperationId);
+    Assert.Equal("operation-id-conflict", rejection.Code);
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Closes);
+    Assert.Empty(other.Closes);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Single(operations.Committed(DocId));
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The append is awaited inside the room lane, so a slow commit holds the
+  /// next one up rather than letting it overtake: what every member sees is
+  /// the order the journal recorded.
+  /// </summary>
+  [Fact]
+  public async Task CommittedOperationsBroadcastInServerSequenceOrder()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var first = V2Member();
+    var second = V2Member();
+    var observer = new FakeMember(canWrite: false);
+    var firstMembership = await Join(manager, first);
+    var secondMembership = await Join(manager, second);
+    await Join(manager, observer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var firstUpdate = YDocs.UpdateAppending(client, "a");
+    var secondUpdate = YDocs.UpdateAppending(client, "b");
+    observer.Received.Clear();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      entered.TrySetResult();
+
+      return release.Task;
+    };
+
+    var slow = firstMembership
+        .ReceiveAsync(Operation(firstMembership, OpOne, firstUpdate), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    operations.BeforeAppend = null;
+    var overtaking = secondMembership
+        .ReceiveAsync(Operation(secondMembership, OpTwo, secondUpdate), CancellationToken.None)
+        .AsTask();
+    release.SetResult();
+    await slow;
+    await overtaking;
+
+    string[] submitted = [Convert.ToHexString(firstUpdate), Convert.ToHexString(secondUpdate)];
+    Assert.Equal(
+        submitted,
+        operations.Committed(DocId)
+            .Select(record => Convert.ToHexString(record.Update.Span))
+            .ToArray());
+    Assert.Equal(
+        submitted,
+        observer.Received
+            .OfType<SyncUpdateFrame>()
+            .Select(frame => Convert.ToHexString(frame.Update))
+            .ToArray());
+  }
+
+  /// <summary>
+  /// A room that reloads must rebuild from committed data alone: the
+  /// checkpoint covers everything through its sequence, the tail carries what
+  /// came after it, and no operation falls between the two.
+  /// </summary>
+  [Fact]
+  public async Task ReloadReplaysEveryAcknowledgedOperationAfterTheCheckpoint()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    // Through sequence 1, so operation one is only reachable via the
+    // checkpoint: the open no longer returns it in the tail.
+    await using (var session = (await operations.OpenAsync(DocId, CancellationToken.None)).Session!)
+    {
+      var replica = YDocs.NewClient();
+
+      foreach (var frame in session.OpenResult.Baseline)
+      {
+        YDocs.Apply(replica, frame.ToArray());
+      }
+
+      YDocs.Apply(replica, session.OpenResult.Tail[0].Update.ToArray());
+      await session.WriteCheckpointAsync(
+          new CollabOperationCheckpoint(1, YDocs.FullState(replica)),
+          CancellationToken.None);
+    }
+
+    Assert.Equal("hello!?", await ExportedTextAsync(manager));
+    Assert.Equal(1, endpoint.Loads);
+  }
+
+  [Fact]
+  public async Task UnjournalledProvisionalStateNeverExportsOrCheckpoints()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Empty(endpoint.Saves);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Null(operations.Checkpoint(DocId));
+
+    operations.FailAppends = null;
+    time.Advance(TimeSpan.FromSeconds(2));
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// S3 exposes a working set and no journal, so that room keeps relaying and
+  /// scheduling the blob write exactly as it did — and has no commit primitive
+  /// to run: an operation frame is dropped rather than applied.
+  /// </summary>
+  [Fact]
+  public async Task WorkingSetOnlyRoomKeepsTheLegacyRelayPath()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var writer = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var framesBefore = store.FramesOf(DocId).Count;
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
+
+    Assert.Empty(writer.Received);
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    await Waits.UntilAsync(
+        () => store.FramesOf(DocId).Count == framesBefore + 1,
+        "the working set to catch up");
+
+    other.Received.Clear();
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+
+    Assert.Empty(writer.Received);
+    Assert.Empty(other.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AReadOnlyMembersOperationIsRejectedWithoutJournalling()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var reader = V2Member(canWrite: false);
+    var membership = await Join(manager, reader);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, " hacked");
+    reader.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(reader.Received));
+    Assert.Equal("read-only", rejection.Code);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The lookup covers the current lineage only, so an operation naming an
+  /// older one has to be refused before it: its id would read as uncommitted
+  /// and its bytes would be journalled into a history they never belonged to.
+  /// </summary>
+  [Fact]
+  public async Task AnOperationFromAnotherLineageIsRejectedWithoutJournalling()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new OperationFrame(Tags.Lineage, OpOne, update)),
+        CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(writer.Received));
+    Assert.Equal("lineage-mismatch", rejection.Code);
+    Assert.Equal(Tags.Lineage, rejection.Lineage);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AnUnusableOperationUpdateIsRejectedWithoutJournalling()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, [0xde, 0xad, 0xbe, 0xef, 0x01]),
+        CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(writer.Received));
+    Assert.Equal("invalid-update", rejection.Code);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(writer.Closes);
+  }
+
+  /// <summary>
   /// A well-formed awareness payload carrying <paramref name="clients"/>
   /// entries: y-protocols writes [varuint clients]{[clientId][clock][varstring
   /// state]}* and never checks that a sender owns the ids it encodes, so
@@ -855,6 +1452,24 @@ public sealed class CollabRoomTests
     while (value != 0);
   }
 
+  private static byte[] Operation(
+      CollabMembership membership,
+      string operationId,
+      byte[] update)
+  {
+    return SyncWire.Encode(
+        new OperationFrame(membership.Tag.Lineage, operationId, update));
+  }
+
+  private static FakeMember V2Member(string? actorId = null, bool canWrite = true)
+  {
+    return new FakeMember(
+        canWrite,
+        acceptsControlFrames: true,
+        actorId,
+        CollabOperationSource.ClientV2);
+  }
+
   private CollabRoomManager CreateManager(CollabRoomOptions? options = null)
   {
     return new CollabRoomManager(
@@ -864,6 +1479,19 @@ public sealed class CollabRoomTests
         options ?? new CollabRoomOptions(),
         time,
         log.Add);
+  }
+
+  /// <summary>A room backed by an operation store, which is what turns on the commit path.</summary>
+  private CollabRoomManager CreateJournalManager(CollabRoomOptions? options = null)
+  {
+    return new CollabRoomManager(
+        store,
+        endpoint,
+        converter,
+        options ?? new CollabRoomOptions(),
+        time,
+        log.Add,
+        operations);
   }
 
   private static async Task<CollabMembership> Join(CollabRoomManager manager, FakeMember member)

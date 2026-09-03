@@ -785,9 +785,18 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
   private readonly Dictionary<string, FakeOperationDocument> documents =
       new(StringComparer.Ordinal);
   private readonly Lock guard = new();
+  private int opens;
 
-  /// <summary>Awaited inside every append before it commits — a slow store.</summary>
+  /// <summary>
+  /// Awaited inside every append before it commits — a slow store. The wait
+  /// honours the caller's token, the way a store that is handed a cancelled
+  /// token stops rather than committing: without that, a caller's commit
+  /// timeout could never end the wait.
+  /// </summary>
   internal Func<Task>? BeforeAppend { get; set; }
+
+  /// <summary>Documents opened, so a test can see what a rejoin did NOT re-read.</summary>
+  internal int Opens => Volatile.Read(ref opens);
 
   /// <summary>
   /// When it answers non-null for a doc, that doc's AppendAsync throws it. An
@@ -822,6 +831,15 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
     }
   }
 
+  /// <summary>The published checkpoint for a doc, or null when none exists.</summary>
+  internal CollabOperationCheckpoint? Checkpoint(string docId)
+  {
+    lock (guard)
+    {
+      return documents.TryGetValue(docId, out var document) ? document.Checkpoint : null;
+    }
+  }
+
   /// <summary>Another process takes the fence while a session is still live.</summary>
   internal void StealFence(string docId)
   {
@@ -836,6 +854,7 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       CancellationToken cancellationToken = default)
   {
     cancellationToken.ThrowIfCancellationRequested();
+    Interlocked.Increment(ref opens);
 
     lock (guard)
     {
@@ -931,7 +950,7 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
       if (pause is not null)
       {
-        await pause();
+        await pause().WaitAsync(cancellationToken);
       }
 
       var failure = store.FailAppends?.Invoke(documentId);

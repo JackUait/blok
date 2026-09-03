@@ -37,4 +37,20 @@ internal sealed class CollabRoomOptions
 
   /// <summary>Longest the doubling backoff may reach.</summary>
   public TimeSpan RetryBackoffCap { get; init; } = TimeSpan.FromSeconds(60);
+
+  /// <summary>
+  /// How long the room waits for one journal append before it stops waiting.
+  /// The outcome is then UNKNOWN — the write may still land — so the wait
+  /// ending is a commit failure, never a refusal of the operation.
+  /// </summary>
+  public TimeSpan CommitTimeout { get; init; } = TimeSpan.FromSeconds(10);
+
+  /// <summary>Doubling wait after <paramref name="failures"/> failures, capped.</summary>
+  internal TimeSpan Backoff(int failures)
+  {
+    var steps = Math.Min(Math.Max(failures - 1, 0), 16);
+    var delay = RetryBackoff * Math.Pow(2, steps);
+
+    return delay < RetryBackoffCap ? delay : RetryBackoffCap;
+  }
 }

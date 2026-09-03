@@ -102,6 +102,14 @@ internal static class EditEndpoint
 
         return;
 
+      case CollabEditStatus.Unavailable:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status503ServiceUnavailable,
+            "the document is unavailable, retry\n");
+
+        return;
+
       default:
         await SyncEndpoint.RefuseAsync(
             context,

@@ -144,7 +144,9 @@ internal static class SyncEndpoint
 
       using (socket)
       {
-        if (join.Status == CollabJoinStatus.SeedFailed)
+        // Unavailable shares the frame: both mean "this document cannot serve
+        // you right now, come back", which is exactly what 4503 says.
+        if (join.Status is CollabJoinStatus.SeedFailed or CollabJoinStatus.Unavailable)
         {
           member.RequestClose(SyncClose.SeedFailed);
         }

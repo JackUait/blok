@@ -227,13 +227,21 @@ export const blocksToPlainText = (
     visit(block, segments);
   }
 
-  return segments.reduce((out, segment, index) => {
-    if (index === 0) {
-      return segment.text;
+  /**
+   * Collected then joined once. Concatenating onto an accumulator instead
+   * re-allocates the whole document per block, which is quadratic: a long
+   * article allocates tens of megabytes and trips the server runtime's
+   * per-conversion memory limit outright.
+   */
+  const parts: string[] = [];
+
+  segments.forEach((segment, index) => {
+    if (index > 0) {
+      parts.push(segment.isList && segments[index - 1].isList ? '\n' : '\n\n');
     }
 
-    const separator = segment.isList && segments[index - 1].isList ? '\n' : '\n\n';
+    parts.push(segment.text);
+  });
 
-    return out + separator + segment.text;
-  }, '');
+  return parts.join('');
 };

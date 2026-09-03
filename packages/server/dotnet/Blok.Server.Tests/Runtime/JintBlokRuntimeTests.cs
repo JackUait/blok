@@ -159,6 +159,35 @@ public sealed class JintBlokRuntimeTests
     }
   }
 
+  /// <summary>
+  /// A long article has to convert under the engine's own memory limit. Joining
+  /// the finished segments by repeated concatenation allocates the whole
+  /// document again for every block, which is quadratic: a document of a few
+  /// hundred kilobytes allocates tens of megabytes and trips the limit, so the
+  /// conversion fails outright rather than merely running slowly.
+  /// </summary>
+  [Theory]
+  [InlineData("blocksToPlainText")]
+  [InlineData("blocksToMarkdown")]
+  public async Task ConvertsALongArticleWithoutExhaustingTheMemoryLimit(string operation)
+  {
+    var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(2));
+    var paragraph = string.Join(' ', Enumerable.Repeat("слово", 30));
+    var blocks = Enumerable.Range(0, 1200).Select(index => new
+    {
+      id = $"b{index}",
+      type = "paragraph",
+      data = new { text = paragraph },
+    });
+    var input = JsonSerializer.Serialize(new { blocks });
+
+    Assert.True(input.Length > 200_000, $"the document has to be long enough to matter: {input.Length}");
+
+    var output = await runtime.InvokeAsync(operation, input);
+
+    Assert.Contains(paragraph, output, StringComparison.Ordinal);
+  }
+
   private static JsonElement FirstBlock(string output)
   {
     using var document = JsonDocument.Parse(output);

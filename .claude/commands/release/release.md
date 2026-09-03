@@ -30,13 +30,14 @@ The docs site parses `CHANGELOG.md`, so an entry's markdown shape is what the pa
 
 ```markdown
 - **Live collaboration** — Real-time multiplayer editing, turned on with `collaboration: { doc }`.
-  - Two editors on the same `doc` see each other's edits, carets and avatars.
-  - `server` is required, and `persistence` may not be set alongside it.
+  - Editors on the same `doc` see each other's edits, carets and avatars, named by `collaboration.user`.
+  - `offline: true` survives a reload by writing document content to browser storage.
+  - Every tool must support read-only, because a collaboration editor boots read-only.
 ```
 
 1. **Bold title, em-dash, summary.** The title is a noun phrase naming the thing, not a sentence.
 2. **The summary says what a reader gets, in under 25 words.** It has to stand alone, because it is the part most people read.
-3. **One fact per sub-bullet, three to seven of them.** Keep the constraint, the gotcha and the opt-in flag; cut the history and the reasoning about why the old way was wrong.
+3. **At most three sub-bullets, one line each.** One fact per bullet, and only facts that change what a reader does. Everything else belongs on a docs page, not here.
 4. **Keep every public name.** Config keys, methods, flags and routes stay in backticks, so a reader can find the API from the entry.
 5. **Nothing that only matters to a contributor.** No file paths, no counts of alerts triaged, and no measurements unless they change a decision.
 6. **No em-dash inside a sub-bullet.** The page splits on the first one and styles what precedes it as a title.

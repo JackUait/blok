@@ -7,341 +7,249 @@ All notable changes to this project will be documented in this file.
 ### Features
 
 - **Live collaboration** — Real-time multiplayer editing, turned on with `collaboration: { doc }`.
-  - Two editors pointed at the same `doc` see each other's edits, carets and avatars.
-  - Presence comes from the optional `collaboration.user`. Without it, a peer shows as a named space silhouette drawn from its connection id.
-  - The host reads the whole session through one `collaboration:status` event.
-  - `offline: true` keeps a local copy so edits survive a reload, and writes document content into browser storage.
-  - `server` is required, and `persistence` may not be set alongside it.
-  - Every registered tool must support read-only, because a collaboration editor boots read-only.
-  - On the service, `--collab` turns the sync routes on. `--collab-dir` holds document content, so keep it outside the public `--storage-dir`.
+  - Editors on the same `doc` see each other's edits, carets and avatars, named by `collaboration.user`.
+  - `offline: true` survives a reload by writing document content to browser storage.
+  - Every tool must support read-only, because a collaboration editor boots read-only.
 - **`persistence`, `server` and `ticket`** — The document wiring that used to be yours to write.
-  - `persistence: { load, save }` loads the document on mount and saves it as it changes, against your own endpoint.
-  - Saves are queued, never run in parallel, and only the newest pending document is sent.
-  - A rejection is retried with backoff before `onError` hears about it.
-  - The tab asks for confirmation before closing while a save is in flight.
-  - Versioning is opt-in, and Blok only carries the version your endpoint hands it.
-  - `server` fills in the uploader and the link-preview endpoint. Anything you set yourself wins.
-  - `ticket` names the endpoint that mints a short-lived access pass. `@bloklabs/server/ticket` exports `blokTicket` to mint one without a JWT library.
+  - `persistence: { load, save }` loads on mount and saves as the document changes, against your endpoint.
+  - Saves are queued, never parallel, and only the newest pending document is sent.
+  - `server` fills in the uploader and preview endpoints. `ticket` names the endpoint minting an access pass.
 - **Documents convert outside the browser** — `Blok.Server` runs the editor's own serializer in-process.
-  - A saved document therefore converts through the implementation the editor actually uses, not a port of it.
-  - `AddBlokDocuments()` registers it. `AddBlokServer` already includes it, and `BlokDocuments.Create()` is the same thing outside dependency injection.
-  - `IBlokDocumentConverter` gives Markdown, HTML and plain text out, Markdown in, and the saved format as JSON Schema.
+  - `AddBlokDocuments()` registers it, and `AddBlokServer` already includes it.
+  - `IBlokDocumentConverter` gives Markdown, HTML and plain text out, and Markdown in.
   - Markdown cannot express every block, so both directions report what changed.
-  - Each conversion is bounded by a timeout and a recursion limit.
-  - Pass `warmUp: false` for a host that starts often and converts rarely.
-- **Translate a document without handing a model its JSON** — `extractTexts` and `injectTexts` move the prose past a model without showing it the structure.
-  - `extractTexts` returns every translatable string in document order, and `injectTexts` puts the translations back.
-  - The model cannot drop ids, reorder blocks or invent fields, because it never sees them.
-  - Empty values, URLs and file names are skipped, and code blocks are out by default.
+- **Translate a document without handing a model its JSON** — `extractTexts` and `injectTexts` move the prose past a model.
+  - The model never sees the structure, so it cannot drop ids or reorder blocks.
+  - URLs, file names and code blocks are left out of the list.
   - A list whose length does not match the document throws rather than misplacing a translation.
-  - Available from `@bloklabs/core/view`, and as `ExtractTextsAsync` and `InjectTextsAsync` in C#.
-- **Markdown out of a saved document** — `blocksToMarkdown` is the synchronous, DOM-free outbound twin of `markdownToBlocks`.
+- **Markdown out of a saved document** — `blocksToMarkdown` is the synchronous, DOM-free twin of `markdownToBlocks`.
   - Headings become `#`, lists `-` or `1.`, and tables GFM pipe grids.
-  - `blocksToMarkdownWithReport` and `markdownToBlocksWithReport` also name every construct dropped or emitted lossily.
-  - Read that report rather than assuming the round trip was lossless. Blok has no raw-HTML block, so markup written into Markdown comes back as literal text.
-- **A heading keeps the anchor its links point at** — `HeaderData.anchor` renders as the heading's `id`, so in-document links survive a paste and a save.
-  - The anchor is captured from a pasted heading's own `id`, which is how Google Docs and exported HTML address their sections.
-  - `restoreHeadingAnchors` repairs documents already imported without it, matching each dead fragment to the heading its link text names.
-  - The pass reports every fragment it placed, and every one it refused as `no-match` or `ambiguous`, rather than guessing.
+  - `blocksToMarkdownWithReport` also names every construct dropped or emitted lossily.
+  - Markup written into Markdown comes back as literal text, since Blok has no raw-HTML block.
+- **A heading keeps the anchor its links point at** — `HeaderData.anchor` renders as the heading's `id`.
+  - It is captured from a pasted heading's own `id`, so in-document links survive a paste and a save.
+  - `restoreHeadingAnchors` repairs documents already imported without it.
+  - That pass reports every fragment it refused as `no-match` or `ambiguous`, rather than guessing.
 - **An uploader can delete what it stored** — `delete?(url, ctx)` is a third optional method on `BlokUploader`.
-  - Assets an editing session uploaded and then abandoned used to stay in the store forever.
-  - Blok sweeps the ones this session uploaded and stopped using, keyed by the block that persisted them.
-  - With the method absent nothing is ever deleted, and rejecting is how a host reports that a deletion did not happen.
-  - `POST /delete` does the same on the service.
-  - `UploaderConfig.headers` may now be a function returning a promise, so a short-lived pass is minted per request.
-- **Change a live document from outside the browser** — `POST /sync/{doc}/edit` and `POST /sync/{doc}/reset` change a live document over HTTP.
-  - An edit inserts, updates or removes blocks. It is all-or-nothing and reaches every open tab.
-  - A reset drops the working copy, reloads the document from your endpoint, and tells every open tab to pick it up.
-  - Both require a pass with `write: true` whose `doc` claim names that document.
+  - Blok sweeps the assets this session uploaded and then stopped using.
+  - With the method absent nothing is ever deleted, which is what happened until now.
+  - `UploaderConfig.headers` may now be a function, so a short-lived pass is minted per request.
+- **Change a live document from outside the browser** — `POST /sync/{doc}/edit` and `/reset` work over HTTP.
+  - An edit inserts, updates or removes blocks, all-or-nothing, and reaches every open tab.
+  - A reset reloads the document from your endpoint and tells every tab to pick it up.
+  - Both require a pass with `write: true` naming that document.
 
 ### Bug Fixes
 
-- **Pasted HTML ran before anything sanitized it** — A pasted `<img src=x onerror=…>` executed before `clean()` ever saw it, and a pasted `javascript:` link became clickable.
-  - Every paste preprocessor parsed clipboard HTML into an element owned by the live document, and a detached element still initiates resource loads.
-  - All untrusted parses now go through a document with no browsing context.
-  - The URL scheme check moved inside `clean()` itself, so it also covers the public `api.sanitizer.clean` that tool authors are taught to use.
-  - URL hardening no longer depends on a tool declaring a sanitize config.
-  - Both sanitizer walks read a value nested past 256 levels as null.
-- **A long article could not be converted at all** — An article that died outright on the server's embedded engine now converts in milliseconds.
-  - Both serializers folded their segments with `out + separator + text`, reallocating the whole document for every block.
+- **Pasted HTML ran before anything sanitized it** — A pasted `<img src=x onerror=…>` executed before `clean()` saw it.
+  - Clipboard HTML was parsed into an element owned by the live document, which still loads resources.
+  - Untrusted parses now use a document with no browsing context.
+  - The URL scheme check moved inside `clean()`, so a pasted `javascript:` link is no longer clickable.
+- **A long article could not be converted at all** — An article that died on the server's engine now converts in milliseconds.
+  - Both serializers reallocated the whole accumulated document for every block.
   - `blocksToHtml` also sent every inline field through a sanitizer that parsed twice.
-  - The parse context is now built once, and a field nothing can change is returned unparsed.
-  - Sibling runs are grouped and joined once, instead of concatenated down a recursion that was quadratic and one stack frame per block.
-  - Measured on the real engine: 600 KB went from failing outright to 7 ms, and 250 KB from 328 ms to 3 ms.
-- **A legacy document's nested content read as empty** — Plain text, Markdown and HTML all dropped the children of a legacy list, callout, toggle list or columns block.
+  - Measured on the real engine: 600 KB went from failing outright to 7 ms.
+- **A legacy document's nested content read as empty** — Plain text, Markdown and HTML all dropped a legacy block's children.
   - Documents written before nesting moved to `parent` and `content` keep their children inside `data`.
-  - A stored document is only rewritten when someone opens and saves it, so these shapes are still out there.
-  - They are now expanded once, in the document model, so every reader sees them in the same place.
-  - A legacy list serializes byte-identically to the flat list that replaced it.
-  - One unreadable block is skipped and reported as a dropped construct, rather than costing the caller the whole article.
-- **Markdown export lost the fence language, the nesting, and its own warnings** — Code fences exported unlabelled, Tab-nested paragraphs exported as code, and lossy conversions went unreported.
-  - A nested non-list block carried four leading spaces, which after a blank line is an indented code block.
-  - That indent now survives only inside a list item, where four spaces are the continuation.
-  - A collapsible heading, a media or embed block turned into a link, and a table cell pointing at a missing block now all report what changed.
+  - Those shapes are now expanded once, in the document model, so every reader sees them.
+  - One unreadable block is skipped and reported, rather than costing the caller the whole article.
+- **Markdown export lost the fence language and the nesting** — Code fences exported unlabelled, and Tab-nested paragraphs exported as code.
+  - Four leading spaces after a blank line is an indented code block, so that indent survives only inside a list item.
   - A container rendered only its direct children, so a list inside a toggle lost every level below the first.
-- **The caret did not survive a read-only round trip** — Entering read-only now remembers where the caret stood, and leaving it puts the caret back.
-  - That holds on both paths: the in-place per-block toggle, and the save, clear and render dance a registry containing a tool without `setReadOnly` takes.
-  - The restore declines when the user focused something else, when the block is gone, or when the input vanished.
-  - An overlong offset clamps instead of throwing.
-  - A collaboration status blip that changes nothing no longer runs the module cascade, which used to kill a live caret.
+  - Lossy conversions now report what changed, instead of reading as "nothing was lost".
+- **The caret did not survive a read-only round trip** — Entering read-only remembers where the caret stood, and leaving it puts it back.
+  - It holds on both the in-place toggle and the save, clear and render path.
+  - The restore declines when the user focused something else, or when the block is gone.
+  - A collaboration status blip that changes nothing no longer kills a live caret.
 - **A link to somewhere on the same page opened a new tab** — A bare `#fragment` reopened the whole document instead of moving inside it.
-  - So did the absolute URL that "Copy link to block" hands out, since only the bare form was recognised as internal.
-  - Same-page links now route through the blocks API.
-  - A URL carrying a fragment scrolls to it, a URL that is exactly the current one does nothing, and one differing only in its query navigates in this window.
-  - Following a link is reading rather than editing, so the handler no longer unbinds in read-only.
+  - So did the absolute URL that "Copy link to block" hands out.
+  - A fragment now scrolls, an identical URL does nothing, and a query-only difference navigates in place.
+  - Following a link is reading, so the handler no longer unbinds in read-only.
 
 ### Maintenance
 
 - **The server runs its own Yjs engine** — Nothing it ships carries native code any more.
-  - YDotNet and the native build matrix are gone, replaced by a managed C# implementation of the pieces the service actually needs.
-  - That covers the lib0 and Any codecs, the v1 update decoder and encoder, the struct store and state vector, transactions and YATA integration, delete sets, and the map, array and text write API.
-  - Each wave was verified against a shared Yjs oracle renderer rather than against itself.
-  - Every archive and both NuGet packages are built from managed code alone, so a service account with no home directory needs no configuration.
-  - It also removed two documented limits that existed only because of the native binding.
-- **`blok-sync.v2` is on the wire, and deliberately not spoken yet** — The service negotiates it, but the client still offers only `blok-sync.v1`.
-  - The operation, acknowledgement and rejection codecs exist on both sides against pinned shared fixtures.
-  - The operation-store seam is public, an operation id is settled before the document is touched, and a write is journalled before anyone can see it.
-  - Exactly-once acknowledged persistence is groundwork in this release, not a feature of it.
+  - YDotNet and the native build matrix are replaced by a managed C# implementation.
+  - Each wave was verified against a shared Yjs oracle rather than against itself.
+  - A service account with no home directory now needs no configuration.
+- **`blok-sync.v2` is on the wire, and deliberately not spoken yet** — The service negotiates it, and the client still offers only v1.
+  - The operation, acknowledgement and rejection codecs exist on both sides against pinned fixtures.
+  - An operation id is settled and journalled before anyone can see the write.
   - Do not build on the v2 frames until the client negotiates them.
-- **The documentation site was one step from being indexed as its error state** — An external crawl recorded the homepage's only `<h1>` as "Application Error".
-  - A component drew with `Math.random()` during render, and React 19 answers a text mismatch by discarding the server HTML and re-rendering the whole root.
-  - Docs had also not deployed for three days, blocked by a script demanding release assets the release predating it could never have had.
-  - Twenty further defects went with them, including a 301 on nearly every internal link and Russian pages publishing English content.
-  - A post-deploy smoke test now asserts what the host actually serves, since the two worst defects were invisible to the unit suite.
-- **`yarn serve` starts the collaboration backend** — The dev playground now boots the sync service beside it.
+- **The documentation site was one step from being indexed as its error state** — A crawl recorded the homepage's only `<h1>` as "Application Error".
+  - A component drew with `Math.random()` during render, so React 19 discarded the server HTML.
+  - Docs had also not deployed for three days, blocked by a script demanding impossible release assets.
+  - A post-deploy smoke test now asserts what the host actually serves.
+- **`yarn serve` starts the collaboration backend** — The dev playground boots the sync service beside it.
   - Multiplayer is exercised locally by default.
   - Pass `--no-server` to run the playground alone.
-- **Gates and dependencies** — The .NET solution keeps three test layers plus cross-runtime conformance and package smoke tests.
+- **Gates and dependencies** — The .NET solution keeps three test layers plus conformance and package smoke tests.
   - CI requires 80% line and branch coverage on merged production code.
-  - It runs the SDK analyzers with warnings as errors, audits direct and transitive NuGet packages, and scans for committed secrets.
-  - It scans the server tree and the built image, and analyzes C# with CodeQL.
-  - Gates were parallelized to fit a six-minute budget.
-  - Mutation testing runs on the diff alone, carrying surviving mutants between commits so a line that stops being covered is caught where it changed.
+  - It audits NuGet packages, scans for secrets, scans the built image, and analyzes C# with CodeQL.
+  - Mutation testing runs on the diff alone, carrying surviving mutants between commits.
 
 ## [1.12.0](https://github.com/JackUait/blok/compare/v1.11.0...v1.12.0) (2026-08-26)
 
 ### Features
 
 - **`@bloklabs/server` is one C# implementation now, in two forms** — The Go service that shipped in 1.11.0 is ASP.NET Core.
-  - Install `Blok.Server.AspNetCore` from NuGet and the same handlers run inside an app you already have.
-  - Wire it with `AddBlokServer()`, `UseAuthorization<T>()` and `MapBlokServer("/api/blok")`.
-  - Your own authorization policy guards uploads and previews, so there is no second process, port or credential to operate.
-  - `npx @bloklabs/server` and `ghcr.io/jackuait/blok-server` still deliver the standalone host, now a self-contained .NET binary for the same six targets.
-  - Routes, flags, environment variables and every response wire are unchanged, pinned by a 58-case conformance suite.
-  - The packages still store no documents, and carry no database-block or MySQL integration.
-- **Answers pasted from ChatGPT and Gemini keep their structure** — A pasted formula used to arrive as roughly 870 nested layout spans, and a ChatGPT code block arrived twice.
-  - Those apps render an answer as a component tree, so the markup carrying meaning sits in attributes the sanitizer strips.
-  - Math is now replaced by the `<span data-latex>` the equation tool already whitelists, read from `data-math-source`, `data-math` or KaTeX's own MathML annotation.
-  - A code block collapses to one `<pre><code>` with its newlines intact.
-  - Gemini's language label rides the `<pre>` as `data-blok-code-language`, and the Code tool maps the aliases models emit to Prism ids.
-  - Screen-reader speaker labels, icon glyphs and nodes Gemini flags as hidden no longer become content.
-  - There is deliberately no Claude branch: its share pages sit behind a bot check headless Chromium does not clear.
+  - `Blok.Server.AspNetCore` runs the same handlers inside an app you already have, with no second process.
+  - `npx @bloklabs/server` and `ghcr.io/jackuait/blok-server` still deliver the standalone host.
+  - Routes, flags and every response wire are unchanged, pinned by a 58-case conformance suite.
+- **Answers pasted from ChatGPT and Gemini keep their structure** — A pasted formula used to arrive as roughly 870 layout spans.
+  - Math is replaced by the `<span data-latex>` the equation tool already whitelists.
+  - A code block collapses to one `<pre><code>`, and its language rides as `data-blok-code-language`.
+  - There is deliberately no Claude branch: its share pages sit behind a bot check.
 
 ### Bug Fixes
 
-- **Markdown copied out of an AI answer lost half its structure** — The Copy button writes markdown as plain text, which is a different path into Blok, and five things were lost on it.
-  - A code fence or second paragraph nested under a list item vanished without trace, and that is the shape assistants write most.
-  - Nested content is now emitted as sibling blocks in document order, and items resuming afterwards carry `start` so their markers do not restart at 1.
-  - Fence languages are normalized through one shared module that knows the aliases models emit.
-  - Bold, inline code and strikethrough inside a list item survive a save, because the List tool spreads the same inline whitelist every other text tool uses.
-  - A parser throw no longer makes the paste do nothing at all.
-  - A blockquote-only answer no longer arrives as literal `> ` lines.
+- **Markdown copied out of an AI answer lost half its structure** — A code fence nested under a list item vanished without trace.
+  - Nested content is emitted as sibling blocks, and later items carry `start` so markers do not restart at 1.
+  - Fence languages are normalized through one module that knows the aliases models emit.
+  - Bold, inline code and strikethrough inside a list item now survive a save.
 
 ### Maintenance
 
-- **The Go implementation is gone, and the tag ships the C# one** — The Go source was removed only after the dual-target conformance gate passed unwaived.
-  - The tag workflow tests and formats the .NET 10 solution, then packs both NuGet packages and proves them by consuming them from an isolated feed.
-  - It builds six self-contained host archives plus checksums, and smoke-tests both the native archive and the linux/amd64 image.
-  - The image smoke test includes that a public unauthenticated configuration still refuses to start.
-  - It publishes and verifies the NuGet, GitHub and GHCR outputs, and only then drafts the release.
-  - The NuGet credential is minted over OIDC immediately before the push, so it cannot outlive the build that uses it.
-- **Two gates that only CI could see** — The `dotnet format` check was red on `main` from the day it landed, and every step after it in the job never ran.
-  - The repository carried no `.editorconfig`, so the tool fell back to its four-space default while the C# is written two-space.
-  - That produced 12689 whitespace complaints across every file.
-  - The .NET tree now carries its own `root = true` config, so a laptop and a runner agree.
-  - Two conformance cases that need the ordinary binary take their own binding, which keeps the whole file skipped when the harness has not built a server.
+- **The Go implementation is gone, and the tag ships the C# one** — It was removed only after the dual-target conformance gate passed unwaived.
+  - The tag workflow packs both NuGet packages and proves them from an isolated feed.
+  - It smoke-tests the archive and the container image before publishing anything.
+  - The NuGet credential is minted over OIDC immediately before the push.
+- **Two gates that only CI could see** — The `dotnet format` check was red on `main` from the day it landed.
+  - The repository carried no `.editorconfig`, so the tool fell back to four-space indentation.
+  - That produced 12689 whitespace complaints, and every step after it never ran.
+  - The .NET tree now carries its own config, so a laptop and a runner agree.
 
 ## [1.11.0](https://github.com/JackUait/blok/compare/v1.10.1...v1.11.0) (2026-08-23)
 
 ### Features
 
-- **`@bloklabs/presets`** — A new package of ready-made uploaders, so `config.uploader` stops being something every project writes from scratch.
-  - It ships `supabaseStorage`, `presignedStorage` for S3-compatible stores, `cloudinaryStorage`, `fetchStorage` for any endpoint speaking Blok's upload contract, and `indexedDBStorage` for demos.
-  - Zero runtime dependencies: a vendor client is passed in, never imported, so your own auth session applies and the preset is not pinned to a client version.
-  - Buckets and Cloudinary resource types resolve per asset kind rather than per tool.
-  - Only `fetchStorage` and `cloudinaryStorage` implement `uploadByUrl`. The rest leave it undefined, so Blok's URL-verbatim fallback applies.
-  - `indexedDBStorage` exists because the built-in fallback does not survive a reload, so an unconfigured demo breaks on refresh.
-  - A failed upload names the preset that produced it, so a 403 is traceable to the signer, the CORS rule or the PUT.
+- **`@bloklabs/presets`** — Ready-made uploaders, so `config.uploader` is no longer something every project writes.
+  - `supabaseStorage`, `presignedStorage`, `cloudinaryStorage`, `fetchStorage` and `indexedDBStorage`.
+  - Zero runtime dependencies: a vendor client is passed in, never imported, so your own auth session applies.
   - `BlokUploader`, `UploadContext` and `UploadedAsset` are now exported from `@bloklabs/core`.
-- **`@bloklabs/server`** — A new sidecar that handles file uploads and link previews, so a consumer writes no backend code for either.
-  - Run it with `npx @bloklabs/server`, or the `ghcr.io/jackuait/blok-server` container image.
-  - `POST /upload` takes a file, `POST /upload-by-url` re-hosts a pasted remote URL, and `GET /unfurl` returns the metadata a bookmark card is built from.
-  - Both routes that fetch a consumer-supplied URL go through one SSRF-guarded outbound client, held there by a static test that fails the build on any other HTTP client.
-  - Uploaded bytes land in a local directory or any S3-compatible bucket, signed with SigV4 against the standard library so the binary carries no AWS SDK.
-  - Three access modes (`none`, `proxy`, `ticket`) are enforced by startup interlocks rather than warnings, and each refusal names the flag to change.
-  - Access passes are verified against exactly one algorithm, which removes the algorithm-confusion family by construction.
-  - The service stores no documents. It owns what passes through it, never your records.
-- **Cross-block text selection** — Dragging across blocks now selects the characters under the pointer instead of whole blocks.
-  - Every engine clamps a drag-driven selection to the anchor's editing host, and each block's tool element is its own host, so the spanning range is asserted outright and re-applied whenever something rewrites it.
-  - Copy, cut, Backspace, Delete, typing, Enter, paste and the mark engine all split the range per host.
-  - A native copy no longer drops every block after the first, and a cross-block ⌘B no longer deletes the selected text.
+- **`@bloklabs/server`** — A sidecar handling file uploads and link previews, so you write no backend for either.
+  - `POST /upload`, `POST /upload-by-url` and `GET /unfurl`, run through npx or the container image.
+  - Uploaded bytes land in a local directory or any S3-compatible bucket.
+  - Access modes `none`, `proxy` and `ticket` are enforced by startup interlocks rather than warnings.
+- **Cross-block text selection** — Dragging across blocks selects the characters under the pointer, not whole blocks.
+  - Copy, cut, typing, Enter, paste and the mark engine all split the range per editing host.
   - It works in Firefox, which Notion's own implementation does not.
-  - Escape promotes the text selection to a selection of the same blocks. Shift+Click and Shift+Arrow keep their block-level semantics.
-  - A lasso over columns now selects the blocks inside them rather than the column list.
-- **Block controls on either side** — `config.toolbarPosition: 'left' | 'right'` moves the plus button and drag handle between the editor's gutters.
-  - It is live, through `toolbar.setPosition()`.
-  - The start gutter collapses, an equal one opens at the end, and the text reclaims the space the controls used to occupy.
+  - Escape promotes the text selection to a selection of the same blocks.
+- **Block controls on either side** — `config.toolbarPosition: 'left' | 'right'` moves the plus button and drag handle.
+  - It is live through `toolbar.setPosition()`, and the reserved gutter width moves with it.
   - Logical tokens throughout, so RTL mirrors for free.
-  - The viewport clamp, the nested-content nudge, the callout-emoji suppression and the block-settings placement are mirrored too.
-  - Before this, the only lever for getting the controls out of the reading path was hiding them with `hideToolbar`.
-- **Dev override seam** — Every published `@bloklabs/core` entry consults `globalThis.__BLOK_DEV_OVERRIDE__` before falling back to its bundled implementation.
-  - It is a passive, in-realm read. Nothing is fetched, evaluated or resolved from a URL.
-  - It never consults localStorage, meta tags, URL parameters or DOM attributes, so it grants nothing to an attacker who cannot already run script in your origin.
-  - Payloads that are DOM nodes are rejected, which closes DOM clobbering.
-  - A payload that throws on property access warns once and falls back to the bundle rather than crashing the chunk.
+  - Before this, the only lever was hiding the controls entirely with `hideToolbar`.
+- **Dev override seam** — Every `@bloklabs/core` entry consults `globalThis.__BLOK_DEV_OVERRIDE__` before its bundled implementation.
+  - It is a passive, in-realm read: nothing is fetched, evaluated or resolved from a URL.
   - The editor root carries `data-blok-version`, so what is running is inspectable.
-  - To drop the branch from your bundle, alias the newly exported `./dist/*` subpath with an exact-match regex.
+  - To drop the branch from your bundle, alias the newly exported `./dist/*` subpath.
 
 ### Bug Fixes
 
-- **`onChange` fired late, or not at all** — Sustained typing produced zero `onChange` calls until the user paused.
-  - Every mutation restarted the 400 ms batch window, so any gap under 400 ms pushed delivery further out.
-  - The window now opens on the first change and is never extended.
-  - `onChange` leads it on the next microtask, with one tick of deferral so a multi-block paste is still a single call.
-  - Everything after is coalesced into one trailing call, which bounds latency at one window.
-  - `onSave` keeps the trailing edge only, since serializing the whole document is too expensive to front-run a batch.
-  - Read-only and destroy are re-checked at delivery, because a queued microtask cannot be cancelled by `destroy()`.
-- **Selection beside a nested block** — A lasso drawn in the gutter beside a table nested in a toggle heading selected the whole toggle section instead of the table.
-  - Selection decided which block owns a row by a different rule than the block toolbar does, and now uses the toolbar's.
-  - A flat-index range selected every block stored between the endpoints, so a container and its children.
-  - A fast drag dropped every row above the first throttled mousemove, permanently.
-  - Shift+Arrow stepped by flat index and walked into the next container.
-  - One keystroke inside a nested block ran the pipeline once per ancestor, so Shift+ArrowDown extended by two rows per press.
-  - A lasso that ends the drag also stands the hover down, so a queued mousemove cannot yank the toolbar onto the last block.
-- **Empty-block placeholders displaced the caret** — An empty block painted its caret 315 px to the right in a paragraph, and 118 px in an h2.
-  - A placeholder is generated content at the start of the first line box, and left in normal flow it consumes real inline advance.
-  - The block therefore read as if the placeholder were something the user had typed.
-  - Every placeholder gated on the empty mark now paints its text while claiming zero advance.
-  - Media captions stay in normal flow on purpose, because a zero-width box would spill a centred or right-aligned caption to one side.
-  - Separately, the focus helper overwrote a correctly placed caret with an unset range, dropping it out of the element entirely.
-- **A bookmark that could not be previewed** — The same block showed an error placeholder right after a failed paste, and an ordinary card after a reload.
+- **`onChange` fired late, or not at all** — Sustained typing produced zero calls until the user paused.
+  - Every mutation restarted the 400 ms window, which now opens on the first change and never extends.
+  - `onChange` leads the window on the next microtask, and the rest coalesces into one trailing call.
+  - `onSave` keeps the trailing edge only, since serializing the document is too expensive to front-run.
+- **Selection beside a nested block** — A lasso drawn beside a nested table selected the whole toggle section.
+  - Selection now resolves which block owns a row through the same rule the toolbar uses.
+  - A fast drag no longer drops every row above the first throttled mousemove.
+  - One keystroke inside a nested block no longer runs the pipeline once per ancestor.
+- **Empty-block placeholders displaced the caret** — An empty paragraph painted its caret 315 px to the right.
+  - A placeholder in normal flow consumes real inline advance at the start of the line box.
+  - Placeholders now paint their text while claiming zero advance.
+  - Media captions stay in normal flow, since a zero-width box would spill a centred caption sideways.
+- **A bookmark that could not be previewed** — It showed an error after the paste, and an ordinary card after a reload.
   - The error state never reached saved data.
-  - A failed preview now degrades to a plain link on both paths, which is what the reload path already rendered.
-  - Roughly 30% of sites publish no preview data to anything that is not a browser, so this is the ordinary case rather than a fault.
-  - There is no notifier, since both outcomes end as the same link and a reader can act on neither.
+  - A failed preview now degrades to a plain link on both paths.
+  - Roughly 30% of sites publish no preview data, so this is the ordinary case rather than a fault.
 - **Audio player card** — Descenders in the title and artist lines were sliced flat.
   - `text-overflow: ellipsis` forces `overflow: hidden`, which clips at the padding box.
-  - At a line height of exactly 1, that box is shorter than the font's content area: 3.02 px of descender ink against 1.5 px of room.
-  - Both lines now use the same line-height token the file-name row already carries.
+  - At a line height of exactly 1, that box is shorter than the font's content area.
+  - Both lines now use the line-height token the file-name row already carries.
 
 ### Maintenance
 
-- **Release and CI wiring** — Nothing in this repository iterates workspaces automatically, so a package missing from one of seven lists silently drops out of that step.
-  - Both new packages are now registered across all of them: version lockstep, the publish list, the build task graph, their own CI test steps, the tests that pin those graphs, the docs-deploy gate, and the package-metadata law.
-  - The server's binaries and container image ship from a tag-triggered workflow, since a maintainer's laptop has no Go toolchain, Docker daemon or registry credentials.
-  - The npm wrapper resolves its download from the release matching its own version, so binaries must ship on every tag.
-  - A compiler-API law fingerprints every type `@bloklabs/presets` hand-copies into its published declaration, and fails on any mirrored type nobody remembered to cover.
-- **Docs** — New `/presets` and `/server` pages, linked from the navigation and localized in English and Russian down to the table cells.
-  - `/server` leads with the path that runs no service at all, and states its limits on the page rather than in a footnote.
-  - One of those limits: files served from the local directory should sit on a different origin than the app, since an uploaded file is served by your domain.
+- **Release and CI wiring** — Nothing here iterates workspaces, so a package missing from a list drops out silently.
+  - Both new packages are registered across all seven lists, from version lockstep to the publish gate.
+  - The server's binaries and image ship from a tag-triggered workflow, not from a maintainer's laptop.
+  - A compiler-API law fingerprints every type `@bloklabs/presets` hand-copies into its declaration.
+- **Docs** — New `/presets` and `/server` pages, linked from the navigation and localized in both languages.
+  - `/server` leads with the path that runs no service at all, and states its limits on the page.
   - A new page documents the dev override seam, its threat model and its opt-out.
-  - `SECURITY.md` now commits to a response window before the first report rather than after it: acknowledged within five business days, fixed or publicly advised within ninety.
+  - `SECURITY.md` commits to acknowledging a report within five business days.
 
 ## [1.10.1](https://github.com/JackUait/blok/compare/v1.10.0...v1.10.1) (2026-08-20)
 
 ### Features
 
 - **Toggle heading adoption** — "Turn into → Toggle heading" now adopts the heading's section, matching Notion.
-  - Every following sibling up to the next heading of the same or higher rank becomes a child of the new toggle.
-  - Before, the section was left stranded outside and had to be hand-fed into the fresh toggle one block at a time.
-  - Descendants ride along with the sibling that was adopted, rather than being reparented directly.
-  - A heading inside a column adopts only within that column, and a source that is already a toggle keeps exactly the children it had.
+  - Every sibling up to the next heading of equal or higher rank becomes a child of the new toggle.
+  - A heading inside a column adopts only within that column.
   - The adoption runs inside a move transaction, so undo restores the section.
-  - Multi-select convert opts out, so each selected block becomes its own toggle.
 - **Toggle disclosure arrows** — The arrows now read as clickable.
-  - At rest the chevron was a fixed 12 px glyph whose hover pill appeared only once the pointer was already inside the 28 px square.
-  - The chevron scales with its title's font size, so heading arrows grow with their level while toggle lists keep the historical 12 px.
-  - The pill tints on hover anywhere over the title row, rather than over the arrow alone.
+  - The hover pill used to appear only once the pointer was already inside the 28 px square.
+  - The chevron scales with its title's font size, so heading arrows grow with their level.
   - A localized Expand or Collapse tooltip is read from the state-synced `aria-label`.
 
 ### Bug Fixes
 
-- **Nested block menus** — A block inside a toggle could never show its own menu, and a nested table's menu jumped out from under the cursor.
-  - Hovering cell content anchored the toolbar to the table, but crossing onto the cell padding or the gutter strip bounced resolution up to the toggle parent.
-  - Hover and touch now share one resolver in which the deepest block wrapper under the pointer owns the toolbar.
-  - Cell blocks still anchor their table, and a child-toolbar container's first child still anchors the container.
-  - A pointer in a container's own chrome descends by line to the child whose band contains it.
+- **Nested block menus** — A block inside a toggle could never show its own menu.
+  - A nested table's menu also jumped away the moment the pointer crossed onto the cell padding.
+  - Hover and touch now share one resolver where the deepest block under the pointer owns the toolbar.
   - Hover detection stands down entirely over the toolbar.
-  - The page-margin fallback is band-, depth- and x-aware, so the margin beside a nested table anchors the table.
 - **Accessible names for icon-only controls** — The entire inline toolbar was nameless to a screen reader.
-  - A hint is wired via `aria-describedby`, which describes a control but never names it.
-  - An icon-only popover item now takes its accessible name from its hint title, so the repair covers every one of them.
-  - Colour swatches are named from the label they already formatted, and expose applied state via `aria-pressed`.
-  - Captions are named from their localized placeholder, marked multiline, and drop `role="textbox"` in read-only where they are static text.
-  - The embed iframe has a title, and the file card no longer nests an editable textbox inside its button.
-  - No new i18n keys: every label reuses one already present in all 69 locales.
+  - A hint wired via `aria-describedby` describes a control but never names it.
+  - An icon-only popover item now takes its name from its hint title, which repairs every one of them.
+  - Colour swatches, captions and the embed iframe are named too, with no new i18n keys.
 - **List and popover semantics** — Every list item in the editor was an orphan.
-  - Items declared `role="listitem"` but nothing ever declared the list. The wrapper now carries `role="list"`.
-  - Toolbox section headers were `role="separator"` children of a `role="listbox"`, which may own only options and groups, and are now presentational.
-  - A popover is stamped as a menu or listbox only when it actually has default items.
-  - That stops the link editing field and the block colour submenu advertising a menu with no menu items.
-- **Table and database semantics** — Add-row, add-column and the row and column grips were pointer-only, so a keyboard user could not add or reorder anything.
+  - Items declared `role="listitem"` but nothing declared the list, so the wrapper now carries `role="list"`.
+  - Toolbox section headers were separators inside a listbox, and are now presentational.
+  - A popover is stamped as a menu only when it actually has menu items.
+- **Table and database semantics** — Add-row, add-column and the row and column grips were pointer-only.
   - They are now named, focusable buttons with keyboard activation.
-  - Heading cells expose `columnheader` and `rowheader` roles, matching the real `<th>` the view renderer already emits.
-  - The tag itself cannot be swapped, because rebuilding cells would destroy elements that host mounted child blocks.
-  - The header row and column toggle is a real `role="switch"` with `aria-checked` and Enter/Space.
-  - Database view tabs are a real tablist with roving tabindex and `aria-selected`.
+  - Heading cells expose `columnheader` and `rowheader`, matching the `<th>` the view renderer emits.
+  - The header toggle is a real `role="switch"`, and database view tabs are a real tablist.
 - **Escape no longer strands focus** — Escape pressed inside the toolbar left focus on `<body>`.
-  - The document-level handler stopped propagation while still in the capture phase, so the toolbar's own bubble-phase handler could never restore the caret.
+  - The document handler stopped propagation in the capture phase, so the caret could never be restored.
   - It now stands down for targets inside the toolbar.
-  - The inline-toolbar branch stops propagation too, so one Escape no longer both closes the toolbar and enters navigation mode.
   - Modal dialogs return focus to the element that opened them, which fixes focus loss on WebKit.
-- **Contrast** — The grey text token cleared AA by 0.05 on white, and therefore failed on every tinted surface.
-  - It measured 4.28:1 on the secondary background, and 3.95:1 under hover.
-  - It is darkened, along with links and the embed text that sat on the decorative tier.
-  - Inline code becomes its own token, so it stops borrowing the persisted marker red.
-  - The Prism dark palette was entirely dead: every rule was gated on a `.dark` class nothing in Blok sets, so dark code blocks rendered light punctuation at 1.54:1.
-  - Database column pills opt out of the marker palette onto a dedicated on-pill colour, because every light text colour fails AA on its own background.
+- **Contrast** — The grey text token cleared AA by 0.05 on white, so it failed on every tinted surface.
+  - It is darkened, along with links and embed text, and inline code becomes its own token.
+  - The Prism dark palette was dead: every rule was gated on a class nothing in Blok sets.
+  - Database column pills move onto a dedicated on-pill colour.
 
 ### Maintenance
 
-- **Accessibility suite** — Coverage was two copy-pasted axe scans on the table tool, and is now a layered suite on Chromium, Firefox and WebKit.
-  - It scans all 20 block tools in edit and read-only, plus the editor chrome: toolbar, toolbox, block settings, inline toolbar, nested popovers, tooltips and the link field.
-  - It covers keyboard and focus behaviour, live-region announcements, and a regression spec pinning each audited defect.
-  - No rule is waived anywhere, and every scan is preceded by a visibility assertion so a scoped scan cannot pass vacuously.
-  - A static architecture law pins names, role-gated ARIA state, decorative icons and a bidirectional `a11y.*` i18n ledger.
-  - Two defects stay pinned with reasons: navigation mode exposes no selection role, and the inline toolbar still intermittently strands focus.
+- **Accessibility suite** — Two copy-pasted axe scans became a layered suite on Chromium, Firefox and WebKit.
+  - It scans all 20 block tools in edit and read-only, plus the editor chrome.
+  - No rule is waived, and every scan is preceded by a visibility assertion.
+  - Two defects stay pinned with reasons, including the inline toolbar stranding focus.
 
 ## [1.10.0](https://github.com/JackUait/blok/compare/v1.9.0...v1.10.0) (2026-08-07)
 
 ### Features
 
-- **Framework adapters** — `useBlocks` takes `{ within: blockId }` in React, Vue and Angular, so a container re-renders only for changes inside its own subtree.
+- **Framework adapters** — `useBlocks` takes `{ within: blockId }`, so a container re-renders only for its own subtree.
   - Unscoped, a page of N containers turned one keystroke into N re-renders.
-  - It bounds reactivity, not reads: the returned API still sees the whole tree.
-  - A change whose block can no longer be placed counts as in-scope, so a container is never left rendering a dead child.
-  - `childContentAttributes` applies per-child decoration on each child's `[data-blok-element-content]` wrapper, which is where a numbered rail or connector line has to align.
-  - `toolbarAnchorRef` in React and Vue, and `ctx.setToolbarAnchor` in Angular, answer `getToolbarAnchorElement` from inside the component tree.
-  - That ref outranks the declared hook only while it holds a mounted element, so the toolbar is never positioned against a detached node.
+  - `childContentAttributes` applies per-child decoration on each child's content wrapper.
+  - `toolbarAnchorRef` and `ctx.setToolbarAnchor` answer `getToolbarAnchorElement` from inside the component tree.
 - **View** — `renderLatex` and `createLatexRenderer` are exported from `@bloklabs/core/view`.
-  - The KaTeX chunk was already in the bundle, but no entry exported the renderer, so hosts were told to add `katex` as a second dependency of their own.
-  - Both apply the options Blok itself trusts for untrusted input: `trust: false`, capped `maxExpand` and `maxSize`, and no throw on malformed math.
-  - CSS injection is skipped where there is no `document`, so SSR and workers get identical markup.
-  - `inlineRenderers` is synchronous, so `createLatexRenderer()` awaits the load once and hands back a sync renderer.
+  - The KaTeX chunk was already bundled, but hosts were told to add `katex` themselves.
+  - Both apply the options Blok trusts for untrusted input, including `trust: false`.
+  - `createLatexRenderer()` awaits the load once and hands back a synchronous renderer.
 
 ### Bug Fixes
 
 - **`insertChild({ caret })`** — The caret was permanently lost for a portal-rendered child.
-  - Placement ran synchronously after the insert, but a React, Vue or Angular child's `render()` returns an empty host and commits its editable a frame later.
-  - The block was not yet focusable, so the caret helper took its only other branch: clear the selection, blur, highlight the block.
+  - A React, Vue or Angular child returns an empty host and commits its editable a frame later.
+  - The block was not yet focusable, so the caret helper cleared the selection instead.
   - Placement now re-applies once the child's holder produces an input, one-shot.
-  - It stands down if focus moved away in the meantime.
 
 ### Maintenance
 
-- **Adapter parity** — The per-child decoration pass was triplicated across the three adapters and is now one implementation.
-  - Three architecture laws pin the new surface: `child-decoration`, `toolbar-anchor-ref` and `useblocks-scope`.
-  - The view entry gained an export-to-declaration drift check, the guard whose absence let `renderLatex` ship undeclared.
+- **Adapter parity** — The per-child decoration pass was triplicated across the adapters and is now one implementation.
+  - Three architecture laws pin the new surface.
+  - The view entry gained an export-to-declaration drift check.
 
 ## [1.9.0](https://github.com/JackUait/blok/compare/v1.8.0...v1.9.0) (2026-08-06)
 

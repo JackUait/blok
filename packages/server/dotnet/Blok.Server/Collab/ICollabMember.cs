@@ -16,12 +16,11 @@ internal enum CollabCloseReason
   BadAwareness,
 
   /// <summary>
-  /// Close 4503 once a future commit path (Task 3.2 onward) applies an edit
-  /// it cannot confirm was journalled — nothing raises this reason yet. Its
-  /// text differs from <c>SeedFailed</c>'s "document unavailable" on the same
-  /// status, and it is not <c>Reset</c>'s 4409: that status tells the client
-  /// to relineage and discard pending work, which a retryable commit failure
-  /// must not trigger.
+  /// Close 4503: the room could not confirm an edit was journalled, so it
+  /// discarded itself. Its text differs from <c>SeedFailed</c>'s "document
+  /// unavailable" on the same status, and it is not <c>Reset</c>'s 4409: that
+  /// status tells the client to relineage and discard pending work, which a
+  /// retryable commit failure must not trigger.
   /// </summary>
   CommitUnavailable,
 }
@@ -44,8 +43,8 @@ internal interface ICollabMember
   bool AcceptsControlFrames { get; }
 
   /// <summary>
-  /// Actor to attribute this member's writes to, once something journals
-  /// them (Task 3.2 onward — nothing reads this yet). Derived at the
+  /// Actor a journalled write is attributed to. Recorded on every committed
+  /// operation; a v1 write is not journalled yet (Task 3.4). Derived at the
   /// handshake from the ticket's user claim or the signed-in principal —
   /// never from a rate-limit/connection-cap key, and never from anything the
   /// client sends after the handshake. Null when the connection carries no
@@ -55,8 +54,8 @@ internal interface ICollabMember
   string? ActorId { get; }
 
   /// <summary>
-  /// Protocol this member negotiated, for the operation source a future
-  /// commit path (Task 3.2 onward) would record for its writes.
+  /// Protocol this member negotiated; it becomes the source recorded on the
+  /// operations the room commits for it.
   /// </summary>
   CollabOperationSource ProtocolSource { get; }
 

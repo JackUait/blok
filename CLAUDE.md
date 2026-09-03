@@ -66,6 +66,20 @@ Project guidance for Claude Code (claude.ai/code) working with this repository.
 
 Before declaring done: run quality gates (`yarn lint`, `yarn test`), push, clean up local state, and hand off context. Run the checklist above.
 
+## Breaking Changes
+
+Blok is a published library. A change that alters a public surface lands on real consumers, and the user decides the version bump and the release notes.
+
+**Tell the user, in the reply, at the moment you make the change.** Say what breaks, who it breaks for, and what the migration is. Do not bury it in a list.
+
+**Label the commit.** Put `BREAKING` in the subject and a `BREAKING CHANGE:` line in the body giving the old behaviour, the new behaviour, and the migration step.
+
+**Counts as breaking:** removing or renaming an exported symbol, a public type in `types/`, a config key, a data attribute, a CSS variable, or a field in a block's saved data; changing a default; changing a tool's saved JSON shape; anything a consumer's `tsc` or runtime would notice.
+
+**Does not count:** internals under `src/` with no published surface, tests, docs wording.
+
+If the break is avoidable, say so and offer the compatible route before committing to it.
+
 ## Project Overview
 
 Blok is a headless, block-based rich text editor (similar to Notion). Content is JSON blocks, not HTML.

@@ -33,6 +33,23 @@ internal interface ICollabMember
   /// </summary>
   bool AcceptsControlFrames { get; }
 
+  /// <summary>
+  /// Actor to attribute this member's writes to, once something journals
+  /// them (Task 3.2 onward — nothing reads this yet). Derived at the
+  /// handshake from the ticket's user claim or the signed-in principal —
+  /// never from a rate-limit/connection-cap key, and never from anything the
+  /// client sends after the handshake. Null when the connection carries no
+  /// verified identity: an unknown author stays unknown rather than getting
+  /// a fabricated name in durable history.
+  /// </summary>
+  string? ActorId { get; }
+
+  /// <summary>
+  /// Protocol this member negotiated, for the operation source a future
+  /// commit path (Task 3.2 onward) would record for its writes.
+  /// </summary>
+  CollabOperationSource ProtocolSource { get; }
+
   /// <summary>One fully encoded wire frame (see <see cref="SyncWire"/>).</summary>
   void Send(byte[] frame);
 

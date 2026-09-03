@@ -103,7 +103,9 @@ internal static class SyncEndpoint
           maxQueuedBytes: (long)OutboundQueueFactor * options.CollabMaxMessageBytes,
           new SyncInboundBudget(
               options,
-              context.RequestServices.GetRequiredService<TimeProvider>()));
+              context.RequestServices.GetRequiredService<TimeProvider>()),
+          actorId: accepted.ActorId,
+          protocolSource: accepted.ProtocolSource);
       CollabJoinResult join;
 
       // Join before the upgrade: a draining server can still answer 503,

@@ -53,18 +53,26 @@ internal sealed class SyncSocketMember : ICollabMember
       bool acceptsControlFrames,
       long maxQueuedBytes,
       SyncInboundBudget? inbound = null,
-      TimeSpan? closeGrace = null)
+      TimeSpan? closeGrace = null,
+      string? actorId = null,
+      CollabOperationSource protocolSource = CollabOperationSource.ClientV1)
   {
     CanWrite = canWrite;
     AcceptsControlFrames = acceptsControlFrames;
     this.maxQueuedBytes = maxQueuedBytes;
     this.inbound = inbound;
     this.closeGrace = closeGrace ?? DefaultCloseGrace;
+    ActorId = actorId;
+    ProtocolSource = protocolSource;
   }
 
   public bool CanWrite { get; }
 
   public bool AcceptsControlFrames { get; }
+
+  public string? ActorId { get; }
+
+  public CollabOperationSource ProtocolSource { get; }
 
   /// <summary>The close that won, once one was requested.</summary>
   internal SyncCloseFrame? RequestedClose => Volatile.Read(ref requestedClose)?.Value;

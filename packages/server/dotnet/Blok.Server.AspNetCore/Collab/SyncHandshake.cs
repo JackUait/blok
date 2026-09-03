@@ -26,8 +26,17 @@ internal sealed record SyncRejected(string? SubProtocol, SyncCloseFrame Close) :
 /// the signed-in application user, else null — uncapped, because in
 /// none/proxy mode every socket shares one loopback or proxy address and a
 /// cap on it would be a per-doc cap for everyone.
+///
+/// <paramref name="ActorId"/> and <paramref name="ProtocolSource"/> are carried onto the
+/// member for a future commit path to attribute writes with; see
+/// <see cref="SyncHandshake.DeriveActor"/>. Nothing reads either yet.
 /// </summary>
-internal sealed record SyncAccepted(string? SubProtocol, bool CanWrite, string? Principal) : SyncHandshakeResult;
+internal sealed record SyncAccepted(
+    string? SubProtocol,
+    bool CanWrite,
+    string? Principal,
+    string? ActorId,
+    CollabOperationSource ProtocolSource) : SyncHandshakeResult;
 
 /// <summary>
 /// The sync door (plan decisions 7, 9, 18). Order: WebSocket plumbing →
@@ -122,6 +131,7 @@ internal sealed class SyncHandshake(
     string? principal = null;
     var canWrite = true;
     var user = context.User;
+    var ticketUser = "";
 
     if (!SyncEndpoint.IsSingleSegment(doc))
     {
@@ -166,11 +176,18 @@ internal sealed class SyncHandshake(
       principal = $"user:{claims.User}";
       rateLimitKey = principal;
       user = TicketPrincipal.For(claims);
+      ticketUser = claims.User;
     }
 
     principal ??= SignedInPrincipal(context);
 
-    return (new SyncCandidate(subProtocol, canWrite, principal, user), rateLimitKey);
+    var protocolSource = subProtocol == ProtocolV2
+      ? CollabOperationSource.ClientV2
+      : CollabOperationSource.ClientV1;
+
+    return (
+        new SyncCandidate(subProtocol, canWrite, principal, DeriveActor(ticketUser, user), protocolSource, user),
+        rateLimitKey);
   }
 
   private static async ValueTask<SyncHandshakeResult> AuthorizeAsync(
@@ -192,7 +209,12 @@ internal sealed class SyncHandshake(
           await authorization.CanWriteDocumentAsync(candidate.User, doc, context.RequestAborted);
     }
 
-    return new SyncAccepted(candidate.SubProtocol, canWrite, candidate.Principal);
+    return new SyncAccepted(
+        candidate.SubProtocol,
+        canWrite,
+        candidate.Principal,
+        candidate.ActorId,
+        candidate.ProtocolSource);
   }
 
   /// <summary>The application's authenticated user (the RequireAuthorization path), if any.</summary>
@@ -206,6 +228,39 @@ internal sealed class SyncHandshake(
     var name = identity.Name ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     return string.IsNullOrEmpty(name) ? null : $"app:{name}";
+  }
+
+  /// <summary>
+  /// Actor to journal a connection's writes against: the ticket's own user
+  /// claim, else the principal's stable id or display name, else null. Takes
+  /// neither argument from <see cref="SyncAccepted.Principal"/> — in ticket
+  /// mode that value literally becomes the door's rate-limit key (which
+  /// starts life as <c>addr:&lt;ip&gt;</c> before a verified ticket overwrites
+  /// it), so it is a capacity key, not a verified identity, and must never
+  /// end up in durable history.
+  /// </summary>
+  internal static string? DeriveActor(string ticketUser, ClaimsPrincipal principal)
+  {
+    if (!string.IsNullOrEmpty(ticketUser))
+    {
+      return ticketUser;
+    }
+
+    if (principal.Identity is not { IsAuthenticated: true })
+    {
+      return null;
+    }
+
+    var nameIdentifier = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (!string.IsNullOrEmpty(nameIdentifier))
+    {
+      return nameIdentifier;
+    }
+
+    var name = principal.Identity.Name;
+
+    return string.IsNullOrEmpty(name) ? null : name;
   }
 
   /// <summary>
@@ -255,6 +310,8 @@ internal sealed class SyncHandshake(
       string? SubProtocol,
       bool CanWrite,
       string? Principal,
+      string? ActorId,
+      CollabOperationSource ProtocolSource,
       ClaimsPrincipal User) : SyncHandshakeResult;
 }
 

@@ -1,8 +1,13 @@
 using System.Net;
+using System.Net.WebSockets;
 using System.Security.Claims;
+using Blok.Server.AspNetCore.Collab;
 using Blok.Server.Collab;
+using Blok.Server.Tickets;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -462,6 +467,136 @@ public sealed class SyncHandshakeTests
     await app.AssertRefusedAsync(HttpStatusCode.TooManyRequests, configure: SignedInAs("alice"));
     await using var bob = await app.ConnectAsync(configure: SignedInAs("bob"));
     Assert.Equal("seeded", await SyncedTextAsync(bob));
+  }
+
+  // --- Actor attribution (Task 3.1) --------------------------------------
+  //
+  // The journal actor is a handshake-level derivation, so these call
+  // SyncHandshake.NegotiateAsync directly against a bare HttpContext rather
+  // than opening a real socket: nothing downstream of the handshake
+  // consumes it yet, and the derivation must be provable independently of
+  // whatever else the pipeline happens to guard.
+
+  [Fact]
+  public async Task TicketUserBecomesJournalActor()
+  {
+    var handshake = NewHandshake(TicketOptions());
+    var context = NewWebSocketContext(protocols: [SyncApp.Protocol, fixture.Compatible]);
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Equal("u1", accepted.ActorId);
+    Assert.Equal(CollabOperationSource.ClientV1, accepted.ProtocolSource);
+  }
+
+  [Fact]
+  public async Task ApplicationNameIdentifierBecomesJournalActor()
+  {
+    var handshake = NewHandshake(new BlokServerOptions { Auth = "none" });
+    var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "alice")], "test");
+    var context = NewWebSocketContext(origin: null, user: new ClaimsPrincipal(identity));
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Equal("alice", accepted.ActorId);
+  }
+
+  // A verified ticket never names an empty user in practice — SyncClose.UserlessPass
+  // rejects it before a SyncAccepted can exist. This pins the derivation itself, so
+  // that gate is not the only thing standing between an empty claim and a fabricated
+  // actor.
+  [Fact]
+  public void TicketWithoutAUserClaimHasNullJournalActor()
+  {
+    var claims = new TicketClaims(User: "", Document: SyncApp.Doc, Write: true, Exp: 0);
+
+    Assert.Null(SyncHandshake.DeriveActor(claims.User, TicketPrincipal.For(claims)));
+  }
+
+  [Fact]
+  public async Task NoAuthConnectionHasNullJournalActor()
+  {
+    var handshake = NewHandshake(new BlokServerOptions { Auth = "none" });
+    var context = NewWebSocketContext(origin: null);
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Null(accepted.ActorId);
+    Assert.Null(accepted.Principal);
+  }
+
+  // In ticket mode Admit sets rateLimitKey = principal, so this is the one mode
+  // where Principal and the door's rate-limit key are the same string; the
+  // relational assertion below is what makes this about Principal rather than
+  // an incidental prefix difference.
+  [Fact]
+  public async Task TheRateLimitKeyIsNeverTheJournalActor()
+  {
+    var handshake = NewHandshake(TicketOptions());
+    var context = NewWebSocketContext(protocols: [SyncApp.Protocol, fixture.Compatible]);
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Equal("user:u1", accepted.Principal);
+    Assert.Equal("u1", accepted.ActorId);
+    Assert.NotEqual(accepted.Principal, accepted.ActorId);
+  }
+
+  private BlokServerOptions TicketOptions()
+  {
+    return new BlokServerOptions
+    {
+      Auth = "ticket",
+      Secret = fixture.Secret,
+      AllowedOrigins = [SyncApp.AllowedOrigin],
+    };
+  }
+
+  private static SyncHandshake NewHandshake(BlokServerOptions options)
+  {
+    return new SyncHandshake(options, new FixedWindowRateLimiter(options, TimeProvider.System), TimeProvider.System);
+  }
+
+  /// <summary>
+  /// A bare HttpContext good enough for SyncHandshake.NegotiateAsync alone —
+  /// no TestServer, no socket. RequestServices is an empty container, which
+  /// is what an unregistered IBlokAuthorization/ICollabOperationStore looks
+  /// like via GetService.
+  /// </summary>
+  private static DefaultHttpContext NewWebSocketContext(
+      IEnumerable<string>? protocols = null,
+      string? origin = SyncApp.AllowedOrigin,
+      ClaimsPrincipal? user = null)
+  {
+    var context = new DefaultHttpContext
+    {
+      RequestServices = new ServiceCollection().BuildServiceProvider(),
+      User = user ?? new ClaimsPrincipal(new ClaimsIdentity()),
+    };
+    context.Features.Set<IHttpWebSocketFeature>(new FakeWebSocketFeature());
+    context.Connection.RemoteIpAddress = IPAddress.Loopback;
+
+    if (protocols is not null)
+    {
+      context.Request.Headers.SecWebSocketProtocol = string.Join(", ", protocols);
+    }
+
+    if (origin is not null)
+    {
+      context.Request.Headers.Origin = origin;
+    }
+
+    return context;
+  }
+
+  private sealed class FakeWebSocketFeature : IHttpWebSocketFeature
+  {
+    public bool IsWebSocketRequest => true;
+
+    public Task<WebSocket> AcceptAsync(WebSocketAcceptContext context)
+    {
+      throw new NotSupportedException("handshake tests never accept the socket");
+    }
   }
 
   private static Action<Microsoft.AspNetCore.Http.HttpRequest> SignedInAs(string user)

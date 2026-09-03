@@ -589,11 +589,19 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   }
 }
 
-internal sealed class FakeMember(bool canWrite = true, bool acceptsControlFrames = false) : ICollabMember
+internal sealed class FakeMember(
+    bool canWrite = true,
+    bool acceptsControlFrames = false,
+    string? actorId = null,
+    CollabOperationSource protocolSource = CollabOperationSource.ClientV1) : ICollabMember
 {
   public bool CanWrite => canWrite;
 
   public bool AcceptsControlFrames => acceptsControlFrames;
+
+  public string? ActorId => actorId;
+
+  public CollabOperationSource ProtocolSource => protocolSource;
 
   internal List<SyncWireMessage> Received { get; } = [];
 

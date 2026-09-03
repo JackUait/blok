@@ -875,7 +875,7 @@ public sealed class CollabRoomTests
     Assert.Empty(operations.Committed(DocId));
 
     release.SetResult();
-    await receive;
+    await receive.WaitAsync(TimeSpan.FromSeconds(10));
 
     Assert.Contains(other.Received, frame => frame is SyncUpdateFrame);
     Assert.Contains(writer.Received, frame => frame is AcknowledgementFrame);
@@ -1091,7 +1091,10 @@ public sealed class CollabRoomTests
         .AsTask();
     await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
     time.Advance(TimeSpan.FromSeconds(5));
-    await receive;
+
+    // Bounded so a commit that never gives up fails this test instead of
+    // hanging the run.
+    await receive.WaitAsync(TimeSpan.FromSeconds(10));
 
     Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
     Assert.Equal([CollabCloseReason.CommitUnavailable], other.Closes);
@@ -1231,8 +1234,8 @@ public sealed class CollabRoomTests
         .ReceiveAsync(Operation(secondMembership, OpTwo, secondUpdate), CancellationToken.None)
         .AsTask();
     release.SetResult();
-    await slow;
-    await overtaking;
+    await slow.WaitAsync(TimeSpan.FromSeconds(10));
+    await overtaking.WaitAsync(TimeSpan.FromSeconds(10));
 
     string[] submitted = [Convert.ToHexString(firstUpdate), Convert.ToHexString(secondUpdate)];
     Assert.Equal(

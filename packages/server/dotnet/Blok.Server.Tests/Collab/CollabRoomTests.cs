@@ -1559,6 +1559,214 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A v1 write is journalled like every other, so nothing it did may be
+  /// visible before the append returns. What it does NOT earn is a receipt:
+  /// 103 is a v2 frame, and the submitter is not in the broadcast either.
+  /// </summary>
+  [Fact]
+  public async Task V1UpdateIsJournalledBeforeBroadcastWithAServerGeneratedId()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember(actorId: "user-3");
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    stock.Received.Clear();
+    other.Received.Clear();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      entered.TrySetResult();
+
+      return release.Task;
+    };
+
+    var receive = membership
+        .ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Empty(other.Received);
+    Assert.Empty(stock.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(0, store.Writes);
+
+    release.SetResult();
+    await receive.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    Assert.Empty(stock.Received);
+    var record = Assert.Single(operations.Committed(DocId));
+
+    // ClientV2 is the enum's zero value, so a source nobody set reads as v2.
+    Assert.Equal(CollabOperationSource.ClientV1, record.Source);
+    Assert.Equal("user-3", record.ActorId);
+    Assert.Equal(update, record.Update.ToArray());
+    Assert.Equal(1UL, record.ServerSequence);
+    Assert.Matches("^[0-9a-f]{32}$", record.OperationId);
+    await Waits.UntilAsync(() => store.Writes > 0, "the working set write the commit earned");
+  }
+
+  /// <summary>
+  /// The same bytes twice. The second copy teaches the document nothing, so it
+  /// is not journalled again — and neither send answers the sender, which is
+  /// what "journalled, no receipt" means on the wire.
+  /// </summary>
+  [Fact]
+  public async Task V1DuplicateStateConvergesButHasNoClientReceipt()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncStep2Frame(update)), CancellationToken.None);
+
+    Assert.Single(operations.Committed(DocId));
+    Assert.Empty(stock.Received);
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// A stock client already in sync answers SyncStep1 with the diff against
+  /// the server's state vector, which is two bytes of nothing. Journalling
+  /// that would write one no-op operation per idle reconnect into a history
+  /// this plan never prunes.
+  /// </summary>
+  [Fact]
+  public async Task AnEmptyV1UpdateIsNotJournalled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var empty = client.EncodeStateAsUpdate(await ServerStateVectorAsync(manager, client));
+    Assert.Equal(new byte[] { 0, 0 }, empty);
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncStep2Frame(empty)), CancellationToken.None);
+
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(stock.Received);
+    Assert.Empty(other.Received);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// An update that arrives before the one it depends on parks in the engine
+  /// without moving the state vector (see
+  /// <see cref="CompactionKeepsAnUpdateThatIsStillPending"/>). It is real new
+  /// data all the same: skipping it on the state vector alone would leave the
+  /// document holding bytes the journal never gets, which is the one thing an
+  /// operation-store room may not do.
+  /// </summary>
+  [Fact]
+  public async Task AV1UpdateThatOnlyParksPendingIsStillJournalled()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    YDocs.UpdateAppending(client, "a");
+    var second = YDocs.UpdateAppending(client, "b");
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(second)), CancellationToken.None);
+
+    var record = Assert.Single(operations.Committed(DocId));
+    Assert.Equal(second, record.Update.ToArray());
+    Assert.Equal(second, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+
+    // Still parked: the update was journalled for what it carries, not for
+    // what it changed.
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The write gate comes before the journal on the v1 path too, and a reader
+  /// is answered with nothing at all — a rejection is a v2 frame.
+  /// </summary>
+  [Fact]
+  public async Task AReadOnlyV1UpdateIsDroppedWithoutJournalling()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var reader = new FakeMember(canWrite: false);
+    var writer = new FakeMember();
+    var membership = await Join(manager, reader);
+    await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var edit = YDocs.UpdateAppending(client, " hacked");
+    reader.Received.Clear();
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(edit)), CancellationToken.None);
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncStep2Frame(edit)), CancellationToken.None);
+
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(reader.Received);
+    Assert.Empty(writer.Received);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The v1 half of
+  /// <see cref="AppendFailureClosesAndDiscardsTheRoomWithoutObservation"/>:
+  /// bytes the journal refused are bytes the room may not relay, keep or
+  /// write back to the doc endpoint, whichever protocol sent them.
+  /// </summary>
+  [Fact]
+  public async Task AFailedV1AppendDiscardsTheRoomWithoutRelayingOrExporting()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    stock.Received.Clear();
+    other.Received.Clear();
+    operations.FailAppends = _ => new IOException("the journal is down");
+
+    await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], stock.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], other.Closes);
+    Assert.Empty(stock.Received);
+    Assert.Empty(other.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(0, manager.LiveRoomCount);
+
+    operations.FailAppends = null;
+    time.Advance(TimeSpan.FromSeconds(30));
+
+    Assert.Empty(endpoint.Saves);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
   /// The HTTP edit path goes through the same cooldown. It is the likelier
   /// retry storm of the two: a caller that retries a 503 would otherwise
   /// reload the document's baseline and tail on every request.
@@ -1778,6 +1986,23 @@ public sealed class CollabRoomTests
     Assert.Equal(expectedText, YDocs.Text(client));
 
     return client;
+  }
+
+  /// <summary>
+  /// The room's own state vector, as it answers a SyncStep1 with. A stock
+  /// provider's SyncStep2 is the diff its doc computes against exactly this.
+  /// </summary>
+  private static async Task<byte[]> ServerStateVectorAsync(CollabRoomManager manager, YDoc client)
+  {
+    var probe = new FakeMember(canWrite: false);
+    var membership = await Join(manager, probe);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(client))),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+
+    return Assert.IsType<SyncStep1Frame>(
+        probe.Received.First(frame => frame is SyncStep1Frame)).StateVector;
   }
 
   private static async Task Edit(CollabRoomManager manager, CollabMembership membership, string value)

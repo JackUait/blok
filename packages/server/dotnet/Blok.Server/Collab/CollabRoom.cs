@@ -983,10 +983,10 @@ internal sealed class CollabRoom : IDisposable
         AnswerSyncStep1Locked(membership, step1.StateVector);
         break;
       case SyncStep2Frame step2:
-        ApplyFromMemberLocked(membership, step2.Update);
+        await ApplyFromMemberLocked(membership, step2.Update);
         break;
       case SyncUpdateFrame update:
-        ApplyFromMemberLocked(membership, update.Update);
+        await ApplyFromMemberLocked(membership, update.Update);
         break;
       case OperationFrame operation:
         await CommitFromMemberLocked(membership, operation);
@@ -1182,11 +1182,40 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    if (await AppendCommittedLocked(membership, operation.OperationId, operation.Update, digest)
+        is not { } serverSequence)
+    {
+      return;
+    }
+
+    AppendLocked(operation.Update);
+
+    // The submitter included: on v2 the relayed update is how a writer sees
+    // what the server accepted, and the acknowledgement follows it.
+    BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(operation.Update)), null);
+    AcknowledgeLocked(membership, operation, serverSequence);
+    CompactIfOversizedLocked();
+    SchedulePersistLocked();
+    MarkDirtyLocked();
+  }
+
+  /// <summary>
+  /// The durable step the v2 and v1 write paths share: journal bytes the
+  /// document is already holding provisionally, INSIDE the lane. Answers the
+  /// sequence the journal assigned, or null when the room could not commit and
+  /// discarded itself — the caller then publishes nothing.
+  /// </summary>
+  private async Task<ulong?> AppendCommittedLocked(
+      CollabMembership membership,
+      string operationId,
+      byte[] update,
+      ReadOnlyMemory<byte> digest)
+  {
     CollabOperationAppendResult appended;
 
     try
     {
-      // Its own budget, like the lookup's and like the session disposal in
+      // Its own budget, like the v2 lookup's and like the session disposal in
       // CloseRoomLocked: each store call this path makes while holding the
       // lane is bounded by CommitTimeout. By OUR token, which is the only
       // cancellation the seam permits us to cause; the lane is held for the
@@ -1196,12 +1225,12 @@ internal sealed class CollabRoom : IDisposable
           lifetime.Token,
           deadline.Token);
 
-      appended = await session.AppendAsync(
+      appended = await session!.AppendAsync(
           new CollabOperationCandidate(
-              operation.OperationId,
+              operationId,
               membership.Member.ActorId,
               membership.Member.ProtocolSource,
-              operation.Update,
+              update,
               digest),
           bounded.Token);
     }
@@ -1211,41 +1240,32 @@ internal sealed class CollabRoom : IDisposable
       // unknown rather than failed, and both are handled the same way.
       await FailCommitLocked("journal an operation", error);
 
-      return;
+      return null;
     }
 
     if (appended.Outcome == CollabOperationAppendOutcome.Conflict)
     {
-      // The lookup reported this id free and the append does not. The document
-      // is already mutated by bytes that will never be journalled.
+      // The id was settled as free before the apply and the append says
+      // otherwise. The document is already mutated by bytes that will never
+      // be journalled.
       await FailCommitLocked(
           "journal an operation",
           new InvalidOperationException(
-              $"collab: the store refused operation \"{operation.OperationId}\" as a " +
-              "conflict after reporting it uncommitted."));
+              $"collab: the store refused operation \"{operationId}\" as a conflict."));
 
-      return;
+      return null;
     }
 
     if (appended.Outcome == CollabOperationAppendOutcome.Duplicate)
     {
-      // Safe — a duplicate is the same bytes by digest — but the store just
-      // contradicted the lookup it had already answered, and nothing else
-      // would ever show that to whoever has to debug it.
+      // Safe — a duplicate is the same bytes by digest — but the id was
+      // settled as free before the apply, and nothing else would show that
+      // contradiction to whoever has to debug it.
       log?.Invoke(
-          $"collab: room \"{DocId}\" appended operation \"{operation.OperationId}\" as a " +
-          "duplicate after the lookup reported it uncommitted");
+          $"collab: room \"{DocId}\" appended operation \"{operationId}\" as a duplicate");
     }
 
-    AppendLocked(operation.Update);
-
-    // The submitter included: on v2 the relayed update is how a writer sees
-    // what the server accepted, and the acknowledgement follows it.
-    BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(operation.Update)), null);
-    AcknowledgeLocked(membership, operation, appended.ServerSequence);
-    CompactIfOversizedLocked();
-    SchedulePersistLocked();
-    MarkDirtyLocked();
+    return appended.ServerSequence;
   }
 
   private void AcknowledgeLocked(
@@ -1290,18 +1310,88 @@ internal sealed class CollabRoom : IDisposable
     await CloseRoomLocked(CollabCloseReason.CommitUnavailable);
   }
 
-  private void ApplyFromMemberLocked(CollabMembership membership, byte[] update)
+  /// <summary>
+  /// A SyncStep2 or SyncUpdate: what a blok-sync.v1 member sends, and what a
+  /// stock y-websocket member sends having negotiated no subprotocol at all.
+  /// A journal-backed room journals it through the same append a v2 operation
+  /// uses, under an id the server mints, and sends the writer no receipt.
+  /// </summary>
+  private async Task ApplyFromMemberLocked(CollabMembership membership, byte[] update)
   {
-    if (!membership.Member.CanWrite || !ApplyRemoteLocked(update))
+    if (!membership.Member.CanWrite)
     {
       return;
     }
 
+    // A working-set-only room (S3) has no journal, so nothing here may wait
+    // on one: it relays straight off the apply.
+    if (session is null)
+    {
+      if (ApplyRemoteLocked(update))
+      {
+        PublishFromMemberLocked(membership, update);
+      }
+
+      return;
+    }
+
+    var before = doc!.EncodeStateVector();
+
+    if (!ApplyRemoteLocked(update))
+    {
+      return;
+    }
+
+    // A stock client already in sync answers SyncStep1 with the diff against
+    // the server's state vector, which is two bytes of nothing; journalling
+    // that would write one no-op operation per idle reconnect into a history
+    // nothing prunes. The pending term is the safety half: an update that
+    // arrives before the one it depends on parks without moving the state
+    // vector, and dropping it here would leave the document holding bytes the
+    // journal never gets.
+    if (!doc.HasPending && doc.EncodeStateVector().AsSpan().SequenceEqual(before))
+    {
+      return;
+    }
+
+    if (await AppendCommittedLocked(
+          membership,
+          NewOperationId(),
+          update,
+          SHA256.HashData(update)) is null)
+    {
+      return;
+    }
+
+    // No acknowledgement follows: 103 is a v2 frame, and a v1 provider ends
+    // its session on one it cannot parse. A v1 write is journalled and earns
+    // no receipt.
+    PublishFromMemberLocked(membership, update);
+  }
+
+  /// <summary>
+  /// The tail of a v1 write: log the frame, relay it to the OTHERS — v1 bytes
+  /// do not change, so the submitter is not in the broadcast — and let the
+  /// blob catch up.
+  /// </summary>
+  private void PublishFromMemberLocked(CollabMembership membership, byte[] update)
+  {
     AppendLocked(update);
     BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(update)), membership);
     CompactIfOversizedLocked();
     SchedulePersistLocked();
     MarkDirtyLocked();
+  }
+
+  /// <summary>
+  /// A v1 member carries no operation id, so the server mints one per update.
+  /// The client never re-sends it, so this id names the write in history
+  /// rather than keying a retry, and a freshly minted id has nothing to look
+  /// up.
+  /// </summary>
+  private static string NewOperationId()
+  {
+    return Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
   }
 
   /// <summary>Stops serving one member and closes it; the room may be left empty, so the linger is re-armed.</summary>

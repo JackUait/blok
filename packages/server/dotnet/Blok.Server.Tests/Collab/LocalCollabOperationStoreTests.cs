@@ -24,6 +24,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   private const int ActorIdLengthOffset = 32;
   private const int ManifestSlotSize = 128;
   private const int ManifestSlotContentSize = 96;
+  private const byte ForeignManifestVersion = 1;
 
   private readonly string root = Path.Combine(
       Path.GetTempPath(),
@@ -446,15 +447,19 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
       await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
     }
 
-    // Both slots restamped to a version this build does not write, each
-    // re-checksummed so the bytes are honest — the file is fine, the version
-    // is not.
     var manifest = File.ReadAllBytes(ManifestPath);
 
+    // Stated, not assumed: the stamped version has to differ from the one this
+    // build writes, or the test proves nothing.
+    Assert.NotEqual(ForeignManifestVersion, manifest[4]);
+
+    // Both slots restamped and RE-CHECKSUMMED. The re-checksum is load-bearing:
+    // the store reads the version only after the checksum says the bytes are
+    // intact, so without it these slots read as corruption instead.
     for (var slot = 0; slot < 2; slot++)
     {
       var span = manifest.AsSpan(slot * ManifestSlotSize, ManifestSlotSize);
-      span[4] = 1;
+      span[4] = ForeignManifestVersion;
       SHA256.HashData(span[..ManifestSlotContentSize], span[ManifestSlotContentSize..]);
     }
 
@@ -466,8 +471,42 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
     // "neither slot decodes" would send an operator hunting a disk fault during
     // an incident that is really a deployment problem.
-    Assert.Contains("is version 1", failure.Message, StringComparison.Ordinal);
+    Assert.Contains(
+        $"is version {ForeignManifestVersion}",
+        failure.Message,
+        StringComparison.Ordinal);
     Assert.DoesNotContain("decodes", failure.Message, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public async Task ACorruptManifestIsNotReportedAsAnotherVersion()
+  {
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+    }
+
+    // Magic intact, checksum left alone, and the corrupted byte is the VERSION
+    // byte itself — the one case where the order of the two checks is
+    // observable. Read the version first and this rotted byte is announced as
+    // another version, which is the mirror of the misdiagnosis the version
+    // message exists to remove; read the checksum first and it is what it is,
+    // a corrupt manifest.
+    var manifest = File.ReadAllBytes(ManifestPath);
+
+    for (var slot = 0; slot < 2; slot++)
+    {
+      manifest[(slot * ManifestSlotSize) + 4] ^= 0xff;
+    }
+
+    File.WriteAllBytes(ManifestPath, manifest);
+
+    var failure = await Assert.ThrowsAsync<InvalidDataException>(
+        async () => await new LocalCollabOperationStore(root, log: logs.Add)
+            .OpenAsync(DocId, CancellationToken.None));
+
+    Assert.Contains("decodes", failure.Message, StringComparison.Ordinal);
+    Assert.DoesNotContain("is version", failure.Message, StringComparison.Ordinal);
   }
 
   [Fact]

@@ -471,15 +471,21 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     {
       var span = bytes.AsSpan(slot * ManifestSlotSize, ManifestSlotSize);
 
-      if (TryDecodeSlot(span, out var candidate) &&
-          (best is null || candidate.WriteCounter > best.Value.WriteCounter))
+      switch (TryDecodeSlot(span, out var candidate))
       {
-        best = candidate;
-      }
-      else if (span[..ManifestMagic.Length].SequenceEqual(ManifestMagic) &&
-          span[4] != ManifestVersion)
-      {
-        foreignVersion = span[4];
+        case ManifestSlotStatus.Ok
+            when best is null || candidate.WriteCounter > best.Value.WriteCounter:
+          best = candidate;
+
+          break;
+
+        case ManifestSlotStatus.ForeignVersion:
+          foreignVersion = span[4];
+
+          break;
+
+        default:
+          break;
       }
     }
 
@@ -516,21 +522,46 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     SHA256.HashData(slot[..ManifestSlotContentSize], slot[ManifestSlotContentSize..]);
   }
 
-  private static bool TryDecodeSlot(ReadOnlySpan<byte> slot, out Manifest manifest)
+  /// <summary>How one manifest slot read back.</summary>
+  private enum ManifestSlotStatus
+  {
+    /// <summary>Decoded, and written by this version.</summary>
+    Ok,
+
+    /// <summary>Bad magic or a checksum that does not match its content.</summary>
+    Unreadable,
+
+    /// <summary>Intact, and written by a version this build does not know.</summary>
+    ForeignVersion,
+  }
+
+  private static ManifestSlotStatus TryDecodeSlot(
+      ReadOnlySpan<byte> slot,
+      out Manifest manifest)
   {
     manifest = Manifest.Unseeded;
 
-    if (!slot[..ManifestMagic.Length].SequenceEqual(ManifestMagic) || slot[4] != ManifestVersion)
+    if (!slot[..ManifestMagic.Length].SequenceEqual(ManifestMagic))
     {
-      return false;
+      return ManifestSlotStatus.Unreadable;
     }
 
     Span<byte> computed = stackalloc byte[ChecksumSize];
     SHA256.HashData(slot[..ManifestSlotContentSize], computed);
 
+    // The checksum is verified BEFORE the version byte is trusted for anything.
+    // Reading the version first would report a corrupted byte as "written by
+    // another version" — the exact mirror of the misdiagnosis this distinction
+    // exists to prevent, and it would send an operator after a deployment
+    // problem during a disk fault.
     if (!computed.SequenceEqual(slot[ManifestSlotContentSize..]))
     {
-      return false;
+      return ManifestSlotStatus.Unreadable;
+    }
+
+    if (slot[4] != ManifestVersion)
+    {
+      return ManifestSlotStatus.ForeignVersion;
     }
 
     manifest = new Manifest(
@@ -545,7 +576,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         BinaryPrimitives.ReadUInt64LittleEndian(slot[68..]),
         BinaryPrimitives.ReadUInt64LittleEndian(slot[76..]));
 
-    return true;
+    return ManifestSlotStatus.Ok;
   }
 
   /// <summary>
@@ -1074,9 +1105,15 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       // earlier sweep would delete the state the manifest still names. And only
       // names ending in THIS session's fence: the glob covers every fence, so
       // an unscoped sweep is a delete of another holder's live checkpoint, with
-      // no fence check in front of it and invisible to a law that looks for
-      // truncation. Another holder's orphans are left for a collector that can
-      // prove they are orphans.
+      // no fence check in front of it.
+      //
+      // The cost is a LEAK, and nothing collects it: another session's
+      // checkpoints stay on disk for the life of the document, one
+      // full-document-state file per session per generation, accumulating
+      // across every restart and failover. A "delete anything the manifest does
+      // not name" collector would be wrong — it races a live holder between its
+      // WriteSealed and its publication — so a real one needs the fence, and
+      // there is no such collector.
       var mine = string.Create(CultureInfo.InvariantCulture, $".{manifest.Fence}");
 
       foreach (var stale in Directory.GetFiles(

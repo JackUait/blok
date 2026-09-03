@@ -1353,22 +1353,28 @@ public sealed class CollabRoomTests
         () => store.FramesOf(DocId).Count == framesBefore + 1,
         "the working set to catch up");
 
+    // From a member that DID negotiate v2, so the protocol gate lets the frame
+    // through and the room's "no journal" guard is what stops it. A v1 sender
+    // would be refused a frame earlier and prove nothing about this room.
+    var negotiated = V2Member();
+    var negotiatedMembership = await Join(manager, negotiated);
+
+    // The join itself broadcasts a queryAwareness to the others.
+    negotiated.Received.Clear();
+    writer.Received.Clear();
     other.Received.Clear();
-    await membership.ReceiveAsync(
-        Operation(membership, OpOne, YDocs.UpdateAppending(client, "?")),
+
+    await negotiatedMembership.ReceiveAsync(
+        Operation(negotiatedMembership, OpOne, YDocs.UpdateAppending(client, "?")),
         CancellationToken.None);
 
+    Assert.Empty(negotiated.Received);
     Assert.Empty(writer.Received);
     Assert.Empty(other.Received);
     Assert.Empty(operations.Committed(DocId));
     Assert.Equal("hello!", await ExportedTextAsync(manager));
   }
 
-  /// <summary>
-  /// The HTTP edit path goes through the same cooldown. It is the likelier
-  /// retry storm of the two: a caller that retries a 503 would otherwise
-  /// reload the document's baseline and tail on every request.
-  /// </summary>
   /// <summary>
   /// The lookup runs in the lane the append is bounded in, so it is bounded
   /// the same way: a store that hangs there would wedge the document with no
@@ -1441,6 +1447,25 @@ public sealed class CollabRoomTests
   /// one — an acknowledgement or a rejection is a frame its client cannot
   /// parse, and a stock provider ends the session on those.
   /// </summary>
+  /// <summary>
+  /// The refusal happens before a room exists. Refusing from inside one would
+  /// leave the room the reset itself constructed registered forever: nothing
+  /// forgets it, and a room that never turned Ready arms no eviction timer.
+  /// </summary>
+  [Fact]
+  public async Task AResetRefusalDoesNotLeaveARoomBehind()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+
+    await Assert.ThrowsAsync<CollabResetUnavailableException>(
+        async () => await manager.ResetAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(0, operations.Opens);
+    Assert.Equal(0, endpoint.Loads);
+  }
+
   [Fact]
   public async Task AnOperationFrameFromAV1MemberIsDroppedWithoutJournalling()
   {
@@ -1464,6 +1489,11 @@ public sealed class CollabRoomTests
     Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// The HTTP edit path goes through the same cooldown. It is the likelier
+  /// retry storm of the two: a caller that retries a 503 would otherwise
+  /// reload the document's baseline and tail on every request.
+  /// </summary>
   [Fact]
   public async Task AnEditIsRefusedWhileTheDocumentIsInItsCommitCooldown()
   {

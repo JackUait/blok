@@ -155,12 +155,24 @@ internal sealed class CollabRoomManager : ICollabRoomManager
   /// Bumps the doc's epoch (plan decision 5): empty log under epoch+1,
   /// members closed with <see cref="CollabCloseReason.Reset"/>, room
   /// dropped; the next join re-seeds from the doc endpoint.
+  ///
+  /// With an operation store registered this is REFUSED instead, before any
+  /// room is touched — see <see cref="CollabResetUnavailableException"/>.
   /// </summary>
   internal async ValueTask<CollabWorkingSetTag> ResetAsync(
       string docId,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
+
+    // Ahead of RoomFor, which CONSTRUCTS and registers: a refusal thrown from
+    // inside the room would strand the room the reset itself just created,
+    // since only a null answer reaches Forget and a room that never turned
+    // Ready arms no eviction timer.
+    if (operationStore is not null)
+    {
+      throw new CollabResetUnavailableException(docId);
+    }
 
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {

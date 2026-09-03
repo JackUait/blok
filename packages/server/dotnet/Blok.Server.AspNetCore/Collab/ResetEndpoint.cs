@@ -58,10 +58,13 @@ internal static class ResetEndpoint
     }
     catch (CollabResetUnavailableException)
     {
+      // 501, not 503: waiting does not help, because this build cannot reset a
+      // journal-backed document at all. A 503 would put a caller's retry loop
+      // in a spin. Task 3.5 lands the fenced journal reset and removes this.
       await SyncEndpoint.RefuseAsync(
           context,
-          StatusCodes.Status503ServiceUnavailable,
-          "the document cannot be reset right now\n");
+          StatusCodes.Status501NotImplemented,
+          "resetting a journal-backed document is not implemented yet\n");
 
       return;
     }

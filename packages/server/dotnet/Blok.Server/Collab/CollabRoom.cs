@@ -368,7 +368,12 @@ internal sealed class CollabRoom : IDisposable
         cancellationToken);
   }
 
-  /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
+  /// <summary>
+  /// Null when the room has already closed — the caller should retry on a
+  /// fresh room. This resets the WORKING SET; an operation-store room never
+  /// gets here, because the manager refuses the reset before it builds a room
+  /// (see <see cref="CollabResetUnavailableException"/>).
+  /// </summary>
   internal Task<CollabWorkingSetTag?> ResetAsync(CancellationToken cancellationToken)
   {
     return RunAsync<CollabWorkingSetTag?>(
@@ -377,15 +382,6 @@ internal sealed class CollabRoom : IDisposable
           if (state == RoomState.Closed)
           {
             return null;
-          }
-
-          // Refused rather than performed; see CollabResetUnavailableException
-          // for why, and Task 3.5 for what replaces it. Gated on the STORE and
-          // not on the session: a New room has no session yet and would
-          // blob-reset a document whose journal is the authority.
-          if (operationStore is not null)
-          {
-            throw new CollabResetUnavailableException(DocId);
           }
 
           var current = tag;
@@ -1179,10 +1175,11 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      // Its own budget, like the lookup's: no single store call may outlast
-      // CommitTimeout. By OUR token, which is the only cancellation the seam
-      // permits us to cause; the lane is held for the whole wait, so a slow
-      // store backpressures this document.
+      // Its own budget, like the lookup's: no store call ON THIS PATH may
+      // outlast CommitTimeout. The load path's calls are still unbounded. By
+      // OUR token, which is the only cancellation the seam permits us to
+      // cause; the lane is held for the whole wait, so a slow store
+      // backpressures this document.
       using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
       using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
           lifetime.Token,

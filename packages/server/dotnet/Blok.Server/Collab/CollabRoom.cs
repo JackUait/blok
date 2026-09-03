@@ -379,6 +379,15 @@ internal sealed class CollabRoom : IDisposable
             return null;
           }
 
+          // Refused rather than performed; see CollabResetUnavailableException
+          // for why, and Task 3.5 for what replaces it. Gated on the STORE and
+          // not on the session: a New room has no session yet and would
+          // blob-reset a document whose journal is the authority.
+          if (operationStore is not null)
+          {
+            throw new CollabResetUnavailableException(DocId);
+          }
+
           var current = tag;
 
           if (state == RoomState.New)
@@ -1081,6 +1090,17 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    if (membership.Member.ProtocolSource != CollabOperationSource.ClientV2)
+    {
+      // Both answers a 102 earns are v2 frames. Sending one to a member that
+      // negotiated v1 hands a stock client a frame its provider ends the
+      // session on, so this is a drop rather than a rejection.
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped an operation frame from a member that did not negotiate v2");
+
+      return;
+    }
+
     if (!membership.Member.CanWrite)
     {
       RejectLocked(membership, operation, "read-only");
@@ -1103,10 +1123,18 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
+      // Bounded like the append below, and for the same reason: this runs with
+      // the lane held, so a store that never answers wedges the document with
+      // nothing to end the wait — and the drain waits on that lane too.
+      using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+      using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
+          lifetime.Token,
+          deadline.Token);
+
       committed = await session.FindCommittedAsync(
           operation.OperationId,
           digest,
-          lifetime.Token);
+          bounded.Token);
     }
     catch (Exception error)
     {
@@ -1151,9 +1179,10 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      // Bounded, and by OUR token: a store may only report a cancellation the
-      // caller asked for, and this is one. The room is inside its lane for the
-      // whole wait, so a slow store backpressures this document.
+      // Its own budget, like the lookup's: no single store call may outlast
+      // CommitTimeout. By OUR token, which is the only cancellation the seam
+      // permits us to cause; the lane is held for the whole wait, so a slow
+      // store backpressures this document.
       using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
       using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
           lifetime.Token,
@@ -1188,6 +1217,16 @@ internal sealed class CollabRoom : IDisposable
               "conflict after reporting it uncommitted."));
 
       return;
+    }
+
+    if (appended.Outcome == CollabOperationAppendOutcome.Duplicate)
+    {
+      // Safe — a duplicate is the same bytes by digest — but the store just
+      // contradicted the lookup it had already answered, and nothing else
+      // would ever show that to whoever has to debug it.
+      log?.Invoke(
+          $"collab: room \"{DocId}\" appended operation \"{operation.OperationId}\" as a " +
+          "duplicate after the lookup reported it uncommitted");
     }
 
     AppendLocked(operation.Update);

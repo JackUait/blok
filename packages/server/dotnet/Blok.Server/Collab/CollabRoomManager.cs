@@ -48,6 +48,20 @@ internal enum CollabEditStatus
 internal sealed record CollabEditResult(CollabEditStatus Status, Exception? Error);
 
 /// <summary>
+/// A reset the room refuses to perform.
+///
+/// TEMPORARY, and Task 3.5 removes it: an operation-store room's reset must be
+/// a fenced journal transaction, and the working-set reset this room still
+/// knows how to do would close every client with 4409 — which the client reads
+/// as "relineage, discard your pending work" — while leaving the journal, the
+/// thing the next room actually loads, exactly as it was. Refusing is the safe
+/// half of that pair until the real reset exists.
+/// </summary>
+internal sealed class CollabResetUnavailableException(string docId)
+    : Exception(
+        $"collab: \"{docId}\" cannot be reset until its journal reset lands (Task 3.5).");
+
+/// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
 /// when they close (eviction, reset, seed failure, drain); a join that races
 /// a closing room simply retries on a fresh one.

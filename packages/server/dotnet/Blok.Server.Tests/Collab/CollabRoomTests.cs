@@ -874,6 +874,9 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
     Assert.Empty(writer.Received);
     Assert.Empty(operations.Committed(DocId));
+    // The blob write is scheduled after the append too, so the update cannot
+    // reach the working set ahead of the journal either.
+    Assert.Equal(0, store.Writes);
 
     release.SetResult();
     await receive.WaitAsync(TimeSpan.FromSeconds(10));
@@ -881,6 +884,7 @@ public sealed class CollabRoomTests
     Assert.Contains(other.Received, frame => frame is SyncUpdateFrame);
     Assert.Contains(writer.Received, frame => frame is AcknowledgementFrame);
     Assert.Single(operations.Committed(DocId));
+    await Waits.UntilAsync(() => store.Writes > 0, "the working set write the commit earned");
   }
 
   [Fact]
@@ -1365,6 +1369,101 @@ public sealed class CollabRoomTests
   /// retry storm of the two: a caller that retries a 503 would otherwise
   /// reload the document's baseline and tail on every request.
   /// </summary>
+  /// <summary>
+  /// The lookup runs in the lane the append is bounded in, so it is bounded
+  /// the same way: a store that hangs there would wedge the document with no
+  /// timeout, no close and no cooldown, and take the drain down with it.
+  /// </summary>
+  [Fact]
+  public async Task ALookupPastTheStoreTimeoutIsCommitUnavailable()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(
+        new CollabRoomOptions { CommitTimeout = TimeSpan.FromSeconds(5) });
+    var writer = V2Member();
+    var other = new FakeMember();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeLookup = () =>
+    {
+      entered.TrySetResult();
+
+      return never.Task;
+    };
+
+    var receive = membership
+        .ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None)
+        .AsTask();
+    await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    time.Advance(TimeSpan.FromSeconds(5));
+    await receive.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Empty(other.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// A journal-backed reset has to be a fenced store transaction (Task 3.5).
+  /// Until it is, the working-set reset this room still knows how to do would
+  /// close every client with 4409 — "relineage, discard your pending work" —
+  /// and leave the journal, which is what the next room loads, untouched. So
+  /// it is refused, and refusing must cost nobody their connection.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAnOperationStoreRoomIsRefusedWithoutClosingAnyone()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var lineage = membership.Tag.Lineage;
+
+    await Assert.ThrowsAsync<CollabResetUnavailableException>(
+        async () => await manager.ResetAsync(DocId, CancellationToken.None));
+
+    Assert.Empty(writer.Closes);
+    Assert.Equal(0, store.Resets);
+    Assert.Equal(lineage, operations.Head(DocId)?.Lineage);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// Frame 102 is a v2 frame. A member that negotiated v1 gets no answer to
+  /// one — an acknowledgement or a rejection is a frame its client cannot
+  /// parse, and a stock provider ends the session on those.
+  /// </summary>
+  [Fact]
+  public async Task AnOperationFrameFromAV1MemberIsDroppedWithoutJournalling()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = V2Member();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Empty(stock.Received);
+    Assert.Empty(other.Received);
+    Assert.Empty(stock.Closes);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
   [Fact]
   public async Task AnEditIsRefusedWhileTheDocumentIsInItsCommitCooldown()
   {

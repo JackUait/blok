@@ -795,6 +795,13 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
   /// </summary>
   internal Func<Task>? BeforeAppend { get; set; }
 
+  /// <summary>
+  /// Awaited inside every lookup before it answers, and token-aware for the
+  /// same reason <see cref="BeforeAppend"/> is: a lookup runs in the room's
+  /// lane too, so a store that hangs there wedges the document.
+  /// </summary>
+  internal Func<Task>? BeforeLookup { get; set; }
+
   /// <summary>Documents opened, so a test can see what a rejoin did NOT re-read.</summary>
   internal int Opens => Volatile.Read(ref opens);
 
@@ -917,7 +924,7 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
     public CollabOperationOpenResult OpenResult => openResult;
 
-    public ValueTask<CollabOperationLookup> FindCommittedAsync(
+    public async ValueTask<CollabOperationLookup> FindCommittedAsync(
         string operationId,
         ReadOnlyMemory<byte> digest,
         CancellationToken cancellationToken = default)
@@ -925,17 +932,24 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       ArgumentNullException.ThrowIfNull(operationId);
       cancellationToken.ThrowIfCancellationRequested();
 
+      var pause = store.BeforeLookup;
+
+      if (pause is not null)
+      {
+        await pause().WaitAsync(cancellationToken);
+      }
+
       lock (store.guard)
       {
         var existing = Committed(Fenced(), operationId);
 
-        return ValueTask.FromResult(existing is null
+        return existing is null
           ? new CollabOperationLookup(CollabOperationLookupOutcome.NotCommitted, 0)
           : new CollabOperationLookup(
               digest.Span.SequenceEqual(existing.Digest.Span)
                 ? CollabOperationLookupOutcome.Duplicate
                 : CollabOperationLookupOutcome.Conflict,
-              existing.ServerSequence));
+              existing.ServerSequence);
       }
     }
 

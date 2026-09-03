@@ -51,7 +51,21 @@ internal static class ResetEndpoint
     }
 
     var rooms = context.RequestServices.GetRequiredService<CollabRoomManager>();
-    await rooms.ResetAsync(doc, context.RequestAborted);
+
+    try
+    {
+      await rooms.ResetAsync(doc, context.RequestAborted);
+    }
+    catch (CollabResetUnavailableException)
+    {
+      await SyncEndpoint.RefuseAsync(
+          context,
+          StatusCodes.Status503ServiceUnavailable,
+          "the document cannot be reset right now\n");
+
+      return;
+    }
+
     context.Response.StatusCode = StatusCodes.Status204NoContent;
   }
 }

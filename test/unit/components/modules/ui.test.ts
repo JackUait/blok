@@ -2546,9 +2546,14 @@ describe("UI module", () => {
     const createLinkUI = (): CreateUIResult => {
       const result = createUI();
 
+      /**
+       * Following a link is not editing, so the handler lives in the
+       * read-only-insensitive group — binding the sensitive one here would
+       * hide the read-only regression these tests pin.
+       */
       (
-        result.ui as unknown as { bindReadOnlySensitiveListeners: () => void }
-      ).bindReadOnlySensitiveListeners();
+        result.ui as unknown as { bindReadOnlyInsensitiveListeners: () => void }
+      ).bindReadOnlyInsensitiveListeners();
 
       return result;
     };
@@ -2603,6 +2608,90 @@ describe("UI module", () => {
       clickLink(redactor, "#");
 
       expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("scrolls to the section for a full URL of this page carrying a fragment", () => {
+      /**
+       * "Copy link to block" hands out an absolute URL, not a bare fragment.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(
+        redactor,
+        `${window.location.origin}${window.location.pathname}#block-42`
+      );
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("block-42");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("does nothing for a full URL of this page with no fragment", () => {
+      /**
+       * Reopening the current page would throw away unsaved edits.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(redactor, `${window.location.origin}${window.location.pathname}`);
+
+      expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("navigates in the same window when only the query differs", () => {
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+      const href = `${window.location.origin}${window.location.pathname}?page=2`;
+
+      clickLink(redactor, href);
+
+      expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(href, "_self");
+    });
+
+    it("decodes a percent-encoded fragment of a full same-page URL", () => {
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(
+        redactor,
+        `${window.location.origin}${window.location.pathname}#%D0%B1%D0%BB%D0%BE%D0%BA`
+      );
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("блок");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("still follows a same-page link after read-only is turned on", () => {
+      /**
+       * Read-only unbinds the editing listeners; link navigation is not
+       * editing and must survive the toggle.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { ui, blok, redactor } = createLinkUI();
+
+      ui.toggleReadOnly(true);
+
+      clickLink(redactor, "#h.2y1ok8y7pef0");
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("h.2y1ok8y7pef0");
       expect(openSpy).not.toHaveBeenCalled();
     });
   });

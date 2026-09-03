@@ -8,7 +8,7 @@
  * - logger.ts - log, logLabeled, setLogLevel, LogLevels
  * - type-guards.ts - isFunction, isObject, isString, isBoolean, isNumber, isUndefined, isEmpty, isPrintableKey
  * - functional.ts - debounce, throttle, delay
- * - browser.ts - array, getFileExtension, isValidMimeType, getUserOS, isMobileScreen, isIosDevice, getValidUrl, openTab
+ * - browser.ts - array, getFileExtension, isValidMimeType, getUserOS, isMobileScreen, isIosDevice, getValidUrl, openTab, openSameWindow
  * - string.ts - capitalize, beautifyShortcut
  * - object.ts - deepMerge, equals
  * - id-generator.ts - generateBlockId, generateId
@@ -55,6 +55,7 @@ export {
   isIosDevice,
   getValidUrl,
   openTab,
+  openSameWindow,
 } from './utils/browser';
 
 // String utilities

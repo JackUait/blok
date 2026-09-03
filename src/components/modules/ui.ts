@@ -14,13 +14,14 @@ import { Dom as $, toggleEmptyMark } from '../dom';
 import { BlokMobileLayoutToggled } from '../events';
 import { Flipper } from '../flipper';
 import { SelectionUtils as Selection } from '../selection/index';
-import { debounce, getBlokVersion, getValidUrl, isEmpty, openTab, mobileScreenBreakpoint } from '../utils';
+import { debounce, getBlokVersion, getValidUrl, isEmpty, openSameWindow, openTab, mobileScreenBreakpoint } from '../utils';
 import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
 import { decodeHashFragment } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
+import { isSamePageLink } from '../../tools/link/registry';
 
 // Controllers and handlers
 import { BlockHoverController } from './uiControllers/controllers/blockHover';
@@ -594,6 +595,18 @@ export class UI extends Module<UINodes> {
   };
 
   /**
+   * Anchor navigation. Read-only-insensitive like the hover card above:
+   * following a link is reading, not editing, and a same-page link that falls
+   * through to the browser in read-only mode moves the URL without moving the
+   * page — block ids live in `data-blok-id`, not `id`.
+   */
+  private redactorClickListener = (event: Event): void => {
+    if (event instanceof MouseEvent) {
+      this.redactorClicked(event);
+    }
+  };
+
+  /**
    * Right-click inside block content opens the block context menu (Block
    * Settings) anchored at the cursor, mirroring a desktop application. This is
    * a hover-independent path to the block menu that avoids the "wrong block"
@@ -1081,6 +1094,8 @@ export class UI extends Module<UINodes> {
      */
     this.listeners.on(this.nodes.redactor, 'mousemove', this.anchorMouseMoveListener);
     this.listeners.on(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
+
+    this.listeners.on(this.nodes.redactor, 'click', this.redactorClickListener);
   }
 
   /**
@@ -1093,6 +1108,7 @@ export class UI extends Module<UINodes> {
     this.listeners.off(this.nodes.redactor, 'contextmenu', this.redactorContextMenu);
     this.listeners.off(this.nodes.redactor, 'mousemove', this.anchorMouseMoveListener);
     this.listeners.off(this.nodes.redactor, 'mouseout', this.anchorMouseOutListener);
+    this.listeners.off(this.nodes.redactor, 'click', this.redactorClickListener);
 
     /**
      * Disable selection controller
@@ -1126,15 +1142,6 @@ export class UI extends Module<UINodes> {
         }
       }, false);
     }
-
-    /**
-     * Redactor click handler for anchor navigation (plain or Ctrl+click)
-     */
-    this.readOnlyMutableListeners.on(this.nodes.redactor, 'click', (event: Event) => {
-      if (event instanceof MouseEvent) {
-        this.redactorClicked(event);
-      }
-    }, false);
 
     /**
      * Document click handler - uses the click handler from handlers/click.ts
@@ -1361,7 +1368,7 @@ export class UI extends Module<UINodes> {
   }
 
   /**
-   * Open a link href in a new tab, refusing schemes that execute script when
+   * Follow a link href, refusing schemes that execute script when
    * followed (`javascript:`, `data:text/html`, …). Anchors can carry such a
    * href when created outside the inline Link tool's creation-time guard (paste,
    * import, programmatic data), so the click path that follows them must
@@ -1374,22 +1381,48 @@ export class UI extends Module<UINodes> {
     }
 
     /**
-     * A bare fragment addresses THIS document — the link tool even labels it
-     * "Jump to section". Opening it in a new tab would reload the page instead
-     * of moving to the section, so hand it to the blocks API, which resolves
-     * both block ids and heading anchors.
+     * Anything addressing the page the user is already on — a bare fragment or
+     * the absolute URL "Copy link to block" hands out. Such a link is created
+     * with target="_self" (isSamePageLink), so opening it in a tab reopens the
+     * whole document instead of moving inside it.
      */
-    if (href.startsWith('#')) {
-      const fragment = decodeHashFragment(href.slice(1));
-
-      if (fragment !== '') {
-        this.Blok.BlocksAPI.scrollToBlock(fragment);
-      }
+    if (isSamePageLink(href)) {
+      this.followSamePageLink(href);
 
       return;
     }
 
     openTab(getValidUrl(href));
+  }
+
+  /**
+   * Follow a link that points at this page.
+   *
+   * Same origin and pathname is all isSamePageLink checks, so a differing query
+   * string still means a different document: navigate to it, in this window.
+   * Otherwise the fragment goes to the blocks API, which resolves both block ids
+   * and heading anchors. An empty fragment means the current URL exactly —
+   * reopening it would throw away unsaved edits, so nothing happens.
+   * @param href - the raw anchor href, already known to address this page
+   */
+  private followSamePageLink(href: string): void {
+    /**
+     * Safe to parse without a guard: isSamePageLink returned true, which it
+     * only does for a bare fragment or an href it parsed against this same base.
+     */
+    const resolved = new URL(href.trim(), window.location.href);
+
+    if (resolved.search !== window.location.search) {
+      openSameWindow(resolved.href);
+
+      return;
+    }
+
+    const fragment = decodeHashFragment(resolved.hash.slice(1));
+
+    if (fragment !== '') {
+      this.Blok.BlocksAPI.scrollToBlock(fragment);
+    }
   }
 
   /**

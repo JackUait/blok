@@ -190,6 +190,23 @@ export const openTab = (url: string): void => {
 };
 
 /**
+ * Navigates the current window to the passed URL.
+ *
+ * The counterpart of {@link openTab} for a destination that belongs to the page
+ * the user is already on — spawning a tab for it would reopen the same document.
+ * @param url - destination to navigate to
+ */
+export const openSameWindow = (url: string): void => {
+  const win = getGlobalWindow();
+
+  if (!win) {
+    return;
+  }
+
+  win.open(url, '_self');
+};
+
+/**
  * Export getGlobalWindow for internal use
  */
 export { getGlobalWindow, getGlobalNavigator };

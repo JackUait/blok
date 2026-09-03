@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "دستياب ناهي",
   "tools.database.moreViews": "وڌيڪ: {count}…",
   "tools.video.errorNotMediaUrl": "وڊيو فائل (.mp4, .webm, .mov) جي لنڪ ڏيو، يا ايمبيڊ بلاڪ استعمال ڪريو",
-  "tools.video.errorUnplayable": "هي وڊيو هلائي نٿي سگهجي"
+  "tools.video.errorUnplayable": "هي وڊيو هلائي نٿي سگهجي",
+  "presence.anonymous.astronaut": "گمنام خلاباز",
+  "presence.anonymous.rocket": "گمنام راڪيٽ",
+  "presence.anonymous.comet": "گمنام دم وارو تارو",
+  "presence.anonymous.satellite": "گمنام مصنوعي سيارو",
+  "presence.anonymous.planet": "گمنام سيارو",
+  "presence.anonymous.moon": "گمنام چنڊ",
+  "presence.anonymous.star": "گمنام تارو",
+  "presence.anonymous.sun": "گمنام سج",
+  "presence.anonymous.telescope": "گمنام دوربين",
+  "presence.anonymous.galaxy": "گمنام ڪهڪشان",
+  "presence.anonymous.saucer": "گمنام اڏامندڙ ٿالهي",
+  "presence.anonymous.asteroid": "گمنام سيارچو",
+  "presence.anonymous.unknown": "گمنام"
 }

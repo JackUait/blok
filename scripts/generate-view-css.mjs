@@ -18,7 +18,9 @@
  * kept wholesale: they apply by inheritance, so no selector match can prove
  * them dead.
  *
- * WHAT IS DELIBERATELY EXCLUDED: `fonts.css`. Its four `@font-face` rules embed
+ * WHAT IS DELIBERATELY EXCLUDED: `presence.css`, whose collaborator avatars,
+ * carets and silhouettes have nothing to draw in a static view, and
+ * `fonts.css`. Its four `@font-face` rules embed
  * ~226 KB of base64 webfont — larger than everything else combined — and a view
  * should inherit the host's typography. Hosts that want Blok's monospace face in
  * code blocks point `--blok-font-mono` at their own copy.
@@ -445,8 +447,16 @@ const main = async () => {
   /**
    * `fonts.css` is stripped from the entry rather than pruned out of the
    * result: `@font-face` has no selector, so the pruner cannot judge it.
+   *
+   * `presence.css` is stripped for the opposite reason — the pruner judges it
+   * WRONG. Its rules are attribute-keyed and several declare custom properties
+   * alone, so they read as theme token carriers and are kept wholesale. A
+   * rendered view has no awareness, no peers and no silhouettes, so all of it
+   * is dead weight in a budgeted sheet.
    */
-  const entrySource = readFileSync(STYLES_ENTRY, 'utf-8').replace(/^@import '\.\/fonts\.css';$/m, '');
+  const entrySource = readFileSync(STYLES_ENTRY, 'utf-8')
+    .replace(/^@import '\.\/fonts\.css';$/m, '')
+    .replace(/^@import '\.\/presence\.css';$/m, '');
 
   const compiler = await compile(entrySource, {
     base: dirname(STYLES_ENTRY),

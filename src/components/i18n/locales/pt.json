@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Indisponível",
   "tools.database.moreViews": "{count} a mais…",
   "tools.video.errorNotMediaUrl": "Insira o link de um arquivo de vídeo (.mp4, .webm, .mov) ou use um bloco de incorporação",
-  "tools.video.errorUnplayable": "Não é possível reproduzir este vídeo"
+  "tools.video.errorUnplayable": "Não é possível reproduzir este vídeo",
+  "presence.anonymous.astronaut": "Astronauta anônimo",
+  "presence.anonymous.rocket": "Foguete anônimo",
+  "presence.anonymous.comet": "Cometa anônimo",
+  "presence.anonymous.satellite": "Satélite anônimo",
+  "presence.anonymous.planet": "Planeta anônimo",
+  "presence.anonymous.moon": "Lua anônima",
+  "presence.anonymous.star": "Estrela anônima",
+  "presence.anonymous.sun": "Sol anônimo",
+  "presence.anonymous.telescope": "Telescópio anônimo",
+  "presence.anonymous.galaxy": "Galáxia anônima",
+  "presence.anonymous.saucer": "Óvni anônimo",
+  "presence.anonymous.asteroid": "Asteroide anônimo",
+  "presence.anonymous.unknown": "Anônimo"
 }

@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Nepasiekiama",
   "tools.database.moreViews": "Dar {count}…",
   "tools.video.errorNotMediaUrl": "Pateikite vaizdo failo nuorodą (.mp4, .webm, .mov) arba naudokite įterpinio bloką",
-  "tools.video.errorUnplayable": "Šio vaizdo įrašo paleisti negalima"
+  "tools.video.errorUnplayable": "Šio vaizdo įrašo paleisti negalima",
+  "presence.anonymous.astronaut": "Anoniminis astronautas",
+  "presence.anonymous.rocket": "Anoniminė raketa",
+  "presence.anonymous.comet": "Anoniminė kometa",
+  "presence.anonymous.satellite": "Anoniminis palydovas",
+  "presence.anonymous.planet": "Anoniminė planeta",
+  "presence.anonymous.moon": "Anoniminis mėnulis",
+  "presence.anonymous.star": "Anoniminė žvaigždė",
+  "presence.anonymous.sun": "Anoniminė saulė",
+  "presence.anonymous.telescope": "Anoniminis teleskopas",
+  "presence.anonymous.galaxy": "Anoniminė galaktika",
+  "presence.anonymous.saucer": "Anoniminis NSO",
+  "presence.anonymous.asteroid": "Anoniminis asteroidas",
+  "presence.anonymous.unknown": "Anonimas"
 }

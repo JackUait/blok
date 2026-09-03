@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "မရရှိနိုင်ပါ",
   "tools.database.moreViews": "နောက်ထပ် {count} ခု…",
   "tools.video.errorNotMediaUrl": "ဗီဒီယိုဖိုင်လင့်ခ် (.mp4, .webm, .mov) ကို ထည့်ပါ၊ သို့မဟုတ် မြှုပ်သွင်းမှုဘလောက်ကို အသုံးပြုပါ",
-  "tools.video.errorUnplayable": "ဤဗီဒီယိုကို ဖွင့်၍မရပါ"
+  "tools.video.errorUnplayable": "ဤဗီဒီယိုကို ဖွင့်၍မရပါ",
+  "presence.anonymous.astronaut": "အမည်မသိ အာကာသယာဉ်မှူး",
+  "presence.anonymous.rocket": "အမည်မသိ ဒုံးပျံ",
+  "presence.anonymous.comet": "အမည်မသိ ကြယ်တံခွန်",
+  "presence.anonymous.satellite": "အမည်မသိ ဂြိုဟ်တု",
+  "presence.anonymous.planet": "အမည်မသိ ဂြိုဟ်",
+  "presence.anonymous.moon": "အမည်မသိ လ",
+  "presence.anonymous.star": "အမည်မသိ ကြယ်",
+  "presence.anonymous.sun": "အမည်မသိ နေ",
+  "presence.anonymous.telescope": "အမည်မသိ အဝေးကြည့်မှန်ပြောင်း",
+  "presence.anonymous.galaxy": "အမည်မသိ နဂါးငွေ့တန်း",
+  "presence.anonymous.saucer": "အမည်မသိ ပျံသန်းသောပန်းကန်ပြား",
+  "presence.anonymous.asteroid": "အမည်မသိ ဂြိုဟ်သေး",
+  "presence.anonymous.unknown": "အမည်မသိ"
 }

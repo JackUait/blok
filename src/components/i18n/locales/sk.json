@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Nie je k dispozícii",
   "tools.database.moreViews": "Ďalšie: {count}…",
   "tools.video.errorNotMediaUrl": "Zadajte odkaz na videosúbor (.mp4, .webm, .mov) alebo použite blok na vloženie",
-  "tools.video.errorUnplayable": "Toto video sa nedá prehrať"
+  "tools.video.errorUnplayable": "Toto video sa nedá prehrať",
+  "presence.anonymous.astronaut": "Anonymný astronaut",
+  "presence.anonymous.rocket": "Anonymná raketa",
+  "presence.anonymous.comet": "Anonymná kométa",
+  "presence.anonymous.satellite": "Anonymný satelit",
+  "presence.anonymous.planet": "Anonymná planéta",
+  "presence.anonymous.moon": "Anonymný mesiac",
+  "presence.anonymous.star": "Anonymná hviezda",
+  "presence.anonymous.sun": "Anonymné slnko",
+  "presence.anonymous.telescope": "Anonymný ďalekohľad",
+  "presence.anonymous.galaxy": "Anonymná galaxia",
+  "presence.anonymous.saucer": "Anonymné UFO",
+  "presence.anonymous.asteroid": "Anonymný asteroid",
+  "presence.anonymous.unknown": "Anonym"
 }

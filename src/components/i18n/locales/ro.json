@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Indisponibil",
   "tools.database.moreViews": "Încă: {count}…",
   "tools.video.errorNotMediaUrl": "Introduceți linkul unui fișier video (.mp4, .webm, .mov) sau folosiți un bloc de încorporare",
-  "tools.video.errorUnplayable": "Acest videoclip nu poate fi redat"
+  "tools.video.errorUnplayable": "Acest videoclip nu poate fi redat",
+  "presence.anonymous.astronaut": "Astronaut anonim",
+  "presence.anonymous.rocket": "Rachetă anonimă",
+  "presence.anonymous.comet": "Cometă anonimă",
+  "presence.anonymous.satellite": "Satelit anonim",
+  "presence.anonymous.planet": "Planetă anonimă",
+  "presence.anonymous.moon": "Lună anonimă",
+  "presence.anonymous.star": "Stea anonimă",
+  "presence.anonymous.sun": "Soare anonim",
+  "presence.anonymous.telescope": "Telescop anonim",
+  "presence.anonymous.galaxy": "Galaxie anonimă",
+  "presence.anonymous.saucer": "OZN anonim",
+  "presence.anonymous.asteroid": "Asteroid anonim",
+  "presence.anonymous.unknown": "Anonim"
 }

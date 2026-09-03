@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "غير متاح",
   "tools.database.moreViews": "المزيد: {count}…",
   "tools.video.errorNotMediaUrl": "أضف رابطًا إلى ملف فيديو (.mp4, .webm, .mov)، أو استخدم كتلة تضمين.",
-  "tools.video.errorUnplayable": "لا يمكن تشغيل هذا الفيديو."
+  "tools.video.errorUnplayable": "لا يمكن تشغيل هذا الفيديو.",
+  "presence.anonymous.astronaut": "رائد فضاء مجهول",
+  "presence.anonymous.rocket": "صاروخ مجهول",
+  "presence.anonymous.comet": "مذنّب مجهول",
+  "presence.anonymous.satellite": "قمر صناعي مجهول",
+  "presence.anonymous.planet": "كوكب مجهول",
+  "presence.anonymous.moon": "قمر مجهول",
+  "presence.anonymous.star": "نجمة مجهولة",
+  "presence.anonymous.sun": "شمس مجهولة",
+  "presence.anonymous.telescope": "تلسكوب مجهول",
+  "presence.anonymous.galaxy": "مجرّة مجهولة",
+  "presence.anonymous.saucer": "طبق طائر مجهول",
+  "presence.anonymous.asteroid": "كويكب مجهول",
+  "presence.anonymous.unknown": "مجهول"
 }

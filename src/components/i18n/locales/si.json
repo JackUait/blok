@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ලබා ගත නොහැක",
   "tools.database.moreViews": "තවත්: {count}…",
   "tools.video.errorNotMediaUrl": "වීඩියෝ ගොනුවක (.mp4, .webm, .mov) සබැඳියක් යොදන්න, නැතහොත් කාවැද්දීමේ බ්ලොක් එකක් භාවිත කරන්න",
-  "tools.video.errorUnplayable": "මෙම වීඩියෝව ධාවනය කළ නොහැක"
+  "tools.video.errorUnplayable": "මෙම වීඩියෝව ධාවනය කළ නොහැක",
+  "presence.anonymous.astronaut": "නාඳුනන ගගනගාමියා",
+  "presence.anonymous.rocket": "නාඳුනන රොකට්ටුව",
+  "presence.anonymous.comet": "නාඳුනන වල්ගා තරුව",
+  "presence.anonymous.satellite": "නාඳුනන චන්ද්‍රිකාව",
+  "presence.anonymous.planet": "නාඳුනන ග්‍රහලෝකය",
+  "presence.anonymous.moon": "නාඳුනන සඳ",
+  "presence.anonymous.star": "නාඳුනන තරුව",
+  "presence.anonymous.sun": "නාඳුනන හිරු",
+  "presence.anonymous.telescope": "නාඳුනන දුරදක්නය",
+  "presence.anonymous.galaxy": "නාඳුනන මන්දාකිනිය",
+  "presence.anonymous.saucer": "නාඳුනන පියාසර පිඟාන",
+  "presence.anonymous.asteroid": "නාඳුනන ග්‍රහකය",
+  "presence.anonymous.unknown": "නාඳුනන"
 }

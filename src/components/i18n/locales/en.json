@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Not available",
   "tools.database.moreViews": "{count} more…",
   "tools.video.errorNotMediaUrl": "Link a video file (.mp4, .webm, .mov), or use an embed block",
-  "tools.video.errorUnplayable": "This video can't be played"
+  "tools.video.errorUnplayable": "This video can't be played",
+  "presence.anonymous.astronaut": "Anonymous Astronaut",
+  "presence.anonymous.rocket": "Anonymous Rocket",
+  "presence.anonymous.comet": "Anonymous Comet",
+  "presence.anonymous.satellite": "Anonymous Satellite",
+  "presence.anonymous.planet": "Anonymous Planet",
+  "presence.anonymous.moon": "Anonymous Moon",
+  "presence.anonymous.star": "Anonymous Star",
+  "presence.anonymous.sun": "Anonymous Sun",
+  "presence.anonymous.telescope": "Anonymous Telescope",
+  "presence.anonymous.galaxy": "Anonymous Galaxy",
+  "presence.anonymous.saucer": "Anonymous UFO",
+  "presence.anonymous.asteroid": "Anonymous Asteroid",
+  "presence.anonymous.unknown": "Anonymous"
 }

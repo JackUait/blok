@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "មិនអាចប្រើបាន",
   "tools.database.moreViews": "{count} ទៀត…",
   "tools.video.errorNotMediaUrl": "សូមភ្ជាប់តំណទៅឯកសារវីដេអូ (.mp4, .webm, .mov) ឬប្រើប្លុកបង្កប់",
-  "tools.video.errorUnplayable": "មិនអាចចាក់វីដេអូនេះបានទេ"
+  "tools.video.errorUnplayable": "មិនអាចចាក់វីដេអូនេះបានទេ",
+  "presence.anonymous.astronaut": "អវកាសយានិកអនាមិក",
+  "presence.anonymous.rocket": "រ៉ុក្កែតអនាមិក",
+  "presence.anonymous.comet": "ផ្កាយដុះកន្ទុយអនាមិក",
+  "presence.anonymous.satellite": "ផ្កាយរណបអនាមិក",
+  "presence.anonymous.planet": "ភពអនាមិក",
+  "presence.anonymous.moon": "ព្រះចន្ទអនាមិក",
+  "presence.anonymous.star": "ផ្កាយអនាមិក",
+  "presence.anonymous.sun": "ព្រះអាទិត្យអនាមិក",
+  "presence.anonymous.telescope": "កែវយឺតអនាមិក",
+  "presence.anonymous.galaxy": "កាឡាក់ស៊ីអនាមិក",
+  "presence.anonymous.saucer": "ចានហោះអនាមិក",
+  "presence.anonymous.asteroid": "ភពតូចអនាមិក",
+  "presence.anonymous.unknown": "អនាមិក"
 }

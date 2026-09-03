@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "მიუწვდომელია",
   "tools.database.moreViews": "კიდევ {count}…",
   "tools.video.errorNotMediaUrl": "მიუთითეთ ვიდეოფაილის ბმული (.mp4, .webm, .mov), ან გამოიყენეთ ჩაშენების ბლოკი",
-  "tools.video.errorUnplayable": "ამ ვიდეოს დაკვრა შეუძლებელია"
+  "tools.video.errorUnplayable": "ამ ვიდეოს დაკვრა შეუძლებელია",
+  "presence.anonymous.astronaut": "ანონიმური ასტრონავტი",
+  "presence.anonymous.rocket": "ანონიმური რაკეტა",
+  "presence.anonymous.comet": "ანონიმური კომეტა",
+  "presence.anonymous.satellite": "ანონიმური თანამგზავრი",
+  "presence.anonymous.planet": "ანონიმური პლანეტა",
+  "presence.anonymous.moon": "ანონიმური მთვარე",
+  "presence.anonymous.star": "ანონიმური ვარსკვლავი",
+  "presence.anonymous.sun": "ანონიმური მზე",
+  "presence.anonymous.telescope": "ანონიმური ტელესკოპი",
+  "presence.anonymous.galaxy": "ანონიმური გალაქტიკა",
+  "presence.anonymous.saucer": "ანონიმური მფრინავი თეფში",
+  "presence.anonymous.asteroid": "ანონიმური ასტეროიდი",
+  "presence.anonymous.unknown": "ანონიმი"
 }

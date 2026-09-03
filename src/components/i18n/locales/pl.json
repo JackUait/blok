@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Niedostępne",
   "tools.database.moreViews": "Więcej: {count}…",
   "tools.video.errorNotMediaUrl": "Podaj link do pliku wideo (.mp4, .webm, .mov) albo użyj bloku osadzania",
-  "tools.video.errorUnplayable": "Nie można odtworzyć tego wideo"
+  "tools.video.errorUnplayable": "Nie można odtworzyć tego wideo",
+  "presence.anonymous.astronaut": "Anonimowy astronauta",
+  "presence.anonymous.rocket": "Anonimowa rakieta",
+  "presence.anonymous.comet": "Anonimowa kometa",
+  "presence.anonymous.satellite": "Anonimowy satelita",
+  "presence.anonymous.planet": "Anonimowa planeta",
+  "presence.anonymous.moon": "Anonimowy księżyc",
+  "presence.anonymous.star": "Anonimowa gwiazda",
+  "presence.anonymous.sun": "Anonimowe słońce",
+  "presence.anonymous.telescope": "Anonimowy teleskop",
+  "presence.anonymous.galaxy": "Anonimowa galaktyka",
+  "presence.anonymous.saucer": "Anonimowe UFO",
+  "presence.anonymous.asteroid": "Anonimowa planetoida",
+  "presence.anonymous.unknown": "Anonim"
 }

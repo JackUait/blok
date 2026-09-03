@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ಲಭ್ಯವಿಲ್ಲ",
   "tools.database.moreViews": "ಇನ್ನಷ್ಟು: {count}…",
   "tools.video.errorNotMediaUrl": "ವೀಡಿಯೊ ಫೈಲ್‌ಗೆ (.mp4, .webm, .mov) ಲಿಂಕ್ ನೀಡಿ ಅಥವಾ ಎಂಬೆಡ್ ಬ್ಲಾಕ್ ಬಳಸಿ",
-  "tools.video.errorUnplayable": "ಈ ವೀಡಿಯೊವನ್ನು ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ"
+  "tools.video.errorUnplayable": "ಈ ವೀಡಿಯೊವನ್ನು ಪ್ಲೇ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ",
+  "presence.anonymous.astronaut": "ಅನಾಮಧೇಯ ಗಗನಯಾತ್ರಿ",
+  "presence.anonymous.rocket": "ಅನಾಮಧೇಯ ರಾಕೆಟ್",
+  "presence.anonymous.comet": "ಅನಾಮಧೇಯ ಧೂಮಕೇತು",
+  "presence.anonymous.satellite": "ಅನಾಮಧೇಯ ಉಪಗ್ರಹ",
+  "presence.anonymous.planet": "ಅನಾಮಧೇಯ ಗ್ರಹ",
+  "presence.anonymous.moon": "ಅನಾಮಧೇಯ ಚಂದ್ರ",
+  "presence.anonymous.star": "ಅನಾಮಧೇಯ ನಕ್ಷತ್ರ",
+  "presence.anonymous.sun": "ಅನಾಮಧೇಯ ಸೂರ್ಯ",
+  "presence.anonymous.telescope": "ಅನಾಮಧೇಯ ದೂರದರ್ಶಕ",
+  "presence.anonymous.galaxy": "ಅನಾಮಧೇಯ ನಕ್ಷತ್ರಪುಂಜ",
+  "presence.anonymous.saucer": "ಅನಾಮಧೇಯ ಹಾರುವ ತಟ್ಟೆ",
+  "presence.anonymous.asteroid": "ಅನಾಮಧೇಯ ಕ್ಷುದ್ರಗ್ರಹ",
+  "presence.anonymous.unknown": "ಅನಾಮಧೇಯ"
 }

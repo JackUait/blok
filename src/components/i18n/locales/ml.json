@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ലഭ്യമല്ല",
   "tools.database.moreViews": "{count} എണ്ണം കൂടി…",
   "tools.video.errorNotMediaUrl": "ഒരു വീഡിയോ ഫയലിലേക്കുള്ള ലിങ്ക് (.mp4, .webm, .mov) നൽകുക, അല്ലെങ്കിൽ ഒരു എംബെഡ് ബ്ലോക്ക് ഉപയോഗിക്കുക",
-  "tools.video.errorUnplayable": "ഈ വീഡിയോ പ്ലേ ചെയ്യാനാകില്ല"
+  "tools.video.errorUnplayable": "ഈ വീഡിയോ പ്ലേ ചെയ്യാനാകില്ല",
+  "presence.anonymous.astronaut": "അജ്ഞാത ബഹിരാകാശയാത്രികൻ",
+  "presence.anonymous.rocket": "അജ്ഞാത റോക്കറ്റ്",
+  "presence.anonymous.comet": "അജ്ഞാത വാൽനക്ഷത്രം",
+  "presence.anonymous.satellite": "അജ്ഞാത ഉപഗ്രഹം",
+  "presence.anonymous.planet": "അജ്ഞാത ഗ്രഹം",
+  "presence.anonymous.moon": "അജ്ഞാത ചന്ദ്രൻ",
+  "presence.anonymous.star": "അജ്ഞാത നക്ഷത്രം",
+  "presence.anonymous.sun": "അജ്ഞാത സൂര്യൻ",
+  "presence.anonymous.telescope": "അജ്ഞാത ദൂരദർശിനി",
+  "presence.anonymous.galaxy": "അജ്ഞാത ഗാലക്സി",
+  "presence.anonymous.saucer": "അജ്ഞാത പറക്കുംതളിക",
+  "presence.anonymous.asteroid": "അജ്ഞാത ഛിന്നഗ്രഹം",
+  "presence.anonymous.unknown": "അജ്ഞാതൻ"
 }

@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Không khả dụng",
   "tools.database.moreViews": "Còn lại: {count}…",
   "tools.video.errorNotMediaUrl": "Nhập liên kết đến tệp video (.mp4, .webm, .mov) hoặc dùng khối nhúng",
-  "tools.video.errorUnplayable": "Không thể phát video này"
+  "tools.video.errorUnplayable": "Không thể phát video này",
+  "presence.anonymous.astronaut": "Phi hành gia ẩn danh",
+  "presence.anonymous.rocket": "Tên lửa ẩn danh",
+  "presence.anonymous.comet": "Sao chổi ẩn danh",
+  "presence.anonymous.satellite": "Vệ tinh ẩn danh",
+  "presence.anonymous.planet": "Hành tinh ẩn danh",
+  "presence.anonymous.moon": "Mặt trăng ẩn danh",
+  "presence.anonymous.star": "Ngôi sao ẩn danh",
+  "presence.anonymous.sun": "Mặt trời ẩn danh",
+  "presence.anonymous.telescope": "Kính thiên văn ẩn danh",
+  "presence.anonymous.galaxy": "Thiên hà ẩn danh",
+  "presence.anonymous.saucer": "Đĩa bay ẩn danh",
+  "presence.anonymous.asteroid": "Tiểu hành tinh ẩn danh",
+  "presence.anonymous.unknown": "Ẩn danh"
 }

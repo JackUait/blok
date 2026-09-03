@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Tidak tersedia",
   "tools.database.moreViews": "{count} lainnya…",
   "tools.video.errorNotMediaUrl": "Tautkan berkas video (.mp4, .webm, .mov), atau gunakan blok sematan",
-  "tools.video.errorUnplayable": "Video ini tidak dapat diputar"
+  "tools.video.errorUnplayable": "Video ini tidak dapat diputar",
+  "presence.anonymous.astronaut": "Astronaut anonim",
+  "presence.anonymous.rocket": "Roket anonim",
+  "presence.anonymous.comet": "Komet anonim",
+  "presence.anonymous.satellite": "Satelit anonim",
+  "presence.anonymous.planet": "Planet anonim",
+  "presence.anonymous.moon": "Bulan anonim",
+  "presence.anonymous.star": "Bintang anonim",
+  "presence.anonymous.sun": "Matahari anonim",
+  "presence.anonymous.telescope": "Teleskop anonim",
+  "presence.anonymous.galaxy": "Galaksi anonim",
+  "presence.anonymous.saucer": "Piring terbang anonim",
+  "presence.anonymous.asteroid": "Asteroid anonim",
+  "presence.anonymous.unknown": "Anonim"
 }

@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Haipatikani",
   "tools.database.moreViews": "Zaidi: {count}…",
   "tools.video.errorNotMediaUrl": "Weka kiungo cha faili ya video (.mp4, .webm, .mov), au tumia kizuizi cha kupachika",
-  "tools.video.errorUnplayable": "Video hii haiwezi kuchezwa"
+  "tools.video.errorUnplayable": "Video hii haiwezi kuchezwa",
+  "presence.anonymous.astronaut": "Mwanaanga asiyejulikana",
+  "presence.anonymous.rocket": "Roketi isiyojulikana",
+  "presence.anonymous.comet": "Nyota mkia isiyojulikana",
+  "presence.anonymous.satellite": "Setilaiti isiyojulikana",
+  "presence.anonymous.planet": "Sayari isiyojulikana",
+  "presence.anonymous.moon": "Mwezi usiojulikana",
+  "presence.anonymous.star": "Nyota isiyojulikana",
+  "presence.anonymous.sun": "Jua lisilojulikana",
+  "presence.anonymous.telescope": "Darubini isiyojulikana",
+  "presence.anonymous.galaxy": "Galaksi isiyojulikana",
+  "presence.anonymous.saucer": "Sahani ya angani isiyojulikana",
+  "presence.anonymous.asteroid": "Asteroidi isiyojulikana",
+  "presence.anonymous.unknown": "Asiyejulikana"
 }

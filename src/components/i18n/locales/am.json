@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "አይገኝም",
   "tools.database.moreViews": "ተጨማሪ {count}…",
   "tools.video.errorNotMediaUrl": "የቪዲዮ ፋይል (.mp4, .webm, .mov) አገናኝ ያክሉ ወይም የማስገቢያ ብሎክ ይጠቀሙ።",
-  "tools.video.errorUnplayable": "ይህን ቪዲዮ ማጫወት አይቻልም።"
+  "tools.video.errorUnplayable": "ይህን ቪዲዮ ማጫወት አይቻልም።",
+  "presence.anonymous.astronaut": "ስም አልባ ጠፈርተኛ",
+  "presence.anonymous.rocket": "ስም አልባ ሮኬት",
+  "presence.anonymous.comet": "ስም አልባ ጅራታም ኮከብ",
+  "presence.anonymous.satellite": "ስም አልባ ሳተላይት",
+  "presence.anonymous.planet": "ስም አልባ ፕላኔት",
+  "presence.anonymous.moon": "ስም አልባ ጨረቃ",
+  "presence.anonymous.star": "ስም አልባ ኮከብ",
+  "presence.anonymous.sun": "ስም አልባ ፀሐይ",
+  "presence.anonymous.telescope": "ስም አልባ ቴሌስኮፕ",
+  "presence.anonymous.galaxy": "ስም አልባ ጋላክሲ",
+  "presence.anonymous.saucer": "ስም አልባ በራሪ ሳህን",
+  "presence.anonymous.asteroid": "ስም አልባ አስትሮይድ",
+  "presence.anonymous.unknown": "ስም አልባ"
 }

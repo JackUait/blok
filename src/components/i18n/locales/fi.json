@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Ei saatavilla",
   "tools.database.moreViews": "{count} lisää…",
   "tools.video.errorNotMediaUrl": "Linkitä videotiedosto (.mp4, .webm, .mov) tai käytä upotuslohkoa.",
-  "tools.video.errorUnplayable": "Tätä videota ei voi toistaa."
+  "tools.video.errorUnplayable": "Tätä videota ei voi toistaa.",
+  "presence.anonymous.astronaut": "Nimetön astronautti",
+  "presence.anonymous.rocket": "Nimetön raketti",
+  "presence.anonymous.comet": "Nimetön komeetta",
+  "presence.anonymous.satellite": "Nimetön satelliitti",
+  "presence.anonymous.planet": "Nimetön planeetta",
+  "presence.anonymous.moon": "Nimetön kuu",
+  "presence.anonymous.star": "Nimetön tähti",
+  "presence.anonymous.sun": "Nimetön aurinko",
+  "presence.anonymous.telescope": "Nimetön kaukoputki",
+  "presence.anonymous.galaxy": "Nimetön galaksi",
+  "presence.anonymous.saucer": "Nimetön ufo",
+  "presence.anonymous.asteroid": "Nimetön asteroidi",
+  "presence.anonymous.unknown": "Nimetön"
 }

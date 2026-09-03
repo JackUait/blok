@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "無法使用",
   "tools.database.moreViews": "更多：{count}…",
   "tools.video.errorNotMediaUrl": "輸入影片檔（.mp4、.webm、.mov）連結，或使用嵌入區塊",
-  "tools.video.errorUnplayable": "無法播放這部影片"
+  "tools.video.errorUnplayable": "無法播放這部影片",
+  "presence.anonymous.astronaut": "匿名太空人",
+  "presence.anonymous.rocket": "匿名火箭",
+  "presence.anonymous.comet": "匿名彗星",
+  "presence.anonymous.satellite": "匿名衛星",
+  "presence.anonymous.planet": "匿名行星",
+  "presence.anonymous.moon": "匿名月亮",
+  "presence.anonymous.star": "匿名星星",
+  "presence.anonymous.sun": "匿名太陽",
+  "presence.anonymous.telescope": "匿名望遠鏡",
+  "presence.anonymous.galaxy": "匿名星系",
+  "presence.anonymous.saucer": "匿名飛碟",
+  "presence.anonymous.asteroid": "匿名小行星",
+  "presence.anonymous.unknown": "匿名"
 }

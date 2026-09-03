@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "கிடைக்கவில்லை",
   "tools.database.moreViews": "மேலும்: {count}…",
   "tools.video.errorNotMediaUrl": "வீடியோ கோப்பிற்கான (.mp4, .webm, .mov) இணைப்பை உள்ளிடவும் அல்லது உட்பொதிவுத் தொகுதியைப் பயன்படுத்தவும்",
-  "tools.video.errorUnplayable": "இந்த வீடியோவை இயக்க முடியவில்லை"
+  "tools.video.errorUnplayable": "இந்த வீடியோவை இயக்க முடியவில்லை",
+  "presence.anonymous.astronaut": "அநாமதேய விண்வெளி வீரர்",
+  "presence.anonymous.rocket": "அநாமதேய ராக்கெட்",
+  "presence.anonymous.comet": "அநாமதேய வால்நட்சத்திரம்",
+  "presence.anonymous.satellite": "அநாமதேய செயற்கைக்கோள்",
+  "presence.anonymous.planet": "அநாமதேய கோள்",
+  "presence.anonymous.moon": "அநாமதேய நிலா",
+  "presence.anonymous.star": "அநாமதேய நட்சத்திரம்",
+  "presence.anonymous.sun": "அநாமதேய சூரியன்",
+  "presence.anonymous.telescope": "அநாமதேய தொலைநோக்கி",
+  "presence.anonymous.galaxy": "அநாமதேய பால்வெளி",
+  "presence.anonymous.saucer": "அநாமதேய பறக்கும் தட்டு",
+  "presence.anonymous.asteroid": "அநாமதேய சிறுகோள்",
+  "presence.anonymous.unknown": "அநாமதேயர்"
 }

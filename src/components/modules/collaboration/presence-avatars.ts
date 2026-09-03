@@ -9,6 +9,12 @@ export interface AvatarIdentity {
   name: string;
   /** Already through the hex gate. */
   color: string;
+  /**
+   * The silhouette a peer who published no name of their own wears, or null
+   * for a peer whose name draws a monogram. One of ANONYMOUS_GLYPHS, so it is
+   * this client's own value and never a peer's.
+   */
+  glyph?: string | null;
 }
 
 /** What the avatar layer needs to know about a peer, after sanitization. */
@@ -51,6 +57,13 @@ const OVERFLOW_ATTR = 'data-blok-presence-face-overflow';
 const INITIALS_ATTR = 'data-blok-presence-initials';
 
 /**
+ * Which silhouette a nameless peer wears. presence.css turns it into a mask;
+ * the shape is never a child node, for the same reason the monogram is not —
+ * block copy keeps whatever the holder held.
+ */
+const GLYPH_ATTR = 'data-blok-presence-glyph';
+
+/**
  * Faces one block shows before it starts counting.
  *
  * Smaller than the editor-wide avatar stack's four: this strip lives in the
@@ -67,9 +80,10 @@ const DEFAULT_MAX_FACES = 3;
 const FALLBACK_LINE_CENTRE = 12;
 
 /**
- * One avatar disc: the peer's colour and, for a named peer, the full name in a
- * `title` and their monogram. Attribute values are never parsed as markup, so
- * a hostile name is safe in both.
+ * One avatar disc: the peer's colour, the full name in a `title`, and either
+ * their monogram or — for a peer who published no name — a space silhouette.
+ * Attribute values are never parsed as markup, so a hostile name is safe in
+ * both.
  *
  * `monogram` says where the initials go. The gutter face sits INSIDE a block
  * holder, and block copy sanitizes `holder.innerHTML` keeping every text node
@@ -81,15 +95,22 @@ const FALLBACK_LINE_CENTRE = 12;
  */
 export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text' | 'attribute'): HTMLElement => {
   const avatar = document.createElement('span');
+  const glyph = peer.glyph ?? null;
 
   avatar.setAttribute(attr, '');
   avatar.style.setProperty(PRESENCE_COLOR_PROPERTY, peer.color);
 
-  // A peer who published no name is drawn as their colour alone: no monogram,
-  // and no tooltip claiming an empty name.
+  // A peer who published no name wears a silhouette instead of a monogram:
+  // initials of a name this client generated would be initials of nobody.
+  if (glyph !== null) {
+    avatar.setAttribute(GLYPH_ATTR, glyph);
+  }
+
   if (peer.name !== '') {
     avatar.setAttribute('title', peer.name);
+  }
 
+  if (peer.name !== '' && glyph === null) {
     if (monogram === 'attribute') {
       avatar.setAttribute(INITIALS_ATTR, initialsOf(peer.name));
     } else {

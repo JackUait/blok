@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "לא זמין",
   "tools.database.moreViews": "עוד {count}…",
   "tools.video.errorNotMediaUrl": "הוסף קישור לקובץ וידאו (.mp4, .webm, .mov) או השתמש בבלוק הטמעה.",
-  "tools.video.errorUnplayable": "לא ניתן להפעיל את הסרטון הזה."
+  "tools.video.errorUnplayable": "לא ניתן להפעיל את הסרטון הזה.",
+  "presence.anonymous.astronaut": "אסטרונאוט אנונימי",
+  "presence.anonymous.rocket": "רקטה אנונימית",
+  "presence.anonymous.comet": "שביט אנונימי",
+  "presence.anonymous.satellite": "לוויין אנונימי",
+  "presence.anonymous.planet": "כוכב לכת אנונימי",
+  "presence.anonymous.moon": "ירח אנונימי",
+  "presence.anonymous.star": "כוכב אנונימי",
+  "presence.anonymous.sun": "שמש אנונימית",
+  "presence.anonymous.telescope": "טלסקופ אנונימי",
+  "presence.anonymous.galaxy": "גלקסיה אנונימית",
+  "presence.anonymous.saucer": "עב״ם אנונימי",
+  "presence.anonymous.asteroid": "אסטרואיד אנונימי",
+  "presence.anonymous.unknown": "אנונימי"
 }

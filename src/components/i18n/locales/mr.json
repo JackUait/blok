@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "उपलब्ध नाही",
   "tools.database.moreViews": "आणखी: {count}…",
   "tools.video.errorNotMediaUrl": "व्हिडिओ फाइलची लिंक (.mp4, .webm, .mov) द्या किंवा एम्बेड ब्लॉक वापरा",
-  "tools.video.errorUnplayable": "हा व्हिडिओ प्ले करता येत नाही"
+  "tools.video.errorUnplayable": "हा व्हिडिओ प्ले करता येत नाही",
+  "presence.anonymous.astronaut": "अनामिक अंतराळवीर",
+  "presence.anonymous.rocket": "अनामिक रॉकेट",
+  "presence.anonymous.comet": "अनामिक धूमकेतू",
+  "presence.anonymous.satellite": "अनामिक उपग्रह",
+  "presence.anonymous.planet": "अनामिक ग्रह",
+  "presence.anonymous.moon": "अनामिक चंद्र",
+  "presence.anonymous.star": "अनामिक तारा",
+  "presence.anonymous.sun": "अनामिक सूर्य",
+  "presence.anonymous.telescope": "अनामिक दुर्बीण",
+  "presence.anonymous.galaxy": "अनामिक आकाशगंगा",
+  "presence.anonymous.saucer": "अनामिक उडती तबकडी",
+  "presence.anonymous.asteroid": "अनामिक लघुग्रह",
+  "presence.anonymous.unknown": "अनामिक"
 }

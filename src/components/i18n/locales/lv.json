@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Nav pieejams",
   "tools.database.moreViews": "Vēl {count}…",
   "tools.video.errorNotMediaUrl": "Norādiet saiti uz video failu (.mp4, .webm, .mov) vai izmantojiet iegulšanas bloku",
-  "tools.video.errorUnplayable": "Šo video nevar atskaņot"
+  "tools.video.errorUnplayable": "Šo video nevar atskaņot",
+  "presence.anonymous.astronaut": "Anonīms astronauts",
+  "presence.anonymous.rocket": "Anonīma raķete",
+  "presence.anonymous.comet": "Anonīma komēta",
+  "presence.anonymous.satellite": "Anonīms satelīts",
+  "presence.anonymous.planet": "Anonīma planēta",
+  "presence.anonymous.moon": "Anonīms mēness",
+  "presence.anonymous.star": "Anonīma zvaigzne",
+  "presence.anonymous.sun": "Anonīma saule",
+  "presence.anonymous.telescope": "Anonīms teleskops",
+  "presence.anonymous.galaxy": "Anonīma galaktika",
+  "presence.anonymous.saucer": "Anonīms NLO",
+  "presence.anonymous.asteroid": "Anonīms asteroīds",
+  "presence.anonymous.unknown": "Anonīms"
 }

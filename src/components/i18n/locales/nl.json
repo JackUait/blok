@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Niet beschikbaar",
   "tools.database.moreViews": "Nog {count}…",
   "tools.video.errorNotMediaUrl": "Voeg een link naar een videobestand (.mp4, .webm, .mov) toe of gebruik een insluitblok",
-  "tools.video.errorUnplayable": "Deze video kan niet worden afgespeeld"
+  "tools.video.errorUnplayable": "Deze video kan niet worden afgespeeld",
+  "presence.anonymous.astronaut": "Anonieme astronaut",
+  "presence.anonymous.rocket": "Anonieme raket",
+  "presence.anonymous.comet": "Anonieme komeet",
+  "presence.anonymous.satellite": "Anonieme satelliet",
+  "presence.anonymous.planet": "Anonieme planeet",
+  "presence.anonymous.moon": "Anonieme maan",
+  "presence.anonymous.star": "Anonieme ster",
+  "presence.anonymous.sun": "Anonieme zon",
+  "presence.anonymous.telescope": "Anonieme telescoop",
+  "presence.anonymous.galaxy": "Anoniem sterrenstelsel",
+  "presence.anonymous.saucer": "Anonieme ufo",
+  "presence.anonymous.asteroid": "Anonieme asteroïde",
+  "presence.anonymous.unknown": "Anoniem"
 }

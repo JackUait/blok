@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Недоступно",
   "tools.database.moreViews": "Ещё: {count}…",
   "tools.video.errorNotMediaUrl": "Укажите ссылку на видеофайл (.mp4, .webm, .mov) или используйте блок встраивания",
-  "tools.video.errorUnplayable": "Не удаётся воспроизвести это видео"
+  "tools.video.errorUnplayable": "Не удаётся воспроизвести это видео",
+  "presence.anonymous.astronaut": "Анонимный астронавт",
+  "presence.anonymous.rocket": "Анонимная ракета",
+  "presence.anonymous.comet": "Анонимная комета",
+  "presence.anonymous.satellite": "Анонимный спутник",
+  "presence.anonymous.planet": "Анонимная планета",
+  "presence.anonymous.moon": "Анонимная луна",
+  "presence.anonymous.star": "Анонимная звезда",
+  "presence.anonymous.sun": "Анонимное солнце",
+  "presence.anonymous.telescope": "Анонимный телескоп",
+  "presence.anonymous.galaxy": "Анонимная галактика",
+  "presence.anonymous.saucer": "Анонимное НЛО",
+  "presence.anonymous.asteroid": "Анонимный астероид",
+  "presence.anonymous.unknown": "Аноним"
 }

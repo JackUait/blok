@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "উপলভ্য নয়",
   "tools.database.moreViews": "আরও {count}টি…",
   "tools.video.errorNotMediaUrl": "একটি ভিডিও ফাইল (.mp4, .webm, .mov) লিঙ্ক করুন অথবা একটি এম্বেড ব্লক ব্যবহার করুন।",
-  "tools.video.errorUnplayable": "এই ভিডিওটি চালানো যাচ্ছে না।"
+  "tools.video.errorUnplayable": "এই ভিডিওটি চালানো যাচ্ছে না।",
+  "presence.anonymous.astronaut": "নামহীন নভোচারী",
+  "presence.anonymous.rocket": "নামহীন রকেট",
+  "presence.anonymous.comet": "নামহীন ধূমকেতু",
+  "presence.anonymous.satellite": "নামহীন উপগ্রহ",
+  "presence.anonymous.planet": "নামহীন গ্রহ",
+  "presence.anonymous.moon": "নামহীন চাঁদ",
+  "presence.anonymous.star": "নামহীন তারা",
+  "presence.anonymous.sun": "নামহীন সূর্য",
+  "presence.anonymous.telescope": "নামহীন দূরবিন",
+  "presence.anonymous.galaxy": "নামহীন ছায়াপথ",
+  "presence.anonymous.saucer": "নামহীন উড়ন্ত চাকতি",
+  "presence.anonymous.asteroid": "নামহীন গ্রহাণু",
+  "presence.anonymous.unknown": "নামহীন"
 }

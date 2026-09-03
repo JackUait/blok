@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "بەردەست نییە",
   "tools.database.moreViews": "{count}ی تر…",
   "tools.video.errorNotMediaUrl": "بەستەری فایلێکی ڤیدیۆ (.mp4، .webm، .mov) دابنێ، یان بلۆکی جێگیرکردن بەکاربهێنە",
-  "tools.video.errorUnplayable": "ئەم ڤیدیۆیە ناتوانرێت لێ بدرێت"
+  "tools.video.errorUnplayable": "ئەم ڤیدیۆیە ناتوانرێت لێ بدرێت",
+  "presence.anonymous.astronaut": "فەزانەوردی نەناسراو",
+  "presence.anonymous.rocket": "موشەکی نەناسراو",
+  "presence.anonymous.comet": "کۆمێتی نەناسراو",
+  "presence.anonymous.satellite": "مانگە دەستکردی نەناسراو",
+  "presence.anonymous.planet": "هەسارەی نەناسراو",
+  "presence.anonymous.moon": "مانگی نەناسراو",
+  "presence.anonymous.star": "ئەستێرەی نەناسراو",
+  "presence.anonymous.sun": "خۆری نەناسراو",
+  "presence.anonymous.telescope": "تەلەسکۆپی نەناسراو",
+  "presence.anonymous.galaxy": "گەلاکسیی نەناسراو",
+  "presence.anonymous.saucer": "بەشقابی فڕیوی نەناسراو",
+  "presence.anonymous.asteroid": "ئەستێرۆکی نەناسراو",
+  "presence.anonymous.unknown": "نەناسراو"
 }

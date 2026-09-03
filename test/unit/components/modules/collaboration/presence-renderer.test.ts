@@ -17,6 +17,11 @@ import {
   type PresenceState,
 } from '../../../../../src/components/modules/collaboration/presence';
 import {
+  ANONYMOUS_GLYPHS,
+  ANONYMOUS_LABEL_KEYS,
+  assignAnonymousGlyphs,
+} from '../../../../../src/components/modules/collaboration/anonymous-identity';
+import {
   createPresenceRenderer,
   type PresenceRenderer,
 } from '../../../../../src/components/modules/collaboration/presence-renderer';
@@ -24,6 +29,7 @@ import { clean } from '../../../../../src/components/utils/sanitizer';
 
 const PRESENCE_COLOR = '--blok-presence-color';
 const INITIALS_ATTR = 'data-blok-presence-initials';
+const GLYPH_ATTR = 'data-blok-presence-glyph';
 
 interface Harness {
   host: HTMLElement;
@@ -59,7 +65,14 @@ const makeHolder = (blockId: string): HTMLElement => {
   return holder;
 };
 
-const setup = (options: { maxAvatars?: number; blockIds?: string[] } = {}): Harness => {
+const setup = (
+  options: {
+    maxAvatars?: number;
+    blockIds?: string[];
+    translate?: (key: string) => string;
+    isLocalAnonymous?: () => boolean;
+  } = {}
+): Harness => {
   const host = document.createElement('div');
   const redactor = document.createElement('div');
   const holders = new Map<string, HTMLElement>();
@@ -85,6 +98,8 @@ const setup = (options: { maxAvatars?: number; blockIds?: string[] } = {}): Harn
     },
     isHidden: () => hidden.value,
     maxAvatars: options.maxAvatars,
+    translate: options.translate,
+    isLocalAnonymous: options.isLocalAnonymous,
   });
 
   harnesses.push({ host, renderer });
@@ -238,10 +253,76 @@ describe('presence renderer', () => {
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
-      // A face in their colour, with no monogram and no title claiming a name.
+      // A face in their colour, wearing a silhouette instead of a monogram —
+      // and with no title, because nothing here localizes one.
       expect(face(holder)).not.toBeNull();
+      expect(face(holder)?.hasAttribute(GLYPH_ATTR)).toBe(true);
       expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
       expect(face(holder)?.hasAttribute('title')).toBe(false);
+    });
+
+    it('wears the silhouette their client id names, labelled in the reader\'s language', () => {
+      const harness = setup({ translate: (key) => `label:${key}` });
+      const clientId = 98;
+      const glyph = assignAnonymousGlyphs([clientId]).get(clientId) ?? 'unknown';
+
+      harness.renderer.render(
+        [peer(clientId, { user: {}, blockId: 'block-3', caret: caretAt('block-3') })],
+        42
+      );
+
+      const holder = harness.holderOf('block-3');
+
+      expect(face(holder)?.getAttribute(GLYPH_ATTR)).toBe(glyph);
+      expect(face(holder)?.getAttribute('title')).toBe(`label:${ANONYMOUS_LABEL_KEYS[glyph]}`);
+      // The silhouette REPLACES the monogram: initials of a generated label
+      // would be initials of nothing.
+      expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
+      expect(avatars(harness.host)[0].getAttribute(GLYPH_ATTR)).toBe(glyph);
+      expect(avatars(harness.host)[0].textContent).toBe('');
+    });
+
+    /**
+     * The reader is in the room too. Their own state is filtered out of the
+     * DRAW list, but it still occupies a silhouette — so a nameless reader
+     * whose id contests a nameless peer's slot has to push that peer on,
+     * exactly as every other browser in the room does. Skip this and the same
+     * person is called two different things in two tabs, which is the one
+     * thing the whole scheme promises not to do.
+     */
+    it('counts the nameless reader themselves when it hands out silhouettes', () => {
+      const localClientId = 12;
+      const harness = setup({ translate: (key) => key, isLocalAnonymous: () => true });
+
+      harness.renderer.render(
+        [peer(localClientId + ANONYMOUS_GLYPHS.length, {
+          user: {},
+          blockId: 'block-1',
+          caret: caretAt('block-1'),
+        })],
+        localClientId
+      );
+
+      const contested = assignAnonymousGlyphs([localClientId]).get(localClientId);
+
+      expect(avatars(harness.host)[0].getAttribute(GLYPH_ATTR)).not.toBe(contested);
+    });
+
+    it('never shares a silhouette with another nameless peer in the room', () => {
+      const harness = setup({ translate: (key) => key });
+      const contested = [12, 12 + ANONYMOUS_GLYPHS.length];
+
+      harness.renderer.render(
+        contested.map((clientId) =>
+          peer(clientId, { user: {}, blockId: 'block-1', caret: caretAt('block-1') })
+        ),
+        42
+      );
+
+      const drawn = avatars(harness.host).map((avatar) => avatar.getAttribute(GLYPH_ATTR));
+
+      expect(drawn).toHaveLength(2);
+      expect(new Set(drawn).size).toBe(2);
     });
 
     it('is not drawn by a state that carries no identity at all', () => {

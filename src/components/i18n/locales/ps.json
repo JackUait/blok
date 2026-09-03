@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "شتون نه لري",
   "tools.database.moreViews": "{count} نور…",
   "tools.video.errorNotMediaUrl": "د ویډیو فایل لینک (.mp4، .webm، .mov) ورکړئ، یا د ځای پر ځای کولو بلاک وکاروئ",
-  "tools.video.errorUnplayable": "دا ویډیو نه شي پلې کېدای"
+  "tools.video.errorUnplayable": "دا ویډیو نه شي پلې کېدای",
+  "presence.anonymous.astronaut": "ناشناخته فضانورد",
+  "presence.anonymous.rocket": "ناشناخته راکټ",
+  "presence.anonymous.comet": "ناشناخته لکۍ لرونکی ستوری",
+  "presence.anonymous.satellite": "ناشناخته مصنوعي سپوږمکۍ",
+  "presence.anonymous.planet": "ناشناخته سیاره",
+  "presence.anonymous.moon": "ناشناخته سپوږمۍ",
+  "presence.anonymous.star": "ناشناخته ستوری",
+  "presence.anonymous.sun": "ناشناخته لمر",
+  "presence.anonymous.telescope": "ناشناخته تلسکوپ",
+  "presence.anonymous.galaxy": "ناشناخته کهکشان",
+  "presence.anonymous.saucer": "ناشناخته الوتونکی بشقاب",
+  "presence.anonymous.asteroid": "ناشناخته سیارک",
+  "presence.anonymous.unknown": "ناشناخته"
 }

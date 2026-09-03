@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ލިބެން ނެތް",
   "tools.database.moreViews": "އިތުރު {count}…",
   "tools.video.errorNotMediaUrl": "ވީޑިއޯ ފައިލަކަށް (.mp4, .webm, .mov) ލިންކްކުރޭ، ނުވަތަ އެމްބެޑް ބްލޮކެއް ބޭނުންކުރޭ.",
-  "tools.video.errorUnplayable": "މި ވީޑިއޯ ޕްލޭއެއް ނުކުރެވޭނެ."
+  "tools.video.errorUnplayable": "މި ވީޑިއޯ ޕްލޭއެއް ނުކުރެވޭނެ.",
+  "presence.anonymous.astronaut": "ނަން ނޭނގޭ އެސްޓްރޮނޯޓް",
+  "presence.anonymous.rocket": "ނަން ނޭނގޭ ރޮކެޓް",
+  "presence.anonymous.comet": "ނަން ނޭނގޭ ކޮމެޓް",
+  "presence.anonymous.satellite": "ނަން ނޭނގޭ ސެޓެލައިޓް",
+  "presence.anonymous.planet": "ނަން ނޭނގޭ ޕްލެނެޓް",
+  "presence.anonymous.moon": "ނަން ނޭނގޭ ހަނދު",
+  "presence.anonymous.star": "ނަން ނޭނގޭ ތަރި",
+  "presence.anonymous.sun": "ނަން ނޭނގޭ އިރު",
+  "presence.anonymous.telescope": "ނަން ނޭނގޭ ޓެލެސްކޯޕް",
+  "presence.anonymous.galaxy": "ނަން ނޭނގޭ ގެލެކްސީ",
+  "presence.anonymous.saucer": "ނަން ނޭނގޭ ޔޫއެފްއޯ",
+  "presence.anonymous.asteroid": "ނަން ނޭނގޭ އެސްޓަރޮއިޑް",
+  "presence.anonymous.unknown": "ނަން ނޭނގޭ"
 }

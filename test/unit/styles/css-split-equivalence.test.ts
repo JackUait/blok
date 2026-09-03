@@ -540,8 +540,16 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // direct-child chain on the LTR rule and its RTL mirror — while the dead
     // radius/fade tokens and the name-flag reduced-motion rule went (~1KB
     // net). Bumps the multiplier to 1.4656.
+    // 2026-09-03: anonymous presence silhouettes — a peer who published no name
+    // is drawn as one of twelve space shapes instead of a bare disc, and the
+    // shapes are inline SVG data URIs in presence.css (a mask on the face's
+    // `::after`, never a child node: the strip sits inside a block holder and
+    // block copy keeps whatever the holder held). Thirteen URIs plus the shared
+    // mask rule is ~5.3KB, and there is no cheaper home for them — stamping
+    // them from JS would put the same bytes in the bundle instead. Bumps the
+    // multiplier to 1.4805.
     const PRE_SPLIT_BYTES = 407853;
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4656);
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805);
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

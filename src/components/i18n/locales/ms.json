@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Tidak tersedia",
   "tools.database.moreViews": "{count} lagi…",
   "tools.video.errorNotMediaUrl": "Pautkan fail video (.mp4, .webm, .mov), atau gunakan blok benaman",
-  "tools.video.errorUnplayable": "Video ini tidak boleh dimainkan"
+  "tools.video.errorUnplayable": "Video ini tidak boleh dimainkan",
+  "presence.anonymous.astronaut": "Angkasawan awanama",
+  "presence.anonymous.rocket": "Roket awanama",
+  "presence.anonymous.comet": "Komet awanama",
+  "presence.anonymous.satellite": "Satelit awanama",
+  "presence.anonymous.planet": "Planet awanama",
+  "presence.anonymous.moon": "Bulan awanama",
+  "presence.anonymous.star": "Bintang awanama",
+  "presence.anonymous.sun": "Matahari awanama",
+  "presence.anonymous.telescope": "Teleskop awanama",
+  "presence.anonymous.galaxy": "Galaksi awanama",
+  "presence.anonymous.saucer": "Piring terbang awanama",
+  "presence.anonymous.asteroid": "Asteroid awanama",
+  "presence.anonymous.unknown": "Awanama"
 }

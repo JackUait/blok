@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "در دسترس نیست",
   "tools.database.moreViews": "{count} مورد دیگر…",
   "tools.video.errorNotMediaUrl": "به یک فایل ویدیویی (.mp4, .webm, .mov) پیوند بدهید یا از بلوک جاسازی استفاده کنید.",
-  "tools.video.errorUnplayable": "این ویدیو قابل پخش نیست."
+  "tools.video.errorUnplayable": "این ویدیو قابل پخش نیست.",
+  "presence.anonymous.astronaut": "فضانورد ناشناس",
+  "presence.anonymous.rocket": "موشک ناشناس",
+  "presence.anonymous.comet": "دنباله‌دار ناشناس",
+  "presence.anonymous.satellite": "ماهواره ناشناس",
+  "presence.anonymous.planet": "سیاره ناشناس",
+  "presence.anonymous.moon": "ماه ناشناس",
+  "presence.anonymous.star": "ستاره ناشناس",
+  "presence.anonymous.sun": "خورشید ناشناس",
+  "presence.anonymous.telescope": "تلسکوپ ناشناس",
+  "presence.anonymous.galaxy": "کهکشان ناشناس",
+  "presence.anonymous.saucer": "بشقاب پرنده ناشناس",
+  "presence.anonymous.asteroid": "سیارک ناشناس",
+  "presence.anonymous.unknown": "ناشناس"
 }

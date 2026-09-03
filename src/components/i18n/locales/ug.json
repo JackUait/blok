@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ئىشلەتكىلى بولمايدۇ",
   "tools.database.moreViews": "يەنە: {count}…",
   "tools.video.errorNotMediaUrl": "سىن ھۆججىتىنىڭ (.mp4, .webm, .mov) ئۇلانمىسىنى كىرگۈزۈڭ ياكى سىڭدۈرۈش بۆلىكىنى ئىشلىتىڭ",
-  "tools.video.errorUnplayable": "بۇ سىننى قويغىلى بولمايدۇ"
+  "tools.video.errorUnplayable": "بۇ سىننى قويغىلى بولمايدۇ",
+  "presence.anonymous.astronaut": "نامسىز كائىناتچى",
+  "presence.anonymous.rocket": "نامسىز راكېتا",
+  "presence.anonymous.comet": "نامسىز قۇيرۇقلۇق يۇلتۇز",
+  "presence.anonymous.satellite": "نامسىز ھەمراھ",
+  "presence.anonymous.planet": "نامسىز پىلانېت",
+  "presence.anonymous.moon": "نامسىز ئاي",
+  "presence.anonymous.star": "نامسىز يۇلتۇز",
+  "presence.anonymous.sun": "نامسىز قۇياش",
+  "presence.anonymous.telescope": "نامسىز تېلېسكوپ",
+  "presence.anonymous.galaxy": "نامسىز گالاكتىكا",
+  "presence.anonymous.saucer": "نامسىز ئۇچار تەخسە",
+  "presence.anonymous.asteroid": "نامسىز ئاستېرويىد",
+  "presence.anonymous.unknown": "نامسىز"
 }

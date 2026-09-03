@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "دستیاب نہیں",
   "tools.database.moreViews": "مزید: {count}…",
   "tools.video.errorNotMediaUrl": "ویڈیو فائل (.mp4, .webm, .mov) کا لنک درج کریں، یا ایمبیڈ بلاک استعمال کریں",
-  "tools.video.errorUnplayable": "یہ ویڈیو چلائی نہیں جا سکتی"
+  "tools.video.errorUnplayable": "یہ ویڈیو چلائی نہیں جا سکتی",
+  "presence.anonymous.astronaut": "گمنام خلاباز",
+  "presence.anonymous.rocket": "گمنام راکٹ",
+  "presence.anonymous.comet": "گمنام دم دار ستارہ",
+  "presence.anonymous.satellite": "گمنام مصنوعی سیارہ",
+  "presence.anonymous.planet": "گمنام سیارہ",
+  "presence.anonymous.moon": "گمنام چاند",
+  "presence.anonymous.star": "گمنام ستارہ",
+  "presence.anonymous.sun": "گمنام سورج",
+  "presence.anonymous.telescope": "گمنام دوربین",
+  "presence.anonymous.galaxy": "گمنام کہکشاں",
+  "presence.anonymous.saucer": "گمنام اڑن طشتری",
+  "presence.anonymous.asteroid": "گمنام سیارچہ",
+  "presence.anonymous.unknown": "گمنام"
 }

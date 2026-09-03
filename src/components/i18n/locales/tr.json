@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Kullanılamıyor",
   "tools.database.moreViews": "Diğerleri: {count}…",
   "tools.video.errorNotMediaUrl": "Bir video dosyasının (.mp4, .webm, .mov) bağlantısını girin veya yerleştirme bloğu kullanın",
-  "tools.video.errorUnplayable": "Bu video oynatılamıyor"
+  "tools.video.errorUnplayable": "Bu video oynatılamıyor",
+  "presence.anonymous.astronaut": "Anonim astronot",
+  "presence.anonymous.rocket": "Anonim roket",
+  "presence.anonymous.comet": "Anonim kuyruklu yıldız",
+  "presence.anonymous.satellite": "Anonim uydu",
+  "presence.anonymous.planet": "Anonim gezegen",
+  "presence.anonymous.moon": "Anonim ay",
+  "presence.anonymous.star": "Anonim yıldız",
+  "presence.anonymous.sun": "Anonim güneş",
+  "presence.anonymous.telescope": "Anonim teleskop",
+  "presence.anonymous.galaxy": "Anonim galaksi",
+  "presence.anonymous.saucer": "Anonim UFO",
+  "presence.anonymous.asteroid": "Anonim asteroit",
+  "presence.anonymous.unknown": "Anonim"
 }

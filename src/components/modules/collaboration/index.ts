@@ -370,6 +370,11 @@ export class Collaboration extends Module {
         resolveHolder: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.holder ?? null,
         resolveInputs: (blockId) => this.Blok.BlockManager.getBlockById(blockId)?.inputs ?? [],
         isHidden: () => this.Blok.ReadOnly.isControlsHidden,
+        translate: (key) => this.Blok.I18n.t(key),
+        // The same test `publishUser` applies to this editor's own name, so
+        // the reader occupies a silhouette here exactly when their peers give
+        // them one.
+        isLocalAnonymous: () => (settings.user?.name ?? '').trim() === '',
       }),
     });
     this.presence.start();

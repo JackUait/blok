@@ -252,7 +252,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 413 + 122 + 26 + 2 closure for all 563 keys', () => {
+  it('rebuilds a disjoint 426 + 122 + 26 + 2 closure for all 576 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -266,7 +266,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(563);
+    expect(lifecycle.size).toBe(576);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -276,7 +276,7 @@ describe('current English catalog lifecycle coverage', () => {
       // key still ships to every locale: dropping it would rewrite all 69
       // dictionaries and invalidate each sha256 digest recorded in the
       // translation audit ledger.
-      'executable-literal': 413,
+      'executable-literal': 426,
       'finite-dynamic': 122,
       'registered-namespace-compatible': 26,
       'catalog-only': 2,

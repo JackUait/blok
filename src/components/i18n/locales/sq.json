@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Nuk disponohet",
   "tools.database.moreViews": "Të tjera: {count}…",
   "tools.video.errorNotMediaUrl": "Vendosni lidhjen e një skedari video (.mp4, .webm, .mov) ose përdorni një bllok ngulitjeje",
-  "tools.video.errorUnplayable": "Kjo video nuk mund të luhet"
+  "tools.video.errorUnplayable": "Kjo video nuk mund të luhet",
+  "presence.anonymous.astronaut": "Astronaut anonim",
+  "presence.anonymous.rocket": "Raketë anonime",
+  "presence.anonymous.comet": "Kometë anonime",
+  "presence.anonymous.satellite": "Satelit anonim",
+  "presence.anonymous.planet": "Planet anonim",
+  "presence.anonymous.moon": "Hënë anonime",
+  "presence.anonymous.star": "Yll anonim",
+  "presence.anonymous.sun": "Diell anonim",
+  "presence.anonymous.telescope": "Teleskop anonim",
+  "presence.anonymous.galaxy": "Galaktikë anonime",
+  "presence.anonymous.saucer": "UFO anonim",
+  "presence.anonymous.asteroid": "Asteroid anonim",
+  "presence.anonymous.unknown": "Anonim"
 }

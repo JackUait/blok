@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "사용할 수 없음",
   "tools.database.moreViews": "외 {count}개…",
   "tools.video.errorNotMediaUrl": "동영상 파일 링크(.mp4, .webm, .mov)를 입력하거나 임베드 블록을 사용하세요",
-  "tools.video.errorUnplayable": "이 동영상은 재생할 수 없습니다"
+  "tools.video.errorUnplayable": "이 동영상은 재생할 수 없습니다",
+  "presence.anonymous.astronaut": "익명의 우주비행사",
+  "presence.anonymous.rocket": "익명의 로켓",
+  "presence.anonymous.comet": "익명의 혜성",
+  "presence.anonymous.satellite": "익명의 위성",
+  "presence.anonymous.planet": "익명의 행성",
+  "presence.anonymous.moon": "익명의 달",
+  "presence.anonymous.star": "익명의 별",
+  "presence.anonymous.sun": "익명의 태양",
+  "presence.anonymous.telescope": "익명의 망원경",
+  "presence.anonymous.galaxy": "익명의 은하",
+  "presence.anonymous.saucer": "익명의 비행접시",
+  "presence.anonymous.asteroid": "익명의 소행성",
+  "presence.anonymous.unknown": "익명"
 }

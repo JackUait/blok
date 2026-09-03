@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ບໍ່ພ້ອມໃຊ້ງານ",
   "tools.database.moreViews": "ອີກ {count}…",
   "tools.video.errorNotMediaUrl": "ໃສ່ລິ້ງຫາໄຟລ໌ວິດີໂອ (.mp4, .webm, .mov) ຫຼືໃຊ້ບລັອກຝັງ",
-  "tools.video.errorUnplayable": "ບໍ່ສາມາດຫຼິ້ນວິດີໂອນີ້ໄດ້"
+  "tools.video.errorUnplayable": "ບໍ່ສາມາດຫຼິ້ນວິດີໂອນີ້ໄດ້",
+  "presence.anonymous.astronaut": "ນັກບິນອະວະກາດນິລະນາມ",
+  "presence.anonymous.rocket": "ຈະຫລວດນິລະນາມ",
+  "presence.anonymous.comet": "ດາວຫາງນິລະນາມ",
+  "presence.anonymous.satellite": "ດາວທຽມນິລະນາມ",
+  "presence.anonymous.planet": "ດາວເຄາະນິລະນາມ",
+  "presence.anonymous.moon": "ດວງຈັນນິລະນາມ",
+  "presence.anonymous.star": "ດາວນິລະນາມ",
+  "presence.anonymous.sun": "ດວງອາທິດນິລະນາມ",
+  "presence.anonymous.telescope": "ກ້ອງສ່ອງທາງໄກນິລະນາມ",
+  "presence.anonymous.galaxy": "ກາລັກຊີນິລະນາມ",
+  "presence.anonymous.saucer": "ຈານບິນນິລະນາມ",
+  "presence.anonymous.asteroid": "ດາວເຄາະນ້ອຍນິລະນາມ",
+  "presence.anonymous.unknown": "ນິລະນາມ"
 }

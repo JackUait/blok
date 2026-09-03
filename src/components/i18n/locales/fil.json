@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Hindi magagamit",
   "tools.database.moreViews": "{count} pa…",
   "tools.video.errorNotMediaUrl": "Mag-link ng video file (.mp4, .webm, .mov) o gumamit ng embed block.",
-  "tools.video.errorUnplayable": "Hindi ma-play ang video na ito."
+  "tools.video.errorUnplayable": "Hindi ma-play ang video na ito.",
+  "presence.anonymous.astronaut": "Di-kilalang astronaut",
+  "presence.anonymous.rocket": "Di-kilalang rocket",
+  "presence.anonymous.comet": "Di-kilalang kometa",
+  "presence.anonymous.satellite": "Di-kilalang satellite",
+  "presence.anonymous.planet": "Di-kilalang planeta",
+  "presence.anonymous.moon": "Di-kilalang buwan",
+  "presence.anonymous.star": "Di-kilalang bituin",
+  "presence.anonymous.sun": "Di-kilalang araw",
+  "presence.anonymous.telescope": "Di-kilalang teleskopyo",
+  "presence.anonymous.galaxy": "Di-kilalang galaxy",
+  "presence.anonymous.saucer": "Di-kilalang flying saucer",
+  "presence.anonymous.asteroid": "Di-kilalang asteroid",
+  "presence.anonymous.unknown": "Di-kilala"
 }

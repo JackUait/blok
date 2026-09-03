@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Ikke tilgjengelig",
   "tools.database.moreViews": "Flere: {count}…",
   "tools.video.errorNotMediaUrl": "Legg inn en lenke til en videofil (.mp4, .webm, .mov), eller bruk en innbyggingsblokk",
-  "tools.video.errorUnplayable": "Denne videoen kan ikke spilles av"
+  "tools.video.errorUnplayable": "Denne videoen kan ikke spilles av",
+  "presence.anonymous.astronaut": "Anonym astronaut",
+  "presence.anonymous.rocket": "Anonym rakett",
+  "presence.anonymous.comet": "Anonym komet",
+  "presence.anonymous.satellite": "Anonym satellitt",
+  "presence.anonymous.planet": "Anonym planet",
+  "presence.anonymous.moon": "Anonym måne",
+  "presence.anonymous.star": "Anonym stjerne",
+  "presence.anonymous.sun": "Anonym sol",
+  "presence.anonymous.telescope": "Anonymt teleskop",
+  "presence.anonymous.galaxy": "Anonym galakse",
+  "presence.anonymous.saucer": "Anonymt ufo",
+  "presence.anonymous.asteroid": "Anonym asteroide",
+  "presence.anonymous.unknown": "Anonym"
 }

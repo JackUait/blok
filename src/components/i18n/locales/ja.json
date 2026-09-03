@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "利用できません",
   "tools.database.moreViews": "ほか {count} 件…",
   "tools.video.errorNotMediaUrl": "動画ファイル（.mp4、.webm、.mov）へのリンクを指定するか、埋め込みブロックを使用してください",
-  "tools.video.errorUnplayable": "この動画は再生できません"
+  "tools.video.errorUnplayable": "この動画は再生できません",
+  "presence.anonymous.astronaut": "匿名の宇宙飛行士",
+  "presence.anonymous.rocket": "匿名のロケット",
+  "presence.anonymous.comet": "匿名の彗星",
+  "presence.anonymous.satellite": "匿名の人工衛星",
+  "presence.anonymous.planet": "匿名の惑星",
+  "presence.anonymous.moon": "匿名の月",
+  "presence.anonymous.star": "匿名の星",
+  "presence.anonymous.sun": "匿名の太陽",
+  "presence.anonymous.telescope": "匿名の望遠鏡",
+  "presence.anonymous.galaxy": "匿名の銀河",
+  "presence.anonymous.saucer": "匿名のUFO",
+  "presence.anonymous.asteroid": "匿名の小惑星",
+  "presence.anonymous.unknown": "匿名"
 }

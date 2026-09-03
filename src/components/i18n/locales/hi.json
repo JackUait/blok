@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "उपलब्ध नहीं",
   "tools.database.moreViews": "{count} और…",
   "tools.video.errorNotMediaUrl": "वीडियो फ़ाइल (.mp4, .webm, .mov) का लिंक जोड़ें या एम्बेड ब्लॉक का उपयोग करें।",
-  "tools.video.errorUnplayable": "यह वीडियो चलाया नहीं जा सकता।"
+  "tools.video.errorUnplayable": "यह वीडियो चलाया नहीं जा सकता।",
+  "presence.anonymous.astronaut": "गुमनाम अंतरिक्ष यात्री",
+  "presence.anonymous.rocket": "गुमनाम रॉकेट",
+  "presence.anonymous.comet": "गुमनाम धूमकेतु",
+  "presence.anonymous.satellite": "गुमनाम उपग्रह",
+  "presence.anonymous.planet": "गुमनाम ग्रह",
+  "presence.anonymous.moon": "गुमनाम चंद्रमा",
+  "presence.anonymous.star": "गुमनाम तारा",
+  "presence.anonymous.sun": "गुमनाम सूर्य",
+  "presence.anonymous.telescope": "गुमनाम दूरबीन",
+  "presence.anonymous.galaxy": "गुमनाम आकाशगंगा",
+  "presence.anonymous.saucer": "गुमनाम उड़न तश्तरी",
+  "presence.anonymous.asteroid": "गुमनाम क्षुद्रग्रह",
+  "presence.anonymous.unknown": "गुमनाम"
 }

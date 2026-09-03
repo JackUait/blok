@@ -1218,19 +1218,6 @@
 [data-blok-columns] {
   --blok-column-gutter: min(2rem, 4vw);
 }
-[data-blok-interface] {
-  --blok-presence-color: #0b6e99;
-  --blok-presence-gap: 6px;
-  --blok-presence-overlap: -6px;
-  --blok-presence-caret-width: 2px;
-  --blok-presence-caret-radius: 1px;
-  --blok-presence-pulse: 1.6s;
-  --blok-presence-face-size: 26px;
-  --blok-presence-ring: 2px;
-  --blok-presence-face-gap: 2px;
-  --blok-presence-slide: 180ms;
-  --blok-presence-face-line: 1.5rem;
-}
 [data-blok-tool="callout"] [data-blok-tool="paragraph"] {
   font-size: inherit;
 }

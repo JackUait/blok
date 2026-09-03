@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "उपलब्ध छैन",
   "tools.database.moreViews": "थप {count}…",
   "tools.video.errorNotMediaUrl": "भिडियो फाइलको लिङ्क (.mp4, .webm, .mov) दिनुहोस् वा इम्बेड ब्लक प्रयोग गर्नुहोस्",
-  "tools.video.errorUnplayable": "यो भिडियो प्ले गर्न सकिँदैन"
+  "tools.video.errorUnplayable": "यो भिडियो प्ले गर्न सकिँदैन",
+  "presence.anonymous.astronaut": "अज्ञात अन्तरिक्ष यात्री",
+  "presence.anonymous.rocket": "अज्ञात रकेट",
+  "presence.anonymous.comet": "अज्ञात पुच्छ्रे तारा",
+  "presence.anonymous.satellite": "अज्ञात उपग्रह",
+  "presence.anonymous.planet": "अज्ञात ग्रह",
+  "presence.anonymous.moon": "अज्ञात चन्द्रमा",
+  "presence.anonymous.star": "अज्ञात तारा",
+  "presence.anonymous.sun": "अज्ञात सूर्य",
+  "presence.anonymous.telescope": "अज्ञात दूरबिन",
+  "presence.anonymous.galaxy": "अज्ञात आकाशगंगा",
+  "presence.anonymous.saucer": "अज्ञात उड्ने तश्तरी",
+  "presence.anonymous.asteroid": "अज्ञात क्षुद्रग्रह",
+  "presence.anonymous.unknown": "अज्ञात"
 }

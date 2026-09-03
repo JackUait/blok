@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ไม่พร้อมใช้งาน",
   "tools.database.moreViews": "เพิ่มเติม: {count}…",
   "tools.video.errorNotMediaUrl": "ใส่ลิงก์ไฟล์วิดีโอ (.mp4, .webm, .mov) หรือใช้บล็อกฝัง",
-  "tools.video.errorUnplayable": "ไม่สามารถเล่นวิดีโอนี้ได้"
+  "tools.video.errorUnplayable": "ไม่สามารถเล่นวิดีโอนี้ได้",
+  "presence.anonymous.astronaut": "นักบินอวกาศนิรนาม",
+  "presence.anonymous.rocket": "จรวดนิรนาม",
+  "presence.anonymous.comet": "ดาวหางนิรนาม",
+  "presence.anonymous.satellite": "ดาวเทียมนิรนาม",
+  "presence.anonymous.planet": "ดาวเคราะห์นิรนาม",
+  "presence.anonymous.moon": "ดวงจันทร์นิรนาม",
+  "presence.anonymous.star": "ดาวนิรนาม",
+  "presence.anonymous.sun": "ดวงอาทิตย์นิรนาม",
+  "presence.anonymous.telescope": "กล้องโทรทรรศน์นิรนาม",
+  "presence.anonymous.galaxy": "กาแล็กซีนิรนาม",
+  "presence.anonymous.saucer": "จานบินนิรนาม",
+  "presence.anonymous.asteroid": "ดาวเคราะห์น้อยนิรนาม",
+  "presence.anonymous.unknown": "นิรนาม"
 }

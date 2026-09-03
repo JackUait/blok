@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Nem érhető el",
   "tools.database.moreViews": "További {count}…",
   "tools.video.errorNotMediaUrl": "Hivatkozzon egy videófájlra (.mp4, .webm, .mov), vagy használjon beágyazási blokkot.",
-  "tools.video.errorUnplayable": "Ez a videó nem játszható le."
+  "tools.video.errorUnplayable": "Ez a videó nem játszható le.",
+  "presence.anonymous.astronaut": "Névtelen űrhajós",
+  "presence.anonymous.rocket": "Névtelen rakéta",
+  "presence.anonymous.comet": "Névtelen üstökös",
+  "presence.anonymous.satellite": "Névtelen műhold",
+  "presence.anonymous.planet": "Névtelen bolygó",
+  "presence.anonymous.moon": "Névtelen hold",
+  "presence.anonymous.star": "Névtelen csillag",
+  "presence.anonymous.sun": "Névtelen nap",
+  "presence.anonymous.telescope": "Névtelen távcső",
+  "presence.anonymous.galaxy": "Névtelen galaxis",
+  "presence.anonymous.saucer": "Névtelen ufó",
+  "presence.anonymous.asteroid": "Névtelen aszteroida",
+  "presence.anonymous.unknown": "Névtelen"
 }

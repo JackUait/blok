@@ -19,11 +19,16 @@ import {
   createPresenceRenderer,
   type PresenceRenderer,
 } from '../../../../../src/components/modules/collaboration/presence-renderer';
+import {
+  ANONYMOUS_GLYPHS,
+  UNKNOWN_GLYPH,
+} from '../../../../../src/components/modules/collaboration/anonymous-identity';
 import type { PresenceState } from '../../../../../src/components/modules/collaboration/presence';
 
 const STYLESHEET = readFileSync(resolve(__dirname, '../../../../../src/styles/presence.css'), 'utf8');
 
 const INITIALS_ATTR = 'data-blok-presence-initials';
+const GLYPH_ATTR = 'data-blok-presence-glyph';
 
 interface Harness {
   root: HTMLElement;
@@ -125,6 +130,39 @@ describe('presence stylesheet', () => {
     mounted.splice(0).forEach((element) => element.remove());
     style.remove();
     vi.restoreAllMocks();
+  });
+
+  /**
+   * A nameless peer wears a silhouette instead of a monogram. The shapes live
+   * in the stylesheet and not in the DOM: the gutter face sits inside a block
+   * holder, and block copy unwraps the strip and keeps every node it held, so
+   * an inline `<svg>` would ride into the next document. A mask painted from a
+   * data URI leaves the holder with nothing to carry.
+   */
+  describe('an anonymous silhouette', () => {
+    it('carries a shape for every silhouette the assigner can hand out', () => {
+      const glyphs = [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH];
+
+      glyphs.forEach((glyph) => {
+        expect(STYLESHEET).toMatch(
+          new RegExp(`\\[${GLYPH_ATTR}="${glyph}"\\][^{]*\\{[^}]*--blok-presence-glyph:\\s*url\\("data:image/svg\\+xml`)
+        );
+      });
+    });
+
+    it('paints the mask on the same pseudo-element the monogram uses', () => {
+      const sheet = style.sheet;
+
+      if (sheet === null) {
+        throw new Error('stylesheet did not parse');
+      }
+
+      const painter = styleRules(sheet).find((rule) =>
+        rule.selectorText.includes(`[${GLYPH_ATTR}]::after`));
+
+      expect(painter?.style.getPropertyValue('mask-image')).not.toBe('');
+      expect(painter?.style.getPropertyValue('background-color')).not.toBe('');
+    });
   });
 
   describe('the gutter face', () => {

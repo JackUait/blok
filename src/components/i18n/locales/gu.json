@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ઉપલબ્ધ નથી",
   "tools.database.moreViews": "{count} વધુ…",
   "tools.video.errorNotMediaUrl": "વિડિઓ ફાઇલ (.mp4, .webm, .mov) લિંક કરો અથવા એમ્બેડ બ્લોકનો ઉપયોગ કરો.",
-  "tools.video.errorUnplayable": "આ વિડિઓ ચલાવી શકાતો નથી."
+  "tools.video.errorUnplayable": "આ વિડિઓ ચલાવી શકાતો નથી.",
+  "presence.anonymous.astronaut": "અનામી અવકાશયાત્રી",
+  "presence.anonymous.rocket": "અનામી રોકેટ",
+  "presence.anonymous.comet": "અનામી ધૂમકેતુ",
+  "presence.anonymous.satellite": "અનામી ઉપગ્રહ",
+  "presence.anonymous.planet": "અનામી ગ્રહ",
+  "presence.anonymous.moon": "અનામી ચંદ્ર",
+  "presence.anonymous.star": "અનામી તારો",
+  "presence.anonymous.sun": "અનામી સૂર્ય",
+  "presence.anonymous.telescope": "અનામી દૂરબીન",
+  "presence.anonymous.galaxy": "અનામી આકાશગંગા",
+  "presence.anonymous.saucer": "અનામી ઉડતી રકાબી",
+  "presence.anonymous.asteroid": "અનામી લઘુગ્રહ",
+  "presence.anonymous.unknown": "અનામી"
 }

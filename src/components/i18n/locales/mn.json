@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Ашиглах боломжгүй",
   "tools.database.moreViews": "Бусад: {count}…",
   "tools.video.errorNotMediaUrl": "Видео файлын холбоосыг (.mp4, .webm, .mov) оруулна уу, эсвэл шигтгээ блок ашиглана уу",
-  "tools.video.errorUnplayable": "Энэ видеог тоглуулах боломжгүй"
+  "tools.video.errorUnplayable": "Энэ видеог тоглуулах боломжгүй",
+  "presence.anonymous.astronaut": "Нэргүй сансрын нисгэгч",
+  "presence.anonymous.rocket": "Нэргүй пуужин",
+  "presence.anonymous.comet": "Нэргүй сүүлт од",
+  "presence.anonymous.satellite": "Нэргүй хиймэл дагуул",
+  "presence.anonymous.planet": "Нэргүй гараг",
+  "presence.anonymous.moon": "Нэргүй сар",
+  "presence.anonymous.star": "Нэргүй од",
+  "presence.anonymous.sun": "Нэргүй нар",
+  "presence.anonymous.telescope": "Нэргүй дуран",
+  "presence.anonymous.galaxy": "Нэргүй галактик",
+  "presence.anonymous.saucer": "Нэргүй нисдэг таваг",
+  "presence.anonymous.asteroid": "Нэргүй астероид",
+  "presence.anonymous.unknown": "Нэргүй"
 }

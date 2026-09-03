@@ -724,6 +724,9 @@ describe('server docs data', () => {
     // conflates them wires the wrong one.
     expect(body).toMatch(/last edited|attribution|credit/i);
     expect(body).toMatch(/independent|separate/i);
+    // Leaving the name out is the DEFAULT, so the entry has to say what that
+    // person is drawn as rather than leaving a reader to guess at a blank disc.
+    expect(body).toMatch(/silhouette/i);
   });
 
   // Awareness frames are relayed unread, read-only members included, so the

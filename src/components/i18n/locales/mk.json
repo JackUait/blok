@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Недостапно",
   "tools.database.moreViews": "Уште {count}…",
   "tools.video.errorNotMediaUrl": "Наведете врска до видеодатотека (.mp4, .webm, .mov) или користете блок за вградување",
-  "tools.video.errorUnplayable": "Ова видео не може да се репродуцира"
+  "tools.video.errorUnplayable": "Ова видео не може да се репродуцира",
+  "presence.anonymous.astronaut": "Анонимен астронаут",
+  "presence.anonymous.rocket": "Анонимна ракета",
+  "presence.anonymous.comet": "Анонимна комета",
+  "presence.anonymous.satellite": "Анонимен сателит",
+  "presence.anonymous.planet": "Анонимна планета",
+  "presence.anonymous.moon": "Анонимна месечина",
+  "presence.anonymous.star": "Анонимна ѕвезда",
+  "presence.anonymous.sun": "Анонимно сонце",
+  "presence.anonymous.telescope": "Анонимен телескоп",
+  "presence.anonymous.galaxy": "Анонимна галаксија",
+  "presence.anonymous.saucer": "Анонимно НЛО",
+  "presence.anonymous.asteroid": "Анонимен астероид",
+  "presence.anonymous.unknown": "Анонимен"
 }

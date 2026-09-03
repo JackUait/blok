@@ -135,6 +135,16 @@ describe('view baseline stylesheet law', () => {
       expect(readFileSync(join(repoRoot, 'view.css')).byteLength).toBeLessThan(VIEW_CSS_BYTE_BUDGET);
     });
 
+    it('ships no presence chrome — a view has no collaborators in it', () => {
+      /**
+       * Presence rules are attribute-keyed and several are pure custom-property
+       * carriers, so the pruner keeps them the way it keeps a theme token —
+       * except a rendered view has no awareness, no peers and no silhouettes,
+       * so every byte of it is dead weight inside a budgeted sheet.
+       */
+      expect(readFileSync(join(repoRoot, 'view.css'), 'utf-8')).not.toContain('presence');
+    });
+
     it('ships no webfonts — a view inherits the host typography', () => {
       /**
        * fonts.css alone is ~226 KB of base64. Bundling it would quintuple the

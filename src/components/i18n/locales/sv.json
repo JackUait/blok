@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Inte tillgängligt",
   "tools.database.moreViews": "{count} till…",
   "tools.video.errorNotMediaUrl": "Ange en länk till en videofil (.mp4, .webm, .mov) eller använd ett inbäddningsblock",
-  "tools.video.errorUnplayable": "Det går inte att spela upp den här videon"
+  "tools.video.errorUnplayable": "Det går inte att spela upp den här videon",
+  "presence.anonymous.astronaut": "Anonym astronaut",
+  "presence.anonymous.rocket": "Anonym raket",
+  "presence.anonymous.comet": "Anonym komet",
+  "presence.anonymous.satellite": "Anonym satellit",
+  "presence.anonymous.planet": "Anonym planet",
+  "presence.anonymous.moon": "Anonym måne",
+  "presence.anonymous.star": "Anonym stjärna",
+  "presence.anonymous.sun": "Anonym sol",
+  "presence.anonymous.telescope": "Anonymt teleskop",
+  "presence.anonymous.galaxy": "Anonym galax",
+  "presence.anonymous.saucer": "Anonymt ufo",
+  "presence.anonymous.asteroid": "Anonym asteroid",
+  "presence.anonymous.unknown": "Anonym"
 }

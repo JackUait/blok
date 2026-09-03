@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Ni na voljo",
   "tools.database.moreViews": "Še: {count}…",
   "tools.video.errorNotMediaUrl": "Vnesite povezavo do videodatoteke (.mp4, .webm, .mov) ali uporabite blok za vdelavo",
-  "tools.video.errorUnplayable": "Tega videa ni mogoče predvajati"
+  "tools.video.errorUnplayable": "Tega videa ni mogoče predvajati",
+  "presence.anonymous.astronaut": "Anonimni astronavt",
+  "presence.anonymous.rocket": "Anonimna raketa",
+  "presence.anonymous.comet": "Anonimni komet",
+  "presence.anonymous.satellite": "Anonimni satelit",
+  "presence.anonymous.planet": "Anonimni planet",
+  "presence.anonymous.moon": "Anonimna luna",
+  "presence.anonymous.star": "Anonimna zvezda",
+  "presence.anonymous.sun": "Anonimno sonce",
+  "presence.anonymous.telescope": "Anonimni teleskop",
+  "presence.anonymous.galaxy": "Anonimna galaksija",
+  "presence.anonymous.saucer": "Anonimni NLP",
+  "presence.anonymous.asteroid": "Anonimni asteroid",
+  "presence.anonymous.unknown": "Anonimnež"
 }

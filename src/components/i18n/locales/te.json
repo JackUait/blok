@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "అందుబాటులో లేదు",
   "tools.database.moreViews": "మరిన్ని: {count}…",
   "tools.video.errorNotMediaUrl": "వీడియో ఫైల్ (.mp4, .webm, .mov) లింక్‌ను నమోదు చేయండి లేదా పొందుపరిచే బ్లాక్‌ను ఉపయోగించండి",
-  "tools.video.errorUnplayable": "ఈ వీడియోను ప్లే చేయడం సాధ్యం కాదు"
+  "tools.video.errorUnplayable": "ఈ వీడియోను ప్లే చేయడం సాధ్యం కాదు",
+  "presence.anonymous.astronaut": "అనామక వ్యోమగామి",
+  "presence.anonymous.rocket": "అనామక రాకెట్",
+  "presence.anonymous.comet": "అనామక తోకచుక్క",
+  "presence.anonymous.satellite": "అనామక ఉపగ్రహం",
+  "presence.anonymous.planet": "అనామక గ్రహం",
+  "presence.anonymous.moon": "అనామక చంద్రుడు",
+  "presence.anonymous.star": "అనామక నక్షత్రం",
+  "presence.anonymous.sun": "అనామక సూర్యుడు",
+  "presence.anonymous.telescope": "అనామక దూరదర్శిని",
+  "presence.anonymous.galaxy": "అనామక పాలపుంత",
+  "presence.anonymous.saucer": "అనామక ఎగిరే పళ్ళెం",
+  "presence.anonymous.asteroid": "అనామక గ్రహశకలం",
+  "presence.anonymous.unknown": "అనామకుడు"
 }

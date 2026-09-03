@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "ਉਪਲਬਧ ਨਹੀਂ",
   "tools.database.moreViews": "{count} ਹੋਰ…",
   "tools.video.errorNotMediaUrl": "ਵੀਡੀਓ ਫ਼ਾਈਲ ਦਾ ਲਿੰਕ (.mp4, .webm, .mov) ਦਿਓ ਜਾਂ ਇੰਬੈੱਡ ਬਲਾਕ ਵਰਤੋ",
-  "tools.video.errorUnplayable": "ਇਹ ਵੀਡੀਓ ਚਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ"
+  "tools.video.errorUnplayable": "ਇਹ ਵੀਡੀਓ ਚਲਾਇਆ ਨਹੀਂ ਜਾ ਸਕਦਾ",
+  "presence.anonymous.astronaut": "ਗੁਮਨਾਮ ਪੁਲਾੜ ਯਾਤਰੀ",
+  "presence.anonymous.rocket": "ਗੁਮਨਾਮ ਰਾਕਟ",
+  "presence.anonymous.comet": "ਗੁਮਨਾਮ ਪੂਛਲ ਤਾਰਾ",
+  "presence.anonymous.satellite": "ਗੁਮਨਾਮ ਉਪਗ੍ਰਹਿ",
+  "presence.anonymous.planet": "ਗੁਮਨਾਮ ਗ੍ਰਹਿ",
+  "presence.anonymous.moon": "ਗੁਮਨਾਮ ਚੰਦ",
+  "presence.anonymous.star": "ਗੁਮਨਾਮ ਤਾਰਾ",
+  "presence.anonymous.sun": "ਗੁਮਨਾਮ ਸੂਰਜ",
+  "presence.anonymous.telescope": "ਗੁਮਨਾਮ ਦੂਰਬੀਨ",
+  "presence.anonymous.galaxy": "ਗੁਮਨਾਮ ਆਕਾਸ਼ਗੰਗਾ",
+  "presence.anonymous.saucer": "ਗੁਮਨਾਮ ਉੱਡਣ ਤਸ਼ਤਰੀ",
+  "presence.anonymous.asteroid": "ਗੁਮਨਾਮ ਛੋਟਾ ਗ੍ਰਹਿ",
+  "presence.anonymous.unknown": "ਗੁਮਨਾਮ"
 }

@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Pole saadaval",
   "tools.database.moreViews": "Veel {count}…",
   "tools.video.errorNotMediaUrl": "Lisa link videofailile (.mp4, .webm, .mov) või kasuta manusplokki.",
-  "tools.video.errorUnplayable": "Seda videot ei saa esitada."
+  "tools.video.errorUnplayable": "Seda videot ei saa esitada.",
+  "presence.anonymous.astronaut": "Anonüümne astronaut",
+  "presence.anonymous.rocket": "Anonüümne rakett",
+  "presence.anonymous.comet": "Anonüümne komeet",
+  "presence.anonymous.satellite": "Anonüümne satelliit",
+  "presence.anonymous.planet": "Anonüümne planeet",
+  "presence.anonymous.moon": "Anonüümne kuu",
+  "presence.anonymous.star": "Anonüümne täht",
+  "presence.anonymous.sun": "Anonüümne päike",
+  "presence.anonymous.telescope": "Anonüümne teleskoop",
+  "presence.anonymous.galaxy": "Anonüümne galaktika",
+  "presence.anonymous.saucer": "Anonüümne UFO",
+  "presence.anonymous.asteroid": "Anonüümne asteroid",
+  "presence.anonymous.unknown": "Anonüümne"
 }

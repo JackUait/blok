@@ -561,5 +561,18 @@
   "tools.video.statsUnavailable": "Հասանելի չէ",
   "tools.database.moreViews": "Եվս {count}…",
   "tools.video.errorNotMediaUrl": "Տեսանյութի ֆայլի (.mp4, .webm, .mov) հղում ավելացրեք կամ օգտագործեք ներդրման բլոկ։",
-  "tools.video.errorUnplayable": "Այս տեսանյութը հնարավոր չէ նվագարկել։"
+  "tools.video.errorUnplayable": "Այս տեսանյութը հնարավոր չէ նվագարկել։",
+  "presence.anonymous.astronaut": "Անանուն տիեզերագնաց",
+  "presence.anonymous.rocket": "Անանուն հրթիռ",
+  "presence.anonymous.comet": "Անանուն գիսաստղ",
+  "presence.anonymous.satellite": "Անանուն արբանյակ",
+  "presence.anonymous.planet": "Անանուն մոլորակ",
+  "presence.anonymous.moon": "Անանուն լուսին",
+  "presence.anonymous.star": "Անանուն աստղ",
+  "presence.anonymous.sun": "Անանուն արև",
+  "presence.anonymous.telescope": "Անանուն աստղադիտակ",
+  "presence.anonymous.galaxy": "Անանուն գալակտիկա",
+  "presence.anonymous.saucer": "Անանուն թռչող ափսե",
+  "presence.anonymous.asteroid": "Անանուն աստերոիդ",
+  "presence.anonymous.unknown": "Անանուն"
 }

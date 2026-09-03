@@ -1,0 +1,44 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "yarn",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.mutation.config.ts"
+  },
+  "incremental": true,
+  "incrementalFile": ".mutation-state/stryker-incremental.json",
+  "ignoreStatic": true,
+  "timeoutMS": 60000,
+  "timeoutFactor": 3,
+  "dryRunTimeoutMinutes": 15,
+  "concurrency": 4,
+  "reporters": [
+    "clear-text",
+    "html",
+    "json"
+  ],
+  "htmlReporter": {
+    "fileName": ".mutation-state/report.html"
+  },
+  "jsonReporter": {
+    "fileName": ".mutation-state/report.json"
+  },
+  "ignorePatterns": [
+    "docs/**",
+    "storybook-static/**",
+    "playwright-report/**",
+    "test-results/**",
+    ".server-test-results/**",
+    ".server-coverage/**",
+    "static/**",
+    "public/**",
+    "packages/server/dotnet/**",
+    ".playwright-cli/**",
+    ".playwright-mcp/**",
+    ".venv/**",
+    ".dev/**",
+    "override-extension/**",
+    "*.png",
+    "*.json.gz"
+  ]
+}

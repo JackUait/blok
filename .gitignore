@@ -104,3 +104,6 @@ override-extension/payload/
 # TOML files (gitleaks config stays tracked)
 *.toml
 !gitleaks.toml
+
+# Stryker mutation state: incremental baseline, survivor ledger and reports
+.mutation-state/

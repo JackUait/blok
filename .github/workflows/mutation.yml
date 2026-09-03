@@ -1,0 +1,81 @@
+name: Mutation
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Rebuild the whole baseline instead of measuring the diff (takes hours)"
+        type: boolean
+        default: false
+
+# Runs queue instead of cancelling one another. Two runs would race over the
+# survivor ledger, and a cancelled run's commits would never be measured at all.
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Reading the previous run's ledger artifact.
+  actions: read
+
+jobs:
+  mutation:
+    name: Mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The diff runs from the last measured commit, which can sit many
+          # pushes back. A shallow clone cannot reach it and would force the
+          # run to give up and ask for a full sweep.
+          fetch-depth: 0
+
+      - name: Setup Node.js and Dependencies
+        uses: ./.github/actions/setup-node-deps
+        with:
+          install-docs: "false"
+
+      # The ledger lives in an artifact, not in git: Stryker's incremental file
+      # has non-deterministic test ids upstream, so committing it would produce a
+      # 15k-line diff on every run.
+      - name: Restore mutation state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --workflow mutation.yml --branch main \
+            --status success --limit 1 --json databaseId -q '.[0].databaseId' || true)
+
+          if [ -n "$run_id" ] && gh run download "$run_id" \
+            --name mutation-state --dir .mutation-state; then
+            echo "Restored mutation state from run $run_id"
+          else
+            echo "No previous mutation state. Seed it locally with 'yarn mutate --full'."
+          fi
+
+      - name: Run mutation testing
+        # TODO: drop continue-on-error once the ratchet has held for two weeks.
+        continue-on-error: true
+        env:
+          FULL_SWEEP: ${{ inputs.full }}
+        run: |
+          if [ "$FULL_SWEEP" = "true" ]; then
+            yarn mutate --full
+          else
+            yarn mutate
+          fi
+
+      # Always: a broken ratchet still leaves a valid ledger, and losing it would
+      # make the next run start from nothing.
+      - name: Upload mutation state
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-state
+          path: .mutation-state/
+          if-no-files-found: warn
+          retention-days: 90

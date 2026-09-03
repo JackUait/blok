@@ -39,13 +39,11 @@ internal sealed class CollabRoomOptions
   public TimeSpan RetryBackoffCap { get; init; } = TimeSpan.FromSeconds(60);
 
   /// <summary>
-  /// How long the room waits for ONE operation-store call on the commit path —
-  /// the id lookup, the append, and the session disposal that follows a
-  /// failure. Each runs with the room's lane held, so an unbounded wait wedges
-  /// that document. When it ends an append, the outcome is UNKNOWN (the write
-  /// may still land), so it is a commit failure rather than a refusal of the
-  /// operation. It bounds nothing outside that path: the load and reset paths
-  /// still run their store and endpoint calls on the room's lifetime alone.
+  /// How long the room waits for ONE operation-store call it makes while
+  /// holding its lane: the commit path's id lookup and its append, and the
+  /// session disposal that follows a close. A wait there is a wait the whole
+  /// document pays. When it ends an append the outcome is UNKNOWN — the write
+  /// may still land — so that is a commit failure, not a refusal.
   /// </summary>
   public TimeSpan CommitTimeout { get; init; } = TimeSpan.FromSeconds(10);
 

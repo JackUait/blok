@@ -1187,10 +1187,10 @@ internal sealed class CollabRoom : IDisposable
     try
     {
       // Its own budget, like the lookup's and like the session disposal in
-      // CloseRoomLocked: every store call the commit path makes is bounded by
-      // CommitTimeout. The LOAD path's are not. By OUR token, which is the
-      // only cancellation the seam permits us to cause; the lane is held for
-      // the whole wait, so a slow store backpressures this document.
+      // CloseRoomLocked: each store call this path makes while holding the
+      // lane is bounded by CommitTimeout. By OUR token, which is the only
+      // cancellation the seam permits us to cause; the lane is held for the
+      // whole wait, so a slow store backpressures this document.
       using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
       using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
           lifetime.Token,

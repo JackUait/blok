@@ -133,11 +133,7 @@ internal sealed class YDoc
   {
     ArgumentNullException.ThrowIfNull(update);
 
-    // Parking is measured by IDENTITY, not by size: ApplyDecoded assigns a
-    // fresh list or delete set whenever anything new parks, and a range that
-    // merges into one already parked would leave every count unmoved.
-    var parkedStructs = Store.PendingStructs;
-    var parkedDeletes = Store.PendingDs;
+    var parkedBefore = ParkedCoverage();
 
     Transact(
         transaction =>
@@ -148,10 +144,11 @@ internal sealed class YDoc
         local: false,
         out var moved);
 
-    var parked = !ReferenceEquals(parkedStructs, Store.PendingStructs) ||
-        !ReferenceEquals(parkedDeletes, Store.PendingDs);
-
-    return new ApplyResult(ApplyOutcome.Applied, HasPending, moved || parked, null);
+    return new ApplyResult(
+        ApplyOutcome.Applied,
+        HasPending,
+        moved || ParkedCoverage() != parkedBefore,
+        null);
   }
 
   /// <summary>
@@ -252,6 +249,63 @@ internal sealed class YDoc
     moved = Moved(transaction);
 
     return update;
+  }
+
+  /// <summary>
+  /// How much the store has PARKED: the clock span of every waiting struct
+  /// plus the clock span of every waiting deletion.
+  /// </summary>
+  /// <remarks>
+  /// <para>
+  /// Compared across an apply, this is what separates "this update parked
+  /// something new" from "this update merely touched the parked state".
+  /// Nothing cheaper works. <see cref="DeleteSet.Apply"/> opens with
+  /// <c>new DeleteSet()</c> and ALWAYS allocates, and
+  /// <c>MergeDeleteSets(null, X)</c> returns that fresh object, so while
+  /// anything is parked <see cref="StructStore.PendingDs"/> gets a new
+  /// identity on every apply — including one that decoded to nothing at all.
+  /// Reference identity and object counts both answer "yes, changed" there.
+  /// </para>
+  /// <para>
+  /// Ranges are merged into a COPY before measuring: a redelivery that
+  /// overlaps what is already parked must not add to the total, while a range
+  /// that extends one already parked must. Merging the stored set in place
+  /// would edit the document's own parked state from a read.
+  /// </para>
+  /// </remarks>
+  private ulong ParkedCoverage()
+  {
+    var coverage = 0UL;
+
+    foreach (var waiting in Store.PendingStructs ?? [])
+    {
+      coverage += (ulong)waiting.Length;
+    }
+
+    if (Store.PendingDs is { } deletions)
+    {
+      var merged = new DeleteSet();
+
+      foreach (var (client, ranges) in deletions.Clients)
+      {
+        foreach (var range in ranges)
+        {
+          merged.Add(client, range.Clock, range.Length);
+        }
+      }
+
+      merged.SortAndMerge();
+
+      foreach (var (_, ranges) in merged.Clients)
+      {
+        foreach (var range in ranges)
+        {
+          coverage += range.Length;
+        }
+      }
+    }
+
+    return coverage;
   }
 
   /// <summary>

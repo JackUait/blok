@@ -1722,6 +1722,70 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A parked delete set is not a corner case, and while one exists EVERY
+  /// apply rebuilds it: <c>DeleteSet.Apply</c> opens with
+  /// <c>new DeleteSet()</c> and always allocates, and
+  /// <c>MergeDeleteSets(null, X)</c> hands that fresh object straight back.
+  /// So an update that decodes to zero structs and zero delete-set clients —
+  /// the literal two-byte idle resync — still replaces
+  /// <c>Store.PendingDs</c> with a different object.
+  ///
+  /// Any parked-state signal that reads identity, or counts objects, calls
+  /// that a change and journals one no-op per reconnect. The signal has to
+  /// measure how much is parked, not whether the parked set was touched.
+  /// </summary>
+  [Fact]
+  public async Task AnIdleV1ResyncIsNotJournalledWhileADeleteIsParked()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var twoBytes = client.EncodeStateAsUpdate(await ServerStateVectorAsync(manager, client));
+    Assert.Equal(new byte[] { 0, 0 }, twoBytes);
+
+    // A deletion of text the server never received, so it cannot be applied
+    // and parks. Store.PendingDs is non-null from here on.
+    var stray = YDocs.NewClient();
+    YDocs.UpdateAppending(stray, "zz");
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateDeleting(stray, 0, 2))),
+        CancellationToken.None);
+
+    // Let the export the parked delete legitimately earned land first, or the
+    // absence measured below is just that PUT arriving late.
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+    await Waits.UntilAsync(() => endpoint.Saves.Count > 0, "the export the parked delete earned");
+
+    var committed = operations.Committed(DocId).Count;
+    var frames = store.FramesOf(DocId).Count;
+    var saves = endpoint.Saves.Count;
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    for (var reconnect = 0; reconnect < 3; reconnect++)
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new SyncStep2Frame(twoBytes)),
+          CancellationToken.None);
+    }
+
+    Assert.Equal(committed, operations.Committed(DocId).Count);
+    Assert.Empty(stock.Received);
+    Assert.Empty(other.Received);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+    Assert.Equal(frames, store.FramesOf(DocId).Count);
+    Assert.Equal(saves, endpoint.Saves.Count);
+  }
+
+  /// <summary>
   /// The other fundamental edit shape, and the one no test in this file could
   /// produce until now. A Yjs deletion creates NO structs: it marks existing
   /// items deleted and names them in the delete set, so the room's state
@@ -1793,10 +1857,9 @@ public sealed class CollabRoomTests
     Assert.Equal(second, record.Update.ToArray());
     Assert.Equal(second, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
 
-    // Parked state is the ONLY condition under which the no-op skip does not
-    // fire, so it is the only condition under which a refused apply could
-    // reach the journal. Journalled bytes the engine cannot read are a poison
-    // pill: the next load hydrates them and throws.
+    // With the room left parked, a refused apply must still be refused.
+    // Journalled bytes the engine cannot read are a poison pill: the next
+    // load hydrates them and throws.
     await membership.ReceiveAsync(
         SyncWire.Encode(new SyncUpdateFrame([0xde, 0xad, 0xbe, 0xef, 0x01])),
         CancellationToken.None);

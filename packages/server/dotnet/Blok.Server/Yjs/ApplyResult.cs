@@ -12,8 +12,8 @@ internal enum ApplyOutcome
 /// <paramref name="PendingRemains"/> is the document's health signal after the
 /// call: structs or deletions the update named but could not be applied yet.
 /// <paramref name="Changed"/> is whether THIS update taught the document
-/// anything — it integrated a struct, deleted something not already deleted,
-/// or parked something for later.
+/// anything: it integrated a struct, deleted something not already deleted,
+/// or grew what the document has parked.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -31,6 +31,13 @@ internal enum ApplyOutcome
 /// tries: an already-deleted target is skipped rather than re-deleted, and a
 /// struct the store already holds is not integrated again. Callers that
 /// journal, relay or persist an update decide on this, never on its size.
+/// </para>
+/// <para>
+/// WHAT IT CANNOT SEE: the parked half is measured as a clock-span total
+/// before and after (<c>ParkedCoverage</c>), so parked content that changes
+/// shape without changing span does not register. A false TRUE is safe here —
+/// a caller journals a no-op — and a false FALSE is not, so any doubt should
+/// be resolved towards reporting a change.
 /// </para>
 /// </remarks>
 internal readonly record struct ApplyResult(

@@ -29,8 +29,12 @@ public sealed class ParkedCoverageTests
   {
     var doc = new YDoc(1000);
 
-    // (5,5) and (6,3): raw 8, but only clocks 5..9 are parked.
+    // (5,5) and (6,3): raw 8, but only clocks 5..9 are parked. Both readings
+    // are asserted, because the raw one is the fixture's PREMISE — if
+    // MergeParked ever folded these two at park time it would silently become
+    // 5, and the trap this test exercises would stop existing unnoticed.
     Apply(doc, [Run(5, "aaaaa"), Run(6, "bbb")]);
+    Assert.Equal(8UL, RawParkedLength(doc));
     Assert.Equal(5UL, ParkedUnion(doc));
 
     var arrival = Apply(doc, [Run(10, "ccc")]);

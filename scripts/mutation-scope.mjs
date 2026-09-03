@@ -241,16 +241,30 @@ export const updateSurvivorAges = ({ previousAges, survivors, sha, timestamp }) 
  * The gate. Absolute scores would be red from the first day, so the rule is that
  * the survivor count may not grow. Fixing old ones lowers the bar for good.
  */
-export const checkRatchet = ({ previousTotal, currentTotal, seeding = false }) => {
+export const checkRatchet = ({ previousTotal, currentTotal, partial = false }) => {
   if (previousTotal === null || previousTotal === undefined) {
     return { ok: true, delta: 0 };
   }
 
   const delta = currentTotal - previousTotal;
 
-  // Seeding walks the repository a batch at a time, so every batch brings files
-  // the ledger has never seen. Growth there is the work, not a regression.
-  return { ok: seeding || delta <= 0, delta };
+  // A run that parked files measured part of its scope, and the seed parks the
+  // whole repository a batch at a time. Neither total is a verdict.
+  return { ok: partial || delta <= 0, delta };
+};
+
+/**
+ * Which total the ledger keeps as the bar. A run that parked files must not
+ * raise the bar to include its own new survivors, or the regression the muted
+ * ratchet let through would never be caught afterwards either. The seed is the
+ * exception: there the growing ledger IS the new bar.
+ */
+export const nextTotal = ({ previousTotal, currentTotal, parked, seeding }) => {
+  if (parked && !seeding && previousTotal !== null && previousTotal !== undefined) {
+    return previousTotal;
+  }
+
+  return currentTotal;
 };
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
@@ -342,6 +356,9 @@ const seed = (stateDir) => {
       lastCheckedSha: git('rev-parse', 'HEAD'),
       survivorTotal: state.survivorTotal ?? null,
       pending: mutate,
+      // Tells the batches that follow that this queue is the ledger filling up,
+      // not one wide push that ran out of budget. It clears when the queue does.
+      seeding: true,
     }, null, 2)}\n`,
   );
 
@@ -362,14 +379,15 @@ const record = (stateDir, reportPath, pending) => {
 
   const survivors = collectSurvivors(report);
   const sha = git('rev-parse', 'HEAD');
-  // A run that parked files measured only part of its scope, so growth here
-  // cannot be read as a regression. The cost is that a real one hides until the
-  // queue drains, which is why the budget should stay big enough that ordinary
-  // pushes never park anything.
+  const previousTotal = state.survivorTotal ?? null;
+  const parked = pending.length > 0;
+  // Seeding survives only as long as its queue does, so a wide push after the
+  // baseline is built is parked work, not seeding.
+  const seeding = state.seeding === true && parked;
   const ratchet = checkRatchet({
-    previousTotal: state.survivorTotal ?? null,
+    previousTotal,
     currentTotal: survivors.length,
-    seeding: pending.length > 0,
+    partial: parked,
   });
 
   const ages = updateSurvivorAges({
@@ -385,8 +403,14 @@ const record = (stateDir, reportPath, pending) => {
     join(stateDir, 'state.json'),
     `${JSON.stringify({
       lastCheckedSha: sha,
-      survivorTotal: survivors.length,
+      survivorTotal: nextTotal({
+        previousTotal,
+        currentTotal: survivors.length,
+        parked,
+        seeding,
+      }),
       pending,
+      seeding,
     }, null, 2)}\n`,
   );
 

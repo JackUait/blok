@@ -71,10 +71,11 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: mutation-state
-          # The HTML report weighs about as much as the ledger itself and
-          # nothing downstream reads it.
+          # Both reports weigh about as much as the ledger itself, and the next
+          # run reads only the incremental file, the state and the ages.
           path: |
             .mutation-state/
             !.mutation-state/report.html
+            !.mutation-state/report.json
           if-no-files-found: warn
           retention-days: 90

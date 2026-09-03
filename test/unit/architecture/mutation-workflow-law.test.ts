@@ -49,12 +49,14 @@ describe('mutation workflow', () => {
     expect(restore?.run).toContain('gh release download');
   });
 
-  // The HTML report is about a kilobyte per mutant, same as the ledger itself,
-  // and nothing downstream reads it. Uploading it doubles the artifact.
-  it('keeps the HTML report out of the uploaded ledger', () => {
+  // Both reports run about a kilobyte per mutant, as much as the ledger itself.
+  // Nothing reads either one after the run that wrote it: the next run restores
+  // the incremental file, the state and the ages, and nothing else.
+  it('keeps the reports out of the uploaded ledger', () => {
     const upload = steps.find((step) => step.name === 'Upload mutation state');
 
     expect(String(upload?.with?.path)).toContain('!.mutation-state/report.html');
+    expect(String(upload?.with?.path)).toContain('!.mutation-state/report.json');
   });
 
   // A full sweep is hours of work and cannot finish inside any job timeout we

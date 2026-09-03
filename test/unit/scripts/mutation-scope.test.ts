@@ -6,6 +6,7 @@ import {
   buildStrykerArgs,
   checkRatchet,
   collectSurvivors,
+  nextTotal,
   resolveDiffBase,
   splitByBudget,
   updateSurvivorAges,
@@ -415,6 +416,49 @@ describe('mutation-scope', () => {
     });
   });
 
+  describe('nextTotal', () => {
+    // Recording the partial total would raise the bar to include the run's own
+    // new survivors, and the regression it hid would then never be caught.
+    it('keeps the settled bar when a run parked part of its scope', () => {
+      expect(nextTotal({
+        previousTotal: 12,
+        currentTotal: 400,
+        parked: true,
+        seeding: false,
+      })).toBe(12);
+    });
+
+    // The seed is the ledger filling up on purpose, so its growth is the new bar.
+    it('takes the new total when the seed is what parked the files', () => {
+      expect(nextTotal({
+        previousTotal: 12,
+        currentTotal: 400,
+        parked: true,
+        seeding: true,
+      })).toBe(400);
+    });
+
+    it('takes the new total when the run measured everything it was given', () => {
+      expect(nextTotal({
+        previousTotal: 12,
+        currentTotal: 9,
+        parked: false,
+        seeding: false,
+      })).toBe(9);
+    });
+
+    // Nothing to hold on to on the very first run, so the partial total is still
+    // better than no bar at all.
+    it('takes the first total it sees when there is no bar yet', () => {
+      expect(nextTotal({
+        previousTotal: null,
+        currentTotal: 400,
+        parked: true,
+        seeding: false,
+      })).toBe(400);
+    });
+  });
+
   describe('checkRatchet', () => {
     it('passes when the survivor count holds steady', () => {
       expect(checkRatchet({ previousTotal: 12, currentTotal: 12 })).toEqual({
@@ -437,10 +481,10 @@ describe('mutation-scope', () => {
       });
     });
 
-    // Seeding walks the repository a batch at a time, and every batch adds
-    // files the ledger has never seen. Growth there is the job, not a regression.
-    it('holds its fire while the baseline is still being seeded', () => {
-      expect(checkRatchet({ previousTotal: 12, currentTotal: 400, seeding: true })).toEqual({
+    // A run that parked files measured part of its scope. Reading that total as
+    // a regression would fail every batch of the baseline seed.
+    it('holds its fire when the run measured only part of its scope', () => {
+      expect(checkRatchet({ previousTotal: 12, currentTotal: 400, partial: true })).toEqual({
         ok: true,
         delta: 388,
       });

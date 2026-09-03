@@ -2191,6 +2191,12 @@
           },
           "1": {
             "label": "Decide who may open which document"
+          },
+          "2": {
+            "label": "Convert documents \u2014 no storage, no route"
+          },
+          "3": {
+            "label": "Translate a document without giving a model its JSON"
           }
         },
         "editorConfig": {

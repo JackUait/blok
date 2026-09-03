@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
 using Xunit;
@@ -1359,6 +1360,51 @@ public sealed class CollabRoomTests
     Assert.Equal("hello!", await ExportedTextAsync(manager));
   }
 
+  /// <summary>
+  /// The HTTP edit path goes through the same cooldown. It is the likelier
+  /// retry storm of the two: a caller that retries a 503 would otherwise
+  /// reload the document's baseline and tail on every request.
+  /// </summary>
+  [Fact]
+  public async Task AnEditIsRefusedWhileTheDocumentIsInItsCommitCooldown()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    operations.FailAppends = _ => new IOException("the journal is down");
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+    var opens = operations.Opens;
+
+    var refused = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Unavailable, refused.Status);
+    Assert.Equal(opens, operations.Opens);
+    Assert.Equal(1, endpoint.Loads);
+  }
+
+  [Fact]
+  public async Task AnEditIsRefusedWhileAnotherProcessHoldsTheDocument()
+  {
+    endpoint.Holds(DocId, "hello");
+    var held = await operations.OpenAsync(DocId, CancellationToken.None);
+    Assert.Equal(CollabDocumentOpenOutcome.Opened, held.Outcome);
+    var manager = CreateJournalManager();
+
+    var refused = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Unavailable, refused.Status);
+    Assert.Equal(0, endpoint.Loads);
+    Assert.Equal(0, manager.LiveRoomCount);
+
+    await held.Session!.DisposeAsync();
+    Assert.Equal(
+        CollabEditStatus.Applied,
+        (await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None)).Status);
+  }
+
   [Fact]
   public async Task AReadOnlyMembersOperationIsRejectedWithoutJournalling()
   {
@@ -1462,6 +1508,20 @@ public sealed class CollabRoomTests
   {
     return SyncWire.Encode(
         new OperationFrame(membership.Tag.Lineage, operationId, update));
+  }
+
+  private static CollabEditOp.Insert Appending(string id, string text)
+  {
+    return new CollabEditOp.Insert(
+        id,
+        new JsonObject
+        {
+          ["id"] = id,
+          ["type"] = "paragraph",
+          ["data"] = new JsonObject { ["text"] = text },
+        },
+        After: null,
+        Parent: null);
   }
 
   private static FakeMember V2Member(string? actorId = null, bool canWrite = true)

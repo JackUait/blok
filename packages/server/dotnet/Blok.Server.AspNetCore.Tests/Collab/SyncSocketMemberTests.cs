@@ -58,7 +58,7 @@ public sealed class SyncSocketMemberTests
     Assert.Equal("malformed awareness", member.RequestedClose.Value.Reason);
   }
 
-  /// <summary>A reason the endpoint has no mapping for closes 1011 instead of throwing inside the room's lane.</summary>
+  /// <summary>A value outside the enum still closes 1011 instead of throwing inside the room's lane.</summary>
   [Fact]
   public void AnUnmappedReasonClosesAsAnInternalError()
   {
@@ -67,5 +67,38 @@ public sealed class SyncSocketMemberTests
     member.Close((CollabCloseReason)99);
 
     Assert.Equal(1011, (int)member.RequestedClose!.Value.Status);
+  }
+
+  [Fact]
+  public void CommitUnavailableMapsToTheRetryableCommitStatusWithItsOwnText()
+  {
+    var frame = SyncClose.For(CollabCloseReason.CommitUnavailable);
+
+    Assert.Equal(4503, (int)frame.Status);
+    Assert.Equal("commit unavailable, retry", frame.Reason);
+  }
+
+  [Fact]
+  public void CommitUnavailableSharesSeedFailedsStatusButNotItsText()
+  {
+    var frame = SyncClose.For(CollabCloseReason.CommitUnavailable);
+
+    Assert.Equal(SyncClose.SeedFailed.Status, frame.Status);
+    Assert.NotEqual(SyncClose.SeedFailed.Reason, frame.Reason);
+  }
+
+  [Fact]
+  public void CommitUnavailableDoesNotFallThroughToTheInternalErrorFrame()
+  {
+    Assert.NotEqual(SyncClose.Internal, SyncClose.For(CollabCloseReason.CommitUnavailable));
+  }
+
+  [Fact]
+  public void ResetKeepsItsOwnStatusAndText()
+  {
+    var frame = SyncClose.For(CollabCloseReason.Reset);
+
+    Assert.Equal(4409, (int)frame.Status);
+    Assert.Equal("document reset", frame.Reason);
   }
 }

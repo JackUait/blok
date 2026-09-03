@@ -56,21 +56,41 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame SeedFailed =
       new((WebSocketCloseStatus)4503, "document unavailable");
 
+  /// <summary>
+  /// Same 4503 as <see cref="SeedFailed"/> (come back later) but its own text,
+  /// so an operator can tell a failed journal append from a failed seed. Not
+  /// 4409: the client reads that status as a relineage and discards pending
+  /// work, which a transient commit failure must not trigger.
+  /// </summary>
+  internal static readonly SyncCloseFrame CommitUnavailable =
+      new((WebSocketCloseStatus)4503, "commit unavailable, retry");
+
   internal static readonly SyncCloseFrame BadAwareness =
       new(WebSocketCloseStatus.PolicyViolation, "malformed awareness");
 
-  /// <summary>A reason with no mapping: a close is still the right answer inside the room's lane, a throw is not.</summary>
+  /// <summary>A value outside the enum: a close is still the right answer inside the room's lane, a throw is not.</summary>
   internal static readonly SyncCloseFrame Internal =
       new(WebSocketCloseStatus.InternalServerError, "internal error");
 
+  /// <summary>
+  /// <see cref="Map"/> below has no default arm, so it is exhaustive over the
+  /// named enum: with TreatWarningsAsErrors, a new <see cref="CollabCloseReason"/>
+  /// shipped without an arm fails the build (CS8509) instead of silently
+  /// falling through to <see cref="Internal"/>. IsDefined covers what the
+  /// compiler cannot see statically — a value outside the enum, e.g. a bad cast.
+  /// </summary>
   internal static SyncCloseFrame For(CollabCloseReason reason)
   {
-    return reason switch
-    {
-      CollabCloseReason.Reset => Reset,
-      CollabCloseReason.Draining => Draining,
-      CollabCloseReason.BadAwareness => BadAwareness,
-      _ => Internal,
-    };
+    return Enum.IsDefined(reason) ? Map(reason) : Internal;
   }
+
+#pragma warning disable CS8524 // no default arm on purpose: For()'s IsDefined guard is what rules out a value outside the enum, not this switch.
+  private static SyncCloseFrame Map(CollabCloseReason reason) => reason switch
+  {
+    CollabCloseReason.Reset => Reset,
+    CollabCloseReason.Draining => Draining,
+    CollabCloseReason.BadAwareness => BadAwareness,
+    CollabCloseReason.CommitUnavailable => CommitUnavailable,
+  };
+#pragma warning restore CS8524
 }

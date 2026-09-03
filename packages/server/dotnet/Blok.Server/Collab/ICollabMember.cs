@@ -14,6 +14,16 @@ internal enum CollabCloseReason
   /// close 1008, after which the client reconnects with its usual backoff.
   /// </summary>
   BadAwareness,
+
+  /// <summary>
+  /// Close 4503 once a future commit path (Task 3.2 onward) applies an edit
+  /// it cannot confirm was journalled — nothing raises this reason yet. Its
+  /// text differs from <c>SeedFailed</c>'s "document unavailable" on the same
+  /// status, and it is not <c>Reset</c>'s 4409: that status tells the client
+  /// to relineage and discard pending work, which a retryable commit failure
+  /// must not trigger.
+  /// </summary>
+  CommitUnavailable,
 }
 
 /// <summary>

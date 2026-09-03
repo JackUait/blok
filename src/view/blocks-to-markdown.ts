@@ -7,7 +7,6 @@
  *
  * PURITY CONTRACT: only pure imports (src/shared/*, src/view/*, parse5).
  */
-import { parseFragment } from 'parse5';
 import type { DefaultTreeAdapterMap } from 'parse5';
 
 import { EQUATION_SOURCE_ATTR } from '../shared/equation-mark';
@@ -15,7 +14,7 @@ import { serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
 import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
-import { htmlTextContent } from './html-text';
+import { htmlTextContent, needsTokenizing, parseInlineFragment } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
 
@@ -108,7 +107,19 @@ const parse5InlineBackend: InlineBackend = {
    * @param html - inline HTML string
    */
   inlineToMarkdown(html: string): string {
-    return serializeNodes(parseFragment(html ?? '').childNodes);
+    const source = html ?? '';
+
+    /**
+     * A lone text node serializes to its raw value with no Markdown escaping,
+     * so a field the tokenizer would not have changed is already its own
+     * Markdown. Reads inline HTML through its own `parseFragment` rather than
+     * through `htmlTextContent`, so it needs the guard of its own.
+     */
+    if (!needsTokenizing(source)) {
+      return source;
+    }
+
+    return serializeNodes(parseInlineFragment(source).childNodes);
   },
 
   /**

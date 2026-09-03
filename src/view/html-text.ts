@@ -47,13 +47,70 @@ const collect = (nodes: P5ChildNode[]): string => {
 };
 
 /**
+ * The characters HTML5 input-stream preprocessing acts on: `<` opens a tag, `&`
+ * may open a character reference, a CR (alone or in a CRLF) becomes a newline,
+ * and a NUL is dropped. Every other character — tab, form feed, U+00A0, a lone
+ * surrogate, an astral emoji, a bare `>` — comes back out of the tokenizer
+ * exactly as it went in.
+ */
+const NEEDS_TOKENIZING = /[<&\r\u0000]/;
+
+/**
+ * Whether a field has to go through parse5 at all. A field that does not is
+ * returned verbatim by every reader here, which is what the tokenizer would
+ * have produced — and parse5 is a character-by-character HTML5 tokenizer, so
+ * skipping it is most of the cost of reading a document that is mostly prose.
+ * This matters far more than it looks: the server package runs this code on an
+ * interpreter, where the tokenizer costs orders of magnitude more than it does
+ * in a browser.
+ * @param html - fragment markup
+ */
+export const needsTokenizing = (html: string): boolean => NEEDS_TOKENIZING.test(html);
+
+/**
+ * A valid surrogate pair, or a single surrogate. Ordered so the pair wins:
+ * whatever the alternation matches with length 1 was unpaired.
+ */
+const SURROGATE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g;
+
+/**
+ * Parse a fragment, repairing input parse5 refuses to read at all. Two adjacent
+ * low surrogates make it throw `RangeError` — the shape a truncated UTF-16
+ * paste leaves behind — and that would cost a whole document over one field.
+ * The server runtime reads STORED articles, where an abort means an article
+ * nobody can read again, not a request someone can retry.
+ *
+ * HTML5 replaces an unpaired surrogate with U+FFFD anyway, so doing it here
+ * loses nothing that was not already broken, and keeps the field's markup.
+ * @param html - fragment markup
+ */
+export const repairSurrogates = (html: string): string =>
+  html.replace(SURROGATE, (match) => (match.length === 2 ? match : '\uFFFD'));
+
+/**
+ * Parse an inline fragment, retrying once on the input parse5 refuses.
+ * @param html - fragment markup
+ */
+export const parseInlineFragment = (html: string): DefaultTreeAdapterMap['documentFragment'] => {
+  try {
+    return parseFragment(html);
+  } catch (error) {
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+
+    return parseFragment(repairSurrogates(html));
+  }
+};
+
+/**
  * Extract the plain text of an HTML fragment.
  * @param html - fragment markup
  */
 export const htmlTextContent = (html: string): string => {
-  if (html === '') {
-    return '';
+  if (html === '' || !needsTokenizing(html)) {
+    return html;
   }
 
-  return collect(parseFragment(html).childNodes);
+  return collect(parseInlineFragment(html).childNodes);
 };

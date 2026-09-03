@@ -37,6 +37,7 @@ import {
   type InlineElementView,
 } from '../shared/inline-normalization-policy';
 import { isSafeAttribute, PLAINTEXT } from '../shared/sanitize-rules';
+import { repairSurrogates } from './html-text';
 import { hasUnsafeUrlProtocol } from '../shared/url-policy';
 
 type P5Element = DefaultTreeAdapterMap['element'];
@@ -753,7 +754,25 @@ export const sanitizeHtmlFragment = (
    * table fragments differently.
    */
   const contextElement = parseFragment('<div></div>').childNodes[0] as P5Element;
-  const fragment = parseFragment(contextElement, html, {});
+  /**
+   * Retried on the input parse5 refuses outright: two adjacent low surrogates
+   * make it throw, and one such field must not cost the whole document. See
+   * `repairSurrogates`.
+   * @param source - fragment markup to parse in the div context
+   */
+  const parseInContext = (source: string): DefaultTreeAdapterMap['documentFragment'] => {
+    try {
+      return parseFragment(contextElement, source, {});
+    } catch (error) {
+      if (!(error instanceof RangeError)) {
+        throw error;
+      }
+
+      return parseFragment(contextElement, repairSurrogates(source), {});
+    }
+  };
+
+  const fragment = parseInContext(html);
 
   sanitizeChildren(fragment, config, true, true, transform);
   normalizeInlineMarkupFragment(fragment);

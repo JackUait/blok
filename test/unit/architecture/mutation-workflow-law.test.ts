@@ -1,8 +1,9 @@
 // @vitest-environment node
 /**
- * Two settings in the mutation workflow are load-bearing and look like noise.
- * Flipping either one produces a workflow that still runs green while measuring
- * nothing, so they are pinned here rather than left to review.
+ * Settings in the mutation gate that are load-bearing and look like noise.
+ * Flipping one produces a gate that still runs green while measuring nothing,
+ * or one that cannot start at all, so they are pinned here rather than left to
+ * review.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -78,5 +79,23 @@ describe('mutation workflow', () => {
 
     expect(upload).toBeDefined();
     expect((upload as unknown as Record<string, unknown>).if).toBe('always()');
+  });
+});
+
+describe('mutation vitest config', () => {
+  // The config Stryker drives stands in for vitest.config.ts, and every value it
+  // invents rather than derives is a test that passes under the normal gate and
+  // fails under Stryker. A faked CLI version killed the first seed batch: the
+  // CLI suite asserts the real one, and Stryker runs that suite the moment a CLI
+  // source enters the scope.
+  it('derives the CLI version instead of inventing one', async () => {
+    const [config, cliPackage] = await Promise.all([
+      import('../../../vitest.mutation.config'),
+      import('../../../packages/cli/package.json'),
+    ]);
+
+    expect(config.default.define?.__CLI_VERSION__).toBe(
+      JSON.stringify(cliPackage.default.version),
+    );
   });
 });

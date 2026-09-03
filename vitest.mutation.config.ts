@@ -1,9 +1,14 @@
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 import { enableJsdomWebStorageGuard } from './scripts/jsdom-webstorage-guard.mjs';
 
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+const cliPkg = JSON.parse(
+  readFileSync(path.resolve(dirname, 'packages/cli/package.json'), 'utf-8'),
+) as { version: string };
 
 // Same Node 26 guard as vitest.config.ts — see scripts/jsdom-webstorage-guard.mjs.
 enableJsdomWebStorageGuard();
@@ -22,8 +27,9 @@ enableJsdomWebStorageGuard();
  */
 export default defineConfig({
   define: {
-    // Stryker never runs the CLI suite, so the real version is irrelevant here.
-    __CLI_VERSION__: JSON.stringify('0.0.0-mutation'),
+    // Derived, never invented: the CLI suite asserts this against its own
+    // package, and Stryker runs that suite as soon as a CLI source is in scope.
+    __CLI_VERSION__: JSON.stringify(cliPkg.version),
     __VUE_OPTIONS_API__: 'true',
     __VUE_PROD_DEVTOOLS__: 'false',
     __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',

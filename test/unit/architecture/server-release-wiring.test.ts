@@ -16,6 +16,7 @@ const RELEASE_WORKFLOW = '.github/workflows/release-server.yml';
 const SETUP_NODE_ACTION = '.github/actions/setup-node-deps/action.yml';
 const CHECKOUT_ACTION = 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1';
 const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68';
+const BUILDX_ACTION = 'docker/setup-buildx-action@';
 const LOGIN_ACTION = 'docker/login-action@dbcb813823bdd20940b903addbd779551569679f';
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const SERVER_ARCHIVES = [
@@ -51,9 +52,13 @@ type CompositeAction = {
 
 type Workflow = {
   concurrency?: { group?: string; 'cancel-in-progress'?: boolean };
-  on?: { push?: { tags?: string[] } };
+  on?: {
+    push?: { tags?: string[] };
+    workflow_dispatch?: { inputs?: Record<string, { required?: boolean }> };
+  };
   jobs: Record<string, {
     if?: string;
+    env?: Record<string, string>;
     permissions?: Record<string, string>;
     steps?: WorkflowStep[];
   }>;
@@ -272,6 +277,7 @@ describe('server release wiring', () => {
     expect(actions).toContain(CHECKOUT_ACTION);
     expect(steps.find((step) => step.uses === CHECKOUT_ACTION)?.with)
       .toMatchObject({
+        ref: '${{ inputs.release_tag || github.ref }}',
         'fetch-depth': 0,
         'persist-credentials': false,
       });
@@ -280,7 +286,14 @@ describe('server release wiring', () => {
       .toMatchObject({ 'install-docs': false });
     expect(actions).toContain(SETUP_DOTNET_ACTION);
     expect(actions).toContain(LOGIN_ACTION);
-    expect(source.match(/version="\$\{GITHUB_REF_NAME#v\}"/g)).toHaveLength(1);
+    expect(source.match(/version="\$\{RELEASE_TAG#v\}"/g)).toHaveLength(1);
+    // A dispatch runs this file from main, where GITHUB_REF_NAME is "main" and
+    // GITHUB_SHA is main's HEAD. Every tag and sha read must come from the
+    // input instead, or a dispatch ships main and gates on main's CI.
+    expect(job?.env?.RELEASE_TAG).toBe('${{ inputs.release_tag || github.ref_name }}');
+    expect(workflow.on?.workflow_dispatch?.inputs?.release_tag?.required).toBe(true);
+    expect(runs).not.toContain('GITHUB_REF_NAME');
+    expect(runs).not.toContain('$GITHUB_SHA');
     expect(runs).toContain(
       'dotnet test packages/server/dotnet/Blok.Server.slnx --configuration Release',
     );
@@ -353,14 +366,14 @@ describe('server release wiring', () => {
     expect(deliveryVerification).toContain('"architecture": "amd64"');
     expect(deliveryVerification).toContain('"architecture": "arm64"');
 
-    expect(runs).toContain('gh release upload "$GITHUB_REF_NAME"');
-    expect(runs).toContain('gh release edit "$GITHUB_REF_NAME" --draft=false');
+    expect(runs).toContain('gh release upload "$RELEASE_TAG"');
+    expect(runs).toContain('gh release edit "$RELEASE_TAG" --draft=false');
 
     const nugetPush = source.indexOf('dotnet nuget push');
-    const assetUpload = source.indexOf('gh release upload "$GITHUB_REF_NAME"');
+    const assetUpload = source.indexOf('gh release upload "$RELEASE_TAG"');
     const imagePush = source.indexOf('docker buildx build');
     const observable = source.indexOf('Verify published server delivery');
-    const publishDraft = source.indexOf('gh release edit "$GITHUB_REF_NAME" --draft=false');
+    const publishDraft = source.indexOf('gh release edit "$RELEASE_TAG" --draft=false');
 
     expect(nugetPush).toBeGreaterThan(-1);
     expect(assetUpload).toBeGreaterThan(nugetPush);
@@ -379,6 +392,11 @@ describe('server release wiring', () => {
     const logoutIndex = steps.findIndex((step) => step.name === 'Log out of GHCR');
     const logout = steps[logoutIndex];
 
+    // ubuntu-latest's default builder is the docker driver, which builds one
+    // platform only. Without this step the multi-architecture push fails.
+    const buildxIndex = steps.findIndex((step) => (step.uses ?? '').startsWith(BUILDX_ACTION));
+
+    expect(buildxIndex).toBe(loginIndex - 1);
     expect(loginIndex).toBe(pushIndex - 1);
     expect(logoutIndex).toBe(pushIndex + 1);
     expect(logout?.if).toBe('always()');
@@ -399,9 +417,9 @@ describe('server release wiring', () => {
 
     expect(job?.permissions).toMatchObject({ actions: 'write' });
     expect(dispatch?.run).toContain('gh workflow run deploy-docs.yml');
-    expect(dispatch?.run).toContain('--ref "$GITHUB_REF_NAME"');
+    expect(dispatch?.run).toContain('--ref "$RELEASE_TAG"');
     expect(dispatch?.run).toContain(
-      '-f release_tag="$GITHUB_REF_NAME"',
+      '-f release_tag="$RELEASE_TAG"',
     );
     expect(dispatchIndex).toBeGreaterThan(publishIndex);
   });

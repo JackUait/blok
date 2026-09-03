@@ -1767,6 +1767,40 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The minted ids have to differ per update. The store refuses a second
+  /// append under an id it already holds with other bytes, and that refusal
+  /// is not a per-write error: it discards the room for everyone in it.
+  /// </summary>
+  [Fact]
+  public async Task ConsecutiveV1UpdatesAreJournalledUnderDistinctIds()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var membership = await Join(manager, stock);
+    var client = await SyncedClientAsync(manager, "hello");
+    stock.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "?"))),
+        CancellationToken.None);
+
+    var committed = operations.Committed(DocId);
+
+    Assert.Equal(2, committed.Count);
+    Assert.NotEqual(committed[0].OperationId, committed[1].OperationId);
+    Assert.Equal(
+        new ulong[] { 1, 2 },
+        committed.Select(record => record.ServerSequence).ToArray());
+    Assert.Empty(stock.Received);
+    Assert.Empty(stock.Closes);
+    Assert.Equal("hello!?", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
   /// The HTTP edit path goes through the same cooldown. It is the likelier
   /// retry storm of the two: a caller that retries a 503 would otherwise
   /// reload the document's baseline and tail on every request.

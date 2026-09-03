@@ -9,9 +9,14 @@ namespace Blok.Server.Collab;
 /// (must be positive) followed by that many bytes of one Yjs update.
 ///
 /// The magic carries the container version: "BKWS" was the pre-lineage
-/// header, and a blob still carrying it decodes as unreadable, which the
-/// store reports as absent and the doc re-seeds under a new lineage. That is
-/// the migration — the format never shipped.
+/// header, and a blob still carrying it decodes as unreadable, which
+/// <see cref="LocalCollabStore"/> reports as absent and the doc re-seeds under
+/// a new lineage. That is the migration — the format never shipped.
+///
+/// <see cref="LocalCollabOperationStore"/> does the opposite with the same
+/// bytes: an undecodable file REFUSES to open rather than re-seeding, so a
+/// "BKWS" blob would be permanently unopenable there. Only safe because the
+/// magic never shipped.
 /// </summary>
 internal static class CollabWorkingSetCodec
 {

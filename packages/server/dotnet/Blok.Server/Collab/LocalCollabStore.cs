@@ -81,6 +81,15 @@ internal sealed class LocalCollabStore : ICollabWorkingSetStore
   /// guard reads only the header: left in place, it would refuse every
   /// re-seed under a lower epoch and no API could recover the doc.
   /// </summary>
+  /// <remarks>
+  /// THIS DESTROYS <see cref="LocalCollabOperationStore"/>'S FAIL-CLOSED
+  /// IMPORT. That store refuses to open a document whose working set does not
+  /// decode, precisely so a damaged file is never served as a blank page and
+  /// overwritten by the first edit. Once this rename has run it sees no file
+  /// at all, seeds an empty document, and the guarantee is gone. So the
+  /// operation store must open a document BEFORE anything calls
+  /// <see cref="ReadAsync"/> on it.
+  /// </remarks>
   private void MoveAside(string docId, string path)
   {
     var aside = $"{path}.unreadable-{DateTime.UtcNow:yyyyMMdd'T'HHmmssfff'Z'}";

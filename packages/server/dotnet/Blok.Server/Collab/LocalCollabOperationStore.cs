@@ -52,6 +52,15 @@ namespace Blok.Server.Collab;
 /// one-process-per-directory covering both.
 /// </para>
 /// <para>
+/// THIS STORE MUST OPEN A DOCUMENT BEFORE ANYTHING READS IT THROUGH
+/// <see cref="LocalCollabStore"/>. Importing a working set that does not
+/// decode fails closed rather than seeding an empty document — but
+/// <c>LocalCollabStore.ReadAsync</c> MOVES an unreadable file aside, and after
+/// that rename the import sees no file, seeds empty, and the user's damaged
+/// document is replaced by a blank one on the first edit. Nothing consumes
+/// this store yet, which is the only reason the ordering is free today.
+/// </para>
+/// <para>
 /// THE ACKNOWLEDGEMENT BOUNDARY IS ONE FLUSH. An append writes its record to a
 /// journal file whose directory entry is already durable, then calls
 /// <c>Flush(flushToDisk: true)</c>. Nothing else is written — not the manifest,

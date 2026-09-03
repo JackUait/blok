@@ -927,9 +927,11 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     // document over, it did not consume the old copy.
     Assert.Equal(legacy, File.ReadAllBytes(LegacyPath));
 
-    // Importing again would be a second migration of an already-migrated
-    // document; the epoch and lineage would move and clients would be told to
-    // drop their caches.
+    // A SECOND IMPORT IS ONLY VISIBLE IN THE FILE COUNT, which is why the
+    // count is asserted below. Re-importing the same unchanged file copies the
+    // identical format, epoch and lineage, and lands on a fresh generation
+    // whose names collide with nothing — so every value assertion in this
+    // block passes while the document is silently re-migrated on every open.
     await using var reopened = await OpenAsync();
     Assert.Equal(LegacyFormat, reopened.OpenResult.Head!.Format);
     Assert.Equal(7L, reopened.OpenResult.Head.Epoch);
@@ -937,6 +939,10 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     Assert.Equal<byte[][]>(
         [.. frames],
         [.. reopened.OpenResult.Baseline.Select(frame => frame.ToArray())]);
+
+    // The one observable difference: a second import writes a second
+    // generation's baseline beside the first.
+    Assert.Single(Directory.GetFiles(DocDirectory, "baseline.*"));
 
     var first = await reopened.AppendAsync(Candidate(OperationId(1), [0x01]));
     Assert.Equal(CollabOperationAppendOutcome.Committed, first.Outcome);
@@ -1105,8 +1111,10 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     Assert.Contains(DocId, failure.Message, StringComparison.Ordinal);
     Assert.Contains("unreadable", failure.Message, StringComparison.Ordinal);
 
-    // Nothing was written, moved aside or seeded: the document did not become
-    // a new, empty one, and the bytes are still there to be repaired.
+    // No baseline, no journal, and the old file neither moved nor rewritten:
+    // the document did not become a new, empty one, and the bytes are still
+    // there to be repaired. The manifest IS written — Open publishes its fence
+    // bump before the import runs — so every refused open advances the fence.
     Assert.Equal(damaged, File.ReadAllBytes(LegacyPath));
     Assert.Empty(Directory.GetFiles(DocDirectory, "baseline.*"));
     Assert.Empty(Directory.GetFiles(DocDirectory, "journal.*"));

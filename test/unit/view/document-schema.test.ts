@@ -79,7 +79,7 @@ const block = {
   contentIds: [],
 } as never;
 
-const options = <D, C>(data: D, config?: C): BlockToolConstructorOptions<D, C> => ({
+const options = <D extends Record<string, unknown>, C extends Record<string, unknown>>(data: D, config?: C): BlockToolConstructorOptions<D, C> => ({
   data,
   config: (config ?? {}) as C,
   api,

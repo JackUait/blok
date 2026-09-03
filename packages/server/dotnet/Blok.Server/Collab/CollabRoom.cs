@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -52,6 +53,11 @@ internal sealed class CollabMembership
 /// it was LOCAL, and only those are recorded here (the seed and edit ops).
 /// Remote updates are appended and relayed by the receive path itself, which
 /// knows the sender.
+///
+/// With an <see cref="ICollabOperationStore"/> the room holds one fenced
+/// session for its whole life, and a v2 operation is journalled before anyone
+/// can see it. Without one the room relays and schedules a blob write exactly
+/// as it always did — the commit primitive runs only while a session is open.
 /// </summary>
 internal sealed class CollabRoom : IDisposable
 {
@@ -76,6 +82,10 @@ internal sealed class CollabRoom : IDisposable
   private readonly ITimer evictionTimer;
   private readonly ITimer persistTimer;
 
+  // What the last LOCAL transaction emitted, waiting for its caller to decide
+  // when it becomes observable.
+  private readonly List<byte[]> localUpdates = [];
+
   private RoomState state = RoomState.New;
   // Replaced by load-or-seed before the room turns Ready; a tag without a
   // lineage is never persisted and never announced.
@@ -84,6 +94,7 @@ internal sealed class CollabRoom : IDisposable
       0,
       CollabWorkingSetTag.NoLineage);
   private YDoc? doc;
+  private ICollabOperationSession? session;
   private int frameCount;
 
   // Bytes of the full-state frame the last in-room compaction left at the
@@ -155,10 +166,24 @@ internal sealed class CollabRoom : IDisposable
     Closed,
   }
 
+  /// <summary>
+  /// Why a load produced no Ready room. Unavailable is "come back later" — the
+  /// document is held by another process — and carries no error because
+  /// nothing went wrong.
+  /// </summary>
+  private readonly record struct LoadFailure(bool Unavailable, Exception? Error);
+
   /// <summary>Raised inside the lane, exactly once, when the room stops serving.</summary>
   internal event Action<CollabRoom>? Closed;
 
   internal string DocId { get; }
+
+  /// <summary>
+  /// True when the room stopped because an append failed or its outcome could
+  /// not be determined. Read by the manager when <see cref="Closed"/> fires, to
+  /// hold the document off until the store has had time to recover.
+  /// </summary>
+  internal bool CommitUnavailable { get; private set; }
 
   /// <summary>Null when the room has already closed — the caller should retry on a fresh room.</summary>
   internal Task<CollabJoinResult?> JoinAsync(
@@ -175,13 +200,16 @@ internal sealed class CollabRoom : IDisposable
 
           if (state == RoomState.New)
           {
-            var failure = await TryLoadLocked();
-
-            if (failure is not null)
+            if (await TryLoadLocked() is { } failure)
             {
-              CloseLocked(null);
+              await CloseRoomLocked(null);
 
-              return new CollabJoinResult(CollabJoinStatus.SeedFailed, null, failure);
+              return new CollabJoinResult(
+                  failure.Unavailable
+                    ? CollabJoinStatus.Unavailable
+                    : CollabJoinStatus.SeedFailed,
+                  null,
+                  failure.Error);
             }
           }
 
@@ -223,14 +251,12 @@ internal sealed class CollabRoom : IDisposable
     ArgumentNullException.ThrowIfNull(frame);
 
     return new ValueTask(RunAsync(
-        () =>
+        async () =>
         {
           if (state == RoomState.Ready && members.Contains(membership))
           {
-            ReceiveLocked(membership, frame);
+            await ReceiveLocked(membership, frame);
           }
-
-          return Task.CompletedTask;
         },
         cancellationToken));
   }
@@ -278,15 +304,19 @@ internal sealed class CollabRoom : IDisposable
 
           if (state == RoomState.New)
           {
-            var failure = await TryLoadLocked();
-
-            if (failure is not null)
+            if (await TryLoadLocked() is { } failure)
             {
-              CloseLocked(null);
+              await CloseRoomLocked(null);
 
-              return new CollabEditResult(CollabEditStatus.SeedFailed, failure);
+              return new CollabEditResult(
+                  failure.Unavailable
+                    ? CollabEditStatus.Unavailable
+                    : CollabEditStatus.SeedFailed,
+                  failure.Error);
             }
           }
+
+          localUpdates.Clear();
 
           try
           {
@@ -299,6 +329,10 @@ internal sealed class CollabRoom : IDisposable
           }
           finally
           {
+            // A refusal can come after some ops applied, and those are in the
+            // doc: relaying them is what keeps the members from diverging.
+            PublishLocalUpdatesLocked();
+
             // An edit is a path that can leave a Ready room with no members —
             // the room it just loaded to serve one HTTP request. Without this
             // the linger is never armed and the doc lives until the process
@@ -369,7 +403,7 @@ internal sealed class CollabRoom : IDisposable
           // lifetime and the close follows regardless.
           cancellationToken.ThrowIfCancellationRequested();
           await store.ResetAsync(DocId, next, lifetime.Token);
-          CloseLocked(CollabCloseReason.Reset);
+          await CloseRoomLocked(CollabCloseReason.Reset);
 
           return next;
         },
@@ -401,7 +435,7 @@ internal sealed class CollabRoom : IDisposable
 
           if (state != RoomState.Closed)
           {
-            CloseLocked(CollabCloseReason.Draining);
+            await CloseRoomLocked(CollabCloseReason.Draining);
           }
         },
         CancellationToken.None);
@@ -491,8 +525,8 @@ internal sealed class CollabRoom : IDisposable
     }
   }
 
-  /// <summary>Load-or-seed. Returns the failure instead of throwing so the join can report SeedFailed.</summary>
-  private async Task<Exception?> TryLoadLocked()
+  /// <summary>Load-or-seed. Returns the failure instead of throwing so the join can report it.</summary>
+  private async Task<LoadFailure?> TryLoadLocked()
   {
     try
     {
@@ -500,6 +534,26 @@ internal sealed class CollabRoom : IDisposable
       // replicas sharing an id would corrupt the doc.
       doc = new YDoc();
       doc.UpdateEmitted += OnLocalUpdate;
+
+      if (operationStore is not null)
+      {
+        var open = await operationStore.OpenAsync(DocId, lifetime.Token);
+
+        if (open.Session is null)
+        {
+          // One process per document: the join is refused rather than made to
+          // wait for a fence this process may never get.
+          log?.Invoke($"collab: document \"{DocId}\" is open in another process");
+
+          return new LoadFailure(Unavailable: true, null);
+        }
+
+        session = open.Session;
+        await LoadFromJournalLocked();
+        state = RoomState.Ready;
+
+        return null;
+      }
 
       var stored = await store.ReadAsync(DocId, lifetime.Token);
 
@@ -545,8 +599,93 @@ internal sealed class CollabRoom : IDisposable
     {
       log?.Invoke($"collab: room \"{DocId}\" could not load: {error.Message}");
 
-      return error;
+      return new LoadFailure(Unavailable: false, error);
     }
+  }
+
+  /// <summary>
+  /// Committed data only: the baseline, then the checkpoint covering every
+  /// operation through its sequence, then the tail that came after it. A
+  /// document with no head has never been seeded, and seeding it is what mints
+  /// its lineage.
+  /// </summary>
+  private async Task LoadFromJournalLocked()
+  {
+    var opened = session!.OpenResult;
+
+    if (opened.Head is null)
+    {
+      await SeedJournalLocked();
+
+      return;
+    }
+
+    tag = new CollabWorkingSetTag(
+        opened.Head.Format,
+        opened.Head.Epoch,
+        opened.Head.Lineage);
+    HydrateCommittedLocked(opened.Baseline);
+
+    if (opened.Checkpoint is { } checkpoint)
+    {
+      HydrateCommittedLocked([checkpoint.State]);
+    }
+
+    HydrateCommittedLocked(
+        [.. opened.Tail.Select(record => record.Update)]);
+  }
+
+  private void HydrateCommittedLocked(IReadOnlyList<ReadOnlyMemory<byte>> updates)
+  {
+    foreach (var update in updates)
+    {
+      var bytes = update.ToArray();
+
+      if (!ApplyRemoteLocked(bytes))
+      {
+        throw new InvalidDataException(
+            $"collab: committed data for \"{DocId}\" could not be applied.");
+      }
+
+      AppendLocked(bytes);
+    }
+  }
+
+  /// <summary>
+  /// A document the journal has never held. The doc endpoint's JSON becomes the
+  /// sequence-zero baseline under a fresh lineage, and the reset is awaited:
+  /// a seed the journal did not take must fail the join rather than serve a
+  /// history nothing recorded.
+  /// </summary>
+  private async Task SeedJournalLocked()
+  {
+    var loaded = await endpoint.LoadAsync(DocId, lifetime.Token);
+    version = loaded.Version;
+    localUpdates.Clear();
+
+    if (loaded.Data is not null)
+    {
+      converter.Seed(doc!, loaded.Data);
+    }
+
+    var baseline = new List<ReadOnlyMemory<byte>>();
+
+    foreach (var update in localUpdates)
+    {
+      AppendLocked(update);
+      baseline.Add(update);
+    }
+
+    localUpdates.Clear();
+
+    var head = await session!.ResetAsync(
+        new CollabOperationReset(
+            CollabWorkingSetTag.SchemaV2,
+            Epoch: 0,
+            CollabWorkingSetTag.NewLineage(),
+            baseline),
+        lifetime.Token);
+    tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
   }
 
   private void HydrateLocked(byte[] storedFrames)
@@ -589,27 +728,44 @@ internal sealed class CollabRoom : IDisposable
     // A null document is the endpoint's "nothing saved yet": an empty doc
     // with an empty log, which re-seeds on the next open. Never seed empty
     // on a failure — that path throws out of LoadAsync.
+    localUpdates.Clear();
+
     if (loaded.Data is not null)
     {
       converter.Seed(doc!, loaded.Data);
     }
+
+    PublishLocalUpdatesLocked();
 
     // Awaited on purpose: a seed that cannot be written must fail the join
     // closed rather than serve a doc the store has never seen.
     await PersistLocked(lifetime.Token);
   }
 
+  /// <summary>
+  /// Captures what a LOCAL transaction produced; its caller decides when that
+  /// becomes observable, which is what lets a journal-backed path commit
+  /// first. A remote update is appended and relayed by the receive path, which
+  /// knows who sent it; echoing it here would send it back to its own author.
+  /// </summary>
   private void OnLocalUpdate(YUpdateEvent updateEvent)
   {
-    // A remote update is appended and relayed by the receive path, which knows
-    // who sent it; echoing it here would send it back to its own author.
-    if (!updateEvent.Local)
+    if (updateEvent.Local)
     {
-      return;
+      localUpdates.Add(updateEvent.Update);
+    }
+  }
+
+  /// <summary>Appends and relays everything the last local transaction emitted.</summary>
+  private void PublishLocalUpdatesLocked()
+  {
+    foreach (var update in localUpdates)
+    {
+      AppendLocked(update);
+      BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(update)), null);
     }
 
-    AppendLocked(updateEvent.Update);
-    BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(updateEvent.Update)), null);
+    localUpdates.Clear();
   }
 
   /// <summary>
@@ -795,7 +951,7 @@ internal sealed class CollabRoom : IDisposable
     baseFrameLength = frameSection.Length;
   }
 
-  private void ReceiveLocked(CollabMembership membership, byte[] frame)
+  private async Task ReceiveLocked(CollabMembership membership, byte[] frame)
   {
     if (!SyncWire.TryDecode(frame, out var message, out var error))
     {
@@ -814,6 +970,9 @@ internal sealed class CollabRoom : IDisposable
         break;
       case SyncUpdateFrame update:
         ApplyFromMemberLocked(membership, update.Update);
+        break;
+      case OperationFrame operation:
+        await CommitFromMemberLocked(membership, operation);
         break;
       case AwarenessFrame awareness:
         RelayAwarenessLocked(membership, awareness);
@@ -900,6 +1059,186 @@ internal sealed class CollabRoom : IDisposable
 
     Send(membership, SyncWire.Encode(new SyncStep2Frame(diff)));
     Send(membership, SyncWire.Encode(new SyncStep1Frame(stateVector)));
+  }
+
+  /// <summary>
+  /// A v2 operation. Settle the id, apply provisionally, journal it INSIDE the
+  /// lane, and only then let anyone see it: no broadcast, no acknowledgement,
+  /// no export and no checkpoint may precede the append returning.
+  /// </summary>
+  private async Task CommitFromMemberLocked(
+      CollabMembership membership,
+      OperationFrame operation)
+  {
+    if (session is null)
+    {
+      // No journal to commit to. v2 is never negotiated against such a room,
+      // so this is a frame no client of this room should have sent.
+      log?.Invoke(
+          $"collab: room \"{DocId}\" dropped an operation frame; it has no operation store");
+
+      return;
+    }
+
+    if (!membership.Member.CanWrite)
+    {
+      RejectLocked(membership, operation, "read-only");
+
+      return;
+    }
+
+    // Ahead of the lookup: FindCommittedAsync answers for the CURRENT lineage
+    // only, so an operation naming an older one would read as uncommitted and
+    // be journalled into a history it never belonged to.
+    if (!string.Equals(operation.Lineage, tag.Lineage, StringComparison.Ordinal))
+    {
+      RejectLocked(membership, operation, "lineage-mismatch");
+
+      return;
+    }
+
+    var digest = SHA256.HashData(operation.Update);
+    CollabOperationLookup committed;
+
+    try
+    {
+      committed = await session.FindCommittedAsync(
+          operation.OperationId,
+          digest,
+          lifetime.Token);
+    }
+    catch (Exception error)
+    {
+      // Nothing was applied, but a store that cannot answer cannot commit
+      // either; serving on would mean accepting writes it can never journal.
+      await FailCommitLocked("look up an operation id", error);
+
+      return;
+    }
+
+    switch (committed.Outcome)
+    {
+      case CollabOperationLookupOutcome.Duplicate:
+        // A retry of work that is already durable: the bytes are applied and
+        // were relayed when they landed, so only the lost receipt is re-sent.
+        AcknowledgeLocked(membership, operation, committed.ServerSequence);
+
+        return;
+
+      case CollabOperationLookupOutcome.Conflict:
+        // THIS is why the lookup precedes the apply. Learning it from the
+        // append would leave the document holding bytes the journal refuses,
+        // whose only cure is discarding the room — so any writer could close
+        // the room for everyone by re-sending one id with different bytes.
+        RejectLocked(membership, operation, "operation-id-conflict");
+
+        return;
+
+      default:
+        break;
+    }
+
+    if (!ApplyRemoteLocked(operation.Update))
+    {
+      RejectLocked(membership, operation, "invalid-update");
+
+      return;
+    }
+
+    CollabOperationAppendResult appended;
+
+    try
+    {
+      // Bounded, and by OUR token: a store may only report a cancellation the
+      // caller asked for, and this is one. The room is inside its lane for the
+      // whole wait, so a slow store backpressures this document.
+      using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+      using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
+          lifetime.Token,
+          deadline.Token);
+
+      appended = await session.AppendAsync(
+          new CollabOperationCandidate(
+              operation.OperationId,
+              membership.Member.ActorId,
+              membership.Member.ProtocolSource,
+              operation.Update,
+              digest),
+          bounded.Token);
+    }
+    catch (Exception error)
+    {
+      // Including a timeout: the write may still land, so the outcome is
+      // unknown rather than failed, and both are handled the same way.
+      await FailCommitLocked("journal an operation", error);
+
+      return;
+    }
+
+    if (appended.Outcome == CollabOperationAppendOutcome.Conflict)
+    {
+      // The lookup reported this id free and the append does not. The document
+      // is already mutated by bytes that will never be journalled.
+      await FailCommitLocked(
+          "journal an operation",
+          new InvalidOperationException(
+              $"collab: the store refused operation \"{operation.OperationId}\" as a " +
+              "conflict after reporting it uncommitted."));
+
+      return;
+    }
+
+    AppendLocked(operation.Update);
+
+    // The submitter included: on v2 the relayed update is how a writer sees
+    // what the server accepted, and the acknowledgement follows it.
+    BroadcastLocked(SyncWire.Encode(new SyncUpdateFrame(operation.Update)), null);
+    AcknowledgeLocked(membership, operation, appended.ServerSequence);
+    CompactIfOversizedLocked();
+    SchedulePersistLocked();
+    MarkDirtyLocked();
+  }
+
+  private void AcknowledgeLocked(
+      CollabMembership membership,
+      OperationFrame operation,
+      ulong serverSequence)
+  {
+    Send(membership, SyncWire.Encode(new AcknowledgementFrame(
+        tag.Lineage,
+        operation.OperationId,
+        serverSequence)));
+  }
+
+  /// <summary>
+  /// The refusal carries the lineage the client named, not the room's: on a
+  /// lineage mismatch those differ, and the client matches the answer to the
+  /// row it sent.
+  /// </summary>
+  private void RejectLocked(
+      CollabMembership membership,
+      OperationFrame operation,
+      string code)
+  {
+    log?.Invoke(
+        $"collab: room \"{DocId}\" refused operation \"{operation.OperationId}\": {code}");
+    Send(membership, SyncWire.Encode(new RejectionFrame(
+        operation.Lineage,
+        operation.OperationId,
+        code)));
+  }
+
+  /// <summary>
+  /// A commit that failed, or that may have landed without saying so. The
+  /// document now holds bytes the journal may not, so the room stops here: it
+  /// closes every member with the retryable close and discards itself, and a
+  /// fresh room reloads committed data only.
+  /// </summary>
+  private async Task FailCommitLocked(string what, Exception error)
+  {
+    log?.Invoke($"collab: room \"{DocId}\" could not {what}, closing: {error.Message}");
+    CommitUnavailable = true;
+    await CloseRoomLocked(CollabCloseReason.CommitUnavailable);
   }
 
   private void ApplyFromMemberLocked(CollabMembership membership, byte[] update)
@@ -1156,7 +1495,7 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    CloseLocked(null);
+    await CloseRoomLocked(null);
   }
 
   /// <summary>
@@ -1224,6 +1563,32 @@ internal sealed class CollabRoom : IDisposable
     {
       log?.Invoke($"collab: room \"{DocId}\" could not export during flush: {error.Message}");
     }
+  }
+
+  /// <summary>
+  /// Releases the fence with the room: a session left open keeps the document
+  /// locked to a process that has stopped serving it. Disposed first, and
+  /// never while one of its calls is in flight — every caller here has awaited
+  /// its own, the failure path included.
+  /// </summary>
+  private async Task CloseRoomLocked(CollabCloseReason? reason)
+  {
+    if (session is { } closing)
+    {
+      session = null;
+
+      try
+      {
+        await closing.DisposeAsync();
+      }
+      catch (Exception error)
+      {
+        log?.Invoke(
+            $"collab: room \"{DocId}\" could not release its operation session: {error.Message}");
+      }
+    }
+
+    CloseLocked(reason);
   }
 
   private void CloseLocked(CollabCloseReason? reason)

@@ -57,6 +57,7 @@ internal sealed class CollabRoomManager : ICollabRoomManager
   private const int MaxJoinAttempts = 16;
 
   private readonly Dictionary<string, CollabRoom> rooms = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, CommitCooldown> cooldowns = new(StringComparer.Ordinal);
   private readonly ICollabWorkingSetStore store;
   private readonly ICollabOperationStore? operationStore;
   private readonly IDocEndpointClient endpoint;
@@ -114,6 +115,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       if (draining)
       {
         return new CollabJoinResult(CollabJoinStatus.Draining, null, null);
+      }
+
+      if (InCommitCooldown(docId))
+      {
+        return new CollabJoinResult(CollabJoinStatus.Unavailable, null, null);
       }
 
       var room = RoomFor(docId);
@@ -181,6 +187,11 @@ internal sealed class CollabRoomManager : ICollabRoomManager
         return new CollabEditResult(CollabEditStatus.Draining, null);
       }
 
+      if (InCommitCooldown(docId))
+      {
+        return new CollabEditResult(CollabEditStatus.Unavailable, null);
+      }
+
       var room = RoomFor(docId);
       var result = await room.EditAsync(ops, cancellationToken);
 
@@ -195,6 +206,9 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     throw new InvalidOperationException(
         $"collab: the room for \"{docId}\" kept closing during an edit.");
   }
+
+  /// <summary>Consecutive commit failures for one document, and when it may be loaded again.</summary>
+  private sealed record CommitCooldown(int Failures, DateTimeOffset Until);
 
   /// <summary>Plan decision 19: refuse new joins, flush every room (blob + export), close members 1001.</summary>
   public async ValueTask DrainAsync(CancellationToken cancellationToken = default)
@@ -269,8 +283,42 @@ internal sealed class CollabRoomManager : ICollabRoomManager
     }
   }
 
+  /// <summary>
+  /// A document whose commit failed is refused for a doubling wait. Without it
+  /// every reconnect through the outage would reload that document's baseline
+  /// and tail from the store that is already in trouble.
+  /// </summary>
+  private bool InCommitCooldown(string docId)
+  {
+    lock (rooms)
+    {
+      return cooldowns.TryGetValue(docId, out var cooldown) &&
+          timeProvider.GetUtcNow() < cooldown.Until;
+    }
+  }
+
   private void OnRoomClosed(CollabRoom room)
   {
+    lock (rooms)
+    {
+      if (room.CommitUnavailable)
+      {
+        var failures = (cooldowns.TryGetValue(room.DocId, out var cooldown)
+            ? cooldown.Failures
+            : 0) + 1;
+
+        cooldowns[room.DocId] = new CommitCooldown(
+            failures,
+            timeProvider.GetUtcNow() + options.Backoff(failures));
+      }
+      else
+      {
+        // The room served and closed for an ordinary reason, so the store is
+        // no longer the problem: the next failure starts its wait over.
+        cooldowns.Remove(room.DocId);
+      }
+    }
+
     Forget(room);
   }
 

@@ -147,7 +147,7 @@ export const buildStrykerArgs = ({ mode, mutate, testFiles, allowFull = false })
   if (mode === 'full') {
     if (!allowFull) {
       throw new Error(
-        'No mutation baseline: seed .mutation-state locally, or pass --full to sweep everything',
+        'No mutation baseline: run `yarn mutate:seed` and drain the queue, or pass --full',
       );
     }
 

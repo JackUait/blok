@@ -15,6 +15,16 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// document needs no storage, no outbound network access and no route.
   /// </summary>
   /// <param name="services">The service collection.</param>
+  /// <param name="poolSize">
+  /// How many documents may convert at once; further callers wait for a free
+  /// engine. Defaults to the processor count, capped at four.
+  /// </param>
+  /// <param name="timeout">
+  /// How long one conversion may run before it is abandoned. Defaults to ten
+  /// seconds. Raise it for a service that converts long documents: the embedded
+  /// runtime is an interpreter, so a conversion costs far more here than the
+  /// same code costs in a browser, and it grows with the document.
+  /// </param>
   /// <param name="warmUp">
   /// Build the converter at startup rather than on the first conversion.
   /// Building it parses the embedded bundle into every engine of its pool and
@@ -23,11 +33,15 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// rarely — a test host, for instance.
   /// </param>
   /// <returns>The same collection, for chaining.</returns>
-  public static IServiceCollection AddBlokDocuments(this IServiceCollection services, bool warmUp = true)
+  public static IServiceCollection AddBlokDocuments(
+      this IServiceCollection services,
+      int? poolSize = null,
+      TimeSpan? timeout = null,
+      bool warmUp = true)
   {
     ArgumentNullException.ThrowIfNull(services);
 
-    services.TryAddSingleton<IBlokRuntime>(static _ => JintBlokRuntime.FromEmbeddedResource());
+    services.TryAddSingleton<IBlokRuntime>(_ => JintBlokRuntime.FromEmbeddedResource(poolSize, timeout));
     services.TryAddSingleton<IBlokDocumentConverter, BlokDocumentConverter>();
 
     if (warmUp)

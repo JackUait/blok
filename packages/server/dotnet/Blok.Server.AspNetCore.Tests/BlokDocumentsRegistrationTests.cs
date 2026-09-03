@@ -83,6 +83,44 @@ public sealed class BlokDocumentsRegistrationTests
     Assert.True(built);
   }
 
+  /// <summary>
+  /// The embedded runtime is an interpreter, so a conversion costs far more
+  /// than the same code costs in a browser and grows with the document. A
+  /// service that stores long articles has to be able to say so; without this
+  /// its only options were the ten-second default or building the converter by
+  /// hand and losing the registration.
+  /// </summary>
+  [Fact]
+  public async Task TakesTheTimeoutTheCallerAsksFor()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokDocuments(poolSize: 1, timeout: TimeSpan.FromMinutes(2), warmUp: false);
+
+    using var provider = services.BuildServiceProvider();
+    var conversion = await provider.GetRequiredService<IBlokDocumentConverter>()
+        .ToMarkdownAsync("""{"blocks":[{"type":"paragraph","data":{"text":"Hi"}}]}""");
+
+    Assert.Equal("Hi", conversion.Markdown);
+  }
+
+  /// <summary>
+  /// A timeout under a second or so fails while the bundle is being loaded into
+  /// each engine, which is the honest place for it to fail — not later, on
+  /// somebody's document.
+  /// </summary>
+  [Fact]
+  public void RefusesATimeoutTooShortToLoadTheBundle()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokDocuments(poolSize: 1, timeout: TimeSpan.FromMilliseconds(1), warmUp: false);
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.ThrowsAny<Exception>(() => provider.GetRequiredService<IBlokDocumentConverter>());
+  }
+
   [Fact]
   public void SkipsTheWarmUpWhenItIsNotWanted()
   {

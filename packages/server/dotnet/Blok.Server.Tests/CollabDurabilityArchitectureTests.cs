@@ -48,6 +48,14 @@ public sealed class CollabDurabilityArchitectureTests
   /// every test, and a missing directory fsync is invisible without real power
   /// loss, which is the exact failure those laws exist to catch.
   /// </summary>
+  /// <remarks>
+  /// THIS IS A SOURCE-ORDER PRESENCE LAW, NOT AN EXECUTION-ORDER ONE. It cannot
+  /// require the steps to sit on one control-flow path, to be unconditional, to
+  /// take the arguments they should, or that no early return sits between them:
+  /// <c>WriteSealed(…); if (fastPath) return; SyncDirectory(d); Republish(n);</c>
+  /// is green while the acknowledged path never syncs. It closes what it was
+  /// asked to close — a deleted call site — and nothing beyond that.
+  /// </remarks>
   private static readonly (string Method, string[] InOrder)[] PublicationOrders =
   [
     ("WriteCheckpointAsync", ["WriteSealed", "SyncDirectory", "Republish"]),
@@ -59,13 +67,21 @@ public sealed class CollabDurabilityArchitectureTests
   /// fence-guarded.
   /// </summary>
   /// <remarks>
-  /// EXEMPTIONS CARRY REASONS, AND THE REASONS ARE CHECKED. This list is where
-  /// this law has already failed once: <c>ResetAsync</c> sat here as
-  /// <c>NeedsFence: false</c> under "nothing references it yet", which was
-  /// false — it truncated a journal a new holder had published and acknowledged
-  /// operations into. An exemption list without written reasons is where the
-  /// next hole hides, so an empty justification on an exempt entry is itself a
-  /// failure (see <see cref="EveryExemptionCarriesAReason"/>).
+  /// <para>
+  /// EVERY EXEMPTION MUST STATE A REASON, AND WHAT IS MECHANICALLY CHECKABLE IN
+  /// IT MUST BE CHECKED. This list is where this law has already failed twice:
+  /// <c>ResetAsync</c> sat here as <c>NeedsFence: false</c> under "nothing
+  /// references it yet", which was false — it truncated a journal a new holder
+  /// had published and acknowledged operations into; and <c>TryDelete</c>'s
+  /// reason rested on it having exactly one caller, which nothing verified.
+  /// </para>
+  /// <para>
+  /// So: <see cref="EveryExemptionCarriesAReason"/> fails an exempt entry with
+  /// no reason at all, and <see cref="TheOnlyDeleterHasOneScopedCallSite"/>
+  /// pins the half of <c>TryDelete</c>'s reason a second call site would break.
+  /// What stays prose — that the sweep's own filter is correct — is read, not
+  /// checked, and the store's tests cover it instead.
+  /// </para>
   /// </remarks>
   private static readonly (string Method, bool NeedsFence, string Reason)[] Shortenings =
   [
@@ -78,8 +94,10 @@ public sealed class CollabDurabilityArchitectureTests
     (
       "TryDelete",
       false,
-      "The only File.Delete in the store, and its one caller sweeps only names " +
-      "ending in its own fence, so a session can collect nothing but its own " +
+      "The only File.Delete in the store. It has exactly one call site — pinned " +
+      "by TheOnlyDeleterHasOneScopedCallSite, because a second, unscoped one " +
+      "would leave every law here green — and that caller sweeps only names " +
+      "ending in its own fence, so a session collects nothing but its own " +
       "superseded checkpoints."),
     (
       "WriteSealed",
@@ -207,6 +225,60 @@ public sealed class CollabDurabilityArchitectureTests
         """));
 
     Assert.Contains("WriteCheckpointAsync", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void TheOnlyDeleterHasOneScopedCallSite()
+  {
+    var source = ReadStore();
+    var callers = Parse(source)
+        .DescendantNodes()
+        .OfType<InvocationExpressionSyntax>()
+        .Where(invocation => NameOf(invocation) == "TryDelete")
+        .Select(invocation =>
+            invocation.FirstAncestorOrSelf<MethodDeclarationSyntax>()?.Identifier.ValueText
+            ?? "<no method>")
+        .ToList();
+
+    // TryDelete is exempt from the fence guard BECAUSE of who calls it. A
+    // second call site would make that reason false while every law here — and
+    // every test — stayed green, which is exactly how the last two holes in
+    // this list survived.
+    Assert.Equal(["WriteCheckpointAsync"], callers);
+  }
+
+  [Fact]
+  public void DetectsAnUnguardedDeleteInAFenceRequiringMethod()
+  {
+    var violation = Assert.Single(FindTruncationViolations(
+        """
+        class Session
+        {
+          void ResetAsync()
+          {
+            File.Delete(BaselinePath(dir, generation, fence));
+            RequireFence();
+          }
+        }
+        """));
+
+    Assert.Contains("Delete", violation, StringComparison.Ordinal);
+  }
+
+  [Fact]
+  public void AcceptsAGuardedDelete()
+  {
+    Assert.Empty(FindTruncationViolations(
+        """
+        class Session
+        {
+          void ResetAsync()
+          {
+            RequireFence();
+            File.Delete(BaselinePath(dir, generation, fence));
+          }
+        }
+        """));
   }
 
   [Fact]
@@ -475,6 +547,23 @@ public sealed class CollabDurabilityArchitectureTests
   }
 
   [Fact]
+  public void DetectsAFenceCheckThatIsNotTheStatementBefore()
+  {
+    Assert.Single(FindTruncationViolations(
+        """
+        class Session
+        {
+          void RollBack(long length)
+          {
+            RequireFence();
+            log("about to roll back");
+            journal.SetLength(length);
+          }
+        }
+        """));
+  }
+
+  [Fact]
   public void DetectsATruncationInAMethodThatMayNotTruncate()
   {
     var violation = Assert.Single(FindTruncationViolations(
@@ -569,7 +658,10 @@ public sealed class CollabDurabilityArchitectureTests
         .Where(invocation => NameOf(invocation) is "SetLength" or "Delete")
         .Select(invocation => (
             Node: (SyntaxNode)invocation,
-            Truncates: NameOf(invocation) == "SetLength"))
+            Operation: NameOf(invocation)!,
+
+            // A call site is somewhere a fence check can stand.
+            Guardable: true))
         .Concat(root.DescendantNodes()
             .OfType<MemberAccessExpressionSyntax>()
             .Where(access =>
@@ -578,9 +670,12 @@ public sealed class CollabDurabilityArchitectureTests
 
                 // A pattern TESTS a mode, it does not open anything with it.
                 access.FirstAncestorOrSelf<PatternSyntax>() is null)
-            .Select(access => (Node: (SyntaxNode)access, Truncates: false)));
+            .Select(access => (
+                Node: (SyntaxNode)access,
+                Operation: $"FileMode.{access.Name.Identifier.ValueText}",
+                Guardable: false)));
 
-    foreach (var (node, isSetLength) in shortenings)
+    foreach (var (node, operation, guardable) in shortenings)
     {
       var owner = node.FirstAncestorOrSelf<MethodDeclarationSyntax>();
       var name = owner?.Identifier.ValueText ?? "<no method>";
@@ -588,32 +683,49 @@ public sealed class CollabDurabilityArchitectureTests
       if (!allowed.TryGetValue(name, out var needsFence))
       {
         violations.Add(
-            $"{name} shortens a file, which only " +
+            $"{name} destroys data ({operation}), which only " +
             $"{string.Join(", ", allowed.Keys)} may do.");
 
         continue;
       }
 
-      // Only a SetLength is checked for a guard: a FileMode is an argument, and
-      // what makes those safe is the name it opens, not a check in front of it.
-      if (!needsFence || !isSetLength)
+      // A FileMode is an ARGUMENT, not a call site: what makes those safe is
+      // the name it opens, and there is nowhere in front of it for a check to
+      // stand. Every actual operation — SetLength and Delete alike — must be
+      // guarded in a method that needs the fence. Delete was once excluded here
+      // along with the FileModes, which left an unguarded delete of the live
+      // published baseline legal inside ResetAsync.
+      if (!needsFence || !guardable)
       {
         continue;
       }
 
-      var guarded = Block(node) is { } block &&
-          block.DescendantNodes()
-              .OfType<InvocationExpressionSyntax>()
-              .Any(call =>
-                  NameOf(call)?.Contains("Fence", StringComparison.Ordinal) == true &&
-                  Block(call) == block &&
-                  call.SpanStart < node.SpanStart);
+      // IMMEDIATELY before, not merely somewhere earlier in the block. A
+      // method's entry check sits in that block too, and "the fence held when
+      // this method started" is exactly the check-then-act that a stall
+      // invalidates — the reason ResetAsync's collision had to be removed by
+      // naming rather than narrowed by a guard. All three real call sites put
+      // the confirmation on the preceding line, so nothing is lost by saying so.
+      var statement = node.FirstAncestorOrSelf<StatementSyntax>();
+      var block = statement?.Parent as BlockSyntax;
+      var index = statement is null || block is null
+        ? -1
+        : block.Statements.IndexOf(statement);
+      // And the confirmation must BE that statement, not merely sit somewhere
+      // inside it: a fence check tucked into a conditional is one the operation
+      // can be reached without.
+      var guarded = index > 0 &&
+          block!.Statements[index - 1] is ExpressionStatementSyntax
+          {
+            Expression: InvocationExpressionSyntax confirmation,
+          } &&
+          NameOf(confirmation)?.Contains("Fence", StringComparison.Ordinal) == true;
 
       if (!guarded)
       {
         violations.Add(
-            $"{name} must confirm the fence in the same block, before its " +
-            "SetLength.");
+            $"{name} must confirm the fence in the statement immediately " +
+            $"before its {operation}.");
       }
     }
 

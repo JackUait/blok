@@ -9,9 +9,12 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
-// Source bytes per run. The first four measured files came to ~60 bytes per
-// mutant at ~0.6 s each, so this is roughly a thousand mutants, ten minutes.
-const DEFAULT_BUDGET = 60000;
+// Source bytes per run, sized so one CI batch stays near ten minutes. Two real
+// runs put a mutant at 60-83 source bytes, but the seconds per mutant ranged
+// from 0.6 to 2.5 depending on how many tests cover the module, so this is cut
+// for the slow end. Seeding locally should raise it: every batch pays for a dry
+// run, and there the wall clock is nobody's runner slot.
+const DEFAULT_BUDGET = 20000;
 const SOURCE_PREFIX = 'src/';
 const TEST_PREFIX = 'test/unit/';
 const TEST_SUFFIX = /\.test\.tsx?$/;

@@ -1612,9 +1612,15 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
-  /// The same bytes twice. The second copy teaches the document nothing, so it
-  /// is not journalled again — and neither send answers the sender, which is
-  /// what "journalled, no receipt" means on the wire.
+  /// The same bytes twice, as a SyncUpdate and then a SyncStep2. The document
+  /// converges and the sender is answered on NEITHER send — that is what
+  /// "journalled, no receipt" means on the wire.
+  ///
+  /// The journal takes both copies, under two ids. Recognising the second as
+  /// redundant would mean deciding "the document already held this", and the
+  /// cheap way to decide it — did the state vector move — is what swallowed
+  /// deletions, whose state vector never moves. Two identical rows is the
+  /// price of the safe direction; the second one replays as a no-op.
   /// </summary>
   [Fact]
   public async Task V1DuplicateStateConvergesButHasNoClientReceipt()
@@ -1633,9 +1639,17 @@ public sealed class CollabRoomTests
     await membership.ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(update)), CancellationToken.None);
     await membership.ReceiveAsync(SyncWire.Encode(new SyncStep2Frame(update)), CancellationToken.None);
 
-    Assert.Single(operations.Committed(DocId));
     Assert.Empty(stock.Received);
-    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+
+    var committed = operations.Committed(DocId);
+
+    Assert.Equal(2, committed.Count);
+    Assert.All(committed, record => Assert.Equal(update, record.Update.ToArray()));
+    Assert.NotEqual(committed[0].OperationId, committed[1].OperationId);
+    Assert.All(
+        other.Received,
+        frame => Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(frame).Update));
+    Assert.Equal(2, other.Received.Count);
     Assert.Equal("hello!", await ExportedTextAsync(manager));
   }
 
@@ -1666,6 +1680,47 @@ public sealed class CollabRoomTests
     Assert.Empty(stock.Received);
     Assert.Empty(other.Received);
     Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The other fundamental edit shape, and the one no test in this file could
+  /// produce until now. A Yjs deletion creates NO structs: it marks existing
+  /// items deleted and names them in the delete set, so the room's state
+  /// vector is byte-identical across it. A skip keyed on the state vector
+  /// therefore swallows every backspace a v1 client sends — unrelayed, so the
+  /// other tabs keep showing the deleted text, and unjournalled, so the next
+  /// load resurrects it and the export PUTs the resurrection back to the
+  /// consumer's own endpoint.
+  /// </summary>
+  [Fact]
+  public async Task AV1DeletionIsJournalledAndRelayed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, stock);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var deletion = YDocs.UpdateDeleting(client, 4, 1);
+    var stateVectorBefore = await ServerStateVectorAsync(manager, client);
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(deletion)),
+        CancellationToken.None);
+
+    var record = Assert.Single(operations.Committed(DocId));
+    Assert.Equal(deletion, record.Update.ToArray());
+    Assert.Equal(CollabOperationSource.ClientV1, record.Source);
+    Assert.Equal(deletion, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
+    Assert.Empty(stock.Received);
+
+    // The mechanism the test exists for, asserted rather than described: the
+    // room's own state vector did not move across a deletion it applied.
+    Assert.Equal(stateVectorBefore, await ServerStateVectorAsync(manager, client));
+    Assert.Equal("hell", await ExportedTextAsync(manager));
   }
 
   /// <summary>

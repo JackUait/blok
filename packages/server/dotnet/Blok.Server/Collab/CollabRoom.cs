@@ -658,7 +658,7 @@ internal sealed class CollabRoom : IDisposable
     {
       var bytes = update.ToArray();
 
-      if (!ApplyRemoteLocked(bytes))
+      if (ApplyRemoteLocked(bytes) is null)
       {
         throw new InvalidDataException(
             $"collab: committed data for \"{DocId}\" could not be applied.");
@@ -715,7 +715,7 @@ internal sealed class CollabRoom : IDisposable
 
     foreach (var frame in frames)
     {
-      if (!ApplyRemoteLocked(frame))
+      if (ApplyRemoteLocked(frame) is null)
       {
         throw new InvalidDataException(
             $"collab: a stored update for \"{DocId}\" could not be applied.");
@@ -788,9 +788,11 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// The pre-apply screen and the apply. Only Malformed and TooDeep are
   /// refused, and refusing is a log-and-DROP with no close; a NUL-bearing
-  /// update is applied like any other (Locked Decision 9).
+  /// update is applied like any other (Locked Decision 9). Answers the
+  /// decoded update on success — the caller needs to know WHAT it carried,
+  /// and this is where it was parsed — or null when nothing was applied.
   /// </summary>
-  private bool ApplyRemoteLocked(byte[] update)
+  private DecodedUpdate? ApplyRemoteLocked(byte[] update)
   {
     var inspection = UpdateInspector.Inspect(update);
 
@@ -799,18 +801,20 @@ internal sealed class CollabRoom : IDisposable
       log?.Invoke(
           $"collab: room \"{DocId}\" dropped an update it could not read: {inspection.Reason}");
 
-      return false;
+      return null;
     }
 
     try
     {
-      return doc!.ApplyUpdate(inspection.Decoded).Outcome == ApplyOutcome.Applied;
+      return doc!.ApplyUpdate(inspection.Decoded).Outcome == ApplyOutcome.Applied
+        ? inspection.Decoded
+        : null;
     }
     catch (Exception error)
     {
       log?.Invoke($"collab: room \"{DocId}\" dropped an update it could not apply: {error.Message}");
 
-      return false;
+      return null;
     }
   }
 
@@ -1175,7 +1179,7 @@ internal sealed class CollabRoom : IDisposable
         break;
     }
 
-    if (!ApplyRemoteLocked(operation.Update))
+    if (ApplyRemoteLocked(operation.Update) is null)
     {
       RejectLocked(membership, operation, "invalid-update");
 
@@ -1327,7 +1331,7 @@ internal sealed class CollabRoom : IDisposable
     // on one: it relays straight off the apply.
     if (session is null)
     {
-      if (ApplyRemoteLocked(update))
+      if (ApplyRemoteLocked(update) is not null)
       {
         PublishFromMemberLocked(membership, update);
       }
@@ -1335,21 +1339,24 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    var before = doc!.EncodeStateVector();
-
-    if (!ApplyRemoteLocked(update))
+    if (ApplyRemoteLocked(update) is not { } applied)
     {
       return;
     }
 
-    // A stock client already in sync answers SyncStep1 with the diff against
-    // the server's state vector, which is two bytes of nothing; journalling
-    // that would write one no-op operation per idle reconnect into a history
-    // nothing prunes. The pending term is the safety half: an update that
-    // arrives before the one it depends on parks without moving the state
-    // vector, and dropping it here would leave the document holding bytes the
-    // journal never gets.
-    if (!doc.HasPending && doc.EncodeStateVector().AsSpan().SequenceEqual(before))
+    // Skipped only when the update CARRIES nothing: no structs, no deletions.
+    // A stock client already in sync answers SyncStep1 with exactly that, two
+    // bytes, and journalling it would write one no-op operation per idle
+    // reconnect into a history nothing prunes.
+    //
+    // Never weaken this to "the state vector did not move". A DELETION
+    // creates no structs — it marks existing items deleted and names them in
+    // the delete set — so the state vector is byte-identical across every
+    // backspace; and an update that arrives before the one it depends on
+    // parks without moving it either. Either would then be dropped from the
+    // journal AND from the relay while already applied to the live document,
+    // which resurrects it on the next load.
+    if (applied.Structs.Count == 0 && applied.DeleteSet.IsEmpty)
     {
       return;
     }

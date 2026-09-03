@@ -643,6 +643,20 @@ internal static class YDocs
         throw new InvalidOperationException("no update was emitted");
   }
 
+  /// <summary>
+  /// The other fundamental edit shape. A deletion creates NO structs — it
+  /// marks existing items deleted and names them in the delete set — so the
+  /// state vector is byte-identical across it. Nothing else in this harness
+  /// produces one, which is how a skip keyed on the state vector went unseen.
+  /// </summary>
+  internal static byte[] UpdateDeleting(YDoc doc, int index, int length)
+  {
+    var text = doc.GetText("content");
+
+    return doc.Transact(transaction => text.Delete(transaction, index, length)) ??
+        throw new InvalidOperationException("no update was emitted");
+  }
+
   internal static byte[] StateVector(YDoc doc)
   {
     return doc.EncodeStateVector();

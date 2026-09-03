@@ -390,6 +390,68 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
   }
 
   [Fact]
+  public async Task ResetNamesItsFilesAfterTheFenceThatMintedThem()
+  {
+    // Two holders compute the same generation, so the generation alone is not a
+    // unique name. The fence is: a session that stalls inside ResetAsync and is
+    // judged dead resumes to write files nobody references, instead of
+    // overwriting the baseline the new holder published and truncating the
+    // journal it has already acknowledged operations into.
+    await using (var first = await OpenAsync())
+    {
+      await first.ResetAsync(Reset(1, CollabWorkingSetTag.NewLineage()));
+      await first.AppendAsync(Candidate(OperationId(1), [0x01]));
+    }
+
+    var mintedByTheFirstOpen = JournalPath(1);
+
+    await using (var second = await OpenAsync())
+    {
+      await second.ResetAsync(Reset(2, CollabWorkingSetTag.NewLineage()));
+      await second.AppendAsync(Candidate(OperationId(2), [0x02]));
+
+      // Same generation for a third reset, a different fence, a different name.
+      await second.ResetAsync(Reset(3, CollabWorkingSetTag.NewLineage()));
+    }
+
+    var names = Directory
+        .GetFiles(DocDirectory, "journal.*")
+        .Select(Path.GetFileName)
+        .ToArray();
+    Assert.Equal(names.Length, names.Distinct(StringComparer.Ordinal).Count());
+    Assert.Contains(
+        Path.GetFileName(mintedByTheFirstOpen),
+        names,
+        StringComparer.Ordinal);
+
+    // Every generation the second session minted carries ITS fence, not the
+    // first session's.
+    Assert.All(
+        Directory.GetFiles(DocDirectory, "journal.2.*"),
+        path => Assert.EndsWith(
+            ".2",
+            Path.GetFileName(path),
+            StringComparison.Ordinal));
+
+    await using var reopened = await OpenAsync();
+    Assert.Equal(3L, reopened.OpenResult.Head!.Epoch);
+    Assert.Equal(0ul, reopened.OpenResult.Head.DurableThrough);
+  }
+
+  [Fact]
+  public void RefusesAWireLimitTheRecordFormatCannotCarry()
+  {
+    // A misconfiguration must not wait until the first oversized append, where
+    // it surfaces from the encoder and reads like a data problem.
+    Assert.Throws<ArgumentOutOfRangeException>(
+        () => new LocalCollabOperationStore(root, 33L * 1024 * 1024));
+    Assert.Throws<ArgumentOutOfRangeException>(
+        () => new LocalCollabOperationStore(root, 0));
+
+    Assert.NotNull(new LocalCollabOperationStore(root, 32L * 1024 * 1024));
+  }
+
+  [Fact]
   public async Task MissingJournalFileFailsClosed()
   {
     await using (var session = await OpenAsync())
@@ -398,7 +460,8 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
       await session.AppendAsync(Candidate(OperationId(1), [0x01]));
     }
 
-    File.Delete(JournalPath(1));
+    var journalPath = JournalPath(1);
+    File.Delete(journalPath);
 
     // Opening it OpenOrCreate would RECREATE it empty, and an empty lineage is
     // indistinguishable from a fresh one: the store would reassign sequence 1
@@ -408,7 +471,7 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
         async () => await new LocalCollabOperationStore(root, log: logs.Add)
             .OpenAsync(DocId, CancellationToken.None));
     Assert.Contains("journal.1", failure.Message, StringComparison.Ordinal);
-    Assert.False(File.Exists(JournalPath(1)));
+    Assert.False(File.Exists(journalPath));
 
     // The refusal released its hold, so the retry reports the same loss.
     await Assert.ThrowsAsync<InvalidDataException>(
@@ -721,11 +784,15 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
 
   private string LockPath => Path.Combine(DocDirectory, "lock");
 
+  /// <summary>
+  /// Resolved by generation, because the rest of the name is the fence that
+  /// minted it — the thing that stops two holders writing one file.
+  /// </summary>
   private string JournalPath(int generation)
   {
-    return Path.Combine(
+    return Assert.Single(Directory.GetFiles(
         DocDirectory,
-        string.Create(CultureInfo.InvariantCulture, $"journal.{generation}"));
+        string.Create(CultureInfo.InvariantCulture, $"journal.{generation}.*")));
   }
 
   private async Task<ICollabOperationSession> OpenAsync()

@@ -76,7 +76,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   // open(2) O_RDONLY; the same value on Linux and macOS.
   private const int ReadOnlyFlags = 0;
 
-  private const byte ManifestVersion = 1;
+  private const byte ManifestVersion = 2;
   private const int ManifestSlotSize = 128;
   private const int ManifestSlotContentSize = 96;
   private const int ManifestSize = ManifestSlotSize * 2;
@@ -197,23 +197,29 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       {
         baseline = ReadBaseline(docDirectory, fenced, documentId);
 
-        var journalPath = JournalPath(docDirectory, fenced.Generation);
+        var journalPath = JournalPath(
+            docDirectory,
+            fenced.Generation,
+            fenced.GenerationFence);
 
-        if (!File.Exists(journalPath))
+        try
         {
-          // OpenOrCreate would CREATE it, turning "a file is missing, an
-          // operator would notice" into "an empty lineage, indistinguishable
-          // from a fresh one" — after which this store reassigns sequences that
-          // are already taken and answers NotCommitted for committed ids.
-          // ResetAsync always creates the journal BEFORE publishing the
-          // manifest that names it, so a manifest naming a journal that is not
-          // there can only mean the file was lost.
+          // FileMode.Open, never OpenOrCreate: creating it would turn "a file
+          // is missing, an operator would notice" into "an empty lineage,
+          // indistinguishable from a fresh one" — after which this store
+          // reassigns sequences that are already taken and answers NotCommitted
+          // for committed ids. Asking the OS to open-or-fail is atomic, where
+          // checking File.Exists first is not.
+          journal = OpenJournal(journalPath, FileMode.Open);
+        }
+        catch (Exception error)
+            when (error is FileNotFoundException or DirectoryNotFoundException)
+        {
           throw new InvalidDataException(
               $"collab: \"{documentId}\" names {Path.GetFileName(journalPath)}, " +
-              "which is not there.");
+              "which is not there.",
+              error);
         }
-
-        journal = OpenJournal(journalPath);
         records = ScanForward(
             journal,
             index,
@@ -271,25 +277,31 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     }
   }
 
-  private static string JournalPath(string docDirectory, ulong generation)
+  private static string JournalPath(string docDirectory, ulong generation, ulong mintedBy)
   {
     return Path.Combine(
         docDirectory,
-        string.Create(CultureInfo.InvariantCulture, $"journal.{generation}"));
+        string.Create(CultureInfo.InvariantCulture, $"journal.{generation}.{mintedBy}"));
   }
 
-  private static string BaselinePath(string docDirectory, ulong generation)
+  private static string BaselinePath(string docDirectory, ulong generation, ulong mintedBy)
   {
     return Path.Combine(
         docDirectory,
-        string.Create(CultureInfo.InvariantCulture, $"baseline.{generation}"));
+        string.Create(CultureInfo.InvariantCulture, $"baseline.{generation}.{mintedBy}"));
   }
 
-  private static string CheckpointPath(string docDirectory, ulong generation, ulong through)
+  private static string CheckpointPath(
+      string docDirectory,
+      ulong generation,
+      ulong through,
+      ulong writtenBy)
   {
     return Path.Combine(
         docDirectory,
-        string.Create(CultureInfo.InvariantCulture, $"checkpoint.{generation}.{through}"));
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"checkpoint.{generation}.{through}.{writtenBy}"));
   }
 
   private void EnsureDirectory(string docDirectory)
@@ -344,11 +356,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     return file;
   }
 
-  private static FileStream OpenJournal(string path)
+  private static FileStream OpenJournal(string path, FileMode mode)
   {
     return new FileStream(
         path,
-        CreateOptions(FileAccess.ReadWrite, FileMode.OpenOrCreate, FileShare.ReadWrite));
+        CreateOptions(FileAccess.ReadWrite, mode, FileShare.ReadWrite));
   }
 
   private static FileStreamOptions CreateOptions(
@@ -367,7 +379,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       BufferSize = 0,
     };
 
-    if (!OperatingSystem.IsWindows())
+    // Only for modes that can create: the runtime rejects UnixCreateMode on
+    // FileMode.Open, which the recovery path uses so a missing journal fails
+    // instead of being conjured empty.
+    if (!OperatingSystem.IsWindows() &&
+        mode is FileMode.CreateNew or FileMode.Create or FileMode.OpenOrCreate or FileMode.Append)
     {
       options.UnixCreateMode = PrivateFileMode;
     }
@@ -452,6 +468,8 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     BinaryPrimitives.WriteInt64LittleEndian(slot[36..], manifest.Epoch);
     Convert.FromHexString(manifest.Lineage).CopyTo(slot[44..]);
     BinaryPrimitives.WriteUInt64LittleEndian(slot[60..], manifest.CheckpointThrough);
+    BinaryPrimitives.WriteUInt64LittleEndian(slot[68..], manifest.GenerationFence);
+    BinaryPrimitives.WriteUInt64LittleEndian(slot[76..], manifest.CheckpointFence);
     SHA256.HashData(slot[..ManifestSlotContentSize], slot[ManifestSlotContentSize..]);
   }
 
@@ -480,7 +498,9 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         BinaryPrimitives.ReadInt32LittleEndian(slot[32..]),
         BinaryPrimitives.ReadInt64LittleEndian(slot[36..]),
         Convert.ToHexStringLower(slot.Slice(44, 16)),
-        BinaryPrimitives.ReadUInt64LittleEndian(slot[60..]));
+        BinaryPrimitives.ReadUInt64LittleEndian(slot[60..]),
+        BinaryPrimitives.ReadUInt64LittleEndian(slot[68..]),
+        BinaryPrimitives.ReadUInt64LittleEndian(slot[76..]));
 
     return true;
   }
@@ -588,7 +608,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       string documentId)
   {
     var content = ReadSealed(
-        BaselinePath(docDirectory, manifest.Generation),
+        BaselinePath(docDirectory, manifest.Generation, manifest.GenerationFence),
         BaselineMagic,
         documentId,
         out _);
@@ -608,7 +628,11 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       string documentId)
   {
     var state = ReadSealed(
-        CheckpointPath(docDirectory, manifest.Generation, manifest.CheckpointThrough),
+        CheckpointPath(
+            docDirectory,
+            manifest.Generation,
+            manifest.CheckpointThrough,
+            manifest.CheckpointFence),
         CheckpointMagic,
         documentId,
         out var through);
@@ -774,6 +798,15 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   }
 
   /// <summary>The manifest's published state; the fence lives here.</summary>
+  /// <param name="GenerationFence">
+  /// The fence held by the session that minted the current generation's
+  /// baseline and journal. It is part of their file NAMES, which is what stops
+  /// two holders from ever computing the same one — see the type's remarks.
+  /// </param>
+  /// <param name="CheckpointFence">
+  /// The fence held by the session that wrote the published checkpoint, for the
+  /// same reason.
+  /// </param>
   private readonly record struct Manifest(
       ulong WriteCounter,
       ulong Fence,
@@ -782,10 +815,12 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       int Format,
       long Epoch,
       string Lineage,
-      ulong CheckpointThrough)
+      ulong CheckpointThrough,
+      ulong GenerationFence,
+      ulong CheckpointFence)
   {
     internal static Manifest Unseeded { get; } =
-        new(0, 0, 0, false, 0, 0, new string('0', CollabWorkingSetTag.LineageLength), 0);
+        new(0, 0, 0, false, 0, 0, new string('0', CollabWorkingSetTag.LineageLength), 0, 0, 0);
   }
 
   private sealed class JournalIndex
@@ -975,10 +1010,22 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         return ValueTask.CompletedTask;
       }
 
-      var path = CheckpointPath(docDirectory, manifest.Generation, checkpoint.Through);
+      // The writing session's fence is in the NAME, so a session that stalls
+      // here and is judged dead cannot overwrite the checkpoint bytes the new
+      // holder published in the meantime — it writes a name nobody references
+      // and its Republish then throws on the fence.
+      var path = CheckpointPath(
+          docDirectory,
+          manifest.Generation,
+          checkpoint.Through,
+          manifest.Fence);
       WriteSealed(path, CheckpointMagic, checkpoint.Through, checkpoint.State.Span);
       SyncDirectory(docDirectory);
-      Republish(manifest with { CheckpointThrough = checkpoint.Through });
+      Republish(manifest with
+      {
+        CheckpointThrough = checkpoint.Through,
+        CheckpointFence = manifest.Fence,
+      });
 
       // Only after the publication that made the new checkpoint current: an
       // earlier sweep would delete the state the manifest still names.
@@ -1029,6 +1076,19 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
 
       var generation = manifest.Generation + 1;
 
+      // THE MINTING FENCE IS PART OF EVERY NAME THIS RESET WRITES, and that is
+      // the whole safety property here, not the checks around it. The generation
+      // alone is a name a NEW holder computes identically: a session that
+      // stalls after its entry fence check — a GC pause, or the stall that got
+      // it judged dead — would resume and overwrite the baseline the new holder
+      // had published and truncate the journal it had already acknowledged
+      // operations into. No check-then-act guard closes that, because the stall
+      // can happen after the check. Two holders never share a fence, so with
+      // the fence in the name they never share a file: a stale reset writes
+      // names nothing references, Republish throws, and what it left behind is
+      // collectable exactly like a crashed reset's orphans.
+      var mintedBy = manifest.Fence;
+
       using (var frames = new MemoryStream())
       {
         foreach (var frame in reset.Baseline)
@@ -1044,7 +1104,7 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         }
 
         WriteSealed(
-            BaselinePath(docDirectory, generation),
+            BaselinePath(docDirectory, generation, mintedBy),
             BaselineMagic,
             0,
             frames.GetBuffer().AsSpan(0, (int)frames.Length));
@@ -1055,10 +1115,16 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       // would leave the session on the old lineage's index, and because the
       // duplicate check precedes the seeded check, it would then answer
       // Duplicate for ids belonging to a lineage that can never be replayed.
-      var swapped = OpenJournal(JournalPath(docDirectory, generation));
+      var swapped = OpenJournal(
+          JournalPath(docDirectory, generation, mintedBy),
+          FileMode.OpenOrCreate);
 
       try
       {
+        // Only ever this session's own abandoned earlier attempt at the same
+        // fence and generation, because the name carries both. The fence check
+        // is defence in depth, not the property being relied on.
+        RequireFence();
         swapped.SetLength(0);
         swapped.Flush(flushToDisk: true);
 
@@ -1069,6 +1135,8 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
         Republish(manifest with
         {
           Generation = generation,
+          GenerationFence = mintedBy,
+          CheckpointFence = 0,
           Seeded = true,
           Format = reset.Format,
           Epoch = reset.Epoch,
@@ -1128,8 +1196,13 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
     /// When the fence is gone, or the roll-back itself cannot be flushed, this
     /// session can no longer say what disk holds, so it stops answering at all:
     /// every later call throws and the caller reopens from committed data.
-    /// Leaving the bytes alone is safe either way — a torn tail is repaired by
-    /// whoever really holds the document.
+    /// Leaving the bytes alone is not free, and the trade is deliberate: a
+    /// TORN tail the real holder repairs on its own scan, but a COMPLETE,
+    /// checksum-valid record whose sequence duplicates one the new holder
+    /// assigned makes every later open fail closed on the contiguity check,
+    /// with no resynchronisation path and no operator tool. Intact bytes and a
+    /// loud failure still beat silently deleting a record somebody was told was
+    /// saved.
     /// </para>
     /// </remarks>
     private void RollBack(long length)
@@ -1143,8 +1216,12 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
       catch (Exception error)
           when (error is IOException or
               CollabOperationFenceLostException or
-              InvalidDataException)
+              InvalidDataException or
+              UnauthorizedAccessException)
       {
+        // UnauthorizedAccessException included because RequireFence reads the
+        // manifest: escaping here would replace the failure the caller is being
+        // told about AND leave the record in the journal with faulted unset.
         faulted = true;
       }
     }

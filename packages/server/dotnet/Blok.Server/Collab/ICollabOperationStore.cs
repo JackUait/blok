@@ -153,6 +153,16 @@ public interface ICollabOperationStore
   /// <see cref="CollabOperationOpenResult.Head"/>; the caller seeds it through
   /// <see cref="ICollabOperationSession.ResetAsync"/>.
   /// </para>
+  /// <para>
+  /// AN OPEN MAY ALSO LOSE THE FENCE IT JUST TOOK, and throw
+  /// <see cref="CollabOperationFenceLostException"/> rather than return either
+  /// outcome. Reading a document back is not instantaneous, and a store that
+  /// repairs anything while doing so must re-check the fence before it writes;
+  /// by then another process may have taken the document. Treat it as the
+  /// caller treats it anywhere else: this process is not the writer, so stop
+  /// and let the join fail. It is not a corrupt document and not a retryable
+  /// I/O error.
+  /// </para>
   /// </remarks>
   ValueTask<CollabDocumentOpen> OpenAsync(
       string documentId,

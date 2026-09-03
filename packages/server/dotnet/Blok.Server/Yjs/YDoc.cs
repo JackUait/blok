@@ -122,7 +122,7 @@ internal sealed class YDoc
     }
     catch (Lib0FormatException failure)
     {
-      return new ApplyResult(ApplyOutcome.Malformed, HasPending, failure.Message);
+      return new ApplyResult(ApplyOutcome.Malformed, HasPending, Changed: false, failure.Message);
     }
 
     return ApplyUpdate(decoded);
@@ -133,15 +133,25 @@ internal sealed class YDoc
   {
     ArgumentNullException.ThrowIfNull(update);
 
+    // Parking is measured by IDENTITY, not by size: ApplyDecoded assigns a
+    // fresh list or delete set whenever anything new parks, and a range that
+    // merges into one already parked would leave every count unmoved.
+    var parkedStructs = Store.PendingStructs;
+    var parkedDeletes = Store.PendingDs;
+
     Transact(
         transaction =>
         {
           transaction.Local = false;
           ApplyDecoded(transaction, Integrator.ToRuntimeStructs(update), update.DeleteSet);
         },
-        local: false);
+        local: false,
+        out var moved);
 
-    return new ApplyResult(ApplyOutcome.Applied, HasPending, null);
+    var parked = !ReferenceEquals(parkedStructs, Store.PendingStructs) ||
+        !ReferenceEquals(parkedDeletes, Store.PendingDs);
+
+    return new ApplyResult(ApplyOutcome.Applied, HasPending, moved || parked, null);
   }
 
   /// <summary>
@@ -207,11 +217,20 @@ internal sealed class YDoc
 
   private byte[]? Transact(Action<YTransaction> body, bool local)
   {
+    return Transact(body, local, out _);
+  }
+
+  private byte[]? Transact(Action<YTransaction> body, bool local, out bool moved)
+  {
     ArgumentNullException.ThrowIfNull(body);
 
     if (CurrentTransaction is { } open)
     {
       body(open);
+
+      // A nested run reports through the outermost transaction, which is the
+      // one that will be cleaned up and measured.
+      moved = false;
 
       return null;
     }
@@ -229,7 +248,43 @@ internal sealed class YDoc
       CurrentTransaction = null;
     }
 
-    return Cleanup(transaction);
+    var update = Cleanup(transaction);
+    moved = Moved(transaction);
+
+    return update;
+  }
+
+  /// <summary>
+  /// Whether the transaction moved the document: it integrated a struct, or
+  /// it deleted something that was not already deleted.
+  /// </summary>
+  /// <remarks>
+  /// This MUST agree with <see cref="UpdateV1Encoder.FromTransaction"/>'s
+  /// "nothing to emit" test — the two say the same thing, and a caller that
+  /// trusted one while the other drifted would relay an update the document
+  /// never made, or drop one it did. They are written apart because
+  /// <see cref="UpdateEncoder"/> is a swappable hook and this is not:
+  /// deriving the answer from whether that hook produced bytes would make
+  /// correctness depend on which encoder happens to be installed.
+  /// </remarks>
+  private static bool Moved(YTransaction transaction)
+  {
+    if (transaction.DeleteSet.Count != 0)
+    {
+      return true;
+    }
+
+    var after = transaction.AfterState ?? transaction.Doc.Store.GetStateVector();
+
+    foreach (var (client, clock) in after)
+    {
+      if (transaction.BeforeState.Get(client) != clock)
+      {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// <summary>

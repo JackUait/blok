@@ -789,10 +789,10 @@ internal sealed class CollabRoom : IDisposable
   /// The pre-apply screen and the apply. Only Malformed and TooDeep are
   /// refused, and refusing is a log-and-DROP with no close; a NUL-bearing
   /// update is applied like any other (Locked Decision 9). Answers the
-  /// decoded update on success — the caller needs to know WHAT it carried,
-  /// and this is where it was parsed — or null when nothing was applied.
+  /// engine's own account of what the apply did, or null when nothing was
+  /// applied.
   /// </summary>
-  private DecodedUpdate? ApplyRemoteLocked(byte[] update)
+  private ApplyResult? ApplyRemoteLocked(byte[] update)
   {
     var inspection = UpdateInspector.Inspect(update);
 
@@ -806,9 +806,9 @@ internal sealed class CollabRoom : IDisposable
 
     try
     {
-      return doc!.ApplyUpdate(inspection.Decoded).Outcome == ApplyOutcome.Applied
-        ? inspection.Decoded
-        : null;
+      var applied = doc!.ApplyUpdate(inspection.Decoded);
+
+      return applied.Outcome == ApplyOutcome.Applied ? applied : null;
     }
     catch (Exception error)
     {
@@ -1344,19 +1344,13 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    // Skipped only when the update CARRIES nothing: no structs, no deletions.
-    // A stock client already in sync answers SyncStep1 with exactly that, two
-    // bytes, and journalling it would write one no-op operation per idle
-    // reconnect into a history nothing prunes.
-    //
-    // Never weaken this to "the state vector did not move". A DELETION
-    // creates no structs — it marks existing items deleted and names them in
-    // the delete set — so the state vector is byte-identical across every
-    // backspace; and an update that arrives before the one it depends on
-    // parks without moving it either. Either would then be dropped from the
-    // journal AND from the relay while already applied to the live document,
-    // which resurrects it on the next load.
-    if (applied.Structs.Count == 0 && applied.DeleteSet.IsEmpty)
+    // The ENGINE decides this, never the bytes. An idle client answering
+    // SyncStep1 sends the document's whole deletion history back (yjs writes
+    // the delete set undiffed), so "it carries something" journals a no-op
+    // per reconnect that grows with the document; and "the state vector
+    // moved" is blind to deletions, which move no clock. Both were tried
+    // here, and both were wrong. See ApplyResult.Changed.
+    if (!applied.Changed)
     {
       return;
     }

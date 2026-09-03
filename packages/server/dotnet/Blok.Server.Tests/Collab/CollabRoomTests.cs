@@ -1613,14 +1613,9 @@ public sealed class CollabRoomTests
 
   /// <summary>
   /// The same bytes twice, as a SyncUpdate and then a SyncStep2. The document
-  /// converges and the sender is answered on NEITHER send — that is what
-  /// "journalled, no receipt" means on the wire.
-  ///
-  /// The journal takes both copies, under two ids. Recognising the second as
-  /// redundant would mean deciding "the document already held this", and the
-  /// cheap way to decide it — did the state vector move — is what swallowed
-  /// deletions, whose state vector never moves. Two identical rows is the
-  /// price of the safe direction; the second one replays as a no-op.
+  /// converges, the sender is answered on NEITHER send — that is what
+  /// "journalled, no receipt" means on the wire — and the journal takes one
+  /// row, because the engine integrates nothing the second time and says so.
   /// </summary>
   [Fact]
   public async Task V1DuplicateStateConvergesButHasNoClientReceipt()
@@ -1641,26 +1636,28 @@ public sealed class CollabRoomTests
 
     Assert.Empty(stock.Received);
 
-    var committed = operations.Committed(DocId);
+    var record = Assert.Single(operations.Committed(DocId));
 
-    Assert.Equal(2, committed.Count);
-    Assert.All(committed, record => Assert.Equal(update, record.Update.ToArray()));
-    Assert.NotEqual(committed[0].OperationId, committed[1].OperationId);
-    Assert.All(
-        other.Received,
-        frame => Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(frame).Update));
-    Assert.Equal(2, other.Received.Count);
+    Assert.Equal(update, record.Update.ToArray());
+    Assert.Equal(update, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
     Assert.Equal("hello!", await ExportedTextAsync(manager));
   }
 
   /// <summary>
-  /// A stock client already in sync answers SyncStep1 with the diff against
-  /// the server's state vector, which is two bytes of nothing. Journalling
-  /// that would write one no-op operation per idle reconnect into a history
-  /// this plan never prunes.
+  /// What an already-synced client actually answers SyncStep1 with, on a
+  /// document that has been edited the way documents are.
+  ///
+  /// On a pristine document that answer is two bytes of nothing, which is the
+  /// shape the requirement was written around. It stops being two bytes the
+  /// moment anything is deleted: yjs writes the delete set WHOLE, never
+  /// diffed against the target (<c>writeDeleteSet(createDeleteSetFromStructStore)</c>,
+  /// mirrored by this engine's <c>EncodeStateAsUpdate</c>), so the answer
+  /// carries the document's entire deletion history and grows with it. A skip
+  /// keyed on the bytes therefore journals one no-op per idle reconnect on
+  /// every document that has ever seen a backspace — which is every real one.
   /// </summary>
   [Fact]
-  public async Task AnEmptyV1UpdateIsNotJournalled()
+  public async Task AnIdleV1ResyncIsNotJournalledEvenWithDeletionHistory()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateJournalManager();
@@ -1668,18 +1665,60 @@ public sealed class CollabRoomTests
     var other = new FakeMember();
     var membership = await Join(manager, stock);
     await Join(manager, other);
-    var client = await SyncedClientAsync(manager, "hello");
-    var empty = client.EncodeStateAsUpdate(await ServerStateVectorAsync(manager, client));
-    Assert.Equal(new byte[] { 0, 0 }, empty);
+    var pristine = await SyncedClientAsync(manager, "hello");
+    var twoBytes = pristine.EncodeStateAsUpdate(await ServerStateVectorAsync(manager, pristine));
+    Assert.Equal(new byte[] { 0, 0 }, twoBytes);
     stock.Received.Clear();
     other.Received.Clear();
 
-    await membership.ReceiveAsync(SyncWire.Encode(new SyncStep2Frame(empty)), CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep2Frame(twoBytes)),
+        CancellationToken.None);
 
     Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(other.Received);
+
+    // Now give the document deletion history and re-sync from scratch.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateDeleting(pristine, 4, 1))),
+        CancellationToken.None);
+    var synced = await SyncedClientAsync(manager, "hell");
+    var answer = synced.EncodeStateAsUpdate(await ServerStateVectorAsync(manager, synced));
+
+    // The whole point: an in-sync answer is NOT the two-byte shape here.
+    Assert.True(answer.Length > 2, $"expected a carried delete set, got {answer.Length} bytes");
+
+    // Let the export the DELETION legitimately earned land first, or the
+    // absence measured below is just that PUT arriving late.
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+    await Waits.UntilAsync(() => endpoint.Saves.Count > 0, "the export the deletion earned");
+
+    var committed = operations.Committed(DocId).Count;
+    var frames = store.FramesOf(DocId).Count;
+    var saves = endpoint.Saves.Count;
+    stock.Received.Clear();
+    other.Received.Clear();
+
+    // Three idle reconnects, the way a flaky connection produces them.
+    for (var reconnect = 0; reconnect < 3; reconnect++)
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new SyncStep2Frame(answer)),
+          CancellationToken.None);
+    }
+
+    Assert.Equal(committed, operations.Committed(DocId).Count);
     Assert.Empty(stock.Received);
     Assert.Empty(other.Received);
-    Assert.Equal("hello", await ExportedTextAsync(manager));
+    Assert.Equal("hell", await ExportedTextAsync(manager));
+
+    // No working-set frame and no PUT of unchanged content back to the
+    // consumer's own document endpoint.
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+    Assert.Equal(frames, store.FramesOf(DocId).Count);
+    Assert.Equal(saves, endpoint.Saves.Count);
   }
 
   /// <summary>
@@ -1717,8 +1756,10 @@ public sealed class CollabRoomTests
     Assert.Equal(deletion, Assert.IsType<SyncUpdateFrame>(Assert.Single(other.Received)).Update);
     Assert.Empty(stock.Received);
 
-    // The mechanism the test exists for, asserted rather than described: the
-    // room's own state vector did not move across a deletion it applied.
+    // Documentation, NOT a guard: this holds whether the room journals the
+    // deletion or drops it, and the journal assertion above fails first
+    // either way. It is here so the next person who reaches for a
+    // state-vector test reads the reason it cannot work.
     Assert.Equal(stateVectorBefore, await ServerStateVectorAsync(manager, client));
     Assert.Equal("hell", await ExportedTextAsync(manager));
   }

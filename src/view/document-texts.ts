@@ -46,6 +46,11 @@ const PROSE_FIELDS: Record<string, string[]> = {
   bookmark: ['title', 'description'],
   /** Legacy `toggleList` names its heading `title`; the current `toggle` uses `text`. */
   toggleList: ['title'],
+  /**
+   * Legacy only: a current callout holds no text of its own, so this field is
+   * present exactly when the document predates children-by-reference.
+   */
+  callout: ['title'],
 };
 
 /** Types whose LEGACY data nests item text in `data.items[]`. Current list blocks are flat. */
@@ -169,6 +174,16 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
   };
 
   /**
+   * Walk one legacy column's blocks.
+   * @param column - raw entry from a `data.cols` array
+   */
+  const walkColumn = (column: unknown): void => {
+    if (isRecord(column) && Array.isArray(column.blocks)) {
+      column.blocks.forEach(walkBlock);
+    }
+  };
+
+  /**
    * Walk one block entry. Entries that are not shaped like a block yield
    * nothing and stay untouched.
    * @param entry - raw block entry
@@ -198,6 +213,11 @@ const collectSlots = (blocks: unknown[], options: DocumentTextsOptions): TextSlo
 
     if (LEGACY_BODY_TYPES.has(entry.type) && isRecord(data.body) && Array.isArray(data.body.blocks)) {
       data.body.blocks.forEach(walkBlock);
+    }
+
+    /** `type: 'columns'` is legacy-only — the columns tool writes `column_list`/`column`. */
+    if (entry.type === 'columns' && Array.isArray(data.cols)) {
+      data.cols.forEach(walkColumn);
     }
   };
 

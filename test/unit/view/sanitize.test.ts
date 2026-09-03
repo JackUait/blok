@@ -228,6 +228,38 @@ describe('view sanitizeHtmlFragment', () => {
     });
   });
 
+  describe('markup-free fields skip the parser', () => {
+    const nbsp = String.fromCharCode(160);
+
+    it.each([
+      ['ascii prose', 'ordinary article text'],
+      ['cyrillic prose', 'обычный текст статьи'],
+      ['a tab', `tab${String.fromCharCode(9)}here`],
+      ['a form feed', `a${String.fromCharCode(12)}b`],
+      ['an astral emoji', 'emoji \u{1F389}'],
+      ['a lone surrogate', `x${String.fromCharCode(0xd800)}y`],
+      ['quotes and apostrophes', `she said "hi" and it's fine`],
+    ])('returns %s unchanged', (_label, input) => {
+      expect(sanitizeHtmlFragment(input, { b: {} })).toBe(input);
+    });
+
+    /**
+     * The six characters the fast path must never claim. Each one changes under
+     * a parse-and-serialize round trip, so skipping the parser for a field
+     * holding one would silently emit different markup than the sanitizer.
+     */
+    it.each([
+      ['<', 'a < b', 'a &lt; b'],
+      ['>', 'a > b', 'a &gt; b'],
+      ['&', 'a & b', 'a &amp; b'],
+      ['a no-break space', `a${nbsp}b`, 'a&nbsp;b'],
+      ['a carriage return', `cr${String.fromCharCode(13)}here`, 'cr\nhere'],
+      ['a NUL', `nul${String.fromCharCode(0)}here`, 'nulhere'],
+    ])('still normalizes %s', (_label, input, expected) => {
+      expect(sanitizeHtmlFragment(input, { b: {} })).toBe(expected);
+    });
+  });
+
   describe('PLAINTEXT sentinel', () => {
     it('returns entity-escaped text when the whole config is PLAINTEXT', () => {
       const result = sanitizeHtmlFragment('<b>a & b</b> "q" \'s\'', PLAINTEXT);

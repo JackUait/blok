@@ -179,10 +179,16 @@ public sealed class JintBlokRuntimeTests
   /// running slowly. Sized at 600 KB deliberately — well past where the old
   /// shape died — so the limit is proven to scale with the document rather than
   /// merely to have been nudged.
+  ///
+  /// <para>blocksToHtml was left out when that was fixed and failed for its own
+  /// reason: it sanitized every inline field, and sanitizing parses the fragment
+  /// twice — once for a &lt;div&gt; parse context rebuilt per call. A field with no
+  /// markup now skips the parser entirely, so every reader here is covered.</para>
   /// </summary>
   [Theory]
   [InlineData("blocksToPlainText")]
   [InlineData("blocksToMarkdown")]
+  [InlineData("blocksToHtml")]
   public async Task ConvertsALongArticleWithoutExhaustingTheMemoryLimit(string operation)
   {
     var runtime = JintBlokRuntime.FromEmbeddedResource(poolSize: 1, timeout: TimeSpan.FromMinutes(5));

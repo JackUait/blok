@@ -732,6 +732,31 @@ const normalizeInlineMarkupFragment = (fragment: P5ParentNode): void => {
 };
 
 /**
+ * The characters a parse-and-serialize round trip can change: `<`, `>` and `&`
+ * come back escaped, U+00A0 comes back as `&nbsp;`, a CR becomes a newline and
+ * a NUL is dropped. A fragment holding none of them serializes to exactly what
+ * went in, so it is returned unparsed. Nothing else may be added here — a tab,
+ * a form feed, a lone surrogate and an astral emoji all survive the round trip
+ * unchanged and must keep taking the fast path.
+ *
+ * This is most fields of a prose document, and parse5 is a character-by-
+ * character tokenizer: the server package runs this on an interpreter, where
+ * one skipped parse per field is the difference between a long article
+ * rendering and exhausting the runtime's memory budget.
+ * @param html - fragment markup
+ */
+const needsSanitizing = (html: string): boolean => /[<>&\r\u0000\u00A0]/.test(html);
+
+/**
+ * The <div> every fragment is parsed in, to match the DOM pipeline (janitor
+ * parses into a detached <div>); parse5's default context is <template>, which
+ * treats table fragments differently. parse5 only reads the context element, so
+ * one is built once and shared — building it per call parses a second fragment
+ * for every inline field in the document.
+ */
+const DIV_CONTEXT = parseFragment('<div></div>').childNodes[0] as P5Element;
+
+/**
  * Sanitize an HTML fragment string against a {@link SanitizerConfig},
  * DOM-free. When the config is the {@link PLAINTEXT} sentinel the input is
  * treated as literal text and returned entity-escaped.
@@ -748,12 +773,11 @@ export const sanitizeHtmlFragment = (
     return escapeHtml(html);
   }
 
-  /**
-   * Parse in a <div> context to match the DOM pipeline (janitor parses into a
-   * detached <div>); parse5's default context is <template>, which treats
-   * table fragments differently.
-   */
-  const contextElement = parseFragment('<div></div>').childNodes[0] as P5Element;
+  if (html === '' || !needsSanitizing(html)) {
+    return html;
+  }
+
+  const contextElement = DIV_CONTEXT;
   /**
    * Retried on the input parse5 refuses outright: two adjacent low surrogates
    * make it throw, and one such field must not cost the whole document. See

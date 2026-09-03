@@ -201,6 +201,9 @@ const BARE_CONTAINER_TOOLS = new Set(['database', 'database-row']);
  */
 const SELF_STAMPING_TOOLS = new Set(['header', 'divider', 'code']);
 
+/** One rendering unit of a sibling run: a block, or a grouped run of `list` blocks. */
+type Segment = { kind: 'block'; block: ViewBlock } | { kind: 'list'; run: ViewBlock[] };
+
 /**
  * Insert a `name="value"` attribute onto the first opening tag of
  * Blok-generated markup. Operates only on our own emitter output (which always
@@ -426,30 +429,42 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
   };
 
   /**
-   * End index (exclusive) of the consecutive `list` run starting at `from`.
+   * A sibling run split into what renders as one unit: a single block, or a
+   * group of consecutive `list` blocks that share one nested <ul>/<ol>.
    * @param blocks - sibling run
-   * @param from - index of the first list block
    */
-  const listRunEnd = (blocks: ViewBlock[], from: number): number => {
-    return from < blocks.length && blocks[from].type === 'list' ? listRunEnd(blocks, from + 1) : from;
+  const segmentsOf = (blocks: ViewBlock[]): Segment[] => {
+    return blocks.reduce<Segment[]>((segments, block) => {
+      const grouped = block.type === 'list' && renderers.list === undefined;
+      const last = segments[segments.length - 1];
+
+      if (grouped && last?.kind === 'list') {
+        last.run.push(block);
+
+        return segments;
+      }
+
+      segments.push(grouped ? { kind: 'list', run: [block] } : { kind: 'block', block });
+
+      return segments;
+    }, []);
   };
 
   /**
-   * Render siblings from an index on; consecutive list blocks group into one
-   * nested <ul>/<ol> run (unless a custom renderer owns `list`).
+   * Render a sibling run, joined once at the end. Appending each block onto the
+   * markup that follows it re-allocates the whole remainder per block, which is
+   * quadratic — and grouping list runs by recursing down the siblings puts one
+   * frame on the stack per block. A 600 KB article did neither: it allocated
+   * past the server runtime's per-conversion memory limit and failed outright.
    * @param blocks - sibling run
-   * @param from - index to render from
    */
-  const renderFrom = (blocks: ViewBlock[], from: number): string => {
-    if (from >= blocks.length) {
-      return '';
-    }
+  const renderList = (blocks: ViewBlock[]): string => {
+    return segmentsOf(blocks).map((segment) => {
+      if (segment.kind === 'block') {
+        return renderGuarded(segment.block);
+      }
 
-    const block = blocks[from];
-
-    if (block.type === 'list' && renderers.list === undefined) {
-      const end = listRunEnd(blocks, from);
-      const run = blocks.slice(from, end).filter((item) => item.id === undefined || !active.has(item.id));
+      const run = segment.run.filter((item) => item.id === undefined || !active.has(item.id));
       const listHtml = renderListRun(run, env);
 
       /**
@@ -458,17 +473,9 @@ export const createHtmlRenderer = (model: DocumentModel, options: BlocksToHtmlOp
        * and break one-to-one pairing against the editor's flat item blocks.
        * Without parity the legacy run-level hook is preserved unchanged.
        */
-      const stampedRun = toolAttributes && !classes
-        ? stampAttr(listHtml, 'data-blok-tool', 'list')
-        : listHtml;
-
-      return stampedRun + renderFrom(blocks, end);
-    }
-
-    return renderGuarded(block) + renderFrom(blocks, from + 1);
+      return toolAttributes && !classes ? stampAttr(listHtml, 'data-blok-tool', 'list') : listHtml;
+    }).join('');
   };
-
-  const renderList = (blocks: ViewBlock[]): string => renderFrom(blocks, 0);
 
   return {
     renderTopLevel: () => renderList(model.topLevel),

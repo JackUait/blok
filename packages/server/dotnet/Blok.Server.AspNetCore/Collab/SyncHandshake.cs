@@ -238,6 +238,11 @@ internal sealed class SyncHandshake(
   /// starts life as <c>addr:&lt;ip&gt;</c> before a verified ticket overwrites
   /// it), so it is a capacity key, not a verified identity, and must never
   /// end up in durable history.
+  ///
+  /// Checks NameIdentifier before Name — deliberately the opposite order from
+  /// <see cref="SignedInPrincipal"/> below. A display name can be changed by
+  /// the user it names; a stable id cannot, and a durable actor record must
+  /// keep naming the same person as that name changes.
   /// </summary>
   internal static string? DeriveActor(string ticketUser, ClaimsPrincipal principal)
   {

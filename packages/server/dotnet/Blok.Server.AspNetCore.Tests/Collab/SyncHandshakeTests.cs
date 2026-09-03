@@ -542,6 +542,23 @@ public sealed class SyncHandshakeTests
     Assert.NotEqual(accepted.Principal, accepted.ActorId);
   }
 
+  // DeriveActor checks NameIdentifier before Name on purpose (see the comment on
+  // DeriveActor) — the opposite of SignedInPrincipal two methods below. No other
+  // test can tell the two orders apart, since none gives a principal both claims
+  // with different values.
+  [Fact]
+  public void NameIdentifierWinsOverNameWhenAPrincipalCarriesBoth()
+  {
+    var identity = new ClaimsIdentity(
+        [
+          new Claim(ClaimTypes.NameIdentifier, "stable-id"),
+          new Claim(ClaimTypes.Name, "Display Name"),
+        ],
+        "test");
+
+    Assert.Equal("stable-id", SyncHandshake.DeriveActor("", new ClaimsPrincipal(identity)));
+  }
+
   private BlokServerOptions TicketOptions()
   {
     return new BlokServerOptions

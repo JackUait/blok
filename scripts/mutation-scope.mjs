@@ -109,6 +109,11 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles }) => {
   const mutate = [];
   const tests = new Set();
   const knownTests = new Set(testFiles);
+  // A test that mirrors its own source is spoken for, and must not be lent to an
+  // unrelated source that merely shares a file name.
+  const claimedTests = new Set(
+    sourceFiles.flatMap((file) => mirrorTestsOf(file).filter((candidate) => knownTests.has(candidate))),
+  );
 
   for (const source of [...candidates].sort()) {
     const mirrored = mirrorTestsOf(source).find((candidate) => knownTests.has(candidate));
@@ -119,7 +124,9 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles }) => {
       continue;
     }
 
-    const matches = testsByStem.get(stemOf(source)) ?? [];
+    const matches = (testsByStem.get(stemOf(source)) ?? []).filter(
+      (candidate) => !claimedTests.has(candidate),
+    );
 
     if (matches.length === 0) {
       skipped.push({ file: source, reason: 'no-test' });

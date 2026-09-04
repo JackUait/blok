@@ -128,6 +128,42 @@ describe('mutation-scope', () => {
       expect(scope.skipped).toEqual([]);
     });
 
+    // A test that mirrors its own source is spoken for. Letting an unrelated
+    // same-named source borrow it measured the wrong module 26 times in the
+    // first baseline: one `types.test.ts` was claimed by eight different
+    // `types.ts`, and the 1033-line keyboard CONTROLLER was scored against the
+    // 60-line keyboard UTIL's test, which is why it came back 99% survived.
+    it('skips a source whose only same-named test belongs to another source', () => {
+      const scope = buildScope({
+        changedPaths: ['src/modules/controllers/keyboard.ts'],
+        sourceFiles: [
+          'src/modules/controllers/keyboard.ts',
+          'src/utils/keyboard.ts',
+        ],
+        testFiles: ['test/unit/utils/keyboard.test.ts'],
+      });
+
+      expect(scope.mutate).toEqual([]);
+      expect(scope.skipped).toEqual([
+        { file: 'src/modules/controllers/keyboard.ts', reason: 'no-test' },
+      ]);
+    });
+
+    // The source that owns the test still gets it.
+    it('still pairs the source the borrowed test actually mirrors', () => {
+      const scope = buildScope({
+        changedPaths: ['src/utils/keyboard.ts'],
+        sourceFiles: [
+          'src/modules/controllers/keyboard.ts',
+          'src/utils/keyboard.ts',
+        ],
+        testFiles: ['test/unit/utils/keyboard.test.ts'],
+      });
+
+      expect(scope.mutate).toEqual(['src/utils/keyboard.ts']);
+      expect(scope.testFiles).toEqual(['test/unit/utils/keyboard.test.ts']);
+    });
+
     // Guessing between same-named tests in unrelated directories is how a run
     // silently measures the wrong module.
     it('skips a source with several same-named tests and no mirrored one', () => {

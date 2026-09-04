@@ -107,3 +107,6 @@ override-extension/payload/
 
 # Stryker mutation state: incremental baseline, survivor ledger and reports
 .mutation-state/
+# The published baseline, unpacked into the directory above by the workflow and
+# written here again on every seed. Six megabytes nobody should commit.
+mutation-state.tar.gz

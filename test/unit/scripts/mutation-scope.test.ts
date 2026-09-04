@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildImporterIndex,
   buildScope,
   buildStrykerArgs,
   checkRatchet,
@@ -71,7 +72,129 @@ describe('mutation-scope', () => {
     });
   });
 
+  describe('buildImporterIndex', () => {
+    const read = (files: Record<string, string>) => (path: string): string => files[path] ?? '';
+
+    it('maps a source to the test that imports it by relative path', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/sanitize.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/sanitize.test.ts': "import { x } from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.get('src/view/sanitize.ts')).toEqual(['test/unit/view/sanitize.test.ts']);
+    });
+
+    // The whole point: one source is protected by several suites, and measuring
+    // it against only the mirrored one reported 205 survivors where 141 were
+    // real — a third of them killed by tests the run never loaded.
+    it('collects every test that imports the same source', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/a.test.ts', 'test/unit/view/b.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/a.test.ts': "import { x } from '../../../src/view/sanitize';",
+          'test/unit/view/b.test.ts': "import { y } from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.get('src/view/sanitize.ts')).toEqual([
+        'test/unit/view/a.test.ts',
+        'test/unit/view/b.test.ts',
+      ]);
+    });
+
+    it('resolves a directory import to its index file', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/tools/table.test.ts'],
+        sourceFiles: ['src/tools/table/index.ts'],
+        readFile: read({
+          'test/unit/tools/table.test.ts': "import T from '../../../src/tools/table';",
+        }),
+      });
+
+      expect(index.get('src/tools/table/index.ts')).toEqual(['test/unit/tools/table.test.ts']);
+    });
+
+    it('resolves the package aliases the test suite imports core through', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/blok.test.ts'],
+        sourceFiles: ['src/blok.ts'],
+        readFile: read({
+          'test/unit/blok.test.ts': "import Blok from '@bloklabs/core';",
+        }),
+      });
+
+      expect(index.get('src/blok.ts')).toEqual(['test/unit/blok.test.ts']);
+    });
+
+    it('leaves a source no test imports out of the index', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/a.test.ts'],
+        sourceFiles: ['src/lonely.ts'],
+        readFile: read({ 'test/unit/a.test.ts': "import { x } from './helpers';" }),
+      });
+
+      expect(index.has('src/lonely.ts')).toBe(false);
+    });
+  });
+
   describe('buildScope', () => {
+    // Pairing by path measured a file against one of its suites and ignored the
+    // rest. Every test that imports the source is protecting it, so every one of
+    // them has to run, or a mutant its sibling suite kills reads as a survivor.
+    it('runs every test that imports the changed source', () => {
+      const scope = buildScope({
+        changedPaths: ['src/view/sanitize.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        testFiles: [
+          'test/unit/view/sanitize.test.ts',
+          'test/unit/view/sanitize.parity.test.ts',
+        ],
+        importers: new Map([[
+          'src/view/sanitize.ts',
+          ['test/unit/view/sanitize.test.ts', 'test/unit/view/sanitize.parity.test.ts'],
+        ]]),
+      });
+
+      expect(scope.mutate).toEqual(['src/view/sanitize.ts']);
+      expect(scope.testFiles).toEqual([
+        'test/unit/view/sanitize.parity.test.ts',
+        'test/unit/view/sanitize.test.ts',
+      ]);
+    });
+
+    // An import is proof; a shared file name never was. With the index in hand
+    // there is nothing left to guess, so a source no test imports is untested.
+    it('skips a source no test imports, whatever it is called', () => {
+      const scope = buildScope({
+        changedPaths: ['src/modules/controllers/keyboard.ts'],
+        sourceFiles: ['src/modules/controllers/keyboard.ts', 'src/utils/keyboard.ts'],
+        testFiles: ['test/unit/utils/keyboard.test.ts'],
+        importers: new Map([['src/utils/keyboard.ts', ['test/unit/utils/keyboard.test.ts']]]),
+      });
+
+      expect(scope.mutate).toEqual([]);
+      expect(scope.skipped).toEqual([
+        { file: 'src/modules/controllers/keyboard.ts', reason: 'no-test' },
+      ]);
+    });
+
+    // A weakened test with an untouched source must still be measured, and the
+    // index says which source that test was protecting.
+    it('mutates every source a changed test imports', () => {
+      const scope = buildScope({
+        changedPaths: ['test/unit/view/sanitize.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        testFiles: ['test/unit/view/sanitize.test.ts'],
+        importers: new Map([['src/view/sanitize.ts', ['test/unit/view/sanitize.test.ts']]]),
+      });
+
+      expect(scope.mutate).toEqual(['src/view/sanitize.ts']);
+    });
+
     it('pairs a changed source with its own test file', () => {
       const scope = buildScope({
         changedPaths: ['src/components/utils/child-tools.ts'],

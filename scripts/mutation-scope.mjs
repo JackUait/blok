@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 const SURVIVING_STATUSES = new Set(['Survived', 'NoCoverage']);
 // Source bytes per run, sized so one CI batch stays near ten minutes. Two real
@@ -36,6 +36,69 @@ const mirrorSourcesOf = (test) => {
 };
 
 const stemOf = (path) => path.split('/').pop().replace(TEST_SUFFIX, '').replace(SOURCE_SUFFIX, '');
+
+// The specifiers the unit suite reaches core through; vitest.mutation.config.ts
+// declares the same aliases, and a test importing one of these is protecting the
+// file it points at just as much as one using a relative path.
+const IMPORT_ALIASES = {
+  '@bloklabs/core/adapters': 'src/adapters.ts',
+  '@bloklabs/core': 'src/blok.ts',
+};
+
+const IMPORT_PATTERN = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g;
+
+const RESOLUTION_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+
+/**
+ * Maps every source to the test files that import it.
+ *
+ * A source is only as measured as the tests the run actually loads. Pairing by
+ * path alone measured `src/view/sanitize.ts` against one of its three suites and
+ * called 205 mutants survivors where 141 were real. Reading the imports says
+ * which tests protect a file instead of guessing it from its name.
+ */
+export const buildImporterIndex = ({ testFiles, sourceFiles, readFile }) => {
+  const sources = new Set(sourceFiles);
+  const index = new Map();
+
+  const add = (source, test) => {
+    const seen = index.get(source);
+
+    if (seen === undefined) {
+      index.set(source, [test]);
+    } else if (!seen.includes(test)) {
+      seen.push(test);
+    }
+  };
+
+  for (const test of testFiles) {
+    for (const [, specifier] of readFile(test).matchAll(IMPORT_PATTERN)) {
+      const aliased = IMPORT_ALIASES[specifier];
+
+      if (aliased !== undefined) {
+        if (sources.has(aliased)) {
+          add(aliased, test);
+        }
+        continue;
+      }
+
+      if (!specifier.startsWith('.')) {
+        continue;
+      }
+
+      const base = relative('.', resolve(dirname(test), specifier));
+      const resolved = RESOLUTION_SUFFIXES
+        .map((suffix) => base + suffix)
+        .find((candidate) => sources.has(candidate));
+
+      if (resolved !== undefined) {
+        add(resolved, test);
+      }
+    }
+  }
+
+  return index;
+};
 
 const groupByStem = (paths) => {
   const groups = new Map();
@@ -72,7 +135,7 @@ export const resolveDiffBase = (state, isReachable) => {
  * them against. A changed test pulls in its source: otherwise weakening a test
  * without touching the source would go unmeasured.
  */
-export const buildScope = ({ changedPaths, sourceFiles, testFiles }) => {
+export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers }) => {
   const sources = new Set(sourceFiles);
   const sourcesByStem = groupByStem(sourceFiles);
   const testsByStem = groupByStem(testFiles);
@@ -87,6 +150,15 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles }) => {
     }
 
     if (!TEST_SUFFIX.test(path) || !path.startsWith(TEST_PREFIX)) {
+      continue;
+    }
+
+    if (importers !== undefined) {
+      for (const [source, importing] of importers) {
+        if (importing.includes(path)) {
+          candidates.add(source);
+        }
+      }
       continue;
     }
 
@@ -116,6 +188,21 @@ export const buildScope = ({ changedPaths, sourceFiles, testFiles }) => {
   );
 
   for (const source of [...candidates].sort()) {
+    const importing = importers?.get(source) ?? [];
+
+    if (importing.length > 0) {
+      mutate.push(source);
+      for (const test of importing) {
+        tests.add(test);
+      }
+      continue;
+    }
+
+    if (importers !== undefined) {
+      skipped.push({ file: source, reason: 'no-test' });
+      continue;
+    }
+
     const mirrored = mirrorTestsOf(source).find((candidate) => knownTests.has(candidate));
 
     if (mirrored !== undefined) {
@@ -333,10 +420,19 @@ const sizeOf = (path) => {
   }
 };
 
+const readSource = (path) => {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return '';
+  }
+};
+
 const plan = (stateDir, budget) => {
   const state = readJson(join(stateDir, 'state.json'), {});
   const base = resolveDiffBase(state, isReachable);
   const { sourceFiles, testFiles } = trackedFiles();
+  const importers = buildImporterIndex({ testFiles, sourceFiles, readFile: readSource });
 
   if (base.mode === 'full') {
     return { ...base, mutate: sourceFiles, testFiles, skipped: [], pending: [] };
@@ -349,12 +445,13 @@ const plan = (stateDir, budget) => {
     changedPaths: [...gitLines('diff', '--name-only', base.from, 'HEAD'), ...queued],
     sourceFiles,
     testFiles,
+    importers,
   });
   const { batch, pending } = splitByBudget({ files: wanted.mutate, weightOf: sizeOf, budget });
 
   return {
     ...base,
-    ...buildScope({ changedPaths: batch, sourceFiles, testFiles }),
+    ...buildScope({ changedPaths: batch, sourceFiles, testFiles, importers }),
     skipped: wanted.skipped,
     pending,
   };
@@ -371,6 +468,7 @@ const seed = (stateDir) => {
     changedPaths: sourceFiles,
     sourceFiles,
     testFiles,
+    importers: buildImporterIndex({ testFiles, sourceFiles, readFile: readSource }),
   });
   const state = readJson(join(stateDir, 'state.json'), {});
 
@@ -396,8 +494,9 @@ const seed = (stateDir) => {
 /** Every source the pairing rule can measure right now. */
 const measurableSources = () => {
   const { sourceFiles, testFiles } = trackedFiles();
+  const importers = buildImporterIndex({ testFiles, sourceFiles, readFile: readSource });
 
-  return new Set(buildScope({ changedPaths: sourceFiles, sourceFiles, testFiles }).mutate);
+  return new Set(buildScope({ changedPaths: sourceFiles, sourceFiles, testFiles, importers }).mutate);
 };
 
 const record = (stateDir, reportPath, pending) => {

@@ -74,5 +74,8 @@ jobs:
             .mutation-state/
             !.mutation-state/report.html
             !.mutation-state/report.json
+          # The ledger directory starts with a dot, and the default reads that
+          # as hidden and uploads nothing.
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 90

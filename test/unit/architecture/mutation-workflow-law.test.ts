@@ -83,6 +83,17 @@ describe('mutation workflow', () => {
     expect(run as unknown as Record<string, unknown>).not.toHaveProperty('continue-on-error');
   });
 
+  // `.mutation-state` starts with a dot, so upload-artifact's default treats the
+  // whole ledger as hidden and uploads nothing, warning where nobody looks. Every
+  // run then falls back to the release asset, the diff base never advances past
+  // the commit the baseline was built on, and the gate re-measures the same range
+  // for ever.
+  it('uploads a ledger directory whose name starts with a dot', () => {
+    const upload = steps.find((step) => step.name === 'Upload mutation state');
+
+    expect(upload?.with?.['include-hidden-files']).toBe(true);
+  });
+
   // A broken ratchet still leaves a valid ledger. Dropping it would make the
   // next run start from nothing and refuse to measure anything.
   it('uploads the ledger even when the run fails', () => {

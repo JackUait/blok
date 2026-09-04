@@ -60,6 +60,18 @@ describe('url-policy', () => {
       expect(hasUnsafeUrlProtocol('blob:https://example.com/uuid', 'src')).toBe(false);
     });
 
+    // Every pattern here is anchored, and nothing else re-checks that. Unanchored,
+    // the scheme name matches anywhere in the URL, so an ordinary link whose path
+    // or query merely mentions one is declared unsafe and stripped — the sanitizer
+    // destroying valid content rather than letting anything through.
+    it('reads the scheme at the start only, not anywhere in the URL', () => {
+      expect(hasUnsafeUrlProtocol('https://example.com/docs/javascript:guide', 'href')).toBe(false);
+      expect(hasUnsafeUrlProtocol('https://example.com/?q=vbscript:x', 'href')).toBe(false);
+      expect(hasUnsafeUrlProtocol('https://example.com/api/data:export', 'href')).toBe(false);
+      expect(hasUnsafeUrlProtocol('https://example.com/img/data:cache.png', 'src')).toBe(false);
+      expect(hasUnsafeUrlProtocol('https://example.com/files/blob:id', 'href')).toBe(false);
+    });
+
     it('allows regular and unknown-custom schemes', () => {
       expect(hasUnsafeUrlProtocol('https://example.com', 'href')).toBe(false);
       expect(hasUnsafeUrlProtocol('http://example.com/a.png', 'src')).toBe(false);

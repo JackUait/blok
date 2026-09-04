@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using Blok.Server.Collab;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -14,9 +16,190 @@ namespace Blok.Server.AspNetCore.Tests.Collab;
 public sealed class EditEndpointTests
 {
   private const string AppendOne =
-      """{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "text": "!" } } } ] }""";
+      """{ "ops": [ { "op": "insert", "id": "new", "block": { "type": "p", "data": { "z": "ignored", "text": "!" } } } ] }""";
+  private const string AppendOneReordered =
+      """{"ops":[{"block":{"data":{"text":"!","z":"ignored"},"type":"p"},"id":"new","op":"insert"}]}""";
+  private const string IdempotencyKey = "edit-key";
 
   private readonly TicketFixture fixture = TicketFixture.Load();
+
+  [Fact]
+  public async Task EditRequiresAnIdempotencyKey()
+  {
+    await using var app = await SyncApp.StartAsync();
+
+    foreach (var key in new[] { null, "", "badkey", new string('a', 129) })
+    {
+      using var response = await Edit(app, doc: Guid.NewGuid().ToString("N"), key: key);
+      Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    using var multiple = await Edit(
+        app,
+        doc: "key-multiple",
+        key: "first",
+        configure: request => request.Headers.TryAddWithoutValidation(
+            "Blok-Idempotency-Key",
+            "second"));
+    Assert.Equal(HttpStatusCode.BadRequest, multiple.StatusCode);
+
+    using var accepted = await Edit(app, doc: "key-boundary", key: new string('~', 128));
+    Assert.Equal(HttpStatusCode.NoContent, accepted.StatusCode);
+  }
+
+  [Fact]
+  public async Task EditReturnsOnlyAfterDurableCommit()
+  {
+    var operations = new FakeCollabOperationStore();
+    var enteredAppend = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var releaseAppend = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      enteredAppend.TrySetResult();
+
+      return releaseAppend.Task;
+    };
+    await using var app = await StartWithOperationStore(operations);
+    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await open.ReceiveAsync<BlokControlFrame>();
+    var mirror = YDocs.NewClient();
+    await open.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await open.ReceiveAsync<SyncStep2Frame>()).Update);
+    await open.ReceiveAsync<SyncStep1Frame>();
+
+    var pending = Edit(app, key: "durable-edit");
+    var first = await Task.WhenAny(pending, enteredAppend.Task);
+
+    Assert.Same(enteredAppend.Task, first);
+    Assert.False(pending.IsCompleted);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+    var relay = open.ReceiveAsync<SyncUpdateFrame>();
+    Assert.False(relay.IsCompleted);
+
+    releaseAppend.SetResult();
+    using var response = await pending;
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    YDocs.Apply(mirror, (await relay).Update);
+    Assert.Equal("seeded!", YDocs.Text(mirror));
+    var record = Assert.Single(operations.Committed(SyncApp.Doc));
+    Assert.Equal(CollabOperationSource.HttpEdit, record.Source);
+    Assert.Matches("^[0-9a-f]{32}$", record.OperationId);
+    Assert.NotEqual("durable-edit", record.OperationId);
+    Assert.Equal("1", Assert.Single(response.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal(
+        Assert.IsType<CollabDocumentHead>(operations.Head(SyncApp.Doc)).Lineage,
+        Assert.Single(response.Headers.GetValues("Blok-Doc-Lineage")));
+  }
+
+  [Fact]
+  public async Task EditJournalsABatchAsOneOperation()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Edit(
+        app,
+        key: "batched-edit",
+        body: """{ "ops": [ { "op": "insert", "id": "first", "block": { "type": "p", "data": { "text": "!" } } }, { "op": "insert", "id": "second", "block": { "type": "p", "data": { "text": "?" } } } ] }""");
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    Assert.Single(operations.Committed(SyncApp.Doc));
+  }
+
+  [Fact]
+  public async Task EditRetryWithSameKeyAppliesOnce()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+
+    using var first = await Edit(app, key: "same-edit", body: AppendOne);
+    using var retry = await Edit(app, key: "same-edit", body: AppendOneReordered);
+
+    Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, retry.StatusCode);
+    Assert.Equal(1, app.Fakes.Converter.ApplyOpsCalls);
+    Assert.Single(operations.Committed(SyncApp.Doc));
+    Assert.Equal(
+        Assert.Single(first.Headers.GetValues("Blok-Doc-Sequence")),
+        Assert.Single(retry.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal(
+        Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage")),
+        Assert.Single(retry.Headers.GetValues("Blok-Doc-Lineage")));
+  }
+
+  [Fact]
+  public async Task SameEditKeyWithDifferentBodyReturns409()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+
+    using var first = await Edit(app, key: "reused-edit-key");
+    using var conflict = await Edit(
+        app,
+        key: "reused-edit-key",
+        body: """{ "ops": [ { "op": "remove", "id": "new" } ] }""");
+
+    Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+    Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+    Assert.Equal(1, app.Fakes.Converter.ApplyOpsCalls);
+    Assert.Single(operations.Committed(SyncApp.Doc));
+  }
+
+  [Fact]
+  public async Task EditJournalActorComesFromThePrincipal()
+  {
+    var ticketOperations = new FakeCollabOperationStore();
+    await using (var ticketApp = await StartWithOperationStore(
+        ticketOperations,
+        auth: "ticket"))
+    {
+      using var response = await Edit(ticketApp, ticket: fixture.Compatible, key: "ticket-actor");
+      Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+      Assert.Equal("u1", Assert.Single(ticketOperations.Committed(SyncApp.Doc)).ActorId);
+    }
+
+    var principalOperations = new FakeCollabOperationStore();
+    await using var principalApp = await StartWithOperationStore(
+        principalOperations,
+        services: services =>
+        {
+          services
+              .AddAuthentication(HeaderAuthenticationHandler.SchemeName)
+              .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>(
+                  HeaderAuthenticationHandler.SchemeName,
+                  _ => { });
+          services.AddAuthorization();
+        },
+        configureApp: app =>
+        {
+          app.UseAuthentication();
+          app.UseAuthorization();
+        },
+        requireAuthorization: true);
+
+    using var principalResponse = await Edit(
+        principalApp,
+        key: "principal-actor",
+        configure: request => request.Headers.TryAddWithoutValidation(
+            HeaderAuthenticationHandler.Header,
+            "stable-user"));
+    Assert.Equal(HttpStatusCode.NoContent, principalResponse.StatusCode);
+    Assert.Equal(
+        "stable-user",
+        Assert.Single(principalOperations.Committed(SyncApp.Doc)).ActorId);
+  }
+
+  [Fact]
+  public async Task EditAnswersServiceUnavailableWhenDocumentOpenElsewhere()
+  {
+    var operations = new FakeCollabOperationStore { DocumentOpenElsewhere = true };
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Edit(app);
+
+    await AssertError(response, HttpStatusCode.ServiceUnavailable, "the document is unavailable, retry\n");
+  }
 
   [Fact]
   public async Task AnEditLandsOnEveryOpenSocketAndInTheDocument()
@@ -199,7 +382,9 @@ public sealed class EditEndpointTests
       SyncApp app,
       string doc = SyncApp.Doc,
       string? ticket = null,
-      string body = AppendOne)
+      string body = AppendOne,
+      string? key = IdempotencyKey,
+      Action<HttpRequestMessage>? configure = null)
   {
     using var request = new HttpRequestMessage(
         HttpMethod.Post,
@@ -214,7 +399,33 @@ public sealed class EditEndpointTests
       request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {ticket}");
     }
 
+    if (key is not null)
+    {
+      request.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", key);
+    }
+
+    configure?.Invoke(request);
+
     return await app.CreateClient().SendAsync(request);
+  }
+
+  private static Task<SyncApp> StartWithOperationStore(
+      FakeCollabOperationStore operations,
+      string auth = "none",
+      Action<IServiceCollection>? services = null,
+      Action<WebApplication>? configureApp = null,
+      bool requireAuthorization = false)
+  {
+    return SyncApp.StartAsync(
+        auth,
+        services: collection =>
+        {
+          collection.AddSingleton<ICollabOperationStore>(operations);
+          services?.Invoke(collection);
+        },
+        configureApp: configureApp,
+        requireAuthorization: requireAuthorization,
+        fakes: new SyncFakes(operationStore: operations));
   }
 
   private static async Task AssertError(

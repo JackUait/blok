@@ -1416,58 +1416,44 @@ public sealed class CollabRoomTests
     Assert.Equal(0, manager.LiveRoomCount);
   }
 
-  /// <summary>
-  /// A journal-backed reset has to be a fenced store transaction (Task 3.5).
-  /// Until it is, the working-set reset this room still knows how to do would
-  /// close every client with 4409 — "relineage, discard your pending work" —
-  /// and leave the journal, which is what the next room loads, untouched. So
-  /// it is refused, and refusing must cost nobody their connection.
-  /// </summary>
   [Fact]
-  public async Task ResettingAnOperationStoreRoomIsRefusedWithoutClosingAnyone()
+  public async Task ResettingAnOperationStoreRoomResetsTheJournalAndClosesMembers()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateJournalManager();
     var writer = V2Member();
     var membership = await Join(manager, writer);
-    var lineage = membership.Tag.Lineage;
 
-    await Assert.ThrowsAsync<CollabResetUnavailableException>(
-        async () => await manager.ResetAsync(DocId, CancellationToken.None));
+    var reset = await manager.ResetAsync(DocId, CancellationToken.None);
 
-    Assert.Empty(writer.Closes);
+    Assert.Equal(membership.Tag.Format, reset.Format);
+    Assert.Equal(membership.Tag.Epoch + 1, reset.Epoch);
+    Assert.NotEqual(membership.Tag.Lineage, reset.Lineage);
+    Assert.Equal([CollabCloseReason.Reset], writer.Closes);
     Assert.Equal(0, store.Resets);
-    Assert.Equal(lineage, operations.Head(DocId)?.Lineage);
-    Assert.Equal(1, manager.LiveRoomCount);
-    Assert.Equal("hello", await ExportedTextAsync(manager));
+    var head = Assert.IsType<CollabDocumentHead>(operations.Head(DocId));
+    Assert.Equal(reset.Format, head.Format);
+    Assert.Equal(reset.Epoch, head.Epoch);
+    Assert.Equal(reset.Lineage, head.Lineage);
   }
 
-  /// <summary>
-  /// The refusal happens before a room exists. Refusing from inside one would
-  /// leave the room the reset itself constructed registered forever: nothing
-  /// forgets it, and a room that never turned Ready arms no eviction timer.
-  /// </summary>
   [Fact]
-  public async Task AResetRefusalDoesNotLeaveARoomBehind()
+  public async Task ResettingANewOperationStoreRoomOpensTheJournalBeforeTheWorkingSet()
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateJournalManager();
 
-    await Assert.ThrowsAsync<CollabResetUnavailableException>(
-        async () => await manager.ResetAsync(DocId, CancellationToken.None));
+    var reset = await manager.ResetAsync(DocId, CancellationToken.None);
 
+    Assert.Equal(1, operations.Opens);
+    Assert.Equal(1, endpoint.Loads);
+    Assert.Equal(0, store.Reads);
+    Assert.Equal(1, reset.Epoch);
     Assert.Equal(0, manager.LiveRoomCount);
-    Assert.Equal(0, operations.Opens);
-    Assert.Equal(0, endpoint.Loads);
   }
 
-  /// <summary>
-  /// Depth for the manager's check: the room is what would perform the reset,
-  /// and one new caller reaching it would close every client with 4409 while
-  /// the journal the next room loads keeps its lineage.
-  /// </summary>
   [Fact]
-  public async Task TheRoomItselfRefusesAResetOnAJournalBackedDocument()
+  public async Task AJournalRoomResetDoesNotWriteTheWorkingSet()
   {
     endpoint.Holds(DocId, "hello");
     using var room = new CollabRoom(
@@ -1480,11 +1466,13 @@ public sealed class CollabRoomTests
         log.Add,
         operations);
 
-    await Assert.ThrowsAsync<CollabResetUnavailableException>(
-        async () => await room.ResetAsync(CancellationToken.None));
+    var result = await room.ResetAsync(CancellationToken.None);
 
+    var reset = Assert.IsType<CollabResetResult>(result);
+    Assert.Equal(CollabResetStatus.Reset, reset.Status);
     Assert.Equal(0, store.Resets);
     Assert.Equal(0, store.Reads);
+    Assert.Equal(reset.Tag?.Lineage, operations.Head(DocId)?.Lineage);
   }
 
   /// <summary>

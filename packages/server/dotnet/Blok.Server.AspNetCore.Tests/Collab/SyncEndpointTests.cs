@@ -666,6 +666,18 @@ public sealed class SyncEndpointTests
   }
 
   [Fact]
+  public async Task ADocumentOpenElsewhereCloses4503()
+  {
+    var operations = new FakeCollabOperationStore { DocumentOpenElsewhere = true };
+    await using var app = await SyncApp.StartAsync(
+        services: services => services.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(operationStore: operations));
+    await using var client = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+
+    Assert.Equal((4503, "document unavailable"), await client.ReceiveCloseAsync());
+  }
+
+  [Fact]
   public async Task ASeedFailureIsAcceptedThenClosed4503()
   {
     var fakes = new SyncFakes();

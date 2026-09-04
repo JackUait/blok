@@ -1,3 +1,4 @@
+using System.Globalization;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,10 @@ namespace Blok.Server.AspNetCore.Collab;
 /// </summary>
 internal static class EditEndpoint
 {
+  private const string IdempotencyKeyHeader = "Blok-Idempotency-Key";
+  private const string LineageHeader = "Blok-Doc-Lineage";
+  private const string SequenceHeader = "Blok-Doc-Sequence";
+
   public static async Task HandleAsync(HttpContext context)
   {
     var doc = SyncEndpoint.RouteDoc(context);
@@ -55,6 +60,18 @@ internal static class EditEndpoint
       return;
     }
 
+    if (!context.Request.Headers.TryGetValue(IdempotencyKeyHeader, out var keys) ||
+        keys.Count != 1 ||
+        !CollabEditOps.TryNormalizeIdempotencyKey(keys[0], out var operationId))
+    {
+      await SyncEndpoint.RefuseAsync(
+          context,
+          StatusCodes.Status400BadRequest,
+          $"a valid {IdempotencyKeyHeader} header is required\n");
+
+      return;
+    }
+
     var options = context.RequestServices.GetRequiredService<BlokServerOptions>();
     var body = await ReadBodyAsync(context, options.CollabMaxMessageBytes);
 
@@ -85,12 +102,36 @@ internal static class EditEndpoint
     }
 
     var rooms = context.RequestServices.GetRequiredService<CollabRoomManager>();
-    var result = await rooms.EditAsync(doc, ops, context.RequestAborted);
+    var actorId = SyncHandshake.DeriveActor(
+        claims is { } actorTicket ? actorTicket.User : "",
+        user);
+    var result = await rooms.EditAsync(
+        doc,
+        ops,
+        operationId,
+        CollabEditOps.CanonicalBodyDigest(ops),
+        actorId,
+        context.RequestAborted);
 
     switch (result.Status)
     {
       case CollabEditStatus.Applied:
+        if (result.Receipt is { } receipt)
+        {
+          context.Response.Headers[LineageHeader] = receipt.Tag.Lineage;
+          context.Response.Headers[SequenceHeader] = receipt.ServerSequence.ToString(
+              CultureInfo.InvariantCulture);
+        }
+
         context.Response.StatusCode = StatusCodes.Status204NoContent;
+
+        return;
+
+      case CollabEditStatus.Conflict:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status409Conflict,
+            "the idempotency key was already used for a different edit\n");
 
         return;
 

@@ -235,7 +235,9 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `POST /upload-by-url` | Fetches and stores a remote file; the request media type must be `application/json` |
 | `GET /sync/{doc}` | WebSocket; the editor's live collaboration connection to one document (with `--collab`) |
 | `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
-| `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, and reaches every open tab |
+| `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
+
+`POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. Retry the same request with the same key to receive the first result without applying it again; a different request with that key receives 409. With an operation journal, 204 means the edit is durable and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service keeps its existing write-back retry behavior after a 204.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 

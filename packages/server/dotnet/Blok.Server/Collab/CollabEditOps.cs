@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -95,6 +97,128 @@ internal static class CollabEditOps
     }
 
     return ops;
+  }
+
+  /// <summary>Maps a printable HTTP key into the journal's 32-lower-hex id space.</summary>
+  internal static bool TryNormalizeIdempotencyKey(string? key, out string operationId)
+  {
+    operationId = "";
+
+    if (key is not { Length: >= 1 and <= 128 })
+    {
+      return false;
+    }
+
+    foreach (var character in key)
+    {
+      if (character is < ' ' or > '~')
+      {
+        return false;
+      }
+    }
+
+    var digest = SHA256.HashData(Encoding.ASCII.GetBytes(key));
+    operationId = Convert.ToHexStringLower(digest.AsSpan(0, CollabWorkingSetTag.LineageLength / 2));
+
+    return true;
+  }
+
+  /// <summary>Stable JSON for an already parsed request, independent of JSON whitespace and map order.</summary>
+  internal static byte[] CanonicalBody(IReadOnlyList<CollabEditOp> ops)
+  {
+    ArgumentNullException.ThrowIfNull(ops);
+    using var buffer = new MemoryStream();
+    using var writer = new Utf8JsonWriter(buffer);
+    writer.WriteStartObject();
+    writer.WritePropertyName("ops");
+    writer.WriteStartArray();
+
+    foreach (var op in ops)
+    {
+      WriteCanonicalOp(op, writer);
+    }
+
+    writer.WriteEndArray();
+    writer.WriteEndObject();
+    writer.Flush();
+
+    return buffer.ToArray();
+  }
+
+  internal static byte[] CanonicalBodyDigest(IReadOnlyList<CollabEditOp> ops)
+  {
+    return SHA256.HashData(CanonicalBody(ops));
+  }
+
+  private static void WriteCanonicalOp(CollabEditOp op, Utf8JsonWriter writer)
+  {
+    writer.WriteStartObject();
+
+    switch (op)
+    {
+      case CollabEditOp.Insert insert:
+        writer.WriteString("after", insert.After);
+        writer.WritePropertyName("block");
+        WriteCanonicalNode(insert.Block, writer);
+        writer.WriteString("id", insert.Id);
+        writer.WriteString("op", "insert");
+        writer.WriteString("parent", insert.Parent);
+        break;
+
+      case CollabEditOp.Update update:
+        writer.WritePropertyName("data");
+        WriteCanonicalNode(update.Data, writer);
+        writer.WriteString("id", update.Id);
+        writer.WriteString("op", "update");
+        break;
+
+      case CollabEditOp.Remove remove:
+        writer.WriteString("id", remove.Id);
+        writer.WriteString("op", "remove");
+        break;
+
+      default:
+        throw new ArgumentOutOfRangeException(nameof(op));
+    }
+
+    writer.WriteEndObject();
+  }
+
+  private static void WriteCanonicalNode(JsonNode? node, Utf8JsonWriter writer)
+  {
+    switch (node)
+    {
+      case null:
+        writer.WriteNullValue();
+        break;
+
+      case JsonObject map:
+        writer.WriteStartObject();
+
+        foreach (var (key, value) in map.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+          writer.WritePropertyName(key);
+          WriteCanonicalNode(value, writer);
+        }
+
+        writer.WriteEndObject();
+        break;
+
+      case JsonArray items:
+        writer.WriteStartArray();
+
+        foreach (var item in items)
+        {
+          WriteCanonicalNode(item, writer);
+        }
+
+        writer.WriteEndArray();
+        break;
+
+      default:
+        node.WriteTo(writer);
+        break;
+    }
   }
 
   private static CollabEditOp ParseOp(JsonNode? node, int index)

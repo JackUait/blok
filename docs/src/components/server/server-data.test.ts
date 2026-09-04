@@ -466,9 +466,11 @@ describe('server docs data', () => {
     // close the reset-vs-export race without knowing it exists.
     expect(body).toContain('Blok-Doc-Version');
     expect(body).toMatch(/409/);
-    // 204 comes after the working-copy write, and the planner refuses two
-    // shapes outright rather than placing the block somewhere unasked-for.
-    expect(body).toMatch(/204/);
+    expect(body).toContain('Blok-Idempotency-Key');
+    expect(body).toMatch(/1 to 128/);
+    expect(body).toContain('Blok-Doc-Lineage');
+    expect(body).toContain('Blok-Doc-Sequence');
+    expect(body).toMatch(/durable/i);
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');
     expect(body).toMatch(/422/);

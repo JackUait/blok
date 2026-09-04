@@ -11,6 +11,96 @@ public sealed class ResetEndpointTests
   private readonly TicketFixture fixture = TicketFixture.Load();
 
   [Fact]
+  public async Task ResetCommitsANewLineageBeforeReturning()
+  {
+    var operations = new FakeCollabOperationStore();
+    operations.SetHead(SyncApp.Doc, epoch: 7);
+    await using var app = await StartWithOperationStore(operations);
+    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var before = (await open.ReceiveAsync<BlokControlFrame>()).Tag;
+    var enteredReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var releaseReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeReset = () =>
+    {
+      enteredReset.TrySetResult();
+
+      return releaseReset.Task;
+    };
+
+    var pending = Reset(app);
+    var first = await Task.WhenAny(pending, enteredReset.Task);
+
+    Assert.Same(enteredReset.Task, first);
+    Assert.False(pending.IsCompleted);
+    Assert.Equal(before.Lineage, Assert.IsType<CollabDocumentHead>(operations.Head(SyncApp.Doc)).Lineage);
+    var close = open.ReceiveCloseAsync();
+    Assert.False(close.IsCompleted);
+
+    releaseReset.SetResult();
+    using var response = await pending;
+
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    var after = Assert.IsType<CollabDocumentHead>(operations.Head(SyncApp.Doc));
+    Assert.Equal(before.Epoch + 1, after.Epoch);
+    Assert.NotEqual(before.Lineage, after.Lineage);
+    Assert.Equal(0ul, after.DurableThrough);
+    Assert.Equal((4409, "document reset"), await close);
+  }
+
+  [Fact]
+  public async Task OldLineageCannotAppendAfterReset()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartWithOperationStore(operations);
+    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var before = (await open.ReceiveAsync<BlokControlFrame>()).Tag;
+    var oldClient = YDocs.NewClient();
+    var oldUpdate = YDocs.UpdateAppending(oldClient, "late");
+    var enteredReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var releaseReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var oldAppend = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeReset = () =>
+    {
+      enteredReset.TrySetResult();
+
+      return releaseReset.Task;
+    };
+    operations.BeforeAppend = () =>
+    {
+      oldAppend.TrySetResult();
+
+      return Task.CompletedTask;
+    };
+
+    var reset = Reset(app);
+    var first = await Task.WhenAny(reset, enteredReset.Task);
+
+    Assert.Same(enteredReset.Task, first);
+    await open.SendAsync(new SyncUpdateFrame(oldUpdate));
+    var close = open.ReceiveCloseAsync();
+    releaseReset.SetResult();
+
+    using var response = await reset;
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    var completed = await Task.WhenAny(close, oldAppend.Task);
+    Assert.Same(close, completed);
+    Assert.Equal((4409, "document reset"), await close);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+    Assert.NotEqual(before.Lineage, Assert.IsType<CollabDocumentHead>(operations.Head(SyncApp.Doc)).Lineage);
+  }
+
+  [Fact]
+  public async Task ResetAnswersServiceUnavailableWhenDocumentOpenElsewhere()
+  {
+    var operations = new FakeCollabOperationStore { DocumentOpenElsewhere = true };
+    await using var app = await StartWithOperationStore(operations);
+
+    using var response = await Reset(app);
+
+    await AssertError(response, HttpStatusCode.ServiceUnavailable, "the document is unavailable, retry\n");
+  }
+
+  [Fact]
   public async Task ResetBumpsTheEpochClosesOpenSocketsAndTheNextJoinReseeds()
   {
     await using var app = await SyncApp.StartAsync();
@@ -134,6 +224,13 @@ public sealed class ResetEndpointTests
     }
 
     return await app.CreateClient().SendAsync(request);
+  }
+
+  private static Task<SyncApp> StartWithOperationStore(FakeCollabOperationStore operations)
+  {
+    return SyncApp.StartAsync(
+        services: services => services.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(operationStore: operations));
   }
 
   private static async Task AssertError(

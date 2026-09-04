@@ -51,24 +51,30 @@ internal static class ResetEndpoint
     }
 
     var rooms = context.RequestServices.GetRequiredService<CollabRoomManager>();
+    var result = await rooms.ResetForHttpAsync(doc, context.RequestAborted);
 
-    try
+    switch (result.Status)
     {
-      await rooms.ResetAsync(doc, context.RequestAborted);
-    }
-    catch (CollabResetUnavailableException)
-    {
-      // 501, not 503: waiting does not help, because this build cannot reset a
-      // journal-backed document at all. A 503 would put a caller's retry loop
-      // in a spin. Task 3.5 lands the fenced journal reset and removes this.
-      await SyncEndpoint.RefuseAsync(
-          context,
-          StatusCodes.Status501NotImplemented,
-          "resetting a journal-backed document is not implemented yet\n");
+      case CollabResetStatus.Reset:
+        context.Response.StatusCode = StatusCodes.Status204NoContent;
 
-      return;
-    }
+        return;
 
-    context.Response.StatusCode = StatusCodes.Status204NoContent;
+      case CollabResetStatus.Unavailable:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status503ServiceUnavailable,
+            "the document is unavailable, retry\n");
+
+        return;
+
+      default:
+        await SyncEndpoint.RefuseAsync(
+            context,
+            StatusCodes.Status503ServiceUnavailable,
+            "the document could not be loaded\n");
+
+        return;
+    }
   }
 }

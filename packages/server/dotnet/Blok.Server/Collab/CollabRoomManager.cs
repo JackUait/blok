@@ -28,6 +28,9 @@ internal enum CollabEditStatus
 {
   Applied,
 
+  /// <summary>The id is committed for a different request body. The endpoint answers 409.</summary>
+  Conflict,
+
   /// <summary>The server is going down; the endpoint answers 503.</summary>
   Draining,
 
@@ -45,21 +48,24 @@ internal enum CollabEditStatus
   Unavailable,
 }
 
-internal sealed record CollabEditResult(CollabEditStatus Status, Exception? Error);
+internal sealed record CollabEditReceipt(CollabWorkingSetTag Tag, ulong ServerSequence);
 
-/// <summary>
-/// A reset the room refuses to perform.
-///
-/// TEMPORARY, and Task 3.5 removes it: an operation-store room's reset must be
-/// a fenced journal transaction, and the working-set reset this room still
-/// knows how to do would close every client with 4409 — which the client reads
-/// as "relineage, discard your pending work" — while leaving the journal, the
-/// thing the next room actually loads, exactly as it was. Refusing is the safe
-/// half of that pair until the real reset exists.
-/// </summary>
-internal sealed class CollabResetUnavailableException(string docId)
-    : Exception(
-        $"collab: \"{docId}\" cannot be reset until its journal reset lands (Task 3.5).");
+internal sealed record CollabEditResult(
+    CollabEditStatus Status,
+    Exception? Error,
+    CollabEditReceipt? Receipt = null);
+
+internal enum CollabResetStatus
+{
+  Reset,
+  SeedFailed,
+  Unavailable,
+}
+
+internal sealed record CollabResetResult(
+    CollabResetStatus Status,
+    CollabWorkingSetTag? Tag,
+    Exception? Error);
 
 /// <summary>
 /// Owns one <see cref="CollabRoom"/> per open doc. Rooms remove themselves
@@ -151,37 +157,30 @@ internal sealed class CollabRoomManager : ICollabRoomManager
         $"collab: the room for \"{docId}\" kept closing during join.");
   }
 
-  /// <summary>
-  /// Bumps the doc's epoch (plan decision 5): empty log under epoch+1,
-  /// members closed with <see cref="CollabCloseReason.Reset"/>, room
-  /// dropped; the next join re-seeds from the doc endpoint.
-  ///
-  /// With an operation store registered this is REFUSED instead, before any
-  /// room is touched — see <see cref="CollabResetUnavailableException"/>.
-  /// </summary>
   internal async ValueTask<CollabWorkingSetTag> ResetAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    var result = await ResetForHttpAsync(docId, cancellationToken);
+
+    return result.Tag ?? throw result.Error ?? new InvalidOperationException(
+        $"collab: document \"{docId}\" is unavailable");
+  }
+
+  internal async ValueTask<CollabResetResult> ResetForHttpAsync(
       string docId,
       CancellationToken cancellationToken = default)
   {
     ArgumentException.ThrowIfNullOrEmpty(docId);
 
-    // Ahead of RoomFor, which CONSTRUCTS and registers: a refusal thrown from
-    // inside the room would strand the room the reset itself just created,
-    // since only a null answer reaches Forget and a room that never turned
-    // Ready arms no eviction timer.
-    if (operationStore is not null)
-    {
-      throw new CollabResetUnavailableException(docId);
-    }
-
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
       var room = RoomFor(docId);
-      var tag = await room.ResetAsync(cancellationToken);
+      var result = await room.ResetAsync(cancellationToken);
 
-      if (tag is not null)
+      if (result is not null)
       {
-        return tag.Value;
+        return result;
       }
 
       Forget(room);
@@ -191,17 +190,32 @@ internal sealed class CollabRoomManager : ICollabRoomManager
         $"collab: the room for \"{docId}\" kept closing during reset.");
   }
 
-  /// <summary>
-  /// Block-level edits from the HTTP edit endpoint. Retries on a room that
-  /// closes underneath, exactly as reset does.
-  /// </summary>
-  internal async ValueTask<CollabEditResult> EditAsync(
+  internal ValueTask<CollabEditResult> EditAsync(
       string docId,
       IReadOnlyList<CollabEditOp> ops,
       CancellationToken cancellationToken = default)
   {
+    return EditAsync(
+        docId,
+        ops,
+        Guid.NewGuid().ToString("N"),
+        CollabEditOps.CanonicalBodyDigest(ops),
+        actorId: null,
+        cancellationToken: cancellationToken);
+  }
+
+  /// <summary>Block-level HTTP edit with the endpoint's idempotency receipt.</summary>
+  internal async ValueTask<CollabEditResult> EditAsync(
+      string docId,
+      IReadOnlyList<CollabEditOp> ops,
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      string? actorId,
+      CancellationToken cancellationToken = default)
+  {
     ArgumentException.ThrowIfNullOrEmpty(docId);
     ArgumentNullException.ThrowIfNull(ops);
+    ArgumentException.ThrowIfNullOrEmpty(operationId);
 
     for (var attempt = 0; attempt < MaxJoinAttempts; attempt++)
     {
@@ -219,7 +233,12 @@ internal sealed class CollabRoomManager : ICollabRoomManager
       }
 
       var room = RoomFor(docId);
-      var result = await room.EditAsync(ops, cancellationToken);
+      var result = await room.EditAsync(
+          ops,
+          operationId,
+          digest,
+          actorId,
+          cancellationToken);
 
       if (result is not null)
       {

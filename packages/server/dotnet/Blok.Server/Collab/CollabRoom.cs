@@ -280,17 +280,12 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// Block-level edits from POST /sync/{doc}/edit. Null when the room has
   /// already closed — the caller should retry on a fresh room.
-  ///
-  /// Materializes the doc the way a join does, so "edit a document nobody has
-  /// open" works. The write happens INSIDE the lane as a LOCAL transaction, so
-  /// the update observer appends it to the log and broadcasts it to every
-  /// member with no relay code here — but that observer
-  /// does not run what a member write gets afterwards, so the trio is invoked
-  /// explicitly or the edit reaches the connected tabs and nothing else: not
-  /// the blob, not the consumer's endpoint.
   /// </summary>
   internal Task<CollabEditResult?> EditAsync(
       IReadOnlyList<CollabEditOp> ops,
+      string operationId,
+      ReadOnlyMemory<byte> digest,
+      string? actorId,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(ops);
@@ -317,67 +312,117 @@ internal sealed class CollabRoom : IDisposable
             }
           }
 
+          if (session is not null)
+          {
+            CollabOperationLookup committed;
+
+            try
+            {
+              using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+              using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
+                  lifetime.Token,
+                  deadline.Token);
+              committed = await session.FindCommittedAsync(operationId, digest, bounded.Token);
+            }
+            catch (Exception error)
+            {
+              await FailCommitLocked("look up an operation id", error);
+
+              return new CollabEditResult(CollabEditStatus.Unavailable, null);
+            }
+
+            switch (committed.Outcome)
+            {
+              case CollabOperationLookupOutcome.Duplicate:
+                return new CollabEditResult(
+                    CollabEditStatus.Applied,
+                    null,
+                    new CollabEditReceipt(tag, committed.ServerSequence));
+
+              case CollabOperationLookupOutcome.Conflict:
+                return new CollabEditResult(CollabEditStatus.Conflict, null);
+            }
+          }
+
           localUpdates.Clear();
+
+          if (session is null)
+          {
+            try
+            {
+              converter.ApplyOps(doc!, ops);
+            }
+            catch (CollabEditException refusal)
+            {
+              return new CollabEditResult(CollabEditStatus.Invalid, refusal);
+            }
+            finally
+            {
+              PublishLocalUpdatesLocked();
+              UpdateEvictionLocked();
+            }
+
+            CompactIfOversizedLocked();
+            await SettleInFlightPersistLocked();
+
+            try
+            {
+              await PersistLocked(lifetime.Token);
+            }
+            catch (Exception error) when (!lifetime.IsCancellationRequested)
+            {
+              log?.Invoke(
+                  $"collab: room \"{DocId}\" could not persist an edit, retrying: {error.Message}");
+              SchedulePersistLocked();
+            }
+
+            MarkDirtyLocked();
+
+            return new CollabEditResult(CollabEditStatus.Applied, null);
+          }
 
           try
           {
-            // Ready implies a loaded doc, as every other lane body assumes.
             converter.ApplyOps(doc!, ops);
           }
           catch (CollabEditException refusal)
           {
+            localUpdates.Clear();
+            UpdateEvictionLocked();
+
             return new CollabEditResult(CollabEditStatus.Invalid, refusal);
           }
-          finally
-          {
-            // A refusal can come after some ops applied, and those are in the
-            // doc: relaying them is what keeps the members from diverging.
-            PublishLocalUpdatesLocked();
 
-            // An edit is a path that can leave a Ready room with no members —
-            // the room it just loaded to serve one HTTP request. Without this
-            // the linger is never armed and the doc lives until the process
-            // does. In the `finally` because a refusal loads the room too.
-            UpdateEvictionLocked();
+          var update = localUpdates.Single();
+          var sequence = await AppendCommittedLocked(
+              operationId,
+              actorId,
+              CollabOperationSource.HttpEdit,
+              update,
+              digest);
+
+          if (sequence is null)
+          {
+            return new CollabEditResult(CollabEditStatus.Unavailable, null);
           }
 
+          PublishLocalUpdatesLocked();
           CompactIfOversizedLocked();
-
-          // Awaited, unlike a member write: the caller is answered with a
-          // success code and there may be no member holding the edit, so
-          // the blob is the only durable copy. A failed write still answers
-          // success — the edit IS applied and broadcast — and leaves the
-          // room persist-behind, which eviction refuses to drop.
-          await SettleInFlightPersistLocked();
-
-          try
-          {
-            await PersistLocked(lifetime.Token);
-          }
-          catch (Exception error) when (!lifetime.IsCancellationRequested)
-          {
-            log?.Invoke(
-                $"collab: room \"{DocId}\" could not persist an edit, retrying: {error.Message}");
-            SchedulePersistLocked();
-          }
-
+          SchedulePersistLocked();
           MarkDirtyLocked();
+          UpdateEvictionLocked();
 
-          return new CollabEditResult(CollabEditStatus.Applied, null);
+          return new CollabEditResult(
+              CollabEditStatus.Applied,
+              null,
+              new CollabEditReceipt(tag, sequence.Value));
         },
         cancellationToken);
   }
 
-  /// <summary>
-  /// Null when the room has already closed — the caller should retry on a
-  /// fresh room. This resets the WORKING SET, so an operation-store room
-  /// refuses instead (see <see cref="CollabResetUnavailableException"/>); the
-  /// manager refuses ahead of it, which is what keeps the room it would have
-  /// built from being stranded.
-  /// </summary>
-  internal Task<CollabWorkingSetTag?> ResetAsync(CancellationToken cancellationToken)
+  internal Task<CollabResetResult?> ResetAsync(CancellationToken cancellationToken)
   {
-    return RunAsync<CollabWorkingSetTag?>(
+    return RunAsync<CollabResetResult?>(
         async () =>
         {
           if (state == RoomState.Closed)
@@ -385,44 +430,67 @@ internal sealed class CollabRoom : IDisposable
             return null;
           }
 
-          // Depth, not duplication. The manager refuses first and MUST, or the
-          // room it built to get here is stranded; but the reset below is what
-          // would actually run, and it closes every client with 4409 — read as
-          // "relineage, discard your pending work" — while the journal that
-          // the next room loads keeps its lineage and its content.
           if (operationStore is not null)
           {
-            throw new CollabResetUnavailableException(DocId);
+            if (state == RoomState.New)
+            {
+              try
+              {
+                if (!await TryOpenJournalLocked())
+                {
+                  await CloseRoomLocked(null);
+
+                  return new CollabResetResult(CollabResetStatus.Unavailable, null, null);
+                }
+              }
+              catch (Exception error)
+              {
+                await CloseRoomLocked(null);
+
+                return new CollabResetResult(CollabResetStatus.SeedFailed, null, error);
+              }
+            }
+
+            var head = session!.OpenResult.Head;
+            var current = head is null
+                ? tag
+                : new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+
+            try
+            {
+              var next = await ResetJournalLocked(current);
+              await CloseRoomLocked(CollabCloseReason.Reset);
+
+              return new CollabResetResult(CollabResetStatus.Reset, next, null);
+            }
+            catch (Exception error)
+            {
+              await FailCommitLocked("reset the document", error);
+
+              return new CollabResetResult(CollabResetStatus.Unavailable, null, error);
+            }
           }
 
-          var current = tag;
+          var legacyCurrent = tag;
 
           if (state == RoomState.New)
           {
             var stored = await store.ReadAsync(DocId, cancellationToken);
-            current = stored?.Tag ?? current;
+            legacyCurrent = stored?.Tag ?? legacyCurrent;
           }
 
-          // A blob write may still be in the air with the pre-reset log and
-          // tag; letting it land after the reset would undo it.
           await SettleInFlightPersistLocked();
 
-          var next = new CollabWorkingSetTag(
-              current.Format,
-              current.Epoch + 1,
+          var legacyNext = new CollabWorkingSetTag(
+              legacyCurrent.Format,
+              legacyCurrent.Epoch + 1,
               CollabWorkingSetTag.NewLineage());
 
-          // The caller's token bounds the wait and the read, not the write:
-          // a store PUT can land and the awaiting task still throw for a
-          // token that flipped meanwhile, and a throw here would leave a
-          // Ready room at the old tag to write the old log back over the
-          // reset. Checked once, then the write runs under the room's own
-          // lifetime and the close follows regardless.
           cancellationToken.ThrowIfCancellationRequested();
-          await store.ResetAsync(DocId, next, lifetime.Token);
+          await store.ResetAsync(DocId, legacyNext, lifetime.Token);
           await CloseRoomLocked(CollabCloseReason.Reset);
 
-          return next;
+          return new CollabResetResult(CollabResetStatus.Reset, legacyNext, null);
         },
         cancellationToken);
   }
@@ -542,6 +610,22 @@ internal sealed class CollabRoom : IDisposable
     }
   }
 
+  private async Task<bool> TryOpenJournalLocked()
+  {
+    var open = await operationStore!.OpenAsync(DocId, lifetime.Token);
+
+    if (open.Session is null)
+    {
+      log?.Invoke($"collab: document \"{DocId}\" is open in another process");
+
+      return false;
+    }
+
+    session = open.Session;
+
+    return true;
+  }
+
   /// <summary>Load-or-seed. Returns the failure instead of throwing so the join can report it.</summary>
   private async Task<LoadFailure?> TryLoadLocked()
   {
@@ -554,18 +638,11 @@ internal sealed class CollabRoom : IDisposable
 
       if (operationStore is not null)
       {
-        var open = await operationStore.OpenAsync(DocId, lifetime.Token);
-
-        if (open.Session is null)
+        if (!await TryOpenJournalLocked())
         {
-          // One process per document: the join is refused rather than made to
-          // wait for a fence this process may never get.
-          log?.Invoke($"collab: document \"{DocId}\" is open in another process");
-
           return new LoadFailure(Unavailable: true, null);
         }
 
-        session = open.Session;
         await LoadFromJournalLocked();
         state = RoomState.Ready;
 
@@ -703,6 +780,37 @@ internal sealed class CollabRoom : IDisposable
             baseline),
         lifetime.Token);
     tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+  }
+
+  /// <summary>Builds a standalone baseline; seeding the old doc would only make a diff.</summary>
+  private async Task<CollabWorkingSetTag> ResetJournalLocked(CollabWorkingSetTag current)
+  {
+    var loaded = await endpoint.LoadAsync(DocId, lifetime.Token);
+    var baseline = new List<ReadOnlyMemory<byte>>();
+    var resetDoc = new YDoc();
+    resetDoc.UpdateEmitted += update =>
+    {
+      if (update.Local)
+      {
+        baseline.Add(update.Update);
+      }
+    };
+
+    if (loaded.Data is not null)
+    {
+      converter.Seed(resetDoc, loaded.Data);
+    }
+
+    var head = await session!.ResetAsync(
+        new CollabOperationReset(
+            current.Format,
+            current.Epoch + 1,
+            CollabWorkingSetTag.NewLineage(),
+            baseline),
+        lifetime.Token);
+    tag = new CollabWorkingSetTag(head.Format, head.Epoch, head.Lineage);
+
+    return tag;
   }
 
   private void HydrateLocked(byte[] storedFrames)
@@ -1186,8 +1294,12 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    if (await AppendCommittedLocked(membership, operation.OperationId, operation.Update, digest)
-        is not { } serverSequence)
+    if (await AppendCommittedLocked(
+          operation.OperationId,
+          membership.Member.ActorId,
+          membership.Member.ProtocolSource,
+          operation.Update,
+          digest) is not { } serverSequence)
     {
       return;
     }
@@ -1204,14 +1316,13 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// The durable step the v2 and v1 write paths share: journal bytes the
-  /// document is already holding provisionally, INSIDE the lane. Answers the
-  /// sequence the journal assigned, or null when the room could not commit and
-  /// discarded itself — the caller then publishes nothing.
+  /// The durable step journal-backed write paths share. It answers the sequence
+  /// or closes the room before anything is published.
   /// </summary>
   private async Task<ulong?> AppendCommittedLocked(
-      CollabMembership membership,
       string operationId,
+      string? actorId,
+      CollabOperationSource source,
       byte[] update,
       ReadOnlyMemory<byte> digest)
   {
@@ -1232,8 +1343,8 @@ internal sealed class CollabRoom : IDisposable
       appended = await session!.AppendAsync(
           new CollabOperationCandidate(
               operationId,
-              membership.Member.ActorId,
-              membership.Member.ProtocolSource,
+              actorId,
+              source,
               update,
               digest),
           bounded.Token);
@@ -1356,8 +1467,9 @@ internal sealed class CollabRoom : IDisposable
     }
 
     if (await AppendCommittedLocked(
-          membership,
           NewOperationId(),
+          membership.Member.ActorId,
+          membership.Member.ProtocolSource,
           update,
           SHA256.HashData(update)) is null)
     {

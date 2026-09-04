@@ -1438,6 +1438,50 @@ public sealed class CollabRoomTests
   }
 
   [Fact]
+  public async Task AQueuedOldLineageReceiveCannotAppendAfterJournalReset()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var oldUpdate = YDocs.UpdateAppending(client, "late");
+    var releaseLoad = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    endpoint.LoadGate = releaseLoad;
+    writer.Received.Clear();
+    var reset = manager.ResetAsync(DocId, CancellationToken.None).AsTask();
+    await Waits.UntilAsync(() => endpoint.Loads == 2, "the reset endpoint load");
+    var append = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    operations.BeforeAppend = () =>
+    {
+      append.TrySetResult();
+
+      return Task.CompletedTask;
+    };
+
+    // Deterministic, not a race: the reset holds the room's lane at the gated
+    // endpoint load, and ReceiveAsync registers on that lane synchronously —
+    // so this write is queued BEHIND the reset before it is released.
+    var queued = membership
+        .ReceiveAsync(SyncWire.Encode(new SyncUpdateFrame(oldUpdate)), CancellationToken.None)
+        .AsTask();
+    Assert.False(queued.IsCompleted);
+
+    releaseLoad.SetResult();
+    var resetTag = await reset;
+    endpoint.LoadGate = null;
+    await queued.WaitAsync(TimeSpan.FromSeconds(10));
+
+    Assert.Equal(membership.Tag.Epoch + 1, resetTag.Epoch);
+    Assert.NotEqual(membership.Tag.Lineage, resetTag.Lineage);
+    Assert.Equal([CollabCloseReason.Reset], writer.Closes);
+    Assert.Empty(writer.Received);
+    Assert.False(append.Task.IsCompleted);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  [Fact]
   public async Task ResettingANewOperationStoreRoomOpensTheJournalBeforeTheWorkingSet()
   {
     endpoint.Holds(DocId, "hello");
@@ -2031,6 +2075,87 @@ public sealed class CollabRoomTests
     Assert.Equal(CollabEditStatus.Unavailable, refused.Status);
     Assert.Equal(opens, operations.Opens);
     Assert.Equal(1, endpoint.Loads);
+  }
+
+  [Fact]
+  public async Task APostApplyFailureClosesWithoutObservation()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var observer = new FakeMember();
+    await Join(manager, writer);
+    await Join(manager, observer);
+    writer.Received.Clear();
+    observer.Received.Clear();
+    converter.EditFailureAfterApply = new InvalidOperationException("the converter failed after writing");
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Unavailable, result.Status);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], observer.Closes);
+    Assert.Empty(writer.Received);
+    Assert.Empty(observer.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(endpoint.Saves);
+    time.Advance(TimeSpan.FromSeconds(2));
+    converter.EditFailureAfterApply = null;
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AnEditWithNoLocalUpdateClosesWithoutObservation()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var observer = new FakeMember();
+    await Join(manager, writer);
+    await Join(manager, observer);
+    writer.Received.Clear();
+    observer.Received.Clear();
+    converter.SuppressEditUpdates = true;
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Unavailable, result.Status);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], observer.Closes);
+    Assert.Empty(writer.Received);
+    Assert.Empty(observer.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(endpoint.Saves);
+    time.Advance(TimeSpan.FromSeconds(2));
+    converter.SuppressEditUpdates = false;
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  [Fact]
+  public async Task AnEditWithMultipleLocalUpdatesClosesWithoutObservation()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var observer = new FakeMember();
+    await Join(manager, writer);
+    await Join(manager, observer);
+    writer.Received.Clear();
+    observer.Received.Clear();
+    converter.EmitSecondEditUpdate = true;
+
+    var result = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+
+    Assert.Equal(CollabEditStatus.Unavailable, result.Status);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], writer.Closes);
+    Assert.Equal([CollabCloseReason.CommitUnavailable], observer.Closes);
+    Assert.Empty(writer.Received);
+    Assert.Empty(observer.Received);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(endpoint.Saves);
+    time.Advance(TimeSpan.FromSeconds(2));
+    converter.EmitSecondEditUpdate = false;
+    Assert.Equal("hello", await ExportedTextAsync(manager));
   }
 
   [Fact]

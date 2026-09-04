@@ -384,6 +384,14 @@ internal sealed class CollabRoom : IDisposable
           try
           {
             converter.ApplyOps(doc!, ops);
+
+            // One update is what the append journals; zero or many means the
+            // document moved by bytes the journal would never see.
+            if (localUpdates.Count != 1)
+            {
+              throw new InvalidOperationException(
+                  $"collab: applying an edit emitted {localUpdates.Count} local updates.");
+            }
           }
           catch (CollabEditException refusal)
           {
@@ -392,8 +400,20 @@ internal sealed class CollabRoom : IDisposable
 
             return new CollabEditResult(CollabEditStatus.Invalid, refusal);
           }
+          catch (Exception error)
+          {
+            // Not a refusal: the converter may have written part of the edit
+            // and still failed, and a write-time failure can retain that
+            // mutation without emitting an update at all (see YDocConverter).
+            // The room is holding state no append can journal, so it goes
+            // rather than serving an export or a later edit from it.
+            localUpdates.Clear();
+            await FailCommitLocked("apply an edit", error);
 
-          var update = localUpdates.Single();
+            return new CollabEditResult(CollabEditStatus.Unavailable, null);
+          }
+
+          var update = localUpdates[0];
           var sequence = await AppendCommittedLocked(
               operationId,
               actorId,
@@ -1358,26 +1378,20 @@ internal sealed class CollabRoom : IDisposable
       return null;
     }
 
-    if (appended.Outcome == CollabOperationAppendOutcome.Conflict)
+    if (appended.Outcome != CollabOperationAppendOutcome.Committed)
     {
-      // The id was free as far as this room knew and the append says
-      // otherwise. The document is already mutated by bytes that will never
-      // be journalled.
+      // The lookup said the id was free, so the document already holds bytes
+      // this outcome cannot prove are journalled. A duplicate is no safer than
+      // a conflict here: an HTTP edit digests the canonical request, not the
+      // update it generates, so equal digests say the same request was asked
+      // for twice — not that the journal holds THESE bytes, which carry this
+      // room's random client id.
       await FailCommitLocked(
           "journal an operation",
           new InvalidOperationException(
-              $"collab: the store refused operation \"{operationId}\" as a conflict."));
+              $"collab: the store returned {appended.Outcome} for new operation \"{operationId}\"."));
 
       return null;
-    }
-
-    if (appended.Outcome == CollabOperationAppendOutcome.Duplicate)
-    {
-      // Safe — a duplicate is the same bytes by digest — but the id was free
-      // as far as this room knew, and nothing else would show that
-      // contradiction to whoever has to debug it.
-      log?.Invoke(
-          $"collab: room \"{DocId}\" appended operation \"{operationId}\" as a duplicate");
     }
 
     return appended.ServerSequence;

@@ -506,6 +506,12 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   /// <summary>Set to make the next ApplyOps refuse, as an invalid op would.</summary>
   internal CollabEditException? EditFailure { get; set; }
 
+  internal Exception? EditFailureAfterApply { get; set; }
+
+  internal bool SuppressEditUpdates { get; set; }
+
+  internal bool EmitSecondEditUpdate { get; set; }
+
   /// <summary>Thrown by the next Export only, as the real converter does on a block whose shape a peer broke.</summary>
   internal Exception? NextExportFailure { get; set; }
 
@@ -542,6 +548,11 @@ internal sealed class FakeDocConverter : ICollabDocConverter
       throw EditFailure;
     }
 
+    if (SuppressEditUpdates)
+    {
+      return;
+    }
+
     var text = doc.GetText("content");
 
     foreach (var op in ops)
@@ -570,6 +581,16 @@ internal sealed class FakeDocConverter : ICollabDocConverter
             break;
         }
       });
+    }
+
+    if (EmitSecondEditUpdate)
+    {
+      doc.Transact(transaction => text.Insert(transaction, text.ToString().Length, "."));
+    }
+
+    if (EditFailureAfterApply is not null)
+    {
+      throw EditFailureAfterApply;
     }
   }
 

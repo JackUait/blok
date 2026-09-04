@@ -114,6 +114,8 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
   internal Func<Task>? BeforeAppend { get; set; }
 
+  internal CollabOperationAppendOutcome? NextAppendOutcome { get; set; }
+
   internal Func<Task>? BeforeReset { get; set; }
 
   internal bool DocumentOpenElsewhere { get; set; }
@@ -256,6 +258,14 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       lock (store.guard)
       {
         var document = Fenced();
+        var forced = store.NextAppendOutcome;
+        store.NextAppendOutcome = null;
+
+        if (forced is not null)
+        {
+          return new CollabOperationAppendResult(forced.Value, 1);
+        }
+
         var existing = Committed(document, candidate.OperationId);
 
         if (existing is not null)
@@ -429,11 +439,14 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
   private readonly Dictionary<string, LoadedDocument> documents = new(StringComparer.Ordinal);
 
   private int gets;
+  private int saves;
 
   internal Exception? LoadFailure { get; set; }
 
   /// <summary>Seed GETs so far; every one costs the consumer a request.</summary>
   internal int Gets => Volatile.Read(ref gets);
+
+  internal int Saves => Volatile.Read(ref saves);
 
   internal void Holds(string docId, string text)
   {
@@ -460,6 +473,8 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
       string? version,
       CancellationToken cancellationToken)
   {
+    Interlocked.Increment(ref saves);
+
     return Task.FromResult<string?>(null);
   }
 }
@@ -630,6 +645,25 @@ internal sealed class SyncClient(WebSocket socket) : IAsyncDisposable
 
       return Assert.IsType<T>(message);
     }
+  }
+
+  /// <summary>
+  /// The next frame, or null when the socket closed instead — how a test says
+  /// "nothing was relayed before the close" rather than "a close arrived
+  /// eventually", which <see cref="ReceiveCloseAsync"/> would also accept.
+  /// </summary>
+  internal async Task<SyncWireMessage?> ReceiveOrCloseAsync()
+  {
+    var (type, payload) = await ReceiveRawAsync();
+
+    if (type == WebSocketMessageType.Close)
+    {
+      return null;
+    }
+
+    Assert.True(SyncWire.TryDecode(payload, out var message, out var error), error);
+
+    return message;
   }
 
   /// <summary>

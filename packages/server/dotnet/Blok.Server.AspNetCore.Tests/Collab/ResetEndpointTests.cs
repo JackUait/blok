@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Blok.Server.Collab;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -11,13 +12,31 @@ public sealed class ResetEndpointTests
   private readonly TicketFixture fixture = TicketFixture.Load();
 
   [Fact]
-  public async Task ResetCommitsANewLineageBeforeReturning()
+  public async Task ResetCommitsTheCurrentEndpointDocumentAndANewLineageBeforeReturning()
   {
     var operations = new FakeCollabOperationStore();
     operations.SetHead(SyncApp.Doc, epoch: 7);
     await using var app = await StartWithOperationStore(operations);
     await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
     var before = (await open.ReceiveAsync<BlokControlFrame>()).Tag;
+    using (var editRequest = new HttpRequestMessage(
+        HttpMethod.Post,
+        $"/sync/{SyncApp.Doc}/edit")
+    {
+      Content = new StringContent(
+          """{ "ops": [ { "op": "insert", "id": "before-reset", "block": { "type": "p", "data": { "text": "journal" } } } ] }""",
+          Encoding.UTF8,
+          "application/json"),
+    })
+    {
+      editRequest.Headers.TryAddWithoutValidation("Origin", SyncApp.AllowedOrigin);
+      editRequest.Headers.TryAddWithoutValidation("Blok-Idempotency-Key", "before-reset");
+      using var edited = await app.CreateClient().SendAsync(editRequest);
+      Assert.Equal(HttpStatusCode.NoContent, edited.StatusCode);
+    }
+
+    Assert.Single(operations.Committed(SyncApp.Doc));
+    app.Fakes.Endpoint.Holds(SyncApp.Doc, "endpoint reset");
     var enteredReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     var releaseReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     operations.BeforeReset = () =>
@@ -45,48 +64,16 @@ public sealed class ResetEndpointTests
     Assert.NotEqual(before.Lineage, after.Lineage);
     Assert.Equal(0ul, after.DurableThrough);
     Assert.Equal((4409, "document reset"), await close);
-  }
 
-  [Fact]
-  public async Task OldLineageCannotAppendAfterReset()
-  {
-    var operations = new FakeCollabOperationStore();
-    await using var app = await StartWithOperationStore(operations);
-    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
-    var before = (await open.ReceiveAsync<BlokControlFrame>()).Tag;
-    var oldClient = YDocs.NewClient();
-    var oldUpdate = YDocs.UpdateAppending(oldClient, "late");
-    var enteredReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var releaseReset = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var oldAppend = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    operations.BeforeReset = () =>
-    {
-      enteredReset.TrySetResult();
-
-      return releaseReset.Task;
-    };
-    operations.BeforeAppend = () =>
-    {
-      oldAppend.TrySetResult();
-
-      return Task.CompletedTask;
-    };
-
-    var reset = Reset(app);
-    var first = await Task.WhenAny(reset, enteredReset.Task);
-
-    Assert.Same(enteredReset.Task, first);
-    await open.SendAsync(new SyncUpdateFrame(oldUpdate));
-    var close = open.ReceiveCloseAsync();
-    releaseReset.SetResult();
-
-    using var response = await reset;
-    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    var completed = await Task.WhenAny(close, oldAppend.Task);
-    Assert.Same(close, completed);
-    Assert.Equal((4409, "document reset"), await close);
-    Assert.Empty(operations.Committed(SyncApp.Doc));
-    Assert.NotEqual(before.Lineage, Assert.IsType<CollabDocumentHead>(operations.Head(SyncApp.Doc)).Lineage);
+    await using var fresh = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var reopened = (await fresh.ReceiveAsync<BlokControlFrame>()).Tag;
+    Assert.Equal(after.Epoch, reopened.Epoch);
+    Assert.Equal(after.Lineage, reopened.Lineage);
+    var mirror = YDocs.NewClient();
+    await fresh.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await fresh.ReceiveAsync<SyncStep2Frame>()).Update);
+    await fresh.ReceiveAsync<SyncStep1Frame>();
+    Assert.Equal("endpoint reset", YDocs.Text(mirror));
   }
 
   [Fact]

@@ -93,6 +93,32 @@ public sealed class EditEndpointTests
   }
 
   [Fact]
+  public async Task ALateDuplicateAppendClosesWithoutRelayingOrWritingBack()
+  {
+    var operations = new FakeCollabOperationStore
+    {
+      NextAppendOutcome = CollabOperationAppendOutcome.Duplicate,
+    };
+    await using var app = await StartWithOperationStore(operations);
+    await using var open = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    await open.ReceiveAsync<BlokControlFrame>();
+    var mirror = YDocs.NewClient();
+    await open.SendAsync(new SyncStep1Frame(YDocs.StateVector(mirror)));
+    YDocs.Apply(mirror, (await open.ReceiveAsync<SyncStep2Frame>()).Update);
+    await open.ReceiveAsync<SyncStep1Frame>();
+    var nextFrame = open.ReceiveOrCloseAsync();
+
+    using var response = await Edit(app, key: "late-duplicate");
+
+    // The digest matched the request, not the bytes this room just generated,
+    // so the room goes instead of relaying an update the journal never took.
+    Assert.Null(await nextFrame);
+    Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+    Assert.Equal(0, app.Fakes.Endpoint.Saves);
+  }
+
+  [Fact]
   public async Task EditJournalsABatchAsOneOperation()
   {
     var operations = new FakeCollabOperationStore();
@@ -108,24 +134,32 @@ public sealed class EditEndpointTests
   }
 
   [Fact]
-  public async Task EditRetryWithSameKeyAppliesOnce()
+  public async Task EditRetryAfterRoomRecreationAppliesNothingAgain()
   {
     var operations = new FakeCollabOperationStore();
-    await using var app = await StartWithOperationStore(operations);
+    string sequence;
+    string lineage;
 
-    using var first = await Edit(app, key: "same-edit", body: AppendOne);
-    using var retry = await Edit(app, key: "same-edit", body: AppendOneReordered);
+    await using (var firstApp = await StartWithOperationStore(operations))
+    {
+      using var first = await Edit(firstApp, key: "same-edit", body: AppendOne);
 
-    Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+      Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+      Assert.Equal(1, firstApp.Fakes.Converter.ApplyOpsCalls);
+      sequence = Assert.Single(first.Headers.GetValues("Blok-Doc-Sequence"));
+      lineage = Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage"));
+      await firstApp.Fakes.Manager.DrainAsync(CancellationToken.None);
+      Assert.Equal(0, firstApp.Fakes.Manager.LiveRoomCount);
+    }
+
+    await using var retryApp = await StartWithOperationStore(operations);
+    using var retry = await Edit(retryApp, key: "same-edit", body: AppendOneReordered);
+
     Assert.Equal(HttpStatusCode.NoContent, retry.StatusCode);
-    Assert.Equal(1, app.Fakes.Converter.ApplyOpsCalls);
+    Assert.Equal(0, retryApp.Fakes.Converter.ApplyOpsCalls);
     Assert.Single(operations.Committed(SyncApp.Doc));
-    Assert.Equal(
-        Assert.Single(first.Headers.GetValues("Blok-Doc-Sequence")),
-        Assert.Single(retry.Headers.GetValues("Blok-Doc-Sequence")));
-    Assert.Equal(
-        Assert.Single(first.Headers.GetValues("Blok-Doc-Lineage")),
-        Assert.Single(retry.Headers.GetValues("Blok-Doc-Lineage")));
+    Assert.Equal(sequence, Assert.Single(retry.Headers.GetValues("Blok-Doc-Sequence")));
+    Assert.Equal(lineage, Assert.Single(retry.Headers.GetValues("Blok-Doc-Lineage")));
   }
 
   [Fact]

@@ -122,6 +122,24 @@ describe('inline-content-sanitize', () => {
       expect(preserveEquationSpan(el)).toBe(false);
     });
 
+    // The guard is what makes this a no-op when there is nothing to fix. Without
+    // it every already-normalized span is rewritten, which replaces its children
+    // with one fresh text node — losing any markup a later pass put inside a span
+    // whose text already equals its source.
+    it('leaves an already-normalized span untouched', () => {
+      const el = document.createElement('span');
+
+      el.setAttribute('data-latex', 'a+b');
+      el.innerHTML = '<b>a+b</b>';
+
+      const before = el.firstChild;
+
+      preserveEquationSpan(el);
+
+      expect(el.firstChild).toBe(before);
+      expect(el.innerHTML).toBe('<b>a+b</b>');
+    });
+
     it('normalizes the span content to the LaTeX source in place', () => {
       const el = document.createElement('span');
 

@@ -2646,6 +2646,56 @@ describe("UI module", () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
+    it("scrolls to the section when the link carries a fragment and a different query", () => {
+      /**
+       * The fragment names a place inside the document already open, so it wins
+       * over the query difference. "Copy link to block" stamps the query of the
+       * moment it was copied, so any later read from another query would else
+       * reload the whole article just to move within it.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      clickLink(
+        redactor,
+        `${window.location.origin}${window.location.pathname}?origin=search#header-18`
+      );
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("header-18");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("scrolls to the section when the link omits the query the address bar carries", () => {
+      /**
+       * A link that names no query is not asking for other query params — it is
+       * the shape a host's own in-article links take once view state (a search
+       * term, a referrer flag) sits in the address bar.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+      const original = `${window.location.pathname}${window.location.search}`;
+
+      window.history.replaceState(null, "", "?origin=search");
+
+      try {
+        clickLink(
+          redactor,
+          `${window.location.origin}${window.location.pathname}#header-18`
+        );
+      } finally {
+        window.history.replaceState(null, "", original);
+      }
+
+      expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("header-18");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
     it("navigates in the same window when only the query differs", () => {
       const openSpy = vi.fn();
 

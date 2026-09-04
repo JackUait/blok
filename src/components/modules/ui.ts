@@ -1398,11 +1398,17 @@ export class UI extends Module<UINodes> {
   /**
    * Follow a link that points at this page.
    *
-   * Same origin and pathname is all isSamePageLink checks, so a differing query
-   * string still means a different document: navigate to it, in this window.
-   * Otherwise the fragment goes to the blocks API, which resolves both block ids
-   * and heading anchors. An empty fragment means the current URL exactly —
-   * reopening it would throw away unsaved edits, so nothing happens.
+   * A fragment names a place inside the document that is already open, so it
+   * decides on its own: hand it to the blocks API, which resolves both block ids
+   * and heading anchors. The query is deliberately not consulted there — only
+   * the host knows which of its params identify the document, and reloading to
+   * reach a section throws away the reader's position and any unsaved edits.
+   * "Copy link to block" stamps the query of the moment it was copied, so
+   * weighing the query would break Blok's own deep links.
+   *
+   * Without a fragment the link can only mean "this page under other query
+   * params": navigate to it, in this window. An empty fragment and an equal
+   * query means the current URL exactly, and reopening that does nothing.
    * @param href - the raw anchor href, already known to address this page
    */
   private followSamePageLink(href: string): void {
@@ -1411,17 +1417,16 @@ export class UI extends Module<UINodes> {
      * only does for a bare fragment or an href it parsed against this same base.
      */
     const resolved = new URL(href.trim(), window.location.href);
-
-    if (resolved.search !== window.location.search) {
-      openSameWindow(resolved.href);
-
-      return;
-    }
-
     const fragment = decodeHashFragment(resolved.hash.slice(1));
 
     if (fragment !== '') {
       this.Blok.BlocksAPI.scrollToBlock(fragment);
+
+      return;
+    }
+
+    if (resolved.search !== window.location.search) {
+      openSameWindow(resolved.href);
     }
   }
 

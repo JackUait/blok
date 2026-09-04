@@ -294,3 +294,71 @@ describe('view sanitizer entry paths', () => {
     });
   });
 });
+
+describe('view sanitizer edge inputs', () => {
+  // An element with no class attribute has no classes. The fallback for the
+  // missing attribute is an empty string, and any other fallback invents
+  // classes out of nothing.
+  it('reads an element with no class attribute as having none', () => {
+    expect(capture('<p>t</p>', 'p', (el) => el.classList.length)).toEqual([0]);
+    expect(capture('<p>t</p>', 'p', (el) => el.classList.value)).toEqual(['']);
+  });
+
+  // No markup character, so the fast path hands the input straight back. Parsing
+  // it instead is not equivalent: two adjacent lone low surrogates make parse5
+  // throw, and the recovery rewrites them.
+  it('returns text parse5 could not have parsed, untouched', () => {
+    const lone = `a${'\uDC00'}${'\uDC00'}b`;
+
+    expect(sanitizeHtmlFragment(lone, { p: true })).toBe(lone);
+  });
+
+  it('strips comments, which carry no text to hoist', () => {
+    expect(sanitizeHtmlFragment('<p>a<!-- secret -->b</p>', { p: true })).toBe('<p>ab</p>');
+  });
+
+  // removeProperty writes the surviving declarations back; a filter that drops
+  // everything would empty the attribute instead of narrowing it.
+  it('keeps the other declarations when one is removed', () => {
+    const config = {
+      p: (element: FacadeElement) => {
+        element.style.removeProperty('color');
+
+        return { style: true };
+      },
+    } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<p style="color: red; font-weight: bold">t</p>', config))
+      .toBe('<p style="font-weight: bold;">t</p>');
+  });
+
+  // Only href and src go through the URL policy. Every other attribute has to
+  // pass untouched, or the policy silently eats unrelated markup.
+  it('leaves attributes other than href and src to the allowlist alone', () => {
+    const out = sanitizeHtmlFragment(
+      '<a href="/x" title="t" data-id="7">l</a>',
+      { a: { href: true, title: true, 'data-id': true } },
+      (url) => url,
+    );
+
+    expect(out).toBe('<a href="/x" title="t" data-id="7">l</a>');
+  });
+
+  // A function rule returning an object keeps the tag and applies that object as
+  // the attribute map, so an attribute missing from it is dropped.
+  it('applies the map a function rule returns', () => {
+    const config = {
+      a: () => ({ href: true }),
+    } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<a href="/x" title="t">l</a>', config)).toBe('<a href="/x">l</a>');
+  });
+
+  it('keeps the tag and strips every attribute when a function rule returns null', () => {
+    const config = {
+      a: () => null,
+    } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<a href="/x" title="t">l</a>', config)).toBe('<a>l</a>');
+  });
+});

@@ -471,7 +471,7 @@ describe('server docs data', () => {
     expect(body).toContain('Blok-Doc-Lineage');
     expect(body).toContain('Blok-Doc-Sequence');
     expect(body).toMatch(/operation journal.*same key.*first result.*409/i);
-    expect(body).toMatch(/working-copy-only.*does not deduplicat.*ordinary retry/i);
+    expect(body).toMatch(/working-copy-only.*does not deduplicat.*never answers 409.*ordinary retry/i);
     expect(body).toMatch(/durable/i);
     expect(body).toContain('has no children list, so nothing can be placed under it.');
     expect(body).toContain('is not in the document order, so nothing can be placed after it.');

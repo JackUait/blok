@@ -616,6 +616,34 @@ public sealed class YDocConverterEditTests
         throw new InvalidOperationException("not a block");
   }
 
+  /// <summary>
+  /// The room fails an edit that does not emit exactly one update, and the
+  /// only thing standing behind that is this: every op of a batch lands in
+  /// ONE transaction. Split them and every batched edit answers 503.
+  /// </summary>
+  [Fact]
+  public void ABatchEmitsExactlyOneUpdate()
+  {
+    var doc = SeededDoc(Root, Second);
+    var emitted = 0;
+    doc.UpdateEmitted += update =>
+    {
+      if (update.Local)
+      {
+        emitted++;
+      }
+    };
+
+    Apply(
+        doc,
+        """{ "op": "insert", "id": "first", "after": "root", "block": { "type": "header", "data": {} } }""",
+        """{ "op": "insert", "id": "third", "after": "first", "block": { "type": "header", "data": {} } }""",
+        """{ "op": "remove", "id": "second" }""");
+
+    Assert.Equal(1, emitted);
+    Assert.Equal(["root", "first", "third"], Ids(YDocConverter.Export(doc)));
+  }
+
   private static YDoc SeededDoc(params string[] blockJson)
   {
     var doc = new YDoc();

@@ -59,9 +59,6 @@ jobs:
           fi
 
       - name: Run mutation testing
-        # TODO: drop continue-on-error once the baseline release exists and the
-        # ratchet has held for two weeks.
-        continue-on-error: true
         run: yarn mutate
 
       # Always: a broken ratchet still leaves a valid ledger, and losing it would

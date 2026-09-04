@@ -72,6 +72,17 @@ describe('mutation workflow', () => {
     expect(workflow.jobs.mutation['timeout-minutes']).toBeGreaterThanOrEqual(60);
   });
 
+  // A gate that cannot go red is the gate that measured nothing for a day and
+  // reported success twice. The baseline is published, so the only things that
+  // redden this job now are a broken ratchet and a lost ledger, which is what it
+  // is for.
+  it('lets a broken ratchet fail the job', () => {
+    const run = steps.find((step) => step.name === 'Run mutation testing');
+
+    expect(run).toBeDefined();
+    expect(run as unknown as Record<string, unknown>).not.toHaveProperty('continue-on-error');
+  });
+
   // A broken ratchet still leaves a valid ledger. Dropping it would make the
   // next run start from nothing and refuse to measure anything.
   it('uploads the ledger even when the run fails', () => {

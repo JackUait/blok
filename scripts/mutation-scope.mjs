@@ -254,6 +254,14 @@ export const checkRatchet = ({ previousTotal, currentTotal, partial = false }) =
 };
 
 /**
+ * Whether this run's total is a verdict at all. A run that parked files measured
+ * part of its scope, and every batch of a seed is part of one long measurement —
+ * including the batch that empties the queue, which is why the flag is read as
+ * well as the queue.
+ */
+export const isPartialRun = ({ pending, seeding }) => pending.length > 0 || seeding === true;
+
+/**
  * Which total the ledger keeps as the bar. A run that parked files must not
  * raise the bar to include its own new survivors, or the regression the muted
  * ratchet let through would never be caught afterwards either. The seed is the
@@ -387,7 +395,7 @@ const record = (stateDir, reportPath, pending) => {
   const ratchet = checkRatchet({
     previousTotal,
     currentTotal: survivors.length,
-    partial: parked,
+    partial: isPartialRun({ pending, seeding: state.seeding }),
   });
 
   const ages = updateSurvivorAges({

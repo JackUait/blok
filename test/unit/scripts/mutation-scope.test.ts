@@ -6,6 +6,7 @@ import {
   buildStrykerArgs,
   checkRatchet,
   collectSurvivors,
+  isPartialRun,
   nextTotal,
   resolveDiffBase,
   splitByBudget,
@@ -413,6 +414,23 @@ describe('mutation-scope', () => {
         batch: ['src/c.ts'],
         pending: ['src/a.ts'],
       });
+    });
+  });
+
+  describe('isPartialRun', () => {
+    it('reads a run that parked files as part of a longer measurement', () => {
+      expect(isPartialRun({ pending: ['src/a.ts'], seeding: false })).toBe(true);
+    });
+
+    // The batch that empties the seed queue still carries files the ledger has
+    // never seen. Gating it turned the last batch of the first real seed red for
+    // 486 survivors that were the seed's whole point.
+    it('reads the batch that finishes a seed as part of one too', () => {
+      expect(isPartialRun({ pending: [], seeding: true })).toBe(true);
+    });
+
+    it('reads an ordinary run that measured its whole scope as a verdict', () => {
+      expect(isPartialRun({ pending: [], seeding: false })).toBe(false);
     });
   });
 

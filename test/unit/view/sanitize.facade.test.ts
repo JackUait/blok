@@ -362,3 +362,89 @@ describe('view sanitizer edge inputs', () => {
     expect(sanitizeHtmlFragment('<a href="/x" title="t">l</a>', config)).toBe('<a>l</a>');
   });
 });
+
+// Whitespace between two block elements is dropped; whitespace next to inline
+// content is content. The rule needs the sibling on either side, so the walk has
+// to skip non-element nodes and step in the direction it was given.
+describe('view sanitizer whitespace between siblings', () => {
+  const config = { div: true, span: true, p: true } as unknown as SanitizerConfig;
+
+  it('drops whitespace sitting between two block elements', () => {
+    expect(sanitizeHtmlFragment('<p>a</p> <p>b</p>', config)).toBe('<p>a</p><p>b</p>');
+  });
+
+  it('keeps whitespace between two inline elements', () => {
+    expect(sanitizeHtmlFragment('<span>a</span> <span>b</span>', config))
+      .toBe('<span>a</span> <span>b</span>');
+  });
+
+  // Only one side needs to be a block, so the walk in each direction has to
+  // reach past the whitespace it started from.
+  it('drops whitespace with a block on the left only', () => {
+    expect(sanitizeHtmlFragment('<p>a</p> <span>b</span>', config)).toBe('<p>a</p><span>b</span>');
+  });
+
+  it('drops whitespace with a block on the right only', () => {
+    expect(sanitizeHtmlFragment('<span>a</span> <p>b</p>', config)).toBe('<span>a</span><p>b</p>');
+  });
+
+  // A comment between the whitespace and the block is not an element, so the
+  // walk must step over it rather than give up.
+  it('looks past a comment when finding the neighbouring element', () => {
+    expect(sanitizeHtmlFragment('<p>a</p><!--c--> <p>b</p>', config)).toBe('<p>a</p><p>b</p>');
+  });
+});
+
+describe('view sanitizer text collection and attribute rules', () => {
+  // textContent walks elements and text, and contributes nothing for anything
+  // else. A comment's data is not text and must not leak into a rule's view.
+  it('contributes nothing for a comment inside the element', () => {
+    expect(capture('<p>a<!--secret-->b</p>', 'p', (el) => el.textContent)).toEqual(['ab']);
+  });
+
+  // A string attribute rule keeps the attribute only when the value matches;
+  // a boolean one keeps whatever value is there.
+  it('keeps a string-ruled attribute only on an exact value match', () => {
+    const config = { a: { rel: 'nofollow' } } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<a rel="nofollow">l</a>', config)).toBe('<a rel="nofollow">l</a>');
+    expect(sanitizeHtmlFragment('<a rel="noopener">l</a>', config)).toBe('<a>l</a>');
+  });
+
+  it('keeps a boolean-ruled attribute whatever its value', () => {
+    const config = { a: { rel: true } } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<a rel="noopener">l</a>', config)).toBe('<a rel="noopener">l</a>');
+  });
+
+  // Only href and src are scheme-checked. An unrelated attribute may legitimately
+  // hold text that looks like a script URL.
+  it('keeps a script-looking value in an attribute that is not a URL sink', () => {
+    const config = { a: { title: true } } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<a title="javascript:alert(1)">l</a>', config))
+      .toBe('<a title="javascript:alert(1)">l</a>');
+  });
+
+  // A rule that is neither function, boolean nor object is not an allowlist
+  // entry, and the tag has to be unwrapped rather than trusted.
+  it('unwraps a tag whose rule is a bare string', () => {
+    const config = { b: 'nonsense' } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<b>x</b>', config)).toBe('x');
+  });
+
+  // removeAttr narrows the attribute list; dropping all of them would take the
+  // untouched ones with it.
+  it('keeps the other attributes when the class list empties', () => {
+    const config = {
+      p: (element: FacadeElement) => {
+        element.classList.remove('one');
+
+        return { class: true, title: true };
+      },
+    } as unknown as SanitizerConfig;
+
+    expect(sanitizeHtmlFragment('<p class="one" title="t">x</p>', config)).toBe('<p title="t">x</p>');
+  });
+});

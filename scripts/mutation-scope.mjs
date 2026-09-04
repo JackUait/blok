@@ -196,11 +196,21 @@ export const splitByBudget = ({ files, weightOf, budget }) => {
 /**
  * Reads the survivors out of a Stryker JSON report. Uncovered mutants count as
  * survivors: a branch no test enters is the same gap as one no test asserts on.
+ *
+ * `measurable` drops files this run could not have measured. Stryker copies
+ * results for files outside `--mutate` into every later report, so a file that
+ * lost its pairing keeps whatever it last scored for ever, and nothing can
+ * re-measure or fix it. The trade is that deleting a test lowers the bar by
+ * whatever its source was carrying — visible in review as a deleted test.
  */
-export const collectSurvivors = (report) => {
+export const collectSurvivors = (report, measurable) => {
   const survivors = [];
 
   for (const [file, entry] of Object.entries(report.files ?? {})) {
+    if (measurable !== undefined && !measurable.has(file)) {
+      continue;
+    }
+
     for (const mutant of entry.mutants ?? []) {
       if (!SURVIVING_STATUSES.has(mutant.status)) {
         continue;
@@ -383,6 +393,13 @@ const seed = (stateDir) => {
   );
 };
 
+/** Every source the pairing rule can measure right now. */
+const measurableSources = () => {
+  const { sourceFiles, testFiles } = trackedFiles();
+
+  return new Set(buildScope({ changedPaths: sourceFiles, sourceFiles, testFiles }).mutate);
+};
+
 const record = (stateDir, reportPath, pending) => {
   const state = readJson(join(stateDir, 'state.json'), {});
   const previousAges = readJson(join(stateDir, 'ages.json'), {});
@@ -392,7 +409,7 @@ const record = (stateDir, reportPath, pending) => {
     throw new Error(`No mutation report at ${reportPath}`);
   }
 
-  const survivors = collectSurvivors(report);
+  const survivors = collectSurvivors(report, measurableSources());
   const sha = git('rev-parse', 'HEAD');
   const previousTotal = state.survivorTotal ?? null;
   const parked = pending.length > 0;

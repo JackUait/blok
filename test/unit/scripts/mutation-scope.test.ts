@@ -357,6 +357,33 @@ describe('mutation-scope', () => {
     it('reads an empty report as no survivors', () => {
       expect(collectSurvivors({ files: {} })).toEqual([]);
     });
+
+    // Stryker copies results for files outside --mutate into every later report,
+    // so a file the pairing rule can no longer measure fossilises whatever it
+    // last scored. Eight files entered the first baseline through a mispairing
+    // and left 737 survivors nothing can ever re-measure or fix.
+    it('drops files the run can no longer measure', () => {
+      const report = {
+        files: {
+          'src/a.ts': { mutants: [mutant()] },
+          'src/gone.ts': { mutants: [mutant()] },
+        },
+      };
+
+      expect(collectSurvivors(report, new Set(['src/a.ts'])).map(({ file }) => file))
+        .toEqual(['src/a.ts']);
+    });
+
+    it('counts every file when it is not told what is measurable', () => {
+      const report = {
+        files: {
+          'src/a.ts': { mutants: [mutant()] },
+          'src/b.ts': { mutants: [mutant()] },
+        },
+      };
+
+      expect(collectSurvivors(report)).toHaveLength(2);
+    });
   });
 
   describe('updateSurvivorAges', () => {

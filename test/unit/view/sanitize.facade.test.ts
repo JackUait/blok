@@ -1,0 +1,201 @@
+// @vitest-environment node
+/**
+ * The DOM-free sanitizer hands function rules a hand-built Element: a parse5
+ * node wearing getAttribute/style/classList/textContent. Nothing else in the
+ * suite reads those back, so the whole facade could return empty strings and
+ * every existing test would still pass — which is exactly what the mutation run
+ * reported for this file.
+ *
+ * A rule here records what the facade said, and the assertions are on the
+ * recording. The facade is not exported, so a rule is the only way in.
+ */
+import { describe, it, expect } from 'vitest';
+
+import { sanitizeHtmlFragment } from '../../../src/view/sanitize';
+import type { SanitizerConfig } from '../../../types/configs/sanitizer-config';
+
+/**
+ * The facade is declared as `Element` but carries `style` and `classList`, which
+ * live on `HTMLElement`. Rules in this repo read them, so the tests do too.
+ */
+type FacadeElement = HTMLElement;
+
+/** Runs one function rule over `html` and returns what the rule saw. */
+const capture = <T>(html: string, tag: string, read: (element: FacadeElement) => T): T[] => {
+  const seen: T[] = [];
+  const config = {
+    [tag]: (element: FacadeElement) => {
+      seen.push(read(element));
+
+      return true;
+    },
+  } as unknown as SanitizerConfig;
+
+  sanitizeHtmlFragment(html, config);
+
+  return seen;
+};
+
+describe('view sanitizer element facade', () => {
+  describe('attributes and tag', () => {
+    it('reports the tag name upper-cased, as the DOM does', () => {
+      expect(capture('<a href="/x">l</a>', 'a', (el) => el.tagName)).toEqual(['A']);
+    });
+
+    it('reads an attribute and answers null for one that is absent', () => {
+      expect(capture('<a href="/x">l</a>', 'a', (el) => el.getAttribute('href'))).toEqual(['/x']);
+      expect(capture('<a href="/x">l</a>', 'a', (el) => el.getAttribute('rel'))).toEqual([null]);
+    });
+
+    it('answers hasAttribute on presence, including an empty value', () => {
+      expect(capture('<a href="">l</a>', 'a', (el) => el.hasAttribute('href'))).toEqual([true]);
+      expect(capture('<a href="">l</a>', 'a', (el) => el.hasAttribute('rel'))).toEqual([false]);
+    });
+
+    it('lists every attribute as a name/value pair', () => {
+      const [attrs] = capture('<a href="/x" rel="nofollow">l</a>', 'a', (el) =>
+        Array.from(el.attributes).map(({ name, value }) => `${name}=${value}`));
+
+      expect(attrs).toEqual(['href=/x', 'rel=nofollow']);
+    });
+
+    it('collects text from nested children, not just the first one', () => {
+      expect(capture('<p>a<b>b</b>c</p>', 'p', (el) => el.textContent)).toEqual(['abc']);
+    });
+  });
+
+  describe('style', () => {
+    const style = '<p style="color: red; FONT-WEIGHT: bold">t</p>';
+
+    it('counts the declarations it parsed', () => {
+      expect(capture(style, 'p', (el) => el.style.length)).toEqual([2]);
+    });
+
+    it('reads a value by property name, case-insensitively', () => {
+      expect(capture(style, 'p', (el) => el.style.getPropertyValue('color'))).toEqual(['red']);
+      expect(capture(style, 'p', (el) => el.style.getPropertyValue('font-weight'))).toEqual(['bold']);
+      expect(capture(style, 'p', (el) => el.style.getPropertyValue('FONT-WEIGHT'))).toEqual(['bold']);
+    });
+
+    it('answers an empty string for a property that is not set', () => {
+      expect(capture(style, 'p', (el) => el.style.getPropertyValue('margin'))).toEqual(['']);
+    });
+
+    it('names a declaration by index and answers empty past the end', () => {
+      expect(capture(style, 'p', (el) => el.style.item(0))).toEqual(['color']);
+      expect(capture(style, 'p', (el) => el.style.item(1))).toEqual(['font-weight']);
+      expect(capture(style, 'p', (el) => el.style.item(9))).toEqual(['']);
+    });
+
+    it('returns the value it removed, and nothing for an absent property', () => {
+      expect(capture(style, 'p', (el) => el.style.removeProperty('color'))).toEqual(['red']);
+      expect(capture(style, 'p', (el) => el.style.removeProperty('margin'))).toEqual(['']);
+    });
+
+    // A declaration with no colon, or an empty half on either side, is not a
+    // declaration. Kept, they would surface as a property with no value.
+    it('ignores malformed declarations', () => {
+      expect(capture('<p style="color red; :x; y:; ;">t</p>', 'p', (el) => el.style.length))
+        .toEqual([0]);
+    });
+
+    it('reads an element with no style attribute as empty', () => {
+      expect(capture('<p>t</p>', 'p', (el) => el.style.length)).toEqual([0]);
+    });
+  });
+
+  describe('classList', () => {
+    const classes = '<p class="one two">t</p>';
+
+    it('reports length, value and membership', () => {
+      expect(capture(classes, 'p', (el) => el.classList.length)).toEqual([2]);
+      expect(capture(classes, 'p', (el) => el.classList.value)).toEqual(['one two']);
+      expect(capture(classes, 'p', (el) => el.classList.contains('two'))).toEqual([true]);
+      expect(capture(classes, 'p', (el) => el.classList.contains('three'))).toEqual([false]);
+    });
+
+    it('names a class by index and answers null past the end', () => {
+      expect(capture(classes, 'p', (el) => el.classList.item(1))).toEqual(['two']);
+      expect(capture(classes, 'p', (el) => el.classList.item(9))).toEqual([null]);
+    });
+
+    // Runs of whitespace between class names are separators, not names.
+    it('reads a run of whitespace as one separator', () => {
+      expect(capture('<p class="  one   two  ">t</p>', 'p', (el) => el.classList.length))
+        .toEqual([2]);
+    });
+  });
+
+  describe('facade writes reach the output', () => {
+    const rewrite = (tag: string, act: (element: FacadeElement) => void): string => {
+      const config = {
+        [tag]: (element: FacadeElement) => {
+          act(element);
+
+          return { class: true, style: true };
+        },
+      } as unknown as SanitizerConfig;
+
+      return sanitizeHtmlFragment(`<${tag} class="one" style="color: red">t</${tag}>`, config);
+    };
+
+    it('adds a class, and adding it twice does not repeat it', () => {
+      expect(rewrite('p', (el) => {
+        el.classList.add('two');
+        el.classList.add('two');
+      })).toContain('class="one two"');
+    });
+
+    it('removes a class, and removing an absent one changes nothing', () => {
+      expect(rewrite('p', (el) => {
+        el.classList.add('two');
+        el.classList.remove('one');
+        el.classList.remove('nope');
+      })).toContain('class="two"');
+    });
+
+    // An emptied list drops the attribute rather than leaving class="".
+    it('drops the class attribute once the last class goes', () => {
+      expect(rewrite('p', (el) => el.classList.remove('one'))).not.toContain('class');
+    });
+
+    it('toggles a class off and on, reporting what it left behind', () => {
+      const states: boolean[] = [];
+
+      const html = rewrite('p', (el) => {
+        states.push(el.classList.toggle('one'), el.classList.toggle('three'));
+      });
+
+      expect(states).toEqual([false, true]);
+      expect(html).toContain('class="three"');
+    });
+
+    it('honours the forced argument of toggle over the current state', () => {
+      const states: boolean[] = [];
+
+      const html = rewrite('p', (el) => {
+        states.push(el.classList.toggle('one', true), el.classList.toggle('four', false));
+      });
+
+      expect(states).toEqual([true, false]);
+      expect(html).toContain('class="one"');
+    });
+
+    it('writes a removed style back to the attribute', () => {
+      expect(rewrite('p', (el) => el.style.removeProperty('color'))).not.toContain('style');
+    });
+
+    it('replaces the children when a rule assigns textContent', () => {
+      const config = {
+        p: (element: FacadeElement) => {
+          // eslint-disable-next-line no-param-reassign -- the facade's documented write path
+          element.textContent = 'flat';
+
+          return true;
+        },
+      } as unknown as SanitizerConfig;
+
+      expect(sanitizeHtmlFragment('<p>a<b>bold</b>c</p>', config)).toBe('<p>flat</p>');
+    });
+  });
+});

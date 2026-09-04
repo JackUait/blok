@@ -448,3 +448,33 @@ describe('view sanitizer text collection and attribute rules', () => {
     expect(sanitizeHtmlFragment('<p class="one" title="t">x</p>', config)).toBe('<p title="t">x</p>');
   });
 });
+
+// Inline normalization runs in sweeps: merging two wrappers exposes a pair
+// inside them that only the NEXT sweep can merge. So each pass has to report
+// whether it changed anything, and the loop has to run again while it did.
+// Every one of these inputs is left half-normalized by a single pass.
+describe('view sanitizer inline normalization sweeps', () => {
+  const config = { b: true, i: true, span: true } as unknown as SanitizerConfig;
+
+  it('merges the pair that merging the outer wrappers exposed', () => {
+    expect(sanitizeHtmlFragment('<b><i>a</i></b><b><i>b</i></b>', config))
+      .toBe('<b><i>ab</i></b>');
+  });
+
+  it('keeps sweeping through a wrapper that decorates nothing', () => {
+    expect(sanitizeHtmlFragment('<span><b>a</b></span><span><b>b</b></span>', config))
+      .toBe('<span><b>ab</b></span>');
+  });
+
+  it('unwraps a mark that repeats its ancestor', () => {
+    expect(sanitizeHtmlFragment('<b><b>x</b></b>', config)).toBe('<b>x</b>');
+  });
+
+  it('merges a run of interchangeable siblings into one', () => {
+    expect(sanitizeHtmlFragment('<b>a</b><b>b</b><b>c</b>', config)).toBe('<b>abc</b>');
+  });
+
+  it('unwraps and merges in the same pass', () => {
+    expect(sanitizeHtmlFragment('<b>a<b>b</b></b><b>c</b>', config)).toBe('<b>abc</b>');
+  });
+});

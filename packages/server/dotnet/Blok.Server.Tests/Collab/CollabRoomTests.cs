@@ -1048,7 +1048,13 @@ public sealed class CollabRoomTests
     time.Advance(TimeSpan.FromSeconds(2));
     var second = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
     Assert.Equal(CollabJoinStatus.Joined, second.Status);
+
+    // The sync exchange first, or the operation is refused as not-synced and
+    // the append that has to fail again never runs.
     await second.Membership!.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None);
+    await second.Membership.ReceiveAsync(
         Operation(second.Membership, OpTwo, update),
         CancellationToken.None);
 
@@ -1442,7 +1448,11 @@ public sealed class CollabRoomTests
   {
     endpoint.Holds(DocId, "hello");
     var manager = CreateJournalManager();
-    var writer = V2Member();
+
+    // v1, deliberately: a v2 member's raw SyncUpdate is a policy violation the
+    // room drops on its own, so this test would pass without the reset having
+    // fenced anything.
+    var writer = new FakeMember();
     var membership = await Join(manager, writer);
     var client = await SyncedClientAsync(manager, "hello");
     var oldUpdate = YDocs.UpdateAppending(client, "late");
@@ -1588,6 +1598,150 @@ public sealed class CollabRoomTests
     Assert.Empty(stock.Closes);
     Assert.Empty(operations.Committed(DocId));
     Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// Protocol §7: a raw SyncStep2/Update from a v2 member carries no operation
+  /// id, so it can be answered with neither an acknowledgement nor a
+  /// rejection. It is dropped and the member is closed.
+  /// </summary>
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task ARawWriteFromAV2MemberIsDroppedAndTheMemberIsClosed(bool asSyncStep2)
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = V2Member();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(asSyncStep2
+          ? new SyncStep2Frame(update)
+          : new SyncUpdateFrame(update)),
+        CancellationToken.None);
+
+    // The relay is what a leak looks like from outside: the submitter is
+    // excluded from a v1 broadcast, so only a peer can see the bytes escape.
+    Assert.Empty(other.Received);
+    Assert.Empty(writer.Received);
+    Assert.Equal([CollabCloseReason.RawWriteOnV2], writer.Closes);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The gate is the negotiated protocol, not the frame shape: v1 and stock
+  /// y-websocket members keep writing through SyncStep2 and SyncUpdate.
+  /// </summary>
+  [Fact]
+  public async Task ARawWriteFromAV1MemberIsStillAppliedOnTheSameRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var stock = new FakeMember();
+    var membership = await Join(manager, stock);
+    var client = await SyncedClientAsync(manager, "hello");
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "!"))),
+        CancellationToken.None);
+
+    Assert.Empty(stock.Closes);
+    Assert.Single(operations.Committed(DocId));
+    Assert.Equal("hello!", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// Sync readiness is per membership: until the room has queued ITS SyncStep2
+  /// the member may hold a state the server never sent it, so the operation is
+  /// refused transiently and the connection stays open for the retry.
+  /// </summary>
+  [Fact]
+  public async Task AnOperationBeforeTheRoomAnsweredSyncStep1IsRejectedAsNotSynced()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer, synced: false);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(writer.Received));
+    Assert.Equal("not-synced", rejection.Code);
+    Assert.Equal(OpOne, rejection.OperationId);
+    Assert.Empty(operations.Committed(DocId));
+    Assert.Empty(writer.Closes);
+
+    // Transient: the same id is accepted once the handshake completes.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+        CancellationToken.None);
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    Assert.Contains(writer.Received, frame => frame is AcknowledgementFrame);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
+  /// A SyncStep1 the room could not answer left the member holding a state
+  /// this room never sent, so it is not synced — the flag belongs after the
+  /// SyncStep2 send, not at the top of the answer.
+  /// </summary>
+  [Fact]
+  public async Task ASyncStep1TheRoomCouldNotAnswerDoesNotMakeTheMemberSynced()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer, synced: false);
+    var client = await SyncedClientAsync(manager, "hello");
+    var update = YDocs.UpdateAppending(client, "!");
+
+    // Not a state vector yjs can read: the answer throws and is dropped.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncStep1Frame([0xff, 0xff, 0xff])),
+        CancellationToken.None);
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(Operation(membership, OpOne, update), CancellationToken.None);
+
+    var rejection = Assert.IsType<RejectionFrame>(Assert.Single(writer.Received));
+    Assert.Equal("not-synced", rejection.Code);
+    Assert.Empty(operations.Committed(DocId));
+  }
+
+  /// <summary>Presence is not a write, so it crosses the room before the sync exchange too.</summary>
+  [Fact]
+  public async Task AwarenessBeforeTheSyncExchangeIsStillRelayed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = V2Member();
+    var membership = await Join(manager, writer, synced: false);
+    await Join(manager, other, synced: false);
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(1))),
+        CancellationToken.None);
+
+    Assert.Equal(
+        AwarenessClaiming(1),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+    Assert.Empty(writer.Closes);
   }
 
   /// <summary>
@@ -2330,13 +2484,30 @@ public sealed class CollabRoomTests
         operations);
   }
 
-  private static async Task<CollabMembership> Join(CollabRoomManager manager, FakeMember member)
+  /// <summary>
+  /// Joins, and for a v2 member also completes the sync exchange the room
+  /// requires before it accepts an operation frame — without it every commit
+  /// test below would be exercising the not-synced gate instead.
+  /// <paramref name="synced"/> false is for the tests of that gate.
+  /// </summary>
+  private static async Task<CollabMembership> Join(
+      CollabRoomManager manager,
+      FakeMember member,
+      bool synced = true)
   {
     var result = await manager.JoinAsync(DocId, member, CancellationToken.None);
 
     Assert.Equal(CollabJoinStatus.Joined, result.Status);
+    var membership = result.Membership!;
 
-    return result.Membership!;
+    if (synced && member.ProtocolSource == CollabOperationSource.ClientV2)
+    {
+      await membership.ReceiveAsync(
+          SyncWire.Encode(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient()))),
+          CancellationToken.None);
+    }
+
+    return membership;
   }
 
   /// <summary>A client doc holding the room's current state, obtained the way a stock client would.</summary>

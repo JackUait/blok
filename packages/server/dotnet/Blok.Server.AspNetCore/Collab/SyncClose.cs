@@ -68,6 +68,14 @@ internal static class SyncClose
   internal static readonly SyncCloseFrame BadAwareness =
       new(WebSocketCloseStatus.PolicyViolation, "malformed awareness");
 
+  /// <summary>
+  /// The other 1008. Its own text because the two mean different things to an
+  /// operator: a stream of unparseable presence, versus a client writing
+  /// outside the operation envelope v2 requires.
+  /// </summary>
+  internal static readonly SyncCloseFrame RawWriteOnV2 =
+      new(WebSocketCloseStatus.PolicyViolation, "raw write on a v2 session");
+
   /// <summary>A value outside the enum: a close is still the right answer inside the room's lane, a throw is not.</summary>
   internal static readonly SyncCloseFrame Internal =
       new(WebSocketCloseStatus.InternalServerError, "internal error");
@@ -91,6 +99,7 @@ internal static class SyncClose
     CollabCloseReason.Draining => Draining,
     CollabCloseReason.BadAwareness => BadAwareness,
     CollabCloseReason.CommitUnavailable => CommitUnavailable,
+    CollabCloseReason.RawWriteOnV2 => RawWriteOnV2,
   };
 #pragma warning restore CS8524
 }

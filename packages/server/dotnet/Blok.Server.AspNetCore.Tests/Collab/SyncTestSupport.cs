@@ -750,7 +750,7 @@ internal sealed class SyncApp : IAsyncDisposable
   internal const string Doc = "doc-42";
   internal const string Protocol = "blok-sync.v1";
 
-  /// <summary>Never selected in this wave — see AdvertiseV2 on SyncHandshake.</summary>
+  /// <summary>Selected only when an ICollabOperationStore is registered too.</summary>
   internal const string ProtocolV2 = "blok-sync.v2";
 
   private readonly WebApplication app;

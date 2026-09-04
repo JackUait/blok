@@ -117,13 +117,13 @@ public sealed class SyncHandshakeTests
     await app.AssertRefusedAsync(HttpStatusCode.BadRequest, protocols: [fixture.Compatible]);
   }
 
-  // --- v2 negotiation (Task 1.4) ----------------------------------------
+  // --- v2 negotiation ---------------------------------------------------
   //
-  // AdvertiseV2 stays off until Task 3.3 lands the commit path, so every case
-  // here still selects v1 — "v1 only" and "v1+ticket" are already pinned by
-  // the tests above; these cover the remaining matrix rows: v2 offered
-  // alongside v1 (with and without a registered operation store), and the
-  // ticket search excluding both protocol tokens.
+  // v2 needs the advertise switch AND a registered operation store; without a
+  // store the door selects v1 even when v2 is offered first. "v1 only" and
+  // "v1+ticket" are already pinned by the tests above; these cover the
+  // remaining matrix rows and the ticket search excluding both protocol
+  // tokens.
 
   [Fact]
   public async Task OffersV2ThenV1ThenTicketJoinAtV1WhenNoOperationStoreIsRegistered()
@@ -140,19 +140,36 @@ public sealed class SyncHandshakeTests
   }
 
   [Fact]
-  public async Task OffersV2ThenV1ThenTicketStillJoinAtV1WithAnOperationStoreRegisteredBecauseTheAdvertiseSwitchIsOff()
+  public async Task OffersV2ThenV1ThenTicketJoinAtV2WithAnOperationStoreRegistered()
   {
+    // The SAME store instance behind the door and behind the room: a server
+    // whose handshake sees a store while its room has no session would
+    // negotiate a protocol it cannot durably serve.
+    var operations = new FakeCollabOperationStore();
     await using var app = await SyncApp.StartAsync(
         "ticket",
-        services: services => services.AddSingleton<ICollabOperationStore, FakeCollabOperationStore>());
+        services: services => services.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(operationStore: operations));
 
     Assert.NotNull(app.App.Services.GetService<ICollabOperationStore>());
 
     await using var client = await app.ConnectAsync(
         protocols: [SyncApp.ProtocolV2, SyncApp.Protocol, fixture.Compatible]);
 
-    Assert.Equal(SyncApp.Protocol, client.SubProtocol);
+    Assert.Equal(SyncApp.ProtocolV2, client.SubProtocol);
     AssertFreshTag((await client.ReceiveAsync<BlokControlFrame>()).Tag);
+  }
+
+  [Fact]
+  public async Task AV2OnlyOfferWithNoOperationStoreSelectsNothingAndIsRefused()
+  {
+    await using var app = await SyncApp.StartAsync("ticket");
+
+    Assert.Null(app.App.Services.GetService<ICollabOperationStore>());
+
+    await app.AssertRefusedAsync(
+        HttpStatusCode.BadRequest,
+        protocols: [SyncApp.ProtocolV2, fixture.Compatible]);
   }
 
   [Fact]

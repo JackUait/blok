@@ -28,8 +28,9 @@ internal sealed record SyncRejected(string? SubProtocol, SyncCloseFrame Close) :
 /// cap on it would be a per-doc cap for everyone.
 ///
 /// <paramref name="ActorId"/> and <paramref name="ProtocolSource"/> are carried onto the
-/// member for a future commit path to attribute writes with; see
-/// <see cref="SyncHandshake.DeriveActor"/>. Nothing reads either yet.
+/// member and recorded on every operation the room journals for it; see
+/// <see cref="SyncHandshake.DeriveActor"/>. The source is also what the room
+/// refuses a raw write on, so it is not decoration.
 /// </summary>
 internal sealed record SyncAccepted(
     string? SubProtocol,
@@ -60,16 +61,10 @@ internal sealed class SyncHandshake(
 
   /// <summary>
   /// v2 needs this AND a registered <see cref="ICollabOperationStore"/>; either
-  /// alone is not enough. Stays off until Task 3.3 lands the journal-before-
-  /// broadcast commit path — flipped earlier, a room with Wave 2's store but
-  /// not Wave 3's commit path would select a protocol it cannot durably serve.
-  /// `static readonly`, not `const`: a compile-time constant here would fold
-  /// the guarded branch below to unreachable code (CS0162) under this repo's
-  /// TreatWarningsAsErrors.
+  /// alone is not enough. A room without a store has no journal, so it could
+  /// not durably serve the protocol it would be selecting.
   /// </summary>
-#pragma warning disable CA1805 // explicit `= false` documents the OFF state Task 3.3 flips; it is not dead code.
-  private static readonly bool AdvertiseV2 = false;
-#pragma warning restore CA1805
+  private const bool AdvertiseV2 = true;
 
   internal async ValueTask<SyncHandshakeResult> NegotiateAsync(HttpContext context, string doc)
   {

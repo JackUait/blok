@@ -23,6 +23,15 @@ internal enum CollabCloseReason
   /// retryable commit failure must not trigger.
   /// </summary>
   CommitUnavailable,
+
+  /// <summary>
+  /// Close 1008: a member that negotiated v2 sent a raw SyncStep2 or
+  /// SyncUpdate. Such a frame carries no operation id, so it can be answered
+  /// with neither an acknowledgement nor a rejection. Not <c>BadAwareness</c>,
+  /// the other 1008: that one is a relay the room tolerates twice before
+  /// closing, this one is refused on the first frame and applies nothing.
+  /// </summary>
+  RawWriteOnV2,
 }
 
 /// <summary>
@@ -36,16 +45,16 @@ internal interface ICollabMember
   bool CanWrite { get; }
 
   /// <summary>
-  /// True for connections that negotiated blok-sync.v1: the room sends them
-  /// the epoch control frame as their first frame (plan decision 6). The
-  /// endpoint must not send it as well.
+  /// True for connections that negotiated a blok-sync subprotocol (v1 or v2):
+  /// the room sends them the epoch control frame as their first frame (plan
+  /// decision 6). The endpoint must not send it as well.
   /// </summary>
   bool AcceptsControlFrames { get; }
 
   /// <summary>
   /// Actor a journalled write is attributed to. Recorded on every committed
-  /// operation; a v1 write is not journalled yet (Task 3.4). Derived at the
-  /// handshake from the ticket's user claim or the signed-in principal —
+  /// operation, a v1 one included. Derived at the handshake from the ticket's
+  /// user claim or the signed-in principal —
   /// never from a rate-limit/connection-cap key, and never from anything the
   /// client sends after the handshake. Null when the connection carries no
   /// verified identity: an unknown author stays unknown rather than getting

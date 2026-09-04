@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.WebSockets;
 using Blok.Server.Collab;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -13,6 +14,8 @@ namespace Blok.Server.AspNetCore.Tests.Collab;
 /// <summary>The /sync/{doc} wire once the door is open: sync, awareness, limits, lifecycle.</summary>
 public sealed class SyncEndpointTests
 {
+  private const string OpOne = "0123456789abcdef0123456789abcdef";
+
   private readonly TicketFixture fixture = TicketFixture.Load();
 
   [Theory]
@@ -665,6 +668,175 @@ public sealed class SyncEndpointTests
     Assert.Equal((1008, "outbound queue overflow"), await stalled.ReceiveCloseAsync());
   }
 
+  /// <summary>
+  /// v2 keeps the v1 handshake and changes only what the client may send
+  /// back. Both clients start from an empty doc against the same room, so
+  /// "the same frames" is assertable as the same bytes.
+  /// </summary>
+  [Fact]
+  public async Task AV2JoinReceivesTheSameHandshakeBytesAsAV1Join()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(
+        operations,
+        new CollabRoomOptions { AnnouncedMaxMessageBytes = 1L << 20 });
+    await using var v1 = await app.ConnectAsync(protocols: [SyncApp.Protocol]);
+    var v1Frames = await HandshakeFramesAsync(v1);
+    await using var v2 = await app.ConnectAsync(
+        protocols: [SyncApp.ProtocolV2, SyncApp.Protocol]);
+    var v2Frames = await HandshakeFramesAsync(v2);
+
+    Assert.Equal(SyncApp.ProtocolV2, v2.SubProtocol);
+    Assert.Collection(
+        v2Frames,
+        frame => Assert.IsType<BlokControlFrame>(frame),
+        frame => Assert.IsType<BlokLimitsFrame>(frame),
+        frame => Assert.IsType<SyncStep2Frame>(frame),
+        frame => Assert.IsType<SyncStep1Frame>(frame));
+    Assert.Equal(v1Frames.Select(SyncWire.Encode), v2Frames.Select(SyncWire.Encode));
+  }
+
+  /// <summary>
+  /// Every inbound SyncStep1 is answered SyncStep2 then the server's own
+  /// SyncStep1, resyncs included — that second answer is how a client which
+  /// has just drained its outbox learns the fresh server state vector.
+  /// </summary>
+  [Fact]
+  public async Task AResyncOnAV2SessionIsAnsweredWithSyncStep2ThenAFreshServerSyncStep1()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(operations);
+    await using var client = await app.ConnectAsync(protocols: [SyncApp.ProtocolV2]);
+    var doc = YDocs.NewClient();
+    var lineage = (await client.ReceiveAsync<BlokControlFrame>()).Tag.Lineage;
+    await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
+    YDocs.Apply(doc, (await client.ReceiveAsync<SyncStep2Frame>()).Update);
+    var atJoin = (await client.ReceiveAsync<SyncStep1Frame>()).StateVector;
+    await client.SendAsync(new OperationFrame(lineage, OpOne, YDocs.UpdateAppending(doc, "!")));
+    await client.ReceiveAsync<SyncUpdateFrame>();
+    await client.ReceiveAsync<AcknowledgementFrame>();
+
+    await client.SendAsync(new SyncStep1Frame(atJoin));
+
+    await client.ReceiveAsync<SyncStep2Frame>();
+    Assert.NotEqual(atJoin, (await client.ReceiveAsync<SyncStep1Frame>()).StateVector);
+  }
+
+  /// <summary>
+  /// The negotiated protocol is what the journal records, and the handshake
+  /// is the only thing that sets it.
+  /// </summary>
+  [Fact]
+  public async Task AV2OperationIsRelayedAcknowledgedAndJournalledAsAClientV2Write()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(operations);
+    await using var client = await app.ConnectAsync(protocols: [SyncApp.ProtocolV2]);
+    var doc = YDocs.NewClient();
+    var lineage = await HandshakeV2Async(client, doc);
+    var update = YDocs.UpdateAppending(doc, "!");
+
+    await client.SendAsync(new OperationFrame(lineage, OpOne, update));
+
+    // The submitter is in the v2 broadcast: on a v2 session the relay is how
+    // a writer sees what the server accepted, and the receipt follows it.
+    Assert.Equal(update, (await client.ReceiveAsync<SyncUpdateFrame>()).Update);
+    var ack = await client.ReceiveAsync<AcknowledgementFrame>();
+    Assert.Equal(lineage, ack.Lineage);
+    Assert.Equal(OpOne, ack.OperationId);
+    Assert.Equal(1UL, ack.ServerSequence);
+    var record = Assert.Single(operations.Committed(SyncApp.Doc));
+    Assert.Equal(OpOne, record.OperationId);
+    Assert.Equal(CollabOperationSource.ClientV2, record.Source);
+  }
+
+  /// <summary>Presence is not a write, so v2 relays it, before its sync exchange too.</summary>
+  [Fact]
+  public async Task AwarenessFromAV2SessionIsRelayed()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(operations);
+    await using var peer = await app.ConnectAsync();
+    Assert.Equal("seeded", await SyncedTextAsync(peer));
+    await using var writer = await app.ConnectAsync(protocols: [SyncApp.ProtocolV2]);
+    Assert.Equal(SyncApp.ProtocolV2, writer.SubProtocol);
+
+    await writer.SendAsync(new AwarenessFrame(Presence(7)));
+
+    Assert.Equal(Presence(7), (await peer.ReceiveAsync<AwarenessFrame>()).Update);
+  }
+
+  /// <summary>
+  /// Protocol §7: a raw SyncStep2/Update on a v2 socket carries no operation
+  /// id, so it can be answered with neither an acknowledgement nor a
+  /// rejection. Nothing is applied, journalled or relayed; the socket goes.
+  /// </summary>
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task ARawWriteOnAV2SessionIsClosed1008WithoutReachingAPeer(bool asSyncStep2)
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(operations);
+    await using var writer = await app.ConnectAsync(protocols: [SyncApp.ProtocolV2]);
+    var doc = YDocs.NewClient();
+    await HandshakeV2Async(writer, doc);
+    await using var peer = await app.ConnectAsync();
+    Assert.Equal("seeded", await SyncedTextAsync(peer));
+
+    // The peer's join queued this at the writer; left in place it would be
+    // mistaken below for a frame the raw write produced.
+    await writer.ReceiveAsync<QueryAwarenessFrame>();
+    var update = YDocs.UpdateAppending(doc, "!");
+    var offenderNext = writer.ReceiveOrCloseAsync();
+    var peerNext = peer.ReceiveOrCloseAsync();
+
+    await writer.SendAsync(asSyncStep2
+      ? new SyncStep2Frame(update)
+      : new SyncUpdateFrame(update));
+
+    // Whichever lands first answers it: the writer is excluded from a raw
+    // relay, so a leak is only ever visible at the peer.
+    var landed = await await Task.WhenAny(offenderNext, peerNext);
+
+    Assert.True(landed is null, $"expected the close first, got {landed}");
+    Assert.Equal(1008, (int)(writer.Socket.CloseStatus ?? WebSocketCloseStatus.Empty));
+    Assert.Equal("raw write on a v2 session", writer.Socket.CloseStatusDescription);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+  }
+
+  /// <summary>
+  /// not-synced is the one transient rejection code: the room was not ready,
+  /// the operation was never judged invalid, and the socket stays up for the
+  /// client to redrive the same id.
+  /// </summary>
+  [Fact]
+  public async Task AnOperationBeforeTheSyncExchangeIsRejectedAsNotSyncedAndAcceptedAfterIt()
+  {
+    var operations = new FakeCollabOperationStore();
+    await using var app = await StartV2Async(operations);
+    await using var client = await app.ConnectAsync(protocols: [SyncApp.ProtocolV2]);
+    var doc = YDocs.NewClient();
+    var lineage = (await client.ReceiveAsync<BlokControlFrame>()).Tag.Lineage;
+    var update = YDocs.UpdateAppending(doc, "!");
+
+    await client.SendAsync(new OperationFrame(lineage, OpOne, update));
+
+    var rejection = await client.ReceiveAsync<RejectionFrame>();
+    Assert.Equal("not-synced", rejection.Code);
+    Assert.Equal(OpOne, rejection.OperationId);
+    Assert.Empty(operations.Committed(SyncApp.Doc));
+
+    await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
+    await client.ReceiveAsync<SyncStep2Frame>();
+    await client.ReceiveAsync<SyncStep1Frame>();
+    await client.SendAsync(new OperationFrame(lineage, OpOne, update));
+
+    await client.ReceiveAsync<SyncUpdateFrame>();
+    Assert.Equal(OpOne, (await client.ReceiveAsync<AcknowledgementFrame>()).OperationId);
+    Assert.Single(operations.Committed(SyncApp.Doc));
+  }
+
   [Fact]
   public async Task ADocumentOpenElsewhereCloses4503()
   {
@@ -704,6 +876,45 @@ public sealed class SyncEndpointTests
 
     Assert.Equal((1001, "server shutting down"), await client.ReceiveCloseAsync());
     await app.AssertRefusedAsync(HttpStatusCode.ServiceUnavailable);
+  }
+
+  /// <summary>
+  /// The door advertises v2 only with a registered store, and the room needs
+  /// the SAME one — a server whose handshake sees a store its room does not
+  /// would negotiate a protocol it cannot durably serve.
+  /// </summary>
+  private static Task<SyncApp> StartV2Async(
+      FakeCollabOperationStore operations,
+      CollabRoomOptions? roomOptions = null)
+  {
+    return SyncApp.StartAsync(
+        services: services => services.AddSingleton<ICollabOperationStore>(operations),
+        fakes: new SyncFakes(roomOptions, operations));
+  }
+
+  /// <summary>
+  /// The join frames in order — control, limits, then the SyncStep2 and
+  /// SyncStep1 that one SyncStep1 earns. Raw receives: the type-filtering
+  /// overload would skip an unexpected frame instead of showing it.
+  /// </summary>
+  private static async Task<SyncWireMessage[]> HandshakeFramesAsync(SyncClient client)
+  {
+    var control = await client.ReceiveAsync();
+    var limits = await client.ReceiveAsync();
+    await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(YDocs.NewClient())));
+
+    return [control, limits, await client.ReceiveAsync(), await client.ReceiveAsync()];
+  }
+
+  /// <summary>Drives a v2 socket through the handshake and returns the document's lineage.</summary>
+  private static async Task<string> HandshakeV2Async(SyncClient client, Blok.Server.Yjs.YDoc doc)
+  {
+    var lineage = (await client.ReceiveAsync<BlokControlFrame>()).Tag.Lineage;
+    await client.SendAsync(new SyncStep1Frame(YDocs.StateVector(doc)));
+    YDocs.Apply(doc, (await client.ReceiveAsync<SyncStep2Frame>()).Update);
+    await client.ReceiveAsync<SyncStep1Frame>();
+
+    return lineage;
   }
 
   private static async Task<Blok.Server.Yjs.YDoc> SyncedAsync(SyncClient client)

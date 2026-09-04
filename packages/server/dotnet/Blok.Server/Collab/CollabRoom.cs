@@ -30,6 +30,13 @@ internal sealed class CollabMembership
   /// <summary>Room-owned, touched only under the lane.</summary>
   internal int MalformedAwarenessFrames { get; set; }
 
+  /// <summary>
+  /// Set once the room has queued ITS SyncStep2 to this member. A v2
+  /// operation before that point is refused as not-synced. Room-owned,
+  /// touched only under the lane.
+  /// </summary>
+  internal bool Synced { get; set; }
+
   public ValueTask ReceiveAsync(
       byte[] frame,
       CancellationToken cancellationToken = default)
@@ -1109,6 +1116,20 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    // Protocol §7: only an operation frame may carry a v2 client's write. A
+    // raw SyncStep2/Update has no operation id, so it can be answered with
+    // neither an acknowledgement nor a rejection — nothing is applied,
+    // journalled or relayed, and the member goes. The gate is the NEGOTIATED
+    // protocol: v1 and stock y-websocket members still write this way.
+    if (message is SyncStep2Frame or SyncUpdateFrame &&
+        membership.Member.ProtocolSource == CollabOperationSource.ClientV2)
+    {
+      log?.Invoke($"collab: room \"{DocId}\" closed a v2 member that sent a raw write");
+      ExpelLocked(membership, CollabCloseReason.RawWriteOnV2);
+
+      return;
+    }
+
     switch (message)
     {
       case SyncStep1Frame step1:
@@ -1208,6 +1229,10 @@ internal sealed class CollabRoom : IDisposable
 
     Send(membership, SyncWire.Encode(new SyncStep2Frame(diff)));
     Send(membership, SyncWire.Encode(new SyncStep1Frame(stateVector)));
+
+    // After the send, not before: the drop branches above leave the member
+    // holding a state this room never gave it, which is what not-synced means.
+    membership.Synced = true;
   }
 
   /// <summary>
@@ -1243,6 +1268,15 @@ internal sealed class CollabRoom : IDisposable
     if (!membership.Member.CanWrite)
     {
       RejectLocked(membership, operation, "read-only");
+
+      return;
+    }
+
+    if (!membership.Synced)
+    {
+      // Transient, and the connection stays: the client redrives the same
+      // operation once the sync exchange has completed.
+      RejectLocked(membership, operation, "not-synced");
 
       return;
     }

@@ -105,6 +105,10 @@ override-extension/payload/
 *.toml
 !gitleaks.toml
 
+# Stryker's sandboxes: one full copy of the repo per concurrent runner, left
+# behind when a run is killed rather than finishing.
+.stryker-tmp/
+
 # Stryker mutation state: incremental baseline, survivor ledger and reports
 .mutation-state/
 # The published baseline, unpacked into the directory above by the workflow and

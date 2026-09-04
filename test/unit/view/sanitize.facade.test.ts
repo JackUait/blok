@@ -199,3 +199,98 @@ describe('view sanitizer element facade', () => {
     });
   });
 });
+
+describe('view sanitizer entry paths', () => {
+  // The fast path returns the input untouched when there is no markup to parse.
+  // Without it, every plain-text field pays for a parse; with it inverted, none
+  // of them are ever sanitized.
+  describe('the no-markup fast path', () => {
+    it('returns text carrying no markup characters byte-identical', () => {
+      expect(sanitizeHtmlFragment('plain text, no markup', { p: true })).toBe('plain text, no markup');
+    });
+
+    it('returns an empty fragment as an empty string', () => {
+      expect(sanitizeHtmlFragment('', { p: true })).toBe('');
+    });
+
+    // Each character in the trigger set has to keep triggering: a stray `&`,
+    // a NBSP or a CR reach the parser and come back normalized, and skipping
+    // them would hand the caller raw input the DOM sanitizer would have changed.
+    it('still sanitizes text whose only markup character is an entity or a control', () => {
+      expect(sanitizeHtmlFragment('a & b', { p: true })).toBe('a &amp; b');
+      expect(sanitizeHtmlFragment('<b>x</b>', {})).toBe('x');
+    });
+  });
+
+  describe('template content', () => {
+    // parse5 serializes template.content, which html-janitor's TreeWalker cannot
+    // even see. Left unsanitized, an allowed <template> smuggles arbitrary
+    // markup through the whole allowlist.
+    it('sanitizes inside a template, not just around it', () => {
+      const html = '<template><p>keep</p><script>alert(1)</script><b>drop</b></template>';
+      const out = sanitizeHtmlFragment(html, { template: true, p: true });
+
+      expect(out).toContain('<p>keep</p>');
+      expect(out).not.toContain('<script>');
+      expect(out).not.toContain('<b>');
+      expect(out).toContain('drop');
+    });
+
+    it('leaves a non-template element to the ordinary child walk', () => {
+      expect(sanitizeHtmlFragment('<div><span>x</span><script>a</script></div>', { div: true, span: true }))
+        .toBe('<div><span>x</span></div>');
+    });
+  });
+
+  describe('the URL transform hook', () => {
+    it('writes back a rewritten attribute value', () => {
+      const out = sanitizeHtmlFragment(
+        '<a href="/x">l</a>',
+        { a: { href: true } },
+        (url) => `https://cdn.example${url}`,
+      );
+
+      expect(out).toBe('<a href="https://cdn.example/x">l</a>');
+    });
+
+    it('leaves the attribute alone when the transform returns it unchanged', () => {
+      const out = sanitizeHtmlFragment('<a href="/x">l</a>', { a: { href: true } }, (url) => url);
+
+      expect(out).toBe('<a href="/x">l</a>');
+    });
+
+    // The transform runs BEFORE the scheme check, so a transform that produces
+    // a script URL must still be refused — otherwise the hook is a bypass.
+    it('drops an attribute the transform turned into a script URL', () => {
+      const out = sanitizeHtmlFragment(
+        '<a href="/x">l</a>',
+        { a: { href: true } },
+        () => 'javascript:alert(1)',
+      );
+
+      expect(out).toBe('<a>l</a>');
+    });
+
+    it('drops an attribute when the transform does not return a string', () => {
+      const out = sanitizeHtmlFragment(
+        '<a href="/x">l</a>',
+        { a: { href: true } },
+        (() => undefined) as unknown as (url: string, attr: 'href' | 'src') => string,
+      );
+
+      expect(out).toBe('<a>l</a>');
+    });
+  });
+
+  // parse5 throws a RangeError on two adjacent low surrogates. One such field
+  // must not cost the whole document, so the parse is retried on repaired input
+  // — and any other error has to keep propagating rather than be swallowed.
+  describe('unparseable input', () => {
+    it('recovers from adjacent lone low surrogates instead of throwing', () => {
+      const broken = `<p>a${'\uDC00'}${'\uDC00'}b</p>`;
+
+      expect(() => sanitizeHtmlFragment(broken, { p: true })).not.toThrow();
+      expect(sanitizeHtmlFragment(broken, { p: true })).toContain('<p>');
+    });
+  });
+});

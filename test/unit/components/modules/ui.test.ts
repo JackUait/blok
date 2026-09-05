@@ -2558,6 +2558,17 @@ describe("UI module", () => {
       return result;
     };
 
+    /**
+     * The editor only takes a fragment click when something here answers to it,
+     * so a scroll test has to put that target in the document first.
+     */
+    const addTarget = (redactor: HTMLElement, blockId: string): void => {
+      const block = document.createElement("div");
+
+      block.setAttribute("data-blok-id", blockId);
+      redactor.appendChild(block);
+    };
+
     const clickLink = (redactor: HTMLElement, href: string): void => {
       const anchor = document.createElement("a");
 
@@ -2579,6 +2590,7 @@ describe("UI module", () => {
 
       const { blok, redactor } = createLinkUI();
 
+      addTarget(redactor, "h.2y1ok8y7pef0");
       clickLink(redactor, "#h.2y1ok8y7pef0");
 
       expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("h.2y1ok8y7pef0");
@@ -2621,6 +2633,7 @@ describe("UI module", () => {
 
       const { blok, redactor } = createLinkUI();
 
+      addTarget(redactor, "block-42");
       clickLink(
         redactor,
         `${window.location.origin}${window.location.pathname}#block-42`
@@ -2659,6 +2672,7 @@ describe("UI module", () => {
 
       const { blok, redactor } = createLinkUI();
 
+      addTarget(redactor, "header-18");
       clickLink(
         redactor,
         `${window.location.origin}${window.location.pathname}?origin=search#header-18`
@@ -2679,6 +2693,9 @@ describe("UI module", () => {
       vi.spyOn(window, "open").mockImplementation(openSpy);
 
       const { blok, redactor } = createLinkUI();
+
+      addTarget(redactor, "header-18");
+
       const original = `${window.location.pathname}${window.location.search}`;
 
       window.history.replaceState(null, "", "?origin=search");
@@ -2717,12 +2734,69 @@ describe("UI module", () => {
 
       const { blok, redactor } = createLinkUI();
 
+      addTarget(redactor, "блок");
       clickLink(
         redactor,
         `${window.location.origin}${window.location.pathname}#%D0%B1%D0%BB%D0%BE%D0%BA`
       );
 
       expect(blok.BlocksAPI.scrollToBlock).toHaveBeenCalledWith("блок");
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    const clickLinkCancelable = (redactor: HTMLElement, href: string): MouseEvent => {
+      const anchor = document.createElement("a");
+
+      anchor.setAttribute("href", href);
+      anchor.textContent = "Раздел";
+      redactor.appendChild(anchor);
+
+      const event = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+      });
+
+      anchor.dispatchEvent(event);
+
+      return event;
+    };
+
+    it("leaves a fragment nothing answers to for the browser to follow", () => {
+      /**
+       * An imported document can link a heading anchor this editor never
+       * rendered. Swallowing that click strands the host: it never sees the
+       * hashchange its own fallback listens for, so the click does nothing at
+       * all instead of merely doing nothing here.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { blok, redactor } = createLinkUI();
+
+      const event = clickLinkCancelable(redactor, "#h.2y1ok8y7pef0");
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(blok.BlocksAPI.scrollToBlock).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("still refuses an unsafe scheme rather than letting the browser run it", () => {
+      /**
+       * Falling through is only ever right for a fragment this editor cannot
+       * place. A javascript: href must stay swallowed — handing it back to the
+       * browser is exactly the click-to-XSS the guard exists to stop.
+       */
+      const openSpy = vi.fn();
+
+      vi.spyOn(window, "open").mockImplementation(openSpy);
+
+      const { redactor } = createLinkUI();
+
+      const event = clickLinkCancelable(redactor, "javascript:alert(1)");
+
+      expect(event.defaultPrevented).toBe(true);
       expect(openSpy).not.toHaveBeenCalled();
     });
 
@@ -2737,6 +2811,7 @@ describe("UI module", () => {
 
       const { ui, blok, redactor } = createLinkUI();
 
+      addTarget(redactor, "h.2y1ok8y7pef0");
       ui.toggleReadOnly(true);
 
       clickLink(redactor, "#h.2y1ok8y7pef0");

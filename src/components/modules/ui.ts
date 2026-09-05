@@ -19,7 +19,7 @@ import { destroyAnnouncer, registerAnnouncer } from '../utils/announcer';
 import { buildFontSizeVarLines } from '../utils/font-size-tokens';
 import { LinkHoverCard } from '../utils/link-hover-card';
 import { log } from '../utils/logger';
-import { decodeHashFragment } from '../utils/hash-target';
+import { decodeHashFragment, resolveHashTarget } from '../utils/hash-target';
 import { hasUnsafeScheme } from '../utils/sanitize-url';
 import { isSamePageLink } from '../../tools/link/registry';
 
@@ -1358,6 +1358,16 @@ export class UI extends Module<UINodes> {
       return;
     }
 
+    /**
+     * Decided before the click is swallowed: a click this editor will not act
+     * on has to reach the browser intact.
+     */
+    if (!this.handlesLinkClick(href)) {
+      this.linkHoverCard?.hide();
+
+      return;
+    }
+
     event.stopImmediatePropagation();
     event.stopPropagation();
     event.preventDefault();
@@ -1365,6 +1375,39 @@ export class UI extends Module<UINodes> {
     this.linkHoverCard?.hide();
 
     this.openLink(href);
+  }
+
+  /**
+   * Whether this editor acts on a click on `href` itself.
+   *
+   * The one case it does not is a same-page fragment that answers to nothing
+   * here — an imported document linking a heading this editor never rendered.
+   * Swallowing that click strands the host: `location.hash` never moves, so the
+   * `hashchange` its own fallback waits for never arrives and the click does
+   * nothing at all. Letting the browser follow it costs this editor nothing (it
+   * had no target to scroll to) and hands the host its signal back.
+   *
+   * Refusing an unsafe scheme counts as acting: that click must stay swallowed,
+   * or handing it back is the click-to-XSS the refusal exists to stop.
+   * @param href - the raw anchor href
+   */
+  private handlesLinkClick(href: string): boolean {
+    if (hasUnsafeScheme(href) || !isSamePageLink(href)) {
+      return true;
+    }
+
+    const resolved = new URL(href.trim(), window.location.href);
+    const fragment = decodeHashFragment(resolved.hash.slice(1));
+
+    /**
+     * No fragment is still this editor's call — it either navigates on a query
+     * difference or deliberately does nothing for the current URL exactly.
+     */
+    if (fragment === '') {
+      return true;
+    }
+
+    return resolveHashTarget(fragment, this.nodes.holder) !== null;
   }
 
   /**

@@ -30,6 +30,18 @@ import type { CollaborationStatusChangedPayload } from '../../../../../types/eve
 
 const LINEAGE = '0123456789abcdef0123456789abcdef';
 
+/** The identity partition every offline boot here runs under. */
+const SCOPE = 'member-1';
+
+/**
+ * The database key the module opens for a document under one identity — the
+ * probes below read exactly what the module wrote, so this has to track it.
+ * @param doc - the document id the harness booted with
+ * @param scope - the identity partition the harness booted under
+ */
+const cacheKey = (doc = 'doc-1', scope: string = SCOPE): string =>
+  `wss://sync.test/api/sync/${doc}|${scope}`;
+
 /**
  * An ordinary third-party tool: read-only CAPABLE, but with no `setReadOnly`.
  *
@@ -223,11 +235,9 @@ const waitFor = async (
  * that there is something to reload INTO.
  * @param doc - the document id the harness booted with
  */
-const waitForCachedDocument = async (doc = 'doc-1'): Promise<void> => {
-  const key = `wss://sync.test/api/sync/${doc}`;
-
+const waitForCachedDocument = async (doc = 'doc-1', scope: string = SCOPE): Promise<void> => {
   await waitFor(async () => {
-    const probe = createOfflineCache({ key });
+    const probe = createOfflineCache({ key: cacheKey(doc, scope) });
     const contents = await probe.open();
 
     probe.close();
@@ -243,6 +253,7 @@ interface BootOptions {
   ticket?: string;
   collaboration?: boolean;
   offline?: boolean;
+  offlineScope?: string;
   user?: { name: string; color?: string };
 }
 
@@ -257,6 +268,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
     doc: options.doc ?? 'doc-1',
     user: options.user,
     offline: options.offline,
+    offlineScope: options.offlineScope ?? (options.offline === true ? SCOPE : undefined),
     socketFactory: (url, protocols) => {
       const socket = new MockSocket(url, protocols);
 
@@ -654,7 +666,7 @@ describe('collaboration — sync-first load', () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
 
       const snapshot = peerWith([{ id: 'b1', type: 'paragraph', data: { text: 'cached' } }]);
-      const seed = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+      const seed = createOfflineCache({ key: cacheKey() });
 
       await seed.open();
       await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, true, snapshot.encodeStateAsUpdate());
@@ -683,7 +695,7 @@ describe('collaboration — sync-first load', () => {
       destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
 
       const rowsAfter = async (): Promise<number> => {
-        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const probe = createOfflineCache({ key: cacheKey() });
         const contents = await probe.open();
 
         probe.close();
@@ -740,7 +752,7 @@ describe('collaboration — sync-first load', () => {
 
       destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
 
-      const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+      const probe = createOfflineCache({ key: cacheKey() });
       const contents = await probe.open();
 
       probe.close();
@@ -793,7 +805,7 @@ describe('collaboration — sync-first load', () => {
       expect(seen.at(-1)?.reason).toContain('offline copy was discarded');
 
       await waitFor(async () => {
-        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const probe = createOfflineCache({ key: cacheKey() });
         const contents = await probe.open();
 
         probe.close();
@@ -818,7 +830,7 @@ describe('collaboration — sync-first load', () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      const seed = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+      const seed = createOfflineCache({ key: cacheKey() });
 
       await seed.open();
       await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, false, new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]));
@@ -829,7 +841,7 @@ describe('collaboration — sync-first load', () => {
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
 
       await waitFor(async () => {
-        const probe = createOfflineCache({ key: 'wss://sync.test/api/sync/doc-1' });
+        const probe = createOfflineCache({ key: cacheKey() });
         const contents = await probe.open();
 
         probe.close();
@@ -857,6 +869,120 @@ describe('collaboration — sync-first load', () => {
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
 
       expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    // A scope is a partition for a copy, not a reason to keep one: without
+    // `offline` the host never consented to writing the document to disk.
+    it('opens no database for an offlineScope without offline', async () => {
+      const factory = new IDBFactory();
+      const openSpy = vi.spyOn(factory, 'open');
+
+      vi.stubGlobal('indexedDB', factory);
+
+      const harness = await boot({ offline: false,
+        offlineScope: 'alice' });
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'not cached' } }]);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The local copy belongs to the BROWSER, so on a shared profile the next
+     * person to open the page was handed the previous person's document —
+     * drawn on screen before any connection was made. `offlineScope` is the
+     * partition that stops it.
+     */
+    describe('the identity partition', () => {
+      it('never hands one scope the document another scope cached', async () => {
+        vi.stubGlobal('indexedDB', new IDBFactory());
+
+        const alice = await boot({ offline: true,
+          offlineScope: 'alice' });
+
+        firstSync(alice, [{ type: 'paragraph', data: { text: 'alice private' } }]);
+        await waitFor(() => alice.core.moduleInstances.BlockManager.blocks.length === 1, 'alice synced');
+        await waitForCachedDocument('doc-1', 'alice');
+        destroyCore(booted.splice(booted.indexOf(alice.core), 1)[0]);
+
+        const bob = await boot({ offline: true,
+          offlineScope: 'bob' });
+
+        expect(
+          blockTexts(bob.core),
+          'a bob-scoped boot adopted the alice-scoped cached document'
+        ).toEqual([]);
+        expect(bob.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
+      }, 20_000);
+
+      it('leaves the other partition untouched', async () => {
+        vi.stubGlobal('indexedDB', new IDBFactory());
+
+        const alice = await boot({ offline: true,
+          offlineScope: 'alice' });
+
+        firstSync(alice, [{ type: 'paragraph', data: { text: 'alice private' } }]);
+        await waitFor(() => alice.core.moduleInstances.BlockManager.blocks.length === 1, 'alice synced');
+        await waitForCachedDocument('doc-1', 'alice');
+        destroyCore(booted.splice(booted.indexOf(alice.core), 1)[0]);
+
+        const bob = await boot({ offline: true,
+          offlineScope: 'bob' });
+
+        firstSync(bob, [{ type: 'paragraph', data: { text: 'bob private' } }]);
+        await waitFor(() => bob.core.moduleInstances.BlockManager.blocks.length === 1, 'bob synced');
+        await waitForCachedDocument('doc-1', 'bob');
+        destroyCore(booted.splice(booted.indexOf(bob.core), 1)[0]);
+
+        const probe = createOfflineCache({ key: cacheKey('doc-1', 'alice') });
+        const contents = await probe.open();
+
+        probe.close();
+
+        const replay = new DocumentStore(new YBlockSerializer());
+
+        for (const update of contents?.updates ?? []) {
+          replay.applyRemoteUpdate(update);
+        }
+
+        const texts = replay.toJSON().map((block) => (block.data as { text?: string }).text);
+
+        replay.destroy();
+
+        expect(
+          texts,
+          'a bob-scoped session wrote into the alice-scoped partition'
+        ).toEqual(['alice private']);
+      }, 30_000);
+
+      it('finds its own copy intact on a later visit', async () => {
+        vi.stubGlobal('indexedDB', new IDBFactory());
+
+        const alice = await boot({ offline: true,
+          offlineScope: 'alice' });
+
+        firstSync(alice, [{ type: 'paragraph', data: { text: 'alice private' } }]);
+        await waitFor(() => alice.core.moduleInstances.BlockManager.blocks.length === 1, 'alice synced');
+        await waitForCachedDocument('doc-1', 'alice');
+        destroyCore(booted.splice(booted.indexOf(alice.core), 1)[0]);
+
+        const bob = await boot({ offline: true,
+          offlineScope: 'bob' });
+
+        await waitFor(() => bob.sockets.length === 1, 'bob opened a socket');
+        destroyCore(booted.splice(booted.indexOf(bob.core), 1)[0]);
+
+        const back = await boot({ offline: true,
+          offlineScope: 'alice' });
+
+        await waitFor(
+          () => back.core.moduleInstances.BlockManager.blocks.length === 1,
+          'the alice-scoped copy on the second visit'
+        );
+
+        expect(blockTexts(back.core)).toEqual(['alice private']);
+      }, 30_000);
     });
   });
 

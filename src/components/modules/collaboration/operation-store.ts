@@ -56,6 +56,16 @@ export interface OperationStoreOptions {
 }
 
 /**
+ * Escapes one segment of the partition name, whose parts are joined with `|`.
+ *
+ * `%` MUST be escaped before `|`: the other order turns `a|b` and the literal
+ * `a%7Cb` into the same string, so two partitions share one database.
+ * @param segment - one of the url, doc or scope parts
+ */
+export const escapePartitionSegment = (segment: string): string =>
+  segment.replace(/%/g, '%25').replace(/\|/g, '%7C');
+
+/**
  * The store's own record of the session that wrote it. `writeDenied` and
  * `protocol` ride along so a reload restores the member's last known write
  * verdict and routes local edits the way the server will accept them.
@@ -382,7 +392,7 @@ const resolveLocks = (supplied: OfflineCacheLocks | undefined): OfflineCacheLock
  * @param options - what to store, and where
  */
 export const createOperationStore = (options: OperationStoreOptions): OperationStore => {
-  const dbName = `blok-ops-${options.url}|${options.doc}|${options.offlineScope ?? ''}`;
+  const dbName = `blok-ops-${escapePartitionSegment(options.url)}|${escapePartitionSegment(options.doc)}|${escapePartitionSegment(options.offlineScope ?? '')}`;
   const threshold = options.compactionThreshold ?? DEFAULT_COMPACTION_THRESHOLD;
   const locks = resolveLocks(options.locks);
 

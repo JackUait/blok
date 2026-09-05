@@ -329,6 +329,18 @@ export class Core {
     if (collaboration.offline !== undefined && typeof collaboration.offline !== 'boolean') {
       throw new Error('collaboration.offline must be a boolean');
     }
+
+    // The configuration setter runs before `init()`, so this refusal lands
+    // before Collaboration.load() opens IndexedDB — a later check would be
+    // looking at a database already open under the wrong name.
+    if (
+      collaboration.offline === true &&
+      (typeof collaboration.offlineScope !== 'string' || collaboration.offlineScope.length === 0)
+    ) {
+      throw new Error(
+        'collaboration.offlineScope must be a non-empty string when collaboration.offline is true'
+      );
+    }
   }
 
   /**

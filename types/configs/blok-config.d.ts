@@ -735,14 +735,35 @@ export interface BlokMountOptions {
      * verdict is honoured only while `ticket` is configured — without a
      * ticket source the cached document comes up editable.
      *
-     * IT IS NOT SCOPED TO A PERSON. The copy belongs to the browser, so on a
-     * shared profile the next person to open that page sees the previous
-     * one's document on screen before any connection is made — the server
-     * refuses them a moment later, but the content was already drawn. If the
-     * same browser serves more than one account, give each one its own
-     * document ids, or leave this off.
+     * The copy is scoped to a person by `offlineScope`, which is REQUIRED
+     * whenever this is on — without it the editor refuses to start.
      */
     offline?: boolean;
+
+    /**
+     * Which signed-in identity the local copy belongs to. Required when
+     * `offline` is on; ignored otherwise.
+     *
+     * The copy lives in this browser's storage, which belongs to the BROWSER
+     * and not to a person: unpartitioned, the next person to open the page on
+     * a shared profile sees the previous one's document drawn on screen before
+     * any connection is made. This key is that partition — each scope gets its
+     * own local copy, and no scope can read or write another one's.
+     *
+     * Pass an OPAQUE, STABLE id for the signed-in account: the same string
+     * every time that person signs in, on every device. It is NOT an
+     * authorization claim — the server decides what they may read and write,
+     * and never sees this value — and it is not the display identity either
+     * (`collaboration.user` is that, and it can change).
+     *
+     * Do NOT derive it from anything that rotates. A ticket, a session id or a
+     * presence value mints a new partition on every refresh, which strands
+     * every earlier copy — including edits made offline and not yet sent.
+     *
+     * Changing it is not a migration: the old scope's copy is left where it
+     * is, untouched and unread.
+     */
+    offlineScope?: string;
   };
 
   /**

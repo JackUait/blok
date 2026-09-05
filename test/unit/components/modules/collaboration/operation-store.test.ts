@@ -1470,6 +1470,52 @@ describe('collaboration — operation store', () => {
     });
   });
 
+  /**
+   * The database name joins url, doc and scope with `|`. Unescaped, a `|`
+   * inside a segment moves the boundary, so two different partitions produce
+   * one name and share one outbox. `offlineScope` makes that a person
+   * boundary, which is why the separator has to be unambiguous.
+   */
+  describe('the partition boundary', () => {
+    /**
+     * Writes an adoptable copy under one partition.
+     * @param options - the partition to write under
+     * @param text - what the single row carries
+     */
+    const seed = async (options: Partial<OperationStoreOptions>): Promise<void> => {
+      const writer = storeWith(options);
+
+      await writer.open();
+      await writer.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await writer.appendRemote(updateWith('block-1', 'first partition'));
+      await writer.close();
+    };
+
+    it('keeps two partitions apart when a separator sits inside a segment', async () => {
+      await seed({ url: 'wss://sync.test/a|b',
+        doc: 'c' });
+
+      const reader = storeWith({ url: 'wss://sync.test/a',
+        doc: 'b|c' });
+
+      expect(
+        await reader.open(),
+        'a `|` inside the url aliased two partitions onto one database'
+      ).toBeNull();
+    });
+
+    it('keeps an escaped separator apart from a segment that spells it out', async () => {
+      await seed({ url: 'wss://sync.test/a|b' });
+
+      const reader = storeWith({ url: 'wss://sync.test/a%7Cb' });
+
+      expect(
+        await reader.open(),
+        'escaping `|` before `%` aliased `a|b` onto the literal `a%7Cb`'
+      ).toBeNull();
+    });
+  });
+
   describe('the legacy development database', () => {
     it('a prepopulated legacy blok-collab-* database stays untouched', async () => {
       const legacyName = `blok-collab-${URL}`;

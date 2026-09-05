@@ -539,6 +539,60 @@ describe('Core', () => {
       }).toThrow('collaboration.offline must be a boolean');
     });
 
+    // The local copy belongs to the browser, not to a person. Without a
+    // partition the next person on a shared profile is handed the previous
+    // one's document, so the scope is refused-not-defaulted — a default would
+    // be one shared partition wearing a name.
+    it.each([[undefined], [''], [42], [null]])(
+      'refuses collaboration.offline true without a non-empty offlineScope: %s',
+      async (offlineScope) => {
+        const core = await createReadyCore();
+
+        expect(() => {
+          core.configuration = withHolder({
+            collaboration: { doc: 'my-doc',
+              offline: true,
+              offlineScope },
+            server: 'https://blok.example.com',
+          });
+        }).toThrow('collaboration.offlineScope must be a non-empty string when collaboration.offline is true');
+      }
+    );
+
+    it('accepts collaboration.offline true with an offlineScope', async () => {
+      const core = await createReadyCore();
+
+      expect(() => {
+        core.configuration = withHolder({
+          collaboration: { doc: 'my-doc',
+            offline: true,
+            offlineScope: 'member-7' },
+          server: 'https://blok.example.com',
+        });
+      }).not.toThrow();
+
+      expect(core.configuration.collaboration).toEqual({ doc: 'my-doc',
+        offline: true,
+        offlineScope: 'member-7' });
+    });
+
+    // Nothing is cached without `offline`, so there is no partition to demand.
+    it.each([[undefined], [false]])(
+      'ignores offlineScope when offline is %s',
+      async (offline) => {
+        const core = await createReadyCore();
+
+        expect(() => {
+          core.configuration = withHolder({
+            collaboration: { doc: 'my-doc',
+              offline,
+              offlineScope: '' },
+            server: 'https://blok.example.com',
+          });
+        }).not.toThrow();
+      }
+    );
+
     // A JS consumer can drop `doc` entirely; that is still an invalid segment,
     // not a crash.
     it('refuses collaboration whose doc is missing entirely', async () => {

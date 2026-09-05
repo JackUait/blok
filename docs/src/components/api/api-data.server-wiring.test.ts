@@ -82,6 +82,16 @@ describe("server wiring config keys", () => {
     expect(description).not.toMatch(/outline/i);
   });
 
+  // `offline` on its own is refused at construction now: the copy belongs to
+  // the browser, so without a partition a shared profile hands it to whoever
+  // opens the page next.
+  it("names the identity partition offline requires", () => {
+    const description = row("collaboration")?.description ?? "";
+
+    expect(description).toMatch(/offlineScope/);
+    expect(row("collaboration")?.type).toContain("offlineScope?: string");
+  });
+
   it("names the event a host renders its indicator from", () => {
     expect(row("collaboration")?.description).toContain("collaboration:status");
   });

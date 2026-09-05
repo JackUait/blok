@@ -16,6 +16,7 @@ import {
 } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
 import { createOfflineCache, type OfflineCache } from './offline-cache';
+import { escapePartitionSegment } from './operation-store';
 import { createCollabProvider } from './provider';
 import type {
   CollabDocSeam,
@@ -47,6 +48,12 @@ export interface CollaborationConfig {
    * person — see the published config docs.
    */
   offline?: boolean;
+  /**
+   * Opaque, stable partition for the signed-in identity. Required whenever
+   * `offline` is on, so one person's local copy is never handed to the next
+   * person on the same browser.
+   */
+  offlineScope?: string;
   /** @internal Opens the transport; defaults to the global `WebSocket`. */
   socketFactory?: CollabSocketFactory;
   /** @internal How long to wait for the server's control frame. */
@@ -164,6 +171,9 @@ interface CollabSettings {
   url: string;
   user: { name?: string; color?: string } | undefined;
   offline: boolean;
+
+  /** Identity partition the local copy is keyed by. Empty unless `offline`. */
+  offlineScope: string;
   ticketEndpoint: string | undefined;
   socketFactory: CollabSocketFactory | undefined;
   handshakeTimeoutMs: number | undefined;
@@ -290,6 +300,9 @@ export class Collaboration extends Module {
       url: syncUrl(server, collaboration.doc),
       user: collaboration.user,
       offline: collaboration.offline === true,
+      // Core refuses `offline: true` without a non-empty scope, so the fallback
+      // is only ever reached on a session that opens no database at all.
+      offlineScope: collaboration.offlineScope ?? '',
       ticketEndpoint: this.config.ticket,
       socketFactory: collaboration.socketFactory,
       handshakeTimeoutMs: collaboration.handshakeTimeoutMs,
@@ -418,7 +431,12 @@ export class Collaboration extends Module {
       return undefined;
     }
 
-    const cache = createOfflineCache({ key: settings.url });
+    // Partitioned by identity: the copy belongs to the browser, so an unscoped
+    // key hands the next person on a shared profile the previous person's
+    // document, drawn before any connection can refuse it.
+    const cache = createOfflineCache({
+      key: `${escapePartitionSegment(settings.url)}|${escapePartitionSegment(settings.offlineScope)}`,
+    });
 
     this.cache = cache;
 

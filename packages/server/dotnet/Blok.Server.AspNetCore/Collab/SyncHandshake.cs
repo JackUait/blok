@@ -63,6 +63,9 @@ internal sealed class SyncHandshake(
   /// v2 needs this AND a registered <see cref="ICollabOperationStore"/>; either
   /// alone is not enough. A room without a store has no journal, so it could
   /// not durably serve the protocol it would be selecting.
+  ///
+  /// `const` is fine either way, but a `static readonly` set back to `false`
+  /// trips CA1805 under this repo's warnings-as-errors.
   /// </summary>
   private const bool AdvertiseV2 = true;
 

@@ -506,6 +506,24 @@ public sealed class SyncHandshakeTests
     Assert.Equal(CollabOperationSource.ClientV1, accepted.ProtocolSource);
   }
 
+  /// <summary>
+  /// ClientV2 is the enum's default, so only a v2 selection that ALSO answers
+  /// v1 for the same handshake proves the source is derived rather than left
+  /// unset. The v1 arm above is the other half of that pair.
+  /// </summary>
+  [Fact]
+  public async Task AV2SelectionCarriesTheClientV2JournalSource()
+  {
+    var handshake = NewHandshake(TicketOptions(), new FakeCollabOperationStore());
+    var context = NewWebSocketContext(
+        protocols: [SyncApp.ProtocolV2, SyncApp.Protocol, fixture.Compatible]);
+
+    var accepted = Assert.IsType<SyncAccepted>(await handshake.NegotiateAsync(context, SyncApp.Doc));
+
+    Assert.Equal(SyncApp.ProtocolV2, accepted.SubProtocol);
+    Assert.Equal(CollabOperationSource.ClientV2, accepted.ProtocolSource);
+  }
+
   [Fact]
   public async Task ApplicationNameIdentifierBecomesJournalActor()
   {
@@ -586,9 +604,15 @@ public sealed class SyncHandshakeTests
     };
   }
 
-  private static SyncHandshake NewHandshake(BlokServerOptions options)
+  private static SyncHandshake NewHandshake(
+      BlokServerOptions options,
+      ICollabOperationStore? operations = null)
   {
-    return new SyncHandshake(options, new FixedWindowRateLimiter(options, TimeProvider.System), TimeProvider.System);
+    return new SyncHandshake(
+        options,
+        new FixedWindowRateLimiter(options, TimeProvider.System),
+        TimeProvider.System,
+        operations);
   }
 
   /// <summary>

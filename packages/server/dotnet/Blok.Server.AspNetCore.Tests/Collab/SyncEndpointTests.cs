@@ -799,6 +799,15 @@ public sealed class SyncEndpointTests
     // relay, so a leak is only ever visible at the peer.
     var landed = await await Task.WhenAny(offenderNext, peerNext);
 
+    // The loser is never awaited and faults when its socket is disposed;
+    // observing it keeps that out of this test's failure output.
+    _ = offenderNext.ContinueWith(
+        task => _ = task.Exception,
+        TaskContinuationOptions.OnlyOnFaulted);
+    _ = peerNext.ContinueWith(
+        task => _ = task.Exception,
+        TaskContinuationOptions.OnlyOnFaulted);
+
     Assert.True(landed is null, $"expected the close first, got {landed}");
     Assert.Equal(1008, (int)(writer.Socket.CloseStatus ?? WebSocketCloseStatus.Empty));
     Assert.Equal("raw write on a v2 session", writer.Socket.CloseStatusDescription);
@@ -895,7 +904,8 @@ public sealed class SyncEndpointTests
   /// <summary>
   /// The join frames in order — control, limits, then the SyncStep2 and
   /// SyncStep1 that one SyncStep1 earns. Raw receives: the type-filtering
-  /// overload would skip an unexpected frame instead of showing it.
+  /// overload skips a join-time queryAwareness, which is exactly the frame a
+  /// v2-only greeting would hide behind.
   /// </summary>
   private static async Task<SyncWireMessage[]> HandshakeFramesAsync(SyncClient client)
   {

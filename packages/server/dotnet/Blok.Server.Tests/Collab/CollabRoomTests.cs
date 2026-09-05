@@ -1634,6 +1634,19 @@ public sealed class CollabRoomTests
     Assert.Equal([CollabCloseReason.RawWriteOnV2], writer.Closes);
     Assert.Empty(operations.Committed(DocId));
     Assert.Equal("hello", await ExportedTextAsync(manager));
+
+    // Clears the queryAwareness the export probe's join broadcast, so what is
+    // asserted below is the expelled member's frame and nothing else.
+    other.Received.Clear();
+
+    // Closing the socket is not enough: a member left in the room would keep
+    // receiving the broadcast and would still have its next frame processed.
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(1))),
+        CancellationToken.None);
+
+    Assert.Empty(other.Received);
+    Assert.Equal([CollabCloseReason.RawWriteOnV2], writer.Closes);
   }
 
   /// <summary>
@@ -1732,6 +1745,31 @@ public sealed class CollabRoomTests
     var other = V2Member();
     var membership = await Join(manager, writer, synced: false);
     await Join(manager, other, synced: false);
+    other.Received.Clear();
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessClaiming(1))),
+        CancellationToken.None);
+
+    Assert.Equal(
+        AwarenessClaiming(1),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+    Assert.Empty(writer.Closes);
+  }
+
+  /// <summary>
+  /// The other half of "before and after": readiness gates operations, never
+  /// presence. A member that has finished the exchange still relays awareness.
+  /// </summary>
+  [Fact]
+  public async Task AwarenessAfterTheSyncExchangeIsStillRelayed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var other = V2Member();
+    var membership = await Join(manager, writer);
+    await Join(manager, other);
     other.Received.Clear();
 
     await membership.ReceiveAsync(

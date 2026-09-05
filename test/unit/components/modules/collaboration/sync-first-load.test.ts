@@ -14,7 +14,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
-import { createOfflineCache } from '../../../../../src/components/modules/collaboration/offline-cache';
+import {
+  createOperationStore,
+  type OperationStoreOptions,
+  type PendingOperation,
+} from '../../../../../src/components/modules/collaboration/operation-store';
 import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
 import * as collabProvider from '../../../../../src/components/modules/collaboration/provider';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
@@ -30,20 +34,26 @@ import type { CollaborationStatusChangedPayload } from '../../../../../types/eve
 
 const LINEAGE = '0123456789abcdef0123456789abcdef';
 
+/** What a server backed by a durable operation store selects. */
+const V2 = 'blok-sync.v2';
+
 /** The identity partition every offline boot here runs under. */
 const SCOPE = 'member-1';
 
 /**
- * The database key the module opens for a document under one identity — the
- * probes below read exactly what the module wrote, so this has to track it.
+ * The store the module opens for a document under one identity — the probes
+ * below read exactly what the module wrote, so this has to track it.
  * @param doc - the document id the harness booted with
  * @param scope - the identity partition the harness booted under
  */
-const cacheKey = (doc = 'doc-1', scope: string = SCOPE): string =>
-  `wss://sync.test/api/sync/${doc}|${scope}`;
+const storeOptions = (doc = 'doc-1', scope: string = SCOPE): OperationStoreOptions => ({
+  url: `wss://sync.test/api/sync/${doc}`,
+  doc,
+  offlineScope: scope,
+});
 
-/** What `createOfflineCache` prefixes its `key` with. */
-const CACHE_DB_PREFIX = 'blok-collab-';
+/** What `createOperationStore` prefixes its database name with. */
+const CACHE_DB_PREFIX = 'blok-ops-';
 
 /**
  * An ordinary third-party tool: read-only CAPABLE, but with no `setReadOnly`.
@@ -240,19 +250,107 @@ const waitFor = async (
  */
 const waitForCachedDocument = async (doc = 'doc-1', scope: string = SCOPE): Promise<void> => {
   await waitFor(async () => {
-    const probe = createOfflineCache({ key: cacheKey(doc, scope) });
+    const probe = createOperationStore(storeOptions(doc, scope));
     const contents = await probe.open();
 
-    probe.close();
+    await probe.close();
 
     return contents !== null && contents.updates.length > 0;
   }, 'the session to persist its document');
 };
 
 /**
+ * Rows in one object store of a database, read RAW.
+ *
+ * The store's database name folds three escaped segments together and cannot
+ * be parsed back into the options that built it, so a probe that only has a
+ * name has to open it directly.
+ * @param name - the database name
+ * @param objectStore - which of the store's four object stores to count
+ */
+const rawRowCount = async (name: string, objectStore: string): Promise<number> =>
+  new Promise((resolve) => {
+    const request = indexedDB.open(name);
+
+    request.onerror = () => resolve(0);
+    request.onsuccess = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(objectStore)) {
+        db.close();
+        resolve(0);
+
+        return;
+      }
+
+      const count = db.transaction(objectStore, 'readonly').objectStore(objectStore).count();
+
+      count.onsuccess = () => {
+        db.close();
+        resolve(count.result);
+      };
+      count.onerror = () => {
+        db.close();
+        resolve(0);
+      };
+    };
+  });
+
+/**
+ * What the local copy holds: its cache rows, and the oldest row the outbox
+ * would hand a drain.
+ *
+ * `oldestPending`, never `stats().pendingOperations` — that counter includes
+ * rows `oldestPending` refuses to hand out.
+ * @param doc - the document id the harness booted with
+ * @param scope - the identity partition the harness booted under
+ */
+const readStore = async (
+  doc = 'doc-1',
+  scope: string = SCOPE
+): Promise<{ updates: Uint8Array[]; pending: PendingOperation | null }> => {
+  const probe = createOperationStore(storeOptions(doc, scope));
+  const contents = await probe.open();
+  const pending = await probe.oldestPending();
+
+  await probe.close();
+
+  return {
+    updates: contents?.updates ?? [],
+    pending,
+  };
+};
+
+/**
+ * The block texts a set of updates replays into.
+ * @param updates - update bytes, applied in order
+ */
+const textsOf = (updates: Uint8Array[]): (string | undefined)[] => {
+  const replay = new DocumentStore(new YBlockSerializer());
+
+  for (const update of updates) {
+    replay.applyRemoteUpdate(update);
+  }
+
+  const texts = replay.toJSON().map((block) => (block.data as { text?: string }).text);
+
+  replay.destroy();
+
+  return texts;
+};
+
+/**
+ * The document the local copy replays into — what a reload would show.
+ * @param doc - the document id the harness booted with
+ * @param scope - the identity partition the harness booted under
+ */
+const cachedTexts = async (doc = 'doc-1', scope: string = SCOPE): Promise<(string | undefined)[]> =>
+  textsOf((await readStore(doc, scope)).updates);
+
+/**
  * Waits until SOME session has written a document, whatever partition it chose.
  *
- * The scoped gate above reads through `cacheKey`, so a regression that merges
+ * The scoped gate above reads through `storeOptions`, so a regression that merges
  * two scopes makes the gate time out and the partition test reports a probe
  * timeout instead of the leak it exists to name. This one asks the factory.
  *
@@ -269,12 +367,7 @@ const waitForAnyCachedDocument = async (): Promise<void> => {
         continue;
       }
 
-      const probe = createOfflineCache({ key: name.slice(CACHE_DB_PREFIX.length) });
-      const contents = await probe.open();
-
-      probe.close();
-
-      if (contents !== null && contents.updates.length > 0) {
+      if (await rawRowCount(name, 'updates') > 0) {
         return true;
       }
     }
@@ -354,12 +447,17 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
   };
 };
 
-/** Open + control frame + a first SyncStep2 carrying the peer's blocks. */
-const firstSync = (harness: Harness, blocks: OutputBlockData[]): MockSocket => {
+/**
+ * Open + control frame + a first SyncStep2 carrying the peer's blocks.
+ * @param harness - the booted editor
+ * @param blocks - what the room holds
+ * @param protocol - the subprotocol the server selects
+ */
+const firstSync = (harness: Harness, blocks: OutputBlockData[], protocol = 'blok-sync.v1'): MockSocket => {
   const socket = harness.socket();
   const peer = peerWith(blocks);
 
-  socket.open();
+  socket.open(protocol);
   socket.deliver(controlFrame());
   socket.deliver({
     type: 'syncStep2',
@@ -706,11 +804,11 @@ describe('collaboration — sync-first load', () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
 
       const snapshot = peerWith([{ id: 'b1', type: 'paragraph', data: { text: 'cached' } }]);
-      const seed = createOfflineCache({ key: cacheKey() });
+      const seed = createOperationStore(storeOptions());
 
       await seed.open();
-      await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, true, snapshot.encodeStateAsUpdate());
-      seed.close();
+      await seed.recordSession({ format: 1, epoch: 0, lineage: LINEAGE }, true, 'v1', snapshot.encodeStateAsUpdate());
+      await seed.close();
       snapshot.destroy();
 
       const harness = await boot({ offline: true });
@@ -735,10 +833,10 @@ describe('collaboration — sync-first load', () => {
       destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
 
       const rowsAfter = async (): Promise<number> => {
-        const probe = createOfflineCache({ key: cacheKey() });
+        const probe = createOperationStore(storeOptions());
         const contents = await probe.open();
 
-        probe.close();
+        await probe.close();
 
         return contents?.updates.length ?? 0;
       };
@@ -792,22 +890,11 @@ describe('collaboration — sync-first load', () => {
 
       destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
 
-      const probe = createOfflineCache({ key: cacheKey() });
-      const contents = await probe.open();
+      // Polled, not read once: the flush is synchronous but the row it makes
+      // reaches disk on the store's own transaction, which `close()` drains.
+      await waitFor(async () => (await cachedTexts())[0] === 'trailing', 'the flushed write to reach the copy');
 
-      probe.close();
-
-      const replay = new DocumentStore(new YBlockSerializer());
-
-      for (const update of contents?.updates ?? []) {
-        replay.applyRemoteUpdate(update);
-      }
-
-      const text = (replay.toJSON()[0]?.data as { text?: string } | undefined)?.text;
-
-      replay.destroy();
-
-      expect(text).toBe('trailing');
+      expect(await cachedTexts()).toEqual(['trailing']);
     }, 30_000);
 
     /**
@@ -845,10 +932,10 @@ describe('collaboration — sync-first load', () => {
       expect(seen.at(-1)?.reason).toContain('offline copy was discarded');
 
       await waitFor(async () => {
-        const probe = createOfflineCache({ key: cacheKey() });
+        const probe = createOperationStore(storeOptions());
         const contents = await probe.open();
 
-        probe.close();
+        await probe.close();
 
         return contents === null;
       }, 'the cache to be cleared');
@@ -870,21 +957,26 @@ describe('collaboration — sync-first load', () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-      const seed = createOfflineCache({ key: cacheKey() });
+      const seed = createOperationStore(storeOptions());
 
       await seed.open();
-      await seed.saveMeta({ format: 1, epoch: 0, lineage: LINEAGE }, false, new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff]));
-      seed.close();
+      await seed.recordSession(
+        { format: 1, epoch: 0, lineage: LINEAGE },
+        false,
+        'v1',
+        new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])
+      );
+      await seed.close();
 
       const harness = await boot({ offline: true });
 
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
 
       await waitFor(async () => {
-        const probe = createOfflineCache({ key: cacheKey() });
+        const probe = createOperationStore(storeOptions());
         const contents = await probe.open();
 
-        probe.close();
+        await probe.close();
 
         return contents === null;
       }, 'the cache to be cleared');
@@ -978,10 +1070,10 @@ describe('collaboration — sync-first load', () => {
         await waitForCachedDocument('doc-1', 'bob').catch(() => undefined);
         destroyCore(booted.splice(booted.indexOf(bob.core), 1)[0]);
 
-        const probe = createOfflineCache({ key: cacheKey('doc-1', 'alice') });
+        const probe = createOperationStore(storeOptions('doc-1', 'alice'));
         const contents = await probe.open();
 
-        probe.close();
+        await probe.close();
 
         const replay = new DocumentStore(new YBlockSerializer());
 
@@ -1036,10 +1128,14 @@ describe('collaboration — sync-first load', () => {
       it('keeps two partitions apart when a separator sits inside the key', async () => {
         vi.stubGlobal('indexedDB', new IDBFactory());
 
-        const first = await boot({ server: '/foo/sync/d|x',
+        // Both spell `<origin>/foo/sync/e|e|/sync/g|g|s` when the three
+        // segments are joined raw. The doc rides the key twice — once
+        // percent-encoded inside the url, once verbatim — so a colliding pair
+        // has to move the `|` through the server path and the scope.
+        const first = await boot({ server: '/foo',
           doc: 'e',
           offline: true,
-          offlineScope: 's' });
+          offlineScope: '/sync/g|g|s' });
 
         firstSync(first, [{ type: 'paragraph', data: { text: 'first partition' } }]);
         await waitFor(
@@ -1049,10 +1145,10 @@ describe('collaboration — sync-first load', () => {
         await waitForAnyCachedDocument();
         destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
 
-        const second = await boot({ server: '/foo',
-          doc: 'd',
+        const second = await boot({ server: '/foo/sync/e|e|',
+          doc: 'g',
           offline: true,
-          offlineScope: 'x/sync/e|s' });
+          offlineScope: 's' });
 
         expect(
           blockTexts(second.core),
@@ -1060,6 +1156,305 @@ describe('collaboration — sync-first load', () => {
         ).toEqual([]);
       }, 20_000);
     });
+  });
+
+  /**
+   * Capture is a MODULE-lifetime job. The provider's own doc hook lives on one
+   * connection and drops a local edit outright when the socket is absent or not
+   * ready, which is precisely when an offline edit is made.
+   */
+  describe('capturing local updates', () => {
+    /**
+     * The narrow window this whole feature exists for: an adopted copy is
+     * editable before the tab has spoken to anybody, and what is typed in that
+     * window has to be waiting in the outbox when a connection finally happens.
+     */
+    it('captures a local update before any socket exists (cache-adopted boot)', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ id: 'b1', type: 'paragraph', data: { text: 'synced once' } }], V2);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      const before = await readStore();
+
+      reloaded.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed with no socket');
+
+      // Tolerated: with nothing captured there is nothing to wait for, and the
+      // assertion below has to be the one that speaks.
+      await waitFor(async () => (await readStore()).pending !== null, 'the edit to reach the outbox', 1500)
+        .catch(() => undefined);
+
+      const after = await readStore();
+
+      expect(after.pending, 'an edit made on a cache-adopted boot never reached the outbox').not.toBeNull();
+      expect(after.pending?.lineage).toBe(LINEAGE);
+      // ONE row, not two: `appendLocal` writes the cache row and the outbox
+      // row in the same transaction, so a second cache write for the same
+      // edit means both taps journaled it.
+      expect(after.updates.length).toBe(before.updates.length + 1);
+      expect(textsOf([...before.updates, ...(after.pending === null ? [] : [after.pending.bytes])]))
+        .toEqual(['typed with no socket']);
+      // The claim in full: nothing was exchanged with anybody to get here.
+      expect(reloaded.sockets[0].sent).toEqual([]);
+    }, 30_000);
+
+    it('captures while reconnecting and offline', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const before = await readStore();
+
+      socket.serverClose(1006);
+      await waitFor(() => collabAttr(harness.core) === 'offline', 'offline');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed while reconnecting');
+
+      await waitFor(async () => (await readStore()).pending !== null, 'the edit to reach the outbox', 1500)
+        .catch(() => undefined);
+
+      const after = await readStore();
+
+      expect(after.pending, 'an edit made while the socket was down never reached the outbox').not.toBeNull();
+      expect(textsOf([...before.updates, ...(after.pending === null ? [] : [after.pending.bytes])]))
+        .toEqual(['typed while reconnecting']);
+    }, 30_000);
+
+    /**
+     * The reason capture is TWO taps. The unfiltered tap is the only one that
+     * sees a peer's update, and it feeds the cache; the filtered tap is the
+     * only one that sees ours, and it feeds the outbox. One tap over
+     * `onAnyDocUpdate` would journal every peer's work as ours and send it
+     * back to the room.
+     */
+    it('does not enqueue a provider-origin broadcast', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.applyRemoteUpdate(yjs.encodeStateAsUpdate());
+      peer.addBlock({ id: 'b2', type: 'paragraph', data: { text: 'from a peer' } });
+      socket.deliver({ type: 'update', update: peer.encodeStateAsUpdate(yjs.getStateVector()) });
+      peer.destroy();
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 2, "the peer's block");
+      // Tolerated: a broadcast that is misrouted never reaches the copy, and
+      // the assertions below are the ones that have to say so.
+      await waitFor(async () => (await cachedTexts()).length === 2, "the peer's block in the copy", 1500)
+        .catch(() => undefined);
+
+      const after = await readStore();
+
+      expect(after.pending, "a server broadcast was journaled into this browser's outbox").toBeNull();
+      expect(textsOf(after.updates)).toEqual(['synced', 'from a peer']);
+    }, 30_000);
+
+    /**
+     * The store could not be opened, so nothing this tab writes is durable —
+     * and the design's local-durability boundary says an edit that cannot be
+     * stored must not be sent. Blok keeps what is on screen, blocks editing,
+     * and asks for a recovery export. The empty room here makes the point
+     * sharp: the first-sync seed is a write the module itself would make, and
+     * it is gated on the applied read-only state.
+     */
+    it('storage failure blocks editing and sends nothing', async () => {
+      const factory = new IDBFactory();
+
+      vi.spyOn(factory, 'open').mockImplementation(() => {
+        throw new Error('storage is unavailable');
+      });
+      vi.stubGlobal('indexedDB', factory);
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, []);
+
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+
+      expect(
+        harness.core.moduleInstances.ReadOnly.isEnabled,
+        'editing resumed on a session whose local copy could not be opened'
+      ).toBe(true);
+      expect(socket.sent.map((bytes) => decode(bytes).type)).toEqual(['syncStep1']);
+      expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
+    }, 20_000);
+
+    /**
+     * A write forced into the document before any lineage exists. The store
+     * REFUSES such a row rather than parking it — there is nothing to stamp it
+     * with — and a refusal is what latches the durability block, so the taps
+     * have to hold it back rather than let it end the session.
+     */
+    it('drops a write made before the session names a lineage, and keeps editing possible', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      harness.core.moduleInstances.YjsManager.addBlock({
+        id: 'early',
+        type: 'paragraph',
+        data: { text: 'written before the first sync' },
+      });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'from the room' } }]);
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+
+      // Tolerated: the block never arrives when the guard holds, and this wait
+      // is only here so the assertion below is not racing a refusal in flight.
+      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1000)
+        .catch(() => undefined);
+
+      expect(
+        harness.core.moduleInstances.ReadOnly.isEnabled,
+        'a write with no lineage to stamp it ended the session'
+      ).toBe(false);
+    }, 20_000);
+
+    /**
+     * A host that seeds content the moment it hears `connected`. The status
+     * event reaches that listener from inside the transition, so the session
+     * has to be recorded with the store BEFORE the event goes out — otherwise
+     * the write it provokes is a local edit with no lineage to stamp it, which
+     * the store refuses and the refusal ends the session.
+     */
+    it('records the session before the status event a host may write from', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        if (payload.status === 'connected') {
+          harness.core.moduleInstances.YjsManager.addBlock({
+            id: 'seeded-by-host',
+            type: 'paragraph',
+            data: { text: 'written from the status event' },
+          });
+        }
+      });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'from the room' } }]);
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+
+      // Tolerated: nothing blocks editing when the ordering holds.
+      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1000)
+        .catch(() => undefined);
+
+      expect(
+        harness.core.moduleInstances.ReadOnly.isEnabled,
+        'a write from the connected event outran the session record and ended the session'
+      ).toBe(false);
+    }, 20_000);
+
+    /**
+     * The other way durability goes: the copy opened, and then a write to it
+     * failed. Another tab (or the browser) dropping the database is the
+     * reachable form of it. The update is on screen and not in the copy, so
+     * every later struct from this client depends on one that is missing —
+     * editing stops until a recovery export.
+     */
+    it('blocks editing when a write does not reach the copy', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(false);
+
+      for (const entry of await indexedDB.databases()) {
+        if (entry.name !== undefined) {
+          await new Promise((resolve) => {
+            const request = indexedDB.deleteDatabase(entry.name as string);
+
+            request.onsuccess = resolve;
+            request.onerror = resolve;
+            request.onblocked = resolve;
+          });
+        }
+      }
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed onto a copy that is gone');
+
+      await waitFor(
+        () => harness.core.moduleInstances.ReadOnly.isEnabled,
+        'editing to be blocked',
+        2000
+      ).catch(() => undefined);
+
+      expect(
+        harness.core.moduleInstances.ReadOnly.isEnabled,
+        'editing continued although the edit never reached the copy'
+      ).toBe(true);
+    }, 20_000);
+
+    /**
+     * The coalescing write buffer may still hold the last thing typed when the
+     * editor comes down. `destroy` flushes it FIRST and detaches capture
+     * after, or that write is made into a document nothing is listening to.
+     */
+    it('destroy detaches capture only after the final buffered Yjs flush', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const before = await readStore();
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const flush = (entries: ReadonlyMap<string, unknown>): boolean => {
+        let wrote = false;
+
+        for (const [key, value] of entries) {
+          wrote = yjs.updateBlockData('b1', key, value) || wrote;
+        }
+
+        return wrote;
+      };
+
+      // Two writes: the first lands on the leading edge, the second coalesces
+      // into the trailing window and is still pending at teardown.
+      yjs.enqueueBlockDataWrite('b1', { text: 'leading' }, flush);
+      yjs.enqueueBlockDataWrite('b1', { text: 'trailing' }, flush);
+
+      destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
+
+      await waitFor(
+        async () => textsOf([...before.updates, ...(await readStore()).updates]).includes('trailing'),
+        'the flushed write to reach the copy',
+        1500
+      ).catch(() => undefined);
+
+      const after = await readStore();
+
+      expect(
+        textsOf(after.updates),
+        'the buffered write was flushed after capture had already detached, so it reached nothing'
+      ).toEqual(['trailing']);
+      // Through the outbox, which is where a v2 session's own edits go.
+      expect(after.pending).not.toBeNull();
+    }, 30_000);
   });
 
   describe('the binary seam', () => {

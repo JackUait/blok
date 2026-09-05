@@ -8,7 +8,7 @@ import * as idb from 'lib0/indexeddb';
 import * as Y from 'yjs';
 
 import type { OfflineCacheLocks } from './offline-cache';
-import type { WorkingSetTag } from './types';
+import type { SessionProtocol, WorkingSetTag } from './types';
 
 /**
  * Lineage is compared by EQUALITY and must look like the server's: 32 lower-hex
@@ -32,8 +32,7 @@ const BY_OPERATION_ID = 'by-operation-id';
 /** How many random bytes an operation id carries: 128 bits. */
 const OPERATION_ID_BYTES = 16;
 
-/** Which wire protocol the last completed sync negotiated. */
-export type SessionProtocol = 'v1' | 'v2';
+export type { SessionProtocol };
 
 export interface OperationStoreOptions {
   /** Canonical server URL. */

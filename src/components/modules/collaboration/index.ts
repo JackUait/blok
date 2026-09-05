@@ -15,8 +15,7 @@ import {
   type PresenceState,
 } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
-import { createOfflineCache, type OfflineCache } from './offline-cache';
-import { escapePartitionSegment } from './operation-store';
+import { createOperationStore, type OperationStore } from './operation-store';
 import { createCollabProvider } from './provider';
 import type {
   CollabDocSeam,
@@ -25,6 +24,7 @@ import type {
   CollabStatus,
   CollabStatusDetail,
   CollabTicketSource,
+  SessionProtocol,
 } from './types';
 
 /**
@@ -252,8 +252,33 @@ export class Collaboration extends Module {
 
   private awarenessUnhook: (() => void) | null = null;
 
-  /** The local copy of the document; null unless `collaboration.offline`. */
-  private cache: OfflineCache | null = null;
+  /**
+   * The local copy plus the outbox. Present for every collaboration session:
+   * without `offline` it runs in memory, which is where the queue contract
+   * still has to hold.
+   */
+  private store: OperationStore | null = null;
+
+  /**
+   * Origins this module applied FROM the network. The unfiltered tap sees
+   * local and remote updates alike and has no other way to tell them apart.
+   */
+  private readonly remoteOrigins = new WeakSet();
+
+  /**
+   * The wire protocol local edits are routed by: the adopted copy's, then the
+   * one the last completed sync negotiated. v1 has no receipt and no outbox
+   * row; v2 journals every edit before it may be sent.
+   */
+  private protocol: SessionProtocol = 'v1';
+
+  /**
+   * An update the document already shows never reached the store, so the copy
+   * has a hole in it and every later struct from this client depends on the
+   * missing one. Latched for the session: editing stops and a recovery export
+   * is what comes next.
+   */
+  private durabilityLost = false;
 
   /**
    * Latched when the boot adopted a cached document. It stands in for
@@ -263,7 +288,11 @@ export class Collaboration extends Module {
    */
   private cacheAdopted = false;
 
+  /** The unfiltered tap: every peer's update, for the local copy. */
   private cacheUnhook: (() => void) | null = null;
+
+  /** The filtered tap: this editor's own edits, for the outbox. */
+  private outboxUnhook: (() => void) | null = null;
 
   /**
    * Whether the cache already holds this lineage's history. Rows can only be
@@ -332,7 +361,61 @@ export class Collaboration extends Module {
    */
   public get isEditingBlocked(): boolean {
     return this.settings !== null
-      && (!(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal);
+      && (!(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal || this.durabilityLost);
+  }
+
+  /**
+   * Whether the document carries a lineage the store can stamp rows with — the
+   * first sync, or a cache adoption. Before that the store REFUSES a local
+   * edit rather than parking it, and by contract there is none: editing is
+   * blocked until one of the two has happened.
+   */
+  private get hasLineage(): boolean {
+    return this.firstSynced || this.cacheAdopted;
+  }
+
+  /**
+   * @param origin - the transaction origin an update arrived with
+   */
+  private isRemoteOrigin(origin: unknown): boolean {
+    return typeof origin === 'object' && origin !== null && this.remoteOrigins.has(origin);
+  }
+
+  /**
+   * @param write - a store write already in flight
+   */
+  private captured(write: Promise<unknown>): void {
+    void write.catch((thrown) => this.loseDurability(thrown));
+  }
+
+  /**
+   * A write did not land, so the copy on disk is missing something the
+   * document already shows. Editing stops, and the copy goes with it: the
+   * store's own refusal lives in memory and would not survive a reload, so
+   * without the clear the next boot adopts a broken copy as editable.
+   * @param thrown - what the store refused with
+   */
+  private async loseDurability(thrown: unknown): Promise<void> {
+    if (this.durabilityLost) {
+      return;
+    }
+
+    this.durabilityLost = true;
+    logLabeled('collaboration could not store an update; editing is blocked', 'warn', thrown);
+
+    // The clear empties the copy, so the next `connected` owes it a fresh
+    // snapshot — a meta recorded over an empty copy is what makes a later boot
+    // adopt an empty document as editable.
+    this.cacheSeeded = false;
+
+    // Nothing may be asked of a closed store.
+    if (!this.isDestroyed && this.store !== null) {
+      await this.store.clearAdoptable().catch((failed) => {
+        logLabeled('collaboration could not drop its local copy', 'warn', failed);
+      });
+    }
+
+    await this.applyArbitration();
   }
 
   /**
@@ -427,20 +510,26 @@ export class Collaboration extends Module {
    * @param settings - this session's settings
    */
   private async adoptCache(settings: CollabSettings): Promise<string | undefined> {
-    if (!settings.offline) {
-      return undefined;
-    }
-
     // Partitioned by identity: the copy belongs to the browser, so an unscoped
     // key hands the next person on a shared profile the previous person's
-    // document, drawn before any connection can refuse it.
-    const cache = createOfflineCache({
-      key: `${escapePartitionSegment(settings.url)}|${escapePartitionSegment(settings.offlineScope)}`,
+    // document, drawn before any connection can refuse it. Without `offline`
+    // the scope is null, which is the store's memory mode: no database.
+    const store = createOperationStore({
+      url: settings.url,
+      doc: settings.doc,
+      offlineScope: settings.offline ? settings.offlineScope : null,
     });
 
-    this.cache = cache;
+    this.store = store;
 
-    const contents = await cache.open();
+    const contents = await store.open();
+
+    // Offline was asked for and the database would not open. The queue runs in
+    // memory so this tab's work survives until it is exported, but nothing in
+    // it is durable — and an edit that cannot be stored must not be sent.
+    if ((await store.stats()).storageUnavailable) {
+      this.durabilityLost = true;
+    }
 
     // The unfiltered tap, because remote updates have to be stored too —
     // `onDocUpdate` hides exactly what a reload needs. It skips its OWN
@@ -452,7 +541,37 @@ export class Collaboration extends Module {
         return;
       }
 
-      void cache.append(update);
+      if (this.isRemoteOrigin(origin)) {
+        // Only a session that keeps a copy on disk has a reason to store what
+        // peers sent; in memory mode nothing would ever read it back.
+        if (settings.offline) {
+          this.captured(store.appendRemote(update));
+        }
+
+        return;
+      }
+
+      // A v2 session journals its own edits through the outbox tap below, in
+      // one transaction with the cache row; a second row here would store the
+      // same update twice.
+      if (this.protocol !== 'v2' && this.hasLineage) {
+        this.captured(store.appendCached(update));
+      }
+    });
+
+    // The SECOND tap, and it must stay a second one. `onDocUpdate` hides
+    // everything `applyRemoteUpdate` brought in, so this is the only hook that
+    // sees this editor's own edits and nobody else's — one tap over
+    // `onAnyDocUpdate` would journal every peer's work into this browser's
+    // outbox and send it back to the room as ours. Neither tap belongs in the
+    // provider's per-socket seam, which drops a local edit outright when the
+    // socket is absent or not ready: exactly when an offline edit is made.
+    this.outboxUnhook = this.Blok.YjsManager.onDocUpdate((update) => {
+      if (this.protocol !== 'v2' || !this.hasLineage || this.store === null) {
+        return;
+      }
+
+      this.captured(this.store.appendLocal(update));
     });
 
     if (contents === null) {
@@ -481,6 +600,9 @@ export class Collaboration extends Module {
     // is the one thing that can ever re-derive it — restored without one it
     // would hold, and be re-persisted, for the rest of this browser's life.
     this.writeDenied = settings.ticketEndpoint !== undefined && contents.meta.writeDenied;
+    // The protocol the copy was written under. A v1-only deployment must not
+    // come back from a reload accumulating outbox rows nothing can drain.
+    this.protocol = contents.meta.protocol;
     this.cacheAdopted = true;
     this.cacheSeeded = true;
 
@@ -513,14 +635,18 @@ export class Collaboration extends Module {
     this.provider = null;
     this.cacheUnhook?.();
     this.cacheUnhook = null;
+    this.outboxUnhook?.();
+    this.outboxUnhook = null;
 
     if (this.flushOnPageHide !== null) {
       window.removeEventListener('pagehide', this.flushOnPageHide);
       this.flushOnPageHide = null;
     }
 
-    this.cache?.close();
-    this.cache = null;
+    if (this.store !== null) {
+      this.captured(this.store.close());
+      this.store = null;
+    }
   }
 
   /**
@@ -537,6 +663,12 @@ export class Collaboration extends Module {
 
     return {
       applyRemoteUpdate: (update, origin) => {
+        // The only place a server update enters this document, so the only
+        // place the unfiltered tap can learn which origins are not ours.
+        if (typeof origin === 'object' && origin !== null) {
+          this.remoteOrigins.add(origin);
+        }
+
         this.dropDegradedView();
         yjs.applyRemoteUpdate(update, origin);
       },
@@ -599,7 +731,9 @@ export class Collaboration extends Module {
     // them here is what stops the next boot adopting a dead room's history.
     this.cacheAdopted = false;
     this.cacheSeeded = false;
-    void this.cache?.clear();
+    if (this.store !== null) {
+      this.captured(this.store.clearAdoptable());
+    }
     this.resetGeneration += 1;
     void this.applyArbitration();
   }
@@ -664,9 +798,12 @@ export class Collaboration extends Module {
     this.terminal = status === 'error';
     this.firstSynced = this.firstSynced || status === 'connected';
 
+    // BEFORE anything can observe the transition: `emitStatus` reaches host
+    // listeners, and a listener that writes to the document would produce a
+    // local edit the store has no lineage to stamp yet.
+    this.recordCacheMeta(status);
     this.setStateAttribute(status);
     this.emitStatus();
-    this.recordCacheMeta(status);
 
     await this.applyArbitration();
 
@@ -698,11 +835,11 @@ export class Collaboration extends Module {
    * @param detail - what the provider said about the transition
    */
   private discardCacheIfOversized(detail: CollabStatusDetail | undefined): CollabStatusDetail | undefined {
-    if (this.cache === null || detail?.error !== 'oversized-update') {
+    if (this.store === null || this.settings?.offline !== true || detail?.error !== 'oversized-update') {
       return detail;
     }
 
-    void this.cache.clear();
+    this.captured(this.store.clearAdoptable());
 
     const note = 'the offline copy was discarded so the next load syncs from the server';
     const reason = detail.reason === undefined || detail.reason === '' ? note : `${detail.reason}; ${note}`;
@@ -720,19 +857,21 @@ export class Collaboration extends Module {
    * @param status - the transition being published
    */
   private recordCacheMeta(status: CollabStatus): void {
-    const cache = this.cache;
+    const store = this.store;
     const tag = this.provider?.tag;
 
-    if (status !== 'connected' || cache === null || tag === undefined || tag === null) {
+    if (status !== 'connected' || store === null || tag === undefined || tag === null) {
       return;
     }
 
-    // ONE call, not a chain: the cache orders the meta and the snapshot
+    // ONE call, not a chain: the store orders the meta and the snapshot
     // internally, so the pair survives an editor torn down in between — which
     // is exactly when the seed matters, since it is what the next boot adopts.
     const snapshot = this.cacheSeeded ? undefined : this.Blok.YjsManager.encodeStateAsUpdate();
 
-    void cache.saveMeta(tag, this.writeDenied, snapshot);
+    this.protocol = this.provider?.protocol ?? 'v1';
+
+    this.captured(store.recordSession(tag, this.writeDenied, this.protocol, snapshot));
 
     this.cacheSeeded = true;
   }

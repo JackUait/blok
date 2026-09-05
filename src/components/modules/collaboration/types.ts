@@ -14,6 +14,9 @@ export interface WorkingSetTag {
   lineage: string;
 }
 
+/** Which wire protocol the last completed handshake negotiated. */
+export type SessionProtocol = 'v1' | 'v2';
+
 /**
  * One y-protocols message as carried by one WebSocket frame — the frames this
  * codec can put on the wire and hand back to the provider.
@@ -254,4 +257,13 @@ export interface CollabProvider {
   readonly status: CollabStatus;
   /** The working-set tag from the last validated control frame. */
   readonly tag: WorkingSetTag | null;
+
+  /**
+   * What the server selected from the subprotocol offers on the connection
+   * that last validated a control frame. The module records it with the
+   * session so a reload routes local edits the way the server will accept
+   * them, and it is what decides whether an edit goes on the wire here or
+   * through the store's outbox.
+   */
+  readonly protocol: SessionProtocol;
 }

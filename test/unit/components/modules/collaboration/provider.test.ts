@@ -16,6 +16,9 @@ import type { AwarenessChange } from '../../../../../src/components/modules/yjs/
 import { YBlockSerializer } from '../../../../../src/components/modules/yjs/serializer';
 
 const PROTOCOL = 'blok-sync.v1';
+
+/** What a server that has a durable operation store selects. */
+const PROTOCOL_V2 = 'blok-sync.v2';
 const LINEAGE_A = '0123456789abcdef0123456789abcdef';
 const LINEAGE_B = 'fedcba9876543210fedcba9876543210';
 
@@ -181,13 +184,17 @@ const createHarness = (
   };
 };
 
-/** Connect, open, and validate the control frame — the "ready" starting point. */
-const connectAndHandshake = (harness: Harness): MockSocket => {
+/**
+ * Connect, open, and validate the control frame — the "ready" starting point.
+ * @param harness - the provider under test
+ * @param protocol - the subprotocol the server selects
+ */
+const connectAndHandshake = (harness: Harness, protocol = PROTOCOL): MockSocket => {
   harness.provider.connect();
 
   const socket = harness.socket();
 
-  socket.open();
+  socket.open(protocol);
   socket.deliver(controlFrame());
 
   return socket;
@@ -898,6 +905,48 @@ describe('createCollabProvider', () => {
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
 
       expect(socket.frameTypes).toEqual(['syncStep1', 'update']);
+    });
+
+    /**
+     * The v2 send path is the outbox drain (Task 4.4): an operation leaves only
+     * once the store has committed it. A raw type-0 written straight out of the
+     * seam would put the edit on the wire BEFORE `appendLocal` resolved, which
+     * is the send the design's local-durability boundary forbids.
+     */
+    it('sends nothing before appendLocal resolves: a v2 session writes no raw update frame', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness, PROTOCOL_V2);
+
+      harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
+
+      expect(socket.frameTypes, 'a v2 local edit went on the wire before the store committed it')
+        .toEqual(['syncStep1']);
+    });
+
+    /** The other half of the same switch: v1 has no outbox, so v1 still sends. */
+    it('still broadcasts a local write when the server selected v1', () => {
+      const harness = createHarness();
+      const socket = connectAndHandshake(harness, PROTOCOL);
+
+      harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
+
+      expect(socket.frameTypes).toEqual(['syncStep1', 'update']);
+    });
+
+    it('reports the protocol the server selected', () => {
+      const harness = createHarness();
+
+      connectAndHandshake(harness, PROTOCOL_V2);
+
+      expect(harness.provider.protocol).toBe('v2');
+    });
+
+    it('reports v1 when the server selected no subprotocol at all', () => {
+      const harness = createHarness();
+
+      connectAndHandshake(harness, '');
+
+      expect(harness.provider.protocol).toBe('v1');
     });
 
     it('uses ONE provider origin for the whole generation (never one per message)', () => {

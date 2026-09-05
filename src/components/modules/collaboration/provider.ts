@@ -8,6 +8,7 @@ import type {
   CollabStatus,
   CollabStatusDetail,
   CollabTerminalError,
+  SessionProtocol,
   SyncWireFrame,
   WebSocketLike,
   WorkingSetTag,
@@ -43,6 +44,9 @@ import type {
  * being acknowledged.
  */
 const SYNC_SUBPROTOCOL_OFFERS = ['blok-sync.v1'];
+
+/** The token a server with a durable operation store selects. */
+const SYNC_SUBPROTOCOL_V2 = 'blok-sync.v2';
 
 /** CRDT schema this client speaks. A control frame naming another is terminal. */
 const SUPPORTED_FORMAT = 1;
@@ -100,6 +104,13 @@ interface ProviderState {
   socket: WebSocketLike | null;
   origin: ProviderOrigin | null;
   tag: WorkingSetTag | null;
+  /**
+   * What the server selected on the connection that last validated a control
+   * frame. Nothing is offered but v1 until Task 4.5, so this reads 'v1' in the
+   * field; it is read from the socket rather than assumed because the whole
+   * local-write route hangs off it.
+   */
+  protocol: SessionProtocol;
   /**
    * Lineage this document's history belongs to. Normally learned from the
    * first control frame; PRE-SEEDED when the document was adopted from the
@@ -199,6 +210,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     status: 'offline',
     socket: null,
     origin: null,
+    protocol: 'v1',
     tag: null,
     lineage: options.initialLineage ?? null,
     buffered: [],
@@ -321,6 +333,13 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   const hookSeam = (origin: ProviderOrigin): void => {
     state.unhookDoc = yjs.onDocUpdate((update, updateOrigin) => {
       if (updateOrigin === origin || state.socket === null) {
+        return;
+      }
+
+      // Under v2 the send path is the outbox drain (Task 4.4): an operation
+      // leaves only once the store has committed it, so writing a raw type-0
+      // here would put the edit on the wire before that.
+      if (state.protocol === 'v2') {
         return;
       }
 
@@ -638,6 +657,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     state.lineage = tag.lineage;
     state.tag = tag;
+    // Read from the socket, not inferred from the offers: a proxy or an older
+    // server may select nothing at all, and that is v1.
+    state.protocol = socket.protocol === SYNC_SUBPROTOCOL_V2 ? 'v2' : 'v1';
 
     // A repeat control frame on a live connection must not hook the seam twice —
     // that would broadcast every local edit once per hook.
@@ -1019,6 +1041,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     },
     get tag(): WorkingSetTag | null {
       return state.tag;
+    },
+    get protocol(): SessionProtocol {
+      return state.protocol;
     },
   };
 }

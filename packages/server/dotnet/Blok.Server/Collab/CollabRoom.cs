@@ -1241,8 +1241,8 @@ internal sealed class CollabRoom : IDisposable
   /// nothing reads would only be a copy no fence covers. Every blob path is
   /// driven by the two counters below — persist scheduling and the flush's
   /// write by <c>blobVersion</c>, compaction and the flush's compaction by
-  /// <c>frameCount</c>, the eviction hold by both — so leaving them at zero
-  /// is what skips all of them.
+  /// <c>frameCount</c>, and the eviction hold by <c>blobVersion</c> again —
+  /// so leaving them at zero is what skips all of them.
   /// </summary>
   private void AppendLocked(byte[] update)
   {

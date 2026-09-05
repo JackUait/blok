@@ -3546,10 +3546,16 @@ public sealed class CollabRoomTests
   /// <summary>
   /// Compaction replaces the working-set log with the doc's whole state, and
   /// a journal room has no such log to replace. The stream below crosses the
-  /// frame threshold on every site a journal room could compact from — a v2
-  /// commit, a v1 write, an HTTP edit, and the drain's flush. The
-  /// working-set-only room at the end is the premise: on the SAME options it
-  /// compacts, so the threshold was crossed rather than merely configured.
+  /// three sites that compact IN PLACE — a v2 commit, a v1 write, an HTTP
+  /// edit. Not the fourth: at this threshold every append compacts at once,
+  /// so the log never holds two frames at the drain and FlushLocked's own
+  /// compaction cannot fire. That one is crossed by
+  /// OperationStoreRoomNeverWritesTheWorkingSetStore and
+  /// OperationStoreRoomLoadsBaselineAndTailThroughTheFencedSession, which run
+  /// at the default threshold and drain a multi-frame log.
+  ///
+  /// The working-set-only room at the end is the premise: on the SAME options
+  /// it compacts, so the threshold was crossed rather than merely configured.
   /// </summary>
   [Fact]
   public async Task OperationStoreRoomNeverCompacts()

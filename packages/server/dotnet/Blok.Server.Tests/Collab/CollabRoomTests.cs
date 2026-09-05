@@ -2720,6 +2720,49 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The two halves composed, on the room shape that needs both: a RELOADED
+  /// one, where only the version GET can supply a version at all. Its reset
+  /// flush carries that version, and a host that saved after the room loaded
+  /// answers the flush 409 — so the documented "save your version, then
+  /// reset" still ends with the host's copy, not with Blok's projection.
+  /// </summary>
+  [Fact]
+  public async Task AResetFlushCarriesTheReloadedVersionAndYieldsToTheHostsSave()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var manager = CreateJournalManager();
+    var first = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await first.ReceiveAsync(
+        Operation(first, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the seeded room to be evicted");
+
+    // Reloaded from the journal, so nothing but the version GET can tell it
+    // the consumer's record is at v2.
+    endpoint.Holds(DocId, "hello world", version: "v2");
+    var second = await Join(manager, V2Member());
+    var next = await SyncedClientAsync(manager, "hello world");
+    await second.ReceiveAsync(
+        Operation(second, OpTwo, YDocs.UpdateAppending(next, "!")),
+        CancellationToken.None);
+
+    // The host saves and moves its version on, then asks for the reset. Its
+    // 409 is what has to keep the flush from landing over that save.
+    endpoint.Holds(DocId, "host wins", version: "v3");
+    endpoint.NextSaveFailure = new DocEndpointException(
+        "collab: the doc endpoint PUT returned 409.",
+        409);
+
+    await manager.ResetAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
+    Assert.Equal("host wins", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
   /// A room whose content came from the journal never seeded from the
   /// endpoint, so nothing ever set the version. Its write-back would then
   /// carry no Blok-Doc-Version, leaving a consumer that enforces optimistic

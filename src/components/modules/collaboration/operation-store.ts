@@ -99,6 +99,15 @@ export interface OperationStoreStats {
    * consent (`offlineScope: null`), which drains like any other queue.
    */
   storageUnavailable: boolean;
+
+  /**
+   * A write failed after the store was open, so an update the document already
+   * shows is not in the cache. Every append is refused until `clearAdoptable()`
+   * has dropped the copy; the caller blocks editing and offers a recovery
+   * export. A rejected append says the same thing once — this says it whenever
+   * asked, and without matching on an error message.
+   */
+  updateLost: boolean;
 }
 
 export interface OperationStore {
@@ -460,7 +469,9 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
    * not bring editing back. Yjs integration needs per-client clock continuity,
    * so every later struct from this client depends on the lost one — and
    * `Y.decodeUpdate` validates structure, not dependencies, so nothing
-   * downstream would ever notice. Only dropping the cached copy clears it.
+   * downstream would ever notice. Only dropping the cached copy clears it —
+   * and no later `recordSession` hands the lineage back, so the remote path,
+   * which reads the lineage directly, stays shut too.
    */
   const poison = (): void => {
     dropSession();
@@ -800,10 +811,20 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           throw error;
         }
 
-        state.lineage = tag.lineage;
-        state.protocol = protocol;
         state.rows = rows + (snapshot === undefined ? 0 : 1);
         notify();
+
+        // A poisoned store takes no lineage back. The meta above is still the
+        // server's own word and worth recording, but every write path here
+        // stamps rows with this lineage, and there is nothing left to stamp
+        // onto: `appendRemote` reads it directly, so without this a reconnect
+        // would resume stacking remote rows onto a copy with a gap in it.
+        if (state.poisoned) {
+          return;
+        }
+
+        state.lineage = tag.lineage;
+        state.protocol = protocol;
       });
     },
 
@@ -1052,6 +1073,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           quarantinedOperations: state.memoryQuarantined,
           appendInFlight: state.appends > 0,
           storageUnavailable: state.storageUnavailable,
+          updateLost: state.poisoned,
         };
       }
 
@@ -1067,6 +1089,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         ).length,
         appendInFlight: state.appends > 0,
         storageUnavailable: state.storageUnavailable,
+        updateLost: state.poisoned,
       };
     },
 
@@ -1084,12 +1107,13 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         // rows stamped into a store this call is about to empty.
         dropSession();
         state.rows = 0;
-        // The copy with the hole in it is gone, so editing can resume.
-        state.poisoned = false;
 
         const db = state.db;
 
         if (db === null) {
+          // Nothing was on disk, so there is no copy left to block editing on.
+          state.poisoned = false;
+
           return;
         }
 
@@ -1100,6 +1124,12 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           metaStore.delete(META_KEY);
         });
 
+        // ONLY here: this is the call the caller makes to recover from a lost
+        // write, and the fault that lost it is the fault that fails this clear.
+        // Clearing the poison above the transaction would announce that the
+        // copy is gone while it is still on disk — and then editing resumes on
+        // it and the next operation, which depends on the lost one, is sent.
+        state.poisoned = false;
         notify();
       });
     },

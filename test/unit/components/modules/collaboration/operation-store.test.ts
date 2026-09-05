@@ -113,6 +113,7 @@ const plantUpdate = async (row: { lineage: string; bytes: Uint8Array }): Promise
 const originalAdd = IDBObjectStore.prototype.add;
 const originalPut = IDBObjectStore.prototype.put;
 const originalDelete = IDBObjectStore.prototype.delete;
+const originalClear = IDBObjectStore.prototype.clear;
 const originalTransaction = IDBDatabase.prototype.transaction;
 
 /**
@@ -1343,9 +1344,105 @@ describe('collaboration — operation store', () => {
       await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
       await expect(store.appendLocal(updateWith('block-4', 'four'))).rejects.toThrow();
     });
+
+    it('a failed clearAdoptable leaves the session poisoned', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendLocal(updateWith('block-1', 'one'));
+
+      failAddsTo('outbox');
+
+      await expect(store.appendLocal(updateWith('block-2', 'two'))).rejects.toThrow();
+      vi.restoreAllMocks();
+
+      // The fault that failed the append is the fault that fails the recovery
+      // clear: the copy is still on disk, so the poison must still stand.
+      vi.spyOn(IDBObjectStore.prototype, 'clear').mockImplementationOnce(function (this: IDBObjectStore) {
+        const request = originalClear.call(this);
+
+        this.transaction.abort();
+
+        return request;
+      });
+
+      await expect(store.clearAdoptable()).rejects.toThrow();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      await expect(store.appendLocal(updateWith('block-3', 'three'))).rejects.toThrow();
+      expect(await rowsIn('outbox')).toHaveLength(1);
+      expect(await rowsIn('updates')).toHaveLength(1);
+    });
+
+    it('reports the lost update in stats, so nothing has to match on a message', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      expect((await store.stats()).updateLost).toBe(false);
+
+      failAddsTo('outbox');
+
+      await expect(store.appendLocal(updateWith('block-1', 'one'))).rejects.toThrow();
+      vi.restoreAllMocks();
+
+      // A rejected promise is a one-shot fact; "block editing and offer a
+      // recovery export" is a state the caller consults whenever it likes.
+      expect((await store.stats()).updateLost).toBe(true);
+
+      await store.clearAdoptable();
+
+      expect((await store.stats()).updateLost).toBe(false);
+    });
+
+    it('stops caching remote updates too, and the next session record does not resume them', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendRemote(updateWith('block-1', 'one'));
+
+      failAddsTo('updates');
+
+      await expect(store.appendRemote(updateWith('block-2', 'two'))).rejects.toThrow();
+      vi.restoreAllMocks();
+      await store.appendRemote(updateWith('block-3', 'three'));
+
+      // Rows written after the lost one depend on it, and `Y.decodeUpdate`
+      // validates structure, not dependencies — an orphan row would be waved
+      // through by adoption and materialise nothing.
+      expect(await rowsIn('updates')).toHaveLength(1);
+
+      // A reconnect records the session again; that must not resume them.
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendRemote(updateWith('block-4', 'four'));
+
+      expect(await rowsIn('updates')).toHaveLength(1);
+    });
   });
 
   describe('after close', () => {
+    it('shuts the door before it drains, so an append racing the drain is refused', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      const inFlight = store.appendLocal(updateWith('block-1', 'one'));
+      const closing = store.close();
+
+      // `enqueue` chains on the queue close() is already awaiting, so an append
+      // that slips in lands behind it — durable, and unreachable afterwards,
+      // because the store it belongs to has no database any more.
+      await expect(store.appendLocal(updateWith('block-2', 'two'))).rejects.toThrow();
+      await inFlight;
+      await closing;
+
+      expect(await rowsIn('outbox')).toHaveLength(1);
+    });
+
     it('refuses every append, instead of queueing one nothing can store', async () => {
       const store = storeWith();
 

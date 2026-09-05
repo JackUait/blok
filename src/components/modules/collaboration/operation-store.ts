@@ -91,6 +91,14 @@ export interface OperationStoreStats {
   pendingBytes: number;
   quarantinedOperations: number;
   appendInFlight: boolean;
+
+  /**
+   * Offline was asked for and the database could not be opened. The queue runs
+   * in memory so the tab's work survives until it is exported, but nothing in
+   * it is durable, so nothing in it is sendable either. False in memory mode by
+   * consent (`offlineScope: null`), which drains like any other queue.
+   */
+  storageUnavailable: boolean;
 }
 
 export interface OperationStore {
@@ -380,6 +388,9 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     memoryQuarantined: number;
     retained: PendingOperation[];
     appends: number;
+    poisoned: boolean;
+    storageUnavailable: boolean;
+    closed: boolean;
     queue: Promise<unknown>;
     listeners: Set<() => void>;
   } = {
@@ -393,6 +404,9 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     memoryQuarantined: 0,
     retained: [],
     appends: 0,
+    poisoned: false,
+    storageUnavailable: false,
+    closed: false,
     queue: Promise.resolve(),
     listeners: new Set(),
   };
@@ -423,6 +437,10 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
    * throws rather than dropping the edit. The old cache dropped it silently.
    */
   const requireLineage = (): string => {
+    if (state.poisoned) {
+      throw new Error('Blok collaboration: an update was lost, so editing stays blocked until the cache is dropped');
+    }
+
     if (state.lineage === null) {
       throw new Error('Blok collaboration: a local edit arrived before the session named a lineage');
     }
@@ -430,14 +448,30 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     return state.lineage;
   };
 
-  /**
-   * A storage failure leaves a hole in the history: every later update depends
-   * on the lost one, so the lineage goes with it and the next local edit throws
-   * instead of stacking rows onto a copy that can never be replayed.
-   */
+  /** Forgets the session. Editing resumes at the next `recordSession`. */
   const dropSession = (): void => {
     state.lineage = null;
     state.protocol = null;
+  };
+
+  /**
+   * A storage failure leaves a hole in the history, and the hole OUTLIVES the
+   * session that made it: the lineage goes, and the next `recordSession` must
+   * not bring editing back. Yjs integration needs per-client clock continuity,
+   * so every later struct from this client depends on the lost one — and
+   * `Y.decodeUpdate` validates structure, not dependencies, so nothing
+   * downstream would ever notice. Only dropping the cached copy clears it.
+   */
+  const poison = (): void => {
+    dropSession();
+    state.poisoned = true;
+  };
+
+  /** A closed store has no database; without this it would look like memory mode. */
+  const requireOpen = (): void => {
+    if (state.closed) {
+      throw new Error('Blok collaboration: the operation store is closed');
+    }
   };
 
   /**
@@ -648,8 +682,11 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         });
       } catch {
         // No database means no durability, but the queue still runs in memory:
-        // an edit the user already made must not be dropped on the floor.
+        // an edit the user already made must not be dropped on the floor. The
+        // caller asked for offline and cannot have it, so it is told — a null
+        // here is otherwise indistinguishable from an empty cache.
         state.db = null;
+        state.storageUnavailable = true;
 
         return null;
       }
@@ -771,6 +808,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     },
 
     appendLocal: async (update) => {
+      requireOpen();
       state.appends += 1;
 
       try {
@@ -805,7 +843,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
             // for export or recovery — but it is never handed to the drain,
             // because it did not reach disk.
             state.retained.push(operation);
-            dropSession();
+            poison();
             throw error;
           }
 
@@ -820,6 +858,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     },
 
     appendCached: async (update) => {
+      requireOpen();
       state.appends += 1;
 
       try {
@@ -834,7 +873,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           try {
             await writeCacheRow(db, lineage, update);
           } catch (error) {
-            dropSession();
+            poison();
             throw error;
           }
 
@@ -847,6 +886,8 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     },
 
     appendRemote: async (update) => {
+      requireOpen();
+
       await enqueue(async () => {
         const lineage = state.lineage;
         const db = state.db;
@@ -861,7 +902,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         try {
           await writeCacheRow(db, lineage, update);
         } catch (error) {
-          dropSession();
+          poison();
           throw error;
         }
 
@@ -870,6 +911,12 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     },
 
     oldestPending: async () => {
+      // Kept in memory for export, never handed to the drain: none of it
+      // reached disk, and the drain's whole contract is that it did.
+      if (state.storageUnavailable) {
+        return null;
+      }
+
       const db = state.db;
 
       if (db === null) {
@@ -1004,6 +1051,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           pendingBytes: state.memory.reduce((total, row) => total + row.bytes.byteLength, 0) + retainedBytes,
           quarantinedOperations: state.memoryQuarantined,
           appendInFlight: state.appends > 0,
+          storageUnavailable: state.storageUnavailable,
         };
       }
 
@@ -1018,6 +1066,7 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
           (row) => (row as { kind?: unknown } | null)?.kind === 'operation'
         ).length,
         appendInFlight: state.appends > 0,
+        storageUnavailable: state.storageUnavailable,
       };
     },
 
@@ -1035,6 +1084,8 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         // rows stamped into a store this call is about to empty.
         dropSession();
         state.rows = 0;
+        // The copy with the hole in it is gone, so editing can resume.
+        state.poisoned = false;
 
         const db = state.db;
 
@@ -1054,8 +1105,11 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
     },
 
     close: async () => {
-      // Writes already scheduled still run: the last thing a session does is
-      // often the snapshot that makes the next boot adoptable.
+      // Shut first, drain second: writes already scheduled still run — the last
+      // thing a session does is often the snapshot that makes the next boot
+      // adoptable — but nothing new joins them.
+      state.closed = true;
+
       await state.queue.catch(() => undefined);
 
       const db = state.db;

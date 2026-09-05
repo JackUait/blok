@@ -157,13 +157,76 @@ const failSnapshotAdd = (): void => {
 const recordTransactions = (log: Array<{ stores: string[]; mode: string }>): void => {
   vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
     this: IDBDatabase,
-    names: string | string[],
+    names: string | Iterable<string>,
     mode?: IDBTransactionMode
   ) {
     log.push({ stores: typeof names === 'string' ? [ names ] : [ ...names ],
       mode: mode ?? 'readonly' });
 
     return originalTransaction.call(this, names, mode);
+  });
+};
+
+/**
+ * Logs when each transaction is OPENED, with its mode, and when a readwrite one
+ * commits. Catches a write whose promise resolves on request success while the
+ * method carries on to open its next transaction.
+ * @param log - the ordered log to append to
+ */
+const logTransactionOrder = (log: string[]): void => {
+  vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
+    this: IDBDatabase,
+    names: string | Iterable<string>,
+    mode?: IDBTransactionMode
+  ) {
+    const transaction = originalTransaction.call(this, names, mode);
+
+    log.push(`open:${mode ?? 'readonly'}`);
+
+    if (mode === 'readwrite') {
+      transaction.addEventListener('complete', () => log.push('commit'));
+    }
+
+    return transaction;
+  });
+};
+
+/**
+ * Logs every readwrite transaction and the writes issued on it, in order:
+ * `open`, `<store>.<op>`, `commit`.
+ * @param log - the ordered log to append to
+ */
+const logWrites = (log: string[]): void => {
+  vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
+    this: IDBDatabase,
+    names: string | Iterable<string>,
+    mode?: IDBTransactionMode
+  ) {
+    const transaction = originalTransaction.call(this, names, mode);
+
+    if (mode === 'readwrite') {
+      log.push('open');
+      transaction.addEventListener('complete', () => log.push('commit'));
+    }
+
+    return transaction;
+  });
+  vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
+    this: IDBObjectStore,
+    value: unknown,
+    key?: IDBValidKey
+  ) {
+    log.push(`${this.name}.add`);
+
+    return originalAdd.call(this, value, key);
+  });
+  vi.spyOn(IDBObjectStore.prototype, 'delete').mockImplementation(function (
+    this: IDBObjectStore,
+    key: IDBValidKey | IDBKeyRange
+  ) {
+    log.push(`${this.name}.delete`);
+
+    return originalDelete.call(this, key);
   });
 };
 
@@ -175,12 +238,16 @@ const recordTransactions = (log: Array<{ stores: string[]; mode: string }>): voi
 const logCommits = (log: string[]): void => {
   vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
     this: IDBDatabase,
-    names: string | string[],
+    names: string | Iterable<string>,
     mode?: IDBTransactionMode
   ) {
     const transaction = originalTransaction.call(this, names, mode);
 
-    transaction.addEventListener('complete', () => log.push('transaction committed'));
+    // Readwrite only: a readonly read commits on its own schedule and would
+    // make the ordering below nondeterministic.
+    if (mode === 'readwrite') {
+      transaction.addEventListener('complete', () => log.push('transaction committed'));
+    }
 
     return transaction;
   });
@@ -606,20 +673,22 @@ describe('collaboration — operation store', () => {
   });
 
   describe('degrading storage', () => {
-    it('falls back to the memory queue when indexedDB is absent', async () => {
+    it('keeps the edit in memory when indexedDB is absent, and sends nothing', async () => {
       vi.stubGlobal('indexedDB', undefined);
 
       const store = storeWith();
 
       expect(await store.open()).toBeNull();
       await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendLocal(updateWith('block-1', 'text'));
 
-      const pending = await store.appendLocal(updateWith('block-1', 'text'));
-
-      expect((await store.oldestPending())?.operationId).toBe(pending.operationId);
+      // Offline was asked for and could not be given: the edit is kept for
+      // export, and nothing that never reached disk is handed to the drain.
+      expect(await store.oldestPending()).toBeNull();
+      expect((await store.stats()).pendingOperations).toBe(1);
     });
 
-    it('falls back to the memory queue when opening the database throws', async () => {
+    it('reports that durable storage is unavailable when opening the database throws', async () => {
       vi.spyOn(factory, 'open').mockImplementation(() => {
         throw new Error('quota exceeded');
       });
@@ -627,8 +696,13 @@ describe('collaboration — operation store', () => {
       const store = storeWith();
 
       expect(await store.open()).toBeNull();
+
+      // `open() === null` alone cannot be told apart from an empty cache, and
+      // the caller has to block editing and ask for a recovery export.
+      expect((await store.stats()).storageUnavailable).toBe(true);
       await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
       await expect(store.appendLocal(updateWith('block-1', 'text'))).resolves.toBeDefined();
+      expect(await store.oldestPending()).toBeNull();
     });
 
     it('keeps every row when the lock manager itself rejects', async () => {
@@ -708,13 +782,19 @@ describe('collaboration — operation store', () => {
       // outbox row was lost is an edit the document shows and never sends.
       expect(await rowsIn('updates')).toEqual([]);
       vi.restoreAllMocks();
+      await store.close();
 
-      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      // A fresh store, because the failure above poisoned that session for
+      // good — the pairing itself is what the rest of this test is about.
+      const next = storeWith();
+
+      await next.open();
+      await next.recordSession(tagWith(LINEAGE_A), false, 'v2');
 
       const transactions: Array<{ stores: string[]; mode: string }> = [];
 
       recordTransactions(transactions);
-      await store.appendLocal(updateWith('block-2', 'two'));
+      await next.appendLocal(updateWith('block-2', 'two'));
 
       expect(transactions).toEqual([ { stores: [ 'updates', 'outbox' ],
         mode: 'readwrite' } ]);
@@ -1069,7 +1149,9 @@ describe('collaboration — operation store', () => {
       expect((await store.stats()).appendInFlight).toBe(false);
 
       // No offline scope means no consent to write this document to disk.
+      // That is not a storage failure: this queue drains like any other.
       expect(openSpy).not.toHaveBeenCalled();
+      expect((await store.stats()).storageUnavailable).toBe(false);
       expect((await store.oldestPending())?.operationId).toBe(pending.operationId);
 
       await store.acknowledge(pending.operationId);
@@ -1084,6 +1166,200 @@ describe('collaboration — operation store', () => {
       expect(await store.oldestPending()).toBeNull();
       expect((await store.stats()).quarantinedOperations).toBe(1);
       expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the durability rule at every write', () => {
+    it('every write resolves only on transaction completion, not on request success', async () => {
+      const store = storeWith();
+
+      await store.open();
+
+      const order: string[] = [];
+
+      logCommits(order);
+
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v1', updateWith('block-1', 'seed'));
+      order.push('recordSession resolved');
+
+      expect(order).toEqual([ 'transaction committed', 'recordSession resolved' ]);
+
+      order.length = 0;
+      await store.appendCached(updateWith('block-2', 'cached'));
+      order.push('appendCached resolved');
+
+      expect(order).toEqual([ 'transaction committed', 'appendCached resolved' ]);
+
+      order.length = 0;
+      await store.appendRemote(updateWith('block-3', 'remote'));
+      order.push('appendRemote resolved');
+
+      expect(order).toEqual([ 'transaction committed', 'appendRemote resolved' ]);
+
+      order.length = 0;
+      await store.quarantineLineage(LINEAGE_A, 'read-only', updateWith('block-4', 'recovery'));
+      order.push('quarantineLineage resolved');
+
+      expect(order).toEqual([ 'transaction committed', 'quarantineLineage resolved' ]);
+
+      order.length = 0;
+      await store.clearAdoptable();
+      order.push('clearAdoptable resolved');
+
+      expect(order).toEqual([ 'transaction committed', 'clearAdoptable resolved' ]);
+    });
+
+    it('open resolves only after its sweep, and after its discard, commits', async () => {
+      const writer = storeWith();
+
+      await writer.open();
+      await writer.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await writer.appendRemote(updateWith('block-1', 'good'));
+      await writer.close();
+      await plantUpdate({ lineage: LINEAGE_B,
+        bytes: updateWith('block-2', 'stranger') });
+
+      const sweeper = storeWith();
+      const sweep: string[] = [];
+
+      logTransactionOrder(sweep);
+      await sweeper.open();
+
+      // The sweep is durable before open() moves on to read the outbox. A
+      // promise resolved on request success would open that next transaction
+      // while this one is still uncommitted.
+      expect(sweep.slice(-3)).toEqual([ 'open:readwrite', 'commit', 'open:readonly' ]);
+      await sweeper.close();
+      vi.restoreAllMocks();
+
+      await plantUpdate({ lineage: LINEAGE_A,
+        bytes: new Uint8Array([ 255, 255, 255, 255, 7, 0, 3 ]) });
+
+      const discarder = storeWith();
+      const discard: string[] = [];
+
+      logCommits(discard);
+
+      expect(await discarder.open()).toBeNull();
+      discard.push('open resolved');
+
+      expect(discard).toEqual([ 'transaction committed', 'open resolved' ]);
+    });
+
+    it('compaction commits the merged row before it deletes the originals', async () => {
+      const store = storeWith({ compactionThreshold: 2 });
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendRemote(updateWith('block-1', 'one'));
+
+      const log: string[] = [];
+
+      logWrites(log);
+      await store.appendRemote(updateWith('block-2', 'two'));
+
+      // A crash between the write and the delete leaves a duplicate, which
+      // CRDT updates absorb; the other order loses history outright.
+      expect(log).toEqual([
+        'open', 'updates.add', 'commit',
+        'open', 'updates.add', 'commit',
+        'open', 'updates.delete', 'updates.delete', 'commit',
+      ]);
+    });
+  });
+
+  describe('clearAdoptable and the queue', () => {
+    it('clearAdoptable never touches the outbox or the quarantine', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      const pending = await store.appendLocal(updateWith('block-1', 'one'));
+
+      // A quarantine of another lineage moves no rows but leaves its recovery
+      // snapshot behind, so there is something in that store to protect too.
+      await store.quarantineLineage(LINEAGE_B, 'read-only', updateWith('block-9', 'recovery'));
+      await store.clearAdoptable();
+
+      // This is what the reset sequence calls right after quarantineLineage:
+      // dropping the queue here would drop operations the server owes a
+      // receipt for.
+      expect(await rowsIn('outbox')).toHaveLength(1);
+      expect(await rowsIn('quarantine')).toHaveLength(1);
+      expect((await store.oldestPending())?.operationId).toBe(pending.operationId);
+      expect(await rowsIn('updates')).toEqual([]);
+    });
+  });
+
+  describe('a poisoned session', () => {
+    it('stays poisoned across the next session record, until the cache is dropped', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.appendLocal(updateWith('block-1', 'one'));
+
+      failAddsTo('outbox');
+
+      await expect(store.appendLocal(updateWith('block-2', 'two'))).rejects.toThrow();
+      vi.restoreAllMocks();
+
+      // The next validated control frame must NOT re-arm editing. Every later
+      // update from this Yjs client depends on the one that was lost, and
+      // `Y.decodeUpdate` validates structure, not dependencies — so nothing
+      // downstream would ever notice the hole.
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      await expect(store.appendLocal(updateWith('block-3', 'three'))).rejects.toThrow();
+      expect(await rowsIn('outbox')).toHaveLength(1);
+
+      // Dropping the cached copy drops the hole with it.
+      await store.clearAdoptable();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await expect(store.appendLocal(updateWith('block-4', 'four'))).resolves.toBeDefined();
+    });
+
+    it('a failed cached write and a failed remote write poison it too', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v1');
+
+      failAddsTo('updates');
+
+      await expect(store.appendCached(updateWith('block-1', 'one'))).rejects.toThrow();
+      vi.restoreAllMocks();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v1');
+      await expect(store.appendCached(updateWith('block-2', 'two'))).rejects.toThrow();
+
+      await store.clearAdoptable();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+
+      failAddsTo('updates');
+
+      await expect(store.appendRemote(updateWith('block-3', 'three'))).rejects.toThrow();
+      vi.restoreAllMocks();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await expect(store.appendLocal(updateWith('block-4', 'four'))).rejects.toThrow();
+    });
+  });
+
+  describe('after close', () => {
+    it('refuses every append, instead of queueing one nothing can store', async () => {
+      const store = storeWith();
+
+      await store.open();
+      await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
+      await store.close();
+
+      // A closed store has no database, and a store with no database is memory
+      // mode — which would resolve the append and offer it to the drain.
+      await expect(store.appendLocal(updateWith('block-1', 'one'))).rejects.toThrow();
+      await expect(store.appendCached(updateWith('block-1', 'one'))).rejects.toThrow();
+      await expect(store.appendRemote(updateWith('block-1', 'one'))).rejects.toThrow();
+      expect(await rowsIn('outbox')).toEqual([]);
+      expect(await store.oldestPending()).toBeNull();
     });
   });
 

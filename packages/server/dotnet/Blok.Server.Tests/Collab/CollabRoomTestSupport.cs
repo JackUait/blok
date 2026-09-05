@@ -479,13 +479,6 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     lock (guard)
     {
       saves.Add(new RecordedSave(docId, outputData.DeepClone(), version, projection));
-
-      if (EchoesSaves)
-      {
-        documents[docId] = new LoadedDocument(
-            outputData.DeepClone(),
-            NextSaveVersion ?? version);
-      }
     }
 
     if (SaveGate is not null)
@@ -503,6 +496,17 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
 
     var answer = NextSaveVersion;
     NextSaveVersion = null;
+
+    // Only a save that COMPLETED reaches the record. A cancelled or refused
+    // PUT leaves the consumer holding what it had, which is what makes a
+    // failed write-back observable at all.
+    if (EchoesSaves)
+    {
+      lock (guard)
+      {
+        documents[docId] = new LoadedDocument(outputData.DeepClone(), answer ?? version);
+      }
+    }
 
     return answer;
   }

@@ -2565,6 +2565,71 @@ public sealed class CollabRoomTests
 
     Assert.Equal(CollabJoinStatus.Joined, rejoined.Status);
     Assert.Equal("hello world", await ExportedTextAsync(manager));
+
+    // And the operator is told why the write-back will carry no version,
+    // rather than being left to infer it from a missing header.
+    await Waits.UntilAsync(
+        () => log.Any(line =>
+            line.Contains("could not read the document version", StringComparison.Ordinal)),
+        "the version read to report its failure");
+  }
+
+  /// <summary>
+  /// Journal corruption is not a hiccup. The design's crash table says fail
+  /// closed and never silently re-seed, so a checkpoint refused because the
+  /// journal cannot be read stops the room rather than logging "retrying
+  /// later" at it forever.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointRefusedByACorruptJournalClosesTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.FailCheckpoints = _ => new InvalidDataException(
+        "collab: the journal record after sequence 1 is corrupt.");
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(CollabCloseReason.CommitUnavailable, Assert.Single(writer.Closes));
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// A session that can never checkpoint again — one whose fence check has
+  /// faulted, say — presents as an ordinary failure. Under the cadence task
+  /// 5.1 will drive, that is an unbounded retry loop against a session that
+  /// can never succeed, so a run of them stops the room instead.
+  /// </summary>
+  [Fact]
+  public async Task ARunOfCheckpointFailuresStopsTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.FailCheckpoints = _ => new IOException(
+        "collab: this session can no longer say what is durable; reopen the document");
+
+    for (var attempt = 0; attempt < 2; attempt++)
+    {
+      Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+      Assert.Empty(writer.Closes);
+    }
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(CollabCloseReason.CommitUnavailable, Assert.Single(writer.Closes));
+    Assert.Equal(0, manager.LiveRoomCount);
   }
 
   /// <summary>
@@ -2612,6 +2677,7 @@ public sealed class CollabRoomTests
     operations.FailCheckpoints = _ => new IOException("the journal disk is busy");
 
     Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
 
     Assert.Empty(writer.Closes);
     Assert.Equal(1, manager.LiveRoomCount);
@@ -2621,6 +2687,19 @@ public sealed class CollabRoomTests
 
     Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
     Assert.Equal(1UL, operations.Checkpoint(DocId)!.Through);
+
+    // The run that stops the room is CONSECUTIVE: the success above clears
+    // it, so these two are not the third strike.
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+    operations.FailCheckpoints = _ => new IOException("the journal disk is busy");
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Empty(writer.Closes);
+    Assert.Equal(1, manager.LiveRoomCount);
   }
 
   /// <summary>
@@ -2717,6 +2796,243 @@ public sealed class CollabRoomTests
     await manager.ResetAsync(DocId, CancellationToken.None);
 
     Assert.Equal("hello world", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The reset's projection is not the caller's to abandon. Run under the
+  /// request token, a client disconnecting mid-flush left the record stale and
+  /// the reset rebaselined from it — the very loss the flush exists to
+  /// prevent, in a window the flush itself opened.
+  /// </summary>
+  [Fact]
+  public async Task AClientDisconnectingMidResetDoesNotCostTheProjection()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    endpoint.EchoesSaves = true;
+    var manager = CreateJournalManager();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+
+    var stuck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    endpoint.SaveGate = stuck;
+    using var caller = new CancellationTokenSource();
+    var reset = manager.ResetAsync(DocId, caller.Token).AsTask();
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the reset's flush to start");
+
+    await caller.CancelAsync();
+    stuck.SetResult();
+    endpoint.SaveGate = null;
+    await reset;
+
+    Assert.Equal("hello world", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The previous room died with a projection owed, so the record is behind.
+  /// A reloaded room starts clean, so the reset's flush had nothing to write
+  /// and the rebaseline dropped exactly the operations the record was already
+  /// missing — the shape an operator meets after an outage and a restart.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAReloadedRoomProjectsTheWorkTheRecordNeverGot()
+  {
+    var second = await AJournalledDocumentWhoseRecordMissedAnOperation();
+    await Join(second, V2Member());
+
+    await second.ResetAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("hello world", await ExportedTextAsync(second));
+  }
+
+  /// <summary>
+  /// The same loss with nobody in the document, which is the likelier shape:
+  /// the reset branch only opened the journal, never loaded it and so never
+  /// reached Ready, leaving the flush unable to run at all.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAColdJournalledDocumentProjectsItBeforeRebaselining()
+  {
+    var second = await AJournalledDocumentWhoseRecordMissedAnOperation();
+
+    await second.ResetAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("hello world", await ExportedTextAsync(second));
+  }
+
+  /// <summary>
+  /// Commits an operation, then takes the service down with the consumer's
+  /// endpoint refusing the write-back, so the journal holds work the record
+  /// never got. Answers a fresh manager over the same journal: a restart.
+  /// </summary>
+  private async Task<CollabRoomManager> AJournalledDocumentWhoseRecordMissedAnOperation()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    endpoint.EchoesSaves = true;
+    var first = CreateJournalManager();
+    var membership = await Join(first, V2Member());
+    var client = await SyncedClientAsync(first, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    endpoint.NextSaveFailure = new DocEndpointException(
+        "collab: the doc endpoint PUT returned 503.",
+        503);
+    await first.DrainAsync(CancellationToken.None);
+
+    // The premise: the drain really did try the write-back and really was
+    // refused, so the record still holds "hello" and not "hello world".
+    Assert.Single(endpoint.Saves);
+    Assert.Null(endpoint.NextSaveFailure);
+
+    return CreateJournalManager();
+  }
+
+  /// <summary>
+  /// The version read must never be on the acknowledgement path. It is taken
+  /// with the room's lane AND the journal fence held, so an HTTP edit that
+  /// opens a cold, already-journalled document would otherwise stall — and
+  /// take every other join and edit on that document with it — for the
+  /// endpoint's whole request timeout.
+  /// </summary>
+  [Fact]
+  public async Task AnEditOnAColdJournalledDocumentDoesNotWaitForTheVersionRead()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var manager = CreateJournalManager();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    // The consumer's endpoint stops answering, so the version read hangs.
+    endpoint.LoadGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    var edit = manager.EditAsync(
+        DocId,
+        [Appending("b-1", "!")],
+        CancellationToken.None).AsTask();
+    var finished = await Task.WhenAny(edit, Task.Delay(TimeSpan.FromSeconds(5)));
+
+    Assert.Same(edit, finished);
+    Assert.Equal(CollabEditStatus.Applied, (await edit).Status);
+    Assert.Equal(2, operations.Committed(DocId).Count);
+
+    endpoint.LoadGate.SetResult();
+  }
+
+  /// <summary>
+  /// Taking the version read off the acknowledgement path put it in a race
+  /// with the projection. A PUT built while the read is still in flight would
+  /// carry no version at all — I2's own defect, reintroduced by its own fix —
+  /// so the two places that build one wait it out first. The checkpoint route.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointProjectionWaitsForAVersionReadStillInFlight()
+  {
+    var manager = await AReloadedRoomWhoseVersionReadIsStuck();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello world");
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    var before = endpoint.Saves.Count;
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    // Exactly the debounce. A longer jump would sweep the settle's own bound
+    // in the same Advance pass and make it give up for the clock's reasons.
+    time.Advance(TimeSpan.FromSeconds(2));
+    endpoint.LoadGate!.SetResult();
+    await Waits.UntilAsync(
+        () => endpoint.Saves.Count > before,
+        "the checkpoint's projection");
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
+  }
+
+  /// <summary>The same race on the other route that builds a PUT: eviction and drain.</summary>
+  [Fact]
+  public async Task ADrainProjectionWaitsForAVersionReadStillInFlight()
+  {
+    var manager = await AReloadedRoomWhoseVersionReadIsStuck();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello world");
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    var drain = manager.DrainAsync(CancellationToken.None).AsTask();
+    endpoint.LoadGate!.SetResult();
+    await drain;
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
+  }
+
+  /// <summary>
+  /// A journal whose head already exists and a consumer endpoint that has
+  /// stopped answering, so the next room's version read is still outstanding
+  /// when it is asked to project. Answers a fresh manager over that journal.
+  /// </summary>
+  private async Task<CollabRoomManager> AReloadedRoomWhoseVersionReadIsStuck()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var first = CreateJournalManager();
+    var membership = await Join(first, V2Member());
+    var client = await SyncedClientAsync(first, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await first.DrainAsync(CancellationToken.None);
+
+    endpoint.Holds(DocId, "hello world", version: "v2");
+    endpoint.LoadGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    return CreateJournalManager();
+  }
+
+  /// <summary>
+  /// The version is captured when the room STARTS diverging from the record,
+  /// not when it builds a PUT. Reading it just before the PUT would return the
+  /// version the host's own save produced, so the write-back would match and
+  /// land over that save — which is the failure the version read exists to
+  /// prevent.
+  /// </summary>
+  [Fact]
+  public async Task TheVersionIsCapturedAtLoadSoAHostSaveAfterwardsStillRefusesTheWriteBack()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var manager = CreateJournalManager();
+    var first = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await first.ReceiveAsync(
+        Operation(first, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the seeded room to be evicted");
+
+    // The room reloads while the consumer's record is at v2 ...
+    endpoint.Holds(DocId, "hello world", version: "v2");
+    var second = await Join(manager, V2Member());
+    var next = await SyncedClientAsync(manager, "hello world");
+    await second.ReceiveAsync(
+        Operation(second, OpTwo, YDocs.UpdateAppending(next, "!")),
+        CancellationToken.None);
+
+    // ... and the host saves AFTER that, moving its record on to v3.
+    endpoint.Holds(DocId, "host wins", version: "v3");
+    await second.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the reloaded room to be evicted");
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
   }
 
   /// <summary>

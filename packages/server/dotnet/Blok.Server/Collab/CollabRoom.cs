@@ -72,6 +72,9 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>Malformed awareness frames one member may send before it is closed.</summary>
   private const int MalformedAwarenessLimit = 3;
 
+  /// <summary>Consecutive checkpoint failures the room tolerates before it stops serving.</summary>
+  private const int CheckpointFailureLimit = 3;
+
   private static readonly byte[] QueryAwareness =
       SyncWire.Encode(new QueryAwarenessFrame());
 
@@ -116,6 +119,7 @@ internal sealed class CollabRoom : IDisposable
   // journal's position rather than counting from zero.
   private ulong committedThrough;
   private ulong checkpointedThrough;
+  private int checkpointFailures;
 
   // The blob is behind the doc while blobVersion != persistedVersion; that
   // is the room's "persist behind" flag, and it is what keeps a room that
@@ -126,6 +130,13 @@ internal sealed class CollabRoom : IDisposable
   private Task? inFlightPersist;
   private int persistFailures;
   private string? version;
+
+  // The consumer's version handle, read BESIDE the room at load. Started
+  // there so the version it captures predates anything the host saved after
+  // the room began diverging from the record; awaited only where a PUT is
+  // built, because the load runs with the lane and the journal fence held and
+  // an acknowledgement must never wait on the endpoint.
+  private Task<string?>? pendingVersion;
   private bool exportDirty;
 
   // A checkpoint's projection, still owed. Distinct from exportDirty
@@ -494,18 +505,15 @@ internal sealed class CollabRoom : IDisposable
                 new CollabOperationCheckpoint(committedThrough, doc.EncodeStateAsUpdate()),
                 bounded.Token);
           }
-          catch (CollabOperationFenceLostException error)
+          catch (Exception error) when (
+              error is CollabOperationFenceLostException or
+                  ArgumentOutOfRangeException or
+                  InvalidDataException)
           {
-            // Another process owns the document now, so this room cannot
-            // serve it at all.
-            await FailCommitLocked("publish a checkpoint", error);
-
-            return false;
-          }
-          catch (ArgumentOutOfRangeException error)
-          {
-            // The store refused the sequence, which means this room's idea of
-            // what is committed is wrong. Fail closed.
+            // A lost fence (another process owns the document), a sequence the
+            // store refused (this room's idea of what is committed is wrong)
+            // and a journal it cannot read (the crash table's "fail closed;
+            // never silently re-seed"). None of the three heals by retrying.
             await FailCommitLocked("publish a checkpoint", error);
 
             return false;
@@ -515,14 +523,26 @@ internal sealed class CollabRoom : IDisposable
             // Everything else — a disk hiccup, a store timeout. A checkpoint
             // is only a replay accelerator, so a failed one leaves the room
             // holding nothing the journal lacks; evicting a roomful of people
-            // from a document they can still edit would be the worse answer.
-            // checkpointedThrough is left alone, so the next tick retries.
+            // from a document they can still edit would be the worse answer,
+            // and checkpointedThrough is left alone so the next attempt
+            // retries. Bounded, though: a session that can never checkpoint
+            // again reads exactly like a hiccup, and under a checkpoint
+            // cadence that would retry forever.
+            if (++checkpointFailures >= CheckpointFailureLimit)
+            {
+              await FailCommitLocked("publish a checkpoint", error);
+
+              return false;
+            }
+
             log?.Invoke(
-                $"collab: room \"{DocId}\" could not publish a checkpoint, retrying later: {error.Message}");
+                $"collab: room \"{DocId}\" could not publish a checkpoint " +
+                $"({checkpointFailures} of {CheckpointFailureLimit}), retrying later: {error.Message}");
 
             return false;
           }
 
+          checkpointFailures = 0;
           checkpointedThrough = committedThrough;
 
           // MarkDirty deliberately arms no timer on a journal room, so the
@@ -559,6 +579,18 @@ internal sealed class CollabRoom : IDisposable
 
                   return new CollabResetResult(CollabResetStatus.Unavailable, null, null);
                 }
+
+                // An already-journalled document is HYDRATED here, so the
+                // flush below can run at all: nobody is in the room to have
+                // projected, and the record this is about to be rebaselined
+                // from is only as fresh as the last projection. A document
+                // the journal has never held has nothing to project.
+                if (session!.OpenResult.Head is not null)
+                {
+                  NewDocLocked();
+                  await LoadFromJournalLocked();
+                  state = RoomState.Ready;
+                }
               }
               catch (Exception error)
               {
@@ -576,9 +608,13 @@ internal sealed class CollabRoom : IDisposable
               // acknowledged since then, and an old-lineage operation can
               // never be replayed into the new lineage. A host that saved
               // first answers this PUT 409 and its own copy still wins.
+              //
+              // NOT under the caller's token: a client that disconnects
+              // mid-flush would leave the record stale and the rebaseline
+              // would then take it, which is the loss this exists to stop.
               try
               {
-                await FlushLocked(cancellationToken);
+                await FlushLocked(CancellationToken.None);
               }
               catch (Exception error)
               {
@@ -746,6 +782,16 @@ internal sealed class CollabRoom : IDisposable
     }
   }
 
+  /// <summary>
+  /// A random uint32 client id by construction, as a browser draws: two
+  /// replicas sharing an id would corrupt the doc.
+  /// </summary>
+  private void NewDocLocked()
+  {
+    doc = new YDoc();
+    doc.UpdateEmitted += OnLocalUpdate;
+  }
+
   private async Task<bool> TryOpenJournalLocked()
   {
     var open = await operationStore!.OpenAsync(DocId, lifetime.Token);
@@ -767,10 +813,7 @@ internal sealed class CollabRoom : IDisposable
   {
     try
     {
-      // A random uint32 client id by construction, as a browser draws: two
-      // replicas sharing an id would corrupt the doc.
-      doc = new YDoc();
-      doc.UpdateEmitted += OnLocalUpdate;
+      NewDocLocked();
 
       if (operationStore is not null)
       {
@@ -856,7 +899,7 @@ internal sealed class CollabRoom : IDisposable
         opened.Head.Lineage);
     committedThrough = opened.Head.DurableThrough;
     checkpointedThrough = opened.Checkpoint?.Through ?? 0;
-    await ReadProjectionVersionLocked();
+    StartVersionReadLocked();
     HydrateCommittedLocked(opened.Baseline);
 
     if (opened.Checkpoint is { } checkpoint)
@@ -866,30 +909,109 @@ internal sealed class CollabRoom : IDisposable
 
     HydrateCommittedLocked(
         [.. opened.Tail.Select(record => record.Update)]);
+
+    // The previous room may have died with a projection owed — a crash, a
+    // drain the endpoint refused, a converter refusal — and nothing else
+    // would ever notice. One PUT per room lifetime buys the record catching
+    // up whenever a document is opened, and it is what a reset rebaselines
+    // from. A SEED does not come through here: its record IS the source.
+    MarkDirtyLocked();
   }
 
   /// <summary>
   /// The consumer's optimistic-concurrency handle, for a room whose content
   /// came from the journal instead of a seed. Nothing else sets it there, and
-  /// a journal-backed room now makes one write-back in its whole life — so
-  /// without this GET no write-back it ever makes carries Blok-Doc-Version,
-  /// and a consumer has no basis to refuse a projection built before its own
-  /// save. The BODY is discarded: the journal is what the document is.
-  ///
-  /// Best effort. The endpoint being unreachable must not fail a join the
-  /// journal can serve on its own.
+  /// a journal-backed room makes one write-back in its whole life — so without
+  /// this GET no write-back it ever makes carries Blok-Doc-Version, and a
+  /// consumer has no basis to refuse a projection built before its own save.
+  /// The BODY is discarded: the journal is what the document is.
   /// </summary>
-  private async Task ReadProjectionVersionLocked()
+  private void StartVersionReadLocked()
+  {
+    var reading = ReadProjectionVersionAsync();
+    pendingVersion = reading;
+    _ = ObserveVersionAsync(reading);
+  }
+
+  /// <summary>
+  /// Best effort. The endpoint being unreachable must cost the write-back its
+  /// header and nothing else — never the join the journal can serve on its own.
+  /// </summary>
+  private async Task<string?> ReadProjectionVersionAsync()
   {
     try
     {
-      version = (await endpoint.LoadAsync(DocId, lifetime.Token)).Version;
+      return (await endpoint.LoadAsync(DocId, lifetime.Token)).Version;
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {
       log?.Invoke(
           $"collab: room \"{DocId}\" could not read the document version, so its write-back " +
           $"will carry none: {error.Message}");
+
+      return null;
+    }
+  }
+
+  private async Task ObserveVersionAsync(Task<string?> reading)
+  {
+    string? answered = null;
+
+    try
+    {
+      answered = await reading;
+    }
+    catch (Exception)
+    {
+      // Only the room's own lifetime ends this read; there is nothing to apply.
+    }
+
+    Post(() =>
+    {
+      ApplyVersionLocked(reading, answered);
+
+      return Task.CompletedTask;
+    });
+  }
+
+  /// <summary>Idempotent: whichever of the observer and the settle gets there first wins.</summary>
+  private void ApplyVersionLocked(Task<string?> reading, string? answered)
+  {
+    if (!ReferenceEquals(reading, pendingVersion))
+    {
+      return;
+    }
+
+    pendingVersion = null;
+
+    if (answered is not null)
+    {
+      version = answered;
+    }
+  }
+
+  /// <summary>
+  /// Waits out the load-time version read, where a PUT is about to be built.
+  /// It has normally landed long before any projection — the earliest is a
+  /// debounce away — so this is usually an already-completed task. Bounded
+  /// because the lane is held: past the bound the projection goes without the
+  /// header rather than holding the whole document up for it.
+  /// </summary>
+  private async Task SettleVersionLocked()
+  {
+    if (pendingVersion is not { } reading)
+    {
+      return;
+    }
+
+    try
+    {
+      ApplyVersionLocked(reading, await reading.WaitAsync(options.CommitTimeout, timeProvider));
+    }
+    catch (Exception error)
+    {
+      log?.Invoke(
+          $"collab: room \"{DocId}\" is projecting before its version read finished: {error.Message}");
     }
   }
 
@@ -1834,13 +1956,14 @@ internal sealed class CollabRoom : IDisposable
         Timeout.InfiniteTimeSpan);
   }
 
-  private Task TryExportLocked()
+  private async Task TryExportLocked()
   {
     if (state != RoomState.Ready || !exportDirty || inFlightSave is not null)
     {
-      return Task.CompletedTask;
+      return;
     }
 
+    await SettleVersionLocked();
     Task<string?> save;
 
     // Only the JSON snapshot is taken under the lane; the PUT runs beside
@@ -1864,7 +1987,7 @@ internal sealed class CollabRoom : IDisposable
       {
         RefuseProjectionLocked(error);
 
-        return Task.CompletedTask;
+        return;
       }
 
       log?.Invoke($"collab: room \"{DocId}\" could not export, retrying: {error.Message}");
@@ -1872,15 +1995,13 @@ internal sealed class CollabRoom : IDisposable
       exportRetryAt = timeProvider.GetUtcNow() + Backoff(exportFailures);
       ScheduleExportLocked();
 
-      return Task.CompletedTask;
+      return;
     }
 
     exportDirty = false;
     dirtySince = null;
     inFlightSave = save;
     _ = ObserveSaveAsync(save);
-
-    return Task.CompletedTask;
   }
 
   private async Task ObserveSaveAsync(Task<string?> save)
@@ -2051,6 +2172,7 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    await SettleVersionLocked();
     JsonNode snapshot;
 
     try

@@ -14,7 +14,7 @@ import { serializeBlocksToMarkdown } from '../markdown/blocks-to-markdown-core';
 import type { InlineBackend, MarkdownDegradation, SerializableBlock } from '../markdown/blocks-to-markdown-core';
 import { buildDocumentModel } from './document-model';
 import type { ViewBlock } from './document-model';
-import { htmlTextContent, needsTokenizing, parseInlineFragment } from './html-text';
+import { needsTokenizing, parseInlineFragment } from './html-text';
 
 import type { LooseOutputData, OutputData } from '../../types';
 
@@ -95,6 +95,16 @@ const serializeNode = (node: P5ChildNode): string => {
 
       return href ? `[${inner}](${href})` : inner;
     }
+    /**
+     * An image has no child nodes, so the `default` branch serializes it to
+     * nothing and the image is lost. `alt` and `src` are written raw, exactly
+     * as `a` writes its label and `href`.
+     */
+    case 'img': {
+      const src = attr(node, 'src');
+
+      return src ? `![${attr(node, 'alt') ?? ''}](${src})` : '';
+    }
     default:
       return inner;
   }
@@ -120,14 +130,6 @@ const parse5InlineBackend: InlineBackend = {
     }
 
     return serializeNodes(parseInlineFragment(source).childNodes);
-  },
-
-  /**
-   * Strip HTML to its text content (used for code blocks, where Markdown is literal).
-   * @param html - HTML string
-   */
-  htmlToText(html: string): string {
-    return htmlTextContent(html ?? '');
   },
 };
 

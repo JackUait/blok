@@ -75,6 +75,16 @@ const serializeInlineNode = (node: Node): string => {
 
       return href ? `[${inner}](${href})` : inner;
     }
+    /**
+     * An image has no child nodes, so the `default` branch serializes it to
+     * nothing and the image is lost. `alt` and `src` are written raw, exactly
+     * as `a` writes its label and `href`.
+     */
+    case 'img': {
+      const src = element.getAttribute('src');
+
+      return src ? `![${element.getAttribute('alt') ?? ''}](${src})` : '';
+    }
     default:
       return inner;
   }
@@ -92,18 +102,6 @@ const domInlineBackend: InlineBackend = {
     container.innerHTML = html ?? '';
 
     return serializeChildren(container);
-  },
-
-  /**
-   * Strip HTML to its text content (used for code blocks, where Markdown is literal).
-   * @param html - HTML string
-   */
-  htmlToText(html: string): string {
-    const container = document.createElement('div');
-
-    container.innerHTML = html ?? '';
-
-    return container.textContent ?? '';
   },
 };
 

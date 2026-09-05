@@ -77,6 +77,22 @@ const FIXTURES: Array<{ name: string; document: OutputData }> = [
     document: doc([{ type: 'paragraph', data: { text: '<a href="https://x.com/a?b=1&amp;c=2">go <b>now</b></a>' } }]),
   },
   {
+    name: 'an inline image',
+    document: doc([{ type: 'paragraph', data: { text: 'before <img src="https://i/x.png" alt="A shot"> after' } }]),
+  },
+  {
+    name: 'an inline image with no alt and one with no src',
+    document: doc([{ type: 'paragraph', data: { text: '<img src="https://i/x.png">|<img alt="orphan">|<img src="">' } }]),
+  },
+  {
+    name: 'an inline image carrying Markdown-meaningful characters and entities',
+    document: doc([{ type: 'paragraph', data: { text: '<img src="https://i/x(1).png?a=1&amp;b=2" alt="a]b &amp; c">' } }]),
+  },
+  {
+    name: 'an inline image inside a link and inside bold',
+    document: doc([{ type: 'paragraph', data: { text: '<a href="https://x.com"><img src="i.png" alt="A"></a> <b><img src="i.png" alt="B"></b>' } }]),
+  },
+  {
     name: 'HTML entities and a hard break',
     document: doc([{ type: 'paragraph', data: { text: 'a &lt; b &amp;&nbsp;c<br>second line' } }]),
   },

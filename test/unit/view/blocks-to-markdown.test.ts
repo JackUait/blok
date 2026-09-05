@@ -38,6 +38,58 @@ describe('blocksToMarkdown (view)', () => {
     expect(blocksToMarkdown(doc([{ type: 'paragraph', data: { text: 'a &lt; b &amp; c' } }]))).toBe('a < b & c');
   });
 
+  /**
+   * An inline `<img>` has no child nodes, so without a case of its own it fell
+   * to the default branch and serialized to the empty string — the image
+   * vanished from the export with nothing said about it.
+   */
+  describe('inline images', () => {
+    /**
+     * Serialize one paragraph's inline HTML.
+     * @param text - the paragraph's `data.text`
+     */
+    const inline = (text: string): string => blocksToMarkdown(doc([{ type: 'paragraph', data: { text } }]));
+
+    it('serializes an inline image as a Markdown image', () => {
+      expect(inline('before <img src="https://i/x.png" alt="A shot"> after'))
+        .toBe('before ![A shot](https://i/x.png) after');
+    });
+
+    it('emits an empty alt when the image has none', () => {
+      expect(inline('<img src="https://i/x.png">')).toBe('![](https://i/x.png)');
+      expect(inline('<img src="https://i/x.png" alt="">')).toBe('![](https://i/x.png)');
+    });
+
+    it('emits nothing for an image with no usable src, rather than a broken link', () => {
+      expect(inline('x <img alt="orphan"> y')).toBe('x  y');
+      expect(inline('x <img src="" alt="orphan"> y')).toBe('x  y');
+    });
+
+    /**
+     * The link case emits `href` and its label raw, so the image case does the
+     * same. Escaping only one of the two would make the backends disagree with
+     * how every other inline construct is written.
+     */
+    it('leaves Markdown-meaningful characters in alt and src unescaped, matching link serialization', () => {
+      expect(inline('<img src="https://i/x(1).png" alt="a]b">')).toBe('![a]b](https://i/x(1).png)');
+      expect(inline('<a href="https://x.com/(1)">a]b</a>')).toBe('[a]b](https://x.com/(1))');
+    });
+
+    it('decodes HTML entities in alt and src', () => {
+      expect(inline('<img src="https://i/x.png?a=1&amp;b=2" alt="Tom &amp; Jerry">'))
+        .toBe('![Tom & Jerry](https://i/x.png?a=1&b=2)');
+    });
+
+    it('keeps an image nested inside a link or a mark', () => {
+      expect(inline('<a href="https://x.com"><img src="i.png" alt="A"></a>')).toBe('[![A](i.png)](https://x.com)');
+      expect(inline('<b><img src="i.png" alt="A"></b>')).toBe('**![A](i.png)**');
+    });
+
+    it('collapses a mark holding only a src-less image', () => {
+      expect(inline('<b><img alt="orphan"></b>')).toBe('');
+    });
+  });
+
   it('serializes headings, quotes, dividers and code fences', () => {
     expect(blocksToMarkdown(doc([{ type: 'header', data: { text: 'Title', level: 2 } }]))).toBe('## Title');
     expect(blocksToMarkdown(doc([{ type: 'quote', data: { text: 'wisdom' } }]))).toBe('> wisdom');

@@ -42,8 +42,6 @@ export interface SerializableBlock {
 export interface InlineBackend {
   /** Inline HTML → inline Markdown (marks, links, `<br>`). */
   inlineToMarkdown(html: string): string;
-  /** Inline HTML → literal text, for constructs where Markdown is verbatim (code). */
-  htmlToText(html: string): string;
 }
 
 /** A construct that could not be carried into Markdown as-is. */
@@ -411,6 +409,60 @@ const prefixLines = (text: string, prefix: string): string =>
   text.split('\n').map((line) => prefix + line).join('\n');
 
 /**
+ * The number an ordered item's marker carries.
+ *
+ * The list tool stores `data.start` on the FIRST item of a group and omits it
+ * when it is 1 (`data-normalizer.ts`), never copying it onto the items that
+ * follow — which matches Markdown, where an ordered list takes its numbering
+ * from the first item alone, so `5.` then `1.` then `1.` renders 5, 6, 7.
+ * CommonMark's marker is 0-999999999: anything outside that (or not a whole
+ * number) is not a marker at all and would turn the item into a paragraph.
+ * @param data - the list block's data
+ * @returns the number to print before the dot
+ */
+const orderedMarkerNumber = (data: BlockToolData): number => {
+  const { start } = data;
+
+  return typeof start === 'number' && Number.isInteger(start) && start >= 0 && start <= 999999999 ? start : 1;
+};
+
+/** Character references a legacy text field can carry, and what they stand for. */
+const NAMED_CHARACTER_REFERENCES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: '\u00a0',
+};
+
+/**
+ * Resolve HTML character references, leaving every tag as literal text.
+ *
+ * Only a legacy code block whose content sits in `data.text` reaches this —
+ * `data.text` is the inline-HTML field everywhere else, so its `<` and `&`
+ * arrive escaped (`escapeHtml` in mdast-to-blocks.ts is the exact inverse).
+ * Tags are never parsed: that is what turned a code sample into a script sink.
+ * One pass, so `&amp;lt;` — an ESCAPED `&lt;` — decodes once, not twice. A
+ * reference without its `;` is left alone rather than guessed at.
+ * @param text - possibly escaped text
+ * @returns the text with its character references resolved
+ */
+const decodeCharacterReferences = (text: string): string =>
+  text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z][a-z0-9]*);/gi, (reference: string, body: string): string => {
+    if (!body.startsWith('#')) {
+      return NAMED_CHARACTER_REFERENCES[body.toLowerCase()] ?? reference;
+    }
+
+    const hex = body[1] === 'x' || body[1] === 'X';
+    const codePoint = Number.parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
+    /** A surrogate half or an out-of-range value is not a character. */
+    const isCharacter = codePoint > 0 && codePoint <= 0x10ffff && (codePoint < 0xd800 || codePoint > 0xdfff);
+
+    return isCharacter ? String.fromCodePoint(codePoint) : reference;
+  });
+
+/**
  * Serialize a single block to a Markdown line (or fenced/quoted block).
  * @param block - the block to serialize
  * @param context - the serialization context
@@ -460,7 +512,7 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       const indent = LIST_INDENT.repeat(structuralDepth > 0 ? structuralDepth : flatDepth);
 
       if (data.style === 'ordered') {
-        return `${indent}1. ${text}`;
+        return `${indent}${orderedMarkerNumber(data)}. ${text}`;
       }
 
       if (data.style === 'checklist') {
@@ -530,12 +582,32 @@ const blockMarkdownBody = (block: SerializableBlock, context: SerializationConte
       return `${flatIndent}${'#'.repeat(level)} ${text}`;
     }
     case 'quote':
-      return `${flatIndent}> ${text}`;
+      /**
+       * EVERY line carries the marker: a `<br>` in the quote reaches here as a
+       * newline, and one prefix left line two a plain paragraph — the quote
+       * silently lost half its content. A blank line is a bare `>` (the GFM
+       * convention), and the flat indent repeats so a quote inside a list item
+       * keeps continuing that item.
+       */
+      return text
+        .split('\n')
+        .map((line) => (line === '' ? `${flatIndent}>` : `${flatIndent}> ${line}`))
+        .join('\n');
     case 'code': {
       const language = asString(data.language).trim();
       const info = language === PLAIN_TEXT_LANGUAGE ? '' : language;
+      /**
+       * `data.code` is LITERAL text — the code tool saves the code element's
+       * `textContent` — so it is emitted verbatim, every `<`, `>` and `&`
+       * intact. It used to go through the inline backend's `htmlToText`, which
+       * both ATE markup (`List<string>` came out `List()`) and, in the browser,
+       * parsed the snippet: `innerHTML` on a detached div still fires an
+       * image's `onerror`, so copying a code sample as Markdown ran it.
+       */
+      const literal = asString(data.code);
+      const body = literal !== '' ? literal : decodeCharacterReferences(asString(data.text));
 
-      return `${flatIndent}\`\`\`${info}\n${context.inline.htmlToText(asString(data.code) || asString(data.text))}\n\`\`\``;
+      return `${flatIndent}\`\`\`${info}\n${body}\n\`\`\``;
     }
     /** `delimiter` is the Editor.js name for the same block; imported documents still carry it. */
     case 'divider':

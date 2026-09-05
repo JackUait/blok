@@ -320,3 +320,197 @@ describe('blocksToMarkdown: table', () => {
     expect(reserialized).toBe(md);
   });
 });
+
+/**
+ * A code block stores LITERAL text — the code tool saves
+ * `codeElement.textContent` into `data.code` — so it must reach the fence
+ * byte-for-byte. Running it through an HTML text extractor both lost markup
+ * (`List<string>` became `List`) and, in the DOM backend, parsed the snippet
+ * (`innerHTML` on a detached div still fires an image's `onerror`).
+ */
+describe('blocksToMarkdown: code', () => {
+  /**
+   * Serialize one code block from its literal `data.code`.
+   * @param code - the snippet, exactly as the code tool saved it
+   * @returns the fenced Markdown
+   */
+  const fence = (code: string): string => blocksToMarkdown([{ tool: 'code',
+    data: { code } }]);
+
+  it('keeps a generic type argument instead of parsing it as a tag', () => {
+    expect(fence('var x = new List<string>();')).toBe('```\nvar x = new List<string>();\n```');
+  });
+
+  it('keeps entity-looking source verbatim (no decoding of literal code)', () => {
+    expect(fence('a &amp; b &lt; c')).toBe('```\na &amp; b &lt; c\n```');
+    expect(fence('const gt = a > b && c < d;')).toBe('```\nconst gt = a > b && c < d;\n```');
+  });
+
+  it('does not parse a snippet containing an image tag with an error handler', () => {
+    const sample = '<img src=x onerror="alert(1)">';
+
+    expect(fence(sample)).toBe(`\`\`\`\n${sample}\n\`\`\``);
+  });
+
+  it('keeps multi-line code and the language fence', () => {
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { code: '<T>(a: T) => a\n// <end>',
+        language: 'typescript' } }]))
+      .toBe('```typescript\n<T>(a: T) => a\n// <end>\n```');
+  });
+
+  /**
+   * Legacy documents can carry a code block whose content sits in `data.text`.
+   * Every other tool's `data.text` is inline HTML (that is what the default
+   * branch feeds to `inlineToMarkdown`), so the escaping is undone — but the
+   * tags themselves are NEVER parsed, or the fallback reopens the same sink.
+   */
+  it('entity-decodes the legacy `data.text` fallback without parsing tags', () => {
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { text: 'a &lt; b &amp;&amp; c' } }])).toBe('```\na < b && c\n```');
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { text: 'x <b>y</b>' } }])).toBe('```\nx <b>y</b>\n```');
+  });
+
+  it('decodes numeric and named references in the legacy fallback exactly once', () => {
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { text: '&#39;a&#x27; &quot;b&quot;' } }])).toBe('```\n\'a\' "b"\n```');
+    // `&amp;lt;` is an ESCAPED `&lt;`, so it decodes to `&lt;` and stops there.
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { text: '&amp;lt;' } }])).toBe('```\n&lt;\n```');
+    // An unknown reference is not a reference; it survives as written.
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { text: '&nope; 5 &lt 6' } }])).toBe('```\n&nope; 5 &lt 6\n```');
+  });
+
+  it('prefers `data.code` over the legacy `data.text`', () => {
+    expect(blocksToMarkdown([{ tool: 'code',
+      data: { code: 'a < b',
+        text: 'ignored' } }])).toBe('```\na < b\n```');
+  });
+});
+
+/**
+ * A quote's inline `<br>` reaches the serializer as a newline, so a quote is
+ * not necessarily one line. Markdown needs the marker on every one of them —
+ * a single prefix left line two a plain paragraph, silently dropping it out of
+ * the quote.
+ */
+describe('blocksToMarkdown: quote', () => {
+  it('prefixes every line of a multi-line quote', () => {
+    expect(blocksToMarkdown([{ tool: 'quote',
+      data: { text: 'one<br>two<br>three' } }])).toBe('> one\n> two\n> three');
+  });
+
+  it('keeps inline marks on the continuation lines', () => {
+    expect(blocksToMarkdown([{ tool: 'quote',
+      data: { text: 'plain<br><b>bold</b>' } }])).toBe('> plain\n> **bold**');
+  });
+
+  it('emits a bare `>` for a blank line inside the quote', () => {
+    expect(blocksToMarkdown([{ tool: 'quote',
+      data: { text: 'a<br><br>b' } }])).toBe('> a\n>\n> b');
+    expect(blocksToMarkdown([{ tool: 'quote',
+      data: { text: '' } }])).toBe('>');
+  });
+
+  it('keeps the list indent on every line of a quote inside a list item', () => {
+    expect(blocksToMarkdown([
+      { id: 'l',
+        tool: 'list',
+        data: { text: 'item',
+          style: 'unordered' } },
+      { tool: 'quote',
+        data: { text: 'a<br>b' },
+        parentId: 'l',
+        indent: 1 },
+    ])).toBe('- item\n\n    > a\n    > b');
+  });
+
+  it('still emits a single-line quote as one marker', () => {
+    expect(blocksToMarkdown([{ tool: 'quote',
+      data: { text: 'wisdom' } }])).toBe('> wisdom');
+  });
+});
+
+/**
+ * An ordered list can start at any number: the list tool stores it as
+ * `data.start` on the FIRST item of a group and omits it when it is 1.
+ * CommonMark reads a list's numbering from its first item alone, so only that
+ * item carries the real number — the ones after it stay `1.` and still render
+ * 6, 7, 8 …
+ */
+describe('blocksToMarkdown: ordered list start', () => {
+  it('emits the saved start number instead of always 1', () => {
+    expect(blocksToMarkdown([{ tool: 'list',
+      data: { text: 'a',
+        style: 'ordered',
+        start: 5 } }])).toBe('5. a');
+  });
+
+  it('numbers a run from the item that carries the start', () => {
+    expect(blocksToMarkdown([
+      { tool: 'list',
+        data: { text: 'a',
+          style: 'ordered',
+          start: 5 } },
+      { tool: 'list',
+        data: { text: 'b',
+          style: 'ordered' } },
+      { tool: 'list',
+        data: { text: 'c',
+          style: 'ordered' } },
+    ])).toBe('5. a\n1. b\n1. c');
+  });
+
+  it('keeps the start on a nested ordered item', () => {
+    expect(blocksToMarkdown([{ tool: 'list',
+      data: { text: 'x',
+        style: 'ordered',
+        start: 3 },
+      indent: 1 }])).toBe('    3. x');
+  });
+
+  it('falls back to 1 for a start that is not a usable list number', () => {
+    // CommonMark accepts 0-999999999; anything else is not an ordered marker
+    // at all, and emitting it would turn the item into a paragraph.
+    for (const start of [-3, 1.5, '5', Number.NaN, 1_000_000_000]) {
+      expect(blocksToMarkdown([{ tool: 'list',
+        data: { text: 'a',
+          style: 'ordered',
+          start } }])).toBe('1. a');
+    }
+
+    expect(blocksToMarkdown([{ tool: 'list',
+      data: { text: 'a',
+        style: 'ordered',
+        start: 0 } }])).toBe('0. a');
+  });
+
+  it('ignores a start on unordered and checklist items', () => {
+    expect(blocksToMarkdown([{ tool: 'list',
+      data: { text: 'a',
+        style: 'unordered',
+        start: 5 } }])).toBe('- a');
+    expect(blocksToMarkdown([{ tool: 'list',
+      data: { text: 'a',
+        style: 'checklist',
+        checked: true,
+        start: 5 } }])).toBe('- [x] a');
+  });
+
+  it('keeps a mixed ordered/unordered run intact', () => {
+    expect(blocksToMarkdown([
+      { tool: 'list',
+        data: { text: 'a',
+          style: 'ordered',
+          start: 2 } },
+      { tool: 'list',
+        data: { text: 'b',
+          style: 'unordered' } },
+      { tool: 'list',
+        data: { text: 'c',
+          style: 'ordered' } },
+    ])).toBe('2. a\n- b\n1. c');
+  });
+});

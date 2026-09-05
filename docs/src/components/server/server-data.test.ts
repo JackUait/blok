@@ -684,9 +684,13 @@ describe('server docs data', () => {
     expect(body).toMatch(/browser storage/i);
     expect(body).toMatch(/until the first successful sync/i);
     expect(body).toMatch(/thrown away|discarded/i);
-    // The copy belongs to the browser, not to the person signed in — an
-    // operator on shared computers has to be told before they turn it on.
-    expect(body).toMatch(/shared computer/i);
+    // `offlineScope` is what makes the copy belong to a person rather than to
+    // the browser, and the editor refuses to start without it — so the page
+    // that explains turning `offline` on has to name it, and must no longer
+    // warn about a shared computer it no longer leaks on.
+    expect(body).toMatch(/offlineScope/);
+    expect(body).toMatch(/requires|required/i);
+    expect(body).not.toMatch(/shared computer/i);
   });
 
   // The claim the design says will eventually disappoint someone, so it is

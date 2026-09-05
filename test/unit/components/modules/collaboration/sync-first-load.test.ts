@@ -42,6 +42,9 @@ const SCOPE = 'member-1';
 const cacheKey = (doc = 'doc-1', scope: string = SCOPE): string =>
   `wss://sync.test/api/sync/${doc}|${scope}`;
 
+/** What `createOfflineCache` prefixes its `key` with. */
+const CACHE_DB_PREFIX = 'blok-collab-';
+
 /**
  * An ordinary third-party tool: read-only CAPABLE, but with no `setReadOnly`.
  *
@@ -246,8 +249,39 @@ const waitForCachedDocument = async (doc = 'doc-1', scope: string = SCOPE): Prom
   }, 'the session to persist its document');
 };
 
+/**
+ * Waits until SOME session has written a document, whatever partition it chose.
+ *
+ * The scoped gate above reads through `cacheKey`, so a regression that merges
+ * two scopes makes the gate time out and the partition test reports a probe
+ * timeout instead of the leak it exists to name. This one asks the factory.
+ */
+const waitForAnyCachedDocument = async (): Promise<void> => {
+  await waitFor(async () => {
+    for (const entry of await indexedDB.databases()) {
+      const name = entry.name;
+
+      if (name === undefined || !name.startsWith(CACHE_DB_PREFIX)) {
+        continue;
+      }
+
+      const probe = createOfflineCache({ key: name.slice(CACHE_DB_PREFIX.length) });
+      const contents = await probe.open();
+
+      probe.close();
+
+      if (contents !== null && contents.updates.length > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }, 'any session to persist its document');
+};
+
 interface BootOptions {
   doc?: string;
+  server?: string;
   data?: BlokConfig['data'];
   readOnly?: boolean;
   ticket?: string;
@@ -292,7 +326,9 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
     },
     data: options.data,
     readOnly: options.readOnly,
-    ...(options.collaboration === false ? {} : { server: 'https://sync.test/api/', collaboration }),
+    ...(options.collaboration === false
+      ? {}
+      : { server: options.server ?? 'https://sync.test/api/', collaboration }),
     ...(options.ticket === undefined ? {} : { ticket: options.ticket }),
   });
 
@@ -903,7 +939,7 @@ describe('collaboration — sync-first load', () => {
 
         firstSync(alice, [{ type: 'paragraph', data: { text: 'alice private' } }]);
         await waitFor(() => alice.core.moduleInstances.BlockManager.blocks.length === 1, 'alice synced');
-        await waitForCachedDocument('doc-1', 'alice');
+        await waitForAnyCachedDocument();
         destroyCore(booted.splice(booted.indexOf(alice.core), 1)[0]);
 
         const bob = await boot({ offline: true,
@@ -924,7 +960,7 @@ describe('collaboration — sync-first load', () => {
 
         firstSync(alice, [{ type: 'paragraph', data: { text: 'alice private' } }]);
         await waitFor(() => alice.core.moduleInstances.BlockManager.blocks.length === 1, 'alice synced');
-        await waitForCachedDocument('doc-1', 'alice');
+        await waitForAnyCachedDocument();
         destroyCore(booted.splice(booted.indexOf(alice.core), 1)[0]);
 
         const bob = await boot({ offline: true,
@@ -932,7 +968,10 @@ describe('collaboration — sync-first load', () => {
 
         firstSync(bob, [{ type: 'paragraph', data: { text: 'bob private' } }]);
         await waitFor(() => bob.core.moduleInstances.BlockManager.blocks.length === 1, 'bob synced');
-        await waitForCachedDocument('doc-1', 'bob');
+        // Timeout tolerated: a regression that merges the two scopes leaves
+        // nothing under bob's key, and the gate would then report a probe
+        // failure instead of the assertion below naming the leak.
+        await waitForCachedDocument('doc-1', 'bob').catch(() => undefined);
         destroyCore(booted.splice(booted.indexOf(bob.core), 1)[0]);
 
         const probe = createOfflineCache({ key: cacheKey('doc-1', 'alice') });
@@ -983,6 +1022,39 @@ describe('collaboration — sync-first load', () => {
 
         expect(blockTexts(back.core)).toEqual(['alice private']);
       }, 30_000);
+
+      /**
+       * The key joins the server url and the scope with `|`, and BOTH can carry
+       * one: `|` is not percent-encoded in a URL path, and the scope is an
+       * arbitrary host string. These two configurations are different
+       * partitions that spell a single database name unescaped.
+       */
+      it('keeps two partitions apart when a separator sits inside the key', async () => {
+        vi.stubGlobal('indexedDB', new IDBFactory());
+
+        const first = await boot({ server: '/foo/sync/d|x',
+          doc: 'e',
+          offline: true,
+          offlineScope: 's' });
+
+        firstSync(first, [{ type: 'paragraph', data: { text: 'first partition' } }]);
+        await waitFor(
+          () => first.core.moduleInstances.BlockManager.blocks.length === 1,
+          'the first partition synced'
+        );
+        await waitForAnyCachedDocument();
+        destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+        const second = await boot({ server: '/foo',
+          doc: 'd',
+          offline: true,
+          offlineScope: 'x/sync/e|s' });
+
+        expect(
+          blockTexts(second.core),
+          'a `|` inside the server path aliased two identity partitions onto one database'
+        ).toEqual([]);
+      }, 20_000);
     });
   });
 

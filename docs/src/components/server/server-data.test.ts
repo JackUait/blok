@@ -1,5 +1,6 @@
 // docs/src/components/server/server-data.test.ts
 import { describe, expect, it } from 'vitest';
+import { getTranslation } from '../../i18n';
 import { serverCoverageNote, serverLimits, serverPaths } from './server-data';
 
 describe('server docs data', () => {
@@ -691,6 +692,19 @@ describe('server docs data', () => {
     expect(body).toMatch(/offlineScope/);
     expect(body).toMatch(/requires|required/i);
     expect(body).not.toMatch(/shared computer/i);
+  });
+
+  // What the page ACTUALLY renders. `useServerTranslations` prefers the i18n
+  // bundle over the literal above and falls back only on a missing key, so an
+  // edit to `server-data.ts` alone is dead code on every rendered locale — which
+  // is how a shared-computer warning outlived the leak it described.
+  it('renders the offlineScope guidance in both shipped locales', () => {
+    const key = 'server.limits.collab-offline-reload.body';
+
+    expect(getTranslation('en', key)).toMatch(/offlineScope/);
+    expect(getTranslation('en', key)).not.toMatch(/shared computer/i);
+    expect(getTranslation('ru', key)).toMatch(/offlineScope/);
+    expect(getTranslation('ru', key)).not.toMatch(/общем компьютере/i);
   });
 
   // The claim the design says will eventually disappoint someone, so it is

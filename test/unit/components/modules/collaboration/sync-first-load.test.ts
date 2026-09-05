@@ -255,6 +255,10 @@ const waitForCachedDocument = async (doc = 'doc-1', scope: string = SCOPE): Prom
  * The scoped gate above reads through `cacheKey`, so a regression that merges
  * two scopes makes the gate time out and the partition test reports a probe
  * timeout instead of the leak it exists to name. This one asks the factory.
+ *
+ * PRECONDITION: at most one cache database exists when it is called. It
+ * returns on the first one holding updates, so gating a caller that has
+ * already booted two partitions can settle on the wrong one.
  */
 const waitForAnyCachedDocument = async (): Promise<void> => {
   await waitFor(async () => {

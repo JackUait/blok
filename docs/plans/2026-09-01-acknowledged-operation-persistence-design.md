@@ -526,6 +526,15 @@ Two YDotNet 0.6 limitations must be resolved before v2 is advertised:
    a dependency-pending update, so the server cannot safely advance
    `checkpointThrough` or skip the journal tail.
 
+Both are CLOSED by the managed engine that replaced YDotNet, and the record is
+kept because each is accurate about the binding it names. Gate 1: a NUL-bearing
+update applies and exports intact. Gate 2: `YDoc.EncodeStateAsUpdate` writes
+`PendingNormalizer.AllRuns(...)`, parked structs included, and
+`CompactionKeepsAnUpdateThatIsStillPending` asserts the round trip. Task 3.7's
+brief transcribed gate 2 as a property of the ENGINE rather than of the binding,
+and built a risk framing on it; that framing is wrong and the task's real value
+is elsewhere. Do not re-derive an engine limitation from these two lines.
+
 Implementation begins with a dependency gate. The accepted YDotNet/yrs version
 must prove both behaviors in process-isolated tests:
 

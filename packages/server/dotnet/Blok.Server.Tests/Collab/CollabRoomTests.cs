@@ -2883,15 +2883,19 @@ public sealed class CollabRoomTests
 
   /// <summary>
   /// The likelier shape of every trigger the swallow names: the journal
-  /// replays for a while and then stops. Every record that DID apply was
-  /// appended, so the room now has a working set to write — and `FlushLocked`
-  /// reaches `PersistLocked` three steps before its exportDirty guard. Leaving
-  /// a room whose load failed at New is what keeps that partial blob, under
-  /// the PRE-RESET tag, from being written on a path that should touch
-  /// nothing.
+  /// replays for a while and then stops.
+  ///
+  /// This test was written to pin `state` staying New on that catch, because
+  /// a partly-replayed room had a working set to write and `FlushLocked`
+  /// reaches `PersistLocked` three steps before its exportDirty guard. Task
+  /// 3.7 retired that pin: a journal room's `AppendLocked` returns early, so
+  /// no blob can be written whatever `state` says, and `state = New` there is
+  /// now unpinned hygiene. What it still guards is the rest of 3.6's N7 fix —
+  /// the reset rebaselines rather than refusing — on a journal the engine
+  /// stops replaying partway.
   /// </summary>
   [Fact]
-  public async Task ResettingAColdDocumentWhoseJournalStopsReplayingWritesNoPartialWorkingSet()
+  public async Task ResettingAColdDocumentWhoseJournalStopsReplayingStillRebaselines()
   {
     endpoint.Holds(DocId, "hello", version: "v1");
     var replayable = YDocs.NewClient();
@@ -3556,6 +3560,12 @@ public sealed class CollabRoomTests
   ///
   /// The working-set-only room at the end is the premise: on the SAME options
   /// it compacts, so the threshold was crossed rather than merely configured.
+  ///
+  /// What this pins is the observable CONSEQUENCE, not the call. On a journal
+  /// room `CompactLocked` is inert by construction — its append is guarded,
+  /// and it resets a frame section that is already empty — so forcing it to
+  /// run changes nothing a test can see. Only a compaction that also writes
+  /// fails this.
   /// </summary>
   [Fact]
   public async Task OperationStoreRoomNeverCompacts()

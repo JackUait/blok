@@ -1242,7 +1242,9 @@ internal sealed class CollabRoom : IDisposable
   /// driven by the two counters below — persist scheduling and the flush's
   /// write by <c>blobVersion</c>, compaction and the flush's compaction by
   /// <c>frameCount</c>, and the eviction hold by <c>blobVersion</c> again —
-  /// so leaving them at zero is what skips all of them.
+  /// so leaving them at zero is what skips all of them. The LOAD skip is a
+  /// different mechanism and predates this guard: `TryLoadLocked` branches on
+  /// <c>operationStore</c>, not on a counter.
   /// </summary>
   private void AppendLocked(byte[] update)
   {

@@ -120,6 +120,21 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 
   internal bool DocumentOpenElsewhere { get; set; }
 
+  /// <summary>When it answers non-null for a doc, that doc's AppendAsync throws it and records nothing.</summary>
+  internal Func<string, Exception?>? FailAppends { get; set; }
+
+  /// <summary>When it answers non-null for a doc, that doc's WriteCheckpointAsync throws it and publishes nothing.</summary>
+  internal Func<string, Exception?>? FailCheckpoints { get; set; }
+
+  /// <summary>The published checkpoint for a doc, or null when none was ever written.</summary>
+  internal CollabOperationCheckpoint? Checkpoint(string documentId)
+  {
+    lock (guard)
+    {
+      return documents.TryGetValue(documentId, out var document) ? document.Checkpoint : null;
+    }
+  }
+
   internal IReadOnlyList<CollabOperationRecord> Committed(string documentId)
   {
     lock (guard)
@@ -179,8 +194,9 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       var open = new CollabOperationOpenResult(
           document.Head,
           [.. document.Baseline],
-          null,
-          [.. document.Records]);
+          document.Checkpoint,
+          [.. document.Records.Where(record =>
+              record.ServerSequence > (document.Checkpoint?.Through ?? 0))]);
 
       return ValueTask.FromResult(
           CollabDocumentOpen.Opened(new FakeOperationSession(this, documentId, document.Fence, open)));
@@ -203,6 +219,8 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
     internal CollabDocumentHead? Head { get; set; }
 
     internal List<ReadOnlyMemory<byte>> Baseline { get; set; } = [];
+
+    internal CollabOperationCheckpoint? Checkpoint { get; set; }
 
     internal List<CollabOperationRecord> Records { get; } = [];
 
@@ -255,9 +273,17 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
         await pause().WaitAsync(cancellationToken);
       }
 
+      var failure = store.FailAppends?.Invoke(documentId);
+
       lock (store.guard)
       {
         var document = Fenced();
+
+        if (failure is not null)
+        {
+          throw failure;
+        }
+
         var forced = store.NextAppendOutcome;
         store.NextAppendOutcome = null;
 
@@ -298,11 +324,21 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
         CollabOperationCheckpoint checkpoint,
         CancellationToken cancellationToken = default)
     {
+      ArgumentNullException.ThrowIfNull(checkpoint);
       cancellationToken.ThrowIfCancellationRequested();
+
+      var failure = store.FailCheckpoints?.Invoke(documentId);
 
       lock (store.guard)
       {
-        Fenced();
+        var document = Fenced();
+
+        if (failure is not null)
+        {
+          throw failure;
+        }
+
+        document.Checkpoint = checkpoint;
       }
 
       return ValueTask.CompletedTask;
@@ -387,12 +423,30 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
 internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 {
   private readonly Dictionary<string, StoredWorkingSet> documents = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, int> writes = new(StringComparer.Ordinal);
 
   internal StoredWorkingSet Stored(string docId)
   {
     lock (documents)
     {
       return documents[docId];
+    }
+  }
+
+  /// <summary>Blob writes for a doc, whether or not one is still stored.</summary>
+  internal int Writes(string docId)
+  {
+    lock (documents)
+    {
+      return writes.TryGetValue(docId, out var count) ? count : 0;
+    }
+  }
+
+  internal bool Holds(string docId)
+  {
+    lock (documents)
+    {
+      return documents.ContainsKey(docId);
     }
   }
 
@@ -415,6 +469,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
     lock (documents)
     {
       documents[docId] = new StoredWorkingSet(updates, tag);
+      writes[docId] = (writes.TryGetValue(docId, out var count) ? count : 0) + 1;
     }
 
     return Task.CompletedTask;
@@ -437,6 +492,7 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
 internal sealed class FakeDocEndpoint : IDocEndpointClient
 {
   private readonly Dictionary<string, LoadedDocument> documents = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, int> savesByDoc = new(StringComparer.Ordinal);
 
   private int gets;
   private int saves;
@@ -447,6 +503,15 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
   internal int Gets => Volatile.Read(ref gets);
 
   internal int Saves => Volatile.Read(ref saves);
+
+  /// <summary>Whole-JSON PUTs for one doc; a test using several docs cannot read the total.</summary>
+  internal int SavesFor(string docId)
+  {
+    lock (savesByDoc)
+    {
+      return savesByDoc.TryGetValue(docId, out var count) ? count : 0;
+    }
+  }
 
   internal void Holds(string docId, string text)
   {
@@ -475,6 +540,11 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
       CancellationToken cancellationToken)
   {
     Interlocked.Increment(ref saves);
+
+    lock (savesByDoc)
+    {
+      savesByDoc[docId] = (savesByDoc.TryGetValue(docId, out var count) ? count : 0) + 1;
+    }
 
     return Task.FromResult<string?>(null);
   }

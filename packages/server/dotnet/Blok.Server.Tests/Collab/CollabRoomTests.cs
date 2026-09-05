@@ -2848,6 +2848,38 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// A journal this engine cannot replay — the design's dependency gate 2, an
+  /// engine change, a port in flight — already fails every warm load, so the
+  /// reset is the only door left. Hydrating before the rebaseline must not
+  /// close it: the reset is about to throw that journal away regardless, and
+  /// no history anyone could be served is lost by dropping it.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAColdDocumentWhoseJournalCannotBeReplayedStillRebaselines()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+
+    await using (var session = (await operations.OpenAsync(DocId, CancellationToken.None)).Session!)
+    {
+      await session.ResetAsync(
+          new CollabOperationReset(
+              CollabWorkingSetTag.SchemaV2,
+              Epoch: 3,
+              CollabWorkingSetTag.NewLineage(),
+              [new byte[] { 0xde, 0xad, 0xbe, 0xef, 0x01 }]),
+          CancellationToken.None);
+    }
+
+    var manager = CreateJournalManager();
+
+    var result = await manager.ResetForHttpAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(CollabResetStatus.Reset, result.Status);
+    Assert.Equal(4, result.Tag!.Value.Epoch);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
   /// The same loss with nobody in the document, which is the likelier shape:
   /// the reset branch only opened the journal, never loaded it and so never
   /// reached Ready, leaving the flush unable to run at all.
@@ -2953,6 +2985,101 @@ public sealed class CollabRoomTests
     await Waits.UntilAsync(
         () => endpoint.Saves.Count > before,
         "the checkpoint's projection");
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
+  }
+
+  /// <summary>
+  /// A read the settle gave up on must never land BACKWARDS. The PUT it was
+  /// abandoned for carries no header, the consumer answers that PUT with a new
+  /// handle, and the late read then holds a version older than the one the room
+  /// has since earned. Writing it back is permanent on a reloaded room —
+  /// nothing re-reads the endpoint version after load — so every later
+  /// projection becomes refusable, the room stays dirty, and eviction keeps it
+  /// resident on the journal fence retrying a PUT that can never land.
+  /// </summary>
+  [Fact]
+  public async Task AVersionReadTheSettleGaveUpOnCannotLandOverANewerHandle()
+  {
+    var manager = await AReloadedRoomWhoseVersionReadIsStuck();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello world");
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    var before = endpoint.Saves.Count;
+
+    // The consumer answers the header-less PUT with a handle of its own.
+    endpoint.NextSaveVersion = "v5";
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(15),
+        () => endpoint.Saves.Count > before,
+        "the projection the settle gave up waiting for");
+
+    // The premise: the settle really did give up, so that PUT went bare.
+    Assert.Null(endpoint.Saves[^1].Version);
+
+    // Now the abandoned read finally answers, with the version it saw at load.
+    endpoint.LoadGate!.SetResult();
+
+    for (var tick = 0; tick < 5; tick++)
+    {
+      await Task.Delay(10);
+      await manager.SettleAsync();
+    }
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpThree, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    var second = endpoint.Saves.Count;
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAsync(
+        () => endpoint.Saves.Count > second,
+        "the next projection");
+
+    Assert.Equal("v5", endpoint.Saves[^1].Version);
+  }
+
+  /// <summary>
+  /// The other side of the same rule, and why the handle is guarded by "is it
+  /// still empty" rather than by dropping the late read outright: when the PUT
+  /// the settle gave up for FAILS, nothing has set a handle, so the read that
+  /// finally answers is still the best the room has and must be kept.
+  /// </summary>
+  [Fact]
+  public async Task AVersionReadThatLandsAfterAFailedProjectionStillFillsTheHandle()
+  {
+    var manager = await AReloadedRoomWhoseVersionReadIsStuck();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello world");
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    var before = endpoint.Saves.Count;
+
+    endpoint.NextSaveFailure = new DocEndpointException(
+        "collab: the doc endpoint PUT returned 502.",
+        502);
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(2));
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(15),
+        () => endpoint.Saves.Count > before,
+        "the projection the settle gave up waiting for");
+
+    Assert.Null(endpoint.Saves[^1].Version);
+    endpoint.LoadGate!.SetResult();
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(2),
+        () => endpoint.Saves.Count > before + 1,
+        "the refused projection to be retried");
 
     Assert.Equal("v2", endpoint.Saves[^1].Version);
   }

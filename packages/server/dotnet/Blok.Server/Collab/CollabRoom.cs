@@ -588,8 +588,23 @@ internal sealed class CollabRoom : IDisposable
                 if (session!.OpenResult.Head is not null)
                 {
                   NewDocLocked();
-                  await LoadFromJournalLocked();
-                  state = RoomState.Ready;
+
+                  try
+                  {
+                    await LoadFromJournalLocked();
+                    state = RoomState.Ready;
+                  }
+                  catch (Exception error)
+                  {
+                    // A journal this engine cannot replay. The warm load fails
+                    // on the same record, so nobody could have been served this
+                    // history and none of it is recoverable — and the reset is
+                    // about to throw it away regardless. Rebaseline without the
+                    // flush rather than refuse the only door left open.
+                    log?.Invoke(
+                        $"collab: room \"{DocId}\" could not replay its journal before a reset, " +
+                        $"so the reset drops it: {error.Message}");
+                  }
                 }
               }
               catch (Exception error)
@@ -974,7 +989,15 @@ internal sealed class CollabRoom : IDisposable
     });
   }
 
-  /// <summary>Idempotent: whichever of the observer and the settle gets there first wins.</summary>
+  /// <summary>
+  /// Idempotent: whichever of the observer and the settle gets there first
+  /// wins. A read may only FILL the handle, never replace one — a projection
+  /// the settle gave up waiting for goes out bare, and the version its answer
+  /// carries is then newer than anything this read saw. Writing over it would
+  /// be permanent: nothing re-reads the endpoint's version after load, so
+  /// every later projection would be refusable and the room would sit on its
+  /// journal fence retrying a PUT that can never land.
+  /// </summary>
   private void ApplyVersionLocked(Task<string?> reading, string? answered)
   {
     if (!ReferenceEquals(reading, pendingVersion))
@@ -984,7 +1007,7 @@ internal sealed class CollabRoom : IDisposable
 
     pendingVersion = null;
 
-    if (answered is not null)
+    if (answered is not null && version is null)
     {
       version = answered;
     }
@@ -1966,11 +1989,14 @@ internal sealed class CollabRoom : IDisposable
     await SettleVersionLocked();
     Task<string?> save;
 
-    // Only the JSON snapshot is taken under the lane; the PUT runs beside
-    // it so a slow endpoint never stalls sync. Single flight keeps PUTs
-    // ordered. On a working-set-only room a converter refusal (a peer wrote
-    // a shape it cannot read) is a failed export like any other: backed off
-    // and retried, never left for the next edit to re-arm.
+    // The JSON snapshot is taken under the lane and the PUT runs beside it,
+    // so a slow endpoint does not stall sync for the length of a write-back.
+    // The settle above is the ONE endpoint-dependent wait still inside the
+    // lane: bounded by CommitTimeout and only while a load-time version read
+    // is outstanding, but an edit does queue behind it. Single flight keeps
+    // PUTs ordered. On a working-set-only room a converter refusal (a peer
+    // wrote a shape it cannot read) is a failed export like any other: backed
+    // off and retried, never left for the next edit to re-arm.
     try
     {
       var snapshot = converter.Export(doc!);

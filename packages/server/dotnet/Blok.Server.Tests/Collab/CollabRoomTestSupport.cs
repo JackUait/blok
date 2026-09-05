@@ -433,6 +433,13 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
   /// <summary>When set, SaveAsync waits for it before answering.</summary>
   internal TaskCompletionSource? SaveGate { get; set; }
 
+  /// <summary>
+  /// Makes a save land in the record a later load answers with, the way a real
+  /// consumer's endpoint behaves. Opt-in: most tests want the seeded document
+  /// back no matter what was written over it.
+  /// </summary>
+  internal bool EchoesSaves { get; set; }
+
   internal void Holds(string docId, string text, string? version = null)
   {
     documents[docId] = new LoadedDocument(new JsonObject { ["text"] = text }, version);
@@ -472,6 +479,13 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
     lock (guard)
     {
       saves.Add(new RecordedSave(docId, outputData.DeepClone(), version, projection));
+
+      if (EchoesSaves)
+      {
+        documents[docId] = new LoadedDocument(
+            outputData.DeepClone(),
+            NextSaveVersion ?? version);
+      }
     }
 
     if (SaveGate is not null)
@@ -868,6 +882,13 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
   internal Func<string, Exception?>? FailAppends { get; set; }
 
   /// <summary>
+  /// When it answers non-null for a doc, that doc's WriteCheckpointAsync throws
+  /// it. A checkpoint is only a replay accelerator, so a room has to survive
+  /// this differently from a failed append.
+  /// </summary>
+  internal Func<string, Exception?>? FailCheckpoints { get; set; }
+
+  /// <summary>
   /// With <see cref="FailAppends"/> set, journal the record before throwing:
   /// the UNKNOWN outcome — durable to the store, failed to the caller. Retrying
   /// the same operation id must then read as a duplicate.
@@ -1072,9 +1093,16 @@ internal sealed class FakeCollabOperationStore : ICollabOperationStore
       ArgumentNullException.ThrowIfNull(checkpoint);
       cancellationToken.ThrowIfCancellationRequested();
 
+      var failure = store.FailCheckpoints?.Invoke(documentId);
+
       lock (store.guard)
       {
         var document = Fenced();
+
+        if (failure is not null)
+        {
+          throw failure;
+        }
 
         if (checkpoint.Through == 0 ||
             checkpoint.Through > (document.Head?.DurableThrough ?? 0) ||

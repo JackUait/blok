@@ -1068,7 +1068,10 @@ public sealed class CollabRoomTests
     Assert.Equal(
         CollabJoinStatus.Joined,
         (await manager.JoinAsync(DocId, V2Member(), CancellationToken.None)).Status);
-    Assert.Equal(1, endpoint.Loads);
+
+    // One consumer GET per room that actually loaded, and none at all for a
+    // join the cooldown refused.
+    Assert.Equal(operations.Opens, endpoint.Loads);
   }
 
   /// <summary>
@@ -1305,7 +1308,10 @@ public sealed class CollabRoomTests
     }
 
     Assert.Equal("hello!?", await ExportedTextAsync(manager));
-    Assert.Equal(1, endpoint.Loads);
+
+    // The seed's GET and the reload's version GET. The CONTENT came from the
+    // journal, which is what the text above says: the endpoint holds "hello".
+    Assert.Equal(2, endpoint.Loads);
   }
 
   [Fact]
@@ -2531,6 +2537,223 @@ public sealed class CollabRoomTests
     Assert.Equal(1, converter.Exports);
     Assert.Equal("hello!", Assert.Single(endpoint.Saves).Data["text"]?.GetValue<string>());
     Assert.Equal(1UL, operations.Checkpoint(DocId)!.Through);
+  }
+
+  /// <summary>
+  /// The version GET is a courtesy, not a dependency. A journal-backed room's
+  /// content comes from the journal, so an endpoint that cannot answer must
+  /// cost the write-back its version header and nothing else — never the join.
+  /// </summary>
+  [Fact]
+  public async Task AReloadedJournalRoomStillServesWhenTheEndpointIsDown()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var first = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await first.ReceiveAsync(
+        Operation(first, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the seeded room to be evicted");
+    endpoint.LoadFailure = new DocEndpointException(
+        "collab: the doc endpoint GET returned 503.",
+        503);
+
+    var rejoined = await manager.JoinAsync(DocId, V2Member(), CancellationToken.None);
+
+    Assert.Equal(CollabJoinStatus.Joined, rejoined.Status);
+    Assert.Equal("hello world", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// The store refusing the sequence means this room's idea of what is
+  /// committed is wrong, which is a bug here rather than a store hiccup.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointSequenceTheStoreRefusesClosesTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.FailCheckpoints = _ => new ArgumentOutOfRangeException(
+        "checkpoint",
+        "a checkpoint must name a committed sequence at or above the published one");
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(CollabCloseReason.CommitUnavailable, Assert.Single(writer.Closes));
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// A checkpoint is only a replay accelerator, so a failed one leaves the
+  /// room holding nothing the journal lacks. A disk hiccup must not evict
+  /// everyone from a document they can still edit — under a checkpoint
+  /// cadence it would do that over and over.
+  /// </summary>
+  [Fact]
+  public async Task ATransientCheckpointFailureKeepsTheRoomAndIsRetried()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.FailCheckpoints = _ => new IOException("the journal disk is busy");
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Empty(writer.Closes);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Null(operations.Checkpoint(DocId));
+
+    operations.FailCheckpoints = null;
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    Assert.Equal(1UL, operations.Checkpoint(DocId)!.Through);
+  }
+
+  /// <summary>
+  /// The other half: a lost fence means another process owns the document, so
+  /// this room genuinely cannot serve it any more.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointThatLostTheFenceClosesTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    operations.StealFence(DocId);
+
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    Assert.Equal(CollabCloseReason.CommitUnavailable, Assert.Single(writer.Closes));
+    Assert.Equal(0, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// A checkpoint published while a PUT is in flight still earns its own
+  /// projection. ScheduleExport cannot arm behind a live save, and a
+  /// journal-backed room does not re-arm on a plain success — so without a
+  /// standing "owed" mark the projection is dropped until eviction. Under the
+  /// cadence task 5.1 will drive, a consumer slower than the checkpoint
+  /// interval would lose them silently and repeatedly.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointPublishedDuringAnInFlightProjectionStillEarnsOne()
+  {
+    endpoint.Holds(DocId, "hello");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(
+        () => endpoint.Saves.Count == 1,
+        "the projection the first checkpoint earned");
+
+    // A second checkpoint while that PUT is still gated: ScheduleExport is a
+    // no-op behind an in-flight save, so only the owed mark can carry it.
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    endpoint.SaveGate.SetResult();
+    endpoint.SaveGate = null;
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count >= 2,
+        "the projection the second checkpoint earned");
+
+    Assert.Equal(2UL, operations.Checkpoint(DocId)!.Through);
+    Assert.Equal("hello!?", endpoint.Saves[1].Data["text"]?.GetValue<string>());
+    Assert.Equal(2, endpoint.Saves.Count);
+  }
+
+  /// <summary>
+  /// A reset baselines the new lineage from the consumer's record, and the
+  /// demotion made that record only as fresh as the last projection. Without
+  /// a projection first, the reset rebuilds from a document that is missing
+  /// every operation acknowledged since then — and an old-lineage operation
+  /// can never be replayed into the new lineage, so that work is gone.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAJournalRoomProjectsCommittedWorkBeforeItRebaselines()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    endpoint.EchoesSaves = true;
+    var manager = CreateJournalManager();
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+
+    Assert.Equal("hello world", await ExportedTextAsync(manager));
+
+    await manager.ResetAsync(DocId, CancellationToken.None);
+
+    Assert.Equal("hello world", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// A room whose content came from the journal never seeded from the
+  /// endpoint, so nothing ever set the version. Its write-back would then
+  /// carry no Blok-Doc-Version, leaving a consumer that enforces optimistic
+  /// concurrency with nothing to refuse a projection built before its own
+  /// save with — and after the demotion that is the ONLY write-back such a
+  /// room makes.
+  /// </summary>
+  [Fact]
+  public async Task AReloadedJournalRoomStillCarriesTheDocumentVersion()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var manager = CreateJournalManager();
+    var first = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    await first.ReceiveAsync(
+        Operation(first, OpOne, YDocs.UpdateAppending(client, " world")),
+        CancellationToken.None);
+    await first.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the seeded room to be evicted");
+
+    // The host saved meanwhile, so its record moved to v2.
+    endpoint.Holds(DocId, "hello world", version: "v2");
+    var second = await Join(manager, V2Member());
+    var next = await SyncedClientAsync(manager, "hello world");
+    await second.ReceiveAsync(
+        Operation(second, OpTwo, YDocs.UpdateAppending(next, "!")),
+        CancellationToken.None);
+    await second.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the reloaded room to be evicted");
+
+    Assert.Equal("v2", endpoint.Saves[^1].Version);
+    Assert.Equal("v1", endpoint.Saves[0].Version);
   }
 
   /// <summary>

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
@@ -875,8 +876,6 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
     Assert.Empty(writer.Received);
     Assert.Empty(operations.Committed(DocId));
-    // The blob write is scheduled after the append too, so the update cannot
-    // reach the working set ahead of the journal either.
     Assert.Equal(0, store.Writes);
 
     release.SetResult();
@@ -885,7 +884,10 @@ public sealed class CollabRoomTests
     Assert.Contains(other.Received, frame => frame is SyncUpdateFrame);
     Assert.Contains(writer.Received, frame => frame is AcknowledgementFrame);
     Assert.Single(operations.Committed(DocId));
-    await Waits.UntilAsync(() => store.Writes > 0, "the working set write the commit earned");
+
+    // A journal room writes no working set at all — before the append or
+    // after it. The fenced session is the only writer of document bytes.
+    Assert.Equal(0, store.Writes);
   }
 
   [Fact]
@@ -1839,7 +1841,7 @@ public sealed class CollabRoomTests
     Assert.Equal(update, record.Update.ToArray());
     Assert.Equal(1UL, record.ServerSequence);
     Assert.Matches("^[0-9a-f]{32}$", record.OperationId);
-    await Waits.UntilAsync(() => store.Writes > 0, "the working set write the commit earned");
+    Assert.Equal(0, store.Writes);
   }
 
   /// <summary>
@@ -1923,7 +1925,7 @@ public sealed class CollabRoomTests
     await manager.SettleAsync();
 
     var committed = operations.Committed(DocId).Count;
-    var frames = store.FramesOf(DocId).Count;
+    var writes = store.Writes;
     stock.Received.Clear();
     other.Received.Clear();
 
@@ -1940,12 +1942,12 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
     Assert.Equal("hell", await ExportedTextAsync(manager));
 
-    // No working-set frame, and no PUT to the consumer's own document
+    // No working-set write, and no PUT to the consumer's own document
     // endpoint — a journal-backed room owes one only to a checkpoint or to
     // eviction, so an idle reconnect buys nothing there either.
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
-    Assert.Equal(frames, store.FramesOf(DocId).Count);
+    Assert.Equal(writes, store.Writes);
     Assert.Empty(endpoint.Saves);
   }
 
@@ -2036,7 +2038,7 @@ public sealed class CollabRoomTests
     await manager.SettleAsync();
 
     var committed = operations.Committed(DocId).Count;
-    var frames = store.FramesOf(DocId).Count;
+    var writes = store.Writes;
     stock.Received.Clear();
     other.Received.Clear();
 
@@ -2054,7 +2056,7 @@ public sealed class CollabRoomTests
 
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
-    Assert.Equal(frames, store.FramesOf(DocId).Count);
+    Assert.Equal(writes, store.Writes);
     Assert.Empty(endpoint.Saves);
   }
 
@@ -3502,6 +3504,184 @@ public sealed class CollabRoomTests
     Assert.Empty(endpoint.Saves);
     Assert.Single(log, line => line.Contains("b-1", StringComparison.Ordinal));
     Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
+  /// A journal-backed room keeps no second, unfenced copy of the document.
+  /// Every write path it has — a v2 operation, a v1 update, an HTTP edit —
+  /// and the drain that follows leave the working-set store untouched: the
+  /// fenced session is the only writer of document bytes.
+  /// </summary>
+  [Fact]
+  public async Task OperationStoreRoomNeverWritesTheWorkingSetStore()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var stock = await Join(manager, new FakeMember());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    await stock.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "?"))),
+        CancellationToken.None);
+    var edit = await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+    var text = await ExportedTextAsync(manager);
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
+
+    // The room really did serve all three write paths, so the zeros above are
+    // absence rather than a room that never ran.
+    Assert.Equal(CollabEditStatus.Applied, edit.Status);
+    Assert.Equal(3, operations.Committed(DocId).Count);
+    Assert.Equal(text, Assert.Single(endpoint.Saves).Data["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// Compaction replaces the working-set log with the doc's whole state, and
+  /// a journal room has no such log to replace. The stream below crosses the
+  /// frame threshold on every site a journal room could compact from — a v2
+  /// commit, a v1 write, an HTTP edit, and the drain's flush. The
+  /// working-set-only room at the end is the premise: on the SAME options it
+  /// compacts, so the threshold was crossed rather than merely configured.
+  /// </summary>
+  [Fact]
+  public async Task OperationStoreRoomNeverCompacts()
+  {
+    var options = new CollabRoomOptions { CompactionFrameThreshold = 2 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var stock = await Join(manager, new FakeMember());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    foreach (var operationId in new[] { OpOne, OpTwo })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    foreach (var piece in new[] { "a", "b" })
+    {
+      await stock.ReceiveAsync(
+          SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, piece))),
+          CancellationToken.None);
+    }
+
+    await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal(0, store.Writes);
+    Assert.False(store.Holds(DocId));
+    Assert.Equal(5, operations.Committed(DocId).Count);
+
+    // The premise. Six frames' worth of updates land as one-frame writes,
+    // which is what in-place compaction looks like from the store.
+    const string legacyDoc = "doc-legacy";
+    endpoint.Holds(legacyDoc, "hello");
+    var legacy = CreateManager(options);
+    var joined = await legacy.JoinAsync(legacyDoc, new FakeMember(), CancellationToken.None);
+    var legacyClient = YDocs.NewClient();
+
+    foreach (var piece in new[] { "a", "b", "c", "d", "e" })
+    {
+      await joined.Membership!.ReceiveAsync(
+          SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(legacyClient, piece))),
+          CancellationToken.None);
+    }
+
+    await legacy.DrainAsync(CancellationToken.None);
+
+    Assert.True(store.Writes > 0, "the working-set-only room wrote nothing");
+    Assert.Equal(1, store.MostFramesWritten);
+  }
+
+  /// <summary>
+  /// Load comes from the fenced session: the baseline first, then the tail
+  /// that came after it. The blob is neither read nor written, so a decoy
+  /// working set survives the room's whole life untouched — which is what
+  /// "no second copy" means from the store's side.
+  /// </summary>
+  [Fact]
+  public async Task OperationStoreRoomLoadsBaselineAndTailThroughTheFencedSession()
+  {
+    endpoint.Holds(DocId, "endpoint");
+    var source = YDocs.NewClient();
+    var baseline = YDocs.UpdateAppending(source, "base");
+    var tail = YDocs.UpdateAppending(source, "-tail");
+
+    await using (var session = (await operations.OpenAsync(DocId, CancellationToken.None)).Session!)
+    {
+      await session.ResetAsync(
+          new CollabOperationReset(
+              CollabWorkingSetTag.SchemaV2,
+              Epoch: 2,
+              Tags.Lineage,
+              [baseline]),
+          CancellationToken.None);
+      await session.AppendAsync(
+          new CollabOperationCandidate(
+              OpOne,
+              null,
+              CollabOperationSource.ClientV1,
+              tail,
+              SHA256.HashData(tail)),
+          CancellationToken.None);
+    }
+
+    // A blob holding a different document: reading it would serve the wrong
+    // history, writing it would be the second copy.
+    store.Seed(DocId, [YDocs.FullState(YDocs.DocWith("blob"))], Tags.At(9));
+    var manager = CreateJournalManager();
+
+    var served = await ExportedTextAsync(manager);
+    await manager.DrainAsync(CancellationToken.None);
+
+    Assert.Equal("base-tail", served);
+    Assert.Equal("blob", YDocs.Replay(store.FramesOf(DocId)));
+    Assert.Equal(Tags.At(9), store.Stored(DocId).Tag);
+    Assert.Equal(0, store.Reads);
+    Assert.Equal(0, store.Writes);
+  }
+
+  /// <summary>
+  /// The blob-write hold keeps a room loaded until its working set lands. A
+  /// journal room owes no working set, so a store that cannot write must not
+  /// pin it — the journal already holds every operation. The projection's
+  /// dirty hold beside it stays, and the eviction still makes its PUT.
+  /// </summary>
+  [Fact]
+  public async Task OperationStoreRoomEvictsWithoutWaitingForABlobWrite()
+  {
+    endpoint.Holds(DocId, "hello");
+    store.FailWrites = _ => new IOException("the working set store is down");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => endpoint.Saves.Count == 1, "the eviction flush to project");
+    await manager.SettleAsync();
+
+    Assert.DoesNotContain(
+        log,
+        line => line.Contains("until its working set is written", StringComparison.Ordinal));
+    Assert.Equal(0, manager.LiveRoomCount);
+    Assert.Equal(0, store.Writes);
+    Assert.Equal("hello!", Assert.Single(endpoint.Saves).Data["text"]?.GetValue<string>());
   }
 
   /// <summary>

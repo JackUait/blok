@@ -1312,7 +1312,17 @@ describe('collaboration — operation store', () => {
       // downstream would ever notice the hole.
       await store.recordSession(tagWith(LINEAGE_A), false, 'v2');
 
-      await expect(store.appendLocal(updateWith('block-3', 'three'))).rejects.toThrow();
+      // The MESSAGE, not just a rejection: with the lineage gate in place a
+      // bare rejects.toThrow() is satisfied by the null-lineage error, which
+      // leaves the poison check itself pinned by nothing.
+      await expect(store.appendLocal(updateWith('block-3', 'three')))
+        .rejects.toThrow(/an update was lost/);
+
+      // The other lineage restore: re-opening must not re-arm the remote path
+      // onto a copy that is missing an update.
+      expect(await store.open()).toBeNull();
+      await expect(store.appendRemote(updateWith('block-r', 'remote'))).resolves.toBeUndefined();
+      expect(await rowsIn('updates')).toHaveLength(1);
       expect(await rowsIn('outbox')).toHaveLength(1);
 
       // Dropping the cached copy drops the hole with it.

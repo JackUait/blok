@@ -682,6 +682,13 @@ export const createOperationStore = (options: OperationStoreOptions): OperationS
         return null;
       }
 
+      // The only other lineage restore. Re-opening a poisoned store would hand
+      // the lineage back and reopen the remote path onto a copy missing an
+      // update — the door `recordSession`'s gate closes, reached the other way.
+      if (state.poisoned) {
+        return null;
+      }
+
       try {
         state.db = await idb.openDB(dbName, (created) => {
           created.createObjectStore(META_STORE);

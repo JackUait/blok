@@ -216,9 +216,16 @@ Every write resolves on transaction completion, not request success.
 Offline-cache compaction may merge `updates`; it must never merge or delete
 `outbox` or `quarantine`.
 
-The existing offline cache has not shipped in a release. The new database leaves
-that development-era database untouched rather than guessing which old updates
-were local. There is no dual-write or permanent migration layer.
+CORRECTED 2026-09-05: the existing offline cache HAS shipped. `offline?: boolean`
+and the `blok-collab-${key}` database are both in the published 1.13.0 tarball,
+released 2026-09-03 — the day after this line was written. The decision below is
+unchanged, because it never rested on the cache being development-era: attributing
+an unscoped copy to a signed-in identity is exactly the guess the partition exists
+to forbid. What changes is whose data it is about. The new database leaves the old
+one untouched rather than guessing which old updates were local; there is no
+dual-write and no permanent migration layer, so anything typed offline under 1.13.0
+and not yet sent is orphaned on disk. Nothing enumerates or deletes those databases
+yet — that belongs with retiring `offline-cache.ts`.
 
 ### Persistent capture and draining
 

@@ -213,4 +213,48 @@ describe('server runtime boundary', () => {
   it('refuses an unknown operation', async () => {
     await expect(invoke('unknown', '{}')).rejects.toThrow('Unsupported Blok runtime operation');
   });
+
+  /**
+   * Plain text now takes either shape: a bare document (what every caller sent
+   * before the flag existed) or an envelope carrying the options beside it.
+   * A saved document always has `blocks`, so the two never collide.
+   */
+  it('reads plain text from a bare document, as before', async () => {
+    const output = await invoke('blocksToPlainText', JSON.stringify({
+      blocks: [{ type: 'image', data: { url: 'https://x.y/a.png', caption: 'Cap', alt: 'A tabby cat' } }],
+    }));
+
+    expect(output).toBe('Cap');
+  });
+
+  it('reads plain text from an envelope without the flag', async () => {
+    const output = await invoke('blocksToPlainText', JSON.stringify({
+      document: { blocks: [{ type: 'image', data: { url: 'https://x.y/a.png', caption: 'Cap', alt: 'A tabby cat' } }] },
+    }));
+
+    expect(output).toBe('Cap');
+  });
+
+  it('includes hidden text only when the envelope asks', async () => {
+    const output = await invoke('blocksToPlainText', JSON.stringify({
+      document: { blocks: [{ type: 'image', data: { url: 'https://x.y/a.png', caption: 'Cap', alt: 'A tabby cat' } }] },
+      includeHiddenText: true,
+    }));
+
+    expect(output).toBe('Cap\nA tabby cat');
+  });
+
+  it('still skips malformed blocks inside an envelope', async () => {
+    const output = await invoke('blocksToPlainText', JSON.stringify({
+      document: { blocks: [{ type: 'paragraph', data: { text: 'Kept' } }, null] },
+      includeHiddenText: true,
+    }));
+
+    expect(output).toBe('Kept');
+  });
+
+  it('rejects an envelope whose document is not a document', async () => {
+    await expect(invoke('blocksToPlainText', JSON.stringify({ document: { notBlocks: [] } })))
+      .rejects.toThrow(TypeError);
+  });
 });

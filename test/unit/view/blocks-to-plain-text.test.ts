@@ -162,4 +162,103 @@ describe('blocksToPlainText', () => {
 
     expect(text).toBe('Box');
   });
+
+  /**
+   * A legacy quote stores its attribution in `caption`; the renderer paints it
+   * as a `<cite>`. The reader used to see only `data.text`, so the person being
+   * quoted was unsearchable. Unconditional — it is displayed text.
+   */
+  it('reads a legacy quote caption after its text', () => {
+    expect(blocksToPlainText(doc([
+      { type: 'quote', data: { text: 'Wise <b>words</b>', caption: 'Ada <i>Lovelace</i>' } },
+    ]))).toBe('Wise words\nAda Lovelace');
+  });
+
+  it('emits nothing extra for a quote without a caption', () => {
+    expect(blocksToPlainText(doc([{ type: 'quote', data: { text: 'Wise words' } }]))).toBe('Wise words');
+  });
+
+  /**
+   * The default reader emits the FIRST non-empty label of a media block, which
+   * is what the editor paints. A search index needs the rest — an image's alt,
+   * a bookmark's description, the URLs a person pastes back verbatim.
+   */
+  describe('includeHiddenText', () => {
+    it('adds an image alt after its caption', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'image', data: { url: 'https://x.y/a.png', caption: 'Cap', alt: 'A tabby cat' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('Cap');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe('Cap\nA tabby cat');
+    });
+
+    it('adds a video url after its caption', () => {
+      const blocks: OutputBlockData[] = [{ type: 'video', data: { url: 'https://x.y/clip.mp4', caption: 'Clip' } }];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('Clip');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe('Clip\nhttps://x.y/clip.mp4');
+    });
+
+    it('adds an embed source after its caption', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'embed', data: { service: 'youtube', source: 'https://youtu.be/abc', embed: 'https://www.youtube.com/embed/abc', caption: 'Talk' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('Talk');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe('Talk\nhttps://youtu.be/abc');
+    });
+
+    it('adds an audio title, artist and url after its caption', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'audio', data: { url: 'https://x.y/a.mp3', caption: 'Episode 1', title: 'Intro', artist: 'The Band' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('Episode 1');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true }))
+        .toBe('Episode 1\nIntro\nThe Band\nhttps://x.y/a.mp3');
+    });
+
+    it('adds a file name and url after its caption', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'file', data: { url: 'https://x.y/spec.pdf', fileName: 'spec.pdf', caption: 'The spec' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('The spec');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true }))
+        .toBe('The spec\nspec.pdf\nhttps://x.y/spec.pdf');
+    });
+
+    it('adds a bookmark description and url after its title', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'bookmark', data: { url: 'https://example.com', title: 'Example', description: 'A sample site' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks))).toBe('Example');
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true }))
+        .toBe('Example\nA sample site\nhttps://example.com');
+    });
+
+    it('skips absent fields instead of leaving blank lines', () => {
+      expect(blocksToPlainText(
+        doc([{ type: 'image', data: { url: 'https://x.y/a.png', alt: 'Only alt' } }]),
+        { includeHiddenText: true }
+      )).toBe('Only alt');
+
+      expect(blocksToPlainText(
+        doc([{ type: 'bookmark', data: { url: 'https://example.com' } }]),
+        { includeHiddenText: true }
+      )).toBe('https://example.com');
+    });
+
+    it('leaves blocks that carry no hidden text byte-identical', () => {
+      const blocks: OutputBlockData[] = [
+        { type: 'header', data: { text: 'Title', level: 1 } },
+        { type: 'paragraph', data: { text: 'Body' } },
+        { type: 'code', data: { code: 'a < b' } },
+      ];
+
+      expect(blocksToPlainText(doc(blocks), { includeHiddenText: true })).toBe(blocksToPlainText(doc(blocks)));
+    });
+  });
 });

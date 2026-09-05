@@ -23,14 +23,15 @@ export interface DocumentTextsOptions {
 
 /**
  * Prose fields per block type, in emission order. Field NAMES come from
- * `ownText` in blocks-to-plain-text.ts, but this list diverges twice on
- * purpose: no URL fallbacks (a url is not prose), and EVERY field of a type is
- * emitted rather than the first non-empty one — each is separately translated.
+ * `ownText` in blocks-to-plain-text.ts, but this list diverges on purpose: no
+ * URLs (translating one corrupts it), and EVERY field of a type is emitted
+ * rather than only what a reader sees — each is separately translated.
  */
 const PROSE_FIELDS: Record<string, string[]> = {
   paragraph: ['text'],
   header: ['text'],
-  quote: ['text'],
+  /** A legacy quote's attribution lives in `caption` and renders as a `<cite>`. */
+  quote: ['text', 'caption'],
   toggle: ['text'],
   list: ['text'],
   /** `alt` is written for a reader who cannot see the image, so it is prose too. */

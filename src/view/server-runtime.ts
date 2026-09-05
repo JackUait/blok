@@ -6,6 +6,7 @@ import { markdownToBlocksWithReport } from '../markdown';
 import { blocksToHtml } from './blocks-to-html';
 import type { MarkdownDegradation } from './blocks-to-markdown';
 import { blocksToMarkdownWithReport } from './blocks-to-markdown';
+import type { BlocksToPlainTextOptions } from './blocks-to-plain-text';
 import { blocksToPlainText } from './blocks-to-plain-text';
 import { blokDocumentSchema } from './document-schema';
 import type { DocumentTextsOptions } from './document-texts';
@@ -76,13 +77,11 @@ interface ParsedDocument {
 }
 
 /**
- * Parse a document envelope. Input that is not a document at all still throws —
+ * Read a parsed document. Input that is not a document at all still throws —
  * only individual blocks degrade.
- * @param inputJson - the serialized envelope
+ * @param input - the parsed document record
  */
-const parseDocument = (inputJson: string): ParsedDocument => {
-  const input = parseRecord(inputJson);
-
+const readDocument = (input: Record<string, unknown>): ParsedDocument => {
   if (!Array.isArray(input.blocks)) {
     throw new TypeError('Document input requires a `blocks` array.');
   }
@@ -93,6 +92,12 @@ const parseDocument = (inputJson: string): ParsedDocument => {
 
   return { document: { blocks }, skipped: input.blocks.length - blocks.length };
 };
+
+/**
+ * Parse a document envelope.
+ * @param inputJson - the serialized envelope
+ */
+const parseDocument = (inputJson: string): ParsedDocument => readDocument(parseRecord(inputJson));
 
 /**
  * Describe skipped blocks as one degradation, so a report never grows with the
@@ -128,6 +133,27 @@ const parseTextsRequest = (inputJson: string): {
     document: input.document,
     texts: texts as string[],
     options: { includeCode: input.includeCode === true },
+  };
+};
+
+/**
+ * Plain text takes either shape: the BARE document every caller sent before
+ * options existed, or an envelope carrying them beside it. A saved document
+ * always has a `blocks` key and an envelope never does, so the two are told
+ * apart without a version flag.
+ * @param inputJson - the serialized request
+ */
+const parsePlainTextRequest = (inputJson: string): {
+  document: LooseOutputData;
+  options: BlocksToPlainTextOptions;
+} => {
+  const input = parseRecord(inputJson);
+  const wrapped = !Array.isArray(input.blocks) && isRecord(input.document) ? input.document : input;
+
+  return {
+    /** Still through `readDocument`: a read-only operation drops a block it cannot read. */
+    document: readDocument(wrapped).document,
+    options: { includeHiddenText: input.includeHiddenText === true },
   };
 };
 
@@ -175,8 +201,11 @@ export const invoke = async (operation: string, inputJson: string): Promise<stri
 
       return JSON.stringify(report);
     }
-    case 'blocksToPlainText':
-      return blocksToPlainText(parseDocument(inputJson).document);
+    case 'blocksToPlainText': {
+      const { document, options } = parsePlainTextRequest(inputJson);
+
+      return blocksToPlainText(document, options);
+    }
     /**
      * The version the editor stamps into a saved document. A consumer writing
      * documents outside the browser reads it from here so both sides agree on

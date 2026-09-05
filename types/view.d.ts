@@ -182,17 +182,43 @@ export declare function blocksToHtml(
   options?: BlocksToHtmlOptions
 ): string;
 
+/** Options for {@link blocksToPlainText} — everything {@link blocksToHtml} takes, plus one. */
+export interface BlocksToPlainTextOptions extends BlocksToHtmlOptions {
+  /**
+   * Also emit the media fields the default reader drops because the editor
+   * paints them as an attribute, or not at all. Exactly these, appended after
+   * the block's displayed label and separated by single newlines:
+   *
+   * - `image`: `alt`
+   * - `video`: `url`
+   * - `embed`: `source`
+   * - `audio`: `title`, `artist`, `url`
+   * - `file`: `fileName`, `url`
+   * - `bookmark`: `description`, `url`
+   *
+   * Default `false`. "Hidden" is relative to the DEFAULT reader, which emits
+   * only the first non-empty label per block: an audio `title`, a file
+   * `fileName` and a bookmark `url` are painted on screen whenever the field
+   * ahead of them is empty, and are dropped whenever it is not.
+   *
+   * Made for a search index, where a URL is the one string a person pastes
+   * back verbatim. A preview wants the default.
+   */
+  includeHiddenText?: boolean;
+}
+
 /**
  * Extract the plain text of a saved Blok document — synchronous and DOM-free.
- * Blocks are separated by `\n\n`, list items by `\n`, table cells by `\t`.
+ * Blocks are separated by `\n\n`, list items by `\n`, the several fields of one
+ * block by `\n`, table cells by `\t`.
  *
  * @param data - saved document (strict or loose wire shape; nullish tolerated)
- * @param options - same options as {@link blocksToHtml}
+ * @param options - {@link blocksToHtml}'s options, plus `includeHiddenText`
  * @returns plain text ('' for empty/malformed documents)
  */
 export declare function blocksToPlainText(
   data: OutputData | LooseOutputData | null | undefined,
-  options?: BlocksToHtmlOptions
+  options?: BlocksToPlainTextOptions
 ): string;
 
 /** Options for {@link extractTexts} / {@link injectTexts}. */

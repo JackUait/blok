@@ -438,4 +438,19 @@ describe('extractTexts / injectTexts', () => {
       blocks: [{ type: 'paragraph', data: { text: 'Привет' } }],
     });
   });
+
+  /**
+   * A legacy quote's attribution lives in `caption` and renders as a `<cite>`,
+   * so it is prose the reader sees — and was never handed to a translator.
+   */
+  it('translates a legacy quote caption alongside its text', () => {
+    const data = {
+      blocks: [{ type: 'quote', data: { text: 'Wise words', caption: 'Ada Lovelace' } }],
+    };
+
+    expect(extractTexts(data)).toEqual(['Wise words', 'Ada Lovelace']);
+    expect(injectTexts(data, ['Мудрые слова', 'Ада Лавлейс'])).toEqual({
+      blocks: [{ type: 'quote', data: { text: 'Мудрые слова', caption: 'Ада Лавлейс' } }],
+    });
+  });
 });

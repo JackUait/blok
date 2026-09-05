@@ -4518,7 +4518,22 @@ const html = blocksToHtml(savedData, {
         name: "blocksToPlainText(data, options?)",
         returnType: "string",
         description:
-          "Extract the plain text of a saved document — blocks are separated by \\n\\n, list items by \\n, table cells by \\t. Synchronous and DOM-free, same options as blocksToHtml. Ideal for previews, search indexing, and character counts.",
+          "Extract the plain text of a saved document — blocks are separated by \\n\\n, list items by \\n, table cells by \\t. Synchronous and DOM-free, same options as blocksToHtml plus includeHiddenText. Ideal for previews, search indexing, and character counts.",
+        params: [
+          {
+            name: "data",
+            type: "OutputData | LooseOutputData | null | undefined",
+            required: true,
+            description: "Saved document, in the strict save() shape or the loose wire shape.",
+          },
+          {
+            name: "options.includeHiddenText",
+            type: "boolean",
+            required: false,
+            description:
+              "Also read the media text the default output leaves out, because the editor paints it as an attribute or does not paint it at all: an image's alt, a video's or file's url, an embed's source, an audio track's title, artist and url, and a bookmark's description and url. Each is appended after the block's visible label, one per line. Off by default, so the default output stays exactly what a reader sees on screen — turn it on for a search index, where alt text and a pasted URL are both things people search for.",
+          },
+        ],
         note:
           "There is no core \"document size\" helper because the two sizes you might mean are measured differently: `blocksToPlainText(data).length` is the visible content length (what a user typed), while `new TextEncoder().encode(JSON.stringify(data)).length` is the transport size in bytes (what a save/upload limit — e.g. 500KB — should check). Use the plain-text length for content rules and the JSON byte length for storage rules.",
         example: `import { blocksToPlainText } from '@bloklabs/core/view';

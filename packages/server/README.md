@@ -249,6 +249,66 @@ Upload routes exist only when local or S3-compatible storage is configured. Cons
 
 A request that carries `Origin` must match an allowed origin in every auth mode. In `none` and `proxy`, a genuinely originless backend request remains allowed, but an originless browser request carrying `Sec-Fetch-Site: cross-site` is rejected. `ticket` always requires an allowed `Origin`. A ticket with `write: false` may call `GET /unfurl` and open `GET /sync/{doc}` read-only; both upload routes, `reset` and `edit` require `write: true`. The `doc` claim scopes the collaboration routes: `/sync/{doc}`, its `reset` and its `edit` are refused when the pass names no document or a different one. A collaboration pass must also name its `user`: `GET /sync/{doc}` closes one with an empty `user` as 4401 `pass names no user`, because the per-user connection cap and rate window key on that name. The upload and unfurl routes ignore it, so a pass minted for one page works for every upload and preview that page can make.
 
+## Live collaboration profiles
+
+`--collab` (or `options.CollabEnabled`) gives you the working-copy profile: the service keeps a working copy of every open document and writes it back to your document endpoint. Nothing keeps a record of the individual changes that produced it, so `POST /sync/{doc}/edit` cannot tell a retry from new work, and a socket gets no per-change receipt.
+
+Registering an operation store turns on the acknowledged profile. The journal becomes the record: every accepted change is appended to it before it is broadcast, the edit route deduplicates its `Blok-Idempotency-Key` and answers 409 for a key reused for different work, and a socket that negotiated `blok-sync.v2` receives one acknowledgement per operation naming the sequence it committed at. The service ships no store you can switch on — there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own:
+
+```csharp
+using Blok.Server.AspNetCore;
+using Blok.Server.Collab;
+
+// One method on the store; the session it hands back carries the reads and
+// every write, so nothing can be written without holding the document's fence.
+public sealed class SqlCollabOperationStore(NpgsqlDataSource database) : ICollabOperationStore
+{
+  public ValueTask<CollabDocumentOpen> OpenAsync(
+      string documentId,
+      CancellationToken cancellationToken = default)
+  {
+    // Take the document's fence in one transaction, read its head, checkpoint
+    // and journal tail back, and hand out a session that holds the lease.
+  }
+}
+
+builder.Services
+  .AddBlokServer(options =>
+  {
+    options.CollabEnabled = true;
+    options.CollabDirectory = "./blok-collab";
+    options.DocEndpoint = "https://myapp.com/api/documents";
+  })
+  .UseCollabOperationStore<SqlCollabOperationStore>();
+
+var app = builder.Build();
+
+app.UseWebSockets();
+app.MapBlokServer("/api/blok").RequireAuthorization();
+app.Run();
+```
+
+The store is resolved as a singleton and is used for several documents at once. A relational implementation is one document-head row plus an operations table with unique `(document, lineage, operationId)` and `(document, lineage, serverSequence)`.
+
+What the service requires of it:
+
+- **One live writer per document.** `OpenAsync` returns `CollabDocumentOpen.DocumentOpenElsewhere` while a live process holds the document, and it must be able to reclaim the fence of a holder that has died. Refusing whenever a holder record exists satisfies the first half and locks the document forever the first time a process is killed. How liveness is decided is yours: an exclusive file the kernel releases when the process ends does it, and a store over SQL needs a lease with an expiry it renews.
+- **The fence is re-verified on every call.** A session that has lost it throws `CollabOperationFenceLostException` from every method rather than writing, or answering, as if it still owned the document. An open may throw it too: reading a document back is not instantaneous, and another process may take the document meanwhile.
+- **The read-back is linearizable.** An open observes every operation, checkpoint and reset committed under any earlier fence, including one committed microseconds before the previous holder died. A read that may lag its own writes hands back a stale head, and the room then reassigns a sequence that is already taken.
+- **Durable means durable.** When `AppendAsync` completes with `Committed`, the record survives the process dying immediately afterwards. The room broadcasts the update and reports the save on the strength of that completion.
+- **The id check and the sequence assignment are one atomic step.** No two operations receive the same sequence on one lineage, and no id is committed twice.
+- **`FindCommittedAsync` answers from the durable index**, never from a memo of what this session appended: an append that threw may still have committed, and that retry is the one lookup a memo gets wrong. Its answer must match what `AppendAsync` would give for the same id.
+- **A failure is thrown, not swallowed** — including an outcome the store cannot determine. The room then broadcasts nothing, acknowledges nothing, closes every member with `4503 commit unavailable, retry` and reloads from committed data; the producer retries the same operation id, and the duplicate check settles the unknown outcome.
+- **`WriteCheckpointAsync` never touches history.** A `Through` that is not a committed sequence, or is below one already published, is `ArgumentOutOfRangeException`; republishing at the sequence already published succeeds and changes nothing, because that is both the retry after an unknown outcome and what a periodic checkpointer does when nothing has advanced.
+- **`ResetAsync` replaces the document atomically** with a new epoch, lineage and sequence-zero baseline, and is also how a document that has never been seeded is seeded. The caller owns the epoch law; a store may refuse a regression but never invents an epoch of its own.
+- **Cancellation belongs to the caller.** A store-side timeout or abort surfaces as some other exception, because the caller reads a cancellation it did not ask for as its own shutdown.
+
+A backend that is not .NET implements the wire protocol instead of this interface: `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host only (`node scripts/test-server-conformance.mjs --target csharp`), so another backend runs those vectors, and the same durability scenarios — restart the process, fail the next append, inspect history — in its own harness.
+
+Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is compatible with the working-copy profile alone: ordinary y-protocol sync, no acknowledgement, no durability claim. On a journal-backed document a v1 write is still journaled before it is relayed; it simply earns no receipt. The same holds for any client that offers only v1.
+
+S3 stays v1-only. `--collab-s3-prefix` puts the working set in your bucket, and there is no S3 operation store, so an S3-configured service runs the working-copy profile unless it also registers one.
+
 ## Quality gates
 
 The .NET solution keeps three test layers: `Blok.Server.Tests` for core behavior, `Blok.Server.AspNetCore.Tests` for in-process integration, and `Blok.Server.Host.Tests` for real-process end-to-end behavior. CI also runs the cross-runtime conformance and package smoke tests.

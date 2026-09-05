@@ -357,11 +357,12 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-seven service limits the design refuses to bury', () => {
+  it('states the twenty-eight service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
       'working-copy-privacy',
+      'collab-operation-journal',
       'collab-reset',
       'doc-endpoint-auth',
       'collab-new-documents',
@@ -442,6 +443,55 @@ describe('server docs data', () => {
     expect(body).toContain('.unreadable-');
     expect(body).toMatch(/temporary files/i);
     expect(body).toMatch(/format this service does not read/i);
+  });
+
+  // The idempotency rules the entry below states hold only where an operation
+  // journal exists, and the service registers none: no flag turns one on and
+  // the working copy is not one, so the reader has to be told the seam is
+  // theirs to fill before the next entry promises them a retry-safe edit.
+  it('says a retry-safe outside edit needs an operation journal you write', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
+
+    expect(limits.indexOf('collab-operation-journal')).toBe(limits.indexOf('collab-reset') - 1);
+    expect(body).toContain('Blok-Idempotency-Key');
+    expect(body).toMatch(/409/);
+    expect(body).toMatch(/503/);
+    expect(body).toMatch(/no flag/i);
+    expect(body).toContain('--collab-dir');
+    expect(body).toContain('--collab-s3-prefix');
+    expect(body).toContain('ICollabOperationStore');
+    expect(body).toContain('UseCollabOperationStore');
+    // The laws are the price of the seam, so the entry names the load-bearing
+    // ones rather than sending a reader to write a store that loses edits.
+    expect(body).toMatch(/one live writer|one writer/i);
+    expect(body).toMatch(/durable before/i);
+    expect(body).toMatch(/one step|atomic/i);
+  });
+
+  // What the page ACTUALLY renders. An entry added to `server-data.ts` alone is
+  // dead code on every rendered locale, and a Russian reader would get the
+  // English body until the key exists.
+  it('renders the operation-journal entry in both shipped locales', () => {
+    const key = 'server.limits.collab-operation-journal.body';
+
+    expect(getTranslation('en', key)).toContain('UseCollabOperationStore');
+    expect(getTranslation('ru', key)).toContain('UseCollabOperationStore');
+    // `getTranslation` falls back to English on a miss, so only Cyrillic text
+    // proves the Russian key is really there.
+    expect(getTranslation('ru', key)).toMatch(/журнал/i);
+  });
+
+  // The bundle outranks the literal, and it kept the pre-journal answer long
+  // after `server-data.ts` gained the idempotency rules: the page told
+  // operators a failed write still answers 204, which is now a 503.
+  it('renders the idempotency rules for outside edits in both shipped locales', () => {
+    const key = 'server.limits.collab-reset.body';
+
+    expect(getTranslation('en', key)).toContain('Blok-Idempotency-Key');
+    expect(getTranslation('en', key)).not.toMatch(/it still answers 204/);
+    expect(getTranslation('ru', key)).toContain('Blok-Idempotency-Key');
+    expect(getTranslation('ru', key)).not.toMatch(/всё равно отвечает 204/);
   });
 
   // Two ways in, and the entry has to make the choice between them obvious:

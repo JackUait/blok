@@ -9,6 +9,8 @@ namespace Blok.Server.Tests.Collab;
 
 public sealed class DocEndpointClientTests
 {
+  private const string Lineage = "00112233445566778899aabbccddeeff";
+
   private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 
   [Fact]
@@ -197,7 +199,7 @@ public sealed class DocEndpointClientTests
         authorization: "Token xyz");
     var document = JsonNode.Parse("""{"time":5,"blocks":[{"id":"a","type":"paragraph","data":{}}]}""");
 
-    await client.SaveAsync("doc-1", document!, "v7", CancellationToken.None);
+    await client.SaveAsync("doc-1", document!, "v7", null, CancellationToken.None);
 
     var request = Assert.Single(recorder.Requests);
     Assert.Equal(HttpMethod.Put, request.Method);
@@ -216,11 +218,85 @@ public sealed class DocEndpointClientTests
     var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.OK));
     using var client = CreateClient(recorder);
 
-    await client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, null, CancellationToken.None);
+    await client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, null, null, CancellationToken.None);
 
     Assert.DoesNotContain(
         DocEndpointClient.VersionHeader,
         Assert.Single(recorder.Requests).Headers.Keys);
+  }
+
+  /// <summary>
+  /// A projection names the lineage and the committed sequence its JSON
+  /// includes, so a consumer can refuse one older than the record it holds. A
+  /// working-set-only room has no committed sequence and sends neither.
+  /// </summary>
+  [Fact]
+  public async Task ProjectionCarriesLineageAndServerSequence()
+  {
+    var recorder = new RequestRecorder(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+    using var client = CreateClient(recorder);
+    var document = JsonNode.Parse("""{"blocks":[]}""")!;
+
+    await client.SaveAsync(
+        "doc",
+        document,
+        "v7",
+        new DocProjection(Lineage, ulong.MaxValue),
+        CancellationToken.None);
+    await client.SaveAsync("doc", document, "v7", null, CancellationToken.None);
+
+    var stamped = recorder.Requests[0];
+    Assert.Equal(Lineage, stamped.Headers[DocEndpointClient.LineageHeader]);
+
+    // Plain decimal, no grouping and no exponent: the consumer compares it.
+    Assert.Equal("18446744073709551615", stamped.Headers[DocEndpointClient.SequenceHeader]);
+    Assert.Equal("v7", stamped.Headers[DocEndpointClient.VersionHeader]);
+
+    var unstamped = recorder.Requests[1];
+    Assert.DoesNotContain(DocEndpointClient.LineageHeader, unstamped.Headers.Keys);
+    Assert.DoesNotContain(DocEndpointClient.SequenceHeader, unstamped.Headers.Keys);
+    Assert.Equal("v7", unstamped.Headers[DocEndpointClient.VersionHeader]);
+  }
+
+  /// <summary>
+  /// The sequence header is the consumer's handle on ordering: a projection
+  /// naming a sequence its record has passed is refused, and the client
+  /// reports that refusal rather than counting it as a save.
+  /// </summary>
+  [Fact]
+  public async Task OlderProjectionCannotOverwriteANewerSequenceWhenConsumerUsesHeaders()
+  {
+    // A consumer whose record already holds sequence 5. The recorder logs the
+    // request before it answers, so the responder reads it back from there.
+    RequestRecorder? consumer = null;
+    consumer = new RequestRecorder(_ =>
+        consumer!.Requests[^1].Headers.TryGetValue(
+                DocEndpointClient.SequenceHeader,
+                out var sent) &&
+            ulong.TryParse(sent, CultureInfo.InvariantCulture, out var sequence) &&
+            sequence > 5
+          ? Json("""{"version":"v9"}""")
+          : new HttpResponseMessage(HttpStatusCode.Conflict));
+    using var client = CreateClient(consumer);
+    var document = JsonNode.Parse("""{"blocks":[]}""")!;
+
+    var stale = await Assert.ThrowsAsync<DocEndpointException>(
+        () => client.SaveAsync(
+            "doc",
+            document,
+            "v5",
+            new DocProjection(Lineage, 3),
+            CancellationToken.None));
+
+    Assert.Equal(409, stale.StatusCode);
+    Assert.Equal(
+        "v9",
+        await client.SaveAsync(
+            "doc",
+            document,
+            "v5",
+            new DocProjection(Lineage, 7),
+            CancellationToken.None));
   }
 
   [Theory]
@@ -238,6 +314,7 @@ public sealed class DocEndpointClientTests
         "doc",
         JsonNode.Parse("""{"blocks":[]}""")!,
         "v7",
+        null,
         CancellationToken.None);
 
     Assert.Equal(expected, version);
@@ -252,7 +329,7 @@ public sealed class DocEndpointClientTests
     using var client = CreateClient(recorder);
 
     var error = await Assert.ThrowsAsync<DocEndpointException>(
-        () => client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, null, CancellationToken.None));
+        () => client.SaveAsync("doc", JsonNode.Parse("""{"blocks":[]}""")!, null, null, CancellationToken.None));
 
     Assert.Equal((int)status, error.StatusCode);
   }
@@ -324,7 +401,7 @@ public sealed class DocEndpointClientTests
     using var client = CreateClient(recorder);
 
     await Assert.ThrowsAnyAsync<ArgumentException>(
-        () => client.SaveAsync("..", new JsonObject(), null, CancellationToken.None));
+        () => client.SaveAsync("..", new JsonObject(), null, null, CancellationToken.None));
     Assert.Empty(recorder.Requests);
   }
 
@@ -411,7 +488,7 @@ public sealed class DocEndpointClientTests
         DeepJson(100),
         documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 4096 })!;
 
-    await client.SaveAsync("doc", document, null, CancellationToken.None);
+    await client.SaveAsync("doc", document, null, null, CancellationToken.None);
 
     Assert.Contains("\"a\"", Assert.Single(recorder.Requests).Body, StringComparison.Ordinal);
   }
@@ -436,7 +513,7 @@ public sealed class DocEndpointClientTests
         documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 4096 })!;
 
     await Assert.ThrowsAsync<DocEndpointException>(
-        () => client.SaveAsync("doc", document, null, CancellationToken.None));
+        () => client.SaveAsync("doc", document, null, null, CancellationToken.None));
     Assert.Empty(recorder.Requests);
   }
 

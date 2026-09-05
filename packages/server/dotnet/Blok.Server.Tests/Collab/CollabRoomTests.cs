@@ -13,6 +13,7 @@ public sealed class CollabRoomTests
   // 32 lowercase hex, the operation-id shape the v2 codec enforces.
   private const string OpOne = "0123456789abcdef0123456789abcdef";
   private const string OpTwo = "fedcba9876543210fedcba9876543210";
+  private const string OpThree = "00112233445566778899aabbccddeeff";
 
   private readonly FakeWorkingSetStore store = new();
   private readonly FakeCollabOperationStore operations = new();
@@ -1912,15 +1913,11 @@ public sealed class CollabRoomTests
     // The whole point: an in-sync answer is NOT the two-byte shape here.
     Assert.True(answer.Length > 2, $"expected a carried delete set, got {answer.Length} bytes");
 
-    // Let the export the DELETION legitimately earned land first, or the
-    // absence measured below is just that PUT arriving late.
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
-    await Waits.UntilAsync(() => endpoint.Saves.Count > 0, "the export the deletion earned");
 
     var committed = operations.Committed(DocId).Count;
     var frames = store.FramesOf(DocId).Count;
-    var saves = endpoint.Saves.Count;
     stock.Received.Clear();
     other.Received.Clear();
 
@@ -1937,12 +1934,13 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
     Assert.Equal("hell", await ExportedTextAsync(manager));
 
-    // No working-set frame and no PUT of unchanged content back to the
-    // consumer's own document endpoint.
+    // No working-set frame, and no PUT to the consumer's own document
+    // endpoint — a journal-backed room owes one only to a checkpoint or to
+    // eviction, so an idle reconnect buys nothing there either.
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
     Assert.Equal(frames, store.FramesOf(DocId).Count);
-    Assert.Equal(saves, endpoint.Saves.Count);
+    Assert.Empty(endpoint.Saves);
   }
 
   /// <summary>
@@ -2028,15 +2026,11 @@ public sealed class CollabRoomTests
         SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateDeleting(stray, 0, 2))),
         CancellationToken.None);
 
-    // Let the export the parked delete legitimately earned land first, or the
-    // absence measured below is just that PUT arriving late.
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
-    await Waits.UntilAsync(() => endpoint.Saves.Count > 0, "the export the parked delete earned");
 
     var committed = operations.Committed(DocId).Count;
     var frames = store.FramesOf(DocId).Count;
-    var saves = endpoint.Saves.Count;
     stock.Received.Clear();
     other.Received.Clear();
 
@@ -2055,7 +2049,7 @@ public sealed class CollabRoomTests
     time.Advance(TimeSpan.FromSeconds(30));
     await manager.SettleAsync();
     Assert.Equal(frames, store.FramesOf(DocId).Count);
-    Assert.Equal(saves, endpoint.Saves.Count);
+    Assert.Empty(endpoint.Saves);
   }
 
   /// <summary>
@@ -2433,6 +2427,332 @@ public sealed class CollabRoomTests
     Assert.Equal("invalid-update", rejection.Code);
     Assert.Empty(operations.Committed(DocId));
     Assert.Empty(writer.Closes);
+  }
+
+  /// <summary>
+  /// The receipt says the journal took the operation, and nothing else. With
+  /// the consumer's endpoint wedged the acknowledgement still arrives — and
+  /// no whole-JSON PUT is even started for the edit.
+  /// </summary>
+  [Fact]
+  public async Task OperationAckDoesNotWaitForJsonProjection()
+  {
+    endpoint.Holds(DocId, "hello");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    writer.Received.Clear();
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    var ack = Assert.IsType<AcknowledgementFrame>(
+        writer.Received.Single(frame => frame is AcknowledgementFrame));
+    Assert.Equal(1UL, ack.ServerSequence);
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+
+    Assert.Empty(endpoint.Saves);
+    Assert.Single(operations.Committed(DocId));
+  }
+
+  /// <summary>
+  /// The demotion itself: on a journal-backed room the whole-JSON PUT stops
+  /// being what every debounce window buys. Three committed operations across
+  /// three windows build no snapshot at all.
+  /// </summary>
+  [Fact]
+  public async Task EditsDoNotScheduleAWholeJsonPutPerDebounceWindow()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+
+    foreach (var operationId in new[] { OpOne, OpTwo, OpThree })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+      time.Advance(TimeSpan.FromSeconds(30));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(0, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+    Assert.Equal(3, operations.Committed(DocId).Count);
+  }
+
+  /// <summary>
+  /// A published checkpoint is the one edit-time event that earns a
+  /// projection, and it earns exactly ONE. An operation committed while that
+  /// PUT is in flight must not coalesce into a second one — that is the route
+  /// by which the per-window PUT would come back.
+  /// </summary>
+  [Fact]
+  public async Task PublishedCheckpointSchedulesOneProjection()
+  {
+    endpoint.Holds(DocId, "hello");
+    endpoint.SaveGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(
+        () => endpoint.Saves.Count == 1,
+        "the projection the checkpoint earned");
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, "?")),
+        CancellationToken.None);
+    endpoint.SaveGate.SetResult();
+    endpoint.SaveGate = null;
+
+    // The PUT's completion posts back onto the room lane; give the coalescing
+    // re-arm every chance to fire before measuring its absence.
+    for (var tick = 0; tick < 5; tick++)
+    {
+      await Task.Delay(10);
+      time.Advance(TimeSpan.FromSeconds(30));
+      await manager.SettleAsync();
+    }
+
+    Assert.Equal(1, converter.Exports);
+    Assert.Equal("hello!", Assert.Single(endpoint.Saves).Data["text"]?.GetValue<string>());
+    Assert.Equal(1UL, operations.Checkpoint(DocId)!.Through);
+  }
+
+  /// <summary>
+  /// A reloaded room takes its position from the journal head. Counting from
+  /// zero instead would make its next checkpoint name sequence 0 — a value no
+  /// store accepts — and the refusal closes the room for everyone in it.
+  /// </summary>
+  [Fact]
+  public async Task AReloadedRoomInheritsItsCommittedSequenceFromTheHead()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+
+    foreach (var operationId in new[] { OpOne, OpTwo })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+    await Join(manager, V2Member());
+
+    var republished = await manager.CheckpointAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.False(republished);
+    Assert.Equal(2UL, operations.Checkpoint(DocId)!.Through);
+  }
+
+  /// <summary>
+  /// A checkpoint is replayed INSTEAD of the operations it covers, so it may
+  /// not be taken while the engine holds parked state: the encode would carry
+  /// structs the tail after its sequence no longer completes.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointIsRefusedWhileTheEngineHoldsPendingState()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var membership = await Join(manager, new FakeMember());
+
+    // A deletion of text this room never received: it cannot be applied, so
+    // the engine parks it.
+    var stray = YDocs.NewClient();
+    YDocs.UpdateAppending(stray, "zz");
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateDeleting(stray, 0, 2))),
+        CancellationToken.None);
+
+    Assert.Single(operations.Committed(DocId));
+    Assert.False(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    Assert.Null(operations.Checkpoint(DocId));
+  }
+
+  /// <summary>
+  /// The endpoint refusing the PUT is transient: the projection stays owed and
+  /// is retried on the export backoff, with no new checkpoint and no new edit
+  /// to re-arm it.
+  /// </summary>
+  [Fact]
+  public async Task FailedProjectionStaysDirtyAndRetries()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    endpoint.NextSaveFailure = new DocEndpointException(
+        "collab: the doc endpoint PUT returned 502.",
+        502);
+
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => endpoint.Saves.Count >= 2,
+        "the refused projection to be retried");
+
+    Assert.Equal("hello!", endpoint.Saves[0].Data["text"]?.GetValue<string>());
+    Assert.Equal("hello!", endpoint.Saves[1].Data["text"]?.GetValue<string>());
+    Assert.Equal(
+        new DocProjection(membership.Tag.Lineage, 1),
+        endpoint.Saves[1].Projection);
+    Assert.Equal(1, manager.LiveRoomCount);
+  }
+
+  /// <summary>
+  /// The two moments a journal-backed room still projects. Each PUT names the
+  /// committed sequence its JSON includes, and the sequence a fresh room
+  /// carries comes from the journal head, not from a counter that restarts.
+  /// </summary>
+  [Fact]
+  public async Task EvictionAndDrainProjectTheLatestCommittedSequence()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var lineage = membership.Tag.Lineage;
+
+    foreach (var operationId in new[] { OpOne, OpTwo })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    var evicted = Assert.Single(endpoint.Saves);
+    Assert.Equal(new DocProjection(lineage, 2), evicted.Projection);
+    Assert.Equal("hello!!", evicted.Data["text"]?.GetValue<string>());
+
+    // A fresh room over the same journal: its sequence continues the head's.
+    var rejoined = await Join(manager, V2Member());
+    var next = await SyncedClientAsync(manager, "hello!!");
+    await rejoined.ReceiveAsync(
+        Operation(rejoined, OpThree, YDocs.UpdateAppending(next, "?")),
+        CancellationToken.None);
+
+    await manager.DrainAsync(CancellationToken.None);
+
+    var drained = endpoint.Saves[1];
+    Assert.Equal(new DocProjection(lineage, 3), drained.Projection);
+    Assert.Equal("hello!!?", drained.Data["text"]?.GetValue<string>());
+  }
+
+  /// <summary>
+  /// The projection's dirty flag lives only in memory. Dropping the room past
+  /// a PUT the endpoint refused would leave the consumer's record behind with
+  /// nothing left to retry it — and on a journal-backed room no later edit
+  /// re-arms the export either. So the room stays loaded on the export
+  /// backoff until the projection lands.
+  /// </summary>
+  [Fact]
+  public async Task EvictionWaitsForADirtyProjection()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    endpoint.NextSaveFailure = new DocEndpointException(
+        "collab: the doc endpoint PUT returned 502.",
+        502);
+    await membership.LeaveAsync();
+
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(
+        () => endpoint.Saves.Count == 1,
+        "the eviction projection to be refused");
+    await manager.SettleAsync();
+
+    Assert.Equal(1, manager.LiveRoomCount);
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => manager.LiveRoomCount == 0,
+        "the room to be evicted once its projection landed");
+
+    Assert.Equal(2, endpoint.Saves.Count);
+    Assert.Equal(
+        new DocProjection(membership.Tag.Lineage, 1),
+        endpoint.Saves[1].Projection);
+  }
+
+  /// <summary>
+  /// The converter refusing the room's OWN document never heals by retrying.
+  /// The journal already holds every operation, so the room logs once, stops
+  /// owing the projection and evicts, rather than staying loaded forever for
+  /// a PUT it can never build.
+  /// </summary>
+  [Fact]
+  public async Task PermanentProjectionFailureReleasesTheHoldAndMarksTheDocumentUnexportable()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager();
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, "!")),
+        CancellationToken.None);
+    converter.ExportFailure = new InvalidDataException(
+        "collab: block \"b-1\" has data that is not a map.");
+
+    // First refusal, with the room still occupied.
+    Assert.True(await manager.CheckpointAsync(DocId, CancellationToken.None));
+    time.Advance(TimeSpan.FromSeconds(30));
+    await manager.SettleAsync();
+    await membership.LeaveAsync();
+
+    await Waits.UntilAdvancingAsync(
+        time,
+        TimeSpan.FromSeconds(30),
+        () => manager.LiveRoomCount == 0,
+        "the room to stop being held for a projection it can never build");
+
+    // The checkpoint's attempt and the eviction flush's, and no retry in
+    // between: a refusal is never backed off and tried again.
+    Assert.Equal(2, converter.Exports);
+    Assert.Empty(endpoint.Saves);
+    Assert.Single(log, line => line.Contains("b-1", StringComparison.Ordinal));
+    Assert.Single(operations.Committed(DocId));
   }
 
   /// <summary>

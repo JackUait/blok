@@ -394,7 +394,11 @@ internal sealed class FakeWorkingSetStore : ICollabWorkingSetStore
   }
 }
 
-internal sealed record RecordedSave(string DocId, JsonNode Data, string? Version);
+internal sealed record RecordedSave(
+    string DocId,
+    JsonNode Data,
+    string? Version,
+    DocProjection? Projection);
 
 internal sealed class FakeDocEndpoint : IDocEndpointClient
 {
@@ -462,11 +466,12 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
       string docId,
       JsonNode outputData,
       string? version,
+      DocProjection? projection,
       CancellationToken cancellationToken)
   {
     lock (guard)
     {
-      saves.Add(new RecordedSave(docId, outputData.DeepClone(), version));
+      saves.Add(new RecordedSave(docId, outputData.DeepClone(), version, projection));
     }
 
     if (SaveGate is not null)
@@ -514,6 +519,9 @@ internal sealed class FakeDocConverter : ICollabDocConverter
 
   /// <summary>Thrown by the next Export only, as the real converter does on a block whose shape a peer broke.</summary>
   internal Exception? NextExportFailure { get; set; }
+
+  /// <summary>Thrown by EVERY Export: a document whose own data the converter cannot read.</summary>
+  internal Exception? ExportFailure { get; set; }
 
   public void Seed(YDoc doc, JsonNode outputData)
   {
@@ -597,6 +605,11 @@ internal sealed class FakeDocConverter : ICollabDocConverter
   public JsonNode Export(YDoc doc)
   {
     Exports++;
+
+    if (ExportFailure is not null)
+    {
+      throw ExportFailure;
+    }
 
     if (NextExportFailure is not null)
     {

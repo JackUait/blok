@@ -471,6 +471,7 @@ internal sealed class FakeDocEndpoint : IDocEndpointClient
       string docId,
       JsonNode outputData,
       string? version,
+      DocProjection? projection,
       CancellationToken cancellationToken)
   {
     Interlocked.Increment(ref saves);

@@ -31,6 +31,13 @@ internal sealed record DocEndpointOptions(
 /// </summary>
 internal sealed record LoadedDocument(JsonNode? Data, string? Version);
 
+/// <summary>
+/// The committed point a whole-JSON projection describes, so the consumer can
+/// refuse one that is older than the record it already holds. Null on a room
+/// with no operation journal: it has no committed sequence to name.
+/// </summary>
+internal sealed record DocProjection(string Lineage, ulong ServerSequence);
+
 internal sealed class DocEndpointException(
     string message,
     int? statusCode = null,
@@ -53,6 +60,7 @@ internal interface IDocEndpointClient
       string docId,
       JsonNode outputData,
       string? version,
+      DocProjection? projection,
       CancellationToken cancellationToken);
 }
 
@@ -71,6 +79,12 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
 {
   /// <summary>Pass-through of the version the endpoint last reported.</summary>
   internal const string VersionHeader = "Blok-Doc-Version";
+
+  /// <summary>The lineage a projection belongs to; the name the edit endpoint answers with.</summary>
+  internal const string LineageHeader = "Blok-Doc-Lineage";
+
+  /// <summary>The committed server sequence the projected JSON includes.</summary>
+  internal const string SequenceHeader = "Blok-Doc-Sequence";
 
   /// <summary>How much of an error body goes into the exception message.</summary>
   private const int ErrorBodyPrefixBytes = 512;
@@ -137,6 +151,7 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
       string docId,
       JsonNode outputData,
       string? version,
+      DocProjection? projection,
       CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(outputData);
@@ -150,6 +165,14 @@ internal sealed class DocEndpointClient : IDocEndpointClient, IDisposable
     if (version is not null)
     {
       request.Headers.TryAddWithoutValidation(VersionHeader, version);
+    }
+
+    if (projection is not null)
+    {
+      request.Headers.TryAddWithoutValidation(LineageHeader, projection.Lineage);
+      request.Headers.TryAddWithoutValidation(
+          SequenceHeader,
+          projection.ServerSequence.ToString(CultureInfo.InvariantCulture));
     }
 
     var body = await SendAsync(request, cancellationToken);

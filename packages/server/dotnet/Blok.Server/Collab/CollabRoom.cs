@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using Blok.Server.Yjs;
 
 namespace Blok.Server.Collab;
@@ -110,6 +111,12 @@ internal sealed class CollabRoom : IDisposable
   // threshold would compact again on every update.
   private long baseFrameLength;
 
+  // Highest sequence this room has committed, and the highest a checkpoint
+  // covers. Both restart from the head at load: a fresh room inherits the
+  // journal's position rather than counting from zero.
+  private ulong committedThrough;
+  private ulong checkpointedThrough;
+
   // The blob is behind the doc while blobVersion != persistedVersion; that
   // is the room's "persist behind" flag, and it is what keeps a room that
   // cannot write from being dropped.
@@ -120,6 +127,7 @@ internal sealed class CollabRoom : IDisposable
   private int persistFailures;
   private string? version;
   private bool exportDirty;
+  private bool projectionRefused;
   private DateTimeOffset? dirtySince;
   private DateTimeOffset? exportRetryAt;
   private int exportFailures;
@@ -447,6 +455,62 @@ internal sealed class CollabRoom : IDisposable
         cancellationToken);
   }
 
+  /// <summary>
+  /// Publishes a checkpoint through everything committed so far. WHEN this
+  /// runs belongs to the checkpoint publisher (plan task 5.1); this is the
+  /// room's only route to <see cref="ICollabOperationSession.WriteCheckpointAsync"/>.
+  /// False when there is nothing new to publish.
+  ///
+  /// Refused while the engine holds pending state: a checkpoint is replayed
+  /// INSTEAD of the operations it covers, and an encode taken over parked
+  /// structs is not a state those operations would rebuild.
+  /// </summary>
+  internal Task<bool> CheckpointAsync(CancellationToken cancellationToken)
+  {
+    return RunAsync(
+        async () =>
+        {
+          if (state != RoomState.Ready ||
+              session is null ||
+              committedThrough == checkpointedThrough ||
+              doc!.HasPending)
+          {
+            return false;
+          }
+
+          try
+          {
+            using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+            using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
+                lifetime.Token,
+                deadline.Token);
+
+            await session.WriteCheckpointAsync(
+                new CollabOperationCheckpoint(committedThrough, doc.EncodeStateAsUpdate()),
+                bounded.Token);
+          }
+          catch (Exception error)
+          {
+            // A lost fence says another process owns the document, and an
+            // unknown outcome says the store is in trouble; either way this
+            // room stops serving, like every other session call it makes.
+            await FailCommitLocked("publish a checkpoint", error);
+
+            return false;
+          }
+
+          checkpointedThrough = committedThrough;
+
+          // MarkDirty deliberately arms no timer on a journal room, so the
+          // projection a checkpoint earns has to be armed here.
+          MarkDirtyLocked();
+          ScheduleExportLocked();
+
+          return true;
+        },
+        cancellationToken);
+  }
+
   internal Task<CollabResetResult?> ResetAsync(CancellationToken cancellationToken)
   {
     return RunAsync<CollabResetResult?>(
@@ -745,6 +809,8 @@ internal sealed class CollabRoom : IDisposable
         opened.Head.Format,
         opened.Head.Epoch,
         opened.Head.Lineage);
+    committedThrough = opened.Head.DurableThrough;
+    checkpointedThrough = opened.Checkpoint?.Through ?? 0;
     HydrateCommittedLocked(opened.Baseline);
 
     if (opened.Checkpoint is { } checkpoint)
@@ -1428,6 +1494,8 @@ internal sealed class CollabRoom : IDisposable
       return null;
     }
 
+    committedThrough = appended.ServerSequence;
+
     return appended.ServerSequence;
   }
 
@@ -1617,11 +1685,50 @@ internal sealed class CollabRoom : IDisposable
         Timeout.InfiniteTimeSpan);
   }
 
+  /// <summary>
+  /// Records that the consumer's JSON is behind the document. A journal-backed
+  /// room stops there: the journal is what the write is durable in, so its
+  /// projection is scheduled by a published checkpoint and by eviction/drain,
+  /// never once per edit window.
+  /// </summary>
   private void MarkDirtyLocked()
   {
     exportDirty = true;
     dirtySince ??= timeProvider.GetUtcNow();
-    ScheduleExportLocked();
+
+    if (session is null)
+    {
+      ScheduleExportLocked();
+    }
+  }
+
+  /// <summary>
+  /// The converter refusing the room's own document — an unreadable block
+  /// shape, a depth the JSON writer will not take. Retrying cannot heal it,
+  /// and on a journal-backed room every operation is already durable, so the
+  /// room stops holding itself loaded for a PUT it can never build. Logged
+  /// once per room: it takes an operator reset, not a wait.
+  /// </summary>
+  private void RefuseProjectionLocked(Exception error)
+  {
+    if (projectionRefused)
+    {
+      return;
+    }
+
+    projectionRefused = true;
+    log?.Invoke(
+        $"collab: room \"{DocId}\" cannot export its document, so the consumer's record " +
+        $"stays behind until the document is reset: {error.Message}");
+  }
+
+  /// <summary>
+  /// What a projection names. Null on a working-set-only room: it has no
+  /// committed sequence, so it has nothing for a consumer to order by.
+  /// </summary>
+  private DocProjection? ProjectionLocked()
+  {
+    return session is null ? null : new DocProjection(tag.Lineage, committedThrough);
   }
 
   private void ScheduleExportLocked()
@@ -1664,15 +1771,27 @@ internal sealed class CollabRoom : IDisposable
 
     // Only the JSON snapshot is taken under the lane; the PUT runs beside
     // it so a slow endpoint never stalls sync. Single flight keeps PUTs
-    // ordered. A converter that refuses the doc (a peer wrote a shape it
-    // cannot read) is a failed export like any other: backed off and
-    // retried, never left for the next edit to re-arm.
+    // ordered. On a working-set-only room a converter refusal (a peer wrote
+    // a shape it cannot read) is a failed export like any other: backed off
+    // and retried, never left for the next edit to re-arm.
     try
     {
-      save = endpoint.SaveAsync(DocId, converter.Export(doc!), version, lifetime.Token);
+      save = endpoint.SaveAsync(
+          DocId,
+          converter.Export(doc!),
+          version,
+          ProjectionLocked(),
+          lifetime.Token);
     }
     catch (Exception error)
     {
+      if (session is not null)
+      {
+        RefuseProjectionLocked(error);
+
+        return Task.CompletedTask;
+      }
+
       log?.Invoke($"collab: room \"{DocId}\" could not export, retrying: {error.Message}");
       exportFailures++;
       exportRetryAt = timeProvider.GetUtcNow() + Backoff(exportFailures);
@@ -1737,6 +1856,7 @@ internal sealed class CollabRoom : IDisposable
     {
       exportFailures = 0;
       exportRetryAt = null;
+      projectionRefused = false;
 
       if (answered is not null)
       {
@@ -1744,7 +1864,11 @@ internal sealed class CollabRoom : IDisposable
       }
     }
 
-    if (exportDirty)
+    // Work that arrived while the PUT was in flight. A journal-backed room
+    // does not re-arm for it: that would put the per-edit-window PUT back
+    // through the coalescing path. A FAILED one is re-armed for every room —
+    // the projection it owes has not been made yet.
+    if (exportDirty && (failure is not null || session is null))
     {
       ScheduleExportLocked();
     }
@@ -1782,11 +1906,12 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
-    if (exportDirty)
+    if (exportDirty && !projectionRefused)
     {
       // Same reasoning for the consumer's record: a room dropped with an
       // export owed hydrates clean from the blob next time and never exports
-      // what the endpoint missed.
+      // what the endpoint missed. A refused projection is the exception —
+      // waiting cannot produce it, so holding the room only wastes memory.
       exportFailures++;
       log?.Invoke(
           $"collab: room \"{DocId}\" is staying loaded until its export lands");
@@ -1850,14 +1975,39 @@ internal sealed class CollabRoom : IDisposable
       return;
     }
 
+    JsonNode snapshot;
+
     try
     {
-      var snapshot = converter.Export(doc!);
-      version = await endpoint.SaveAsync(DocId, snapshot, version, deadline.Token) ?? version;
+      snapshot = converter.Export(doc!);
+    }
+    catch (Exception error) when (!lifetime.IsCancellationRequested)
+    {
+      if (session is not null)
+      {
+        RefuseProjectionLocked(error);
+      }
+      else
+      {
+        log?.Invoke($"collab: room \"{DocId}\" could not export during flush: {error.Message}");
+      }
+
+      return;
+    }
+
+    try
+    {
+      version = await endpoint.SaveAsync(
+          DocId,
+          snapshot,
+          version,
+          ProjectionLocked(),
+          deadline.Token) ?? version;
       exportDirty = false;
       dirtySince = null;
       exportFailures = 0;
       exportRetryAt = null;
+      projectionRefused = false;
     }
     catch (Exception error) when (!lifetime.IsCancellationRequested)
     {

@@ -252,6 +252,27 @@ internal sealed class CollabRoomManager : ICollabRoomManager
         $"collab: the room for \"{docId}\" kept closing during an edit.");
   }
 
+  /// <summary>
+  /// Publishes a checkpoint on a document that is already loaded, and with it
+  /// the one whole-JSON projection a checkpoint earns. Nothing drives this
+  /// yet: the cadence belongs to the checkpoint publisher (plan task 5.1).
+  /// False when no room holds the document, or the room had nothing new.
+  /// </summary>
+  internal async ValueTask<bool> CheckpointAsync(
+      string docId,
+      CancellationToken cancellationToken = default)
+  {
+    ArgumentException.ThrowIfNullOrEmpty(docId);
+    CollabRoom? room;
+
+    lock (rooms)
+    {
+      rooms.TryGetValue(docId, out room);
+    }
+
+    return room is not null && await room.CheckpointAsync(cancellationToken);
+  }
+
   /// <summary>Consecutive commit failures for one document, and when it may be loaded again.</summary>
   private sealed record CommitCooldown(int Failures, DateTimeOffset Until);
 

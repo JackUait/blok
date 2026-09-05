@@ -326,7 +326,7 @@ describe('mdastToBlocks', () => {
   });
 
   describe('image', () => {
-    it('falls back to paragraph for unmapped images', () => {
+    it('converts a standalone image paragraph to an image block', () => {
       const tree: Root = {
         type: 'root',
         children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: 'pic' }] }],
@@ -335,7 +335,176 @@ describe('mdastToBlocks', () => {
       const blocks = mdastToBlocks(tree);
 
       expect(blocks).toHaveLength(1);
-      expect(blocks[0].data.text).toContain('<img');
+      expect(blocks[0].type).toBe('image');
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'pic', alt: 'pic' });
+    });
+
+    it('stores the alt text verbatim — the caption field is plain text, not HTML', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: 'a & b <c>' }] }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a & b <c>', alt: 'a & b <c>' });
+    });
+
+    it('omits caption and alt for an image with no alt text', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'https://img.com/pic.png', alt: '' }] }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks[0].type).toBe('image');
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png' });
+    });
+
+    it('ignores whitespace-only text around a standalone image', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'paragraph',
+          children: [
+            { type: 'text', value: '  ' },
+            { type: 'image', url: 'https://img.com/pic.png', alt: 'pic' },
+            { type: 'text', value: '\n' },
+          ],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('image');
+    });
+
+    it('keeps a paragraph that mixes an image with other text', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'paragraph',
+          children: [
+            { type: 'text', value: 'before ' },
+            { type: 'image', url: 'https://img.com/pic.png', alt: 'pic' },
+            { type: 'text', value: ' after' },
+          ],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('paragraph');
+      expect(blocks[0].data.text).toBe('before <img src="https://img.com/pic.png" alt="pic"> after');
+    });
+
+    it('keeps a paragraph for an image whose url has an unsafe scheme', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{ type: 'paragraph', children: [{ type: 'image', url: 'javascript:alert(1)', alt: 'pic' }] }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('paragraph');
+      expect(blocks[0].data.text).toBe('');
+    });
+
+    it('converts a standalone resolved imageReference to an image block', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [
+          {
+            type: 'paragraph',
+            children: [{ type: 'imageReference', identifier: 'shot', label: 'shot', referenceType: 'full', alt: 'pic' }],
+          },
+          { type: 'definition', identifier: 'shot', label: 'shot', url: 'https://img.com/pic.png', title: null },
+        ],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('image');
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'pic', alt: 'pic' });
+    });
+
+    it('keeps a paragraph for a standalone imageReference with no definition', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [{
+          type: 'paragraph',
+          children: [{ type: 'imageReference', identifier: 'gone', label: 'Gone', referenceType: 'full', alt: 'pic' }],
+        }],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('paragraph');
+      expect(blocks[0].data.text).toBe('![pic][Gone]');
+    });
+  });
+
+  describe('definitions', () => {
+    it('resolves a linkReference against a definition that appears later', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [
+          {
+            type: 'paragraph',
+            children: [{
+              type: 'linkReference',
+              identifier: 'site',
+              label: 'site',
+              referenceType: 'full',
+              children: [{ type: 'text', value: 'the docs' }],
+            }],
+          },
+          { type: 'definition', identifier: 'site', label: 'site', url: 'https://example.com', title: null },
+        ],
+      };
+
+      const blocks = mdastToBlocks(tree);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].data.text).toBe(
+        '<a href="https://example.com" target="_blank" rel="noopener noreferrer nofollow">the docs</a>'
+      );
+    });
+
+    it('collects definitions nested inside other blocks', () => {
+      const tree: Root = {
+        type: 'root',
+        children: [
+          {
+            type: 'blockquote',
+            children: [{ type: 'definition', identifier: 'site', label: 'site', url: 'https://example.com', title: null }],
+          },
+          {
+            type: 'heading',
+            depth: 2,
+            children: [{
+              type: 'linkReference',
+              identifier: 'site',
+              label: 'site',
+              referenceType: 'full',
+              children: [{ type: 'text', value: 'docs' }],
+            }],
+          },
+        ],
+      };
+
+      const blocks = mdastToBlocks(tree);
+      const header = blocks.find((block) => block.type === 'header');
+
+      expect(header?.data.text).toBe(
+        '<a href="https://example.com" target="_blank" rel="noopener noreferrer nofollow">docs</a>'
+      );
     });
   });
 

@@ -1,8 +1,17 @@
-import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent } from 'mdast';
+import type { Root, Nodes, List, ListItem, PhrasingContent, Table, Blockquote, RootContent, Definition } from 'mdast';
 import type { OutputBlockData } from '../../types/data-formats/output-data';
 import type { MarkdownImportConfig } from './types';
+import { safeImageSrc } from '../components/utils/sanitize-url';
 import { phrasingToHtml } from './phrasing-to-html';
+import type { DefinitionMap } from './phrasing-to-html';
 import { normalizeFenceLang } from './fence-language';
+
+/** Everything one `mdastToBlocks` call shares with every node handler. */
+interface ConvertContext {
+  config: MarkdownImportConfig;
+  generateId: () => string;
+  definitions: DefinitionMap;
+}
 
 /**
  * Creates a scoped ID generator. Each call to mdastToBlocks gets a fresh generator.
@@ -15,24 +24,56 @@ function createIdGenerator(): () => string {
 }
 
 /**
+ * Collect every link/image definition in the tree.
+ *
+ * A definition may sit anywhere — after the references that use it, or inside a
+ * blockquote or list item — so the whole tree is walked before any node is
+ * converted. Mirrors the prepass in `markdownToHtml.ts`.
+ */
+function collectDefinitions(tree: Root): DefinitionMap {
+  const definitions = new Map<string, Definition>();
+
+  /**
+   * Visit one node and its children.
+   * @param node - the node to visit
+   */
+  const visit = (node: RootContent): void => {
+    if (node.type === 'definition') {
+      definitions.set(node.identifier, node);
+    }
+
+    if ('children' in node && Array.isArray(node.children)) {
+      node.children.forEach(visit);
+    }
+  };
+
+  tree.children.forEach(visit);
+
+  return definitions;
+}
+
+/**
  * Convert an mdast tree to an array of Blok OutputBlockData.
  */
 export function mdastToBlocks(tree: Root, config: MarkdownImportConfig = {}): OutputBlockData[] {
-  const generateId = createIdGenerator();
+  const ctx: ConvertContext = {
+    config,
+    generateId: createIdGenerator(),
+    definitions: collectDefinitions(tree),
+  };
 
-  return convertNodes(tree.children, config, 0, generateId);
+  return convertNodes(tree.children, ctx, 0);
 }
 
 function convertNodes(
   nodes: RootContent[],
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   listDepth: number,
-  generateId: () => string,
 ): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
 
   for (const node of nodes) {
-    const result = convertNode(node, config, listDepth, generateId);
+    const result = convertNode(node, ctx, listDepth);
 
     if (result) {
       blocks.push(...result);
@@ -44,30 +85,29 @@ function convertNodes(
 
 function convertNode(
   node: RootContent,
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   listDepth: number,
-  generateId: () => string,
 ): OutputBlockData[] | null {
   // 1. Check toolMap first
-  if (config.toolMap?.[node.type]) {
-    return handleToolMap(node, config, generateId);
+  if (ctx.config.toolMap?.[node.type]) {
+    return handleToolMap(node, ctx);
   }
 
   // 2. Built-in handlers
-  const builtInResult = handleBuiltInNode(node, config, listDepth, generateId);
+  const builtInResult = handleBuiltInNode(node, ctx, listDepth);
 
   if (builtInResult !== undefined) {
     return builtInResult;
   }
 
   // 3. onUnknownNode hook
-  if (config.onUnknownNode) {
-    return tryOnUnknownNode(config.onUnknownNode, node);
+  if (ctx.config.onUnknownNode) {
+    return tryOnUnknownNode(ctx.config.onUnknownNode, node);
   }
 
   // 4. Fallback: extract any text content as paragraph
   if ('value' in node && typeof node.value === 'string') {
-    return [makeParagraph(escapeHtml(node.value), generateId)];
+    return [makeParagraph(escapeHtml(node.value), ctx.generateId)];
   }
 
   return null;
@@ -78,32 +118,31 @@ function convertNode(
  */
 function handleBuiltInNode(
   node: RootContent,
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   listDepth: number,
-  generateId: () => string,
 ): OutputBlockData[] | null | undefined {
   if (node.type === 'paragraph') {
-    return handleParagraph(node.children, generateId);
+    return handleParagraph(node.children, ctx);
   }
 
   if (node.type === 'heading') {
-    return [makeBlock('header', { text: phrasingToHtml(node.children), level: node.depth }, generateId)];
+    return [makeBlock('header', { text: phrasingToHtml(node.children, ctx.definitions), level: node.depth }, ctx.generateId)];
   }
 
   if (node.type === 'thematicBreak') {
-    return [makeBlock('divider', {}, generateId)];
+    return [makeBlock('divider', {}, ctx.generateId)];
   }
 
   if (node.type === 'list') {
-    return handleList(node, config, listDepth, generateId);
+    return handleList(node, ctx, listDepth);
   }
 
   if (node.type === 'blockquote') {
-    return handleBlockquote(node, generateId);
+    return handleBlockquote(node, ctx);
   }
 
   if (node.type === 'table') {
-    return handleTable(node, generateId);
+    return handleTable(node, ctx);
   }
 
   if (node.type === 'code') {
@@ -114,15 +153,15 @@ function handleBuiltInNode(
       // Unknown languages keep their raw label rather than collapsing to
       // "plain text" — the fence still says what the snippet is.
       language: normalizeFenceLang(rawLang) ?? (rawLang || 'plain text'),
-    }, generateId)];
+    }, ctx.generateId)];
   }
 
   if (node.type === 'math') {
-    return [makeBlock('code', { code: node.value, language: 'latex' }, generateId)];
+    return [makeBlock('code', { code: node.value, language: 'latex' }, ctx.generateId)];
   }
 
   if (node.type === 'html') {
-    return handleFallback(node, config, escapeHtml(node.value), generateId);
+    return handleFallback(node, ctx, escapeHtml(node.value));
   }
 
   return undefined;
@@ -130,34 +169,113 @@ function handleBuiltInNode(
 
 type ParagraphChild = { type: string; value?: string; children?: unknown[] };
 
+/** Source and alt text of the single image a paragraph consists of. */
+interface StandaloneImage {
+  url: string;
+  alt: string;
+}
+
+/**
+ * Pair a URL with its alt text once the URL is known safe.
+ *
+ * @param rawUrl - the URL written in the Markdown
+ * @param alt - the image's alt text, if any
+ */
+function safeStandaloneImage(rawUrl: string, alt: string | null | undefined): StandaloneImage | null {
+  const url = safeImageSrc(rawUrl);
+
+  return url === null ? null : { url, alt: alt ?? '' };
+}
+
+/**
+ * The image a paragraph consists of, ignoring whitespace around it.
+ *
+ * Returns null when the paragraph mixes an image with other content, when a
+ * reference-style image has no definition, and when the URL carries an unsafe
+ * scheme — all three keep the plain-paragraph behaviour.
+ *
+ * @param children - the paragraph's phrasing children
+ * @param definitions - definitions a reference-style image resolves against
+ */
+function soleImage(children: PhrasingContent[], definitions: DefinitionMap): StandaloneImage | null {
+  const meaningful = children.filter((child) => child.type !== 'text' || child.value.trim() !== '');
+
+  if (meaningful.length !== 1) {
+    return null;
+  }
+
+  const [node] = meaningful;
+
+  if (node.type === 'image') {
+    return safeStandaloneImage(node.url, node.alt);
+  }
+
+  if (node.type === 'imageReference') {
+    const definition = definitions.get(node.identifier);
+
+    return definition === undefined ? null : safeStandaloneImage(definition.url, node.alt);
+  }
+
+  return null;
+}
+
+/**
+ * Image block for a paragraph that holds nothing but an image.
+ *
+ * The alt text lands in `caption` because the export direction writes `caption`
+ * into the Markdown alt slot, and in `alt` because that is the field the
+ * rendered `<img alt>` reads. Both hold plain text — the caption editor writes
+ * it via `textContent` and the view emitter escapes it on output.
+ *
+ * @param image - the resolved source and alt text
+ * @param generateId - block id generator
+ */
+function makeImage(image: StandaloneImage, generateId: () => string): OutputBlockData {
+  const data: Record<string, unknown> = { url: image.url };
+
+  if (image.alt !== '') {
+    data.caption = image.alt;
+    data.alt = image.alt;
+  }
+
+  return makeBlock('image', data, generateId);
+}
+
 /**
  * Convert a paragraph's phrasing children to blocks.
- * Splits on inlineMath nodes, emitting each as a latex code block.
+ * A lone image becomes an image block; inlineMath splits the paragraph into
+ * latex code blocks.
  */
-function handleParagraph(children: ParagraphChild[], generateId: () => string): OutputBlockData[] {
+function handleParagraph(children: ParagraphChild[], ctx: ConvertContext): OutputBlockData[] {
+  const image = soleImage(children as PhrasingContent[], ctx.definitions);
+
+  if (image !== null) {
+    return [makeImage(image, ctx.generateId)];
+  }
+
   const hasInlineMath = children.some(c => c.type === 'inlineMath');
 
   if (!hasInlineMath) {
-    return [makeParagraph(phrasingToHtml(children as PhrasingContent[]), generateId)];
+    return [makeParagraph(phrasingToHtml(children as PhrasingContent[], ctx.definitions), ctx.generateId)];
   }
 
-  return splitOnInlineMath(children, generateId);
+  return splitOnInlineMath(children, ctx);
 }
 
-function splitOnInlineMath(children: ParagraphChild[], generateId: () => string): OutputBlockData[] {
+function splitOnInlineMath(children: ParagraphChild[], ctx: ConvertContext): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
   const segments = groupByInlineMath(children);
 
   for (const segment of segments) {
     if (segment.type === 'math') {
-      blocks.push(makeBlock('code', { code: segment.value, language: 'latex' }, generateId));
+      blocks.push(makeBlock('code', { code: segment.value, language: 'latex' }, ctx.generateId));
       continue;
     }
 
-    const text = phrasingToHtml(segment.nodes as PhrasingContent[]).trim();
+    const text = phrasingToHtml(segment.nodes as PhrasingContent[], ctx.definitions).trim();
 
     if (text) {
-      blocks.push(makeParagraph(text, generateId));
+      blocks.push(makeParagraph(text, ctx.generateId));
     }
   }
 
@@ -206,10 +324,9 @@ function tryOnUnknownNode(
 
 function handleToolMap(
   node: RootContent,
-  config: MarkdownImportConfig,
-  generateId: () => string,
+  ctx: ConvertContext,
 ): OutputBlockData[] {
-  const toolMap = config.toolMap;
+  const toolMap = ctx.config.toolMap;
 
   if (!toolMap) {
     return [];
@@ -219,7 +336,7 @@ function handleToolMap(
 
   try {
     const block: OutputBlockData = {
-      id: generateId(),
+      id: ctx.generateId(),
       type: entry.tool,
       data: entry.data(node),
     };
@@ -227,7 +344,7 @@ function handleToolMap(
     if (entry.children) {
       const childBlocks = entry.children(
         node,
-        (childNodes) => convertNodes(childNodes as RootContent[], config, 0, generateId),
+        (childNodes) => convertNodes(childNodes as RootContent[], ctx, 0),
       );
 
       return [block, ...childBlocks];
@@ -243,9 +360,8 @@ function handleToolMap(
 
 function handleList(
   list: List,
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   depth: number,
-  generateId: () => string,
 ): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
 
@@ -255,7 +371,7 @@ function handleList(
     // block), so the items after it must carry their own `start`.
     const runInterrupted = blocks.some((block) => block.type !== 'list');
 
-    blocks.push(...handleListItem(item, list, config, depth, index, generateId, runInterrupted));
+    blocks.push(...handleListItem(item, list, ctx, depth, index, runInterrupted));
   }
 
   return blocks;
@@ -272,10 +388,9 @@ function resolveListStyle(isChecklist: boolean, ordered: boolean | null | undefi
 function handleListItem(
   item: ListItem,
   list: List,
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   depth: number,
   index: number,
-  generateId: () => string,
   runInterrupted: boolean,
 ): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
@@ -286,7 +401,7 @@ function handleListItem(
   const paragraphChild = item.children.find(
     (c): c is Extract<typeof c, { type: 'paragraph' }> => c.type === 'paragraph',
   );
-  const text = paragraphChild ? phrasingToHtml(paragraphChild.children) : '';
+  const text = paragraphChild ? phrasingToHtml(paragraphChild.children, ctx.definitions) : '';
 
   const data: Record<string, unknown> = { text, style, depth };
 
@@ -300,7 +415,7 @@ function handleListItem(
     data.start = startValue;
   }
 
-  blocks.push(makeBlock('list', data, generateId));
+  blocks.push(makeBlock('list', data, ctx.generateId));
 
   // Everything else in the item becomes sibling blocks in document order.
   // Skipped by identity, not by type: a SECOND paragraph is real content.
@@ -310,7 +425,7 @@ function handleListItem(
       continue;
     }
 
-    const childBlocks = convertNode(child, config, depth + 1, generateId);
+    const childBlocks = convertNode(child, ctx, depth + 1);
 
     if (childBlocks) {
       blocks.push(...childBlocks);
@@ -320,12 +435,12 @@ function handleListItem(
   return blocks;
 }
 
-function handleBlockquote(bq: Blockquote, generateId: () => string): OutputBlockData[] {
+function handleBlockquote(bq: Blockquote, ctx: ConvertContext): OutputBlockData[] {
   const parts: string[] = [];
 
   for (const child of bq.children) {
     if (child.type === 'paragraph') {
-      parts.push(phrasingToHtml(child.children));
+      parts.push(phrasingToHtml(child.children, ctx.definitions));
       continue;
     }
 
@@ -339,20 +454,20 @@ function handleBlockquote(bq: Blockquote, generateId: () => string): OutputBlock
     );
 
     if (innerPhrasing.length > 0) {
-      parts.push(phrasingToHtml(innerPhrasing));
+      parts.push(phrasingToHtml(innerPhrasing, ctx.definitions));
     }
   }
 
-  return [makeBlock('quote', { text: parts.join('<br>'), size: 'default' }, generateId)];
+  return [makeBlock('quote', { text: parts.join('<br>'), size: 'default' }, ctx.generateId)];
 }
 
-function handleTable(table: Table, generateId: () => string): OutputBlockData[] {
+function handleTable(table: Table, ctx: ConvertContext): OutputBlockData[] {
   const blocks: OutputBlockData[] = [];
-  const tableId = generateId();
+  const tableId = ctx.generateId();
   const content: Array<Array<{ blocks: string[] }>> = [];
 
   for (const row of table.children) {
-    const rowContent = processTableRow(row.children, tableId, blocks, generateId);
+    const rowContent = processTableRow(row.children, tableId, blocks, ctx);
 
     content.push(rowContent);
   }
@@ -375,13 +490,13 @@ function processTableRow(
   cells: Table['children'][number]['children'],
   tableId: string,
   blocks: OutputBlockData[],
-  generateId: () => string,
+  ctx: ConvertContext,
 ): Array<{ blocks: string[] }> {
   const rowContent: Array<{ blocks: string[] }> = [];
 
   for (const cell of cells) {
-    const cellText = phrasingToHtml(cell.children);
-    const cellBlockId = generateId();
+    const cellText = phrasingToHtml(cell.children, ctx.definitions);
+    const cellBlockId = ctx.generateId();
 
     blocks.push({
       id: cellBlockId,
@@ -398,13 +513,12 @@ function processTableRow(
 
 function handleFallback(
   node: RootContent,
-  config: MarkdownImportConfig,
+  ctx: ConvertContext,
   fallbackText: string,
-  generateId: () => string,
 ): OutputBlockData[] | null {
   // Try onUnknownNode first for unmapped block types
-  if (config.onUnknownNode) {
-    const result = tryOnUnknownNode(config.onUnknownNode, node);
+  if (ctx.config.onUnknownNode) {
+    const result = tryOnUnknownNode(ctx.config.onUnknownNode, node);
 
     // null means "skip this node" — respect the caller's decision
     // non-null means the hook handled it
@@ -415,7 +529,7 @@ function handleFallback(
     return result;
   }
 
-  return [makeParagraph(fallbackText, generateId)];
+  return [makeParagraph(fallbackText, ctx.generateId)];
 }
 
 function makeParagraph(text: string, generateId: () => string): OutputBlockData {

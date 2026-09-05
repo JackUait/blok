@@ -135,6 +135,91 @@ $$e^{i\\pi} + 1 = 0$$`;
     expect(codeBlocks[0].data.language).toBe('latex');
     expect(codeBlocks[1].data.language).toBe('latex');
   });
+
+  describe('images', () => {
+    it('imports a standalone image line as an image block', async () => {
+      const blocks = await markdownToBlocks('![a picture](https://img.com/pic.png)');
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('image');
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a picture', alt: 'a picture' });
+    });
+
+    it('keeps Markdown-decoded characters verbatim in the caption', async () => {
+      const blocks = await markdownToBlocks('![a &amp; b](https://img.com/pic.png)');
+
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a & b', alt: 'a & b' });
+    });
+
+    it('leaves an image mixed with text as a paragraph', async () => {
+      const blocks = await markdownToBlocks('before ![pic](https://img.com/pic.png) after');
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('paragraph');
+      expect(blocks[0].data.text).toBe('before <img src="https://img.com/pic.png" alt="pic"> after');
+    });
+
+    it('imports a reference-style image line as an image block', async () => {
+      const md = '![a picture][shot]\n\n[shot]: https://img.com/pic.png';
+
+      const blocks = await markdownToBlocks(md);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('image');
+      expect(blocks[0].data).toEqual({ url: 'https://img.com/pic.png', caption: 'a picture', alt: 'a picture' });
+    });
+  });
+
+  describe('reference-style links', () => {
+    it('resolves a reference link against its definition', async () => {
+      const md = 'Read [the docs][site] today.\n\n[site]: https://example.com/docs';
+
+      const blocks = await markdownToBlocks(md);
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].data.text).toBe(
+        'Read <a href="https://example.com/docs" target="_blank" rel="noopener noreferrer nofollow">the docs</a> today.'
+      );
+    });
+
+    it('resolves a definition that appears before the reference', async () => {
+      const md = '[site]: https://example.com/docs\n\nRead [the docs][site].';
+
+      const blocks = await markdownToBlocks(md);
+
+      expect(blocks[0].data.text).toContain('href="https://example.com/docs"');
+    });
+
+    it('resolves a shortcut reference', async () => {
+      const md = 'Read [site] today.\n\n[site]: https://example.com/docs';
+
+      const blocks = await markdownToBlocks(md);
+
+      expect(blocks[0].data.text).toContain('href="https://example.com/docs"');
+    });
+
+    it('drops the definition line itself rather than emitting a block for it', async () => {
+      const blocks = await markdownToBlocks('Text.\n\n[site]: https://example.com/docs');
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].data.text).toBe('Text.');
+    });
+
+    /**
+     * micromark resolves references during the flow pass, so a reference with
+     * no definition never reaches mdast as `linkReference` — it arrives as a
+     * plain text node holding the literal source. Nothing is lost, so there is
+     * nothing for the degradation report to say.
+     */
+    it('keeps an unresolvable reference as its literal source, with no warning', async () => {
+      const { blocks, warnings } = await markdownToBlocksWithReport('[the docs][missing]');
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].type).toBe('paragraph');
+      expect(blocks[0].data.text).toBe('[the docs][missing]');
+      expect(warnings).toEqual([]);
+    });
+  });
 });
 
 describe('markdownToBlocksWithReport', () => {

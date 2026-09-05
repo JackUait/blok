@@ -408,8 +408,18 @@ export class Collaboration extends Module {
     // adopt an empty document as editable.
     this.cacheSeeded = false;
 
-    // Nothing may be asked of a closed store.
-    if (!this.isDestroyed && this.store !== null) {
+    // Nothing may be asked of a closed store, and nothing of a torn-down
+    // editor: every module is marked destroyed before any `destroy()` body
+    // runs, so a rejection arriving after teardown would re-arbitrate a
+    // ReadOnly that is already gone. It costs the recovery clear in that one
+    // window — a write that fails during the final flush leaves the copy
+    // adoptable and missing that row — because refusing a closed store is the
+    // stronger rule.
+    if (this.isDestroyed) {
+      return;
+    }
+
+    if (this.store !== null) {
       await this.store.clearAdoptable().catch((failed) => {
         logLabeled('collaboration could not drop its local copy', 'warn', failed);
       });
@@ -537,6 +547,12 @@ export class Collaboration extends Module {
     // document, and without the check every boot would write the whole
     // document back as a fresh row.
     this.cacheUnhook = this.Blok.YjsManager.onAnyDocUpdate((update, origin) => {
+      // Two other things happen to stop the replay here today — it runs before
+      // `cacheAdopted`, so `hasLineage` is false, and `applyRemoteUpdate` puts
+      // this origin in the DocumentStore's remote set, so the outbox tap never
+      // sees it — which is why deleting this line breaks no test. Neither is
+      // the law: this line is, and a reorder that moved the replay would need
+      // it back.
       if (origin === CACHE_ORIGIN) {
         return;
       }
@@ -867,7 +883,13 @@ export class Collaboration extends Module {
     // ONE call, not a chain: the store orders the meta and the snapshot
     // internally, so the pair survives an editor torn down in between — which
     // is exactly when the seed matters, since it is what the next boot adopts.
-    const snapshot = this.cacheSeeded ? undefined : this.Blok.YjsManager.encodeStateAsUpdate();
+    // Skipped without `offline` as well as when already seeded: the store runs
+    // in memory there and discards the snapshot at `db === null`, so encoding
+    // the whole document would cost a full serialisation on the first-sync
+    // path for nothing.
+    const snapshot = this.cacheSeeded || this.settings?.offline !== true
+      ? undefined
+      : this.Blok.YjsManager.encodeStateAsUpdate();
 
     this.protocol = this.provider?.protocol ?? 'v1';
 

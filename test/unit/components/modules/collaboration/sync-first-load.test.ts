@@ -7,7 +7,7 @@
  * SyncStep2 materialises the blocks through the ordinary remote path. With
  * `collaboration` absent, not one byte of that machinery may be allocated.
  */
-import { IDBFactory } from 'fake-indexeddb';
+import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import * as encoding from 'lib0/encoding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -1406,6 +1406,136 @@ describe('collaboration — sync-first load', () => {
         'editing continued although the edit never reached the copy'
       ).toBe(true);
     }, 20_000);
+
+    /**
+     * A write that fails once and then works again — a quota refusal, not a
+     * database that has gone. The recovery clear empties the copy, so the next
+     * session record owes it a fresh snapshot: a `meta` written over an empty
+     * copy is exactly what makes the boot after it adopt an EMPTY document as
+     * editable.
+     *
+     * The reconnect here keeps the same lineage, so this pins the snapshot
+     * half of that rule, not the new-lineage half.
+     */
+    it('a transient write failure leaves the next session record carrying a snapshot', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      // One refusal, then the database is healthy again — `commitTogether`
+      // catches the synchronous throw, aborts that transaction alone, and
+      // leaves the connection open.
+      const add = vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementationOnce(() => {
+        throw new Error('a transient quota failure');
+      });
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed onto a full disk');
+
+      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 3000);
+      add.mockRestore();
+
+      socket.serverClose(1001, 'gone');
+      await waitFor(() => harness.sockets.length === 2, 'reconnect', 6000);
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'reconnected');
+
+      // Tolerated: with the snapshot never re-owed there is nothing to wait for.
+      await waitFor(async () => (await readStore()).updates.length > 0, 'a fresh snapshot', 3000)
+        .catch(() => undefined);
+
+      expect(
+        (await readStore()).updates.length,
+        'the re-recorded session left an adoptable copy with no snapshot behind it'
+      ).toBeGreaterThan(0);
+    }, 30_000);
+
+    /**
+     * A session with no local copy still opens a store — in memory, so the
+     * queue contract holds — but a snapshot handed to it is discarded at
+     * `db === null`. Encoding the whole document for that costs a full
+     * serialisation on the first-sync critical path and buys nothing.
+     */
+    it('encodes no snapshot for a session that keeps no local copy', async () => {
+      const encode = vi.spyOn(YjsManager.prototype, 'encodeStateAsUpdate');
+
+      const harness = await boot();
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'from the room' } }]);
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+
+      expect(
+        encode.mock.calls.length,
+        'a session with nowhere to put a snapshot serialised the whole document anyway'
+      ).toBe(0);
+    }, 20_000);
+
+    /**
+     * The teardown window, where carry-forward contracts 2 and 4 pull opposite
+     * ways: a write that fails during the final flush wants the copy dropped,
+     * and a closed store may be asked for nothing. Contract 4 wins, and the
+     * arbitration that would follow must not run either — every module is
+     * marked destroyed before any `destroy()` body runs, so a late rejection
+     * would reach a torn-down ReadOnly.
+     */
+    it('asks nothing of a torn-down editor when the final flush fails to store', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const harness = await boot({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const flush = (entries: ReadonlyMap<string, unknown>): boolean => {
+        let wrote = false;
+
+        for (const [key, value] of entries) {
+          wrote = yjs.updateBlockData('b1', key, value) || wrote;
+        }
+
+        return wrote;
+      };
+
+      yjs.enqueueBlockDataWrite('b1', { text: 'leading' }, flush);
+      // The leading write has to be SAFELY stored before the copy goes, or the
+      // block latches before teardown and the trailing failure is never the
+      // first one.
+      await waitFor(async () => textsOf((await readStore()).updates).includes('leading'), 'the leading write');
+
+      yjs.enqueueBlockDataWrite('b1', { text: 'trailing' }, flush);
+
+      for (const entry of await indexedDB.databases()) {
+        if (entry.name !== undefined) {
+          await new Promise((resolve) => {
+            const request = indexedDB.deleteDatabase(entry.name as string);
+
+            request.onsuccess = resolve;
+            request.onerror = resolve;
+            request.onblocked = resolve;
+          });
+        }
+      }
+
+      const arbitration = vi.spyOn(harness.core.moduleInstances.ReadOnly, 'reapplyCollaborationArbitration');
+
+      destroyCore(booted.splice(booted.indexOf(harness.core), 1)[0]);
+
+      const duringTeardown = arbitration.mock.calls.length;
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(
+        arbitration.mock.calls.length,
+        'a store rejection after teardown re-ran arbitration on a destroyed editor'
+      ).toBe(duringTeardown);
+    }, 30_000);
 
     /**
      * The coalescing write buffer may still hold the last thing typed when the

@@ -2880,6 +2880,46 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// The likelier shape of every trigger the swallow names: the journal
+  /// replays for a while and then stops. Every record that DID apply was
+  /// appended, so the room now has a working set to write — and `FlushLocked`
+  /// reaches `PersistLocked` three steps before its exportDirty guard. Leaving
+  /// a room whose load failed at New is what keeps that partial blob, under
+  /// the PRE-RESET tag, from being written on a path that should touch
+  /// nothing.
+  /// </summary>
+  [Fact]
+  public async Task ResettingAColdDocumentWhoseJournalStopsReplayingWritesNoPartialWorkingSet()
+  {
+    endpoint.Holds(DocId, "hello", version: "v1");
+    var replayable = YDocs.NewClient();
+
+    await using (var session = (await operations.OpenAsync(DocId, CancellationToken.None)).Session!)
+    {
+      await session.ResetAsync(
+          new CollabOperationReset(
+              CollabWorkingSetTag.SchemaV2,
+              Epoch: 3,
+              CollabWorkingSetTag.NewLineage(),
+              [
+                YDocs.UpdateAppending(replayable, "hello"),
+                new byte[] { 0xde, 0xad, 0xbe, 0xef, 0x01 },
+              ]),
+          CancellationToken.None);
+    }
+
+    var manager = CreateJournalManager();
+    var writesBefore = store.Writes;
+
+    var result = await manager.ResetForHttpAsync(DocId, CancellationToken.None);
+
+    Assert.Equal(writesBefore, store.Writes);
+    Assert.Equal(CollabResetStatus.Reset, result.Status);
+    Assert.Equal(4, result.Tag!.Value.Epoch);
+    Assert.Equal("hello", await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
   /// The same loss with nobody in the document, which is the likelier shape:
   /// the reset branch only opened the journal, never loaded it and so never
   /// reached Ready, leaving the flush unable to run at all.

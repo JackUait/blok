@@ -136,6 +136,7 @@ public sealed class BlokDocumentsRegistrationTests
 
     public override ValueTask<string> ToPlainTextAsync(
         string documentJson,
+        bool includeHiddenText = false,
         CancellationToken cancellationToken = default)
     {
       Conversions++;
@@ -177,6 +178,23 @@ public sealed class BlokDocumentsRegistrationTests
     var services = new ServiceCollection();
 
     services.AddBlokDocuments(poolSize: 1, timeout: TimeSpan.FromMilliseconds(1), warmUp: false);
+
+    using var provider = services.BuildServiceProvider();
+
+    Assert.ThrowsAny<Exception>(() => provider.GetRequiredService<IBlokDocumentConverter>());
+  }
+
+  /// <summary>
+  /// The budget is per-call allocation churn, so a value too small to parse the
+  /// bundle fails here — at registration, on the caller's own argument — rather
+  /// than later, on somebody's document.
+  /// </summary>
+  [Fact]
+  public void RefusesAnAllocationBudgetTooSmallToLoadTheBundle()
+  {
+    var services = new ServiceCollection();
+
+    services.AddBlokDocuments(poolSize: 1, warmUp: false, allocationBudgetBytes: 1024);
 
     using var provider = services.BuildServiceProvider();
 
@@ -267,6 +285,7 @@ public sealed class BlokDocumentsRegistrationTests
     /** The one method the warm-up calls, so it answers rather than throwing. */
     public virtual ValueTask<string> ToPlainTextAsync(
         string documentJson,
+        bool includeHiddenText = false,
         CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(string.Empty);
 

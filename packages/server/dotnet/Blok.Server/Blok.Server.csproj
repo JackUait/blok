@@ -18,7 +18,16 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.7.2" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
-    <PackageReference Include="Jint" Version="4.16.1" />
+    <!--
+      Compile assets deliberately withheld from consumers: nothing public
+      exposes a Jint type any more (a conversion failure is
+      BlokDocumentConversionException), and letting the engine's API flow
+      transitively is how a downstream project ended up writing
+      `using Jint.Runtime;` against a package it never declared. Runtime assets
+      still flow, so the engine is restored and loaded exactly as before.
+    -->
+    <PackageReference Include="Jint" Version="4.16.1"
+                      PrivateAssets="compile;contentfiles;analyzers;build" />
   </ItemGroup>
 
   <ItemGroup>

@@ -112,7 +112,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
   {
     var request = new JsonObject
     {
-      ["document"] = JsonNode.Parse(documentJson),
+      ["document"] = ParseDocument(documentJson),
       ["includeCode"] = includeCode,
     };
 
@@ -124,6 +124,38 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return request.ToJsonString();
   }
 
+  /// <summary>
+  /// Plain text carries an option beside the document for the same reason, and
+  /// the runtime reads either shape — the bare document every caller sent
+  /// before the option existed, or this envelope.
+  /// </summary>
+  private static string PlainTextRequest(string documentJson, bool includeHiddenText)
+  {
+    return new JsonObject
+    {
+      ["document"] = ParseDocument(documentJson),
+      ["includeHiddenText"] = includeHiddenText,
+    }.ToJsonString();
+  }
+
+  /**
+   * The envelope operations parse the document here rather than in the engine,
+   * which would otherwise make ONE bad document report two different failures
+   * depending on which reader was asked for it — a JSON exception from this
+   * method, or a JavaScript one from the bundle's own `JSON.parse`.
+   */
+  private static JsonNode? ParseDocument(string documentJson)
+  {
+    try
+    {
+      return JsonNode.Parse(documentJson);
+    }
+    catch (JsonException exception)
+    {
+      throw new BlokDocumentConversionException(BlokConversionFailure.InvalidDocument, exception);
+    }
+  }
+
   public ValueTask<string> ToHtmlAsync(string documentJson, CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(documentJson);
@@ -131,11 +163,17 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     return runtime.InvokeAsync("blocksToHtml", documentJson, cancellationToken);
   }
 
-  public ValueTask<string> ToPlainTextAsync(string documentJson, CancellationToken cancellationToken = default)
+  public ValueTask<string> ToPlainTextAsync(
+      string documentJson,
+      bool includeHiddenText = false,
+      CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(documentJson);
 
-    return runtime.InvokeAsync("blocksToPlainText", documentJson, cancellationToken);
+    return runtime.InvokeAsync(
+        "blocksToPlainText",
+        PlainTextRequest(documentJson, includeHiddenText),
+        cancellationToken);
   }
 
   public async ValueTask<BlokImportConversion> FromMarkdownAsync(

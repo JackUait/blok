@@ -36,16 +36,27 @@ public static class BlokDocumentsServiceCollectionExtensions
   /// awaited. Pass <c>false</c> for a host that starts many times and converts
   /// rarely — a test host, for instance.
   /// </param>
+  /// <param name="allocationBudgetBytes">
+  /// How much ONE conversion may allocate. This is allocation churn per call,
+  /// NOT resident memory: the runtime counts every allocation a conversion
+  /// makes rather than what it still holds, and nothing is reserved, so a host
+  /// that converts small documents pays nothing for a large budget. Defaults to
+  /// 512 MiB, which is what a long article carrying inline markup, or one
+  /// holding a large inline base64 image, was measured to need. Lower it only
+  /// to bound a hostile document.
+  /// </param>
   /// <returns>The same collection, for chaining.</returns>
   public static IServiceCollection AddBlokDocuments(
       this IServiceCollection services,
       int? poolSize = null,
       TimeSpan? timeout = null,
-      bool warmUp = true)
+      bool warmUp = true,
+      long? allocationBudgetBytes = null)
   {
     ArgumentNullException.ThrowIfNull(services);
 
-    services.TryAddSingleton<IBlokRuntime>(_ => JintBlokRuntime.FromEmbeddedResource(poolSize, timeout));
+    services.TryAddSingleton<IBlokRuntime>(
+        _ => JintBlokRuntime.FromEmbeddedResource(poolSize, timeout, allocationBudgetBytes));
     services.TryAddSingleton<IBlokDocumentConverter, BlokDocumentConverter>();
 
     if (warmUp)
@@ -92,7 +103,7 @@ internal sealed class BlokDocumentWarmUp(IBlokDocumentConverter converter) : IHo
         {
           try
           {
-            await converter.ToPlainTextAsync(WarmUpDocument(), cancellationToken);
+            await converter.ToPlainTextAsync(WarmUpDocument(), cancellationToken: cancellationToken);
           }
           catch (Exception)
           {

@@ -70,7 +70,7 @@ public sealed class ArticleExport(IBlokDocumentConverter blok, ILogger<ArticleEx
 |--------|---------|
 | `ToMarkdownAsync` | the Markdown, plus every construct Markdown could not carry |
 | `ToHtmlAsync` | the document's HTML |
-| `ToPlainTextAsync` | the document's readable text |
+| `ToPlainTextAsync` | the document's readable text; `includeHiddenText: true` also emits an image's alt, a video/file url, an embed source, an audio title/artist/url and a bookmark description/url |
 | `FromMarkdownAsync` | the saved document, plus what Markdown could not carry into it |
 | `ExtractTextsAsync` / `InjectTextsAsync` | the document's translatable strings, and the document with them put back |
 | `GetVersionAsync` | the `version` the editor stamps into a saved document |
@@ -114,7 +114,13 @@ var document = new JsonObject
 
 Markdown cannot express every block — a callout becomes a blockquote, columns flatten, a spacer disappears — so both directions report what changed. A caller handing the result to something that cannot ask a follow-up question, an export or a model, should read that report rather than assume the round trip was lossless.
 
-An instance holds a pool of engines and is expensive to construct — every engine parses the embedded bundle, about a second in total — so register one for the lifetime of the process. `AddBlokDocuments` builds it at startup rather than during the first request; pass `warmUp: false` where a host starts often and converts rarely, such as a test host. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout and a recursion limit, so a pathological document fails rather than wedging the process.
+An instance holds a pool of engines and is expensive to construct — every engine parses the embedded bundle, about a second in total — so register one for the lifetime of the process. `AddBlokDocuments` builds it at startup rather than during the first request; pass `warmUp: false` where a host starts often and converts rarely, such as a test host. The pool size bounds how many documents convert at once; further callers wait. A conversion is bounded by a timeout, a per-call allocation budget and a stack guard, so a pathological document fails rather than wedging the process.
+
+`allocationBudgetBytes` is allocation churn for ONE conversion, not resident memory: the runtime counts every allocation a call makes rather than what it still holds, and nothing is reserved. It defaults to 512 MiB because that is what a long article carrying inline markup, or one holding a large inline base64 image, was measured to need — a 700 KB article with a third of its fields marked up exhausted the old 64 MiB in every reader. Lower it only to bound a hostile document.
+
+A conversion that fails throws `BlokDocumentConversionException`. Read its `Reason` rather than its message: `InvalidDocument` (not JSON, or JSON with no `blocks`), `TimedOut`, `DocumentTooLarge` (the allocation budget), `Unknown` (everything else). Nothing about the JavaScript engine reaches a caller, so explaining the failure to your own users needs no reference to it. Your own cancelled `CancellationToken` still arrives as `OperationCanceledException`, never as this.
+
+A degradation report's `Action` is one of `BlokDegradationActions.Dropped` / `BlokDegradationActions.Degraded`. It stays an open string so a Blok release naming a new outcome cannot fail deserialization in an app already deployed — compare against the constants, and treat anything else as news.
 
 ## Standalone
 

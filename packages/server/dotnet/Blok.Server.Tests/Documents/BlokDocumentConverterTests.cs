@@ -290,11 +290,120 @@ public sealed class BlokDocumentConverterTests
     Assert.Equal("dropped", warning.Action);
   }
 
-  [Fact]
-  public async Task RejectsMalformedInput()
+  /// <summary>
+  /// One unusable document, one answer, whichever reader was asked for it.
+  /// </summary>
+  [Theory]
+  [InlineData("not json")]
+  [InlineData("{\"nope\":1}")]
+  public async Task ReportsEveryUnusableDocumentTheSameWay(string document)
   {
     var converter = BlokDocuments.Create(poolSize: 1);
 
-    await Assert.ThrowsAnyAsync<Exception>(() => converter.ToMarkdownAsync("not json").AsTask());
+    foreach (var convert in new Func<Task>[]
+    {
+      () => converter.ToMarkdownAsync(document).AsTask(),
+      () => converter.ToHtmlAsync(document).AsTask(),
+      () => converter.ToPlainTextAsync(document).AsTask(),
+    })
+    {
+      var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(convert);
+
+      Assert.Equal(BlokConversionFailure.InvalidDocument, failure.Reason);
+    }
+  }
+
+  /// <summary>
+  /// The parity the readers and the translation path did not have: the same
+  /// unreadable input arrived as two unrelated types — a JavaScript exception
+  /// from the bundle's own parse for one, a <c>JsonException</c> from this
+  /// package for the other — so a caller could not write one handler for "they
+  /// sent us rubbish".
+  ///
+  /// <para>Only for input that is not JSON. Well-formed JSON that is not a
+  /// document is deliberately NOT a failure here: the extraction tolerates
+  /// anything and answers with an empty list, which is what lets a caller run
+  /// it over stored documents of every vintage without losing one.</para>
+  /// </summary>
+  [Fact]
+  public async Task ReportsUnreadableInputTheSameWayOnTheTranslationPath()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var failure = await Assert.ThrowsAsync<BlokDocumentConversionException>(
+        () => converter.ExtractTextsAsync("not json").AsTask());
+
+    Assert.Equal(BlokConversionFailure.InvalidDocument, failure.Reason);
+    Assert.Empty(await converter.ExtractTextsAsync("""{"nope":1}"""));
+  }
+
+  /// <summary>
+  /// A caller's own cancellation is not a conversion failure, whatever else
+  /// this package now wraps: a token it cancelled has to keep arriving as
+  /// cancellation or every <c>catch</c> upstream stops working.
+  /// </summary>
+  [Fact]
+  public async Task StillReportsTheCallersOwnCancellationAsCancellation()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    using var cancelled = new CancellationTokenSource();
+    await cancelled.CancelAsync();
+
+    await Assert.ThrowsAnyAsync<OperationCanceledException>(
+        () => converter.ToHtmlAsync(Article, cancelled.Token).AsTask());
+  }
+
+  /// <summary>
+  /// The two outcomes a report can name, published so a consumer stops
+  /// re-declaring them as its own constants and spelling one of them wrong.
+  /// <c>Construct</c> stays an open string: a custom tool's name is genuinely
+  /// open, and so is the set of Markdown constructs.
+  /// </summary>
+  [Fact]
+  public async Task NamesTheTwoDegradationOutcomesItReports()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+
+    var conversion = await converter.ToMarkdownAsync("""
+        {"blocks":[
+          {"id":"c1","type":"callout","data":{"emoji":"💡"}},
+          {"id":"p1","type":"paragraph","data":{"text":"Mind the gap"},"parent":"c1"},
+          {"id":"s1","type":"spacer","data":{}}
+        ]}
+        """);
+
+    Assert.Equal(BlokDegradationActions.Degraded, conversion.Warnings[0].Action);
+    Assert.Equal(BlokDegradationActions.Dropped, conversion.Warnings[1].Action);
+    Assert.Equal("degraded", BlokDegradationActions.Degraded);
+    Assert.Equal("dropped", BlokDegradationActions.Dropped);
+  }
+
+  /// <summary>
+  /// A search index wants the text a document holds, not the text the editor
+  /// paints — an image's alt is an attribute on screen and nowhere in the
+  /// reader's output. Off by default: a preview wants what the editor paints.
+  /// </summary>
+  [Fact]
+  public async Task ReadsTheHiddenMediaTextOnlyWhenAsked()
+  {
+    var converter = BlokDocuments.Create(poolSize: 1);
+    const string document = """
+        {"blocks":[
+          {"id":"i1","type":"image","data":{"url":"https://cdn/x.png","caption":"A cat","alt":"A tabby asleep"}},
+          {"id":"b1","type":"bookmark","data":{"title":"Blok","url":"https://blokeditor.com","description":"Block editor"}}
+        ]}
+        """;
+
+    var painted = await converter.ToPlainTextAsync(document);
+    var indexed = await converter.ToPlainTextAsync(document, includeHiddenText: true);
+
+    Assert.DoesNotContain("A tabby asleep", painted, StringComparison.Ordinal);
+    Assert.DoesNotContain("Block editor", painted, StringComparison.Ordinal);
+    Assert.Contains("A cat", painted, StringComparison.Ordinal);
+
+    Assert.Contains("A cat", indexed, StringComparison.Ordinal);
+    Assert.Contains("A tabby asleep", indexed, StringComparison.Ordinal);
+    Assert.Contains("Block editor", indexed, StringComparison.Ordinal);
+    Assert.Contains("https://blokeditor.com", indexed, StringComparison.Ordinal);
   }
 }

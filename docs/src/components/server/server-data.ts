@@ -214,6 +214,38 @@ var version = await blok.GetVersionAsync(ct);
 // output or validating an import.
 var schema = await blok.GetSchemaAsync(ct);`,
       },
+      {
+        label: 'Index a document, and handle a conversion that fails',
+        language: 'csharp',
+        code: `// The default text is what a reader sees on screen. A search index wants
+// more: the alt text of an image, the artist of a track, the URL somebody
+// pasted as a bare link. That is what includeHiddenText adds.
+var text = await blok.ToPlainTextAsync(contentJson, includeHiddenText: true, cancellationToken: ct);
+
+// Conversion runs Blok's own JavaScript, so it is bounded. Every failure
+// arrives as one type carrying a reason — you never catch the engine's.
+try
+{
+  var markdown = await blok.ToMarkdownAsync(contentJson, ct);
+}
+catch (BlokDocumentConversionException failure)
+{
+  var advice = failure.Reason switch
+  {
+    BlokConversionFailure.DocumentTooLarge => "Split the document and try again.",
+    BlokConversionFailure.TimedOut => "Split the document and try again.",
+    BlokConversionFailure.InvalidDocument => "This is not a saved Blok document.",
+    _ => "Retry, then report it.",
+  };
+
+  logger.LogWarning("Conversion failed ({Reason}): {Advice}", failure.Reason, advice);
+}
+
+// A conversion is bounded by a timeout and by how much the interpreter may
+// allocate for one call. The budget is allocation churn, NOT resident memory,
+// and nothing is reserved — raise it for documents with large inline images.
+builder.Services.AddBlokDocuments(allocationBudgetBytes: 1024L * 1024 * 1024);`,
+      },
     ],
     editorConfig: {
       label: 'Point the editor at the mapped routes',

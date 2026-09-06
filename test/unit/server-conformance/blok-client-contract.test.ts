@@ -560,10 +560,12 @@ function localUpdate(id: string, text: string): Uint8Array {
 }
 
 /*
- * The journal readers below are byte-identical to protocol-v2-contract.test.ts's
- * copies, so a reviewer can diff them; RECORD_HEADER_BYTES is hand-copied from
- * CollabJournalCodec.HeaderSize and `recordOffsets` REFUSES a journal its
- * records do not tile exactly rather than reporting a plausible count.
+ * `docKey` and `recordOffsets` below are byte-identical to
+ * protocol-v2-contract.test.ts's copies, so a reviewer can diff those two;
+ * `journalFile` is NOT — it is narrowed to the single-file case these tests
+ * need. RECORD_HEADER_BYTES is hand-copied from CollabJournalCodec.HeaderSize,
+ * and `recordOffsets` REFUSES a journal its records do not tile exactly rather
+ * than reporting a plausible count.
  */
 function docKey(docId: string): string {
   return createHash('sha256').update(docId, 'utf8').digest('hex');

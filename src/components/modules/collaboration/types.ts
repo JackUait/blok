@@ -301,6 +301,18 @@ export interface CollabProviderOptions {
    * relineages exactly as it does under v1.
    */
   outbox?: CollabOutbox;
+
+  /**
+   * A store write the PROVIDER issued did not commit — the residual
+   * `appendLocal` of the post-drain diff, or a lineage quarantine.
+   *
+   * Every OTHER store write is the Collaboration module's, and the module
+   * routes its own through a wrapper that blocks editing and drops the
+   * adoptable copy. These two never pass through it, so without this callback
+   * the session goes on reporting itself healthy while the local copy is
+   * poisoned.
+   */
+  onOutboxFailure?: (thrown: unknown) => void;
 }
 
 /** What {@link createCollabProvider} hands back. */

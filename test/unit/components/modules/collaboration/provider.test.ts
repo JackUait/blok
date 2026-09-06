@@ -2143,6 +2143,18 @@ describe('createCollabProvider', () => {
 
       public lineage: string | null;
 
+      /** Set to make every `quarantineLineage` reject with it. */
+      public failQuarantine: Error | null = null;
+
+      /** Set to make every `appendLocal` reject with it. */
+      public failAppend: Error | null = null;
+
+      /** When set, `quarantineLineage` waits on it before it does anything. */
+      public quarantineGate: Promise<void> | null = null;
+
+      /** Every `quarantineLineage` call, committed or not. */
+      public quarantineAttempts = 0;
+
       private queue: Promise<unknown> = Promise.resolve();
 
       private minted = 0;
@@ -2171,6 +2183,10 @@ describe('createCollabProvider', () => {
         return this.enqueue(() => {
           const lineage = this.lineage;
 
+          if (this.failAppend !== null) {
+            throw this.failAppend;
+          }
+
           if (lineage === null) {
             throw new Error('the outbox has no lineage to stamp a local edit with');
           }
@@ -2197,14 +2213,27 @@ describe('createCollabProvider', () => {
       }
 
       public quarantineLineage(lineage: string, reason: string, snapshot: Uint8Array): Promise<number> {
-        return this.enqueue(() => {
-          const moved = this.rows.filter((row) => row.lineage === lineage);
+        this.quarantineAttempts += 1;
 
-          this.rows = this.rows.filter((row) => row.lineage !== lineage);
-
+        return this.enqueue(async () => {
+          // The real store calls `dropSession()` BEFORE its transaction and
+          // never rolls that back, so a quarantine that FAILS still ends the
+          // lineage. That asymmetry is the whole of the stale-row defect.
           if (this.lineage === lineage) {
             this.lineage = null;
           }
+
+          if (this.quarantineGate !== null) {
+            await this.quarantineGate;
+          }
+
+          if (this.failQuarantine !== null) {
+            throw this.failQuarantine;
+          }
+
+          const moved = this.rows.filter((row) => row.lineage === lineage);
+
+          this.rows = this.rows.filter((row) => row.lineage !== lineage);
 
           this.log.push('quarantine');
           this.quarantined.push({ lineage, reason, snapshot, moved });
@@ -2221,7 +2250,7 @@ describe('createCollabProvider', () => {
         };
       }
 
-      private enqueue<T>(work: () => T): Promise<T> {
+      private enqueue<T>(work: () => T | PromiseLike<T>): Promise<T> {
         const result = this.queue.then(work);
 
         this.queue = result.catch(() => undefined);
@@ -2549,21 +2578,31 @@ describe('createCollabProvider', () => {
       const { harness, socket } = v2Handshake(outbox);
 
       harness.store.addBlock({ id: 'mine', type: 'paragraph', data: { text: 'typed' } });
-
-      const bytes = harness.store.encodeStateAsUpdate();
-
-      outbox.seed(bytes);
+      outbox.seed(harness.store.encodeStateAsUpdate());
       serverFirstSync(harness, socket, peer);
       await settle();
 
-      socket.deliver({ type: 'update', update: bytes });
-      socket.deliver({ type: 'update', update: bytes });
+      // The broadcast has to carry something this document LACKS. Echoing back
+      // state we already hold passes whether the frame is applied, applied
+      // twice, or ignored — and ignoring it is the mistake this diff invites,
+      // since v2 replaces the type-0 SEND path while type-0 stays the
+      // server-to-client broadcast format (protocol section 7).
+      peer.addBlock({ id: 'theirs', type: 'paragraph', data: { text: 'peer' } });
+
+      const broadcast = peer.encodeStateAsUpdate(harness.store.getStateVector());
+
+      socket.deliver({ type: 'update', update: broadcast });
+      socket.deliver({ type: 'update', update: broadcast });
       await settle();
 
+      // Sorted: two root blocks from two clients converge in a well-defined but
+      // client-id-dependent order, and the claim here is presence-without-
+      // duplication, not order. A skipped apply gives ['mine'], a doubled one
+      // ['mine', 'theirs', 'theirs'].
       expect(
-        harness.store.toJSON().map((block) => block.id),
-        'the server broadcast of our own operation duplicated the block it carried'
-      ).toEqual(['mine']);
+        [...harness.store.toJSON().map((block) => block.id)].sort(),
+        'a v2 session did not apply the server broadcast, or applied it twice — that frame is how it receives every peer\'s work'
+      ).toEqual(['mine', 'theirs']);
       expect(harness.statuses.some((entry) => entry.status === 'error')).toBe(false);
     });
 
@@ -2820,6 +2859,184 @@ describe('createCollabProvider', () => {
       const storeIsAnOutbox: OperationStore extends CollabOutbox ? true : never = true;
 
       expect(storeIsAnOutbox).toBe(true);
+    });
+
+    it('quarantines a row of an abandoned lineage instead of sending it', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const harness = createHarness({ outbox, initialLineage: LINEAGE_A });
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      // A quarantine that does not commit still ends the lineage in the store,
+      // so the rows stay behind while the session moves on to the next one.
+      outbox.failQuarantine = new Error('the quarantine transaction did not commit');
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+
+      outbox.failQuarantine = null;
+      advanceToReconnect(harness);
+
+      const next = harness.socket();
+
+      next.open(PROTOCOL_V2);
+      next.deliver(controlFrame({ lineage: LINEAGE_B }));
+      serverFirstSync(harness, next, peer);
+      await settle();
+
+      expect(
+        operationIds(next),
+        'a row stamped with an abandoned lineage went on the wire against the new one: the server answers lineage-mismatch, that relineage quarantines a lineage holding nothing, and the client loops forever with no terminal state'
+      ).toEqual([]);
+      expect(
+        outbox.quarantined.map((entry) => entry.lineage),
+        "the stale row was left as oldestPending's answer, which wedges the drain for the session"
+      ).toContain(LINEAGE_A);
+      expect(outbox.rows).toEqual([]);
+    });
+
+    it('stops trying when the stale-lineage quarantine will not commit', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const harness = createHarness({ outbox, initialLineage: LINEAGE_A });
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      // Never lifted: whatever broke the relineage quarantine breaks the drain's
+      // one too.
+      outbox.failQuarantine = new Error('the quarantine transaction did not commit');
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+      advanceToReconnect(harness);
+
+      const next = harness.socket();
+
+      next.open(PROTOCOL_V2);
+      next.deliver(controlFrame({ lineage: LINEAGE_B }));
+      serverFirstSync(harness, next, peer);
+      await settle();
+
+      // One for the relineage, one for the drain's stale row. Re-waking the
+      // drain after a quarantine that did not commit reads the SAME row back
+      // and spins on it.
+      expect(
+        outbox.quarantineAttempts,
+        'the drain re-woke itself after a quarantine that did not commit, so it spins on the row it could not move'
+      ).toBe(2);
+      expect(operationIds(next)).toEqual([]);
+    });
+
+    it('reports a quarantine failure to the host', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const failures: unknown[] = [];
+      const refusal = new Error('the quarantine transaction did not commit');
+      const harness = createHarness({
+        outbox,
+        initialLineage: LINEAGE_A,
+        onOutboxFailure: (thrown) => failures.push(thrown),
+      });
+
+      outbox.seed(new Uint8Array([1]));
+      outbox.failQuarantine = refusal;
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+
+      expect(
+        failures,
+        'a store write the PROVIDER issued failed and nothing told the host, so the session goes on reporting itself healthy while the local copy is poisoned'
+      ).toEqual([refusal]);
+    });
+
+    it('reports a residual append failure to the host', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const failures: unknown[] = [];
+      const refusal = new Error('the outbox write did not commit');
+      const peer = newPeer();
+      const harness = createHarness({ outbox, onOutboxFailure: (thrown) => failures.push(thrown) });
+      const socket = connectAndHandshake(harness, PROTOCOL_V2);
+
+      harness.store.addBlock({ id: 'residual', type: 'paragraph', data: { text: 'kept' } });
+      outbox.failAppend = refusal;
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(
+        failures,
+        'the one append the provider issues itself swallowed its refusal, so the 4.1 contract (drop the adoptable copy when an append rejects) went unhonoured on that path'
+      ).toEqual([refusal]);
+    });
+
+    it('a final rejection leaves the connection alive past the ack deadline', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const rejected = outbox.seed(new Uint8Array([1]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({
+        type: 'rejection',
+        lineage: LINEAGE_A,
+        operationId: rejected.operationId,
+        code: 'invalid-update',
+      });
+      await settle();
+
+      vi.advanceTimersByTime(ACK_TIMEOUT_MS);
+      await settle();
+
+      expect(
+        socket.closedWith,
+        'the acknowledgement deadline of an operation the rejection already settled tore down a connection that is meant to stay open'
+      ).toBeNull();
+      expect(harness.statuses.at(-1)?.status).toBe('connected');
+    });
+
+    it('refuses a connect while the relineage preparation is still running', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const release = { now: (): void => undefined };
+      const harness = createHarness({ outbox, initialLineage: LINEAGE_A }, (seam) => ({
+        ...seam,
+        resetForRelineage: (): void => {
+          outbox.log.push('reset');
+          seam.resetForRelineage();
+        },
+      }));
+
+      outbox.quarantineGate = new Promise<void>((resolve) => {
+        release.now = resolve;
+      });
+      outbox.seed(new Uint8Array([1]));
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+
+      // Inside the window: the quarantine has not committed, so the document
+      // still carries the lineage being discarded.
+      harness.provider.connect();
+
+      expect(
+        harness.sockets,
+        'a host connect opened a generation on a document still being discarded, and the bumped generation then made the pending preparation skip the reset altogether'
+      ).toHaveLength(1);
+
+      release.now();
+      await settle();
+
+      expect(outbox.log).toEqual(['quarantine', 'reset']);
     });
 
     it('drains on the committed hint another tab raises', async () => {

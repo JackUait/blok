@@ -556,6 +556,12 @@ export class Collaboration extends Module {
       // `OperationStore` is a structural superset of the outbox seam, so this
       // is a pass-through. It is also what makes the provider offer v2 at all.
       outbox: this.store ?? undefined,
+      // The provider issues two store writes of its own — the post-drain
+      // residual append and a lineage quarantine — and neither goes through
+      // `captured`. Same policy either way: block editing and drop the copy.
+      onOutboxFailure: (thrown) => {
+        void this.loseDurability(thrown);
+      },
       onStatus: (status, detail) => {
         void this.handleStatus(status, detail);
       },

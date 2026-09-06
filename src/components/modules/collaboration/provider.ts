@@ -106,6 +106,9 @@ const RELINEAGE_REASON = 'lineage-reset';
 /** Recorded with a row this client refused to write because it exceeds the cap. */
 const OVERSIZED_REASON = 'oversized-update';
 
+/** Recorded with a row left behind by a quarantine that did not commit. */
+const STALE_LINEAGE_REASON = 'stale-lineage';
+
 /** Enough to hold a whole first sync ahead of the control frame, not enough to flood us. */
 const MAX_BUFFERED_INBOUND = 64;
 
@@ -521,21 +524,6 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
-   * The room's history is not ours any more — a control frame announcing a new
-   * lineage, or the server closing with 4409.
-   *
-   * Discard our document for a genuinely fresh one and reconnect. It is NEVER
-   * continued on the same socket: this connection already sent a SyncStep1 for
-   * the state vector we just threw away, so the server's answer would be a diff
-   * against history that no longer exists here. A new connection re-does the
-   * handshake from an empty state vector and receives the room whole.
-   *
-   * Always through `scheduleReconnect`, never `openGeneration` — a server that
-   * announces a fresh lineage every time would otherwise spin without backoff.
-   * @param code - the close code that triggered it, if any
-   * @param reason - human explanation for the status detail
-   */
-  /**
    * Moves every pending row of `lineage` out of the outbox, with a recovery
    * snapshot beside them, because nothing stamped with it can be sent any more.
    *
@@ -549,19 +537,26 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * @param lineage - the lineage to empty
    * @param reason - a fixed string, or a codec-validated rejection code; never
    * text a peer wrote
+   * @returns whether the move committed — a caller that goes on to read the
+   * outbox has to know, because a failure leaves the rows in place
    */
-  const quarantineTail = async (lineage: string, reason: string): Promise<void> => {
+  const quarantineTail = async (lineage: string, reason: string): Promise<boolean> => {
     const outbox = options.outbox;
 
     if (outbox === undefined) {
-      return;
+      return false;
     }
 
     try {
       yjs.flushPendingWrites?.();
       await outbox.quarantineLineage(lineage, reason, yjs.encodeStateAsUpdate());
+
+      return true;
     } catch (thrown) {
       logLabeled(`collaboration could not quarantine the pending operations of ${docId}`, 'error', thrown);
+      options.onOutboxFailure?.(thrown);
+
+      return false;
     }
   };
 
@@ -582,6 +577,21 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     scheduleReconnect(code, reason);
   };
 
+  /**
+   * The room's history is not ours any more — a control frame announcing a new
+   * lineage, or the server closing with 4409.
+   *
+   * Discard our document for a genuinely fresh one and reconnect. It is NEVER
+   * continued on the same socket: this connection already sent a SyncStep1 for
+   * the state vector we just threw away, so the server's answer would be a diff
+   * against history that no longer exists here. A new connection re-does the
+   * handshake from an empty state vector and receives the room whole.
+   *
+   * Always through `scheduleReconnect`, never `openGeneration` — a server that
+   * announces a fresh lineage every time would otherwise spin without backoff.
+   * @param code - the close code that triggered it, if any
+   * @param reason - human explanation for the status detail
+   */
   const relineage = (code: number | undefined, reason: string): void => {
     const lineage = state.lineage;
 
@@ -603,6 +613,12 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     const generation = state.generation;
 
+    // Unconditional on the outcome, deliberately. Refusing to finish would park
+    // the provider in 'relineage' with no socket and no reconnect — a silent
+    // wedge. A quarantine that did not commit leaves old-lineage rows behind
+    // (the store ends the session before its transaction and does not roll that
+    // back), and `runDrain`'s stale-lineage guard is what stops those reaching
+    // the wire.
     void quarantineTail(lineage, RELINEAGE_REASON).then(() => {
       if (isStale(generation)) {
         return;
@@ -707,6 +723,25 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         return;
       }
 
+      // A row of a lineage this session no longer serves. It exists only after a
+      // quarantine that did not commit, and sending it is an unbounded loop: the
+      // server answers `lineage-mismatch`, that relineage quarantines the
+      // CURRENT lineage and moves nothing, reconnect, repeat — with no terminal
+      // state and nothing the user can see. A bare `return` is NOT the fix
+      // either: the row stays `oldestPending`'s answer and wedges the drain for
+      // the session. Its OWN lineage has to go.
+      if (row.lineage !== state.lineage) {
+        void quarantineTail(row.lineage, STALE_LINEAGE_REASON).then((moved) => {
+          // Only on a move that committed: re-waking after a failure would read
+          // the same row back and spin.
+          if (moved && !isStale(generation)) {
+            drain();
+          }
+        });
+
+        return;
+      }
+
       sendOperation(socket, row);
     } catch (thrown) {
       logLabeled(`collaboration could not drain the outbox of ${docId}`, 'error', thrown);
@@ -762,6 +797,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       },
       (thrown: unknown) => {
         logLabeled(`collaboration could not journal the residual state of ${docId}`, 'error', thrown);
+        options.onOutboxFailure?.(thrown);
       }
     );
   };

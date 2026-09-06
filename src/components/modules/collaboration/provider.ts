@@ -104,7 +104,7 @@ const TRANSIENT_REJECTION_CODE = 'not-synced';
 const LINEAGE_MISMATCH_CODE = 'lineage-mismatch';
 
 /** Recorded with rows a lineage reset quarantines. Never free text from a peer. */
-const RELINEAGE_REASON = 'lineage-reset';
+export const RELINEAGE_REASON = 'lineage-reset';
 
 /** Recorded with a row this client refused to write because it exceeds the cap. */
 const OVERSIZED_REASON = 'oversized-update';
@@ -873,7 +873,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       state.ackTimer = clearTimer(state.ackTimer);
     }
 
-    options.onOperationSettled?.({ serverSequence: frame.serverSequence });
+    options.onOperationAcknowledged?.(frame.serverSequence);
 
     const generation = state.generation;
 
@@ -936,7 +936,6 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // Final. The tail goes with it: later updates in this lineage may depend on
     // the rejected one, so sending them alone would apply a dependent edit the
     // server has no base for.
-    options.onOperationSettled?.({ rejectionCode: frame.code });
     void quarantineTail(lineage, frame.code);
   };
 

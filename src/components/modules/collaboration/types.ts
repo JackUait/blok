@@ -333,14 +333,17 @@ export interface CollabProviderOptions {
   onOutboxFailure?: (thrown: unknown) => void;
 
   /**
-   * The server settled one durable operation: `serverSequence` when it
-   * acknowledged it, `rejectionCode` when a FINAL rejection retired its tail.
+   * The server acknowledged one durable operation, at `serverSequence`.
    *
-   * RECORDING ONLY — it must publish nothing. The outbox write that follows
-   * (the delete, or the quarantine) is what republishes the save state, and
-   * doing it here would report a row retired before the store had retired it.
+   * RECORDING ONLY — it must publish nothing. The outbox delete that follows is
+   * what republishes the save state, and doing it here would report a row
+   * retired before the store had retired it.
+   *
+   * A rejection has no twin here on purpose: what a quarantine MEANS is read
+   * off the reason the quarantine itself ran with, so no verdict outlives the
+   * quarantine it belongs to.
    */
-  onOperationSettled?: (settled: { serverSequence?: string; rejectionCode?: string }) => void;
+  onOperationAcknowledged?: (serverSequence: string) => void;
 }
 
 /** What {@link createCollabProvider} hands back. */

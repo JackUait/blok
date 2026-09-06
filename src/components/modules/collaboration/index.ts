@@ -16,7 +16,7 @@ import {
 } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
 import { createOperationStore, type OperationStore, type OperationStoreStats } from './operation-store';
-import { createCollabProvider } from './provider';
+import { createCollabProvider, RELINEAGE_REASON } from './provider';
 import type {
   CollabDocSeam,
   CollabOutbox,
@@ -171,20 +171,6 @@ function* presenceStates(states: Map<number, Record<string, unknown>>): Generato
 type SaveState = NonNullable<CollaborationStatusChangedPayload['save']>;
 
 /**
- * Whether two save states say the same thing. The coalescing gate: a retry
- * timer ticking, or a remote update landing, must not publish an event that
- * repeats what the host already has.
- *
- * Compared key by key rather than field by field. Naming the six members
- * individually leaves terms no reachable state can move on their own — a row
- * count never changes without its byte total — so those terms could be deleted
- * with every test still green. The key COUNT is the half that catches an
- * optional member appearing beside otherwise identical numbers, which is what
- * a `reason` arriving does.
- * @param left - the last published save state
- * @param right - the freshly read one
- */
-/**
  * What a store that cannot even be read reports. Its rows are unknowable, so
  * the counts are zero and the verdict is left to the module's own durability
  * latch — which the same failure sets.
@@ -198,6 +184,20 @@ const UNREADABLE_STATS: OperationStoreStats = {
   updateLost: true,
 };
 
+/**
+ * Whether two save states say the same thing. The coalescing gate: a retry
+ * timer ticking, or a remote update landing, must not publish an event that
+ * repeats what the host already has.
+ *
+ * Compared key by key rather than field by field. Naming the six members
+ * individually leaves terms no reachable state can move on their own — a row
+ * count never changes without its byte total — so those terms could be deleted
+ * with every test still green. The key COUNT is the half that catches an
+ * optional member appearing beside otherwise identical numbers, which is what
+ * a `reason` arriving does.
+ * @param left - the last published save state
+ * @param right - the freshly read one
+ */
 const sameSaveState = (left: SaveState, right: SaveState): boolean => {
   const keys = Object.keys(left) as (keyof SaveState)[];
 
@@ -360,8 +360,14 @@ export class Collaboration extends Module {
   /** Where the server journalled the last acknowledged operation. */
   private serverSequence: string | undefined = undefined;
 
-  /** A final rejection retired a tail of this session's edits. */
-  private operationRejected = false;
+  /**
+   * Whether the LAST quarantine was a refusal rather than a room reset.
+   *
+   * Rewritten by every quarantine, never latched: a rejection earlier in the
+   * session must not go on blaming itself for a later lineage reset, which is
+   * a different cause entirely.
+   */
+  private quarantineRejected = false;
 
   /**
    * Attached only in memory mode, and only while rows are waiting. An offline
@@ -476,6 +482,10 @@ export class Collaboration extends Module {
       }),
       quarantineLineage: (lineage, reason, snapshot) =>
         store.quarantineLineage(lineage, reason, snapshot).then((moved) => {
+          // Read off THIS quarantine's own reason. A relineage is the one cause
+          // that is not a refusal; an oversized frame is the client applying
+          // the verdict the server's own `oversized-update` rejection carries.
+          this.quarantineRejected = reason !== RELINEAGE_REASON;
           void this.refreshSave();
 
           return moved;
@@ -519,9 +529,12 @@ export class Collaboration extends Module {
   /**
    * What the local copy says about this browser's unsent work.
    *
-   * `pendingOperations` is REPORTED from the store's counter and nothing is
-   * decided from it: it counts rows `oldestPending` refuses to hand out while
-   * storage is unavailable (Task 4.1's contract).
+   * `pendingOperations` comes from the store's counter, which counts rows
+   * `oldestPending` refuses to hand out while storage is unavailable (Task
+   * 4.1's contract). Two decisions read it — `pending` over `saved` here, and
+   * the unload guard in `refreshSave` — and both are shadowed: the failure
+   * that inflates the count latches `durabilityLost`, and `blocked` is the
+   * first branch. Nothing else may branch on it.
    * @param stats - a fresh read of the store
    */
   private saveStateOf(stats: OperationStoreStats): SaveState {
@@ -553,7 +566,7 @@ export class Collaboration extends Module {
     if (stats.quarantinedOperations > 0) {
       return {
         state: 'quarantined',
-        ...(this.operationRejected ? { reason: 'operation-rejected' as const } : {}),
+        ...(this.quarantineRejected ? { reason: 'operation-rejected' as const } : {}),
         ...counts,
       };
     }
@@ -773,14 +786,8 @@ export class Collaboration extends Module {
       // retired. It is also what makes the provider offer v2 at all.
       outbox: this.store === null ? undefined : this.outboxSeam(this.store),
       keepsLocalCopy: settings.offline,
-      onOperationSettled: ({ serverSequence, rejectionCode }) => {
-        if (serverSequence !== undefined) {
-          this.serverSequence = serverSequence;
-        }
-
-        if (rejectionCode !== undefined) {
-          this.operationRejected = true;
-        }
+      onOperationAcknowledged: (serverSequence) => {
+        this.serverSequence = serverSequence;
       },
       // The provider issues two store writes of its own — the post-drain
       // residual append and a lineage quarantine — and neither goes through

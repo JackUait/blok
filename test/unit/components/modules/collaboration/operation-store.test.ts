@@ -14,9 +14,9 @@ import * as idb from 'lib0/indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
-import type { OfflineCacheLocks } from '../../../../../src/components/modules/collaboration/offline-cache';
 import {
   createOperationStore,
+  type OfflineCacheLocks,
   type OperationStore,
   type OperationStoreOptions,
 } from '../../../../../src/components/modules/collaboration/operation-store';

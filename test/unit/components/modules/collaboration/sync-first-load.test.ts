@@ -2924,6 +2924,84 @@ describe('collaboration — sync-first load', () => {
       ).toBe('9007199254740993');
     }, 30_000);
 
+    /**
+     * The other half of the law above: a state that did NOT move is not an
+     * event. Every path that touches the store re-reads it and would publish,
+     * so a redelivered receipt — the server answers a re-sent operation with
+     * its ORIGINAL acknowledgement (protocol section 7.2) — hands the host a
+     * payload identical to the one it already holds unless the comparator
+     * coalesces it.
+     *
+     * `refreshSave` is private; the lever is the outbox seam's `acknowledge`,
+     * which is what the provider calls for any id on our lineage.
+     */
+    it('a redelivered acknowledgement whose save state is identical publishes nothing', async () => {
+      const { harness, seen } = await watched();
+
+      // FIRST, before anything is measured. The post-ready replay publishes
+      // with `force`, which bypasses the comparator by design, so the event it
+      // is entitled to make would read as a coalescing failure if it landed
+      // inside a window below. Its timer is queued during `load`, so waiting
+      // for the first payload sequences it strictly before the rest.
+      await waitFor(() => seen.length > 0, 'the post-ready replay', 3000);
+
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed once');
+      await waitFor(() => operationOn(socket) !== undefined, 'the operation on the wire', 3000);
+
+      const receipt: Extract<SyncWireFrame, { type: 'acknowledgement' }> = {
+        type: 'acknowledgement',
+        lineage: LINEAGE,
+        operationId: operationOn(socket)?.operationId ?? '',
+        serverSequence: '7',
+      };
+
+      socket.deliver(receipt);
+      await waitFor(() => states(seen).includes('saved'), 'the acknowledged save state', 3000)
+        .catch(() => undefined);
+      await settle(seen);
+
+      expect(
+        seen.at(-1)?.save,
+        'the session never settled on the acknowledged state, so there is nothing to repeat'
+      ).toEqual({
+        state: 'saved',
+        serverSequence: '7',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+
+      const quiet = seen.length;
+
+      // A CONTROL window first, the same length as the measured one and with
+      // nothing delivered into it. Without it a session that publishes on its
+      // own — a late store read, a presence change — would fail the window
+      // below and read as a comparator that stopped coalescing.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      expect(
+        seen.length - quiet,
+        'the settled session published on its own, so the window below measures noise, not the comparator'
+      ).toBe(0);
+
+      // The SAME receipt: the row it names is already gone, so the delete is a
+      // no-op, and the sequence it carries is the one already published.
+      socket.deliver(receipt);
+
+      // A republish would ride the acknowledge transaction's completion, so
+      // this waits well past it instead of asserting on the same tick.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      expect(
+        seen.length - quiet,
+        'the host was told again about a save state it was already in'
+      ).toBe(0);
+    }, 30_000);
+
     it('a host subscribing right after isReady receives the current save state', async () => {
       const harness = await boot();
 

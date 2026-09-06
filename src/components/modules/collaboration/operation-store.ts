@@ -1,13 +1,12 @@
 // lib0's `put`/`del`/`add`/`addAutoKey` helpers accept only
 // `string | number | ArrayBuffer | Date` as an item and a narrower key union
-// than `IDBValidKey`, so an object row does not type-check through them — the
-// six TS errors `offline-cache.ts` carries. Only `openDB`, `transact` and the
-// read helpers are used from lib0 here; every write goes straight to the native
-// store, and every read through the typed `read` wrapper below.
+// than `IDBValidKey`, so an object row does not type-check through them. Only
+// `openDB`, `transact` and the read helpers are used from lib0 here; every
+// write goes straight to the native store, and every read through the typed
+// `read` wrapper below.
 import * as idb from 'lib0/indexeddb';
 import * as Y from 'yjs';
 
-import type { OfflineCacheLocks } from './offline-cache';
 import type { SessionProtocol, WorkingSetTag } from './types';
 
 /**
@@ -33,6 +32,19 @@ const BY_OPERATION_ID = 'by-operation-id';
 const OPERATION_ID_BYTES = 16;
 
 export type { SessionProtocol };
+
+/**
+ * The slice of the Web Locks API compaction needs. Injected so the caller can
+ * supply one in an environment that has none — `navigator.locks` is absent in
+ * jsdom and in older browsers.
+ */
+export interface OfflineCacheLocks {
+  request: (
+    name: string,
+    options: { ifAvailable: boolean },
+    callback: (lock: unknown) => Promise<void>
+  ) => Promise<void>;
+}
 
 export interface OperationStoreOptions {
   /** Canonical server URL. */

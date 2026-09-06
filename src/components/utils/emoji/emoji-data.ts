@@ -1,4 +1,4 @@
-// src/tools/callout/emoji-picker/emoji-data.ts
+// src/components/utils/emoji/emoji-data.ts
 
 import type { EmojiLocaleData } from './emoji-locale';
 

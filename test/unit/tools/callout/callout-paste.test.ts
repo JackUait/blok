@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { API, BlockToolConstructorOptions, HTMLPasteEvent } from '../../../../types';
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
 
-vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
+vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([]),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),

@@ -1,4 +1,4 @@
-// test/unit/tools/callout/emoji-picker/emoji-locale.test.ts
+// test/unit/components/utils/emoji/emoji-locale.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -18,18 +18,18 @@ describe('emoji-locale', () => {
   });
 
   it('loadEmojiLocale returns locale data for a supported locale', async () => {
-    vi.doMock('../../../../../src/tools/callout/emoji-picker/locales/fr.json', () => ({
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', () => ({
       default: MOCK_FR_DATA,
     }));
 
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const data = await loadEmojiLocale('fr');
 
     expect(data).toEqual(MOCK_FR_DATA);
   });
 
   it('loadEmojiLocale returns Traditional Chinese names and keywords for Taiwan', async () => {
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const data = await loadEmojiLocale('zh-TW');
 
     expect(data?.['😀']?.n).toBe('笑臉');
@@ -37,32 +37,32 @@ describe('emoji-locale', () => {
   });
 
   it('loadEmojiLocale returns null for English', async () => {
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const data = await loadEmojiLocale('en');
 
     expect(data).toBeNull();
   });
 
   it('falls back to English instead of loading Kurmanji metadata for Sorani', async () => {
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const data = await loadEmojiLocale('ku');
 
     expect(data).toBeNull();
   });
 
   it('loadEmojiLocale returns null for unsupported locale', async () => {
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const data = await loadEmojiLocale('xx');
 
     expect(data).toBeNull();
   });
 
   it('loadEmojiLocale caches result on second call', async () => {
-    vi.doMock('../../../../../src/tools/callout/emoji-picker/locales/fr.json', () => ({
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', () => ({
       default: MOCK_FR_DATA,
     }));
 
-    const { loadEmojiLocale } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const first = await loadEmojiLocale('fr');
     const second = await loadEmojiLocale('fr');
 
@@ -70,11 +70,11 @@ describe('emoji-locale', () => {
   });
 
   it('getTranslatedName returns translated name when available', async () => {
-    vi.doMock('../../../../../src/tools/callout/emoji-picker/locales/fr.json', () => ({
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', () => ({
       default: MOCK_FR_DATA,
     }));
 
-    const { loadEmojiLocale, getTranslatedName } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale, getTranslatedName } = await import('../../../../../src/components/utils/emoji/emoji-locale');
 
     await loadEmojiLocale('fr');
     const name = getTranslatedName('💡', 'fr');
@@ -83,18 +83,18 @@ describe('emoji-locale', () => {
   });
 
   it('getTranslatedName returns null when locale not loaded', async () => {
-    const { getTranslatedName } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { getTranslatedName } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const name = getTranslatedName('💡', 'fr');
 
     expect(name).toBeNull();
   });
 
   it('getTranslatedName returns null when emoji not in locale data', async () => {
-    vi.doMock('../../../../../src/tools/callout/emoji-picker/locales/fr.json', () => ({
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', () => ({
       default: MOCK_FR_DATA,
     }));
 
-    const { loadEmojiLocale, getTranslatedName } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale, getTranslatedName } = await import('../../../../../src/components/utils/emoji/emoji-locale');
 
     await loadEmojiLocale('fr');
     const name = getTranslatedName('🦄', 'fr');
@@ -103,11 +103,11 @@ describe('emoji-locale', () => {
   });
 
   it('getTranslatedKeywords returns translated keywords when available', async () => {
-    vi.doMock('../../../../../src/tools/callout/emoji-picker/locales/fr.json', () => ({
+    vi.doMock('../../../../../src/components/utils/emoji/locales/fr.json', () => ({
       default: MOCK_FR_DATA,
     }));
 
-    const { loadEmojiLocale, getTranslatedKeywords } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { loadEmojiLocale, getTranslatedKeywords } = await import('../../../../../src/components/utils/emoji/emoji-locale');
 
     await loadEmojiLocale('fr');
     const keywords = getTranslatedKeywords('💡', 'fr');
@@ -116,7 +116,7 @@ describe('emoji-locale', () => {
   });
 
   it('getTranslatedKeywords returns null when locale not loaded', async () => {
-    const { getTranslatedKeywords } = await import('../../../../../src/tools/callout/emoji-picker/emoji-locale');
+    const { getTranslatedKeywords } = await import('../../../../../src/components/utils/emoji/emoji-locale');
     const keywords = getTranslatedKeywords('💡', 'fr');
 
     expect(keywords).toBeNull();

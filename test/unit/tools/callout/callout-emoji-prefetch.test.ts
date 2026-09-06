@@ -6,14 +6,14 @@ import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/t
 
 const mockLoadEmojiData = vi.fn();
 
-vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
+vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
   loadEmojiData: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),
   CURATED_CALLOUT_EMOJIS: [],
 }));
 
-vi.mock('../../../../src/tools/callout/emoji-picker/emoji-locale', () => ({
+vi.mock('../../../../src/components/utils/emoji/emoji-locale', () => ({
   loadEmojiLocale: vi.fn().mockResolvedValue(null),
   getTranslatedName: vi.fn().mockReturnValue(null),
 }));

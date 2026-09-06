@@ -1,4 +1,4 @@
-// test/unit/tools/callout/emoji-picker/emoji-data.test.ts
+// test/unit/components/utils/emoji/emoji-data.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -27,7 +27,7 @@ describe('emoji-data', () => {
   });
 
   it('loadEmojiData returns processed emojis with native char, id, name, keywords, category', async () => {
-    const { loadEmojiData } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
 
     expect(emojis).toHaveLength(4);
@@ -41,7 +41,7 @@ describe('emoji-data', () => {
   });
 
   it('loadEmojiData caches result on second call', async () => {
-    const { loadEmojiData } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const first = await loadEmojiData();
     const second = await loadEmojiData();
 
@@ -49,7 +49,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis filters by name', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const results = searchEmojis(emojis, 'light');
 
@@ -58,7 +58,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis filters by keyword', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const results = searchEmojis(emojis, 'idea');
 
@@ -67,7 +67,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis is case-insensitive', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const results = searchEmojis(emojis, 'HAPPY');
 
@@ -76,7 +76,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis returns empty array for no match', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const results = searchEmojis(emojis, 'zzznomatch');
 
@@ -84,7 +84,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis matches against translated names when locale data is provided', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const localeData = {
       '💡': { n: 'ampoule', k: ['idée', 'lumière'] },
@@ -96,7 +96,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis matches against translated keywords when locale data is provided', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const localeData = {
       '💡': { n: 'ampoule', k: ['idée', 'lumière'] },
@@ -108,7 +108,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis still matches English names when locale data is provided', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const localeData = {
       '💡': { n: 'ampoule', k: ['idée'] },
@@ -120,7 +120,7 @@ describe('emoji-data', () => {
   });
 
   it('searchEmojis works without locale data (backward compatible)', async () => {
-    const { loadEmojiData, searchEmojis } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { loadEmojiData, searchEmojis } = await import('../../../../../src/components/utils/emoji/emoji-data');
     const emojis = await loadEmojiData();
     const results = searchEmojis(emojis, 'light');
 
@@ -129,7 +129,7 @@ describe('emoji-data', () => {
   });
 
   it('CURATED_CALLOUT_EMOJIS contains 💡 and has ~20 entries', async () => {
-    const { CURATED_CALLOUT_EMOJIS } = await import('../../../../../src/tools/callout/emoji-picker/emoji-data');
+    const { CURATED_CALLOUT_EMOJIS } = await import('../../../../../src/components/utils/emoji/emoji-data');
 
     expect(CURATED_CALLOUT_EMOJIS).toContain('💡');
     expect(CURATED_CALLOUT_EMOJIS.length).toBeGreaterThanOrEqual(15);

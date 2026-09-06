@@ -6,7 +6,7 @@
  * per-locale JSON files consumed at runtime by the emoji picker.
  *
  * Usage:  node scripts/build-emoji-locale-data.mjs
- * Output: src/tools/callout/emoji-picker/locales/{locale}.json
+ * Output: src/components/utils/emoji/locales/{locale}.json
  */
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -58,7 +58,7 @@ const CLDR_LOCALE_OVERRIDES = {
 /* ------------------------------------------------------------------ */
 
 const OUTPUT_DIR = process.env.BLOK_EMOJI_LOCALE_OUTPUT_DIR ??
-  join(ROOT, 'src/tools/callout/emoji-picker/locales');
+  join(ROOT, 'src/components/utils/emoji/locales');
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
 

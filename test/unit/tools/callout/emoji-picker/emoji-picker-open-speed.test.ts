@@ -1,7 +1,7 @@
 // test/unit/tools/callout/emoji-picker/emoji-picker-open-speed.test.ts
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-picker/emoji-data';
+import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
 vi.mock('../../../../../src/components/utils/tooltip', () => ({
   onHover: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
 
 const mockLoadEmojiLocale = vi.fn().mockResolvedValue(null);
 
-vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-locale', () => ({
+vi.mock('../../../../../src/components/utils/emoji/emoji-locale', () => ({
   loadEmojiLocale: (...args: unknown[]): unknown => mockLoadEmojiLocale(...args),
   getTranslatedName: vi.fn().mockReturnValue(null),
 }));
@@ -24,7 +24,7 @@ const EMOJIS: ProcessedEmoji[] = [
 
 const mockLoadEmojiData = vi.fn();
 
-vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
+vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => ({
   loadEmojiData: (...args: unknown[]): unknown => mockLoadEmojiData(...args),
   searchEmojis: vi.fn((emojis: ProcessedEmoji[], q: string) => emojis.filter(e => e.name.toLowerCase().includes(q.toLowerCase()))),
   groupEmojisByCategory: vi.fn((emojis: ProcessedEmoji[]) => {

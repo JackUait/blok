@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { simulateInput, simulateKeydown, simulateMousedown } from '../../../../helpers/simulate';
-import type { ProcessedEmoji } from '../../../../../src/tools/callout/emoji-picker/emoji-data';
+import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
 const mockOnHover = vi.fn();
 
@@ -14,12 +14,12 @@ vi.mock('../../../../../src/components/utils/tooltip', () => ({
 const mockLoadEmojiLocale = vi.fn().mockResolvedValue(null);
 const mockGetTranslatedName = vi.fn().mockReturnValue(null);
 
-vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-locale', () => ({
+vi.mock('../../../../../src/components/utils/emoji/emoji-locale', () => ({
   loadEmojiLocale: (...args: unknown[]): unknown => mockLoadEmojiLocale(...args),
   getTranslatedName: (...args: unknown[]): unknown => mockGetTranslatedName(...args),
 }));
 
-vi.mock('../../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
+vi.mock('../../../../../src/components/utils/emoji/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([
     { native: '💡', skins: ['💡'], id: 'bulb', name: 'Light Bulb', keywords: ['light', 'idea'], category: 'objects' },
     { native: '😀', skins: ['😀'], id: 'grinning', name: 'Grinning Face', keywords: ['face', 'happy'], category: 'people' },

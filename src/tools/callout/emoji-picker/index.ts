@@ -1,7 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
-import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from './emoji-data';
-import { loadEmojiLocale, type EmojiLocaleData } from './emoji-locale';
+import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
+import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { getTabbables } from '../../../components/utils/modal-dialog';
 import { createPositionTracker, type PositionTracker } from '../../../components/utils/popover/anchored-position';

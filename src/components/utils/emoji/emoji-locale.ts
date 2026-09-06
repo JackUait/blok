@@ -1,4 +1,4 @@
-// src/tools/callout/emoji-picker/emoji-locale.ts
+// src/components/utils/emoji/emoji-locale.ts
 
 /**
  * Entry shape for a single emoji in a locale file.

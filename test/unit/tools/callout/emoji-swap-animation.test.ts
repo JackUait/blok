@@ -5,7 +5,7 @@ import type { API, BlockToolConstructorOptions } from '../../../../types';
 import type { CalloutData, CalloutConfig } from '../../../../src/tools/callout/types';
 import { CalloutTool } from '../../../../src/tools/callout';
 
-vi.mock('../../../../src/tools/callout/emoji-picker/emoji-data', () => ({
+vi.mock('../../../../src/components/utils/emoji/emoji-data', () => ({
   loadEmojiData: vi.fn().mockResolvedValue([]),
   searchEmojis: vi.fn().mockReturnValue([]),
   groupEmojisByCategory: vi.fn().mockReturnValue(new Map()),

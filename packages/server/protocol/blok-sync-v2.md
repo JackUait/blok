@@ -129,7 +129,10 @@ varuint(101)  varstring({"maxMessageBytes":N})
 ```
 
 `maxMessageBytes` MUST be a positive integer. It is the cap an operation is
-measured against before the server answers `oversized-update`.
+measured against before a server answers `oversized-update` — see section 11.3:
+the reference server never answers it, because in this implementation the
+verdict is reached client-side against this frame before the operation is
+sent.
 
 Both Blok payloads keep the v1 decoder rules they shipped with; section 5's
 rules are v2 metadata rules and do not retroactively change them.
@@ -537,8 +540,8 @@ from a run rather than trust the sentence.
 runner. It builds
 `packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj` twice — once
 in Release, once in Debug with `BLOK_SERVER_CONFORMANCE` defined — and then
-runs the four files in `test/unit/server-conformance/` against the built
-binaries. `--target` accepts only `csharp`: **the runner drives the built C#
+runs four of the files in `test/unit/server-conformance/` against the built
+binaries — the two fixture-freshness files there are not in its list. `--target` accepts only `csharp`: **the runner drives the built C#
 host and nothing else, and this document adds no external-target mode.**
 `--test-name-pattern` is a case-sensitive regular expression matched against
 the whole test name; vitest exits 0 when a pattern selects nothing, so the
@@ -686,9 +689,22 @@ retry, it would be a new operation. The old lineage's records remain history; a
 reset MUST NOT erase them.
 
 *Executed by* `a reset starts a new lineage that refuses the old one and reuses
-none of its ids`: a new lineage value, `lineage-mismatch` for the old one on an
-otherwise healthy socket, the old lineage's id and bytes committing afresh at
-sequence `1`, and the superseded generation's journal still on disk.
+none of its ids`. Two of its assertions are there because the obvious ones
+cannot separate a conformant server from a broken one:
+
+- the id committed on the old lineage answers `1` on the new one — but so would
+  a duplicate served out of the old lineage's history, whose original sequence
+  was also 1. What separates them is the NEXT sequence: the test asserts `2`,
+  which only holds if the first commit actually appended.
+- the ordering MUST needs an id the lookup would FIND. A fresh id on the
+  superseded lineage is refused by a lookup-first server too, since neither
+  ordering finds it. So the test re-submits the carried id on the old lineage
+  *after* it is committed on the new one: a lookup-first server answers that a
+  duplicate, and only a lineage-first server answers `lineage-mismatch`.
+
+It also reads the document only once the relayed updates have arrived, not off
+the acknowledgement — section 8 says a type-103 is not a delivery receipt, and
+this server relays the committed update after it.
 
 #### S8 — Authenticated actor and read-only rejection
 

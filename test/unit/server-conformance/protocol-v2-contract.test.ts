@@ -1168,11 +1168,34 @@ it(
     expect(after.closed).toBeNull();
 
     // The very id and bytes that are durable on the OLD lineage commit afresh
-    // at sequence 1 rather than answering as a duplicate. Ids are
+    // rather than answering as a duplicate out of that history. Ids are
     // lineage-scoped, which is why a client quarantines its pending
     // old-lineage rows instead of replaying them here.
     expect(await after.commit(alpha, carried)).toBe('1');
-    expect(contentOf(after.doc)).toEqual(['alpha']);
+    // `1` alone cannot say which happened: a duplicate served out of the old
+    // lineage carries its original sequence, which was also 1. Only the NEXT
+    // sequence separates them — a duplicate commits nothing, so the new
+    // lineage would still be empty and this would be `1`.
+    expect(await after.commit(independentUpdate('beta'))).toBe('2');
+    // And this is what separates lineage-first from lookup-first. `carried` is
+    // NOW committed on the CURRENT lineage, so a server that looked the id up
+    // before comparing the lineage would answer this as a duplicate. The fresh
+    // id above cannot tell the two orderings apart: neither of them finds it.
+    after.submit(carried, alpha, before);
+    expect(await waitForRejection(after, carried)).toBe('lineage-mismatch');
+
+    // Section 8: an acknowledgement is not a delivery receipt. This server
+    // relays the committed update AFTER the type-103, so reading the document
+    // off the acknowledgement is a race the test loses about half the time.
+    await waitFor(
+      () => {
+        after.drain();
+
+        return contentOf(after.doc).length === 2;
+      },
+      () => `both relayed updates (${after.describe()})`,
+    );
+    expect(contentOf(after.doc)).toEqual(['alpha', 'beta']);
     after.destroy();
 
     // The superseded generation's journal is still on disk: a reset starts a

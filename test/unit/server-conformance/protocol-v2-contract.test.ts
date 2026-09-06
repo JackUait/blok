@@ -1,10 +1,11 @@
 // @vitest-environment node
 
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { appendFile, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { expect, it as baseIt } from 'vitest';
 import * as Y from 'yjs';
@@ -28,6 +29,17 @@ import { startServer, type RunningServer } from './run-against';
  * ICollabOperationStore, so it negotiates v1 and has no journal at all; every
  * helper here therefore asserts the negotiated subprotocol before it asserts
  * anything about durability.
+ *
+ * WHAT NONE OF THIS PROVES IS FSYNC, and the gap is bigger than it looks. A
+ * killed process leaves its page cache to the kernel, so a record that reached
+ * write(2) survives SIGKILL whether or not it was flushed to stable storage.
+ * Deleting `journal.Flush(flushToDisk: true)` from LocalCollabOperationStore
+ * outright leaves all six of these tests green — the journal FileStream is
+ * opened with BufferSize = 0, so the bytes reach the page cache on the write
+ * either way. The line the store's own remarks call "THE ACKNOWLEDGEMENT
+ * BOUNDARY IS ONE FLUSH" therefore has NO coverage here. These tests prove
+ * ORDERING: nothing is acknowledged before it is written. Durability across
+ * power loss needs a power cut or a fault-injecting filesystem.
  */
 const unset = (name: string): boolean =>
   process.env[name] === undefined || process.env[name] === '';
@@ -35,6 +47,9 @@ const unset = (name: string): boolean =>
 const it = baseIt.skipIf(unset('BLOK_CONFORMANCE_SERVER'));
 
 const DOC_ID = 'doc-journal';
+/** The document every fixture ticket in `fixtures/tickets.json` names. */
+const TICKET_DOC_ID = 'doc-42';
+const ALLOWED_ORIGIN = 'https://app.example.com';
 const PROTOCOL_V2 = 'blok-sync.v2';
 const SYNC_TYPE = 0;
 const STEP1 = 0;
@@ -45,7 +60,10 @@ const OPERATION_TYPE = 102;
 const ACKNOWLEDGEMENT_TYPE = 103;
 const REJECTION_TYPE = 104;
 const DRAINING_CLOSE = 1001;
+const RESET_CLOSE = 4409;
 const UNAVAILABLE_CLOSE = 4503;
+/** Its own text, so a failed commit is not read as a failed seed (same 4503). */
+const COMMIT_UNAVAILABLE_REASON = 'commit unavailable, retry';
 /** The shared Yjs root every operation in this file appends one string to. */
 const ROOT = 'conformance';
 /** CollabJournalCodec: bodyLength + version + source + a 32-byte header checksum. */
@@ -69,7 +87,10 @@ interface V2Client {
   commit(update: Uint8Array, operationId?: string): Promise<string>;
   describe(): string;
   destroy(): void;
-  submit(operationId: string, update: Uint8Array): void;
+  /** Absorbs whatever has arrived; `doc` only advances when something reads. */
+  drain(): void;
+  /** `lineage` defaults to the one this connection was told; pass another to name a superseded one. */
+  submit(operationId: string, update: Uint8Array, lineage?: string): void;
   waitForAck(operationId: string): Promise<string>;
 }
 
@@ -257,17 +278,28 @@ async function checkpointThrough(
   return Number(parts[parts.length - 2]);
 }
 
-/** Byte offsets of every complete record; the remainder, if any, is a torn tail. */
+/**
+ * Byte offsets of every record. A journal whose records do not tile it exactly
+ * is REFUSED rather than reported as a plausible count: RECORD_HEADER_BYTES is
+ * hand-copied from CollabJournalCodec.HeaderSize, and a header that grew would
+ * otherwise silently mis-parse and make every length assertion in this file
+ * meaningless.
+ */
 function recordOffsets(journal: Buffer): number[] {
   const offsets: number[] = [];
   let at = 0;
 
-  while (at + RECORD_HEADER_BYTES <= journal.length) {
-    const bodyLength = journal.readInt32LE(at);
+  while (at < journal.length) {
+    const bodyLength = at + RECORD_HEADER_BYTES <= journal.length
+      ? journal.readInt32LE(at)
+      : -1;
     const end = at + RECORD_HEADER_BYTES + bodyLength;
 
     if (bodyLength < 0 || end > journal.length) {
-      break;
+      throw new Error(
+        `The journal does not tile into records: ${journal.length - at} bytes are left over ` +
+        `after ${offsets.length} records, with a header size of ${RECORD_HEADER_BYTES}.`,
+      );
     }
 
     offsets.push(at);
@@ -294,21 +326,54 @@ async function journalDigest(collabDirectory: string, docId: string): Promise<st
   return digest.digest('hex');
 }
 
+interface Tickets {
+  compatible: string;
+  readOnly: string;
+  secret: string;
+}
+
+/** The same signed fixture passes the other conformance files use; `doc-42` is their document. */
+function loadTickets(): Tickets {
+  const path = fileURLToPath(new URL('./fixtures/tickets.json', import.meta.url));
+  const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('The server ticket fixture has an invalid shape');
+  }
+
+  const read = (key: keyof Tickets): string => {
+    const value = (parsed as Record<string, unknown>)[key];
+
+    if (typeof value !== 'string' || value === '') {
+      throw new Error(`The server ticket fixture is missing "${key}"`);
+    }
+
+    return value;
+  };
+
+  return { compatible: read('compatible'), readOnly: read('readOnly'), secret: read('secret') };
+}
+
+const tickets = loadTickets();
+
 function startJournalServer(
   collabDirectory: string,
   endpoint: FixtureDocEndpoint,
+  auth: 'none' | 'ticket',
 ): Promise<RunningServer> {
   return startServer({
     args: [
       '--listen', '127.0.0.1:0',
-      '--auth', 'none',
+      '--auth', auth,
       '--storage-dir', '',
       '--rate-limit', '0',
       '--collab',
       '--collab-dir', collabDirectory,
       '--doc-endpoint', endpoint.url,
       '--conformance-journal',
+      ...(auth === 'ticket' ? ['--allow-origin', ALLOWED_ORIGIN] : []),
     ],
+    env: auth === 'ticket' ? { BLOK_SECRET: tickets.secret } : {},
   });
 }
 
@@ -319,9 +384,20 @@ interface RawSocket {
   destroy(): void;
 }
 
-function openSocket(server: RunningServer, docId: string): Promise<RawSocket> {
+function openSocket(server: RunningServer, docId: string, ticket?: string): Promise<RawSocket> {
   const url = `${server.baseUrl.replace(/^http:/, 'ws:')}/sync/${encodeURIComponent(docId)}`;
-  const socket = new WebSocket(url, [PROTOCOL_V2, 'blok-sync.v1']);
+  const protocols = ticket === undefined
+    ? [PROTOCOL_V2, 'blok-sync.v1']
+    : [PROTOCOL_V2, 'blok-sync.v1', ticket];
+  // Node's WebSocket sends no Origin header and ticket mode refuses an upgrade
+  // without an allowed one. Node takes headers through an undici init object in
+  // the protocols slot; the DOM typing does not know it.
+  const socket = ticket === undefined
+    ? new WebSocket(url, protocols)
+    : new WebSocket(
+        url,
+        { protocols, headers: { Origin: ALLOWED_ORIGIN } } as unknown as string[],
+      );
   const frames: Uint8Array[] = [];
   let closed: CloseRecord | null = null;
 
@@ -362,8 +438,12 @@ function openSocket(server: RunningServer, docId: string): Promise<RawSocket> {
  * sent before it has answered a SyncStep1 (`not-synced`), so the handshake is
  * not optional.
  */
-async function connect(server: RunningServer, docId = DOC_ID): Promise<V2Client> {
-  const raw = await openSocket(server, docId);
+async function connect(
+  server: RunningServer,
+  docId = DOC_ID,
+  ticket?: string,
+): Promise<V2Client> {
+  const raw = await openSocket(server, docId, ticket);
   const acks = new Map<string, string>();
   const rejections = new Map<string, string>();
   const doc = new Y.Doc();
@@ -448,6 +528,7 @@ async function connect(server: RunningServer, docId = DOC_ID): Promise<V2Client>
   return {
     doc,
     describe,
+    drain,
     get acks() {
       drain();
 
@@ -479,8 +560,8 @@ async function connect(server: RunningServer, docId = DOC_ID): Promise<V2Client>
       raw.destroy();
       doc.destroy();
     },
-    submit: (id, update) => {
-      raw.socket.send(operationFrame(lineage ?? '', id, update));
+    submit: (id, update, named = lineage ?? '') => {
+      raw.socket.send(operationFrame(named, id, update));
     },
     waitForAck,
   };
@@ -504,7 +585,10 @@ interface Harness {
   start(): Promise<RunningServer>;
 }
 
-async function withHarness(body: (harness: Harness) => Promise<void>): Promise<void> {
+async function withHarness(
+  body: (harness: Harness) => Promise<void>,
+  auth: 'none' | 'ticket' = 'none',
+): Promise<void> {
   const root = await mkdtemp(join(tmpdir(), 'blok-journal-'));
   const collabDirectory = join(root, 'collab');
   const endpoint = await startDocEndpoint();
@@ -515,7 +599,7 @@ async function withHarness(body: (harness: Harness) => Promise<void>): Promise<v
       collabDirectory,
       endpoint,
       start: async () => {
-        const server = await startJournalServer(collabDirectory, endpoint);
+        const server = await startJournalServer(collabDirectory, endpoint, auth);
 
         servers.push(server);
 
@@ -532,6 +616,68 @@ async function withHarness(body: (harness: Harness) => Promise<void>): Promise<v
   }
 }
 
+/**
+ * Like `waitForAck`, but the answer this operation is owed is a type-104. It
+ * never settles on an acknowledgement, because the id under test may already
+ * be ACKNOWLEDGED from an earlier send — which is the whole point of the
+ * conflict case.
+ */
+async function waitForRejection(client: V2Client, id: string): Promise<string> {
+  await waitFor(
+    () => client.rejections.has(id) || client.closed !== null,
+    () => `a rejection of operation ${id} (${client.describe()})`,
+  );
+
+  const code = client.rejections.get(id);
+
+  if (code === undefined) {
+    throw new Error(`Operation ${id} was not rejected: ${client.describe()}`);
+  }
+
+  return code;
+}
+
+/**
+ * A join after a commit failure. The room manager refuses the document for a
+ * doubling wait rather than reloading it through the outage, so the FIRST join
+ * after the store recovers is answered with a close; this probes until one
+ * survives instead of assuming a duration.
+ */
+async function connectAfterOutage(server: RunningServer, docId = DOC_ID): Promise<V2Client> {
+  const deadline = Date.now() + DEADLINE_MS;
+
+  for (;;) {
+    const probe = await openSocket(server, docId);
+
+    await waitFor(
+      () => probe.frames.length > 0 || probe.closed !== null,
+      () => 'the room to answer a probe join',
+    );
+
+    const refused = probe.closed !== null;
+
+    probe.destroy();
+
+    if (!refused) {
+      return connect(server, docId);
+    }
+
+    if (Date.now() > deadline) {
+      throw new Error(`The room for "${docId}" stayed unavailable for ${DEADLINE_MS} ms`);
+    }
+
+    await delay(POLL_INTERVAL_MS);
+  }
+}
+
+/** CollabJournalCodec's body: operationId, sequence, ticks, then the actor's length. */
+function actorOf(journal: Buffer, offset: number): string | null {
+  const body = offset + RECORD_HEADER_BYTES;
+  const length = journal.readInt32LE(body + 32);
+
+  return length < 0 ? null : journal.toString('utf8', body + 36, body + 36 + length);
+}
+
 it(
   'an acknowledged operation survives a hard kill and restart',
   { timeout: TEST_TIMEOUT_MS },
@@ -540,6 +686,11 @@ it(
     const client = await connect(server);
 
     expect(await client.commit(independentUpdate('alpha'))).toBe('1');
+    // BEFORE the kill, and that ordering is the whole assertion: a 103 is only
+    // honest if the record was already on disk when it went out. Read only
+    // after the kill, this passes for a server that acknowledged first and
+    // wrote a moment later, because the kill lands after both.
+    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID)))).toHaveLength(1);
     client.destroy();
     await server.kill();
 
@@ -576,8 +727,10 @@ it(
     client.destroy();
     await server.kill();
 
-    // What a process killed mid-append leaves: a record header that was never
-    // finished. Recovery must drop exactly it, and nothing before it.
+    // A tail that is not a whole record. SIGKILL cannot produce this — the
+    // journal stream is unbuffered, so a record is one write(2) that either
+    // happened or did not — but a power cut or a partial sector can, and
+    // recovery must drop exactly it and nothing before it.
     await appendFile(await journalFile(collabDirectory, DOC_ID), Buffer.alloc(12, 0xab));
 
     const restarted = await start();
@@ -785,4 +938,248 @@ it(
       await restarted.stop();
     }
   }),
+);
+
+it(
+  'a resent operation with the same id and the same bytes is answered from history, never committed twice',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const client = await connect(server);
+    const first = operationId();
+    const alpha = independentUpdate('alpha');
+
+    expect(await client.commit(alpha, first)).toBe('1');
+    // The retry a client makes when it never saw the acknowledgement: the
+    // ORIGINAL sequence comes back.
+    expect(await client.commit(alpha, first)).toBe('1');
+    // ...and the next new operation takes 2, so the duplicate spent no sequence.
+    expect(await client.commit(independentUpdate('beta'))).toBe('2');
+    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID))))
+      .toHaveLength(2);
+    client.destroy();
+    expect(await lateJoin(server)).toEqual(['alpha', 'beta']);
+  }),
+);
+
+it(
+  'the same operation id with different bytes is refused as a conflict and never applied',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const client = await connect(server);
+    const reused = operationId();
+
+    expect(await client.commit(independentUpdate('alpha'), reused)).toBe('1');
+    client.submit(reused, independentUpdate('beta'));
+    expect(await waitForRejection(client, reused)).toBe('operation-id-conflict');
+    // A per-operation refusal, not a close: any writer could otherwise end the
+    // room for everyone by re-sending one id with different bytes.
+    expect(client.closed).toBeNull();
+    expect(await client.commit(independentUpdate('gamma'))).toBe('2');
+    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID))))
+      .toHaveLength(2);
+    // The refused bytes never reached the document: the id is settled BEFORE
+    // the update is applied.
+    expect(contentOf(client.doc)).toEqual(['alpha', 'gamma']);
+    client.destroy();
+    expect(await lateJoin(server)).toEqual(['alpha', 'gamma']);
+  }),
+);
+
+it(
+  'a failed journal commit acknowledges nothing, closes every member 4503, and leaves the retry to settle it',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const writer = await connect(server);
+    const observer = await connect(server);
+    const pending = operationId();
+    const beta = independentUpdate('beta');
+
+    expect(await writer.commit(independentUpdate('alpha'))).toBe('1');
+
+    const journal = await journalFile(collabDirectory, DOC_ID);
+    const manifest = join(journalDirectory(collabDirectory, DOC_ID), 'manifest');
+    const intact = await readFile(manifest);
+
+    // The store's own head, made unreadable under the open session. Its fence
+    // lives here and is re-read from this path before anything is written, so
+    // every call the commit path makes now fails — which is the only outage
+    // this harness can induce from outside the process.
+    await writeFile(manifest, Buffer.alloc(intact.length, 0));
+    writer.submit(pending, beta);
+    await waitFor(
+      () => writer.closed !== null && observer.closed !== null,
+      () => `both members to close (${writer.describe()}; ${observer.describe()})`,
+    );
+
+    // Neither answer: the outcome is UNKNOWN, and a type-104 would tell the
+    // client to quarantine work that may well be durable.
+    expect(writer.acks.has(pending)).toBe(false);
+    expect(writer.rejections.has(pending)).toBe(false);
+    expect(writer.closed).toEqual({
+      code: UNAVAILABLE_CLOSE,
+      reason: COMMIT_UNAVAILABLE_REASON,
+    });
+    // Not only the writer: the room discards itself, so every member goes.
+    expect(observer.closed).toEqual({
+      code: UNAVAILABLE_CLOSE,
+      reason: COMMIT_UNAVAILABLE_REASON,
+    });
+    expect(recordOffsets(await readFile(journal))).toHaveLength(1);
+    writer.destroy();
+    observer.destroy();
+
+    await writeFile(manifest, intact);
+
+    const retry = await connectAfterOutage(server);
+
+    // The same operation id is how an unknown outcome is settled, and it
+    // commits exactly once.
+    expect(await retry.commit(beta, pending)).toBe('2');
+    expect(recordOffsets(await readFile(journal))).toHaveLength(2);
+    retry.destroy();
+    expect(await lateJoin(server)).toEqual(['alpha', 'beta']);
+  }),
+);
+
+it(
+  'a published checkpoint keeps every operation id it covers answerable from history',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const client = await connect(server);
+    const covered = operationId();
+    const first = independentUpdate('op-01');
+    const committed = ['op-01'];
+    let through: number | null = null;
+
+    expect(await client.commit(first, covered)).toBe('1');
+
+    // Discovered, not hard-coded: the threshold is a room option no host flag
+    // exposes.
+    for (let index = 2; index <= 96 && through === null; index++) {
+      const value = `op-${String(index).padStart(2, '0')}`;
+
+      expect(await client.commit(independentUpdate(value))).toBe(String(index));
+      committed.push(value);
+      through = await checkpointThrough(collabDirectory, DOC_ID);
+    }
+
+    expect(through, `no checkpoint after ${committed.length} operations`).not.toBeNull();
+    expect(through).toBeGreaterThanOrEqual(1);
+
+    const journal = await journalFile(collabDirectory, DOC_ID);
+
+    // A checkpoint compacts REPLAY, not history: it removes no record...
+    expect(recordOffsets(await readFile(journal))).toHaveLength(committed.length);
+    // ...so an id it covers still answers with its own original sequence
+    // instead of being committed a second time.
+    expect(await client.commit(first, covered)).toBe('1');
+    expect(recordOffsets(await readFile(journal))).toHaveLength(committed.length);
+    client.destroy();
+    await server.kill();
+
+    const restarted = await start();
+
+    try {
+      const rejoined = await connect(restarted);
+
+      expect(contentOf(rejoined.doc)).toEqual([...committed].sort());
+      // Still answered after a restart that replayed only the tail: the
+      // durable id index spans the whole journal, checkpoint or not.
+      expect(await rejoined.commit(first, covered)).toBe('1');
+      rejoined.destroy();
+    } finally {
+      await restarted.stop();
+    }
+  }),
+);
+
+it(
+  'a reset starts a new lineage that refuses the old one and reuses none of its ids',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const client = await connect(server);
+    const carried = operationId();
+    const stale = operationId();
+    const alpha = independentUpdate('alpha');
+    const before = client.lineage;
+
+    expect(await client.commit(alpha, carried)).toBe('1');
+
+    const reset = await server.request('POST', `/sync/${DOC_ID}/reset`);
+
+    expect(reset.status, reset.text).toBe(204);
+    await waitFor(() => client.closed !== null, () => `the reset close (${client.describe()})`);
+    expect(client.closed?.code).toBe(RESET_CLOSE);
+    client.destroy();
+
+    const after = await connect(server);
+
+    expect(after.lineage).not.toBe(before);
+    // Refused before the id is looked up at all: the lookup answers for the
+    // CURRENT lineage only, so an old-lineage operation would otherwise be
+    // journalled into a history it never belonged to.
+    after.submit(stale, independentUpdate('stale'), before);
+    expect(await waitForRejection(after, stale)).toBe('lineage-mismatch');
+    expect(after.closed).toBeNull();
+
+    // The very id and bytes that are durable on the OLD lineage commit afresh
+    // at sequence 1 rather than answering as a duplicate. Ids are
+    // lineage-scoped, which is why a client quarantines its pending
+    // old-lineage rows instead of replaying them here.
+    expect(await after.commit(alpha, carried)).toBe('1');
+    expect(contentOf(after.doc)).toEqual(['alpha']);
+    after.destroy();
+
+    // The superseded generation's journal is still on disk: a reset starts a
+    // new history, it does not erase the old one.
+    const journals = (await readdir(journalDirectory(collabDirectory, DOC_ID)))
+      .filter((name) => name.startsWith('journal.'));
+
+    expect(journals).toHaveLength(2);
+  }),
+);
+
+it(
+  'an authenticated actor is journalled and a read-only member is refused without a close',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const writer = await connect(server, TICKET_DOC_ID, tickets.compatible);
+    const reader = await connect(server, TICKET_DOC_ID, tickets.readOnly);
+    const refused = operationId();
+
+    expect(await writer.commit(independentUpdate('alpha'))).toBe('1');
+
+    const journal = await journalFile(collabDirectory, TICKET_DOC_ID);
+    const bytes = await readFile(journal);
+    const offsets = recordOffsets(bytes);
+
+    expect(offsets).toHaveLength(1);
+    // The verified pass's own user claim — not the rate-limit key, not
+    // awareness, and not anything the operation metadata carried.
+    expect(actorOf(bytes, offsets[0])).toBe('u1');
+
+    reader.submit(refused, independentUpdate('beta'));
+    expect(await waitForRejection(reader, refused)).toBe('read-only');
+    // A viewer is refused the WRITE, not the room.
+    expect(reader.closed).toBeNull();
+    expect(await writer.commit(independentUpdate('gamma'))).toBe('2');
+    await waitFor(
+      () => {
+        reader.drain();
+
+        return contentOf(reader.doc).includes('gamma');
+      },
+      () => `the read-only member to receive the broadcast (${reader.describe()})`,
+    );
+    expect(recordOffsets(await readFile(journal))).toHaveLength(2);
+    expect(contentOf(reader.doc)).toEqual(['alpha', 'gamma']);
+    writer.destroy();
+    reader.destroy();
+  }, 'ticket'),
 );

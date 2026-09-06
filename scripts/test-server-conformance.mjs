@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +46,38 @@ function selectedOptions(args) {
   return { testNamePattern };
 }
 
+/**
+ * Vitest exits 0 when `-t` selects nothing, which reads exactly like a suite
+ * that passed — so a mistyped or wrongly-cased pattern silently proves
+ * nothing. The JSON report is the only place the run says how many tests it
+ * actually executed.
+ */
+async function requireExecutedTests(reportPath, testNamePattern) {
+  let report;
+
+  try {
+    report = JSON.parse(await readFile(reportPath, 'utf8'));
+  } catch (error) {
+    throw new Error(
+      `Could not read the vitest report at ${reportPath}: ` +
+      `${error instanceof Error ? error.message : error}`,
+    );
+  }
+
+  const total = report.numTotalTests ?? 0;
+  const skipped = (report.numPendingTests ?? 0) + (report.numTodoTests ?? 0);
+
+  if (total - skipped > 0) {
+    return;
+  }
+
+  throw new Error(
+    `--test-name-pattern ${JSON.stringify(testNamePattern)} ran no test ` +
+    `(${total} collected, ${skipped} skipped). It is a CASE-SENSITIVE regular expression ` +
+    'matched against the full test name, and vitest exits 0 when it selects nothing.',
+  );
+}
+
 async function main() {
   const options = selectedOptions(process.argv.slice(2));
   const temporaryDirectory = await mkdtemp(join(tmpdir(), 'blok-server-conformance-'));
@@ -90,8 +122,15 @@ async function main() {
       'test/unit/server-conformance/protocol-v2-contract.test.ts',
     ];
 
+    const reportPath = join(temporaryDirectory, 'vitest-report.json');
+
     if (options.testNamePattern !== undefined) {
-      vitestArgs.push('-t', options.testNamePattern);
+      vitestArgs.push(
+        '-t', options.testNamePattern,
+        '--reporter=default',
+        '--reporter=json',
+        `--outputFile.json=${reportPath}`,
+      );
     }
 
     await run(process.execPath, vitestArgs, {
@@ -108,6 +147,10 @@ async function main() {
         ),
       },
     });
+
+    if (options.testNamePattern !== undefined) {
+      await requireExecutedTests(reportPath, options.testNamePattern);
+    }
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

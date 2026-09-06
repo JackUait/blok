@@ -18,6 +18,10 @@ decoder MUST produce for it: `malformed` for all but one, and `unknown` —
 accepted and ignored, not refused — for the unknown-outer-type case. Section 10
 documents both entry shapes field by field.
 
+Sections 1–10 fix the bytes. Section 11 fixes the eight behaviours a durable v2
+server owes on top of them, and names the executable case that proves each one
+against the reference server.
+
 ## 1. Notation
 
 All frames are binary WebSocket messages. **Exactly one frame per WebSocket
@@ -517,3 +521,201 @@ Both carry the key `lineage` twice, so a decoder that detects duplicates
 structurally sees rule 11 as well — which is correct, and is exactly why the
 order is normative rather than advisory. Every other vector violates exactly
 one rule.
+
+## 11. Behaviour scenarios
+
+Wire conformance is not durable conformance. A server can encode every frame in
+sections 1–10 correctly and still acknowledge work it never stored. The eight
+scenarios below are the behaviours a durable `blok-sync.v2` server owes, each
+one stated normatively and each one executed against the reference server. The
+executing case is named beside it, so an implementer can re-derive the claim
+from a run rather than trust the sentence.
+
+### 11.1 What runs them, and what a passing run does not prove
+
+`node scripts/test-server-conformance.mjs` is this repository's conformance
+runner. It builds
+`packages/server/dotnet/Blok.Server.Host/Blok.Server.Host.csproj` twice — once
+in Release, once in Debug with `BLOK_SERVER_CONFORMANCE` defined — and then
+runs the four files in `test/unit/server-conformance/` against the built
+binaries. `--target` accepts only `csharp`: **the runner drives the built C#
+host and nothing else, and this document adds no external-target mode.**
+`--test-name-pattern` is a case-sensitive regular expression matched against
+the whole test name; vitest exits 0 when a pattern selects nothing, so the
+runner fails any run whose pattern executed no test rather than reporting a
+silent green.
+
+A backend written in another language runs the fixtures of section 10 and the
+scenario definitions below **in its own harness**. Four of the eight cannot be
+reached over the wire at all: certifying durability additionally requires that
+harness to restart the backend (S3, S5, S6), fail its next journal append (S4)
+and inspect the recovered history. A harness that only sends frames and reads
+answers has tested the encoder, not the store.
+
+This document, its fixtures and its scenarios are repository-only. They are not
+a package export and there is no CLI entry point for them.
+
+**THE REFERENCE SERVER JOURNALS ONLY UNDER A TEST-ONLY FLAG.** A released
+`Blok.Server.Host` binary resolves no `ICollabOperationStore` — the built-in
+`LocalCollabOperationStore` is `Blok.Server`-internal, production DI resolves
+the store with `GetService`, and no shipped host flag registers one — so it
+selects `blok-sync.v1` and journals nothing. The scenarios below run against a
+`--conformance-journal` build, a flag that exists only inside
+`#if BLOK_SERVER_CONFORMANCE`. What they prove is that the implementation
+behind that flag is conformant, not that a released binary speaks v2 today. A
+host reaches this behaviour by registering its own store with
+`UseCollabOperationStore<T>()`.
+
+### 11.2 The scenarios
+
+#### S1 — Duplicate: same operation id, same digest
+
+An operation whose `operationId` is already committed on the current lineage
+**with the same payload digest** MUST be answered with a type-103 carrying the
+**original** `serverSequence`. The server MUST NOT assign a new sequence, MUST
+NOT record a second operation, and MUST NOT apply the update again. The next
+new operation takes the sequence immediately after the original one, so a
+duplicate spends nothing.
+
+*Executed by* `a resent operation with the same id and the same bytes is
+answered from history, never committed twice`: sequences `1`, `1`, `2`, and two
+journal records for three sends.
+
+#### S2 — Conflict: same operation id, different digest
+
+The same `operationId` with different bytes MUST be answered with a type-104
+carrying `operation-id-conflict`. The server MUST NOT apply the update, MUST
+NOT record it, and **MUST NOT close the connection**: the refusal is
+per-operation, or any writer could end the room for everyone by re-sending one
+id with different bytes.
+
+A conformant server settles the id **before** it mutates the document. Learning
+the conflict from the append instead would leave the document holding bytes the
+journal refuses, whose only cure is discarding the room.
+
+*Executed by* `the same operation id with different bytes is refused as a
+conflict and never applied`: the code, an open socket, sequence `2` for the
+next operation, two journal records, and neither the live document nor a late
+join holding the refused bytes.
+
+#### S3 — Acknowledgement then hard restart
+
+An operation the server answered with a type-103 MUST still be there after the
+process dies without a drain and is restarted on the same storage: a late
+join's SyncStep2 carries it. The acknowledgement MUST NOT depend on any
+whole-document projection completing.
+
+*Executed by* `an acknowledged operation survives a hard kill and restart`: the
+process is killed with SIGKILL, the consumer endpoint has received nothing at
+that moment, no working-set blob exists, and the restart serves the operation
+back.
+
+#### S4 — Failed journal append
+
+When a commit cannot be completed — the append failed, or its outcome is
+unknown because a write may or may not have landed — the server MUST send
+**neither** a type-103 **nor** a type-104 for that operation, and MUST close
+every member of the document with `4503` and the reason
+`commit unavailable, retry` (section 6.1). Nothing may be recorded for the
+failed operation.
+
+A type-104 would be wrong here in a way that costs data: it tells the client to
+quarantine an operation that may in fact be durable. The producer settles the
+unknown outcome by re-sending the **same** `operationId` after reconnecting,
+and that retry MUST commit exactly once.
+
+A server MAY refuse joins to the document for a backoff period after such a
+failure, so a client MUST reconnect with backoff and MUST NOT read the first
+refusal as terminal.
+
+*Executed by* `a failed journal commit acknowledges nothing, closes every
+member 4503, and leaves the retry to settle it`: the store's head is made
+unreadable under the open session, and the writer **and** a second member that
+sent nothing both receive `4503 commit unavailable, retry`, with no
+acknowledgement, no rejection and no new journal record. The store is then
+restored and the same `operationId` commits once, at the next sequence.
+
+#### S5 — Checkpoint lag and replay
+
+A published checkpoint MAY lag the journal. Every operation committed after the
+newest published checkpoint MUST survive a crash: recovery replays the journal
+tail on top of the checkpoint. A server that replayed the checkpoint alone
+would lose acknowledged work.
+
+*Executed by* `checkpoint lag replays the journal tail after a hard kill`: the
+checkpoint threshold is discovered by driving operations until one is
+published, three more are committed past it, the process is killed, and the
+restart serves all of them.
+
+#### S6 — Compaction preserves history
+
+Publishing a checkpoint compacts **replay**, never **history**. The operations
+a checkpoint covers, and their ids, MUST stay committed: re-sending an id the
+checkpoint covers MUST still be answered with that operation's own original
+`serverSequence` under S1, both while the server runs and after a restart.
+Publishing a checkpoint MUST NOT remove journalled operations.
+
+This is what makes idempotent retry safe for the life of a document rather than
+until the next checkpoint. A store that pruned history at a checkpoint would
+answer "not committed" for an id that is committed, and commit it twice.
+
+*Executed by* `a published checkpoint keeps every operation id it covers
+answerable from history`: the journal holds one record per commit before and
+after the checkpoint is published, the operation at sequence `1` still answers
+`1` after it, and still answers `1` after a hard kill and a restart that
+replays only the tail.
+
+#### S7 — Reset lineage isolation
+
+A reset starts a new lineage, and the two lineages MUST NOT leak into each
+other. After a reset:
+
+- open members are closed (the reference server uses `4409`);
+- the next join is told the **new** lineage in the type-100 control frame;
+- an operation naming the superseded lineage MUST be refused with
+  `lineage-mismatch`, and that check MUST run **before** the id lookup — the
+  lookup answers for the current lineage only, so an old-lineage operation
+  would otherwise be journalled into a history it never belonged to;
+- sequences on the new lineage start at `1`;
+- an `operationId` committed on the old lineage MUST NOT be answered as a
+  duplicate on the new one.
+
+The last point is why a client quarantines its pending old-lineage rows instead
+of replaying them (section 6): replaying one would not be recognised as a
+retry, it would be a new operation. The old lineage's records remain history; a
+reset MUST NOT erase them.
+
+*Executed by* `a reset starts a new lineage that refuses the old one and reuses
+none of its ids`: a new lineage value, `lineage-mismatch` for the old one on an
+otherwise healthy socket, the old lineage's id and bytes committing afresh at
+sequence `1`, and the superseded generation's journal still on disk.
+
+#### S8 — Authenticated actor and read-only rejection
+
+The actor recorded with an operation comes from the connection's verified
+identity — the pass's user claim, or the authenticated principal — and never
+from the operation metadata, awareness, or the key the server rate-limits on. A
+connection without write permission MUST be answered `read-only`, and MUST NOT
+be closed for it: it stays in the room and keeps receiving broadcasts, because
+a viewer is refused the write, not the document.
+
+`read-only` is final (section 6). A write verdict that flips mid-typing must
+leave the typed content recoverable, so the client quarantines it rather than
+retrying or dropping it.
+
+*Executed by* `an authenticated actor is journalled and a read-only member is
+refused without a close`: the journal record's actor field holds the writer
+pass's user, and the read-only member is refused, stays open, and receives the
+writer's next committed update.
+
+### 11.3 Rejection codes these scenarios reach
+
+The scenarios execute three of the six codes in section 6 against the reference
+server: `operation-id-conflict` (S2), `lineage-mismatch` (S7) and `read-only`
+(S8).
+
+The reference server can also send `not-synced` and `invalid-update`. **It never
+sends `oversized-update`.** In this implementation that verdict is reached on
+the client, before the frame is sent, against the limit the type-101 frame
+announced. A server MAY send it; a client MUST handle it either way, and every
+implementation MUST accept an unrecognised code as a final rejection.

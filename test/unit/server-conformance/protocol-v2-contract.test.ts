@@ -98,6 +98,13 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/** The check phase, so a frame that arrived in the poll phase is already absorbed. */
+function nextTurn(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+}
+
 async function waitFor(
   ready: () => boolean,
   describe: () => string,
@@ -678,6 +685,30 @@ function actorOf(journal: Buffer, offset: number): string | null {
   return length < 0 ? null : journal.toString('utf8', body + 36, body + 36 + length);
 }
 
+/**
+ * The journal as it stood the instant the acknowledgement was seen. Polled one
+ * event-loop turn at a time and read SYNCHRONOUSLY, because every millisecond
+ * of slack here is time a server that acknowledged before it wrote would use
+ * to catch up — which is exactly what this must not tolerate.
+ */
+async function journalWhenAcknowledged(
+  client: V2Client,
+  id: string,
+  journal: string,
+): Promise<Buffer> {
+  const deadline = Date.now() + DEADLINE_MS;
+
+  while (Date.now() < deadline) {
+    if (client.acks.has(id)) {
+      return readFileSync(journal);
+    }
+
+    await nextTurn();
+  }
+
+  throw new Error(`Timed out waiting for the acknowledgement of ${id} (${client.describe()})`);
+}
+
 it(
   'an acknowledged operation survives a hard kill and restart',
   { timeout: TEST_TIMEOUT_MS },
@@ -685,12 +716,21 @@ it(
     const server = await start();
     const client = await connect(server);
 
-    expect(await client.commit(independentUpdate('alpha'))).toBe('1');
-    // BEFORE the kill, and that ordering is the whole assertion: a 103 is only
-    // honest if the record was already on disk when it went out. Read only
-    // after the kill, this passes for a server that acknowledged first and
-    // wrote a moment later, because the kill lands after both.
-    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID)))).toHaveLength(1);
+    const journal = await journalFile(collabDirectory, DOC_ID);
+    const acknowledged = operationId();
+
+    client.submit(acknowledged, independentUpdate('alpha'));
+    // At the acknowledgement, not after the kill: read later this passes for a
+    // server that acknowledged first and wrote a moment after. It shortens the
+    // window rather than closing it — the room's Send runs asynchronously to
+    // its commit lane, so even a server that acknowledges before it appends
+    // usually gets the record down before the frame leaves the socket
+    // (measured: this catches such a server about one run in three). The
+    // ordering is pinned DETERMINISTICALLY by "a failed journal commit
+    // acknowledges nothing ..." below, where the append cannot succeed at all.
+    expect(recordOffsets(await journalWhenAcknowledged(client, acknowledged, journal)))
+      .toHaveLength(1);
+    expect(client.acks.get(acknowledged)).toBe('1');
     client.destroy();
     await server.kill();
 
@@ -700,7 +740,7 @@ it(
     expect(endpoint.puts).toHaveLength(0);
     // A journal-backed room writes no working-set blob at all.
     expect(existsSync(join(collabDirectory, docKey(DOC_ID)))).toBe(false);
-    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID)))).toHaveLength(1);
+    expect(recordOffsets(await readFile(journal))).toHaveLength(1);
 
     const restarted = await start();
 

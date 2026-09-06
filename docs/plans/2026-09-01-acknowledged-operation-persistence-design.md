@@ -497,7 +497,11 @@ publishes:
 The repository's conformance runner drives only the built C# host. A custom
 backend runs the fixtures and scenarios in its own harness, and wire
 conformance alone cannot prove fsync or crash behavior: that harness must also
-restart the backend, fail an append, and inspect history. A second raw-operation HTTP sink is not added: it would duplicate the
+restart the backend, fail an append, and inspect history. Restarting it does
+not prove fsync either — killing a process leaves its page cache to the kernel,
+so process conformance proves only that nothing is acknowledged before it is
+written, and the flush itself needs a power cut or a fault-injecting
+filesystem. A second raw-operation HTTP sink is not added: it would duplicate the
 same auth, lineage, idempotency, commit, broadcast, and acknowledgement path.
 The existing HTTP edit API remains the non-WebSocket producer and uses the
 shared commit primitive.

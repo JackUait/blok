@@ -1400,6 +1400,19 @@ ordinaryIt('keeps the conformance-only origin flag out of an ordinary binary', a
   );
 });
 
+// The trailing unknown flag is what keeps this honest: the ordinary parser
+// names the FIRST flag it does not know, so if --conformance-journal ever
+// became a real flag the refusal would name --not-a-real-flag instead and this
+// would go red rather than quietly passing on the exit code alone.
+ordinaryIt('keeps the conformance-only journal flag out of an ordinary binary', async () => {
+  await expect(startServer({
+    command: ordinaryServerCommand(),
+    args: serverArgs('--conformance-journal', '--not-a-real-flag'),
+  })).rejects.toThrow(
+    /code 2[\s\S]*flag provided but not defined: -conformance-journal/,
+  );
+});
+
 it('unfurls redirected metadata with stable precedence and resolved URLs', async () => {
   const origin = await startFixtureOrigin();
 

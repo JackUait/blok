@@ -135,7 +135,7 @@ export const resolveDiffBase = (state, isReachable) => {
  * them against. A changed test pulls in its source: otherwise weakening a test
  * without touching the source would go unmeasured.
  */
-export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers }) => {
+export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers = undefined }) => {
   const sources = new Set(sourceFiles);
   const sourcesByStem = groupByStem(sourceFiles);
   const testsByStem = groupByStem(testFiles);

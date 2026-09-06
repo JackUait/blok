@@ -104,6 +104,12 @@ interface BlokClient {
 interface BlokClientOptions {
   /** Lineage the document already carries, as a cache-adopted boot passes it. */
   initialLineage?: string;
+  /**
+   * Whether the session keeps a durable local copy. False (the default) makes
+   * the provider hand the quarantine an EMPTY recovery snapshot, because a
+   * memory-mode store discards it.
+   */
+  keepsLocalCopy?: boolean;
   /** Present makes this a v2-capable tab: it offers v2 and drains through the outbox. */
   outbox?: CollabOutbox;
   ticket?: string;
@@ -199,6 +205,7 @@ const seamFor = (store: DocumentStore): CollabDocSeam => ({
   onAwarenessChange: (callback) => store.onAwarenessChange(callback),
   onAwarenessUpdate: (callback) => store.onAwarenessUpdate(callback),
   encodeAwarenessUpdate: (clients) => store.encodeAwarenessUpdate(clients),
+  encodeLocalAwarenessDeparture: () => store.encodeLocalAwarenessDeparture(),
   applyAwarenessUpdate: (update, origin) => store.applyAwarenessUpdate(update, origin),
   clearRemoteAwarenessStates: () => store.clearRemoteAwarenessStates(),
   resetForRelineage: () => store.resetForRelineage(),
@@ -318,6 +325,7 @@ function connectBlokClient(wsUrl: string, docId: string, options: BlokClientOpti
     // backoff window (500 ms for the first attempt) instead of up to a second.
     random: () => 0,
     initialLineage: options.initialLineage,
+    keepsLocalCopy: options.keepsLocalCopy,
     outbox,
   });
 
@@ -1159,7 +1167,13 @@ it('read-only and reset verdicts quarantine pending bytes rather than losing or 
   await withBlokServer('ticket', async ({ connect, server }) => {
     const readerOutbox = new SharedOutbox();
     const writer = connect(TICKET_DOC_ID, { ticket: tickets.compatible });
-    const reader = connect(TICKET_DOC_ID, { ticket: tickets.readOnly, outbox: readerOutbox });
+    // `keepsLocalCopy` is what earns the recovery snapshot asserted below: a
+    // memory-mode session discards it, so the provider encodes none.
+    const reader = connect(TICKET_DOC_ID, {
+      keepsLocalCopy: true,
+      outbox: readerOutbox,
+      ticket: tickets.readOnly,
+    });
 
     await Promise.all([writer.whenConnected(), reader.whenConnected()]);
     await whenIdle(reader);

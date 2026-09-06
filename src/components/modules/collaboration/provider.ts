@@ -367,6 +367,32 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   };
 
   /**
+   * Withdraw this client's presence NOW, on the caller's turn.
+   *
+   * Deliberately not `scheduleAwareness`: the callers are `pagehide` and
+   * `destroy`, and a frame parked in the 100ms window dies with the page. The
+   * frame carries a null state at the current clock, which is the removal
+   * y-protocols documents; without it the room keeps drawing this tab for up
+   * to 30s and a reload — which mints a new client id — reads as a stranger
+   * arriving.
+   */
+  const announceDeparture = (): void => {
+    const socket = state.socket;
+
+    if (socket === null || state.phase !== 'ready') {
+      return;
+    }
+
+    const update = yjs.encodeLocalAwarenessDeparture();
+
+    if (update === null) {
+      return;
+    }
+
+    send(socket, { type: 'awareness', update });
+  };
+
+  /**
    * Coalesces presence traffic into one frame per window — including the reply
    * to queryAwareness, so a peer spamming type-3 cannot push us past the
    * server's own inbound budget.
@@ -438,8 +464,12 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
   /**
    * Ends one connection generation: unhook the seam, cancel its timers, drop
    * remote presence, and detach (optionally close) the socket. The seam is
-   * unhooked BEFORE presence is cleared so the local removals are not broadcast
-   * onto a connection that is going away.
+   * unhooked BEFORE presence is cleared so that dropping our REMOTE
+   * bookkeeping — peers we merely stop tracking, who have not gone anywhere —
+   * is not broadcast onto a connection that is going away.
+   *
+   * This client's OWN departure is the opposite case and must reach the wire:
+   * {@link announceDeparture} sends it before this runs.
    * @param closeSocket - whether to send a normal close (client-initiated ends)
    */
   const teardownGeneration = (closeSocket: boolean): void => {
@@ -1461,10 +1491,17 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
       openGeneration();
     },
+    announceDeparture: (): void => {
+      announceDeparture();
+    },
     destroy: (): void => {
       if (state.destroyed) {
         return;
       }
+
+      // Before the teardown unhooks the seam and closes the socket — the only
+      // moment this client can still tell the room it is going.
+      announceDeparture();
 
       // Set first: every continuation and every report checks it.
       state.destroyed = true;

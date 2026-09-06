@@ -814,6 +814,14 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Encode the frame that withdraws this client's presence, or null when
+   * there is none to withdraw.
+   */
+  public encodeLocalAwarenessDeparture(): Uint8Array | null {
+    return this.documentStore.encodeLocalAwarenessDeparture();
+  }
+
+  /**
    * Apply a binary awareness update received from a peer.
    * @param update - Encoded awareness update
    * @param origin - Provider origin carried on the emitted change

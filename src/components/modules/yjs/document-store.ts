@@ -1,3 +1,4 @@
+import { getUnixTime } from 'lib0/time';
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwarenessStates } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
@@ -14,6 +15,19 @@ import { equals } from '../../utils/object';
  * classifies these transactions 'remote' and the UndoManager ignores them.
  */
 const REMOTE_APPLY_ORIGIN = Object.freeze({ source: 'blok-remote-apply' });
+
+/**
+ * How long a departed client's meta row is kept before the flood guard may
+ * drop it — three times y-protocols' 30s outdated window.
+ *
+ * The row is the tombstone that keeps a relayed state from re-adding a peer
+ * who is gone, so it has to outlive every browser that could still be
+ * relaying that peer. One 30s window is not enough: a browser that learned
+ * the departed client from another browser's queryAwareness reply holds it
+ * for a further 30s, and that hop can chain. Two numbers per dead id is a
+ * cheap margin.
+ */
+const AWARENESS_TOMBSTONE_TTL_MS = 90_000;
 
 /**
  * Lengths of the equal prefix and equal suffix of two sequences, the suffix
@@ -1610,6 +1624,30 @@ export class DocumentStore {
   }
 
   /**
+   * The frame that tells the room this client is gone: its id, its current
+   * clock, and a null state. y-protocols asks for exactly this — "before a
+   * client disconnects, it should propagate a null state with an updated
+   * clock" — and without it a departed peer lingers on every other browser
+   * until their own 30s sweep expires it, which is what makes one reload look
+   * like a second person joining.
+   *
+   * Encoded from an EMPTY state map, so nothing local is mutated: a page that
+   * turns out to survive (a bfcache restore) keeps publishing presence, and a
+   * peer applies the null through the same clock branch it applies any
+   * removal through. Null before `enableAwareness` — single-player has nobody
+   * to tell.
+   */
+  public encodeLocalAwarenessDeparture(): Uint8Array | null {
+    const awareness = this.awareness;
+
+    if (awareness === null || !awareness.meta.has(awareness.clientID)) {
+      return null;
+    }
+
+    return encodeAwarenessUpdate(awareness, [awareness.clientID], new Map());
+  }
+
+  /**
    * Apply a binary awareness update received from a peer. No-op before
    * `enableAwareness` — a stray inbound frame during single-player is ignored.
    * @param update - Encoded awareness update
@@ -1627,16 +1665,29 @@ export class DocumentStore {
   /**
    * y-protocols keeps a meta row (clock, last seen) for every client id it
    * has ever heard of, and its outdated sweep removes STATES only — so a
-   * flood of fake client ids grows `meta` forever. Drop the rows of remote
-   * clients that hold no state.
+   * flood of fake client ids would grow `meta` forever. Drop the rows of
+   * remote clients that hold no state AND have been silent past
+   * {@link AWARENESS_TOMBSTONE_TTL_MS}.
+   *
+   * The age test is the whole point. A stateless row is y-protocols'
+   * TOMBSTONE: `applyAwarenessUpdate` rejects a relayed state whose clock the
+   * row already holds, and `encodeAwarenessUpdate` reads the row to encode a
+   * removal at all. Pruning on statelessness alone let any peer's
+   * queryAwareness reply resurrect a departed client, and emptied the removal
+   * the provider was about to broadcast.
    *
    * Runs at the start of each inbound apply, NOT on 'change': the provider
    * encodes a change's removed ids later (deferred broadcast) and needs
    * their rows until then.
    */
   private pruneAwarenessMeta(awareness: Awareness): void {
-    for (const clientId of Array.from(awareness.meta.keys())) {
-      if (clientId !== awareness.clientID && !awareness.states.has(clientId)) {
+    // The same clock y-protocols stamps `lastUpdated` with. `Date.now` read
+    // here instead would drift under fake timers, which replace the global
+    // but not the binding lib0 captured at import.
+    const staleBefore = getUnixTime() - AWARENESS_TOMBSTONE_TTL_MS;
+
+    for (const [clientId, row] of Array.from(awareness.meta)) {
+      if (clientId !== awareness.clientID && !awareness.states.has(clientId) && row.lastUpdated < staleBefore) {
         awareness.meta.delete(clientId);
       }
     }

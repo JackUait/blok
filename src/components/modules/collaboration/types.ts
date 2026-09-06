@@ -153,6 +153,17 @@ export interface CollabDocSeam {
    */
   onAwarenessUpdate(callback: (changes: AwarenessChange, origin: unknown) => void): () => void;
   encodeAwarenessUpdate(clients?: number[]): Uint8Array;
+
+  /**
+   * The frame that says this client is leaving: its id at its current clock,
+   * carrying a null state. Null when there is no presence to withdraw.
+   *
+   * Nothing else tells the room a tab is gone — the server relays presence
+   * without reading it, and a peer that hears nothing keeps drawing the
+   * departed client until its own 30s sweep. A reload takes a NEW client id,
+   * so that stale entry reads as a second person.
+   */
+  encodeLocalAwarenessDeparture(): Uint8Array | null;
   applyAwarenessUpdate(update: Uint8Array, origin: unknown): void;
   clearRemoteAwarenessStates(): void;
 
@@ -338,6 +349,13 @@ export interface CollabProvider {
   connect(): void;
   /** Stop for good: close the socket, unhook the seam, cancel every timer. */
   destroy(): void;
+
+  /**
+   * Tell the room this client is leaving, on THIS turn — no presence window,
+   * because the caller is a `pagehide` handler and nothing queued survives it.
+   * A no-op unless a synced connection is open. `destroy` calls it first.
+   */
+  announceDeparture(): void;
   /** Last reported status. */
   readonly status: CollabStatus;
   /** The working-set tag from the last validated control frame. */

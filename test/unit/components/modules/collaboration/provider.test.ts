@@ -118,6 +118,7 @@ const seamFor = (store: DocumentStore): CollabDocSeam => ({
   onAwarenessChange: (callback) => store.onAwarenessChange(callback),
   onAwarenessUpdate: (callback) => store.onAwarenessUpdate(callback),
   encodeAwarenessUpdate: (clients) => store.encodeAwarenessUpdate(clients),
+  encodeLocalAwarenessDeparture: () => store.encodeLocalAwarenessDeparture(),
   applyAwarenessUpdate: (update, origin) => store.applyAwarenessUpdate(update, origin),
   clearRemoteAwarenessStates: () => store.clearRemoteAwarenessStates(),
   resetForRelineage: () => store.resetForRelineage(),
@@ -1200,6 +1201,74 @@ describe('createCollabProvider', () => {
 
       expect(harness.store.getAwarenessStates().has(peerClientId)).toBe(false);
     });
+
+    /**
+     * A tab that reloads takes a NEW client id with it, so a peer that was
+     * never told the old one left draws the same person twice until its own
+     * 30s sweep expires the corpse. y-protocols asks a departing client to
+     * publish a null state; nothing did.
+     */
+    describe('departure', () => {
+      it('writes the departure straight to the socket, without waiting for the presence window', () => {
+        const harness = createHarness({ awarenessThrottleMs: 100 });
+        const peer = new DocumentStore(new YBlockSerializer());
+
+        stores.push(peer);
+        peer.enableAwareness();
+
+        const socket = connectAndHandshake(harness);
+
+        harness.store.setAwarenessField('user', { name: 'Alice' });
+        vi.advanceTimersByTime(100);
+
+        const localClientId = Array.from(harness.store.getAwarenessStates().keys())[0];
+
+        peer.applyAwarenessUpdate(harness.store.encodeAwarenessUpdate(), { source: 'peer' });
+        expect(peer.getAwarenessStates().has(localClientId)).toBe(true);
+
+        const before = socket.frames.length;
+
+        harness.provider.announceDeparture();
+
+        const written = socket.frames.slice(before);
+
+        expect(written.map((frame) => frame.type)).toEqual(['awareness']);
+
+        const departure = written[0];
+
+        if (departure.type !== 'awareness') {
+          throw new Error('expected an awareness frame');
+        }
+
+        peer.applyAwarenessUpdate(departure.update, { source: 'peer' });
+
+        expect(peer.getAwarenessStates().has(localClientId)).toBe(false);
+      });
+
+      it('announces the departure before closing the socket on destroy', () => {
+        const harness = createHarness();
+        const socket = connectAndHandshake(harness);
+
+        harness.store.setAwarenessField('user', { name: 'Alice' });
+        vi.advanceTimersByTime(100);
+
+        const before = socket.frames.length;
+
+        harness.provider.destroy();
+
+        expect(socket.frames.slice(before).map((frame) => frame.type)).toEqual(['awareness']);
+        expect(socket.closedWith?.code).toBe(1000);
+      });
+
+      it('says nothing when it never reached a server', () => {
+        const harness = createHarness();
+
+        harness.provider.connect();
+        harness.provider.announceDeparture();
+
+        expect(harness.socket().frames).toEqual([]);
+      });
+    });
   });
 
   // A seam that throws has failed to materialise the document. Retrying the same
@@ -2073,7 +2142,10 @@ describe('createCollabProvider', () => {
       harness.provider.destroy();
       harness.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'after' } });
 
-      expect(socket.frameTypes).toEqual(['syncStep1']);
+      // Not an exact list: destroy also withdraws this client's presence, and
+      // that goodbye is the one frame it is allowed to send on the way out.
+      expect(socket.frameTypes).not.toContain('update');
+      expect(socket.frameTypes.filter((type) => type !== 'awareness')).toEqual(['syncStep1']);
     });
 
     it('never opens a socket when the ticket resolves after destroy', async () => {

@@ -712,6 +712,11 @@ export class Collaboration extends Module {
     // the wire, and the cache is opt-in.
     this.flushOnPageHide = (): void => {
       this.Blok.YjsManager.flushPendingBlockWrites();
+      // The document first, then the goodbye. Nothing else tells the room this
+      // tab is gone: a reload comes back under a NEW client id, so the entry
+      // left behind is drawn as a second person for the 30s a peer takes to
+      // sweep it. Must be the synchronous send — a queued frame dies here.
+      this.provider?.announceDeparture();
     };
     window.addEventListener('pagehide', this.flushOnPageHide);
 
@@ -1005,6 +1010,7 @@ export class Collaboration extends Module {
       onAwarenessChange: (callback) => yjs.onAwarenessChange(callback),
       onAwarenessUpdate: (callback) => yjs.onAwarenessUpdate(callback),
       encodeAwarenessUpdate: (clients) => yjs.encodeAwarenessUpdate(clients),
+      encodeLocalAwarenessDeparture: () => yjs.encodeLocalAwarenessDeparture(),
       applyAwarenessUpdate: (update, origin) => yjs.applyAwarenessUpdate(update, origin),
       clearRemoteAwarenessStates: () => yjs.clearRemoteAwarenessStates(),
       resetForRelineage: () => this.resetForRelineage(),

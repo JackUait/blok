@@ -3107,6 +3107,42 @@ describe('collaboration — sync-first load', () => {
 
       expect(firstBlockTextOnTheWire(socket, base)).toBe('trailing');
     });
+
+    /**
+     * A reloading tab comes back under a new awareness client id. Unless the
+     * old one is withdrawn on the way out, every peer keeps drawing it until
+     * their own 30s sweep — one person, two avatars.
+     */
+    it('withdraws this client from the room on pagehide', async () => {
+      const harness = await boot();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const localClientId = Array.from(yjs.getAwarenessStates().keys())[0];
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      peer.enableAwareness();
+      peer.applyAwarenessUpdate(yjs.encodeAwarenessUpdate(), { source: 'peer' });
+      expect(peer.getAwarenessStates().has(localClientId)).toBe(true);
+
+      const before = socket.sent.length;
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      for (const bytes of socket.sent.slice(before)) {
+        const frame = decode(bytes);
+
+        if (frame.type === 'awareness') {
+          peer.applyAwarenessUpdate(frame.update, { source: 'peer' });
+        }
+      }
+
+      expect(peer.getAwarenessStates().has(localClientId)).toBe(false);
+
+      peer.destroy();
+    });
   });
 
   describe('teardown', () => {

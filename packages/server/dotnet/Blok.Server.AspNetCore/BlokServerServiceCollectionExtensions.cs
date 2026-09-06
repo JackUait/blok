@@ -8,17 +8,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Blok.Server.AspNetCore;
 
+/// <summary>Registers the Blok server's services into an application's container.</summary>
 public static class BlokServerServiceCollectionExtensions
 {
   private static readonly TimeSpan DocEndpointRequestTimeout = TimeSpan.FromSeconds(30);
   private static readonly Action<ILogger, string, Exception?> LogCollab =
       LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1, "Collab"), "{Message}");
 
+  /// <summary>Registers the server on its defaults: loopback, no auth, no storage, no collaboration.</summary>
+  /// <param name="services">The application's container.</param>
+  /// <returns>The builder the opt-in hooks hang off.</returns>
   public static BlokServerBuilder AddBlokServer(this IServiceCollection services)
   {
     return services.AddBlokServer(new BlokServerOptions());
   }
 
+  /// <summary>Registers the server, letting the caller change the defaults first.</summary>
+  /// <param name="services">The application's container.</param>
+  /// <param name="configure">
+  /// Run once, on a fresh <see cref="BlokServerOptions"/>, before anything is
+  /// registered.
+  /// </param>
+  /// <returns>The builder the opt-in hooks hang off.</returns>
+  /// <exception cref="InvalidOperationException">
+  /// The configured options are not usable together — see
+  /// <see cref="BlokServerOptions.Validate"/>.
+  /// </exception>
   public static BlokServerBuilder AddBlokServer(
       this IServiceCollection services,
       Action<BlokServerOptions> configure)
@@ -32,6 +47,23 @@ public static class BlokServerServiceCollectionExtensions
     return services.AddBlokServer(options);
   }
 
+  /// <summary>Registers the server against options the caller already built.</summary>
+  /// <remarks>
+  /// The instance itself becomes the singleton, so a later change to it is
+  /// seen by the services that read it. Every registration is a
+  /// <c>TryAdd</c>: whatever the application registered first wins, which is
+  /// how a host substitutes its own blob store, clock or room manager.
+  /// </remarks>
+  /// <param name="services">The application's container.</param>
+  /// <param name="options">
+  /// Validated here, so a configuration mistake throws at startup rather than
+  /// at the first request that touches it.
+  /// </param>
+  /// <returns>The builder the opt-in hooks hang off.</returns>
+  /// <exception cref="InvalidOperationException">
+  /// The options are not usable together — see
+  /// <see cref="BlokServerOptions.Validate"/>.
+  /// </exception>
   public static BlokServerBuilder AddBlokServer(
       this IServiceCollection services,
       BlokServerOptions options)
@@ -42,7 +74,7 @@ public static class BlokServerServiceCollectionExtensions
 
     services.TryAddSingleton(options);
     services.TryAddSingleton(TimeProvider.System);
-    /**
+    /*
      * Registered, but NOT warmed. This call is about uploads, link previews and
      * collaboration; an app that mapped those may never convert a document, and
      * warming builds a whole engine pool and converts through it. An app that

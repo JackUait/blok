@@ -3,54 +3,183 @@ using System.Net;
 
 namespace Blok.Server.AspNetCore;
 
+/// <summary>
+/// Everything the Blok server is configured by. The standalone
+/// <c>blok-server</c> host fills it from its command line; an application
+/// hosting Blok in-process sets it directly.
+/// </summary>
+/// <remarks>
+/// The instance handed to <c>AddBlokServer</c> IS the registered singleton,
+/// and several services read it lazily, so a value changed after registration
+/// is still seen. <see cref="Validate"/> is what refuses combinations that do
+/// not work together.
+/// </remarks>
 public sealed class BlokServerOptions
 {
   private const long DefaultMaxUploadBytes = 32L << 20;
 
+  /// <summary>
+  /// Reported by <c>GET /health</c> and in the standalone host's startup line.
+  /// This is the deployment's own version, not the Blok library's and not a
+  /// document schema version.
+  /// </summary>
   public string Version { get; set; } = "dev";
 
+  /// <summary>
+  /// <c>host:port</c> the standalone host binds. Validated even in-process,
+  /// because <see cref="Auth"/> "none" and "proxy" are allowed only on
+  /// loopback and that is decided from this string. A DNS host other than
+  /// localhost is refused: it would bind every interface.
+  /// </summary>
   public string ListenAddress { get; set; } = "127.0.0.1:4000";
 
+  /// <summary>
+  /// Access mode: "none", "proxy", or "ticket". The first two trust every
+  /// caller and may therefore bind loopback only; "ticket" verifies a signed
+  /// pass against <see cref="Secret"/> and is the only mode that may be
+  /// exposed.
+  /// </summary>
   public string Auth { get; set; } = "none";
 
+  /// <summary>
+  /// Shared secret ticket passes are signed and verified with; at least 32
+  /// characters in ticket mode. The standalone host reads it from
+  /// <c>BLOK_SECRET</c> unless a flag overrides — a flag lands in this
+  /// machine's process list.
+  /// </summary>
   public string Secret { get; set; } = "";
 
+  /// <summary>
+  /// Origins allowed to call this service, checked on requests and on the sync
+  /// upgrade. Required in ticket mode: without it anyone who finds this
+  /// address can drive requests at third-party sites from this server's IP.
+  /// </summary>
   public IList<string> AllowedOrigins { get; set; } = [];
 
+  /// <summary>
+  /// Directory uploaded files are written to and served from. Empty with no
+  /// <see cref="S3Bucket"/> means blob storage is off, and the upload routes
+  /// are then never mapped.
+  /// </summary>
   public string StorageDirectory { get; set; } = "";
 
+  /// <summary>
+  /// URL prefix stored files are handed out under: a full HTTP(S) URL, or a
+  /// root-relative path for local storage. It is also the only prefix a delete
+  /// recognises a file by, so changing it strands what was already stored.
+  /// </summary>
   public string PublicUrl { get; set; } = "";
 
+  /// <summary>
+  /// Largest upload accepted, in bytes (32 MiB by default). Must be positive —
+  /// a zero cap refuses every upload — and no larger than
+  /// <see cref="Array.MaxLength"/> while remote URL upload is open, because
+  /// that path buffers the fetched response.
+  /// </summary>
   public long MaxUploadBytes { get; set; } = DefaultMaxUploadBytes;
 
+  /// <summary>
+  /// Requests a minute per caller; 0 turns the limiter off. The standalone
+  /// host defaults it to 60 in ticket mode and to 0 otherwise.
+  /// </summary>
   public long RateLimitPerMinute { get; set; }
 
+  /// <summary>
+  /// Closes <c>GET /unfurl</c> and <c>POST /upload-by-url</c>, and defaults to
+  /// closed. Both make this server fetch a URL its caller chose, which is
+  /// reachability the caller does not otherwise have; the guarded outbound
+  /// policy is the only thing keeping that off the internal network. The
+  /// standalone host opens them and takes that trade deliberately.
+  /// </summary>
   public bool UnfurlDisabled { get; set; } = true;
 
+  /// <summary>
+  /// S3-compatible endpoint: a full HTTP(S) origin with no credentials, path,
+  /// query or fragment. Plain HTTP is accepted only against loopback.
+  /// </summary>
   public string S3Endpoint { get; set; } = "";
 
+  /// <summary>
+  /// S3 region. Required with a bucket: an empty region is signed into every
+  /// request and would fail only at the first upload.
+  /// </summary>
   public string S3Region { get; set; } = "";
 
+  /// <summary>
+  /// S3 bucket uploads go to. Set it to put blob storage in S3 instead of
+  /// <see cref="StorageDirectory"/>; it needs the endpoint, region, bucket URL
+  /// and credentials.
+  /// </summary>
   public string S3Bucket { get; set; } = "";
 
+  /// <summary>
+  /// Public URL prefix stored objects are built from, and the only prefix a
+  /// delete recognises one under. A full HTTP(S) URL with no query or
+  /// fragment.
+  /// </summary>
   public string S3BucketUrl { get; set; } = "";
 
+  /// <summary>
+  /// "path" or "virtual", or empty to choose from the endpoint. Set it when
+  /// the endpoint is a bucket-per-host service or an emulator that only
+  /// answers path-style requests.
+  /// </summary>
   public string S3Addressing { get; set; } = "";
 
+  /// <summary>
+  /// S3 access key. The standalone host reads it from
+  /// <c>BLOK_S3_ACCESS_KEY</c> and offers no flag for it, deliberately: a flag
+  /// lands in this machine's process list.
+  /// </summary>
   public string S3AccessKey { get; set; } = "";
 
+  /// <summary>
+  /// S3 secret key, read from <c>BLOK_S3_SECRET_KEY</c> for the same reason as
+  /// <see cref="S3AccessKey"/>.
+  /// </summary>
   public string S3SecretKey { get; set; } = "";
 
+  /// <summary>
+  /// Serve collaborative sync rooms. Off, the sync, reset and edit routes are
+  /// never mapped; on, it needs <see cref="DocEndpoint"/> and somewhere to put
+  /// the working set.
+  /// </summary>
   public bool CollabEnabled { get; set; }
 
+  /// <summary>
+  /// HTTP(S) URL sync rooms seed documents from and export them back to — the
+  /// application's own document store, and the authority a room is answerable
+  /// to. Plain HTTP is accepted only against loopback.
+  /// </summary>
   public string DocEndpoint { get; set; } = "";
 
+  /// <summary>
+  /// Authorization header sent with every doc-endpoint request. It must not
+  /// contain a line break — a trailing newline from <c>echo</c> or a file is
+  /// the usual cause, and the header would be dropped from every request
+  /// silently. The standalone host reads it from
+  /// <c>BLOK_DOC_ENDPOINT_AUTH</c>.
+  /// </summary>
   public string DocEndpointAuth { get; set; } = "";
 
+  /// <summary>
+  /// Directory the collaboration working set is kept in. It must not resolve
+  /// inside <see cref="StorageDirectory"/>: uploaded files are served
+  /// publicly, and the working set would be downloadable by anyone.
+  /// </summary>
   public string CollabDirectory { get; set; } = "";
 
+  /// <summary>
+  /// S3 key prefix for the collaboration working set, needing
+  /// <see cref="S3Bucket"/>. It is the alternative to
+  /// <see cref="CollabDirectory"/>, and collaboration needs one of the two.
+  /// </summary>
   public string CollabS3Prefix { get; set; } = "";
 
+  /// <summary>
+  /// Live sync connections one user may hold on one document. Must be
+  /// positive: a zero cap refuses every sync connection.
+  /// </summary>
   public int CollabMaxConnectionsPerUserPerDoc { get; set; } = 8;
 
   /// <summary>
@@ -62,8 +191,18 @@ public sealed class BlokServerOptions
   /// </summary>
   public long CollabMaxConnections { get; set; }
 
+  /// <summary>
+  /// Largest inbound sync frame and edit body, and the ceiling announced to
+  /// clients in the limits frame so they can split their own writes. Must be
+  /// positive: a zero cap closes every connection on its first frame.
+  /// </summary>
   public int CollabMaxMessageBytes { get; set; } = 1 << 20;
 
+  /// <summary>
+  /// WebSocket keep-alive ping interval; zero turns pings off. A socket that
+  /// does not answer within twice this is aborted, which is what frees a dead
+  /// connection's slot in the per-user cap.
+  /// </summary>
   public TimeSpan CollabKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(15);
 
   /// <summary>
@@ -105,6 +244,21 @@ public sealed class BlokServerOptions
 
   internal string LocalPublicPath { get; private set; } = "";
 
+  /// <summary>
+  /// Throws unless these options work together, and resolves the public path
+  /// local files are served under.
+  /// </summary>
+  /// <remarks>
+  /// Called by <c>AddBlokServer</c>, by <c>MapBlokServer</c>, and again inside
+  /// the lazy service factories, so a value changed after registration is
+  /// still checked before it is used. It is idempotent.
+  /// </remarks>
+  /// <exception cref="InvalidOperationException">
+  /// One option is malformed, or two are set to a combination that cannot
+  /// serve — an exposed listen address under an auth mode that trusts every
+  /// caller, a bucket with no region, a working set inside the public upload
+  /// directory. The message names the flag and what breaks.
+  /// </exception>
   public void Validate()
   {
     LocalPublicPath = "";

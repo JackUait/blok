@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Blok.Server.AspNetCore;
 
+/// <summary>Maps the Blok server's HTTP and WebSocket routes into an application.</summary>
 public static class BlokServerEndpointRouteBuilderExtensions
 {
   private static readonly Action<ILogger, string, string, string, Exception?> LogOpenSyncRoutes =
@@ -18,6 +19,37 @@ public static class BlokServerEndpointRouteBuilderExtensions
           "are open to anyone who can reach this app unless the mapped group has RequireAuthorization(); " +
           "register a hook with AddBlokServer(...).UseAuthorization<T>() or set Auth to \"ticket\"");
 
+  /// <summary>
+  /// Maps <c>/health</c> plus whatever the options switch on: the upload
+  /// routes when storage is configured, the unfurl routes unless they are
+  /// closed, and <c>/sync/{doc}</c> with its reset and edit routes when
+  /// collaboration is on.
+  /// </summary>
+  /// <remarks>
+  /// Everything the group does not claim answers 404, so the group must not be
+  /// mapped at a pattern that shares a prefix with the application's own
+  /// routes.
+  /// <para>
+  /// The returned group carries no authorization of its own. Call
+  /// <c>RequireAuthorization()</c> on it, register an
+  /// <see cref="IBlokAuthorization"/>, or run with <c>Auth</c> "ticket" —
+  /// with none of the three the document routes are open to every caller that
+  /// reaches the app, and a warning says so at startup.
+  /// </para>
+  /// </remarks>
+  /// <param name="endpoints">The application's route builder.</param>
+  /// <param name="pattern">
+  /// Prefix for the group, empty for the application root. Files uploaded to
+  /// local storage are served outside it, from the configured public URL.
+  /// </param>
+  /// <returns>
+  /// The mapped group, so the caller can add conventions —
+  /// <c>RequireAuthorization</c>, CORS, rate limiting — to all of it at once.
+  /// </returns>
+  /// <exception cref="InvalidOperationException">
+  /// The registered options are not usable together — see
+  /// <see cref="BlokServerOptions.Validate"/>.
+  /// </exception>
   public static RouteGroupBuilder MapBlokServer(
       this IEndpointRouteBuilder endpoints,
       string pattern = "")

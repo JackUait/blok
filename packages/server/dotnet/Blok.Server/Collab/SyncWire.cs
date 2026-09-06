@@ -67,11 +67,11 @@ internal sealed record UnknownFrame(ulong MessageType) : SyncWireMessage;
 ///   awareness       [1][len][awareness update]
 ///   auth            [2][0][len][utf8 reason]
 ///   queryAwareness  [3]
-///   blok control    [100][len]{"epoch":N,"format":N,"lineage":"<32 hex>"}
+///   blok control    [100][len]{"epoch":N,"format":N,"lineage":"&lt;32 hex&gt;"}
 ///   blok limits     [101][len]{"maxMessageBytes":N}
-///   operation       [102][len]{"lineage":"<32 hex>","operationId":"<32 hex>"}[len][update]
-///   acknowledgement [103][len]{"lineage":"<32 hex>","operationId":"<32 hex>","serverSequence":"<u64>"}
-///   rejection       [104][len]{"lineage":"<32 hex>","operationId":"<32 hex>","code":"<code>"}
+///   operation       [102][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;"}[len][update]
+///   acknowledgement [103][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;","serverSequence":"&lt;u64&gt;"}
+///   rejection       [104][len]{"lineage":"&lt;32 hex&gt;","operationId":"&lt;32 hex&gt;","code":"&lt;code&gt;"}
 /// </code>
 /// Pinned byte-for-byte by test/unit/server-conformance/fixtures/sync-frames.json
 /// and, for 102-104, by its <c>v2</c> section (packages/server/protocol/blok-sync-v2.md).

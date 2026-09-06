@@ -7,6 +7,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Blok.Server.AspNetCore;
 
+/// <summary>
+/// Substitutions the conformance runner needs and a shipped server must not
+/// have. The whole file compiles only under <c>BLOK_SERVER_CONFORMANCE</c>, so
+/// none of it is in a released assembly.
+/// </summary>
 public static class BlokServerConformanceExtensions
 {
   /// <summary>
@@ -21,6 +26,7 @@ public static class BlokServerConformanceExtensions
   /// The collaboration directory. The store puts each document under
   /// <c>&lt;directory&gt;/&lt;key&gt;.journal/</c>, beside the working set.
   /// </param>
+  /// <returns>The same builder, so hooks chain.</returns>
   public static BlokServerBuilder UseConformanceJournal(
       this BlokServerBuilder builder,
       string directory)
@@ -35,6 +41,19 @@ public static class BlokServerConformanceExtensions
     return builder;
   }
 
+  /// <summary>
+  /// Narrows outbound fetches to one loopback origin. The shipped policy
+  /// blocks loopback outright, which is exactly what an unfurl test needs to
+  /// reach.
+  /// </summary>
+  /// <param name="builder">The server being built.</param>
+  /// <param name="origin">
+  /// The only URL prefix allowed. Matched as a prefix that must end at a
+  /// <c>/</c>, <c>?</c> or <c>#</c>, so a sibling path cannot pass by sharing
+  /// its opening characters.
+  /// </param>
+  /// <param name="port">The loopback port the fixture server is on.</param>
+  /// <returns>The same builder, so hooks chain.</returns>
   public static BlokServerBuilder UseConformanceOrigin(
       this BlokServerBuilder builder,
       string origin,

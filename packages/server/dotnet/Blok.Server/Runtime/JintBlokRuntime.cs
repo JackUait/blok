@@ -14,7 +14,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
 
   private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
 
-  /**
+  /*
    * Jint counts every allocation a call makes, not what it still holds, so this
    * is churn per conversion rather than resident memory — a reader that builds
    * and discards a string a hundred times has spent it a hundred times over.
@@ -61,7 +61,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     {
       Engine engine;
 
-      /**
+      /*
        * Loading the bundle runs under the same timeout and allocation budget a
        * conversion does, so a caller who lowers either too far fails here. The
        * engine's own exception types are withheld from consumers at compile
@@ -122,7 +122,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
           operation,
           inputJson)).AsString();
     }
-    /**
+    /*
      * NEVER wrapped: a caller's own cancellation has to stay cancellation, or
      * every `catch (OperationCanceledException)` upstream stops working.
      */
@@ -131,7 +131,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
       reusable = false;
       throw;
     }
-    /**
+    /*
      * Only what leaves an engine mid-execution is poison, which is why the two
      * constraint failures replace the engine and the JavaScript ones do not.
      * Runaway recursion is deliberately among the latter: the stack guard turns
@@ -148,7 +148,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
       reusable = false;
       throw new BlokDocumentConversionException(BlokConversionFailure.DocumentTooLarge, exception);
     }
-    /**
+    /*
      * Two shapes for one thing. The bundle's entry point is `async`, so an error
      * thrown while reading the input rejects its promise and arrives as a
      * rejection; anything the engine raises outside that promise arrives as a
@@ -163,7 +163,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     {
       throw new BlokDocumentConversionException(Classify(exception.Error), exception);
     }
-    /**
+    /*
      * Whatever this is, it left an engine mid-execution, so the engine goes.
      */
     catch (Exception exception)
@@ -173,7 +173,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     }
     finally
     {
-      /**
+      /*
        * The pool is fixed size, so a slot that is not refilled is gone for
        * good and the pool eventually blocks forever. Building the replacement
        * can itself fail — the bundle load is bounded by the same timeout — so
@@ -202,7 +202,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
     return result;
   }
 
-  /**
+  /*
    * The runtime rejects input it cannot read by throwing a `TypeError`, and
    * `JSON.parse` rejects malformed JSON with a `SyntaxError`. Nothing else the
    * bundle raises is a statement about the input — the stack guard's own
@@ -217,7 +217,7 @@ internal sealed class JintBlokRuntime : IBlokRuntime
         : BlokConversionFailure.Unknown;
   }
 
-  /**
+  /*
    * `StackOverflowGuard` rather than a recursion limit, for the same reason the
    * limit was there: an uncatchable .NET StackOverflowException kills the whole
    * process. The guard measures the remaining native stack instead of counting

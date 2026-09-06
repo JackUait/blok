@@ -89,7 +89,7 @@ internal sealed class BlokDocumentWarmUp(IBlokDocumentConverter converter) : IHo
   /// <summary>The warm-up run, so a test can wait for what startup does not.</summary>
   internal Task Warmed { get; private set; } = Task.CompletedTask;
 
-  /**
+  /*
    * Started, not awaited, and its failure is swallowed. Warming is an
    * optimization: an application must not refuse to start because a conversion
    * was slow, and on a loaded host that conversion can reach the runtime's own

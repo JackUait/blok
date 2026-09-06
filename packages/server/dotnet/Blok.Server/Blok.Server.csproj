@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>true</IsPackable>
+    <!-- On because this package's public surface is implemented by consumers.
+         Without it CS1591 never fires, so a new public member ships with no
+         documentation on a green build, and the XML written for consumers
+         reaches them as nothing. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Blok.Server</PackageId>
     <Authors>JackUait</Authors>
     <Description>Shared server services and embedded document runtime for Blok.</Description>

@@ -716,6 +716,16 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   /// next append after a hole. A lookup passes null, because the seam says it
   /// writes nothing; it stops at the tail and the append that follows clears it.
   /// </param>
+  /// <param name="journal">
+  /// The open journal. Its position is left at the new scanned-through offset,
+  /// which is where the append that follows writes.
+  /// </param>
+  /// <param name="index">
+  /// Advanced in place — the id map, <c>DurableThrough</c> and
+  /// <c>ScannedThrough</c> all move. It is the resume point, so handing in a
+  /// fresh one rescans the whole file and rebuilds the map from byte zero.
+  /// </param>
+  /// <param name="documentId">Names the document in the corruption messages.</param>
   private static List<CollabOperationRecord> ScanForward(
       FileStream journal,
       JournalIndex index,
@@ -996,6 +1006,41 @@ internal sealed class LocalCollabOperationStore : ICollabOperationStore
   }
 
   /// <summary>The manifest's published state; the fence lives here.</summary>
+  /// <param name="WriteCounter">
+  /// Which of the two slots is current. A publication writes slot
+  /// <c>WriteCounter &amp; 1</c> and raises the counter, so the higher counter
+  /// wins the read and a torn write leaves the previous slot intact.
+  /// </param>
+  /// <param name="Fence">
+  /// The token this session took the document under. Every write re-reads the
+  /// manifest first and throws
+  /// <see cref="CollabOperationFenceLostException"/> unless this still matches.
+  /// </param>
+  /// <param name="Generation">
+  /// Counts the baseline/journal pairs ever minted here. A reset raises it, and
+  /// it names the files, so a superseded generation's files are never reopened.
+  /// </param>
+  /// <param name="Seeded">
+  /// False until a baseline exists. An unseeded document has no lineage, so
+  /// nothing may be appended to it.
+  /// </param>
+  /// <param name="Format">
+  /// Schema the baseline frames and operation updates were produced against.
+  /// </param>
+  /// <param name="Epoch">
+  /// Counts resets. A reset must raise it, which is what refuses a replayed
+  /// reset request rather than re-seeding the document from it.
+  /// </param>
+  /// <param name="Lineage">
+  /// 32 lowercase hexadecimal characters, minted on seed and on every reset.
+  /// Stored as text because it is compared and reported as text.
+  /// </param>
+  /// <param name="CheckpointThrough">
+  /// The sequence the published checkpoint covers, 0 when none is published.
+  /// It may never exceed what the journal reaches: history is the record, and
+  /// a checkpoint past the last committed sequence means the journal lost
+  /// records the checkpoint already folded in.
+  /// </param>
   /// <param name="GenerationFence">
   /// The fence held by the session that minted the current generation's
   /// baseline and journal. It is part of their file NAMES, which is what stops

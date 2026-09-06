@@ -23,7 +23,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
 
     var reported = await runtime.InvokeAsync("version", "{}", cancellationToken);
 
-    /**
+    /*
      * `dev` is what the bundle answers when it was built without the VERSION
      * define. Caching it would stamp it into every document this process
      * writes, and nothing downstream could tell it from a real version — so it
@@ -138,7 +138,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
     }.ToJsonString();
   }
 
-  /**
+  /*
    * The envelope operations parse the document here rather than in the engine,
    * which would otherwise make ONE bad document report two different failures
    * depending on which reader was asked for it — a JSON exception from this
@@ -189,7 +189,7 @@ internal sealed class BlokDocumentConverter(IBlokRuntime runtime) : IBlokDocumen
         ?? throw new InvalidOperationException("The Blok runtime returned no document.");
     var warnings = payload["warnings"].Deserialize<List<BlokDegradation>>() ?? [];
 
-    /**
+    /*
      * The report rides alongside the document on the wire, but it is not part
      * of it — a caller storing the result must not persist the warnings.
      */

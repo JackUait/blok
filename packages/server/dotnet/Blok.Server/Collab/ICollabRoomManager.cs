@@ -8,5 +8,15 @@ namespace Blok.Server.Collab;
 /// </summary>
 public interface ICollabRoomManager
 {
+  /// <summary>Refuses new joins, then drains every live room.</summary>
+  /// <param name="cancellationToken">
+  /// Bounds the flush only. A room whose store or endpoint fails, or whose
+  /// flush is cancelled, still closes — one sick room may not hold the whole
+  /// shutdown open.
+  /// </param>
+  /// <returns>
+  /// Completes once no room is left, including rooms opened by a join that
+  /// raced the refusal.
+  /// </returns>
   ValueTask DrainAsync(CancellationToken cancellationToken = default);
 }

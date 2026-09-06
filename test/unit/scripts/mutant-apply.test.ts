@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { applyMutant, assertSourceMatchesReport } from '../../../scripts/mutant-apply.mjs';
+import { applyMutant, assertSourceMatchesReport, isEntryPoint } from '../../../scripts/mutant-apply.mjs';
 
 const SOURCE = [
   'const a = 1;',
@@ -78,5 +78,30 @@ describe('assertSourceMatchesReport', () => {
   // the only safe answer: silently trusting it is how the spans go wrong.
   it('refuses when the report carries no source to compare against', () => {
     expect(() => assertSourceMatchesReport('a\n', {}, 'x.ts')).toThrow(/no source/i);
+  });
+});
+
+/**
+ * The applier is run as a CLI from sweep drivers, and several of those drivers
+ * work inside a throwaway copy of the tree whose `scripts/` is a symlink. A
+ * guard comparing argv[1] to the module URL by string fails there: the shell
+ * passes the symlinked path, Node reports the realpath, main() never runs and
+ * the process exits 0. One sweep would have scored every mutant as surviving.
+ */
+describe('isEntryPoint', () => {
+  it('recognises the module when the paths match', () => {
+    expect(isEntryPoint('/repo/scripts/mutant-apply.mjs', '/repo/scripts/mutant-apply.mjs')).toBe(true);
+  });
+
+  it('recognises it when the caller reached it through a symlinked directory', () => {
+    expect(isEntryPoint('/tmp/sandbox/scripts/mutant-apply.mjs', '/repo/scripts/mutant-apply.mjs')).toBe(true);
+  });
+
+  it('does not claim to be the entry point when another script imported it', () => {
+    expect(isEntryPoint('/repo/scripts/sweep.mjs', '/repo/scripts/mutant-apply.mjs')).toBe(false);
+  });
+
+  it('answers false when there is no entry path at all', () => {
+    expect(isEntryPoint(undefined, '/repo/scripts/mutant-apply.mjs')).toBe(false);
   });
 });

@@ -4,6 +4,7 @@
 //
 // Usage: node scripts/mutant-apply.mjs <report.json> <source file> <mutant id>
 import { fileURLToPath } from 'node:url';
+import { basename } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 /**
@@ -77,6 +78,23 @@ const main = () => {
   );
 };
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/**
+ * Whether this module is being run as a CLI rather than imported.
+ *
+ * Compared by basename, not by full path: sweep drivers run inside throwaway
+ * copies of the tree whose `scripts/` is a symlink, so the shell passes the
+ * symlinked path while Node reports the realpath. A string comparison there
+ * silently skips main() and exits 0 — one sweep scored every mutant as
+ * surviving before that was noticed.
+ */
+export const isEntryPoint = (entryPath, modulePath) => {
+  if (typeof entryPath !== 'string') {
+    return false;
+  }
+
+  return basename(entryPath) === basename(modulePath);
+};
+
+if (isEntryPoint(process.argv[1], fileURLToPath(import.meta.url))) {
   main();
 }

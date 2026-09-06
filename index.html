@@ -1216,10 +1216,33 @@
     const DEV_SERVER_URL = 'http://127.0.0.1:4000';
 
     /**
-     * Stable for the tab's whole life: a name that changed on every editor
-     * reinit would look like a peer leaving and a new one arriving.
+     * Stable for the tab's whole life, RELOADS INCLUDED: a name that changed
+     * on every editor reinit would look like a peer leaving and a new one
+     * arriving, and re-rolling it on reload made every refresh introduce a
+     * stranger. sessionStorage is per-tab, so a second tab is still someone
+     * else.
      */
-    const PRESENCE_NAME = ['Ann', 'Ben', 'Cleo', 'Dima', 'Eve', 'Finn'][Math.floor(Math.random() * 6)];
+    const PRESENCE_NAME = (() => {
+      const names = ['Ann', 'Ben', 'Cleo', 'Dima', 'Eve', 'Finn'];
+
+      try {
+        const kept = sessionStorage.getItem('blok-playground-presence-name');
+
+        if (names.includes(kept)) {
+          return kept;
+        }
+
+        const picked = names[Math.floor(Math.random() * names.length)];
+
+        sessionStorage.setItem('blok-playground-presence-name', picked);
+
+        return picked;
+      } catch {
+        // Private mode, or storage the browser refuses. A random name is the
+        // playground working as it always did.
+        return names[Math.floor(Math.random() * names.length)];
+      }
+    })();
 
     /**
      * Collaboration config for this tab, or null to stay local.

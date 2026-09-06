@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { applyMutant } from '../../../scripts/mutant-apply.mjs';
+import { applyMutant, assertSourceMatchesReport } from '../../../scripts/mutant-apply.mjs';
 
 const SOURCE = [
   'const a = 1;',
@@ -49,5 +49,34 @@ describe('applyMutant', () => {
     });
 
     expect(mutated.split('\n')[0]).toBe('const a = 9;');
+  });
+});
+
+/**
+ * A mutant is a span, and a span only means something against the exact text it
+ * was measured on. The baseline ages the moment anyone edits a file, and then a
+ * span lands in the wrong place: the patch is silently wrong, the verdict is
+ * garbage, and the source is left mangled. One file had already drifted by 48
+ * lines while its report still claimed the old shape.
+ */
+describe('assertSourceMatchesReport', () => {
+  it('accepts a file byte-identical to the report', () => {
+    expect(() => assertSourceMatchesReport('a\nb\n', { source: 'a\nb\n' }, 'x.ts')).not.toThrow();
+  });
+
+  it('refuses a file that has changed since the report was built', () => {
+    expect(() => assertSourceMatchesReport('a\nCHANGED\n', { source: 'a\nb\n' }, 'x.ts'))
+      .toThrow(/drifted/i);
+  });
+
+  it('names the file and both line counts, so the reason is obvious', () => {
+    expect(() => assertSourceMatchesReport('a\nb\nc\n', { source: 'a\n' }, 'src/x.ts'))
+      .toThrow(/src\/x\.ts.*1.*3|src\/x\.ts/);
+  });
+
+  // A report without the source cannot prove anything either way. Refusing is
+  // the only safe answer: silently trusting it is how the spans go wrong.
+  it('refuses when the report carries no source to compare against', () => {
+    expect(() => assertSourceMatchesReport('a\n', {}, 'x.ts')).toThrow(/no source/i);
   });
 });

@@ -307,6 +307,32 @@ public sealed class SyncEndpointTests
     Assert.IsType<QueryAwarenessFrame>(await alice.ReceiveAsync<QueryAwarenessFrame>());
   }
 
+  /// <summary>
+  /// The same story over a REAL socket: a client that vanishes without a
+  /// goodbye — a crash, a killed tab, a dropped network — must not be left
+  /// drawn on everyone else until their own 30s sweep expires it.
+  /// </summary>
+  [Fact]
+  public async Task WithdrawsThePresenceOfAConnectionThatJustDisappears()
+  {
+    await using var app = await SyncApp.StartAsync();
+    var alice = await app.ConnectAsync();
+    await using var bob = await app.ConnectAsync();
+
+    Assert.IsType<QueryAwarenessFrame>(await alice.ReceiveAsync<QueryAwarenessFrame>());
+
+    await alice.SendAsync(new AwarenessFrame(Presence(2)));
+    Assert.Equal(Presence(2), (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+
+    await alice.DisposeAsync();
+
+    // Client 2 at the clock bob holds it at, with a null state: the removal a
+    // stock y-protocols client applies.
+    Assert.Equal(
+        new byte[] { 1, 2, 1, 4, (byte)'n', (byte)'u', (byte)'l', (byte)'l' },
+        (await bob.ReceiveAsync<AwarenessFrame>()).Update);
+  }
+
   [Fact]
   public async Task TheNinthConnectionForOneUserAndDocIsRefusedWhileAnotherUserStillJoins()
   {

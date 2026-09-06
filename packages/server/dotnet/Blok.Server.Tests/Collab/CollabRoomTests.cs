@@ -4247,6 +4247,49 @@ public sealed class CollabRoomTests
     Assert.Empty(other.Received);
   }
 
+  /// <summary>
+  /// A frame carrying more than one client is somebody REPLAYING the room —
+  /// every member answers queryAwareness with everything it holds, its own
+  /// state included, so a reply that can teach the room about a peer always
+  /// carries at least two entries. A client's OWN publish is one entry: it
+  /// knows only itself when it connects (the provider drops remote presence
+  /// on every disconnect) and its keepalive renews one id.
+  ///
+  /// So ownership is never taken from a multi-entry frame. Without that a
+  /// member whose replay reached the room first would evict a live client by
+  /// leaving.
+  /// </summary>
+  [Fact]
+  public async Task DoesNotClaimAClientFirstSeenInsideAReplayOfTheRoom()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var owner = await Join(manager, new FakeMember());
+    var replay = await Join(manager, new FakeMember());
+    var other = new FakeMember();
+    await Join(manager, other);
+
+    // The replay lands FIRST, naming a client the room has not heard of, then
+    // the client that actually owns it publishes at the same clock.
+    await replay.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessForBoth((7, 1), (42, 3)))),
+        CancellationToken.None);
+    await owner.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    other.Received.Clear();
+
+    await replay.LeaveAsync();
+
+    Assert.Empty(other.Received);
+
+    await owner.LeaveAsync();
+
+    Assert.Equal(
+        AwarenessFor(42, 3, "null"),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+  }
+
   /// <summary>A member that already withdrew its own client has nothing left to withdraw.</summary>
   [Fact]
   public async Task WithdrawsNothingTwiceWhenTheClientSaidGoodbyeItself()
@@ -4287,6 +4330,23 @@ public sealed class CollabRoomTests
     WriteVarUint(payload, clock);
     WriteVarUint(payload, (ulong)state.Length);
     payload.AddRange(Encoding.UTF8.GetBytes(state));
+
+    return [.. payload];
+  }
+
+  /// <summary>Two well-formed entries in one frame — the shape a queryAwareness reply has.</summary>
+  private static byte[] AwarenessForBoth(
+      (ulong ClientId, ulong Clock) first,
+      (ulong ClientId, ulong Clock) second)
+  {
+    var payload = new List<byte> { 0x02 };
+
+    foreach (var entry in new[] { first, second })
+    {
+      WriteVarUint(payload, entry.ClientId);
+      WriteVarUint(payload, entry.Clock);
+      payload.AddRange([0x02, (byte)'{', (byte)'}']);
+    }
 
     return [.. payload];
   }

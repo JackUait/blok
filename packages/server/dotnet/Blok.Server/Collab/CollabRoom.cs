@@ -1935,12 +1935,22 @@ internal sealed class CollabRoom : IDisposable
   /// carries the clock it received. A null state is that client saying goodbye
   /// for itself, which retires the entry.
   ///
+  /// An UNKNOWN id is claimed only from a single-entry frame. A frame carrying
+  /// more than one client is somebody replaying the room — a queryAwareness
+  /// reply encodes everything the sender holds, its own state included, so a
+  /// reply that can teach the room about a peer always carries at least two
+  /// entries. Without that test a member whose replay reached the room first
+  /// (the map had been at its cap when the real owner published, say) would
+  /// evict a live client by leaving.
+  ///
   /// The map is capped like a frame is: past the cap a new id is simply not
   /// tracked, and its owner's departure falls back to the peers' own 30s
   /// sweep. Presence is best-effort; unbounded server memory is not.
   /// </summary>
   private void RecordAwarenessOwnersLocked(CollabMembership membership, List<AwarenessEntry> entries)
   {
+    var ownPublish = entries.Count == 1;
+
     foreach (var entry in entries)
     {
       var known = awarenessOwners.TryGetValue(entry.ClientId, out var owner);
@@ -1965,7 +1975,7 @@ internal sealed class CollabRoom : IDisposable
         continue;
       }
 
-      if (awarenessOwners.Count < options.MaxAwarenessClients)
+      if (ownPublish && awarenessOwners.Count < options.MaxAwarenessClients)
       {
         awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
       }

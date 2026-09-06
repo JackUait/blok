@@ -185,8 +185,10 @@ export interface CollaborationStatusChangedPayload {
    * not stop the socket.
    *
    * DELIVERY. This is published whether or not the connection changed: a save
-   * state that moves on its own emits an event, an identical payload emits
-   * none, and a retry tick emits nothing. One replay lands shortly after the
+   * state that moves on its own emits an event, and an identical payload emits
+   * none. A reconnect attempt still reports its own `offline` and `connecting`
+   * states, each carrying the current save state; what it does not do is invent
+   * a save change per retry. One replay lands shortly after the
    * editor is ready, so a host that subscribes once `isReady` resolves still
    * hears the state it is already in.
    *

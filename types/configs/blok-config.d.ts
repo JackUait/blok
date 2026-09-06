@@ -611,9 +611,10 @@ export interface BlokMountOptions {
    * survives a page reload — the queue lives in memory only.
    *
    * COMPATIBILITY, NOT HISTORY. Every `save` carries the WHOLE document, and
-   * only the newest queued payload is sent — so what was typed between two
-   * saves is never sent anywhere, and nothing keeps it. Use this where there is
-   * no sync service to talk to. Where durable saving is the point, use
+   * only the newest queued payload is sent, so nothing typed is lost — that
+   * payload carries it. What is never recorded anywhere is the document states
+   * in between. Use this where there is no sync service to talk to. Where
+   * durable saving is the point, use
    * {@link BlokMountOptions.collaboration}, which acknowledges each edit
    * individually; the two cannot be combined.
    * @example

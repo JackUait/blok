@@ -537,13 +537,15 @@ describe('server docs data', () => {
     expect(body).toMatch(/onChange/);
     expect(body).toMatch(/do not write|never write|stop saving/i);
     // The reverse reading has to be closed too. `persistence` sends the WHOLE
-    // document on a debounce and only ever the newest payload, so the edits
-    // between two saves are never sent anywhere — it is the compatibility
-    // route for a build with no service, not a durable record of what happened.
+    // document on a debounce and only ever the newest payload — so nothing
+    // typed is lost, since that payload carries it, but the states in between
+    // are never recorded. It is the compatibility route for a build with no
+    // service, not a durable record of what happened. The old assertion here
+    // matched "never sent", which said the content was lost and was false.
     expect(body).toMatch(/compatibility/i);
     expect(body).toMatch(/whole document/i);
     expect(body).toMatch(/newest/i);
-    expect(body).toMatch(/never sent|no record of|not a record/i);
+    expect(body).toMatch(/never recorded|no record of|not a record/i);
   });
 
   // The other two bodies this change moved. The gate above proves the KEY is
@@ -1117,7 +1119,7 @@ describe('server docs data', () => {
     const persistence = types.slice(0, types.indexOf('persistence?: {'));
 
     expect(persistence).toMatch(/compatibility/i);
-    expect(persistence).toMatch(/never sent|no record of|not a record/i);
+    expect(persistence).toMatch(/never recorded|no record of|not a record/i);
     // The browser may drop the offline copy on its own.
     expect(types).toMatch(/not a backup/i);
   });

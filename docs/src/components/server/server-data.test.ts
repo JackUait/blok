@@ -561,6 +561,11 @@ describe('server docs data', () => {
     expect(getTranslation('en', key)).not.toMatch(/it still answers 204/);
     expect(getTranslation('ru', key)).toContain('Blok-Idempotency-Key');
     expect(getTranslation('ru', key)).not.toMatch(/всё равно отвечает 204/);
+    // Both lines above survive a reverted Russian body: the header name is
+    // Latin, and the negative passes vacuously against the English fallback.
+    // Only Cyrillic from the repaired span can fail when the repair is undone.
+    expect(getTranslation('ru', key)).toMatch(/после надёжной фиксации/);
+    expect(getTranslation('ru', key)).toMatch(/возвращает 503 и не передаёт изменение/);
   });
 
   // Two ways in, and the entry has to make the choice between them obvious:

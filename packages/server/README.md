@@ -243,7 +243,7 @@ A pass is a plain HS256 JWT carrying `user`, `doc`, `write` and `exp`, signed wi
 | `POST /sync/{doc}/reset` | Drops the working copy, reloads the document from your endpoint and tells every open tab to pick it up |
 | `POST /sync/{doc}/edit` | Inserts, updates or removes blocks from outside; all-or-nothing, reaches every open tab, and requires an idempotency key |
 
-`POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 means the edit is durable and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
+`POST /sync/{doc}/edit` needs one `Blok-Idempotency-Key` header with 1 to 128 printable ASCII characters. With an operation journal, retrying the same key returns the first result without applying it again; reusing it for different work receives 409. A 204 then means the edit is durable, and the response carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`; a working-copy-only service answers 204 without those headers and without that promise. If that journal cannot commit, the endpoint returns 503 without relaying the edit. A working-copy-only service does not deduplicate the key or make reuse a 409: requests have ordinary retry behavior, and its 204 starts the existing write-back retry path.
 
 Upload routes exist only when local or S3-compatible storage is configured. Consumer-supplied URLs pass through one guarded outbound client that blocks private and cloud-metadata addresses. Send `POST /upload-by-url` a `{"url":"..."}` body with an `application/json` media type; parameters such as `charset=utf-8` are allowed, but JSON suffix types are not.
 
@@ -253,7 +253,7 @@ A request that carries `Origin` must match an allowed origin in every auth mode.
 
 `--collab` (or `options.CollabEnabled`) gives you the working-copy profile: the service keeps a working copy of every open document and writes it back to your document endpoint. Nothing keeps a record of the individual changes that produced it, so `POST /sync/{doc}/edit` cannot tell a retry from new work, and a socket gets no per-change receipt.
 
-Registering an operation store turns on the acknowledged profile. The journal becomes the record: every accepted change is appended to it before it is broadcast, the edit route deduplicates its `Blok-Idempotency-Key` and answers 409 for a key reused for different work, and a socket that negotiated `blok-sync.v2` receives one acknowledgement per operation naming the sequence it committed at. The service ships no store you can switch on — there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own:
+Registering an operation store turns on the acknowledged profile. The journal becomes the record: every accepted change is appended to it before it is broadcast, the edit route deduplicates its `Blok-Idempotency-Key` and answers 409 for a key reused for different work, and a socket that negotiated `blok-sync.v2` receives one acknowledgement per operation naming the sequence it committed at. The service ships no store you can switch on — there is no flag for one on the standalone host, and the working set under `--collab-dir` or `--collab-s3-prefix` is not a journal. An in-process app registers its own. The store's own bodies are elided below — writing them is the work, and the laws further down are what they have to keep; the registration is complete as written:
 
 ```csharp
 using Blok.Server.AspNetCore;
@@ -261,7 +261,7 @@ using Blok.Server.Collab;
 
 // One method on the store; the session it hands back carries the reads and
 // every write, so nothing can be written without holding the document's fence.
-public sealed class SqlCollabOperationStore(NpgsqlDataSource database) : ICollabOperationStore
+public sealed class SqlCollabOperationStore(IConfiguration configuration) : ICollabOperationStore
 {
   public ValueTask<CollabDocumentOpen> OpenAsync(
       string documentId,
@@ -302,6 +302,7 @@ What the service requires of it:
 - **`WriteCheckpointAsync` never touches history.** A `Through` that is not a committed sequence, or is below one already published, is `ArgumentOutOfRangeException`; republishing at the sequence already published succeeds and changes nothing, because that is both the retry after an unknown outcome and what a periodic checkpointer does when nothing has advanced.
 - **`ResetAsync` replaces the document atomically** with a new epoch, lineage and sequence-zero baseline, and is also how a document that has never been seeded is seeded. The caller owns the epoch law; a store may refuse a regression but never invents an epoch of its own.
 - **Cancellation belongs to the caller.** A store-side timeout or abort surfaces as some other exception, because the caller reads a cancellation it did not ask for as its own shutdown.
+- **Disposal releases the fence, unless it is already gone.** `DisposeAsync` lets another process open the document, and never throws because the fence was already lost; every method throws `ObjectDisposedException` afterwards. A session that HAS lost the fence releases nothing — the fence it would release now belongs to somebody else, so a `DisposeAsync` that unconditionally drops its lock row hands a third writer the document while the second is mid-write.
 
 A backend that is not .NET implements the wire protocol instead of this interface: `packages/server/protocol/blok-sync-v2.md` is a normative spec written so a server outside this repository can be built from it alone, and the frame vectors it pins live in `test/unit/server-conformance/fixtures/sync-frames.json`. This repository's conformance runner builds and drives the C# host only (`node scripts/test-server-conformance.mjs --target csharp`), so another backend runs those vectors, and the same durability scenarios — restart the process, fail the next append, inspect history — in its own harness.
 

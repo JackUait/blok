@@ -322,6 +322,28 @@ const readStore = async (
 };
 
 /**
+ * Outbox row counts a probe sees. `stats` counts EVERY row, unlike
+ * `oldestPending`, which is only the drain's cursor; `quarantined` excludes the
+ * recovery snapshot the quarantine writes beside the rows.
+ * @param doc - the document id the harness booted with
+ * @param scope - the identity partition the harness booted under
+ */
+const storeCounts = async (
+  doc = 'doc-1',
+  scope: string = SCOPE
+): Promise<{ pending: number; quarantined: number }> => {
+  const probe = createOperationStore(storeOptions(doc, scope));
+
+  await probe.open();
+
+  const stats = await probe.stats();
+
+  await probe.close();
+
+  return { pending: stats.pendingOperations, quarantined: stats.quarantinedOperations };
+};
+
+/**
  * The block texts a set of updates replays into.
  * @param updates - update bytes, applied in order
  */
@@ -593,7 +615,7 @@ describe('collaboration — sync-first load', () => {
       const harness = await boot({ doc: 'my doc/1'.replace('/', '-') });
 
       expect(harness.socket().url).toBe('wss://sync.test/api/sync/my%20doc-1');
-      expect(harness.socket().protocols).toEqual(['blok-sync.v1']);
+      expect(harness.socket().protocols).toEqual([V2, 'blok-sync.v1']);
     });
   });
 
@@ -1317,9 +1339,10 @@ describe('collaboration — sync-first load', () => {
       firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'from the room' } }]);
       await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
 
-      // Tolerated: the block never arrives when the guard holds, and this wait
-      // is only here so the assertion below is not racing a refusal in flight.
-      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1000)
+      // Waits for the arbitration a completed sync owes. Waiting for read-only
+      // to be ENABLED would return on the first poll — that is where a
+      // collaboration editor starts — and race the refusal this pins against.
+      await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be possible', 2000)
         .catch(() => undefined);
 
       expect(
@@ -1353,8 +1376,9 @@ describe('collaboration — sync-first load', () => {
       firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'from the room' } }]);
       await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
 
-      // Tolerated: nothing blocks editing when the ordering holds.
-      await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1000)
+      // Waits for the arbitration a completed sync owes; read-only is where a
+      // collaboration editor starts, so the wait has to be for it to LIFT.
+      await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editing to be possible', 2000)
         .catch(() => undefined);
 
       expect(
@@ -1585,6 +1609,336 @@ describe('collaboration — sync-first load', () => {
       // Through the outbox, which is where a v2 session's own edits go.
       expect(after.pending).not.toBeNull();
     }, 30_000);
+
+    /**
+     * The same buffer, on the other structural chokepoint: a relineage
+     * quarantines every row of the abandoned lineage, and the last thing typed
+     * has to be a row by then or the recovery record does not carry it.
+     *
+     * Pins the OUTCOME, not the seam wiring that is one of its two causes:
+     * `UndoHistory`'s 100ms word-boundary timer drains the same buffer
+     * (undo-history.ts, `stopCapturing`), and it beats the quarantine's turn on
+     * the store's serial queue here, so removing `flushPendingWrites` from the
+     * seam does not fail this test. Measured, not assumed.
+     */
+    it('a buffered write in flight during relineage is quarantined with the rest', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      const yjs = harness.core.moduleInstances.YjsManager;
+      const flush = (entries: ReadonlyMap<string, unknown>): boolean => {
+        let wrote = false;
+
+        for (const [key, value] of entries) {
+          wrote = yjs.updateBlockData('b1', key, value) || wrote;
+        }
+
+        return wrote;
+      };
+
+      expect((await storeCounts()).pending, 'the fixture began with rows already waiting').toBe(0);
+
+      // Back to back, with NOTHING awaited between them: the first rides the
+      // leading edge and is a row at once, the second coalesces into the
+      // trailing window and is still only in the buffer. Any await here would
+      // outlast the 400ms window and make the second a leading edge too, which
+      // is a fixture that cannot fail.
+      yjs.enqueueBlockDataWrite('b1', { text: 'leading' }, flush);
+      yjs.enqueueBlockDataWrite('b1', { text: 'trailing' }, flush);
+
+      harness.socket().deliver({
+        type: 'control',
+        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+      });
+
+      await waitFor(async () => (await storeCounts()).quarantined > 0, 'the quarantine', 5000);
+
+      expect(
+        (await storeCounts()).quarantined,
+        'the last buffered edit was still in the write buffer when the quarantine walked the outbox, so it never became a row and the recovery record does not carry it'
+      ).toBe(2);
+    }, 40_000);
+  });
+
+  /**
+   * Protocol section 2. A client that negotiates v1 MUST NOT claim durable
+   * acknowledgement: rows a v2 session journalled are KEPT — a v1 server can
+   * neither acknowledge nor reject them — and editing stops until a connection
+   * that can drain them arrives.
+   */
+  describe('mixed-version fallback', () => {
+    /** What the client wrote, minus the presence chatter every session makes. */
+    const wireTypes = (socket: MockSocket): string[] =>
+      socket.sent.map((bytes) => decode(bytes).type).filter((type) => type !== 'awareness');
+
+    const operationOn = (socket: MockSocket): Extract<SyncWireFrame, { type: 'operation' }> | undefined =>
+      socket.sent
+        .map((bytes) => decode(bytes))
+        .find((frame): frame is Extract<SyncWireFrame, { type: 'operation' }> => frame.type === 'operation');
+
+    /**
+     * Leaves an outbox row behind that nothing has acknowledged, and hands back
+     * the row a reload will find waiting.
+     */
+    const retainedRow = async (): Promise<PendingOperation> => {
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      first.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed under v2');
+      await waitFor(async () => (await readStore()).pending !== null, 'the edit to reach the outbox');
+
+      const { pending } = await readStore();
+
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      if (pending === null) {
+        throw new Error('the v2 session journalled nothing to retain');
+      }
+
+      return pending;
+    };
+
+    it('v1 selected with no v2 rows keeps current behavior', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitFor(() => !harness.core.moduleInstances.ReadOnly.isEnabled, 'editable');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed under v1');
+      await waitFor(async () => (await cachedTexts()).includes('typed under v1'), 'the edit in the copy');
+
+      expect(
+        harness.core.moduleInstances.ReadOnly.isEnabled,
+        'a v1 session with nothing waiting for a receipt stopped accepting edits'
+      ).toBe(false);
+      expect(wireTypes(socket), 'a v1 session stopped broadcasting its local writes')
+        .toEqual(['syncStep1', 'update']);
+      expect(
+        (await readStore()).pending,
+        'a v1 session journalled an operation row nothing can ever acknowledge'
+      ).toBeNull();
+    }, 30_000);
+
+    it('v1 selected with pending v2 rows sends none and blocks editing', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const row = await retainedRow();
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      const socket = firstSync(reloaded, []);
+
+      await waitFor(() => collabAttr(reloaded.core) === 'connected', 'connected');
+      // Tolerated: with the hold never applied there is nothing to wait for,
+      // and the assertion below is the one that has to speak.
+      await waitFor(() => reloaded.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1500)
+        .catch(() => undefined);
+
+      expect(
+        reloaded.core.moduleInstances.ReadOnly.isEnabled,
+        'a v1 server was selected while durable rows waited, so the session went on taking edits it can never deliver a receipt for'
+      ).toBe(true);
+      expect(wireTypes(socket), 'a v1 server was written to on behalf of a row it can neither acknowledge nor reject')
+        .toEqual(['syncStep1']);
+      expect(
+        (await readStore()).pending?.operationId,
+        'the retained row did not survive the v1 session that could not take it'
+      ).toBe(row.operationId);
+    }, 40_000);
+
+    /**
+     * The other half of the downgrade: everything this session journalled was
+     * already acknowledged, so v1 takes nothing away from it.
+     */
+    it('a v1 downgrade with nothing waiting keeps editing possible', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const first = await boot({ offline: true });
+
+      firstSync(first, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => first.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      expect((await readStore()).pending, 'the fixture left a row behind').toBeNull();
+
+      destroyCore(booted.splice(booted.indexOf(first.core), 1)[0]);
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      // A cache-adopted session is ALREADY editable when the frame lands, so
+      // waiting for "editable" returns on the first poll and would assert
+      // before the outbox read has answered. Arbitration is the first thing the
+      // transition does after that read, so one more call is the barrier — and
+      // if it has already landed the wait simply expires, which is still after.
+      const arbitration = vi.spyOn(reloaded.core.moduleInstances.ReadOnly, 'reapplyCollaborationArbitration');
+
+      firstSync(reloaded, []);
+      await waitFor(() => collabAttr(reloaded.core) === 'connected', 'connected');
+
+      const published = arbitration.mock.calls.length;
+
+      await waitFor(
+        () => arbitration.mock.calls.length > published,
+        'the arbitration that follows the outbox read',
+        3000
+      ).catch(() => undefined);
+
+      expect(
+        reloaded.core.moduleInstances.ReadOnly.isEnabled,
+        'a v1 server was blamed for rows that do not exist, and the session stopped taking edits'
+      ).toBe(false);
+    }, 40_000);
+
+    /**
+     * The hold is re-read on EVERY later v1 connection, not only on the
+     * downgrade that set it: a relineage empties the outbox behind the
+     * session's back, and a client that only ever asked once would stay
+     * unable to edit for the rest of the tab's life.
+     */
+    it('a later v1 connection lifts the hold once the rows are gone', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      await retainedRow();
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+      firstSync(reloaded, []);
+      await waitFor(() => reloaded.core.moduleInstances.ReadOnly.isEnabled, 'the hold to go on', 3000);
+
+      // A lineage the client has never seen: the rows stamped with the old one
+      // are quarantined, so by the next connection nothing is waiting.
+      reloaded.socket().deliver({
+        type: 'control',
+        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+      });
+      await waitFor(() => reloaded.sockets.length === 2, 'the reconnect', 8000);
+      await waitFor(async () => (await readStore()).pending === null, 'the quarantine', 5000);
+
+      firstSync(reloaded, []);
+      await waitFor(() => collabAttr(reloaded.core) === 'connected', 'the second v1 connection', 5000);
+      await waitFor(() => !reloaded.core.moduleInstances.ReadOnly.isEnabled, 'the hold to lift', 5000)
+        .catch(() => undefined);
+
+      expect(
+        reloaded.core.moduleInstances.ReadOnly.isEnabled,
+        'the outbox was emptied and a fresh connection came up, and the session never asked again — it stays unable to edit for good'
+      ).toBe(false);
+    }, 60_000);
+
+    it('v2 reconnect later sends and acknowledges the retained row', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const row = await retainedRow();
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+      firstSync(reloaded, []);
+      await waitFor(() => collabAttr(reloaded.core) === 'connected', 'the v1 connection');
+
+      reloaded.socket().serverClose(1006);
+      await waitFor(() => reloaded.sockets.length === 2, 'the reconnect', 8000);
+
+      const second = firstSync(reloaded, [], V2);
+
+      // Tolerated: a row that never leaves has nothing to wait for.
+      await waitFor(() => operationOn(second) !== undefined, 'the retained row on the wire', 3000)
+        .catch(() => undefined);
+
+      expect(
+        operationOn(second),
+        'a connection that could finally take the retained row came up and the row still never left'
+      ).toBeDefined();
+      expect(operationOn(second)?.operationId).toBe(row.operationId);
+
+      second.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE,
+        operationId: row.operationId,
+        serverSequence: '1',
+      });
+      await waitFor(async () => (await readStore()).pending === null, 'the row to be retired', 3000)
+        .catch(() => undefined);
+
+      expect((await readStore()).pending, 'an acknowledged row stayed in the outbox').toBeNull();
+      expect(
+        reloaded.core.moduleInstances.ReadOnly.isEnabled,
+        'editing stayed blocked on a session that can deliver again'
+      ).toBe(false);
+    }, 60_000);
+
+    /**
+     * The await this task introduces. A v2 session that comes back to a v1
+     * server reads the outbox before arbitration may lift read-only, and a
+     * teardown landing inside that read must not re-arbitrate a ReadOnly that
+     * is already gone — the same rule the final-flush case above pins.
+     */
+    it('asks nothing of a torn-down editor while the outbox read is in flight', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      await retainedRow();
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      const arbitration = vi.spyOn(reloaded.core.moduleInstances.ReadOnly, 'reapplyCollaborationArbitration');
+
+      // Synchronous with the frame: the transition runs to the outbox read and
+      // parks there, which is the window this test exists for.
+      firstSync(reloaded, []);
+      destroyCore(booted.splice(booted.indexOf(reloaded.core), 1)[0]);
+
+      const duringTeardown = arbitration.mock.calls.length;
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(
+        arbitration.mock.calls.length,
+        'an outbox read that resolved after teardown re-arbitrated a destroyed editor'
+      ).toBe(duringTeardown);
+    }, 40_000);
+
+    /**
+     * The same-tab wake. The store's `onCommitted` hint is cross-tab only, so
+     * without it a fresh edit sits in the outbox until something else — a
+     * reconnect, another tab — happens to shake the drain loose.
+     */
+    it('a fresh local edit reaches the wire without waiting for a reconnect', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const harness = await boot({ offline: true });
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed on a live session');
+      await waitFor(() => operationOn(socket) !== undefined, 'the edit on the wire', 3000)
+        .catch(() => undefined);
+
+      const pending = (await readStore()).pending;
+
+      expect(
+        operationOn(socket),
+        'an edit made on a live v2 session sat in the outbox until something else woke the drain'
+      ).toBeDefined();
+      expect(operationOn(socket)?.operationId).toBe(pending?.operationId);
+    }, 30_000);
   });
 
   describe('the binary seam', () => {
@@ -1802,8 +2156,15 @@ describe('collaboration — sync-first load', () => {
 
       socket.serverClose(4409, 'the room was reset');
 
-      // Document and DOM both gone, synchronously with the close.
-      expect(harness.core.moduleInstances.YjsManager.toJSON()).toEqual([]);
+      // No longer synchronous with the close: every session now holds an
+      // outbox, so the reset waits for the old lineage to be quarantined before
+      // it throws the document away. Both still go, and the SyncStep1 below is
+      // what proves nothing of the old room reached the new one.
+      await waitFor(
+        () => harness.core.moduleInstances.YjsManager.toJSON().length === 0,
+        'the old room to be dropped'
+      );
+
       expect(harness.core.moduleInstances.BlockManager.blocks.length).toBe(0);
 
       await waitFor(() => harness.core.moduleInstances.ReadOnly.isEnabled, 'read-only while unsynced again');
@@ -1913,7 +2274,7 @@ describe('collaboration — sync-first load', () => {
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
 
       expect(harness.core.moduleInstances.ReadOnly.isEnabled).toBe(true);
-      expect(harness.socket().protocols).toEqual(['blok-sync.v1', `header.${payload}.signature`]);
+      expect(harness.socket().protocols).toEqual([V2, 'blok-sync.v1', `header.${payload}.signature`]);
     });
   });
 

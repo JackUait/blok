@@ -2,6 +2,7 @@ import { logLabeled } from '../../utils/logger';
 
 import { decode, encode } from './sync-wire';
 import type {
+  CollabOutbox,
   CollabOutboxRow,
   CollabProvider,
   CollabProviderOptions,
@@ -36,18 +37,24 @@ import type {
  * No DOM, no module wiring: the Collaboration module owns those.
  */
 
-/**
- * Version tokens this client offers, in order, before the ticket (if any).
- * Stays `['blok-sync.v1']` until Task 4.5 changes it to
- * `['blok-sync.v2', 'blok-sync.v1']` once this provider can drain v2
- * operation/acknowledgement/rejection frames. Offering v2 before then gets
- * the client selected into a protocol it cannot honour, and its edits stop
- * being acknowledged.
- */
-const SYNC_SUBPROTOCOL_OFFERS = ['blok-sync.v1'];
+/** The token every server selects when it has no durable operation store. */
+const SYNC_SUBPROTOCOL_V1 = 'blok-sync.v1';
 
 /** The token a server with a durable operation store selects. */
 const SYNC_SUBPROTOCOL_V2 = 'blok-sync.v2';
+
+/**
+ * Version tokens this client offers, in order, before the ticket (if any).
+ *
+ * v2 is offered ONLY with an outbox, because that is the whole v2 write path:
+ * without one the seam drops every local edit (`hookSeam` returns under v2) and
+ * the drain that replaces it returns before it can ask for the residual state
+ * vector, so a v2 selection would leave the client unable to send anything at
+ * all after its opening SyncStep1.
+ * @param outbox - the durable outbox, when this provider has one
+ */
+const subprotocolOffers = (outbox: CollabOutbox | undefined): string[] =>
+  outbox === undefined ? [SYNC_SUBPROTOCOL_V1] : [SYNC_SUBPROTOCOL_V2, SYNC_SUBPROTOCOL_V1];
 
 /** CRDT schema this client speaks. A control frame naming another is terminal. */
 const SUPPORTED_FORMAT = 1;
@@ -134,8 +141,8 @@ interface ProviderState {
   tag: WorkingSetTag | null;
   /**
    * What the server selected on the connection that last validated a control
-   * frame. Nothing is offered but v1 until Task 4.5, so this reads 'v1' in the
-   * field; it is read from the socket rather than assumed because the whole
+   * frame. Read from the socket rather than inferred from the offers — a proxy
+   * or an older server may select nothing at all — because the whole
    * local-write route hangs off it.
    */
   protocol: SessionProtocol;
@@ -771,12 +778,17 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * deliberately NOT required to increase — a re-sent operation is answered with
    * its ORIGINAL acknowledgement (section 7.2), so a monotonicity rule would
    * refuse a legitimate duplicate.
+   *
+   * Gated on the negotiated protocol, unlike `relineage`: a v1 session claimed
+   * no durability (section 2) and may retire nothing, and reading the protocol
+   * here is safe because `onmessage` drops 103/104 arriving BEFORE the control
+   * frame, which is the frame that reads it.
    * @param frame - the decoded acknowledgement
    */
   const handleAcknowledgement = (frame: Extract<SyncWireFrame, { type: 'acknowledgement' }>): void => {
     const outbox = options.outbox;
 
-    if (outbox === undefined || state.lineage === null || frame.lineage !== state.lineage) {
+    if (outbox === undefined || state.protocol !== 'v2' || state.lineage === null || frame.lineage !== state.lineage) {
       return;
     }
 
@@ -809,12 +821,15 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * outbox to be redriven and refused forever. The code is the only thing
    * branched on — it is the codec-validated kebab-case token, and a rejection
    * carries no free text at all.
+   *
+   * Protocol-gated for the same reason frame 103 is: a v1 session sent no
+   * operation, so it may act on no verdict about one.
    * @param frame - the decoded rejection
    */
   const handleRejection = (frame: Extract<SyncWireFrame, { type: 'rejection' }>): void => {
     const lineage = state.lineage;
 
-    if (options.outbox === undefined || lineage === null || frame.lineage !== lineage) {
+    if (options.outbox === undefined || state.protocol !== 'v2' || lineage === null || frame.lineage !== lineage) {
       return;
     }
 
@@ -1208,7 +1223,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * @param token - the connection ticket, if the host mints them
    */
   const openSocket = (generation: number, token: string | null): void => {
-    const protocols = token === null ? [...SYNC_SUBPROTOCOL_OFFERS] : [...SYNC_SUBPROTOCOL_OFFERS, token];
+    const offers = subprotocolOffers(options.outbox);
+    const protocols = token === null ? offers : [...offers, token];
 
     // The try covers the factory call ALONE: a throw while attaching handlers
     // would leave a half-wired socket in `state`, which is the strand this

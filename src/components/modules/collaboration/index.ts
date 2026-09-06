@@ -281,6 +281,15 @@ export class Collaboration extends Module {
   private durabilityLost = false;
 
   /**
+   * A v1 server was selected while durable rows were still waiting. They are
+   * KEPT — v1 can neither acknowledge nor reject them (protocol section 2) — so
+   * editing stops until a connection that can drain them arrives. Recomputed on
+   * every completed sync, unlike `durabilityLost`: a v2 reconnect makes
+   * durability available again.
+   */
+  private retainedUnderV1 = false;
+
+  /**
    * Latched when the boot adopted a cached document. It stands in for
    * `firstSynced` everywhere editing is decided: the cache only ever becomes
    * adoptable behind a VALIDATED control frame, so an adopted document carries
@@ -361,7 +370,8 @@ export class Collaboration extends Module {
    */
   public get isEditingBlocked(): boolean {
     return this.settings !== null
-      && (!(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal || this.durabilityLost);
+      && (!(this.firstSynced || this.cacheAdopted) || this.writeDenied || this.terminal
+        || this.durabilityLost || this.retainedUnderV1);
   }
 
   /**
@@ -379,6 +389,48 @@ export class Collaboration extends Module {
    */
   private isRemoteOrigin(origin: unknown): boolean {
     return typeof origin === 'object' && origin !== null && this.remoteOrigins.has(origin);
+  }
+
+  /**
+   * Protocol section 2: a client that negotiated v1 may claim no durable
+   * acknowledgement. Rows a v2 session journalled are kept and sent to nobody,
+   * and editing stops until a v2 connection can drain them.
+   *
+   * Returns a promise ONLY when the answer needs a database read, so the
+   * caller can reach arbitration without a tick on every other transition.
+   * @param status - the transition being published
+   * @param priorProtocol - what local edits were routed by before this sync
+   */
+  private applyDurabilityHold(status: CollabStatus, priorProtocol: SessionProtocol): Promise<void> | undefined {
+    const store = this.store;
+
+    // Only a completed sync has negotiated anything: `recordCacheMeta` is what
+    // reads the selected protocol, and it runs on 'connected' alone.
+    if (status !== 'connected' || store === null) {
+      return undefined;
+    }
+
+    if (this.protocol === 'v2') {
+      // v2 drains whatever is waiting, so nothing is held back.
+      this.retainedUnderV1 = false;
+
+      return undefined;
+    }
+
+    // Only a tab that COULD have journalled rows owes the read: `appendLocal`
+    // refuses unless this tab negotiated v2, so a session that has only ever
+    // been v1 has nothing to look for. Worth the branch because the read is a
+    // database round trip on the path that LIFTS read-only — an ordinary
+    // connect must reach arbitration in the tick it always has.
+    if (priorProtocol !== 'v2' && !this.retainedUnderV1) {
+      return undefined;
+    }
+
+    // `oldestPending`, never `stats().pendingOperations` — that counter
+    // includes rows the drain is never handed.
+    return store.oldestPending().then((row) => {
+      this.retainedUnderV1 = row !== null;
+    });
   }
 
   /**
@@ -501,6 +553,9 @@ export class Collaboration extends Module {
       // lineage COMPARED against the first control frame, never overwritten by
       // it. See the provider's `initialLineage`.
       initialLineage: adopted,
+      // `OperationStore` is a structural superset of the outbox seam, so this
+      // is a pass-through. It is also what makes the provider offer v2 at all.
+      outbox: this.store ?? undefined,
       onStatus: (status, detail) => {
         void this.handleStatus(status, detail);
       },
@@ -587,7 +642,9 @@ export class Collaboration extends Module {
         return;
       }
 
-      this.captured(this.store.appendLocal(update));
+      // The store's `onCommitted` hint never fires for the tab that wrote the
+      // row, so this is the only wake the drain gets for our own edit.
+      this.captured(this.store.appendLocal(update).then(() => this.provider?.drain()));
     });
 
     if (contents === null) {
@@ -701,6 +758,9 @@ export class Collaboration extends Module {
       applyAwarenessUpdate: (update, origin) => yjs.applyAwarenessUpdate(update, origin),
       clearRemoteAwarenessStates: () => yjs.clearRemoteAwarenessStates(),
       resetForRelineage: () => this.resetForRelineage(),
+      // The relineage quarantine walks the outbox, so the last thing typed has
+      // to be a row before it runs — this is the same flush `destroy` performs.
+      flushPendingWrites: () => yjs.flushPendingBlockWrites(),
     };
   }
 
@@ -814,12 +874,29 @@ export class Collaboration extends Module {
     this.terminal = status === 'error';
     this.firstSynced = this.firstSynced || status === 'connected';
 
+    // Read before `recordCacheMeta` overwrites it: only a session that used to
+    // route edits through the outbox can be holding rows a v1 server cannot take.
+    const priorProtocol = this.protocol;
+
     // BEFORE anything can observe the transition: `emitStatus` reaches host
     // listeners, and a listener that writes to the document would produce a
     // local edit the store has no lineage to stamp yet.
     this.recordCacheMeta(status);
     this.setStateAttribute(status);
     this.emitStatus();
+
+    // BEFORE arbitration, which is what lifts read-only: a session that starts
+    // editing and only then learns it negotiated v1 has already produced local
+    // updates it has nowhere to route.
+    const hold = this.applyDurabilityHold(status, priorProtocol);
+
+    if (hold !== undefined) {
+      await hold;
+
+      if (this.isDestroyed) {
+        return;
+      }
+    }
 
     await this.applyArbitration();
 

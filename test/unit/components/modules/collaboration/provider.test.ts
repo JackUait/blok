@@ -287,11 +287,14 @@ describe('createCollabProvider', () => {
       expect(harness.socket().protocols).toEqual([PROTOCOL, 'tok-1']);
     });
 
-    // TRAP (Task 1.4): the offer list must stay exactly [v1] / [v1, ticket]
-    // until Task 4.5 adds v2 once this provider can drain v2 operation
-    // frames. Offering v2 earlier gets the client selected into a protocol
-    // it cannot honour, and its edits stop being acknowledged.
-    it('never offers blok-sync.v2, with or without a ticket', async () => {
+    /**
+     * A provider with NO outbox cannot honour v2, so it must never be selected
+     * into it: under v2 the seam drops every local edit and the drain that
+     * replaces them returns at once, which leaves the client unable to send
+     * anything after its opening SyncStep1. Offers stay [v1] / [v1, ticket] and
+     * the write path stays exactly what it was.
+     */
+    it('stock provider behavior is unchanged', async () => {
       const ticketSource = vi.fn(() => Promise.resolve('tok-1'));
       const noTicket = createHarness();
       const withTicket = createHarness({ ticketSource });
@@ -300,8 +303,20 @@ describe('createCollabProvider', () => {
       withTicket.provider.connect();
       await flushMicrotasks();
 
-      expect(noTicket.socket().protocols).toEqual([PROTOCOL]);
+      expect(
+        noTicket.socket().protocols,
+        'a provider with no outbox offered v2, a protocol it cannot send a single local edit under'
+      ).toEqual([PROTOCOL]);
       expect(withTicket.socket().protocols).toEqual([PROTOCOL, 'tok-1']);
+
+      const socket = noTicket.socket();
+
+      socket.open(PROTOCOL);
+      socket.deliver(controlFrame());
+      noTicket.store.addBlock({ id: 'b1', type: 'paragraph', data: { text: 'hi' } });
+
+      expect(socket.frameTypes, 'a stock session stopped broadcasting its local writes')
+        .toEqual(['syncStep1', 'update']);
     });
 
     it('exposes the server-selected subprotocol once the socket opens', () => {
@@ -2826,6 +2841,128 @@ describe('createCollabProvider', () => {
         operationIds(socket),
         'a row another tab committed sat in the outbox until this tab happened to reconnect'
       ).toEqual([row.operationId]);
+    });
+
+    /**
+     * Protocol section 2. A client that negotiated v1 MUST NOT claim durable
+     * acknowledgement: it keeps every row it holds, sends none of them, and
+     * waits for a connection that can take them.
+     */
+    describe('mixed-version fallback', () => {
+      it('offers blok-sync.v2 ahead of v1 once it has an outbox to drain', async () => {
+        const ticketSource = vi.fn(() => Promise.resolve('tok-1'));
+        const noTicket = createHarness({ outbox: new FakeOutbox(LINEAGE_A) });
+        const withTicket = createHarness({ outbox: new FakeOutbox(LINEAGE_A), ticketSource });
+
+        noTicket.provider.connect();
+        withTicket.provider.connect();
+        await flushMicrotasks();
+
+        expect(
+          noTicket.socket().protocols,
+          'a client that can drain v2 never offered it, so a v2 server can only select v1 and nothing it journals is ever acknowledged'
+        ).toEqual([PROTOCOL_V2, PROTOCOL]);
+        expect(withTicket.socket().protocols).toEqual([PROTOCOL_V2, PROTOCOL, 'tok-1']);
+      });
+
+      it('v1 selected with pending v2 rows sends none', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+        const harness = createHarness({ outbox });
+        const socket = connectAndHandshake(harness, PROTOCOL);
+        const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+        harness.provider.drain();
+        completeFirstSync(harness, socket, peer);
+        await settle();
+
+        expect(
+          operationFrames(socket),
+          'a v1 server was sent an operation it can neither acknowledge nor reject'
+        ).toEqual([]);
+        expect(
+          outbox.rows.map((pending) => pending.operationId),
+          'a row went missing on a session that cannot get a receipt for it'
+        ).toEqual([row.operationId]);
+        // v1 keeps its raw answer: withholding it would strand the room's sync.
+        expect(socket.frameTypes).toEqual(['syncStep1', 'syncStep2']);
+      });
+
+      it('v1 never deletes or acknowledges a v2 row', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+        const harness = createHarness({ outbox });
+        const socket = connectAndHandshake(harness, PROTOCOL);
+        const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+        completeFirstSync(harness, socket, peer);
+        await settle();
+
+        // Out of spec from the server's side, which is the point: a v1 session
+        // has claimed no durability, so it may act on neither verdict.
+        socket.deliver({
+          type: 'acknowledgement',
+          lineage: LINEAGE_A,
+          operationId: row.operationId,
+          serverSequence: '1',
+        });
+        socket.deliver({
+          type: 'rejection',
+          lineage: LINEAGE_A,
+          operationId: row.operationId,
+          code: 'invalid-update',
+        });
+        await settle();
+
+        expect(
+          outbox.acknowledged,
+          'a v1 session retired a durable row on a receipt v1 never entitled it to'
+        ).toEqual([]);
+        expect(
+          outbox.quarantined,
+          'a v1 session quarantined a row on a verdict about an operation it never sent'
+        ).toEqual([]);
+        expect(outbox.rows.map((pending) => pending.operationId)).toEqual([row.operationId]);
+      });
+
+      it('a v2 connection drains and retires the row the v1 one kept', async () => {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+        const harness = createHarness({ outbox });
+        const first = connectAndHandshake(harness, PROTOCOL);
+        const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+        completeFirstSync(harness, first, peer);
+        await settle();
+
+        expect(operationFrames(first)).toEqual([]);
+
+        first.serverClose(1006);
+        advanceToReconnect(harness);
+
+        const second = harness.socket();
+
+        second.open(PROTOCOL_V2);
+        second.deliver(controlFrame());
+        completeFirstSync(harness, second, peer);
+        await settle();
+
+        expect(
+          operationIds(second),
+          'the row a v1 session kept was never sent on the v2 connection that could finally take it'
+        ).toEqual([row.operationId]);
+
+        second.deliver({
+          type: 'acknowledgement',
+          lineage: LINEAGE_A,
+          operationId: row.operationId,
+          serverSequence: '1',
+        });
+        await settle();
+
+        expect(outbox.acknowledged).toEqual([row.operationId]);
+        expect(outbox.rows).toEqual([]);
+      });
     });
   });
 });

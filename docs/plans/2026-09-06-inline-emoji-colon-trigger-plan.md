@@ -21,6 +21,8 @@
 - Code comments record only what silently breaks if changed. No history, no restating the code.
 - Do **not** write "Notion parity" in any comment for this feature. The rules are our conventions; the spec explains why.
 - Other sessions are active in this repo. Before committing, `git add` only the exact paths the task names. Never `git add -A`, never `git add` a file you did not write in this task.
+- Never `git stash`. Other sessions have uncommitted work in this tree and a stash can destroy it.
+- Before editing a file another session has claimed, message that session and wait. `src/components/modules/blockEvents/index.ts` (Task 6) sits next to the inline-toolbar and popover files another session owns.
 
 ---
 
@@ -599,6 +601,20 @@ Detection and menu lifecycle. Insertion is Task 7.
 
 - [ ] **Step 1: Write the failing test**
 
+These unit tests assert menu **state** (`opened`), never rendered popover markup. The composer constructs a real `PopoverDesktop`, which in jsdom reaches for `window.matchMedia` and layout APIs, so the fixture must stub the popover module:
+
+```ts
+vi.mock('../../../../../../src/components/utils/popover', () => ({
+  PopoverDesktop: vi.fn(() => ({
+    show: vi.fn(), hide: vi.fn(), on: vi.fn(), filterItems: vi.fn(),
+    updatePosition: vi.fn(), getElement: vi.fn(() => document.createElement('div')),
+  })),
+  PopoverMobile: vi.fn(),
+}));
+```
+
+Without that stub the first run fails with `matchMedia is not a function`. Popover rendering, positioning and keyboard navigation are covered by the e2e task, not here.
+
 Put the harness in `test/unit/components/modules/blockEvents/composers/emojiTrigger.fixture.ts` and export `createBlock`, `createBlokModules` and `setCaret` from it, because Tasks 7 and 8 import the same three helpers. The shapes below follow `markdownShortcuts.test.ts`; do not invent different ones.
 
 Then create `test/unit/components/modules/blockEvents/composers/emojiTrigger.test.ts` importing from that fixture.
@@ -608,6 +624,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiTrigger } from '../../../../../../src/components/modules/blockEvents/composers/emojiTrigger';
 import type { BlokModules } from '../../../../../../src/types-internal/blok-modules';
 import type { Block } from '../../../../../../src/components/block';
+import { isInlineEmojiEnabled } from '../../../../../../src/components/utils/emoji/inline-emoji-config';
 
 const createInputEvent = (options: Partial<InputEvent> = {}): InputEvent => ({
   inputType: 'insertText',
@@ -761,6 +778,26 @@ describe('EmojiTrigger — opening and closing', () => {
     expect(handled).toBe(true);
     expect(trigger.opened).toBe(false);
     expect(block.currentInput?.textContent).toBe(':fi');
+  });
+
+  it('never opens when inlineEmoji is false', async () => {
+    // The composer itself has no config access; BlockEvents guards the call.
+    // This asserts the guard, not the composer, so it drives the real wiring.
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+    const handleInput = vi.spyOn(trigger, 'handleInput');
+
+    // Stand in for BlockEvents.handleInput's guard line.
+    if (isInlineEmojiEnabled({ inlineEmoji: false })) {
+      void trigger.handleInput(createInputEvent());
+    }
+
+    expect(handleInput).not.toHaveBeenCalled();
+    expect(trigger.opened).toBe(false);
   });
 
   it('closes when the search yields nothing', async () => {
@@ -998,7 +1035,9 @@ Follow the sequence `MarkdownShortcuts.handleInlineMarkdown` uses, in this order
 
 1. Guard: a collapsed selection whose `startContainer` is a text node inside `currentBlock.currentInput`.
 2. `this.Blok.YjsManager.stopCapturing()` before any DOM write, so the replacement does not merge with the preceding keystrokes into one undo entry.
-3. Build the replacement text: `before + native + after`, where `before` and `after` come from slicing the text node around the resolved span and `native` is the emoji's skin-tone-adjusted character. Read the tone from `localStorage` key `blok-emoji-skin-tone`, falling back to index 0 when the key is absent, unparseable, or out of range for that emoji's `skins` array.
+3. Build the replacement text: `before + native + after`, where `before` and `after` come from slicing the text node around the resolved span and `native` is the emoji's skin-tone-adjusted character.
+
+   The stored tone is a **direct index into the emoji's `skins` array**, not a Fitzpatrick number. `loadSkinTone` in `src/tools/callout/emoji-picker/index.ts` reads `localStorage` key `blok-emoji-skin-tone`, parses it as an integer, and returns it when it falls in 0 to 5, otherwise 0. Index 0 is the default (tone-free) glyph. Reuse that reader rather than writing a second one, and additionally fall back to `skins[0]` when the index exceeds the array for a given emoji, since most emoji have exactly one skin.
 4. Restore the caret to the offset just after the inserted character.
 5. Close the menu and restore the contenteditable's previous `aria-label`.
 
@@ -1111,6 +1150,8 @@ Expected: FAIL on the first case, the text still reads `:fire:`.
 
 In `handleInput`, when the inserted character is `:` and a span was open, look up the query. If exactly one result ranks as an exact shortcode match, extend the span by one to swallow the closing colon and call `commit`. Otherwise close the menu and leave the text alone.
 
+This path depends on `RANK_EXACT_ID` in Task 3 treating an exact **keyword** hit the same as an exact **id** hit. That is what makes `:thumbsup:` work, because `thumbsup` is a keyword of the `+1` emoji and not an id. Do not "tidy" that tier into id-only matching without also changing this branch.
+
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `yarn test test/unit/components/modules/blockEvents/composers/emojiTrigger-closing-colon.test.ts`
@@ -1186,13 +1227,21 @@ Expected: PASS.
 ```bash
 git add docs
 git commit -m "docs(config): document the inlineEmoji key"
-git pull --rebase
-git push
 ```
+
+Then publish. Do **not** use `git pull --rebase`: it aborts while other sessions hold unstaged work in this tree, and stashing their work is forbidden.
+
+```bash
+git fetch origin main
+git rev-list --left-right --count origin/main...HEAD   # prints "behind ahead"
+```
+
+If `behind` is 0, run `git push`. If it is not 0, stop and tell the user rather than rebasing over another session's WIP.
 
 - [ ] **Step 4: Confirm the push landed**
 
-Run: `git status`
-Expected: up to date with origin.
+Run: `git ls-tree origin/main --name-only docs/`
+
+Expected: your changed files are listed. A concurrent session may push your commit along with its own, so a `0 0` count after fetching means the work already landed, not that there was nothing to push.
 
 Mention in the release notes that the inline emoji menu is new default-on behaviour that intercepts typing, and that `inlineEmoji: false` turns it off.

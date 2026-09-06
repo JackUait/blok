@@ -1,7 +1,8 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +36,10 @@ const ALLOWED_ORIGIN = 'https://app.example.com';
 const SYNC_PROTOCOL = 'blok-sync.v1';
 /** Blok's epoch announcement; y-protocols uses 0-3 (plan decision 6). */
 const CONTROL_MESSAGE_TYPE = 100;
+/** The three v2 types. A v1 client has no handler for any of them. */
+const V2_MESSAGE_TYPES = [102, 103, 104];
+/** CollabJournalCodec: bodyLength + version + source + a 32-byte header checksum. */
+const RECORD_HEADER_BYTES = 38;
 /** Every signed fixture ticket carries this doc claim (docMismatch carries "other-doc"). */
 const TICKET_DOC_ID = 'doc-42';
 const POLL_INTERVAL_MS = 25;
@@ -59,6 +64,8 @@ interface ControlFrame {
 }
 
 interface ConnectOptions {
+  /** Subprotocols to offer in no-auth mode; a stock client offers none by default. */
+  protocols?: string[];
   /** Default true: y-websocket reconnects on every close code outside 4400-4499. */
   reconnect?: boolean;
   /** Offers [blok-sync.v1, ticket] as subprotocols and sends the allowed Origin. */
@@ -70,12 +77,16 @@ interface SyncClient {
   readonly controlFrames: ControlFrame[];
   readonly doc: Y.Doc;
   readonly provider: WebsocketProvider;
+  /** Outer types of any 102/103/104 frame this v1 client was sent. */
+  readonly v2Frames: number[];
   describe(): string;
   destroy(): void;
   whenSynced(): Promise<void>;
 }
 
 interface SyncHarness {
+  /** Where the server keeps its journals; only meaningful on a journal harness. */
+  readonly collabDirectory: string;
   readonly endpoint: FixtureDocEndpoint;
   readonly server: RunningServer;
   connect(docId: string, options?: ConnectOptions): SyncClient;
@@ -178,10 +189,12 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
   const closeCodes: number[] = [];
   const controlFrames: ControlFrame[] = [];
   const statuses: string[] = [];
+  const v2Frames: number[] = [];
   const ticket = options.ticket;
   let errors = 0;
+  const offered = options.protocols === undefined ? {} : { protocols: options.protocols };
   const handshake = ticket === undefined
-    ? {}
+    ? offered
     : { protocols: [SYNC_PROTOCOL, ticket], WebSocketPolyfill: OriginWebSocket };
   // `connect: false` so the hooks below are in place before the first frame
   // or status event; the constructor would otherwise dial synchronously.
@@ -199,6 +212,14 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
   provider.messageHandlers[CONTROL_MESSAGE_TYPE] = (_encoder, decoder) => {
     controlFrames.push(parseControlFrame(decoding.readVarString(decoder)));
   };
+
+  // Same trick for the v2 types, so "a v1 client was sent a frame it cannot
+  // read" becomes an assertion instead of a log line.
+  for (const type of V2_MESSAGE_TYPES) {
+    provider.messageHandlers[type] = () => {
+      v2Frames.push(type);
+    };
+  }
   provider.on('connection-close', (event) => {
     if (event !== null) {
       closeCodes.push(event.code);
@@ -215,6 +236,7 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
   const describe = (): string =>
     `client "${docId}"${ticket === undefined ? '' : ' (ticket)'}: ` +
     `status=${statuses.at(-1) ?? 'never connected'} synced=${provider.synced} ` +
+    `protocol=${provider.ws?.protocol ?? 'none'} v2Frames=[${v2Frames.join(', ')}] ` +
     `closes=[${closeCodes.join(', ')}] errors=${errors} control=${JSON.stringify(controlFrames)}`;
 
   let destroyed = false;
@@ -224,6 +246,7 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
     controlFrames,
     doc,
     provider,
+    v2Frames,
     describe,
     // Idempotent: a test may destroy a client it is done with before the harness sweeps up.
     destroy: () => {
@@ -242,6 +265,9 @@ function connectClient(wsUrl: string, docId: string, options: ConnectOptions): S
 async function withSyncServer(
   auth: 'none' | 'ticket',
   run: (harness: SyncHarness) => Promise<void>,
+  // Only a --conformance-journal build registers an operation store, and only a
+  // server with one journals anything at all (protocol section 11.1).
+  journal = false,
 ): Promise<void> {
   const collabDirectory = await mkdtemp(join(tmpdir(), 'blok-sync-conformance-'));
   const endpoint = await startDocEndpoint();
@@ -258,6 +284,7 @@ async function withSyncServer(
         '--collab',
         '--collab-dir', collabDirectory,
         '--doc-endpoint', endpoint.url,
+        ...(journal ? ['--conformance-journal'] : []),
         ...(auth === 'ticket' ? ['--allow-origin', ALLOWED_ORIGIN] : []),
       ],
       env: auth === 'ticket' ? { BLOK_SECRET: tickets.secret } : {},
@@ -266,6 +293,7 @@ async function withSyncServer(
     const wsUrl = `${server.baseUrl.replace(/^http:/, 'ws:')}/sync`;
 
     await run({
+      collabDirectory,
       endpoint,
       server,
       connect: (docId, options = {}) => {
@@ -341,6 +369,79 @@ function outputBlocks(body: unknown): unknown {
 
 function ticketHeaders(ticket: string): Record<string, string> {
   return { Origin: ALLOWED_ORIGIN, Authorization: `Bearer ${ticket}` };
+}
+
+/*
+ * The journal readers below are byte-identical to protocol-v2-contract.test.ts's
+ * copies, so a reviewer can diff them; RECORD_HEADER_BYTES is hand-copied from
+ * CollabJournalCodec.HeaderSize and `recordOffsets` REFUSES a journal its
+ * records do not tile exactly rather than reporting a plausible count.
+ */
+function docKey(docId: string): string {
+  return createHash('sha256').update(docId, 'utf8').digest('hex');
+}
+
+async function journalFile(collabDirectory: string, docId: string): Promise<string> {
+  const directory = join(collabDirectory, `${docKey(docId)}.journal`);
+  const names = (await readdir(directory)).filter((name) => name.startsWith('journal.'));
+
+  if (names.length !== 1) {
+    throw new Error(`${directory} holds ${names.length} "journal.*" files: ${names.join(', ')}`);
+  }
+
+  return join(directory, names[0]);
+}
+
+function recordOffsets(journal: Buffer): number[] {
+  const offsets: number[] = [];
+  let at = 0;
+
+  while (at < journal.length) {
+    const bodyLength = at + RECORD_HEADER_BYTES <= journal.length
+      ? journal.readInt32LE(at)
+      : -1;
+    const end = at + RECORD_HEADER_BYTES + bodyLength;
+
+    if (bodyLength < 0 || end > journal.length) {
+      throw new Error(
+        `The journal does not tile into records: ${journal.length - at} bytes are left over ` +
+        `after ${offsets.length} records, with a header size of ${RECORD_HEADER_BYTES}.`,
+      );
+    }
+
+    offsets.push(at);
+    at = end;
+  }
+
+  return offsets;
+}
+
+/**
+ * The journal AS IT STOOD the instant a peer first held `ids`. Polled one
+ * event-loop turn at a time and read SYNCHRONOUSLY: every millisecond of slack
+ * is time a server that broadcast before it appended would use to catch up.
+ * @param peer - the client whose document is watched
+ * @param ids - the blocks whose arrival ends the wait
+ * @param journal - the journal file to read at that instant
+ */
+async function journalWhenDelivered(
+  peer: SyncClient,
+  ids: string[],
+  journal: string,
+): Promise<Buffer> {
+  const deadline = Date.now() + DEADLINE_MS;
+
+  while (Date.now() < deadline) {
+    if (hasBlocks(peer.doc, ids)) {
+      return readFileSync(journal);
+    }
+
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+  }
+
+  throw new Error(`Timed out waiting for ${ids.join(', ')} on ${peer.describe()}`);
 }
 
 it('converges two stock clients editing different blocks concurrently in no-auth loopback mode', async () => {
@@ -636,4 +737,47 @@ it('resets a document: 204, open sockets close 4409, the next join sees epoch + 
     expect(bob.controlFrames[0].lineage).not.toBe(lineage);
     expect(blockIds(bob.doc)).toEqual(['seed-1']);
   });
+}, TEST_TIMEOUT_MS);
+
+it('journals a v1 member\'s write before it broadcasts it, and sends it no receipt', async () => {
+  await withSyncServer('none', async ({ collabDirectory, connect }) => {
+    const docId = 'v1-on-a-journalled-room';
+    // Named explicitly rather than left to a stock client's empty offer, so
+    // the assertion below is about the version the server SELECTED.
+    const alice = connect(docId, { protocols: [SYNC_PROTOCOL] });
+    const bob = connect(docId, { protocols: [SYNC_PROTOCOL] });
+
+    await Promise.all([alice.whenSynced(), bob.whenSynced()]);
+
+    expect(alice.provider.ws?.protocol, alice.describe()).toBe(SYNC_PROTOCOL);
+    expect(bob.provider.ws?.protocol, bob.describe()).toBe(SYNC_PROTOCOL);
+
+    const journal = await journalFile(collabDirectory, docId);
+
+    // The baseline that makes the count below mean something: a journal-backed
+    // room writes no operation record for a seed or a join.
+    expect(recordOffsets(readFileSync(journal))).toHaveLength(0);
+
+    addParagraph(alice.doc, 'a1', 'a v1 write on a journal-backed room');
+
+    // Section 9: the server awaits the append and only then publishes, so the
+    // record is on disk at the instant the FIRST peer can see the update. Read
+    // at that instant, not after — a later read would pass for a server that
+    // broadcast first and appended a moment afterwards.
+    expect(
+      recordOffsets(await journalWhenDelivered(bob, ['a1'], journal)),
+      'the update reached a peer before the journal held it'
+    ).toHaveLength(1);
+
+    // ...and the writer earns nothing for it. A type-103 is a v2 frame; a v1
+    // provider ends its session on one it cannot parse.
+    expect(
+      alice.v2Frames,
+      'a v1 member was sent a v2 frame on a journal-backed document'
+    ).toEqual([]);
+    expect(bob.v2Frames).toEqual([]);
+    expect(alice.closeCodes).toEqual([]);
+    expect(bob.closeCodes).toEqual([]);
+    expect(readBlocks(bob.doc)).toEqual(readBlocks(alice.doc));
+  }, true);
 }, TEST_TIMEOUT_MS);

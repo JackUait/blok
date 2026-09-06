@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { expect, it as baseIt } from 'vitest';
+import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 
 import { startDocEndpoint, type FixtureDocEndpoint } from './doc-endpoint';
@@ -55,6 +56,7 @@ const SYNC_TYPE = 0;
 const STEP1 = 0;
 const STEP2 = 1;
 const UPDATE = 2;
+const AWARENESS_TYPE = 1;
 const CONTROL_TYPE = 100;
 const OPERATION_TYPE = 102;
 const ACKNOWLEDGEMENT_TYPE = 103;
@@ -79,6 +81,8 @@ interface CloseRecord {
 
 interface V2Client {
   readonly acks: Map<string, string>;
+  /** How many type-1 frames this connection has been relayed. */
+  readonly awarenessFrames: number;
   readonly closed: CloseRecord | null;
   readonly doc: Y.Doc;
   readonly lineage: string;
@@ -89,6 +93,8 @@ interface V2Client {
   destroy(): void;
   /** Absorbs whatever has arrived; `doc` only advances when something reads. */
   drain(): void;
+  /** Publishes one y-protocols presence state as a type-1 frame. */
+  publishPresence(state: Record<string, unknown>): void;
   /** `lineage` defaults to the one this connection was told; pass another to name a superseded one. */
   submit(operationId: string, update: Uint8Array, lineage?: string): void;
   waitForAck(operationId: string): Promise<string>;
@@ -337,6 +343,8 @@ interface Tickets {
   compatible: string;
   readOnly: string;
   secret: string;
+  /** A second WRITER, user `u2` on the same document — the actor contrast. */
+  userTwo: string;
 }
 
 /** The same signed fixture passes the other conformance files use; `doc-42` is their document. */
@@ -358,7 +366,12 @@ function loadTickets(): Tickets {
     return value;
   };
 
-  return { compatible: read('compatible'), readOnly: read('readOnly'), secret: read('secret') };
+  return {
+    compatible: read('compatible'),
+    readOnly: read('readOnly'),
+    secret: read('secret'),
+    userTwo: read('userTwo'),
+  };
 }
 
 const tickets = loadTickets();
@@ -456,11 +469,14 @@ async function connect(
   const doc = new Y.Doc();
   let lineage: string | null = null;
   let synced = false;
+  let awarenessFrames = 0;
 
   const absorb = (frame: Uint8Array): void => {
     const [type, afterType] = readVarUint(frame, 0);
 
-    if (type === SYNC_TYPE) {
+    if (type === AWARENESS_TYPE) {
+      awarenessFrames += 1;
+    } else if (type === SYNC_TYPE) {
       const [subType, afterSubType] = readVarUint(frame, afterType);
       const [length, start] = readVarUint(frame, afterSubType);
       const carriesState = subType === STEP2 || subType === UPDATE;
@@ -495,7 +511,7 @@ async function connect(
   const describe = (): string =>
     `socket protocol=${raw.socket.protocol} lineage=${String(lineage)} ` +
     `acks=${JSON.stringify([...acks])} rejections=${JSON.stringify([...rejections])} ` +
-    `closed=${JSON.stringify(raw.closed)}`;
+    `awareness=${awarenessFrames} closed=${JSON.stringify(raw.closed)}`;
 
   expect(
     raw.socket.protocol,
@@ -536,6 +552,11 @@ async function connect(
     doc,
     describe,
     drain,
+    get awarenessFrames() {
+      drain();
+
+      return awarenessFrames;
+    },
     get acks() {
       drain();
 
@@ -566,6 +587,23 @@ async function connect(
     destroy: () => {
       raw.destroy();
       doc.destroy();
+    },
+    // y-protocols' own encoder, so the server's awareness validator sees the
+    // frame every stock client sends. The room relays it verbatim and never
+    // reads it, which is exactly what the actor case has to be able to assume.
+    publishPresence: (state) => {
+      const awareness = new Awareness(doc);
+
+      awareness.setLocalState(state);
+
+      const update = encodeAwarenessUpdate(awareness, [doc.clientID]);
+
+      raw.socket.send(frameOf([
+        writeVarUint(AWARENESS_TYPE),
+        writeVarUint(update.length),
+        [...update],
+      ]));
+      awareness.destroy();
     },
     submit: (id, update, named = lineage ?? '') => {
       raw.socket.send(operationFrame(named, id, update));
@@ -1244,5 +1282,97 @@ it(
     expect(contentOf(reader.doc)).toEqual(['alpha', 'gamma']);
     writer.destroy();
     reader.destroy();
+  }, 'ticket'),
+);
+
+it(
+  'a v2 operation is acknowledged, relayed to a v2 peer, and served to a late join',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const alice = await connect(server);
+    const bob = await connect(server);
+    const first = operationId();
+
+    alice.submit(first, independentUpdate('alpha'));
+    expect(await alice.waitForAck(first)).toBe('1');
+
+    // Section 8: an acknowledgement is not a delivery receipt, so BOTH
+    // documents are read off the relay rather than off the type-103. Alice's
+    // own copy is the section 7 self-echo — the broadcast that carries a
+    // committed update to every member INCLUDING the socket that submitted it,
+    // which nothing else on a v2 socket provides.
+    await waitFor(
+      () => {
+        alice.drain();
+        bob.drain();
+
+        return contentOf(alice.doc).includes('alpha') && contentOf(bob.doc).includes('alpha');
+      },
+      () => `the committed update on both v2 members (${alice.describe()}; ${bob.describe()})`,
+    );
+
+    // The other direction, on the same lineage: sequences are gap-free across
+    // members, not per connection.
+    expect(await bob.commit(independentUpdate('beta'))).toBe('2');
+    await waitFor(
+      () => {
+        alice.drain();
+
+        return contentOf(alice.doc).includes('beta');
+      },
+      () => `the peer's committed update on alice (${alice.describe()})`,
+    );
+
+    expect(contentOf(alice.doc)).toEqual(['alpha', 'beta']);
+    expect(contentOf(bob.doc)).toEqual(['alpha', 'beta']);
+    expect(recordOffsets(await readFile(await journalFile(collabDirectory, DOC_ID))))
+      .toHaveLength(2);
+    alice.destroy();
+    bob.destroy();
+
+    // And a member that was never in the room is served both from the store.
+    expect(await lateJoin(server)).toEqual(['alpha', 'beta']);
+  }),
+);
+
+it(
+  'the journalled actor comes from each connection\'s own pass, never from presence',
+  { timeout: TEST_TIMEOUT_MS },
+  () => withHarness(async ({ collabDirectory, start }) => {
+    const server = await start();
+    const one = await connect(server, TICKET_DOC_ID, tickets.compatible);
+    const two = await connect(server, TICKET_DOC_ID, tickets.userTwo);
+
+    // Presence deliberately CROSSED: each connection advertises the other's
+    // user. A server that took the actor from awareness would journal the two
+    // records in exactly the reverse order of the one asserted below.
+    one.publishPresence({ user: { name: 'u2' } });
+    two.publishPresence({ user: { name: 'u1' } });
+
+    // The positive event that puts both states in the room before either
+    // commit: the server relays presence to every OTHER member, so each side
+    // seeing a type-1 frame is the peer's claim having landed.
+    await waitFor(
+      () => one.awarenessFrames > 0 && two.awarenessFrames > 0,
+      () => `both presence claims to reach the room (${one.describe()}; ${two.describe()})`,
+    );
+
+    expect(await one.commit(independentUpdate('from-one'))).toBe('1');
+    expect(await two.commit(independentUpdate('from-two'))).toBe('2');
+
+    const bytes = await readFile(await journalFile(collabDirectory, TICKET_DOC_ID));
+    const offsets = recordOffsets(bytes);
+
+    expect(offsets).toHaveLength(2);
+    // Two connections from the same address on the same document, differing in
+    // nothing but the pass they presented. A room-wide or address-wide actor
+    // would repeat one value; an actor read from presence would swap them.
+    expect(
+      offsets.map((offset) => actorOf(bytes, offset)),
+      'the journalled actor did not follow the submitting connection\'s own pass'
+    ).toEqual(['u1', 'u2']);
+    one.destroy();
+    two.destroy();
   }, 'ticket'),
 );

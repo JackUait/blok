@@ -935,6 +935,11 @@ internal sealed class CollabRoom : IDisposable
     // The COUNT alone bounds that growth, so the inherited bytes are
     // deliberately not added: it would only make the first checkpoint of a
     // reloaded room come sooner, at the cost of a second thing to keep true.
+    // Both operands are ulong and nothing on the LOAD path validates a custom
+    // store's Checkpoint.Through against its Head.DurableThrough, so a store
+    // answering with a checkpoint ahead of durable wraps this to a small
+    // negative. Benign — the room just waits longer for its first checkpoint
+    // — and unreachable through the built-in store, which refuses that write.
     operationsSinceCheckpoint = (long)(committedThrough - checkpointedThrough);
     StartVersionReadLocked();
     HydrateCommittedLocked(opened.Baseline);
@@ -949,8 +954,8 @@ internal sealed class CollabRoom : IDisposable
 
     // The previous room may have died with a projection owed — a crash, a
     // drain the endpoint refused, a converter refusal — and nothing else
-    // would ever notice. One PUT per room lifetime buys the record catching
-    // up whenever a document is opened, and it is what a reset rebaselines
+    // would ever notice. This load-time PUT buys the record catching up
+    // whenever a document is opened, and it is what a reset rebaselines
     // from. A SEED does not come through here: its record IS the source.
     MarkDirtyLocked();
   }
@@ -958,9 +963,10 @@ internal sealed class CollabRoom : IDisposable
   /// <summary>
   /// The consumer's optimistic-concurrency handle, for a room whose content
   /// came from the journal instead of a seed. Nothing else sets it there, and
-  /// a journal-backed room makes one write-back in its whole life — so without
-  /// this GET no write-back it ever makes carries Blok-Doc-Version, and a
-  /// consumer has no basis to refuse a projection built before its own save.
+  /// nothing re-reads it afterwards — so without this GET no write-back the
+  /// room ever makes carries Blok-Doc-Version, and a consumer has no basis to
+  /// refuse a projection built before its own save. A journal-backed room
+  /// writes back once per published checkpoint, and on eviction or drain.
   /// The BODY is discarded: the journal is what the document is.
   /// </summary>
   private void StartVersionReadLocked()

@@ -914,6 +914,69 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
     Assert.Equal(5ul, reopened.OpenResult.Head!.DurableThrough);
   }
 
+  /// <summary>
+  /// The sealing order, pinned by BEHAVIOUR rather than by source shape.
+  /// `EveryPublicationCallsItsDurableStepsInOrder` already holds the call
+  /// order, but it says so itself: it is a source-order PRESENCE law, so a
+  /// publication that runs before the seal on some paths and after it on
+  /// others stays green. What must never happen is the manifest naming a
+  /// checkpoint file that was never written — the document would then be
+  /// unopenable, with its previous checkpoint already unreferenced.
+  ///
+  /// The failure is staged with a DIRECTORY at the path the next checkpoint
+  /// needs, so `WriteSealed`'s create fails the way a full disk fails: a
+  /// failure the correct code can genuinely meet, not one only a mutant
+  /// produces.
+  /// </summary>
+  [Fact]
+  public async Task ACheckpointThatCannotBeSealedPublishesNothing()
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var older = new byte[] { 0xc0, 0xc1 };
+
+    await using (var session = await OpenAsync())
+    {
+      await session.ResetAsync(Reset(1, lineage, 0xb1));
+
+      for (var n = 1; n <= 5; n++)
+      {
+        await session.AppendAsync(Candidate(OperationId(n), [(byte)n]));
+      }
+
+      await session.WriteCheckpointAsync(new CollabOperationCheckpoint(3, older));
+
+      var published = Assert.Single(Directory.GetFiles(DocDirectory, "checkpoint.*"));
+      var parts = Path.GetFileName(published).Split('.');
+      Directory.CreateDirectory(Path.Combine(
+          DocDirectory,
+          string.Create(CultureInfo.InvariantCulture, $"{parts[0]}.{parts[1]}.5.{parts[3]}")));
+      var manifestBefore = File.ReadAllBytes(ManifestPath);
+
+      var failure = await Record.ExceptionAsync(
+          async () => await session.WriteCheckpointAsync(
+              new CollabOperationCheckpoint(5, new byte[] { 0xd0, 0xd1 })));
+
+      // Narrowed on purpose: a lost fence or a disposed session would also
+      // throw and would leave the manifest alone for reasons this test is not
+      // about. Linux raises EISDIR as IOException, macOS
+      // UnauthorizedAccessException.
+      Assert.True(
+          failure is IOException or UnauthorizedAccessException,
+          $"the seal failed with {failure?.GetType().Name ?? "nothing at all"}, which is " +
+          "not the disk failure this test stages");
+      Assert.True(
+          manifestBefore.SequenceEqual(File.ReadAllBytes(ManifestPath)),
+          "the manifest was published before the checkpoint file it names was sealed, so a " +
+          "sealing failure leaves the document naming a checkpoint that is not there");
+    }
+
+    // And the document still opens, on the checkpoint that IS sealed.
+    await using var reopened = await OpenAsync();
+
+    Assert.Equal(older, reopened.OpenResult.Checkpoint!.State.ToArray());
+    Assert.Equal(3ul, reopened.OpenResult.Checkpoint.Through);
+  }
+
   [Fact]
   public async Task CoexistsWithTodaysWholeDocumentFileInOneDirectory()
   {

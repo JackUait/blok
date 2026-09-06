@@ -2941,9 +2941,14 @@ describe('collaboration — sync-first load', () => {
       // FIRST, before anything is measured. The post-ready replay publishes
       // with `force`, which bypasses the comparator by design, so the event it
       // is entitled to make would read as a coalescing failure if it landed
-      // inside a window below. Its timer is queued during `load`, so waiting
-      // for the first payload sequences it strictly before the rest.
-      await waitFor(() => seen.length > 0, 'the post-ready replay', 3000);
+      // inside a window below.
+      //
+      // What sequences it out is the WAIT, not which payload arrives: `seen`
+      // starts empty, so `waitFor` always sleeps at least one 10ms timer — and
+      // the replay's timer was queued during `load`, strictly earlier, so it
+      // has fired by the time this returns. The payload that ends the wait may
+      // be the connecting transition's own store read rather than the replay.
+      await waitFor(() => seen.length > 0, 'the session to publish', 3000);
 
       const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
 

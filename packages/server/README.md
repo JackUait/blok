@@ -309,6 +309,27 @@ Stock `y-websocket` never offers `blok-sync.v2`, so it negotiates v1 and is comp
 
 S3 stays v1-only. `--collab-s3-prefix` puts the working set in your bucket, and there is no S3 operation store, so an S3-configured service runs the working-copy profile unless it also registers one.
 
+### Going back to the working-copy profile
+
+Registering an operation store is close to one-way per document. A journal-backed document is written to the journal and nowhere else: it gets no working-set blob at all, and the whole-JSON projection your document endpoint holds is refreshed by a published checkpoint, by an eviction and by a drain — not once per edit window. Between those moments the journal is ahead of everything a build without your store can read.
+
+A build without your store does not read the journal. Unregistering the store, or rolling back to a build that predates it, lands each document on whatever else it has:
+
+- **Journal-backed from the start.** There is no blob, so the room seeds from your document endpoint and comes back as the last projection that endpoint accepted. Every operation acknowledged since then is still in your journal and nothing serves it.
+- **Working set from before the switch.** A document that ran under `--collab-dir` or `--collab-s3-prefix` before you registered the store still holds the blob it had that day, and registering the store never touched it — a journal-backed room writes no blob, and it seeds its journal from your endpoint rather than from the blob. A blob with any frame in it is authoritative on open and the endpoint is never consulted, so that document comes back as it was on the day you switched, with no error and nothing in the log.
+
+Blok does not keep a second whole-document copy beside the journal to make the switch back instant. The journal is the record; the JSON is a projection of it. Buying instant rollback with a hidden dual write would mean two records that can disagree, and the second one carries no fence.
+
+Run this drill before you roll back.
+
+1. **Stop admission and drain.** The standalone host drains on a graceful stop: new upgrades get 503, every open room flushes its projection, and members close 1001. An in-process app calls `ICollabRoomManager.DrainAsync` before it stops Kestrel. A document nobody had open was already flushed when its room was evicted.
+2. **Read what the drain said.** `warning: collab: the shutdown drain did not complete` on stderr means the shutdown timeout cut the drain short, so at least one projection did not land. `could not export during flush` names one room whose PUT failed. `cannot export its document` is the converter refusing that document — no wait produces that projection, and the room evicts without one.
+3. **Compare per document, not per room.** For each document in your store, the last write-back your endpoint accepted carries `Blok-Doc-Lineage` and `Blok-Doc-Sequence`. `Blok-Doc-Sequence` must equal the head's `DurableThrough` on that lineage. Anything short of it is exactly what the rollback drops, and it is the only place that gap is visible.
+4. **Start the old build.**
+5. **Clear the blobs left from before the switch.** For every document that had a working set before you registered the store, call `POST /sync/{doc}/reset` once on the old build. It rewrites the working set to an empty log, so the next open seeds from your endpoint instead of from the day you switched. A document that was only ever journal-backed has no blob and needs nothing here.
+
+Rolling forward again is not symmetric either. With the store registered, the journal wins the open, so whatever was typed while the old build was serving is not in it.
+
 ## Quality gates
 
 The .NET solution keeps three test layers: `Blok.Server.Tests` for core behavior, `Blok.Server.AspNetCore.Tests` for in-process integration, and `Blok.Server.Host.Tests` for real-process end-to-end behavior. CI also runs the cross-runtime conformance and package smoke tests.

@@ -1,7 +1,13 @@
 // docs/src/components/server/server-data.test.ts
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 import { getTranslation } from '../../i18n';
 import { serverCoverageNote, serverLimits, serverPaths } from './server-data';
+
+/** Repo root — docs/src/components/server → up four levels. */
+const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
+const readSource = (rel: string): string => readFileSync(join(BLOK_ROOT, rel), 'utf8');
 
 describe('server docs data', () => {
   it('documents the four deployment paths as separate entries', () => {
@@ -357,12 +363,13 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-eight service limits the design refuses to bury', () => {
+  it('states the twenty-nine service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
       'working-copy-privacy',
       'collab-operation-journal',
+      'collab-rollback-boundary',
       'collab-reset',
       'doc-endpoint-auth',
       'collab-new-documents',
@@ -453,7 +460,9 @@ describe('server docs data', () => {
     const limits = serverLimits.map((l) => l.id);
     const body = serverLimits.find((l) => l.id === 'collab-operation-journal')?.body ?? '';
 
-    expect(limits.indexOf('collab-operation-journal')).toBe(limits.indexOf('collab-reset') - 1);
+    expect(limits.indexOf('collab-operation-journal')).toBe(
+      limits.indexOf('collab-rollback-boundary') - 1,
+    );
     expect(body).toContain('Blok-Idempotency-Key');
     expect(body).toMatch(/409/);
     expect(body).toMatch(/503/);
@@ -480,6 +489,66 @@ describe('server docs data', () => {
     // `getTranslation` falls back to English on a miss, so only Cyrillic text
     // proves the Russian key is really there.
     expect(getTranslation('ru', key)).toMatch(/журнал/i);
+  });
+
+  // The claim this entry exists to refuse: that a build without the store can
+  // be put back the moment a v2 edit is acknowledged. A journal-backed room
+  // writes no working copy at all, and its whole-JSON record is written after a
+  // published checkpoint and on eviction/drain — so between those moments the
+  // journal is the only place the acknowledged edits are.
+  it('refuses the claim that the journal can be switched off and rolled straight back', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-rollback-boundary')?.body ?? '';
+
+    expect(limits.indexOf('collab-rollback-boundary')).toBe(limits.indexOf('collab-reset') - 1);
+    expect(body).toMatch(/one-way/i);
+    // A refusal has to be stated, not left out. The plan forbids the hidden
+    // dual whole-document write that would have made the switch back instant,
+    // so the entry says the copy is not there rather than staying quiet.
+    expect(body).toMatch(/does not keep a second/i);
+    expect(body).toMatch(/instant/i);
+    // The two landings, and the silent one is the dangerous one.
+    expect(body).toContain('--collab-dir');
+    expect(body).toContain('--collab-s3-prefix');
+    expect(body).toMatch(/no error|nothing in the log/i);
+    // The drill, in the terms an operator can actually check.
+    expect(body).toMatch(/drain/i);
+    expect(body).toContain('ICollabRoomManager.DrainAsync');
+    expect(body).toContain('Blok-Doc-Sequence');
+    expect(body).toContain('durable-through');
+    expect(body).toContain('POST /sync/{doc}/reset');
+  });
+
+  // What the page renders. The entry is worthless in `server-data.ts` alone.
+  it('renders the rollback boundary in both shipped locales', () => {
+    const key = 'server.limits.collab-rollback-boundary.body';
+
+    expect(getTranslation('en', key)).toContain('Blok-Doc-Sequence');
+    expect(getTranslation('en', key)).toMatch(/does not keep a second/i);
+    expect(getTranslation('ru', key)).toContain('Blok-Doc-Sequence');
+    // `getTranslation` falls back to English on a miss, so only Cyrillic text
+    // proves the Russian key is really there.
+    expect(getTranslation('ru', key)).toMatch(/откат/i);
+  });
+
+  // The operator half of the same boundary. The page states the rule; the
+  // README carries the drill. Order is the load-bearing part: the reset that
+  // clears a working copy left from before the store only works on the old
+  // build, so it cannot be run before the drain.
+  it('carries the rollback drill in the server README, in the order it has to run', () => {
+    const readme = readSource('packages/server/README.md');
+
+    expect(readme).toContain('### Going back to the working-copy profile');
+
+    const drill = readme.slice(readme.indexOf('### Going back to the working-copy profile'));
+
+    expect(drill).toContain('ICollabRoomManager.DrainAsync');
+    expect(drill).toContain('warning: collab: the shutdown drain did not complete');
+    expect(drill).toContain('Blok-Doc-Sequence');
+    expect(drill).toContain('DurableThrough');
+    expect(drill).toContain('POST /sync/{doc}/reset');
+    expect(drill.indexOf('DrainAsync')).toBeLessThan(drill.indexOf('POST /sync/{doc}/reset'));
+    expect(drill).toMatch(/does not keep a second/i);
   });
 
   // The bundle outranks the literal, and it kept the pre-journal answer long

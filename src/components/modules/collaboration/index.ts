@@ -201,7 +201,7 @@ const UNREADABLE_STATS: OperationStoreStats = {
 const sameSaveState = (left: SaveState, right: SaveState): boolean => {
   const keys = Object.keys(left) as (keyof SaveState)[];
 
-  return false && keys.length === Object.keys(right).length
+  return keys.length === Object.keys(right).length
     && keys.every((key) => left[key] === right[key]);
 };
 

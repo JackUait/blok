@@ -2,7 +2,7 @@
 
 Blok's shared C# server handles file uploads, link previews and live collaboration, and converts saved documents. Use it inside an ASP.NET Core app, or run the same routes as a standalone npm binary or Docker image.
 
-Documents stay yours: saving and loading them is a small endpoint in your own app, and that endpoint remains the record. With live collaboration on, the service keeps only a working copy of each open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. The packages include no database-block or MySQL integration; those follow this delivery migration.
+Documents stay yours: saving and loading them is a small endpoint in your own app, and that endpoint remains the record. With live collaboration on, the service keeps only a working copy of each open document, in storage you point it at, and writes what people type back to your endpoint every few seconds. Register an operation journal and that changes: the document keeps no working copy, the journal is where an edit becomes durable, and your endpoint's record is refreshed from a published checkpoint, on eviction and on drain rather than on a timer. The packages include no database-block or MySQL integration; those follow this delivery migration.
 
 ## ASP.NET Core
 

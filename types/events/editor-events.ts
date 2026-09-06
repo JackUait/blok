@@ -174,13 +174,25 @@ export interface CollaborationStatusChangedPayload {
    * - `pending` — edits are journalled locally and not acknowledged yet.
    * - `blocked` — the local copy is broken, so nothing more may be sent.
    * - `quarantined` — edits were moved out of the queue and will never be sent;
-   *   `quarantinedOperations` counts them, and only an export recovers them.
+   *   `quarantinedOperations` counts them. With `offline` on they stay in this
+   *   browser's copy; in memory mode only the count survives, and nothing reads
+   *   either of them back out today.
    * - `unavailable` — no durable save can be reported at all: the server speaks
    *   the legacy protocol, or nothing has been negotiated yet.
    *
    * Persistence reasons live HERE, never in `error`: that union means "the
    * editor will not reconnect", and a broken local store or a refused edit does
    * not stop the socket.
+   *
+   * DELIVERY. This is published whether or not the connection changed: a save
+   * state that moves on its own emits an event, an identical payload emits
+   * none, and a retry tick emits nothing. One replay lands shortly after the
+   * editor is ready, so a host that subscribes once `isReady` resolves still
+   * hears the state it is already in.
+   *
+   * The counts are a report, not a verdict. A local queue that cannot be read
+   * at all answers zero rows, so zero under `blocked` means unknown rather than
+   * nothing waiting.
    */
   save?: {
     state: 'saved' | 'pending' | 'blocked' | 'quarantined' | 'unavailable';

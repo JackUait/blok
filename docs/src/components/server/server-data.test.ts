@@ -2,14 +2,80 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { getTranslation } from '../../i18n';
+import { getTranslation, translations } from '../../i18n';
 import { serverCoverageNote, serverLimits, serverPaths } from './server-data';
 
 /** Repo root — docs/src/components/server → up four levels. */
 const BLOK_ROOT = resolve(__dirname, '..', '..', '..', '..');
 const readSource = (rel: string): string => readFileSync(join(BLOK_ROOT, rel), 'utf8');
 
+/**
+ * Walks a dot path in one bundle. NOT `getTranslation`: that falls back to
+ * English on a Russian miss, so it answers a string for a key ru.json does not
+ * have.
+ * @param locale - the bundle to look in
+ * @param key - the dot-notation key
+ */
+const holdsKey = (locale: 'en' | 'ru', key: string): boolean => {
+  const found = key.split('.').reduce<unknown>(
+    (node, part) => (
+      node !== null && typeof node === 'object'
+        ? (node as Record<string, unknown>)[part]
+        : undefined
+    ),
+    translations[locale],
+  );
+
+  return typeof found === 'string';
+};
+
+/**
+ * Every key `useServerTranslations` asks for, derived the way that hook derives
+ * them (`docs/src/hooks/useServerTranslations.ts`). Mirrored rather than
+ * imported, so a key the hook stops asking for shows up here as a change.
+ */
+const overlayKeys = (): string[] => [
+  'server.coverageNote',
+  ...serverPaths.flatMap((path) => {
+    const base = `server.paths.${path.id}`;
+
+    return [
+      `${base}.title`,
+      `${base}.situation`,
+      `${base}.description`,
+      ...path.whatToRun.map((_, index) => `${base}.whatToRun.${index}.label`),
+      ...path.appRoute.map((_, index) => `${base}.appRoute.${index}.label`),
+      `${base}.editorConfig.label`,
+      ...path.failureModes.flatMap((_, index) => [
+        `${base}.failureModes.${index}.symptom`,
+        `${base}.failureModes.${index}.cause`,
+        `${base}.failureModes.${index}.fix`,
+      ]),
+    ];
+  }),
+  ...serverLimits.flatMap((limit) => [
+    `server.limits.${limit.id}.title`,
+    `server.limits.${limit.id}.body`,
+  ]),
+];
+
 describe('server docs data', () => {
+  // The gap that let three separate corrections ship to nobody. `translateOr`
+  // falls back to the TypeScript literal, so a key missing from BOTH bundles
+  // renders English on /ru with no error; and `yarn i18n:check:docs` only diffs
+  // en against ru, so a key in neither is invisible to it too. That pair is how
+  // `collab-reset` drifted for eight commits and how one appRoute label turned
+  // /ru/server into English prose. Nothing else ties this data module's prose to
+  // its keys.
+  it('holds a bundle key for every string the /server overlay asks for', () => {
+    const asked = overlayKeys();
+    const missingEn = asked.filter((key) => !holdsKey('en', key));
+    const missingRu = asked.filter((key) => !holdsKey('ru', key));
+
+    expect(missingEn, `asked for, missing from en.json:\n${missingEn.join('\n')}`).toEqual([]);
+    expect(missingRu, `asked for, missing from ru.json:\n${missingRu.join('\n')}`).toEqual([]);
+  });
+
   it('documents the four deployment paths as separate entries', () => {
     expect(serverPaths.map((p) => p.id)).toEqual([
       'own-storage',
@@ -363,7 +429,7 @@ describe('server docs data', () => {
     expect(prose).toMatch(/--rate-limit.*ticket.*60.*otherwise.*0/i);
   });
 
-  it('states the twenty-nine service limits the design refuses to bury', () => {
+  it('states the thirty service limits the design refuses to bury', () => {
     expect(serverLimits.map((l) => l.id)).toEqual([
       'no-documents',
       'collab-replaces-persistence',
@@ -387,6 +453,7 @@ describe('server docs data', () => {
       'collab-what-is-not-limited',
       'collab-what-is-not-checked',
       'collab-connection-states',
+      'collab-save-state',
       'collab-offline-reload',
       'collab-merge-granularity',
       'collab-presence-identity',
@@ -418,6 +485,40 @@ describe('server docs data', () => {
     // a room that still owes one — so an endpoint outage is a delay, not a loss.
     expect(body).toMatch(/retried/i);
     expect(body).toMatch(/stays loaded/i);
+    // "Every few seconds" is the working-copy profile's cadence and nobody
+    // else's. A journal-backed room writes no working copy and refreshes the
+    // record from a published checkpoint and on eviction/drain, so the
+    // unqualified claim promised a freshness the room stopped offering.
+    expect(body).toMatch(/without an operation journal|working copy.*cadence|that cadence/i);
+    expect(body).toMatch(/checkpoint/i);
+    expect(body).toMatch(/eviction/i);
+    expect(body).toMatch(/drain/i);
+  });
+
+  // The bundle outranks the literal, and the cadence claim is in all three
+  // places. Qualifying it in `server-data.ts` alone leaves both rendered pages
+  // promising a write-back every few seconds on a profile that has none.
+  it('renders the qualified write-back cadence in both shipped locales', () => {
+    const key = 'server.limits.no-documents.body';
+
+    expect(getTranslation('en', key)).toMatch(/checkpoint/i);
+    expect(getTranslation('ru', key)).toMatch(/checkpoint|контрольн/i);
+    // `getTranslation` falls back to English on a miss, so only Cyrillic from
+    // the changed span can go red when the Russian body is reverted.
+    expect(getTranslation('ru', key)).toMatch(/журнал операций/i);
+    expect(getTranslation('ru', key)).toMatch(/не по таймеру/);
+  });
+
+  // The same sentence in the operator's own README, which had the unqualified
+  // claim on its fifth line — the first thing a reader of the package sees.
+  it('qualifies the same cadence claim in the server README', () => {
+    const readme = readSource('packages/server/README.md');
+    const opening = readme.slice(0, readme.indexOf('## ASP.NET Core'));
+
+    expect(opening).toMatch(/every few seconds/i);
+    expect(opening).toMatch(/operation journal/i);
+    expect(opening).toMatch(/checkpoint/i);
+    expect(opening).toMatch(/eviction|drain/i);
   });
 
   // Two ways to give the document a second owner, one entry: the refused
@@ -435,6 +536,35 @@ describe('server docs data', () => {
     expect(body).toMatch(/onSave/);
     expect(body).toMatch(/onChange/);
     expect(body).toMatch(/do not write|never write|stop saving/i);
+    // The reverse reading has to be closed too. `persistence` sends the WHOLE
+    // document on a debounce and only ever the newest payload, so the edits
+    // between two saves are never sent anywhere — it is the compatibility
+    // route for a build with no service, not a durable record of what happened.
+    expect(body).toMatch(/compatibility/i);
+    expect(body).toMatch(/whole document/i);
+    expect(body).toMatch(/newest/i);
+    expect(body).toMatch(/never sent|no record of|not a record/i);
+  });
+
+  // The other two bodies this change moved. The gate above proves the KEY is
+  // there; only a content assertion proves the bundle carries the new sentence,
+  // and without one the drift these entries are being repaired for can happen
+  // again silently.
+  it('renders the persistence-is-compatibility and save-state hand-off in both shipped locales', () => {
+    const persistence = 'server.limits.collab-replaces-persistence.body';
+    const states = 'server.limits.collab-connection-states.body';
+
+    expect(getTranslation('en', persistence)).toMatch(/compatibility/i);
+    expect(getTranslation('en', states)).toMatch(/none of those four/i);
+    // Offline work drains one acknowledged operation at a time under v2, so
+    // the merged-difference claim had to go from both bundles, not just the
+    // TypeScript literal.
+    expect(getTranslation('en', states)).not.toMatch(/as one difference/i);
+    // Cyrillic anchors: `getTranslation` falls back to English on a miss, so
+    // reverting either Russian body is what turns these red.
+    expect(getTranslation('ru', persistence)).toMatch(/путь совместимости/);
+    expect(getTranslation('ru', states)).toMatch(/следующая запись/);
+    expect(getTranslation('ru', states)).not.toMatch(/одной разницей/);
   });
 
   it('keeps the working copy out of public reach', () => {
@@ -823,6 +953,97 @@ describe('server docs data', () => {
     expect(body).toMatch(/connected/);
     expect(body).toMatch(/offline/);
     expect(body).toMatch(/your own indicator|indicator of your own/i);
+    // The four names describe the socket. A reader who draws a save indicator
+    // from them draws a lie, so the entry hands them off to the one that says
+    // what is saved rather than leaving the inference open.
+    expect(body).toMatch(/says nothing about|none of (them|those)/i);
+    expect(body).toMatch(/next entry|entry below|entry that follows/i);
+    // Under v2 the offline pile drains one operation at a time, each with its
+    // own acknowledgement, so "one difference" was true of v1 only.
+    expect(body).not.toMatch(/as one difference/i);
+  });
+
+  // The plan's whole point: `connected` is content synchronization, and the
+  // acknowledgement boundary is the operation journal — not the socket, not a
+  // peer seeing the edit, not the whole-JSON projection. This entry is where a
+  // host reading `collaboration:status` learns which half is which.
+  it('separates the save state from the connection state, and fixes the ACK boundary', () => {
+    const limits = serverLimits.map((l) => l.id);
+    const body = serverLimits.find((l) => l.id === 'collab-save-state')?.body ?? '';
+
+    expect(limits.indexOf('collab-save-state')).toBe(limits.indexOf('collab-connection-states') + 1);
+    expect(body).toContain('collaboration:status');
+    expect(body).toContain('save');
+    // The four renderings the plan names, plus the fifth a host will meet.
+    expect(body).toContain('pending');
+    expect(body).toContain('saved');
+    expect(body).toContain('quarantined');
+    expect(body).toContain('unavailable');
+    expect(body).toContain('blocked');
+    expect(body).toMatch(/connected/);
+    // The counts a host renders from, and the reason the sequence is a string.
+    expect(body).toContain('pendingOperations');
+    expect(body).toContain('pendingBytes');
+    expect(body).toContain('quarantinedOperations');
+    expect(body).toContain('serverSequence');
+    expect(body).toMatch(/decimal string/i);
+    // The boundary itself, stated as an exclusion rather than left to inference.
+    expect(body).toMatch(/operation journal/i);
+    expect(body).toMatch(/before anybody else/i);
+    expect(body).toMatch(/not a save|is not saved/i);
+    // One user gets the same queue, journal and receipt as ten. That is the
+    // recommendation the plan asks this page to make.
+    expect(body).toMatch(/one person|single user|on their own/i);
+    // And the caveat that makes the recommendation honest: no host flag reaches
+    // the built-in journal, so a stock service reports `unavailable` forever.
+    expect(body).toMatch(/no operation journal|without.*journal/i);
+    expect(body).toMatch(/legacy-protocol/);
+    // The event fires when only the save state moved, coalesces an identical
+    // payload, and replays once after the editor is ready. A host that wired a
+    // listener expecting one event per connection change is wrong about how
+    // often it runs.
+    expect(body).toMatch(/even when|whether or not|without the connection/i);
+    expect(body).toMatch(/identical|same payload/i);
+    expect(body).toMatch(/ready/i);
+    // A queue that cannot be read at all answers zero rows, so the counts under
+    // `blocked` are not a "nothing is waiting" answer.
+    expect(body).toMatch(/zero/i);
+  });
+
+  // The published payload is where a host meets the same facts while typing the
+  // handler, and two of them cannot be derived from the state names: how often
+  // the event arrives, and that quarantined bytes are not retrievable.
+  it('says on the published payload how often it arrives, and what quarantine keeps', () => {
+    const events = readSource('types/events/editor-events.ts');
+    const save = events.slice(
+      events.indexOf('Whether this browser'),
+      events.indexOf('serverSequence?: string'),
+    );
+
+    expect(save).toMatch(/even when|whether or not|without the connection/i);
+    expect(save).toMatch(/identical/i);
+    expect(save).toMatch(/ready/i);
+    expect(save).toMatch(/zero/i);
+    // Memory mode drops the quarantined bytes and keeps only a counter, and
+    // nothing reads the offline copy's quarantine back out either — so "only
+    // an export recovers them" sold a door that is not there.
+    expect(save).not.toMatch(/only an export recovers/);
+    expect(save).toMatch(/only the count/i);
+  });
+
+  // What the page ACTUALLY renders. An entry added to `server-data.ts` alone is
+  // dead code on every rendered locale.
+  it('renders the save-state entry in both shipped locales', () => {
+    const key = 'server.limits.collab-save-state.body';
+
+    expect(getTranslation('en', key)).toContain('serverSequence');
+    expect(getTranslation('en', key)).toMatch(/before anybody else/i);
+    expect(getTranslation('ru', key)).toContain('serverSequence');
+    // `getTranslation` falls back to English on a miss, so the Latin lines
+    // above pass vacuously against the English body. Only Cyrillic from this
+    // entry can go red when the Russian key is deleted.
+    expect(getTranslation('ru', key)).toMatch(/в вашем журнале операций/);
+    expect(getTranslation('ru', key)).toMatch(/поднятый сокет — это ещё не сохранение/);
   });
 
   // Staying editable offline is only kind if the price of a reload is written
@@ -851,6 +1072,19 @@ describe('server docs data', () => {
     expect(body).toMatch(/offlineScope/);
     expect(body).toMatch(/requires|required/i);
     expect(body).not.toMatch(/shared computer/i);
+    // The scope has to be opaque and stable or it strands the copies it was
+    // added to protect: nothing asks the host for a stable id anywhere else,
+    // and a ticket or a session id is the obvious wrong reach.
+    expect(body).toMatch(/opaque/i);
+    // Not `/stable/i`: the entry already said "a stable id" before this, so
+    // that pattern passes against the text this assertion exists to replace.
+    expect(body).toMatch(/on every device/i);
+    expect(body).toMatch(/rotates|ticket|session id/i);
+    // And the copy is not a backup. Blok never calls `navigator.storage
+    // .persist()`, so a browser short of space may drop the whole database
+    // without telling anyone — a caveat that belongs beside the opt-in.
+    expect(body).toMatch(/not a backup|never a backup/i);
+    expect(body).toMatch(/short of space|running low|evict/i);
   });
 
   // What the page ACTUALLY renders. `useServerTranslations` prefers the i18n
@@ -864,6 +1098,28 @@ describe('server docs data', () => {
     expect(getTranslation('en', key)).not.toMatch(/shared computer/i);
     expect(getTranslation('ru', key)).toMatch(/offlineScope/);
     expect(getTranslation('ru', key)).not.toMatch(/общем компьютере/i);
+    expect(getTranslation('en', key)).toMatch(/not a backup/i);
+    // Cyrillic, so reverting the Russian body is what turns this red.
+    expect(getTranslation('ru', key)).toMatch(/не резервная копия/i);
+  });
+
+  // The page states the rule; the published type is where a host meets it while
+  // writing the config. Same law as the README drill: prose that lives in one
+  // surface only is prose half the readers never see.
+  it('carries the save-path guidance in the published collaboration type', () => {
+    const types = readSource('types/configs/blok-config.d.ts');
+
+    // The one-user recommendation, beside the option it recommends.
+    expect(types).toMatch(/one person|single user/i);
+    expect(types).toMatch(/operation journal/i);
+    // `persistence` is the compatibility route, so its own block says so
+    // rather than leaving a reader to infer it from the collaboration block.
+    const persistence = types.slice(0, types.indexOf('persistence?: {'));
+
+    expect(persistence).toMatch(/compatibility/i);
+    expect(persistence).toMatch(/never sent|no record of|not a record/i);
+    // The browser may drop the offline copy on its own.
+    expect(types).toMatch(/not a backup/i);
   });
 
   // The claim the design says will eventually disappoint someone, so it is

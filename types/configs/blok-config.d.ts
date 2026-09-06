@@ -609,6 +609,13 @@ export interface BlokMountOptions {
    * next change carries it out rather than losing it. While anything is queued
    * or in flight the tab asks for confirmation before it closes. None of this
    * survives a page reload — the queue lives in memory only.
+   *
+   * COMPATIBILITY, NOT HISTORY. Every `save` carries the WHOLE document, and
+   * only the newest queued payload is sent — so what was typed between two
+   * saves is never sent anywhere, and nothing keeps it. Use this where there is
+   * no sync service to talk to. Where durable saving is the point, use
+   * {@link BlokMountOptions.collaboration}, which acknowledges each edit
+   * individually; the two cannot be combined.
    * @example
    * persistence: {
    *   load: () => fetch('/api/doc/42').then((r) => r.json()),
@@ -681,6 +688,14 @@ export interface BlokMountOptions {
    * would give the document two owners. Requires {@link BlokMountOptions.server}
    * — the sync URL is derived from it. Both are refused at construction.
    *
+   * ALSO THE DURABLE SAVE PATH FOR ONE PERSON. A single user pointed at the
+   * service gets the same local queue, the same server journal and the same
+   * per-edit acknowledgement as ten people do. `collaboration:status` reports
+   * that in its `save` member, INDEPENDENTLY of `status`: `connected` is
+   * content synchronization, never a save receipt. The acknowledgement needs an
+   * operation journal registered on the service — without one, every session
+   * reports `save.state: 'unavailable'`.
+   *
    * Once connected: `collaboration:status` lists at most 50 peers, chosen
    * after a bounded scan of the presence map; destroying the editor, and
    * `pagehide`, flush pending typing to the wire; a block a peer wrote with a
@@ -737,6 +752,11 @@ export interface BlokMountOptions {
      *
      * The copy is scoped to a person by `offlineScope`, which is REQUIRED
      * whenever this is on — without it the editor refuses to start.
+     *
+     * It is NOT A BACKUP. Blok never asks the browser to keep the storage, so
+     * a browser short of space may drop the copy without telling anyone, and
+     * clearing site data does the same on purpose. It carries work across a
+     * reload; the document lives on the service and in your own records.
      */
     offline?: boolean;
 

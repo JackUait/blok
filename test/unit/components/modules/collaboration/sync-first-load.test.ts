@@ -2867,6 +2867,51 @@ describe('collaboration — sync-first load', () => {
       });
     }, 20_000);
 
+    /**
+     * The FOURTH reason `quarantineTail` runs with, and the one a classifier
+     * built from the other three gets wrong. `oldestPending` does not filter by
+     * lineage — another tab shares this outbox — so a row of a lineage this
+     * session no longer serves reaches the drain and is quarantined as
+     * `stale-lineage`. Nothing was refused and nothing failed.
+     */
+    it('a stale-lineage quarantine is not reported as a rejection', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const { harness, seen } = await watched({ offline: true });
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitForCachedDocument();
+      await settle(seen);
+
+      // The other tab. It journals a row under a lineage this session does not
+      // serve, and it is the OLDEST row, so it is the one the next drain reads.
+      const otherTab = createOperationStore(storeOptions());
+
+      await otherTab.open();
+      await otherTab.recordSession(
+        { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+        false,
+        'v2'
+      );
+      await otherTab.appendLocal(new Uint8Array([1, 2, 3]));
+      await otherTab.close();
+
+      // Wakes this tab's drain.
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed beside the stray row');
+
+      await waitFor(() => states(seen).includes('quarantined'), 'the stale-lineage quarantine', 5000)
+        .catch(() => undefined);
+
+      const quarantined = seen.filter((payload) => payload.save?.state === 'quarantined').at(-1);
+
+      expect(
+        quarantined?.save?.reason,
+        'a row dropped for belonging to an old lineage was published as a server rejection'
+      ).toBeUndefined();
+      expect(quarantined?.save?.quarantinedOperations).toBe(1);
+    }, 30_000);
+
     it('server sequence remains a decimal string', async () => {
       const { harness, seen } = await watched();
       const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);

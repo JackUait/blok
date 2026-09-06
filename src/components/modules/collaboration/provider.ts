@@ -110,7 +110,7 @@ export const RELINEAGE_REASON = 'lineage-reset';
 const OVERSIZED_REASON = 'oversized-update';
 
 /** Recorded with a row left behind by a quarantine that did not commit. */
-const STALE_LINEAGE_REASON = 'stale-lineage';
+export const STALE_LINEAGE_REASON = 'stale-lineage';
 
 /** Enough to hold a whole first sync ahead of the control frame, not enough to flood us. */
 const MAX_BUFFERED_INBOUND = 64;

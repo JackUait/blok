@@ -15,6 +15,9 @@ public sealed class CollabRoomTests
   private const string OpOne = "0123456789abcdef0123456789abcdef";
   private const string OpTwo = "fedcba9876543210fedcba9876543210";
   private const string OpThree = "00112233445566778899aabbccddeeff";
+  private const string OpFour = "11111111222222223333333344444444";
+  private const string OpFive = "5555555566666666777777778888888a";
+  private const string OpSix = "99999999aaaaaaaabbbbbbbbcccccccd";
 
   private readonly FakeWorkingSetStore store = new();
   private readonly FakeCollabOperationStore operations = new();
@@ -2772,6 +2775,473 @@ public sealed class CollabRoomTests
     Assert.Equal(2UL, operations.Checkpoint(DocId)!.Through);
     Assert.Equal("hello!?", endpoint.Saves[1].Data["text"]?.GetValue<string>());
     Assert.Equal(2, endpoint.Saves.Count);
+  }
+
+  /// <summary>
+  /// The threshold is what publishes a checkpoint now, and a checkpoint is
+  /// replayed INSTEAD of the operations it covers. So it may never name a
+  /// sequence the journal has not committed, and the state it carries may
+  /// never hold bytes past that sequence — either would let a reload
+  /// materialise work no acknowledgement ever promised.
+  /// </summary>
+  [Fact]
+  public async Task CheckpointThroughNeverExceedsDurableThrough()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 3 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    foreach (var (operationId, piece) in new[] { (OpOne, "a"), (OpTwo, "b"), (OpThree, "c") })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, piece)),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    var published = operations.Checkpoint(DocId);
+    var head = operations.Head(DocId)!;
+
+    Assert.True(
+        published is not null,
+        "three committed operations crossed the threshold and nothing was published");
+    Assert.True(
+        published!.Through <= head.DurableThrough,
+        $"the checkpoint names sequence {published.Through}, past the journal's " +
+        $"{head.DurableThrough}");
+
+    // And its bytes carry no more than that sequence: a state holding an
+    // operation the checkpoint does not cover is the same defect, unnamed.
+    var replica = YDocs.NewClient();
+    YDocs.Apply(replica, published.State.ToArray());
+
+    Assert.Equal("helloabc", YDocs.Text(replica));
+    Assert.Equal(3UL, published.Through);
+    Assert.Equal(3UL, head.DurableThrough);
+
+    // The next operation commits past the checkpoint and does NOT drag it
+    // along: the cursor moves only where a checkpoint was actually written.
+    await membership.ReceiveAsync(
+        Operation(membership, OpFour, YDocs.UpdateAppending(client, "d")),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Equal(3UL, operations.Checkpoint(DocId)!.Through);
+    Assert.Equal(4UL, operations.Head(DocId)!.DurableThrough);
+  }
+
+  /// <summary>
+  /// The threshold measures what the PUBLISHED CHECKPOINT does not cover, not
+  /// what this room happened to commit. A room that counted only its own
+  /// commits would never checkpoint a document edited in bursts shorter than
+  /// the threshold — every reload starts at zero while the uncovered tail
+  /// grows without bound, and every later open replays all of it.
+  /// </summary>
+  [Fact]
+  public async Task AReloadedRoomCountsTheTailItInheritedTowardTheThreshold()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 3 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    foreach (var (operationId, piece) in new[] { (OpOne, "a"), (OpTwo, "b") })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, piece)),
+          CancellationToken.None);
+    }
+
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    // The premise: two is under the threshold, so nothing was published and
+    // the whole tail is still uncovered when the next room opens.
+    Assert.Null(operations.Checkpoint(DocId));
+
+    var rejoined = await Join(manager, V2Member());
+    var second = await SyncedClientAsync(manager, "helloab");
+    await rejoined.ReceiveAsync(
+        Operation(rejoined, OpThree, YDocs.UpdateAppending(second, "c")),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    var published = operations.Checkpoint(DocId);
+
+    Assert.True(
+        published is not null,
+        "the reloaded room ignored the tail it inherited: three operations are " +
+        "uncovered and no checkpoint was published");
+    Assert.Equal(3UL, published!.Through);
+  }
+
+  /// <summary>
+  /// An update that arrives before the one it depends on is PARKED, and a
+  /// whole-state encode taken over parked structs is not a state those
+  /// operations rebuild — replaying such a checkpoint INSTEAD of them would
+  /// hand a later reader content no acknowledged operation produced. So the
+  /// threshold may fire and the cursor still may not move; the engine's own
+  /// account of pending state is the gate, never a guess that there is none.
+  /// </summary>
+  [Fact]
+  public async Task PendingYjsStatePreventsCheckpointAdvancement()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 2 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var membership = await Join(manager, V2Member());
+    var author = await SyncedClientAsync(manager, "hello");
+    var other = await SyncedClientAsync(manager, "hello");
+    var first = YDocs.UpdateAppending(author, "a");
+    var second = YDocs.UpdateAppending(author, "b");
+
+    // One independent operation, then the dependent half of a pair whose
+    // first half never arrived: the threshold is crossed with the room
+    // holding a struct it cannot integrate.
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(other, "z")),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, second),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Null(operations.Checkpoint(DocId));
+
+    // Both operations are durable regardless — the gate refuses the
+    // accelerator, never the journal.
+    Assert.Equal(2, operations.Committed(DocId).Count);
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpThree, first),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    var published = operations.Checkpoint(DocId);
+
+    Assert.True(
+        published is not null,
+        "the dependency landed and the checkpoint the pending state held back " +
+        "was never published");
+    Assert.Equal(3UL, published!.Through);
+
+    var replica = YDocs.NewClient();
+    YDocs.Apply(replica, published.State.ToArray());
+
+    Assert.Equal(await ExportedTextAsync(manager), YDocs.Text(replica));
+  }
+
+  /// <summary>
+  /// What the split has to buy: the checkpoint replaces the operations it
+  /// covers and the tail carries the rest, so a reload rebuilds the SAME
+  /// document — not merely the same text. Nothing may fall between the two,
+  /// and the checkpoint may not stand in for an operation it never covered.
+  /// </summary>
+  [Fact]
+  public async Task CheckpointThenTailReplaysTheExactDocument()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 3 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+    var operationIds = new[] { OpOne, OpTwo, OpThree, OpFour, OpFive };
+
+    for (var n = 0; n < operationIds.Length; n++)
+    {
+      await membership.ReceiveAsync(
+          Operation(
+              membership,
+              operationIds[n],
+              YDocs.UpdateAppending(client, ((char)('a' + n)).ToString())),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    var liveText = await ExportedTextAsync(manager);
+    var liveStateVector = await ServerStateVectorAsync(manager, YDocs.NewClient());
+    await membership.LeaveAsync();
+    time.Advance(TimeSpan.FromSeconds(30));
+    await Waits.UntilAsync(() => manager.LiveRoomCount == 0, "the room to be evicted");
+
+    // The premise, read from the store rather than assumed: the reload really
+    // is checkpoint-plus-tail and not a full replay that would pass anyway.
+    await using (var probe = (await operations.OpenAsync(DocId, CancellationToken.None)).Session!)
+    {
+      Assert.True(
+          probe.OpenResult.Checkpoint is not null,
+          "the reload has no checkpoint to stand in for anything: the whole " +
+          "journal is still the tail, so this test would pass on a full replay");
+      Assert.Equal(3UL, probe.OpenResult.Checkpoint!.Through);
+      Assert.Equal<ulong[]>(
+          [4, 5],
+          [.. probe.OpenResult.Tail.Select(record => record.ServerSequence)]);
+    }
+
+    var reloadedStateVector = await ServerStateVectorAsync(manager, YDocs.NewClient());
+
+    Assert.Equal(liveStateVector, reloadedStateVector);
+    Assert.Equal("helloabcde", liveText);
+    Assert.Equal(liveText, await ExportedTextAsync(manager));
+  }
+
+  /// <summary>
+  /// A checkpoint is a replay accelerator and a materialization source, never
+  /// a compaction. The journal is what version history will be replayed from
+  /// and what makes a retry idempotent, so publishing one may remove neither
+  /// the records nor the operation ids that answer a duplicate.
+  /// </summary>
+  [Fact]
+  public async Task CheckpointPublicationDoesNotDeleteOperationHistory()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 3 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var writer = V2Member("editor-1");
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var operationIds = new[] { OpOne, OpTwo, OpThree };
+
+    for (var n = 0; n < operationIds.Length; n++)
+    {
+      await membership.ReceiveAsync(
+          Operation(
+              membership,
+              operationIds[n],
+              YDocs.UpdateAppending(client, ((char)('a' + n)).ToString())),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    var published = operations.Checkpoint(DocId);
+
+    Assert.True(
+        published is not null,
+        "no checkpoint was published, so nothing here says what publishing one preserves");
+    Assert.Equal(3UL, published!.Through);
+    Assert.Equal<string[]>(
+        operationIds,
+        [.. operations.Committed(DocId).Select(record => record.OperationId)]);
+    Assert.Equal<ulong[]>(
+        [1, 2, 3],
+        [.. operations.Committed(DocId).Select(record => record.ServerSequence)]);
+    Assert.Equal<string?[]>(
+        ["editor-1", "editor-1", "editor-1"],
+        [.. operations.Committed(DocId).Select(record => record.ActorId)]);
+
+    // And the idempotency metadata with them: a retry of the first operation,
+    // now covered by the checkpoint, is still answered from the journal
+    // rather than journalled a second time.
+    writer.Received.Clear();
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, operations.Committed(DocId)[0].Update.ToArray()),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    var acknowledgement = Assert.IsType<AcknowledgementFrame>(Assert.Single(writer.Received));
+
+    Assert.Equal(1UL, acknowledgement.ServerSequence);
+    Assert.Equal(OpOne, acknowledgement.OperationId);
+    Assert.Equal(3, operations.Committed(DocId).Count);
+  }
+
+  /// <summary>
+  /// The failure limit is a COUNT with no wait behind it: three consecutive
+  /// non-fatal failures close the room for everyone. So the threshold has to
+  /// be spacing as well as a trigger — the counters clear when an attempt is
+  /// MADE, and a failed checkpoint costs another whole threshold of committed
+  /// operations before the next one. Retrying on the very next operation
+  /// would spend all three strikes inside one disk hiccup.
+  /// </summary>
+  [Fact]
+  public async Task AFailedCheckpointCostsAnotherThresholdBeforeItRetries()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 2 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    var attempts = 0;
+    operations.FailCheckpoints = _ =>
+    {
+      attempts++;
+
+      return new IOException("the journal disk is busy");
+    };
+
+    foreach (var operationId in new[] { OpOne, OpTwo, OpThree, OpFour })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+
+    Assert.True(
+        attempts == 2,
+        $"a failed checkpoint retried without waiting another threshold: {attempts} " +
+        "attempts over four operations, and three of them close the room");
+    Assert.Empty(writer.Closes);
+    Assert.Equal(1, manager.LiveRoomCount);
+    Assert.Null(operations.Checkpoint(DocId));
+
+    // The wait is the only spacing there is, and it is what keeps the run
+    // under the limit while the disk recovers.
+    Assert.Equal(
+        ["1 of 3", "2 of 3"],
+        [.. log
+            .Where(line => line.Contains("could not publish a checkpoint", StringComparison.Ordinal))
+            .Select(line => line[(line.IndexOf('(', StringComparison.Ordinal) + 1)..line.IndexOf(')', StringComparison.Ordinal)])]);
+
+    operations.FailCheckpoints = null;
+
+    foreach (var operationId in new[] { OpFive, OpSix })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "?")),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    var recovered = operations.Checkpoint(DocId);
+
+    Assert.True(
+        recovered is not null,
+        "the disk recovered and the threshold after it still published nothing");
+    Assert.Equal(6UL, recovered!.Through);
+  }
+
+  /// <summary>
+  /// The byte threshold exists because a checkpoint's cost is the whole
+  /// document, not the operation count: a handful of large operations move
+  /// as much state as a hundred keystrokes. Bytes ACCUMULATE across
+  /// operations, so no single update has to be over the threshold on its own.
+  /// </summary>
+  [Fact]
+  public async Task TheByteThresholdPublishesWhereTheOperationCountWouldNot()
+  {
+    var options = new CollabRoomOptions
+    {
+      CheckpointOperationThreshold = 1000,
+      CheckpointByteThreshold = 300,
+    };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var membership = await Join(manager, V2Member());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpOne, YDocs.UpdateAppending(client, new string('y', 200))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    var first = operations.Committed(DocId)[0].Update.Length;
+
+    Assert.True(
+        first < options.CheckpointByteThreshold,
+        $"the premise is gone: the first operation crosses on its own at {first} bytes");
+    Assert.Null(operations.Checkpoint(DocId));
+
+    await membership.ReceiveAsync(
+        Operation(membership, OpTwo, YDocs.UpdateAppending(client, new string('x', 200))),
+        CancellationToken.None);
+    await manager.SettleAsync();
+    var second = operations.Committed(DocId)[1].Update.Length;
+
+    Assert.True(
+        second < options.CheckpointByteThreshold,
+        $"the premise is gone: the second operation crosses on its own at {second} bytes");
+    Assert.True(
+        first + second >= options.CheckpointByteThreshold,
+        "the premise is gone: the two operations together are under the threshold");
+    var published = operations.Checkpoint(DocId);
+
+    Assert.True(
+        published is not null,
+        $"{first + second} committed bytes crossed the " +
+        $"{options.CheckpointByteThreshold}-byte threshold and nothing was published");
+    Assert.Equal(2UL, published!.Through);
+  }
+
+  /// <summary>
+  /// The trigger lives in the one durable step every write path shares, so a
+  /// document journalled by v1/stock members and by the HTTP edit endpoint
+  /// gets the same cadence. Hanging it off the v2 receive path alone would
+  /// leave a room whose writers are stock clients replaying its whole journal
+  /// on every open, forever.
+  /// </summary>
+  [Fact]
+  public async Task TheThresholdCountsEveryJournalledWriteNotJustV2Operations()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 2 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var stock = await Join(manager, new FakeMember());
+    var client = await SyncedClientAsync(manager, "hello");
+
+    await stock.ReceiveAsync(
+        SyncWire.Encode(new SyncUpdateFrame(YDocs.UpdateAppending(client, "a"))),
+        CancellationToken.None);
+    await manager.EditAsync(DocId, [Appending("b-1", "x")], CancellationToken.None);
+    await manager.SettleAsync();
+    var published = operations.Checkpoint(DocId);
+
+    Assert.True(
+        published is not null,
+        "a v1 write and an HTTP edit journalled two operations and neither " +
+        "counted toward the checkpoint threshold");
+    Assert.Equal(2UL, published!.Through);
+    Assert.Equal<CollabOperationSource[]>(
+        [CollabOperationSource.ClientV1, CollabOperationSource.HttpEdit],
+        [.. operations.Committed(DocId).Select(record => record.Source)]);
+  }
+
+  /// <summary>
+  /// The threshold attempt is POSTED behind the commit that armed it, never
+  /// awaited inside it. An operation is durable the moment the append
+  /// returns, and it still owes its writer the relay and the exact
+  /// acknowledgement; a checkpoint awaited in between can spend the room's
+  /// last strike and close it first, leaving committed work that no member
+  /// ever saw accepted and whose receipt the client waits for forever.
+  /// </summary>
+  [Fact]
+  public async Task TheOperationThatTripsAFatalCheckpointIsStillRelayedAndAcknowledged()
+  {
+    var options = new CollabRoomOptions { CheckpointOperationThreshold = 1 };
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateJournalManager(options);
+    var writer = V2Member();
+    var membership = await Join(manager, writer);
+    var client = await SyncedClientAsync(manager, "hello");
+    operations.FailCheckpoints = _ => new IOException("the journal disk is busy");
+
+    foreach (var operationId in new[] { OpOne, OpTwo })
+    {
+      await membership.ReceiveAsync(
+          Operation(membership, operationId, YDocs.UpdateAppending(client, "!")),
+          CancellationToken.None);
+    }
+
+    await manager.SettleAsync();
+    var last = YDocs.UpdateAppending(client, "?");
+    writer.Received.Clear();
+
+    // The third strike: this operation commits, and the checkpoint it arms
+    // is the one that stops the room.
+    await membership.ReceiveAsync(
+        Operation(membership, OpThree, last),
+        CancellationToken.None);
+    await manager.SettleAsync();
+
+    Assert.Collection(
+        writer.Received,
+        frame => Assert.Equal(last, Assert.IsType<SyncUpdateFrame>(frame).Update),
+        frame => Assert.Equal(3UL, Assert.IsType<AcknowledgementFrame>(frame).ServerSequence));
+    Assert.Equal(CollabCloseReason.CommitUnavailable, Assert.Single(writer.Closes));
+    Assert.Equal(3, operations.Committed(DocId).Count);
   }
 
   /// <summary>

@@ -18,6 +18,19 @@ internal sealed class CollabRoomOptions
   public long CompactionByteThreshold { get; init; } = 1L << 20;
 
   /// <summary>
+  /// Operations a journal-backed room may commit past its published
+  /// checkpoint before it publishes another. The journal's counterpart to
+  /// <see cref="CompactionFrameThreshold"/> — the same "enough incremental
+  /// state to be worth replacing with a whole one" judgement — but its own
+  /// knob, because a journal room never compacts and a checkpoint that fails
+  /// three times in a row stops the room.
+  /// </summary>
+  public int CheckpointOperationThreshold { get; init; } = 64;
+
+  /// <summary>Update bytes committed past the published checkpoint that trigger the same.</summary>
+  public long CheckpointByteThreshold { get; init; } = 1L << 20;
+
+  /// <summary>
   /// Client entries one awareness frame may claim before the room refuses to
   /// relay it. A room holds tens of participants, not thousands, and
   /// y-protocols never checks that a sender owns the client ids it encodes.

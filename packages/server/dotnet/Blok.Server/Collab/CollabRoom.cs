@@ -121,6 +121,13 @@ internal sealed class CollabRoom : IDisposable
   private ulong checkpointedThrough;
   private int checkpointFailures;
 
+  // What the published checkpoint does not cover, as the thresholds measure
+  // it. Cleared when an attempt is MADE rather than when one succeeds: the
+  // failure limit above is a count with no wait behind it, so another
+  // threshold's worth of operations is the only spacing a retry gets.
+  private long operationsSinceCheckpoint;
+  private long bytesSinceCheckpoint;
+
   // The blob is behind the doc while blobVersion != persistedVersion; that
   // is the room's "persist behind" flag, and it is what keeps a room that
   // cannot write from being dropped.
@@ -472,89 +479,95 @@ internal sealed class CollabRoom : IDisposable
   }
 
   /// <summary>
-  /// Publishes a checkpoint through everything committed so far. WHEN this
-  /// runs belongs to the checkpoint publisher (plan task 5.1); this is the
-  /// room's only route to <see cref="ICollabOperationSession.WriteCheckpointAsync"/>.
-  /// False when there is nothing new to publish.
-  ///
-  /// Refused while the engine holds pending state: a checkpoint is replayed
-  /// INSTEAD of the operations it covers, and an encode taken over parked
-  /// structs is not a state those operations would rebuild.
+  /// Publishes a checkpoint through everything committed so far. The room
+  /// drives this itself off the thresholds; this entry is what lets a host
+  /// (and the tests) ask for one directly. False when there is nothing new to
+  /// publish.
   /// </summary>
   internal Task<bool> CheckpointAsync(CancellationToken cancellationToken)
   {
-    return RunAsync(
-        async () =>
-        {
-          if (state != RoomState.Ready ||
-              session is null ||
-              committedThrough == checkpointedThrough ||
-              doc!.HasPending)
-          {
-            return false;
-          }
+    return RunAsync(CheckpointLocked, cancellationToken);
+  }
 
-          try
-          {
-            using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
-            using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
-                lifetime.Token,
-                deadline.Token);
+  /// <summary>
+  /// Refused while the engine holds pending state: a checkpoint is replayed
+  /// INSTEAD of the operations it covers, and an encode taken over parked
+  /// structs is not a state those operations would rebuild. The counters are
+  /// left alone there on purpose, so the next commit — which is what makes
+  /// the missing dependency arrive — tries again immediately.
+  /// </summary>
+  private async Task<bool> CheckpointLocked()
+  {
+    if (state != RoomState.Ready ||
+        session is null ||
+        committedThrough == checkpointedThrough ||
+        doc!.HasPending)
+    {
+      return false;
+    }
 
-            await session.WriteCheckpointAsync(
-                new CollabOperationCheckpoint(committedThrough, doc.EncodeStateAsUpdate()),
-                bounded.Token);
-          }
-          catch (Exception error) when (
-              error is CollabOperationFenceLostException or
-                  ArgumentOutOfRangeException or
-                  InvalidDataException)
-          {
-            // A lost fence (another process owns the document), a sequence the
-            // store refused (this room's idea of what is committed is wrong)
-            // and a journal it cannot read (the crash table's "fail closed;
-            // never silently re-seed"). None of the three heals by retrying.
-            await FailCommitLocked("publish a checkpoint", error);
+    operationsSinceCheckpoint = 0;
+    bytesSinceCheckpoint = 0;
 
-            return false;
-          }
-          catch (Exception error)
-          {
-            // Everything else — a disk hiccup, a store timeout. A checkpoint
-            // is only a replay accelerator, so a failed one leaves the room
-            // holding nothing the journal lacks; evicting a roomful of people
-            // from a document they can still edit would be the worse answer,
-            // and checkpointedThrough is left alone so the next attempt
-            // retries. Bounded, though: a session that can never checkpoint
-            // again reads exactly like a hiccup, and under a checkpoint
-            // cadence that would retry forever.
-            if (++checkpointFailures >= CheckpointFailureLimit)
-            {
-              await FailCommitLocked("publish a checkpoint", error);
+    try
+    {
+      using var deadline = new CancellationTokenSource(options.CommitTimeout, timeProvider);
+      using var bounded = CancellationTokenSource.CreateLinkedTokenSource(
+          lifetime.Token,
+          deadline.Token);
 
-              return false;
-            }
+      await session.WriteCheckpointAsync(
+          new CollabOperationCheckpoint(committedThrough, doc.EncodeStateAsUpdate()),
+          bounded.Token);
+    }
+    catch (Exception error) when (
+        error is CollabOperationFenceLostException or
+            ArgumentOutOfRangeException or
+            InvalidDataException)
+    {
+      // A lost fence (another process owns the document), a sequence the
+      // store refused (this room's idea of what is committed is wrong)
+      // and a journal it cannot read (the crash table's "fail closed;
+      // never silently re-seed"). None of the three heals by retrying.
+      await FailCommitLocked("publish a checkpoint", error);
 
-            log?.Invoke(
-                $"collab: room \"{DocId}\" could not publish a checkpoint " +
-                $"({checkpointFailures} of {CheckpointFailureLimit}), retrying later: {error.Message}");
+      return false;
+    }
+    catch (Exception error)
+    {
+      // Everything else — a disk hiccup, a store timeout. A checkpoint
+      // is only a replay accelerator, so a failed one leaves the room
+      // holding nothing the journal lacks; evicting a roomful of people
+      // from a document they can still edit would be the worse answer,
+      // and checkpointedThrough is left alone so the next attempt
+      // retries. Bounded, though: a session that can never checkpoint
+      // again reads exactly like a hiccup, and the cadence would retry
+      // forever.
+      if (++checkpointFailures >= CheckpointFailureLimit)
+      {
+        await FailCommitLocked("publish a checkpoint", error);
 
-            return false;
-          }
+        return false;
+      }
 
-          checkpointFailures = 0;
-          checkpointedThrough = committedThrough;
+      log?.Invoke(
+          $"collab: room \"{DocId}\" could not publish a checkpoint " +
+          $"({checkpointFailures} of {CheckpointFailureLimit}), retrying later: {error.Message}");
 
-          // MarkDirty deliberately arms no timer on a journal room, so the
-          // projection a checkpoint earns has to be armed here — and marked
-          // owed, because this arming is dropped when a save is in flight.
-          projectionOwed = true;
-          MarkDirtyLocked();
-          ScheduleExportLocked();
+      return false;
+    }
 
-          return true;
-        },
-        cancellationToken);
+    checkpointFailures = 0;
+    checkpointedThrough = committedThrough;
+
+    // MarkDirty deliberately arms no timer on a journal room, so the
+    // projection a checkpoint earns has to be armed here — and marked
+    // owed, because this arming is dropped when a save is in flight.
+    projectionOwed = true;
+    MarkDirtyLocked();
+    ScheduleExportLocked();
+
+    return true;
   }
 
   internal Task<CollabResetResult?> ResetAsync(CancellationToken cancellationToken)
@@ -914,6 +927,15 @@ internal sealed class CollabRoom : IDisposable
         opened.Head.Lineage);
     committedThrough = opened.Head.DurableThrough;
     checkpointedThrough = opened.Checkpoint?.Through ?? 0;
+
+    // The threshold counts what the checkpoint does not cover, so a room
+    // inherits the uncovered tail rather than starting at zero. Counting only
+    // this room's own commits would leave a document edited in short bursts
+    // with a tail that grows across every reload and is never checkpointed.
+    // The COUNT alone bounds that growth, so the inherited bytes are
+    // deliberately not added: it would only make the first checkpoint of a
+    // reloaded room come sooner, at the cost of a second thing to keep true.
+    operationsSinceCheckpoint = (long)(committedThrough - checkpointedThrough);
     StartVersionReadLocked();
     HydrateCommittedLocked(opened.Baseline);
 
@@ -1727,6 +1749,18 @@ internal sealed class CollabRoom : IDisposable
     }
 
     committedThrough = appended.ServerSequence;
+    operationsSinceCheckpoint++;
+    bytesSinceCheckpoint += update.Length;
+
+    if (operationsSinceCheckpoint >= options.CheckpointOperationThreshold ||
+        bytesSinceCheckpoint >= options.CheckpointByteThreshold)
+    {
+      // POSTED, not awaited. This operation still owes its caller a broadcast
+      // and an exact acknowledgement, and a checkpoint that failed between
+      // the append and those would close the room over work that is already
+      // durable. The lane makes the posted attempt run straight after them.
+      Post(() => CheckpointLocked());
+    }
 
     return appended.ServerSequence;
   }

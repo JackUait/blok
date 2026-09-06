@@ -857,6 +857,63 @@ public sealed class LocalCollabOperationStoreTests : IDisposable
         (await reopened.FindCommittedAsync(OperationId(1), firstDigest)).Outcome);
   }
 
+  /// <summary>
+  /// The manifest publication is the single step that makes a checkpoint
+  /// current; the sealed file and the directory sync both precede it. So a
+  /// process that dies between them leaves a checkpoint file nothing names,
+  /// and recovery must take the OLD checkpoint together with the whole tail
+  /// after it — never the newer file on disk, whose sequence no published
+  /// manifest vouches for.
+  /// </summary>
+  [Fact]
+  public async Task CrashBeforeManifestPublishUsesTheOldCheckpointAndFullTail()
+  {
+    var lineage = CollabWorkingSetTag.NewLineage();
+    var older = new byte[] { 0xc0, 0xc1 };
+    var newer = new byte[] { 0xd0, 0xd1 };
+
+    await using (var first = await OpenAsync())
+    {
+      await first.ResetAsync(Reset(1, lineage, 0xb1));
+
+      for (var n = 1; n <= 5; n++)
+      {
+        await first.AppendAsync(Candidate(OperationId(n), [(byte)n]));
+      }
+
+      await first.WriteCheckpointAsync(new CollabOperationCheckpoint(3, older));
+    }
+
+    // A SECOND session, because the sweep that follows a publication deletes
+    // only the writing session's own files: a crash never reaches the sweep
+    // either, so the file set left behind is the one a different fence
+    // produces here.
+    byte[] beforePublication;
+
+    await using (var second = await OpenAsync())
+    {
+      beforePublication = File.ReadAllBytes(ManifestPath);
+      await second.WriteCheckpointAsync(new CollabOperationCheckpoint(5, newer));
+    }
+
+    // THE PUBLICATION THAT NEVER LANDED, reconstructed rather than mocked:
+    // the sealed checkpoint-5 file is on disk and the manifest is exactly the
+    // bytes that were there when WriteSealed returned.
+    File.WriteAllBytes(ManifestPath, beforePublication);
+
+    Assert.Equal(2, Directory.GetFiles(DocDirectory, "checkpoint.*").Length);
+
+    await using var reopened = await OpenAsync();
+    var checkpoint = Assert.IsType<CollabOperationCheckpoint>(reopened.OpenResult.Checkpoint);
+
+    Assert.Equal(older, checkpoint.State.ToArray());
+    Assert.Equal(3ul, checkpoint.Through);
+    Assert.Equal<ulong[]>(
+        [4, 5],
+        [.. reopened.OpenResult.Tail.Select(record => record.ServerSequence)]);
+    Assert.Equal(5ul, reopened.OpenResult.Head!.DurableThrough);
+  }
+
   [Fact]
   public async Task CoexistsWithTodaysWholeDocumentFileInOneDirectory()
   {

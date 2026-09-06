@@ -833,6 +833,8 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       state.ackTimer = clearTimer(state.ackTimer);
     }
 
+    options.onOperationSettled?.({ serverSequence: frame.serverSequence });
+
     const generation = state.generation;
 
     // The next operation waits for the deletion to COMMIT: draining first would
@@ -894,6 +896,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     // Final. The tail goes with it: later updates in this lineage may depend on
     // the rejected one, so sending them alone would apply a dependent edit the
     // server has no base for.
+    options.onOperationSettled?.({ rejectionCode: frame.code });
     void quarantineTail(lineage, frame.code);
   };
 

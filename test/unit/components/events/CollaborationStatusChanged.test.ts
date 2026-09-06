@@ -68,4 +68,72 @@ describe('CollaborationStatusChanged event', () => {
     expect(seen.map((payload) => payload.retryInMs)).toEqual([30_000, undefined]);
     expect(seen.map((payload) => payload.error)).toEqual([undefined, 'forbidden']);
   });
+
+  // Save state is independent of connection state: a live session can still be
+  // holding work a reload would lose, so a host reads `save`, never `status`,
+  // to decide whether the tab is safe to close.
+  it('carries a save state a connected session can still report pending work in', () => {
+    const dispatcher = new EventsDispatcher<BlokEventMap>();
+    const seen: CollaborationStatusChangedPayload[] = [];
+
+    dispatcher.on(CollaborationStatusChanged, (payload) => seen.push(payload));
+
+    const pending: CollaborationStatusChangedPayload = {
+      status: 'connected',
+      peers: [],
+      save: {
+        state: 'pending',
+        pendingOperations: 2,
+        pendingBytes: 96,
+        quarantinedOperations: 0,
+      },
+    };
+    // 2^64 - 1. A `number` rounds it to 18446744073709552000, so the field is a
+    // decimal string and has to reach the listener as one.
+    const saved: CollaborationStatusChangedPayload = {
+      status: 'connected',
+      peers: [],
+      save: {
+        state: 'saved',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+        serverSequence: '18446744073709551615',
+      },
+    };
+
+    dispatcher.emit(CollaborationStatusChanged, pending);
+    dispatcher.emit(CollaborationStatusChanged, saved);
+
+    expect(seen.map((payload) => payload.save?.state)).toEqual(['pending', 'saved']);
+    expect(seen[1].save?.serverSequence).toBe('18446744073709551615');
+  });
+
+  // The terminal union is the "will not reconnect" contract. A broken local
+  // store or a refused edit does not stop the socket, so those reasons live in
+  // `save.reason` and never widen `error`.
+  it('keeps persistence reasons out of the terminal reason union', () => {
+    const dispatcher = new EventsDispatcher<BlokEventMap>();
+    const seen: CollaborationStatusChangedPayload[] = [];
+
+    dispatcher.on(CollaborationStatusChanged, (payload) => seen.push(payload));
+
+    const broken: CollaborationStatusChangedPayload = {
+      status: 'connected',
+      peers: [],
+      save: {
+        state: 'blocked',
+        reason: 'local-storage-failed',
+        pendingOperations: 1,
+        pendingBytes: 12,
+        quarantinedOperations: 0,
+      },
+    };
+
+    dispatcher.emit(CollaborationStatusChanged, broken);
+
+    expect(seen[0].error, 'a persistence failure was published as a terminal connection reason').toBeUndefined();
+    expect(seen[0].save?.reason).toBe('local-storage-failed');
+    expect(seen[0].status).toBe('connected');
+  });
 });

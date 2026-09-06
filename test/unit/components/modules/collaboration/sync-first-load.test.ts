@@ -1398,6 +1398,11 @@ describe('collaboration — sync-first load', () => {
       vi.stubGlobal('indexedDB', new IDBFactory());
 
       const harness = await boot({ offline: true });
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
 
       firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
       await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
@@ -1429,6 +1434,20 @@ describe('collaboration — sync-first load', () => {
         harness.core.moduleInstances.ReadOnly.isEnabled,
         'editing continued although the edit never reached the copy'
       ).toBe(true);
+
+      // And the host has to be TOLD. Editing stopping with nothing published
+      // is a session that looks healthy from the outside while the copy has a
+      // hole in it.
+      await waitFor(
+        () => seen.at(-1)?.save?.state === 'blocked',
+        'the blocked save state',
+        3000
+      ).catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save,
+        'the copy lost a write and the host was never told why editing stopped'
+      ).toMatchObject({ state: 'blocked', reason: 'local-storage-failed' });
     }, 20_000);
 
     /**
@@ -2293,7 +2312,14 @@ describe('collaboration — sync-first load', () => {
 
       socket.serverClose(1001, 'gone');
 
-      expect(seen.map((payload) => payload.status)).toEqual(['connected', 'offline']);
+      // Consecutive repeats are collapsed: the save state is published on the
+      // same event and changes without the connection changing, so a
+      // transition is a status that differs from the one before it.
+      const transitions = seen
+        .map((payload) => payload.status)
+        .filter((status, index, all) => status !== all[index - 1]);
+
+      expect(transitions).toEqual(['connected', 'offline']);
       expect(seen[0].peers).toEqual([]);
     });
 
@@ -2458,6 +2484,435 @@ describe('collaboration — sync-first load', () => {
   // `emitStatus` runs inside the awareness change callback, inside the frame
   // handler: a host listener that throws must not end the session, and one that
   // throws on the `connected` transition must not stop arbitration behind it.
+  describe('save state', () => {
+    /** The first operation frame a v2 session put on the wire. */
+    const operationOn = (socket: MockSocket): Extract<SyncWireFrame, { type: 'operation' }> | undefined =>
+      socket.sent
+        .map((bytes) => decode(bytes))
+        .find((frame): frame is Extract<SyncWireFrame, { type: 'operation' }> => frame.type === 'operation');
+
+    /** Every save state published so far, in order. */
+    const states = (seen: CollaborationStatusChangedPayload[]): (string | undefined)[] =>
+      seen.map((payload) => payload.save?.state);
+
+    /**
+     * Waits until nothing new is published for a beat.
+     *
+     * The first sync's read-only cascade runs over several macrotasks and its
+     * TRAILING store read lands whenever it lands. Without this barrier that
+     * read is what publishes the next state, and a wake under test is never
+     * the thing that spoke — which is exactly how the quarantine wake passed
+     * while deleted.
+     * @param seen - the payloads collected so far
+     */
+    const settle = async (seen: CollaborationStatusChangedPayload[]): Promise<void> => {
+      await waitFor(async () => {
+        const count = seen.length;
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+
+        return seen.length === count;
+      }, 'the session to go quiet', 10_000);
+    };
+
+    /**
+     * Boots and collects status payloads from that moment on. The array is live.
+     * @param options - what to boot with
+     */
+    const watched = async (
+      options: BootOptions = {}
+    ): Promise<{ harness: Harness; seen: CollaborationStatusChangedPayload[] }> => {
+      const harness = await boot(options);
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      return { harness, seen };
+    };
+
+    it('connected may report pending', async () => {
+      const { harness, seen } = await watched();
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitFor(() => states(seen).includes('saved'), 'the synced save state', 3000);
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed and unacknowledged');
+
+      await waitFor(
+        () => seen.some((payload) => payload.save?.state === 'pending' && payload.save.pendingOperations > 0),
+        'a pending save state',
+        3000
+      ).catch(() => undefined);
+
+      const pending = seen.filter((payload) => payload.save?.state === 'pending').at(-1);
+
+      expect(
+        pending,
+        'a live session published nothing about an edit the server has not taken'
+      ).toBeDefined();
+      expect(
+        pending?.status,
+        'unsaved work was only reported once the connection itself changed'
+      ).toBe('connected');
+      expect(pending?.save?.pendingOperations).toBe(1);
+      expect(pending?.save?.pendingBytes).toBeGreaterThan(0);
+    }, 20_000);
+
+    it('saved requires zero rows and no append transaction', async () => {
+      const { harness, seen } = await watched();
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitFor(() => states(seen).includes('saved'), 'the synced save state', 3000);
+
+      expect(seen.filter((payload) => payload.save?.state === 'saved').at(-1)?.save).toEqual({
+        state: 'saved',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+
+      const before = seen.length;
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'mid-append');
+
+      await waitFor(
+        () => seen.slice(before).some((payload) => payload.save?.state === 'pending'),
+        'the save state to leave saved',
+        3000
+      ).catch(() => undefined);
+
+      // The store counts an append from the CALL, not from the commit, so this
+      // first report is the window where no row exists yet — and the document
+      // is not saved in it either.
+      expect(
+        seen.slice(before).find((payload) => payload.save?.state === 'pending')?.save,
+        'the editor called itself saved while the row for the last edit was still being written'
+      ).toEqual({
+        state: 'pending',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+    }, 20_000);
+
+    it('v1 reports legacy unavailable and never saved', async () => {
+      const { harness, seen } = await watched();
+
+      // Let the boot go quiet first. The post-ready replay publishes whatever
+      // is current WITHOUT coalescing, so a replay landing after the sync
+      // would deliver the legacy verdict on its own and this test would pass
+      // with the coalescer's `reason` term deleted.
+      await settle(seen);
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }]);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+      await waitFor(
+        () => seen.some((payload) => payload.save?.reason === 'legacy-protocol'),
+        'the legacy verdict',
+        3000
+      ).catch(() => undefined);
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed under v1');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      expect(
+        states(seen),
+        'a v1 session called an edit saved, though v1 acknowledges nothing (protocol section 2)'
+      ).not.toContain('saved');
+      expect(seen.at(-1)?.save).toEqual({
+        state: 'unavailable',
+        reason: 'legacy-protocol',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+
+      // RE-EMIT, not reorder. `emitStatus` has to stay synchronous — the
+      // connect/disconnect test asserts right after `serverClose` — so the
+      // store read that names the protocol lands on a FOLLOW-UP event.
+      // Computing the save state before the emit would collapse these two.
+      const connected = seen.filter((payload) => payload.status === 'connected');
+
+      expect(connected.length).toBeGreaterThan(1);
+      expect(connected[0].save?.reason).toBeUndefined();
+      expect(connected.at(-1)?.save?.reason).toBe('legacy-protocol');
+    }, 20_000);
+
+    it('storage failure reports blocked with reason local-storage-failed and leaves the terminal reason union unchanged', async () => {
+      const factory = new IDBFactory();
+
+      vi.spyOn(factory, 'open').mockImplementation(() => {
+        throw new Error('storage is unavailable');
+      });
+      vi.stubGlobal('indexedDB', factory);
+
+      const { harness, seen } = await watched({ offline: true });
+
+      firstSync(harness, []);
+      await waitFor(() => collabAttr(harness.core) === 'connected', 'connected');
+      await waitFor(() => states(seen).includes('blocked'), 'the blocked save state', 3000)
+        .catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save,
+        'a session whose local copy could not be opened went on reporting its work saved'
+      ).toEqual({
+        state: 'blocked',
+        reason: 'local-storage-failed',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+      // The terminal union means "the editor will not reconnect". A broken
+      // local store does not stop the socket, so it must never reach `error`.
+      expect(
+        seen.map((payload) => payload.error),
+        'a persistence failure widened the terminal reason union'
+      ).toEqual(seen.map(() => undefined));
+      expect(states(seen)).not.toContain('saved');
+    }, 20_000);
+
+    it('reset reports quarantined count after reconnect', async () => {
+      const { harness, seen } = await watched();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed before the reset');
+      await waitFor(
+        () => seen.some((payload) => payload.save?.state === 'pending' && payload.save.pendingOperations > 0),
+        'the outbox row',
+        3000
+      );
+
+      // A lineage this client has never seen: the rows stamped with the old one
+      // move to quarantine and the session reconnects into the new room.
+      socket.deliver({
+        type: 'control',
+        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+      });
+
+      await waitFor(() => harness.sockets.length === 2, 'the reconnect', 8000);
+      firstSync(harness, [], V2);
+      await waitFor(() => seen.at(-1)?.status === 'connected', 'the second connection', 5000);
+      await waitFor(() => states(seen).includes('quarantined'), 'the quarantined verdict', 3000)
+        .catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save,
+        'a reset moved this editor’s work out of the queue and the session reported nothing lost'
+      ).toEqual({
+        state: 'quarantined',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 1,
+      });
+
+      // Both counts non-zero, which is the only place the ORDER of the two
+      // branches shows: new work drains itself, quarantined work never does
+      // and needs the reader to export it, so the loss is what the headline
+      // has to name.
+      harness.core.moduleInstances.YjsManager.addBlock({
+        id: 'after-the-reset',
+        type: 'paragraph',
+        data: { text: 'typed into the new room' },
+      });
+
+      await waitFor(
+        () => (seen.at(-1)?.save?.pendingOperations ?? 0) > 0,
+        'a row in the new lineage',
+        3000
+      ).catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save?.state,
+        'work that can still be sent hid work that never will be'
+      ).toBe('quarantined');
+      expect(seen.at(-1)?.save?.pendingOperations).toBeGreaterThan(0);
+      expect(seen.at(-1)?.save?.quarantinedOperations).toBe(1);
+    }, 40_000);
+
+    /**
+     * The third reason the payload declares. A FINAL rejection retires the
+     * whole tail — later updates may depend on the refused one — so the rows
+     * are gone for good and only an export brings them back.
+     */
+    it('a final rejection reports quarantined with reason operation-rejected', async () => {
+      const { harness, seen } = await watched();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed and refused');
+      await waitFor(() => operationOn(socket) !== undefined, 'the operation on the wire', 3000);
+      await settle(seen);
+
+      socket.deliver({
+        type: 'rejection',
+        lineage: LINEAGE,
+        operationId: operationOn(socket)?.operationId ?? '',
+        code: 'invalid-update',
+      });
+
+      await waitFor(() => states(seen).includes('quarantined'), 'the quarantined verdict', 3000)
+        .catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save,
+        'the server refused an edit for good and the session reported nothing lost'
+      ).toEqual({
+        state: 'quarantined',
+        reason: 'operation-rejected',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 1,
+      });
+    }, 20_000);
+
+    it('server sequence remains a decimal string', async () => {
+      const { harness, seen } = await watched();
+      const socket = firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      harness.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed under v2');
+      await waitFor(() => operationOn(socket) !== undefined, 'the operation on the wire', 3000);
+
+      // 2^64 - 1, the protocol's ceiling: a `number` rounds it to
+      // 18446744073709552000 and the last four digits are gone for good.
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE,
+        operationId: operationOn(socket)?.operationId ?? '',
+        serverSequence: '18446744073709551615',
+      });
+
+      await waitFor(
+        () => seen.some((payload) => payload.save?.serverSequence !== undefined),
+        'the acknowledged sequence',
+        3000
+      ).catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save?.serverSequence,
+        'the acknowledged sequence came back rounded, so it travelled as a number'
+      ).toBe('18446744073709551615');
+      expect(seen.at(-1)?.save?.state).toBe('saved');
+      expect(seen.at(-1)?.save?.pendingOperations).toBe(0);
+
+      await settle(seen);
+
+      // Another tab shares this outbox, so an acknowledgement may name a row
+      // this one does not hold: the delete is a no-op and every count stays
+      // put. The sequence is then the ONLY thing that moved, and it still has
+      // to reach the host. 2^53 + 1, so it is also a value `number` rounds —
+      // and the protocol does not require a sequence to increase.
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE,
+        operationId: 'ab'.repeat(16),
+        serverSequence: '9007199254740993',
+      });
+
+      await waitFor(
+        () => seen.at(-1)?.save?.serverSequence === '9007199254740993',
+        'the sequence from the other tab',
+        3000
+      ).catch(() => undefined);
+
+      expect(
+        seen.at(-1)?.save?.serverSequence,
+        'a sequence that advanced with no other change was never published'
+      ).toBe('9007199254740993');
+    }, 30_000);
+
+    it('a host subscribing right after isReady receives the current save state', async () => {
+      const harness = await boot();
+
+      // The connecting transition's own store read rides a MICROTASK chain
+      // (its emit arrives through processTicksAndRejections), so draining the
+      // queue puts it strictly before this subscription. What is left can only
+      // come from something scheduled on a macrotask — the replay. Without the
+      // drain this test passes on that first read and pins nothing: removing
+      // the replay outright left it green.
+      for (let turn = 0; turn < 200; turn += 1) {
+        await Promise.resolve();
+      }
+
+      const seen: CollaborationStatusChangedPayload[] = [];
+
+      harness.core.moduleInstances.API.methods.events.on('collaboration:status', (payload) => {
+        seen.push(payload);
+      });
+
+      await waitFor(() => seen.length > 0, 'the post-ready replay', 3000).catch(() => undefined);
+
+      expect(
+        seen[0],
+        'a host that subscribed the moment the editor was ready never heard from the session'
+      ).toBeDefined();
+      // Nothing has been negotiated yet, so there is no durable save to report
+      // and nobody to blame for it.
+      expect(seen[0]?.save).toEqual({
+        state: 'unavailable',
+        pendingOperations: 0,
+        pendingBytes: 0,
+        quarantinedOperations: 0,
+      });
+      expect(seen[0]?.status).toBe('connecting');
+    }, 20_000);
+
+    it('memory mode arms the beforeunload guard while pending; offline mode does not', async () => {
+      const added = vi.spyOn(window, 'addEventListener');
+      const removed = vi.spyOn(window, 'removeEventListener');
+      const guards = (): number => added.mock.calls.filter(([type]) => type === 'beforeunload').length;
+      const dropped = (): number => removed.mock.calls.filter(([type]) => type === 'beforeunload').length;
+
+      const memory = await boot();
+      const memorySocket = firstSync(memory, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => memory.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      memory.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed in memory mode');
+      await waitFor(() => operationOn(memorySocket) !== undefined, 'the operation on the wire', 3000);
+      await waitFor(() => guards() > 0, 'the unload guard', 3000).catch(() => undefined);
+
+      expect(
+        guards(),
+        'a memory-mode session let a reload throw away an edit nobody has taken'
+      ).toBeGreaterThan(0);
+
+      destroyCore(booted.splice(booted.indexOf(memory.core), 1)[0]);
+
+      expect(
+        dropped(),
+        'a destroyed editor left its confirm-on-leave dialog armed for the rest of the page'
+      ).toBeGreaterThan(0);
+
+      added.mockClear();
+
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      const offline = await boot({ offline: true });
+      const offlineSocket = firstSync(offline, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+
+      await waitFor(() => offline.core.moduleInstances.BlockManager.blocks.length === 1, 'the offline first sync');
+
+      offline.core.moduleInstances.YjsManager.updateBlockData('b1', 'text', 'typed offline');
+      await waitFor(() => operationOn(offlineSocket) !== undefined, 'the offline operation on the wire', 5000);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      expect(
+        guards(),
+        'an offline session, whose rows survive the reload, still asked the user to confirm leaving'
+      ).toBe(0);
+    }, 40_000);
+  });
+
   describe('a throwing collaboration:status listener', () => {
     it('does not end the session when it throws on an awareness frame', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => undefined);

@@ -1,5 +1,5 @@
 import type { OutputBlockData } from '../../../../types';
-import type { CollaborationPeer } from '../../../../types/events/editor-events';
+import type { CollaborationPeer, CollaborationStatusChangedPayload } from '../../../../types/events/editor-events';
 import type { ModuleConfig } from '../../../types-internal/module-config';
 import { Module } from '../../__module';
 import { CollaborationStatusChanged } from '../../events';
@@ -15,10 +15,11 @@ import {
   type PresenceState,
 } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
-import { createOperationStore, type OperationStore } from './operation-store';
+import { createOperationStore, type OperationStore, type OperationStoreStats } from './operation-store';
 import { createCollabProvider } from './provider';
 import type {
   CollabDocSeam,
+  CollabOutbox,
   CollabProvider,
   CollabSocketFactory,
   CollabStatus,
@@ -166,6 +167,44 @@ function* presenceStates(states: Map<number, Record<string, unknown>>): Generato
   }
 }
 
+/** The `save` block of the published status payload. */
+type SaveState = NonNullable<CollaborationStatusChangedPayload['save']>;
+
+/**
+ * Whether two save states say the same thing. The coalescing gate: a retry
+ * timer ticking, or a remote update landing, must not publish an event that
+ * repeats what the host already has.
+ *
+ * Compared key by key rather than field by field. Naming the six members
+ * individually leaves terms no reachable state can move on their own — a row
+ * count never changes without its byte total — so those terms could be deleted
+ * with every test still green. The key COUNT is the half that catches an
+ * optional member appearing beside otherwise identical numbers, which is what
+ * a `reason` arriving does.
+ * @param left - the last published save state
+ * @param right - the freshly read one
+ */
+/**
+ * What a store that cannot even be read reports. Its rows are unknowable, so
+ * the counts are zero and the verdict is left to the module's own durability
+ * latch — which the same failure sets.
+ */
+const UNREADABLE_STATS: OperationStoreStats = {
+  pendingOperations: 0,
+  pendingBytes: 0,
+  quarantinedOperations: 0,
+  appendInFlight: false,
+  storageUnavailable: true,
+  updateLost: true,
+};
+
+const sameSaveState = (left: SaveState, right: SaveState): boolean => {
+  const keys = Object.keys(left) as (keyof SaveState)[];
+
+  return keys.length === Object.keys(right).length
+    && keys.every((key) => left[key] === right[key]);
+};
+
 interface CollabSettings {
   doc: string;
   url: string;
@@ -312,6 +351,32 @@ export class Collaboration extends Module {
 
   private flushOnPageHide: (() => void) | null = null;
 
+  /**
+   * The last save state published, so an identical one emits nothing. Absent
+   * until the first store read answers.
+   */
+  private save: SaveState | undefined = undefined;
+
+  /** Where the server journalled the last acknowledged operation. */
+  private serverSequence: string | undefined = undefined;
+
+  /** A final rejection retired a tail of this session's edits. */
+  private operationRejected = false;
+
+  /**
+   * Attached only in memory mode, and only while rows are waiting. An offline
+   * session keeps its rows on disk, so a reload loses nothing and a confirm
+   * dialog would be a lie.
+   */
+  private unloadGuard: ((event: BeforeUnloadEvent) => void) | null = null;
+
+  /**
+   * The post-ready replay. `EventsDispatcher` has no replay and the session
+   * starts connecting during `load`, so a host that subscribes once the ready
+   * promise resolves would otherwise never hear the state it is already in.
+   */
+  private readyReplay: number | null = null;
+
   /** Publishes this editor's presence and draws everybody else's. */
   private presence: Presence | null = null;
 
@@ -389,6 +454,142 @@ export class Collaboration extends Module {
    */
   private isRemoteOrigin(origin: unknown): boolean {
     return typeof origin === 'object' && origin !== null && this.remoteOrigins.has(origin);
+  }
+
+  /**
+   * The store as the provider drains it, with a save-state read behind the two
+   * writes the provider commits itself. The store's own `onCommitted` hint is
+   * cross-tab only, so without this an acknowledgement retiring a row would
+   * change nothing a host can see until the next connection transition.
+   *
+   * Every method delegates straight through, so the seam's ORDERING CONTRACT
+   * still holds; the reads are fire-and-forget so the drain is not held up by
+   * one.
+   * @param store - this session's operation store
+   */
+  private outboxSeam(store: OperationStore): CollabOutbox {
+    return {
+      appendLocal: (update) => store.appendLocal(update),
+      oldestPending: () => store.oldestPending(),
+      acknowledge: (operationId) => store.acknowledge(operationId).then(() => {
+        void this.refreshSave();
+      }),
+      quarantineLineage: (lineage, reason, snapshot) =>
+        store.quarantineLineage(lineage, reason, snapshot).then((moved) => {
+          void this.refreshSave();
+
+          return moved;
+        }),
+      onCommitted: (listener) => store.onCommitted(listener),
+    };
+  }
+
+  /**
+   * Reads the local copy and publishes the save state when it changed.
+   * @param force - publish even when nothing changed; the post-ready replay
+   */
+  private async refreshSave(force = false): Promise<void> {
+    const store = this.store;
+
+    if (store === null || this.isDestroyed) {
+      return;
+    }
+
+    // A database that has gone is exactly the case that latches durability,
+    // and it is also the case where the read itself throws. Returning here
+    // would leave editing stopped with the host never told why.
+    const stats = await store.stats().catch(() => UNREADABLE_STATS);
+
+    if (this.isDestroyed) {
+      return;
+    }
+
+    const next = this.saveStateOf(stats);
+
+    this.syncUnloadGuard(stats.pendingOperations > 0);
+
+    if (!force && this.save !== undefined && sameSaveState(this.save, next)) {
+      return;
+    }
+
+    this.save = next;
+    this.emitStatus();
+  }
+
+  /**
+   * What the local copy says about this browser's unsent work.
+   *
+   * `pendingOperations` is REPORTED from the store's counter and nothing is
+   * decided from it: it counts rows `oldestPending` refuses to hand out while
+   * storage is unavailable (Task 4.1's contract).
+   * @param stats - a fresh read of the store
+   */
+  private saveStateOf(stats: OperationStoreStats): SaveState {
+    const counts = {
+      pendingOperations: stats.pendingOperations,
+      pendingBytes: stats.pendingBytes,
+      quarantinedOperations: stats.quarantinedOperations,
+      ...(this.serverSequence === undefined ? {} : { serverSequence: this.serverSequence }),
+    };
+
+    // The module's latch, not the store's `updateLost`: the recovery clear that
+    // follows a lost write UN-poisons the store, so its own signal is back to
+    // healthy while editing stays blocked for the rest of the session.
+    if (this.durabilityLost) {
+      return { state: 'blocked', reason: 'local-storage-failed', ...counts };
+    }
+
+    // v1 acknowledges nothing (protocol section 2), so a v1 session can never
+    // call an edit saved. Before a sync has negotiated anything the answer is
+    // the same, with nobody to blame for it.
+    if (this.protocol !== 'v2') {
+      return {
+        state: 'unavailable',
+        ...(this.hasLineage ? { reason: 'legacy-protocol' as const } : {}),
+        ...counts,
+      };
+    }
+
+    if (stats.quarantinedOperations > 0) {
+      return {
+        state: 'quarantined',
+        ...(this.operationRejected ? { reason: 'operation-rejected' as const } : {}),
+        ...counts,
+      };
+    }
+
+    // `appendInFlight` as well as the count: the store counts an append from
+    // the CALL, and the window before it commits is the one moment a row
+    // exists nowhere and calling the document saved would be wrong.
+    if (stats.pendingOperations > 0 || stats.appendInFlight) {
+      return { state: 'pending', ...counts };
+    }
+
+    return { state: 'saved', ...counts };
+  }
+
+  /**
+   * Mirrors the save queue's unload guard (`utils/persistence.ts`): warn before
+   * a reload that would throw work away. Memory mode only — an offline
+   * session's rows are on disk and go out on the next boot.
+   * @param pending - whether rows are still waiting to be taken
+   */
+  private syncUnloadGuard(pending: boolean): void {
+    const hasWork = pending && this.settings?.offline !== true && !this.isDestroyed;
+
+    if (hasWork === (this.unloadGuard !== null)) {
+      return;
+    }
+
+    if (this.unloadGuard !== null) {
+      window.removeEventListener('beforeunload', this.unloadGuard);
+      this.unloadGuard = null;
+
+      return;
+    }
+
+    this.unloadGuard = (event: BeforeUnloadEvent): void => event.preventDefault();
+    window.addEventListener('beforeunload', this.unloadGuard);
   }
 
   /**
@@ -478,6 +679,7 @@ export class Collaboration extends Module {
     }
 
     await this.applyArbitration();
+    await this.refreshSave();
   }
 
   /**
@@ -553,9 +755,19 @@ export class Collaboration extends Module {
       // lineage COMPARED against the first control frame, never overwritten by
       // it. See the provider's `initialLineage`.
       initialLineage: adopted,
-      // `OperationStore` is a structural superset of the outbox seam, so this
-      // is a pass-through. It is also what makes the provider offer v2 at all.
-      outbox: this.store ?? undefined,
+      // Wrapped rather than passed straight through: the two writes the
+      // provider commits itself are the only wake this tab gets when a row is
+      // retired. It is also what makes the provider offer v2 at all.
+      outbox: this.store === null ? undefined : this.outboxSeam(this.store),
+      onOperationSettled: ({ serverSequence, rejectionCode }) => {
+        if (serverSequence !== undefined) {
+          this.serverSequence = serverSequence;
+        }
+
+        if (rejectionCode !== undefined) {
+          this.operationRejected = true;
+        }
+      },
       // The provider issues two store writes of its own — the post-drain
       // residual append and a lineage quarantine — and neither goes through
       // `captured`. Same policy either way: block editing and drop the copy.
@@ -568,6 +780,14 @@ export class Collaboration extends Module {
     });
 
     this.provider.connect();
+
+    // A MACROTASK: the ready promise resolves on the microtasks that follow
+    // this call, so a timer lands after it — which is the first moment a host
+    // that awaited `isReady` can be listening.
+    this.readyReplay = window.setTimeout(() => {
+      this.readyReplay = null;
+      void this.refreshSave(true);
+    }, 0);
   }
 
   /**
@@ -650,7 +870,15 @@ export class Collaboration extends Module {
 
       // The store's `onCommitted` hint never fires for the tab that wrote the
       // row, so this is the only wake the drain gets for our own edit.
-      this.captured(this.store.appendLocal(update).then(() => this.provider?.drain()));
+      this.captured(this.store.appendLocal(update).then(() => {
+        this.provider?.drain();
+        void this.refreshSave();
+      }));
+
+      // AFTER the append has started, never before: the store counts the
+      // transaction from the call, so this read is the one that reports work
+      // no row carries yet.
+      void this.refreshSave();
     });
 
     if (contents === null) {
@@ -721,6 +949,13 @@ export class Collaboration extends Module {
       window.removeEventListener('pagehide', this.flushOnPageHide);
       this.flushOnPageHide = null;
     }
+
+    if (this.readyReplay !== null) {
+      window.clearTimeout(this.readyReplay);
+      this.readyReplay = null;
+    }
+
+    this.syncUnloadGuard(false);
 
     if (this.store !== null) {
       this.captured(this.store.close());
@@ -914,6 +1149,11 @@ export class Collaboration extends Module {
     if (this.resetGeneration !== generation || this.isDestroyed) {
       return;
     }
+
+    // A FOLLOW-UP event, not the one above: the counts and the negotiated
+    // protocol need a store read, and `emitStatus` has to stay synchronous
+    // with the transition.
+    void this.refreshSave();
 
     if (isFirstSync) {
       this.seedEmptyDocument();
@@ -1152,6 +1392,7 @@ export class Collaboration extends Module {
         ...(detail?.code === undefined ? {} : { code: detail.code }),
         ...(detail?.reason === undefined ? {} : { reason: detail.reason }),
         ...(detail?.retryInMs === undefined ? {} : { retryInMs: detail.retryInMs }),
+        ...(this.save === undefined ? {} : { save: this.save }),
       });
     } catch (thrown) {
       logLabeled('a collaboration:status listener threw', 'warn', thrown);

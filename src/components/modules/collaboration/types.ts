@@ -313,6 +313,16 @@ export interface CollabProviderOptions {
    * poisoned.
    */
   onOutboxFailure?: (thrown: unknown) => void;
+
+  /**
+   * The server settled one durable operation: `serverSequence` when it
+   * acknowledged it, `rejectionCode` when a FINAL rejection retired its tail.
+   *
+   * RECORDING ONLY — it must publish nothing. The outbox write that follows
+   * (the delete, or the quarantine) is what republishes the save state, and
+   * doing it here would report a row retired before the store had retired it.
+   */
+  onOperationSettled?: (settled: { serverSequence?: string; rejectionCode?: string }) => void;
 }
 
 /** What {@link createCollabProvider} hands back. */

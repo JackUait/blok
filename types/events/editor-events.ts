@@ -164,6 +164,37 @@ export interface CollaborationStatusChangedPayload {
    * Set on `offline` only: milliseconds until the next reconnect attempt.
    */
   retryInMs?: number;
+
+  /**
+   * Whether this browser's edits are safely with the server, INDEPENDENT of
+   * `status`: a `connected` session can still be holding work nobody has taken,
+   * and an `offline` one can have nothing left to send.
+   *
+   * - `saved` — nothing is waiting and nothing is being written.
+   * - `pending` — edits are journalled locally and not acknowledged yet.
+   * - `blocked` — the local copy is broken, so nothing more may be sent.
+   * - `quarantined` — edits were moved out of the queue and will never be sent;
+   *   `quarantinedOperations` counts them, and only an export recovers them.
+   * - `unavailable` — no durable save can be reported at all: the server speaks
+   *   the legacy protocol, or nothing has been negotiated yet.
+   *
+   * Persistence reasons live HERE, never in `error`: that union means "the
+   * editor will not reconnect", and a broken local store or a refused edit does
+   * not stop the socket.
+   */
+  save?: {
+    state: 'saved' | 'pending' | 'blocked' | 'quarantined' | 'unavailable';
+    reason?: 'local-storage-failed' | 'operation-rejected' | 'legacy-protocol';
+    pendingOperations: number;
+    pendingBytes: number;
+    quarantinedOperations: number;
+
+    /**
+     * Where the server journalled the last acknowledged edit. A DECIMAL
+     * STRING: the ceiling is 2^64 - 1, which no `number` holds exactly.
+     */
+    serverSequence?: string;
+  };
 }
 
 /**

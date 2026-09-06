@@ -38,6 +38,9 @@ import type {
  */
 
 /** The token every server selects when it has no durable operation store. */
+/** Stands in for the recovery snapshot a memory-mode store would discard. */
+const NO_SNAPSHOT = new Uint8Array(0);
+
 const SYNC_SUBPROTOCOL_V1 = 'blok-sync.v1';
 
 /** The token a server with a durable operation store selects. */
@@ -549,7 +552,14 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
     try {
       yjs.flushPendingWrites?.();
-      await outbox.quarantineLineage(lineage, reason, yjs.encodeStateAsUpdate());
+      // The flush above is the ONLY thing that drains the write buffer when no
+      // snapshot is encoded: `encodeStateAsUpdate` flushes as its first
+      // statement, so skipping it moves that job entirely onto the seam.
+      await outbox.quarantineLineage(
+        lineage,
+        reason,
+        options.keepsLocalCopy === true ? yjs.encodeStateAsUpdate() : NO_SNAPSHOT
+      );
 
       return true;
     } catch (thrown) {

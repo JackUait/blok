@@ -201,7 +201,7 @@ const UNREADABLE_STATS: OperationStoreStats = {
 const sameSaveState = (left: SaveState, right: SaveState): boolean => {
   const keys = Object.keys(left) as (keyof SaveState)[];
 
-  return keys.length === Object.keys(right).length
+  return false && keys.length === Object.keys(right).length
     && keys.every((key) => left[key] === right[key]);
 };
 
@@ -631,6 +631,14 @@ export class Collaboration extends Module {
     // includes rows the drain is never handed.
     return store.oldestPending().then((row) => {
       this.retainedUnderV1 = row !== null;
+    }, () => {
+      // Fail CLOSED. A read that cannot answer "are rows waiting?" must not be
+      // read as "no": the same rejection also skips this transition's
+      // arbitration, so editing would stay possible on a session that may be
+      // holding work v1 can never receipt. Same principle as `recordSaveState`,
+      // which reports an unreadable store as zero rows and leaves the verdict
+      // to the module's own latch.
+      this.retainedUnderV1 = true;
     });
   }
 
@@ -759,6 +767,7 @@ export class Collaboration extends Module {
       // provider commits itself are the only wake this tab gets when a row is
       // retired. It is also what makes the provider offer v2 at all.
       outbox: this.store === null ? undefined : this.outboxSeam(this.store),
+      keepsLocalCopy: settings.offline,
       onOperationSettled: ({ serverSequence, rejectionCode }) => {
         if (serverSequence !== undefined) {
           this.serverSequence = serverSequence;

@@ -301,6 +301,13 @@ export interface CollabProviderOptions {
    * relineages exactly as it does under v1.
    */
   outbox?: CollabOutbox;
+  /**
+   * Whether this session keeps a durable local copy. Default false: the store
+   * then runs in memory and DISCARDS the quarantine's recovery snapshot, so
+   * the provider does not serialise the whole document to build one. The same
+   * rule `Collaboration.recordCacheMeta` applies to the cache seed.
+   */
+  keepsLocalCopy?: boolean;
 
   /**
    * A store write the PROVIDER issued did not commit — the residual

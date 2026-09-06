@@ -14,11 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Core } from '../../../../../src/components/core';
 import { Modules } from '../../../../../src/components/modules';
 import type { CollaborationConfig } from '../../../../../src/components/modules/collaboration';
-import {
-  createOperationStore,
-  type OperationStoreOptions,
-  type PendingOperation,
-} from '../../../../../src/components/modules/collaboration/operation-store';
+import * as operationStore from '../../../../../src/components/modules/collaboration/operation-store';
 import { MAX_PEERS } from '../../../../../src/components/modules/collaboration/presence';
 import * as collabProvider from '../../../../../src/components/modules/collaboration/provider';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
@@ -46,11 +42,18 @@ const SCOPE = 'member-1';
  * @param doc - the document id the harness booted with
  * @param scope - the identity partition the harness booted under
  */
-const storeOptions = (doc = 'doc-1', scope: string = SCOPE): OperationStoreOptions => ({
+const storeOptions = (doc = 'doc-1', scope: string = SCOPE): operationStore.OperationStoreOptions => ({
   url: `wss://sync.test/api/sync/${doc}`,
   doc,
   offlineScope: scope,
 });
+
+/**
+ * The real factory, captured before any test can spy the namespace: the probes
+ * in this file must keep reading the store even while the module under test is
+ * being handed a faulty one.
+ */
+const { createOperationStore } = operationStore;
 
 /** What `createOperationStore` prefixes its database name with. */
 const CACHE_DB_PREFIX = 'blok-ops-';
@@ -308,7 +311,7 @@ const rawRowCount = async (name: string, objectStore: string): Promise<number> =
 const readStore = async (
   doc = 'doc-1',
   scope: string = SCOPE
-): Promise<{ updates: Uint8Array[]; pending: PendingOperation | null }> => {
+): Promise<{ updates: Uint8Array[]; pending: operationStore.PendingOperation | null }> => {
   const probe = createOperationStore(storeOptions(doc, scope));
   const contents = await probe.open();
   const pending = await probe.oldestPending();
@@ -1704,7 +1707,7 @@ describe('collaboration — sync-first load', () => {
      * Leaves an outbox row behind that nothing has acknowledged, and hands back
      * the row a reload will find waiting.
      */
-    const retainedRow = async (): Promise<PendingOperation> => {
+    const retainedRow = async (): Promise<operationStore.PendingOperation> => {
       const first = await boot({ offline: true });
 
       firstSync(first, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
@@ -1760,6 +1763,16 @@ describe('collaboration — sync-first load', () => {
       const socket = firstSync(reloaded, []);
 
       await waitFor(() => collabAttr(reloaded.core) === 'connected', 'connected');
+
+      // The real server ALWAYS asks (CollabRoom answers a SyncStep1 with its
+      // diff and its own SyncStep1), and a v1 session answers that with a raw
+      // SyncStep2 by design. Without this frame the fixture proves only that
+      // the mock never asked.
+      const asking = peerWith([]);
+
+      socket.deliver({ type: 'syncStep1', stateVector: asking.getStateVector() });
+      asking.destroy();
+
       // Tolerated: with the hold never applied there is nothing to wait for,
       // and the assertion below is the one that has to speak.
       await waitFor(() => reloaded.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 1500)
@@ -1769,13 +1782,94 @@ describe('collaboration — sync-first load', () => {
         reloaded.core.moduleInstances.ReadOnly.isEnabled,
         'a v1 server was selected while durable rows waited, so the session went on taking edits it can never deliver a receipt for'
       ).toBe(true);
-      expect(wireTypes(socket), 'a v1 server was written to on behalf of a row it can neither acknowledge nor reject')
-        .toEqual(['syncStep1']);
+      // "Sends none" is about OPERATIONS: no type-102 frame carries a durable
+      // row to a server that can neither acknowledge nor reject it. The resync
+      // answer is a separate, ruled-correct behaviour — the rows' CONTENT does
+      // reach a v1 server inside that SyncStep2, because it is in the document
+      // and v1 sync is the only way it gets there at all.
+      expect(
+        operationOn(socket),
+        'a v1 server was sent an operation frame on behalf of a row it can neither acknowledge nor reject'
+      ).toBeUndefined();
+      expect(wireTypes(socket), 'a v1 session stopped answering the server resync it has always answered')
+        .toEqual(['syncStep1', 'syncStep2']);
       expect(
         (await readStore()).pending?.operationId,
         'the retained row did not survive the v1 session that could not take it'
       ).toBe(row.operationId);
     }, 40_000);
+
+    /**
+     * A read that cannot answer "are rows waiting?" must not be read as "no".
+     * The database is deleted underneath the session, so `oldestPending`'s own
+     * `idb.transact` throws — the same fault that makes `stats()` throw, which
+     * `recordSaveState` already handles by leaving the verdict to the latch.
+     */
+    it('an outbox read that fails stops taking edits rather than assuming none wait', async () => {
+      vi.stubGlobal('indexedDB', new IDBFactory());
+
+      await retainedRow();
+
+      // ONLY `oldestPending` fails. Deleting the database would do it too, but
+      // that also makes `stats()` throw, which latches `durabilityLost` and
+      // blocks editing on its own — the fixture would pass without the catch.
+      vi.spyOn(operationStore, 'createOperationStore').mockImplementation((options) => {
+        const store = createOperationStore(options);
+
+        return {
+          ...store,
+          oldestPending: () => Promise.reject(new Error('probe: the outbox could not be read')),
+        };
+      });
+
+      const reloaded = await boot({ offline: true });
+
+      await waitFor(() => reloaded.core.moduleInstances.BlockManager.blocks.length === 1, 'cached blocks');
+
+      firstSync(reloaded, []);
+      await waitFor(() => collabAttr(reloaded.core) === 'connected', 'connected');
+
+      // The failing read also SKIPS the arbitration of its own transition, so
+      // "still read-only" right here proves nothing — the session simply never
+      // left the state it booted in. The next transition arbitrates normally
+      // and is what reads the latch back.
+      reloaded.socket().serverClose(1006);
+      await waitFor(() => collabAttr(reloaded.core) === 'offline', 'the disconnect', 5000);
+      // Tolerated: a hold that fails open never blocks, so there is nothing to
+      // wait for and the assertion below is the one that has to speak.
+      await waitFor(() => reloaded.core.moduleInstances.ReadOnly.isEnabled, 'editing to be blocked', 3000)
+        .catch(() => undefined);
+
+      expect(
+        reloaded.core.moduleInstances.ReadOnly.isEnabled,
+        'an outbox read that could not answer was read as "no rows waiting", so the session went on taking edits it can never deliver'
+      ).toBe(true);
+    }, 40_000);
+
+    /**
+     * `recordCacheMeta` already refuses to encode a snapshot a memory-mode
+     * store would only discard; the quarantine snapshot owes the same rule. It
+     * is a whole-document serialisation on a session that keeps no copy at all.
+     */
+    it('a session with no local copy encodes no recovery snapshot to quarantine', async () => {
+      const harness = await boot();
+
+      firstSync(harness, [{ id: 'b1', type: 'paragraph', data: { text: 'synced' } }], V2);
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'first sync');
+
+      const encode = vi.spyOn(harness.core.moduleInstances.YjsManager, 'encodeStateAsUpdate');
+
+      harness.socket().deliver({
+        type: 'control',
+        tag: { format: 1, epoch: 0, lineage: 'fedcba9876543210fedcba9876543210' },
+      });
+      await waitFor(() => harness.sockets.length === 2, 'the reconnect', 8000);
+
+      expect(
+        encode.mock.calls.filter((call) => call[0] === undefined),
+        'a session that keeps no local copy serialised the whole document for a recovery snapshot the store throws away'
+      ).toEqual([]);
+    }, 30_000);
 
     /**
      * The other half of the downgrade: everything this session journalled was

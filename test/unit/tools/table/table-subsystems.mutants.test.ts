@@ -1859,7 +1859,7 @@ describe('grip row/column menu — clear and colour', () => {
   it('paints every cell of the grip column with text colour', () => {
     const harness = createHarness();
 
-    rowColOptions().onColorChange('col', 0, 'rgb(7, 8, 9)', 'color');
+    rowColOptions().onColorChange('col', 0, 'rgb(7, 8, 9)', 'textColor');
 
     expect(harness.model.getCellTextColor(0, 0)).toBe('rgb(7, 8, 9)');
     expect(harness.model.getCellTextColor(1, 0)).toBe('rgb(7, 8, 9)');
@@ -3003,7 +3003,7 @@ describe('copy and cut', () => {
 
   it('writes both flavours to the system clipboard from the copy button', async () => {
     const harness = createHarness();
-    const write = vi.fn(() => Promise.resolve());
+    const write = vi.fn<(items: Array<{ items: Record<string, Blob> }>) => Promise<void>>(() => Promise.resolve());
 
     vi.stubGlobal('ClipboardItem', class {
       public constructor(public readonly items: Record<string, Blob>) {}
@@ -3014,7 +3014,7 @@ describe('copy and cut', () => {
 
     expect(write).toHaveBeenCalledTimes(1);
 
-    const items = write.mock.calls[0][0] as Array<{ items: Record<string, Blob> }>;
+    const items = write.mock.calls[0][0];
 
     expect(Object.keys(items[0].items)).toEqual(['text/html', 'text/plain']);
     await expect(items[0].items['text/plain'].text()).resolves.toBe('r0c0');
@@ -3022,7 +3022,7 @@ describe('copy and cut', () => {
 
   it('does not touch the system clipboard when there is nothing to copy', () => {
     const harness = createHarness();
-    const write = vi.fn(() => Promise.resolve());
+    const write = vi.fn<(items: Array<{ items: Record<string, Blob> }>) => Promise<void>>(() => Promise.resolve());
 
     Object.defineProperty(navigator, 'clipboard', { value: { write }, configurable: true });
     harness.host.gridElement = null;
@@ -3147,7 +3147,7 @@ describe('cell colour and placement', () => {
   it('paints the text colour when that is the mode', () => {
     const harness = createHarness();
 
-    cellSelectionOptions().onColorChange([harness.cellOf(0, 1)], 'rgb(1, 2, 3)', 'color');
+    cellSelectionOptions().onColorChange([harness.cellOf(0, 1)], 'rgb(1, 2, 3)', 'textColor');
 
     expect(harness.model.getCellTextColor(0, 1)).toBe('rgb(1, 2, 3)');
     expect(harness.model.getCellColor(0, 1)).toBeUndefined();
@@ -4203,7 +4203,7 @@ describe('gaps a second mutation pass found', () => {
 
   it('labels each clipboard blob with its MIME type', () => {
     const harness = createHarness();
-    const write = vi.fn(() => Promise.resolve());
+    const write = vi.fn<(items: Array<{ items: Record<string, Blob> }>) => Promise<void>>(() => Promise.resolve());
 
     vi.stubGlobal('ClipboardItem', class {
       public constructor(public readonly items: Record<string, Blob>) {}
@@ -4212,7 +4212,7 @@ describe('gaps a second mutation pass found', () => {
 
     cellSelectionOptions().onCopyViaButton([harness.cellOf(0, 0)]);
 
-    const items = write.mock.calls[0][0] as Array<{ items: Record<string, Blob> }>;
+    const items = write.mock.calls[0][0];
 
     expect(items[0].items['text/html'].type).toBe('text/html');
     expect(items[0].items['text/plain'].type).toBe('text/plain');

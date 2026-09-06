@@ -250,7 +250,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     // own window keydown listener, so stale toolbars would keep answering keys.
     toolbar.destroy();
 
-    addEventListenerSpy.mock.calls.forEach((call) => {
+    addEventListenerSpy.mock.calls.forEach((call: unknown) => {
       const [type, handler, options] = call as [string, EventListener, boolean | undefined];
 
       if (type === 'keydown') {
@@ -273,7 +273,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('creates the wrapper even when the selection is not allowed to show it', async () => {
-      blok.BlockManager.currentBlock = null;
+      blok.BlockManager.currentBlock = undefined;
 
       await toolbar.tryToShow();
 
@@ -384,7 +384,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('stays closed when the selection is not allowed', async () => {
-      blok.BlockManager.currentBlock = null;
+      blok.BlockManager.currentBlock = undefined;
 
       await toolbar.tryToShow();
 
@@ -404,7 +404,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     it('closes first when asked to, and stays closed if the selection went away', async () => {
       await toolbar.tryToShow();
 
-      blok.BlockManager.currentBlock = null;
+      blok.BlockManager.currentBlock = undefined;
 
       await toolbar.tryToShow(true);
 
@@ -873,7 +873,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('pulls the wrapper back inside the content area using the popover width', async () => {
-      blok.UI.contentRect = new DOMRect(0, 0, 200, 600);
+      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, 200, 600), configurable: true });
 
       await toolbar.tryToShow();
 
@@ -881,7 +881,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('measures the popover from its element when it reports no size', async () => {
-      blok.UI.contentRect = new DOMRect(0, 0, 200, 600);
+      Object.defineProperty(blok.UI, 'contentRect', { value: new DOMRect(0, 0, 200, 600), configurable: true });
       vi.spyOn(popoverElement, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 120, 38));
       popoverHolder.factory = () => ({
         show,
@@ -1171,7 +1171,7 @@ describe('InlineToolbar (mutation coverage)', () => {
     });
 
     it('keeps the DOM ready even when the selection forbids the menu', async () => {
-      blok.BlockManager.currentBlock = null;
+      blok.BlockManager.currentBlock = undefined;
 
       await toolbar.editLink(anchor);
 
@@ -1518,7 +1518,7 @@ describe('InlineToolbar (mutation coverage)', () => {
       blockHolder.appendChild(anchor);
       // No block under the anchor: the toolbar cannot open, so the tool's own
       // action is the only way its shortcut can still do something.
-      blok.BlockManager.currentBlock = null;
+      blok.BlockManager.currentBlock = undefined;
     });
 
     /**

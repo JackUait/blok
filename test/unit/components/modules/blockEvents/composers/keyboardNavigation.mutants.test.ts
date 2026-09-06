@@ -647,7 +647,7 @@ describe('KeyboardNavigation — arrow navigation side effects', () => {
 
     vi.spyOn(caretUtils, 'findNbspAfterEmptyInline').mockReturnValue({ node: nbspNode, offset: 1 });
 
-    const setCursor = vi.spyOn(SelectionUtils, 'setCursor').mockImplementation(() => new Range());
+    const setCursor = vi.spyOn(SelectionUtils, 'setCursor').mockImplementation(() => new DOMRect());
     const event = createKeyboardEvent({ key: 'ArrowRight', keyCode: keyCodes.RIGHT });
 
     harness.nav.handleArrowRightAndDown(event);

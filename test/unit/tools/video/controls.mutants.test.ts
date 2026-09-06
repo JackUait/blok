@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { attachControls, bufferedPct } from '../../../../src/tools/video/controls';
 import {
   IconExpandFullscreen,
@@ -1761,7 +1762,7 @@ describe('video controls — picture-in-picture', () => {
   afterEach(() => {
     h.destroy();
     document.body.innerHTML = '';
-    delete (document as Partial<Document>).pictureInPictureEnabled;
+    delete (document as Partial<{ pictureInPictureEnabled: unknown }>).pictureInPictureEnabled;
     vi.restoreAllMocks();
   });
 
@@ -1787,7 +1788,7 @@ describe('video controls — picture-in-picture', () => {
     setProp(document, 'pictureInPictureElement', h.video);
     pip().click();
     window.removeEventListener('error', onError);
-    delete (document as Partial<Document>).pictureInPictureElement;
+    delete (document as Partial<{ pictureInPictureElement: unknown }>).pictureInPictureElement;
     expect(onError).not.toHaveBeenCalled();
   });
 });
@@ -1957,9 +1958,9 @@ describe('video controls — playback statistics', () => {
 });
 
 const memoryStorage = (seed: Record<string, string> = {}): {
-  getItem: ReturnType<typeof vi.fn>;
-  setItem: ReturnType<typeof vi.fn>;
-  removeItem: ReturnType<typeof vi.fn>;
+  getItem: Mock<(key: string) => string | null>;
+  setItem: Mock<(key: string, value: string) => void>;
+  removeItem: Mock<(key: string) => void>;
 } => {
   const map = new Map(Object.entries(seed));
 
@@ -2398,7 +2399,7 @@ describe('video controls — teardown of optional surfaces', () => {
     h.destroy();
     h.video.dispatchEvent(new Event('enterpictureinpicture'));
     expect(pip.getAttribute('aria-pressed')).toBe('false');
-    delete (document as Partial<Document>).pictureInPictureEnabled;
+    delete (document as Partial<{ pictureInPictureEnabled: unknown }>).pictureInPictureEnabled;
   });
 
   it('stops listening for the theater dismiss gesture', () => {

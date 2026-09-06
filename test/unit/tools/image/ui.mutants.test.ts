@@ -20,7 +20,7 @@ import {
   renderOverlay,
   updateOverlayTier,
 } from '../../../../src/tools/image/ui';
-import type { LightboxOptions, OverlayOptions } from '../../../../src/tools/image/ui';
+import type { CaptionRowOptions, LightboxOptions, OverlayOptions } from '../../../../src/tools/image/ui';
 import { downloadImage } from '../../../../src/tools/image/download';
 import * as tooltip from '../../../../src/components/utils/tooltip';
 import { simulateClick, simulateKeydown, simulateMousedown } from '../../../helpers/simulate';
@@ -520,13 +520,13 @@ describe('renderCaptionRow', () => {
   });
 
   it('survives a host that clears its alt handler after render', () => {
-    const opts = {
+    const opts: CaptionRowOptions = {
       caption: { value: '', placeholder: 'p', readOnly: false },
       onAlt: vi.fn(),
     };
     const row = renderCaptionRow(opts);
 
-    opts.onAlt = undefined as unknown as () => void;
+    opts.onAlt = undefined;
 
     expect(() => action(row, 'alt-edit').click()).not.toThrow();
   });

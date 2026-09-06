@@ -134,8 +134,15 @@ export const resolveDiffBase = (state, isReachable) => {
  * Turns a list of changed paths into the files to mutate and the tests to run
  * them against. A changed test pulls in its source: otherwise weakening a test
  * without touching the source would go unmeasured.
+ *
+ * @param {object} scope - what changed and what the repository holds
+ * @param {string[]} scope.changedPaths - paths touched since the diff base
+ * @param {string[]} scope.sourceFiles - every tracked source file
+ * @param {string[]} scope.testFiles - every tracked test file
+ * @param {Map<string, string[]>} [scope.importers] - source to the tests that
+ *   import it; without it the pairing falls back to the mirrored path
  */
-export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers = undefined }) => {
+export const buildScope = ({ changedPaths, sourceFiles, testFiles, importers }) => {
   const sources = new Set(sourceFiles);
   const sourcesByStem = groupByStem(sourceFiles);
   const testsByStem = groupByStem(testFiles);

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { ImageTool } from '../../../../src/tools/image';
 import { URL_PATTERN } from '../../../../src/tools/image/constants';
 import { ImageError } from '../../../../src/tools/image/errors';
@@ -50,8 +51,8 @@ const mockAttachResize = vi.mocked(attachResizeHandle);
 const mockLightbox = vi.mocked(openLightbox);
 
 /** Detach spies handed back by the mocked modal / resize handle. */
-let cropDetach: ReturnType<typeof vi.fn>;
-let resizeDetach: ReturnType<typeof vi.fn>;
+let cropDetach: Mock<() => void>;
+let resizeDetach: Mock<() => void>;
 
 const createMockApi = (messages: Record<string, string> = {}): API => ({
   styles: { block: 'blok-block' },
@@ -137,8 +138,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   // restoreAllMocks() wipes implementations off vi.fn()s from vi.mock factories,
   // so every default is re-installed here rather than at declaration.
-  cropDetach = vi.fn();
-  resizeDetach = vi.fn();
+  cropDetach = vi.fn<() => void>();
+  resizeDetach = vi.fn<() => void>();
   mockCropModal.mockImplementation(() => cropDetach);
   mockAttachResize.mockImplementation(() => resizeDetach);
   mockProbe.mockResolvedValue(null);
@@ -520,7 +521,7 @@ describe('ImageTool — upload results and failures', () => {
   it('does not log a rejection the tool already has copy for', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => { /* quiet */ });
     const tool = new ImageTool(createOptions({}, {
-      uploader: { uploadByFile: async () => { throw new ImageError('UPLOAD_FAILED'); } },
+      uploader: { uploadByFile: async () => { throw new ImageError('UPLOAD_FAILED', 'server rejected'); } },
     }));
     const root = tool.render();
 
@@ -534,7 +535,7 @@ describe('ImageTool — upload results and failures', () => {
 
   it('keeps reporting progress when the user retries a failed upload', async () => {
     const uploadByFile = vi.fn()
-      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED'))
+      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED', 'server rejected'))
       .mockResolvedValue({ url: 'https://cdn/a.png' });
     const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
     const root = tool.render();
@@ -551,7 +552,7 @@ describe('ImageTool — upload results and failures', () => {
 
   it('disables the retry button while the retry is in flight', async () => {
     const uploadByFile = vi.fn()
-      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED'))
+      .mockRejectedValueOnce(new ImageError('UPLOAD_FAILED', 'server rejected'))
       .mockImplementation(() => new Promise<{ url: string }>(() => { /* in flight */ }));
     const tool = new ImageTool(createOptions({}, { uploader: { uploadByFile } }));
     const root = tool.render();
@@ -1089,7 +1090,7 @@ describe('ImageTool — an image that fails to decode', () => {
   it('switches an upload-failure card to the broken card when the old image fails', async () => {
     const tool = new ImageTool(createOptions(
       { url: 'https://x/y.png' },
-      { reloadAttempts: 0, uploader: { uploadByUrl: async () => { throw new ImageError('UPLOAD_FAILED'); } } }
+      { reloadAttempts: 0, uploader: { uploadByUrl: async () => { throw new ImageError('UPLOAD_FAILED', 'server rejected'); } } }
     ));
     const root = tool.render();
     const stale = el<HTMLImageElement>(root, 'img');
@@ -2288,6 +2289,10 @@ type ResizeOptions = Parameters<typeof attachResizeHandle>[0];
 
 const resizeCalls = (): ResizeOptions[] => mockAttachResize.mock.calls.map((c) => c[0]);
 
+// minWidthPx is declared as a number OR a thunk; the tool always passes the thunk.
+const minWidthOf = (opts: ResizeOptions): number | undefined =>
+  (typeof opts.minWidthPx === 'function' ? opts.minWidthPx() : opts.minWidthPx);
+
 describe('ImageTool — resize handles', () => {
   it('hangs one handle on each side of the figure', () => {
     const tool = new ImageTool(createOptions({ url: 'u' }));
@@ -2325,7 +2330,7 @@ describe('ImageTool — resize handles', () => {
 
     cell.appendChild(tool.render());
 
-    expect(resizeCalls()[0].minWidthPx?.()).toBe(120);
+    expect(minWidthOf(resizeCalls()[0])).toBe(120);
   });
 
   it('applies no pixel floor outside a table cell', () => {
@@ -2333,7 +2338,7 @@ describe('ImageTool — resize handles', () => {
 
     document.body.appendChild(tool.render());
 
-    expect(resizeCalls()[0].minWidthPx?.()).toBeUndefined();
+    expect(minWidthOf(resizeCalls()[0])).toBeUndefined();
   });
 
   it('previews the drag width live, then stores it on commit', () => {

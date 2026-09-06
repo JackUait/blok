@@ -511,7 +511,7 @@ describe('KeyboardController — mutation coverage', () => {
 
       popover.appendChild(input);
 
-      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => {});
+      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);
 
       vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
 
@@ -1275,7 +1275,7 @@ describe('KeyboardController — mutation coverage', () => {
 
     it('closes the topmost registered popover', () => {
       const harness = enabledHarness();
-      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => {});
+      const closeTopmost = vi.spyOn(PopoverRegistry.instance, 'closeTopmost').mockImplementation(() => true);
 
       vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(true);
       harness.press(harness.inside, { key: 'Escape' });

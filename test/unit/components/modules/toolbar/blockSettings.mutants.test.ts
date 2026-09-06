@@ -18,6 +18,7 @@ import { BlockSettingsClosed, BlockSettingsOpened } from '../../../../../src/com
 import { SelectionUtils } from '../../../../../src/components/selection';
 import { beautifyShortcut } from '../../../../../src/components/utils/string';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
+import type { wrapBlocksInColumns } from '../../../../../src/tools/column-drop';
 
 /* ------------------------------------------------------------------ mocks */
 
@@ -124,7 +125,7 @@ vi.mock('../../../../../src/components/utils', async () => {
 });
 
 const { wrapBlocksInColumnsMock } = vi.hoisted(() => ({
-  wrapBlocksInColumnsMock: vi.fn(() => null as string | null),
+  wrapBlocksInColumnsMock: vi.fn<typeof wrapBlocksInColumns>(() => null),
 }));
 
 vi.mock('../../../../../src/tools/column-drop', () => ({

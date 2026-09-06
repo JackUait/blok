@@ -14,6 +14,8 @@ export interface StartServerOptions {
 
 export interface RunningServer {
   readonly baseUrl: string;
+  /** SIGKILL, for the crash-recovery tests; `stop` is the graceful SIGTERM drain. */
+  kill(): Promise<void>;
   request(method: string, path: string, options?: HttpRequestOptions): Promise<HttpResponse>;
   stop(): Promise<void>;
 }
@@ -131,6 +133,7 @@ export async function startServer(options: StartServerOptions): Promise<RunningS
 
   return {
     baseUrl,
+    kill: () => serverProcess.kill(),
     request: (method, path, requestOptions = {}) => sendRequest(
       method,
       new URL(path, baseUrl),

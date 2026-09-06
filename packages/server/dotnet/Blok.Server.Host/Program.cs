@@ -88,6 +88,11 @@ if (conformance.Origin is not null)
       conformance.Origin,
       conformance.Port);
 }
+
+if (conformance.Journal)
+{
+  blokServer.UseConformanceJournal(options.CollabDirectory);
+}
 #endif
 
 var app = builder.Build();

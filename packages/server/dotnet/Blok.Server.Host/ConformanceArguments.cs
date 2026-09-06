@@ -7,6 +7,7 @@ internal sealed record ConformanceParseResult(
     string[] Arguments,
     string? Origin,
     int Port,
+    bool Journal,
     string? Error);
 
 internal static class ConformanceArguments
@@ -22,6 +23,7 @@ internal static class ConformanceArguments
     var filtered = new List<string>(arguments.Length);
     string? origin = null;
     var port = 0;
+    var journal = false;
 
     for (var index = 0; index < arguments.Length; index++)
     {
@@ -34,6 +36,12 @@ internal static class ConformanceArguments
 
       var value = "";
       var recognized = false;
+
+      if (argument is "--conformance-journal" or "-conformance-journal")
+      {
+        journal = true;
+        continue;
+      }
 
       if (argument is "--conformance-origin" or "-conformance-origin")
       {
@@ -94,6 +102,7 @@ internal static class ConformanceArguments
         filtered.ToArray(),
         origin,
         port,
+        journal,
         null);
   }
 
@@ -103,6 +112,7 @@ internal static class ConformanceArguments
         [],
         null,
         0,
+        false,
         error);
   }
 }

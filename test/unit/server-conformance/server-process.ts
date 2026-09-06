@@ -4,7 +4,9 @@ import { sendRequest } from './http-client';
 
 const HEALTH_REQUEST_TIMEOUT_MS = 250;
 const HEALTH_POLL_INTERVAL_MS = 25;
-const STARTUP_TIMEOUT_MS = 5_000;
+// The first start in a run pays the cold assembly load, and the crash-recovery
+// tests start a dozen servers; 5 s was not enough for the first of them.
+const STARTUP_TIMEOUT_MS = 20_000;
 const SHUTDOWN_TIMEOUT_MS = 2_000;
 
 export interface ServerProcessOptions {
@@ -16,6 +18,8 @@ export interface ServerProcessOptions {
 
 export interface RunningServerProcess {
   readonly stderr: string;
+  /** SIGKILL: no drain, no flush, no shutdown hook — what a crash looks like. */
+  kill(): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -61,6 +65,18 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 
   if (!await waitForExit(child, SHUTDOWN_TIMEOUT_MS)) {
     throw new Error(`Server process ${child.pid ?? '<unknown>'} did not stop`);
+  }
+}
+
+async function killProcess(child: ChildProcess): Promise<void> {
+  if (hasExited(child)) {
+    return;
+  }
+
+  child.kill('SIGKILL');
+
+  if (!await waitForExit(child, SHUTDOWN_TIMEOUT_MS)) {
+    throw new Error(`Server process ${child.pid ?? '<unknown>'} survived SIGKILL`);
   }
 }
 
@@ -114,6 +130,7 @@ export async function startServerProcess(options: ServerProcessOptions): Promise
         get stderr() {
           return stderr;
         },
+        kill: () => killProcess(child),
         stop: () => stopProcess(child),
       };
     }

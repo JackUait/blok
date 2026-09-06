@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
 using Blok.Server.Collab;
 using Blok.Server.Yjs;
@@ -4171,11 +4172,125 @@ public sealed class CollabRoomTests
   }
 
   /// <summary>
+  /// Nothing else can tell the room a member is gone. The client sends the
+  /// goodbye when it gets the chance, but a crash, a killed tab or a dropped
+  /// network never does — and every peer then draws that client until its own
+  /// 30s sweep expires it. The room knows the ids each member published, so it
+  /// withdraws them on the member's behalf.
+  /// </summary>
+  [Fact]
+  public async Task WithdrawsTheClientsOfAMemberThatLeftWithoutSayingGoodbye()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var leaver = new FakeMember();
+    var other = new FakeMember();
+    var membership = await Join(manager, leaver);
+    await Join(manager, other);
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    other.Received.Clear();
+
+    await membership.LeaveAsync();
+
+    // The clock the room last relayed, and a null state: the removal a stock
+    // client applies (y-protocols accepts state null at the clock it holds).
+    Assert.Equal(
+        AwarenessFor(42, 3, "null"),
+        Assert.IsType<AwarenessFrame>(Assert.Single(other.Received)).Update);
+  }
+
+  [Fact]
+  public async Task WithdrawsNothingForAMemberThatNeverPublishedPresence()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember());
+    var other = new FakeMember();
+    await Join(manager, other);
+    other.Received.Clear();
+
+    await membership.LeaveAsync();
+
+    Assert.Empty(other.Received);
+  }
+
+  /// <summary>
+  /// Relaying somebody else's state must not claim it: every member answers
+  /// queryAwareness with the WHOLE room, so an owner-by-last-sender rule would
+  /// let one member's departure evict everyone. Only advancing a client's
+  /// clock transfers ownership, which is what publishing your own state does.
+  /// </summary>
+  [Fact]
+  public async Task DoesNotWithdrawAClientAMemberOnlyRelayed()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var owner = await Join(manager, new FakeMember());
+    var relayMember = new FakeMember();
+    var relay = await Join(manager, relayMember);
+    var other = new FakeMember();
+    await Join(manager, other);
+
+    await owner.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    await relay.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    other.Received.Clear();
+
+    await relay.LeaveAsync();
+
+    Assert.Empty(other.Received);
+  }
+
+  /// <summary>A member that already withdrew its own client has nothing left to withdraw.</summary>
+  [Fact]
+  public async Task WithdrawsNothingTwiceWhenTheClientSaidGoodbyeItself()
+  {
+    endpoint.Holds(DocId, "hello");
+    var manager = CreateManager();
+    var membership = await Join(manager, new FakeMember());
+    var other = new FakeMember();
+    await Join(manager, other);
+
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3))),
+        CancellationToken.None);
+    await membership.ReceiveAsync(
+        SyncWire.Encode(new AwarenessFrame(AwarenessFor(42, 3, "null"))),
+        CancellationToken.None);
+    other.Received.Clear();
+
+    await membership.LeaveAsync();
+
+    Assert.Empty(other.Received);
+  }
+
+  /// <summary>
   /// A well-formed awareness payload carrying <paramref name="clients"/>
   /// entries: y-protocols writes [varuint clients]{[clientId][clock][varstring
   /// state]}* and never checks that a sender owns the ids it encodes, so
   /// 100_000 fabricated peers fit one frame under the message cap.
   /// </summary>
+  /// <summary>
+  /// One well-formed awareness entry, exactly as y-protocols writes it:
+  /// [1][clientId][clock][varstring state].
+  /// </summary>
+  private static byte[] AwarenessFor(ulong clientId, ulong clock, string state = "{}")
+  {
+    var payload = new List<byte> { 0x01 };
+    WriteVarUint(payload, clientId);
+    WriteVarUint(payload, clock);
+    WriteVarUint(payload, (ulong)state.Length);
+    payload.AddRange(Encoding.UTF8.GetBytes(state));
+
+    return [.. payload];
+  }
+
   private static byte[] AwarenessClaiming(ulong clients)
   {
     var payload = new List<byte>();

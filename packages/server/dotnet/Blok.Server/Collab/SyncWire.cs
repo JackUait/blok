@@ -20,6 +20,16 @@ internal sealed record AwarenessFrame(byte[] Update) : SyncWireMessage;
 
 internal sealed record QueryAwarenessFrame : SyncWireMessage;
 
+/// <summary>
+/// One entry of an awareness payload as the structural walk read it.
+/// <paramref name="Removed"/> marks the null state a departing client
+/// publishes.
+/// </summary>
+/// <param name="ClientId">The y-protocols client id the entry names.</param>
+/// <param name="Clock">That client's awareness clock in this entry.</param>
+/// <param name="Removed">Whether the entry's state is JSON <c>null</c>.</param>
+internal readonly record struct AwarenessEntry(ulong ClientId, ulong Clock, bool Removed);
+
 internal sealed record PermissionDeniedFrame(string Reason) : SyncWireMessage;
 
 /// <summary>Blok-only working-set announcement: epoch, format and lineage (plan decision 6).</summary>
@@ -107,6 +117,9 @@ internal static class SyncWire
   private static readonly HashSet<string> OperationKeys = ["lineage", "operationId"];
   private static readonly HashSet<string> AcknowledgementKeys = ["lineage", "operationId", "serverSequence"];
   private static readonly HashSet<string> RejectionKeys = ["lineage", "operationId", "code"];
+
+  /// <summary>The JSON a departing client publishes in place of its state.</summary>
+  private static readonly byte[] NullState = "null"u8.ToArray();
 
   private static readonly UTF8Encoding StrictUtf8 = new(
       encoderShouldEmitUTF8Identifier: false,
@@ -1400,9 +1413,11 @@ internal static class SyncWire
   internal static bool TryValidateAwarenessUpdate(
       ReadOnlySpan<byte> payload,
       int maxClients,
-      out int clientCount)
+      out int clientCount,
+      List<AwarenessEntry>? entries = null)
   {
     clientCount = 0;
+    entries?.Clear();
 
     if (!TryReadVarUint(ref payload, out var claimed))
     {
@@ -1418,16 +1433,44 @@ internal static class SyncWire
 
     for (var entry = 0UL; entry < claimed; entry++)
     {
-      if (!TryReadVarUint(ref payload, out _) ||
-          !TryReadVarUint(ref payload, out _) ||
+      if (!TryReadVarUint(ref payload, out var clientId) ||
+          !TryReadVarUint(ref payload, out var clock) ||
           !TryReadVarBytes(ref payload, out var state) ||
           !IsJsonDocument(state))
       {
         return false;
       }
+
+      entries?.Add(new AwarenessEntry(clientId, clock, state.SequenceEqual(NullState)));
     }
 
     return payload.IsEmpty;
+  }
+
+  /// <summary>
+  /// The payload that withdraws the given clients: each id at the clock the
+  /// room last relayed for it, carrying a null state. This is exactly what
+  /// y-protocols' own <c>removeAwarenessStates</c> puts on the wire, and the
+  /// only shape a stock client accepts as "this peer is gone" — it applies a
+  /// null state at the clock it already holds.
+  /// </summary>
+  internal static byte[] EncodeAwarenessRemoval(IReadOnlyList<AwarenessEntry> clients)
+  {
+    ArgumentNullException.ThrowIfNull(clients);
+
+    var writer = new ArrayBufferWriter<byte>(
+        MaxVarUintBytes + (clients.Count * ((2 * MaxVarUintBytes) + 1 + NullState.Length)));
+
+    WriteVarUint(writer, (ulong)clients.Count);
+
+    foreach (var client in clients)
+    {
+      WriteVarUint(writer, client.ClientId);
+      WriteVarUint(writer, client.Clock);
+      WriteVarBytes(writer, NullState);
+    }
+
+    return writer.WrittenSpan.ToArray();
   }
 
   private static bool IsJsonDocument(ReadOnlySpan<byte> json)

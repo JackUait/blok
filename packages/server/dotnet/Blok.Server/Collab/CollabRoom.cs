@@ -5,6 +5,14 @@ using Blok.Server.Yjs;
 namespace Blok.Server.Collab;
 
 /// <summary>
+/// Which member published an awareness client id, and the highest clock the
+/// room relayed for it.
+/// </summary>
+/// <param name="Membership">The member whose departure retires the id.</param>
+/// <param name="Clock">The clock every peer holds that client at.</param>
+internal readonly record struct AwarenessOwner(CollabMembership Membership, ulong Clock);
+
+/// <summary>
 /// A member's handle onto its room; the sync endpoint pumps inbound frames
 /// through <see cref="ReceiveAsync"/> and calls <see cref="LeaveAsync"/> when
 /// the connection ends.
@@ -88,6 +96,16 @@ internal sealed class CollabRoom : IDisposable
   private readonly SemaphoreSlim lane = new(1, 1);
   private readonly CancellationTokenSource lifetime = new();
   private readonly HashSet<CollabMembership> members = [];
+
+  /// <summary>
+  /// Who owns each awareness client id the room has relayed, and the highest
+  /// clock seen for it — so a member's presence can be withdrawn when it
+  /// leaves without saying so. Room-owned, touched only under the lane.
+  /// </summary>
+  private readonly Dictionary<ulong, AwarenessOwner> awarenessOwners = [];
+
+  /// <summary>Scratch for the structural walk of one inbound awareness frame; reused, never escapes the lane.</summary>
+  private readonly List<AwarenessEntry> awarenessScratch = [];
   private readonly MemoryStream frameSection = new();
   private readonly ITimer exportTimer;
   private readonly ITimer evictionTimer;
@@ -307,6 +325,7 @@ internal sealed class CollabRoom : IDisposable
         {
           if (members.Remove(membership))
           {
+            WithdrawAwarenessLocked(membership);
             UpdateEvictionLocked();
           }
 
@@ -1501,8 +1520,10 @@ internal sealed class CollabRoom : IDisposable
     if (SyncWire.TryValidateAwarenessUpdate(
           awareness.Update,
           options.MaxAwarenessClients,
-          out var clients))
+          out var clients,
+          awarenessScratch))
     {
+      RecordAwarenessOwnersLocked(membership, awarenessScratch);
       BroadcastLocked(SyncWire.Encode(awareness), membership);
 
       return;
@@ -1899,8 +1920,92 @@ internal sealed class CollabRoom : IDisposable
   private void ExpelLocked(CollabMembership membership, CollabCloseReason reason)
   {
     members.Remove(membership);
+    WithdrawAwarenessLocked(membership);
     UpdateEvictionLocked();
     CloseMember(membership, reason);
+  }
+
+  /// <summary>
+  /// Attribute the ids in one relayed frame.
+  ///
+  /// OWNERSHIP FOLLOWS THE CLOCK, never the sender: every member answers
+  /// queryAwareness with the whole room, so "last sender wins" would let one
+  /// member's departure evict everybody. Only advancing a client's clock takes
+  /// ownership, and only the client that owns an id advances it — a relay
+  /// carries the clock it received. A null state is that client saying goodbye
+  /// for itself, which retires the entry.
+  ///
+  /// The map is capped like a frame is: past the cap a new id is simply not
+  /// tracked, and its owner's departure falls back to the peers' own 30s
+  /// sweep. Presence is best-effort; unbounded server memory is not.
+  /// </summary>
+  private void RecordAwarenessOwnersLocked(CollabMembership membership, List<AwarenessEntry> entries)
+  {
+    foreach (var entry in entries)
+    {
+      var known = awarenessOwners.TryGetValue(entry.ClientId, out var owner);
+
+      if (entry.Removed)
+      {
+        if (known && entry.Clock >= owner.Clock)
+        {
+          awarenessOwners.Remove(entry.ClientId);
+        }
+
+        continue;
+      }
+
+      if (known)
+      {
+        if (entry.Clock > owner.Clock)
+        {
+          awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
+        }
+
+        continue;
+      }
+
+      if (awarenessOwners.Count < options.MaxAwarenessClients)
+      {
+        awarenessOwners[entry.ClientId] = new AwarenessOwner(membership, entry.Clock);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Tell the room the departing member's clients are gone.
+  ///
+  /// The client sends this itself when it gets the chance, but a crash, a
+  /// killed tab or a dropped network never does — and a peer that hears
+  /// nothing keeps drawing that client for the 30s its own sweep takes. Since
+  /// a reload returns under a NEW client id, the stale entry reads as a second
+  /// person in the room.
+  /// </summary>
+  private void WithdrawAwarenessLocked(CollabMembership membership)
+  {
+    var gone = new List<AwarenessEntry>();
+
+    foreach (var (clientId, owner) in awarenessOwners)
+    {
+      if (ReferenceEquals(owner.Membership, membership))
+      {
+        gone.Add(new AwarenessEntry(clientId, owner.Clock, true));
+      }
+    }
+
+    if (gone.Count == 0)
+    {
+      return;
+    }
+
+    foreach (var entry in gone)
+    {
+      awarenessOwners.Remove(entry.ClientId);
+    }
+
+    BroadcastLocked(
+        SyncWire.Encode(new AwarenessFrame(SyncWire.EncodeAwarenessRemoval(gone))),
+        membership);
   }
 
   private void CloseMember(CollabMembership membership, CollabCloseReason reason)

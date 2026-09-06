@@ -171,7 +171,7 @@ describe('server implementation removal law', () => {
       expect(result.stdout).toBe('');
       expect(result.stderr).toBe(
         'Usage: node scripts/test-server-conformance.mjs [--target csharp] ' +
-        '[--test-name-pattern PATTERN]\n',
+        '[--test-name-pattern PATTERN] [--configuration Debug|Release]\n',
       );
       expect(readdirSync(temporaryRoot)).toEqual([]);
     } finally {

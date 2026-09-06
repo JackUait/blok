@@ -10,4 +10,14 @@
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
+
+  <!-- The conformance seam spans Blok.Server.Host and Blok.Server.AspNetCore, so
+       the constant has to reach every project in the reference graph. Never set
+       it with `-p:DefineConstants=BLOK_SERVER_CONFORMANCE`: a command-line
+       DefineConstants is a global property, so it REPLACES the configuration's
+       own DEBUG/TRACE rather than adding to it, and every Debug.Assert is
+       compiled out of the binary the durability proofs drive. -->
+  <PropertyGroup Condition="'$(BlokServerConformance)' == 'true'">
+    <DefineConstants>$(DefineConstants);BLOK_SERVER_CONFORMANCE</DefineConstants>
+  </PropertyGroup>
 </Project>

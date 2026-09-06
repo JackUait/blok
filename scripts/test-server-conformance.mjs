@@ -27,23 +27,46 @@ function run(command, args, options = {}) {
   });
 }
 
+/**
+ * The ordinary host stands in for the shipped binary, so it is always Release.
+ * `--configuration` selects the journal host, the one every durability proof
+ * drives, and it defaults to Debug because that is what CI has always built.
+ */
+const ORDINARY_CONFIGURATION = 'Release';
+const JOURNAL_CONFIGURATIONS = ['Debug', 'Release'];
+
 function selectedOptions(args) {
   const targetIndex = args.indexOf('--target');
   const target = targetIndex >= 0 ? args[targetIndex + 1] : 'csharp';
   const filterIndex = args.indexOf('--test-name-pattern');
   const testNamePattern = filterIndex >= 0 ? args[filterIndex + 1] : undefined;
+  const configurationIndex = args.indexOf('--configuration');
+  const configuration = configurationIndex >= 0 ? args[configurationIndex + 1] : 'Debug';
 
   if (
     target !== 'csharp' ||
-    (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === ''))
+    (filterIndex >= 0 && (testNamePattern === undefined || testNamePattern === '')) ||
+    !JOURNAL_CONFIGURATIONS.includes(configuration)
   ) {
     throw new Error(
       'Usage: node scripts/test-server-conformance.mjs [--target csharp] ' +
-      '[--test-name-pattern PATTERN]',
+      '[--test-name-pattern PATTERN] [--configuration Debug|Release]',
     );
   }
 
-  return { testNamePattern };
+  return { testNamePattern, configuration };
+}
+
+/**
+ * Printed before the builds and again after the run: the first is scrolled away
+ * by two dotnet builds, and the second is what anyone reading the summary sees.
+ * Whoever runs this must never have to guess which binary was proved.
+ */
+function announceConfigurations(configuration) {
+  console.log(
+    `Conformance hosts — ordinary host: ${ORDINARY_CONFIGURATION}, ` +
+    `journal host: ${configuration}.`,
+  );
 }
 
 /**
@@ -90,11 +113,13 @@ async function main() {
   );
 
   try {
+    announceConfigurations(options.configuration);
+
     await run('dotnet', [
       'build',
       hostProject,
       '--configuration',
-      'Release',
+      ORDINARY_CONFIGURATION,
       '--output',
       ordinaryDirectory,
     ], {
@@ -104,10 +129,10 @@ async function main() {
       'build',
       hostProject,
       '--configuration',
-      'Debug',
+      options.configuration,
       '--output',
       conformanceDirectory,
-      '-p:DefineConstants=BLOK_SERVER_CONFORMANCE',
+      '-p:BlokServerConformance=true',
     ], {
       cwd: repositoryRoot,
     });
@@ -151,6 +176,8 @@ async function main() {
     if (options.testNamePattern !== undefined) {
       await requireExecutedTests(reportPath, options.testNamePattern);
     }
+
+    announceConfigurations(options.configuration);
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

@@ -517,6 +517,24 @@ describe('server docs data', () => {
     expect(body).toContain('Blok-Doc-Sequence');
     expect(body).toContain('durable-through');
     expect(body).toContain('POST /sync/{doc}/reset');
+    // Nothing held clients off between starting the old build and the reset,
+    // and that window is destructive: a room hydrated from a blob has no
+    // document version yet, so its first write-back carries no
+    // Blok-Doc-Version and the consumer's 409 has nothing to refuse. One
+    // keystroke writes the day-of-switch document over the verified record,
+    // and the reset then seeds from it.
+    expect(body).toContain('Blok-Doc-Version');
+    expect(body).toMatch(/held off/i);
+    expect(body).toMatch(/last reset/i);
+    // A drain reaches live rooms only, so a document whose process crashed
+    // with its projection owed has no room to flush. Detecting that gap and
+    // offering no remedy sends an operator over the cliff with a red number.
+    expect(body).toMatch(/crashed/i);
+    expect(body).toMatch(/open it once/i);
+    // The cadence line is an upper bound, not a freshness promise, and the
+    // rollback that has a shipped referent is unregistering the store.
+    expect(body).toMatch(/ceiling/i);
+    expect(body).toMatch(/never had it/i);
   });
 
   // What the page renders. The entry is worthless in `server-data.ts` alone.
@@ -525,10 +543,16 @@ describe('server docs data', () => {
 
     expect(getTranslation('en', key)).toContain('Blok-Doc-Sequence');
     expect(getTranslation('en', key)).toMatch(/does not keep a second/i);
+    expect(getTranslation('en', key)).toMatch(/held off/i);
+    expect(getTranslation('en', key)).toMatch(/open it once/i);
     expect(getTranslation('ru', key)).toContain('Blok-Doc-Sequence');
     // `getTranslation` falls back to English on a miss, so only Cyrillic text
-    // proves the Russian key is really there.
+    // proves the Russian key is really there. The two rules that make the
+    // drill safe get their own anchors: revert the Russian body and they are
+    // what goes red.
     expect(getTranslation('ru', key)).toMatch(/откат/i);
+    expect(getTranslation('ru', key)).toMatch(/не впуская клиентов/);
+    expect(getTranslation('ru', key)).toMatch(/откройте его один раз/);
   });
 
   // The operator half of the same boundary. The page states the rule; the
@@ -549,6 +573,17 @@ describe('server docs data', () => {
     expect(drill).toContain('POST /sync/{doc}/reset');
     expect(drill.indexOf('DrainAsync')).toBeLessThan(drill.indexOf('POST /sync/{doc}/reset'));
     expect(drill).toMatch(/does not keep a second/i);
+    // The hold has to be stated where the old build starts, not after the
+    // reset: a reader who reaches the reset first has already lost the record
+    // the drill spent three steps verifying.
+    expect(drill).toContain('Blok-Doc-Version');
+    expect(drill).toMatch(/still held off/i);
+    expect(drill).toMatch(/let clients back in/i);
+    expect(drill.indexOf('still held off')).toBeLessThan(drill.indexOf('POST /sync/{doc}/reset'));
+    // The drain flushes live rooms only, so the remedy for a document it
+    // never reached belongs beside the comparison that finds it.
+    expect(drill).toMatch(/open it once/i);
+    expect(drill.indexOf('open it once')).toBeLessThan(drill.indexOf('still held off'));
   });
 
   // The bundle outranks the literal, and it kept the pre-journal answer long

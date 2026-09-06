@@ -1,10 +1,12 @@
 import * as Y from 'yjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { OperationStore } from '../../../../../src/components/modules/collaboration/operation-store';
 import { createCollabProvider } from '../../../../../src/components/modules/collaboration/provider';
 import { decode, encode } from '../../../../../src/components/modules/collaboration/sync-wire';
 import type {
   CollabDocSeam,
+  CollabOutbox,
   CollabProviderOptions,
   CollabStatus,
   CollabStatusDetail,
@@ -542,9 +544,11 @@ describe('createCollabProvider', () => {
       harness.provider.connect();
       harness.socket().open();
 
-      // 70 > MAX_BUFFERED_INBOUND (64): if any of these were buffered, the
-      // cap would trip and close the socket, exactly like the test above.
-      for (let index = 0; index < 70; index += 1) {
+      // 70 of EACH type, against a MAX_BUFFERED_INBOUND of 64: buffering any
+      // ONE of the three would trip the cap and close the socket, exactly like
+      // the test above. Cycling 70 frames in TOTAL would not — 23 of each is
+      // under the cap, and the test would stop discriminating.
+      for (let index = 0; index < 70 * v2Frames.length; index += 1) {
         harness.socket().deliver(v2Frames[index % v2Frames.length]);
       }
 
@@ -2078,6 +2082,750 @@ describe('createCollabProvider', () => {
       vi.advanceTimersByTime(300_000);
 
       expect(harness.sockets).toHaveLength(1);
+    });
+  });
+
+  /**
+   * blok-sync.v2: the outbox drain, exact acknowledgement, retry and rejection
+   * (packages/server/protocol/blok-sync-v2.md sections 6-8).
+   */
+  describe('the v2 outbox drain', () => {
+    /** Mirrors the provider's own deadline; a test advances exactly to it. */
+    const ACK_TIMEOUT_MS = 15_000;
+
+    /** 32 lowercase hex, and never an id this outbox mints. */
+    const OTHER_TAB_OPERATION = 'abcdefabcdefabcdefabcdefabcdefab';
+
+    /** The one rejection code that means "your history belongs to another room". */
+    const LINEAGE_MISMATCH = 'lineage-mismatch';
+
+    interface OutboxRow {
+      operationId: string;
+      lineage: string;
+      bytes: Uint8Array;
+    }
+
+    /**
+     * The slice of `OperationStore` the provider drains.
+     *
+     * Its write queue is SERIAL exactly as the store's `enqueue` is
+     * (`operation-store.ts`), and that is a contract rather than a
+     * convenience: `quarantineLineage` has to run behind every `appendLocal`
+     * already issued, or the edit the relineage flush provokes is stranded.
+     * `oldestPending` stays OFF the queue, as the store's readonly cursor does.
+     */
+    class FakeOutbox {
+      public rows: OutboxRow[] = [];
+
+      public appended: Uint8Array[] = [];
+
+      public acknowledged: string[] = [];
+
+      public quarantined: { lineage: string; reason: string; snapshot: Uint8Array; moved: OutboxRow[] }[] = [];
+
+      /** Ordered trace of the steps a relineage has to take in one exact order. */
+      public readonly log: string[] = [];
+
+      public lineage: string | null;
+
+      private queue: Promise<unknown> = Promise.resolve();
+
+      private minted = 0;
+
+      private readonly listeners = new Set<() => void>();
+
+      public constructor(lineage: string) {
+        this.lineage = lineage;
+      }
+
+      /** Puts a row in without going through the provider. */
+      public seed(bytes: Uint8Array): OutboxRow {
+        const row = { operationId: this.mintId(), lineage: this.lineage ?? LINEAGE_A, bytes };
+
+        this.rows.push(row);
+
+        return row;
+      }
+
+      /** What another tab's commit looks like from here. */
+      public commit(): void {
+        this.listeners.forEach((listener) => listener());
+      }
+
+      public appendLocal(update: Uint8Array): Promise<OutboxRow> {
+        return this.enqueue(() => {
+          const lineage = this.lineage;
+
+          if (lineage === null) {
+            throw new Error('the outbox has no lineage to stamp a local edit with');
+          }
+
+          this.appended.push(update);
+
+          const row = { operationId: this.mintId(), lineage, bytes: update };
+
+          this.rows.push(row);
+
+          return row;
+        });
+      }
+
+      public oldestPending(): Promise<OutboxRow | null> {
+        return Promise.resolve(this.rows[0] ?? null);
+      }
+
+      public acknowledge(operationId: string): Promise<void> {
+        return this.enqueue(() => {
+          this.acknowledged.push(operationId);
+          this.rows = this.rows.filter((row) => row.operationId !== operationId);
+        });
+      }
+
+      public quarantineLineage(lineage: string, reason: string, snapshot: Uint8Array): Promise<number> {
+        return this.enqueue(() => {
+          const moved = this.rows.filter((row) => row.lineage === lineage);
+
+          this.rows = this.rows.filter((row) => row.lineage !== lineage);
+
+          if (this.lineage === lineage) {
+            this.lineage = null;
+          }
+
+          this.log.push('quarantine');
+          this.quarantined.push({ lineage, reason, snapshot, moved });
+
+          return moved.length;
+        });
+      }
+
+      public onCommitted(listener: () => void): () => void {
+        this.listeners.add(listener);
+
+        return (): void => {
+          this.listeners.delete(listener);
+        };
+      }
+
+      private enqueue<T>(work: () => T): Promise<T> {
+        const result = this.queue.then(work);
+
+        this.queue = result.catch(() => undefined);
+
+        return result;
+      }
+
+      private mintId(): string {
+        this.minted += 1;
+
+        return this.minted.toString(16).padStart(32, '0');
+      }
+    }
+
+    /** Every microtask a drain chains — deeper than `flushMicrotasks`. */
+    const settle = async (): Promise<void> => {
+      for (let tick = 0; tick < 20; tick += 1) {
+        await Promise.resolve();
+      }
+    };
+
+    /** A peer document playing the server side, registered for teardown. */
+    const newPeer = (): DocumentStore => {
+      const peer = new DocumentStore(new YBlockSerializer());
+
+      stores.push(peer);
+
+      return peer;
+    };
+
+    const v2Handshake = (
+      outbox: FakeOutbox,
+      overrides: Partial<CollabProviderOptions> = {}
+    ): { harness: Harness; socket: MockSocket } => {
+      const harness = createHarness({ outbox, ...overrides });
+
+      return { harness, socket: connectAndHandshake(harness, PROTOCOL_V2) };
+    };
+
+    /** The server's answer to our SyncStep1: its diff, then its own state vector. */
+    const serverFirstSync = (harness: Harness, socket: MockSocket, peer: DocumentStore): void => {
+      socket.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate(harness.store.getStateVector()) });
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+    };
+
+    const operationFrames = (socket: MockSocket): Extract<SyncWireFrame, { type: 'operation' }>[] =>
+      socket.frames.filter(
+        (frame): frame is Extract<SyncWireFrame, { type: 'operation' }> => frame.type === 'operation'
+      );
+
+    const operationIds = (socket: MockSocket): string[] =>
+      operationFrames(socket).map((frame) => frame.operationId);
+
+    it('v2 never answers a server SyncStep1 with a raw SyncStep2', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      peer.addBlock({ id: 'p1', type: 'paragraph', data: { text: 'server' } });
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(
+        socket.frameTypes,
+        'a v2 session answered the server SyncStep1 with a raw SyncStep2, putting history on the wire outside an operation envelope'
+      ).not.toContain('syncStep2');
+      expect(socket.frameTypes).toEqual(['syncStep1', 'syncStep1']);
+    });
+
+    it('drains only after applying the server SyncStep2', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      harness.provider.drain();
+      await settle();
+
+      expect(socket.frameTypes, 'an operation was sent before the server SyncStep2 had been applied')
+        .toEqual(['syncStep1']);
+
+      // ONLY the SyncStep2, without the server SyncStep1 that normally follows
+      // it: the sync this frame completes is what has to unblock the drain.
+      socket.deliver({ type: 'syncStep2', update: peer.encodeStateAsUpdate(harness.store.getStateVector()) });
+      await settle();
+
+      expect(operationFrames(socket), 'the completed first sync did not release the drain').toHaveLength(1);
+    });
+
+    it('a server SyncStep1 is ignored while the outbox is non-empty and re-requested once it drains', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(socket.frameTypes, 'the server SyncStep1 was served while operations were still pending')
+        .toEqual(['syncStep1', 'operation']);
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_A,
+        operationId: row.operationId,
+        serverSequence: '1',
+      });
+      await settle();
+
+      expect(socket.frameTypes, 'a drained outbox never re-requested the server state vector')
+        .toEqual(['syncStep1', 'operation', 'syncStep1']);
+    });
+
+    it('residual local state after draining is enveloped as one operation', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+      // Local content no outbox row covers: what a v1 session left behind.
+      harness.store.addBlock({ id: 'residual', type: 'paragraph', data: { text: 'kept' } });
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_A,
+        operationId: row.operationId,
+        serverSequence: '1',
+      });
+      await settle();
+
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(
+        outbox.appended,
+        'the residual local state never reached the outbox, so it could only go up outside an operation envelope'
+      ).toHaveLength(1);
+
+      const frames = operationFrames(socket);
+
+      expect(frames).toHaveLength(2);
+
+      const applied = newPeer();
+
+      applied.applyRemoteUpdate(frames[1].update, {});
+
+      expect(applied.toJSON().map((block) => block.id)).toEqual(['residual']);
+    });
+
+    it('envelopes nothing when the server already holds every local struct', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      harness.store.addBlock({ id: 'shared', type: 'paragraph', data: { text: 'both' } });
+      peer.applyRemoteUpdate(harness.store.encodeStateAsUpdate(), {});
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(
+        outbox.appended,
+        'a caught-up diff was enveloped as an operation, so every v2 connection would journal an empty edit'
+      ).toEqual([]);
+      expect(operationFrames(socket)).toEqual([]);
+    });
+
+    it('v1-era cached edits reach a v2 server after an upgrade', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      // Cached under a v1 session, so it left no outbox row behind.
+      harness.store.addBlock({ id: 'cached', type: 'paragraph', data: { text: 'from v1' } });
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      const frames = operationFrames(socket);
+
+      expect(frames, 'edits cached under a v1 session never reached the v2 server').toHaveLength(1);
+
+      const applied = newPeer();
+
+      applied.applyRemoteUpdate(frames[0].update, {});
+
+      expect(applied.toJSON().map((block) => block.id)).toEqual(['cached']);
+    });
+
+    it('keeps one operation in flight per provider', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      outbox.seed(new Uint8Array([1]));
+      outbox.seed(new Uint8Array([2]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      harness.provider.drain();
+      harness.provider.drain();
+      await settle();
+
+      expect(
+        operationFrames(socket),
+        'a second operation went on the wire while the first was still unacknowledged'
+      ).toHaveLength(1);
+    });
+
+    it('resends the same id after disconnect before ack', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(operationFrames(socket)).toHaveLength(1);
+
+      socket.serverClose(1006, 'dropped');
+      advanceToReconnect(harness);
+
+      const next = harness.socket();
+
+      next.open(PROTOCOL_V2);
+      next.deliver(controlFrame());
+      serverFirstSync(harness, next, peer);
+      await settle();
+
+      expect(
+        operationIds(next),
+        'the retry minted a new operation id, so the server cannot recognise it as the duplicate it is'
+      ).toEqual([row.operationId]);
+    });
+
+    it('ack deletes the exact row and drains the next', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const first = outbox.seed(new Uint8Array([1]));
+      const second = outbox.seed(new Uint8Array([2]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_A,
+        operationId: first.operationId,
+        serverSequence: '1',
+      });
+      await settle();
+
+      expect(outbox.acknowledged, 'the acknowledgement deleted something other than the row it named')
+        .toEqual([first.operationId]);
+      expect(outbox.rows.map((row) => row.operationId)).toEqual([second.operationId]);
+      expect(operationIds(socket)).toEqual([first.operationId, second.operationId]);
+    });
+
+    it('ack from another tab is harmless', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const first = outbox.seed(new Uint8Array([1]));
+      const second = outbox.seed(new Uint8Array([2]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_A,
+        operationId: OTHER_TAB_OPERATION,
+        serverSequence: '7',
+      });
+      await settle();
+
+      expect(
+        operationIds(socket),
+        "another tab's acknowledgement released the in-flight slot, so two operations were unanswered at once"
+      ).toEqual([first.operationId]);
+      expect(outbox.rows.map((row) => row.operationId)).toEqual([first.operationId, second.operationId]);
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_A,
+        operationId: first.operationId,
+        serverSequence: '8',
+      });
+      await settle();
+
+      expect(operationIds(socket)).toEqual([first.operationId, second.operationId]);
+    });
+
+    it('ack timeout reconnects without deleting', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(operationFrames(socket)).toHaveLength(1);
+
+      vi.advanceTimersByTime(ACK_TIMEOUT_MS);
+      await settle();
+
+      expect(outbox.acknowledged, 'a row nobody acknowledged was deleted when its deadline passed').toEqual([]);
+      expect(outbox.rows).toHaveLength(1);
+      expect(harness.statuses.at(-1)?.status).toBe('offline');
+    });
+
+    it('broadcast from the submitting socket applies idempotently', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      harness.store.addBlock({ id: 'mine', type: 'paragraph', data: { text: 'typed' } });
+
+      const bytes = harness.store.encodeStateAsUpdate();
+
+      outbox.seed(bytes);
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({ type: 'update', update: bytes });
+      socket.deliver({ type: 'update', update: bytes });
+      await settle();
+
+      expect(
+        harness.store.toJSON().map((block) => block.id),
+        'the server broadcast of our own operation duplicated the block it carried'
+      ).toEqual(['mine']);
+      expect(harness.statuses.some((entry) => entry.status === 'error')).toBe(false);
+    });
+
+    it('lineage mismatch quarantines before reset', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const harness = createHarness({ outbox, initialLineage: LINEAGE_A }, (seam) => ({
+        ...seam,
+        resetForRelineage: (): void => {
+          outbox.log.push('reset');
+          seam.resetForRelineage();
+        },
+      }));
+      const row = outbox.seed(new Uint8Array([1, 2, 3]));
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+
+      expect(
+        outbox.log,
+        'the document was reset before the old lineage was quarantined, so its pending rows were stranded under a lineage nothing can drain'
+      ).toEqual(['quarantine', 'reset']);
+      expect(outbox.quarantined.map((entry) => entry.lineage)).toEqual([LINEAGE_A]);
+      expect(outbox.quarantined[0].moved.map((moved) => moved.operationId)).toEqual([row.operationId]);
+      expect(harness.statuses.at(-1)?.status).toBe('offline');
+    });
+
+    it('a buffered Yjs write in flight during relineage lands in quarantine, not the new lineage', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const buffered = new Uint8Array([9, 9, 9]);
+      const harness = createHarness({ outbox, initialLineage: LINEAGE_A }, (seam) => ({
+        ...seam,
+        // What the module's lifetime capture tap does when the buffer flushes.
+        flushPendingWrites: (): void => {
+          void outbox.appendLocal(buffered);
+        },
+        resetForRelineage: (): void => {
+          outbox.log.push('reset');
+          seam.resetForRelineage();
+        },
+      }));
+
+      harness.provider.connect();
+      harness.socket().open(PROTOCOL_V2);
+      harness.socket().deliver(controlFrame({ lineage: LINEAGE_B }));
+      await settle();
+
+      expect(
+        outbox.quarantined[0]?.moved.map((moved) => moved.bytes),
+        'the last buffered edit was journalled after the quarantine walked the outbox, so it stayed stamped with a lineage the server has abandoned'
+      ).toEqual([buffered]);
+      expect(outbox.rows, 'a row survived the relineage').toEqual([]);
+      expect(outbox.log).toEqual(['quarantine', 'reset']);
+    });
+
+    it('final rejection quarantines the dependent tail', async () => {
+      // The four stable final codes plus one the spec's OPEN set allows and
+      // this build has never heard of: an unknown code is final too.
+      const codes = ['invalid-update', 'read-only', 'oversized-update', 'operation-id-conflict', 'some-future-code'];
+
+      for (const code of codes) {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+        const { harness, socket } = v2Handshake(outbox);
+        const first = outbox.seed(new Uint8Array([1]));
+
+        outbox.seed(new Uint8Array([2]));
+        serverFirstSync(harness, socket, peer);
+        await settle();
+
+        socket.deliver({ type: 'rejection', lineage: LINEAGE_A, operationId: first.operationId, code });
+        await settle();
+
+        expect(
+          outbox.rows,
+          `a ${code} rejection left the dependent tail in the outbox, where it is redriven and refused forever`
+        ).toEqual([]);
+        expect(outbox.quarantined.map((entry) => entry.reason)).toEqual([code]);
+        expect(socket.closedWith, `a ${code} rejection ended the connection`).toBeNull();
+      }
+    });
+
+    it('transient server close leaves every row pending', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.serverClose(1006, 'dropped');
+      await settle();
+
+      expect(outbox.quarantined, 'a dropped connection quarantined rows the server never judged').toEqual([]);
+      expect(outbox.rows).toHaveLength(1);
+      expect(outbox.acknowledged).toEqual([]);
+      expect(harness.statuses.at(-1)?.status).toBe('offline');
+    });
+
+    it('commit-unavailable close (4503) keeps every row, quarantines nothing, and reconnects with backoff', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      outbox.seed(new Uint8Array([1, 2, 3]));
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.serverClose(4503, 'commit unavailable, retry');
+      await settle();
+
+      expect(
+        outbox.quarantined,
+        'a commit-unavailable close quarantined rows whose commit outcome is merely unknown'
+      ).toEqual([]);
+      expect(outbox.rows).toHaveLength(1);
+      expect(harness.statuses.at(-1)).toEqual({
+        status: 'offline',
+        detail: expect.objectContaining({ code: 4503, retryInMs: 1000 }),
+      });
+
+      advanceToReconnect(harness);
+
+      expect(harness.sockets).toHaveLength(2);
+    });
+
+    it('message-size validation includes the v2 wrapper', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const bytes = new Uint8Array(64).fill(7);
+      const row = outbox.seed(bytes);
+      const framed = encode({
+        type: 'operation',
+        lineage: LINEAGE_A,
+        operationId: row.operationId,
+        update: bytes,
+      }).byteLength;
+
+      // Strictly between the bare update and the framed operation: only the
+      // 102 envelope puts this row over the server's cap.
+      expect(bytes.byteLength).toBeLessThan(framed - 1);
+      socket.deliver({ type: 'limits', maxMessageBytes: framed - 1 });
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(
+        socket.frameTypes,
+        'an operation past the server cap went on the wire — the cap was measured against the bare update, not the type-102 frame it travels in'
+      ).not.toContain('operation');
+      expect(outbox.quarantined.map((entry) => entry.reason)).toEqual(['oversized-update']);
+      expect(
+        harness.statuses.some((entry) => entry.status === 'error'),
+        'one oversized row ended the whole session, so the next boot adopts it and ends the session again'
+      ).toBe(false);
+    });
+
+    it('ignores a v2 frame naming a lineage we do not serve', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+      const first = outbox.seed(new Uint8Array([1]));
+      const second = outbox.seed(new Uint8Array([2]));
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      socket.deliver({
+        type: 'acknowledgement',
+        lineage: LINEAGE_B,
+        operationId: first.operationId,
+        serverSequence: '1',
+      });
+      socket.deliver({ type: 'rejection', lineage: LINEAGE_B, operationId: first.operationId, code: 'invalid-update' });
+      await settle();
+
+      expect(
+        outbox.acknowledged,
+        'a frame naming a lineage this session does not serve retired one of its rows'
+      ).toEqual([]);
+      expect(outbox.quarantined).toEqual([]);
+      expect(outbox.rows.map((row) => row.operationId)).toEqual([first.operationId, second.operationId]);
+      expect(operationIds(socket), 'a foreign-lineage frame released the in-flight slot').toEqual([first.operationId]);
+    });
+
+    it('frame 104 resets, retries or quarantines according to its code', async () => {
+      // The three dispositions the spec fixes: a changed lineage resets, the one
+      // transient code keeps everything, and anything final quarantines the tail
+      // WITHOUT throwing the document away.
+      const cases = [
+        { code: LINEAGE_MISMATCH, resets: 1, quarantines: 1, kept: 0 },
+        { code: 'not-synced', resets: 0, quarantines: 0, kept: 1 },
+        { code: 'invalid-update', resets: 0, quarantines: 1, kept: 0 },
+      ];
+
+      for (const expected of cases) {
+        const outbox = new FakeOutbox(LINEAGE_A);
+        const peer = newPeer();
+        const resets = { count: 0 };
+        const harness = createHarness({ outbox }, (seam) => ({
+          ...seam,
+          resetForRelineage: (): void => {
+            resets.count += 1;
+            seam.resetForRelineage();
+          },
+        }));
+        const socket = connectAndHandshake(harness, PROTOCOL_V2);
+        const row = outbox.seed(new Uint8Array([1]));
+
+        serverFirstSync(harness, socket, peer);
+        await settle();
+
+        socket.deliver({ type: 'rejection', lineage: LINEAGE_A, operationId: row.operationId, code: expected.code });
+        await settle();
+
+        expect(
+          resets.count,
+          `a ${expected.code} rejection took the wrong disposition: only a lineage that changed may throw the document away`
+        ).toBe(expected.resets);
+        expect(outbox.quarantined).toHaveLength(expected.quarantines);
+        expect(outbox.rows).toHaveLength(expected.kept);
+      }
+    });
+
+    it('asks for the residual state vector once per connection', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      // A conformant server answers EVERY inbound SyncStep1 with one of its own.
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      socket.deliver({ type: 'syncStep1', stateVector: peer.getStateVector() });
+      await settle();
+
+      expect(
+        socket.frameTypes.filter((type) => type === 'syncStep1'),
+        'a second residual round went out, and a conformant server answers that with another SyncStep1 — a ping-pong with no end'
+      ).toHaveLength(2);
+    });
+
+    /**
+     * Compile-time only; `lint:types` is what checks it. The Collaboration
+     * module hands the real store straight to the provider, so the seam has to
+     * stay a structural subset of `OperationStore`.
+     */
+    it('the operation store satisfies the outbox seam the provider drains', () => {
+      const storeIsAnOutbox: OperationStore extends CollabOutbox ? true : never = true;
+
+      expect(storeIsAnOutbox).toBe(true);
+    });
+
+    it('drains on the committed hint another tab raises', async () => {
+      const outbox = new FakeOutbox(LINEAGE_A);
+      const peer = newPeer();
+      const { harness, socket } = v2Handshake(outbox);
+
+      serverFirstSync(harness, socket, peer);
+      await settle();
+
+      expect(operationFrames(socket)).toEqual([]);
+
+      const row = outbox.seed(new Uint8Array([4, 5]));
+
+      outbox.commit();
+      await settle();
+
+      expect(
+        operationIds(socket),
+        'a row another tab committed sat in the outbox until this tab happened to reconnect'
+      ).toEqual([row.operationId]);
     });
   });
 });

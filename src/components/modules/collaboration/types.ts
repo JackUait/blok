@@ -73,6 +73,45 @@ export type SyncWireDecodeResult =
   | { type: 'malformed'; reason: string; rule?: number };
 
 /**
+ * One durable local edit as the provider reads it: a structural subset of the
+ * operation store's `PendingOperation`, so the module hands the store straight
+ * to the provider with no adapter in between.
+ */
+export interface CollabOutboxRow {
+  /** 32 lowercase hex characters. Minted once and never regenerated on retry. */
+  operationId: string;
+  /** The lineage the row was stamped with when it was journalled. */
+  lineage: string;
+  /** The raw Yjs update the operation carries. At least one byte. */
+  bytes: Uint8Array;
+}
+
+/**
+ * The slice of the operation store the provider drains — again a structural
+ * subset of `OperationStore`.
+ *
+ * ORDERING CONTRACT: every method here except `oldestPending` runs on the
+ * store's single serial write queue, so a call issued after an `appendLocal`
+ * runs behind it. `quarantineLineage` depends on exactly that: the provider
+ * flushes the Yjs write buffer first, and the append that flush provokes must
+ * already be in the outbox when the quarantine walks it. `oldestPending` is a
+ * read and deliberately stays off the queue, as the store's readonly cursor
+ * does.
+ */
+export interface CollabOutbox {
+  /** Journals one local update and hands back the row it became. */
+  appendLocal(update: Uint8Array): Promise<CollabOutboxRow>;
+  /** Re-read before every send: another tab shares this outbox. */
+  oldestPending(): Promise<CollabOutboxRow | null>;
+  /** Deletes exactly one row; an id no row carries is a no-op, not a failure. */
+  acknowledge(operationId: string): Promise<void>;
+  /** Moves every row of `lineage`, plus a recovery snapshot, to quarantine. */
+  quarantineLineage(lineage: string, reason: string, snapshot: Uint8Array): Promise<number>;
+  /** Lossy hint that another tab committed something. Never fires for this tab. */
+  onCommitted(listener: () => void): () => void;
+}
+
+/**
  * The slice of YjsManager the provider talks to — the binary doc seam plus the
  * awareness seam, with the SAME method names, so binding it is a pass-through
  * with no adapter. Declared here so the Collaboration module (and any test
@@ -133,6 +172,17 @@ export interface CollabDocSeam {
    * rebuilt on the fresh doc — so re-subscribe after this call.
    */
   resetForRelineage(): void;
+
+  /**
+   * Flush the coalescing block-write buffer, so the last thing typed exists as
+   * a document update — and, through the Collaboration module's lifetime
+   * capture tap, as an outbox row — before the caller quarantines the lineage
+   * it belongs to. The same flush `Collaboration.destroy` performs.
+   *
+   * Optional because a provider with no outbox has nothing to strand: the
+   * lineage reset it performs is synchronous and journals nothing.
+   */
+  flushPendingWrites?(): void;
 }
 
 /**
@@ -245,6 +295,12 @@ export interface CollabProviderOptions {
    * mismatch takes the ordinary relineage path.
    */
   initialLineage?: string;
+  /**
+   * The durable outbox local edits are journalled into. Present only on a
+   * session that can speak blok-sync.v2; without it the provider sends and
+   * relineages exactly as it does under v1.
+   */
+  outbox?: CollabOutbox;
 }
 
 /** What {@link createCollabProvider} hands back. */
@@ -266,4 +322,15 @@ export interface CollabProvider {
    * through the store's outbox.
    */
   readonly protocol: SessionProtocol;
+
+  /**
+   * Look for pending operations now. Idempotent and safe at any time; it does
+   * nothing unless a v2 connection is synced and nothing is already in flight.
+   *
+   * The outbox's own `onCommitted` hint never fires for the tab that wrote the
+   * row, so the Collaboration module calls this once its capture tap's
+   * `appendLocal` has committed. Without it a local edit would sit in the
+   * outbox until the next reconnect.
+   */
+  drain(): void;
 }

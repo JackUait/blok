@@ -2,6 +2,7 @@ import { logLabeled } from '../../utils/logger';
 
 import { decode, encode } from './sync-wire';
 import type {
+  CollabOutboxRow,
   CollabProvider,
   CollabProviderOptions,
   CollabSocketFactory,
@@ -71,6 +72,33 @@ const BACKOFF_CAP_MS = 30_000;
 /** A planned restart is back within moments; do not make the user wait a second. */
 const SHORT_RECONNECT_MS = 250;
 
+/**
+ * How long one operation may stay unacknowledged before the connection is
+ * dropped and the SAME id redriven on the next one. Nothing is deleted: an
+ * unanswered operation's commit outcome is unknown, and re-sending the same id
+ * with the same bytes is what resolves it (protocol section 7.2).
+ */
+const ACK_TIMEOUT_MS = 15_000;
+
+/**
+ * A Yjs v1 update carrying nothing: `varUint(0)` for the structs and
+ * `varUint(0)` for the delete set. Anything longer holds something the peer's
+ * state vector does not account for.
+ */
+const EMPTY_UPDATE_BYTES = 2;
+
+/** Rejection codes that are not final. `not-synced` is the only one. */
+const TRANSIENT_REJECTION_CODE = 'not-synced';
+
+/** The rejection that says our history belongs to a lineage the server dropped. */
+const LINEAGE_MISMATCH_CODE = 'lineage-mismatch';
+
+/** Recorded with rows a lineage reset quarantines. Never free text from a peer. */
+const RELINEAGE_REASON = 'lineage-reset';
+
+/** Recorded with a row this client refused to write because it exceeds the cap. */
+const OVERSIZED_REASON = 'oversized-update';
+
 /** Enough to hold a whole first sync ahead of the control frame, not enough to flood us. */
 const MAX_BUFFERED_INBOUND = 64;
 
@@ -94,7 +122,7 @@ interface ProviderOrigin {
   readonly provider: 'blok-collab';
 }
 
-type Phase = 'idle' | 'connecting' | 'awaiting-control' | 'ready' | 'offline' | 'terminal';
+type Phase = 'idle' | 'connecting' | 'awaiting-control' | 'ready' | 'offline' | 'relineage' | 'terminal';
 
 interface ProviderState {
   /** Bumped per connection attempt; every async continuation checks it. */
@@ -155,6 +183,20 @@ interface ProviderState {
   forceTicketRefresh: boolean;
   synced: boolean;
   destroyed: boolean;
+  /** The one operation on the wire, or none. Never two at a time per provider. */
+  inFlight: { operationId: string; lineage: string } | null;
+  /** Fires when an operation goes unanswered: reconnect and redrive the same id. */
+  ackTimer: ReturnType<typeof setTimeout> | null;
+  /** One drain pass at a time; a pass is asynchronous. */
+  draining: boolean;
+  /** A server SyncStep1 we deferred because operations were still pending. */
+  resyncOwed: boolean;
+  /**
+   * The once-per-connection residual round of protocol section 7.1 step 4. Once
+   * per connection because the server answers every SyncStep1 with one of its
+   * own, and a second round would ping-pong for the life of the socket.
+   */
+  residual: 'none' | 'requested' | 'done';
 }
 
 /**
@@ -232,6 +274,11 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     forceTicketRefresh: false,
     synced: false,
     destroyed: false,
+    inFlight: null,
+    ackTimer: null,
+    draining: false,
+    resyncOwed: false,
+    residual: 'none',
   };
 
   /** True once this continuation belongs to a connection nobody is waiting for. */
@@ -391,6 +438,14 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.handshakeTimer = clearTimer(state.handshakeTimer);
     state.firstSyncTimer = clearTimer(state.firstSyncTimer);
     state.awarenessTimer = clearTimer(state.awarenessTimer);
+    state.ackTimer = clearTimer(state.ackTimer);
+    // Per connection: the in-flight slot, a deferred resync and the once-only
+    // residual round all belong to the socket that opened them. `draining` is
+    // deliberately NOT reset here — `runDrain`'s own `finally` always restores
+    // it, so a second reset would be a line nothing can tell apart.
+    state.inFlight = null;
+    state.resyncOwed = false;
+    state.residual = 'none';
     state.awarenessClients.clear();
     state.awarenessFull = false;
 
@@ -473,7 +528,43 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
    * @param code - the close code that triggered it, if any
    * @param reason - human explanation for the status detail
    */
-  const relineage = (code: number | undefined, reason: string): void => {
+  /**
+   * Moves every pending row of `lineage` out of the outbox, with a recovery
+   * snapshot beside them, because nothing stamped with it can be sent any more.
+   *
+   * The FLUSH comes first. The coalescing write buffer may still hold the last
+   * thing typed, and the Collaboration module's lifetime capture tap turns that
+   * flush into an `appendLocal`. Quarantining before it would leave that edit
+   * behind, stamped with a lineage nothing will ever drain — and the outbox's
+   * write queue is serial, so the append the flush provokes is already ahead of
+   * this call. The snapshot is taken after the flush for the same reason: it is
+   * the recovery copy, and it has to contain what was just typed.
+   * @param lineage - the lineage to empty
+   * @param reason - a fixed string, or a codec-validated rejection code; never
+   * text a peer wrote
+   */
+  const quarantineTail = async (lineage: string, reason: string): Promise<void> => {
+    const outbox = options.outbox;
+
+    if (outbox === undefined) {
+      return;
+    }
+
+    try {
+      yjs.flushPendingWrites?.();
+      await outbox.quarantineLineage(lineage, reason, yjs.encodeStateAsUpdate());
+    } catch (thrown) {
+      logLabeled(`collaboration could not quarantine the pending operations of ${docId}`, 'error', thrown);
+    }
+  };
+
+  /**
+   * Discards the document and asks for the room again — the second half of a
+   * relineage, once nothing of the old lineage is left to strand.
+   * @param code - the close code that triggered it, if any
+   * @param reason - human explanation for the status detail
+   */
+  const finishRelineage = (code: number | undefined, reason: string): void => {
     yjs.resetForRelineage();
 
     // Load-bearing: the next control frame announces the NEW lineage, and a
@@ -482,6 +573,277 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.tag = null;
 
     scheduleReconnect(code, reason);
+  };
+
+  const relineage = (code: number | undefined, reason: string): void => {
+    const lineage = state.lineage;
+
+    // No outbox (a v1 session), or a boot that never learned a lineage: nothing
+    // is journalled under it, so the reset stays exactly as synchronous as it
+    // has always been. NOT gated on `state.protocol`: a control frame that
+    // mismatches is compared BEFORE the selected subprotocol is read, so a
+    // cache-adopted boot holding v2 rows would still read 'v1' here.
+    if (options.outbox === undefined || lineage === null) {
+      finishRelineage(code, reason);
+
+      return;
+    }
+
+    // The reconnect waits for the preparation. The phase keeps `connect()` out
+    // while it runs: 'offline' would let a host open a generation on a document
+    // that is still being discarded.
+    state.phase = 'relineage';
+
+    const generation = state.generation;
+
+    void quarantineTail(lineage, RELINEAGE_REASON).then(() => {
+      if (isStale(generation)) {
+        return;
+      }
+
+      finishRelineage(code, reason);
+    });
+  };
+
+  /**
+   * Writes one operation frame (type 102) and starts its acknowledgement
+   * deadline.
+   * @param socket - the live transport
+   * @param row - the oldest pending outbox row
+   */
+  const sendOperation = (socket: WebSocketLike, row: CollabOutboxRow): void => {
+    const bytes = encode({
+      type: 'operation',
+      lineage: row.lineage,
+      operationId: row.operationId,
+      update: row.bytes,
+    });
+    const announced = state.announcedMaxBytes;
+
+    // Measured on the FRAMED operation, not on the bare update: the metadata
+    // section and the two length prefixes ride the same message, and the
+    // server's cap counts the message.
+    if (announced !== null && bytes.byteLength > announced) {
+      // Quarantined, not terminal, and not retried: the row is DURABLE, so a
+      // session that ended here would adopt it on the next boot and end again.
+      // Same verdict the server's own `oversized-update` rejection carries.
+      void quarantineTail(row.lineage, OVERSIZED_REASON);
+
+      return;
+    }
+
+    sendBytes(socket, bytes);
+    state.inFlight = { operationId: row.operationId, lineage: row.lineage };
+    state.ackTimer = setTimeout(() => {
+      state.ackTimer = null;
+      teardownGeneration(true);
+      scheduleReconnect(undefined, `${docId} did not acknowledge an operation`);
+    }, ACK_TIMEOUT_MS);
+  };
+
+  /**
+   * Protocol section 7.1 step 4: the outbox is empty, so ask for a fresh server
+   * state vector and envelope whatever local history it turns out to be
+   * missing. Once per connection — the server answers every SyncStep1 with one
+   * of its own, and a second round would ping-pong for the life of the socket.
+   * @param socket - the live transport
+   */
+  const requestResidualSync = (socket: WebSocketLike): void => {
+    if (!state.resyncOwed || state.residual !== 'none') {
+      return;
+    }
+
+    state.resyncOwed = false;
+    state.residual = 'requested';
+    send(socket, { type: 'syncStep1', stateVector: yjs.getStateVector() });
+  };
+
+  /**
+   * One drain pass: re-read the oldest pending row and put it on the wire.
+   *
+   * The row is re-read every time rather than held in a queue, because another
+   * tab writes into the same store and may have added or deleted rows since the
+   * last pass.
+   */
+  const runDrain = async (): Promise<void> => {
+    const outbox = options.outbox;
+
+    if (
+      outbox === undefined ||
+      state.draining ||
+      state.socket === null ||
+      state.phase !== 'ready' ||
+      state.protocol !== 'v2' ||
+      // An operation before our own first sync draws `not-synced`.
+      !state.synced ||
+      state.inFlight !== null
+    ) {
+      return;
+    }
+
+    state.draining = true;
+
+    const generation = state.generation;
+
+    try {
+      const row = await outbox.oldestPending();
+      const socket = state.socket;
+
+      // Everything below belongs to the connection that started the pass.
+      if (isStale(generation) || state.phase !== 'ready' || socket === null) {
+        return;
+      }
+
+      if (row === null) {
+        requestResidualSync(socket);
+
+        return;
+      }
+
+      sendOperation(socket, row);
+    } catch (thrown) {
+      logLabeled(`collaboration could not drain the outbox of ${docId}`, 'error', thrown);
+    } finally {
+      state.draining = false;
+    }
+  };
+
+  const drain = (): void => {
+    void runDrain();
+  };
+
+  /**
+   * A server SyncStep1 on a v2 connection. The client NEVER answers one with a
+   * raw SyncStep2 (protocol section 7): that frame carries no operation id, so
+   * the server can neither acknowledge nor reject it, and it would put pending
+   * offline work on the wire outside its envelope. While operations are pending
+   * the frame is ignored and the outbox drains instead; once none are left the
+   * client asks again and envelopes the residual diff as one more operation.
+   * @param stateVector - what the server says it already has
+   */
+  const handleResync = (stateVector: Uint8Array): void => {
+    const outbox = options.outbox;
+
+    if (state.residual !== 'requested') {
+      state.resyncOwed = true;
+      drain();
+
+      return;
+    }
+
+    state.residual = 'done';
+
+    const residual = yjs.encodeStateAsUpdate(stateVector);
+
+    // Everything the server already has encodes as varUint(0) twice; enveloping
+    // that would journal an empty operation on every v2 connection.
+    if (outbox === undefined || residual.byteLength <= EMPTY_UPDATE_BYTES) {
+      return;
+    }
+
+    const generation = state.generation;
+
+    // The ONLY path by which edits cached under an earlier v1 session — stored
+    // with no outbox row — reach a server that has since gained a durable store.
+    void outbox.appendLocal(residual).then(
+      () => {
+        if (isStale(generation)) {
+          return;
+        }
+
+        drain();
+      },
+      (thrown: unknown) => {
+        logLabeled(`collaboration could not journal the residual state of ${docId}`, 'error', thrown);
+      }
+    );
+  };
+
+  /**
+   * Frame 103. The lineage must be ours; the id may name any row in the store,
+   * because another tab submits from the same outbox — so the deletion is by
+   * exact id and an id no row carries is a no-op. Only an acknowledgement of the
+   * operation WE have on the wire releases the in-flight slot: releasing it on
+   * another tab's would put a second operation out while the first is unanswered.
+   *
+   * `serverSequence` needs nothing more from us: the codec already refuses
+   * anything but a decimal string of at least 1 (decoder rule 12). It is
+   * deliberately NOT required to increase — a re-sent operation is answered with
+   * its ORIGINAL acknowledgement (section 7.2), so a monotonicity rule would
+   * refuse a legitimate duplicate.
+   * @param frame - the decoded acknowledgement
+   */
+  const handleAcknowledgement = (frame: Extract<SyncWireFrame, { type: 'acknowledgement' }>): void => {
+    const outbox = options.outbox;
+
+    if (outbox === undefined || state.lineage === null || frame.lineage !== state.lineage) {
+      return;
+    }
+
+    if (state.inFlight?.operationId === frame.operationId) {
+      state.inFlight = null;
+      state.ackTimer = clearTimer(state.ackTimer);
+    }
+
+    const generation = state.generation;
+
+    // The next operation waits for the deletion to COMMIT: draining first would
+    // re-read a row this acknowledgement has already retired.
+    void outbox.acknowledge(frame.operationId).then(
+      () => {
+        if (isStale(generation)) {
+          return;
+        }
+
+        drain();
+      },
+      (thrown: unknown) => {
+        logLabeled(`collaboration could not delete an acknowledged operation of ${docId}`, 'error', thrown);
+      }
+    );
+  };
+
+  /**
+   * Frame 104. The codes are an OPEN set (protocol section 6): an unrecognised
+   * one is FINAL, because treating it as malformed would leave the row in the
+   * outbox to be redriven and refused forever. The code is the only thing
+   * branched on — it is the codec-validated kebab-case token, and a rejection
+   * carries no free text at all.
+   * @param frame - the decoded rejection
+   */
+  const handleRejection = (frame: Extract<SyncWireFrame, { type: 'rejection' }>): void => {
+    const lineage = state.lineage;
+
+    if (options.outbox === undefined || lineage === null || frame.lineage !== lineage) {
+      return;
+    }
+
+    if (state.inFlight?.operationId === frame.operationId) {
+      state.inFlight = null;
+      state.ackTimer = clearTimer(state.ackTimer);
+    }
+
+    if (frame.code === LINEAGE_MISMATCH_CODE) {
+      teardownGeneration(true);
+      relineage(undefined, `${docId} was reset; its history is not ours`);
+
+      return;
+    }
+
+    if (frame.code === TRANSIENT_REJECTION_CODE) {
+      // The room was not ready and nothing was judged invalid. We only drain
+      // after our OWN first sync, so this is a server-side race: keep every row
+      // and let reconnect backoff bound the retry.
+      teardownGeneration(true);
+      scheduleReconnect(undefined, `${docId} was not ready for an operation`);
+
+      return;
+    }
+
+    // Final. The tail goes with it: later updates in this lineage may depend on
+    // the rejected one, so sending them alone would apply a dependent edit the
+    // server has no base for.
+    void quarantineTail(lineage, frame.code);
   };
 
   const markSynced = (): void => {
@@ -502,6 +864,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     state.unauthorizedSinceSync = 0;
     state.handshakeTimeoutsSinceSync = 0;
     report('connected');
+
+    // A completed sync is what makes a v2 write legal: an operation sent before
+    // it is answered `not-synced`.
+    drain();
   };
 
   /**
@@ -597,7 +963,11 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         yjs.applyRemoteUpdate(frame.update, origin);
         break;
       case 'syncStep1':
-        answerResync(socket, frame.stateVector);
+        if (state.protocol === 'v2') {
+          handleResync(frame.stateVector);
+        } else {
+          answerResync(socket, frame.stateVector);
+        }
         break;
       case 'awareness':
         dropOnThrow(() => yjs.applyAwarenessUpdate(frame.update, origin));
@@ -615,16 +985,16 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
       case 'limits':
         state.announcedMaxBytes = frame.maxMessageBytes;
         break;
-      // blok-sync.v2 (packages/server/protocol/blok-sync-v2.md). `onmessage`
-      // now filters these out before they ever reach this function (same
-      // early return as `unknown`/`malformed`, so one arriving before the
-      // control frame never counts toward MAX_BUFFERED_INBOUND) — these three
-      // cases exist ONLY so a future edit that wires durable-operation
-      // handling into the provider (a separate task) gets a compile error
-      // here rather than silently falling into a catch-all default.
-      case 'operation':
+      // blok-sync.v2 (packages/server/protocol/blok-sync-v2.md).
       case 'acknowledgement':
+        handleAcknowledgement(frame);
+        break;
       case 'rejection':
+        handleRejection(frame);
+        break;
+      case 'operation':
+        // Client → server only, and `onmessage` drops it before this; the case
+        // stays so a new frame type cannot fall into a silent default.
         break;
     }
   };
@@ -904,23 +1274,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
         const frame = bytes === null ? null : decode(bytes);
 
         // `unknown` is forward compatibility; `malformed` is a frame we refuse to
-        // guess at. Neither is worth dropping the connection over.
-        //
-        // blok-sync.v2 operation/acknowledgement/rejection frames are decoded
-        // by the codec (task 1.2) but not yet handled by this provider (task
-        // 4.4 wires them in). Until then they MUST be exactly as inert as an
-        // `unknown` frame — in particular, one arriving before the control
-        // frame must NOT reach `bufferInbound` below: it would count toward
-        // MAX_BUFFERED_INBOUND and a peer sending 64+ of them would force a
-        // teardown + reconnect over frames this provider does nothing with.
-        if (
-          frame === null ||
-          frame.type === 'unknown' ||
-          frame.type === 'malformed' ||
-          frame.type === 'operation' ||
-          frame.type === 'acknowledgement' ||
-          frame.type === 'rejection'
-        ) {
+        // guess at; `operation` is a client→server frame a server has no
+        // business sending. None is worth dropping the connection over.
+        if (frame === null || frame.type === 'unknown' || frame.type === 'malformed' || frame.type === 'operation') {
           return;
         }
 
@@ -930,7 +1286,18 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
           return;
         }
 
-        if (state.phase === 'awaiting-control') {
+        const beforeControl = state.phase === 'awaiting-control';
+
+        // A v2 acknowledgement or rejection names a lineage the control frame
+        // has not announced yet, so there is nothing to check it against.
+        // DROPPED rather than buffered: buffering would count them toward
+        // MAX_BUFFERED_INBOUND, and a peer sending 64+ would force a teardown
+        // and a reconnect over frames that mean nothing here.
+        if (beforeControl && (frame.type === 'acknowledgement' || frame.type === 'rejection')) {
+          return;
+        }
+
+        if (beforeControl) {
           bufferInbound(frame);
 
           return;
@@ -1008,6 +1375,10 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
   cycle.open = openGeneration;
 
+  // Another tab's commit is the only outbox change this provider does not cause
+  // itself; its own tab's appends are woken by `drain()` from the module.
+  const unhookCommitted = options.outbox?.onCommitted(() => drain()) ?? null;
+
   return {
     connect: (): void => {
       if (state.destroyed || state.phase === 'terminal') {
@@ -1032,6 +1403,7 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
 
       // Set first: every continuation and every report checks it.
       state.destroyed = true;
+      unhookCommitted?.();
       teardownGeneration(true);
       state.reconnectTimer = clearTimer(state.reconnectTimer);
       state.phase = 'terminal';
@@ -1044,6 +1416,9 @@ export function createCollabProvider(options: CollabProviderOptions): CollabProv
     },
     get protocol(): SessionProtocol {
       return state.protocol;
+    },
+    drain: (): void => {
+      drain();
     },
   };
 }

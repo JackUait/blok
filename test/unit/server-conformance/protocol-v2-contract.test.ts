@@ -162,11 +162,15 @@ function readVarUint(bytes: Uint8Array, from: number): [number, number] {
   throw new Error('Unterminated varuint in a server frame');
 }
 
-function frameOf(parts: number[][]): Uint8Array {
+// `Uint8Array<ArrayBuffer>`, not bare `Uint8Array`: every frame here is handed
+// to `WebSocket.send`, which takes `BufferSource` and so refuses a view whose
+// buffer could be a SharedArrayBuffer. `Uint8Array.from` allocates a real
+// ArrayBuffer, so this is the true type — widening it back breaks every send.
+function frameOf(parts: number[][]): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(parts.flat());
 }
 
-function syncFrame(subType: number, payload: Uint8Array): Uint8Array {
+function syncFrame(subType: number, payload: Uint8Array): Uint8Array<ArrayBuffer> {
   return frameOf([
     writeVarUint(SYNC_TYPE),
     writeVarUint(subType),
@@ -179,7 +183,7 @@ function operationFrame(
   lineage: string,
   operationId: string,
   update: Uint8Array,
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   // Canonical metadata: no whitespace, keys in this order (protocol §4.2).
   const metadata = Buffer.from(JSON.stringify({ lineage, operationId }), 'utf8');
 

@@ -229,8 +229,11 @@ function nodeSocketFactory(
     offers.push([...protocols]);
     sockets.push(socket);
     // Shadowed on the instance, never wrapped in a proxy: the provider assigns
-    // onmessage/onclose as properties of this very object.
-    socket.send = (data: string | ArrayBufferLike | Blob | ArrayBufferView): void => {
+    // onmessage/onclose as properties of this very object. `data` is left
+    // unannotated so it takes `WebSocket['send']`'s own parameter type: a
+    // hand-written union here drifts the moment the DOM lib changes, and then
+    // `write(data)` stops compiling.
+    socket.send = (data): void => {
       if (ArrayBuffer.isView(data)) {
         sent.push(new Uint8Array(
           data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),

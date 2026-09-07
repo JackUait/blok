@@ -429,11 +429,7 @@ test.describe('ui.block-tunes', () => {
       await createBlok(page, {
         tools: {
           header: {
-            className: 'Header',
-            config: {
-              levels: [ 1, 2, 3 ],
-              defaultLevel: 2,
-            },
+            className: 'Blok.Header',
           },
         },
         data: {

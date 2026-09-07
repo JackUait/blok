@@ -19,6 +19,10 @@ const SETUP_DOTNET_ACTION = 'actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271
 const BUILDX_ACTION = 'docker/setup-buildx-action@';
 const LOGIN_ACTION = 'docker/login-action@dbcb813823bdd20940b903addbd779551569679f';
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
+const PUBLIC_PUBLISH_STEP = 'Publish NuGet packages';
+const MIRROR_STEP = 'Mirror NuGet packages to the dodopizza feed';
+const PREFLIGHT_STEP = 'Require the dodopizza mirror token';
+const DODO_NUGET_FEED = 'https://nuget.pkg.github.com/dodopizza/index.json';
 const SERVER_ARCHIVES = [
   'blok-server_darwin_amd64.tar.gz',
   'blok-server_darwin_arm64.tar.gz',
@@ -39,6 +43,7 @@ type FamilyEntry = {
 
 type WorkflowStep = {
   if?: string;
+  env?: Record<string, string>;
   name?: string;
   run?: string;
   uses?: string;
@@ -380,6 +385,64 @@ describe('server release wiring', () => {
     expect(imagePush).toBeGreaterThan(assetUpload);
     expect(observable).toBeGreaterThan(imagePush);
     expect(publishDraft).toBeGreaterThan(observable);
+  });
+
+  it('mirrors both NuGets into the dodopizza feed from the artifacts nuget.org took', () => {
+    const source = read(RELEASE_WORKFLOW);
+    const workflow = parse(source) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+
+    const publicIndex = steps.findIndex((step) => step.name === PUBLIC_PUBLISH_STEP);
+    const mirrorIndex = steps.findIndex((step) => step.name === MIRROR_STEP);
+    const mirror = steps[mirrorIndex];
+
+    expect(publicIndex).toBeGreaterThan(-1);
+    expect(mirrorIndex).toBe(publicIndex + 1);
+
+    // Mirroring the packages nuget.org already accepted, rather than packing a
+    // second time, is what keeps the two feeds byte-identical for a version.
+    expect(mirror?.run).not.toContain('dotnet pack');
+
+    for (const packageId of ['Blok.Server', 'Blok.Server.AspNetCore']) {
+      expect(mirror?.run).toContain(
+        `.server-release-dist/nuget/${packageId}."$BLOK_SERVER_VERSION".nupkg`,
+      );
+    }
+
+    expect(mirror?.run).toContain(`--source ${DODO_NUGET_FEED}`);
+    expect(mirror?.run).toContain('--api-key "$DODO_PACKAGES_TOKEN"');
+    // Re-running a shipped tag must not fail on versions already mirrored.
+    expect(mirror?.run).toContain('--skip-duplicate');
+
+    // The org token reaches this step and nothing else, and is never confused
+    // with the public nuget.org key.
+    expect(mirror?.env).toEqual({
+      DODO_PACKAGES_TOKEN: '${{ secrets.BLOK_GITHUB_TOKEN }}',
+    });
+    expect(mirror?.run).not.toContain('NUGET_API_KEY');
+    // Twice and no more: the preflight guard, and this push.
+    expect(source.match(/secrets\.BLOK_GITHUB_TOKEN/g)).toHaveLength(2);
+  });
+
+  it('refuses to start a release when the dodopizza mirror token is missing', () => {
+    const source = read(RELEASE_WORKFLOW);
+    const workflow = parse(source) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+
+    const preflightIndex = steps.findIndex((step) => step.name === PREFLIGHT_STEP);
+    const preflight = steps[preflightIndex];
+    const publicIndex = steps.findIndex((step) => step.name === PUBLIC_PUBLISH_STEP);
+
+    // An absent token would otherwise surface at the mirror push, which runs
+    // after nuget.org already accepted the version — a release half shipped,
+    // with a public version that never reaches the dodopizza feed.
+    expect(preflightIndex).toBeGreaterThan(-1);
+    expect(preflightIndex).toBeLessThan(publicIndex);
+    expect(preflight?.env).toEqual({
+      DODO_PACKAGES_TOKEN: '${{ secrets.BLOK_GITHUB_TOKEN }}',
+    });
+    expect(preflight?.run).toContain('-z "$DODO_PACKAGES_TOKEN"');
+    expect(preflight?.run).toContain('exit 1');
   });
 
   it('holds GHCR credentials only for the image push', () => {

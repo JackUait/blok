@@ -52,6 +52,18 @@ jobs:
           echo "BLOK_SERVER_VERSION=$version" >> "$GITHUB_ENV"
           echo "RELEASE_SHA=$(git rev-parse "$RELEASE_TAG^{commit}")" >> "$GITHUB_ENV"
 
+      # Checked here rather than at the mirror push, which runs after nuget.org
+      # has already taken the version: a missing token there would leave a
+      # public release that never reaches the dodopizza feed.
+      - name: Require the dodopizza mirror token
+        env:
+          DODO_PACKAGES_TOKEN: ${{ secrets.BLOK_GITHUB_TOKEN }}
+        run: |
+          if [ -z "$DODO_PACKAGES_TOKEN" ]; then
+            echo "::error::BLOK_GITHUB_TOKEN is unset, so the release could not reach the dodopizza feed"
+            exit 1
+          fi
+
       - name: Wait for successful CI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -138,6 +150,22 @@ jobs:
           dotnet nuget push .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
             --api-key "$NUGET_API_KEY" \
             --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      # The same .nupkg files nuget.org just took, so a version can never mean
+      # different bytes in the two feeds. GitHub Packages accepts them as they
+      # are: it does not require RepositoryUrl to name a dodopizza repository.
+      - name: Mirror NuGet packages to the dodopizza feed
+        env:
+          DODO_PACKAGES_TOKEN: ${{ secrets.BLOK_GITHUB_TOKEN }}
+        run: |
+          dotnet nuget push .server-release-dist/nuget/Blok.Server."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$DODO_PACKAGES_TOKEN" \
+            --source https://nuget.pkg.github.com/dodopizza/index.json \
+            --skip-duplicate
+          dotnet nuget push .server-release-dist/nuget/Blok.Server.AspNetCore."$BLOK_SERVER_VERSION".nupkg \
+            --api-key "$DODO_PACKAGES_TOKEN" \
+            --source https://nuget.pkg.github.com/dodopizza/index.json \
             --skip-duplicate
 
       - name: Upload release assets

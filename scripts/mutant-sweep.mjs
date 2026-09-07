@@ -28,6 +28,17 @@ const RUN_TIMEOUT_MS = 180_000;
  */
 const BACKUP_DIR = '.mutation-state/sweep-backups';
 
+/**
+ * A file another process can create to stop a running sweep.
+ *
+ * SIGTERM cannot do this. The sweep loop is synchronous — `execFileSync` blocks
+ * the event loop, so a queued signal handler does not run until the whole loop
+ * finishes, which is exactly never when you want to stop it. The only way out
+ * of a sync loop is a check the loop itself performs, so it reads this path
+ * before every mutant. `--stop` writes it; a stopped sweep deletes it.
+ */
+const STOP_FILE = '.mutation-state/sweep-stop';
+
 const backupPathFor = (source) => join(BACKUP_DIR, `${source.replace(/[/\\]/g, '__')}.orig`);
 
 const restoreAll = () => {
@@ -113,6 +124,18 @@ const main = () => {
     return;
   }
 
+  if (process.argv.includes('--stop')) {
+    mkdirSync(BACKUP_DIR, { recursive: true });
+    writeFileSync(STOP_FILE, `${new Date().toISOString()}\n`);
+    process.stdout.write(`Asked every running sweep to stop after its current mutant (${STOP_FILE}).\n`);
+
+    return;
+  }
+
+  // Clearing it here, not when a sweep stops: one `--stop` must halt EVERY
+  // running sweep, and starting a new one is the explicit intent that cancels it.
+  rmSync(STOP_FILE, { force: true });
+
   const reportPath = argOf('report');
   const source = argOf('source');
   const tests = (argOf('tests') ?? '').split(',').filter(Boolean);
@@ -169,6 +192,11 @@ const main = () => {
 
   try {
     for (const [index, mutant] of live.entries()) {
+      if (existsSync(STOP_FILE)) {
+        process.stdout.write(`Stopped at ${index + 1}/${live.length} on request.\n`);
+        break;
+      }
+
       writeFileSync(source, applyMutant(original, mutant));
 
       const run = runTests(tests);

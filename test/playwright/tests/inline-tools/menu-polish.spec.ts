@@ -72,12 +72,20 @@ for (const width of [1280, 390]) {
         const dividers = conversion.getByRole('separator');
 
         await expect(dividers).toHaveCount(2);
-        const sections = await dividers.evaluateAll(elements => elements.map(element => ({
-          before: element.previousElementSibling?.getAttribute('data-blok-convert-group'),
-          after: element.nextElementSibling?.getAttribute('data-blok-item-name'),
-          width: element.getBoundingClientRect().width,
-          sectionWidth: element.parentElement?.getBoundingClientRect().width,
-        })));
+        const sections = await dividers.evaluateAll(elements => elements.map(element => {
+          const section = element.parentElement;
+
+          if (section === null) {
+            throw new Error('separator is not mounted in the menu');
+          }
+
+          return {
+            before: element.previousElementSibling?.getAttribute('data-blok-convert-group'),
+            after: element.nextElementSibling?.getAttribute('data-blok-item-name'),
+            width: element.getBoundingClientRect().width,
+            sectionWidth: section.getBoundingClientRect().width,
+          };
+        }));
 
         expect(sections.map(({ before, after }) => ({ before, after }))).toEqual([
           { before: 'heading', after: 'convert-toggle-heading-label' },

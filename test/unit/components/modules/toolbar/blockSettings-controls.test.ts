@@ -69,7 +69,7 @@ describe('Block settings control groups', () => {
 
   it.each(['heading', 'color'])('starts with %s controls instead of a current-block label', async (firstControl) => {
     const { settings, block } = createSettings([], [
-      { name: firstControl, title: firstControl === 'heading' ? 'Heading' : 'Color' },
+      { name: firstControl, title: firstControl === 'heading' ? 'Heading' : 'Color', onActivate: vi.fn() },
     ]);
 
     await settings.open(block);
@@ -83,12 +83,12 @@ describe('Block settings control groups', () => {
 
   it.each([false, true])('keeps tool tunes and conversion in one formatting group (selected: %s)', async (selected) => {
     const { settings, block, modules } = createSettings([
-      { name: 'first-custom', title: 'First custom' },
-      { name: 'delete', title: 'Delete' },
-      { name: 'last-custom', title: 'Last custom' },
+      { name: 'first-custom', title: 'First custom', onActivate: vi.fn() },
+      { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+      { name: 'last-custom', title: 'Last custom', onActivate: vi.fn() },
     ], [
-      { name: 'heading', title: 'Heading' },
-      { name: 'color', title: 'Color' },
+      { name: 'heading', title: 'Heading', onActivate: vi.fn() },
+      { name: 'color', title: 'Color', onActivate: vi.fn() },
     ]);
 
     modules.Tools.blockTools.set('header', new BlockToolAdapter({
@@ -113,9 +113,9 @@ describe('Block settings control groups', () => {
 
   it('separates tool controls from actions when the block converts to nothing', async () => {
     const { settings, block } = createSettings([
-      { name: 'first-custom', title: 'First custom' },
-      { name: 'delete', title: 'Delete' },
-    ], [{ name: 'text-size', title: 'Text size' }]);
+      { name: 'first-custom', title: 'First custom', onActivate: vi.fn() },
+      { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+    ], [{ name: 'text-size', title: 'Text size', onActivate: vi.fn() }]);
 
     await settings.open(block);
     const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
@@ -128,9 +128,9 @@ describe('Block settings control groups', () => {
 
   it('keeps read-only menus limited to copy link', async () => {
     const { settings, block, modules } = createSettings([
-      { name: 'delete', title: 'Delete' },
-      { name: 'copy-link', title: 'Copy link' },
-    ], [{ name: 'color', title: 'Color' }]);
+      { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+      { name: 'copy-link', title: 'Copy link', onActivate: vi.fn() },
+    ], [{ name: 'color', title: 'Color', onActivate: vi.fn() }]);
 
     modules.Tools.blockTools.set('header', new BlockToolAdapter({
       name: 'header', constructable: Header, config: {}, api: modules.API.methods as API,
@@ -147,11 +147,11 @@ describe('Block settings control groups', () => {
 
   it('keeps multi-selection formatting separate from duplicate and delete', async () => {
     const { settings, block, modules } = createSettings([
-      { name: 'custom-action', title: 'Custom action' },
-      { name: 'delete', title: 'Delete' },
-    ], [{ name: 'color', title: 'Color' }]);
+      { name: 'custom-action', title: 'Custom action', onActivate: vi.fn() },
+      { name: 'delete', title: 'Delete', onActivate: vi.fn() },
+    ], [{ name: 'color', title: 'Color', onActivate: vi.fn() }]);
 
-    modules.BlockSelection.selectedBlocks = [block, { ...block, id: 'second' }];
+    modules.BlockSelection.selectedBlocks = [block, { ...block, id: 'second' } as Block];
 
     await settings.open(block);
     const menu = document.querySelector('[data-blok-testid="block-tunes-popover"]');
@@ -170,7 +170,7 @@ describe('Block settings control groups', () => {
       title: 'More actions',
       children: {
         searchable: true,
-        items: [{ name: 'nested-action', title: 'Nested action' }],
+        items: [{ name: 'nested-action', title: 'Nested action', onActivate: vi.fn() }],
       },
     }]);
 

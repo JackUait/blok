@@ -1134,6 +1134,12 @@ export interface BlokMountOptions {
     /**
      * Stable unique identifier for the current editor.
      * Stored on each block the user edits.
+     *
+     * NOT private in a collaborative session: it is written into the shared
+     * document as `lastEditedBy`, and — only when `collaboration.user.name` is
+     * also set — published to the room alongside that name, so peers can put
+     * the name to the edit. Pass an opaque per-document token rather than an
+     * internal account key if that matters to you.
      */
     id: string;
 

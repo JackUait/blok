@@ -1513,6 +1513,37 @@ describe('BlockSettings', () => {
       expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Ada Lovelace' });
     });
 
+    it('paints a known name without waiting for the host directory', async () => {
+      // The host never answers, so the label can only carry a name if the
+      // footer painted what the directory already knew before mounting.
+      const resolveUser = vi.fn(() => new Promise<{ name: string }>(() => undefined));
+
+      blockSettings = new BlockSettings({
+        config: { resolveUser },
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blokMock = createBlokMock({ resolveUser });
+      blokMock.UserDirectory.learn('user-123', 'Grace Hopper');
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const element = (items[items.length - 1] as { element: HTMLElement }).element;
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEditedBy');
+      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Grace Hopper' });
+    });
+
     it('asks the host directory once however often the menu is reopened', async () => {
       const resolveUser = vi.fn(() => ({ name: 'Jack Uait' }));
 

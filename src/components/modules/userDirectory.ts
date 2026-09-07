@@ -12,8 +12,28 @@ export const LEARNED_NAMES_LIMIT = 200;
 const MAX_NAME_LENGTH = 32;
 
 /**
+ * The one form of a user id everything here compares against.
+ *
+ * The document stores ids NUL-stripped (see the serializer), so an id
+ * configured with a NUL comes back in a different form than it went in, and an
+ * id carrying stray whitespace would key the cache under a string no block ever
+ * names. Normalising once removes both mismatches.
+ * @param value - a user id from config or off the wire
+ * @returns the comparable id, or null when there is none
+ */
+export const normalizeUserId = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.replace(/\0/gu, '').trim();
+
+  return normalized === '' ? null : normalized;
+};
+
+/**
  * Trims a display name and caps it by code points, not UTF-16 units, so a
- * name of emoji is cut on a character boundary.
+ * name of emoji is never cut into a lone surrogate.
  * @param value - the candidate name, from config or off the wire
  * @returns the usable name, or null when there is none
  */
@@ -47,8 +67,23 @@ export class UserDirectory extends Module {
   /** In-flight `resolveUser` calls, so concurrent askers share one. */
   private pending = new Map<string, Promise<UserInfo | null>>();
 
+  /** Ids the host had no answer for, so it is asked once, not once per open. */
+  private unknownToHost = new Set<string>();
+
   /** Names peers published about themselves. Insertion-ordered, bounded. */
   private learned = new Map<string, string>();
+
+  /** This editor's own display name, from its own config — never off the wire. */
+  private selfName: string | null = null;
+
+  /**
+   * Records this editor's own display name, for a host that names itself
+   * through `collaboration.user` rather than `user.name`.
+   * @param name - the display name this editor publishes to a room
+   */
+  public identify(name: unknown): void {
+    this.selfName = usableName(name);
+  }
 
   /**
    * What this directory can say about a user right now, with no async work.
@@ -56,23 +91,30 @@ export class UserDirectory extends Module {
    * @returns the user, or null when nothing is known
    */
   public known(id: string): UserInfo | null {
-    const configured = this.config.user;
+    const key = normalizeUserId(id);
 
-    if (configured?.id === id) {
-      const name = usableName(configured.name);
-
-      if (name !== null) {
-        return { name };
-      }
+    if (key === null || this.isDestroyed) {
+      return null;
     }
 
-    const hostAnswer = this.resolved.get(id);
+    const hostAnswer = this.resolved.get(key);
+
+    /**
+     * Nothing a peer publishes may name the local user: awareness is
+     * unauthenticated, so a forged pair would otherwise rename this person in
+     * their own footer. Their own config and the host directory still can.
+     */
+    if (key === normalizeUserId(this.config.user?.id)) {
+      const trusted = usableName(this.config.user?.name) ?? this.selfName;
+
+      return trusted !== null ? { name: trusted } : hostAnswer ?? null;
+    }
 
     if (hostAnswer !== undefined) {
       return hostAnswer;
     }
 
-    const learnedName = this.learned.get(id);
+    const learnedName = this.learned.get(key);
 
     return learnedName !== undefined ? { name: learnedName } : null;
   }
@@ -85,13 +127,20 @@ export class UserDirectory extends Module {
    * @returns the user, or null when nobody can name them
    */
   public async resolve(id: string): Promise<UserInfo | null> {
+    const key = normalizeUserId(id);
     const resolveUser = this.config.resolveUser;
 
-    if (resolveUser === undefined || this.resolved.has(id)) {
+    if (key === null || resolveUser === undefined || this.resolved.has(key) || this.unknownToHost.has(key)) {
       return this.known(id);
     }
 
-    const inFlight = this.pending.get(id);
+    // The host cannot improve on a name this editor holds about itself, and
+    // asking anyway would paint one name and then swap it for the other.
+    if (key === normalizeUserId(this.config.user?.id) && this.known(key) !== null) {
+      return this.known(key);
+    }
+
+    const inFlight = this.pending.get(key);
 
     if (inFlight !== undefined) {
       return inFlight;
@@ -102,26 +151,31 @@ export class UserDirectory extends Module {
     // as a failure, and none may be cached as if the host had answered.
     const request = (async (): Promise<UserInfo | null> => {
       try {
-        const answer = await resolveUser(id);
-        const name = usableName((answer)?.name);
+        const answer = await resolveUser(key);
+        const name = usableName(answer?.name);
 
-        if (answer === null || answer === undefined || name === null) {
-          return this.known(id);
+        // The editor can be torn down while the host is still looking; caching
+        // an answer nobody will read only keeps the dead editor reachable.
+        if (this.isDestroyed) {
+          return null;
         }
 
-        const user: UserInfo = { ...answer, name };
-
-        this.resolved.set(id, user);
-
-        return user;
+        if (name === null) {
+          this.unknownToHost.add(key);
+        } else {
+          this.resolved.set(key, { ...answer, name });
+        }
       } catch {
-        return this.known(id);
+        // A failed lookup is not an answer, so the host may be asked again.
       } finally {
-        this.pending.delete(id);
+        this.pending.delete(key);
       }
+
+      // One precedence rule for both paints: whatever `known` says now.
+      return this.known(key);
     })();
 
-    this.pending.set(id, request);
+    this.pending.set(key, request);
 
     return request;
   }
@@ -133,14 +187,10 @@ export class UserDirectory extends Module {
    * @param name - the peer's display name
    */
   public learn(id: unknown, name: unknown): void {
-    if (typeof id !== 'string') {
-      return;
-    }
-
-    const key = id.trim();
+    const key = normalizeUserId(id);
     const value = usableName(name);
 
-    if (key === '' || value === null) {
+    if (key === null || value === null || key === normalizeUserId(this.config.user?.id)) {
       return;
     }
 

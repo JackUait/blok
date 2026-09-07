@@ -50,6 +50,58 @@ describe('UserDirectory', () => {
     });
   });
 
+  describe('the local user', () => {
+    it('refuses a name a peer claims for the local user', () => {
+      const directory = createDirectory({ user: { id: 'u1' } });
+
+      // Awareness is unauthenticated: any room member can publish this pair,
+      // and it would otherwise rename the local user in their own footer.
+      directory.learn('u1', 'Evil Mallory');
+
+      expect(directory.known('u1')).toBeNull();
+    });
+
+    it('takes the local name from the editor itself', () => {
+      const directory = createDirectory({ user: { id: 'u1' } });
+
+      directory.identify('Ada');
+
+      expect(directory.known('u1')?.name).toBe('Ada');
+    });
+
+    it('does not flip a configured local name to a host answer', async () => {
+      const resolveUser = vi.fn(() => ({ name: 'Host Ada' }));
+      const directory = createDirectory({ user: { id: 'u1', name: 'Ada' }, resolveUser });
+
+      // The footer paints `known()` first and the resolved answer second, so a
+      // disagreement between the two is a name swapping under the reader.
+      await expect(directory.resolve('u1')).resolves.toEqual({ name: 'Ada' });
+      expect(resolveUser).not.toHaveBeenCalled();
+    });
+
+    it('still lets the host directory name the local user', async () => {
+      const directory = createDirectory({ user: { id: 'u1' }, resolveUser: () => ({ name: 'Ada' }) });
+
+      await directory.resolve('u1');
+
+      expect(directory.known('u1')?.name).toBe('Ada');
+    });
+
+    it('matches an id whose stored form was stripped of a NUL', () => {
+      const directory = createDirectory({ user: { id: 'a\u0000b', name: 'Ada' } });
+
+      // The document stores ids NUL-stripped, so that is the form a block
+      // carries back — the configured name must survive the round trip.
+      expect(directory.known('ab')?.name).toBe('Ada');
+    });
+
+    it('matches an id that was configured with stray whitespace', () => {
+      const directory = createDirectory({ user: { id: '  u1  ', name: 'Ada' } });
+
+      expect(directory.known('u1')?.name).toBe('Ada');
+    });
+  });
+
   describe('what it refuses to learn', () => {
     it('ignores a name that is not a string', () => {
       const directory = createDirectory();
@@ -90,6 +142,31 @@ describe('UserDirectory', () => {
       directory.learn('u2', 'Grace H');
 
       expect(directory.known('u2')?.name).toBe('Grace H');
+    });
+
+    it('keeps every name when the peers exactly fill the bound', () => {
+      const directory = createDirectory();
+
+      for (let i = 0; i < LEARNED_NAMES_LIMIT; i++) {
+        directory.learn(`u${i}`, `name-${i}`);
+      }
+
+      expect(directory.known('u0')?.name).toBe('name-0');
+    });
+
+    it('treats a re-published name as the freshest entry, not the oldest', () => {
+      const directory = createDirectory();
+
+      for (let i = 0; i < LEARNED_NAMES_LIMIT; i++) {
+        directory.learn(`u${i}`, `name-${i}`);
+      }
+
+      directory.learn('u0', 'name-0');
+      directory.learn('newcomer', 'Newcomer');
+
+      // The peer who just spoke is the last one who should be forgotten.
+      expect(directory.known('u0')?.name).toBe('name-0');
+      expect(directory.known('u1')).toBeNull();
     });
 
     it('bounds the learned names so a hostile peer cannot mint ids forever', () => {
@@ -183,6 +260,34 @@ describe('UserDirectory', () => {
 
     it('answers without a host directory at all', async () => {
       const directory = createDirectory();
+
+      await expect(directory.resolve('u1')).resolves.toBeNull();
+    });
+
+    it('asks the host once even when it has no answer', async () => {
+      const resolveUser = vi.fn(() => null);
+      const directory = createDirectory({ resolveUser });
+
+      await directory.resolve('u1');
+      await directory.resolve('u1');
+      await directory.resolve('u1');
+
+      expect(resolveUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('still uses a name learned after the host drew a blank', async () => {
+      const directory = createDirectory({ resolveUser: () => null });
+
+      await directory.resolve('u2');
+      directory.learn('u2', 'Grace');
+
+      await expect(directory.resolve('u2')).resolves.toEqual({ name: 'Grace' });
+    });
+
+    it('answers nothing once the editor is gone', async () => {
+      const directory = createDirectory({ resolveUser: () => ({ name: 'Ada' }) });
+
+      directory.markDestroyed();
 
       await expect(directory.resolve('u1')).resolves.toBeNull();
     });

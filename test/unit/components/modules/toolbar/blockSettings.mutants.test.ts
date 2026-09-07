@@ -18,6 +18,7 @@ import { BlockSettingsClosed, BlockSettingsOpened } from '../../../../../src/com
 import { SelectionUtils } from '../../../../../src/components/selection';
 import { beautifyShortcut } from '../../../../../src/components/utils/string';
 import { DATA_ATTR } from '../../../../../src/components/constants/data-attributes';
+import { UserDirectory } from '../../../../../src/components/modules/userDirectory';
 import type { wrapBlocksInColumns } from '../../../../../src/tools/column-drop';
 
 /* ------------------------------------------------------------------ mocks */
@@ -247,9 +248,10 @@ type BlokMock = {
     getLocale: Mock<() => string>;
     getEnglishTranslation: Mock<(key: string) => string>;
   };
+  UserDirectory: UserDirectory;
 };
 
-const createBlokMock = (): BlokMock => ({
+const createBlokMock = (config: BlokConfig): BlokMock => ({
   ReadOnly: { isEnabled: false, isControlsHidden: false },
   BlockSelection: {
     selectedBlocks: [],
@@ -289,6 +291,12 @@ const createBlokMock = (): BlokMock => ({
     getLocale: vi.fn(() => 'en'),
     getEnglishTranslation: vi.fn((key: string) => `en(${key})`),
   },
+  // The live config object, not a copy: a test that assigns `resolveUser`
+  // later must reach the same directory the module under test consults.
+  UserDirectory: new UserDirectory({
+    config,
+    eventsDispatcher: { on: vi.fn(), off: vi.fn(), emit: vi.fn() } as unknown as ConstructorParameters<typeof UserDirectory>[0]['eventsDispatcher'],
+  }),
 });
 
 /* ---------------------------------------------------------------- helpers */
@@ -371,7 +379,7 @@ describe('BlockSettings — mutation coverage', () => {
       config,
       eventsDispatcher: dispatcher as unknown as ConstructorParameters<typeof BlockSettings>[0]['eventsDispatcher'],
     });
-    blok = createBlokMock();
+    blok = createBlokMock(config);
     settings.state = blok as unknown as BlokModules;
     settings.make();
 

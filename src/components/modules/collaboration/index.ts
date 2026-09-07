@@ -15,6 +15,7 @@ import {
   type PresenceState,
 } from './presence';
 import { createPresenceRenderer } from './presence-renderer';
+import { normalizeUserId } from '../userDirectory';
 import { createOperationStore, type OperationStore, type OperationStoreStats } from './operation-store';
 import { createCollabProvider, RELINEAGE_REASON, STALE_LINEAGE_REASON } from './provider';
 import type {
@@ -410,7 +411,7 @@ export class Collaboration extends Module {
       doc: collaboration.doc,
       url: syncUrl(server, collaboration.doc),
       user: collaboration.user,
-      userId: this.config.user?.id,
+      userId: normalizeUserId(this.config.user?.id) ?? undefined,
       offline: collaboration.offline === true,
       // Core refuses `offline: true` without a non-empty scope, so the fallback
       // is only ever reached on a session that opens no database at all.
@@ -743,10 +744,10 @@ export class Collaboration extends Module {
     this.Blok.YjsManager.enableAwareness();
     this.awarenessUnhook = this.Blok.YjsManager.onAwarenessChange(() => this.emitStatus());
 
-    // The room never sends this editor its own state back, so the local pair
-    // is taught directly — otherwise a host with a collaboration name but no
-    // `user.name` could name every peer except themselves.
-    this.Blok.UserDirectory.learn(settings.userId, settings.user?.name);
+    // The room never sends this editor its own state back, and a name off the
+    // wire is refused for the local id anyway — so a host that names itself
+    // through `collaboration.user` alone teaches the directory directly.
+    this.Blok.UserDirectory.identify(settings.user?.name);
 
     this.presence = createPresence({
       yjs: this.Blok.YjsManager,
@@ -1409,8 +1410,10 @@ export class Collaboration extends Module {
     // The walk the presence renderer takes: not this client, carrying an
     // identity, at most MAX_PEERS after a bounded scan — so one hostile frame
     // full of fabricated states cannot hand the host a list its size.
-    // The walk is already bounded, so learning from it inherits that bound —
-    // a peer minting ids cannot grow this past what the renderer draws.
+    // What bounds the directory is its own cap, not this walk: a peer minting
+    // a fresh id per frame accumulates across frames and can push honest names
+    // out of the cache. Losing a name degrades the footer to a date; it cannot
+    // grow the map.
     const drawable = selectDrawableStates(
       presenceStates(this.Blok.YjsManager.getAwarenessStates()),
       this.presence?.localClientId ?? null

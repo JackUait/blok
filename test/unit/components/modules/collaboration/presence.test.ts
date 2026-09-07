@@ -380,6 +380,18 @@ describe('presence — local awareness upkeep', () => {
       expect(write?.value).not.toHaveProperty('id');
     });
 
+    it('publishes no id for an editor who stays anonymous', () => {
+      const { seam, presence } = setup({ userId: 'account-7' });
+
+      presence.start();
+
+      const write = seam.writes.filter((entry) => entry.field === 'user').at(-1);
+
+      // The id exists to put a NAME to an edit. Publishing it for somebody who
+      // deliberately published no name would identify them without naming them.
+      expect(write?.value).not.toHaveProperty('id');
+    });
+
     it('refuses a blank attribution id rather than publishing an empty one', () => {
       const { seam, presence } = setup({ userId: '   ' });
 

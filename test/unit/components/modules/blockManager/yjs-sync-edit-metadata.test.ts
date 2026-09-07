@@ -204,14 +204,14 @@ describe('BlockYjsSync — edit metadata from the document', () => {
     expect(compose.mock.calls[0][0].lastEditedBy).toBe('user-peer');
   });
 
-  it('takes the time and the author as one record', async () => {
+  it('leaves the stamps alone when the doc record carries no edit', async () => {
     const block = createMockBlock({ id: 'block-1', lastEditedAt: 111, lastEditedBy: 'user-local' });
 
     createHarness([block]);
     manager.fromJSON([{ id: 'block-1', type: 'paragraph', data: { text: 'hello' } }]);
 
-    // A doc record with no stamps at all describes no edit, so keeping the old
-    // time while nulling the author would leave the two halves disagreeing.
+    // A record with no time records no edit — a peer's pure reparent looks
+    // exactly like this — so there is nothing here to overwrite an author with.
     remoteTransact('block-1', () => {
       const yblock = manager.getBlockById('block-1');
 
@@ -220,8 +220,32 @@ describe('BlockYjsSync — edit metadata from the document', () => {
 
     await flush();
 
-    expect(block.lastEditedBy).toBeNull();
-    expect(block.lastEditedAt).toBeUndefined();
+    expect(block.lastEditedBy).toBe('user-local');
+    expect(block.lastEditedAt).toBe(111);
+  });
+
+  it('leaves the stamps alone when the doc names a tool this client cannot build', async () => {
+    const block = createMockBlock({ id: 'block-1', lastEditedAt: 111, lastEditedBy: 'user-local' });
+
+    createHarness([block]);
+    manager.fromJSON([{ id: 'block-1', type: 'paragraph', data: { text: 'hello' } }]);
+
+    // The block keeps the old tool and the old data, so stamping it would make
+    // `Saver` persist an edit this block never took.
+    remoteTransact('block-1', () => {
+      const yblock = manager.getBlockById('block-1');
+
+      yblock?.set('type', 'a-tool-nobody-registered');
+      (yblock?.get('data') as Y.Map<unknown>).set('text', 'typed by a peer');
+      yblock?.set('lastEditedAt', 999);
+      yblock?.set('lastEditedBy', 'user-peer');
+    });
+
+    await flush();
+
+    expect(block.setData).not.toHaveBeenCalled();
+    expect(block.lastEditedBy).toBe('user-local');
+    expect(block.lastEditedAt).toBe(111);
   });
 
   it('forgets the author when the peer edit dropped it', async () => {

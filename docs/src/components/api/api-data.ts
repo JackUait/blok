@@ -672,7 +672,7 @@ const editor = new Blok(config);`,
         type: "{ id: string; name?: string }",
         default: "undefined",
         description:
-          "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Add `name` and the block settings footer reads \"Last edited by <name>\" with no callback to wire. For other people\'s ids Blok asks `resolveUser`, and in a collaborative room it also learns names from the peers themselves.",
+          "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Add `name` and the block settings footer reads \"Last edited by <name>\" with no callback to wire. For other people\'s ids Blok asks `resolveUser`, and in a collaborative room it also learns names from the peers themselves. The id is not private under collaboration: it goes into the shared document as `lastEditedBy`, and — only when `collaboration.user.name` is set too — into the presence state next to that name, which is how peers name each other. Pass an opaque per-document token instead of an internal account key if that matters.",
       },
       {
         option: "resolveUser",

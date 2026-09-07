@@ -43,8 +43,9 @@ export interface PresenceOptions {
   /** Display identity from `config.collaboration.user`, if the host set one. */
   user?: { name?: string; color?: string };
   /**
-   * Attribution id from `config.user.id`. Published so peers can put a name to
-   * the `lastEditedBy` this editor writes into the shared document.
+   * Attribution id from `config.user.id`. Published ONLY alongside a display
+   * name, so peers can put that name to the `lastEditedBy` this editor writes
+   * into the shared document.
    */
   userId?: string;
   /** The block the caret sits in right now. */
@@ -301,14 +302,20 @@ export const createPresence = (options: PresenceOptions): Presence => {
     const name = options.user?.name;
     const configured = options.user?.color;
     const color = isPresenceColor(configured) ? configured : presenceColorFor(state.localClientId ?? 0);
+    const named = typeof name === 'string' && name.trim() !== '';
     const id = options.userId?.trim();
 
+    /**
+     * The id rides along ONLY behind a name. It exists so a peer can put that
+     * name to the `lastEditedBy` in the document; published on its own it would
+     * identify somebody who deliberately chose to appear anonymous.
+     */
     yjs.setAwarenessField(
       'user',
       {
-        ...typeof name === 'string' && name.trim() !== '' ? { name } : {},
+        ...named ? { name } : {},
         color,
-        ...id !== undefined && id !== '' ? { id } : {},
+        ...named && id !== undefined && id !== '' ? { id } : {},
       }
     );
   };

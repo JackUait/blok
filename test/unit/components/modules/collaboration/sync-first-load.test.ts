@@ -411,6 +411,7 @@ interface BootOptions {
   offline?: boolean;
   offlineScope?: string;
   user?: { name: string; color?: string };
+  editor?: { id: string; name?: string };
 }
 
 const boot = async (options: BootOptions = {}): Promise<Harness> => {
@@ -448,6 +449,7 @@ const boot = async (options: BootOptions = {}): Promise<Harness> => {
     },
     data: options.data,
     readOnly: options.readOnly,
+    ...(options.editor === undefined ? {} : { user: options.editor }),
     ...(options.collaboration === false
       ? {}
       : { server: options.server ?? 'https://sync.test/api/', collaboration }),
@@ -2492,6 +2494,18 @@ describe('collaboration — sync-first load', () => {
       expect(seen.at(-1)?.reason).toBeUndefined();
       // Two syncs and a reconnect on real timers.
     }, 20_000);
+
+    it('names the local editor from the identity it publishes to the room', async () => {
+      const harness = await boot({ user: { name: 'Ada' }, editor: { id: 'account-7' } });
+
+      firstSync(harness, [{ type: 'paragraph', data: { text: 'synced' } }]);
+
+      await waitFor(() => harness.core.moduleInstances.BlockManager.blocks.length === 1, 'remote block');
+
+      // The room never echoes this editor's own state back, so without the
+      // direct hand-off a host could name every peer except themselves.
+      expect(harness.core.moduleInstances.UserDirectory.known('account-7')?.name).toBe('Ada');
+    });
 
     it('learns a peer name so the last-edited footer can use it', async () => {
       const harness = await boot();

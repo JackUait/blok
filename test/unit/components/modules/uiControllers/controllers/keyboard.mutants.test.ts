@@ -205,6 +205,9 @@ const createHarness = (options?: {
     },
     BlockEvents: {
       keydown: vi.fn(),
+      // handleEscape reads this before the PopoverRegistry branch (see the
+      // emoji-menu Escape fix); every Escape now touches it.
+      emojiTrigger: { opened: false, close: vi.fn() },
     },
     Caret: {
       setToBlock: vi.fn(),

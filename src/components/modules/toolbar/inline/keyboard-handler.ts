@@ -1,4 +1,6 @@
 import { Flipper } from '../../../flipper';
+import { hasEscapeLayer } from '../../../utils/dismissable-layer';
+import { isInsideKeyboardOwner } from '../../blockEvents/utils/keyboard';
 
 import type { PopoverInline } from '../../../utils/popover/popover-inline';
 
@@ -89,6 +91,16 @@ export class InlineKeyboardHandler {
     const flipper = popover?.flipper;
     const mainFlipperHasFocus = flipper?.hasFocus() ?? false;
     const hasNestedPopover = popover?.hasNestedPopoverOpen ?? false;
+
+    // Native submenus bypass editor keys; inline popovers have no registry trigger.
+    if (event.key === 'Escape' && opened && !event.defaultPrevented && hasNestedPopover && !hasEscapeLayer() &&
+      event.target instanceof Node && isInsideKeyboardOwner(event.target) && popover?.hasNode(event.target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.closeNestedPopover();
+
+      return;
+    }
 
     /**
      * Close inline toolbar when Up/Down arrow key is pressed without Shift

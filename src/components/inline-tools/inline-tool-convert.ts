@@ -1,12 +1,12 @@
 import type { InlineTool, API } from '../../../types';
 import type { Blocks, Selection, Tools, Caret, I18n } from '../../../types/api';
-import type { MenuConfig, MenuConfigItem } from '../../../types/tools';
+import type { MenuConfig } from '../../../types/tools';
 import { SelectionUtils } from '../selection/index';
 import type { BlockToolAdapter } from '../tools/block';
 import { capitalize, isMobileScreen } from '../utils';
 import { getCaretOffset } from '../utils/caret/selection';
 import { getConvertibleToolsForBlock } from '../utils/blocks';
-import { buildConvertMenuEntries, type ConvertMenuI18n } from '../utils/convert-menu';
+import { buildConvertMenuEntries, buildConvertMenuItems, type ConvertMenuI18n } from '../utils/convert-menu';
 import { translateToolTitle, translateToolName } from '../utils/tools';
 
 /**
@@ -98,18 +98,15 @@ export class ConvertInlineTool implements InlineTool {
       return [];
     }
 
-    const convertToItems = buildConvertMenuEntries(convertibleTools, this.i18nInstance)
-      .map<MenuConfigItem>((entry) => ({
-        icon: entry.icon,
-        title: entry.title,
-        name: entry.name,
-        closeOnActivate: true,
-        onActivate: async () => {
-          const newBlock = await this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data);
+    const convertToItems = buildConvertMenuItems(
+      buildConvertMenuEntries(convertibleTools, this.i18nInstance),
+      this.i18nInstance,
+      async (entry) => {
+        const newBlock = await this.blocksAPI.convert(currentBlock.id, entry.toolName, entry.data);
 
-          this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
-        },
-      }));
+        this.caretAPI.setToBlock(newBlock, 'default', caretOffset);
+      }
+    );
 
     const currentBlockToolboxItem = await currentBlock.getActiveToolboxEntry();
     const currentBlockTitle = currentBlockToolboxItem
@@ -126,7 +123,8 @@ export class ConvertInlineTool implements InlineTool {
       },
       children: {
         items: convertToItems,
-        width: 'auto',
+        searchable: true,
+        width: '320px',
         onOpen: () => {
           if (isDesktop) {
             this.selectionAPI.setFakeBackground();

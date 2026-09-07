@@ -92,7 +92,7 @@
   margin-top: var(--blok-space-1);
   /* Two fixed steps like the caption: small below the medium breakpoint,
      full size from it up (@container rule below). */
-  padding: 2px 6px;
+  padding: var(--blok-space-0-5) var(--blok-space-1-5);
   font: inherit;
   font-size: 10px;
   font-weight: 500;

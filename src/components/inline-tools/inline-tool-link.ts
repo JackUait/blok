@@ -31,18 +31,18 @@ const SUGGESTION_ROW_VALID = `${SUGGESTION_ROW_BASE} cursor-pointer can-hover:ho
 const SUGGESTION_ROW_INVALID = `${SUGGESTION_ROW_BASE} pointer-events-none`;
 
 /**
- * The suggestion's leading icon sits in the same soft chip the popover menus
+ * The suggestion's leading icon sits in the same fixed box the popover menus
  * use for their item icons, so the link card reads as part of one system.
  */
-const SUGGESTION_ICON_CHIP = 'flex items-center justify-center size-6 shrink-0 rounded-md bg-popover-icon-bg text-gray-text transition-opacity duration-150 [&_svg]:size-4';
+const SUGGESTION_ICON_CLASSES = 'flex items-center justify-center size-6 shrink-0 text-gray-text transition-opacity duration-150 [&_svg]:size-4';
 const SUGGESTION_URL_TEXT = 'block text-[13px] leading-[18px] font-medium truncate';
 const SUGGESTION_TYPE_TEXT = 'block text-[11px] leading-[14px] text-gray-text mt-px';
 
 /**
- * Keycap-style ⏎ affordance on the confirmable suggestion row. Shown only when
- * pressing Enter would actually insert the link.
+ * ⏎ affordance on the confirmable suggestion row. Shown only when pressing
+ * Enter would actually insert the link.
  */
-const ENTER_HINT_BASE = 'items-center justify-center size-5 shrink-0 rounded-md bg-popover-icon-bg text-gray-text [&_svg]:size-3.5';
+const ENTER_HINT_CLASSES = 'items-center justify-center size-5 shrink-0 text-gray-text [&_svg]:size-3.5';
 
 /**
  * Link Tool
@@ -518,7 +518,7 @@ export class LinkInlineTool implements InlineTool {
 
     const iconEl = document.createElement('span');
 
-    iconEl.className = SUGGESTION_ICON_CHIP;
+    iconEl.className = SUGGESTION_ICON_CLASSES;
     iconEl.setAttribute('data-link-suggestion-icon', '');
 
     const textEl = document.createElement('span');
@@ -537,7 +537,7 @@ export class LinkInlineTool implements InlineTool {
 
     const enterHint = document.createElement('span');
 
-    enterHint.className = `hidden ${ENTER_HINT_BASE}`;
+    enterHint.className = `hidden ${ENTER_HINT_CLASSES}`;
     enterHint.setAttribute('data-link-suggestion-enter-hint', '');
     enterHint.setAttribute('aria-hidden', 'true');
     enterHint.innerHTML = IconReturn;
@@ -580,7 +580,7 @@ export class LinkInlineTool implements InlineTool {
 
     if (iconEl) {
       iconEl.innerHTML = icon;
-      iconEl.className = `${SUGGESTION_ICON_CHIP} ${isComplete ? '' : 'opacity-50'}`.trim();
+      iconEl.className = `${SUGGESTION_ICON_CLASSES} ${isComplete ? '' : 'opacity-50'}`.trim();
     }
     if (urlEl) {
       urlEl.textContent = trimmed;
@@ -596,7 +596,7 @@ export class LinkInlineTool implements InlineTool {
       row.tabIndex = isComplete ? 0 : -1;
     }
     if (enterHint) {
-      enterHint.className = `${isComplete ? 'flex' : 'hidden'} ${ENTER_HINT_BASE}`;
+      enterHint.className = `${isComplete ? 'flex' : 'hidden'} ${ENTER_HINT_CLASSES}`;
     }
 
     this.nodes.suggestion.classList.remove('hidden');

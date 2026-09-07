@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   IconMarker,
   IconBold,
@@ -14,24 +14,6 @@ import {
   IconH2,
 } from '../../../../src/components/icons';
 
-/**
- * Inline-toolbar icon unity (2026-08-05, user-directed "make all of these
- * icons look unified when they are placed together").
- *
- * The inline formatting glyphs render side by side in the inline toolbar
- * grid, so they are read as ONE type specimen. Unified system:
- *
- * - one stroke weight: the 1.25 house hairline — including the B (the 1.9
- *   "semantic bold" experiment read as a different icon set in the grid)
- * - letterforms share cap line y=4 and baseline y=16
- * - symbol glyphs (code, equation) share the y 5.5-14.5 optical band,
- *   centred on (10, 10)
- * - the small × subglyphs (Tx, √x) are the same 3.4-unit glyph, sitting on
- *   their parent glyph's bottom line
- * - the sup/sub pair mirrors around the same lines: the lowercase × sits on
- *   the baseline (sup) or hangs from the cap line (sub), and the small 2 is
- *   the house digit-2 skeleton (IconH2's digit, affine-mapped)
- */
 
 const INLINE_ICONS = {
   IconMarker,
@@ -57,7 +39,6 @@ const digitPathOf = (icon: string): string => {
 
 interface Point { x: number; y: number }
 
-/** Flattens an absolute M/L/C/H/V path into its coordinate stream (control points included). */
 const pointsOf = (d: string): Point[] => {
   const points: Point[] = [];
   let current: Point = { x: 0, y: 0 };
@@ -81,7 +62,6 @@ const pointsOf = (d: string): Point[] => {
   return points;
 };
 
-/** Scale + translation taking the source point cloud's bounding box onto the target's. */
 const affineOf = (source: Point[], target: Point[]): { sx: number; sy: number; tx: number; ty: number } => {
   const box = (pts: Point[]): { x: number; y: number; w: number; h: number } => {
     const xs = pts.map((p) => p.x);
@@ -114,30 +94,51 @@ const spanOf = (d: string): { x: number; y: number } => {
 };
 
 describe('inline-toolbar icon unity', () => {
-  it.each(Object.entries(INLINE_ICONS))('%s strokes only at the 1.25 hairline', (_name, icon) => {
-    const widths = icon.match(/stroke-width="([^"]+)"/g) ?? [];
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    expect(widths.length).toBeGreaterThan(0);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-    for (const w of widths) {
-      expect(w).toBe('stroke-width="1.25"');
+  it.each(Object.entries(INLINE_ICONS))('%s uses the house stroke with lighter tiny digits', (name, icon) => {
+    const shapes = Array.from(svgOf(icon).querySelectorAll('[stroke="currentColor"]'));
+    const hasSmallDigit = name === 'IconSuperscript' || name === 'IconSubscript';
+
+    expect(shapes.length).toBeGreaterThan(0);
+
+    for (const [index, shape] of shapes.entries()) {
+      const width = hasSmallDigit && index === shapes.length - 1 ? '1.05' : '1.25';
+
+      expect(shape.getAttribute('stroke-width')).toBe(width);
     }
   });
 
-  it('letterforms sit on the shared cap line (y4) and baseline (y16)', () => {
-    expect(IconBold).toContain('M6.5 4V16');
-    // italic serifs centred on x=10: top serif 9-15, bottom serif 5-11
-    expect(IconItalic).toContain('M9 4h6');
-    // U bowl starts on the cap line, the rule IS the baseline
-    expect(IconUnderline).toContain('M6 4v5.5');
-    expect(IconUnderline).toContain('M5.5 16h9');
-    // T bar on the cap line, stem runs to the baseline
-    expect(IconClearFormat).toContain('M4 4h8M8 4v12');
+  it('letterforms sit on the shared cap line (y5) and baseline (y15)', () => {
+    expect(IconBold).toContain('M6.5 5v10');
+    expect(IconItalic).toContain('M9 5h6');
+    expect(IconUnderline).toContain('M6 5v4');
+    expect(IconUnderline).toContain('M5.5 15h9');
+    expect(IconClearFormat).toContain('M4 5h8M8 5v10');
   });
 
-  it('symbol glyphs share the 5.5-14.5 optical band centred on (10,10)', () => {
-    expect(IconCode).toContain('m8 5.5-4 4.5 4 4.5m4-9 4 4.5-4 4.5');
-    expect(IconEquation).toContain('M4.25 10.5 6 14.5 8.5 5.5h7.25');
+  it('symbol outlines stay centred on (10,10) inside the letterform band', () => {
+    for (const icon of [IconCode, IconEquation]) {
+      const outline = svgOf(icon).querySelector('path')?.getAttribute('d') ?? '';
+      const points = pointsOf(outline);
+      const xs = points.map(point => point.x);
+      const ys = points.map(point => point.y);
+
+      expect(points.length).toBeGreaterThanOrEqual(4);
+      expect((Math.min(...xs) + Math.max(...xs)) / 2).toBe(10);
+      expect((Math.min(...ys) + Math.max(...ys)) / 2).toBe(10);
+      expect(Math.min(...xs)).toBeGreaterThanOrEqual(3);
+      expect(Math.max(...xs)).toBeLessThanOrEqual(17);
+      expect(Math.min(...ys)).toBeGreaterThanOrEqual(5);
+      expect(Math.max(...ys)).toBeLessThanOrEqual(15);
+      expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(8);
+    }
   });
 
   it('the small × subglyphs of Tx and √x are the same 3.4-unit glyph', () => {
@@ -151,21 +152,16 @@ describe('inline-toolbar icon unity', () => {
     }
   });
 
-  it('marker chip sits on the 3-17 content inset', () => {
-    expect(IconMarker).toContain('x="3" y="3" width="14" height="14"');
+  it('marker chip uses the shared 14 by 12 panel', () => {
+    expect(IconMarker).toContain('x="3" y="4" width="14" height="12"');
   });
 
   it('sup/sub × crosses are the same 6.5-unit glyph on the shared letterform lines', () => {
-    // superscript: × on the y16 baseline; subscript: × hanging from the y4 cap
-    // line — the pair mirrors around the exact lines the letterforms use
-    expect(IconSuperscript).toContain('M4 9.5 10.5 16M10.5 9.5 4 16');
-    expect(IconSubscript).toContain('M4 4 10.5 10.5M10.5 4 4 10.5');
+    expect(IconSuperscript).toContain('M4 8.5 10.5 15M10.5 8.5 4 15');
+    expect(IconSubscript).toContain('M4 5 10.5 11.5M10.5 5 4 11.5');
   });
 
   it('the ²/₂ digits are the house digit-2 skeleton, affine-mapped', () => {
-    // one digit-2 drawing exists in the house (the heading skeleton); the
-    // sup/sub digits are that skeleton uniformly scaled into their own cell so
-    // the pair can never drift from the heading family sitting one row above
     const source = pointsOf(digitPathOf(IconH2));
     const sup = pointsOf(digitPathOf(IconSuperscript));
     const sub = pointsOf(digitPathOf(IconSubscript));
@@ -182,17 +178,14 @@ describe('inline-toolbar icon unity', () => {
       expect(sup[i].y).toBeCloseTo(mapping.ty + p.y * mapping.sy, 1);
     }
 
-    // the subscript digit is the superscript digit translated straight down
     for (const [i, p] of sup.entries()) {
       expect(sub[i].x).toBeCloseTo(p.x, 10);
-      expect(sub[i].y).toBeCloseTo(p.y + 7.2, 10);
+      expect(sub[i].y).toBeCloseTo(p.y + 6, 10);
     }
 
-    // superscript hangs from the cap line, subscript sits on the baseline
-    expect(Math.min(...sup.map((p) => p.y))).toBeCloseTo(4, 10);
-    expect(Math.max(...sub.map((p) => p.y))).toBeCloseTo(16, 10);
+    expect(Math.min(...sup.map((p) => p.y))).toBeCloseTo(5, 10);
+    expect(Math.max(...sub.map((p) => p.y))).toBeCloseTo(15, 10);
 
-    // both stay inside the 3-17 content inset
     expect(Math.max(...sup.map((p) => p.x))).toBeLessThanOrEqual(17);
   });
 });

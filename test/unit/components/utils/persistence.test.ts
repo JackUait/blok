@@ -139,7 +139,11 @@ describe('expandPersistenceConfig', () => {
     expect(result.data).toBeUndefined();
   });
 
-  it('keeps an onSave the host set instead of replacing it', () => {
+  // A host onSave is called ALONGSIDE the endpoint, not instead of it. Letting
+  // it win looked like deference and was really an off switch: Vue synthesizes
+  // an onSave for `v-model:data` and Angular for `[formControl]`, so a host that
+  // never wrote one lost every save to its own binding.
+  it('runs both the queue and an onSave the host set', async () => {
     const onSave = vi.fn();
     const save = vi.fn().mockResolvedValue(undefined);
 
@@ -148,7 +152,22 @@ describe('expandPersistenceConfig', () => {
     result.onSave?.(DOC, API_STUB);
 
     expect(onSave).toHaveBeenCalledWith(DOC, API_STUB);
-    expect(save).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(save).toHaveBeenCalledWith(DOC, { version: null }));
+  });
+
+  // The queue holds the only copy of the newest document. A host callback that
+  // throws is the host's problem; it must not become the document's.
+  it('saves even when the host onSave throws', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const onSave = vi.fn(() => {
+      throw new Error('host blew up');
+    });
+
+    const result = expandPersistenceConfig({ persistence: { load: async () => null, save }, onSave });
+
+    expect(() => result.onSave?.(DOC, API_STUB)).toThrow('host blew up');
+
+    await vi.waitFor(() => expect(save).toHaveBeenCalledWith(DOC, { version: null }));
   });
 
   // onSave is already debounced upstream, but a slow save can still be overtaken
@@ -401,9 +420,9 @@ describe('expandPersistenceConfig', () => {
 
     expect(fireBeforeUnload()).toBe(false);
 
-    // The save the destroyed editor left behind still runs to its end: it
-    // rejects, retries, and parks. None of that bookkeeping may put back the
-    // listener the release just took off.
+    // The save() call already in flight cannot be recalled, so it still
+    // rejects. Nothing follows it — no retry, no park — and none of that
+    // bookkeeping may put back the listener the release just took off.
     save.mockRejectedValue(new Error('offline'));
     gate.reject?.(new Error('offline'));
     await vi.advanceTimersByTimeAsync(RETRY_WINDOW_MS);

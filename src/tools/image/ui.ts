@@ -7,21 +7,21 @@ type ImageAlign = 'left' | 'center' | 'right';
 import { onHover as tooltipOnHover, hide as tooltipHide } from '../../components/utils/tooltip';
 import type { I18nInstance } from '../../components/utils/tools';
 import {
-  IconCaptionImage,
+  IconCaption,
   IconChevronLeft,
   IconChevronRight,
   IconCollapseFullscreen,
-  IconCropImage,
-  IconDownloadImage,
-  IconExpandFullscreenImage,
-  IconImageAlignCenter,
-  IconImageAlignLeft,
-  IconImageAlignRight,
-  IconLinkCopy,
-  IconMoreHorizontal,
-  IconReplaceImage,
-  IconZoomIn,
-  IconZoomOut,
+  IconCrop,
+  IconDownload,
+  IconExpandFullscreen,
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
+  IconLink,
+  IconDotsHorizontal,
+  IconReplace,
+  IconPlus,
+  IconMinus,
 } from '../../components/icons';
 import { applyRubberBand } from './spring';
 import { downloadImage } from './download';
@@ -36,9 +36,9 @@ const ALIGN_TO_TEXT_ALIGN: Record<ImageAlign, string> = {
 };
 
 const ALIGN_ICON: Record<ImageAlign, string> = {
-  left: IconImageAlignLeft,
-  center: IconImageAlignCenter,
-  right: IconImageAlignRight,
+  left: IconAlignLeft,
+  center: IconAlignCenter,
+  right: IconAlignRight,
 };
 
 function bindIntrinsicAspect(img: HTMLImageElement, wrapper: HTMLElement, w: number, h: number): void {
@@ -804,10 +804,10 @@ function renderLightboxToolbar(opts: LightboxToolbarOptions): HTMLElement {
   bar.className = 'blok-image-lightbox__bar';
   bar.addEventListener('click', (event) => event.stopPropagation());
 
-  const iconMinus = IconZoomOut;
-  const iconPlus = IconZoomIn;
-  const iconDownload = IconDownloadImage;
-  const iconCopy = IconLinkCopy;
+  const iconMinus = IconMinus;
+  const iconPlus = IconPlus;
+  const iconDownload = IconDownload;
+  const iconCopy = IconLink;
   const iconCollapse = IconCollapseFullscreen;
 
   appendLightboxButton(bar, {
@@ -1054,31 +1054,31 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
     action: 'caption-toggle',
     label: tr(opts.i18n, 'tools.image.toggleCaption'),
     pressed: opts.state.captionVisible,
-    icon: IconCaptionImage,
+    icon: IconCaption,
     onClick: opts.onToggleCaption,
   });
   appendSimpleButton(root, {
     action: 'replace',
     label: tr(opts.i18n, 'tools.image.replace'),
-    icon: IconReplaceImage,
+    icon: IconReplace,
     onClick: opts.onReplace,
   });
   appendSimpleButton(root, {
     action: 'crop',
     label: tr(opts.i18n, 'tools.image.crop'),
-    icon: IconCropImage,
+    icon: IconCrop,
     onClick: opts.onCrop,
   });
   appendSimpleButton(root, {
     action: 'fullscreen',
     label: tr(opts.i18n, 'tools.image.viewFullscreen'),
-    icon: IconExpandFullscreenImage,
+    icon: IconExpandFullscreen,
     onClick: opts.onFullscreen,
   });
   appendSimpleButton(root, {
     action: 'download',
     label: tr(opts.i18n, 'tools.image.downloadOriginal'),
-    icon: IconDownloadImage,
+    icon: IconDownload,
     onClick: opts.onDownload,
   });
 
@@ -1091,7 +1091,7 @@ export function renderOverlay(opts: OverlayOptions): HTMLElement {
   more.setAttribute('aria-label', moreLabel);
   more.setAttribute('aria-haspopup', 'menu');
   more.setAttribute('aria-expanded', 'false');
-  more.innerHTML = IconMoreHorizontal;
+  more.innerHTML = IconDotsHorizontal;
   tooltipOnHover(more, moreLabel);
   root.appendChild(more);
 

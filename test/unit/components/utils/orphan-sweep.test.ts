@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createOrphanSweep } from '../../../../src/components/utils/orphan-sweep';
+import { sanitizeBlocks } from '../../../../src/components/utils/sanitizer';
+import { Paragraph } from '../../../../src/tools/paragraph';
 import type { OutputData } from '../../../../types';
 
 const IMAGE = 'https://cdn.example/uploads/a1.png';
@@ -111,5 +113,89 @@ describe('createOrphanSweep', () => {
     const sweep = createOrphanSweep();
 
     await expect(sweep.sweep(EMPTY_DOCUMENT)).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * A saved document does not necessarily hold the URL byte-for-byte: the
+ * sanitizer parses strings through an innerHTML round trip, which entity-encodes
+ * `&` — the character every signed CDN URL is full of.
+ */
+describe('createOrphanSweep — entity-encoded URLs', () => {
+  const SIGNED = 'https://cdn.example/uploads/a1.png?X-Amz-Signature=abc&X-Amz-Date=20260101';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('leaves an asset the document still references as an entity-encoded URL alone', async () => {
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const sweep = createOrphanSweep();
+
+    sweep.record(SIGNED, remove);
+    await sweep.sweep({
+      time: 0,
+      version: '1',
+      blocks: [ {
+        id: 'a',
+        type: 'image',
+        data: { file: { url: SIGNED.replace('&', '&amp;') } },
+      } ],
+    });
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  // Path (a): a host-level `sanitizer` config makes every string go through the
+  // parser, a media block's own `data.url` included.
+  it('survives the global sanitizer re-encoding a media block url', async () => {
+    const [block] = sanitizeBlocks(
+      [ { tool: 'image',
+        data: { file: { url: SIGNED } } } ],
+      {},
+      { b: true }
+    );
+
+    expect(JSON.stringify(block.data)).toContain('&amp;');
+
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const sweep = createOrphanSweep();
+
+    sweep.record(SIGNED, remove);
+    await sweep.sweep({ time: 0,
+      version: '1',
+      blocks: [ { id: 'a',
+        type: 'image',
+        data: block.data } ] });
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  // Path (b): no global sanitizer needed — the paragraph tool allows `a[href]`,
+  // so a link to the asset is re-encoded by the tool's own rules.
+  it('survives a paragraph link to the asset being re-encoded', async () => {
+    const [block] = sanitizeBlocks(
+      [ { tool: 'paragraph',
+        data: { text: `<a href="${SIGNED}">download</a>` } } ],
+      Paragraph.sanitize
+    );
+
+    expect(JSON.stringify(block.data)).toContain('&amp;');
+
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const sweep = createOrphanSweep();
+
+    sweep.record(SIGNED, remove);
+    await sweep.sweep({ time: 0,
+      version: '1',
+      blocks: [ { id: 'a',
+        type: 'paragraph',
+        data: block.data } ] });
+
+    expect(remove).not.toHaveBeenCalled();
   });
 });

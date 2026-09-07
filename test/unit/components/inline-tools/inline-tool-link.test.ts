@@ -890,6 +890,23 @@ describe('LinkInlineTool', () => {
       expect(hint?.classList.contains('hidden')).toBe(false);
     });
 
+    it('shows the suggestion icon and the enter-key hint as bare glyphs, with no chip behind them', () => {
+      const { tool } = createTool();
+      const itemWrapper = (tool.render() as unknown as LinkToolRenderResult).children.items[0].element;
+
+      (tool as unknown as { updateSuggestion(v: string): void }).updateSuggestion('https://example.com');
+
+      const icon = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-icon]');
+      const hint = itemWrapper.querySelector<HTMLElement>('[data-link-suggestion-enter-hint]');
+
+      expect(icon?.className).toContain('size-6');
+      expect(icon?.className).not.toContain('bg-popover-icon-bg');
+      expect(icon?.className).not.toContain('rounded-md');
+      expect(hint?.className).toContain('size-5');
+      expect(hint?.className).not.toContain('bg-popover-icon-bg');
+      expect(hint?.className).not.toContain('rounded-md');
+    });
+
     it('prefills the URL field and suppresses the suggestion chip when editing an existing link', () => {
       const { tool, selection } = createTool();
       const anchor = document.createElement('a');

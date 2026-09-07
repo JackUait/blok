@@ -4,6 +4,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
+import { activateColorTab } from '../../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 
@@ -166,6 +167,7 @@ test.describe('Table grip menu — color, duplicate, clear', () => {
     const picker = page.locator('[data-blok-testid="cell-color-picker"]');
 
     await expect(picker).toBeVisible();
+    await activateColorTab(page, 'cell-color', 'backgroundColor');
 
     await page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]').click({ force: true });
 

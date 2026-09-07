@@ -15,6 +15,8 @@
   "popover.search": "Rechercher une action…",
   "popover.nothingFound": "Aucun résultat",
   "popover.convertTo": "Convertir en",
+  "emoji.search": "Rechercher des emojis",
+  "emoji.nothingFound": "Aucun emoji trouvé",
   "toolNames.text": "Texte",
   "toolNames.heading": "Titre",
   "toolNames.link": "Lien",

@@ -15,6 +15,8 @@
   "popover.search": "搜索操作…",
   "popover.nothingFound": "未找到结果",
   "popover.convertTo": "转换为",
+  "emoji.search": "搜索表情符号",
+  "emoji.nothingFound": "未找到表情符号",
   "toolNames.text": "文本",
   "toolNames.heading": "标题",
   "toolNames.link": "链接",

@@ -154,20 +154,14 @@ const openBlockTunesViaToolbar = async (page: Page): Promise<void> => {
 };
 
 /**
- * Heading 1-6 entries live inside a nested 'Heading' submenu
- * (data-blok-item-name="header-levels") since the level converts were grouped.
- * Opens that submenu via mouseover (dispatchEvent avoids Playwright's
- * pointer-move pre-click phase, which can destroy the nested popover) and
- * returns the requested level entry inside the nested popover.
+ * Heading 1-6 are flat radio tiles in the block menu itself. `exact` keeps
+ * "Heading 1" from also matching the "Toggle heading 1" convert entry.
  */
-const openHeadingLevelOption = async (page: Page, level: number): Promise<Locator> => {
-  const submenuToggle = page.locator(`${POPOVER_CONTAINER_SELECTOR} [data-blok-item-name="header-levels"]`);
-
-  await submenuToggle.dispatchEvent('mouseover');
-
+const headingLevelOption = async (page: Page, level: number): Promise<Locator> => {
   const option = page
-    .locator(`${NESTED_POPOVER_SELECTOR} ${POPOVER_ITEM_SELECTOR}`)
-    .filter({ hasText: `Heading ${level}`, hasNotText: 'Toggle' });
+    .getByTestId('block-tunes-popover')
+    .getByRole('menuitemradio', { name: `Heading ${level}`,
+      exact: true });
 
   await expect(option).toBeVisible();
 
@@ -269,7 +263,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = await openHeadingLevelOption(page, 1);
+      const h1Option = await headingLevelOption(page, 1);
 
       await h1Option.dispatchEvent('click');
 
@@ -285,7 +279,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = await openHeadingLevelOption(page, 3);
+      const h3Option = await headingLevelOption(page, 3);
 
       await h3Option.dispatchEvent('click');
 
@@ -301,7 +295,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = await openHeadingLevelOption(page, 4);
+      const h4Option = await headingLevelOption(page, 4);
 
       await h4Option.dispatchEvent('click');
 
@@ -317,7 +311,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h5Option = await openHeadingLevelOption(page, 5);
+      const h5Option = await headingLevelOption(page, 5);
 
       await h5Option.dispatchEvent('click');
 
@@ -333,7 +327,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h6Option = await openHeadingLevelOption(page, 6);
+      const h6Option = await headingLevelOption(page, 6);
 
       await h6Option.dispatchEvent('click');
 
@@ -351,7 +345,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h1Option = await openHeadingLevelOption(page, 1);
+      const h1Option = await headingLevelOption(page, 1);
 
       await h1Option.dispatchEvent('click');
 
@@ -515,7 +509,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h4Option = await openHeadingLevelOption(page, 4);
+      const h4Option = await headingLevelOption(page, 4);
 
       await h4Option.dispatchEvent('click');
 
@@ -538,7 +532,7 @@ test.describe('header Tool', () => {
       await openBlockTunesViaToolbar(page);
 
       for (let level = 1; level <= 6; level++) {
-        const option = await openHeadingLevelOption(page, level);
+        const option = await headingLevelOption(page, level);
 
         await expect(option).toBeVisible();
       }
@@ -551,7 +545,7 @@ test.describe('header Tool', () => {
       });
       await openBlockTunesViaToolbar(page);
 
-      const h3Option = await openHeadingLevelOption(page, 3);
+      const h3Option = await headingLevelOption(page, 3);
 
       await expect(h3Option).toHaveAttribute('data-blok-popover-item-active', 'true');
     });

@@ -17,6 +17,12 @@ interface PopoverChildren {
   onClose?: () => void;
 }
 
+/** `MenuConfig` is a union; the equation tool always returns the children form. */
+interface EquationMenu {
+  children: PopoverChildren;
+  isActive: (() => boolean) | boolean;
+}
+
 interface Harness {
   tool: EquationInlineTool;
   children: PopoverChildren;
@@ -40,8 +46,8 @@ const build = (): Harness => {
     inlineToolbar: { close },
   };
   const tool = new EquationInlineTool({ api: api as never, config: undefined });
-  const config = tool.render();
-  const children = config.children as unknown as PopoverChildren;
+  const config = tool.render() as unknown as EquationMenu;
+  const { children } = config;
   const htmlItem = children.items.find((item) => item.type === PopoverItemType.Html);
 
   if (htmlItem === undefined) {
@@ -65,7 +71,7 @@ const build = (): Harness => {
     throw new Error('isActive is not a predicate');
   }
 
-  return { tool, children, isActive: isActive as () => boolean, wrapper, input, preview, close };
+  return { tool, children, isActive, wrapper, input, preview, close };
 };
 
 /** A span carrying a stored formula, as `findParentTag` would return it. */

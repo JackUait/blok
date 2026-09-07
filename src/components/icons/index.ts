@@ -596,7 +596,8 @@ export const IconEmojiSprout = `
 // Fork and knife icon (Food category)
 export const IconEmojiUtensils = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M4.5 3.5V7a2 2 0 0 0 4 0V3.5M6.5 9v7.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 3.5V6.5a2.5 2.5 0 0 0 5 0V3.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 3.5v13" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M13 16.5v-13c2 0 3 2 3 4S15 11 13 11" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
@@ -605,7 +606,7 @@ export const IconEmojiUtensils = `
 export const IconEmojiBall = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M5.4 5.4c5.5 0 3.7 9.2 9.2 9.2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M3.5 10C7.09 10 10 7.09 10 3.5M16.5 10C12.91 10 10 12.91 10 16.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 
@@ -613,7 +614,7 @@ export const IconEmojiBall = `
 export const IconEmojiLightbulb = `
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <path d="M8 13c0-1.25-.75-2-1.5-3a4.5 4.5 0 1 1 7 0c-.75 1-1.5 1.75-1.5 3Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M8 16h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 15.5l.5 1h3l.5-1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `;
 

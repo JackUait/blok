@@ -69,6 +69,18 @@ describe('Block settings control groups', () => {
     expect(identity?.querySelector('button')).toBeNull();
   });
 
+  it('shows the identity icon as a bare glyph, with no chip behind it', async () => {
+    const { settings, block } = createSettings([]);
+
+    await settings.open(block);
+    const svg = document.querySelector('[data-blok-item-name="block-identity"] svg');
+    const icon = svg?.parentElement;
+
+    expect(icon?.className).toContain('size-7');
+    expect(icon?.className).not.toContain('bg-popover-icon-bg');
+    expect(icon?.className).not.toContain('rounded-md');
+  });
+
   it('keeps custom action order and duplicate behavior while separating delete last', async () => {
     const first = vi.fn();
     const last = vi.fn();

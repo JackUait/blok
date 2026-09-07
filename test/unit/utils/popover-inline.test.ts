@@ -135,7 +135,7 @@ describe('PopoverInline', () => {
       expect(chevron?.className).toContain('text-text-secondary');
     });
 
-    it('wraps the current-block icon in the house squircle chip', () => {
+    it('restores the fixed icon box on the current-block icon, with no chip behind it', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -144,9 +144,11 @@ describe('PopoverInline', () => {
         .getElement()
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-icon"]');
 
-      expect(icon?.className).toContain('bg-popover-icon-bg');
-      expect(icon?.className).toContain('rounded-md');
-      expect(icon?.className).not.toContain('bg-transparent');
+      expect(icon?.className).toContain('w-6');
+      expect(icon?.className).toContain('h-6');
+      expect(icon?.className).not.toContain('w-auto');
+      expect(icon?.className).not.toContain('bg-popover-icon-bg');
+      expect(icon?.className).not.toContain('rounded-md');
     });
 
     it('sets the header row rhythm: chip-height row with a chip-to-label gap', () => {

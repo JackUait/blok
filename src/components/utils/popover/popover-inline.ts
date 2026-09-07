@@ -172,7 +172,7 @@ export class PopoverInline extends PopoverDesktop {
   }
 
   /**
-   * Conversion keeps its label and icon tile beside the icon-only tools.
+   * Conversion keeps its label and fixed icon box beside the icon-only tools.
    */
   private styleConvertControl(): void {
     const root = this.nodes.popover;

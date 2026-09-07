@@ -1186,7 +1186,7 @@
 }
 
 /**
- * Icon chip — small tinted square to the left of the label.
+ * Icon box to the left of the label.
  */
 [data-blok-database-property-type-option-icon] {
   display: flex;
@@ -1194,15 +1194,12 @@
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: var(--blok-space-1-25);
-  background: var(--blok-popover-icon-bg);
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;
-  transition: background-color 100ms ease;
+  transition: color 100ms ease;
 }
 
 [data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
-  background: var(--blok-popover-icon-active-bg);
   color: var(--blok-active-icon);
 }
 

@@ -63,7 +63,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
   margin: 0;
-  background: transparent;
   width: 20px;
   height: 20px;
 }
@@ -3228,15 +3227,12 @@
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: var(--blok-space-1-25);
-  background: var(--blok-popover-icon-bg);
   color: var(--blok-database-tab-text-active);
   flex-shrink: 0;
-  transition: background-color 100ms ease;
+  transition: color 100ms ease;
 }
 
 [data-blok-database-property-type-option]:hover [data-blok-database-property-type-option-icon] {
-  background: var(--blok-popover-icon-active-bg);
   color: var(--blok-active-icon);
 }
 

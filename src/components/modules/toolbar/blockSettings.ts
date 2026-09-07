@@ -299,7 +299,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       if (activeEntry?.icon) {
         const icon = document.createElement('span');
 
-        icon.className = 'flex size-7 shrink-0 items-center justify-center rounded-md bg-popover-icon-bg [&_svg]:size-5';
+        icon.className = 'flex size-7 shrink-0 items-center justify-center [&_svg]:size-5';
         icon.setAttribute('aria-hidden', 'true');
         icon.innerHTML = activeEntry.icon;
         identity.append(icon);

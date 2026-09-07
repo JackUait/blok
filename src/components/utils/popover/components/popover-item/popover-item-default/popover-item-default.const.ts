@@ -20,9 +20,9 @@ export const css = {
 
 
   /**
-   * Icon container styles
+   * Icon box. Fixed size keeps the row rhythm; the glyph sits bare inside it.
    */
-  icon: 'flex items-center justify-center w-6 h-6 shrink-0 rounded-md bg-popover-icon-bg [&_svg]:w-4 [&_svg]:h-4',
+  icon: 'flex items-center justify-center w-6 h-6 shrink-0 [&_svg]:w-4 [&_svg]:h-4',
 
   /**
    * Focused state class for DomIterator/Flipper keyboard navigation.

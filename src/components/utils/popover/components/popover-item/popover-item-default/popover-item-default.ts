@@ -454,7 +454,7 @@ export class PopoverItemDefault extends PopoverItem {
   private getIconClass(iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): string {
     return twMerge(
       css.icon,
-      isInline && 'w-auto h-auto bg-transparent [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
+      isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
       iconWithGap && 'mr-2.5',
       iconWithGap && isInline && 'shadow-none mr-0!',
@@ -469,7 +469,7 @@ export class PopoverItemDefault extends PopoverItem {
   private getChevronClass(): string {
     return twMerge(
       css.icon,
-      'ml-3 w-4 h-4 bg-transparent text-text-secondary'
+      'ml-3 w-4 h-4 text-text-secondary'
     );
   }
 

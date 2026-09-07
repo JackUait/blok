@@ -15,6 +15,8 @@
   "popover.search": "البحث عن إجراء…",
   "popover.nothingFound": "لا توجد نتائج",
   "popover.convertTo": "تحويل إلى",
+  "emoji.search": "البحث عن رموز تعبيرية",
+  "emoji.nothingFound": "لم يتم العثور على رموز تعبيرية",
   "toolNames.text": "نص",
   "toolNames.heading": "عنوان",
   "toolNames.link": "رابط",

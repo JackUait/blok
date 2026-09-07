@@ -5,6 +5,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
+import { activateColorTab } from '../../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
@@ -287,6 +288,7 @@ test.describe('Pill popover reopens for different cell', () => {
     const colorBox = assertBoundingBox(await colorItem.boundingBox(), 'Color item');
 
     await page.mouse.move(colorBox.x + colorBox.width / 2, colorBox.y + colorBox.height / 2);
+    await activateColorTab(page, 'cell-color', 'backgroundColor');
 
     const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 
@@ -393,6 +395,8 @@ test.describe('Pill popover reopens for different cell', () => {
     await expect(colorPicker).toBeVisible();
 
     // Pick a color while color picker is visible
+    await activateColorTab(page, 'cell-color', 'backgroundColor');
+
     const swatch = page.locator('[data-blok-testid="cell-color-swatch-backgroundColor-orange"]');
 
     await expect(swatch).toBeVisible();

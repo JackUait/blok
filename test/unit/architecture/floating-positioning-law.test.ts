@@ -82,6 +82,7 @@ const expectExactReasonedClassification = (
 
 /** Every physical document-root mount and its non-positioning or safe contract. */
 const ROOT_MOUNT_CLASSIFICATIONS: Record<string, string> = {
+  'components/modules/blockEvents/composers/emojiTrigger.ts': 'Mount owner for the inline ":" menu, which is the tracked emoji-picker root surface.',
   'components/modules/drag/DragController.ts': 'Pointer-following drag preview; coordinates refresh on every pointer move.',
   'components/utils/announcer.ts': 'Visually hidden ARIA live region with no element anchor or collision boundary.',
   'components/utils/caret/boundaries.ts': 'Synchronous hidden text-measurement node removed before control returns.',

@@ -94,22 +94,21 @@
   --blok-gray-text: #646a79;
   --blok-dark: #1d202b;
   --blok-active-icon: #2383e2;
-  /* 4.5:1 on white for link TEXT; #2383e2 measured 3.88:1. Icon-only blues
-     (--blok-active-icon / --blok-icon-active-text) stay, they answer the 3:1
-     non-text bar. */
+  /* Link text needs 4.5:1 on white; --blok-active-icon uses the 3:1 icon bar. */
   --blok-link: #1b6fc2;
   --blok-line-gray: #eff0f1;
   --blok-tooltip-bg: #1d202b;
   --blok-tooltip-font: #cdd1e0;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.14);
-  --blok-icon-active-text: #2383e2;
+  /* Selected labels need 4.5:1 on the tint and a color distinct from focused labels. */
+  --blok-icon-active-text: #155fa8;
   --blok-text-primary: black;
   /* Tracks --blok-gray-text; see the contrast note there. */
   --blok-text-secondary: #646a79;
   --blok-popover-border: rgba(55, 53, 47, 0.09);
   --blok-popover-shadow: rgba(13, 20, 33, 0.1);
   --blok-popover-bg: #ffffff;
-  --blok-popover-box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.09), 0 4px 16px rgba(0, 0, 0, 0.1), 0 16px 40px -8px rgba(0, 0, 0, 0.08);
+  --blok-popover-box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.08), 0 4px 8px -2px rgba(55, 53, 47, 0.06), 0 12px 32px -8px rgba(55, 53, 47, 0.16);
   --blok-popover-border-icon: rgb(201 201 204 / 48%);
   --blok-popover-border-icon-disabled: #eff0f1;
   --blok-item-focus-bg: rgba(35, 131, 226, 0.14);
@@ -130,15 +129,15 @@
 
   /* Tokens extracted from TS files */
   --blok-mobile-border: #e8e8eb;
-  --blok-search-input-bg: #f8f8f8;
+  --blok-search-input-bg: #fafafa;
   --blok-search-input-border: rgba(226, 226, 229, 0.2);
   --blok-search-input-focus-border: rgba(35, 131, 226, 0.5);
   /* Tracks the cascaded --blok-gray-text, so dark themes inherit it. */
-  --blok-search-input-placeholder: color-mix(in oklab, var(--blok-gray-text) 80%, transparent);
+  --blok-search-input-placeholder: var(--blok-gray-text);
   --blok-link-input-border: rgba(226, 226, 229, 0.2);
 
   /* Popover icon container */
-  --blok-popover-icon-bg: rgba(55, 53, 47, 0.06);
+  --blok-popover-icon-bg: rgba(55, 53, 47, 0.04);
   --blok-popover-icon-active-bg: rgba(35, 131, 226, 0.1);
 
   /* Table */
@@ -509,13 +508,13 @@
     --blok-tooltip-bg: #2e2e2d;
     --blok-tooltip-font: #e8e6e3;
     --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
-    --blok-icon-active-text: #529cca;
+    --blok-icon-active-text: #6aaed8;
     --blok-text-primary: #e2e0dc;
     --blok-text-secondary: #a39e98;
     --blok-popover-border: rgba(255, 255, 255, 0.14);
     --blok-popover-shadow: rgba(0, 0, 0, 0.6);
     --blok-popover-bg: #252525;
-    --blok-popover-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 24px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.4);
+    --blok-popover-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.5);
     --blok-popover-border-icon: #37352f;
     --blok-popover-border-icon-disabled: #2f2d29;
     --blok-item-focus-bg: rgba(35, 131, 226, 0.2);
@@ -685,13 +684,13 @@
   --blok-tooltip-bg: #2e2e2d;
   --blok-tooltip-font: #e8e6e3;
   --blok-icon-active-bg: rgba(35, 131, 226, 0.2);
-  --blok-icon-active-text: #529cca;
+  --blok-icon-active-text: #6aaed8;
   --blok-text-primary: #e2e0dc;
   --blok-text-secondary: #a39e98;
   --blok-popover-border: rgba(255, 255, 255, 0.14);
   --blok-popover-shadow: rgba(0, 0, 0, 0.6);
   --blok-popover-bg: #252525;
-  --blok-popover-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 24px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.4);
+  --blok-popover-box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.5);
   --blok-popover-border-icon: #37352f;
   --blok-popover-border-icon-disabled: #2f2d29;
   --blok-item-focus-bg: rgba(35, 131, 226, 0.2);

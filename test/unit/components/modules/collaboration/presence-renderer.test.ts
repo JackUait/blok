@@ -184,11 +184,11 @@ describe('presence renderer', () => {
       expect(caret(holder)).not.toBeNull();
       expect(caret(holder)?.style.getPropertyValue(PRESENCE_COLOR)).toBe('#0b6e99');
       // Identity rides the gutter face, not the caret: monogram on it, full
-      // name in its title.
+      // name in its label.
       expect(face(holder)?.getAttribute(INITIALS_ATTR)).toBe('GH');
-      expect(face(holder)?.getAttribute('title')).toBe('Grace Hopper');
+      expect(face(holder)?.getAttribute('aria-label')).toBe('Grace Hopper');
       expect(avatars(harness.host)).toHaveLength(1);
-      expect(avatars(harness.host)[0].getAttribute('title')).toBe('Grace Hopper');
+      expect(avatars(harness.host)[0].getAttribute('aria-label')).toBe('Grace Hopper');
     });
 
     it('is drawn on the holder only — never at or below the tool root', () => {
@@ -254,11 +254,11 @@ describe('presence renderer', () => {
       expect(avatars(harness.host)).toHaveLength(1);
       expect(avatars(harness.host)[0].style.getPropertyValue(PRESENCE_COLOR)).toBe(presenceColorFor(98));
       // A face in their colour, wearing a silhouette instead of a monogram —
-      // and with no title, because nothing here localizes one.
+      // and with no label, because nothing here localizes one.
       expect(face(holder)).not.toBeNull();
       expect(face(holder)?.hasAttribute(GLYPH_ATTR)).toBe(true);
       expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
-      expect(face(holder)?.hasAttribute('title')).toBe(false);
+      expect(face(holder)?.hasAttribute('aria-label')).toBe(false);
     });
 
     it('wears the silhouette their client id names, labelled in the reader\'s language', () => {
@@ -274,7 +274,7 @@ describe('presence renderer', () => {
       const holder = harness.holderOf('block-3');
 
       expect(face(holder)?.getAttribute(GLYPH_ATTR)).toBe(glyph);
-      expect(face(holder)?.getAttribute('title')).toBe(`label:${ANONYMOUS_LABEL_KEYS[glyph]}`);
+      expect(face(holder)?.getAttribute('aria-label')).toBe(`label:${ANONYMOUS_LABEL_KEYS[glyph]}`);
       // The silhouette REPLACES the monogram: initials of a generated label
       // would be initials of nothing.
       expect(face(holder)?.hasAttribute(INITIALS_ATTR)).toBe(false);
@@ -353,7 +353,7 @@ describe('presence renderer', () => {
 
       const holder = harness.holderOf('block-2');
 
-      expect(face(holder)?.getAttribute('title')).toBe('Grace');
+      expect(face(holder)?.getAttribute('aria-label')).toBe('Grace');
       expect(caret(holder)).toBeNull();
       expect(avatars(harness.host)).toHaveLength(1);
     });
@@ -396,7 +396,7 @@ describe('presence renderer', () => {
 
       const element = face(harness.holderOf('block-2'));
 
-      expect(element?.getAttribute('title')).toBe(hostile);
+      expect(element?.getAttribute('aria-label')).toBe(hostile);
       expect(element?.children).toHaveLength(0);
       expect(avatars(harness.host)[0].children).toHaveLength(0);
     });
@@ -424,7 +424,7 @@ describe('presence renderer', () => {
 
       // The cap has to hold on the TITLE too: a hostile name is safe as an
       // attribute value, but a megabyte of it is still a megabyte.
-      expect((element?.getAttribute('title') ?? '').length).toBeLessThanOrEqual(64);
+      expect((element?.getAttribute('aria-label') ?? '').length).toBeLessThanOrEqual(64);
       expect((element?.getAttribute(INITIALS_ATTR) ?? '').length).toBeLessThanOrEqual(2);
     });
 
@@ -485,7 +485,7 @@ describe('presence renderer', () => {
       harness.renderer.render([...junk, named(9999, 'Real Person', 'real')], 42);
 
       expect(avatars(harness.host)).toHaveLength(1);
-      expect(avatars(harness.host)[0].getAttribute('title')).toBe('Real Person');
+      expect(avatars(harness.host)[0].getAttribute('aria-label')).toBe('Real Person');
       expect(caret(harness.holderOf('real'))).not.toBeNull();
     });
 
@@ -621,7 +621,7 @@ describe('presence renderer', () => {
       expect(caret(harness.holderOf('block-2'))).toBeNull();
       expect(face(harness.holderOf('block-2'))).toBeNull();
       expect(caret(harness.holderOf('block-3'))).not.toBeNull();
-      expect(face(harness.holderOf('block-3'))?.getAttribute('title')).toBe('Grace');
+      expect(face(harness.holderOf('block-3'))?.getAttribute('aria-label')).toBe('Grace');
     });
 
     it('keeps one caret per block when a peer stays put', () => {

@@ -50,11 +50,21 @@ export class ModificationsObserver extends Module {
   private leadingFlushScheduled = false;
 
   /**
-   * Set when a change enters the open window, cleared once onSave has seen it.
-   * onSave cannot key off the event queue like onChange does, because the
-   * leading-edge delivery drains that queue before the window closes.
+   * Set when a change enters the open window, cleared once a serialization for
+   * it has STARTED. onSave cannot key off the event queue like onChange does,
+   * because the leading-edge delivery drains that queue before the window
+   * closes.
+   *
+   * Restored by {@link emitOnSave} whenever the serialization never reached the
+   * host, so the edit rides the next window instead of vanishing with it.
    */
   private pendingSave = false;
+
+  /**
+   * True from the moment a serialization starts until it settles. The host does
+   * not have the document yet, so it still counts as unsaved.
+   */
+  private saveInFlight = false;
 
   /**
    * Array of onChange events used to batch them
@@ -107,6 +117,30 @@ export class ModificationsObserver extends Module {
   }
 
   /**
+   * Whether the document holds an edit the host has not received yet: a batch
+   * still waiting for its window to close, a serialization still in flight, or
+   * one that never reached `onSave` — rejected, suppressed by a read-only flip,
+   * or cut short by teardown.
+   *
+   * This is what an unload guard reads to decide whether leaving loses work.
+   */
+  public get hasUnsavedChanges(): boolean {
+    return this.pendingSave || this.saveInFlight;
+  }
+
+  /**
+   * Whether onChange/onSave may reach the host right now.
+   *
+   * Read at DELIVERY time, never at enqueue time: a batch window and a
+   * serialization both outlive the moment the edit was made, and the host can
+   * freeze the document, take the observer out of service for a DOM rewrite, or
+   * tear the editor down in between.
+   */
+  private get isDeliverySuppressed(): boolean {
+    return this.destroyed || this.disabled || this.Blok.ReadOnly.isEnabled;
+  }
+
+  /**
    * Enables onChange event
    */
   public enable(): void {
@@ -128,6 +162,21 @@ export class ModificationsObserver extends Module {
   public disable(): void {
     this.mutationObserver.disconnect();
     this.disabled = true;
+
+    /**
+     * The open window has to close with the observer. `disable()` is the mutex
+     * every host-driven rewrite takes (blocks.render, the read-only toggle, a
+     * repaint), and a surviving timer fires INSIDE that rewrite — serializing a
+     * document that is mid-clear, which is how an empty save reaches the host.
+     *
+     * `pendingSave` deliberately survives: the edit that opened the window was
+     * made while the document was still editable, so it stays dirty and rides
+     * the next window.
+     */
+    if (this.batchingTimeout !== null) {
+      clearTimeout(this.batchingTimeout);
+      this.batchingTimeout = null;
+    }
   }
 
   /**
@@ -196,16 +245,32 @@ export class ModificationsObserver extends Module {
    */
   private flushTrailing(): void {
     this.deliverQueuedChanges();
+    this.flushPendingSave();
+  }
 
-    if (!this.pendingSave) {
+  /**
+   * Serializes once for the batch that just closed, if the host can still
+   * receive it.
+   */
+  private flushPendingSave(): void {
+    if (!this.pendingSave || this.isDeliverySuppressed) {
       return;
     }
 
-    this.pendingSave = false;
+    if (!isFunction(this.config.onSave)) {
+      this.pendingSave = false;
 
-    if (isFunction(this.config.onSave)) {
-      this.emitOnSave();
+      return;
     }
+
+    /**
+     * Cleared as the serialization STARTS, not when it succeeds: a change
+     * arriving while it is in flight re-arms the flag for its own window, and
+     * clearing on success would wipe that newer edit's dirty bit. emitOnSave
+     * puts the flag back whenever the data never reached the host.
+     */
+    this.pendingSave = false;
+    this.emitOnSave();
   }
 
   /**
@@ -219,12 +284,15 @@ export class ModificationsObserver extends Module {
      * fires. Consumers can therefore rely on onChange/onSave never firing in
      * read-only mode without guarding on `api.readOnly.isEnabled` themselves.
      *
-     * `destroyed` is checked here too because a queued microtask, unlike the
-     * batching timeout, cannot be cancelled by destroy().
+     * `destroyed` and `disabled` are checked here too because a queued
+     * microtask, unlike the batching timeout, cannot be cancelled.
+     *
+     * The queue goes, but `pendingSave` stays: suppressing the NOTIFICATION is
+     * the contract, discarding the fact that the document holds an unsaved edit
+     * is not — that edit was made while the document was still editable.
      */
-    if (this.destroyed || this.Blok.ReadOnly.isEnabled) {
+    if (this.isDeliverySuppressed) {
       this.batchingOnChangeQueue.clear();
-      this.pendingSave = false;
 
       return;
     }
@@ -250,13 +318,28 @@ export class ModificationsObserver extends Module {
   /**
    * Serializes the editor and delivers the full OutputData to the consumer's
    * `onSave` callback. Invoked once per batched change window, so a burst of
-   * edits results in a single serialization. Skips delivery if the module was
-   * destroyed while the (async) serialization was in flight.
+   * edits results in a single serialization. Skips delivery if the editor was
+   * frozen, paused or destroyed while the (async) serialization was in flight,
+   * and puts the document back to dirty when it does.
    */
   private emitOnSave(): void {
+    this.saveInFlight = true;
+
     void this.Blok.Saver.save()
       .then((data) => {
-        if (this.destroyed || data === undefined) {
+        this.saveInFlight = false;
+
+        /**
+         * Re-checked after the await: the host can freeze or tear down the
+         * document while the serialization runs. `data` is undefined when the
+         * Saver swallowed a failure of its own.
+         *
+         * Either way the host never saw this batch, so the document goes back
+         * to dirty and the next window retries it.
+         */
+        if (this.isDeliverySuppressed || data === undefined) {
+          this.pendingSave = true;
+
           return;
         }
 
@@ -269,8 +352,11 @@ export class ModificationsObserver extends Module {
       .catch(() => {
         /**
          * Serialization failed — the Saver already surfaces the error via its
-         * own channel, so swallow here to avoid an unhandled rejection.
+         * own channel, so swallow here to avoid an unhandled rejection. The
+         * batch is not swallowed with it.
          */
+        this.saveInFlight = false;
+        this.pendingSave = true;
       });
   }
 
@@ -282,17 +368,24 @@ export class ModificationsObserver extends Module {
    * setTimeout keeping the JS engine alive.
    */
   public destroy(): void {
-    this.disabled = true;
-    this.destroyed = true;
-    this.mutationObserver.disconnect();
-
     if (this.batchingTimeout !== null) {
       clearTimeout(this.batchingTimeout);
       this.batchingTimeout = null;
     }
 
+    /**
+     * Before the flags below gate delivery: an edit made inside the last batch
+     * window is real, and tearing the editor down must not be the thing that
+     * loses it. Only the save half — the queued onChange events are dropped, as
+     * they always were.
+     */
+    this.flushPendingSave();
+
+    this.disabled = true;
+    this.destroyed = true;
+    this.mutationObserver.disconnect();
+
     this.batchingOnChangeQueue.clear();
-    this.pendingSave = false;
   }
 
   /**

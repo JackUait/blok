@@ -325,7 +325,7 @@ export class PopoverItemDefault extends PopoverItem {
     if (params.secondaryLabel) {
       const secondaryEl = document.createElement('div');
 
-      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-20 leading-none text-text-secondary/60';
+      secondaryEl.className = 'ml-auto shrink-0 inline-flex items-center whitespace-nowrap pl-8 leading-none text-text-secondary';
       secondaryEl.setAttribute(DATA_ATTR.popoverItemSecondaryTitle, '');
       secondaryEl.setAttribute('data-blok-testid', 'popover-item-secondary-title');
       secondaryEl.innerHTML = makeShortcutHtml(params.secondaryLabel);
@@ -454,9 +454,9 @@ export class PopoverItemDefault extends PopoverItem {
   private getIconClass(iconWithGap: boolean, isInline: boolean, isNestedInline: boolean): string {
     return twMerge(
       css.icon,
-      isInline && 'w-auto h-auto bg-transparent [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
+      isInline && 'w-auto h-auto [&_svg]:w-icon [&_svg]:h-icon mobile:[&_svg]:w-icon-mobile mobile:[&_svg]:h-icon-mobile',
       isNestedInline && 'w-toolbox-btn h-toolbox-btn',
-      iconWithGap && 'mr-3',
+      iconWithGap && 'mr-2.5',
       iconWithGap && isInline && 'shadow-none mr-0!',
       iconWithGap && isNestedInline && 'mr-2!'
     );
@@ -469,7 +469,7 @@ export class PopoverItemDefault extends PopoverItem {
   private getChevronClass(): string {
     return twMerge(
       css.icon,
-      'w-5 h-5 bg-transparent'
+      'ml-3 w-4 h-4 text-text-secondary'
     );
   }
 

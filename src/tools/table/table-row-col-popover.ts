@@ -78,6 +78,11 @@ const buildColorItem = (
         element,
       }],
       isFlippable: false,
+      onOpen: () => {
+        queueMicrotask(() => {
+          element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+        });
+      },
     },
   };
 };

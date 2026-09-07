@@ -18,8 +18,9 @@ import type {
   PasteConfig,
 } from '../../../types';
 import type { MenuConfig } from '../../../types/tools/menu-config';
+import { PopoverItemType } from '../../../types/utils/popover/popover-item-type';
 import { DATA_ATTR } from '../../components/constants';
-import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconHeading, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
+import { IconH1, IconH2, IconH3, IconH4, IconH5, IconH6, IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6 } from '../../components/icons';
 import { getPlaceholderClasses, setupPlaceholder } from '../../components/utils/placeholder';
 import { twMerge } from '../../components/utils/tw';
 import { HEADER_BASE_CLASSES, HEADER_LEVEL_CLASSES } from '../../shared/tool-classes/header';
@@ -551,6 +552,11 @@ export class Header implements BlockTool {
    * @returns MenuConfig array
    */
   public renderSettings(): MenuConfig {
+    const label = document.createElement('div');
+
+    label.className = 'px-2 pt-1 pb-1 text-[11px] font-medium text-gray-text';
+    label.textContent = this.api.i18n.t('toolNames.heading');
+
     const levelEntries = this.levels.map(level => {
       const translated = this.api.i18n.t(level.nameKey);
       const title = translated !== level.nameKey ? translated : level.name;
@@ -558,8 +564,11 @@ export class Header implements BlockTool {
       return {
         icon: level.icon,
         title,
+        englishTitle: `Heading ${level.number}`,
+        name: `header-level-${level.number}`,
         onActivate: (): void => this.setLevel(level.number),
         closeOnActivate: true,
+        toggle: 'header-levels',
         isActive: this.currentLevel.number === level.number,
         dataset: {
           'blok-header-level': String(level.number),
@@ -577,13 +586,12 @@ export class Header implements BlockTool {
 
     return [
       {
-        icon: IconHeading,
-        title: this.api.i18n.t('toolNames.heading'),
+        type: PopoverItemType.Html,
         name: 'header-levels',
-        children: {
-          items: levelEntries,
-        },
+        element: label,
       },
+      ...levelEntries,
+      { type: PopoverItemType.Separator },
       ...colorItems,
     ] as MenuConfig;
   }
@@ -615,14 +623,8 @@ export class Header implements BlockTool {
    */
   private setLevel(level: number): void {
     this.data = {
-      level: level,
-      text: this.data.text,
-      isToggleable: this._data.isToggleable,
-      // Block-level color is a separate data field (not part of the text export),
-      // so it must be retained explicitly on a level change — exactly like
-      // isToggleable — or normalizeData() drops it and the heading loses its color.
-      textColor: this._data.textColor,
-      backgroundColor: this._data.backgroundColor,
+      ...this.data,
+      level,
     };
   }
 

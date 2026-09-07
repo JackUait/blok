@@ -333,6 +333,22 @@ describe('production readiness gates', () => {
     expect(unpinned).toEqual([]);
   });
 
+  // The pin policy walks into composite actions too. upload-pages-artifact
+  // v3.0.1 calls `actions/upload-artifact@v4` unpinned, so "Set up job"
+  // rejected the whole Build Docs job before a step ran. v4.0.0 was the first
+  // release to pin it; the SHA below is v5.0.0, which pins upload-artifact
+  // v7.0.0 to match the version every other workflow here uses. On every bump,
+  // re-read the upstream action.yml and confirm each nested `uses:` carries a
+  // 40-character SHA.
+  it('pins the Pages upload to a release whose own nested action is pinned', () => {
+    const upload = job(workflow('.github/workflows/deploy-docs.yml'), 'build')
+      .steps?.find(step => step.uses?.startsWith('actions/upload-pages-artifact@'));
+
+    expect(upload?.uses).toBe(
+      'actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9',
+    );
+  });
+
   it('cleans temporary npm credentials on every exit', () => {
     const release = read('scripts/release.mjs');
 

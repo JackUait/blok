@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
+import { isKeyboardModality } from '../input-modality';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
@@ -644,6 +645,15 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.params.autoFocusFirstItem === false) {
+      return;
+    }
+
+    /**
+     * The cursor is a keyboard affordance, so a menu opened with the mouse
+     * starts with no row highlighted. Typing into the search re-places it,
+     * because typing is itself a keyboard gesture.
+     */
+    if (!isKeyboardModality()) {
       return;
     }
 
@@ -1333,8 +1343,8 @@ export class PopoverDesktop extends PopoverAbstract {
       // not stay frozen at the show()-time --width: the container follows its
       // content live, and the resize observer attached in showNestedPopover
       // re-runs this placement whenever the content grows or shrinks.
-      nestedContainer.style.width = 'max-content';
-      nestedContainer.style.minWidth = '0';
+      nestedContainer.style.width = triggerItem.childrenWidth ?? 'max-content';
+      nestedContainer.style.minWidth = triggerItem.childrenMinWidth ?? '0';
 
       // Prefer live layout sizes once the popover is rendered; the initial
       // pre-show call falls back to the detached-clone measurement
@@ -1387,7 +1397,18 @@ export class PopoverDesktop extends PopoverAbstract {
     // edge by `overlap` px, then convert to parent-root-relative pixels.
     const viewportLeft = parentRect.right - overlap;
 
-    nestedContainer.style.left = `${viewportLeft - parentRootRect.left}px`;
+    // The side never flips, but a wide submenu (the 320px convert menu) opened
+    // near the right edge would run off-screen, so slide it back in. A submenu
+    // wider than the viewport keeps its left margin instead of hanging left.
+    const nestedWidth = nestedContainer.offsetWidth > 0
+      ? nestedContainer.offsetWidth
+      : this.nestedPopover?.size.width ?? 0;
+    const rightLimit = window.innerWidth - NESTED_POPOVER_VIEWPORT_MARGIN - nestedWidth;
+    const clampedLeft = nestedWidth > 0
+      ? Math.max(NESTED_POPOVER_VIEWPORT_MARGIN, Math.min(viewportLeft, rightLimit))
+      : viewportLeft;
+
+    nestedContainer.style.left = `${clampedLeft - parentRootRect.left}px`;
 
     // Stamp the resolved side/align so CSS/animation can key off it, mirroring
     // the root popover's data-side/data-align contract.
@@ -1669,7 +1690,8 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     return topLevel.filter(item => {
-      if (!(item instanceof PopoverItemDefault) || item.title === undefined) {
+      // A state control and a same-title nested action can update different data.
+      if (!(item instanceof PopoverItemDefault) || item.title === undefined || item.toggle !== undefined) {
         return true;
       }
 

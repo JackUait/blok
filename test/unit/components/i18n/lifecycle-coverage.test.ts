@@ -13,8 +13,17 @@ type LifecycleCategory =
 const SRC_DIR = resolve(__dirname, '../../../../src');
 const ENGLISH_PATH = join(SRC_DIR, 'components/i18n/locales/en.json');
 const CATALOG_ONLY_KEYS = new Set([
+  // Retain this key for public BlokMessageKey compatibility.
+  'blockSettings.blocksSelected',
   'blockSettings.convertWithChildrenWarning',
   'tools.columns.turnInto',
+  // emoji.nothingFound moved executable-literal -> catalog-only: the inline
+  // ":" trigger's empty state now renders through EmojiPicker's own
+  // NO_EMOJIS_FOUND_KEY (tools.callout.noEmojisFound), the same message the
+  // Callout picker already used, instead of a second string of its own. Kept
+  // in the catalog rather than deleted from all locales — same rationale as
+  // tools.bookmark.error above.
+  'emoji.nothingFound',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -252,7 +261,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 426 + 122 + 26 + 2 closure for all 576 keys', () => {
+  it('rebuilds a disjoint 427 + 122 + 25 + 4 closure for all 578 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -266,7 +275,7 @@ describe('current English catalog lifecycle coverage', () => {
       ])
     );
 
-    expect(lifecycle.size).toBe(576);
+    expect(lifecycle.size).toBe(578);
     expect(counts).toEqual({
       // tools.callout.editIcon moved finite-dynamic -> executable-literal when
       // the callout emoji button stopped being named by the emoji glyph and
@@ -276,10 +285,20 @@ describe('current English catalog lifecycle coverage', () => {
       // key still ships to every locale: dropping it would rewrite all 69
       // dictionaries and invalidate each sha256 digest recorded in the
       // translation audit ledger.
-      'executable-literal': 426,
+      // tools.header.toggleHeading moved registered-namespace-compatible ->
+      // executable-literal when the convert menu started labelling its
+      // toggle-heading group from that key at a literal call site.
+      // emoji.search moved catalog-only -> executable-literal once the inline
+      // emoji trigger composer called I18n.t('emoji.search') at a literal
+      // call site (aria-label for the combobox host). emoji.nothingFound
+      // made the same move and then moved BACK to catalog-only: the inline
+      // trigger's menu is now the real EmojiPicker (Task 6b), whose own
+      // empty state already renders through NO_EMOJIS_FOUND_KEY
+      // (tools.callout.noEmojisFound) — see CATALOG_ONLY_KEYS above.
+      'executable-literal': 427,
       'finite-dynamic': 122,
-      'registered-namespace-compatible': 26,
-      'catalog-only': 2,
+      'registered-namespace-compatible': 25,
+      'catalog-only': 4,
     });
     expect(
       [...lifecycle.entries()]

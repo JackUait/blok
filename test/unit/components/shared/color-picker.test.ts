@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fireEvent, getByRole, queryByAttribute, queryByRole } from '@testing-library/dom';
 import { createColorPicker } from '../../../../src/components/shared/color-picker';
 import type { ColorPickerOptions } from '../../../../src/components/shared/color-picker';
 import { COLOR_PRESETS } from '../../../../src/components/shared/color-presets';
@@ -24,6 +25,17 @@ const createOptions = (overrides: Partial<ColorPickerOptions> = {}): ColorPicker
 });
 
 describe('createColorPicker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.removeItem('blok-recent-colors');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
+    localStorage.removeItem('blok-recent-colors');
+  });
+
   it('renders two sections — one per mode', () => {
     const { element } = createColorPicker(createOptions());
     const sections = element.querySelectorAll('[data-blok-testid^="test-section-"]');
@@ -33,11 +45,17 @@ describe('createColorPicker', () => {
     expect(sections[1].getAttribute('data-blok-testid')).toBe('test-section-bg');
   });
 
-  it('does not render any tab buttons', () => {
+  it('exposes only the selected mode panel until its other tab is activated', () => {
     const { element } = createColorPicker(createOptions());
-    const tabs = element.querySelectorAll('[data-blok-testid^="test-tab-"]');
 
-    expect(tabs).toHaveLength(0);
+    document.body.appendChild(element);
+    expect(getByRole(element, 'tabpanel', { name: 'label.text' })).toBeVisible();
+    expect(queryByRole(element, 'tabpanel', { name: 'label.bg' })).toBeNull();
+
+    fireEvent.click(getByRole(element, 'tab', { name: 'label.bg' }));
+
+    expect(getByRole(element, 'tabpanel', { name: 'label.bg' })).toBeVisible();
+    expect(queryByRole(element, 'tabpanel', { name: 'label.text' })).toBeNull();
   });
 
   it('renders all color swatches in each section (presets + 1 default per section)', () => {
@@ -547,15 +565,17 @@ describe('createColorPicker', () => {
       expect(element.querySelector('[data-blok-testid="test-swatch-recent-bg-blue"]')).not.toBeNull();
     });
 
-    it('renders the recent section before the mode sections', () => {
+    it('keeps recently used colors visible when the other mode is selected', () => {
       const first = createColorPicker(createOptions());
 
       clickSwatch(first.element, 'test-swatch-text-red');
 
       const second = createColorPicker(createOptions());
-      const sections = Array.from(second.element.querySelectorAll('[data-blok-testid^="test-section-"]'));
 
-      expect(sections[0].getAttribute('data-blok-testid')).toBe('test-section-recent');
+      document.body.appendChild(second.element);
+      fireEvent.click(getByRole(second.element, 'tab', { name: 'label.bg' }));
+
+      expect(queryByAttribute('data-blok-testid', second.element, 'test-swatch-recent-text-red')).toBeVisible();
     });
 
     it('shows at most 5 recent swatches, most recent first', () => {

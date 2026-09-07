@@ -4,6 +4,14 @@ vi.mock('../../../../src/tools/image/compress', () => ({
   compressImage: vi.fn(async () => null),
 }));
 
+import type { AssetKind } from '../../../../types/tools/block-tool';
+import type { UploadContext } from '../../../../types/configs/uploader';
+import {
+  collectAssetUploaderSources,
+  hasAssetUploader,
+  uploadAssetFile,
+  uploadAssetUrl,
+} from '../../../../src/components/utils/asset-uploader';
 import { Uploader } from '../../../../src/tools/image/uploader';
 import { compressImage } from '../../../../src/tools/image/compress';
 
@@ -350,14 +358,27 @@ describe('editor-level uploader fallback', () => {
     );
   });
 
+  // Driven through the real resolver, not a stub: the tool's uploader wins
+  // because `api.uploader` files it under the kind this tool owns and prefers
+  // it there. A stubbed `assets` could not tell that apart from the tool
+  // skipping the API, which is how every tool-level upload used to escape the
+  // orphan sweep.
   it("keeps the tool's own uploader authoritative over the editor-level one", async () => {
-    const uploadByFile = vi.fn().mockResolvedValue({ url: 'https://cdn/tool' });
-    const assets = assetsApi();
-    const u = new Uploader({ uploader: { uploadByFile } }, assets);
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: 'https://cdn/tool' }) };
+    const editor = { uploadByFile: vi.fn().mockResolvedValue({ url: 'https://cdn/editor-file' }) };
+    const sources = collectAssetUploaderSources([ { assetKind: 'image',
+      settings: { uploader: tool } } ], editor);
+    const assets = {
+      uploadByFile: (file: File, ctx: UploadContext) => uploadAssetFile(file, ctx, sources),
+      uploadByUrl: (url: string, ctx: UploadContext) => uploadAssetUrl(url, ctx, sources),
+      isConfigured: (kind: AssetKind, method?: 'uploadByFile' | 'uploadByUrl') =>
+        hasAssetUploader(kind, sources, method),
+    };
+    const u = new Uploader({ uploader: tool }, assets);
 
     await expect(u.handleFile(new File([new Uint8Array(4)], 'a.png', { type: 'image/png' })))
       .resolves.toMatchObject({ url: 'https://cdn/tool' });
-    expect(assets.uploadByFile).not.toHaveBeenCalled();
+    expect(editor.uploadByFile).not.toHaveBeenCalled();
   });
 
   it('still falls back to a blob URL when nothing is configured', async () => {

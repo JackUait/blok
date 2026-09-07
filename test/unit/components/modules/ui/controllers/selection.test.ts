@@ -493,6 +493,63 @@ describe('SelectionController', () => {
   });
 
   describe('nested popover handling', () => {
+    it.each(['pointerup', 'selectionchange'])('keeps a focused nested popover open without a document range on %s', (eventName) => {
+      const { controller, blok } = createSelectionController();
+      const popover = document.createElement('div');
+      const search = document.createElement('input');
+      const items = document.createElement('div');
+
+      items.tabIndex = 0;
+      popover.append(search, items);
+      document.body.appendChild(popover);
+      blok.InlineToolbar.opened = true;
+      Object.assign(blok.InlineToolbar, { hasNestedPopoverOpen: true });
+      vi.mocked(blok.InlineToolbar.containsNode).mockImplementation(node => popover.contains(node));
+      controller.enable();
+
+      search.focus();
+      items.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      items.focus();
+      window.getSelection()?.removeAllRanges();
+      items.dispatchEvent(new Event(eventName, { bubbles: true }));
+      vi.runAllTimers();
+
+      expect(blok.InlineToolbar.close).not.toHaveBeenCalled();
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+      expect(items).toHaveFocus();
+    });
+
+    it.each([
+      ['outside', true],
+      ['another toolbar', true],
+      ['this toolbar without a submenu', false],
+    ] as const)('dismisses an empty-range toolbar when focus is in %s', (focusLocation, hasNestedPopoverOpen) => {
+      const { controller, blok } = createSelectionController();
+      const popover = document.createElement('div');
+      const focusedHost = document.createElement('div');
+      const input = document.createElement('input');
+
+      if (focusLocation === 'another toolbar') {
+        focusedHost.setAttribute('data-blok-interface', 'inline-toolbar');
+      }
+      focusedHost.appendChild(input);
+      document.body.append(popover, focusedHost);
+      if (focusLocation === 'this toolbar without a submenu') {
+        popover.appendChild(focusedHost);
+      }
+      blok.InlineToolbar.opened = true;
+      Object.assign(blok.InlineToolbar, { hasNestedPopoverOpen });
+      vi.mocked(blok.InlineToolbar.containsNode).mockImplementation(node => popover.contains(node));
+      controller.enable();
+
+      input.focus();
+      window.getSelection()?.removeAllRanges();
+      input.dispatchEvent(new Event('pointerup', { bubbles: true }));
+
+      expect(blok.InlineToolbar.close).toHaveBeenCalledTimes(1);
+      expect(blok.InlineToolbar.tryToShow).not.toHaveBeenCalled();
+    });
+
     it('does not close toolbar when nested popover is open', async () => {
       const { controller, blok, wrapper } = createSelectionController();
       const blockContent = document.createElement('div');

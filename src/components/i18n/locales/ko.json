@@ -15,6 +15,8 @@
   "popover.search": "작업 검색…",
   "popover.nothingFound": "검색 결과 없음",
   "popover.convertTo": "변환",
+  "emoji.search": "이모지 검색",
+  "emoji.nothingFound": "이모지를 찾을 수 없음",
   "toolNames.text": "텍스트",
   "toolNames.heading": "제목",
   "toolNames.link": "링크",

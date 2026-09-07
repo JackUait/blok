@@ -1231,19 +1231,15 @@ test.describe('blok i18n', () => {
       // Open block settings
       await page.locator(SETTINGS_BUTTON_SELECTOR).click();
 
-      // Heading 1-6 entries live in a nested 'Heading' submenu; open it first.
-      // dispatchEvent avoids Playwright's pointer-move pre-click phase, which
-      // can generate a mouseover that destroys the nested popover.
-      const headingSubmenu = page.locator('[data-blok-testid="block-tunes-popover"] [data-blok-item-name="header-levels"]');
+      // Heading 1-6 are flat radio tiles in the block menu itself.
+      const menu = page.getByTestId('block-tunes-popover');
 
-      await headingSubmenu.dispatchEvent('mouseover');
-
-      // Check heading level options are translated - use popover-item testid and filter by text
-      const popoverItems = page.locator('[data-blok-testid="popover"][data-blok-nested="true"] [data-blok-testid="popover-item"]');
-
-      const heading1Option = popoverItems.filter({ hasText: translations['tools.header.heading1'] });
-      const heading2Option = popoverItems.filter({ hasText: translations['tools.header.heading2'] });
-      const heading3Option = popoverItems.filter({ hasText: translations['tools.header.heading3'] });
+      const heading1Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading1'],
+        exact: true });
+      const heading2Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading2'],
+        exact: true });
+      const heading3Option = menu.getByRole('menuitemradio', { name: translations['tools.header.heading3'],
+        exact: true });
 
       await expect(heading1Option).toBeVisible();
       await expect(heading2Option).toBeVisible();

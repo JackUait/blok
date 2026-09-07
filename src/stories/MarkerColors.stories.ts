@@ -102,8 +102,9 @@ const INLINE_TOOLBAR_TESTID = '[data-blok-testid="inline-toolbar"]';
 const CONTENTEDITABLE_SELECTOR = '[contenteditable="true"]';
 const MARKER_TOOL_SELECTOR = '[data-blok-item-name="marker"]';
 const MARKER_PICKER_SELECTOR = '[data-blok-testid="marker-picker"]';
-const MARKER_COLOR_SECTION_SELECTOR = '[data-blok-testid="marker-section-color"] button';
-const MARKER_BG_SECTION_SELECTOR = '[data-blok-testid="marker-section-background-color"] button';
+const MARKER_COLOR_SWATCH_SELECTOR = '[data-blok-testid^="marker-swatch-color-"]';
+const MARKER_BG_SWATCH_SELECTOR = '[data-blok-testid^="marker-swatch-background-color-"]';
+const MARKER_BG_TAB_SELECTOR = '[data-blok-testid="marker-tab-background-color"]';
 const TIMEOUT_INIT = { timeout: 5000 };
 const TIMEOUT_ACTION = { timeout: 5000 };
 
@@ -409,8 +410,8 @@ export const PartialTextColor: Story = {
 // ---------------------------------------------------------------------------
 
 /**
- * Opens the marker picker on the text-color tab and verifies the grid
- * contains exactly 10 color swatches.
+ * Opens the marker picker on the Text tab and verifies its grid holds
+ * exactly 10 swatches (Default + 9 presets).
  */
 export const PickerTextTab: Story = {
   args: {
@@ -425,7 +426,7 @@ export const PickerTextTab: Story = {
 
       await waitFor(
         () => {
-          const swatches = document.querySelectorAll(MARKER_COLOR_SECTION_SELECTOR);
+          const swatches = document.querySelectorAll(MARKER_COLOR_SWATCH_SELECTOR);
 
           expect(swatches?.length).toBe(10);
         },
@@ -436,8 +437,8 @@ export const PickerTextTab: Story = {
 };
 
 /**
- * Opens the marker picker, switches to the background-color tab, and
- * verifies the grid contains exactly 10 color swatches.
+ * Opens the marker picker, clicks the Background tab, and verifies its grid
+ * holds exactly 10 swatches (Default + 9 presets).
  */
 export const PickerBackgroundTab: Story = {
   args: {
@@ -450,9 +451,21 @@ export const PickerBackgroundTab: Story = {
     await step('Open marker picker and verify background section', async () => {
       await openMarkerPicker(canvasElement);
 
+      const backgroundTab = document.querySelector(MARKER_BG_TAB_SELECTOR);
+
+      expect(backgroundTab).toBeInTheDocument();
+
+      if (backgroundTab) {
+        simulateClick(backgroundTab);
+      }
+
       await waitFor(
         () => {
-          const swatches = document.querySelectorAll(MARKER_BG_SECTION_SELECTOR);
+          const section = document.querySelector('[data-blok-testid="marker-section-background-color"]');
+
+          expect(section).toBeVisible();
+
+          const swatches = document.querySelectorAll(MARKER_BG_SWATCH_SELECTOR);
 
           expect(swatches?.length).toBe(10);
         },
@@ -489,8 +502,8 @@ export const PickerDefaultButton: Story = {
 };
 
 /**
- * Opens the marker picker on uncolored text and verifies no swatch
- * has an active ring indicator.
+ * Opens the marker picker on uncolored text and verifies no Text-tab swatch
+ * other than Default has an active ring indicator.
  */
 export const PickerNoActiveSwatch: Story = {
   args: {
@@ -505,7 +518,7 @@ export const PickerNoActiveSwatch: Story = {
 
       await waitFor(
         () => {
-          const swatches = document.querySelectorAll(MARKER_COLOR_SECTION_SELECTOR);
+          const swatches = document.querySelectorAll(MARKER_COLOR_SWATCH_SELECTOR);
 
           expect(swatches?.length).toBe(10);
 

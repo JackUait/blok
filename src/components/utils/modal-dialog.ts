@@ -216,7 +216,7 @@ export const getTabbables = (container: HTMLElement): HTMLElement[] =>
       return false;
     }
 
-    if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') {
+    if (el.closest('[hidden], [aria-hidden="true"]') !== null) {
       return false;
     }
 

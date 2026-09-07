@@ -67,6 +67,8 @@ export type BlokMessageKey =
   | 'blockSettings.menuShortcutWin'
   | 'blockSettings.openMenuAction'
   | 'blockSettings.orConjunction'
+  | 'emoji.nothingFound'
+  | 'emoji.search'
   | 'notifier.cancel'
   | 'notifier.confirm'
   | 'notifier.dismiss'

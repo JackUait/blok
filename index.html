@@ -1193,6 +1193,7 @@
     import * as Icons from './src/components/icons/index.ts';
     import { ALL_LOCALE_CODES, getDirection } from './src/components/i18n/locales/index.ts';
     import { renderIconGallery } from './src/playground/icon-gallery.ts';
+    import { PRESENCE_GLYPH_GROUP, PRESENCE_GLYPH_ICONS } from './src/playground/presence-glyph-icons.ts';
     import { renderBlockStatesGallery } from './src/playground/block-states-gallery.ts';
     import { applyFontScale, buildFontScaleConfig } from './src/playground/font-scale.ts';
     import { renderUploadingState as renderFileUploadingState } from './src/tools/file/uploading-state.ts';
@@ -2039,12 +2040,15 @@
       'Emoji Picker': ['IconEmojiStar', 'IconEmojiSmile', 'IconEmojiSprout', 'IconEmojiUtensils', 'IconEmojiBall', 'IconEmojiLightbulb', 'IconEmojiFlag'],
       'Link Types': ['IconVideo', 'IconMusic', 'IconMap', 'IconChart', 'IconMessage', 'IconFile'],
       'File Types': ['IconFile', 'IconFileDoc', 'IconFileSheet', 'IconFileSlides', 'IconFileArchive'],
+      // Decoded from presence.css, which owns this artwork — they are masks,
+      // not exports of the icon module.
+      [PRESENCE_GLYPH_GROUP]: Object.keys(PRESENCE_GLYPH_ICONS),
     };
 
     renderIconGallery({
       container: document.getElementById('icon-gallery'),
       iconGroups,
-      icons: Icons,
+      icons: { ...Icons, ...PRESENCE_GLYPH_ICONS },
     });
 
     /**

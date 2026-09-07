@@ -459,6 +459,13 @@ const editor = new Blok(config);`,
           "Opt-in: clicks on the host page below the editor append a block, with zero layout footprint. Pair with `minHeight: 0` to remove the bottom zone entirely. Only clicks landing on the empty background of an element that contains the editor count — clicks on your own content rendered below are ignored, and propagation is never stopped, so host click handlers keep working alongside.",
       },
       {
+        option: "inlineEmoji",
+        type: "boolean",
+        default: "true",
+        description:
+          "Inline emoji menu. Typing `:` followed by a name in a text block opens it — for example `:fire`. Picking an emoji replaces the typed `:query` with the character. The colon opens the menu only at the start of a word. That means at the start of the block, or right after a space. `10:30`, `http://` and `Note: this` do not open it. At least one character must follow the colon. Typing a closing `:` can insert the emoji right away. That only happens when the query is an exact shortcode. `:fire:` gives 🔥 without the menu ever opening. Any other query is left as typed text. Escape closes the menu. It leaves the typed text unchanged. The page does not scroll while the menu is open. The menu's own grid still scrolls. The menu has no search field, no random button, and no remove button. It also has no curated section. Those stay on the Callout tool's own emoji picker, which this option does not affect. `false` turns the menu off. An absent key keeps it on.",
+      },
+      {
         option: "defaultBlock",
         type: "string",
         default: "'paragraph'",

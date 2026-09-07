@@ -1,0 +1,1557 @@
+[
+ {
+  "key": "api.blokClass.methods.save.errors.0.condition",
+  "englishSource": "The editor is in read-only mode when save() is called.",
+  "apiDataLine": 136
+ },
+ {
+  "key": "api.blokClass.methods.save.errors.0.resolution",
+  "englishSource": "Call `readOnly.set(false)` before saving, or persist from the last `onSave` payload / your own mirrored state.",
+  "apiDataLine": 138
+ },
+ {
+  "key": "api.blokClass.methods.createSelector.description",
+  "englishSource": "Named export of the package root (not a member of the Blok class) — builds a CSS selector from a `DATA_ATTR` value. With no `value` it produces a presence selector; with one it produces an equality selector. Use it together with `Blok.DATA_ATTR` instead of matching Blok's internal class names, which are not part of the public surface.",
+  "apiDataLine": 245
+ },
+ {
+  "key": "api.blokClass.methods.icons.description",
+  "englishSource": "Named exports of the `@bloklabs/core/icons` subpath (not members of the Blok class) — Blok's own glyphs as SVG strings, one `Icon*` constant per glyph (`IconBold`, `IconPlus`, `IconTrash`, `IconWarning`, …). Because they are plain strings they drop straight into the places a tool must supply markup: a tool's `static get toolbox()` icon and the entries returned by `renderSettings()`. The subpath ships a generated, self-contained declaration file (`types/icons.d.ts`) listing every constant, so editor autocomplete is the reference for the full set.",
+  "apiDataLine": 255
+ },
+ {
+  "key": "api.blokClass.properties.DATA_ATTR.description",
+  "englishSource": "Named export of the package root (`import { DATA_ATTR } from '@bloklabs/core'`), not a property of the editor instance — the stable `data-blok-*` attribute names Blok writes on its DOM. This is the supported way to query editor DOM and write host tests, instead of matching internal class names. The `DataAttrKey` / `DataAttrValue` types and the `createSelector()` helper are exported alongside it.",
+  "apiDataLine": 274
+ },
+ {
+  "key": "api.blokClass.properties.BLOK_FONT_SIZE_TOKENS.description",
+  "englishSource": "Named export of the package root (`import { BLOK_FONT_SIZE_TOKENS } from '@bloklabs/core'`), not a property of the editor instance — the CSS custom property each `style.fontSize` scenario writes, in a map shaped exactly like the config itself (`BLOK_FONT_SIZE_TOKENS.paragraph`, `.heading[1]`, `.list.checklist`, `.bookmark.link`, …). Use it wherever typography is driven by a channel other than the constructor config — a per-region CSS rule, or `editor.tokens.set({ [BLOK_FONT_SIZE_TOKENS.paragraph]: '18px' })` at runtime — so the custom property names never have to be hand-copied and a rename is a compile error instead of a silent no-op.",
+  "apiDataLine": 280
+ },
+ {
+  "key": "api.blokClass.properties.version.description",
+  "englishSource": "Named export of the package root (`import { version } from '@bloklabs/core'`), not a property of the editor instance — the running editor version, the same value stamped into `OutputData.version`.",
+  "apiDataLine": 286
+ },
+ {
+  "key": "api.blokClass.properties.PendingBlok.description",
+  "englishSource": "A type exported from the package root (`import type { PendingBlok } from '@bloklabs/core'`), not a property of the editor instance — the surface guaranteed to exist synchronously between `new Blok(config)` and `isReady` resolving. Blok builds its module APIs (`blocks`, `caret`, `history`, `readOnly`, …) asynchronously, so reading them earlier returns `undefined`. `PendingBlok` declares only the eight members listed here, which turns that window into a compile error instead of an `undefined` at runtime: `const pending: PendingBlok = new Blok(config); const editor = await pending.isReady;`.",
+  "apiDataLine": 292
+ },
+ {
+  "key": "api.blokClass.properties.tools.description",
+  "englishSource": "Tools API module",
+  "apiDataLine": 320
+ },
+ {
+  "key": "api.blokClass.properties.uploader.description",
+  "englishSource": "Uploader API module — asset uploads routed by asset kind",
+  "apiDataLine": 324
+ },
+ {
+  "key": "api.blokClass.properties.listeners.description",
+  "englishSource": "Listeners API module",
+  "apiDataLine": 330
+ },
+ {
+  "key": "api.blokClass.properties.notifier.description",
+  "englishSource": "Notifier API module",
+  "apiDataLine": 332
+ },
+ {
+  "key": "api.blokClass.properties.sanitizer.description",
+  "englishSource": "Sanitizer API module",
+  "apiDataLine": 336
+ },
+ {
+  "key": "api.blokClass.properties.selection.description",
+  "englishSource": "Selection API module",
+  "apiDataLine": 341
+ },
+ {
+  "key": "api.blokClass.properties.marks.description",
+  "englishSource": "Marks API module — range-aware inline-mark operations",
+  "apiDataLine": 346
+ },
+ {
+  "key": "api.blokClass.properties.styles.description",
+  "englishSource": "Styles API module",
+  "apiDataLine": 348
+ },
+ {
+  "key": "api.blokClass.properties.tooltip.description",
+  "englishSource": "Tooltip API module",
+  "apiDataLine": 349
+ },
+ {
+  "key": "api.blokClass.properties.readOnly.description",
+  "englishSource": "ReadOnly API module",
+  "apiDataLine": 350
+ },
+ {
+  "key": "api.blokClass.properties.ui.description",
+  "englishSource": "UI API module",
+  "apiDataLine": 351
+ },
+ {
+  "key": "api.blokClass.properties.theme.description",
+  "englishSource": "Theme API module",
+  "apiDataLine": 352
+ },
+ {
+  "key": "api.blokClass.properties.width.description",
+  "englishSource": "Width API module",
+  "apiDataLine": 353
+ },
+ {
+  "key": "api.blokClass.properties.placeholder.description",
+  "englishSource": "Placeholder API module",
+  "apiDataLine": 357
+ },
+ {
+  "key": "api.blokClass.properties.tokens.description",
+  "englishSource": "Runtime theme-tokens API module",
+  "apiDataLine": 362
+ },
+ {
+  "key": "api.blokClass.properties.i18n.description",
+  "englishSource": "I18n API module — everything a tool gets through `api.i18n`, widened with `update()`",
+  "apiDataLine": 368
+ },
+ {
+  "key": "api.blokClass.properties.config.description",
+  "englishSource": "Read-only view of selected editor configuration: the `link` and `linkPaste` options this instance was constructed with. A custom inline or link tool reads the host's link policy from here (as `api.config`) instead of re-deriving it.",
+  "apiDataLine": 374
+ },
+ {
+  "key": "api.blokClass.properties.rectangleSelection.description",
+  "englishSource": "Drag-select (rubber-band) control, also reachable inside a tool as `api.rectangleSelection`. `startSelection(pageX, pageY, shiftKey?)` begins a rubber-band from page coordinates; `endSelection()` resets the drag state and hides the overlay; `isRectActivated()` reports whether a rubber-band is currently active; `clearSelection()` drops the active flag; `cancelActiveSelection()` aborts a selection in progress (clear + end) — what another selection system, e.g. table cell selection, calls when it takes priority.",
+  "apiDataLine": 380
+ },
+ {
+  "key": "api.configuration.table.tunes.description",
+  "englishSource": "Names of block tunes added to every block tool that does not declare its own `tunes` set. The tune classes themselves must be registered in `tools` (a class with `static isTune = true`).",
+  "apiDataLine": 432
+ },
+ {
+  "key": "api.configuration.table.dataModel.description",
+  "englishSource": "Input/output data model. 'auto' detects the format of the data you render and preserves it on save; 'legacy' always uses the nested `items[]` structure; 'hierarchical' always uses flat blocks with `parent`/`content` references.",
+  "apiDataLine": 473
+ },
+ {
+  "key": "api.configuration.table.sanitizer.description",
+  "englishSource": "Editor-wide default sanitizer allowlist. Composed with each tool's own `sanitize` rules and applied on save, on render, on paste and on copy of selected blocks.",
+  "apiDataLine": 480
+ },
+ {
+  "key": "api.configuration.table.scrollToBlock.description",
+  "englishSource": "Blok always smooth-scrolls to the block whose id matches the page URL hash (`#<blockId>`) once blocks are rendered — including blocks rendered later via `blocks.render()`. This option only tunes that behavior: `topOffset` (default 0) reserves space above the block for a sticky header.",
+  "apiDataLine": 564
+ },
+ {
+  "key": "api.configuration.table.uploader.description",
+  "englishSource": "Editor-level uploader for every media asset, routed by asset KIND rather than by tool. `uploadByFile(file, { kind, tool })` and `uploadByUrl(url, { kind, tool })` receive `kind: 'image' | 'video' | 'audio' | 'file'`, so one implementation serves the image, video, audio and file blocks — including assets a tool owns outside its own media family, such as the audio block's cover art (`kind: 'image'`, `tool: 'audio'`), which has no tool-level uploader of its own. A tool-level uploader (`tools.image.config.uploader`) stays authoritative for its own kind and takes precedence; this is the fallback. Without either, assets become `blob:` URLs that do not survive a reload.",
+  "apiDataLine": 599
+ },
+ {
+  "key": "api.configuration.table.server.description",
+  "englishSource": "Base URL of a service speaking Blok's upload and unfurl contracts — `https://blok.myapp.com`, or a same-origin path like `/api/blok`. Shorthand only: it fills in `uploader` and the bookmark tool's `endpoint` when you have not set them yourself, and anything you set explicitly wins. That is what lets you take the service for link previews while uploading into your own S3, with no bridging code. It does not configure document storage — your documents stay yours; see `persistence`.",
+  "apiDataLine": 606
+ },
+ {
+  "key": "api.configuration.table.ticket.description",
+  "englishSource": "Endpoint in YOUR app that mints a short-lived access pass for the signed-in user, answering `{ \"ticket\": \"<pass>\" }`. Only needed when `server` points at a standalone service — routes running inside your own app already know who the caller is. The editor caches the pass and replaces it ahead of expiry rather than at it, so no request arrives already invalid, and uploads and link previews share the same one. `@bloklabs/server/ticket` exports `blokTicket()` for minting it; any backend can do the same with its own JWT library.",
+  "apiDataLine": 613
+ },
+ {
+  "key": "api.configuration.table.persistence.description",
+  "englishSource": "Load the document on mount and save it as it changes, against your own endpoint — the Blok service stores no documents. Two callbacks rather than a URL, because the endpoint shape, its auth and the document id are yours. Saves never run in parallel and only the newest pending document follows the one in flight, so a slow save finishing after a fast one cannot bring stale content back. Loading only happens when you passed no `data`, and setting `onSave` yourself wins. `load` may answer with a version alongside the document, and each `save` is told the version it is overwriting and may report the one it wrote — Blok only carries that version between the two calls, so your endpoint stays the only place a stale write is detected.",
+  "apiDataLine": 620
+ },
+ {
+  "key": "api.configuration.table.collaboration.description",
+  "englishSource": "Real-time multiplayer editing against the sync service `server` points at: two editors opened on the same `doc` see each other's edits live. `doc` is the shared document id, and it becomes one path segment of the sync URL — so it must be a single path segment (no `/`, no encoded slash, no `.`/`..`), and anything else is refused at construction rather than failing at the door. `user` is the DISPLAY identity the other people see — the name on their avatar, and the color of their cursor and of the small face parked in the margin beside the block they are in — and is independent of the `user: { id }` option, which records edit attribution: one answers \"whose cursor is that\", the other \"who gets the credit for this edit\"; set either, both or neither. `color` is HEX only (`#rgb`, `#rrggbb`, with or without alpha); anything else is replaced with a color from the built-in palette. `offline` keeps a copy of the document in that browser so edits made while disconnected survive a reload — off by default, because it writes document content into browser storage, and it is dropped whenever the service resets the document. It REQUIRES `offlineScope`, an opaque stable id for the signed-in account: browser storage belongs to the browser rather than to a person, so without a partition the next person on a shared profile is handed the previous one's document. It is never an authorization claim — the server never sees it — and never the display identity; do not derive it from anything that rotates, because a new partition on every refresh strands every copy before it. Requires `server`, and is mutually exclusive with `persistence` — the sync service owns the whole document round-trip, so a second load/save pair would give the document two owners — both refused at construction. Absent, it costs nothing: Blok opens no socket. Mount-only; changing it means recreating the editor. React and Vue take it as a `collaboration` prop, Angular has no dedicated input so it goes through `[config]`. Connection state and the people present arrive on the `collaboration:status` event.",
+  "apiDataLine": 627
+ },
+ {
+  "key": "api.configuration.table.onThemeChange.description",
+  "englishSource": "Fires with the RESOLVED theme ('light' or 'dark') whenever it changes — both when the OS preference flips while `theme` is 'auto', and when `theme.set()` changes what the theme resolves to. It does not fire on initialization, and it does not fire when a `theme.set()` leaves the resolved theme unchanged. A core config option, not an adapter-only prop; the framework adapters expose the same callback as the `onThemeChange` prop / `theme-change` emit / `themeChange` output.",
+  "apiDataLine": 641
+ },
+ {
+  "key": "api.configuration.table.linkPaste.description",
+  "englishSource": "Notion-style link-paste behavior. Set `allowGenericEmbed: true` to also offer \"Create embed\" (framed in a sandboxed iframe) for URLs that match no registered embed provider; the default keeps Blok's registry-only embed guarantee. `allowedEmbedOrigins` is the fine-grained middle ground: hostnames (`dashboards.example.com`) or wildcard subdomain patterns (`*.internal.example.dev`) that may be framed as generic embeds. A stored generic embed matching neither renders as a safe clickable link card instead of an iframe, so the URL stays visible without being framed.",
+  "apiDataLine": 655
+ },
+ {
+  "key": "api.configuration.table.user.description",
+  "englishSource": "Identity of the current editor. Blok stamps `user.id` onto the `lastEditedBy` of every block this user edits — without it `lastEditedBy` stays null. Pair it with `resolveUser` to render a name in the block settings footer.",
+  "apiDataLine": 662
+ },
+ {
+  "key": "api.configuration.table.notifierPosition.description",
+  "englishSource": "Where the built-in toast container is anchored on screen.",
+  "apiDataLine": 676
+ },
+ {
+  "key": "api.configuration.table.notifier.description",
+  "englishSource": "Replaces the built-in toast entirely — Blok calls your handler with the same options object instead of rendering its own DOM notification.",
+  "apiDataLine": 683
+ },
+ {
+  "key": "api.configuration.table.logLevel.description",
+  "englishSource": "How much Blok logs to the console. Values are `VERBOSE`, `INFO`, `WARN` and `ERROR` — there is no \"silent\" level, so `LogLevels.ERROR` is the quietest. `LogLevels` is a named export of the package root.",
+  "apiDataLine": 690
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.clear.description",
+  "englishSource": "Remove all blocks from the editor.",
+  "apiDataLine": 704
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.render.description",
+  "englishSource": "Render passed JSON data as blocks, replacing the current document. Echo-safe: when the incoming document is structurally equal to the current saved content (`time`/`version` ignored), the call is a caret-preserving no-op — the `data → render → onSave → setState → data` round-trip needs no consumer-side dedupe. Accepts the loose wire shape (`LooseOutputData`); the editor deep-clones the data, so the passed object is never mutated or retained — frozen store state (Redux, Immer) can be passed directly.",
+  "apiDataLine": 712
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.renderFromHTML.description",
+  "englishSource": "Render HTML string as blocks by converting it to block format.",
+  "apiDataLine": 725
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.importMarkdown.description",
+  "englishSource": "Convert a Markdown string to blocks and render them, REPLACING the current document — it calls `blocks.render()` internally. The converter is lazy-loaded on first call, and the resolved OutputData is the document that was rendered. `options` is a `MarkdownImportConfig` (tool mapping, GFM toggle, micromark/mdast extensions). For additive insertion, use `markdownToBlocks()` from the standalone `@bloklabs/core/markdown` subpath together with `blocks.insertMany()`.",
+  "apiDataLine": 734
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.importMarkdown.params.md.description",
+  "englishSource": "Markdown source string.",
+  "apiDataLine": 742
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.importMarkdown.params.options.description",
+  "englishSource": "Tool mapping, GFM toggle, and micromark/mdast extensions.",
+  "apiDataLine": 749
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.exportMarkdown.description",
+  "englishSource": "Serialize the current document to Markdown — the outbound twin of `importMarkdown`. Blocks are read through the Saver, so the output reflects the saved (validated) document rather than raw DOM, and the promise resolves to '' when there is nothing to save. Blocks owned by a table cell are serialized inside the pipe table instead of being repeated as loose lines. What Markdown cannot express is degraded: table `colspan`/`rowspan` and heading columns are dropped, and a table with no heading row gets an empty header row, since GFM requires one.",
+  "apiDataLine": 757
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.delete.description",
+  "englishSource": "Remove the block at the specified index, or current block if no index provided.",
+  "apiDataLine": 765
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.delete.params.index.description",
+  "englishSource": "Index of the block to delete.",
+  "apiDataLine": 780
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.delete.params.setCaret.description",
+  "englishSource": "Whether to move the caret to the surviving block after deletion; pass false to avoid stealing the user's caret during programmatic deletion.",
+  "apiDataLine": 788
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.move.description",
+  "englishSource": "Moves a block to a new position. If fromIndex is not provided, moves the current block.",
+  "apiDataLine": 796
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getBlockByIndex.description",
+  "englishSource": "Get the BlockAPI object for the block at the specified index.",
+  "apiDataLine": 807
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getById.description",
+  "englishSource": "Get the BlockAPI object for the block with the specified ID.",
+  "apiDataLine": 817
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getCurrentBlockIndex.description",
+  "englishSource": "Get the index of the currently focused block.",
+  "apiDataLine": 826
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getBlockIndex.description",
+  "englishSource": "Get the index of a block by its ID.",
+  "apiDataLine": 833
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getBlockByElement.description",
+  "englishSource": "Get the BlockAPI object for the block containing the given HTML element.",
+  "apiDataLine": 843
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.scrollToBlock.description",
+  "englishSource": "Scroll a block into view, select it, pulse the arrival highlight and announce the navigation to assistive tech — the public counterpart of the boot-time URL-hash scroll. No-op when no block with that id is in the document. Framework adapters that mount into a detached holder (React/Vue/Angular) render seeded content before it joins the page, so the boot hash scroll defers; @bloklabs/react drains it automatically once the holder connects — call this yourself for deep-linking after the editor is ready.",
+  "apiDataLine": 855
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getChildren.description",
+  "englishSource": "Get all child blocks of a parent container block.",
+  "apiDataLine": 861
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.setBlockParent.description",
+  "englishSource": "Reparent a block: updates the block's `parentId` and the parent's `contentIds` through core's single reparent chokepoint. Pass `null` to move the block back to the root level. An unknown `blockId` is a no-op that logs a warning; a `parentId` that would make the block a descendant of itself throws.",
+  "apiDataLine": 871
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertInsideParent.description",
+  "englishSource": "Insert a block as a child of `parentId` atomically: the creation and the parent assignment are grouped into ONE undo entry, so a single Cmd+Z removes it completely (preferable to `insert()` followed by a reparent, which is two). `insertIndex` is the FLAT document index where the child should appear. `toolName` picks the child's block tool and defaults to `config.defaultBlock`; a tool that is restricted inside table cells is demoted to the default block when the new child would land inside one, and an unregistered name throws before anything is written. `childData` defaults to `{ text: '' }` for the default block, and to `{}` — letting the tool apply its own defaults — whenever `toolName` names a different tool.",
+  "apiDataLine": 882
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.getBlocksCount.description",
+  "englishSource": "Get the total number of blocks in the editor.",
+  "apiDataLine": 901
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insert.description",
+  "englishSource": "Insert a new block with full control over its properties and position.",
+  "apiDataLine": 909
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertMany.description",
+  "englishSource": "Insert multiple blocks at once. When the index is omitted, the blocks are appended at the end of the document.",
+  "apiDataLine": 1012
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertMany.params.blocks.description",
+  "englishSource": "The blocks to insert. Loose wire blocks are accepted — a `null` `data` becomes `{}`, a `null`/empty `id` gets a generated one.",
+  "apiDataLine": 1025
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertMany.params.index.description",
+  "englishSource": "Position to insert at. When omitted, defaults to appending at the end of the document.",
+  "apiDataLine": 1033
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertMany.errors.0.condition",
+  "englishSource": "The provided `index` is negative.",
+  "apiDataLine": 1038
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.insertMany.errors.0.resolution",
+  "englishSource": "Pass an `index` of 0 or greater, or omit it to append.",
+  "apiDataLine": 1040
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.composeBlockData.description",
+  "englishSource": "Create empty block data for the specified tool type.",
+  "apiDataLine": 1047
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.composeBlockData.errors.0.condition",
+  "englishSource": "`toolName` is not a registered tool.",
+  "apiDataLine": 1052
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.composeBlockData.errors.0.resolution",
+  "englishSource": "Register the tool in the editor's `tools` config first.",
+  "apiDataLine": 1054
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.update.description",
+  "englishSource": "Update a block's data and/or tunes. When the block's tool implements `setData(newData)` on its prototype — every React/Vue/Angular block does, as do the built-in header, list, code, toggle and table tools — the data update is applied IN PLACE: the same block instance, the same DOM holder, the same mounted component keep living, so ephemeral tool state, adopted child blocks and the caret all survive. That is what makes `update()` safe to call on every keystroke (renaming a card while the user types). Tools without `setData`, a tool whose `setData` returns `false` (it needs a different DOM shape), and any call that passes `tunes` fall back to recomposing the block: a fresh tool instance replaces the old one, which is destroyed.",
+  "apiDataLine": 1062
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.convert.description",
+  "englishSource": "Convert a block to a different type. Both tools must support conversion config.",
+  "apiDataLine": 1110
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.splitBlock.description",
+  "englishSource": "Atomically split a block by updating the current block and inserting a new block. Both operations are grouped into a single undo entry.",
+  "apiDataLine": 1167
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.stopBlockMutationWatching.description",
+  "englishSource": "Stop mutation watching on a block at the specified index. Use this to prevent spurious block-changed events during block replacement operations.",
+  "apiDataLine": 1181
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.startBlockMutationWatching.description",
+  "englishSource": "Re-arm mutation watching on a block previously silenced by `stopBlockMutationWatching`. It takes an **id**, not an index, because inserts and replacements between the two calls shift indexes; an id that no longer exists is silently skipped — a block replaced in place was constructed with its own watcher.",
+  "apiDataLine": 1191
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.transact.description",
+  "englishSource": "Group every block operation performed inside `fn` into a single undo entry. `fn` must be SYNCHRONOUS — operations that land after an await are no longer part of the group. Use it so structural edits are not partially undoable.",
+  "apiDataLine": 1203
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.beginTransaction.description",
+  "englishSource": "Open an undo group that stays open across async boundaries. Every block operation until `endTransaction()` lands in one undo entry. Use it for pointer gestures that mutate the document continuously (dragging a table's corner to add rows), where `transact()` cannot help because it only wraps a synchronous function. Every call must be paired with `endTransaction()`.",
+  "apiDataLine": 1214
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.endTransaction.description",
+  "englishSource": "Close the undo group opened by `beginTransaction()`.",
+  "apiDataLine": 1222
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.transactWithoutCapture.description",
+  "englishSource": "Run block operations without recording anything in the undo history. Use it for auto-repair and normalization (e.g. ensuring an empty cell always has a block) that Cmd+Z should never step through.",
+  "apiDataLine": 1231
+ },
+ {
+  "key": "api.blocksApi.methods.blocks.setPointerDragActive.description",
+  "englishSource": "Tell core that a pointer drag interaction started or ended. While it is active, DOM-mutation-triggered Yjs syncs are suppressed so browser DOM churn during the drag cannot corrupt Yjs state.",
+  "apiDataLine": 1241
+ },
+ {
+  "key": "api.blocksApi.properties.isSyncingFromYjs.description",
+  "englishSource": "Readonly getter — true while a Yjs sync operation (undo/redo) is in progress. Tools read it to skip cleanup that would fight undo state. Note this is a PROPERTY on `editor.blocks`, unlike the React hook's `isSyncingFromYjs()` method.",
+  "apiDataLine": 1252
+ },
+ {
+  "key": "api.blocksApi.properties.isPointerDragActive.description",
+  "englishSource": "Readonly getter — true while a pointer drag interaction is active. Framework adapters read it to defer a programmatic `dispatchChange` mid-drag (core silently drops such a change) and re-dispatch it once the drag ends.",
+  "apiDataLine": 1258
+ },
+ {
+  "key": "api.blockApi.methods.block.save.description",
+  "englishSource": "Save the block content and return its data.",
+  "apiDataLine": 1272
+ },
+ {
+  "key": "api.blockApi.methods.block.validate.description",
+  "englishSource": "Validate block data against the tool's validation rules.",
+  "apiDataLine": 1282
+ },
+ {
+  "key": "api.blockApi.methods.block.call.description",
+  "englishSource": "Call a custom method on the block's tool.",
+  "apiDataLine": 1292
+ },
+ {
+  "key": "api.blockApi.methods.block.dispatchChange.description",
+  "englishSource": "Manually trigger the onChange callback for this block.",
+  "apiDataLine": 1300
+ },
+ {
+  "key": "api.blockApi.methods.block.getActiveToolboxEntry.description",
+  "englishSource": "Get the active toolbox entry for this block (e.g., Heading 1 vs Heading 2).",
+  "apiDataLine": 1309
+ },
+ {
+  "key": "api.blockApi.methods.block.getChildren.description",
+  "englishSource": "This block's direct children as BlockAPI objects, in order. Every BlockAPI the editor hands out is live, so the children it returns can be walked recursively (`child.getChildren()`) and mutated (`child.setParent(...)`, `child.insertChild(...)`).",
+  "apiDataLine": 1320
+ },
+ {
+  "key": "api.blockApi.methods.block.setParent.description",
+  "englishSource": "Reparent this block under `parentId`, or back to the root level with `null`. Routes through core's universal `setBlockParent` chokepoint, so the parent's `contentIds` is updated together with this block's `parentId`.",
+  "apiDataLine": 1328
+ },
+ {
+  "key": "api.blockApi.methods.block.insertChild.description",
+  "englishSource": "Insert a child block under THIS block atomically — creation and parent assignment land in a single undo entry (it delegates to `blocks.insertInsideParent`). `position` is a `BlockChildPosition`: 'start' | 'end' | { before: childId } | { after: childId }, defaulting to 'end' (appended past the whole subtree). `toolName` picks the child's block tool and defaults to `config.defaultBlock`, so a TYPED child is one operation instead of insert-then-reparent; a tool restricted inside table cells is demoted to the default block when the new child would land inside one. `childData` defaults to `{ text: '' }` for the default block and to `{}` when `toolName` names a different tool. `options` carries the same `{ focus, caret, id, tunes, replace }` vocabulary the framework adapters' rich `insert` spec uses, so a container tool never has to hand-roll caret placement or follow up with an `update` to apply tunes.",
+  "apiDataLine": 1339
+ },
+ {
+  "key": "api.blockApi.methods.block.insertChild.params.childData.description",
+  "englishSource": "Data for the new child block. Defaults to an empty paragraph blob for the default block tool, and to {} — letting the tool apply its own defaults — when toolName is given.",
+  "apiDataLine": 1365
+ },
+ {
+  "key": "api.blockApi.methods.block.insertChild.params.position.description",
+  "englishSource": "Where among the existing children to insert: 'start', 'end', { before: childId } or { after: childId }.",
+  "apiDataLine": 1373
+ },
+ {
+  "key": "api.blockApi.methods.block.insertChild.params.toolName.description",
+  "englishSource": "Block tool to create for the child. Demoted to the default block when it is restricted inside table cells and the new child would land inside one.",
+  "apiDataLine": 1381
+ },
+ {
+  "key": "api.blockApi.methods.block.insertChild.params.options.description",
+  "englishSource": "focus — make the new child the current block. caret — place the caret inside it ({ position?, offset? }), applied only when a child is actually created. id — explicit id; an id that already exists is insert-if-absent (that child is returned, nothing is created). tunes — block tune data applied at creation. replace — overwrite the child named by an object position instead of inserting beside it; with 'start'/'end' there is nothing to overwrite and the call throws.",
+  "apiDataLine": 1389
+ },
+ {
+  "key": "api.blockApi.methods.block.moveChild.description",
+  "englishSource": "Move a direct child by `delta` positions among its siblings, clamped to the valid range. A child carrying its own subtree lands past the target sibling's descendants, not inside them. No-op when `delta` is 0, when `childId` is not a direct child, or when the clamped move would not change the position.",
+  "apiDataLine": 1397
+ },
+ {
+  "key": "api.blockApi.properties.id.description",
+  "englishSource": "Unique block identifier",
+  "apiDataLine": 1404
+ },
+ {
+  "key": "api.blockApi.properties.name.description",
+  "englishSource": "Tool name (e.g., \"paragraph\", \"header\")",
+  "apiDataLine": 1408
+ },
+ {
+  "key": "api.blockApi.properties.config.description",
+  "englishSource": "Tool config passed on initialization",
+  "apiDataLine": 1413
+ },
+ {
+  "key": "api.blockApi.properties.holder.description",
+  "englishSource": "Wrapper of Tool's HTML element",
+  "apiDataLine": 1418
+ },
+ {
+  "key": "api.blockApi.properties.isEmpty.description",
+  "englishSource": "True if block content is empty",
+  "apiDataLine": 1423
+ },
+ {
+  "key": "api.blockApi.properties.selected.description",
+  "englishSource": "True if the block is part of a BLOCK-level selection (rubber-band drag, Shift+Click, Shift+Arrow, Cmd/Ctrl+A). A drag across the text of several blocks makes a character-level selection instead, which marks no block as selected — read that one from the document's own Selection.",
+  "apiDataLine": 1429
+ },
+ {
+  "key": "api.blockApi.properties.focusable.description",
+  "englishSource": "True if block has inputs to be focused",
+  "apiDataLine": 1434
+ },
+ {
+  "key": "api.blockApi.properties.stretched.description",
+  "englishSource": "Getter/setter for block stretch state",
+  "apiDataLine": 1439
+ },
+ {
+  "key": "api.blockApi.properties.parentId.description",
+  "englishSource": "Id of the parent block, or null if this block has no parent",
+  "apiDataLine": 1444
+ },
+ {
+  "key": "api.blockApi.properties.contentIds.description",
+  "englishSource": "Ids of this block's direct children, in order — a read-only copy, so mutating it changes nothing. The block-level counterpart of parentId: it lets a container tool read its children without reaching for the editor API",
+  "apiDataLine": 1450
+ },
+ {
+  "key": "api.blockApi.properties.preservedData.description",
+  "englishSource": "Last successfully extracted block tool data, synchronous — useful when async save() is not feasible, e.g. clipboard operations",
+  "apiDataLine": 1456
+ },
+ {
+  "key": "api.blockApi.properties.preservedTunes.description",
+  "englishSource": "Last successfully extracted block tune data, synchronous — useful when async save() is not feasible, e.g. clipboard operations",
+  "apiDataLine": 1462
+ },
+ {
+  "key": "api.caretApi.methods.caret.setToFirstBlock.description",
+  "englishSource": "Set caret to the first block with optional position and offset.",
+  "apiDataLine": 1476
+ },
+ {
+  "key": "api.caretApi.methods.caret.setToLastBlock.description",
+  "englishSource": "Set caret to the last block with optional position and offset.",
+  "apiDataLine": 1491
+ },
+ {
+  "key": "api.caretApi.methods.caret.setToPreviousBlock.description",
+  "englishSource": "Move caret to the previous block.",
+  "apiDataLine": 1501
+ },
+ {
+  "key": "api.caretApi.methods.caret.setToNextBlock.description",
+  "englishSource": "Move caret to the next block.",
+  "apiDataLine": 1508
+ },
+ {
+  "key": "api.caretApi.methods.caret.setToBlock.description",
+  "englishSource": "Set caret to a specific block by BlockAPI, ID, or index.",
+  "apiDataLine": 1515
+ },
+ {
+  "key": "api.caretApi.methods.caret.focus.description",
+  "englishSource": "Set focus to the editor, optionally at the end of content.",
+  "apiDataLine": 1562
+ },
+ {
+  "key": "api.caretApi.methods.caret.updateLastCaretAfterPosition.description",
+  "englishSource": "Update the \"after\" position of the most recent caret undo entry. Use after async caret movements.",
+  "apiDataLine": 1573
+ },
+ {
+  "key": "api.eventsApi.methods.on.description",
+  "englishSource": "Subscribe to an editor event.",
+  "apiDataLine": 1591
+ },
+ {
+  "key": "api.eventsApi.methods.off.description",
+  "englishSource": "Unsubscribe from an editor event.",
+  "apiDataLine": 1632
+ },
+ {
+  "key": "api.eventsApi.methods.emit.description",
+  "englishSource": "Emit a custom event. Fire-and-forget over the listeners registered at that moment — there is no replay, so a handler subscribed after the emit never sees it.",
+  "apiDataLine": 1643
+ },
+ {
+  "key": "api.historyApi.methods.history.undo.description",
+  "englishSource": "Undo the last operation.",
+  "apiDataLine": 1662
+ },
+ {
+  "key": "api.historyApi.methods.history.redo.description",
+  "englishSource": "Redo the last undone operation.",
+  "apiDataLine": 1674
+ },
+ {
+  "key": "api.historyApi.methods.history.canUndo.description",
+  "englishSource": "Check if undo is available (there are operations to undo).",
+  "apiDataLine": 1686
+ },
+ {
+  "key": "api.historyApi.methods.history.canRedo.description",
+  "englishSource": "Check if redo is available (there are undone operations to redo).",
+  "apiDataLine": 1696
+ },
+ {
+  "key": "api.historyApi.methods.history.clear.description",
+  "englishSource": "Clear all history. Removes all undo/redo entries.",
+  "apiDataLine": 1706
+ },
+ {
+  "key": "api.saverApi.methods.saver.save.description",
+  "englishSource": "Alias for the main save() method. **Rejects while read-only mode is enabled** — it warns and throws `Error(\"Blok's content can not be saved in read-only mode\")` before reaching the Saver. Guard the call with `editor.readOnly.isEnabled`, or call `await editor.readOnly.set(false)` first.",
+  "apiDataLine": 1725
+ },
+ {
+  "key": "api.saverApi.methods.saver.save.errors.0.condition",
+  "englishSource": "Read-only mode is enabled (`editor.readOnly.isEnabled === true`).",
+  "apiDataLine": 1732
+ },
+ {
+  "key": "api.saverApi.methods.saver.save.errors.0.resolution",
+  "englishSource": "Disable read-only with `readOnly.set(false)` before saving, or gate the call on `readOnly.isEnabled`.",
+  "apiDataLine": 1735
+ },
+ {
+  "key": "api.saverApi.methods.saver.save.errors.1.condition",
+  "englishSource": "Collecting the data failed (a tool's save() threw).",
+  "apiDataLine": 1738
+ },
+ {
+  "key": "api.saverApi.methods.saver.save.errors.1.resolution",
+  "englishSource": "Inspect the rejected error: it is the tool's own error whenever the Saver recorded one.",
+  "apiDataLine": 1742
+ },
+ {
+  "key": "api.selectionApi.methods.selection.findParentTag.description",
+  "englishSource": "Find the parent element of the current selection matching the tag and optionally class.",
+  "apiDataLine": 1758
+ },
+ {
+  "key": "api.selectionApi.methods.selection.expandToTag.description",
+  "englishSource": "Expand selection to cover the entire element.",
+  "apiDataLine": 1769
+ },
+ {
+  "key": "api.selectionApi.methods.selection.setFakeBackground.description",
+  "englishSource": "Set a fake background to imitate selection when focus moves away. Useful for inline tools.",
+  "apiDataLine": 1780
+ },
+ {
+  "key": "api.selectionApi.methods.selection.removeFakeBackground.description",
+  "englishSource": "Remove the fake background selection.",
+  "apiDataLine": 1788
+ },
+ {
+  "key": "api.selectionApi.methods.selection.clearFakeBackground.description",
+  "englishSource": "Clear all fake background state - both DOM elements and internal flags.",
+  "apiDataLine": 1796
+ },
+ {
+  "key": "api.selectionApi.methods.selection.save.description",
+  "englishSource": "Save the current selection range to restore later.",
+  "apiDataLine": 1803
+ },
+ {
+  "key": "api.selectionApi.methods.selection.restore.description",
+  "englishSource": "Restore a previously saved selection range.",
+  "apiDataLine": 1815
+ },
+ {
+  "key": "api.marksApi.methods.marks.has.description",
+  "englishSource": "Whether every text node in the range is inside a wrapper matching the spec — whitespace-only text nodes are ignored, and at a collapsed caret the caret's ancestors are checked. Unlike selection.findParentTag (which only checks the selection's boundary nodes and their ancestors), a selection that only partially carries the mark reports false.",
+  "apiDataLine": 1861
+ },
+ {
+  "key": "api.marksApi.methods.marks.has.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 1867
+ },
+ {
+  "key": "api.marksApi.methods.marks.has.params.range.description",
+  "englishSource": "Range to check; defaults to the live selection's first range.",
+  "apiDataLine": 1874
+ },
+ {
+  "key": "api.marksApi.methods.marks.find.description",
+  "englishSource": "Nearest ancestor element matching the spec, starting from the given node (or the current selection's start container). Matching respects the full spec — tag, classNames, and static attribute/style values — not just the tag name.",
+  "apiDataLine": 1887
+ },
+ {
+  "key": "api.marksApi.methods.marks.find.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 1893
+ },
+ {
+  "key": "api.marksApi.methods.marks.find.params.from.description",
+  "englishSource": "Node to start the upward search from; defaults to the current selection's start container.",
+  "apiDataLine": 1900
+ },
+ {
+  "key": "api.marksApi.methods.marks.read.description",
+  "englishSource": "Read the current values of the spec's declared properties from the wrapper at the range start. Returns null when the range is not inside a matching wrapper. The snapshot carries the matched element plus its declared style properties and attributes — unset and transparent-valued style properties are omitted.",
+  "apiDataLine": 1913
+ },
+ {
+  "key": "api.marksApi.methods.marks.read.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 1919
+ },
+ {
+  "key": "api.marksApi.methods.marks.read.params.range.description",
+  "englishSource": "Range to read from; defaults to the live selection's first range.",
+  "apiDataLine": 1926
+ },
+ {
+  "key": "api.marksApi.methods.marks.apply.description",
+  "englishSource": "Wrap the range in the mark, or update matching wrappers in place. Splits partially-covered same-family wrappers at the range boundaries, extends the range over trailing whitespace browsers exclude from double-click selections, and leaves the new contents selected. Returns the created or updated wrapper elements. A collapsed range (a bare caret with nothing selected) is a no-op — apply returns an empty array without touching the DOM or the selection.",
+  "apiDataLine": 1942
+ },
+ {
+  "key": "api.marksApi.methods.marks.apply.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 1948
+ },
+ {
+  "key": "api.marksApi.methods.marks.apply.params.state.description",
+  "englishSource": "Value passed to the spec's function-form attribute/style properties.",
+  "apiDataLine": 1954
+ },
+ {
+  "key": "api.marksApi.methods.marks.apply.params.range.description",
+  "englishSource": "Range to format; defaults to the live selection's first range.",
+  "apiDataLine": 1961
+ },
+ {
+  "key": "api.marksApi.methods.marks.remove.description",
+  "englishSource": "Remove the spec's declared properties and classes from wrappers in the range, unwrapping wrappers left bare. For a non-collapsed range, partially-covered wrappers are split so text outside the range keeps its formatting. A collapsed caret instead targets its enclosing wrapper whole — no split occurs and the spec's properties are stripped from the entire wrapper. The selection is restored either way. Returns the wrappers that survived because they still carry other properties.",
+  "apiDataLine": 1973
+ },
+ {
+  "key": "api.marksApi.methods.marks.remove.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 1979
+ },
+ {
+  "key": "api.marksApi.methods.marks.remove.params.range.description",
+  "englishSource": "Range to deformat; defaults to the live selection's first range.",
+  "apiDataLine": 1986
+ },
+ {
+  "key": "api.marksApi.methods.marks.toggle.description",
+  "englishSource": "remove when the range already carries the mark, apply otherwise. Returns the resulting state: true when the mark is now applied. At a collapsed caret with no existing mark this returns true without applying anything — apply is a no-op on a collapsed range. Call toggle on a non-collapsed range, or treat the return value as the intended state rather than a confirmation.",
+  "apiDataLine": 1997
+ },
+ {
+  "key": "api.marksApi.methods.marks.toggle.params.spec.description",
+  "englishSource": "Declarative mark description: tag plus optional className, attributes, and style.",
+  "apiDataLine": 2003
+ },
+ {
+  "key": "api.marksApi.methods.marks.toggle.params.state.description",
+  "englishSource": "Value passed to the spec's function-form attribute/style properties.",
+  "apiDataLine": 2009
+ },
+ {
+  "key": "api.marksApi.methods.marks.toggle.params.range.description",
+  "englishSource": "Range to toggle; defaults to the live selection's first range.",
+  "apiDataLine": 2016
+ },
+ {
+  "key": "api.stylesApi.properties.block.description",
+  "englishSource": "Base block wrapper styles",
+  "apiDataLine": 2270
+ },
+ {
+  "key": "api.stylesApi.properties.inlineToolButton.description",
+  "englishSource": "Inline toolbar button styles",
+  "apiDataLine": 2275
+ },
+ {
+  "key": "api.stylesApi.properties.inlineToolButtonActive.description",
+  "englishSource": "Active inline tool button styles",
+  "apiDataLine": 2280
+ },
+ {
+  "key": "api.stylesApi.properties.input.description",
+  "englishSource": "Input element styles",
+  "apiDataLine": 2282
+ },
+ {
+  "key": "api.stylesApi.properties.loader.description",
+  "englishSource": "Loading spinner styles",
+  "apiDataLine": 2283
+ },
+ {
+  "key": "api.stylesApi.properties.settingsButton.description",
+  "englishSource": "Settings button styles",
+  "apiDataLine": 2287
+ },
+ {
+  "key": "api.stylesApi.properties.settingsButtonActive.description",
+  "englishSource": "Active settings button styles",
+  "apiDataLine": 2292
+ },
+ {
+  "key": "api.stylesApi.properties.settingsButtonFocused.description",
+  "englishSource": "Focused settings button styles",
+  "apiDataLine": 2297
+ },
+ {
+  "key": "api.stylesApi.properties.settingsButtonFocusedAnimated.description",
+  "englishSource": "Focused settings button styles with click animation",
+  "apiDataLine": 2302
+ },
+ {
+  "key": "api.stylesApi.properties.button.description",
+  "englishSource": "General button styles",
+  "apiDataLine": 2304
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.close.description",
+  "englishSource": "Close the toolbar with optional configuration.",
+  "apiDataLine": 2316
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.open.description",
+  "englishSource": "Open the toolbar.",
+  "apiDataLine": 2328
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.toggleBlockSettings.description",
+  "englishSource": "Toggle the block settings menu (☰).",
+  "apiDataLine": 2334
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.toggleBlockSettings.params.openingState.description",
+  "englishSource": "Force the settings menu open (true) or closed (false).",
+  "apiDataLine": 2354
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.toggleBlockSettings.params.trigger.description",
+  "englishSource": "Element to anchor the settings popover to.",
+  "apiDataLine": 2361
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.toggleBlockSettings.params.options.description",
+  "englishSource": "Placement overrides. `placeLeftOfAnchor` is already `true` when you pass a trigger element — set it to `false` to open the popover to the right of the trigger instead.",
+  "apiDataLine": 2369
+ },
+ {
+  "key": "api.toolbarApi.methods.toolbar.toggleToolbox.description",
+  "englishSource": "Toggle the toolbox (+ menu).",
+  "apiDataLine": 2376
+ },
+ {
+  "key": "api.inlineToolbarApi.methods.inlineToolbar.close.description",
+  "englishSource": "Close the inline toolbar.",
+  "apiDataLine": 2432
+ },
+ {
+  "key": "api.inlineToolbarApi.methods.inlineToolbar.open.description",
+  "englishSource": "Open the inline toolbar at the current selection.",
+  "apiDataLine": 2438
+ },
+ {
+  "key": "api.notifierApi.methods.notifier.show.description",
+  "englishSource": "Show a notification message. Supports simple, confirm, and prompt notifications.",
+  "apiDataLine": 2454
+ },
+ {
+  "key": "api.sanitizerApi.methods.sanitizer.clean.description",
+  "englishSource": "Clean HTML string using the provided sanitizer configuration. `'plaintext'` entries are field-level directives, not tag rules, so `clean()` filters them out of the config before parsing. Allowlisting `href`/`src` allows the attribute, not its scheme — `clean()` additionally drops URL values that can execute (`javascript:`, `data:text/html`, `data:image/svg+xml`), so an allowlisted anchor can never come back as a live script link.",
+  "apiDataLine": 2591
+ },
+ {
+  "key": "api.sanitizerApi.properties.plaintext.description",
+  "englishSource": "A field-level sanitizer rule a tool declares in `static get sanitize()`, and part of the `SanitizerRule` union exported from the package root. Sanitization is an HTML parse: it entity-encodes bare `<`/`&` and drops text shaped like a stray end tag — irrecoverable corruption for a field holding literal source text, such as a code block's `code`. A field marked `'plaintext'` skips tag sanitization, the URL-scheme pass and the editor-level global sanitizer, and round-trips byte-identical. It is declared as a plain string literal rather than a Symbol, so tool sanitize configs survive JSON and `structuredClone`.",
+  "apiDataLine": 2608
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.description",
+  "englishSource": "Show a tooltip on the specified element.",
+  "apiDataLine": 2621
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.element.description",
+  "englishSource": "Element the tooltip is anchored to.",
+  "apiDataLine": 2632
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.content.description",
+  "englishSource": "Tooltip content — a string, HTMLElement, DocumentFragment or Node.",
+  "apiDataLine": 2638
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.description",
+  "englishSource": "Placement and timing overrides. `onHover()` takes the same object.",
+  "apiDataLine": 2645
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.placement.description",
+  "englishSource": "Declared as `string`; the values honored are 'top', 'bottom', 'left' and 'right'. Auto-flipped to the opposite side when the requested side lacks room in the viewport.",
+  "apiDataLine": 2652
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.delay.description",
+  "englishSource": "Milliseconds to wait before showing. Skipped entirely when another tooltip hid within the previous 300 ms, so sweeping across adjacent triggers stays instant.",
+  "apiDataLine": 2659
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.marginTop.description",
+  "englishSource": "Extra vertical offset, applied for bottom placement only.",
+  "apiDataLine": 2666
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.marginLeft.description",
+  "englishSource": "Extra horizontal offset, applied for left placement only.",
+  "apiDataLine": 2673
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.show.params.options.marginRight.description",
+  "englishSource": "Extra horizontal offset, applied for right placement only.",
+  "apiDataLine": 2680
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.hide.description",
+  "englishSource": "Hide the currently visible tooltip.",
+  "apiDataLine": 2687
+ },
+ {
+  "key": "api.tooltipApi.methods.tooltip.onHover.description",
+  "englishSource": "Show tooltip on hover using event listeners. Takes the same `options` as `show()`, except that keyboard-focus reveals ignore `delay` so keyboard users never wait.",
+  "apiDataLine": 2693
+ },
+ {
+  "key": "api.themeApi.methods.theme.get.description",
+  "englishSource": "The configured theme mode — exactly what was passed as `config.theme` or last set via `theme.set()`. Returns 'auto' when the editor follows the OS preference, so this is not the theme currently painted.",
+  "apiDataLine": 2712
+ },
+ {
+  "key": "api.themeApi.methods.theme.set.description",
+  "englishSource": "Set the theme mode. Pass 'light' or 'dark' to pin it, or 'auto' to follow the OS preference via prefers-color-scheme.",
+  "apiDataLine": 2719
+ },
+ {
+  "key": "api.themeApi.methods.theme.getResolved.description",
+  "englishSource": "The theme after evaluating the OS preference when the mode is 'auto' — the theme actually being painted. Use it to match surrounding UI to the editor.",
+  "apiDataLine": 2729
+ },
+ {
+  "key": "api.widthApi.methods.width.get.description",
+  "englishSource": "The active content width mode. Defaults to 'narrow'.",
+  "apiDataLine": 2745
+ },
+ {
+  "key": "api.widthApi.methods.width.set.description",
+  "englishSource": "Set the content width mode. This is what the React/Vue/Angular `width` prop syncs to after mount.",
+  "apiDataLine": 2752
+ },
+ {
+  "key": "api.widthApi.methods.width.toggle.description",
+  "englishSource": "Flip the content width mode between 'narrow' and 'full' — the one-call \"full width\" switch.",
+  "apiDataLine": 2759
+ },
+ {
+  "key": "api.placeholderApi.methods.placeholder.get.description",
+  "englishSource": "The current editor placeholder, or false when it is disabled.",
+  "apiDataLine": 2775
+ },
+ {
+  "key": "api.placeholderApi.methods.placeholder.set.description",
+  "englishSource": "Sets the editor placeholder; updates existing blocks in place and applies to blocks created afterward. Pass false to disable. Available synchronously after construction — pre-ready calls are buffered and replayed.",
+  "apiDataLine": 2782
+ },
+ {
+  "key": "api.readOnlyApi.methods.readOnly.toggle.description",
+  "englishSource": "Toggle read-only state. Without parameter, toggles current state. With parameter, sets to specified state.",
+  "apiDataLine": 2848
+ },
+ {
+  "key": "api.readOnlyApi.properties.isEnabled.description",
+  "englishSource": "Current read-only state",
+  "apiDataLine": 2865
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.t.description",
+  "englishSource": "Translate a key from the global dictionary, optionally interpolating string or number values.",
+  "apiDataLine": 2886
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.has.description",
+  "englishSource": "Check if a translation exists for the given key.",
+  "apiDataLine": 2896
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.getEnglishTranslation.description",
+  "englishSource": "Get the English translation for a key (used for multilingual search).",
+  "apiDataLine": 2905
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.getLocale.description",
+  "englishSource": "Get the active locale code (e.g. 'en').",
+  "apiDataLine": 2912
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.getDirection.description",
+  "englishSource": "Get the text direction currently in effect — derived from the active locale unless an explicit `direction` override was set. Editor instance only: the `api.i18n` handed to tools carries just `t`, `has`, `getEnglishTranslation` and `getLocale`, so a tool must take the direction from the host (its own config, or the `i18n:changed` event) rather than calling this.",
+  "apiDataLine": 2920
+ },
+ {
+  "key": "api.i18nApi.methods.i18n.update.description",
+  "englishSource": "Switch language at runtime. `config.i18n` is otherwise read once during boot, so a host with a language switcher had to recreate the editor to relabel it — losing caret, focus, selection and undo history. `update()` relabels in place instead: no recreation, nothing lost. `locale` accepts any supported code or `'auto'` to re-run browser detection; `messages` merges host overrides over the locale dictionary and is re-applied automatically after every later locale change (a bare locale flip never silently drops your custom strings); `direction` overrides the direction implied by the locale, which you normally do not need. Calls are serialized internally, so lazily-loaded locale chunks cannot land out of order — the last call wins. Scope: everything. Chrome built on demand (block settings, the convert menu, notifications, screen-reader announcements) picks up the new locale the next time it opens; the eagerly-stamped chrome (toolbar and plus-button labels, tooltips, the toolbox list) is relabelled immediately; and block content — placeholders, media-toolbar labels, cell controls, anything a tool resolved while rendering — is repainted from your data, including tools that know nothing about locale changes. The repaint is invisible to you: `onChange` does not fire, scroll is kept, and the caret returns to the block that had it. Fires the `i18n:changed` event with `{ locale, direction }`. Available synchronously after construction — a call made before `isReady` is applied once the editor has booted. `update()` and `getDirection()` are exposed on the editor instance only, not on the `api.i18n` handed to tools (which carries just `t`, `has`, `getEnglishTranslation` and `getLocale`), so a third-party tool cannot flip the host's locale. The React/Vue/Angular adapters drive it reactively: change the `i18n` prop/input and the editor follows in place. Note `defaultLocale` is not accepted — it only decides the fallback while resolving the initial locale.",
+  "apiDataLine": 2929
+ },
+ {
+  "key": "api.i18nApi.methods.normalizeLocale.description",
+  "englishSource": "From `@bloklabs/core/locales`. Normalizes an arbitrary BCP-47 language tag — region-tagged (`'en-US'`), script-tagged (`'zh-Hant'`) or aliased (`'nb'` → `'no'`, `'ckb'` → `'ku'`) — to a supported Blok locale, and returns `null` when the tag is unsupported. The same normalizer runs on browser detection and on explicit `config.i18n.locale` / `i18n.update({ locale })`, so a `null` here is exactly the tag that `update()` would refuse: it keeps the current locale and warns on the console rather than throwing.",
+  "apiDataLine": 2950
+ },
+ {
+  "key": "api.i18nApi.methods.loadLocale.description",
+  "englishSource": "From `@bloklabs/core/locales`. Loads one locale on demand. Only English is bundled — the other 68 are fetched when asked for.",
+  "apiDataLine": 2964
+ },
+ {
+  "key": "api.i18nApi.methods.preloadLocales.description",
+  "englishSource": "From `@bloklabs/core/locales`. Loads several locales up front — e.g. the ones your language switcher offers — so a later switch does not wait on a fetch.",
+  "apiDataLine": 2973
+ },
+ {
+  "key": "api.i18nApi.methods.buildRegistry.description",
+  "englishSource": "From `@bloklabs/core/locales`. Loads the given codes and returns them together as a `LocaleRegistry`.",
+  "apiDataLine": 2982
+ },
+ {
+  "key": "api.i18nApi.methods.getLocaleSync.description",
+  "englishSource": "From `@bloklabs/core/locales`. Returns an already-loaded locale synchronously, or `undefined` when it has not been loaded yet.",
+  "apiDataLine": 2991
+ },
+ {
+  "key": "api.i18nApi.methods.getDirection.description",
+  "englishSource": "From `@bloklabs/core/locales`. Text direction for a locale CODE. Not the same function as `editor.i18n.getDirection()`, which takes no argument and reports the direction the mounted editor is currently using.",
+  "apiDataLine": 3000
+ },
+ {
+  "key": "api.i18nApi.properties.DEFAULT_LOCALE.description",
+  "englishSource": "From `@bloklabs/core/locales`. The default locale code, `'en'`.",
+  "apiDataLine": 3011
+ },
+ {
+  "key": "api.i18nApi.properties.ALL_LOCALE_CODES.description",
+  "englishSource": "From `@bloklabs/core/locales`. All 69 supported locale codes — the list to build a language switcher from, or to hand to `preloadLocales`.",
+  "apiDataLine": 3017
+ },
+ {
+  "key": "api.i18nApi.properties.enLocale.description",
+  "englishSource": "From `@bloklabs/core/locales`. The English dictionary, the only locale bundled by default and the fallback for missing keys.",
+  "apiDataLine": 3023
+ },
+ {
+  "key": "api.uiApi.properties.nodes.wrapper.description",
+  "englishSource": "Top-level blok instance wrapper",
+  "apiDataLine": 3036
+ },
+ {
+  "key": "api.uiApi.properties.nodes.redactor.description",
+  "englishSource": "Element that holds all the blocks",
+  "apiDataLine": 3041
+ },
+ {
+  "key": "api.uiApi.properties.isMobile.description",
+  "englishSource": "Whether Blok is in mobile mode",
+  "apiDataLine": 3046
+ },
+ {
+  "key": "api.listenersApi.methods.listeners.on.description",
+  "englishSource": "Subscribe to event on element. Returns listener ID for removal.",
+  "apiDataLine": 3060
+ },
+ {
+  "key": "api.listenersApi.methods.listeners.off.description",
+  "englishSource": "Unsubscribe from event on element.",
+  "apiDataLine": 3071
+ },
+ {
+  "key": "api.listenersApi.methods.listeners.offById.description",
+  "englishSource": "Unsubscribe from event using the listener ID.",
+  "apiDataLine": 3079
+ },
+ {
+  "key": "api.toolsApi.methods.tools.getBlockTools.description",
+  "englishSource": "Get all available block tool adapters. Each adapter exposes `name` plus tool metadata, including `assetKind` — set to `'image' | 'video' | 'audio' | 'file'` on media tools that store an uploaded asset URL at `data.url`, and `undefined` otherwise. Use it to discover the media-bearing tool set at runtime (instead of hardcoding each tool's data shape) and reconcile a saved document's `data.url`s against your CDN — e.g. to garbage-collect orphaned uploads.",
+  "apiDataLine": 3096
+ },
+ {
+  "key": "api.toolsApi.methods.tools.getToolsConfig.description",
+  "englishSource": "Returns the tools-related configuration of this instance — { tools, inlineToolbar?, tunes?, theme? } — for creating nested Blok editors with the same tool set.",
+  "apiDataLine": 3114
+ },
+ {
+  "key": "api.toolsApi.methods.tools.update.description",
+  "englishSource": "Shallow-merge new configuration into an installed tool at runtime — no editor recreation. A `toolbox` key is treated as the tool-level setting (same as `toolbox` in the `tools` map): pass `toolbox: false` to hide the tool from every insertion surface (existing blocks keep rendering) or a toolbox object to (re)show it — permission gating without rebuilding the editor. Under the React adapter this is automatic: change the `toolbox` value in the `tools` prop and `useBlok`/`BlokEditor` applies it in place.",
+  "apiDataLine": 3121
+ },
+ {
+  "key": "api.toolsApi.methods.defineTool.description",
+  "englishSource": "A registration helper exported from `@bloklabs/core/tools`, not a member of the `tools` namespace. The plain `tools` map types every entry with a bare `ToolSettings` whose `Config` falls back to `Record<string, unknown>`, so a misspelled config key (`defaultLevle` for `defaultLevel`) compiles silently. `defineTool` recovers the tool's real config type from its constructor and applies it to `settings.config`, turning those typos into compile errors. The type-checking happens on the `settings` argument; the RETURN type stays the erased `ExternalToolSettings`, so the result drops straight into the `tools` map. `ExtractToolConfig<TClass>` — the type that does the recovery — is exported alongside it, and falls back to `Record<string, unknown>` for tool classes whose constructor declares no concrete config.",
+  "apiDataLine": 3176
+ },
+ {
+  "key": "api.toolsApi.methods.mountChildBlocks.description",
+  "englishSource": "The child-holder reconciler for container blocks, exported from `@bloklabs/core/tools`. Call it from your tool's `rendered()` hook — it is what the built-in toggle, callout and column tools use, and what the React/Vue/Angular block adapters run on every commit. It is idempotent and cheap, so run it on every render. Per child it: leaves a holder already inside `container` alone; RECLAIMS a holder stranded in a nested container that ENCLOSES `container`, inserting it at its model position rather than appending it last; leaves holders sitting in any OTHER nested container alone, so two containers can never steal each other's blocks; and mounts everything else at its model position. The reclaim is what makes a container survive the insert ordering: core anchors a newly inserted first child as the container block's DOM sibling, so without it a child of a nested container renders one level out — permanently, when your container's child slot had not been created yet at insert time (a framework portal commits a render after core inserts). Mark `container` with `data-blok-nested-blocks` so the rest of the editor recognises it as a container.",
+  "apiDataLine": 3191
+ },
+ {
+  "key": "api.toolsApi.methods.mountChildBlocks.params.container.description",
+  "englishSource": "The element child holders belong in — the element carrying `data-blok-nested-blocks`.",
+  "apiDataLine": 3198
+ },
+ {
+  "key": "api.toolsApi.methods.mountChildBlocks.params.children.description",
+  "englishSource": "The block's children in model order, normally `api.blocks.getChildren(blockId)`.",
+  "apiDataLine": 3205
+ },
+ {
+  "key": "api.toolsApi.methods.BlockToolConstructorOptions.origin.description",
+  "englishSource": "The create-vs-restore signal on the tool contract, handed to every block tool's constructor alongside `data`, `block` and `readOnly`. A container tool that seeds default children — a two-column row, a card that starts with a heading — may only do that once, at creation. Every other time the tool is constructed the document already says what its children are, and during a restore those children commonly land a tick AFTER `rendered()` runs, so an empty `api.blocks.getChildren()` there is only transient: seeding on that read fabricates phantom children beside the real ones. CREATION values — seed: `'user'` (a direct editing gesture: Enter, the plus button, the slash menu, block settings, a markdown shortcut), `'api'` (a programmatic `blocks.insert` / `insertMany` / `insertInsideParent`), `'convert'` (a turn-into). RESTORE values — never seed: `'load'` (a document render), `'replay'` (an undo/redo replay or a remote collaborative update), `'paste'` (pasted content that brings its own children), `'probe'` (the OFF-TREE instance `blocks.composeBlockData()` builds to read a tool's default data — it is never inserted, yet it still runs `render()` and `rendered()`, so it must not touch the block tree at all). Blok always supplies it; treat an absent value as `'api'`, and write the check as an allow-list of creation values so a future origin fails closed. Pair it with `blocks.insert(..., origin)` if you drive insertion from your own UI. On the React/Vue/Angular adapters you rarely read it by hand: the block spec's `onCreated` hook already encodes this allow-list, and it fires after the adapter's first commit — the tick at which the block's DOM and its adopted child holders actually exist.",
+  "apiDataLine": 3233
+ },
+ {
+  "key": "api.toolsApi.methods.BlockToolConstructable.keepsChildrenOnEnter.description",
+  "englishSource": "A static on your tool CLASS that decides where Enter goes on the container's empty LAST child. By default Blok reads that empty trailing line as the author's way out: with siblings present the line is outdented to the container's own parent, and as a sole child a fresh block is inserted after the whole container — Notion's callout behaviour. A layout container whose children ARE its content (a column, a card, a `steps` block) wants the opposite, and without the declaration the escape strands the new line beside the container. Set it to `true` and the new line stays inside, the same rule the built-in `column`, `column_list` and `toggle` follow. It cannot be inferred from the DOM: a callout renders the very same `data-blok-nested-blocks` slot as a column and deliberately keeps the escape, so this is per-tool policy. Core reads it for the symmetric \"remove one indent level\" gesture too (Enter/Backspace on a block nested under a PLAIN parent), so a declaring tool is treated as a container there as well and its children never stepwise-outdent out of it. On the React/Vue/Angular adapters, declare it in the block spec's `statics` bag like any other class static.",
+  "apiDataLine": 3272
+ },
+ {
+  "key": "api.toolsApi.methods.BlockToolConstructable.childTools.description",
+  "englishSource": "A static on your tool CLASS declaring which block tools may be DIRECT children of its block — and core enforces it everywhere for you. On INSERT a disallowed tool is demoted (never refused, because Enter must always produce a block): the target is the first entry of `allow`, so `allow: ['segment-item']` makes \"Enter at the end of a segment\" produce another segment instead of a stray paragraph. On MOVE a drag or keyboard reorder that would carry a disallowed block across the container boundary is refused. In the TOOLBOX the disallowed tools are hidden while the caret sits in a child. `deny` wins over `allow` for a tool named in both, and empty lists read as \"no restriction\". This is the selective, insert-aware counterpart to `ownsChildren`, which is all-or-nothing and clamps moves only — and the generic form of the Table tool's `restrictedTools`, whose enforcement is hard-wired to table cells. Without it a container tool has to defend itself downstream: filtering `child.name` in render, keeping its CSS robust against a foreign child, and migrating strays out of stored documents. On the React/Vue/Angular adapters, declare it in the block spec's `statics` bag like any other class static.",
+  "apiDataLine": 3299
+ },
+ {
+  "key": "api.toolsApi.methods.setData.description",
+  "englishSource": "An optional method on your tool that applies new data to the LIVE instance. Declare it and `blocks.update()`, undo/redo and remote collaborative edits all reuse the block you already rendered instead of recomposing it — no new tool instance, no new holder, so ephemeral state (an open menu, a scroll position, a framework component's local state), the adopted child holders and the caret survive. Without it core destroys the block and builds a replacement, which is why a host that called `blocks.update()` per keystroke used to watch a component-backed block go blank. Return `false` when you cannot apply the data in place — the list tool does that for a style change, which needs a different DOM shape — and core falls back to the full recompose; returning `true` or nothing means it was applied. Throwing has the same effect as `false` (logged, then recomposed). The React/Vue/Angular block factories implement it for you, so adapter blocks are on the in-place path automatically.",
+  "apiDataLine": 3329
+ },
+ {
+  "key": "api.toolsApi.methods.setData.params.newData.description",
+  "englishSource": "The block's full data after the update — the existing data merged with the caller's patch, not the patch alone.",
+  "apiDataLine": 3349
+ },
+ {
+  "key": "api.uploaderApi.title",
+  "englishSource": "Uploader API",
+  "apiDataLine": 3358
+ },
+ {
+  "key": "api.uploaderApi.badge",
+  "englishSource": "Uploader",
+  "apiDataLine": 3357
+ },
+ {
+  "key": "api.uploaderApi.description",
+  "englishSource": "Upload an asset through the pipeline that owns its KIND, instead of whichever tool happens to be asking. Tools call this rather than reaching into their own `config.uploader`, which is why an audio block's cover art reaches your image pipeline instead of the audio endpoint that would reject it. Resolution order for a kind: the tool whose static `assetKind` matches (e.g. `tools.image.config.uploader` for `'image'`), then the editor-level `uploader` config, then a local fallback — a `blob:` URL for files, the URL verbatim for links. See the storage presets page for ready-made `uploader` implementations — Supabase, S3-compatible storage, Cloudinary, and IndexedDB — that need no backend of your own.",
+  "apiDataLine": 3360
+ },
+ {
+  "key": "api.uploaderApi.methods.uploader.uploadByFile.description",
+  "englishSource": "Store a file and return its URL. `ctx` is `{ kind, tool?, onProgress? }` where `kind` is the ASSET kind, not the requesting tool — they differ whenever a tool holds an asset outside its own media family.",
+  "apiDataLine": 3366
+ },
+ {
+  "key": "api.uploaderApi.methods.uploader.uploadByUrl.description",
+  "englishSource": "Re-host an asset the user supplied by URL and return the stored URL. Without an uploader for the kind, the URL is stored verbatim — configure one if a strict `img-src`/`media-src` policy or link rot would break third-party URLs.",
+  "apiDataLine": 3378
+ },
+ {
+  "key": "api.uploaderApi.methods.uploader.isConfigured.description",
+  "englishSource": "Whether a host uploader handles this kind. False means the caller would get the local fallback — useful for deciding whether an asset is worth uploading at all, e.g. inlining small extracted artwork as a `data:` URL instead.",
+  "apiDataLine": 3388
+ },
+ {
+  "key": "api.outputData.methods.normalizeOutputData.description",
+  "englishSource": "Normalizes a whole loose backend DTO into the strict saved OutputData shape, exported from the main entry. A nullish document becomes `{ blocks: [] }`; `null` envelope fields (`time`/`version`) are dropped; each block is normalized so `null`/missing `data` becomes `{}`, `null`/empty ids are dropped for regeneration, and nullish/empty hierarchy references (`parent: null`, `content: null`, `content: []`) are dropped as absent. Unlike a hand-written `blocks.map(...)` mapper it preserves every passthrough field — `tunes`, real `parent`/`content` references, `indent`, edit metadata — so hierarchy and tunes are never silently lost. Idempotent: a strict document passes through unchanged.",
+  "apiDataLine": 3478
+ },
+ {
+  "key": "api.outputData.methods.normalizeOutputBlocks.description",
+  "englishSource": "Block-level counterpart of normalizeOutputData, exported from the main entry: normalizes an array of loose wire blocks into the strict saved shape (`null`/missing `data` → `{}`, `null`/empty `id` dropped for regeneration, nullish/empty `parent`/`content` dropped as absent) while passing every other field through untouched. Use normalizeOutputData when you hold the whole document envelope.",
+  "apiDataLine": 3489
+ },
+ {
+  "key": "api.outputData.methods.BlokData<T>.description",
+  "englishSource": "A type helper, exported from the main entry, that lets an `interface` block-data shape fit the `data` slot. A TS `interface` has no implicit index signature and is therefore not assignable to `Record<string, unknown>`, so `OutputBlockData<'task', TaskData>` fails to compile when `TaskData` is an interface. `BlokData<T>` re-projects `T` through a homomorphic mapped type, which the compiler does treat as having an implicit index signature, while every declared key keeps its precise type. No rewrite is needed: an existing interface value is assignable to `BlokData<T>`, and a `type` alias already satisfies the slot on its own.",
+  "apiDataLine": 3499
+ },
+ {
+  "key": "api.outputData.methods.flattenTree.description",
+  "englishSource": "Turns an ergonomic nested spec into the flat DFS pre-order `OutputBlockData[]` Blok stores, wiring every `parent`/`content` link for you, exported from the main entry alongside its `BlockTreeSpec`, `BlockRunSpec`, `BlockTreeNode` and `FlattenTreeOptions` types. A spec node is `{ type?, data?, tunes?, id?, children? }`; the pure counterpart of the live `blocks.insertTree()` mutation — the same DFS without an editor — so nested content (columns, tables, a whole document) can be seeded without hand-authoring `parent`/`content` id arrays. Every returned block has a resolved `id` (generated when the spec omitted one), so the array is safe to reference by id; leaves omit the empty `content` array. Content that is already flat — a stored Blok document a migration is splicing into a page — goes in as a **run node**, `{ blocks: [...] }`, at the root or as a child: the run is spliced verbatim (ids, `data`, `tunes` and existing `parent`/`content` links are kept) and only the blocks it left un-parented are re-parented onto the enclosing node, the same rule `blocks.insertMarkdown()` applies to a converted run. Because nothing is re-derived, ids stay stable, so a migration can run in batches without duplicating blocks it already wrote. `options` takes `parentId` (the `parent` assigned to the root node(s)) and `generateId` (id generator for nodes without an explicit `id` — pass a deterministic one for reproducible output). Reusing an explicit `id` within the spec throws, and so does passing a pre-flat block as a tree node (its `parent`/`content` links would be dropped silently).",
+  "apiDataLine": 3513
+ },
+ {
+  "key": "api.outputData.methods.isBlockType.description",
+  "englishSource": "A type guard exported from `@bloklabs/core/tools` that narrows a saved block to a known block type, so its `data` is typed through the `BlokBlockDataMap` registry instead of `Record<string, unknown>` — it replaces the `block.type === 'header'` check plus `data as HeaderData` cast. `BlokBlockDataMap` maps each built-in block type to its data shape and is exported from the same subpath; it is augmentable, so a custom tool registers its own shape by declaration merging and gets narrowed the same way.",
+  "apiDataLine": 3541
+ },
+ {
+  "key": "api.outputData.methods.blocksOfType.description",
+  "englishSource": "The collection counterpart of `isBlockType`, also exported from `@bloklabs/core/tools`: collects every saved block of a given type from a document with each result's `data` typed through `BlokBlockDataMap`. Null-tolerant — a `null`/`undefined` document, and the loose `LooseOutputData` wire shape, are accepted — so it replaces the `(data?.blocks ?? []).filter(...)` plus cast that every feature re-writes.",
+  "apiDataLine": 3564
+ },
+ {
+  "key": "api.outputData.methods.EMPTY_OUTPUT_DATA.description",
+  "englishSource": "A shared, deeply frozen empty document (`{ blocks: [] }`), exported from the main entry. Use it in place of a hand-written `{ blocks: [] }` literal for cleared/pristine baselines. Frozen (blocks array included) so a shared reference can never be mutated into a stale non-empty baseline.",
+  "apiDataLine": 3579
+ },
+ {
+  "key": "api.outputData.methods.toRenderableData.description",
+  "englishSource": "Maps a controlled `data` value to something render()/blocks.render() accepts, exported from the main entry: a whole-document `null` (a controlled \"clear to empty\") becomes `{ blocks: [] }`; any real document passes through untouched. render()'s strict guard reads `data.blocks` and would throw on `null`, so route a nullable controlled value through this first.",
+  "apiDataLine": 3591
+ },
+ {
+  "key": "api.outputData.methods.createEmittedEchoWindow.description",
+  "englishSource": "Creates a bounded window of recently emitted onSave payloads for recognizing controlled-`data` echoes, exported from the main entry. Deduping against only the LAST emitted payload is not enough: a host that persists on save and refetches can hand back a STALE echo (an earlier save arriving after a newer one already replaced the baseline), and re-rendering it would clobber the caret and any content typed since. Matching is structural (equalsOutputData), so envelopes reshaped in transit (fresh `time`, stripped ids) still count as echoes.",
+  "apiDataLine": 3601
+ },
+ {
+  "key": "api.outputData.methods.migrateLegacyBlocks.description",
+  "englishSource": "Migrate legacy / Editor.js-style blocks into Blok's hierarchical flat-with-references format, exported from the `@bloklabs/core/migrate` subpath — the same transform the renderer runs automatically at load. Legacy nested shapes (list items, toggle/callout children) explode into separate blocks linked by `parent`/`content` (`parent` is the saved-document field; `parentId` is the useBlocks BlockNode snapshot field), and id-less blocks are stamped with an id. Already-hierarchical blocks pass through unchanged, so it is safe to run on current data and idempotent across repeated runs. `options` exposes the migration context: `generateId` makes the pass PURE (migrate the same document twice and the outputs are equal — needed to compare a stored doc against its migration, or to re-run migration per render without minting fresh ids), `onLossyField` delivers every dropped field instead of dumping it to `console.warn`, and `rules` adds your own grammar entries. `migrateLegacyOutputData(data, options?)` is the envelope-preserving variant; `needsLegacyMigration(blocks, options?)` reports whether a migration would change anything; `matchLegacyRule(block, options?)` is the per-block primitive that returns the entry claiming a single block (or `null`) without re-scanning the table for every block. Every rules-taking entry point accepts either the options object or a bare `rules` array, so passing the array directly can't silently read as \"no rules\".",
+  "apiDataLine": 3612
+ },
+ {
+  "key": "api.outputData.methods.migrateLegacyBlocks.note",
+  "englishSource": "For a data shape only a specific tool understands (a columns layout, a custom media envelope) that core's built-in migration can't read, give that tool a static `upgradeData(data)` — a pure function returning the tool's current data shape. Blok runs it at load, while composing each stored block, before the tool is constructed; a hook that throws is caught and the block loads with its stored data.",
+  "apiDataLine": 3638
+ },
+ {
+  "key": "api.outputData.methods.migrations .description",
+  "englishSource": "Declare per-type \"old data shape → new data shape\" rules from OUTSIDE the tool class. Where `upgradeData` must live inside a tool you own, `migrations` is a map keyed by block type you pass in editor config — so you can migrate a third-party tool you don't control, or your own tool without editing (and re-shipping) its class. Each rule is a pure `(data) => data` transform (return the input unchanged, or `undefined`, when already current). Blok applies it at load, after the tool's own `upgradeData` and BEFORE format analysis — so `dataModel: 'auto'` sees the post-migration shape and an 'auto' round-trip can't quietly undo the migration by saving the old shape back. A throwing rule falls back to the stored data (never a blank editor). The same map works offline: pass it to `migrateOutputData(data, migrations)` (or `migrateBlocks(blocks, migrations)`) from `@bloklabs/core/migrate` to batch-upgrade persisted records without opening an editor. Available on all three framework adapters as the `migrations` prop/input.",
+  "apiDataLine": 3644
+ },
+ {
+  "key": "api.outputData.methods.migrations .note",
+  "englishSource": "Rules must be pure and idempotent — they run on every load, including on already-current data. Prefer `migrations` (config) for shapes a host decides from the outside; prefer a tool's own `upgradeData` for shapes only that tool understands. They compose: `upgradeData` runs first, then the config `migrations` rule for that type.",
+  "apiDataLine": 3667
+ },
+ {
+  "key": "api.outputData.methods.migrate.description",
+  "englishSource": "The composed entry point: runs BOTH migration passes in the one correct order and reports what the migration cost. Data rules (`migrations`) run first, then grammar rules (`rules`) restructure the tree. That order is load-bearing: data rules are keyed by block TYPE, and the grammar rewrites types (`linkTool` → `bookmark`) and explodes containers into many blocks — so a rule run after the grammar never fires, and the block stays silently unmigrated. Data rules shape the grammar's input; the grammar owns the output shape for the types it rewrites. The `report` names every field the mapping could not carry over (`lossyFields`) and every data rule that threw (`errors`), so a batch upgrade of persisted records is no longer silent about its own data loss.",
+  "apiDataLine": 3673
+ },
+ {
+  "key": "api.outputData.methods.migrate.note",
+  "englishSource": "`report.lossyFields` is what `console.warn` used to say and nothing could read. Log it next to a batch upgrade and you get an auditable record of exactly what the upgrade dropped, per block type.",
+  "apiDataLine": 3690
+ },
+ {
+  "key": "api.outputData.methods.rules .description",
+  "englishSource": "Teach the migration machinery a legacy shape Blok doesn't know. A grammar entry is `{ legacyType, detect, expand, targetType, cardinality, contributesNesting, lossyFields, docNote }`; passing entries via `rules` reuses the whole interpreter — recursion into container bodies, the orphan re-parenting invariant, 1:N splits, id minting — instead of re-implementing the dispatch loop around a data-only rule. Host entries are matched BEFORE the built-in table, so they can also override a built-in mapping. Unlike a `migrations` rule, an entry may change a block's `type` and emit several blocks. `expand(block, ctx, { siblings, index })` may also return `{ blocks, consumed }` to absorb the following `consumed` siblings — the shape flat-with-count legacy formats need (a container storing its body as \"the next N blocks\"); `consumed` is clamped to what remains, so a truncated document can't over-consume. Read `LEGACY_GRAMMAR` to introspect the built-in coverage.",
+  "apiDataLine": 3696
+ },
+ {
+  "key": "api.outputData.methods.rules .note",
+  "englishSource": "A container rule whose body is stored as a COUNT of following siblings returns `{ blocks, consumed }` — the interpreter skips exactly that many siblings, so the children are re-parented once and never emitted twice.",
+  "apiDataLine": 3726
+ },
+ {
+  "key": "api.outputData.table.version.description",
+  "englishSource": "Editor version",
+  "apiDataLine": 3435
+ },
+ {
+  "key": "api.outputData.table.time.description",
+  "englishSource": "Timestamp of save",
+  "apiDataLine": 3441
+ },
+ {
+  "key": "api.outputData.table.blocks.description",
+  "englishSource": "Array of block data",
+  "apiDataLine": 3447
+ },
+ {
+  "key": "api.blockData.table.id.description",
+  "englishSource": "Unique block identifier",
+  "apiDataLine": 3776
+ },
+ {
+  "key": "api.blockData.table.type.description",
+  "englishSource": "Block type name",
+  "apiDataLine": 3782
+ },
+ {
+  "key": "api.blockData.table.data.description",
+  "englishSource": "Block-specific data",
+  "apiDataLine": 3788
+ },
+ {
+  "key": "api.blockData.table.tunes.description",
+  "englishSource": "Block tunes/meta data",
+  "apiDataLine": 3794
+ },
+ {
+  "key": "api.blockData.table.parent.description",
+  "englishSource": "Id of the parent block (flat-with-references nesting). On input the loose wire shape also accepts `null`, which is treated as absent — a root-level block.",
+  "apiDataLine": 3801
+ },
+ {
+  "key": "api.blockData.table.content.description",
+  "englishSource": "Ids of child blocks (flat-with-references nesting). On input the loose wire shape also accepts `null` or `[]`, both treated as absent — a childless block.",
+  "apiDataLine": 3808
+ },
+ {
+  "key": "api.blockData.table.indent.description",
+  "englishSource": "Nesting/indent level",
+  "apiDataLine": 3814
+ },
+ {
+  "key": "api.blockData.table.lastEditedAt.description",
+  "englishSource": "Timestamp (ms since epoch) of the last edit to this block. Only present once the block's content actually changes — loading a document is not an edit, so a merely-rendered document saves back exactly what it loaded. equalsOutputData ignores this field.",
+  "apiDataLine": 3821
+ },
+ {
+  "key": "api.blockData.table.lastEditedBy.description",
+  "englishSource": "Id of the user who last edited this block (from the user.id config)",
+  "apiDataLine": 3827
+ },
+ {
+  "key": "api.blokEditor.methods.useBlok.description",
+  "englishSource": "The split mount path behind `<BlokEditor>`: create the instance yourself and hand it a mount point. `useBlok` takes the SAME options as the component — its config type is `UseBlokConfig`, which is `BlokConfig` minus `holder` (the adapter owns the mount element) plus an adapter-level `width`. The reactive-after-mount subset is documented on `UseBlokConfig` itself: `readOnly`, `hideToolbar`, `toolbarPosition`, `inlineToolbar`, `autofocus`, `theme`, `width`, `placeholder`, `style.tokens`, `i18n` and `data` sync in place on the same instance; every other option is consumed once at editor creation. It returns null until the editor exists (SSR, first render). React takes a `deps` dependency LIST as the second argument; Vue takes a reactive config source (ref or getter) and a SINGLE `recreateKey` as the second argument. Angular's equivalent is the `[blokContent]` directive (`BlokContentDirective`), which builds the instance into its own host element and exposes it as the `instance` signal / `(ready)` output.",
+  "apiDataLine": 3864
+ },
+ {
+  "key": "api.blokEditor.methods.BlokContent.description",
+  "englishSource": "The mount point for an instance created by `useBlok`. Renders a `<div>` and adopts the editor's detached holder into it. Its only own prop is `editor: Blok | null` (`BlokContentProps`) — pass null before the instance exists and it simply renders the empty container. In React it also extends `React.HTMLAttributes<HTMLDivElement>`, so `className`, `id` and the rest are forwarded to that div, and it forwards a ref to it. Angular's counterpart is the `[blokContent]` directive, which creates the instance itself rather than receiving one.",
+  "apiDataLine": 3881
+ },
+ {
+  "key": "api.blokEditor.methods.provideBlok.description",
+  "englishSource": "Registers app-wide Blok defaults so every editor beneath it inherits a shared tools registry, theme or i18n config instead of repeating them per instance. React spells it as `<BlokProvider defaults={…}>` (with `useBlokDefaults()` to read them back), Vue as `provideBlok(defaults)` called in a parent's `setup` (backed by the `BLOK_DEFAULT_CONFIG` injection key, with `useBlokDefaults()` to read), and Angular as `provideBlok(defaults)` returning `EnvironmentProviders` for a `providers` array (backed by the `BLOK_DEFAULT_CONFIG` injection token). Merge rule, identical in all three: a defined per-instance config value overrides the default, EXCEPT `tools`, where the two registries are merged — the shared registry composes with per-instance additions rather than being replaced.",
+  "apiDataLine": 3893
+ },
+ {
+  "key": "api.useBlocks.methods.markdownToBlocksWithReport.description",
+  "englishSource": "The same blocks, plus what Markdown could not carry into them. Blok has no raw-HTML block, so markup written into the Markdown is escaped and stored as literal text — safe, but silent. Reach for this when the import is unattended (an MCP tool, an agent, a bulk migration) and something has to be told what changed. Its outbound twin is blocksToMarkdownWithReport in @bloklabs/core/view.",
+  "apiDataLine": 4160
+ },
+ {
+  "key": "api.useBlokReady.methods.useBlokReady.description",
+  "englishSource": "True when every Blok editor in scope is settled. Re-evaluates on every readiness change (construction, boot, render-state flip, destroy) and unsubscribes on unmount.",
+  "apiDataLine": 4378
+ },
+ {
+  "key": "api.useBlokReady.methods.useBlokReady.params.options.within.description",
+  "englishSource": "Restrict the wait to editors mounted inside this element. A ref is re-read on every readiness change, so one that attaches after the first render is picked up. Omit it to observe every editor on the page.",
+  "apiDataLine": 4385
+ },
+ {
+  "key": "api.useBlokReady.methods.useBlokReady.params.options.settleOn.description",
+  "englishSource": "'ready' settles when each editor has finished booting. 'rendered' also waits for its content to be in the DOM, which re-arms on every post-boot re-render.",
+  "apiDataLine": 4393
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.description",
+  "englishSource": "Render a saved document to semantic HTML — synchronous and DOM-free, so it is safe in Node, workers, and React Server Components. Every inline-content field is sanitized against the composed allowlist before interpolation, and the URL scheme policy is identical to the editor's. Returns '' for empty or malformed documents (nullish input is tolerated).",
+  "apiDataLine": 4428
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.data.description",
+  "englishSource": "Saved document, in the strict save() shape or the loose wire shape.",
+  "apiDataLine": 4434
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.schema.description",
+  "englishSource": "viewSchema from defineBlokSchema. Its single composed baseSanitize — folded from the enabled INLINE TOOLS and TUNES, not from block tools' own static sanitize — is spread over the renderer's default inline allowlist, so inline content displays under the same composition that produced it. viewSchema.tools is carried for consumers; the renderer does not read it. To control a custom block's markup, use renderers.",
+  "apiDataLine": 4441
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.renderers.description",
+  "englishSource": "Custom per-tool renderers; a renderer wins over the built-in emitter for its tool name. ctx provides sanitizeInline (sanitize an inline-HTML string), renderBlocks (render an arbitrary block array), plainText (plain text of an HTML string), and renderChildren (render the current block's structural children) so custom output composes safely with the rest of the document.",
+  "apiDataLine": 4448
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.inlineRenderers.description",
+  "englishSource": "Custom renderers for INLINE elements, keyed by lowercase tag name — the inline counterpart of renderers, for marks whose display is not their stored markup (an inline equation stores only its LaTeX source; a mention only an id). Each runs after sanitization, over the elements that survived it, and REPLACES the element with what it returns: undefined keeps the element as sanitized, '' drops it. The returned markup is inserted as-is — it is NOT re-sanitized, the same trust contract as a block renderer's output — so it may carry markup the inline allowlist would strip (KaTeX spans, for instance). element is { tag, attrs, html, text }. Rendered HTML only: blocksToPlainText reads a mark's stored source, not its rendering.",
+  "apiDataLine": 4455
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.onUnknownBlock.description",
+  "englishSource": "What to do with a block whose tool has no renderer: drop it silently, or leave an HTML comment marker in the output.",
+  "apiDataLine": 4463
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.toolAttributes.description",
+  "englishSource": "Stamp data-blok-tool=\"<type>\" on each block root (list runs on their <ul>/<ol>) as a styling hook. Import the opt-in @bloklabs/core/view.css to reproduce the editor's block spacing from the same --blok-block-padding-* tokens, instead of reverse-engineering it with bare-tag CSS. Only Blok's built-in markup is stamped; custom renderers and bare containers (database) are left untouched.",
+  "apiDataLine": 4471
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.blockIds.description",
+  "englishSource": "Stamp data-blok-id=\"<id>\" on each block root (list items on their <li>, not the grouped <ul>/<ol>), so \"copy link to block\" deep links resolve off the live editor. Blocks without an id and bare containers that emit no root of their own (database) are left unstamped.",
+  "apiDataLine": 4479
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.transformUrl.description",
+  "englishSource": "Pure URL rewrite hook applied to every block URL (image/video/audio src, file/bookmark/embed href) and every inline anchor href — for rewriting hrefs or routing CDN image URLs. ctx is { attr: 'href' | 'src', blockType?: string } (blockType is undefined for inline anchors). It runs BEFORE the unsafe-scheme strip, so a rewrite can never re-introduce a javascript:/data: sink; returning '' drops the URL.",
+  "apiDataLine": 4486
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.root.description",
+  "englishSource": "Wrap the output in <div data-blok-interface=\"view\">. Not cosmetic: the scoped preflight and the token/colour layers key on the bare [data-blok-interface] attribute, so emitted classes compute differently without the wrapper and @bloklabs/core/view.css cannot reproduce the editor's appearance. Opt-in because it adds an element to existing output. <BlokView> stamps the attribute on its own wrapper, so React consumers never set this.",
+  "apiDataLine": 4494
+ },
+ {
+  "key": "api.viewApi.methods.blocksToHtml.params.options.classes.description",
+  "englishSource": "Render blocks with the editor's presentational classes and the per-block holder → content scaffolding, so the result matches a read-only editor render. Requires @bloklabs/core/view.css plus root: true (or an [data-blok-interface] ancestor) to actually paint; a few tools also gain a wrapper element under this flag. <BlokView> enables it by default; the useBlokView hook does not.",
+  "apiDataLine": 4502
+ },
+ {
+  "key": "api.viewApi.methods.blocksToPlainText.description",
+  "englishSource": "Extract the plain text of a saved document — blocks are separated by \\n\\n, list items by \\n, table cells by \\t. Synchronous and DOM-free, same options as blocksToHtml plus includeHiddenText. Ideal for previews, search indexing, and character counts.",
+  "apiDataLine": 4521
+ },
+ {
+  "key": "api.viewApi.methods.blocksToPlainText.note",
+  "englishSource": "There is no core \"document size\" helper because the two sizes you might mean are measured differently: `blocksToPlainText(data).length` is the visible content length (what a user typed), while `new TextEncoder().encode(JSON.stringify(data)).length` is the transport size in bytes (what a save/upload limit — e.g. 500KB — should check). Use the plain-text length for content rules and the JSON byte length for storage rules.",
+  "apiDataLine": 4538
+ },
+ {
+  "key": "api.viewApi.methods.blocksToPlainText.params.data.description",
+  "englishSource": "Saved document, in the strict save() shape or the loose wire shape.",
+  "apiDataLine": 4527
+ },
+ {
+  "key": "api.viewApi.methods.blocksToPlainText.params.options.includeHiddenText.description",
+  "englishSource": "Also read the media text the default output leaves out, because the editor paints it as an attribute or does not paint it at all: an image's alt, a video's or file's url, an embed's source, an audio track's title, artist and url, and a bookmark's description and url. Each is appended after the block's visible label, one per line. Off by default, so the default output stays exactly what a reader sees on screen — turn it on for a search index, where alt text and a pasted URL are both things people search for.",
+  "apiDataLine": 4534
+ },
+ {
+  "key": "api.viewApi.methods.blocksToMarkdown.description",
+  "englishSource": "Serialize a saved document to Markdown — synchronous and DOM-free, the outbound twin of markdownToBlocks. Headings become #, lists -/1., to-dos - [x], tables GFM pipe grids. Markdown has no callout, toggle, column or spacer, so a callout becomes a blockquote carrying its emoji, a toggle a bold summary followed by its body, columns flatten into reading order, and a spacer is dropped. Returns '' for empty or malformed documents.",
+  "apiDataLine": 4555
+ },
+ {
+  "key": "api.viewApi.methods.blocksToMarkdownWithReport.description",
+  "englishSource": "The same Markdown, plus a list of what could not be carried across: each entry names the construct, whether it was 'dropped' (nothing emitted) or 'degraded' (emitted lossily), and why. Reach for it when the result goes somewhere that cannot ask a follow-up question — an AI client, an export — and needs to be told what it is missing. A block that leaves no output and carries no inline text is reported too, so a custom tool with no Markdown form is named rather than vanishing.",
+  "apiDataLine": 4565
+ },
+ {
+  "key": "api.viewApi.methods.htmlTextContent.description",
+  "englishSource": "Extract the plain text of an HTML fragment — synchronous and DOM-free, the view renderer's replacement for element.textContent. Entities are decoded (`a &lt; b` → `a < b`) and `<br>` becomes a newline. Use it instead of hand-rolling a DOMParser strip (which needs a DOM) when reducing an inline-HTML field to text.",
+  "apiDataLine": 4575
+ },
+ {
+  "key": "api.viewApi.methods.sanitizeHtmlFragment.description",
+  "englishSource": "Sanitize an HTML fragment against a sanitizer config with no DOM (parse5-backed, matching the editor's html-janitor semantics). `config` is a tag → rule allowlist, or the `'plaintext'` sentinel to strip markup entirely. The DOM-free counterpart of `api.sanitizer.clean()` — use it in Node, workers and RSC, where the editor's sanitizer cannot run.",
+  "apiDataLine": 4584
+ },
+ {
+  "key": "api.viewApi.methods.outlineFromOutputData.description",
+  "englishSource": "Extract the heading outline of a saved document — the source for a table of contents. Synchronous and DOM-free: walks the document in reading order (top-level blocks, then structural children), picks header blocks, and reduces each heading's inline HTML to plain text. Each item is { id?, level, text } — the block id drives anchor links / scroll targets, so no separate DOMParser pass is needed. Headings with empty text are skipped.",
+  "apiDataLine": 4594
+ },
+ {
+  "key": "api.viewApi.methods.restoreHeadingAnchors.description",
+  "englishSource": "Repair in-document links whose target was lost during an import. HTML addresses its own sections by an id on the heading (Google Docs writes <h2 id=\"h.2y1ok8y7pef0\"> and links its table of contents to that fragment); a converter that mints its own block ids and drops the source ones leaves those links pointing at nothing. The link's text still names the heading, so this pass hands each dead fragment to the heading that text names, as HeaderData.anchor. Because it writes content it guesses as little as possible: only headings with no anchor yet, only an exact text match (markup, entities and whitespace normalized away — punctuation is not), and only when exactly one heading and one fragment claim each other; anything less certain is left alone and listed in report.skipped. Running it twice changes nothing further. Call it yourself as a one-off upgrade — it is not part of the automatic load path. DOM-free, so it runs in a Node script over stored records; migrate legacy data first.",
+  "apiDataLine": 4604
+ },
+ {
+  "key": "api.viewApi.methods.defineBlokSchema.description",
+  "englishSource": "Resolve a tools/inlineToolbar/tunes config into one shared schema. Pure and module-scope-safe: call it at module scope and import the result everywhere. Spread editorConfig into new Blok(...) and pass viewSchema to the view functions — this guarantees documents are displayed under the SAME sanitize composition that produced them, instead of two configs drifting apart. The guarantee is per composition: if you change the inline-tool set at runtime with tools.setInlineToolbar, recompose the schema from the current config. Options that don't participate in schema resolution (link, i18n, data, …) pass through editorConfig untouched.",
+  "apiDataLine": 4616
+ },
+ {
+  "key": "api.viewApi.methods.composeBaseSanitizeConfig.description",
+  "englishSource": "Fold an ordered list of sanitize configs with the editor's exact merge semantics — a later-wins Object.assign (inline tools first, then tunes). Function rules are carried by reference, and rules for the same tag are REPLACED, never deep-merged. This is the same fold defineBlokSchema uses to build viewSchema.baseSanitize, exposed for hand-built lists. Exported from both @bloklabs/core and @bloklabs/core/view.",
+  "apiDataLine": 4631
+ },
+ {
+  "key": "api.viewApi.methods.blocksToViewNodes.description",
+  "englishSource": "Render to a framework-agnostic JSON tree instead of an HTML string: each node is { tag, attrs, children } or { text }, with the same options and sanitization pipeline as blocksToHtml. This is what the React bindings map to real elements. Experimental — the shape is not frozen until a second framework adapter consumes it, so it may change in a minor release.",
+  "apiDataLine": 4644
+ },
+ {
+  "key": "api.viewApi.methods.renderLatex.description",
+  "englishSource": "Render a LaTeX string to HTML with the KaTeX build Blok already bundles (its code tool, equation inline tool and markdown importer all use it), hardened for untrusted input: trust: false forbids the markup-injecting commands (\\href, \\includegraphics, \\html*), maxExpand caps macro expansion, maxSize caps element sizing, and throwOnError: false renders malformed math as escaped source instead of failing the document. Reach for it instead of adding katex as your own dependency — that is a second copy of the library and a second, unaudited option set. KaTeX is imported lazily on the first call; with no document present (SSR, workers) the stylesheet injection is skipped and you include katex.min.css yourself, and the markup is identical. Use createLatexRenderer for inlineRenderers, which is synchronous.",
+  "apiDataLine": 4654
+ },
+ {
+  "key": "api.viewApi.methods.createLatexRenderer.description",
+  "englishSource": "Load KaTeX once and get back a synchronous LaTeX renderer — the form inlineRenderers needs, since it replaces an element with the string it returns and a promise there stringifies as [object Promise]. Shaped as \"await the loader, get the renderer\" so there is no call order to get wrong: the renderer cannot exist before KaTeX is ready. Same hardened options as renderLatex. This is what lets a display surface render equations through blocksToHtml/BlokView instead of booting a read-only editor for them.",
+  "apiDataLine": 4663
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.description",
+  "englishSource": "The React display component from @bloklabs/react: renders a saved document inside a single <div> wrapper — no editor instance, no chrome, no async, no effects, and never dangerouslySetInnerHTML (content is mapped from the sanitized view tree to real React elements). The wrapper always carries data-blok-interface=\"view\", which is what makes the emitted classes compute as they do in the editor; it is written BEFORE the divProps spread, so a caller can override it — never to \"blok\", which carries all: initial !important and would block host typography. This is the obvious read-only path — reach for it instead of <BlokEditor readOnly> at display-only call sites: it costs no editor bundle, has no ready latch, and renders identically under SSR. Its props API is stable; only the raw ViewNode tree it maps from (via blocksToViewNodes) stays experimental, and using BlokView never exposes you to it.",
+  "apiDataLine": 4680
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.data.description",
+  "englishSource": "Saved document to display (nullish tolerated).",
+  "apiDataLine": 4686
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.schema.description",
+  "englishSource": "viewSchema from defineBlokSchema — display under the composition that produced the document.",
+  "apiDataLine": 4692
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.renderers.description",
+  "englishSource": "Custom per-tool renderers; win over the built-ins.",
+  "apiDataLine": 4698
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.onUnknownBlock.description",
+  "englishSource": "Unknown-tool policy ('comment' markers are dropped in the React tree).",
+  "apiDataLine": 4705
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.toolAttributes.description",
+  "englishSource": "Stamp data-blok-tool on each block root (pairs with @bloklabs/core/view.css). Forwards to blocksToHtml.",
+  "apiDataLine": 4712
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.blockIds.description",
+  "englishSource": "Stamp data-blok-id on each block root (list items on their <li>) for copy-link-to-block deep links.",
+  "apiDataLine": 4719
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.transformUrl.description",
+  "englishSource": "URL rewrite hook for block URLs + inline anchors, run before the unsafe-scheme strip. Forwards to blocksToHtml.",
+  "apiDataLine": 4725
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.inlineRenderers.description",
+  "englishSource": "Per-tag renderers for INLINE elements — server-render an equation's LaTeX with KaTeX, turn a mention span into a chip. Forwards to blocksToHtml.",
+  "apiDataLine": 4731
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params.classes.description",
+  "englishSource": "Render with the editor's presentational classes and the per-block holder → content scaffolding, so the output matches a read-only editor render. On by default here — this component owns a wrapper and its job is to look like the editor — and it needs @bloklabs/core/view.css imported to paint. Pass classes={false} for unstyled semantic markup.",
+  "apiDataLine": 4738
+ },
+ {
+  "key": "api.viewApi.methods.BlokView.params....divProps.description",
+  "englishSource": "Any standard <div> attribute (className, id, style, data-*, aria-*, event handlers, …) is forwarded onto the single wrapper element.",
+  "apiDataLine": 4744
+ },
+ {
+  "key": "api.viewApi.methods.useBlokView.description",
+  "englishSource": "The wrapper-free form of BlokView: returns a Fragment of the block elements with no extra <div>, for slots where a wrapper is invalid or unwanted — checkbox labels, table cells, headings. Synchronous and effect-free (SSR-safe), memoized on the data reference and the individual option values. Same options as blocksToHtml, except root — which the hook ignores, since emitting no wrapper is its contract — and classes, which defaults to false here (it defaults to true in <BlokView>, which owns a wrapper). Passing root: true type-checks and silently does nothing; wrap the returned Fragment yourself in an element carrying data-blok-interface=\"view\" when you need view.css to paint.",
+  "apiDataLine": 4768
+ }
+]

@@ -83,8 +83,8 @@ strings are not "present in `en.json`, missing from `ru.json`" — they are abse
 matters only for how you detect it.
 
 Consequence: key parity between `en.json` and `ru.json` is structurally incapable of
-measuring translation coverage. **`en.json` contains only 198 of the 571 keys the API hook
-requests** — barely a third of the surface — so a parity check is blind to the real gap and
+measuring translation coverage. **`en.json` holds only 198 of the 571 literal-backed keys —
+296 of all 761 the API hook asks for** — so a parity check is blind to the real gap and
 raises false alarms about the rest. It reports 0 missing keys while 1,197 English phrases
 render. The correct invariant is *every translatable string field in a data module has a
 `ru.json` key*, not *`en.json` ⇔ `ru.json`*.
@@ -269,8 +269,9 @@ TypeScript compiler API and the hook's own key derivation replayed over it, with
 against a runtime import of `API_SECTIONS` and matches byte-for-byte except one
 `${BLOK_VERSION}` interpolation inside a code example.
 
-Full list with English source and `api-data.ts` line number:
-`scratchpad/api-missing-keys.json` (311 objects, all keys unique).
+Full list with English source and `api-data.ts` line number, committed beside this document:
+**`docs/plans/2026-09-07-ru-api-missing-keys.json`** (311 objects, all keys unique). The
+derivation is reproducible from the appendix at the end of this file.
 
 ### The 537 flagged phrases, fully attributed
 
@@ -285,9 +286,10 @@ which is what makes the 221 false positives safe to dismiss.
 | (d) heuristic false positive | 221 | `method.name` 173, `returnType` 44, `table.option` 2, `property.name` 2 |
 
 **Do not chase the 221.** They are identifiers and type signatures rendered *outside*
-`<code>` — a method name in `<h3 class="font-mono">` (`ApiMethodCard.tsx:39`), a return
-type in a `<span>` (`:40`), property names repeated bare in the On-this-page nav. Correct
-as they are.
+`<code>` — a method name in `<h3 class="font-mono">` (`ApiMethodCard.tsx:41`), a return
+type in a `<span>` (`:42`), an error message in a `<p class="font-mono">` (`:130`), and
+property names repeated bare in the On-this-page nav. Correct as they are. (Line numbers
+verified by grep; an earlier draft cited `:39`/`:40`.)
 
 Two missing keys the heuristic *cannot* see — `api.uploaderApi.title` and
 `api.uploaderApi.badge` — have no lower-case word, so they never trip `isEnglishProse`.
@@ -344,6 +346,11 @@ These need to move to a translatable field, not a `ru.json` key.
 **This is an English-side bug, found while auditing Russian.** English readers see outdated
 copy on three pages, and a translator working from `api-data.ts` would translate text no
 English reader ever sees.
+
+Verified directly for the worst one: `en.json:919` describes `useBlocks(editor)`, while
+`api-data.ts:4048` documents `useBlocks(editor, options?)` **and an entire paragraph on
+`{ within: blockId }` subtree scoping** that `en.json` omits. English readers are missing a
+documented feature, not just a signature.
 
 **3. The 62 "ru-only" keys are not orphans.** All 62 are requested by
 `useApiTranslations`; their English side lives in `api-data.ts`, not `en.json`, and all 62
@@ -513,6 +520,10 @@ both sides, different Russian:
 | --- | --- | --- |
 | Bold | **Полужирный** | Жирный |
 | Toggle | **Сворачиваемый список** | Переключатель |
+
+Bold verified directly: `src/components/i18n/locales/ru.json` → `toolNames.bold` =
+«Полужирный»; `docs/src/i18n/ru.json:1926` → `"bold": "Жирный"`. Same English on both
+sides, so the divergence was introduced in Russian.
 
 Three more differ because the *English* differs (Text/Paragraph, Color/Marker,
 Code/Inline Code) — those need an English decision first, not a Russian one.
@@ -699,3 +710,87 @@ api-data.ru-coverage › ru.json is missing 2 keys for strings added to api-data
 
 Items 2, 5 and 6 are independent of the changelog decision and can start immediately.
 
+
+## Appendix: reproducing the numbers
+
+Run from `docs/`. Rebuilds the key set the API hook asks for, walks the bundles **without**
+the English fallback, and prints the reconciliation table in "The numbers, reconciled".
+Needs `api-sections.json` — the `API_SECTIONS` tree with every string tagged by line — which
+is produced by parsing `api-data.ts` with the TypeScript compiler API.
+
+```js
+import { readFileSync } from 'node:fs';
+const ru = JSON.parse(readFileSync('src/i18n/ru.json','utf8'));
+const en = JSON.parse(readFileSync('src/i18n/en.json','utf8'));
+const holds = (b,k) => {
+  let cur = b;
+  for (const seg of k.split('.')) {
+    if (cur === undefined || typeof cur === 'string') return false;
+    cur = cur[seg];
+  }
+  return typeof cur === 'string';
+};
+const src = readFileSync('src/hooks/useApiTranslations.ts','utf8');
+const map = {};
+const block = src.slice(src.indexOf('SECTION_TRANSLATION_KEYS'), src.indexOf('SIDEBAR_LINK_KEYS'));
+for (const m of block.matchAll(/'([^']+)':\s*'([^']+)'/g)) map[m[1]] = m[2];
+const un = (v) => {
+  if (v && typeof v === 'object' && '__str' in v) return v.__str;
+  if (Array.isArray(v)) return v.map(un);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k,x]) => [k, un(x)]));
+  return v;
+};
+const api = un(JSON.parse(readFileSync(process.argv[2],'utf8')));
+const mk = (n) => n.replace(/\(.*\)$/,'');
+const st = { asked:0, litBacked:0, noteOnly:0, missRu:0, missRuLit:0, missRuNote:0, missEn:0 };
+const missLitKeys = [];
+for (const s of api) {
+  const p = map[s.id];
+  if (!p) { console.log('UNMAPPED', s.id); continue; }
+  const push = (k, lit) => {
+    const isNote = lit === undefined;
+    st.asked++;
+    if (isNote) st.noteOnly++; else st.litBacked++;
+    if (!holds(ru,k)) { st.missRu++; if (isNote) st.missRuNote++; else { st.missRuLit++; missLitKeys.push(k); } }
+    if (!holds(en,k)) st.missEn++;
+  };
+  push(`${p}.title`, s.title);
+  if (s.badge) push(`${p}.badge`, s.badge);
+  if (s.description) push(`${p}.description`, s.description);
+  for (const m of s.methods ?? []) {
+    const k = mk(m.name);
+    push(`${p}.methods.${k}.description`, m.description);
+    push(`${p}.methods.${k}.note`, m.note);
+    for (const pa of m.params ?? []) push(`${p}.methods.${k}.params.${pa.name}.description`, pa.description);
+    (m.errors ?? []).forEach((e,i) => {
+      push(`${p}.methods.${k}.errors.${i}.condition`, e.condition);
+      push(`${p}.methods.${k}.errors.${i}.resolution`, e.resolution);
+    });
+  }
+  for (const pr of s.properties ?? []) push(`${p}.properties.${pr.name}.description`, pr.description);
+  for (const r of s.table ?? []) push(`${p}.table.${r.option}.description`, r.description);
+}
+console.log(st);
+const agent1 = JSON.parse(readFileSync(`${process.argv[3]}`,'utf8')).map(x => x.key);
+const a1 = new Set(agent1), mine = new Set(missLitKeys);
+console.log('agent1 list:', a1.size, 'my literal-backed missing:', mine.size);
+console.log('in agent1 not mine:', [...a1].filter(k => !mine.has(k)).slice(0,8));
+console.log('in mine not agent1:', [...mine].filter(k => !a1.has(k)).slice(0,8));
+
+// note-key breakdown: how many notes exist in neither bundle => no note rendered at all
+let noteBoth=0, noteEnOnly=0, noteRuOnly=0, noteNeither=0;
+for (const s of api) {
+  const p = map[s.id]; if (!p) continue;
+  for (const m of s.methods ?? []) {
+    if (m.note !== undefined) continue;          // literal exists in api-data.ts
+    const k = `${p}.methods.${mk(m.name)}.note`;
+    const e = holds(en,k), r = holds(ru,k);
+    if (e && r) noteBoth++; else if (e) noteEnOnly++; else if (r) noteRuOnly++; else noteNeither++;
+  }
+}
+console.log({ noteOnlyKeys: 190, noteBoth, noteEnOnly, noteRuOnly, noteNeither });
+```
+
+The rendered-page scan that produced the 1,197 figure walks
+`dist/client/ru/**/index.html` with jsdom, applying the same strip selector, phrase
+splitting and `isEnglishProse` predicate as `ru-language-purity.test.tsx`.

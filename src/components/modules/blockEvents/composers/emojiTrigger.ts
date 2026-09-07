@@ -1,25 +1,18 @@
-import type { Block } from '../../../block';
-import { isMobileScreen } from '../../../utils';
 import { getCaretOffset } from '../../../utils/caret';
-import type { ProcessedEmoji } from '../../../utils/emoji/emoji-data';
 import { loadEmojiData } from '../../../utils/emoji/emoji-data';
 import { searchEmojisRanked } from '../../../utils/emoji/emoji-search-ranked';
 import type { EmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
 import { resolveEmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
-import type { Popover } from '../../../utils/popover';
-import { PopoverDesktop, PopoverMobile } from '../../../utils/popover';
 import { isTextLikeBlock } from '../utils/text-like-block';
 
-import { prefetchEmojiPickerData } from '../../../../tools/callout/emoji-picker';
-
-import type { PopoverItemParams, PopoverPositionUpdate } from '@/types';
-import { PopoverEvent } from '@/types/utils/popover/popover-event';
+import { EmojiPicker, prefetchEmojiPickerData } from '../../../../tools/callout/emoji-picker';
 
 import { BlockEventComposer } from './__base';
 
 /**
- * Stable id applied to the popover's listbox container, mirroring the
- * Toolbox's TOOLBOX_POPOVER_ID (only one emoji menu is ever open at a time).
+ * Stable id applied to the picker element, mirroring the Toolbox's
+ * TOOLBOX_POPOVER_ID (only one emoji menu is ever open at a time). Also
+ * what the combobox host's aria-controls resolves to.
  */
 const EMOJI_MENU_LISTBOX_ID = 'blok-emoji-menu';
 
@@ -73,19 +66,6 @@ function rectAtOffset(container: HTMLElement, offset: number): DOMRect | undefin
 }
 
 /**
- * Maps ranked emoji results to popover items. Selecting an item only closes
- * the menu for now — inserting the emoji at the trigger span is Task 7.
- */
-function buildMenuItems(emojis: ProcessedEmoji[], onSelect: () => void): PopoverItemParams[] {
-  return emojis.map(emoji => ({
-    title: emoji.name,
-    icon: emoji.native,
-    name: emoji.id,
-    onActivate: onSelect,
-  }));
-}
-
-/**
  * Detects a ":query" span at the caret in a text-like block and opens a
  * ranked emoji menu, closing it when the span disappears, the query matches
  * nothing, or the user cancels. Inserting the chosen emoji (Task 7) and the
@@ -94,7 +74,8 @@ function buildMenuItems(emojis: ProcessedEmoji[], onSelect: () => void): Popover
 export class EmojiTrigger extends BlockEventComposer {
   public opened = false;
 
-  private popover: Popover | null = null;
+  /** Lazily created on first use and reused for the composer's lifetime, like Callout's own picker. */
+  private picker: EmojiPicker | null = null;
   private anchorRect: DOMRect | undefined;
   /** Plain-text offset of the ":" that opened the current menu (see renderMenu). */
   private activeSpanStart: number | undefined;
@@ -151,7 +132,7 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
-    this.renderMenu(results, block, input, span);
+    await this.renderMenu(input, span);
 
     return true;
   }
@@ -159,9 +140,7 @@ export class EmojiTrigger extends BlockEventComposer {
   /**
    * Handle a keydown while the menu may be open. Escape closes it; the other
    * claimed keys are only reported as handled so BlockEvents does not also
-   * run block splitting, indenting or caret navigation for them — the actual
-   * highlight movement is the popover's own Flipper, wired via
-   * `handleContentEditableNavigation`.
+   * run block splitting, indenting or caret navigation for them.
    * @param event - keydown event
    * @returns true when this event was claimed by the open menu
    */
@@ -194,12 +173,7 @@ export class EmojiTrigger extends BlockEventComposer {
       return;
     }
 
-    if (this.popover !== null) {
-      this.popover.off(PopoverEvent.Closed, this.handlePopoverClosed);
-      this.popover.hide();
-      this.popover.destroy();
-      this.popover = null;
-    }
+    this.picker?.close();
 
     document.removeEventListener('selectionchange', this.handleSelectionChange);
     this.removeComboboxRoles();
@@ -209,21 +183,13 @@ export class EmojiTrigger extends BlockEventComposer {
   }
 
   /**
-   * Reacts to the popover closing itself (e.g. an outside click). Detached
-   * from the listener before our own hide()/destroy() calls in close() and
-   * renderMenu(), so this only fires for a close we did not initiate.
-   */
-  private readonly handlePopoverClosed = (): void => {
-    this.close();
-  };
-
-  /**
    * Closes the menu when the caret leaves the ":query" span WITHOUT a text
    * mutation — arrowing or clicking elsewhere in the block. `handleInput`
-   * only re-evaluates on an input event, so nothing else catches this; the
-   * popover's own trigger is the whole contentEditable, so PopoverRegistry's
-   * click-outside handling treats any click inside the block as "inside" and
-   * does not close it either. Registered on open, removed in close().
+   * only re-evaluates on an input event, so nothing else catches this: the
+   * picker itself has no click-outside detection in inline mode (it does not
+   * block the page with a backdrop — see EmojiPicker's `inline` option), and
+   * clicking inside the same block never fires an input event either.
+   * Registered on open, removed in close().
    */
   private readonly handleSelectionChange = (): void => {
     if (!this.opened) {
@@ -255,7 +221,7 @@ export class EmojiTrigger extends BlockEventComposer {
   }
 
   /**
-   * Build (or rebuild) the popover with the current ranked results.
+   * Open (or update) the picker with the current query.
    *
    * The anchor rect is computed once, from the ":" character's position at
    * the moment the menu first opens for a given span, and reused on every
@@ -263,13 +229,13 @@ export class EmojiTrigger extends BlockEventComposer {
    * grows would walk the menu across the screen as characters are typed. A
    * `span.start` that differs from the active one means the caret jumped to
    * a different ":" in the same block (e.g. navigated there and typed), so
-   * the anchor is recomputed for that new span.
-   * @param results - ranked emoji matches, already known to be non-empty
-   * @param block - the block being typed into
+   * the anchor is recomputed and the picker re-opened for that new span.
+   * Picking an emoji only closes the menu for now — inserting it at the
+   * trigger span is Task 7.
    * @param input - the block's current contentEditable
    * @param span - the resolved ":query" span
    */
-  private renderMenu(results: ProcessedEmoji[], block: Block, input: HTMLElement, span: EmojiTriggerSpan): void {
+  private async renderMenu(input: HTMLElement, span: EmojiTriggerSpan): Promise<void> {
     const isFreshTrigger = !this.opened || span.start !== this.activeSpanStart;
 
     if (isFreshTrigger) {
@@ -283,54 +249,45 @@ export class EmojiTrigger extends BlockEventComposer {
       return;
     }
 
-    if (this.popover !== null) {
-      this.popover.off(PopoverEvent.Closed, this.handlePopoverClosed);
-      this.popover.hide();
-      this.popover.destroy();
-      this.popover = null;
+    const picker = this.ensurePicker();
+
+    if (isFreshTrigger) {
+      await picker.open(input, anchorRect);
     }
 
-    // Track the class actually picked (not `instanceof`, which the desktop
-    // popover mock in tests does not satisfy) to decide whether updatePosition
-    // — a desktop-only method — is safe to call.
-    const isDesktop = !isMobileScreen();
-    const PopoverClass = isDesktop ? PopoverDesktop : PopoverMobile;
-
-    const popover = new PopoverClass({
-      trigger: input,
-      items: buildMenuItems(results, () => this.close()),
-      // ARIA listbox (options), not a menu — same combobox surface the
-      // Toolbox's inline slash search uses.
-      listbox: true,
-      listboxId: EMOJI_MENU_LISTBOX_ID,
-      handleContentEditableNavigation: true,
-      // The contentEditable keeps DOM focus throughout — the user is still
-      // typing the query — so the first item must not steal it.
-      autoFocusFirstItem: false,
-      messages: {
-        search: this.Blok.I18n.t('emoji.search'),
-        nothingFound: this.Blok.I18n.t('emoji.nothingFound'),
-      },
-    });
-
-    popover.on(PopoverEvent.Closed, this.handlePopoverClosed);
-    popover.getElement().setAttribute('data-blok-testid', 'emoji-menu');
-
-    this.popover = popover;
-
-    if (isDesktop) {
-      const positionUpdate: PopoverPositionUpdate = { positionContext: block.holder };
-
-      (popover as PopoverDesktop).updatePosition(anchorRect, positionUpdate);
-    }
-
-    popover.show();
+    // Mirrors the typed query into the picker's own search field on every
+    // keystroke — see the plan's "decision already made" on this.
+    picker.setQuery(span.query);
 
     if (!this.opened) {
       this.applyComboboxRoles(input);
       document.addEventListener('selectionchange', this.handleSelectionChange);
       this.opened = true;
     }
+  }
+
+  /** Builds the picker once and reuses it, mirroring Callout's own one-picker-per-tool lifecycle. */
+  private ensurePicker(): EmojiPicker {
+    if (this.picker !== null) {
+      return this.picker;
+    }
+
+    const picker = new EmojiPicker({
+      // Task 7 replaces both with real commit(); for now, picking or
+      // removing just closes the menu, same as Task 6's flat list did.
+      onSelect: () => this.close(),
+      onRemove: () => this.close(),
+      i18n: { t: (key: string): string => this.Blok.I18n.t(key) },
+      locale: this.Blok.I18n.getLocale(),
+      inline: true,
+    });
+
+    picker.getElement().setAttribute('data-blok-testid', 'emoji-menu');
+    picker.getElement().id = EMOJI_MENU_LISTBOX_ID;
+    document.body.appendChild(picker.getElement());
+    this.picker = picker;
+
+    return picker;
   }
 
   /**

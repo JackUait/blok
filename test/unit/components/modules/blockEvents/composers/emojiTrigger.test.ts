@@ -22,38 +22,43 @@ const MOCK_EMOJI_MART_DATA = {
 
 vi.mock('@emoji-mart/data', () => MOCK_EMOJI_MART_DATA);
 
+interface MockEmojiPickerOptions {
+  onSelect: (native: string) => void;
+  onRemove: () => void;
+  i18n: { t: (key: string) => string };
+  locale: string;
+  inline?: boolean;
+}
+
+/** Stable across the whole file so tests can inspect what the composer set on it. */
+const mockPickerElement = document.createElement('div');
+const mockPickerConstructor = vi.fn<(options: MockEmojiPickerOptions) => void>();
+const mockPickerOpen = vi.fn<(anchor: HTMLElement, anchorRect?: DOMRect) => Promise<void>>().mockResolvedValue(undefined);
+const mockPickerSetQuery = vi.fn<(query: string) => void>();
+const mockPickerClose = vi.fn<() => void>();
+
 /**
- * A real PopoverDesktop reaches for window.matchMedia and layout APIs, which
+ * A real EmojiPicker reaches for window.matchMedia and layout APIs, which
  * jsdom does not implement — stub the module so these tests can assert menu
- * STATE (the composer's `opened` flag) without constructing real popover DOM.
- * Rendering and keyboard navigation are covered by Task 9's browser test.
+ * STATE (the composer's `opened` flag) and what it tells the picker to do,
+ * without constructing real picker DOM. Rendering, keyboard navigation and
+ * the picker's own inline-mode behaviour are covered by its own suite
+ * (test/unit/tools/callout/emoji-picker/) and Task 9's browser test.
  */
-vi.mock('../../../../../../src/components/utils/popover', () => ({
-  // A `function` (not an arrow function) so `new PopoverDesktop(...)` is a
+vi.mock('../../../../../../src/tools/callout/emoji-picker', () => ({
+  prefetchEmojiPickerData: vi.fn(),
+  // A `function` (not an arrow function) so `new EmojiPicker(...)` is a
   // valid constructor call — an arrow-function implementation throws
   // "is not a constructor".
-  PopoverDesktop: vi.fn(function popoverDesktopMock() {
+  EmojiPicker: vi.fn(function emojiPickerMock(options: MockEmojiPickerOptions) {
+    mockPickerConstructor(options);
+
     return {
-      show: vi.fn(),
-      hide: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      destroy: vi.fn(),
-      filterItems: vi.fn(),
-      updatePosition: vi.fn(),
-      getElement: vi.fn(() => document.createElement('div')),
-    };
-  }),
-  PopoverMobile: vi.fn(function popoverMobileMock() {
-    return {
-      show: vi.fn(),
-      hide: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      destroy: vi.fn(),
-      filterItems: vi.fn(),
-      updatePosition: vi.fn(),
-      getElement: vi.fn(() => document.createElement('div')),
+      open: mockPickerOpen,
+      setQuery: mockPickerSetQuery,
+      close: mockPickerClose,
+      getElement: () => mockPickerElement,
+      isOpen: () => true,
     };
   }),
 }));
@@ -243,5 +248,117 @@ describe('EmojiTrigger — opening and closing', () => {
     document.dispatchEvent(new Event('selectionchange'));
 
     expect(trigger.opened).toBe(false);
+  });
+});
+
+describe('EmojiTrigger — rendering the real picker', () => {
+  let currentTrigger: EmojiTrigger | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPickerOpen.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    currentTrigger?.close();
+    currentTrigger = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('constructs the picker in inline mode, tagged for the browser test and the combobox aria-controls', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+
+    expect(mockPickerConstructor).toHaveBeenCalledTimes(1);
+    expect(mockPickerConstructor.mock.calls[0]?.[0]?.inline).toBe(true);
+    expect(mockPickerElement.getAttribute('data-blok-testid')).toBe('emoji-menu');
+    expect(mockPickerElement.id).toBe('blok-emoji-menu');
+  });
+
+  it('opens the picker anchored on the block input, passing the caret rect', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+
+    expect(mockPickerOpen).toHaveBeenCalledTimes(1);
+    const [anchorArg, rectArg] = mockPickerOpen.mock.calls[0] ?? [];
+
+    expect(anchorArg).toBe(block.currentInput);
+    expect(rectArg).toBeDefined();
+  });
+
+  it('mirrors each keystroke\'s query into the picker via setQuery', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+
+    expect(mockPickerSetQuery).toHaveBeenLastCalledWith('fi');
+
+    if (block.currentInput !== null && block.currentInput !== undefined) {
+      block.currentInput.textContent = ':fir';
+    }
+    setCaret(block, 4);
+    await trigger.handleInput(createInputEvent({ data: 'r' }));
+
+    expect(mockPickerSetQuery).toHaveBeenLastCalledWith('fir');
+  });
+
+  it('does not reopen the picker for a second keystroke inside the same span', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+
+    if (block.currentInput !== null && block.currentInput !== undefined) {
+      block.currentInput.textContent = ':fir';
+    }
+    setCaret(block, 4);
+    await trigger.handleInput(createInputEvent({ data: 'r' }));
+
+    expect(mockPickerOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the picker when the trigger closes', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+    trigger.close();
+
+    expect(mockPickerClose).toHaveBeenCalledTimes(1);
   });
 });

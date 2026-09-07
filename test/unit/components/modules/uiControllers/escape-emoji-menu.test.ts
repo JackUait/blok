@@ -43,36 +43,6 @@ import type { Block } from '../../../../../src/components/block';
 import type { BlokModules } from '../../../../../src/types-internal/blok-modules';
 import { PopoverRegistry } from '../../../../../src/components/utils/popover/popover-registry';
 
-vi.mock('../../../../../src/components/utils/popover', () => ({
-  // A `function` (not an arrow function) so `new PopoverDesktop(...)` is a
-  // valid constructor call — an arrow-function implementation throws
-  // "is not a constructor".
-  PopoverDesktop: vi.fn(function popoverDesktopMock() {
-    return {
-      show: vi.fn(),
-      hide: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      destroy: vi.fn(),
-      filterItems: vi.fn(),
-      updatePosition: vi.fn(),
-      getElement: vi.fn(() => document.createElement('div')),
-    };
-  }),
-  PopoverMobile: vi.fn(function popoverMobileMock() {
-    return {
-      show: vi.fn(),
-      hide: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      destroy: vi.fn(),
-      filterItems: vi.fn(),
-      updatePosition: vi.fn(),
-      getElement: vi.fn(() => document.createElement('div')),
-    };
-  }),
-}));
-
 const MOCK_EMOJI_MART_DATA = {
   default: {
     categories: [{ id: 'people', emojis: ['fire'] }],
@@ -89,6 +59,14 @@ describe('Escape with the emoji menu open does not enter navigation mode', () =>
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(PopoverRegistry.instance, 'hasOpenPopovers').mockReturnValue(false);
+
+    // The real emoji menu is now the real EmojiPicker (see Task 6b), whose
+    // resolveTheme() calls matchMedia — jsdom doesn't implement it.
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: false }),
+    });
   });
 
   afterEach(() => {

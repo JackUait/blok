@@ -97,7 +97,7 @@ describe('server quality gates', () => {
       'docker build --tag blok-server:ci --file packages/server/Dockerfile .',
     );
     expect(securityUses).toContain(
-      'gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7',
+      'gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e',
     );
     expect(
       securitySteps.find(step => step.name === 'Scan committed secrets')?.env,

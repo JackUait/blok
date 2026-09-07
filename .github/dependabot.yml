@@ -44,7 +44,11 @@ updates:
       # Drop this once @storybook/addon-vitest declares vitest 5 support.
       - dependency-name: vitest
         update-types: ["version-update:semver-major"]
-      - dependency-name: "@vitest/*"
+      - dependency-name: "@vitest/coverage-v8"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/ui"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/browser-playwright"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm

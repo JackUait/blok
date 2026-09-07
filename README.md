@@ -6,6 +6,21 @@
 
 # Blok
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/@bloklabs/core"><img alt="@bloklabs/core on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fcore?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fcore&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/react"><img alt="@bloklabs/react on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Freact?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Freact&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/vue"><img alt="@bloklabs/vue on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fvue?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fvue&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/angular"><img alt="@bloklabs/angular on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fangular?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fangular&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/presets"><img alt="@bloklabs/presets on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fpresets?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fpresets&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/cli"><img alt="@bloklabs/cli on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fcli?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fcli&color=CB3837"></a>
+  <a href="https://www.npmjs.com/package/@bloklabs/server"><img alt="@bloklabs/server on npm" src="https://img.shields.io/npm/v/%40bloklabs%2Fserver?style=flat-square&logo=npm&logoColor=white&label=%40bloklabs%2Fserver&color=CB3837"></a>
+</p>
+
+<p align="center">
+  <a href="https://www.nuget.org/packages/Blok.Server"><img alt="Blok.Server on NuGet" src="https://img.shields.io/nuget/v/Blok.Server?style=flat-square&logo=nuget&logoColor=white&label=Blok.Server&color=004880"></a>
+  <a href="https://www.nuget.org/packages/Blok.Server.AspNetCore"><img alt="Blok.Server.AspNetCore on NuGet" src="https://img.shields.io/nuget/v/Blok.Server.AspNetCore?style=flat-square&logo=nuget&logoColor=white&label=Blok.Server.AspNetCore&color=004880"></a>
+</p>
+
 A block-based rich text editor for the web, like the one in Notion: every paragraph, heading, image or list is its own block you can drag, nest, and convert into something else.
 
 The difference from a plain `contenteditable` field is what you get back. `contenteditable` hands you one HTML blob and leaves you to parse it; Blok saves typed JSON blocks, so the same content can go into a database column, be diffed between revisions, or be rendered on a server that never touches the DOM. And it's headless: Blok ships the engine and the tools, not a theme, so the chrome is yours.

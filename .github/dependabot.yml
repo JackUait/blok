@@ -1,42 +1,111 @@
 version: 2
+
+# Every ecosystem is grouped, so a check produces one PR per group rather than
+# one per dependency. Majors are split from minor/patch everywhere they can be:
+# a blocked major (see the ignore lists) must never hold back the safe patches
+# riding with it. Security updates need their own groups because a group is
+# version-updates-only unless `applies-to` says otherwise, and security PRs
+# ignore both `schedule` and `open-pull-requests-limit`.
 updates:
+  # Yarn workspaces put every packages/*/package.json under this one directory,
+  # so the ignores below also cover packages/cli.
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "05:07"
+    open-pull-requests-limit: 5
     groups:
-      root-dependencies:
+      root-minor-and-patch:
+        applies-to: version-updates
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+      root-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      root-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # jsdom 30 returns "16px" for an unset border-*-width where browsers say
+      # "0px", so every parseFloat(getComputedStyle(x).border*Width) reader in
+      # the unit suite silently gains 16px. It also raises engines.node above
+      # the >=20.19.0 that @bloklabs/cli publishes, and jsdom is that package's
+      # only runtime dependency — taking it would drop Node 20 consumers.
+      # Drop this once jsdom fixes the `medium` keyword resolution.
+      - dependency-name: jsdom
+        update-types: ["version-update:semver-major"]
+      # vitest 5 has no compatible Storybook: every published
+      # @storybook/addon-vitest peers on vitest ^3||^4 and on @vitest/runner
+      # ^3||^4, and vitest 5 stopped publishing @vitest/runner (latest is
+      # 4.1.11). The whole family is pinned together so a partial bump cannot
+      # desync the runner from the reporters.
+      # Drop this once @storybook/addon-vitest declares vitest 5 support.
+      - dependency-name: vitest
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitest/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /docs
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "05:12"
+    open-pull-requests-limit: 5
     groups:
-      docs-dependencies:
+      docs-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      docs-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      docs-security:
+        applies-to: security-updates
         patterns: ["*"]
 
   - package-ecosystem: nuget
     directory: /packages/server/dotnet
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "05:17"
+    open-pull-requests-limit: 3
+    groups:
+      nuget-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      nuget-major:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["major"]
+      nuget-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
+  # One image line, so splitting majors off would be theatre.
   - package-ecosystem: docker
     directory: /packages/server
     schedule:
-      interval: weekly
-      day: monday
-      time: "05:17"
+      interval: monthly
+      time: "05:22"
+    open-pull-requests-limit: 2
+    groups:
+      docker-base-images:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: "05:17"
+      interval: monthly
+      time: "05:27"
+    open-pull-requests-limit: 3
+    groups:
+      actions-minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      actions-major:
+        patterns: ["*"]
+        update-types: ["major"]

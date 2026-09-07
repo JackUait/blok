@@ -1,6 +1,7 @@
 // src/tools/callout/emoji-picker/index.ts
 
-import { loadEmojiData, searchEmojis, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
+import { loadEmojiData, groupEmojisByCategory, CURATED_CALLOUT_EMOJIS, type ProcessedEmoji } from '../../../components/utils/emoji/emoji-data';
+import { searchEmojisRanked } from '../../../components/utils/emoji/emoji-search-ranked';
 import { loadEmojiLocale, type EmojiLocaleData } from '../../../components/utils/emoji/emoji-locale';
 import { hide as hideTooltip, onHover } from '../../../components/utils/tooltip';
 import { getTabbables } from '../../../components/utils/modal-dialog';
@@ -48,7 +49,16 @@ interface EmojiPickerOptions {
   onRemove: () => void;
   i18n: I18n;
   locale: string;
+  /**
+   * Renders the same picker anchored inside a contentEditable, for the inline
+   * ":" trigger: `open()` does not steal focus, skips the page backdrop and
+   * scroll lock, and leaves Escape to the caller (who already owns it).
+   * Defaults to false, the Callout icon-editing popover's existing behaviour.
+   */
+  inline?: boolean;
 }
+
+const UNCAPPED_RESULTS = Number.POSITIVE_INFINITY;
 
 /** SVG icon for each emoji category (display order). */
 const CATEGORY_NAV: ReadonlyArray<readonly [id: string, icon: string]> = [
@@ -122,7 +132,10 @@ export class EmojiPicker {
   private readonly onRemove: () => void;
   private readonly i18n: I18n;
   private readonly _locale: string;
+  private readonly _inline: boolean;
   private _localeData: EmojiLocaleData | null = null;
+  /** Caret rect override for inline mode — see `open()`'s `anchorRect` param. */
+  private _anchorRectOverride: DOMRect | null = null;
 
   private _element: HTMLElement;
   private _body: HTMLElement;
@@ -167,6 +180,7 @@ export class EmojiPicker {
     this.onRemove = options.onRemove;
     this.i18n = options.i18n;
     this._locale = options.locale;
+    this._inline = options.inline ?? false;
     this._element = this.buildElement();
 
     const body = this._element.querySelector<HTMLElement>('[data-emoji-picker-body]');
@@ -210,11 +224,18 @@ export class EmojiPicker {
     return this._open;
   }
 
-  public async open(anchor: HTMLElement): Promise<void> {
+  /**
+   * @param anchor - element the picker is positioned against
+   * @param anchorRect - overrides `anchor`'s own bounding rect for positioning
+   * (inline mode: the anchor is the block's contentEditable, but the true
+   * anchor point is the ":" character's rect inside it)
+   */
+  public async open(anchor: HTMLElement, anchorRect?: DOMRect): Promise<void> {
     const active = document.activeElement;
 
     this._previouslyFocused = active instanceof HTMLElement && active !== document.body ? active : null;
     this._anchorEl = anchor;
+    this._anchorRectOverride = anchorRect ?? null;
     this._open = true;
     this._filterInput.value = '';
     this._element.setAttribute('data-theme', this.resolveTheme());
@@ -257,7 +278,11 @@ export class EmojiPicker {
       this.renderEmojiGrid(this._allEmojis);
     }
 
-    this.showBackdrop();
+    if (!this._inline) {
+      // Inline mode must not block pointer/scroll on the rest of the page —
+      // the caret has to stay usable while the picker is open.
+      this.showBackdrop();
+    }
 
     // Unhide before positioning so getBoundingClientRect returns real dimensions
     this._element.style.animation = 'none';
@@ -275,10 +300,13 @@ export class EmojiPicker {
     void this._element.offsetHeight;
     this._element.style.animation = '';
 
-    // Capture-phase Escape so it closes the picker before any bubbling handler.
-    document.addEventListener('keydown', this._onDocumentKeydown, true);
-
-    this._filterInput.focus();
+    if (!this._inline) {
+      // Capture-phase Escape so it closes the picker before any bubbling
+      // handler. Inline mode's caller already owns Escape (and Tab/arrows),
+      // so a second capture-phase listener here would race it.
+      document.addEventListener('keydown', this._onDocumentKeydown, true);
+      this._filterInput.focus();
+    }
   }
 
   public close(): void {
@@ -298,6 +326,14 @@ export class EmojiPicker {
     this.closeSkinTonePopover();
     this.removeBackdrop();
     this._announcer.textContent = '';
+
+    if (this._inline) {
+      // Focus was never taken from the caret (see open()), so there is
+      // nothing to give back — re-focusing here could disturb the caret.
+      this._previouslyFocused = null;
+
+      return;
+    }
 
     // Restore focus to whatever was focused before opening; fall back to the
     // anchor when that element has since left the document.
@@ -322,9 +358,15 @@ export class EmojiPicker {
     // sizing utilities (w-[400px], fixed, …) never apply and its anchored
     // position collapses.
     el.setAttribute('data-blok-popover', '');
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', this.i18n.t(EDIT_ICON_KEY));
+
+    if (!this._inline) {
+      // Inline mode isn't a modal dialog — it's a suggestion menu anchored in
+      // a contentEditable, and the composer that owns it sets its own id/role.
+      el.setAttribute('role', 'dialog');
+      el.setAttribute('aria-modal', 'true');
+      el.setAttribute('aria-label', this.i18n.t(EDIT_ICON_KEY));
+    }
+
     el.className = [
       'fixed z-50 w-[400px] overflow-hidden rounded-xl',
       'border border-neutral-200/70 bg-white shadow-2xl',
@@ -715,6 +757,17 @@ export class EmojiPicker {
     return emoji.skins[this._skinTone] ?? emoji.native;
   }
 
+  /**
+   * Sets the query and re-filters, exactly as if the user had typed it — the
+   * filter input's own `input` listener calls this same method. Used by the
+   * inline ":" trigger to mirror its typed query into the picker.
+   * @param query - the query to filter by
+   */
+  public setQuery(query: string): void {
+    this._filterInput.value = query;
+    this.handleFilterChange(query);
+  }
+
   private handleFilterChange(query: string): void {
     if (query.trim() === '') {
       this._announcer.textContent = '';
@@ -725,7 +778,9 @@ export class EmojiPicker {
     }
 
     this._nav.hidden = true;
-    const results = searchEmojis(this._allEmojis, query, this._localeData);
+    // Uncapped: the grid renders every match, unlike the inline trigger's
+    // flat, length-limited menu.
+    const results = searchEmojisRanked(this._allEmojis, query, this._localeData, UNCAPPED_RESULTS);
 
     this.announceResults(results.length);
 
@@ -944,12 +999,12 @@ export class EmojiPicker {
   // ─── Positioning ──────────────────────────────────────────
 
   private position(anchor: HTMLElement): void {
-    const rect = anchor.getBoundingClientRect();
+    const rect = this._anchorRectOverride ?? anchor.getBoundingClientRect();
     const pickerRect = this._element.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    // Coordinates are viewport-relative (picker is inside a fixed backdrop)
+    // Coordinates are viewport-relative (fixed positioning, backdrop or not)
     const top = rect.bottom + pickerRect.height > viewportHeight
       ? rect.top - pickerRect.height - 4
       : rect.bottom + 4;

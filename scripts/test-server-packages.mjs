@@ -238,7 +238,7 @@ function assertPackageMetadata(packageId, nuspec) {
         .map(({ id, version }) => ({ id, version }))
         .sort((left, right) => left.id.localeCompare(right.id)),
       [
-        { id: 'AngleSharp', version: '1.7.2' },
+        { id: 'AngleSharp', version: '1.8.0' },
         { id: 'BouncyCastle.Cryptography', version: '2.7.0' },
         { id: 'Jint', version: '4.16.1' },
       ],

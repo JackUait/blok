@@ -700,17 +700,24 @@ export class Table implements BlockTool {
 
     const content = this.initialContent;
 
-    this.initialContent = null;
-
     if (this.readOnly) {
+      // Keep the pending content instead of dropping it. The read-only mount
+      // creates NO blocks — it paints legacy cell strings as inert markup — and
+      // the model normalizes those strings to `{ blocks: [] }`, so this field is
+      // the last place the text exists. setReadOnly(false) consumes it.
+      // (regression: a collaboration session boots read-only until sync
+      // completes, and every legacy cell lost its text when the veto lifted.)
       mountCellBlocksReadOnly(gridEl, content, this.api, this.blockId ?? '');
       const snap = this.model.snapshot();
+
       applyCellColors(gridEl, snap.content);
       applyCellPlacements(gridEl, snap.content);
       this.subsystems.initScrollHazeOnly();
 
       return;
     }
+
+    this.initialContent = null;
 
     this.runTransactedStructuralOp(() => {
       const initializedContent = this.cellBlocks?.initializeCells(content) ?? content;
@@ -811,17 +818,41 @@ export class Table implements BlockTool {
       // Initialize cell blocks and subsystems
       this.initCellBlocks(gridEl);
 
-      // The read-only mount path synthesizes no block for empty cells
-      // ({ blocks: [] } — produced by migrating empty source cells), so after
-      // restoring edit mode those cells would have no contenteditable target
-      // and be impossible to click into or type in. Mirror the fresh-render
-      // edit path (initializeCells) by guaranteeing every cell holds at least
-      // one editable paragraph. Wrapped in a structural op so the freshly
-      // constructed cellBlocks mutation handler defers the synthesized
-      // block-added events instead of double-claiming them.
-      // (regression: published-article tables with empty cells became
-      // un-editable on the read-only→edit toggle.)
+      // The read-only mount path creates no blocks at all: legacy cell strings
+      // are painted as inert markup and empty cells ({ blocks: [] }, produced by
+      // migrating empty source cells) get nothing. Both leave the cell without a
+      // contenteditable target, and the legacy text exists nowhere but the
+      // pending content. Run the fresh-render edit path (initializeCells) over
+      // that pending content here — the read-only render must stay
+      // non-mutating, so this transition is the first legal place to convert.
+      // Wrapped in a structural op so the freshly constructed cellBlocks
+      // mutation handler defers the synthesized block-added events instead of
+      // double-claiming them.
+      // (regressions: legacy cell text erased on the collaborative read-only
+      // boot; published-article tables with empty cells became un-editable on
+      // the read-only→edit toggle.)
+      const pendingContent = this.initialContent;
+
+      this.initialContent = null;
+
       this.runTransactedStructuralOp(() => {
+        if (pendingContent !== null) {
+          // Detach the read-only markup before converting. Whatever is left in a
+          // container is either an inert text div that would keep rendering the
+          // old text beside the new block, or a mounted holder that
+          // mountBlocksInCell reads as already-owned by another container and
+          // DUPLICATES — which is how repeated toggles grew a cell's children.
+          gridEl.querySelectorAll<HTMLElement>(`[${CELL_BLOCKS_ATTR}]`)
+            .forEach(container => container.replaceChildren());
+
+          const initializedContent = this.cellBlocks?.initializeCells(pendingContent) ?? pendingContent;
+
+          this.model.replaceAll({
+            ...this.model.snapshot(),
+            content: initializedContent,
+          });
+        }
+
         gridEl.querySelectorAll<HTMLElement>(`[${CELL_ATTR}]`).forEach(cell => {
           this.cellBlocks?.ensureCellHasBlock(cell);
         });

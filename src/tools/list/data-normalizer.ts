@@ -34,6 +34,16 @@ const isLegacyFormat = (data: unknown): data is LegacyListItemFormat => {
 };
 
 /**
+ * Whether this item already carries text that `save()` produced.
+ *
+ * NON-EMPTY is the test, not mere presence: legacy data reaches the tool with an
+ * empty `text` default alongside its `items` array, so presence alone would make
+ * every legacy import normalize to an empty item.
+ */
+const hasAuthoritativeText = (data: Record<string, unknown>): boolean =>
+  Object.entries(data).some(([key, value]) => key === 'text' && typeof value === 'string' && value !== '');
+
+/**
  * Type for objects that may have ListItemData properties with loose typing
  * to handle malformed data from external sources
  */
@@ -114,8 +124,15 @@ export const normalizeListItemData = (
   }
 
   // Handle legacy format with items[] array - extract first item's content
-  // This provides backward compatibility when legacy data is passed directly to the tool
-  if (isLegacyFormat(data)) {
+  // This provides backward compatibility when legacy data is passed directly to the tool.
+  //
+  // A `text` string means save() has already written this item, so it is the
+  // authoritative value and the legacy branch must stand down. A collaborative
+  // document never deletes a data key it once held, so a migrated item keeps its
+  // stale `items` array forever — reading it here would re-derive the text from
+  // items[0] on every load and discard every edit made since the migration (and
+  // reset depth to 0, which the standard branch below preserves).
+  if (isLegacyFormat(data) && !hasAuthoritativeText(data)) {
     const firstItem = data.items[0];
     // handle string items and old {text,checked} shape
     const extractLegacy = (item: typeof firstItem): { text: string; checked: boolean | string | undefined } => {

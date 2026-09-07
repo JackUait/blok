@@ -954,6 +954,48 @@ export class DocumentStore {
   }
 
   /**
+   * Delete every top-level data key of `id` that `keep` does not name.
+   *
+   * The counterpart, one level up, of the deletion `deepAssignYMap` already
+   * performs for a nested value: `updateBlockData` is per-KEY by signature, so
+   * it can set but never unset, and a caller writing a full save() had no way
+   * to say "these are ALL the keys there are". Only a full-save flush may call
+   * this — a partial patch names a subset by design.
+   * @param id - Block id
+   * @param keep - the keys the new data carries. Compared after NUL-scrubbing,
+   *   because that is the form `updateBlockData` stored them in.
+   * @returns true if any key was deleted
+   */
+  public pruneBlockData(id: string, keep: ReadonlySet<string>): boolean {
+    const yblock = this.getBlockById(id);
+
+    if (yblock === undefined) {
+      return false;
+    }
+
+    const ydata = yblock.get('data');
+
+    if (!(ydata instanceof Y.Map)) {
+      return false;
+    }
+
+    const kept = new Set(Array.from(keep, stripNul));
+    const stale = Array.from(ydata.keys()).filter((key) => !kept.has(key));
+
+    if (stale.length === 0) {
+      return false;
+    }
+
+    this.transact(() => {
+      for (const key of stale) {
+        ydata.delete(key);
+      }
+    }, 'local');
+
+    return true;
+  }
+
+  /**
    * Recursively assign `source` onto `target` Y.Map, writing ONLY changed leaves
    * (so untouched sub-fields keep their CRDT identity and merge across peers) and
    * deleting keys absent from `source`. Nested objects recurse into existing

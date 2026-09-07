@@ -8,6 +8,7 @@ import { Array as YArray, Map as YMap } from 'yjs';
 import type { BlockToolData, SanitizerConfig } from '../../../../types';
 import { BlockToolAPI } from '../../block';
 import type { Block } from '../../block';
+import { modificationsObserverBatchTimeout } from '../../constants';
 import { logLabeled } from '../../utils';
 import { isChildToolAllowed } from '../../utils/child-tools';
 import { moveElementAfter, moveElementBefore } from '../../utils/html';
@@ -91,6 +92,18 @@ export interface SyncHandlers {
 /**
  * BlockYjsSync handles synchronization between DOM blocks and Yjs document
  */
+/**
+ * Whether an add event is the editor materialising a change it did not make.
+ *
+ * Only a REMOTE add opens a settling window. An undo/redo add is replaying the
+ * user's own history, and a restored block normalises nothing — so opening a
+ * window there bought nothing and left the caret inside it, which made the
+ * first keystroke typed within 400ms of a Ctrl+Z land untracked and therefore
+ * un-undoable.
+ * @param origin - origin of the block change event, when the caller knows it
+ */
+const isMaterializingOrigin = (origin?: BlockChangeEvent['origin']): boolean => origin === 'remote';
+
 export class BlockYjsSync {
   private readonly dependencies: BlockYjsSyncDependencies;
   private readonly repository: BlockRepository;
@@ -157,9 +170,109 @@ export class BlockYjsSync {
   }
 
   /**
+   * Blocks materialised from the document whose tool has not finished
+   * normalising them yet, each with the timer that ends its window.
+   *
+   * `isReconciling` closes at the animation frame after the render, but a
+   * tool's own normalisation — stamping a default, rewriting legacy rows into
+   * block references — lands AFTER it, and the resulting write-back is the
+   * EDITOR's, not the user's. Undoing it replays the editor's materialisation
+   * against the document, which is not a state the user was ever in.
+   *
+   * Deliberately NARROWER and WEAKER than `isReconciling`: narrower because it
+   * is scoped to the materialised subtree instead of suppressing every block,
+   * weaker because it does not DROP the write — the value still reaches the
+   * document, it just does not become an undo step.
+   */
+  private readonly settlingBlocks = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /**
+   * Whether a write-back for `block` right now belongs to the editor's own
+   * materialisation of it (or of one of its ancestors) rather than to the user.
+   * Gates the capture flavour in `BlockManager.flushBlockDataWrites`.
+   * @param block - the block whose write-back is being classified
+   */
+  public isMaterializing(block: Block): boolean {
+    return this.settlingBlocks.size > 0 && this.isInSettlingSubtree(block, new Set());
+  }
+
+  private isInSettlingSubtree(block: Block | undefined, visited: Set<string>): boolean {
+    if (block === undefined || visited.has(block.id)) {
+      return false;
+    }
+
+    if (this.settlingBlocks.has(block.id)) {
+      return true;
+    }
+
+    visited.add(block.id);
+
+    const parent = block.parentId === null ? undefined : this.repository.getBlockById(block.parentId);
+
+    return this.isInSettlingSubtree(parent, visited);
+  }
+
+  /**
+   * Open the settling window for a block the reconciler just materialised.
+   * The window is bounded by the same 400ms mutation batch the write buffer
+   * uses, so a block whose tool normalises nothing still settles — and the
+   * first flushed write-back closes it earlier (see `settleMaterialization`),
+   * keeping the window off a user edit that follows.
+   * @param blockId - id of the block being materialised
+   */
+  private markMaterializing(blockId: string): void {
+    const open = this.settlingBlocks.get(blockId);
+
+    if (open !== undefined) {
+      clearTimeout(open);
+    }
+
+    this.settlingBlocks.set(
+      blockId,
+      setTimeout(() => this.settleMaterialization(blockId), modificationsObserverBatchTimeout)
+    );
+  }
+
+  /**
+   * Close one block's settling window.
+   *
+   * When the last one closes, capture is stopped: that is the SEAL. Y.UndoManager
+   * merges anything that lands within its 500ms captureTimeout into the newest
+   * entry, and the measured gap between the last hydration write and the user's
+   * first keystroke was 11ms — so without the boundary one Ctrl+Z reverted the
+   * user's word AND the editor's materialisation together. The boundary makes
+   * the user's edit its own entry even if a hydration entry somehow exists.
+   *
+   * The delete precedes `stopCapturing` on purpose: `stopCapturing` drains the
+   * write buffer, whose flush bodies call back into here.
+   * @param blockId - id of the block that has settled
+   */
+  public settleMaterialization(blockId: string): void {
+    const timer = this.settlingBlocks.get(blockId);
+
+    if (timer === undefined) {
+      return;
+    }
+
+    clearTimeout(timer);
+    this.settlingBlocks.delete(blockId);
+
+    if (this.settlingBlocks.size === 0) {
+      this.dependencies.YjsManager.stopCapturing();
+    }
+  }
+
+  /**
    * Flag to prevent multiple move syncs in the same event batch
    */
   private moveSyncScheduled = false;
+
+  /**
+   * Ids the current batch's 'move' events named, drained by the scheduled
+   * move sync so it can mirror each one's parent contentIds (see
+   * {@link handleYjsMove}).
+   */
+  private readonly pendingMovedBlockIds = new Set<string>();
 
   /**
    * Flag to prevent multiple holder-order reconciles in the same event batch
@@ -354,6 +467,11 @@ export class BlockYjsSync {
     this.destroyed = true;
     this.unsubscribeFromYjs?.();
     this.unsubscribeFromYjs = null;
+
+    // Drop the settling timers WITHOUT sealing: a torn-down editor must not
+    // reach back into the Yjs manager it no longer owns.
+    this.settlingBlocks.forEach((timer) => clearTimeout(timer));
+    this.settlingBlocks.clear();
   }
 
   /**
@@ -372,11 +490,11 @@ export class BlockYjsSync {
     if (event.type === 'update') {
       this.handleYjsUpdate(event.blockId);
     } else if (event.type === 'move') {
-      this.handleYjsMove();
+      this.handleYjsMove(event.blockId);
     } else if (event.type === 'add') {
-      this.handleYjsAdd(event.blockId);
+      this.handleYjsAdd(event.blockId, event.origin);
     } else if (event.type === 'batch-add') {
-      this.handleYjsBatchAdd(event.blockIds);
+      this.handleYjsBatchAdd(event.blockIds, event.origin);
     } else if (event.type === 'remove') {
       this.handleYjsRemove(event.blockId);
       this.batchHadRemove = true;
@@ -815,7 +933,7 @@ export class BlockYjsSync {
   /**
    * Handle block add from Yjs (undo/redo - restoring a removed block, or a remote insert)
    */
-  private handleYjsAdd(blockId: string): void {
+  private handleYjsAdd(blockId: string, origin?: BlockChangeEvent['origin']): void {
     // Block already exists in DOM, no need to add
     if (this.repository.getBlockById(blockId) !== undefined) {
       return;
@@ -866,6 +984,12 @@ export class BlockYjsSync {
       });
 
       this.blocksStore.insert(targetIndex, block);
+
+      // The tool's own normalisation of what the document handed us lands
+      // after this window closes — see `settlingBlocks`.
+      if (isMaterializingOrigin(origin)) {
+        this.markMaterializing(blockId);
+      }
 
       // Emit block-added event so listeners (e.g., TableCellBlocks) can
       // claim the block for the correct cell during undo/redo
@@ -991,7 +1115,7 @@ export class BlockYjsSync {
    * child blocks already exist in BlockManager, so helpers like
    * `mountBlocksInCell()` can find them by ID.
    */
-  private handleYjsBatchAdd(blockIds: string[]): void {
+  private handleYjsBatchAdd(blockIds: string[], origin?: BlockChangeEvent['origin']): void {
     // Collect blocks to create — skip any that already exist
     const candidates: Array<{ blockId: string; toolName: string; data: Record<string, unknown>; parentId: string | undefined; lastEditedAt: number | undefined; lastEditedBy: string | null }> = [];
 
@@ -1065,6 +1189,14 @@ export class BlockYjsSync {
         });
 
         this.blocksStore.addToArray(entry.targetIndex, block);
+
+        // Same as the single add: the tool normalises after this window — see
+        // `settlingBlocks`. Marked in pass 1 so a container's rendered() hook
+        // in pass 2 is already inside every child's window.
+        if (isMaterializingOrigin(origin)) {
+          this.markMaterializing(entry.blockId);
+        }
+
         created.push({ block, targetIndex: entry.targetIndex, parentId: entry.parentId });
       }
 
@@ -1267,8 +1399,26 @@ export class BlockYjsSync {
   /**
    * Handle block move from Yjs (undo/redo - repositioning a moved block)
    * Uses microtask scheduling to batch multiple move events into a single sync
+   *
+   * The reconcile that follows the flat resync is what keeps a move REPLAY
+   * from inverting a container's children. `replayMovePlacement` writes the
+   * doc, then reparents in memory through `BlockHierarchy.setBlockParent`,
+   * which derives the child's slot from the block's flat-array position — and
+   * at that instant the flat array is still the PRE-replay one, because the
+   * repair below is what fixes it and it is a microtask away. So the slot is
+   * computed against stale neighbours and `contentIds` lands in the opposite
+   * order to the doc; nothing healed it, since a replay's second transaction
+   * is a PURE 'move' (parentId already agrees by design) and only
+   * `handleYjsUpdate`'s reparent branch mirrored sibling order back.
+   *
+   * Runs AFTER `syncBlockOrderFromYjs` on purpose: the doc is authoritative
+   * for both, and the flat array must already agree before the invariant
+   * check downstream compares them.
+   * @param blockId - the block the move event named
    */
-  private handleYjsMove(): void {
+  private handleYjsMove(blockId: string): void {
+    this.pendingMovedBlockIds.add(blockId);
+
     // Only schedule one sync per microtask to handle batched move events
     if (this.moveSyncScheduled) {
       return;
@@ -1280,11 +1430,35 @@ export class BlockYjsSync {
     queueMicrotask(() => {
       this.moveSyncScheduled = false;
 
+      const movedIds = [...this.pendingMovedBlockIds];
+
+      this.pendingMovedBlockIds.clear();
+
       if (this.destroyed) {
         return;
       }
 
       this.syncBlockOrderFromYjs();
+
+      const movedIntoParents = new Set(movedIds.map((movedId) => {
+        const rawParentId = this.dependencies.YjsManager.getBlockById(movedId)?.get('parentId');
+
+        return typeof rawParentId === 'string' ? rawParentId : null;
+      }));
+
+      // Holder moves must not echo back to Yjs as fresh local writes, which
+      // would pollute the undo/redo stacks — same window the batch reconcile
+      // uses.
+      this.withAtomicOperation(() => {
+        movedIntoParents.forEach((parentId) => {
+          this.reconcileParentChildOrderFromDoc(parentId);
+          // The stale-flat-array reparent misplaced the HOLDER too, and the
+          // flat resync above does not move nested holders. Re-assert the
+          // parent's sibling order against the (now correct) array, exactly
+          // as the batch reconcile does for a captured reparent.
+          this.reconcileHolderOrderForParent(parentId);
+        });
+      });
     });
   }
 

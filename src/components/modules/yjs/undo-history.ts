@@ -246,8 +246,14 @@ export class UndoHistory {
 
         this.entryByStackItem.set(event.stackItem, entry);
         this.caretUndoStack.push(entry);
-        // Clear redo stack on new action (standard undo/redo behavior)
+        // Clear redo stack on new action (standard undo/redo behavior).
+        // BOTH redo stacks, in lockstep: `redo()` reads the CARET stack to
+        // decide whether the next redo is a move, so a move group left behind
+        // here is unreachable — while `canRedo()` answers from the MOVE stack
+        // and keeps saying yes. Only a new move ever cleared it, so the UI
+        // advertised a redo that did nothing, indefinitely.
         this.caretRedoStack = [];
+        this.moveRedoStack = [];
 
         // Defense-in-depth backstop for "redo caret does not catch up to the new
         // block". This listener runs mid-transaction, BEFORE a structural handler
@@ -599,6 +605,23 @@ export class UndoHistory {
   private recordMoveForUndo(entry: MoveHistoryEntry, skipCaretCapture = false): void {
     this.moveUndoStack.push(entry);
     this.moveRedoStack = [];
+
+    // The yjs redo branch has to die with it. A move's own transaction uses the
+    // UNTRACKED 'move' origin (the placement stacks own its history, and a
+    // tracked one would record every move twice), so yjs bails out of
+    // `addStackItem` before the `else if (!redoing) this.clear(false, true)`
+    // that normally drops its redoStack on a new action. Left alone, the next
+    // `redo()` sees an empty caret redo stack, concludes "not a move", and
+    // delegates to `undoManager.redo()` — replaying an edit the user already
+    // undid. Inert when there is nothing to clear, and its transaction is
+    // origin-less + touches no shared type, so no observer event escapes.
+    this.undoManager.clear(false, true);
+
+    // And a capture boundary. Without it the next tracked write merges into the
+    // stack item recorded BEFORE the move ('stack-item-updated', so no new
+    // caret entry), leaving the caret stack's top the move — one undo then
+    // reverses the move instead of the edit typed after it.
+    this.undoManager.stopCapturing();
 
     // Record caret positions for this move entry (single moves only)
     // Grouped moves handle caret tracking via startMoveGroup/endMoveGroup

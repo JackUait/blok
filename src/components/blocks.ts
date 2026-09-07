@@ -578,6 +578,21 @@ export class Blocks {
 
     const index = this.blocks.indexOf(block);
 
+    /**
+     * Both anchors below can be DOM-nested (inside a callout, toggle or table
+     * cell): the flat-array predecessor at `index > 0`, and the first mounted
+     * follower at index 0 — which is nested whenever a container's holder is
+     * unmounted while its child's is not. Anchoring on either would swallow a
+     * root block into that container, so resolve a root block's slot against
+     * the working area instead. Mirrors the `forceTopLevel` correction in
+     * Blocks.insert.
+     */
+    if (block.parentId === null) {
+      this.insertAtRootLevel(block, index);
+
+      return;
+    }
+
     if (index > 0) {
       const previousBlock = this.blocks[index - 1];
 

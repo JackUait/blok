@@ -18,8 +18,10 @@ describe('Blocks', () => {
    * Create a mock Block instance
    * @param id - The block ID
    * @param name - The block name (default: 'paragraph')
+   * @param parentId - Parent block id; null means the block belongs at root level,
+   *   matching the real Block constructor (`this.parentId = parentId ?? null`)
    */
-  const createMockBlock = (id: string, name: string = 'paragraph'): Block => {
+  const createMockBlock = (id: string, name: string = 'paragraph', parentId: string | null = null): Block => {
     const holder = document.createElement('div');
 
     holder.setAttribute('data-blok-testid', 'block-wrapper');
@@ -29,6 +31,7 @@ describe('Blocks', () => {
       id,
       name,
       holder,
+      parentId,
       call: vi.fn(),
       destroy: vi.fn(),
       tool: {
@@ -2131,6 +2134,78 @@ describe('Blocks', () => {
       expect(cellBlock.call).toHaveBeenCalledWith(BlockToolAPI.RENDERED);
       // Should still be inside the table, not moved to working area
       expect(tableBlock.holder.contains(cellBlock.holder)).toBe(true);
+    });
+
+    it('keeps a root block at the working area when its predecessor is nested', () => {
+      const blocks = createBlocks();
+      const container = createMockBlock('container-1');
+      const nestedChild = createMockBlock('nested-1', 'paragraph', 'container-1');
+      const rootAfter = createMockBlock('root-2');
+
+      blocks.push(container);
+
+      // The child lives inside the container's nested-blocks slot, the way a
+      // toggle or callout mounts its children.
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      container.holder.appendChild(slot);
+      blocks.addToArray(1, nestedChild);
+      slot.appendChild(nestedChild.holder);
+
+      // A ROOT block follows the nested child in flat array order.
+      blocks.addToArray(2, rootAfter);
+
+      blocks.activateBlock(rootAfter);
+
+      expect(rootAfter.holder.parentElement).toBe(workingArea);
+    });
+
+    it('keeps a root block at index 0 at the working area when the only mounted block is nested', () => {
+      const blocks = createBlocks();
+      const rootFirst = createMockBlock('root-0');
+      const container = createMockBlock('container-1');
+      const strandedChild = createMockBlock('stranded-1', 'paragraph', 'container-1');
+
+      // The container's holder is NOT mounted, but its child's holder is — the
+      // stranded-holder state a container's rendered() hook can leave behind.
+      blocks.addToArray(0, rootFirst);
+      blocks.addToArray(1, container);
+      blocks.addToArray(2, strandedChild);
+
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      container.holder.appendChild(slot);
+      slot.appendChild(strandedChild.holder);
+      workingArea.appendChild(slot);
+
+      blocks.activateBlock(rootFirst);
+
+      expect(rootFirst.holder.parentElement).toBe(workingArea);
+    });
+
+    it('keeps a nested block inside its container when its predecessor is nested', () => {
+      const blocks = createBlocks();
+      const container = createMockBlock('container-1');
+      const firstChild = createMockBlock('nested-1', 'paragraph', 'container-1');
+      const secondChild = createMockBlock('nested-2', 'paragraph', 'container-1');
+
+      blocks.push(container);
+
+      const slot = document.createElement('div');
+
+      slot.setAttribute('data-blok-nested-blocks', '');
+      container.holder.appendChild(slot);
+      blocks.addToArray(1, firstChild);
+      slot.appendChild(firstChild.holder);
+
+      // The second child is in the array but its holder is not mounted yet.
+      blocks.addToArray(2, secondChild);
+
+      blocks.activateBlock(secondChild);
+
+      expect(secondChild.holder.parentElement).toBe(slot);
     });
 
     it('positions block relative to previous block in array when not connected', () => {

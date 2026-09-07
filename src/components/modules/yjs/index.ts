@@ -394,6 +394,21 @@ export class YjsManager extends Module {
   }
 
   /**
+   * Drop the top-level data keys of a block that the new full save no longer
+   * carries. Full-save flushes only — see `DocumentStore.pruneBlockData`.
+   * @param id - Block id
+   * @param keep - keys the new data carries
+   * @returns true if any key was deleted
+   */
+  public pruneBlockData(id: string, keep: ReadonlySet<string>): boolean {
+    // Same barrier as updateBlockData — see there. The flush body calls this
+    // itself, where the buffer's dispatch guard makes the drain a no-op.
+    this.flushPendingBlockWrites();
+
+    return this.documentStore.pruneBlockData(id, keep);
+  }
+
+  /**
    * Update a tune in block tunes.
    * @param id - Block id
    * @param tuneName - Tune name

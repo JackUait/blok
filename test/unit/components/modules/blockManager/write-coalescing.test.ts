@@ -14,7 +14,7 @@ import { modificationsObserverBatchTimeout } from '../../../../../src/components
  * prepare() harness (same pattern as blockManager.test.ts drag-guard tests).
  */
 interface BlockManagerPrivateAccess {
-  yjsSync: { isSyncingFromYjs: boolean };
+  yjsSync: { isSyncingFromYjs: boolean; isMaterializing: (block: unknown) => boolean };
   blockDidMutated: (mutationType: string, block: unknown, detail: Record<string, unknown>) => unknown;
 }
 
@@ -68,7 +68,7 @@ const createHarness = (): Harness => {
 
   const priv = blockManager as unknown as BlockManagerPrivateAccess;
 
-  priv.yjsSync = { isSyncingFromYjs: false };
+  priv.yjsSync = { isSyncingFromYjs: false, isMaterializing: (): boolean => false };
 
   yjsManager.addBlock({ id: 'b1', type: 'paragraph', data: { text: '' } });
   // Detach the seed transaction from the typing that follows so undo tests

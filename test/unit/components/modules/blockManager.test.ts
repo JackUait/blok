@@ -226,6 +226,8 @@ const createBlockManager = (
       moveBlock: vi.fn(),
       replaceBlockContent: vi.fn(() => true),
       updateBlockData: vi.fn(() => true),
+      // Reports "nothing pruned" so these tests keep asserting only the writes.
+      pruneBlockData: vi.fn(() => false),
       updateBlockMetadata: vi.fn(() => true),
       // Immediate flush reproduces pre-coalescing write timing for these tests.
       enqueueBlockDataWrite: vi.fn(
@@ -965,6 +967,7 @@ describe('BlockManager', () => {
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(),
+      pruneBlockData: vi.fn(() => false),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
@@ -1043,6 +1046,7 @@ describe('BlockManager', () => {
       removeBlock: vi.fn(),
       moveBlock: vi.fn(),
       updateBlockData: vi.fn(() => true),
+      pruneBlockData: vi.fn(() => false),
       updateBlockTune: vi.fn(),
       updateBlockIndent: vi.fn(),
       stopCapturing: vi.fn(),
@@ -1603,6 +1607,7 @@ describe('BlockManager', () => {
           // Return true to indicate the data actually changed — this is what
           // syncBlockDataToYjs uses as the signal to bump edit metadata.
           updateBlockData: vi.fn(() => true),
+          pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: vi.fn(() => true),
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(
@@ -1723,6 +1728,7 @@ describe('BlockManager', () => {
           removeBlock: vi.fn(),
           moveBlock: vi.fn(),
           updateBlockData: updateBlockDataMock,
+          pruneBlockData: vi.fn(() => false),
           updateBlockMetadata: updateBlockMetadataMock,
           // Immediate flush reproduces pre-coalescing write timing.
           enqueueBlockDataWrite: vi.fn(

@@ -1961,14 +1961,19 @@ export class BlockManager extends Module {
    * flush per 400ms window. `flushBlockDataWrites` is the flush body.
    */
   private async syncBlockDataToYjs(block: Block): Promise<void> {
+    // Classified BEFORE the await: the settling window is measured from the
+    // mutation, not from whenever this tool's save() happens to resolve.
+    const isMaterializing = this.yjsSync.isMaterializing(block);
     const savedData = await block.save();
 
     if (savedData === undefined) {
       return;
     }
 
+    const savedKeys = Object.keys(savedData.data);
+
     this.Blok.YjsManager.enqueueBlockDataWrite(block.id, savedData.data, (entries) => {
-      return this.flushBlockDataWrites(block, entries);
+      return this.flushBlockDataWrites(block, entries, { isMaterializing, savedKeys });
     });
   }
 
@@ -1980,12 +1985,29 @@ export class BlockManager extends Module {
    * no undo entry." Without this guard, a spurious metadata-only transaction lands
    * on the Yjs undo stack after every user operation, causing a single CMD+Z to pop
    * only the metadata entry instead of the actual data change.
+   * This is the FULL-SAVE flush — `entries` come from `block.save()`, so the
+   * saved key set is authoritative and a top-level key it no longer carries is
+   * pruned from the document. The patch path (`BlockMutation.syncDataToYjs`)
+   * must never prune: it receives a PARTIAL patch and would delete every key
+   * the caller did not mention.
    * @param block - the block whose buffered writes are being flushed
    * @param entries - coalesced {key → latest value} data entries
+   * @param options - how to flush
+   * @param options.isMaterializing - the write belongs to the editor's own
+   *   materialisation of the block, so it goes to the document WITHOUT
+   *   becoming an undo step (see `BlockYjsSync.settlingBlocks`)
+   * @param options.savedKeys - keys of the LATEST `block.save()`. The buffer
+   *   coalesces by key, so a window that opened with a key the newest save no
+   *   longer emits still carries it in `entries`; this set is the authority
+   *   for both what to write and what to prune.
    * @returns whether any Yjs write actually happened — the buffer skips its
    *   capture-clock rewind for a flush that wrote nothing (see BlockWriteBuffer).
    */
-  private flushBlockDataWrites(block: Block, entries: ReadonlyMap<string, unknown>): boolean {
+  private flushBlockDataWrites(
+    block: Block,
+    entries: ReadonlyMap<string, unknown>,
+    options: { isMaterializing: boolean; savedKeys: readonly string[] }
+  ): boolean {
     // Wrap data + metadata writes into a single Yjs transaction. Without this,
     // each updateBlockData / updateBlockMetadata call opens its own transaction
     // and fires a stack-item-added event, which runs caret capture that may
@@ -1994,26 +2016,41 @@ export class BlockManager extends Module {
     // metadata bump instead of the data change).
     const dataChangedRef = { value: false };
 
-    this.Blok.YjsManager.transact(() => {
+    // A list item structurally nested under another list item derives its
+    // `depth` from the parentId chain (getStructuralListDepth), so persisting
+    // depth to the CRDT is redundant — and harmful: the derived value lands as
+    // a TRACKED write that pollutes the undo stack with a stray "depth-mirror"
+    // entry a Cmd+Z would pop instead of the real structural move (the bug
+    // behind "undo after Tab indentation restores original depth"). save()
+    // still reports depth for the public output and reload re-derives it from
+    // structure, so skipping the CRDT write is safe. Flat-carrier list items
+    // (authored/drag-nested via data.depth with no LIST parent) keep depth as
+    // their source of truth and are left untouched. Evaluated at FLUSH so a
+    // Tab-nesting that happened mid-window uses the block's current parent.
+    const derivedKeys = this.isStructurallyNestedListItem(block) ? new Set(['depth']) : new Set<string>();
+
+    // The prune must spare what the write loop deliberately skips, not merely
+    // what save() omitted: deleting a derived key from the document is the same
+    // depth bug approached from the other side.
+    const keptKeys = new Set([...options.savedKeys, ...derivedKeys]);
+
+    const write = (): void => {
       for (const [key, value] of entries) {
-        // A list item structurally nested under another list item derives its
-        // `depth` from the parentId chain (getStructuralListDepth), so persisting
-        // depth to the CRDT is redundant — and harmful: the derived value lands as
-        // a TRACKED write that pollutes the undo stack with a stray "depth-mirror"
-        // entry a Cmd+Z would pop instead of the real structural move (the bug
-        // behind "undo after Tab indentation restores original depth"). save()
-        // still reports depth for the public output and reload re-derives it from
-        // structure, so skipping the CRDT write is safe. Flat-carrier list items
-        // (authored/drag-nested via data.depth with no LIST parent) keep depth as
-        // their source of truth and are left untouched. Evaluated at FLUSH so a
-        // Tab-nesting that happened mid-window uses the block's current parent.
-        if (key === 'depth' && this.isStructurallyNestedListItem(block)) {
+        if (derivedKeys.has(key) || !keptKeys.has(key)) {
           continue;
         }
 
         if (this.Blok.YjsManager.updateBlockData(block.id, key, value)) {
           dataChangedRef.value = true;
         }
+      }
+
+      // A key the tool's save() dropped — a transient import field, a tune the
+      // user switched off — must leave the document too. Nothing else anywhere
+      // removes a top-level data key, so without this the value survives every
+      // reload and the tool's own normalizer keeps re-deriving from it.
+      if (this.Blok.YjsManager.pruneBlockData(block.id, keptKeys)) {
+        dataChangedRef.value = true;
       }
 
       if (!dataChangedRef.value) {
@@ -2028,7 +2065,20 @@ export class BlockManager extends Module {
       block.lastEditedBy = this.config.user?.id ?? null;
 
       this.Blok.YjsManager.updateBlockMetadata(block.id, block.lastEditedAt, block.lastEditedBy);
-    });
+    };
+
+    if (options.isMaterializing) {
+      this.Blok.YjsManager.transactWithoutCapture(write);
+    } else {
+      this.Blok.YjsManager.transact(write);
+    }
+
+    // The write-back the settling window was waiting for has landed: close the
+    // window now rather than at its timeout, so a user edit that follows in the
+    // same window is tracked normally.
+    if (options.isMaterializing) {
+      this.yjsSync.settleMaterialization(block.id);
+    }
 
     return dataChangedRef.value;
   }

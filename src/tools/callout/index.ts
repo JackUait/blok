@@ -2,6 +2,7 @@
 
 import type {
   API,
+  BlockOrigin,
   BlockTool,
   BlockToolConstructorOptions,
   ToolboxConfig,
@@ -61,6 +62,19 @@ const VARIANT_TO_BG_PRESET: Record<string, string | null> = {
   caution: 'red',
 };
 
+/**
+ * Origins that mean "the author just made this block" — the only ones allowed to
+ * seed the first child paragraph. Allow-list so a future origin fails CLOSED.
+ * `undefined` means a host hand-built the constructor options (core always
+ * supplies one), which is an explicit creation.
+ */
+const CREATION_ORIGINS: ReadonlySet<BlockOrigin | undefined> = new Set<BlockOrigin | undefined>([
+  undefined,
+  'user',
+  'api',
+  'convert',
+]);
+
 export class CalloutTool implements BlockTool {
   private readonly api: API;
   private readOnly: boolean;
@@ -77,10 +91,17 @@ export class CalloutTool implements BlockTool {
    * text — preserving the original content across the conversion.
    */
   private _pendingChildText: string | null = null;
+  /**
+   * True when this instance is a genuine CREATION rather than a
+   * re-materialisation of a callout the document already describes. Only a
+   * creation may seed its child paragraph.
+   */
+  private readonly isCreation: boolean;
 
-  constructor({ data, api, readOnly, block, config }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
+  constructor({ data, api, readOnly, block, config, origin }: BlockToolConstructorOptions<CalloutData, CalloutConfig>) {
     this.api = api;
     this.readOnly = readOnly;
+    this.isCreation = CREATION_ORIGINS.has(origin);
 
     const importedText = typeof (data as Record<string, unknown>).__importedText === 'string'
       ? (data as Record<string, unknown>).__importedText as string
@@ -201,8 +222,12 @@ export class CalloutTool implements BlockTool {
 
     mountChildBlocks(this._dom.childContainer, children);
 
-    // Auto-create initial paragraph child when callout has no children
-    if (children.length === 0) {
+    // Auto-create initial paragraph child when callout has no children.
+    // Only for a genuine creation: a re-materialised callout renders as a FRESH
+    // instance and its restored children's add events land AFTER this call, so
+    // getChildren() is only TRANSIENTLY empty. Seeding then writes a phantom
+    // paragraph back into the shared document. Mirrors Column.rendered().
+    if (children.length === 0 && this.isCreation) {
       const blockIndex = this.api.blocks.getBlockIndex(this.blockId);
 
       if (blockIndex !== undefined) {

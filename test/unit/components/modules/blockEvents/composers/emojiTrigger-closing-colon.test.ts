@@ -173,4 +173,110 @@ describe('EmojiTrigger — closing colon', () => {
 
     expect(block.currentInput?.textContent).toBe(':fire 👍');
   });
+
+  // Three acceptance criteria a bare offset cannot satisfy at once (a
+  // dismissal keyed only by `span.start` — no block identity, no liveness
+  // check — either leaks across blocks or survives a full delete-and-retype,
+  // since offset 0 is the commonest span position there is):
+  //   1. the dismissal must persist while the SAME span keeps being edited
+  //   2. it must not apply in a DIFFERENT block, even at the same offset
+  //   3. it must not apply to a genuinely NEW span at the same offset after
+  //      the dismissed one was fully deleted
+  describe('Escape dismissal — three acceptance criteria a bare offset cannot satisfy', () => {
+    it('criterion 1: persists across further edits to the SAME span (colon never removed)', async () => {
+      const block = createBlock(':fire');
+
+      document.body.appendChild(block.holder);
+      setCaret(block, 5);
+
+      const trigger = new EmojiTrigger(createBlokModules(block));
+
+      await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+      trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      // Backspace the trailing "e" and retype it — edits the span's query
+      // WITHOUT ever removing the leading ":", so this is still the same
+      // dismissed span, not a new one.
+      const input = block.currentInput;
+
+      if (input !== null && input !== undefined) {
+        input.textContent = ':fir';
+      }
+      setCaret(block, 4);
+      await trigger.handleInput({ inputType: 'deleteContentBackward', data: null } as InputEvent);
+
+      if (input !== null && input !== undefined) {
+        input.textContent = ':fire';
+      }
+      setCaret(block, 5);
+      await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+
+      await typeClosingColon(trigger, block, ':fire:');
+
+      expect(block.currentInput?.textContent).toBe(':fire:');
+      expect(trigger.opened).toBe(false);
+    });
+
+    it('criterion 2: does not apply in a different block, even at the same span offset', async () => {
+      const blockA = createBlock(':fire', {}, 'block-a');
+      const blockB = createBlock(':joy', {}, 'block-b');
+
+      document.body.appendChild(blockA.holder);
+      document.body.appendChild(blockB.holder);
+      setCaret(blockA, 5);
+
+      const modules = createBlokModules(blockA);
+      const trigger = new EmojiTrigger(modules);
+
+      await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+      trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      // Switch to a DIFFERENT block whose own trigger happens to start at
+      // the SAME offset (0) as the one just dismissed in blockA.
+      modules.BlockManager.currentBlock = blockB;
+      setCaret(blockB, 4);
+      await trigger.handleInput({ inputType: 'insertText', data: 'y', isComposing: false } as InputEvent);
+      await typeClosingColon(trigger, blockB, ':joy:');
+
+      expect(blockB.currentInput?.textContent).toBe('😂');
+    });
+
+    it('criterion 3: does not apply to a genuinely new span at the same offset after the dismissed one was fully deleted', async () => {
+      const block = createBlock(':fire');
+
+      document.body.appendChild(block.holder);
+      setCaret(block, 5);
+
+      const trigger = new EmojiTrigger(createBlokModules(block));
+
+      await trigger.handleInput({ inputType: 'insertText', data: 'e', isComposing: false } as InputEvent);
+      trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+      // Delete EVERYTHING, including the dismissed trigger's own ":" — the
+      // physical colon that was dismissed is gone, so this is not
+      // "continuing the same span". Left with a single non-colon character
+      // rather than a truly empty node — the test fixture's setCaret needs
+      // an actual text node to place the caret in, and a real contentEditable
+      // backspaced down to nothing behaves the same way for this check
+      // (offset 0 is simply no longer ":").
+      const input = block.currentInput;
+
+      if (input !== null && input !== undefined) {
+        input.textContent = 'x';
+      }
+      setCaret(block, 0);
+      await trigger.handleInput({ inputType: 'deleteContentBackward', data: null } as InputEvent);
+
+      // Retype a brand new trigger from scratch, landing at the same
+      // offset (0) as the dismissed one.
+      if (input !== null && input !== undefined) {
+        input.textContent = ':joy';
+      }
+      setCaret(block, 4);
+      await trigger.handleInput({ inputType: 'insertText', data: 'y', isComposing: false } as InputEvent);
+      await typeClosingColon(trigger, block, ':joy:');
+
+      expect(block.currentInput?.textContent).toBe('😂');
+    });
+  });
 });

@@ -14,13 +14,23 @@
 // holds (see ScrollLocker, wired into renderMenu/close()) — a ghost picker
 // on a page the user can no longer scroll.
 //
+// A second file covers the INVERSE ghost that fixing the first one
+// introduced: close() now hides the element on paths that used to no-op,
+// but it never touched `pendingOpen`. Reopening the same span before a
+// stale `pendingOpen` resolves used to reuse that stale promise (the whole
+// point of `pendingOpen ??= ...` is to dedupe concurrent opens) instead of
+// issuing a fresh open() — so nothing ever re-showed the element, yet the
+// later renderMenu call still passed its token check and set
+// `opened = true` and locked the scroll. An invisible menu that believes
+// it's open, on a page the user can't scroll.
+//
 // Reproduces the exact usage the closing-colon feature invites: typing a
-// whole shortcode fast enough that the closing colon lands before the first
-// EmojiPicker.open() resolves — realistic on first use, when the picker's
-// own async work is a real delay. Uses a mocked EmojiPicker (not the real
-// one) specifically so this test can hold open() pending and observe
-// close()/the scroll-lock attribute directly and deterministically, rather
-// than guessing at the real component's internal timing.
+// whole shortcode fast enough that keystrokes land before EmojiPicker.open()
+// resolves — realistic on first use, when the picker's own async work is a
+// real delay. Uses a mocked EmojiPicker (not the real one) specifically so
+// this test can hold open() pending and observe close()/the scroll-lock
+// attribute directly and deterministically, rather than guessing at the
+// real component's internal timing.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiTrigger } from '../../../../../../src/components/modules/blockEvents/composers/emojiTrigger';
@@ -45,15 +55,17 @@ interface MockEmojiPickerOptions {
 
 // Mirrors the real EmojiPicker's documented behaviour: open() flips
 // visibility synchronously, before its returned promise settles; close()
-// flips it back.
+// flips it back. Each open() call gets its OWN resolver (pushed onto
+// `pendingOpens`) so a test can control several overlapping opens
+// independently — resolving them in whatever order it needs to.
 let pickerHidden = true;
-let resolveOpen: (() => void) | null = null;
+const pendingOpens: Array<() => void> = [];
 
 const mockPickerOpen = vi.fn<() => Promise<void>>().mockImplementation(() => {
   pickerHidden = false;
 
   return new Promise<void>((resolve) => {
-    resolveOpen = resolve;
+    pendingOpens.push(resolve);
   });
 });
 const mockPickerClose = vi.fn<() => void>().mockImplementation(() => {
@@ -77,11 +89,23 @@ vi.mock('../../../../../../src/tools/callout/emoji-picker', () => ({
 
 const SCROLL_LOCK_ATTR = 'data-blok-scroll-locked';
 
+/**
+ * The invariant that would have caught both ghosts at once: whenever
+ * `opened` is true the element must be visible AND the page must be locked;
+ * whenever it's false the element must be hidden AND the lock released.
+ * Checked as one bidirectional assertion rather than the individual fields
+ * a fix could satisfy by accident on only one side.
+ */
+function assertOpenedInvariant(trigger: EmojiTrigger): void {
+  expect(pickerHidden).toBe(!trigger.opened);
+  expect(document.body.hasAttribute(SCROLL_LOCK_ATTR)).toBe(trigger.opened);
+}
+
 describe('EmojiTrigger — ghost picker when the closing colon bypasses an in-flight open()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pickerHidden = true;
-    resolveOpen = null;
+    pendingOpens.length = 0;
     document.body.removeAttribute(SCROLL_LOCK_ATTR);
   });
 
@@ -100,8 +124,8 @@ describe('EmojiTrigger — ghost picker when the closing colon bypasses an in-fl
     const trigger = new EmojiTrigger(createBlokModules(block));
 
     // Opens a fresh trigger for ":f" — starts the (mocked) picker.open(),
-    // held pending via `resolveOpen` to simulate the real picker's own async
-    // work not having finished yet.
+    // held pending to simulate the real picker's own async work not having
+    // finished yet.
     const openingCall = trigger.handleInput({ inputType: 'insertText', data: 'f', isComposing: false } as InputEvent);
 
     await vi.waitFor(() => {
@@ -127,17 +151,12 @@ describe('EmojiTrigger — ghost picker when the closing colon bypasses an in-fl
     await trigger.handleInput({ inputType: 'insertText', data: ':', isComposing: false } as InputEvent);
 
     // Now let the original, now-superseded open() resolve.
-    resolveOpen?.();
+    pendingOpens[0]?.();
     await openingCall;
 
     expect(trigger.opened).toBe(false);
-    // The regression: without a fix, close() no-ops while `opened` is still
-    // false, so the already-visible mocked picker — and the page scroll
-    // lock it holds — stay stuck forever. These are the assertions that
-    // fail on the unfixed code.
     expect(mockPickerClose).toHaveBeenCalled();
-    expect(pickerHidden).toBe(true);
-    expect(document.body).not.toHaveAttribute(SCROLL_LOCK_ATTR);
+    assertOpenedInvariant(trigger);
   });
 
   it('closes the picker and releases the scroll lock when a span-breaking character arrives mid-open (not just the closing colon)', async () => {
@@ -168,12 +187,70 @@ describe('EmojiTrigger — ghost picker when the closing colon bypasses an in-fl
     setCaret(block, 3);
     await trigger.handleInput({ inputType: 'insertText', data: ' ', isComposing: false } as InputEvent);
 
-    resolveOpen?.();
+    pendingOpens[0]?.();
     await openingCall;
 
     expect(trigger.opened).toBe(false);
     expect(mockPickerClose).toHaveBeenCalled();
+    assertOpenedInvariant(trigger);
+  });
+
+  it('issues a fresh open() — not a reuse of the stale pending one — when the same span reopens before the original open() resolves, ending visible with `opened` true', async () => {
+    const block = createBlock(':f');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 2);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    // First open goes in flight, held pending.
+    const firstOpeningCall = trigger.handleInput({ inputType: 'insertText', data: 'f', isComposing: false } as InputEvent);
+
+    await vi.waitFor(() => {
+      expect(mockPickerOpen).toHaveBeenCalledTimes(1);
+    }, { timeout: 10000 });
+
+    expect(pickerHidden).toBe(false);
+
+    // A space breaks the span — close() runs and hides the element, while
+    // the FIRST open() promise is still unresolved.
+    const input = block.currentInput;
+
+    if (input !== null && input !== undefined) {
+      input.textContent = ':f ';
+    }
+    setCaret(block, 3);
+    await trigger.handleInput({ inputType: 'insertText', data: ' ', isComposing: false } as InputEvent);
+
     expect(pickerHidden).toBe(true);
-    expect(document.body).not.toHaveAttribute(SCROLL_LOCK_ATTR);
+    expect(trigger.opened).toBe(false);
+
+    // Reopen the SAME span position before the original open() resolves —
+    // this is the case that used to reuse the stale pending promise via
+    // `pendingOpen ??= ...` instead of issuing a fresh open().
+    if (input !== null && input !== undefined) {
+      input.textContent = ':f';
+    }
+    setCaret(block, 2);
+    const secondOpeningCall = trigger.handleInput({ inputType: 'insertText', data: 'f', isComposing: false } as InputEvent);
+
+    await vi.waitFor(() => {
+      expect(mockPickerOpen).toHaveBeenCalledTimes(2);
+    }, { timeout: 10000 });
+
+    // A genuinely fresh open() was issued, so the element is visible again
+    // already — this is the assertion that fails without the fix (only one
+    // open() call total, the stale promise reused instead).
+    expect(pickerHidden).toBe(false);
+
+    // Resolve the orphaned first open(), then the real second one.
+    pendingOpens[0]?.();
+    await firstOpeningCall;
+
+    pendingOpens[1]?.();
+    await secondOpeningCall;
+
+    expect(trigger.opened).toBe(true);
+    assertOpenedInvariant(trigger);
   });
 });

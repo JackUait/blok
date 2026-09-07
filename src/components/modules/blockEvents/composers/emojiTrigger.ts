@@ -174,16 +174,53 @@ export class EmojiTrigger extends BlockEventComposer {
    */
   private readonly scrollLocker = new ScrollLocker();
   /**
-   * `span.start` of the trigger the user most recently dismissed with
-   * Escape, or undefined when nothing was dismissed. Escape is the user's
-   * explicit "not this" — commitOnClosingColon checks this so a closing
-   * colon typed right after cannot silently insert the emoji they just
-   * refused. Keyed by span position (not cleared on every keystroke) so the
-   * suppression survives continued typing within that SAME span; a
-   * genuinely different span (a different position) is never suppressed by
-   * this — see commitOnClosingColon and renderMenu.
+   * The trigger the user most recently dismissed with Escape — its block id
+   * and `span.start` — or undefined when nothing was dismissed. Escape is
+   * the user's explicit "not this" — commitOnClosingColon checks this so a
+   * closing colon typed right after cannot silently insert the emoji they
+   * just refused.
+   *
+   * A bare offset cannot carry this alone: EmojiTrigger is one long-lived
+   * composer that reads `BlockManager.currentBlock` fresh on every call, so
+   * a position-only record would leak across every block in the editor —
+   * offset 0 is the commonest span position there is. `blockId` fixes that:
+   * commitOnClosingColon requires BOTH to match.
+   *
+   * Same-block reuse of the same offset still needs handling: `start`
+   * alone cannot tell "the user kept typing in the dismissed span" (must
+   * stay suppressed) apart from "the dismissed span was deleted and a
+   * brand-new one was typed at the same offset" (must NOT be suppressed).
+   * `refreshEscapeDismissal`, called from handleInput on every qualifying
+   * keystroke, resolves this: as long as the live text still has ':' at
+   * `start`, the physically dismissed colon is still there, so the record
+   * survives; the moment it doesn't, the record is cleared — which is also
+   * what makes an unrelated block's own edits leave a dismissal recorded
+   * for THIS block untouched (that check is gated on `blockId` matching
+   * the block being edited).
    */
-  private escapeDismissedSpanStart: number | undefined;
+  private escapeDismissedSpan: { blockId: string; start: number } | undefined;
+
+  /**
+   * Clears `escapeDismissedSpan` once the physical ':' it points at is no
+   * longer there — see the field's own doc for why this, not a plain
+   * position/offset comparison, is what correctly distinguishes "still
+   * editing the dismissed span" from "typed a brand-new one at the same
+   * offset". A no-op for any block other than the dismissed one, so
+   * editing elsewhere never disturbs a dismissal recorded for this block.
+   * @param blockId - id of the block this keystroke is editing
+   * @param text - that block's live plain text
+   */
+  private refreshEscapeDismissal(blockId: string, text: string): void {
+    const dismissed = this.escapeDismissedSpan;
+
+    if (dismissed === undefined || dismissed.blockId !== blockId) {
+      return;
+    }
+
+    if (text.charAt(dismissed.start) !== ':') {
+      this.escapeDismissedSpan = undefined;
+    }
+  }
 
   /**
    * Handle an input event: resolve the ":query" span at the caret and open,
@@ -211,6 +248,12 @@ export class EmojiTrigger extends BlockEventComposer {
     const text = input.textContent ?? '';
     const caretOffset = getCaretOffset(input);
 
+    // Every qualifying keystroke gets a chance to invalidate a stale Escape
+    // dismissal for THIS block — see refreshEscapeDismissal and the
+    // escapeDismissedSpan field doc for why this, not a plain position
+    // comparison, is needed.
+    this.refreshEscapeDismissal(block.id, text);
+
     // Claims this keystroke as the latest one BEFORE the first await, so a
     // slower-resolving earlier keystroke can recognize, once its own await
     // finally settles, that a later one has already superseded it — see
@@ -225,7 +268,7 @@ export class EmojiTrigger extends BlockEventComposer {
     // ":" that is itself preceded by non-whitespace, so the generic path
     // below can never see this as an open trigger on its own.
     if (event.data === ':') {
-      const handledAsClosingColon = await this.commitOnClosingColon(text, caretOffset, token);
+      const handledAsClosingColon = await this.commitOnClosingColon(block.id, text, caretOffset, token);
 
       // A stale call (superseded by a later keystroke) reports handled=true
       // without touching `opened` — report whatever it currently is rather
@@ -292,9 +335,13 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     if (event.key === 'Escape') {
-      // Captured BEFORE close(), which resets activeSpanStart to undefined —
-      // see commitOnClosingColon and the escapeDismissedSpanStart field doc.
-      this.escapeDismissedSpanStart = this.activeSpanStart;
+      // Captured BEFORE close(), which resets activeSpanStart to undefined
+      // — see commitOnClosingColon and the escapeDismissedSpan field doc.
+      const currentBlock = this.Blok.BlockManager.currentBlock;
+
+      if (currentBlock !== undefined && this.activeSpanStart !== undefined) {
+        this.escapeDismissedSpan = { blockId: currentBlock.id, start: this.activeSpanStart };
+      }
       this.close();
 
       return true;
@@ -438,12 +485,13 @@ export class EmojiTrigger extends BlockEventComposer {
    * no such span existed, so handleInput falls through to treating the colon
    * as an ordinary character — which is what keeps prose like "10:30" or a
    * fresh "note: " unaffected.
+   * @param blockId - id of the block this keystroke is editing
    * @param text - live plain text of the input, already including the new ":"
    * @param caretOffset - caret position right after the new ":"
    * @param token - this call's render generation, from handleInput's claim —
    * see renderMenu for why a stale call must not act on stale state.
    */
-  private async commitOnClosingColon(text: string, caretOffset: number, token: number): Promise<boolean> {
+  private async commitOnClosingColon(blockId: string, text: string, caretOffset: number, token: number): Promise<boolean> {
     if (caretOffset === 0 || text.charAt(caretOffset - 1) !== ':') {
       return false;
     }
@@ -454,10 +502,13 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
-    // The user explicitly dismissed THIS span with Escape — falling through
-    // (return false) lets handleInput treat the colon as an ordinary
-    // character, same as the "no valid prior span" case above.
-    if (priorSpan.start === this.escapeDismissedSpanStart) {
+    // The user explicitly dismissed THIS span (same block, same position)
+    // with Escape — falling through (return false) lets handleInput treat
+    // the colon as an ordinary character, same as the "no valid prior span"
+    // case above.
+    const dismissed = this.escapeDismissedSpan;
+
+    if (dismissed !== undefined && dismissed.blockId === blockId && dismissed.start === priorSpan.start) {
       return false;
     }
 
@@ -576,6 +627,17 @@ export class EmojiTrigger extends BlockEventComposer {
    * (ScrollLocker.unlock, removeEventListener, removeComboboxRoles all
    * no-op safely on their own), so running this body when nothing was
    * actually open is harmless.
+   *
+   * Also clears `pendingOpen`: that field exists so several overlapping
+   * keystrokes share ONE in-flight open() rather than issuing several (see
+   * renderMenu) — but once close() has hidden the element, that in-flight
+   * open's eventual resolution no longer means anything is visible. Without
+   * clearing it here, reopening the SAME span before the stale open()
+   * resolves would reuse (not reissue) it via renderMenu's `pendingOpen ===
+   * null` check, so nothing would ever re-show the element even as
+   * `opened` and the scroll lock both flip back on — the inverse of the
+   * ghost this method exists to prevent: a menu the code believes is open,
+   * but that is not actually visible.
    */
   public close(): void {
     if (this.picker === null) {
@@ -591,6 +653,7 @@ export class EmojiTrigger extends BlockEventComposer {
     this.activeSpanStart = undefined;
     this.highlightedIndex = -1;
     this.highlightedButton = null;
+    this.pendingOpen = null;
     this.opened = false;
   }
 
@@ -693,14 +756,6 @@ export class EmojiTrigger extends BlockEventComposer {
     if (isFreshTrigger) {
       this.anchorRect = rectAtOffset(input, span.start) ?? input.getBoundingClientRect();
       this.activeSpanStart = span.start;
-
-      // A genuinely different span (not the SAME position reopening after
-      // Escape, per isFreshTrigger's `!this.opened` clause) starts clean —
-      // forget any earlier dismissal so it can never wrongly suppress an
-      // unrelated later trigger that happens to land at the same offset.
-      if (span.start !== this.escapeDismissedSpanStart) {
-        this.escapeDismissedSpanStart = undefined;
-      }
     }
 
     const anchorRect = this.anchorRect;
@@ -712,9 +767,22 @@ export class EmojiTrigger extends BlockEventComposer {
     const picker = this.ensurePicker();
 
     if (isFreshTrigger) {
-      this.pendingOpen ??= picker.open(input, anchorRect).finally(() => {
-        this.pendingOpen = null;
-      });
+      if (this.pendingOpen === null) {
+        // Self-referential guard: this callback only clears `pendingOpen`
+        // if it is STILL the promise this exact open() produced. Without
+        // it, close() clearing `pendingOpen` (to force a fresh open() on
+        // reopen — see close()'s own comment) races this callback: if this
+        // open() resolves AFTER a later reopen has already installed its
+        // own `pendingOpen`, an unconditional `this.pendingOpen = null`
+        // here would wrongly clobber that newer one.
+        const opening: Promise<void> = picker.open(input, anchorRect).finally(() => {
+          if (this.pendingOpen === opening) {
+            this.pendingOpen = null;
+          }
+        });
+
+        this.pendingOpen = opening;
+      }
       await this.pendingOpen;
     }
 

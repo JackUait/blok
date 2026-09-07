@@ -6,8 +6,10 @@ import type { BlokModules } from '../../../../../../src/types-internal/blok-modu
  * Builds a minimal Block-shaped object with a single text node, matching the
  * markdownShortcuts.test.ts fixture shape. `toolOverrides` lets a test flip
  * `isDefault`/`isLineBreaksEnabled` to exercise the text-like-block gate.
+ * `id` defaults to `'test-block'` — override it when a test needs two
+ * distinct blocks (e.g. proving a per-block dismissal doesn't leak).
  */
-export const createBlock = (text: string, toolOverrides: Record<string, unknown> = {}): Block => {
+export const createBlock = (text: string, toolOverrides: Record<string, unknown> = {}, id = 'test-block'): Block => {
   const input = document.createElement('div');
 
   input.contentEditable = 'true';
@@ -18,7 +20,7 @@ export const createBlock = (text: string, toolOverrides: Record<string, unknown>
   holder.appendChild(input);
 
   return {
-    id: 'test-block',
+    id,
     name: 'paragraph',
     holder,
     currentInput: input,

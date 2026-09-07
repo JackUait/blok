@@ -7,6 +7,7 @@ import { PopoverItemType } from '../../../../../src/components/utils/popover';
 import type { PopoverItemParams } from '../../../../../types/utils/popover/popover-item';
 import { SelectionUtils } from '../../../../../src/components/selection';
 import { simulateKeydown } from '../../../../helpers/simulate';
+import type { Dom } from '../../../../../src/components/dom';
 
 type PopoverMock = {
   on: Mock<(event: string, handler: () => void) => void>;
@@ -127,8 +128,10 @@ vi.mock('../../../../../src/components/i18n', () => ({
   },
 }));
 
-const { domModuleMock } = vi.hoisted(() => {
-  const makeDomNodeMock = vi.fn((tag: string, className?: string | string[]) => {
+type DomModule = { Dom: typeof Dom };
+
+const { makeDomNodeMock } = vi.hoisted(() => ({
+  makeDomNodeMock: vi.fn((tag: string, className?: string | string[]) => {
     const node = document.createElement(tag);
 
     if (Array.isArray(className)) {
@@ -138,18 +141,16 @@ const { domModuleMock } = vi.hoisted(() => {
     }
 
     return node;
-  });
+  }),
+}));
 
-  return {
-    domModuleMock: {
-      Dom: {
-        make: makeDomNodeMock,
-      },
-    },
-  };
+// Only `make` is stubbed; the rest of Dom stays real so predicates the module
+// relies on (editable-target checks) keep their production behaviour.
+vi.mock('../../../../../src/components/dom', async () => {
+  const actual = await vi.importActual<DomModule>('../../../../../src/components/dom');
+
+  return { Dom: Object.assign(Object.create(actual.Dom) as typeof Dom, { make: makeDomNodeMock }) };
 });
-
-vi.mock('../../../../../src/components/dom', () => domModuleMock);
 
 type EventsDispatcherMock = {
   on: Mock<(event: unknown, handler: () => void) => void>;
@@ -630,7 +631,7 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('does not hardcode convert-to children width so the nested popover fits any language text', async () => {
+  it('sizes the searchable convert-to submenu to 320px', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -652,7 +653,10 @@ describe('BlockSettings', () => {
     const items = (popover?.params as { items: PopoverItemParams[] })?.items;
     const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
 
-    expect((convertToItem as { children?: { width?: string } } | undefined)?.children?.width).toBeUndefined();
+    expect((convertToItem as { children?: { width?: string; searchable?: boolean } } | undefined)?.children).toMatchObject({
+      width: '320px',
+      searchable: true,
+    });
   });
 
   it('converts a block that has children without a blocking confirm() prompt', async () => {
@@ -1177,78 +1181,6 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('translates contextLabel using the active toolbox entry titleKey (Heading 1 → Заголовок 1)', async () => {
-    blockSettings.make();
-
-    const block = createBlock();
-
-    (block.getActiveToolboxEntry as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      icon: '<svg />',
-      title: 'Heading 1',
-      titleKey: 'tools.header.heading1',
-    });
-    (block as unknown as { name: string }).name = 'header';
-
-    blokMock.BlockManager.currentBlock = block;
-    blokMock.I18n.t.mockImplementation((key: string) =>
-      key === 'tools.header.heading1' ? 'Заголовок 1' : key
-    );
-    blokMock.I18n.has.mockImplementation((key: string) => key === 'tools.header.heading1');
-
-    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
-
-    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
-
-    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
-    }, 'getTunesItems').mockResolvedValue([]);
-
-    await blockSettings.open(block);
-
-    const popover = getLastPopover();
-    const params = popover?.params as { contextLabel?: string } | undefined;
-
-    expect(params?.contextLabel).toBe('Заголовок 1');
-
-    getTunesItemsSpy.mockRestore();
-  });
-
-  it('translates contextLabel using block.name via toolNames.<name> when entry has no title (image → Изображение)', async () => {
-    blockSettings.make();
-
-    const block = createBlock();
-
-    // Image tool exposes no `title`, only `titleKey: 'image'`.
-    (block.getActiveToolboxEntry as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      icon: '<svg />',
-      titleKey: 'image',
-    });
-    (block as unknown as { name: string }).name = 'image';
-
-    blokMock.BlockManager.currentBlock = block;
-    blokMock.I18n.t.mockImplementation((key: string) =>
-      key === 'toolNames.image' ? 'Изображение' : key
-    );
-    blokMock.I18n.has.mockImplementation((key: string) => key === 'toolNames.image');
-
-    const selectionStub = { save: vi.fn(), restore: vi.fn(), clearSaved: vi.fn() };
-
-    (blockSettings as unknown as { selection: typeof selectionStub }).selection = selectionStub;
-
-    const getTunesItemsSpy = vi.spyOn(blockSettings as unknown as {
-      getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
-    }, 'getTunesItems').mockResolvedValue([]);
-
-    await blockSettings.open(block);
-
-    const popover = getLastPopover();
-    const params = popover?.params as { contextLabel?: string } | undefined;
-
-    expect(params?.contextLabel).toBe('Изображение');
-
-    getTunesItemsSpy.mockRestore();
-  });
-
   it('sets englishTitle and searchTerms on convert-to children for multilingual search', async () => {
     const block = createBlock();
 
@@ -1285,9 +1217,13 @@ describe('BlockSettings', () => {
 
     const children = convertTo?.children?.items ?? [];
 
-    expect(children).toHaveLength(1);
+    expect(children).toHaveLength(2);
+    expect(children[0]).toMatchObject({ type: PopoverItemType.Html, name: 'convert-heading-label' });
+    expect('element' in children[0] && children[0].element.textContent).toBe('toolNames.heading');
 
-    const headerItem = children[0];
+    const headerItem = children[1];
+
+    expect(headerItem).toMatchObject({ name: 'header-1' });
 
     expect('englishTitle' in headerItem && headerItem.englishTitle).toBe('Heading 1');
     expect('searchTerms' in headerItem && headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);

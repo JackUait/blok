@@ -2,6 +2,7 @@
 
 import type { Page } from '@playwright/test';
 import type { Blok, OutputData } from '@/types';
+import { activateColorTab } from '../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { BLOK_INTERFACE_SELECTOR, MODIFIER_KEY } from '../../../../src/components/constants';
 import { expect, gotoTestPage, test } from '../helpers/shared-page';
@@ -157,6 +158,7 @@ test('applies color from block settings menu', async ({ page }) => {
   await expect(settingsBtn).toBeVisible();
   await settingsBtn.click();
   await page.getByText('Color').click();
+  await activateColorTab(page, 'callout-color', 'background-color');
   await page.getByTestId('callout-color-swatch-background-color-blue').click();
   await expect(wrapper).toHaveCSS('background-color', /rgb/);
 });

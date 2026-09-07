@@ -3,7 +3,6 @@ import {
   IconFile,
   IconFileArchive,
   IconFileDoc,
-  IconFilePdf,
   IconFileSheet,
   IconFileSlides,
   IconImage,
@@ -38,7 +37,7 @@ const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', '
 const TEXT_EXTS = new Set(['txt', 'md', 'markdown', 'log', 'ini', 'conf', 'env']);
 
 const CATEGORY_ICON: Record<FileIconCategory, string> = {
-  pdf: IconFilePdf,
+  pdf: IconFile,
   document: IconFileDoc,
   spreadsheet: IconFileSheet,
   presentation: IconFileSlides,

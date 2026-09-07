@@ -487,11 +487,12 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
     // Get popover element and calculate position
     const popoverMountElement = this.popover.getMountElement?.() ?? this.popover.getElement?.();
     const popoverElement = this.popover.getElement?.();
-    const popoverWidth = this.popover.size?.width
+    const popoverSize = this.popover.size;
+    const popoverWidth = popoverSize?.width
       ?? popoverElement?.getBoundingClientRect().width
       ?? 0;
 
-    this.applyPosition(popoverWidth);
+    this.applyPosition(popoverWidth, popoverSize?.height ?? 0);
 
     // Mount popover
     if (popoverMountElement && this.nodes.wrapper) {
@@ -516,7 +517,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
   /**
    * Calculate and apply position to wrapper
    */
-  private applyPosition(popoverWidth: number): void {
+  private applyPosition(popoverWidth: number, popoverHeight = 0): void {
     if (!this.nodes.wrapper) {
       return;
     }
@@ -536,6 +537,7 @@ export class InlineToolbar extends Module<InlineToolbarNodes> {
       wrapperOffset,
       contentRect,
       popoverWidth,
+      popoverHeight,
     });
   }
 

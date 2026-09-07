@@ -22,7 +22,7 @@
  * exception and are listed below with a reason. They were the icons the
  * broadcast actively HARMED.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as icons from '../../../src/components/icons';
 
 /**
@@ -33,11 +33,6 @@ import * as icons from '../../../src/components/icons';
 const FILL_ONLY_ICONS: Readonly<Record<string, string>> = {
   IconHeaderRow: 'solid header band drawn with fill; the grid lines beside it are stroked separately',
   IconHeaderColumn: 'solid header band drawn with fill; the grid lines beside it are stroked separately',
-  IconPlayerPlay: 'solid play triangle — rendered in-block by the video/audio controls',
-  IconPlayerBackward: 'solid skip-back triangles',
-  IconPlayerForward: 'solid skip-forward triangles',
-  IconPlayerVolume: 'solid speaker cone; the sound waves beside it are stroked separately',
-  IconPlayerVolumeMute: 'solid speaker cone; the mute cross beside it is stroked separately',
 };
 
 /** Every exported icon markup string, keyed by its export name. */
@@ -74,6 +69,14 @@ const unstrokedPaths = (markup: string): string[] => {
 };
 
 describe('icon self-stroke law', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('finds the icon surface to scan (guards against a broken import)', () => {
     expect(iconEntries.length).toBeGreaterThan(100);
   });

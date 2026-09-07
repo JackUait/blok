@@ -10,7 +10,7 @@ import { TOOL_SECTIONS } from '../components/tools/tools-data';
 /**
  * Mapping of section IDs to translation keys
  */
-const SECTION_TRANSLATION_KEYS: Record<string, string> = {
+export const SECTION_TRANSLATION_KEYS: Record<string, string> = {
   'quick-start': 'api.quickStart',
   'tutorial': 'api.tutorial',
   'concepts': 'api.concepts',
@@ -92,7 +92,7 @@ const SIDEBAR_LINK_KEYS: Record<string, string> = {
  * Extracts the base key from a method name.
  * e.g. "save()" -> "save", "render(data)" -> "render", "focus(atEnd?)" -> "focus"
  */
-function getMethodKey(methodName: string): string {
+export function getMethodKey(methodName: string): string {
   return methodName.replace(/\(.*\)$/, '');
 }
 

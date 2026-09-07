@@ -305,9 +305,11 @@ export class BlocksAPI extends Module {
       await this.Blok.Renderer.render(cloneOutputBlocks(normalizeOutputBlocks(data.blocks)));
     } finally {
       this.Blok.Renderer.markRenderEnd();
+      // Inside the finally, because the render above throws on a malformed
+      // block. Left outside, one bad render kills onChange/onSave for the rest
+      // of the editor's life — the observer is never re-armed by anything else.
+      this.Blok.ModificationsObserver.enable();
     }
-
-    this.Blok.ModificationsObserver.enable();
 
     this.processPendingHashScroll();
   }

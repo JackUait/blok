@@ -60,7 +60,7 @@ describe('PopoverInline', () => {
     document.body.innerHTML = '';
   });
 
-  describe('grid card layout', () => {
+  describe('compact bar layout', () => {
     const createGridPopover = (): PopoverInline => {
       return new PopoverInline({
         items: [
@@ -83,20 +83,19 @@ describe('PopoverInline', () => {
       });
     };
 
-    it('lays formatting buttons out on five comfortable grid tracks with gaps', () => {
+    it('preserves every configured tool in DOM navigation order', () => {
       const popover = createGridPopover();
 
       popover.show();
 
-      const items = popover.getElement().querySelector(`[${DATA_ATTR.popoverItems}]`);
+      const items = popover.getElement().querySelectorAll(`[${DATA_ATTR.itemName}]`);
 
-      expect(items?.className).toContain('grid-cols-[repeat(5,minmax(2rem,auto))]');
-      expect(items?.className).toContain('gap-x-0.5');
-      // Buttons stretch to fill their tracks so hover pills cover the whole cell
-      expect(items?.className).not.toContain('justify-items-center');
+      expect(Array.from(items, item => item.getAttribute(DATA_ATTR.itemName))).toEqual([
+        'convert-to', 'bold', 'italic', 'underline', 'strikethrough', 'inlineCode', 'equation',
+      ]);
     });
 
-    it('stretches the convert row and separator across the full grid width', () => {
+    it('separates block conversion from text formatting', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -105,8 +104,8 @@ describe('PopoverInline', () => {
       const convert = element.querySelector('[data-blok-item-name="convert-to"]');
       const separator = element.querySelector('[data-blok-testid="popover-item-separator"]');
 
-      expect(convert?.className).toContain('col-span-full');
-      expect(separator?.className).toContain('col-span-full');
+      expect(convert?.nextElementSibling).toBe(separator);
+      expect(separator).toHaveAttribute('aria-orientation', 'vertical');
     });
 
     it('pushes the convert row chevron to the right edge', () => {
@@ -136,7 +135,7 @@ describe('PopoverInline', () => {
       expect(chevron?.className).toContain('text-text-secondary');
     });
 
-    it('wraps the current-block icon in the house squircle chip', () => {
+    it('restores the fixed icon box on the current-block icon, with no chip behind it', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -145,9 +144,11 @@ describe('PopoverInline', () => {
         .getElement()
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-icon"]');
 
-      expect(icon?.className).toContain('bg-popover-icon-bg');
-      expect(icon?.className).toContain('rounded-md');
-      expect(icon?.className).not.toContain('bg-transparent');
+      expect(icon?.className).toContain('w-6');
+      expect(icon?.className).toContain('h-6');
+      expect(icon?.className).not.toContain('w-auto');
+      expect(icon?.className).not.toContain('bg-popover-icon-bg');
+      expect(icon?.className).not.toContain('rounded-md');
     });
 
     it('sets the header row rhythm: chip-height row with a chip-to-label gap', () => {
@@ -159,8 +160,8 @@ describe('PopoverInline', () => {
         .getElement()
         .querySelector('[data-blok-item-name="convert-to"]');
 
-      expect(convert?.className).toContain('max-h-9');
-      expect(convert?.className).not.toContain('max-h-8');
+      expect(convert?.className).toContain('h-10');
+      expect(convert?.className).toContain('max-h-none');
       expect(convert?.className).toContain('gap-2');
       // Named group so only row hover (not whole-card hover) drives the chevron
       expect(convert?.className).toContain('group/convert');
@@ -176,12 +177,12 @@ describe('PopoverInline', () => {
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
 
       expect(chevron?.className).toContain('transition-transform');
-      expect(chevron?.className).toContain('can-hover:group-hover/convert:translate-x-0.5');
-      expect(chevron?.className).toContain('group-data-[blok-popover-item-children-open]/convert:translate-x-0.5');
+      expect(chevron?.className).toContain('can-hover:group-hover/convert:translate-y-0.5');
+      expect(chevron?.className).toContain('group-data-[blok-popover-item-children-open]/convert:translate-y-0.5');
       expect(chevron?.className).toContain('group-data-[blok-popover-item-children-open]/convert:text-text-primary');
     });
 
-    it('points the convert row chevron to the right, since the menu opens sideways', () => {
+    it('points the convert chevron down toward its dropdown', () => {
       const popover = createGridPopover();
 
       popover.show();
@@ -190,7 +191,7 @@ describe('PopoverInline', () => {
         .getElement()
         .querySelector('[data-blok-item-name="convert-to"] [data-blok-testid="popover-item-chevron-right"]');
 
-      expect(chevron?.className).not.toContain('rotate-90');
+      expect(chevron?.className).toContain('rotate-90');
     });
 
     it('marks the convert row as expanded/selected while its menu is open', () => {
@@ -219,7 +220,7 @@ describe('PopoverInline', () => {
       expect(convertEl).toHaveAttribute('aria-expanded', 'false');
     });
 
-    it('opens the convert menu beside the toolbar, not below it', () => {
+    it('aligns the convert dropdown with the toolbar left edge', () => {
       const popover = createGridPopover();
       const instance = popover as unknown as PopoverInlineInternal;
 
@@ -252,8 +253,7 @@ describe('PopoverInline', () => {
         ?.getElement()
         .querySelector<HTMLElement>(`[${DATA_ATTR.popoverContainer}]`);
 
-      // Sits at the toolbar's right edge (minus the 4px overlap), in root-relative coordinates.
-      expect(nestedContainer?.style.left).toBe('196px');
+      expect(nestedContainer?.style.left).toBe('0px');
     });
 
     it('does not pin the container to the single-row toolbar height', () => {

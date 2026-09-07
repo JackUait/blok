@@ -296,7 +296,7 @@ describe('PopoverItemDefault', () => {
     expect(item.isDisabled).toBe(true);
   });
 
-  it('removes icon background in inline context', () => {
+  it('sizes the inline icon to its glyph', () => {
     const item = new PopoverItemDefault(
       {
         title: 'Bold',
@@ -313,15 +313,19 @@ describe('PopoverItemDefault', () => {
     const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
 
     expect(icon).not.toBeNull();
-    expect(icon?.className).not.toContain('bg-popover-icon-bg');
+    expect(icon?.className).toContain('w-auto');
+    expect(icon?.className).toContain('h-auto');
   });
 
-  it('keeps icon background in non-inline context', () => {
+  it('renders the icon as a bare glyph in a fixed box, with no chip behind it', () => {
     const { element } = createItem();
     const icon = element.querySelector<HTMLElement>('[data-blok-testid="popover-item-icon"]');
 
     expect(icon).not.toBeNull();
-    expect(icon?.className).toContain('bg-popover-icon-bg');
+    expect(icon?.className).not.toContain('bg-popover-icon-bg');
+    expect(icon?.className).not.toContain('rounded-md');
+    expect(icon?.className).toContain('w-6');
+    expect(icon?.className).toContain('h-6');
   });
 
   it('prevents icon container from shrinking in flex layout', () => {

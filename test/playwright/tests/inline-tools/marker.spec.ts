@@ -144,6 +144,18 @@ const openMarkerPicker = async (page: Page): Promise<void> => {
 };
 
 /**
+ * Switch the open marker picker to its Background palette. The picker always
+ * opens on the Text tab, so every background swatch is hidden until this runs.
+ * @param page - The Playwright page object
+ */
+const switchToBackgroundTab = async (page: Page): Promise<void> => {
+  const picker = page.locator('[data-blok-testid="marker-picker"]');
+
+  await picker.getByRole('tab', { name: 'Background' }).click();
+  await expect(page.locator('[data-blok-testid="marker-section-background-color"]')).toBeVisible();
+};
+
+/**
  * Get the correct modifier key based on the browser's user agent.
  * WebKit always uses a macOS-style user agent, so it expects Meta regardless of host OS.
  * @param page - The Playwright page object
@@ -202,7 +214,7 @@ test.describe('inline tool marker', () => {
     // Open the marker picker
     await openMarkerPicker(page);
 
-    // Verify text color section is visible (always visible, no tabs)
+    // The picker opens on the Text tab, so its section is the visible one
     const colorSection = page.locator('[data-blok-testid="marker-section-color"]');
 
     await expect(colorSection).toBeVisible();
@@ -253,7 +265,8 @@ test.describe('inline tool marker', () => {
     // Open the marker picker
     await openMarkerPicker(page);
 
-    // Both sections are always visible — click the yellow swatch in the background section directly
+    await switchToBackgroundTab(page);
+
     const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
@@ -369,7 +382,7 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Step 1: Apply text color (red) — both sections are always visible
+    // Step 1: Apply text color (red) on the tab the picker opens with
     const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
     await redSwatch.click();
@@ -379,7 +392,9 @@ test.describe('inline tool marker', () => {
 
     await expect(picker).toBeVisible();
 
-    // Step 2: Apply background color (yellow) — background section is always visible, no tab switch needed
+    // Step 2: switch tabs and apply a background color without reopening
+    await switchToBackgroundTab(page);
+
     const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
@@ -580,20 +595,17 @@ test.describe('inline tool marker', () => {
 
     await expect(colorSection).toBeVisible();
 
-    const colorSwatchCount = colorSection.getByRole('button');
+    // Scoped to the swatch grid: each section also carries a Default reset button.
+    await expect(colorSection.locator('[data-blok-testid^="marker-swatch-"]')).toHaveCount(10);
 
-    await expect(colorSwatchCount).toHaveCount(10);
+    await switchToBackgroundTab(page);
 
     const bgSection = page.locator('[data-blok-testid="marker-section-background-color"]');
 
-    await expect(bgSection).toBeVisible();
-
-    const bgSwatchCount = bgSection.getByRole('button');
-
-    await expect(bgSwatchCount).toHaveCount(10);
+    await expect(bgSection.locator('[data-blok-testid^="marker-swatch-"]')).toHaveCount(10);
   });
 
-  test('color picker contains two always-visible sections: Text and Background', async ({ page }) => {
+  test('color picker exposes Text and Background as tabs, showing one section at a time', async ({ page }) => {
     await createBlokWithBlocks(page, [
       {
         type: 'paragraph',
@@ -609,11 +621,19 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
+    const picker = page.locator('[data-blok-testid="marker-picker"]');
     const colorSection = page.locator('[data-blok-testid="marker-section-color"]');
     const bgSection = page.locator('[data-blok-testid="marker-section-background-color"]');
 
+    await expect(picker.getByRole('tab')).toHaveCount(2);
+    // getByRole skips hidden nodes, so only the active panel is exposed.
+    await expect(picker.getByRole('tabpanel')).toHaveCount(1);
     await expect(colorSection).toBeVisible();
-    await expect(bgSection).toBeVisible();
+    await expect(bgSection).toBeHidden();
+
+    await switchToBackgroundTab(page);
+
+    await expect(colorSection).toBeHidden();
   });
 
   test('Default swatch in Background section removes only background-color and keeps text color', async ({ page }) => {
@@ -632,7 +652,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Background section is always visible — click its Default swatch directly
+    await switchToBackgroundTab(page);
+
     const defaultBtn = page.locator('[data-blok-testid="marker-swatch-background-color-default"]');
 
     await defaultBtn.click();
@@ -665,7 +686,7 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Text section is always visible — click its Default swatch directly
+    // The picker opens on the Text tab, so its Default swatch is already visible
     const defaultBtn = page.locator('[data-blok-testid="marker-swatch-color-default"]');
 
     await defaultBtn.click();
@@ -731,7 +752,8 @@ test.describe('inline tool marker', () => {
 
     await openMarkerPicker(page);
 
-    // Background section is always visible — click purple swatch directly
+    await switchToBackgroundTab(page);
+
     const purpleSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-purple"]');
 
     await purpleSwatch.click();
@@ -770,7 +792,9 @@ test.describe('inline tool marker', () => {
 
     await redSwatch.click();
 
-    // Apply background color (yellow) from the background section — always visible, no tab switch needed
+    // Apply background color (yellow) after switching to the Background tab
+    await switchToBackgroundTab(page);
+
     const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
     await yellowSwatch.click();
@@ -881,7 +905,7 @@ test.describe('inline tool marker', () => {
       await selectText(paragraph, 'Hello');
       await openMarkerPicker(page);
 
-      // Click the red swatch in the text color section (always visible)
+      // Click the red swatch on the Text tab the picker opens with
       const redSwatch = page.locator('[data-blok-testid="marker-swatch-color-red"]');
 
       await redSwatch.click();
@@ -963,6 +987,7 @@ test.describe('inline tool marker', () => {
 
       await selectText(paragraph, 'Highlighted text');
       await openMarkerPicker(page);
+      await switchToBackgroundTab(page);
 
       // Hover the green background swatch (bottom row) — its tooltip renders
       // above it, covering the Default background swatch in the row above.
@@ -1023,9 +1048,9 @@ test.describe('inline tool marker', () => {
     });
 
     /**
-     * Exhaustive sweep over EVERY swatch in BOTH picker sections: after
-     * hovering each one (opening its tooltip), hit-test the center of every
-     * swatch with elementFromPoint and require the swatch itself to win.
+     * Exhaustive sweep over EVERY swatch of BOTH picker tabs: with a tab
+     * active, hover each of its swatches (opening its tooltip) and hit-test
+     * every swatch center with elementFromPoint, requiring the swatch to win.
      * Unlike the single-click regression above, this guard is agnostic to
      * WHICH overlay does the shielding — it fails if the tooltip regresses,
      * but also if any future floating UI (hover card, badge, new tooltip
@@ -1048,70 +1073,82 @@ test.describe('inline tool marker', () => {
       await selectText(paragraph, 'Highlighted text');
       await openMarkerPicker(page);
 
-      // All 20 triggers: 2 sections × (default + 9 color presets). Kept in
+      // All 20 triggers: 2 tabs × (default + 9 color presets). Kept in
       // sync with COLOR_PRESETS by the count assertion below.
-      const sectionKeys = ['color', 'background-color'];
+      const paletteTabs = [
+        { key: 'color', name: 'Text color' },
+        { key: 'background-color', name: 'Background' },
+      ];
       const swatchNames = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
-      const swatchTestIds = sectionKeys.flatMap((section) => swatchNames.map((name) => `marker-swatch-${section}-${name}`));
 
       // Guard the guard: if presets are ever added/renamed, fail loudly here
-      // instead of silently sweeping a stale list.
+      // instead of silently sweeping a stale list. Hidden swatches still count.
       const renderedSwatchCount = await page.locator('[data-blok-testid^="marker-swatch-"]').count();
 
-      expect(renderedSwatchCount).toBe(swatchTestIds.length);
+      expect(renderedSwatchCount).toBe(paletteTabs.length * swatchNames.length);
 
-      const swatchCenters = await page.evaluate((ids) => {
-        return ids.map((id) => {
-          const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
-
-          if (swatch === null) {
-            throw new Error(`Cannot measure swatch center: ${id} was not found`);
-          }
-
-          const rect = swatch.getBoundingClientRect();
-
-          return {
-            id,
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-          };
-        });
-      }, swatchTestIds);
+      const picker = page.locator('[data-blok-testid="marker-picker"]');
       const tooltip = page.getByTestId('tooltip');
 
-      for (const hoveredSwatch of swatchCenters) {
-        await page.mouse.move(hoveredSwatch.x, hoveredSwatch.y);
-        await expect(tooltip).toHaveAttribute('data-state', 'open');
+      // One palette is visible at a time, so each tab is swept while active —
+      // a hidden swatch has no rect and would hit-test as nothing.
+      for (const paletteTab of paletteTabs) {
+        await picker.getByRole('tab', { name: paletteTab.name }).click();
+        await expect(page.locator(`[data-blok-testid="marker-section-${paletteTab.key}"]`)).toBeVisible();
 
-        // Hit-test every precomputed swatch center in one page-side pass:
-        // whatever element the browser would actually deliver a click to must
-        // be the swatch (or a descendant of it) — never an overlay.
-        const shielded = await page.evaluate((centers) => {
-          const offenders: string[] = [];
-
-          for (const center of centers) {
-            const swatch = document.querySelector(`[data-blok-testid="${center.id}"]`);
+        const swatchTestIds = swatchNames.map((name) => `marker-swatch-${paletteTab.key}-${name}`);
+        const swatchCenters = await page.evaluate((ids) => {
+          return ids.map((id) => {
+            const swatch = document.querySelector(`[data-blok-testid="${id}"]`);
 
             if (swatch === null) {
-              offenders.push(`${center.id}: swatch not found`);
-              continue;
+              throw new Error(`Cannot measure swatch center: ${id} was not found`);
             }
 
-            const hit = document.elementFromPoint(center.x, center.y);
+            const rect = swatch.getBoundingClientRect();
 
-            if (hit !== swatch && !swatch.contains(hit)) {
-              const hitDescription = hit === null
-                ? 'nothing'
-                : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
+            return {
+              id,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+            };
+          });
+        }, swatchTestIds);
 
-              offenders.push(`${center.id}: shielded by ${hitDescription}`);
+        for (const hoveredSwatch of swatchCenters) {
+          await page.mouse.move(hoveredSwatch.x, hoveredSwatch.y);
+          await expect(tooltip).toHaveAttribute('data-state', 'open');
+
+          // Hit-test every precomputed swatch center in one page-side pass:
+          // whatever element the browser would actually deliver a click to must
+          // be the swatch (or a descendant of it) — never an overlay.
+          const shielded = await page.evaluate((centers) => {
+            const offenders: string[] = [];
+
+            for (const center of centers) {
+              const swatch = document.querySelector(`[data-blok-testid="${center.id}"]`);
+
+              if (swatch === null) {
+                offenders.push(`${center.id}: swatch not found`);
+                continue;
+              }
+
+              const hit = document.elementFromPoint(center.x, center.y);
+
+              if (hit !== swatch && !swatch.contains(hit)) {
+                const hitDescription = hit === null
+                  ? 'nothing'
+                  : `<${hit.tagName.toLowerCase()} data-blok-testid="${hit.getAttribute('data-blok-testid') ?? ''}">`;
+
+                offenders.push(`${center.id}: shielded by ${hitDescription}`);
+              }
             }
-          }
 
-          return offenders;
-        }, swatchCenters);
+            return offenders;
+          }, swatchCenters);
 
-        expect(shielded, `while hovering ${hoveredSwatch.id}`).toEqual([]);
+          expect(shielded, `while hovering ${hoveredSwatch.id}`).toEqual([]);
+        }
       }
     });
   });
@@ -1134,7 +1171,8 @@ test.describe('inline tool marker', () => {
       await selectText(paragraph, 'Highlight');
       await openMarkerPicker(page);
 
-      // Background section is always visible — click yellow swatch directly
+      await switchToBackgroundTab(page);
+
       const yellowSwatch = page.locator('[data-blok-testid="marker-swatch-background-color-yellow"]');
 
       await yellowSwatch.click();

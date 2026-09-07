@@ -15,6 +15,8 @@
   "popover.search": "Művelet keresése…",
   "popover.nothingFound": "Nincs találat",
   "popover.convertTo": "Átalakítás",
+  "emoji.search": "Emojik keresése",
+  "emoji.nothingFound": "Nem található emoji",
   "toolNames.text": "Szöveg",
   "toolNames.heading": "Címsor",
   "toolNames.link": "Hivatkozás",

@@ -16,11 +16,11 @@ import { beautifyShortcut } from '../../utils/string';
 import { getCaretOffset } from '../../utils/caret/selection';
 import { findCommonNestedContainer, scheduleCaretIntoNestedContainer } from '../../utils/nested-container-caret';
 import { getConvertibleToolsForBlock, getConvertibleToolsForBlocks } from '../../utils/blocks';
-import { buildConvertMenuEntries } from '../../utils/convert-menu';
+import { buildConvertMenuEntries, buildConvertMenuItems } from '../../utils/convert-menu';
 import type { PopoverItemParams, Popover } from '../../utils/popover';
 import { PopoverDesktop, PopoverMobile, PopoverItemType } from '../../utils/popover';
 import { css as popoverItemCls } from '../../utils/popover/components/popover-item';
-import { isToolConvertable, translateToolName, translateToolTitle } from '../../utils/tools';
+import { isToolConvertable } from '../../utils/tools';
 
 import type { PopoverParams } from '@/types/utils/popover/popover';
 import { PopoverEvent } from '@/types/utils/popover/popover-event';
@@ -277,21 +277,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       const anchorRect = providedAnchorRect
         ?? (trigger === undefined ? block.holder.getBoundingClientRect() : undefined);
 
-      const activeEntry = hasMultipleBlocksSelected
-        ? undefined
-        : await block.getActiveToolboxEntry();
-      const contextLabel = ((): string => {
-        if (hasMultipleBlocksSelected) {
-          return this.Blok.I18n.t('blockSettings.blocksSelected', { count: selectedBlocks.length });
-        }
-
-        if (activeEntry) {
-          return translateToolTitle(this.Blok.I18n, activeEntry, block.name);
-        }
-
-        return translateToolName(this.Blok.I18n, undefined, block.name);
-      })();
-
       const PopoverClass = isMobileScreen() ? PopoverMobile : PopoverDesktop;
       const popoverBaseParams = {
         searchable: true,
@@ -307,6 +292,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
           searchResults: this.Blok.I18n.t('a11y.searchResults'),
         },
         autoFocusFirstItem: false,
+        width: '280px',
         minWidth: '220px',
         /**
          * A cursor/holder-anchored menu (context menu, Shift+F10) opens AT the
@@ -327,7 +313,6 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
          * detaches the menu from the handle near the viewport top/bottom.
          */
         viewportMargin: 8,
-        contextLabel,
         /**
          * The block holder is the anchor's movement reference. For a trigger
          * (dots button) it backs the hidden-trigger snapshot: the toggler's
@@ -501,11 +486,10 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     /**
      * Tool-specific tunes come first (e.g. heading level selector)
      */
-    if (!hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0) {
+    const hasToolTunes = !hasMultipleBlocksSelected && toolTunes !== undefined && toolTunes.length > 0;
+
+    if (hasToolTunes) {
       items.push(...toolTunes);
-      items.push({
-        type: PopoverItemType.Separator,
-      });
     }
 
     /**
@@ -520,50 +504,40 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         )
       : await getConvertibleToolsForBlock(new BlockAPI(currentBlock, this.Blok.API), allBlockTools);
 
-    const convertToItems = buildConvertMenuEntries(convertibleTools, this.Blok.I18n)
-      .map<PopoverItemParams>((entry) => ({
-        icon: entry.icon,
-        title: entry.title,
-        name: entry.name,
-        englishTitle: entry.englishTitle,
-        searchTerms: entry.searchTerms,
-        closeOnActivate: true,
-        onActivate: async () => {
-          const { Caret, Toolbar } = this.Blok;
+    const convertToItems = buildConvertMenuItems(
+      buildConvertMenuEntries(convertibleTools, this.Blok.I18n),
+      this.Blok.I18n,
+      async (entry) => {
+        const { Caret, Toolbar } = this.Blok;
 
-          // The builder returns a tool NAME; convertBlock needs the adapter.
-          const tool = convertibleTools.find((candidate) => candidate.name === entry.toolName);
+        // The builder returns a tool NAME; convertBlock needs the adapter.
+        const tool = convertibleTools.find((candidate) => candidate.name === entry.toolName);
 
-          if (tool === undefined) {
-            return;
+        if (tool === undefined) {
+          return;
+        }
+
+        // Child-bearing blocks outdent their children during conversion.
+        const newBlock = await this.convertBlock(
+          currentBlock,
+          selectedBlocks,
+          hasMultipleBlocksSelected,
+          tool,
+          entry.data
+        );
+
+        Toolbar.close();
+
+        if (newBlock) {
+          // Only a single-block conversion has a caret offset to preserve.
+          if (hasMultipleBlocksSelected) {
+            Caret.setToBlock(newBlock, Caret.positions.END);
+          } else {
+            Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
           }
-
-          // Convert immediately — no blocking confirm() prompt. A child-bearing
-          // block's children are outdented to its original parent (see
-          // BlockOperations.replace), matching Notion's instant "Turn into".
-          const newBlock = await this.convertBlock(
-            currentBlock,
-            selectedBlocks,
-            hasMultipleBlocksSelected,
-            tool,
-            entry.data
-          );
-
-          Toolbar.close();
-
-          if (newBlock) {
-            /**
-             * Multi-block conversions have no single caret to preserve, so
-             * land at the end; a single-block turn-into keeps its prior offset.
-             */
-            if (hasMultipleBlocksSelected) {
-              Caret.setToBlock(newBlock, Caret.positions.END);
-            } else {
-              Caret.setToBlock(newBlock, Caret.positions.DEFAULT, caretOffset);
-            }
-          }
-        },
-      }));
+        }
+      }
+    );
 
     /**
      * For a multi-block selection, "Turn into columns" belongs in the same
@@ -580,6 +554,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         icon: IconColumns,
         title: this.Blok.I18n.t('toolNames.columns'),
         name: 'turn-into-columns',
+        dataset: { 'blok-convert-item': 'true' },
         closeOnActivate: true,
         onActivate: () => {
           const { Caret, Toolbar, BlockManager } = this.Blok;
@@ -617,9 +592,16 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
         title: this.Blok.I18n.t('popover.convertTo'),
         children: {
           items: convertToItems,
-          minWidth: '200px',
+          searchable: true,
+          width: '320px',
         },
       });
+      items.push({
+        type: PopoverItemType.Separator,
+      });
+    } else if (hasToolTunes) {
+      // Formatting still needs a boundary before the actions when the block
+      // converts to nothing (image, table, file, audio).
       items.push({
         type: PopoverItemType.Separator,
       });
@@ -657,13 +639,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       },
     };
 
-    /**
-     * For single block selection, show common tunes (delete, move, etc.).
-     * Duplicate sits directly before the delete entry so it reads "Duplicate /
-     * Delete" like Notion (and delete stays the trailing action). When there is
-     * no delete entry (nothing to sit beside) the duplicate is omitted.
-     * For multiple blocks, show Duplicate + a multi-block delete.
-     */
+    // Keep custom actions in registration order, with deletion isolated last.
     if (!hasMultipleBlocksSelected) {
       const deleteIndex = commonTunes.findIndex(
         (tune) => 'name' in tune && tune.name === 'delete'
@@ -672,10 +648,15 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
       if (deleteIndex === -1) {
         items.push(...commonTunes);
       } else {
-        items.push(...commonTunes.slice(0, deleteIndex), duplicateItem, ...commonTunes.slice(deleteIndex));
+        items.push(
+          ...commonTunes.filter((_tune, index) => index !== deleteIndex),
+          duplicateItem,
+          { type: PopoverItemType.Separator },
+          commonTunes[deleteIndex]
+        );
       }
     } else {
-      items.push(duplicateItem);
+      items.push(duplicateItem, { type: PopoverItemType.Separator });
       items.push({
         icon: IconTrash,
         title: this.Blok.I18n.t('blockSettings.delete'),
@@ -731,11 +712,8 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
   private createEditMetadataFooter(block: Block): HTMLElement {
     const container = document.createElement('div');
 
-    // --popover-text-secondary was never declared anywhere in the palette, so
-    // this always resolved to the #888 fallback: 3.54:1 on the light popover.
-    // text-gray-text is the real, theme-aware token (5.41:1 / 5.77:1).
     container.classList.add(
-      'px-3', 'py-2', 'text-xs', 'leading-snug',
+      'px-2', 'py-1.5', 'text-[11px]', 'leading-relaxed',
       'text-gray-text',
       'select-none'
     );
@@ -758,7 +736,7 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
 
     const dateEl = document.createElement('div');
 
-    dateEl.classList.add('mt-1');
+    dateEl.classList.add('mt-0.5');
     const locale = this.Blok.I18n.getLocale();
     /**
      * A block that has never been edited carries no persisted stamp (a load is
@@ -1273,11 +1251,24 @@ export class BlockSettings extends Module<BlockSettingsNodes> {
     }
 
     this.deleteKeyHandler = (event: KeyboardEvent) => {
-      if (event.key === 'Delete') {
-        event.preventDefault();
-        deleteItem.onActivate(deleteItem);
-        this.close();
+      if (event.key !== 'Delete') {
+        return;
       }
+
+      /**
+       * Inside a field the menu owns (its search, a tool's own input) Delete
+       * edits text. Deleting the block there would destroy the document while
+       * the user is typing.
+       */
+      const target = event.target;
+
+      if (target instanceof HTMLElement && ($.isNativeInput(target) || $.isContentEditable(target))) {
+        return;
+      }
+
+      event.preventDefault();
+      deleteItem.onActivate(deleteItem);
+      this.close();
     };
 
     this.popover.getElement().addEventListener('keydown', this.deleteKeyHandler);

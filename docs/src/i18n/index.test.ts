@@ -21,20 +21,27 @@ describe('getTranslation', () => {
   });
 
   // A missing segment used to keep the PARENT node and keep walking, so a later
-  // segment resolved against a shallower ancestor. `api.blockApi` has no
-  // `properties` node, so every per-property lookup collapsed onto the section's
-  // own `description` and every row in the Block API table rendered the section
-  // blurb instead of its own text.
-  it('does not resolve a missing segment against an ancestor node', () => {
-    const key = 'api.blockApi.properties.id.description';
+  // segment resolved against a shallower ancestor: every per-property lookup
+  // collapsed onto the section's own `description`, and every row in the Block
+  // API table rendered the section blurb instead of its own text.
+  //
+  // The segment is deliberately one no translator can ever fill in. These two
+  // cases originally used `api.blockApi.properties.id.description` — a real key
+  // that merely happened to be untranslated — and the Russian one started
+  // failing the moment that key was translated, reporting a fixture collision
+  // as if it were the ancestor leak coming back.
+  const ANCESTOR_LEAK_KEY = 'api.blockApi.__missing__.id.description';
 
-    expect(getTranslation('en', key)).toBe(key);
+  it('does not resolve a missing segment against an ancestor node', () => {
+    expect(getTranslation('en', ANCESTOR_LEAK_KEY)).toBe(ANCESTOR_LEAK_KEY);
   });
 
   it('does not leak the section blurb on a Russian per-property lookup', () => {
-    const key = 'api.blockApi.properties.id.description';
+    // Guards the guard: if the section blurb were empty the assertion above
+    // would pass without proving anything.
+    expect(getTranslation('ru', 'api.blockApi.description')).not.toBe('api.blockApi.description');
 
-    expect(getTranslation('ru', key)).toBe(key);
+    expect(getTranslation('ru', ANCESTOR_LEAK_KEY)).toBe(ANCESTOR_LEAK_KEY);
   });
 
   // The same reducer short-circuited once it hit a string, so any key that

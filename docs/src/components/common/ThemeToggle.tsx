@@ -32,7 +32,7 @@ export const ThemeToggle: React.FC = () => {
       size="icon-sm"
       onClick={handleClick}
       className="rounded-full text-foreground/80 hover:text-foreground"
-      aria-label={`Toggle theme (current: ${label})`}
+      aria-label={`${t("theme.toggleAriaPrefix")} ${label}`}
       title={label}
     >
       <span className="relative flex size-[18px] items-center justify-center">

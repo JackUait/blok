@@ -218,13 +218,17 @@ export class ReadOnly extends Module {
     if (this.supportsInPlaceToggle) {
       this.Blok.ModificationsObserver.disable();
 
-      const blocks = (this.Blok.BlockManager as { blocks?: Array<{ setReadOnly: (s: boolean) => void }> }).blocks ?? [];
+      // In a finally, because a tool's setReadOnly can throw: an enable() the
+      // throw skips kills onChange/onSave for the rest of the editor's life.
+      try {
+        const blocks = (this.Blok.BlockManager as { blocks?: Array<{ setReadOnly: (s: boolean) => void }> }).blocks ?? [];
 
-      for (const block of blocks) {
-        block.setReadOnly(state);
+        blocks.forEach((block) => {
+          block.setReadOnly(state);
+        });
+      } finally {
+        this.Blok.ModificationsObserver.enable();
       }
-
-      this.Blok.ModificationsObserver.enable();
 
       if (!state) {
         this.restoreCaretAfterReadOnly();
@@ -238,57 +242,60 @@ export class ReadOnly extends Module {
      */
     this.Blok.ModificationsObserver.disable();
 
-    /**
-     * Save current Blok Blocks and render again.
-     *
-     * In the editor's own dialect: the reload is a round-trip on itself, and
-     * the host-facing legacy collapse can only express nesting as nested
-     * `items[]`, so it would drop every list item nested by the flat
-     * `data.depth` carrier — a read-only toggle would flatten the document.
-     */
-    const savedBlocks = await this.Blok.Saver.save({ dialect: 'internal' });
+    // Everything up to the matching enable() sits in the try, because both the
+    // serialization and the re-render can throw. An enable() a throw skips
+    // kills onChange/onSave for the rest of the editor's life.
+    try {
+      /**
+       * Save current Blok Blocks and render again.
+       *
+       * In the editor's own dialect: the reload is a round-trip on itself, and
+       * the host-facing legacy collapse can only express nesting as nested
+       * `items[]`, so it would drop every list item nested by the flat
+       * `data.depth` carrier — a read-only toggle would flatten the document.
+       */
+      const savedBlocks = await this.Blok.Saver.save({ dialect: 'internal' });
 
-    if (savedBlocks === undefined) {
-      this.Blok.ModificationsObserver.enable();
+      if (savedBlocks === undefined) {
+        return this.readOnlyEnabled;
+      }
+
+      const savedScrollY = window.scrollY;
+
+      this.Blok.Renderer.markRenderStart();
+
+      try {
+        /*
+         * View-only: the blocks keep their ids and their data is unchanged, so
+         * the Yjs document already describes exactly what is being rendered.
+         * Writing to it would clear the undo history — looking at a document in
+         * read-only mode must not cost the user their undo steps.
+         */
+        await this.Blok.BlockManager.withViewRebuild(async () => {
+          await this.Blok.BlockManager.clear(false, { skipYjsSync: true });
+          await this.Blok.Renderer.render(savedBlocks.blocks, { skipYjsSync: true });
+        });
+      } finally {
+        this.Blok.Renderer.markRenderEnd();
+      }
+
+      /*
+       * After the render, which can move the viewport on its own: a browser
+       * follows focus as the old DOM goes away. Nothing here restores a caret,
+       * so this is the last thing that can move the reader.
+       */
+      if (window.scrollY !== savedScrollY) {
+        window.scrollTo(0, savedScrollY);
+      }
+
+      if (!state) {
+        this.restoreCaretAfterReadOnly();
+      }
 
       return this.readOnlyEnabled;
-    }
-
-    const savedScrollY = window.scrollY;
-
-    this.Blok.Renderer.markRenderStart();
-
-    try {
-      /*
-       * View-only: the blocks keep their ids and their data is unchanged, so
-       * the Yjs document already describes exactly what is being rendered.
-       * Writing to it would clear the undo history — looking at a document in
-       * read-only mode must not cost the user their undo steps.
-       */
-      await this.Blok.BlockManager.withViewRebuild(async () => {
-        await this.Blok.BlockManager.clear(false, { skipYjsSync: true });
-        await this.Blok.Renderer.render(savedBlocks.blocks, { skipYjsSync: true });
-      });
     } finally {
-      this.Blok.Renderer.markRenderEnd();
+      this.Blok.ModificationsObserver.enable();
     }
-
-    /*
-     * After the render, which can move the viewport on its own: a browser
-     * follows focus as the old DOM goes away. Nothing here restores a caret,
-     * so this is the last thing that can move the reader.
-     */
-    if (window.scrollY !== savedScrollY) {
-      window.scrollTo(0, savedScrollY);
-    }
-
-    if (!state) {
-      this.restoreCaretAfterReadOnly();
-    }
-
-    this.Blok.ModificationsObserver.enable();
-
-    return this.readOnlyEnabled;
   }
 
   /**

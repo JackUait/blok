@@ -118,8 +118,8 @@ test.describe('Toolbox dynamic width', () => {
         const style = window.getComputedStyle(label);
         const paddingLeft = parseFloat(style.paddingLeft);
 
-        // Should have at least 72px spacing between title and shortcut
-        if (paddingLeft < 72) {
+        // pl-8 (32px) is the design's minimum gap between title and shortcut.
+        if (paddingLeft < 32) {
           allAdequate = false;
         }
       });

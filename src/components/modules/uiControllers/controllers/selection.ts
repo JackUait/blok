@@ -105,11 +105,6 @@ export class SelectionController extends Controller {
       Selection.get()?.removeAllRanges();
     }
 
-    /**
-     * Ignore transient selection changes triggered by fake background wrappers (used by inline tools
-     * like Convert) while the Inline Toolbar is already open. Otherwise, the toolbar gets torn down
-     * and re-rendered, which closes nested popovers before a user can click their items.
-     */
     if (this.shouldIgnoreSelectionChange()) {
       return;
     }
@@ -204,18 +199,8 @@ export class SelectionController extends Controller {
   }
 
   /**
-   * Guard for selection changes that must not tear down an open Inline Toolbar.
-   *
-   * Two cases collapse/move the document selection on purpose:
-   *  - inline tools (Convert, Link, Equation with a range) wrap the selection in
-   *    a fake-background highlight while their input is focused;
-   *  - a shortcut-opened direct menu (Link/Equation/Marker) focuses its own
-   *    input, which collapses a caret that had no range to fake-background.
-   *
-   * In both cases the toolbar legitimately owns focus, so the resulting
-   * selectionchange should be ignored (outside-click dismissal still happens via
-   * the click handler). Without the direct-menu guard a menu opened at a
-   * collapsed caret was destroyed ~180ms after opening.
+   * Menu focus can clear the document range before an item click fires.
+   * Outside-click dismissal remains with the click handler.
    * @returns true if selection change should be ignored
    */
   private shouldIgnoreSelectionChange(): boolean {
@@ -226,8 +211,12 @@ export class SelectionController extends Controller {
     }
 
     const hasFakeBackground = document.querySelector('[data-blok-fake-background="true"]') !== null;
+    const activeElement = document.activeElement;
+    const hasNestedPopoverFocus = inlineToolbar.hasNestedPopoverOpen &&
+      activeElement !== null &&
+      inlineToolbar.containsNode(activeElement);
 
-    return hasFakeBackground || inlineToolbar.hasDirectMenuOpen;
+    return hasFakeBackground || inlineToolbar.hasDirectMenuOpen || hasNestedPopoverFocus;
   }
 
   /**

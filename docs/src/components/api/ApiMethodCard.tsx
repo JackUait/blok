@@ -38,8 +38,11 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
       data-blok-testid="api-method-card"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</h3>
-        <span className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
+        {/* A signature and a return type are the identifiers a reader types, so
+            they stay English in every locale. They render outside <code>, which
+            is what the Russian-purity law strips, hence the explicit marker. */}
+        <h3 data-lang-exempt className="font-mono text-sm font-semibold tracking-tight text-foreground">{method.name}</h3>
+        <span data-lang-exempt className="rounded-md bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">{method.returnType}</span>
         {(method.deprecated || method.deprecatedSince) && (
           <Badge variant="muted" className="uppercase" data-blok-testid="api-method-deprecated-badge">
             <Typo>{t("api.deprecated")}</Typo>
@@ -127,7 +130,14 @@ export const ApiMethodCard: FC<ApiMethodCardProps> = ({ method, sectionId }) => 
             {method.errors.map((error, index) => (
               <li key={index} className="rounded-xl border border-border px-4 py-3">
                 <p className="text-sm font-semibold text-foreground">{renderInline(error.condition)}</p>
-                <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{error.message}</p>
+                {/* The literal thrown text — language-agnostic by contract
+                    (api-data.ts:28-31), so never translated. Omitted where the
+                    failure throws nothing, rather than filled with prose: this
+                    slot has no translation route, so prose here reaches a
+                    Russian reader in English. */}
+                {error.message !== undefined && (
+                  <p data-lang-exempt className="mt-1 break-all font-mono text-xs text-muted-foreground">{error.message}</p>
+                )}
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{renderInline(error.resolution)}</p>
               </li>
             ))}

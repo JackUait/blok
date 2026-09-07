@@ -14,11 +14,13 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DATA_ATTR, TOOLTIP_INTERFACE_VALUE } from '../../../../../src/components/constants';
 import {
   createAvatarLayer,
   type AvatarLayer,
   type AvatarPeer,
 } from '../../../../../src/components/modules/collaboration/presence-avatars';
+import { destroy as destroyTooltip } from '../../../../../src/components/utils/tooltip';
 
 const GUTTER_ATTR = 'data-blok-presence-gutter';
 const FACE_ATTR = 'data-blok-presence-face';
@@ -117,6 +119,7 @@ beforeEach(() => {
 afterEach(() => {
   layers.splice(0).forEach((layer) => layer.clear());
   mounted.splice(0).forEach((holder) => holder.remove());
+  destroyTooltip();
   vi.restoreAllMocks();
 });
 
@@ -192,12 +195,30 @@ describe('avatar layer — what it draws', () => {
     expect(harness.holderOf('block-1').textContent).toBe('hello world');
   });
 
-  it('names the peer in a title, so hovering identifies them', () => {
+  it('names the peer for assistive tech without letting the browser draw a tooltip', () => {
     const harness = setup();
 
     harness.layer.render([peer(1, { name: 'Ada Lovelace' })]);
 
-    expect(harness.facesIn('block-1')[0]?.getAttribute('title')).toBe('Ada Lovelace');
+    const [face] = harness.facesIn('block-1');
+
+    // `title` is the browser's own bubble: unstyled, slow, and impossible to
+    // theme. The name still has to reach a screen reader, so it moves to a
+    // label and the visible bubble becomes Blok's own.
+    expect(face?.getAttribute('aria-label')).toBe('Ada Lovelace');
+    expect(face?.hasAttribute('title')).toBe(false);
+  });
+
+  it('shows Blok\'s own tooltip when the face is hovered', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1, { name: 'Ada Lovelace' })]);
+    harness.facesIn('block-1')[0]?.dispatchEvent(new Event('mouseenter'));
+
+    const bubble = document.querySelector(`[${DATA_ATTR.interface}="${TOOLTIP_INTERFACE_VALUE}"]`);
+
+    expect(bubble?.getAttribute('data-state')).toBe('open');
+    expect(bubble?.textContent).toContain('Ada Lovelace');
   });
 
   it('carries the peer colour as a custom property', () => {
@@ -220,6 +241,7 @@ describe('avatar layer — what it draws', () => {
     // tooltip claiming an empty name.
     expect(face).toBeDefined();
     expect(face?.hasAttribute(INITIALS_ATTR)).toBe(false);
+    expect(face?.hasAttribute('aria-label')).toBe(false);
     expect(face?.hasAttribute('title')).toBe(false);
   });
 
@@ -232,7 +254,7 @@ describe('avatar layer — what it draws', () => {
     const [face] = harness.facesIn('block-1');
 
     expect(face?.querySelector('img')).toBeNull();
-    expect(face?.getAttribute('title')).toBe(hostile);
+    expect(face?.getAttribute('aria-label')).toBe(hostile);
   });
 });
 

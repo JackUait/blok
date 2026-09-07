@@ -165,6 +165,13 @@ export class Core {
       : null;
 
     /**
+     * Answered HERE, next to the gate and before `data` is defaulted, but
+     * reported after setLogLevel() below — a warning emitted before it would be
+     * filtered by whatever level the previous editor on the page left behind.
+     */
+    const persistedLoadSkipped = persistence !== undefined && this.config.data != null;
+
+    /**
      * If holder is empty then set a default value
      */
     if (this.config.holder == null) {
@@ -176,6 +183,16 @@ export class Core {
     }
 
     setLogLevel(this.config.logLevel);
+
+    if (persistedLoadSkipped) {
+      log(
+        'Both `data` and `persistence` are configured, so `persistence.load` will not run: ' +
+        'the `data` you passed wins, even when it holds no blocks. Nothing is loaded, so no ' +
+        'document version is carried either — every `save` is told `version: null`. ' +
+        'Pass no `data` to load the document from `persistence`.',
+        'warn'
+      );
+    }
 
     /**
      * If default Block's Tool was not passed, use the Paragraph Tool

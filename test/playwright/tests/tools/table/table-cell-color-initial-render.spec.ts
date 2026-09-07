@@ -4,6 +4,7 @@
 import type { Page } from '@playwright/test';
 
 import type { Blok, OutputData } from '@/types';
+import { activateColorTab } from '../../helpers/color-picker';
 import { ensureBlokBundleBuilt } from '../../helpers/ensure-build';
 import { expect, gotoTestPage, test } from '../../helpers/shared-page';
 import { BLOK_INTERFACE_SELECTOR } from '../../../../../src/components/constants';
@@ -170,6 +171,8 @@ const openColorPicker = async (page: Page): Promise<void> => {
 };
 
 const clickSwatch = async (page: Page, name: string, mode: 'textColor' | 'backgroundColor' = 'backgroundColor'): Promise<void> => {
+  await activateColorTab(page, 'cell-color', mode);
+
   const swatch = page.locator(`[data-blok-testid="cell-color-swatch-${mode}-${name}"]`);
 
   await expect(swatch).toBeVisible();

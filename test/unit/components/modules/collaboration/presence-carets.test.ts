@@ -22,6 +22,8 @@ import {
 
 const CARET_ATTR = 'data-blok-presence-caret';
 const IDLE_ATTR = 'data-blok-presence-caret-idle';
+const LABEL_ATTR = 'data-blok-presence-caret-label';
+const SHOWN_ATTR = 'data-blok-presence-caret-shown';
 const COLOR_PROPERTY = '--blok-presence-color';
 
 interface Harness {
@@ -30,6 +32,7 @@ interface Harness {
   inputOf: (blockId: string, index?: number) => HTMLElement;
   toolRootOf: (blockId: string) => HTMLElement;
   caretsIn: (blockId: string) => HTMLElement[];
+  labelsIn: (blockId: string) => HTMLElement[];
   /** Give an element a rect, so the holder-relative arithmetic can be asserted. */
   stubRect: (element: Element, rect: { left: number; top: number; height: number }) => void;
 }
@@ -121,6 +124,7 @@ const setup = (options: { blockIds?: string[]; inputCount?: number; restAfterMs?
       return toolRoot;
     },
     caretsIn: (blockId) => Array.from(holderOf(blockId).querySelectorAll<HTMLElement>(`[${CARET_ATTR}]`)),
+    labelsIn: (blockId) => Array.from(holderOf(blockId).querySelectorAll<HTMLElement>(`[${LABEL_ATTR}]`)),
     stubRect: (element, rect) => {
       vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
         left: rect.left,
@@ -146,6 +150,7 @@ const at = (blockId: string, head: number, inputIndex = 0): CaretPosition => ({
 
 const peer = (clientId: number, overrides: Partial<CaretPeer> = {}): CaretPeer => ({
   clientId,
+  name: 'Ada Lovelace',
   color: '#0b6e99',
   caret: at('block-1', 3),
   ...overrides,
@@ -437,5 +442,131 @@ describe('caret layer — teardown', () => {
     // A timer firing against a removed element is how a stopped session
     // resurrects a ghost.
     expect(document.querySelectorAll(`[${CARET_ATTR}]`)).toHaveLength(0);
+  });
+});
+
+/**
+ * The name flag: who this caret belongs to, shown when they arrive and again
+ * whenever the pointer comes near the line.
+ *
+ * The gutter face still carries identity for the block as a whole. This
+ * answers the other question a bare coloured line cannot: whose line is it,
+ * for the peer who just walked in.
+ *
+ * The name is an ATTRIBUTE the stylesheet paints, never a text node, for the
+ * same reason the monogram is: the flag hangs off the block HOLDER, and a
+ * copied block carries every text node its holder had.
+ */
+describe('caret layer — the name flag', () => {
+  const nearPointer = (caret: HTMLElement, holder: HTMLElement): PointerEvent => {
+    const box = holder.getBoundingClientRect();
+
+    return new MouseEvent('pointermove', {
+      clientX: box.left + parseFloat(caret.style.left),
+      clientY: box.top + parseFloat(caret.style.top) + 2,
+      bubbles: true,
+    }) as PointerEvent;
+  };
+
+  it('flags the peer by name when they arrive', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1, { name: 'Ada Lovelace' })]);
+
+    const [label] = harness.labelsIn('block-1');
+
+    expect(label?.getAttribute(LABEL_ATTR)).toBe('Ada Lovelace');
+    expect(label?.hasAttribute(SHOWN_ATTR)).toBe(true);
+  });
+
+  it('takes the flag down three seconds after they arrive', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    vi.advanceTimersByTime(3000);
+
+    expect(harness.labelsIn('block-1')[0]?.hasAttribute(SHOWN_ATTR)).toBe(false);
+  });
+
+  it('brings the flag back while the pointer rests near the line', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    vi.advanceTimersByTime(3000);
+
+    const holder = harness.holderOf('block-1');
+    const [caret] = harness.caretsIn('block-1');
+
+    holder.dispatchEvent(nearPointer(caret, holder));
+
+    expect(harness.labelsIn('block-1')[0]?.hasAttribute(SHOWN_ATTR)).toBe(true);
+  });
+
+  it('drops the flag again once the pointer moves away', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    vi.advanceTimersByTime(3000);
+
+    const holder = harness.holderOf('block-1');
+    const [caret] = harness.caretsIn('block-1');
+
+    holder.dispatchEvent(nearPointer(caret, holder));
+    holder.dispatchEvent(new MouseEvent('pointermove', {
+      clientX: 4000,
+      clientY: 4000,
+      bubbles: true,
+    }));
+
+    expect(harness.labelsIn('block-1')[0]?.hasAttribute(SHOWN_ATTR)).toBe(false);
+  });
+
+  it('does not greet the same peer again when they only move to another block', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    vi.advanceTimersByTime(3000);
+    harness.layer.render([peer(1, { caret: at('block-2', 2) })]);
+
+    expect(harness.labelsIn('block-2')[0]?.hasAttribute(SHOWN_ATTR)).toBe(false);
+  });
+
+  it('greets a peer again once they have left the room and come back', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    vi.advanceTimersByTime(3000);
+    harness.layer.render([]);
+    harness.layer.render([peer(1)]);
+
+    expect(harness.labelsIn('block-1')[0]?.hasAttribute(SHOWN_ATTR)).toBe(true);
+  });
+
+  it('leaves a peer who published no name unflagged', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1, { name: '' })]);
+
+    expect(harness.labelsIn('block-1')).toHaveLength(0);
+  });
+
+  it('paints the name from an attribute, so a copied block carries no flag text', () => {
+    const harness = setup();
+    const holder = harness.holderOf('block-1');
+    const before = holder.textContent;
+
+    harness.layer.render([peer(1, { name: 'Ada Lovelace' })]);
+
+    expect(holder.textContent).toBe(before);
+    expect(holder.innerHTML).not.toContain('Ada Lovelace<');
+  });
+
+  it('takes the flag down with the caret it belongs to', () => {
+    const harness = setup();
+
+    harness.layer.render([peer(1)]);
+    harness.layer.render([]);
+
+    expect(harness.labelsIn('block-1')).toHaveLength(0);
   });
 });

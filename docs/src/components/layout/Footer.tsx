@@ -47,7 +47,7 @@ export const Footer: React.FC = () => {
                   36px badge below the fold on all 151 pages. */}
               <img
                 src="/mascot.png"
-                alt="Blok mascot"
+                alt={t("footer.mascotAlt")}
                 width={108}
                 height={103}
                 loading="lazy"

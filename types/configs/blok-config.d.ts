@@ -824,6 +824,13 @@ export interface BlokMountOptions {
   captureClicksBelowEditor?: boolean;
 
   /**
+   * Inline emoji menu opened by typing ":" followed by a name.
+   *
+   * @default true
+   */
+  inlineEmoji?: boolean;
+
+  /**
    * Blok's log level (how many logs you want to see)
    */
   logLevel?: LogLevels;

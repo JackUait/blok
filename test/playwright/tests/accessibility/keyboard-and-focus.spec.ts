@@ -637,4 +637,59 @@ test.describe('keyboard operability and focus management', () => {
       await expect.poll(() => readFocus(page)).toStrictEqual(FOCUS_IS_HELD);
     });
   });
+
+  test.describe('the focus cursor is keyboard-only', () => {
+    test('a toolbox opened with the mouse highlights nothing until a key is pressed', async ({ page }) => {
+      await paragraphBlok(page, [ 'First block' ]);
+
+      await page.locator(PARAGRAPH_SELECTOR).first().click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+      await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+      await expect(toolbox.locator(FOCUSED_ITEM_SELECTOR)).toHaveCount(0);
+
+      /**
+       * The suppressed cursor must not consume the first arrow press: it lands
+       * on item 0, not item 1.
+       */
+      await page.keyboard.press('ArrowDown');
+
+      const focusedOption = toolbox.locator(FOCUSED_ITEM_SELECTOR);
+
+      await expect(focusedOption).toHaveCount(1);
+      await expect(toolbox.locator(`[data-blok-testid="popover-item"][data-blok-item-name]:not([data-blok-hidden])`).first())
+        .toHaveAttribute('data-blok-focused', 'true');
+    });
+
+    test('typing after a mouse-opened toolbox restores the cursor', async ({ page }) => {
+      await paragraphBlok(page, [ 'First block' ]);
+
+      await page.locator(PARAGRAPH_SELECTOR).first().click();
+      await page.locator(PLUS_BUTTON_SELECTOR).click();
+
+      const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+      await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+      await expect(toolbox.locator(FOCUSED_ITEM_SELECTOR)).toHaveCount(0);
+
+      await page.keyboard.type('head');
+
+      await expect(toolbox.locator(FOCUSED_ITEM_SELECTOR)).toHaveCount(1);
+    });
+
+    test('a toolbox opened with "/" highlights the first item at once', async ({ page }) => {
+      await createBlok(page, { data: { blocks: [ { type: 'paragraph', data: { text: '' } } ] } });
+
+      await page.locator(PARAGRAPH_SELECTOR).first().click();
+      await page.keyboard.type('/');
+
+      const toolbox = page.locator(TOOLBOX_POPOVER_SELECTOR);
+
+      await expect(page.locator(TOOLBOX_CONTAINER_SELECTOR)).toBeVisible();
+      await expect(toolbox.locator(FOCUSED_ITEM_SELECTOR)).toHaveCount(1);
+    });
+  });
+
 });

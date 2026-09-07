@@ -45,11 +45,13 @@ export class Uploader {
 
   public async handleUrl(raw: string, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateUrl(raw);
-    if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
-    }
+    // Asked before the tool's own uploader on purpose: this route resolves to
+    // the same uploader and is the only one that records for the orphan sweep.
     if (this.assets?.isConfigured('video', 'uploadByUrl')) {
       return this.assets.uploadByUrl(raw, { kind: 'video', tool: 'video', onProgress: options.onProgress });
+    }
+    if (this.config.uploader?.uploadByUrl) {
+      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
 
     return { url: raw };
@@ -57,11 +59,11 @@ export class Uploader {
 
   public async handleFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
     this.validateFile(file);
-    if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
-    }
     if (this.assets?.isConfigured('video', 'uploadByFile')) {
       return this.assets.uploadByFile(file, { kind: 'video', tool: 'video', onProgress: options.onProgress });
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(file, { onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(file), fileName: file.name };

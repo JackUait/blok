@@ -23,7 +23,7 @@ export class InlinePositioner {
    * Calculate and apply position to wrapper element
    */
   public apply(options: InlinePositioningOptions): void {
-    const { wrapper, selectionRect, wrapperOffset, contentRect, popoverWidth } = options;
+    const { wrapper, selectionRect, wrapperOffset, contentRect, popoverWidth, popoverHeight = 0 } = options;
 
     const newCoords = {
       x: selectionRect.x - wrapperOffset.x,
@@ -38,6 +38,18 @@ export class InlinePositioner {
     // Prevent overflow on right side
     if (realRightCoord > contentRect.right) {
       newCoords.x = contentRect.right - popoverWidth - wrapperOffset.x;
+    }
+
+    // A narrow editor must not push the wider toolbar outside the viewport.
+    newCoords.x = Math.max(8, Math.min(newCoords.x + wrapperOffset.x, window.innerWidth - popoverWidth - 8)) - wrapperOffset.x;
+
+    if (popoverHeight > 0) {
+      const bottomTop = newCoords.y + wrapperOffset.top;
+      const top = bottomTop + popoverHeight > window.innerHeight - 8
+        ? selectionRect.top - popoverHeight - this.toolbarVerticalMargin
+        : bottomTop;
+
+      newCoords.y = Math.max(8, Math.min(top, window.innerHeight - popoverHeight - 8)) - wrapperOffset.top;
     }
 
     wrapper.style.left = Math.floor(newCoords.x) + 'px';

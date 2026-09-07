@@ -12,6 +12,11 @@
  * tool's own uploader under the kind it owns and gives it precedence over the
  * editor-level one. These tests drive the real resolver and the real sweep, so
  * they fail if that precedence ever changes.
+ *
+ * A deletion is paired with the uploader that STORED the asset, which is why
+ * every tool uploader here carries its own `delete`. One without it records no
+ * candidate at all rather than borrowing the editor-level `delete`: deleting
+ * through a backend that never held the asset is how user files get destroyed.
  */
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
@@ -91,8 +96,8 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
 
   it('sweeps a file the image tool uploaded through its own uploader', async () => {
     const uploadByFile = vi.fn().mockResolvedValue({ url: STORED });
-    const tool = { uploadByFile };
-    const assets = editorAssets('image', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByFile, delete: deleteAsset };
+    const assets = editorAssets('image', tool, {}, sweep);
 
     await expect(new ImageUploader({ uploader: tool }, assets).handleFile(makeFile('a.png', 'image/png')))
       .resolves.toMatchObject({ url: STORED });
@@ -108,8 +113,8 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
 
   it('sweeps an image the tool re-hosted from a URL', async () => {
     const uploadByUrl = vi.fn().mockResolvedValue({ url: STORED });
-    const tool = { uploadByUrl };
-    const assets = editorAssets('image', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByUrl, delete: deleteAsset };
+    const assets = editorAssets('image', tool, {}, sweep);
 
     await expect(new ImageUploader({ uploader: tool }, assets).handleUrl('https://third-party/art.png'))
       .resolves.toMatchObject({ url: STORED });
@@ -122,8 +127,8 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
 
   it('sweeps a pasted data: URL the tool re-hosted', async () => {
     const uploadByUrl = vi.fn().mockResolvedValue({ url: STORED });
-    const tool = { uploadByUrl };
-    const assets = editorAssets('image', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByUrl, delete: deleteAsset };
+    const assets = editorAssets('image', tool, {}, sweep);
 
     await expect(new ImageUploader({ uploader: tool }, assets)
       .handleUrl('data:image/png;base64,aGk='))
@@ -136,8 +141,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps a file the audio tool uploaded through its own uploader', async () => {
-    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('audio', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('audio', tool, {}, sweep);
 
     await expect(new AudioUploader({ uploader: tool }, assets).handleFile(makeFile('a.mp3', 'audio/mpeg')))
       .resolves.toMatchObject({ url: STORED });
@@ -149,8 +155,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps an audio track the tool re-hosted from a URL', async () => {
-    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('audio', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('audio', tool, {}, sweep);
 
     await expect(new AudioUploader({ uploader: tool }, assets).handleUrl('https://third-party/track.mp3'))
       .resolves.toMatchObject({ url: STORED });
@@ -162,8 +169,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps a file the video tool uploaded through its own uploader', async () => {
-    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('video', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('video', tool, {}, sweep);
 
     await expect(new VideoUploader({ uploader: tool }, assets).handleFile(makeFile('a.mp4', 'video/mp4')))
       .resolves.toMatchObject({ url: STORED });
@@ -175,8 +183,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps a video the tool re-hosted from a URL', async () => {
-    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('video', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('video', tool, {}, sweep);
 
     await expect(new VideoUploader({ uploader: tool }, assets).handleUrl('https://third-party/clip.mp4'))
       .resolves.toMatchObject({ url: STORED });
@@ -188,8 +197,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps a file the file tool uploaded through its own uploader', async () => {
-    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('file', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('file', tool, {}, sweep);
 
     await expect(new FileUploader({ uploader: tool }, assets).handleFile(makeFile('a.pdf', 'application/pdf')))
       .resolves.toMatchObject({ url: STORED });
@@ -201,8 +211,9 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
   });
 
   it('sweeps a file the file tool re-hosted from a URL', async () => {
-    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }) };
-    const assets = editorAssets('file', tool, { delete: deleteAsset }, sweep);
+    const tool = { uploadByUrl: vi.fn().mockResolvedValue({ url: STORED }),
+      delete: deleteAsset };
+    const assets = editorAssets('file', tool, {}, sweep);
 
     await expect(new FileUploader({ uploader: tool }, assets).handleUrl('https://third-party/doc.pdf'))
       .resolves.toMatchObject({ url: STORED });
@@ -211,6 +222,33 @@ describe('a tool-level uploader still records for the orphan sweep', () => {
 
     expect(deleteAsset).toHaveBeenCalledWith(STORED, { kind: 'file',
       tool: 'file' });
+  });
+
+  // The safety guarantee behind the pairing: no `delete` on the uploader that
+  // stored the asset means no deletion at all, never the editor-level one.
+  it('never sweeps a tool-uploaded asset through the editor-level delete', async () => {
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }) };
+    const assets = editorAssets('image', tool, { delete: deleteAsset }, sweep);
+
+    await expect(new ImageUploader({ uploader: tool }, assets).handleFile(makeFile('a.png', 'image/png')))
+      .resolves.toMatchObject({ url: STORED });
+
+    await sweep.sweep(EMPTY_DOCUMENT);
+
+    expect(deleteAsset).not.toHaveBeenCalled();
+  });
+
+  // And nothing is left behind to retry: an un-deletable candidate would be kept
+  // by every sweep and re-attempted on every later save.
+  it('records no candidate at all for an asset its uploader cannot delete', async () => {
+    const tool = { uploadByFile: vi.fn().mockResolvedValue({ url: STORED }) };
+    const record = vi.spyOn(sweep, 'record');
+    const assets = editorAssets('image', tool, { delete: deleteAsset }, sweep);
+
+    await expect(new ImageUploader({ uploader: tool }, assets).handleFile(makeFile('a.png', 'image/png')))
+      .resolves.toMatchObject({ url: STORED });
+
+    expect(record).not.toHaveBeenCalled();
   });
 
   // A tool built without the editor API (standalone use, older embeddings) has

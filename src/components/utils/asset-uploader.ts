@@ -74,44 +74,57 @@ export function collectAssetUploaderSources(
 export type UploadMethod = 'uploadByFile' | 'uploadByUrl';
 
 /**
- * Pick the uploader for an asset kind: the tool that owns the kind first, then
- * the editor-level one. Methods resolve independently, so a host may declare
- * `uploadByUrl` on the image tool and `uploadByFile` at editor level.
+ * Which uploader serves one entry point for a kind: the tool that owns the kind
+ * when it declares that method, else the editor-level one.
+ *
+ * Per-method, not per-object: a host may put `uploadByUrl` on the image tool and
+ * `uploadByFile` at editor level, so the two entry points can resolve to
+ * different objects for the same kind.
+ * @param kind - the kind of asset being uploaded
+ * @param sources - candidate uploaders
+ * @param method - the entry point being resolved
+ */
+function sourceFor(
+  kind: AssetKind,
+  sources: AssetUploaderSources,
+  method: UploadMethod
+): BlokUploader | undefined {
+  const owner = sources.byKind[kind];
+
+  return owner?.[method] !== undefined ? owner : sources.editor;
+}
+
+/**
+ * Pick the upload entry points for an asset kind: the tool that owns the kind
+ * first, then the editor-level one, resolved independently of each other.
  *
  * Returned methods stay bound to the object that declared them, so a host
  * uploader written as an object literal with `this` keeps working.
+ *
+ * `delete` is deliberately absent. A deletion belongs to the object that
+ * actually STORED the asset, which is only known at the upload that stored it —
+ * see {@link recordForSweep}.
  * @param kind - the kind of asset being uploaded
  * @param sources - candidate uploaders
  */
-export function resolveAssetUploader(kind: AssetKind, sources: AssetUploaderSources): BlokUploader {
-  const owner = sources.byKind[kind];
-  const resolved: BlokUploader = {};
+export function resolveAssetUploader(
+  kind: AssetKind,
+  sources: AssetUploaderSources
+): Pick<BlokUploader, UploadMethod> {
+  const resolved: Pick<BlokUploader, UploadMethod> = {};
 
-  // Per-method, not per-object: a host may put uploadByUrl on the image tool and
-  // uploadByFile at editor level. `.call` keeps each method bound to whichever
-  // object declared it, so an uploader written with `this` still works.
-  const fileFrom = owner?.uploadByFile !== undefined ? owner : sources.editor;
+  const fileFrom = sourceFor(kind, sources, 'uploadByFile');
   const uploadByFile = fileFrom?.uploadByFile;
 
   if (fileFrom !== undefined && uploadByFile !== undefined) {
     resolved.uploadByFile = (f, ctx) => uploadByFile.call(fileFrom, f, ctx);
   }
 
-  const urlFrom = owner?.uploadByUrl !== undefined ? owner : sources.editor;
+  const urlFrom = sourceFor(kind, sources, 'uploadByUrl');
   const uploadByUrl = urlFrom?.uploadByUrl;
 
   if (urlFrom !== undefined && uploadByUrl !== undefined) {
     resolved.uploadByUrl = (u, ctx) => uploadByUrl.call(urlFrom, u, ctx);
-  }
-
-  // A deletion routes exactly like the upload that stored the asset: cover art
-  // an audio block posted to the image pipeline has to be deleted through that
-  // same pipeline, not through the host's audio endpoint.
-  const deleteFrom = owner?.delete !== undefined ? owner : sources.editor;
-  const deleteAsset = deleteFrom?.delete;
-
-  if (deleteFrom !== undefined && deleteAsset !== undefined) {
-    resolved.delete = (u, ctx) => deleteAsset.call(deleteFrom, u, ctx);
   }
 
   return resolved;
@@ -141,27 +154,37 @@ export function hasAssetUploader(
 /**
  * Offer an asset this session just uploaded to the orphan sweep.
  *
- * Only an asset whose uploader can delete is worth remembering: with no
- * `delete` there is nothing the sweep could ever do with the URL, and the
- * `blob:` fallback stores nothing to clean up.
+ * The deletion is taken from the uploader that STORED the asset and from no
+ * other: a different backend either 404s or, worse, deletes whatever that URL
+ * names in ITS store. So an uploader without `delete` records nothing at all
+ * rather than borrowing another one's — wasted storage is recoverable, a file
+ * destroyed through the wrong backend is not. The `blob:` fallback stores
+ * nothing to clean up either.
  * @param asset - what the uploader answered with
  * @param ctx - what was uploaded and on whose behalf
- * @param uploader - the uploader resolved for the asset's kind
+ * @param from - the uploader that stored this asset
  * @param sweep - this editor's candidate set, when it has one
  */
 function recordForSweep(
   asset: UploadedAsset,
   ctx: UploadContext,
-  uploader: BlokUploader,
+  from: BlokUploader,
   sweep?: OrphanSweep
 ): void {
-  const deleteAsset = uploader.delete;
+  const deleteAsset = from.delete;
 
   if (deleteAsset === undefined || sweep === undefined) {
     return;
   }
 
-  sweep.record(asset.url, (url) => deleteAsset(url, { kind: ctx.kind, tool: ctx.tool }));
+  // `asset` is host output, unchecked at runtime: a JS uploader may resolve
+  // `{ url: response.headers.get('Location') }` with the header absent. A
+  // candidate with no url names nothing, so skip it rather than file it.
+  if (typeof asset.url !== 'string' || asset.url === '') {
+    return;
+  }
+
+  sweep.record(asset.url, (url) => deleteAsset.call(from, url, { kind: ctx.kind, tool: ctx.tool }));
 }
 
 /**
@@ -179,13 +202,13 @@ export async function uploadAssetFile(
   ctx: UploadContext,
   sources: AssetUploaderSources
 ): Promise<UploadedAsset> {
-  const uploader = resolveAssetUploader(ctx.kind, sources);
-  const upload = uploader.uploadByFile;
+  const from = sourceFor(ctx.kind, sources, 'uploadByFile');
+  const upload = from?.uploadByFile;
 
-  if (upload) {
-    const asset = await upload(file, ctx);
+  if (from !== undefined && upload !== undefined) {
+    const asset = await upload.call(from, file, ctx);
 
-    recordForSweep(asset, ctx, uploader, sources.sweep);
+    recordForSweep(asset, ctx, from, sources.sweep);
 
     return asset;
   }
@@ -209,13 +232,19 @@ export async function uploadAssetUrl(
   ctx: UploadContext,
   sources: AssetUploaderSources
 ): Promise<UploadedAsset> {
-  const uploader = resolveAssetUploader(ctx.kind, sources);
-  const upload = uploader.uploadByUrl;
+  const from = sourceFor(ctx.kind, sources, 'uploadByUrl');
+  const upload = from?.uploadByUrl;
 
-  if (upload) {
-    const asset = await upload(url, ctx);
+  if (from !== undefined && upload !== undefined) {
+    const asset = await upload.call(from, url, ctx);
 
-    recordForSweep(asset, ctx, uploader, sources.sweep);
+    // Handing the URL back unchanged means nothing was stored — a host that only
+    // re-hosts files just validated the link. The sweep may only ever delete what
+    // this session stored, or it would destroy a pasted URL another document
+    // still points at.
+    if (asset.url !== url) {
+      recordForSweep(asset, ctx, from, sources.sweep);
+    }
 
     return asset;
   }

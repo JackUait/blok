@@ -1,4 +1,4 @@
-import { PasteConfig } from '../configs';
+import { DeleteContext, PasteConfig } from '../configs';
 import { BlockTool, BlockToolConstructorOptions } from './block-tool';
 import { BlockToolData } from './block-tool-data';
 import { MaxSizeConfig } from './max-size';
@@ -37,12 +37,19 @@ export interface FileUploadResult {
 }
 
 /**
- * Consumer-supplied uploader. Both methods optional — when absent the tool
+ * Consumer-supplied uploader. Every method optional — when absent the tool
  * falls back to a blob URL (uploadByFile) or the URL itself (uploadByUrl).
  */
 export interface FileUploader {
   uploadByFile?(file: File, ctx?: FileUploadContext): Promise<FileUploadResult>;
   uploadByUrl?(url: string, ctx?: FileUploadContext): Promise<FileUploadResult>;
+  /**
+   * Delete an asset this uploader stored, by the URL it returned for it. Blok
+   * calls it once a saved document no longer references the asset. Without it
+   * nothing this uploader stored is ever cleaned up: Blok never deletes through
+   * a different uploader than the one that stored the asset.
+   */
+  delete?(url: string, ctx: DeleteContext): Promise<void>;
 }
 
 /**

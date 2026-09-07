@@ -25,6 +25,9 @@ export const createBlock = (text: string, toolOverrides: Record<string, unknown>
     inputs: [input],
     isEmpty: text.length === 0,
     tool: { isDefault: true, isLineBreaksEnabled: false, name: 'paragraph', ...toolOverrides },
+    // A composer that mutates the DOM directly (not via a Tool re-render) must
+    // call this to flush the change to Yjs — see markdownShortcuts' same call.
+    dispatchChange: vi.fn(),
   } as unknown as Block;
 };
 

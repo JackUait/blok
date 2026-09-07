@@ -49,6 +49,40 @@ function isInsertOrDeleteText(inputType: string): boolean {
 }
 
 /**
+ * localStorage key the skin-tone picker's own reader
+ * (`loadSkinTone` in src/tools/callout/emoji-picker/index.ts) uses. Duplicated
+ * here rather than imported: that function is not exported, and that file
+ * currently carries another session's large unlanded diff, so exporting it
+ * is out of scope for this change — see the emoji-skin-tone note in this
+ * file's task report.
+ */
+const SKIN_TONE_STORAGE_KEY = 'blok-emoji-skin-tone';
+
+/** Direct index into an emoji's `skins` array (0 = default, tone-free glyph), not a Fitzpatrick number. */
+function loadEmojiSkinTone(): number {
+  try {
+    const raw = localStorage.getItem(SKIN_TONE_STORAGE_KEY);
+
+    if (raw === null) {
+      return 0;
+    }
+
+    const parsed = parseInt(raw, 10);
+
+    return parsed >= 0 && parsed <= 5 ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** The emoji's character at the user's stored skin tone, falling back to skins[0] when that tone doesn't exist for this emoji (most emoji have only one skin). */
+function skinnedNative(emoji: ProcessedEmoji): string {
+  const tone = loadEmojiSkinTone();
+
+  return emoji.skins[tone] ?? emoji.skins[0] ?? emoji.native;
+}
+
+/**
  * Locate the text node and local offset `targetOffset` (measured from the
  * start of `container`'s plain text) falls in. Mirrors the technique
  * MarkdownShortcuts uses to resolve a plain-text offset back into the DOM.
@@ -93,8 +127,8 @@ function rectAtOffset(container: HTMLElement, offset: number): DOMRect | undefin
 /**
  * Detects a ":query" span at the caret in a text-like block and opens a
  * ranked emoji menu, closing it when the span disappears, the query matches
- * nothing, or the user cancels. Inserting the chosen emoji (Task 7) and the
- * closing-colon shortcut (Task 8) are built on top of this.
+ * nothing, or the user cancels. Committing the chosen emoji (via Enter/Tab,
+ * or the picker's own click) replaces the span in place — see `commit`.
  */
 export class EmojiTrigger extends BlockEventComposer {
   public opened = false;
@@ -249,13 +283,93 @@ export class EmojiTrigger extends BlockEventComposer {
         // Clamped inside setHighlightedIndex to the last result.
         this.setHighlightedIndex(Number.MAX_SAFE_INTEGER);
         break;
+      case 'Enter':
+      case 'Tab': {
+        const emoji = this.getHighlightedEmoji();
+
+        if (emoji !== null) {
+          this.commit(emoji);
+        }
+        break;
+      }
       default:
-        // Enter/Tab: stay claimed here (preventDefault above); committing
-        // the highlighted emoji is a later task.
         break;
     }
 
     return true;
+  }
+
+  /**
+   * Insert `emoji` at the ":query" span, replacing it, as one undo step.
+   * Resolves the skin tone itself from the user's stored preference — this
+   * is the keyboard path (Enter/Tab on the highlighted result); the picker's
+   * own mouse-click `onSelect` already resolves the tone before calling back
+   * and goes straight to {@link insertNative}.
+   * @param emoji - the picked emoji
+   */
+  public commit(emoji: ProcessedEmoji): void {
+    this.insertNative(skinnedNative(emoji));
+  }
+
+  /**
+   * Replace the ":query" span at the caret with `native`, as one undo step,
+   * mirroring MarkdownShortcuts.handleInlineMarkdown's sequence: resolve the
+   * span, call `YjsManager.stopCapturing()` BEFORE the DOM write so the
+   * replacement does not merge backward with the keystrokes that opened the
+   * menu, then again AFTER so a keystroke typed right afterward does not
+   * merge forward into it — Yjs's captureTimeout otherwise groups either
+   * side into the same undo entry (see UndoHistory.stopCapturing).
+   * @param native - the exact character(s) to insert
+   */
+  private insertNative(native: string): void {
+    const currentBlock = this.Blok.BlockManager.currentBlock;
+    const currentInput = currentBlock?.currentInput;
+
+    if (currentBlock === undefined || currentInput === undefined) {
+      return;
+    }
+
+    const selection = window.getSelection();
+
+    if (selection === null || !selection.isCollapsed || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+
+    if (node.nodeType !== Node.TEXT_NODE || !currentInput.contains(node)) {
+      return;
+    }
+
+    const fullText = node.textContent ?? '';
+    const span = resolveEmojiTriggerSpan(fullText, range.startOffset);
+
+    if (span === null) {
+      return;
+    }
+
+    this.Blok.YjsManager.stopCapturing();
+
+    const before = fullText.slice(0, span.start);
+    const after = fullText.slice(span.end);
+
+    node.textContent = `${before}${native}${after}`;
+
+    const caretRange = document.createRange();
+
+    caretRange.setStart(node, before.length + native.length);
+    caretRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(caretRange);
+
+    // The DOM was mutated directly (not via a Tool re-render), so notify the
+    // block to flush the change to Yjs — see the CRDT sync contract.
+    currentBlock.dispatchChange();
+
+    this.Blok.YjsManager.stopCapturing();
+
+    this.close();
   }
 
   /**
@@ -416,8 +530,6 @@ export class EmojiTrigger extends BlockEventComposer {
    * `span.start` that differs from the active one means the caret jumped to
    * a different ":" in the same block (e.g. navigated there and typed), so
    * the anchor is recomputed and the picker re-opened for that new span.
-   * Picking an emoji only closes the menu for now — inserting it at the
-   * trigger span is Task 7.
    * `this.opened` only flips true once the FIRST open() resolves, so every
    * keystroke that lands before then also sees `isFreshTrigger === true`.
    * Without a guard each one would call `picker.open()` again — clearing
@@ -480,9 +592,10 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     const picker = new EmojiPicker({
-      // Task 7 replaces both with real commit(); for now, picking or
-      // removing just closes the menu, same as Task 6's flat list did.
-      onSelect: () => this.close(),
+      // The picker resolves the skin tone itself (getSkinnedNative) before
+      // calling back, so `native` here is already final — insertNative(),
+      // not commit(), which would apply the tone a second time.
+      onSelect: (native) => this.insertNative(native),
       onRemove: () => this.close(),
       i18n: { t: (key: string): string => this.Blok.I18n.t(key) },
       locale: this.Blok.I18n.getLocale(),

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiTrigger } from '../../../../../../src/components/modules/blockEvents/composers/emojiTrigger';
 import { isInlineEmojiEnabled } from '../../../../../../src/components/utils/emoji/inline-emoji-config';
+import type { Block } from '../../../../../../src/components/block';
 import { createBlock, createBlokModules, setCaret } from './emojiTrigger.fixture';
 
 /**
@@ -499,7 +500,7 @@ describe('EmojiTrigger — grid highlight navigation', () => {
     });
   }
 
-  async function openWithTwoResults(): Promise<{ trigger: EmojiTrigger; buttons: HTMLButtonElement[] }> {
+  async function openWithTwoResults(): Promise<{ trigger: EmojiTrigger; buttons: HTMLButtonElement[]; block: Block }> {
     const block = createBlock(':i');
 
     document.body.appendChild(block.holder);
@@ -513,7 +514,7 @@ describe('EmojiTrigger — grid highlight navigation', () => {
 
     await trigger.handleInput(createInputEvent({ data: 'i' }));
 
-    return { trigger, buttons };
+    return { trigger, buttons, block };
   }
 
   const press = (trigger: EmojiTrigger, key: string): boolean =>
@@ -602,13 +603,19 @@ describe('EmojiTrigger — grid highlight navigation', () => {
     expect(press(trigger, 'ArrowRight')).toBe(true);
   });
 
-  it('Enter and Tab stay claimed (no-op grid-wise) — insertion is a later task', async () => {
-    const { trigger } = await openWithTwoResults();
+  it('Enter inserts the highlighted emoji and closes the menu', async () => {
+    const { trigger, block } = await openWithTwoResults();
 
     expect(press(trigger, 'Enter')).toBe(true);
+    expect(block.currentInput?.textContent).toBe('🔥');
+    expect(trigger.opened).toBe(false);
+  });
+
+  it('Tab inserts the highlighted emoji and closes the menu', async () => {
+    const { trigger, block } = await openWithTwoResults();
+
     expect(press(trigger, 'Tab')).toBe(true);
-    // Neither key moved the highlight or closed the menu.
-    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
-    expect(trigger.opened).toBe(true);
+    expect(block.currentInput?.textContent).toBe('🔥');
+    expect(trigger.opened).toBe(false);
   });
 });

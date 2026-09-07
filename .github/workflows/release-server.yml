@@ -53,14 +53,30 @@ jobs:
           echo "RELEASE_SHA=$(git rev-parse "$RELEASE_TAG^{commit}")" >> "$GITHUB_ENV"
 
       # Checked here rather than at the mirror push, which runs after nuget.org
-      # has already taken the version: a missing token there would leave a
-      # public release that never reaches the dodopizza feed.
-      - name: Require the dodopizza mirror token
+      # has already taken the version: a published version can never be
+      # withdrawn, so a token that fails there leaves a public release that
+      # never reaches the dodopizza feed.
+      #
+      # The probe asks the REST package list, not either NuGet endpoint. Measured
+      # against the live registry: the feed index answers 200 to any
+      # syntactically valid credentials, and a package path answers 404 for an
+      # id the org does not hold before it ever checks the token — which is
+      # what blok.server is until the first mirror lands. Neither can tell a
+      # live token from a revoked one; this endpoint answers 401 for one.
+      - name: Require a working dodopizza mirror token
         env:
           DODO_PACKAGES_TOKEN: ${{ secrets.BLOK_GITHUB_TOKEN }}
         run: |
           if [ -z "$DODO_PACKAGES_TOKEN" ]; then
             echo "::error::BLOK_GITHUB_TOKEN is unset, so the release could not reach the dodopizza feed"
+            exit 1
+          fi
+
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $DODO_PACKAGES_TOKEN" \
+            "https://api.github.com/orgs/dodopizza/packages?package_type=nuget&per_page=1")"
+          if [ "$status" != "200" ]; then
+            echo "::error::BLOK_GITHUB_TOKEN cannot read dodopizza's NuGet packages (HTTP $status), so the release could not reach that feed"
             exit 1
           fi
 
@@ -293,6 +309,7 @@ jobs:
 
       - name: Verify published server delivery
         env:
+          DODO_PACKAGES_TOKEN: ${{ secrets.BLOK_GITHUB_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: |
           version_path="${BLOK_SERVER_VERSION,,}"
@@ -317,6 +334,13 @@ jobs:
               curl --fail --silent \
                 "https://api.nuget.org/v3-flatcontainer/$package/$version_path/$package.$version_path.nupkg" \
                 >/dev/null || ready=false
+              # The registry answers 302 to the blob store for a version it
+              # serves and 404 for one it does not, so --fail without
+              # --location is the whole check.
+              curl --fail --silent --output /dev/null \
+                --header "Authorization: Bearer $DODO_PACKAGES_TOKEN" \
+                "https://nuget.pkg.github.com/dodopizza/download/$package/$version_path/$package.$version_path.nupkg" \
+                || ready=false
             done
 
             assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')" || ready=false

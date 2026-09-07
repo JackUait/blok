@@ -21,8 +21,15 @@ const LOGIN_ACTION = 'docker/login-action@dbcb813823bdd20940b903addbd77955156967
 const SETUP_NODE_ACTION_SHA = 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020';
 const PUBLIC_PUBLISH_STEP = 'Publish NuGet packages';
 const MIRROR_STEP = 'Mirror NuGet packages to the dodopizza feed';
-const PREFLIGHT_STEP = 'Require the dodopizza mirror token';
+const PREFLIGHT_STEP = 'Require a working dodopizza mirror token';
 const DODO_NUGET_FEED = 'https://nuget.pkg.github.com/dodopizza/index.json';
+const DODO_NUGET_DOWNLOAD = 'https://nuget.pkg.github.com/dodopizza/download';
+// Measured against the live registry: the feed index answers 200 to ANY
+// syntactically valid credentials, and a package path the org does not hold
+// answers 404 before it ever checks the token. Neither can tell a live token
+// from a revoked one, so the preflight probes the REST package list instead.
+const DODO_PACKAGES_API =
+  'https://api.github.com/orgs/dodopizza/packages?package_type=nuget&per_page=1';
 const SERVER_ARCHIVES = [
   'blok-server_darwin_amd64.tar.gz',
   'blok-server_darwin_arm64.tar.gz',
@@ -420,8 +427,9 @@ describe('server release wiring', () => {
       DODO_PACKAGES_TOKEN: '${{ secrets.BLOK_GITHUB_TOKEN }}',
     });
     expect(mirror?.run).not.toContain('NUGET_API_KEY');
-    // Twice and no more: the preflight guard, and this push.
-    expect(source.match(/secrets\.BLOK_GITHUB_TOKEN/g)).toHaveLength(2);
+    // Three times and no more: the preflight probe, this push, and the
+    // delivery check that proves the mirrored version is readable.
+    expect(source.match(/secrets\.BLOK_GITHUB_TOKEN/g)).toHaveLength(3);
   });
 
   it('refuses to start a release when the dodopizza mirror token is missing', () => {
@@ -443,6 +451,47 @@ describe('server release wiring', () => {
     });
     expect(preflight?.run).toContain('-z "$DODO_PACKAGES_TOKEN"');
     expect(preflight?.run).toContain('exit 1');
+  });
+
+  it('proves the mirror token still authenticates before nuget.org takes the version', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+    const preflight = steps.find((step) => step.name === PREFLIGHT_STEP)?.run ?? '';
+
+    // A non-empty check passes for an expired, revoked or under-scoped token,
+    // and each of those fails at the mirror push — after nuget.org has taken a
+    // version that can never be withdrawn. Only a request the registry has to
+    // authenticate rules them out while the release can still be abandoned.
+    expect(preflight).toContain('Authorization: Bearer $DODO_PACKAGES_TOKEN');
+    expect(preflight).toContain(DODO_PACKAGES_API);
+
+    // Neither NuGet endpoint can carry this check. The feed index answers 200
+    // to a token the registry rejects everywhere else, and a package path
+    // answers 404 for an unknown id whether or not the token is live — which
+    // is exactly what blok.server is until the first mirror lands.
+    expect(preflight).not.toContain(DODO_NUGET_FEED);
+    expect(preflight).not.toContain(DODO_NUGET_DOWNLOAD);
+
+    // Only a 200 says the token is live AND still reaches dodopizza's packages.
+    expect(preflight).toContain('"$status" != "200"');
+    expect(preflight).toContain('exit 1');
+  });
+
+  it('waits for both mirrored NuGets to be readable from the dodopizza feed', () => {
+    const workflow = parse(read(RELEASE_WORKFLOW)) as Workflow;
+    const steps = workflow.jobs['release-server']?.steps ?? [];
+    const verify = steps.find((step) => step.name === 'Verify published server delivery');
+
+    // The mirror is the one destination the preflight exists to protect, and it
+    // was the only one delivery verification never looked at: a push that the
+    // registry accepted but never served would have shipped unnoticed.
+    expect(verify?.run).toContain(
+      `${DODO_NUGET_DOWNLOAD}/$package/$version_path/$package.$version_path.nupkg`,
+    );
+    expect(verify?.env).toEqual({
+      DODO_PACKAGES_TOKEN: '${{ secrets.BLOK_GITHUB_TOKEN }}',
+      GH_TOKEN: '${{ github.token }}',
+    });
   });
 
   it('holds GHCR credentials only for the image push', () => {

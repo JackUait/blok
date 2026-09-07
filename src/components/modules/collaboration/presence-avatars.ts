@@ -1,4 +1,5 @@
 import { DATA_ATTR } from '../../constants/data-attributes';
+import { onHover } from '../../utils/tooltip';
 
 import { measureLine } from './caret-position';
 import { PRESENCE_COLOR_PROPERTY, initialsOf } from './presence';
@@ -80,10 +81,14 @@ const DEFAULT_MAX_FACES = 3;
 const FALLBACK_LINE_CENTRE = 12;
 
 /**
- * One avatar disc: the peer's colour, the full name in a `title`, and either
- * their monogram or — for a peer who published no name — a space silhouette.
- * Attribute values are never parsed as markup, so a hostile name is safe in
- * both.
+ * One avatar disc: the peer's colour, their full name, and either their
+ * monogram or — for a peer who published no name — a space silhouette.
+ * Attribute values are never parsed as markup, so a hostile name is safe.
+ *
+ * The name reaches the eye through Blok's own tooltip and assistive tech
+ * through `aria-label`. Deliberately NOT `title`: the browser draws that one
+ * itself, half a second late and in the platform's own styling, so a document
+ * with Blok's chrome everywhere else grows one grey system bubble.
  *
  * `monogram` says where the initials go. The gutter face sits INSIDE a block
  * holder, and block copy sanitizes `holder.innerHTML` keeping every text node
@@ -107,7 +112,8 @@ export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text'
   }
 
   if (peer.name !== '') {
-    avatar.setAttribute('title', peer.name);
+    avatar.setAttribute('aria-label', peer.name);
+    onHover(avatar, peer.name, { placement: 'top' });
   }
 
   if (peer.name !== '' && glyph === null) {
@@ -120,6 +126,18 @@ export const buildAvatar = (peer: AvatarIdentity, attr: string, monogram: 'text'
 
   return avatar;
 };
+
+/**
+ * What one strip draws, so a pass that would draw the same thing leaves it be.
+ * @param group - the peers in one block, in arrival order
+ * @param maxFaces - how many of them get a face before the rest are counted
+ */
+const stripSignature = (group: AvatarPeer[], maxFaces: number): string =>
+  group
+    .slice(0, maxFaces)
+    .map((peer) => `${peer.clientId}:${peer.color}:${peer.glyph ?? ''}:${peer.name}`)
+    .concat(group.length > maxFaces ? [`+${group.length - maxFaces}`] : [])
+    .join('\u0000');
 
 /**
  * Parks a peer's face in the gutter beside the block they are working in, and
@@ -141,6 +159,17 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
 
   /** The ledger, keyed by block id — a gutter belongs to a block, not a peer. */
   const strips = new Map<string, HTMLElement>();
+
+  /**
+   * What each strip currently shows, so an unchanged one keeps its faces.
+   *
+   * A peer republishes on every keystroke, so without this every strip in the
+   * document would be emptied and refilled ten times a second. The faces would
+   * not look different, but each one is a fresh element: a tooltip opened by
+   * hovering a face would be left pointing at a node that is no longer in the
+   * document, and the bubble would hang there until something else hid it.
+   */
+  const shown = new WeakMap<HTMLElement, string>();
 
   const buildFace = (peer: AvatarPeer): HTMLElement => buildAvatar(peer, FACE_ATTR, 'attribute');
 
@@ -251,16 +280,21 @@ export const createAvatarLayer = (options: AvatarLayerOptions): AvatarLayer => {
         }
 
         const strip = stripFor(blockId, holder);
-        const shown = group.slice(0, maxFaces).map(buildFace);
+        const signature = stripSignature(group, maxFaces);
 
-        if (group.length > maxFaces) {
-          shown.push(buildOverflow(group.length - maxFaces));
+        if (shown.get(strip) !== signature) {
+          const faces = group.slice(0, maxFaces).map(buildFace);
+
+          if (group.length > maxFaces) {
+            faces.push(buildOverflow(group.length - maxFaces));
+          }
+
+          // Replaced wholesale rather than diffed: a strip holds at most a
+          // handful of spans, and the identity that must survive a pass is the
+          // STRIP's (so the sweep below can tell it apart), not each face's.
+          strip.replaceChildren(...faces);
+          shown.set(strip, signature);
         }
-
-        // Replaced wholesale rather than diffed: a strip holds at most a
-        // handful of spans, and the identity that must survive a pass is the
-        // STRIP's (so the sweep below can tell it apart), not each face's.
-        strip.replaceChildren(...shown);
 
         // Twice the line centre, with the faces centred inside: that lands them
         // ON the line without a transform, which the hover slide already owns.

@@ -8087,6 +8087,32 @@
   user-select: none;
 }
 
+[data-blok-presence-caret-label] {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--blok-presence-color);
+  color: var(--blok-text-on-dark);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(calc(-100% - 4px));
+  transition: opacity 140ms ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-blok-presence-caret-label]::after {
+  content: attr(data-blok-presence-caret-label);
+}
+
+[data-blok-presence-caret-shown] {
+  opacity: 1;
+}
+
 [data-blok-presence-caret-idle] {
   animation: blok-presence-caret-pulse var(--blok-presence-pulse) ease-in-out infinite;
 }
@@ -8096,6 +8122,10 @@
 }
 
 [@media (prefers-reduced-motion: reduce)] [data-blok-presence-gutter] {
+  transition: none;
+}
+
+[@media (prefers-reduced-motion: reduce)] [data-blok-presence-caret-label] {
   transition: none;
 }
 

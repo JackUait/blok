@@ -1,7 +1,7 @@
 import { getCaretOffset } from '../../../utils/caret';
 import type { ProcessedEmoji } from '../../../utils/emoji/emoji-data';
 import { loadEmojiData } from '../../../utils/emoji/emoji-data';
-import { searchEmojisRanked } from '../../../utils/emoji/emoji-search-ranked';
+import { isExactShortcodeMatch, searchEmojisRanked } from '../../../utils/emoji/emoji-search-ranked';
 import type { EmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
 import { resolveEmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
 import { isTextLikeBlock } from '../utils/text-like-block';
@@ -189,6 +189,31 @@ export class EmojiTrigger extends BlockEventComposer {
 
     const text = input.textContent ?? '';
     const caretOffset = getCaretOffset(input);
+
+    // Claims this keystroke as the latest one BEFORE the first await, so a
+    // slower-resolving earlier keystroke can recognize, once its own await
+    // finally settles, that a later one has already superseded it — see
+    // renderMenu for why this matters.
+    const token = ++this.renderToken;
+
+    // The browser already wrote the new ":" into the DOM before this input
+    // event fired (same as every other character), so a CLOSING colon reads
+    // here as an ordinary keystroke on a span that already existed one
+    // character ago. Handle that case before resolving a span on the new
+    // (now colon-terminated) text — resolveEmojiTriggerSpan would reject a
+    // ":" that is itself preceded by non-whitespace, so the generic path
+    // below can never see this as an open trigger on its own.
+    if (event.data === ':') {
+      const handledAsClosingColon = await this.commitOnClosingColon(text, caretOffset, token);
+
+      // A stale call (superseded by a later keystroke) reports handled=true
+      // without touching `opened` — report whatever it currently is rather
+      // than assuming the menu closed.
+      if (handledAsClosingColon) {
+        return this.opened;
+      }
+    }
+
     const span = resolveEmojiTriggerSpan(text, caretOffset);
 
     if (span === null) {
@@ -196,12 +221,6 @@ export class EmojiTrigger extends BlockEventComposer {
 
       return false;
     }
-
-    // Claims this keystroke as the latest one BEFORE the first await, so a
-    // slower-resolving earlier keystroke can recognize, once its own await
-    // finally settles, that a later one has already superseded it — see
-    // renderMenu for why this matters.
-    const token = ++this.renderToken;
 
     // Warm the dataset once per composer lifetime — repeated warm-up calls on
     // every keystroke would be wasted work once the real load is in flight.
@@ -320,8 +339,17 @@ export class EmojiTrigger extends BlockEventComposer {
    * merge forward into it — Yjs's captureTimeout otherwise groups either
    * side into the same undo entry (see UndoHistory.stopCapturing).
    * @param native - the exact character(s) to insert
+   * @param swallowClosingColon - true for the closing-colon commit: the DOM
+   * already holds a trailing ":" one before the caret (the browser inserted
+   * it before this event fired), so the span is resolved as it looked BEFORE
+   * that colon and then extended by one to consume it. Resolving in this
+   * node-local coordinate system (rather than the caller re-deriving offsets
+   * from the block's plain text) is what keeps this correct when the block
+   * has inline markup before the span — `range.startOffset` and a
+   * block-plain-text offset only agree when the span's own text node starts
+   * at the block's start.
    */
-  private insertNative(native: string): void {
+  private insertNative(native: string, swallowClosingColon = false): void {
     const currentBlock = this.Blok.BlockManager.currentBlock;
     const currentInput = currentBlock?.currentInput;
 
@@ -343,7 +371,11 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     const fullText = node.textContent ?? '';
-    const span = resolveEmojiTriggerSpan(fullText, range.startOffset);
+    const resolveOffset = swallowClosingColon ? range.startOffset - 1 : range.startOffset;
+    const rawSpan = resolveEmojiTriggerSpan(fullText, resolveOffset);
+    const span: EmojiTriggerSpan | null = rawSpan === null || !swallowClosingColon
+      ? rawSpan
+      : { ...rawSpan, end: rawSpan.end + 1 };
 
     if (span === null) {
       return;
@@ -370,6 +402,67 @@ export class EmojiTrigger extends BlockEventComposer {
     this.Blok.YjsManager.stopCapturing();
 
     this.close();
+  }
+
+  /**
+   * Called from handleInput when the just-typed character is ":". Checks
+   * whether the text one keystroke ago (i.e. ending right before this new
+   * colon) already held a valid ":query" span — that makes this new colon a
+   * CLOSING one. When it is: an exact shortcode match commits immediately,
+   * swallowing the new colon; anything else just closes the menu, leaving
+   * the literal text (including the new colon) untouched. Returns false when
+   * no such span existed, so handleInput falls through to treating the colon
+   * as an ordinary character — which is what keeps prose like "10:30" or a
+   * fresh "note: " unaffected.
+   * @param text - live plain text of the input, already including the new ":"
+   * @param caretOffset - caret position right after the new ":"
+   * @param token - this call's render generation, from handleInput's claim —
+   * see renderMenu for why a stale call must not act on stale state.
+   */
+  private async commitOnClosingColon(text: string, caretOffset: number, token: number): Promise<boolean> {
+    if (caretOffset === 0 || text.charAt(caretOffset - 1) !== ':') {
+      return false;
+    }
+
+    const priorSpan = resolveEmojiTriggerSpan(text, caretOffset - 1);
+
+    if (priorSpan === null) {
+      return false;
+    }
+
+    const emojis = await loadEmojiData();
+
+    if (token !== this.renderToken) {
+      return true;
+    }
+
+    this.allEmojis = emojis;
+
+    const lowerQuery = priorSpan.query.toLowerCase();
+    // The id IS the shortcode, so an id match is the primary-key lookup and
+    // always wins — a query like "fire" also happens to be an exact KEYWORD
+    // of "firefighter", "candle" and "name_badge" in the real dataset, and
+    // committing one of those over the "fire" emoji itself would be a guess.
+    const idMatch = emojis.find(emoji => emoji.id.toLowerCase() === lowerQuery);
+
+    // No emoji's id is the literal query (e.g. "thumbsup" isn't an id — it is
+    // a keyword of "+1"). RANK_EXACT_ID ranks that keyword hit the same as an
+    // id hit (see isExactShortcodeMatch), so fall back to it here — but only
+    // commit when it is unique, for the same reason as above.
+    const keywordMatches = idMatch === undefined
+      ? emojis.filter(emoji => isExactShortcodeMatch(emoji, priorSpan.query))
+      : [];
+    const [onlyKeywordMatch] = keywordMatches;
+
+    const match = idMatch ?? (keywordMatches.length === 1 ? onlyKeywordMatch : undefined);
+
+    if (match !== undefined) {
+      this.insertNative(skinnedNative(match), true);
+    } else {
+      this.close();
+    }
+
+    return true;
   }
 
   /**

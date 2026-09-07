@@ -44,6 +44,21 @@ function rankOne(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleD
 }
 
 /**
+ * True when `query` is an exact shortcode match for `emoji` — the same
+ * predicate searchEmojisRanked's top tier (RANK_EXACT_ID) uses, id OR
+ * keyword OR localized name/keyword. Exported so a caller that needs a yes/no
+ * answer (e.g. committing on a closing ":") shares this single rule instead
+ * of re-deriving its own, narrower copy of it (which would silently drop the
+ * keyword case — see rankOne).
+ * @param emoji - candidate emoji
+ * @param query - the text typed after ":", already without whitespace
+ * @param localeData - translated names/keywords, when loaded
+ */
+export function isExactShortcodeMatch(emoji: ProcessedEmoji, query: string, localeData?: EmojiLocaleData | null): boolean {
+  return rankOne(emoji, query.toLowerCase(), localeData) === RANK_EXACT_ID;
+}
+
+/**
  * Emoji matching the query, best first, capped.
  *
  * Ties keep the dataset's own order so the list does not reshuffle between

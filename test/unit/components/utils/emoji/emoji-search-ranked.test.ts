@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { searchEmojisRanked } from '../../../../../src/components/utils/emoji/emoji-search-ranked';
+import { isExactShortcodeMatch, searchEmojisRanked } from '../../../../../src/components/utils/emoji/emoji-search-ranked';
 import type { ProcessedEmoji } from '../../../../../src/components/utils/emoji/emoji-data';
 
 function emoji(id: string, name: string, keywords: string[], native: string): ProcessedEmoji {
@@ -73,5 +73,33 @@ describe('searchEmojisRanked', () => {
     const natives = searchEmojisRanked(data, 'огонь', locale).map(e => e.native);
 
     expect(natives[0]).toBe('🔥');
+  });
+});
+
+describe('isExactShortcodeMatch', () => {
+  const fire = DATA.find(e => e.id === 'fire');
+  const thumbsUp = DATA.find(e => e.id === '+1');
+  const fireEngine = DATA.find(e => e.id === 'fire_engine');
+
+  if (fire === undefined || thumbsUp === undefined || fireEngine === undefined) {
+    throw new Error('fixture emoji missing');
+  }
+
+  it('is true for an exact id match', () => {
+    expect(isExactShortcodeMatch(fire, 'fire')).toBe(true);
+  });
+
+  // Pins the load-bearing rule: "thumbsup" is a keyword of "+1", not its id
+  // — this is what makes ":thumbsup:" commit on the closing colon.
+  it('is true for an exact keyword match, even though the id differs', () => {
+    expect(isExactShortcodeMatch(thumbsUp, 'thumbsup')).toBe(true);
+  });
+
+  it('is false for a prefix-only match', () => {
+    expect(isExactShortcodeMatch(fire, 'fir')).toBe(false);
+  });
+
+  it('is false when the query matches neither this emoji\'s id nor its keywords', () => {
+    expect(isExactShortcodeMatch(fireEngine, 'fire')).toBe(false);
   });
 });

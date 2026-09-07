@@ -140,9 +140,8 @@ export const buildImporterIndex = ({ testFiles, sourceFiles, readFile }) => {
 
   // A test names the barrel; the files behind it are what actually run. CI
   // skipped two changed popover files as untested because their only suite
-  // imports `.../popover-item` and the leaves hang off that index. Barrels only:
-  // `blok.ts` imports the whole editor, so forwarding every source-to-source
-  // edge would pair one central file with the entire suite.
+  // imports `.../popover-item` and the leaves hang off that index. Barrel chains
+  // are followed to the end because an index only re-exports.
   for (const barrel of [...index.keys()].filter((path) => BARREL_PATTERN.test(path))) {
     const tests = [...index.get(barrel)];
     const seen = new Set([barrel]);
@@ -162,6 +161,22 @@ export const buildImporterIndex = ({ testFiles, sourceFiles, readFile }) => {
         if (BARREL_PATTERN.test(dep)) {
           stack.push(dep);
         }
+      }
+    }
+  }
+
+  // Loading a module loads what it imports, so its tests protect its direct
+  // dependencies too. The dialog proved the cost of stopping short: all 25 of its
+  // already-dead mutants died only in a suite one hop further out, and every one
+  // of them was reported as a survivor.
+  //
+  // One hop, not the closure. Measured over this repo, one hop takes the widest
+  // source to 309 test files with a median of 17 and doubles the run's test
+  // entries; the closure would pair `blok.ts` with the entire suite.
+  for (const [source, tests] of [...index].map(([key, value]) => [key, [...value]])) {
+    for (const dep of relativeImportsOf(source, sources, readFile)) {
+      for (const test of tests) {
+        add(dep, test);
       }
     }
   }

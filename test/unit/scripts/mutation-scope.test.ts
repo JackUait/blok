@@ -188,76 +188,38 @@ describe('mutation-scope', () => {
       ]);
     });
 
-    // Only barrels forward. `blok.ts` imports the whole editor, so following
-    // every source-to-source edge would pair one central file with the entire
-    // suite and make a run cost more than a full sweep.
-    it('does not forward a plain module\u2019s tests to what it imports', () => {
+    // A test that loads a module also loads what that module imports, so one hop
+    // forwards. Measured: the dialog's 25 already-dead mutants were ALL killed by
+    // a suite two hops away, and every one of them read as a survivor.
+    it('forwards a module\u2019s tests one hop to what it imports', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/utils/notifier-draw.test.ts'],
+        sourceFiles: ['src/utils/notifier/draw.ts', 'src/utils/modal-dialog.ts'],
+        readFile: read({
+          'test/unit/utils/notifier-draw.test.ts': "import { alert } from '../../../src/utils/notifier/draw';",
+          'src/utils/notifier/draw.ts': "import { openDialog } from '../modal-dialog';",
+        }),
+      });
+
+      expect(index.get('src/utils/modal-dialog.ts')).toEqual(['test/unit/utils/notifier-draw.test.ts']);
+    });
+
+    // One hop, not the whole graph. `blok.ts` imports the entire editor, so a
+    // full closure would pair one central file with the entire suite; measured at
+    // one hop the widest source carries 309 test files and the median is 17.
+    it('stops after one hop for a plain module', () => {
       const index = buildImporterIndex({
         testFiles: ['test/unit/blok.test.ts'],
-        sourceFiles: ['src/blok.ts', 'src/components/modules/caret.ts'],
+        sourceFiles: ['src/blok.ts', 'src/modules/caret.ts', 'src/utils/deep.ts'],
         readFile: read({
           'test/unit/blok.test.ts': "import Blok from '@bloklabs/core';",
-          'src/blok.ts': "import { Caret } from './components/modules/caret';",
+          'src/blok.ts': "import { Caret } from './modules/caret';",
+          'src/modules/caret.ts': "import { deep } from '../utils/deep';",
         }),
       });
 
-      expect(index.has('src/components/modules/caret.ts')).toBe(false);
-    });
-
-    // A type-only import is erased, so the module is never loaded and no mutant
-    // in it can die in that test. Four of the i18n module's seven listed
-    // importers were type-only and mocked it; counting them made 73 already-dead
-    // mutants look like a gap the run could close.
-    it('ignores a test that imports the source only as a type', () => {
-      const index = buildImporterIndex({
-        testFiles: ['test/unit/view/sanitize.test.ts'],
-        sourceFiles: ['src/view/sanitize.ts'],
-        readFile: read({
-          'test/unit/view/sanitize.test.ts': "import type { Rule } from '../../../src/view/sanitize';",
-        }),
-      });
-
-      expect(index.has('src/view/sanitize.ts')).toBe(false);
-    });
-
-    it('ignores a type-only import spread over several lines', () => {
-      const index = buildImporterIndex({
-        testFiles: ['test/unit/view/a.test.ts'],
-        sourceFiles: ['src/view/sanitize.ts'],
-        readFile: read({
-          'test/unit/view/a.test.ts': "import type {\n  Rule,\n  Config,\n} from '../../../src/view/sanitize';",
-        }),
-      });
-
-      expect(index.has('src/view/sanitize.ts')).toBe(false);
-    });
-
-    it('keeps a test that imports the same source for a value as well', () => {
-      const index = buildImporterIndex({
-        testFiles: ['test/unit/view/a.test.ts'],
-        sourceFiles: ['src/view/sanitize.ts'],
-        readFile: read({
-          'test/unit/view/a.test.ts':
-            "import type { Rule } from '../../../src/view/sanitize';\nimport { clean } from '../../../src/view/sanitize';",
-        }),
-      });
-
-      expect(index.get('src/view/sanitize.ts')).toEqual(['test/unit/view/a.test.ts']);
-    });
-
-    // TypeScript erases `import { type Foo }` only when every binding is
-    // type-only, so treating it as a value import is the safe direction: at
-    // worst the run loads a suite that kills nothing.
-    it('keeps an inline type modifier as a value import', () => {
-      const index = buildImporterIndex({
-        testFiles: ['test/unit/view/a.test.ts'],
-        sourceFiles: ['src/view/sanitize.ts'],
-        readFile: read({
-          'test/unit/view/a.test.ts': "import { type Rule, clean } from '../../../src/view/sanitize';",
-        }),
-      });
-
-      expect(index.get('src/view/sanitize.ts')).toEqual(['test/unit/view/a.test.ts']);
+      expect(index.get('src/modules/caret.ts')).toEqual(['test/unit/blok.test.ts']);
+      expect(index.has('src/utils/deep.ts')).toBe(false);
     });
 
     it('leaves a source no test imports out of the index', () => {

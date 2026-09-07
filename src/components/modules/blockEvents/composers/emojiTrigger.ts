@@ -113,6 +113,15 @@ export class EmojiTrigger extends BlockEventComposer {
   private currentResults: ProcessedEmoji[] = [];
   /** Index into currentResults the keyboard highlight sits on, or -1 when there is nothing to highlight. */
   private highlightedIndex = -1;
+  /**
+   * Bumped once per renderMenu call. A call whose token no longer matches
+   * this field after an await is stale — a later keystroke has already
+   * superseded it, and applying its query would clobber the fresher one.
+   * See renderMenu.
+   */
+  private renderToken = 0;
+  /** The in-flight picker.open() for the current span, shared by every renderMenu call still waiting on it — see renderMenu. */
+  private pendingOpen: Promise<void> | null = null;
 
   /**
    * Handle an input event: resolve the ":query" span at the caret and open,
@@ -147,6 +156,12 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
+    // Claims this keystroke as the latest one BEFORE the first await, so a
+    // slower-resolving earlier keystroke can recognize, once its own await
+    // finally settles, that a later one has already superseded it — see
+    // renderMenu for why this matters.
+    const token = ++this.renderToken;
+
     // Warm the dataset once per composer lifetime — repeated warm-up calls on
     // every keystroke would be wasted work once the real load is in flight.
     if (!this.hasPrefetched) {
@@ -155,6 +170,11 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     const emojis = await loadEmojiData();
+
+    if (token !== this.renderToken) {
+      return this.opened;
+    }
+
     const results = searchEmojisRanked(emojis, span.query);
 
     if (results.length === 0) {
@@ -164,7 +184,12 @@ export class EmojiTrigger extends BlockEventComposer {
     }
 
     this.currentResults = results;
-    await this.renderMenu(input, span);
+    await this.renderMenu(input, span, token);
+
+    if (token !== this.renderToken) {
+      return this.opened;
+    }
+
     // Every keystroke re-ranks the results, so the highlight goes back to
     // the top one — matching what Enter should commit without ever arrowing.
     this.setHighlightedIndex(0);
@@ -367,10 +392,21 @@ export class EmojiTrigger extends BlockEventComposer {
    * the anchor is recomputed and the picker re-opened for that new span.
    * Picking an emoji only closes the menu for now — inserting it at the
    * trigger span is Task 7.
+   * `this.opened` only flips true once the FIRST open() resolves, so every
+   * keystroke that lands before then also sees `isFreshTrigger === true`.
+   * Without a guard each one would call `picker.open()` again — clearing
+   * the query and re-rendering the full grid — and, since real async work
+   * offers no guarantee that these resolve in the order they were issued,
+   * whichever one settles last can apply a stale query over a fresher one.
+   * `pendingOpen` de-duplicates the concurrent open() calls down to one,
+   * and `token` (claimed by the caller, handleInput, before its own first
+   * await) makes every call but the most recently issued one a no-op once
+   * its await settles, so the last-typed query always wins.
    * @param input - the block's current contentEditable
    * @param span - the resolved ":query" span
+   * @param token - this call's render generation, from handleInput's `renderToken` claim
    */
-  private async renderMenu(input: HTMLElement, span: EmojiTriggerSpan): Promise<void> {
+  private async renderMenu(input: HTMLElement, span: EmojiTriggerSpan, token: number): Promise<void> {
     const isFreshTrigger = !this.opened || span.start !== this.activeSpanStart;
 
     if (isFreshTrigger) {
@@ -387,11 +423,21 @@ export class EmojiTrigger extends BlockEventComposer {
     const picker = this.ensurePicker();
 
     if (isFreshTrigger) {
-      await picker.open(input, anchorRect);
+      this.pendingOpen ??= picker.open(input, anchorRect).finally(() => {
+        this.pendingOpen = null;
+      });
+      await this.pendingOpen;
     }
 
-    // Mirrors the typed query into the picker's own search field on every
-    // keystroke — see the plan's "decision already made" on this.
+    // A later keystroke already superseded this call while the picker was
+    // opening — let its own render stand instead of overwriting it here.
+    if (token !== this.renderToken) {
+      return;
+    }
+
+    // Drives the picker's filtering with the typed query — there is no
+    // visible search field to mirror it into in inline mode (see the
+    // EmojiPicker `inline` option).
     picker.setQuery(span.query);
 
     if (!this.opened) {

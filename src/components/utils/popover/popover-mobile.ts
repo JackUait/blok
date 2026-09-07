@@ -277,20 +277,23 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
    */
   protected override showNestedItems(item: PopoverItemDefault): void {
     /** Show nested items */
-    this.updateItemsAndHeader(item.children, item.title);
+    this.updateItemsAndHeader(item.children, item.title, item.isChildrenFlippable);
 
     this.history.push({
       title: item.title,
       items: item.children,
     });
+
+    item.onChildrenOpen();
   }
 
   /**
    * Removes rendered popover items and header and displays new ones
    * @param items - new popover items
    * @param title - new popover header text
+   * @param flippable - whether the page uses menu keyboard navigation
    */
-  private updateItemsAndHeader(items: PopoverItemParams[], title?: string ): void {
+  private updateItemsAndHeader(items: PopoverItemParams[], title?: string, flippable = true): void {
     /** Re-render header */
     if (this.header !== null && this.header !== undefined) {
       this.header.destroy();
@@ -347,8 +350,11 @@ export class PopoverMobile extends PopoverAbstract<PopoverMobileNodes> {
     // Re-activate the flipper over the freshly-rendered page so keyboard
     // navigation keeps working after the swap, and move focus to the first item.
     this.flipper.deactivate();
-    this.flipper.activate(this.flippableElements);
-    this.flipper.focusItem(0, { skipNextTab: true });
+
+    if (flippable) {
+      this.flipper.activate(this.flippableElements);
+      this.flipper.focusItem(0, { skipNextTab: true });
+    }
   }
 
   /**

@@ -24,15 +24,23 @@ describe('createCellColorPicker', () => {
     expect(bgSection).not.toBeNull();
   });
 
-  it('does not render tab buttons', () => {
+  it('renders one tab per section and shows only the selected panel', () => {
     const { element } = createCellColorPicker({
       i18n: mockI18n,
       onColorSelect: vi.fn(),
     });
 
-    const tabs = element.querySelectorAll('[data-blok-testid^="cell-color-tab-"]');
+    const tabs = Array.from(element.querySelectorAll('[data-blok-testid^="cell-color-tab-"]'));
+    const textSection = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-section-textColor"]');
+    const bgSection = element.querySelector<HTMLElement>('[data-blok-testid="cell-color-section-backgroundColor"]');
 
-    expect(tabs).toHaveLength(0);
+    expect(tabs.map(tab => tab.getAttribute('data-blok-testid'))).toStrictEqual([
+      'cell-color-tab-textColor',
+      'cell-color-tab-backgroundColor',
+    ]);
+    expect(tabs.map(tab => tab.getAttribute('aria-selected'))).toStrictEqual(['true', 'false']);
+    expect(textSection?.hidden).toBe(false);
+    expect(bgSection?.hidden).toBe(true);
   });
 
   it('renders all color swatches in each section including the default swatch', () => {

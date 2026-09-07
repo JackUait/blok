@@ -1353,6 +1353,11 @@ export class TableCellSelection {
             element: pickerElement,
           }],
           isFlippable: false,
+          onOpen: () => {
+            queueMicrotask(() => {
+              pickerElement.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+            });
+          },
         },
       });
     }

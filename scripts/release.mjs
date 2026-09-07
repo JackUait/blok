@@ -7,6 +7,39 @@ import { collectGprRewriteFiles, FAMILY, prepareManifestForGpr, rewriteSpecifier
 import { isReleaseVersion } from './release-version.mjs';
 
 /**
+ * Workflows a release tag starts on its own, after `yarn release` has already
+ * published npm. Their secrets are the ones nothing else would exercise first.
+ */
+export const RELEASE_TAG_WORKFLOWS = [
+  '.github/workflows/release-server.yml',
+  '.github/workflows/mirror.yml',
+];
+
+/**
+ * Secrets these workflows read that the repository does not hold.
+ *
+ * Actions mints GITHUB_TOKEN per run, so it is never a repository secret and
+ * asking for it would fail every release.
+ *
+ * @param {object} opts
+ * @param {string[]} opts.workflowSources - Raw workflow YAML
+ * @param {string[]} opts.existingSecrets - Secret names the repository holds
+ * @returns {string[]} Missing names, deduplicated and sorted
+ */
+export function missingWorkflowSecrets({ workflowSources, existingSecrets }) {
+  const held = new Set(['GITHUB_TOKEN', ...existingSecrets]);
+  const referenced = new Set();
+
+  for (const source of workflowSources) {
+    for (const [, name] of source.matchAll(/secrets\.([A-Za-z_][A-Za-z0-9_]*)/g)) {
+      referenced.add(name);
+    }
+  }
+
+  return [...referenced].filter((name) => !held.has(name)).sort();
+}
+
+/**
  * Build the `npm publish` command that publishes a pre-packed tarball.
  *
  * @param {object} opts
@@ -200,6 +233,23 @@ if (isDirectRun) {
     runCapture('npm whoami');
   } catch {
     console.error('Not logged in to npm. Set BLOK_NPM_TOKEN in .env or run `npm login` first.');
+    process.exit(1);
+  }
+
+  // The tag pushed below starts these workflows unattended, long after npm has
+  // gone public. A secret nobody created only surfaces there, so the family is
+  // already irreversibly shipped when it does — that is how NUGET_API_KEY, and
+  // then BLOK_GITHUB_TOKEN, each reached a tag they could not serve.
+  const absentSecrets = missingWorkflowSecrets({
+    workflowSources: RELEASE_TAG_WORKFLOWS.map((file) => readFileSync(file, 'utf-8')),
+    existingSecrets: runCapture('gh secret list --json name --jq \'.[].name\'').split('\n').filter(Boolean),
+  });
+
+  if (absentSecrets.length > 0) {
+    console.error(
+      `The release tag runs workflows that read secrets this repository does not hold: ${absentSecrets.join(', ')}.\n` +
+      `Create each one with \`gh secret set <NAME>\` before releasing.`,
+    );
     process.exit(1);
   }
 

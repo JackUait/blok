@@ -502,11 +502,6 @@ describe('BlockSettings — mutation coverage', () => {
       // still gets highlighted.
       expect(blok.BlockSelection.selectBlock.mock.calls[0][0]).toBe(asBlock(current));
       expect(blok.BlockSelection.clearCache).toHaveBeenCalledTimes(1);
-
-      const identity = itemNamed(lastPopover().params.items, 'block-identity');
-
-      expect(identity).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
-      expect((identity.element as HTMLElement).textContent).toBe('paragraph');
     });
 
     it('anchors a multi-selection to the first selected block and skips re-highlighting', async () => {
@@ -521,28 +516,6 @@ describe('BlockSettings — mutation coverage', () => {
       expect(blok.BlockSelection.selectBlock).not.toHaveBeenCalled();
       expect(blok.BlockSelection.clearCache).not.toHaveBeenCalled();
       expect(lastPopover().params.positionContext).toBe(first.holder);
-
-      const identity = itemNamed(lastPopover().params.items, 'block-identity');
-
-      expect(identity).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
-      expect((identity.element as HTMLElement).textContent).toBe('blockSettings.blocksSelected:{"count":2}');
-    });
-
-    it('names the menu after the active toolbox entry of a single block', async () => {
-      const block = createBlockStub({
-        getActiveToolboxEntry: vi.fn(async () => ({ title: 'Heading 2', titleKey: 'tools.header.heading2' })),
-      });
-
-      blok.I18n.has.mockImplementation((key: string) => key === 'tools.header.heading2');
-      blok.I18n.t.mockImplementation((key: string) => `t(${key})`);
-      blok.BlockManager.currentBlock = asBlock(block);
-
-      await settings.open();
-
-      const identity = itemNamed(lastPopover().params.items, 'block-identity');
-
-      expect(identity).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
-      expect((identity.element as HTMLElement).textContent).toBe('t(tools.header.heading2)');
     });
 
     it('hands tunes a render context that resolves the popover element only after it exists', async () => {
@@ -900,15 +873,13 @@ describe('BlockSettings — mutation coverage', () => {
       ...overrides,
     });
 
-    it('orders a single-block menu: identity, tool tunes, convert-to, common tunes, duplicate, isolated delete, footer', async () => {
+    it('orders a single-block menu: tool tunes, convert-to, common tunes, duplicate, isolated delete, footer', async () => {
       getConvertibleToolsForBlockMock.mockResolvedValue([asTool(headerTool)]);
 
       const items = await openWith(tunedBlock());
 
       expect(itemKeys(items)).toStrictEqual([
-        'block-identity',
         'tool-tune',
-        'separator',
         'convert-to',
         'separator',
         'move-up',
@@ -933,9 +904,7 @@ describe('BlockSettings — mutation coverage', () => {
       // One selected block must not be mistaken for a multi-selection: the tool
       // tunes stay and the common tunes are not replaced by a bulk delete.
       expect(itemKeys(items)).toStrictEqual([
-        'block-identity',
         'tool-tune',
-        'separator',
         'convert-to',
         'separator',
         'move-up',
@@ -960,7 +929,6 @@ describe('BlockSettings — mutation coverage', () => {
       }));
 
       expect(itemKeys(items)).toStrictEqual([
-        'block-identity',
         'convert-to',
         'separator',
         'duplicate',
@@ -978,7 +946,7 @@ describe('BlockSettings — mutation coverage', () => {
         getTunes: vi.fn(() => ({ commonTunes: [{ name: 'delete', title: 'Delete' }] as MenuConfigItem[] })),
       }));
 
-      expect(itemKeys(items)).toStrictEqual(['block-identity', 'duplicate', 'separator', 'delete', 'separator', 'edit-metadata']);
+      expect(itemKeys(items)).toStrictEqual(['duplicate', 'separator', 'delete', 'separator', 'edit-metadata']);
     });
 
     it('omits duplicate when the block offers no delete to sit beside', async () => {
@@ -990,10 +958,10 @@ describe('BlockSettings — mutation coverage', () => {
         })),
       }));
 
-      expect(itemKeys(items)).toStrictEqual(['block-identity', 'move-up', 'separator', 'edit-metadata']);
+      expect(itemKeys(items)).toStrictEqual(['move-up', 'separator', 'edit-metadata']);
     });
 
-    it('shows only the block identity, copy-link tune and footer in read-only mode', async () => {
+    it('shows only the copy-link tune and footer in read-only mode', async () => {
       blok.ReadOnly.isEnabled = true;
       getConvertibleToolsForBlockMock.mockResolvedValue([asTool(headerTool)]);
 
@@ -1007,7 +975,7 @@ describe('BlockSettings — mutation coverage', () => {
         })),
       }));
 
-      expect(itemKeys(items)).toStrictEqual(['block-identity', 'copy-link', 'separator', 'edit-metadata']);
+      expect(itemKeys(items)).toStrictEqual(['copy-link', 'separator', 'edit-metadata']);
       expect(getConvertibleToolsForBlockMock).not.toHaveBeenCalled();
     });
 
@@ -1023,7 +991,6 @@ describe('BlockSettings — mutation coverage', () => {
       const items = lastPopover().params.items;
 
       expect(itemKeys(items)).toStrictEqual([
-        'block-identity',
         'convert-to',
         'separator',
         'duplicate',
@@ -1041,7 +1008,7 @@ describe('BlockSettings — mutation coverage', () => {
       const convertTo = itemNamed(items, 'convert-to');
 
       expect(convertTo.title).toBe('popover.convertTo');
-      expect((convertTo.children as { width?: string }).width).toBe('280px');
+      expect((convertTo.children as { width?: string }).width).toBe('320px');
       expect((convertTo.children as { searchable?: boolean }).searchable).toBe(true);
       expect(itemKeys(childrenOf(items, 'convert-to'))).toStrictEqual(['convert-heading-label', 'header']);
 

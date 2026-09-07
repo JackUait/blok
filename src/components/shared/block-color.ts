@@ -161,7 +161,7 @@ const presetNameFromCss = (color: string, field: 'text' | 'bg'): string | undefi
 
 /**
  * Build the single "Color" block-settings entry: a submenu hosting the shared
- * two-section (Text color / Background) swatch picker used by the marker and
+ * tabbed (Text color / Background) swatch picker used by the marker and
  * table cells — mirroring Notion's block color menu. Spread the result into a
  * tool's `renderSettings()` output.
  * @param options - data, i18n and the persistence callback
@@ -209,6 +209,12 @@ export const buildBlockColorTunes = (options: BlockColorTuneOptions): MenuConfig
       icon: swatch(data.textColor ? colorVarName(data.textColor, 'text') : 'currentColor', false),
       children: {
         searchable: false,
+        isFlippable: false,
+        onOpen: () => {
+          queueMicrotask(() => {
+            handle.element.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+          });
+        },
         items: [
           {
             type: PopoverItemType.Html,

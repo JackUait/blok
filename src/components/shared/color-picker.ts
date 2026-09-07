@@ -1,5 +1,7 @@
 import type { I18n } from '../../../types/api';
+import { DATA_ATTR } from '../constants/data-attributes';
 import { parseColor } from '../utils/color-mapping';
+import { generateId } from '../utils/id-generator';
 import { onHover } from '../utils/tooltip';
 import { twMerge } from '../utils/tw';
 import { COLOR_PRESETS, COLOR_PRESETS_DARK } from './color-presets';
@@ -176,10 +178,7 @@ function recordRecentColor(entry: RecentColorEntry): void {
 }
 
 /**
- * Creates a color picker element with two always-visible sections (e.g. Text / Background),
- * each containing a 5-column swatch grid with a "Default" reset swatch at position 0.
- *
- * Shared between the marker inline tool and the table cell color popover.
+ * Shared picker for inline, block and table colors.
  */
 export function createColorPicker(options: ColorPickerOptions): ColorPickerHandle {
   const { i18n, modes, testIdPrefix, onColorSelect, initialActiveColors } = options;
@@ -192,36 +191,44 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
   const wrapper = document.createElement('div');
 
   wrapper.setAttribute('data-blok-testid', `${testIdPrefix}-picker`);
+  wrapper.setAttribute(DATA_ATTR.keyboardOwner, '');
   wrapper.className = 'flex flex-col gap-3 p-2';
-
-  /**
-   * One grid element per section, stored so we can re-render independently.
-   */
+  const pickerId = generateId('blok-color-picker-');
   const sectionGrids: HTMLDivElement[] = [];
+  const sections: HTMLDivElement[] = [];
+  const previews: HTMLSpanElement[] = [];
+  const colorNames: HTMLSpanElement[] = [];
+  const modeTabs: HTMLButtonElement[] = [];
+  const tabList = document.createElement('div');
+
+  tabList.setAttribute('role', 'tablist');
+  tabList.className = 'grid grid-cols-2 gap-1 rounded-lg bg-item-hover-bg p-1';
+  wrapper.appendChild(tabList);
 
   /**
    * Base swatch button classes shared by every swatch in the picker.
    */
   const swatchClassName = twMerge(
-    'w-9 h-9 rounded-md cursor-pointer border-none outline-hidden',
+    'w-10 h-10 rounded-lg cursor-pointer border-none outline-hidden',
     'flex items-center justify-center text-sm font-semibold',
-    'transition-[box-shadow,transform] ring-inset hover:ring-2 hover:ring-swatch-ring-hover active:scale-90'
+    'ring-inset hover:ring-2 hover:ring-swatch-ring-hover aria-pressed:ring-swatch-ring-active',
+    'focus-visible:ring-2 focus-visible:ring-text-secondary aria-pressed:focus-visible:ring-text-secondary',
+    'transition-[box-shadow,transform,scale] duration-150 active:scale-[0.96]',
+    'motion-reduce:transition-none motion-reduce:active:scale-100'
   );
 
-  /**
-   * Container for the "Recently used" section, kept above the mode sections
-   * and re-rendered whenever a color is picked. Empty when there are no recents.
-   */
   const recentSectionHost = document.createElement('div');
-
-  wrapper.appendChild(recentSectionHost);
 
   /**
    * Render (or clear) the "Recently used" section from localStorage. Entries
    * whose axis has no matching mode in this picker are skipped.
    */
   const renderRecentSection = (): void => {
-    recentSectionHost.innerHTML = '';
+    const focusedTestId = recentSectionHost.contains(document.activeElement)
+      ? document.activeElement?.getAttribute('data-blok-testid')
+      : null;
+
+    recentSectionHost.replaceChildren();
     // An empty flex child would still produce a stray wrapper gap — hide it.
     recentSectionHost.hidden = true;
 
@@ -241,17 +248,17 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     const section = document.createElement('div');
 
     section.setAttribute('data-blok-testid', `${testIdPrefix}-section-recent`);
-    section.className = 'flex flex-col gap-1';
+    section.className = 'flex flex-col gap-2 border-t border-popover-border pt-3';
 
     const title = document.createElement('div');
 
-    title.className = 'text-xs font-medium text-text-primary/60 px-0.5';
+    title.className = 'text-xs font-medium text-text-secondary px-0.5';
     title.textContent = i18n.t(RECENTLY_USED_LABEL_KEY);
 
     const grid = document.createElement('div');
 
-    grid.className = 'grid gap-1';
-    grid.style.gridTemplateColumns = 'repeat(5, 2.25rem)';
+    grid.className = 'grid gap-1.5';
+    grid.style.gridTemplateColumns = 'repeat(5, 2.5rem)';
 
     for (const { entry, mode, preset } of recents) {
       if (mode === undefined || preset === undefined) {
@@ -263,6 +270,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       const label = formatSwatchLabel(i18n, mode.labelKey, entry.name);
 
       swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-recent-${entry.field}-${entry.name}`);
+      swatch.type = 'button';
       swatch.className = swatchClassName;
       // No aria-pressed here: recents never render the active ring, and this section is
       // not re-rendered by setActiveColor, so a pressed state written here would go stale.
@@ -278,6 +286,7 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
       }
 
       swatch.addEventListener('click', () => {
+        activateMode(modes.indexOf(mode));
         recordRecentColor(entry);
         renderRecentSection();
         onColorSelect(swatchColor, mode.key);
@@ -290,32 +299,114 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     section.appendChild(grid);
     recentSectionHost.appendChild(section);
     recentSectionHost.hidden = false;
+
+    if (focusedTestId) {
+      Array.from(grid.children).find((child): child is HTMLButtonElement =>
+        child instanceof HTMLButtonElement && child.getAttribute('data-blok-testid') === focusedTestId
+      )?.focus({ preventScroll: true });
+    }
   };
 
-  /**
-   * Build sections once; re-render only the grids on state changes.
-   */
-  modes.forEach((mode) => {
+  modes.forEach((mode, modeIndex) => {
+    const tab = document.createElement('button');
     const section = document.createElement('div');
 
+    tab.type = 'button';
+    tab.id = `${pickerId}-tab-${modeIndex}`;
+    tab.setAttribute('data-blok-testid', `${testIdPrefix}-tab-${mode.key}`);
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-controls', `${pickerId}-panel-${modeIndex}`);
+    tab.textContent = i18n.t(mode.labelKey);
+    tab.className = twMerge(
+      'min-w-0 min-h-8 rounded-md border-none bg-transparent px-2 py-1.5',
+      'text-xs font-medium text-text-secondary cursor-pointer outline-hidden',
+      'aria-selected:bg-popover-bg aria-selected:text-text-primary aria-selected:shadow-xs',
+      'hover:text-text-primary focus-visible:ring-2 focus-visible:ring-text-secondary',
+      'transition-colors duration-150 motion-reduce:transition-none'
+    );
+    // Pointer tabs must not collapse the editor selection or close its toolbar.
+    tab.addEventListener('mousedown', (event) => event.preventDefault());
+    tab.addEventListener('click', () => activateMode(modeIndex));
+    tab.addEventListener('keydown', (event) => {
+      const destinations: Record<string, number | undefined> = {
+        ArrowLeft: (modeIndex + modes.length - 1) % modes.length,
+        ArrowRight: (modeIndex + 1) % modes.length,
+        Home: 0,
+        End: modes.length - 1,
+      };
+      const nextIndex = destinations[event.key];
+
+      if (nextIndex === undefined) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      activateMode(nextIndex);
+      modeTabs[nextIndex].focus({ preventScroll: true });
+    });
+    modeTabs.push(tab);
+    tabList.appendChild(tab);
+
+    section.id = `${pickerId}-panel-${modeIndex}`;
     section.setAttribute('data-blok-testid', `${testIdPrefix}-section-${mode.key}`);
-    section.className = 'flex flex-col gap-1';
+    section.setAttribute('role', 'tabpanel');
+    section.setAttribute('aria-labelledby', tab.id);
+    sections.push(section);
 
-    const title = document.createElement('div');
+    const selected = document.createElement('div');
+    const preview = document.createElement('span');
+    const colorName = document.createElement('span');
+    const resetButton = document.createElement('button');
 
-    title.className = 'text-xs font-medium text-text-primary/60 px-0.5';
-    title.textContent = i18n.t(mode.labelKey);
+    selected.className = 'flex items-center gap-2 px-0.5';
+    preview.className = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold';
+    preview.setAttribute('data-blok-testid', `${testIdPrefix}-preview-${mode.key}`);
+    preview.setAttribute('aria-hidden', 'true');
+    preview.textContent = 'A';
+    previews.push(preview);
+
+    colorName.className = 'min-w-0 flex-1 truncate text-xs font-medium text-text-primary';
+    colorName.setAttribute('role', 'status');
+    colorNames.push(colorName);
+
+    resetButton.type = 'button';
+    resetButton.textContent = i18n.t('tools.marker.default');
+    resetButton.setAttribute('data-blok-testid', `${testIdPrefix}-reset-${mode.key}`);
+    resetButton.className = twMerge(
+      'min-h-8 rounded-md border-none bg-transparent px-2 text-xs text-text-secondary',
+      'cursor-pointer hover:bg-item-hover-bg hover:text-text-primary outline-hidden',
+      'focus-visible:ring-2 focus-visible:ring-text-secondary'
+    );
+    resetButton.addEventListener('click', () => onColorSelect(null, mode.key));
+    selected.append(preview, colorName, resetButton);
 
     const grid = document.createElement('div');
 
-    grid.className = 'grid gap-1';
-    grid.style.gridTemplateColumns = 'repeat(5, 2.25rem)';
+    grid.className = 'grid gap-1.5';
+    grid.style.gridTemplateColumns = 'repeat(5, 2.5rem)';
     sectionGrids.push(grid);
-
-    section.appendChild(title);
-    section.appendChild(grid);
+    section.append(selected, grid);
     wrapper.appendChild(section);
   });
+  wrapper.appendChild(recentSectionHost);
+
+  const activateMode = (modeIndex: number): void => {
+    const focusedPanel = sections.find((section) => section.contains(document.activeElement));
+
+    modes.forEach((_, index) => {
+      const section = sections[index];
+      const active = index === modeIndex;
+
+      section.hidden = !active;
+      section.className = twMerge('flex flex-col gap-3', !active && 'hidden');
+      modeTabs[index].setAttribute('aria-selected', String(active));
+      modeTabs[index].tabIndex = active ? 0 : -1;
+    });
+
+    if (focusedPanel?.hidden || tabList.contains(document.activeElement)) {
+      modeTabs[modeIndex].focus({ preventScroll: true });
+    }
+  };
 
   /**
    * Render the swatches for one section.
@@ -325,70 +416,64 @@ export function createColorPicker(options: ColorPickerOptions): ColorPickerHandl
     const mode = modes[modeIndex];
     const presets = getActivePresets();
 
-    grid.innerHTML = '';
+    const activeColor = state.activeColors[mode.key];
+    const activePreset = presets.find((preset) => activeColor !== null && colorsEqual(preset[mode.presetField], activeColor));
+    const preview = previews[modeIndex];
 
-    const activeColorForSection = state.activeColors[mode.key];
+    colorNames[modeIndex].textContent = activePreset
+      ? i18n.t('tools.colorPicker.color.' + activePreset.name)
+      : activeColor ?? i18n.t('tools.marker.default');
+    preview.style.color = mode.presetField === 'text'
+      ? activeColor ?? 'var(--blok-text-primary)'
+      : activePreset?.text ?? 'var(--blok-text-primary)';
+    preview.style.backgroundColor = mode.presetField === 'bg'
+      ? activeColor ?? SWATCH_NEUTRAL_BG
+      : SWATCH_NEUTRAL_BG;
 
-    // Default swatch (first position) — clears the active color for this section
-    const defaultSwatch = document.createElement('button');
-    const isDefaultActive = activeColorForSection === null;
-    const defaultLabel = formatSwatchLabel(i18n, mode.labelKey, null);
+    [null, ...presets].forEach((preset, index) => {
+      // Keep the buttons mounted: callers update selection during their click callback.
+      const existing = grid.children[index];
+      const swatch = existing instanceof HTMLButtonElement ? existing : document.createElement('button');
+      const swatchColor = preset?.[mode.presetField] ?? null;
+      const isActive = swatchColor === null ? activeColor === null : activeColor !== null && colorsEqual(swatchColor, activeColor);
+      const label = formatSwatchLabel(i18n, mode.labelKey, preset?.name ?? null);
 
-    defaultSwatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-default`);
-    defaultSwatch.className = twMerge(swatchClassName, isDefaultActive && 'ring-2 ring-swatch-ring-hover');
-    // The name has to be authored: a background swatch has no text at all, and every text
-    // swatch renders the same 'A', so textContent cannot tell one colour from another.
-    defaultSwatch.setAttribute('aria-label', defaultLabel);
-    // The applied colour is otherwise signalled only by the ring class (WCAG 1.4.1).
-    defaultSwatch.setAttribute('aria-pressed', String(isDefaultActive));
-    defaultSwatch.textContent = mode.presetField === 'text' ? 'A' : '';
-
-    if (mode.presetField === 'text') {
-      defaultSwatch.style.color = 'var(--blok-text-primary)';
-      defaultSwatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
-    } else {
-      defaultSwatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
-    }
-    defaultSwatch.addEventListener('click', () => {
-      onColorSelect(null, mode.key);
-    });
-    onHover(defaultSwatch, defaultLabel, { placement: 'top' });
-    grid.appendChild(defaultSwatch);
-
-    for (const preset of presets) {
-      const swatch = document.createElement('button');
-      const swatchColor = mode.presetField === 'text' ? preset.text : preset.bg;
-      const isActive = activeColorForSection !== null && colorsEqual(swatchColor, activeColorForSection);
-      const label = formatSwatchLabel(i18n, mode.labelKey, preset.name);
-
-      swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-${preset.name}`);
+      swatch.setAttribute('data-blok-testid', `${testIdPrefix}-swatch-${mode.key}-${preset?.name ?? 'default'}`);
+      swatch.type = 'button';
       swatch.className = twMerge(swatchClassName, isActive && 'ring-2 ring-swatch-ring-hover');
       swatch.setAttribute('aria-label', label);
       swatch.setAttribute('aria-pressed', String(isActive));
       swatch.textContent = mode.presetField === 'text' ? 'A' : '';
+      const backgroundText = presets === COLOR_PRESETS_DARK ? preset?.text ?? 'var(--blok-text-primary)' : '#37352f';
 
-      if (mode.presetField === 'text') {
-        swatch.style.color = preset.text;
-        swatch.style.backgroundColor = SWATCH_NEUTRAL_BG;
-      } else {
-        swatch.style.color = presets === COLOR_PRESETS_DARK ? preset.text : '#37352f';
-        swatch.style.backgroundColor = preset.bg;
+      swatch.style.color = mode.presetField === 'text'
+        ? preset?.text ?? 'var(--blok-text-primary)'
+        : backgroundText;
+      swatch.style.backgroundColor = mode.presetField === 'bg'
+        ? preset?.bg ?? SWATCH_NEUTRAL_BG
+        : SWATCH_NEUTRAL_BG;
+
+      if (existing === undefined) {
+        swatch.addEventListener('click', () => {
+          const currentPreset = getActivePresets().find((entry) => entry.name === preset?.name);
+
+          if (currentPreset) {
+            recordRecentColor({ name: currentPreset.name, field: mode.presetField });
+            renderRecentSection();
+          }
+          onColorSelect(currentPreset?.[mode.presetField] ?? null, mode.key);
+        });
+        onHover(swatch, label, { placement: 'top' });
+        grid.appendChild(swatch);
       }
-
-      swatch.addEventListener('click', () => {
-        recordRecentColor({ name: preset.name, field: mode.presetField });
-        renderRecentSection();
-        onColorSelect(swatchColor, mode.key);
-      });
-      onHover(swatch, label, { placement: 'top' });
-      grid.appendChild(swatch);
-    }
+    });
   };
 
   const renderAll = (): void => {
     modes.forEach((_, i) => renderSection(i));
   };
 
+  activateMode(0);
   renderRecentSection();
   renderAll();
 

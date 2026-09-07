@@ -59,28 +59,13 @@ const toMenuArray = (config: MenuConfig): Array<Record<string, unknown>> => {
   return (Array.isArray(config) ? config : [config]) as Array<Record<string, unknown>>;
 };
 
-/**
- * renderSettings groups levels and toggle conversion in a heading submenu, next
- * to the block-color submenus. Tests can inspect only its child menu items.
- */
-const headingMenuItems = (config: MenuConfig): Array<Record<string, unknown>> => {
-  const headingLevels = toMenuArray(config).find(setting => setting.name === 'header-levels');
-  const children = headingLevels?.children;
-
-  if (children === null || typeof children !== 'object' || !('items' in children) || !Array.isArray(children.items)) {
-    return [];
-  }
-
-  return children.items as Array<Record<string, unknown>>;
-};
-
 const levelEntries = (config: MenuConfig): Array<Record<string, unknown>> => {
-  return headingMenuItems(config).filter(
+  return toMenuArray(config).filter(
     setting => (setting.dataset as Record<string, string> | undefined)?.['blok-header-level'] !== undefined
   );
 };
 
-describe('Header Tool - heading level submenu', () => {
+describe('Header Tool - heading level entries', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -89,16 +74,18 @@ describe('Header Tool - heading level submenu', () => {
     vi.restoreAllMocks();
   });
 
-  it('groups only the heading levels under the submenu (no toggle conversion anywhere)', () => {
+  it('shows the heading levels directly below a label (no toggle conversion anywhere)', () => {
     const header = new Header(createHeaderOptions({ text: 'Hi', level: 2 }));
-    const settings = toMenuArray(header.renderSettings());
+    const config = header.renderSettings();
+    const settings = toMenuArray(config);
     const headingLevels = settings.find(setting => setting.name === 'header-levels');
-    const childItems = (headingLevels?.children as { items?: Array<Record<string, unknown>> } | undefined)?.items ?? [];
+    const items = levelEntries(config);
 
-    expect(headingLevels).toMatchObject({ title: 'toolNames.heading' });
+    expect(headingLevels).toMatchObject({ type: 'html', element: expect.any(HTMLElement) });
+    expect((headingLevels?.element as HTMLElement).textContent).toBe('toolNames.heading');
+    expect(headingLevels?.children).toBeUndefined();
     expect(settings.find(setting => setting.name === 'header-toggle-convert')).toBeUndefined();
-    expect(childItems.find(item => item.name === 'header-toggle-convert')).toBeUndefined();
-    expect(childItems.map(item => item.dataset as Record<string, string> | undefined)).toEqual([
+    expect(items.map(item => item.dataset as Record<string, string> | undefined)).toEqual([
       { 'blok-header-level': '1' },
       { 'blok-header-level': '2' },
       { 'blok-header-level': '3' },
@@ -1035,7 +1022,7 @@ describe('Header Tool - Custom Configurations', () => {
         header.render();
 
         // Trigger setLevel through renderSettings onActivate
-        const settings = headingMenuItems(header.renderSettings());
+        const settings = levelEntries(header.renderSettings());
         const h3Setting = settings.find(s => (s.dataset as Record<string, string>)?.['blok-header-level'] === '3');
         const onActivate = h3Setting?.onActivate as (() => void) | undefined;
 

@@ -1,5 +1,6 @@
 import type { I18n } from '../../../types/api';
-import { IconCopy, IconCross, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
+import { Dom } from '../../components/dom';
+import { IconCopy, IconCross, IconDotsHorizontal, IconMarker, IconMergeCells, IconPlacement, IconSplitCell } from '../../components/icons';
 import { MODIFIER_KEY } from '../../components/constants';
 import { DATA_ATTR } from '../../components/constants/data-attributes';
 import { PopoverDesktop, PopoverItemType } from '../../components/utils/popover';
@@ -27,29 +28,18 @@ const PILL_WIDTH = 16;
 const PILL_HEIGHT = 20;
 const PILL_IDLE_SIZE = 4;
 
-/**
- * Vertical 3-dot kebab (⋮) glyph for the selection pill. A kebab is the
- * universal "more options" menu affordance and, unlike the 6-dot grip used for
- * row/column DRAG handles, reads as a menu trigger — matching Notion's per-cell
- * ⋯ options menu. Starts hidden (opacity-0) and is revealed when the pill
- * expands (see expandPill).
- */
 const createCellMenuDotsSvg = (): SVGElement => {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const svg = Dom.make('div', null, { innerHTML: IconDotsHorizontal }).firstElementChild as SVGElement;
 
   svg.setAttribute('width', '4');
   svg.setAttribute('height', '14');
-  svg.setAttribute('viewBox', '0 0 4 14');
+  // Crop the rotated 20-unit icon without scaling its dots.
+  svg.setAttribute('viewBox', '8 3 4 14');
   svg.setAttribute('fill', 'currentColor');
   svg.classList.add('opacity-0', 'transition-opacity', 'duration-150', 'text-white', 'pointer-events-none');
 
-  for (const cy of [2, 7, 12]) {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-
-    circle.setAttribute('cx', '2');
-    circle.setAttribute('cy', String(cy));
-    circle.setAttribute('r', '1.5');
-    svg.appendChild(circle);
+  for (const circle of svg.querySelectorAll('circle')) {
+    circle.setAttribute('transform', 'rotate(90 10 10)');
   }
 
   return svg;
@@ -1363,6 +1353,11 @@ export class TableCellSelection {
             element: pickerElement,
           }],
           isFlippable: false,
+          onOpen: () => {
+            queueMicrotask(() => {
+              pickerElement.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true });
+            });
+          },
         },
       });
     }

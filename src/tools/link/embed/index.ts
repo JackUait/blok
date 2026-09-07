@@ -10,7 +10,7 @@ import type {
   ToolboxConfig,
 } from '../../../../types';
 import type { MenuConfig } from '../../../../types/tools/menu-config';
-import { IconCopy, IconGlobe, IconLinkCopy, IconReplace, IconTrash } from '../../../components/icons';
+import { IconCopy, IconGlobe, IconLink, IconReplace, IconTrash } from '../../../components/icons';
 import { setFieldValidity } from '../../../components/utils/field-validity';
 import { attachResizeHandle, attachHeightResizeHandle, type ResizeEdge } from '../../image/resizer';
 import { renderEmbedOverlay, type EmbedAlignment } from './overlay';
@@ -627,7 +627,7 @@ export class Embed implements BlockTool {
 
     fieldIcon.className = 'blok-embed-empty__bar-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
-    fieldIcon.innerHTML = IconLinkCopy;
+    fieldIcon.innerHTML = IconLink;
 
     const input = document.createElement('input');
 

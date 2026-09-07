@@ -19,6 +19,8 @@
   "toolbox.sectionColor": "顏色",
   "popover.nothingFound": "找不到結果",
   "popover.convertTo": "轉換為",
+  "emoji.search": "搜尋表情符號",
+  "emoji.nothingFound": "找不到表情符號",
   "toolNames.text": "文字",
   "toolNames.heading": "標題",
   "toolNames.link": "連結",

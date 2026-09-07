@@ -415,6 +415,66 @@ describe('PopoverDesktop — anchored repositioning', () => {
 });
 
 describe('PopoverDesktop — nested submenu placement', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    { measurement: 'live width', liveWidth: 320, measuredWidth: 280, expectedLeft: '212px' },
+    { measurement: 'pre-show measurement', liveWidth: 0, measuredWidth: 320, expectedLeft: '212px' },
+    { measurement: 'oversized width', liveWidth: 1200, measuredWidth: 1200, expectedLeft: '-452px' },
+  ])('clamps the submenu into the viewport using $measurement without changing its side', ({ liveWidth, measuredWidth, expectedLeft }) => {
+    vi.stubGlobal('innerWidth', 1000);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      const nestedRoot = this.closest(`[${DATA_ATTR.nested}]`);
+
+      if (nestedRoot === null) {
+        return STUB_WIDTH;
+      }
+
+      // The real size getter mounts its measurement clone directly in body.
+      return nestedRoot.parentElement === document.body ? measuredWidth : liveWidth;
+    });
+
+    const popover = openPopover({
+      items: [{
+        title: 'Parent',
+        name: 'parent',
+        children: {
+          width: `${liveWidth || measuredWidth}px`,
+          items: [{ title: 'Child', name: 'child', onActivate: (): void => {} }],
+        },
+      }],
+    });
+
+    popover.show();
+
+    const container = popover.getElement().querySelector(`[${DATA_ATTR.popoverContainer}]`);
+
+    if (!(container instanceof HTMLElement)) {
+      throw new Error('popover container missing');
+    }
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 50, left: 480, width: 220, height: 100 })
+    );
+    vi.spyOn(popover.getElement(), 'getBoundingClientRect').mockReturnValue(
+      makeRect({ top: 30, left: 460, width: 260, height: 140 })
+    );
+
+    getItemElement(popover, 'Parent').click();
+
+    const nestedRoot = popover.getElement().querySelector(`[${DATA_ATTR.nested}]`);
+    const nestedContainer = nestedRoot?.querySelector(`[${DATA_ATTR.popoverContainer}]`);
+
+    if (!(nestedRoot instanceof HTMLElement) || !(nestedContainer instanceof HTMLElement)) {
+      throw new Error('nested popover missing');
+    }
+
+    expect(nestedContainer.style.left).toBe(expectedLeft);
+    expect(nestedRoot.getAttribute('data-side')).toBe('right');
+    expect(nestedRoot.getAttribute('data-align')).toBe('center');
+  });
+
   it('opens the submenu beside the parent, overlapping its trailing edge', () => {
     stubMeasuredSize();
 

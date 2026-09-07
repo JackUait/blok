@@ -54,6 +54,7 @@ export const BlokEditor = defineComponent({
     link: { type: Object as PropType<BlokConfig['link']>, default: undefined },
     linkPaste: { type: Object as PropType<BlokConfig['linkPaste']>, default: undefined },
     inlineToolbar: { type: [Array, Boolean] as PropType<string[] | boolean>, default: undefined },
+    inlineEmoji: { type: Boolean as PropType<boolean | undefined>, default: undefined },
     tunes: { type: Array as PropType<string[]>, default: undefined },
     style: { type: Object as PropType<BlokConfig['style']>, default: undefined },
     theme: { type: String as PropType<ThemeMode>, default: undefined },

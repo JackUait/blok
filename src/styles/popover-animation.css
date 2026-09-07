@@ -9,14 +9,8 @@
   transition: opacity 120ms ease-out, transform 120ms ease-out;
 }
 
-/*
-  Popover chrome restated UN-LAYERED. rounded-xl / bg-popover-bg come from
-  @layer utilities (host-Tailwind coexistence), but un-layered rules always beat
-  layered ones, so a consumer reset (div { border-radius: 0; background: none })
-  would strip the popover to a bare box. Scoped to Blok's own container (matches
-  nothing on the host). --blok-popover-bg is the runtime token; --color-popover-bg
-  is a Tailwind @theme inline alias not emitted as a runtime variable.
-*/
+/* Keep chrome unlayered so host resets cannot erase it. The @theme inline
+   color alias does not exist at runtime; use --blok-popover-bg instead. */
 [data-blok-popover-container] {
   border-radius: var(--radius-xl);
   background-color: var(--blok-popover-bg);
@@ -47,6 +41,154 @@
   transform: none;
 }
 
+[data-blok-popover-item][data-blok-focused='true'] {
+  outline: 2px solid var(--blok-text-secondary);
+  outline-offset: -2px;
+}
+
+/* Search keeps full labels; the unfiltered menu groups native controls into tiles. */
+[data-blok-popover-container]:not(:has(> [data-blok-testid='popover-search-field'] > input:not(:placeholder-shown))) {
+  > [data-blok-popover-items]:has(> :is([data-blok-header-level], [data-blok-convert-item])) {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--blok-space-1);
+
+    > * {
+      grid-column: span 6;
+    }
+
+    > [data-blok-convert-item] {
+      grid-column: span 3;
+      min-width: 0;
+      min-height: 40px;
+      max-height: none;
+      margin: 0;
+
+      @media (max-width: 650px) {
+        min-height: 44px;
+      }
+    }
+
+    > [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group]) {
+      grid-column: 1 / span 3;
+    }
+
+    > :is([data-blok-header-level], [data-blok-convert-group]) {
+      grid-column: span 1;
+      min-width: 0;
+      height: 40px;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      justify-content: center;
+
+      > [data-blok-popover-item-title] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      > [data-blok-popover-item-icon] {
+        margin: 0;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+/* Scope the denser chrome to block settings and conversion, not tool pickers. */
+:is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item])) {
+  padding-inline: var(--blok-space-2);
+
+  @media (min-width: 651px) {
+    max-height: min(var(--max-height), calc(100dvh - 16px));
+  }
+
+  > [data-blok-testid='popover-search-field'] {
+    margin-top: var(--blok-space-2);
+    background: transparent;
+    border-color: var(--blok-popover-border);
+
+    &:focus-within {
+      border-color: var(--blok-text-secondary);
+    }
+  }
+
+  > [data-blok-popover-items] {
+    padding-block: var(--blok-space-1) var(--blok-space-1-5);
+    row-gap: var(--blok-space-0-5);
+
+    > [data-blok-popover-item]:not([data-blok-hidden]) {
+      min-height: 32px;
+      max-height: none;
+      margin-block: 0;
+      border-radius: var(--blok-space-1-5);
+
+      &:not([data-blok-header-level], [data-blok-convert-group]) {
+        padding-block: var(--blok-space-1);
+
+        > [data-blok-popover-item-icon] {
+          margin-inline-end: var(--blok-space-2);
+        }
+      }
+
+      > [data-blok-popover-item-secondary-title] {
+        padding-inline-start: var(--blok-space-3);
+        font-size: 11px;
+      }
+    }
+
+    > [role='separator'] {
+      padding-block: var(--blok-space-1);
+    }
+
+    > [data-blok-item-name='header-levels'] > div {
+      padding: var(--blok-space-0-5) var(--blok-space-2);
+      line-height: 16px;
+    }
+
+    /* Keep metadata legible despite the inline scroll-reel distortion. */
+    > [data-blok-item-name='edit-metadata']:not([data-blok-hidden]) {
+      transform: none !important;
+      opacity: 1 !important;
+    }
+
+    > [data-blok-item-name='edit-metadata'] > div {
+      padding: var(--blok-space-0-5) var(--blok-space-2);
+      font-size: 11px;
+      line-height: 14px;
+    }
+  }
+}
+
+/* Built utilities are unlayered; beat their active, hover, and focus selectors. */
+[data-blok-popover-items] > [data-blok-popover-item][data-blok-header-level][data-blok-popover-item-active] {
+  color: var(--blok-text-primary);
+  background-color: var(--blok-item-hover-bg);
+  box-shadow: inset 0 0 0 1px var(--blok-popover-border);
+}
+
+/* Labelled choices may wrap in narrow menus or longer translations. */
+[data-blok-convert-item]:not([data-blok-convert-group]) > [data-blok-popover-item-title] {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 650px) {
+  :is([data-blok-testid='block-tunes-popover'] > [data-blok-popover-container], [data-blok-popover-container]:has(> [data-blok-popover-items] > [data-blok-convert-item]))
+    > [data-blok-popover-items] > [data-blok-popover-item]:not([data-blok-hidden]) {
+    min-height: 44px;
+  }
+}
+
 /* ─── Inline link field: suggestion row & error reveal ──────────────────── */
 
 /* Keyed off the visibility toggle (Tailwind `hidden` class / `hidden`
@@ -58,7 +200,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-popover-container] {
+  [data-blok-popover-container],
+  [data-blok-popover-item-icon-chevron-right] {
     transition: none;
     transform: none;
   }

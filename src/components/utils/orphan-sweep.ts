@@ -33,28 +33,77 @@ export interface OrphanSweep {
   record(url: string, remove: RemoveAsset): void;
 
   /**
+   * Take the high-water mark of what has been recorded so far, to hand back to
+   * `sweep` when the save that is about to leave lands.
+   */
+  beginSave(): number;
+
+  /**
    * Delete every recorded asset the just-saved document no longer references.
    *
    * Only a save that LANDED may drive this: a rejected save says nothing about
    * what the stored document holds, so sweeping on one would delete assets a
    * live document still uses.
    * @param savedDocument - the document the store just accepted
+   * @param recordedBefore - the mark `beginSave` returned for THIS save;
+   * candidates recorded after it are not this save's business
    */
-  sweep(savedDocument: OutputData): Promise<void>;
+  sweep(savedDocument: OutputData, recordedBefore?: number): Promise<void>;
+}
+
+/**
+ * The entities an HTML serializer emits. `sanitizeBlocks` cleans a string by
+ * parsing it and reading `innerHTML` back, so a stored URL is the escaped form
+ * of the one the uploader returned — and every signed CDN URL is full of `&`.
+ */
+const SERIALIZER_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  // The serializer emits this for U+00A0, never for a plain space.
+  '&nbsp;': '\u00a0',
+};
+
+const SERIALIZER_ENTITY_PATTERN = /&(?:amp|lt|gt|quot|nbsp);/g;
+
+/**
+ * Undo that escaping. One pass, so `&amp;lt;` decodes to `&lt;` and not to `<`.
+ * @param value - a string that may carry escaped characters
+ */
+function decodeSerializerEntities(value: string): string {
+  if (!value.includes('&')) {
+    return value;
+  }
+
+  return value.replace(SERIALIZER_ENTITY_PATTERN, (entity) => SERIALIZER_ENTITIES[entity]);
 }
 
 /**
  * Build a candidate set for one editing session.
  */
 export function createOrphanSweep(): OrphanSweep {
-  const candidates = new Map<string, RemoveAsset>();
+  const candidates = new Map<string, { remove: RemoveAsset; recordedAt: number }>();
+  /**
+   * Counts recordings, so a save can tell which candidates already existed when
+   * it left. An upload that resolves mid-save records its URL ~400ms before the
+   * change pipeline delivers a payload naming it, and the queue is empty in
+   * that gap — so without this the landing save calls the brand-new asset an
+   * orphan and deletes the file the document is about to reference.
+   */
+  const counter = { recordings: 0 };
 
   return {
     record(url: string, remove: RemoveAsset): void {
-      candidates.set(url, remove);
+      counter.recordings += 1;
+      candidates.set(url, { remove, recordedAt: counter.recordings });
     },
 
-    async sweep(savedDocument: OutputData): Promise<void> {
+    beginSave(): number {
+      return counter.recordings;
+    },
+
+    async sweep(savedDocument: OutputData, recordedBefore?: number): Promise<void> {
       if (candidates.size === 0) {
         return;
       }
@@ -63,10 +112,19 @@ export function createOrphanSweep(): OrphanSweep {
       // than a walk of block data per tool: a per-tool rule would be wrong the
       // day a tool nests a URL, and audio cover art already does. The candidate
       // set is a handful of session uploads, so the cost is irrelevant.
-      const serialized = JSON.stringify(savedDocument);
-      const orphans = Array.from(candidates).filter(([url]) => !serialized.includes(url));
+      //
+      // Both sides are decoded because the saved document does not hold the URL
+      // byte-for-byte: the sanitizer parses strings and reads the markup back,
+      // so `?a=1&b=2` is stored as `?a=1&amp;b=2`. Comparing raw would call a
+      // referenced asset an orphan and DELETE the file a visible block points
+      // at. Decoding can only widen the match, and a false "still referenced"
+      // leaks a file where a false "orphan" loses one.
+      const serialized = decodeSerializerEntities(JSON.stringify(savedDocument));
+      const orphans = Array.from(candidates)
+        .filter(([, { recordedAt }]) => recordedBefore === undefined || recordedAt <= recordedBefore)
+        .filter(([url]) => !serialized.includes(decodeSerializerEntities(url)));
 
-      await Promise.all(orphans.map(async ([url, remove]) => {
+      await Promise.all(orphans.map(async ([url, { remove }]) => {
         try {
           await remove(url);
           candidates.delete(url);

@@ -34,7 +34,13 @@ export interface ApiMethod {
    */
   errors?: {
     condition: string;
-    message: string;
+    /**
+     * The literal thrown error text, verbatim. Optional because some failures
+     * throw nothing at all — omit it rather than describing the absence here:
+     * this field is never overlaid per-locale, so prose in it reaches a Russian
+     * reader in English with no way to translate it.
+     */
+    message?: string;
     resolution: string;
   }[];
   /**
@@ -1550,7 +1556,6 @@ if (block) {
         errors: [
           {
             condition: "blockOrIdOrIndex is a valid id or index that does not resolve to an existing block (unknown id or out-of-range index).",
-            message: "(no error thrown — the call returns false)",
             resolution: "For id/index inputs, check the boolean return value — a falsy result is the only signal the target wasn't found. Passing a null BlockAPI (e.g. an unchecked getById() result) is invalid input and throws, so null-check before calling.",
           },
         ],
@@ -1736,8 +1741,7 @@ editor.history.clear();`,
           },
           {
             condition: "Collecting the data failed (a tool's save() threw).",
-            message:
-              "Blok's content can not be saved because collecting data failed — or the originating tool error, re-thrown when one was recorded",
+            message: "Blok's content can not be saved because collecting data failed",
             resolution:
               "Inspect the rejected error: it is the tool's own error whenever the Saver recorded one.",
           },

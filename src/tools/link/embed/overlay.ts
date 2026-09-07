@@ -1,10 +1,10 @@
 import {
-  IconCaptionImage,
-  IconImageAlignCenter,
-  IconImageAlignLeft,
-  IconImageAlignRight,
+  IconCaption,
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
   IconLinkExternal,
-  IconMoreHorizontal,
+  IconDotsHorizontal,
 } from '../../../components/icons';
 import { setSafeLinkHref } from '../registry';
 
@@ -25,9 +25,9 @@ export interface EmbedOverlayOptions {
 }
 
 const ALIGN_ICON: Record<EmbedAlignment, string> = {
-  left: IconImageAlignLeft,
-  center: IconImageAlignCenter,
-  right: IconImageAlignRight,
+  left: IconAlignLeft,
+  center: IconAlignCenter,
+  right: IconAlignRight,
 };
 
 const ALIGN_ARIA_KEY: Record<EmbedAlignment, string> = {
@@ -55,7 +55,7 @@ export function renderEmbedOverlay(opts: EmbedOverlayOptions): HTMLElement {
   appendIconButton(root, {
     action: 'caption-toggle',
     label: opts.i18n.t('tools.image.toggleCaption'),
-    icon: IconCaptionImage,
+    icon: IconCaption,
     pressed: opts.captionVisible,
     onClick: opts.onToggleCaption,
   });
@@ -142,7 +142,7 @@ function appendMoreButton(root: HTMLElement, opts: EmbedOverlayOptions): void {
   trigger.setAttribute('aria-label', opts.i18n.t('tools.image.moreOptions'));
   trigger.setAttribute('aria-haspopup', 'menu');
   trigger.setAttribute('aria-expanded', 'false');
-  trigger.innerHTML = IconMoreHorizontal;
+  trigger.innerHTML = IconDotsHorizontal;
   root.appendChild(trigger);
 }
 

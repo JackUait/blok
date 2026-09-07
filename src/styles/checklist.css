@@ -21,8 +21,8 @@
   border-color: var(--blok-active-icon);
   box-shadow: none;
   animation: blok-checkbox-pop 280ms linear;
-  /* SVG checkmark — white path on accent-blue background */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 5L4 7.5L8.5 2.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  /* IconCheck at 1/2 scale; double the scaled stroke to keep the 10px tick readable. */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.25 5l1.75 1.75 3.75-3.75' stroke='white' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
   background-size: 10px 10px;
   background-position: center;
   background-repeat: no-repeat;

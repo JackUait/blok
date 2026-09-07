@@ -9,14 +9,8 @@
   transition: opacity 120ms ease-out, transform 120ms ease-out;
 }
 
-/*
-  Popover chrome restated UN-LAYERED. rounded-xl / bg-popover-bg come from
-  @layer utilities (host-Tailwind coexistence), but un-layered rules always beat
-  layered ones, so a consumer reset (div { border-radius: 0; background: none })
-  would strip the popover to a bare box. Scoped to Blok's own container (matches
-  nothing on the host). --blok-popover-bg is the runtime token; --color-popover-bg
-  is a Tailwind @theme inline alias not emitted as a runtime variable.
-*/
+/* Keep chrome unlayered so host resets cannot erase it. The @theme inline
+   color alias does not exist at runtime; use --blok-popover-bg instead. */
 [data-blok-popover-container] {
   border-radius: var(--radius-xl);
   background-color: var(--blok-popover-bg);
@@ -47,6 +41,65 @@
   transform: none;
 }
 
+[data-blok-popover-item][data-blok-focused='true'] {
+  outline: 2px solid var(--blok-text-secondary);
+  outline-offset: -2px;
+}
+
+/* Search keeps full labels; the unfiltered menu groups native controls into tiles. */
+[data-blok-popover-container]:not(:has(> [data-blok-testid='popover-search-field'] > input:not(:placeholder-shown))) {
+  > [data-blok-popover-items]:has(> :is([data-blok-header-level], [data-blok-convert-item])) {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+
+    > * {
+      grid-column: span 6;
+    }
+
+    > [data-blok-convert-item] {
+      grid-column: span 3;
+      min-width: 0;
+      min-height: 40px;
+      max-height: none;
+      margin: 0;
+    }
+
+    > [data-blok-convert-group] + [data-blok-convert-item]:not([data-blok-convert-group]) {
+      grid-column: 1 / span 3;
+    }
+
+    > :is([data-blok-header-level], [data-blok-convert-group]) {
+      grid-column: span 1;
+      min-width: 0;
+      height: 40px;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      justify-content: center;
+
+      > [data-blok-popover-item-title] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      > [data-blok-popover-item-icon] {
+        margin: 0;
+        background: transparent;
+      }
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
 /* ─── Inline link field: suggestion row & error reveal ──────────────────── */
 
 /* Keyed off the visibility toggle (Tailwind `hidden` class / `hidden`
@@ -58,7 +111,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-blok-popover-container] {
+  [data-blok-popover-container],
+  [data-blok-popover-item-icon-chevron-right] {
     transition: none;
     transform: none;
   }

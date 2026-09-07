@@ -630,7 +630,7 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('does not hardcode convert-to children width so the nested popover fits any language text', async () => {
+  it('sizes the searchable convert-to submenu to 280px', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -652,7 +652,10 @@ describe('BlockSettings', () => {
     const items = (popover?.params as { items: PopoverItemParams[] })?.items;
     const convertToItem = items?.find(item => (item as PopoverItemParams & { name?: string }).name === 'convert-to');
 
-    expect((convertToItem as { children?: { width?: string } } | undefined)?.children?.width).toBeUndefined();
+    expect((convertToItem as { children?: { width?: string; searchable?: boolean } } | undefined)?.children).toMatchObject({
+      width: '280px',
+      searchable: true,
+    });
   });
 
   it('converts a block that has children without a blocking confirm() prompt', async () => {
@@ -1177,7 +1180,7 @@ describe('BlockSettings', () => {
     getTunesItemsSpy.mockRestore();
   });
 
-  it('translates contextLabel using the active toolbox entry titleKey (Heading 1 → Заголовок 1)', async () => {
+  it('translates the block identity header using the active toolbox entry titleKey (Heading 1 → Заголовок 1)', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -1206,14 +1209,16 @@ describe('BlockSettings', () => {
     await blockSettings.open(block);
 
     const popover = getLastPopover();
-    const params = popover?.params as { contextLabel?: string } | undefined;
+    const params = popover?.params as { items: PopoverItemParams[] };
+    const identity = params.items[0];
 
-    expect(params?.contextLabel).toBe('Заголовок 1');
+    expect(identity).toMatchObject({ type: PopoverItemType.Html, name: 'block-identity' });
+    expect('element' in identity && identity.element.textContent).toBe('Заголовок 1');
 
     getTunesItemsSpy.mockRestore();
   });
 
-  it('translates contextLabel using block.name via toolNames.<name> when entry has no title (image → Изображение)', async () => {
+  it('translates the block identity header using block.name via toolNames.<name> when entry has no title (image → Изображение)', async () => {
     blockSettings.make();
 
     const block = createBlock();
@@ -1242,9 +1247,11 @@ describe('BlockSettings', () => {
     await blockSettings.open(block);
 
     const popover = getLastPopover();
-    const params = popover?.params as { contextLabel?: string } | undefined;
+    const params = popover?.params as { items: PopoverItemParams[] };
+    const identity = params.items[0];
 
-    expect(params?.contextLabel).toBe('Изображение');
+    expect(identity).toMatchObject({ type: PopoverItemType.Html, name: 'block-identity' });
+    expect('element' in identity && identity.element.textContent).toBe('Изображение');
 
     getTunesItemsSpy.mockRestore();
   });
@@ -1285,9 +1292,13 @@ describe('BlockSettings', () => {
 
     const children = convertTo?.children?.items ?? [];
 
-    expect(children).toHaveLength(1);
+    expect(children).toHaveLength(2);
+    expect(children[0]).toMatchObject({ type: PopoverItemType.Html, name: 'convert-heading-label' });
+    expect('element' in children[0] && children[0].element.textContent).toBe('toolNames.heading');
 
-    const headerItem = children[0];
+    const headerItem = children[1];
+
+    expect(headerItem).toMatchObject({ name: 'header-1' });
 
     expect('englishTitle' in headerItem && headerItem.englishTitle).toBe('Heading 1');
     expect('searchTerms' in headerItem && headerItem.searchTerms).toEqual(['h1', 'title', 'header', 'heading']);

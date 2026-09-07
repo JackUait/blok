@@ -9,9 +9,9 @@ export const css = {
    * Active is applied via data-blok-popover-item-active attribute
    * A trigger whose submenu is open keeps the hover tint via data-blok-popover-item-children-open
    * Note: noHover state is handled via [data-blok-popover-item-no-hover] which disables hover
-   * Priority order: active < hover < focus (focus wins when navigating with keyboard)
+   * Active colors stay paired on hover and focus; the outline marks keyboard focus.
    */
-  item: 'flex items-center select-none border-none bg-transparent rounded-lg px-2 py-1 text-text-primary mb-px outline-hidden max-h-8 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text data-blok-popover-item-children-open:bg-item-hover-bg can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
+  item: 'flex items-center select-none border-none bg-transparent rounded-lg px-2 py-1.5 text-text-primary mb-px outline-hidden max-h-9 overflow-hidden data-blok-popover-item-active:bg-icon-active-bg data-blok-popover-item-active:text-icon-active-text can-hover:data-blok-popover-item-active:hover:bg-icon-active-bg [&[data-blok-popover-item-active][data-blok-focused="true"]]:bg-icon-active-bg data-blok-popover-item-children-open:bg-item-hover-bg can-hover:hover:cursor-pointer can-hover:hover:bg-item-hover-bg data-blok-force-hover:cursor-pointer data-blok-force-hover:bg-item-hover-bg data-[blok-focused="true"]:bg-item-focus-bg data-blok-popover-item-no-hover:hover:bg-transparent data-blok-popover-item-no-hover:cursor-default can-hover:data-blok-popover-item-destructive:hover:text-item-destructive-text can-hover:data-blok-popover-item-destructive:hover:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-force-hover]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-force-hover]]:bg-item-destructive-hover-bg [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:text-item-destructive-text [&[data-blok-popover-item-destructive][data-blok-focused="true"]]:bg-item-destructive-hover-bg',
 
   /**
    * Item disabled state
@@ -38,7 +38,7 @@ export const cssInline = {
   /**
    * Item in inline context - more compact styling
    */
-  item: 'rounded-md px-1 py-1.5',
+  item: 'rounded-lg min-w-10 h-10 max-h-none px-1.5 py-2 mb-0 shrink-0 mobile:flex-1 transition-[background-color,scale] duration-150 active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100',
   itemIconOnly: 'justify-center',
   itemWithTitle: 'px-2',
 };

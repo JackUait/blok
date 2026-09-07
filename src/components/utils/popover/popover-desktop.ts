@@ -1333,8 +1333,8 @@ export class PopoverDesktop extends PopoverAbstract {
       // not stay frozen at the show()-time --width: the container follows its
       // content live, and the resize observer attached in showNestedPopover
       // re-runs this placement whenever the content grows or shrinks.
-      nestedContainer.style.width = 'max-content';
-      nestedContainer.style.minWidth = '0';
+      nestedContainer.style.width = triggerItem.childrenWidth ?? 'max-content';
+      nestedContainer.style.minWidth = triggerItem.childrenMinWidth ?? '0';
 
       // Prefer live layout sizes once the popover is rendered; the initial
       // pre-show call falls back to the detached-clone measurement
@@ -1669,7 +1669,8 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     return topLevel.filter(item => {
-      if (!(item instanceof PopoverItemDefault) || item.title === undefined) {
+      // A state control and a same-title nested action can update different data.
+      if (!(item instanceof PopoverItemDefault) || item.title === undefined || item.toggle !== undefined) {
         return true;
       }
 

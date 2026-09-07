@@ -22,6 +22,8 @@ export interface InlinePositioningOptions {
   contentRect: DOMRect;
   /** Popover width */
   popoverWidth: number;
+  /** Measured height, including wrapped rows */
+  popoverHeight?: number;
 }
 
 /**

@@ -60,11 +60,15 @@ export class Uploader {
       return this.handleDataUrl(raw, options);
     }
     this.validateUrl(raw);
-    if (this.config.uploader?.uploadByUrl) {
-      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
-    }
+    // `api.uploader` is asked first even when this tool declares an uploader:
+    // it resolves the tool's own uploader ahead of the editor-level one, so the
+    // same uploader runs — and only this route records the asset for the orphan
+    // sweep. The direct call below stays for a tool built without the API.
     if (this.assets?.isConfigured('image', 'uploadByUrl')) {
       return this.assets.uploadByUrl(raw, { kind: 'image', tool: 'image', onProgress: options.onProgress });
+    }
+    if (this.config.uploader?.uploadByUrl) {
+      return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
 
     return { url: raw };
@@ -77,18 +81,24 @@ export class Uploader {
 
     const uploaded = (await compressImage(file, this.config.compress)) ?? file;
 
-    if (this.config.uploader?.uploadByFile) {
-      return this.config.uploader.uploadByFile(uploaded, { onProgress: options.onProgress });
-    }
     if (this.assets?.isConfigured('image', 'uploadByFile')) {
       return this.assets.uploadByFile(uploaded, { kind: 'image', tool: 'image', onProgress: options.onProgress });
+    }
+    if (this.config.uploader?.uploadByFile) {
+      return this.config.uploader.uploadByFile(uploaded, { onProgress: options.onProgress });
     }
 
     return { url: URL.createObjectURL(uploaded), fileName: uploaded.name };
   }
 
   private async handleDataUrl(raw: string, options: UploadOptions): Promise<UploadResult> {
+    // Nested rather than reordered: a tool-level `uploadByUrl` has to keep
+    // beating the file path, so the routing swap happens inside its branch.
     if (this.config.uploader?.uploadByUrl) {
+      if (this.assets?.isConfigured('image', 'uploadByUrl')) {
+        return this.assets.uploadByUrl(raw, { kind: 'image', tool: 'image', onProgress: options.onProgress });
+      }
+
       return this.config.uploader.uploadByUrl(raw, { onProgress: options.onProgress });
     }
     if (this.config.uploader?.uploadByFile || this.assets?.isConfigured('image', 'uploadByFile')) {

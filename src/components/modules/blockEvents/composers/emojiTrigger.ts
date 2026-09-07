@@ -96,6 +96,8 @@ export class EmojiTrigger extends BlockEventComposer {
 
   private popover: Popover | null = null;
   private anchorRect: DOMRect | undefined;
+  /** Plain-text offset of the ":" that opened the current menu (see renderMenu). */
+  private activeSpanStart: number | undefined;
   private comboboxHost: HTMLElement | null = null;
   private previousAriaLabel: string | null = null;
   private hasPrefetched = false;
@@ -199,8 +201,10 @@ export class EmojiTrigger extends BlockEventComposer {
       this.popover = null;
     }
 
+    document.removeEventListener('selectionchange', this.handleSelectionChange);
     this.removeComboboxRoles();
     this.anchorRect = undefined;
+    this.activeSpanStart = undefined;
     this.opened = false;
   }
 
@@ -214,20 +218,63 @@ export class EmojiTrigger extends BlockEventComposer {
   };
 
   /**
+   * Closes the menu when the caret leaves the ":query" span WITHOUT a text
+   * mutation — arrowing or clicking elsewhere in the block. `handleInput`
+   * only re-evaluates on an input event, so nothing else catches this; the
+   * popover's own trigger is the whole contentEditable, so PopoverRegistry's
+   * click-outside handling treats any click inside the block as "inside" and
+   * does not close it either. Registered on open, removed in close().
+   */
+  private readonly handleSelectionChange = (): void => {
+    if (!this.opened) {
+      return;
+    }
+
+    const input = this.Blok.BlockManager.currentBlock?.currentInput;
+
+    if (input === undefined || !EmojiTrigger.isSelectionInside(input)) {
+      this.close();
+
+      return;
+    }
+
+    const text = input.textContent ?? '';
+    const caretOffset = getCaretOffset(input);
+    const span = resolveEmojiTriggerSpan(text, caretOffset);
+
+    if (span === null || span.start !== this.activeSpanStart) {
+      this.close();
+    }
+  };
+
+  /** True when the live selection's anchor sits inside `input`. */
+  private static isSelectionInside(input: HTMLElement): boolean {
+    const node = window.getSelection()?.anchorNode;
+
+    return node !== null && node !== undefined && input.contains(node);
+  }
+
+  /**
    * Build (or rebuild) the popover with the current ranked results.
    *
    * The anchor rect is computed once, from the ":" character's position at
-   * the moment the menu first opens, and reused on every later keystroke —
-   * recomputing it as the query grows would walk the menu across the screen
-   * as characters are typed.
+   * the moment the menu first opens for a given span, and reused on every
+   * later keystroke within that same span — recomputing it as the query
+   * grows would walk the menu across the screen as characters are typed. A
+   * `span.start` that differs from the active one means the caret jumped to
+   * a different ":" in the same block (e.g. navigated there and typed), so
+   * the anchor is recomputed for that new span.
    * @param results - ranked emoji matches, already known to be non-empty
    * @param block - the block being typed into
    * @param input - the block's current contentEditable
    * @param span - the resolved ":query" span
    */
   private renderMenu(results: ProcessedEmoji[], block: Block, input: HTMLElement, span: EmojiTriggerSpan): void {
-    if (!this.opened) {
+    const isFreshTrigger = !this.opened || span.start !== this.activeSpanStart;
+
+    if (isFreshTrigger) {
       this.anchorRect = rectAtOffset(input, span.start) ?? input.getBoundingClientRect();
+      this.activeSpanStart = span.start;
     }
 
     const anchorRect = this.anchorRect;
@@ -281,6 +328,7 @@ export class EmojiTrigger extends BlockEventComposer {
 
     if (!this.opened) {
       this.applyComboboxRoles(input);
+      document.addEventListener('selectionchange', this.handleSelectionChange);
       this.opened = true;
     }
   }

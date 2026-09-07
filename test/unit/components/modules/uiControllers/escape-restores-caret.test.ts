@@ -41,6 +41,11 @@ const createController = (mocks: Mocks): KeyboardController => {
       clearSelection: mocks.clearSelection,
       disableNavigationMode: vi.fn(),
     },
+    // handleEscape reads this before the PopoverRegistry branch (see the
+    // emoji-menu Escape fix) — every path through handleEscape now touches it.
+    BlockEvents: {
+      emojiTrigger: { opened: false, close: vi.fn() },
+    },
     Toolbar: {
       toolbox: { opened: false, close: vi.fn() },
       close: vi.fn(),

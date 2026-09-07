@@ -66,11 +66,19 @@ const createInputEvent = (options: Partial<InputEvent> = {}): InputEvent => ({
 } as InputEvent);
 
 describe('EmojiTrigger — opening and closing', () => {
+  // Tracks the trigger each test creates so afterEach can close it: an open
+  // menu registers a real `document` selectionchange listener (see
+  // handleSelectionChange), and a test that ends without closing would leak
+  // it onto every later test's document.
+  let currentTrigger: EmojiTrigger | undefined;
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(() => {
+    currentTrigger?.close();
+    currentTrigger = undefined;
     vi.restoreAllMocks();
   });
 
@@ -81,6 +89,8 @@ describe('EmojiTrigger — opening and closing', () => {
     setCaret(block, 3);
 
     const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
 
     await trigger.handleInput(createInputEvent());
 
@@ -95,6 +105,8 @@ describe('EmojiTrigger — opening and closing', () => {
 
     const trigger = new EmojiTrigger(createBlokModules(block));
 
+    currentTrigger = trigger;
+
     await trigger.handleInput(createInputEvent({ data: '0' }));
 
     expect(trigger.opened).toBe(false);
@@ -107,6 +119,8 @@ describe('EmojiTrigger — opening and closing', () => {
     setCaret(block, 3);
 
     const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
 
     await trigger.handleInput(createInputEvent());
 
@@ -121,6 +135,8 @@ describe('EmojiTrigger — opening and closing', () => {
 
     const trigger = new EmojiTrigger(createBlokModules(block));
 
+    currentTrigger = trigger;
+
     await trigger.handleInput(createInputEvent({ isComposing: true }));
 
     expect(trigger.opened).toBe(false);
@@ -133,6 +149,8 @@ describe('EmojiTrigger — opening and closing', () => {
     setCaret(block, 3);
 
     const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
 
     await trigger.handleInput(createInputEvent());
     expect(trigger.opened).toBe(true);
@@ -154,6 +172,8 @@ describe('EmojiTrigger — opening and closing', () => {
 
     const trigger = new EmojiTrigger(createBlokModules(block));
 
+    currentTrigger = trigger;
+
     await trigger.handleInput(createInputEvent());
 
     const handled = trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -172,6 +192,9 @@ describe('EmojiTrigger — opening and closing', () => {
     setCaret(block, 3);
 
     const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
     const handleInput = vi.spyOn(trigger, 'handleInput');
 
     // Stand in for BlockEvents.handleInput's guard line.
@@ -191,7 +214,33 @@ describe('EmojiTrigger — opening and closing', () => {
 
     const trigger = new EmojiTrigger(createBlokModules(block));
 
+    currentTrigger = trigger;
+
     await trigger.handleInput(createInputEvent({ data: 'z' }));
+
+    expect(trigger.opened).toBe(false);
+  });
+
+  it('closes when the caret leaves the span without a text mutation', async () => {
+    // A second word later in the block gives the caret somewhere to move to
+    // that is unambiguously outside the ":fi" span.
+    const block = createBlock(':fi elsewhere');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+    expect(trigger.opened).toBe(true);
+
+    // Arrow/click caret movement fires no input event, so nothing but a
+    // selectionchange listener can catch this — setCaret alone does not
+    // notify EmojiTrigger; dispatch the same event a real caret move fires.
+    setCaret(block, 10);
+    document.dispatchEvent(new Event('selectionchange'));
 
     expect(trigger.opened).toBe(false);
   });

@@ -50,9 +50,12 @@ export class BlockEvents extends Module {
   }
 
   /**
-   * Get the EmojiTrigger composer instance
+   * Get the EmojiTrigger composer instance. Public: KeyboardController's
+   * capture-phase Escape handler reads `emojiTrigger.opened` and calls
+   * `close()` directly (see keyboard.ts) — the same pattern it already uses
+   * for `Toolbar.toolbox`.
    */
-  private get emojiTrigger(): EmojiTrigger {
+  public get emojiTrigger(): EmojiTrigger {
     if (!this._emojiTrigger) {
       this._emojiTrigger = new EmojiTrigger(this.Blok);
     }
@@ -640,29 +643,23 @@ export class BlockEvents extends Module {
     const toolboxOpenForInlineSearch = this.Blok.Toolbar.toolbox.opened && !isEnter && !isTab;
 
     /**
-     * Enter/Tab while the emoji menu is open select a suggestion or leave the
-     * menu, not a block-level action (split, indent). The keydown() guard
-     * already returns before beforeKeydownProcessing runs for these keys, so
-     * this is a second, independent gate — same shape as toolboxItemSelected —
-     * in case that ordering ever changes.
-     */
-    const emojiMenuItemSelected = (isEnter || isTab) && this.emojiTrigger.opened;
-
-    /**
      * Do not close Toolbar in cases:
      * 1. ShiftKey pressed (or combination with shiftKey)
      * 2. When Toolbar is opened and Tab leafs its Tools
      * 3. When Toolbar's component is opened and some its item selected
      * 4. When Toolbox is open for inline slash search (allow typing to filter)
-     * 5. When Enter/Tab is pressed while the emoji menu is open
+     *
+     * The emoji menu does not need an entry here: the keydown() guard above
+     * returns before this method runs for every key the menu claims (Escape,
+     * arrows, Home/End, Enter, Tab), so a matching flag here would never be
+     * reachable — checked and confirmed by code review.
      */
     return !(event.shiftKey ||
       flippingToolbarItems ||
       toolboxItemSelected ||
       blockSettingsItemSelected ||
       inlineToolbarItemSelected ||
-      toolboxOpenForInlineSearch ||
-      emojiMenuItemSelected
+      toolboxOpenForInlineSearch
     );
   }
 

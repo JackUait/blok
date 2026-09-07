@@ -2,6 +2,7 @@ import { DATA_ATTR } from '../../constants/data-attributes';
 import { Flipper } from '../../flipper';
 import { keyCodes } from '../../utils';
 import { generateId } from '../id-generator';
+import { isKeyboardModality } from '../input-modality';
 
 import type { PopoverItem, PopoverItemRenderParamsMap } from './components/popover-item';
 import { PopoverItemSeparator, css as popoverItemCls, PopoverItemDefault, PopoverItemType } from './components/popover-item';
@@ -644,6 +645,15 @@ export class PopoverDesktop extends PopoverAbstract {
     }
 
     if (this.params.autoFocusFirstItem === false) {
+      return;
+    }
+
+    /**
+     * The cursor is a keyboard affordance, so a menu opened with the mouse
+     * starts with no row highlighted. Typing into the search re-places it,
+     * because typing is itself a keyboard gesture.
+     */
+    if (!isKeyboardModality()) {
       return;
     }
 

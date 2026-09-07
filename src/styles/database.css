@@ -1162,7 +1162,7 @@
 }
 
 /**
- * Each property type item — icon chip + label row.
+ * Each property type item — icon + label row.
  */
 [data-blok-database-property-type-option] {
   display: flex;

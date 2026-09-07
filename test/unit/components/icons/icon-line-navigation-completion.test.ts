@@ -201,10 +201,32 @@ describe('Blok Line navigation completion', () => {
     const stems = numbersOf(pathOf(IconHash));
     const bars = numbersOf(pathOf(IconHash, 1));
 
-    expect(stems).toEqual([8.5, 5, 6.5, 15, 13.5, 5, 11.5, 15]);
-    expect(stems.slice(4)).toEqual(stems.slice(0, 4).map((value, index) => value + (index % 2 === 0 ? 5 : 0)));
-    expect(bars).toEqual([5, 8, 16, 8, 4, 12, 15, 12]);
-    expect(bars.slice(4)).toEqual(bars.slice(0, 4).map((value, index) => value + (index % 2 === 0 ? -1 : 4)));
+    expect(stems).toHaveLength(8);
+    expect(bars).toHaveLength(8);
+    // Both stems run top to bottom over the same span with the same lean.
+    expect(stems[1]).toBe(stems[5]);
+    expect(stems[3]).toBe(stems[7]);
+    expect(stems[2] - stems[0]).toBe(stems[6] - stems[4]);
+    expect(stems[2] - stems[0]).toBeLessThan(0);
+    const gap = stems[4] - stems[0];
+
+    expect(stems[6] - stems[2]).toBe(gap);
+
+    // Crossbars are level, equal in length, and centered on the stems they cross.
+    expect(bars[1]).toBe(bars[3]);
+    expect(bars[5]).toBe(bars[7]);
+    expect(bars[2] - bars[0]).toBe(bars[6] - bars[4]);
+    const stemAt = (y: number): number =>
+      stems[0] + (stems[2] - stems[0]) * (y - stems[1]) / (stems[3] - stems[1]);
+
+    for (const [left, y, right] of [[bars[0], bars[1], bars[2]], [bars[4], bars[5], bars[6]]]) {
+      expect((left + right) / 2).toBeCloseTo(stemAt(y) + gap / 2, 2);
+    }
+
+    // A hash reads squashed when its counter is wider than tall, or when the
+    // crossbars carry the ink box wider than the stems carry it tall.
+    expect(bars[5] - bars[1]).toBe(gap);
+    expect(stems[3] - stems[1]).toBeGreaterThanOrEqual(Math.max(bars[2], bars[6]) - Math.min(bars[0], bars[4]));
   });
 
   it('reuses the left arrowhead for Return and the panel radius for its turn', () => {

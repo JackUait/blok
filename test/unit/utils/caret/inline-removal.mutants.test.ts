@@ -7,7 +7,7 @@ import {
   whitespaceFollowingRemovedEmptyInline,
 } from '../../../../src/components/utils/caret/inline-removal';
 
-const NBSP = ' ';
+const NBSP = '\u00A0';
 
 const editable = (html: string): HTMLElement => {
   const host = document.createElement('div');

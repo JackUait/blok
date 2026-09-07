@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { preprocess } from '../../../../../src/cli/commands/convert-html/preprocessor';
 
-const NBSP = ' ';
+const NBSP = '\u00A0';
 
 const run = (html: string): HTMLElement => {
   const wrapper = document.createElement('div');

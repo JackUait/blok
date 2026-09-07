@@ -162,38 +162,26 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
   };
 
   /**
-   * Watch the holder for pointer moves and flag the caret while one is near.
+   * Is the pointer close enough to this caret to be pointing at it?
    *
-   * On the HOLDER rather than the document: a document listener would be one
-   * per editor on the page, and this one already has the element whose
-   * coordinates it needs to measure against.
-   * @param entry - the caret being watched
+   * Measured rather than hovered: a caret is two pixels wide, which is not a
+   * hover target, and it must never become one — `pointer-events` on a line
+   * lying in a paragraph would swallow the click that puts your own caret
+   * there.
+   * @param entry - the caret being measured against
+   * @param pointer - where the pointer is, in viewport coordinates
    */
-  const watchPointer = (entry: Drawn): void => {
-    const onMove = (event: Event): void => {
-      const pointer = event as MouseEvent;
-      const box = entry.holder.getBoundingClientRect();
-      const left = pointer.clientX - box.left;
-      const top = pointer.clientY - box.top;
-      const spot = {
-        left: parseFloat(entry.element.style.left),
-        top: parseFloat(entry.element.style.top),
-        height: parseFloat(entry.element.style.height),
-      };
-      const near = Math.abs(left - spot.left) <= HOVER_REACH &&
-        top >= spot.top - HOVER_REACH &&
-        top <= spot.top + spot.height + HOVER_REACH;
+  const isNear = (entry: Drawn, pointer: MouseEvent): boolean => {
+    const box = entry.holder.getBoundingClientRect();
+    const left = pointer.clientX - box.left;
+    const top = pointer.clientY - box.top;
+    const caretLeft = parseFloat(entry.element.style.left);
+    const caretTop = parseFloat(entry.element.style.top);
+    const caretHeight = parseFloat(entry.element.style.height);
 
-      if (near === entry.hovered) {
-        return;
-      }
-
-      entry.hovered = near;
-      applyFlag(entry);
-    };
-
-    entry.holder.addEventListener('pointermove', onMove, { passive: true });
-    entry.unwatch = () => entry.holder.removeEventListener('pointermove', onMove);
+    return Math.abs(left - caretLeft) <= HOVER_REACH &&
+      top >= caretTop - HOVER_REACH &&
+      top <= caretTop + caretHeight + HOVER_REACH;
   };
 
   const create = (holder: HTMLElement, name: string): Drawn => {
@@ -221,7 +209,21 @@ export const createCaretLayer = (options: CaretLayerOptions): CaretLayer => {
       entry.label = inert(document.createElement('div'));
       entry.label.setAttribute(LABEL_ATTR, name);
       holder.appendChild(entry.label);
-      watchPointer(entry);
+
+      // On the HOLDER rather than the document: a document listener would be
+      // one per editor on the page, and this one already has the element it
+      // measures against.
+      const onMove = (event: Event): void => {
+        const near = isNear(entry, event as MouseEvent);
+
+        if (near !== entry.hovered) {
+          entry.hovered = near;
+          applyFlag(entry);
+        }
+      };
+
+      holder.addEventListener('pointermove', onMove, { passive: true });
+      entry.unwatch = () => holder.removeEventListener('pointermove', onMove);
     }
 
     return entry;

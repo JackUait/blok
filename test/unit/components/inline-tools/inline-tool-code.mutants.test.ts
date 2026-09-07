@@ -28,8 +28,8 @@ const mount = (html: string): Fixture => {
 
   return {
     host,
-    activate: () => onActivate(config),
-    isActive: () => isActive(config),
+    activate: () => onActivate(),
+    isActive: () => isActive(),
   };
 };
 

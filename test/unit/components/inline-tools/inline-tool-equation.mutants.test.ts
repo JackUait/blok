@@ -392,7 +392,106 @@ describe('EquationInlineTool mutants', () => {
     });
   });
 
+describe('the popover markup', () => {
+    it('marks the wrapper, the input and the preview so hosts can find them', () => {
+      const { wrapper, input, preview } = build();
+
+      expect(wrapper.hasAttribute('data-blok-equation-tool')).toBe(true);
+      expect(input.getAttribute('data-blok-testid')).toBe('inline-equation-input');
+      expect(input.type).toBe('text');
+      expect(input.enterKeyHint).toBe('done');
+      expect(preview.hasAttribute('data-blok-equation-preview')).toBe(true);
+      expect(preview.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('looks for a SPAN ancestor when deciding whether the caret is on an equation', () => {
+      const { isActive } = build();
+
+      isActive();
+
+      expect(findParentTag).toHaveBeenCalledWith('SPAN');
+    });
+  });
+
+  describe('writing the equation into the document', () => {
+    it('trims an explicit formula before storing it', async () => {
+      const host = selectText('placeholder');
+      const { tool } = build();
+
+      await tool.applyEquation('  o^2  ');
+
+      expect(host.querySelector('span[data-latex]')?.getAttribute('data-latex')).toBe('o^2');
+    });
+
+    it('writes nothing for a blank formula', async () => {
+      const host = selectText('placeholder');
+      const { tool } = build();
+
+      await tool.applyEquation('   ');
+
+      expect(host.querySelector('span[data-latex]')).toBeNull();
+      expect(host.textContent).toBe('placeholder');
+    });
+
+    it('replaces the selected text rather than adding to it', async () => {
+      const host = selectText('replace me');
+      const { tool } = build();
+
+      await tool.applyEquation('p^2');
+
+      expect(host.textContent).not.toContain('replace me');
+      expect(host.querySelector('span[data-latex]')?.getAttribute('data-latex')).toBe('p^2');
+    });
+
+    it('leaves the caret collapsed straight after the equation', async () => {
+      const host = selectText('placeholder');
+      const { tool } = build();
+
+      await tool.applyEquation('q^2');
+
+      const span = host.querySelector('span[data-latex]');
+      const selection = window.getSelection();
+
+      expect(selection?.rangeCount).toBe(1);
+
+      const range = selection?.getRangeAt(0);
+
+      expect(range?.collapsed).toBe(true);
+      expect(range?.startContainer).toBe(span?.parentNode);
+      expect(range?.startOffset).toBe(Array.from(host.childNodes).indexOf(span as ChildNode) + 1);
+    });
+
+    it('marks the rendered span mutation-free so the write is not an edit', async () => {
+      const host = selectText('placeholder');
+      const { tool } = build();
+
+      await tool.applyEquation('r^2');
+
+      expect(host.querySelector('span[data-latex]')?.getAttribute('data-blok-mutation-free')).toBe('true');
+    });
+  });
+
   describe('hydrate', () => {
+    it('leaves an already-rendered span alone', async () => {
+      const root = document.createElement('div');
+
+      root.innerHTML = '<span data-latex="s^2"><span class="katex">rendered:s^2</span></span>';
+
+      await EquationInlineTool.hydrate(root);
+
+      expect(renderLatex).not.toHaveBeenCalled();
+    });
+
+    it('leaves a span with no stored formula alone', async () => {
+      const root = document.createElement('div');
+
+      root.innerHTML = '<span data-latex="">t^2</span>';
+
+      await EquationInlineTool.hydrate(root);
+
+      expect(renderLatex).not.toHaveBeenCalled();
+    });
+
     it('renders every unrendered equation span in a block', async () => {
       const root = document.createElement('div');
 

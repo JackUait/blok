@@ -4,7 +4,7 @@ const uploader = vi.hoisted(() => ({
   handleFile: vi.fn(),
   handleUrl: vi.fn(),
 }));
-const preview = vi.hoisted(() => ({ open: vi.fn(() => vi.fn()) }));
+const preview = vi.hoisted(() => ({ open: vi.fn((_options: unknown) => vi.fn()) }));
 
 vi.mock('../../../../src/tools/file/uploader', () => ({
   Uploader: class FakeUploader {
@@ -69,7 +69,10 @@ const flush = async (): Promise<void> => {
 
 interface ActivatableItem {
   name?: string;
+  title?: string;
+  icon?: string;
   isActive?: boolean;
+  closeOnActivate?: boolean;
   onActivate?: (item: MenuConfigItem) => void;
 }
 
@@ -189,7 +192,7 @@ describe('FileTool mutants', () => {
       const root = tool.render();
 
       document.body.appendChild(root);
-      uploader.handleFile.mockRejectedValue(new FileToolError('too big', 'FILE_TOO_LARGE'));
+      uploader.handleFile.mockRejectedValue(new FileToolError('FILE_TOO_LARGE', 'too big'));
       tool.onPaste(pasteFile(new File(['x'], 'report.pdf', { type: 'application/pdf' })));
       await flush();
 
@@ -361,6 +364,76 @@ describe('FileTool mutants', () => {
       settingsItem(tool, 'file-caption').onActivate?.({} as MenuConfigItem);
 
       expect(tool.save().captionVisible).toBe(false);
+    });
+
+
+    it('lists the four settings actions with their own icons and labels', () => {
+      const tool = createTool({ url: 'https://cdn.test/a.pdf', fileName: 'a.pdf' });
+
+      tool.render();
+
+      const items = tool.renderSettings() as unknown as ActivatableItem[];
+
+      expect(items.map((item) => item.name)).toStrictEqual([
+        'file-caption',
+        'file-replace',
+        'file-download',
+        'file-copy-url',
+      ]);
+      expect(items.map((item) => item.title)).toStrictEqual([
+        'tools.file.toggleCaption',
+        'tools.file.replace',
+        'tools.file.download',
+        'tools.file.copyUrl',
+      ]);
+      expect(new Set(items.map((item) => item.icon)).size).toBe(4);
+      expect(items.every((item) => item.closeOnActivate === true)).toBe(true);
+    });
+
+    it('empties the block from the replace action', () => {
+      const tool = createTool({ url: 'https://cdn.test/a.pdf', fileName: 'a.pdf' });
+      const root = tool.render();
+
+      document.body.appendChild(root);
+      settingsItem(tool, 'file-replace').onActivate?.({} as MenuConfigItem);
+
+      expect(tool.save().url).toBe('');
+      expect(root.querySelector('[data-role="file-card"]')).toBeNull();
+      expect(dispatchChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('clicks the card\'s own download link from the download action', () => {
+      const tool = createTool({ url: 'https://cdn.test/a.pdf', fileName: 'a.pdf' });
+      const root = tool.render();
+
+      document.body.appendChild(root);
+
+      const link = root.querySelector<HTMLAnchorElement>('a[data-action="download"]');
+
+      expect(link).not.toBeNull();
+
+      const click = vi.fn((event: Event) => event.preventDefault());
+
+      link?.addEventListener('click', click);
+      settingsItem(tool, 'file-download').onActivate?.({} as MenuConfigItem);
+
+      expect(click).toHaveBeenCalledTimes(1);
+    });
+
+    it('copies the file url from the copy action', () => {
+      const writeText = vi.fn(async () => undefined);
+
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+
+      const tool = createTool({ url: 'https://cdn.test/a.pdf', fileName: 'a.pdf' });
+
+      tool.render();
+      settingsItem(tool, 'file-copy-url').onActivate?.({} as MenuConfigItem);
+
+      expect(writeText).toHaveBeenCalledWith('https://cdn.test/a.pdf');
     });
   });
 

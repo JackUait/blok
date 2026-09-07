@@ -288,6 +288,11 @@ export interface BlokState {
   inlineToolbar?: string[]|boolean;
 
   /**
+   * Inline emoji menu opened by typing ":" followed by a name. On by default.
+   */
+  inlineEmoji?: boolean;
+
+  /**
    * Fires when something changed in DOM.
    *
    * Delivery latency is bounded, so this is safe to drive UI from ("document is

@@ -189,6 +189,55 @@ describe('SupSubInlineTool mutants', () => {
     });
   });
 
+  describe('a collapsed caret', () => {
+    const putCaret = (node: Node, offset: number): void => selectRange(node, offset, offset);
+
+    it('opens an empty mark at the caret', () => {
+      const { superscript, paragraph } = build('x2');
+
+      putCaret(textOf(paragraph, 'x2'), 1);
+      superscript.onActivate();
+
+      const mark = paragraph.querySelector('sup');
+
+      expect(mark).not.toBeNull();
+      expect(mark?.textContent).toBe('\u200B');
+      expect(paragraph.querySelector('sub')).toBeNull();
+    });
+
+    it('leaves the opposite mark alone when the caret is in plain text', () => {
+      const { subscript, paragraph } = build('x2');
+
+      putCaret(textOf(paragraph, 'x2'), 1);
+      subscript.onActivate();
+
+      expect(paragraph.querySelector('sub')).not.toBeNull();
+      expect(paragraph.querySelector('sup')).toBeNull();
+    });
+
+    it('steps out of the opposite mark before opening its own', () => {
+      const { superscript, paragraph } = build('x<sub>2</sub>');
+
+      putCaret(textOf(paragraph, '2'), 1);
+      superscript.onActivate();
+
+      const opened = paragraph.querySelector('sup');
+
+      expect(opened).not.toBeNull();
+      expect(opened?.closest('sub')).toBeNull();
+    });
+
+    it('steps out of its own mark rather than nesting', () => {
+      const { superscript, paragraph } = build('x<sup>2</sup>');
+
+      putCaret(textOf(paragraph, '2'), 1);
+      superscript.onActivate();
+
+      expect(paragraph.querySelectorAll('sup')).toHaveLength(1);
+      expect(paragraph.textContent).toContain('\u200B');
+    });
+  });
+
   describe('the popover selection handshake', () => {
     it('paints and saves the selection when the popover opens', () => {
       const setFakeBackground = vi.spyOn(SelectionUtils.prototype, 'setFakeBackground')
@@ -291,6 +340,32 @@ describe('SupSubInlineTool mutants', () => {
       }));
 
       expect(paragraph.querySelector('sup')?.textContent).toBe('2');
+    });
+
+    it('registers each shortcut once however many tools are built', () => {
+      const register = vi.spyOn(InlineToolEventManager.prototype, 'register');
+
+      build();
+      build();
+      build();
+
+      expect(register).toHaveBeenCalledTimes(2);
+    });
+
+    it('reads an element-anchored selection as inside the editor', () => {
+      onAMac();
+
+      const { paragraph, editor } = build('x2');
+
+      selectRange(paragraph, 0, paragraph.childNodes.length);
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: '.',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      expect(editor.querySelector('sup')).not.toBeNull();
     });
 
     it('ignores a keystroke outside any editor', () => {

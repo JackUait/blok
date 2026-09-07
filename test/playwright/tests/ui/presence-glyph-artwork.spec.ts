@@ -87,7 +87,47 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
         throw new Error(`Empty painted mask for ${name}`);
       }
 
+      const visited = new Uint8Array(canvas.width * canvas.height);
+      let openings = 0;
+
+      for (let seed = 0; seed < visited.length; seed++) {
+        if (visited[seed] || pixels[seed * 4 + 3] >= 128) {
+          continue;
+        }
+
+        const queue = [seed];
+        let exterior = false;
+
+        visited[seed] = 1;
+
+        for (let index = 0; index < queue.length; index++) {
+          const pixel = queue[index];
+          const x = pixel % canvas.width;
+          const y = Math.floor(pixel / canvas.width);
+
+          exterior ||= x === 0 || y === 0 || x === canvas.width - 1 || y === canvas.height - 1;
+
+          const neighbors = [
+            x > 0 ? pixel - 1 : -1,
+            x < canvas.width - 1 ? pixel + 1 : -1,
+            y > 0 ? pixel - canvas.width : -1,
+            y < canvas.height - 1 ? pixel + canvas.width : -1,
+          ].filter(neighbor => neighbor >= 0 && !visited[neighbor] && pixels[neighbor * 4 + 3] < 128);
+
+          neighbors.forEach(neighbor => {
+            visited[neighbor] = 1;
+            queue.push(neighbor);
+          });
+        }
+
+        // Ignore pinholes smaller than one square SVG unit.
+        if (!exterior && queue.length >= scale * scale) {
+          openings++;
+        }
+      }
+
       return {
+        openings,
         left: minX / scale - padding,
         top: minY / scale - padding,
         right: (maxX + 1) / scale - padding,
@@ -96,6 +136,16 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
         centroidY: weightedY / weight / scale - padding,
       };
     }, glyph);
+
+    const minimumOpenings: Partial<Record<typeof glyph, number>> = {
+      satellite: 7,
+      star: 5,
+      sun: 1,
+      saucer: 4,
+      asteroid: 3,
+    };
+
+    expect.soft(geometry.openings, `${glyph} readable negative-space details`).toBeGreaterThanOrEqual(minimumOpenings[glyph] ?? 0);
 
     const boundsCenterX = (geometry.left + geometry.right) / 2;
     const boundsCenterY = (geometry.top + geometry.bottom) / 2;

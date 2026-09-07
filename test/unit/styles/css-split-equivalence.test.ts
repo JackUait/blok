@@ -554,8 +554,8 @@ describe('main.css split — cascade-preserving equivalence', () => {
     // 2,854 bytes in popover-animation.css.
     // Picker layout, search states and reduced motion add 9,383 bytes.
     // Picker skin controls, reel labels and empty-state motion add 3,457 bytes.
-    // Richer anonymous presence silhouettes add 175 bytes in presence.css.
-    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_457 + 175;
+    // Richer anonymous presence silhouettes add 299 bytes in presence.css.
+    const CEILING = Math.floor(PRE_SPLIT_BYTES * 1.4805) + 1_162 + 2_854 + 9_383 + 3_457 + 299;
     const actual = localImportedByteBudget(ENTRY);
 
     expect(actual).toBeLessThanOrEqual(CEILING);

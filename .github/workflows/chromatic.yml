@@ -23,7 +23,7 @@ jobs:
         run: yarn storybook:build
 
       - name: Run Chromatic
-        uses: chromaui/action@69be7d88fc9479eedbe5b2861f847eb48f97cabc # latest
+        uses: chromaui/action@2a0b63f30233c48591844a46d451b9cf68128186 # latest
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           storybookBuildDir: storybook-static

@@ -91,6 +91,8 @@ export class CalloutTool implements BlockTool {
    * text — preserving the original content across the conversion.
    */
   private _pendingChildText: string | null = null;
+  /** Removers for the listeners only an editable callout carries. */
+  private _editableTeardown: Array<() => void> = [];
   /**
    * True when this instance is a genuine CREATION rather than a
    * re-materialisation of a callout the document already describes. Only a
@@ -165,52 +167,93 @@ export class CalloutTool implements BlockTool {
     this.applyColors();
 
     if (!this.readOnly) {
-      /**
-       * Warm the emoji dataset ahead of the click. Fetching that chunk at click
-       * time is nearly the whole of a slow first open, so two signals start it
-       * early: landing on the trigger (a few hundred ms of runway) and simply
-       * editing this callout (seconds of it, and whoever is writing a callout is
-       * the person likely to reach for its icon).
-       *
-       * Skipped when a host supplies its own picker — that chunk is never used.
-       */
-      if (this._customEmojiPicker === undefined) {
-        const prefetch = (): void => prefetchEmojiPickerData(this.api.i18n.getLocale());
-
-        dom.emojiButton.addEventListener('pointerenter', prefetch);
-        dom.emojiButton.addEventListener('pointerdown', prefetch);
-        dom.emojiButton.addEventListener('focus', prefetch);
-
-        // Editing is a weaker signal than aiming at the button, so it yields to
-        // real work rather than competing with typing.
-        dom.wrapper.addEventListener('focusin', () => {
-          const idle = window.requestIdleCallback;
-
-          if (typeof idle === 'function') {
-            idle(() => prefetch());
-          } else {
-            setTimeout(prefetch, 0);
-          }
-        }, { once: true });
-      }
-
-      dom.emojiButton.addEventListener('click', () => this.openEmojiPicker());
-      dom.emojiButton.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this.openEmojiPicker();
-        }
-      });
-
-      // Backspace delegation: intercept on first child block when it's empty
-      dom.childContainer.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Backspace') {
-          this.handleChildBackspace(e);
-        }
-      });
+      this.wireEditableListeners();
     }
 
     return dom.wrapper;
+  }
+
+  /**
+   * Attach every listener that only an editable callout needs.
+   *
+   * Kept out of `render()` because a callout can reach the editable state long
+   * after it was drawn: a collaboration session boots read-only whatever the
+   * host asked for, so on a reload every callout renders read-only and is
+   * switched in place once the document syncs. Wiring these once at render time
+   * left the emoji trigger dead for the rest of the session.
+   */
+  private wireEditableListeners(): void {
+    // Already wired — a repeated "you are editable" must not stack handlers.
+    if (this._dom === null || this._editableTeardown.length > 0) {
+      return;
+    }
+
+    const dom = this._dom;
+
+    /**
+     * Warm the emoji dataset ahead of the click. Fetching that chunk at click
+     * time is nearly the whole of a slow first open, so two signals start it
+     * early: landing on the trigger (a few hundred ms of runway) and simply
+     * editing this callout (seconds of it, and whoever is writing a callout is
+     * the person likely to reach for its icon).
+     *
+     * Skipped when a host supplies its own picker — that chunk is never used.
+     */
+    if (this._customEmojiPicker === undefined) {
+      const prefetch = (): void => prefetchEmojiPickerData(this.api.i18n.getLocale());
+
+      this.addEditableListener(dom.emojiButton, 'pointerenter', prefetch);
+      this.addEditableListener(dom.emojiButton, 'pointerdown', prefetch);
+      this.addEditableListener(dom.emojiButton, 'focus', prefetch);
+
+      // Editing is a weaker signal than aiming at the button, so it yields to
+      // real work rather than competing with typing.
+      this.addEditableListener(dom.wrapper, 'focusin', () => {
+        const idle = window.requestIdleCallback;
+
+        if (typeof idle === 'function') {
+          idle(() => prefetch());
+        } else {
+          setTimeout(prefetch, 0);
+        }
+      }, { once: true });
+    }
+
+    this.addEditableListener(dom.emojiButton, 'click', () => this.openEmojiPicker());
+    this.addEditableListener(dom.emojiButton, 'keydown', (e: Event) => {
+      const key = (e as KeyboardEvent).key;
+
+      if (key === 'Enter' || key === ' ') {
+        e.preventDefault();
+        this.openEmojiPicker();
+      }
+    });
+
+    // Backspace delegation: intercept on first child block when it's empty
+    this.addEditableListener(dom.childContainer, 'keydown', (e: Event) => {
+      if ((e as KeyboardEvent).key === 'Backspace') {
+        this.handleChildBackspace(e as KeyboardEvent);
+      }
+    });
+  }
+
+  /** Registers a listener and remembers how to take it back off. */
+  private addEditableListener(
+    target: HTMLElement,
+    type: string,
+    handler: EventListener,
+    options?: AddEventListenerOptions
+  ): void {
+    target.addEventListener(type, handler, options);
+    this._editableTeardown.push(() => target.removeEventListener(type, handler, options));
+  }
+
+  private unwireEditableListeners(): void {
+    for (const off of this._editableTeardown) {
+      off();
+    }
+
+    this._editableTeardown = [];
   }
 
   public rendered(): void {
@@ -340,8 +383,17 @@ export class CalloutTool implements BlockTool {
   public setReadOnly(state: boolean): void {
     this.readOnly = state;
 
-    if (this._dom) {
-      this._dom.emojiButton.disabled = state;
+    if (this._dom === null) {
+      // Not drawn yet — render() reads the state we just stored.
+      return;
+    }
+
+    this._dom.emojiButton.disabled = state;
+
+    if (state) {
+      this.unwireEditableListeners();
+    } else {
+      this.wireEditableListeners();
     }
   }
 

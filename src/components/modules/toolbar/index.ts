@@ -768,22 +768,7 @@ export class Toolbar extends Module<ToolbarNodes> {
         || isToggleHeader);
 
     if (hasLeftEdgeInteraction && this.nodes.actions) {
-      /**
-       * CSS pointer-events does not inherit — every descendant of `actions`
-       * keeps its default `auto` and will still intercept clicks that land
-       * on its painted area. For left-edge blocks (toggle, callout,
-       * header-with-arrow) the actions rectangle visually overlaps the
-       * block's own left-edge interactive element (toggle arrow / callout
-       * emoji) once the toolbar is margin-aligned, so a toolbar SVG
-       * swallows the arrow click. Walk every descendant and disable pointer
-       * events explicitly, then restore them on the settings toggler so the
-       * drag handle / tunes-menu still work.
-       */
-      this.nodes.actions.style.pointerEvents = 'none';
-      for (const descendant of Array.from(this.nodes.actions.querySelectorAll<HTMLElement>('*'))) {
-        descendant.style.pointerEvents = 'none';
-      }
-      this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
+      this.shieldLeftEdgeControl(targetBlock);
     }
 
     if (blockContentElement) {
@@ -1256,6 +1241,61 @@ export class Toolbar extends Module<ToolbarNodes> {
     if (this.nodes.settingsToggler) {
       this.nodes.settingsToggler.style.pointerEvents = 'auto';
     }
+  }
+
+  /**
+   * Stop the actions bar from swallowing a block's own left-edge control.
+   *
+   * The bar is margin-aligned, so on a callout / toggle / toggle-heading it can
+   * be clamped over the block's emoji button or toggle arrow. `pointer-events`
+   * does not inherit, so every descendant keeps its own `auto` and intercepts
+   * whatever lands on its painted area — hence the per-descendant walk.
+   *
+   * Only the parts that ACTUALLY cover the control stand down. Blanking the
+   * whole bar (the original fix) left the plus button painted, tooltipped and
+   * permanently unclickable on those three tools — that is how "+ does nothing
+   * on a callout" shipped, and the protection it bought was already void: the
+   * settings toggler sits nearer the content and is restored to `auto` below,
+   * so it, not the plus button, is what a clamped bar puts over the control.
+   *
+   * With no measurable control the bar is disabled wholesale, as before: a
+   * swallowed emoji click has no other route, an unreachable "+" does.
+   * @param targetBlock - block the toolbar is being opened beside
+   */
+  private shieldLeftEdgeControl(targetBlock: Block): void {
+    const { actions } = this.nodes;
+
+    if (!actions) {
+      return;
+    }
+
+    const control = targetBlock.holder.querySelector<HTMLElement>(
+      '[data-blok-testid="callout-emoji-btn"], [data-blok-toggle-arrow]'
+    );
+
+    if (control === null) {
+      actions.style.pointerEvents = 'none';
+      for (const descendant of Array.from(actions.querySelectorAll<HTMLElement>('*'))) {
+        descendant.style.pointerEvents = 'none';
+      }
+      this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
+
+      return;
+    }
+
+    const controlRect = control.getBoundingClientRect();
+    const covers = (element: HTMLElement): boolean => {
+      const rect = element.getBoundingClientRect();
+
+      return rect.left < controlRect.right && controlRect.left < rect.right
+        && rect.top < controlRect.bottom && controlRect.top < rect.bottom;
+    };
+
+    actions.style.pointerEvents = covers(actions) ? 'none' : 'auto';
+    for (const descendant of Array.from(actions.querySelectorAll<HTMLElement>('*'))) {
+      descendant.style.pointerEvents = covers(descendant) ? 'none' : '';
+    }
+    this.restoreSettingsTogglerForLeftEdgeBlock(targetBlock);
   }
 
   /**

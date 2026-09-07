@@ -1597,8 +1597,96 @@ describe('Toolbar — public surface', () => {
       expect(h.actions.style.pointerEvents).toBe('none');
     });
 
-    it('lets clicks through to a toggle heading arrow', () => {
-      const h = openBeside(withArrow('toggle-h', 'header'));
+    /**
+     * Horizontal band at a fixed height — the actions bar and a block's
+     * left-edge control always share the block's first line.
+     */
+    const stubRect = (element: HTMLElement, left: number, right: number): void => {
+      vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+        left,
+        right,
+        top: 0,
+        bottom: 24,
+        width: right - left,
+        height: 24,
+        x: left,
+        y: 0,
+        toJSON: () => ({}),
+      });
+    };
+
+    const withEmoji = (id: string): Block => {
+      const holder = document.createElement('div');
+      const emoji = document.createElement('button');
+
+      emoji.setAttribute('data-blok-testid', 'callout-emoji-btn');
+      holder.appendChild(emoji);
+
+      return makeBlock({
+        id,
+        name: 'callout',
+        holder,
+      });
+    };
+
+    /**
+     * Lays the bar out against the block's left-edge control before the toolbar
+     * measures them, so the geometry — not the block's name — decides.
+     */
+    const openOver = (block: Block, control: { left: number; right: number }): Harness => {
+      document.body.appendChild(block.holder);
+
+      const h = createHarness({
+        blocks: [block, makeBlock({ id: 'other' })],
+      });
+      const controlEl = block.holder.querySelector<HTMLElement>('[data-blok-testid="callout-emoji-btn"], [data-blok-toggle-arrow]');
+
+      stubRect(controlEl as HTMLElement, control.left, control.right);
+      stubRect(h.actions, 10, 60);
+      stubRect(h.plusButton, 10, 34);
+      stubRect(h.settingsToggler, 36, 60);
+
+      h.toolbar.moveAndOpen(block);
+
+      return h;
+    };
+
+    it('keeps the plus button clickable when the bar clears the callout emoji', () => {
+      const h = openOver(withEmoji('callout-clear'), { left: 100,
+        right: 124 });
+
+      expect(h.plusButton.style.pointerEvents).not.toBe('none');
+      expect(h.actions.style.pointerEvents).toBe('auto');
+    });
+
+    it('keeps the plus button clickable when the bar clears the toggle arrow', () => {
+      const h = openOver(withArrow('toggle-clear', 'toggle'), { left: 100,
+        right: 124 });
+
+      expect(h.plusButton.style.pointerEvents).not.toBe('none');
+    });
+
+    it('stops the plus button from swallowing an emoji it covers', () => {
+      const h = openOver(withEmoji('callout-covered'), { left: 12,
+        right: 30 });
+
+      expect(h.plusButton.style.pointerEvents).toBe('none');
+      expect(h.actions.style.pointerEvents).toBe('none');
+    });
+
+    it('keeps the drag handle clickable either way', () => {
+      const clear = openOver(withEmoji('callout-a'), { left: 100,
+        right: 124 });
+      const covered = openOver(withEmoji('callout-b'), { left: 12,
+        right: 30 });
+
+      expect(clear.settingsToggler.style.pointerEvents).toBe('auto');
+      expect(covered.settingsToggler.style.pointerEvents).toBe('auto');
+    });
+
+    it('lets clicks through to a toggle heading arrow it covers', () => {
+      const h = openOver(withArrow('toggle-h', 'header'), { left: 12,
+        right: 30 });
 
       expect(h.actions.style.pointerEvents).toBe('none');
     });

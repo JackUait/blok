@@ -38,13 +38,15 @@ const resetBlok = async (page: Page): Promise<void> => {
 
 type CreateBlokOptions = {
   user?: { id: string; displayName: string };
+  /** Name the editor through `user.name` alone, with no resolveUser callback. */
+  namedUser?: { id: string; name: string };
 };
 
 const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<void> => {
   await resetBlok(page);
   await page.waitForFunction(() => typeof window.Blok === 'function');
 
-  await page.evaluate(async ({ holder, user }) => {
+  await page.evaluate(async ({ holder, user, namedUser }) => {
     const config: Record<string, unknown> = {
       holder,
       data: {
@@ -56,6 +58,10 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
         ],
       } satisfies OutputData,
     };
+
+    if (namedUser) {
+      config.user = namedUser;
+    }
 
     if (user) {
       config.user = { id: user.id };
@@ -72,7 +78,7 @@ const createBlok = async (page: Page, options: CreateBlokOptions = {}): Promise<
 
     window.blokInstance = blok;
     await blok.isReady;
-  }, { holder: HOLDER_ID, user: options.user ?? null });
+  }, { holder: HOLDER_ID, user: options.user ?? null, namedUser: options.namedUser ?? null });
 };
 
 const openBlockSettings = async (page: Page): Promise<void> => {
@@ -110,6 +116,22 @@ test.describe('Block settings edit metadata footer', () => {
 
     await expect(metadataItem).toBeVisible();
     await expect(metadataItem).toContainText('Last edited by Jack Uait');
+  });
+
+  test('names the editor from user.name with no resolveUser callback', async ({ page }) => {
+    await createBlok(page, { namedUser: { id: 'user-123', name: 'Ada Lovelace' } });
+
+    const block = page.locator(BLOCK_SELECTOR).filter({ hasText: 'Hello world' });
+
+    await block.click();
+    await page.keyboard.type(' test');
+
+    await openBlockSettings(page);
+
+    const metadataItem = page.locator(`${POPOVER_CONTAINER_SELECTOR} ${EDIT_METADATA_SELECTOR}`);
+
+    await expect(metadataItem).toBeVisible();
+    await expect(metadataItem).toContainText('Last edited by Ada Lovelace');
   });
 
   test('shows "Last edited" without user name when no user is configured', async ({ page }) => {

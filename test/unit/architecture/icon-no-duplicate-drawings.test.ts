@@ -188,6 +188,20 @@ const scalePoints = (points: string, scale: number): string =>
  * Returns `null` when the markup has no parsable square viewBox — such an icon
  * cannot be compared and is reported separately rather than silently skipped.
  */
+/**
+ * Scaled geometry attributes of a non-path shape, in declaration order.
+ */
+const shapeGeometry = (el: Element, tag: string, scale: number): string[] =>
+  (GEOMETRY_ATTRS[tag] ?? [])
+    .map((attr) => {
+      const raw = el.getAttribute(attr);
+
+      return raw === null
+        ? null
+        : `${attr}=${attr === 'points' ? scalePoints(raw, scale) : round(Number(raw) * scale)}`;
+    })
+    .filter((part): part is string => part !== null);
+
 const signatureOf = (markup: string): string | null => {
   const host = document.createElement('div');
 
@@ -223,20 +237,9 @@ const signatureOf = (markup: string): string | null => {
       strokePaint === 'none'
         ? '0'
         : round(Number(el.getAttribute('stroke-width') ?? inherited('stroke-width') ?? 1) * scale);
-    const geometry: string[] = [];
-
-    if (tag === 'path') {
-      geometry.push(canonicalPath(el.getAttribute('d') ?? '', scale));
-    } else {
-      for (const attr of GEOMETRY_ATTRS[tag] ?? []) {
-        const raw = el.getAttribute(attr);
-
-        if (raw === null) {
-          continue;
-        }
-        geometry.push(`${attr}=${attr === 'points' ? scalePoints(raw, scale) : round(Number(raw) * scale)}`);
-      }
-    }
+    const geometry = tag === 'path'
+      ? [canonicalPath(el.getAttribute('d') ?? '', scale)]
+      : shapeGeometry(el, tag, scale);
 
     parts.push(`${tag}|${geometry.join(' ')}|${fill}|${strokePaint}|${strokeWidth}`);
   }

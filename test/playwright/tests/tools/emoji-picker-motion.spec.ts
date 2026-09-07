@@ -330,6 +330,33 @@ test('keeps decorative Callout empty results and the clear action usable at 320p
   await expect(page.getByTestId('callout-emoji-btn')).toHaveText('💡');
 });
 
+test('sets the empty-state hint on the picker width rather than a narrow column', async ({ page }) => {
+  const picker = await openPicker(page);
+
+  await picker.getByRole('searchbox').fill('zzzznoemojimatcheszzzz');
+  const hint = picker.locator('[data-emoji-picker-hint]');
+
+  await expect(hint).toBeVisible();
+  const layout = await hint.evaluate((element) => {
+    const empty = element.closest<HTMLElement>('[data-emoji-picker-empty]');
+
+    if (!(element instanceof HTMLElement) || empty === null) {
+      throw new Error('Missing empty-state hint');
+    }
+
+    const style = getComputedStyle(element);
+    const padding = getComputedStyle(empty);
+    const available = empty.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+
+    return {
+      lines: Math.round(element.offsetHeight / parseFloat(style.lineHeight)),
+      unconstrained: style.maxWidth === 'none' || parseFloat(style.maxWidth) >= available,
+    };
+  });
+
+  expect(layout).toEqual({ lines: 1, unconstrained: true });
+});
+
 test('reduced motion changes tone and clears empty results without running decorative animations', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const picker = await openPicker(page);

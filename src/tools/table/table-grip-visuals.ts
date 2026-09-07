@@ -1,3 +1,6 @@
+import { Dom } from '../../components/dom';
+import { IconMenu } from '../../components/icons';
+
 export const GRIP_HOVER_SIZE = 16;
 
 /**
@@ -13,33 +16,17 @@ export const setGripPillSize = (grip: HTMLElement, type: 'col' | 'row', size: nu
 };
 
 /**
- * Dot positions for vertical layout (2 cols × 3 rows) — used by row grips.
- */
-const VERTICAL_DOTS: [number, number][] = [
-  [2, 2], [8, 2],
-  [2, 7], [8, 7],
-  [2, 12], [8, 12],
-];
-
-/**
- * Dot positions for horizontal layout (3 cols × 2 rows) — used by column grips.
- */
-const HORIZONTAL_DOTS: [number, number][] = [
-  [2, 2], [7, 2], [12, 2],
-  [2, 8], [7, 8], [12, 8],
-];
-
-/**
  * Creates an SVG element with a dot grid pattern for the drag handle affordance.
  * Column grips get a horizontal 3×2 layout; row grips get a vertical 2×3 layout.
  */
 export const createGripDotsSvg = (orientation: 'horizontal' | 'vertical'): SVGElement => {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const svg = Dom.make('div', null, { innerHTML: IconMenu }).firstElementChild as SVGElement;
   const isHorizontal = orientation === 'horizontal';
 
   svg.setAttribute('width', isHorizontal ? '14' : '10');
   svg.setAttribute('height', isHorizontal ? '10' : '14');
-  svg.setAttribute('viewBox', isHorizontal ? '0 0 14 10' : '0 0 10 14');
+  // Crop the 20-unit icon without scaling its dots or the compact pill.
+  svg.setAttribute('viewBox', isHorizontal ? '3 5 14 10' : '5 3 10 14');
   svg.setAttribute('fill', 'currentColor');
   svg.classList.add(
     'opacity-0',
@@ -49,15 +36,10 @@ export const createGripDotsSvg = (orientation: 'horizontal' | 'vertical'): SVGEl
     'pointer-events-none'
   );
 
-  const positions = isHorizontal ? HORIZONTAL_DOTS : VERTICAL_DOTS;
-
-  for (const [cx, cy] of positions) {
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-
-    circle.setAttribute('cx', String(cx));
-    circle.setAttribute('cy', String(cy));
-    circle.setAttribute('r', '1.5');
-    svg.appendChild(circle);
+  if (isHorizontal) {
+    for (const circle of svg.querySelectorAll('circle')) {
+      circle.setAttribute('transform', 'rotate(90 10 10)');
+    }
   }
 
   return svg;

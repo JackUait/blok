@@ -343,4 +343,40 @@ export function renderIconGallery({ container, iconGroups, icons }: RenderIconGa
   for (const [groupName, iconNames] of Object.entries(iconGroups)) {
     container.appendChild(createIconGroup(groupName, iconNames, icons, entries));
   }
+
+  const previews = Array.from(container.querySelectorAll('svg')).map(svg => ({
+    svg,
+    width: svg.getAttribute('width') ?? '20',
+    height: svg.getAttribute('height') ?? '20',
+  }));
+  const controls = document.createElement('div');
+  const label = document.createElement('span');
+
+  controls.className = 'icon-gallery-controls';
+  controls.setAttribute('role', 'group');
+  controls.setAttribute('aria-label', 'Icon preview size');
+  label.textContent = 'Blok Line · preview size';
+  controls.appendChild(label);
+
+  for (const size of ['Native', '16', '20', '24']) {
+    const button = document.createElement('button');
+
+    button.type = 'button';
+    button.className = 'icon-lightbox__btn';
+    button.textContent = size === 'Native' ? size : `${size} px`;
+    button.setAttribute('aria-pressed', String(size === 'Native'));
+    button.addEventListener('click', () => {
+      for (const preview of previews) {
+        preview.svg.setAttribute('width', size === 'Native' ? preview.width : size);
+        preview.svg.setAttribute('height', size === 'Native' ? preview.height : size);
+      }
+
+      for (const sibling of controls.querySelectorAll('button')) {
+        sibling.setAttribute('aria-pressed', String(sibling === button));
+      }
+    });
+    controls.appendChild(button);
+  }
+
+  container.prepend(controls);
 }

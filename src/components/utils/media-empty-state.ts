@@ -2,7 +2,7 @@ import type { MediaSource } from '../../../types/tools/media-source';
 import {
   IconArrowDownLine,
   IconArrowUp,
-  IconLinkCopy,
+  IconLink,
   IconUpload,
 } from '../icons';
 import { formatBytes } from './format-bytes';
@@ -348,7 +348,7 @@ export function renderMediaEmptyState(opts: MediaEmptyStateOptions): MediaEmptyS
     const fieldIcon = document.createElement('span');
     fieldIcon.className = 'blok-media-empty__embed-icon';
     fieldIcon.setAttribute('aria-hidden', 'true');
-    fieldIcon.innerHTML = IconLinkCopy;
+    fieldIcon.innerHTML = IconLink;
 
     const urlInput = document.createElement('input');
     urlInput.type = 'url';

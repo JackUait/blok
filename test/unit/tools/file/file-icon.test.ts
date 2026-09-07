@@ -4,7 +4,6 @@ import {
   IconFile,
   IconFileArchive,
   IconFileDoc,
-  IconFilePdf,
   IconFileSheet,
   IconFileSlides,
   IconImage,
@@ -15,8 +14,8 @@ import {
 
 describe('resolveFileIcon', () => {
   it('maps PDFs by mime type and by extension', () => {
-    expect(resolveFileIcon({ url: 'x', mimeType: 'application/pdf' })).toEqual({ category: 'pdf', icon: IconFilePdf });
-    expect(resolveFileIcon({ url: 'report.PDF' })).toEqual({ category: 'pdf', icon: IconFilePdf });
+    expect(resolveFileIcon({ url: 'x', mimeType: 'application/pdf' })).toEqual({ category: 'pdf', icon: IconFile });
+    expect(resolveFileIcon({ url: 'report.PDF' })).toEqual({ category: 'pdf', icon: IconFile });
   });
 
   it('maps word-processing documents', () => {

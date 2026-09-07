@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { IconMenu } from '../../../../src/components/icons';
 import { TableRowColControls } from '../../../../src/tools/table/table-row-col-controls';
 
 const CELL_ATTR = 'data-blok-table-cell';
@@ -627,9 +628,11 @@ describe('TableRowColControls', () => {
       const colGrips = grid.querySelectorAll<HTMLElement>(`[${GRIP_COL_ATTR}]`);
       const circles = colGrips[0].querySelectorAll('circle');
 
-      circles.forEach(circle => {
-        expect(circle).toHaveAttribute('r', '1.5');
-      });
+      const canonical = new DOMParser().parseFromString(IconMenu, 'image/svg+xml');
+      const canonicalRadii = Array.from(canonical.querySelectorAll('circle'), circle => circle.getAttribute('r'));
+
+      expect(circles).toHaveLength(6);
+      expect(Array.from(circles, circle => circle.getAttribute('r'))).toStrictEqual(canonicalRadii);
     });
   });
 

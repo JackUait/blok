@@ -229,6 +229,8 @@ The docs are a separate React app in `docs/` (own `package.json`, Vitest + React
 
 All icons live in `src/components/icons/index.ts` as exported SVG string constants.
 
+**Read `src/components/icons/README.md` before drawing or changing an icon.** Blok Line uses shared geometry, not just matching stroke widths. Check the family at 16, 20 and 24 px in `/icons`; add a relationship test so future drawings cannot drift.
+
 The dev playground (`index.html`) has a `iconGroups` object (around line 909) that groups icons into named categories for the `/icons` gallery tab. **This list is manually maintained.**
 
 **Rule: whenever you add a new icon to `src/components/icons/index.ts`, you MUST also add its export name to the appropriate group in `iconGroups` in `index.html`. Place it in the most fitting existing category, or create a new named category if none fits.**

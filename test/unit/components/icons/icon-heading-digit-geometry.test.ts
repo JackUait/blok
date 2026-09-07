@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   IconH1,
   IconH2,
@@ -21,20 +21,6 @@ import {
   IconClearFormat,
 } from '../../../../src/components/icons';
 
-/**
- * Digit-skeleton quality pins for the heading family.
- *
- * The stroked digit skeletons are the letterform half of every H1-H6 icon, so
- * their curve quality IS the perceived quality of the whole family:
- *
- * - Curves are cubic (C) arcs. The old hand-tuned quadratics (Q) kinked at the
- *   bowl junctions of 2/3/5/6, which read as wobble at menu size.
- * - The "4" stem runs the full cap-to-baseline height from a shared apex with
- *   the diagonal. The old stem started mid-air and looked disconnected.
- * - Every toggle digit lives in ONE cell (cap 9.03, baseline 13.75). Toggle
- *   H4-H6 used to reuse the full-size heading digits (baseline 15), so the
- *   toggle row mixed two digit sizes.
- */
 
 const digitPath = (icon: string): string => {
   const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
@@ -89,6 +75,14 @@ const toggles: Record<string, string> = {
   IconToggleH6,
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('heading digit skeleton geometry', () => {
   it.each(Object.entries({ ...headings, ...toggles }))(
     '%s digit curves are cubic arcs, not kink-prone quadratics',
@@ -98,23 +92,20 @@ describe('heading digit skeleton geometry', () => {
   );
 
   it('IconH4 stem is full-height from an apex shared with the diagonal', () => {
-    // both the diagonal and the vertical stem start at the same cap-height apex
-    expect(digitPath(IconH4)).toMatch(/M(\S+) 9\.3.*M\1 9\.3\s*V\s*15/);
+    expect(digitPath(IconH4)).toMatch(/M(\S+) 10.*M\1 10\s*V\s*15/);
   });
 
-  it.each(Object.entries(headings))('%s digit sits in the heading digit cell (cap 9.3, baseline 15)', (_name, icon) => {
+  it.each(Object.entries(headings))('%s digit sits in the heading digit cell (cap 10, baseline 15)', (_name, icon) => {
     const ys = yValues(digitPath(icon));
 
-    expect(Math.min(...ys)).toBeGreaterThanOrEqual(9.3);
-    expect(Math.max(...ys)).toBeLessThanOrEqual(15);
+    expect(ys.length).toBeGreaterThan(0);
+    expect(Math.min(...ys)).toBe(10);
+    expect(Math.max(...ys)).toBe(15);
   });
 
   it.each(Object.entries(toggles))(
     '%s digit is byte-identical to its heading icon digit',
     (name, icon) => {
-      // the toggle heading mirrors the heading icon structure — [big glyph +
-      // subscript digit] — with a disclosure chevron in the H slot; the digit
-      // path is shared verbatim so the two families can never drift apart
       const headingIcon = headings[name.replace('Toggle', '')];
 
       expect(digitPath(icon)).toBe(digitPath(headingIcon));
@@ -122,8 +113,6 @@ describe('heading digit skeleton geometry', () => {
   );
 
   it.each(Object.entries(toggles))('%s letterforms stay inside the 3-17 content inset', (_name, icon) => {
-    // the old composition let digits overflow to x=17.45 and the triangle start
-    // at x=2.5 — everything now fits the house 3-17 content box
     const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
 
     for (const p of Array.from(doc.querySelectorAll('path'))) {
@@ -134,8 +123,6 @@ describe('heading digit skeleton geometry', () => {
   });
 
   it.each(Object.entries(toggles))('%s leads with a letterform-height stroked chevron in the H slot', (_name, icon) => {
-    // two glyphs only — a chevron as tall as the heading H, stroked at the same
-    // hairline as every letterform; no fills, no small accent markers
     const doc = new DOMParser().parseFromString(icon, 'image/svg+xml');
     const paths = Array.from(doc.querySelectorAll('path'));
 
@@ -154,32 +141,38 @@ describe('heading digit skeleton geometry', () => {
 
 describe('inline formatting glyph hygiene', () => {
   it('IconBold is grid-snapped with a single-drawn stem', () => {
-    // the legacy B was two CLOSED shapes carrying 24-grid conversion leftovers
-    // (4.9231, .8787…) — the shared stem stroked twice and coordinates off-grid
     expect(IconBold).not.toMatch(/\d\.\d{3}/);
     expect(IconBold).not.toMatch(/Z/i);
   });
 
   it('IconBold shares the family hairline weight', () => {
-    // the 1.9 "semantic bold" experiment read as a different icon set once the
-    // inline toolbar placed all nine glyphs side by side (user-directed
-    // unification 2026-08-05) — the B's meaning is carried by the letterform,
-    // its weight by the shared 1.25 hairline like every stroke icon system
     expect(IconBold).toContain('stroke-width="1.25"');
   });
 
   it('IconUnderline rule hugs the U bowl width', () => {
-    // the old rule ran 11 units under an 8-unit bowl — reads misaligned;
-    // the rule sits ON the shared y16 baseline of the inline glyph family
-    expect(IconUnderline).toContain('M5.5 16h9');
+    expect(IconUnderline).toContain('M5.5 15h9');
   });
 
   it('IconEquation x sits centered under the radical bar', () => {
-    expect(IconEquation).toContain('M10.4 11.1');
+    const doc = new DOMParser().parseFromString(IconEquation, 'image/svg+xml');
+    const paths = Array.from(doc.querySelectorAll('path'));
+    const radical = paths[0].getAttribute('d')?.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    const cross = digitPath(IconEquation).match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+    const bar = radical.slice(-4);
+    const xs = cross.filter((_value, index) => index % 2 === 0);
+    const ys = cross.filter((_value, index) => index % 2 === 1);
+    const stroke = Number(paths[0].getAttribute('stroke-width'));
+
+    expect(radical).toHaveLength(8);
+    expect(cross).toHaveLength(8);
+    expect(bar[1]).toBe(bar[3]);
+    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBeCloseTo((bar[0] + bar[2]) / 2, 10);
+    expect(Math.min(...xs) - bar[0]).toBeGreaterThan(stroke);
+    expect(bar[2] - Math.max(...xs)).toBeGreaterThan(stroke);
+    expect(Math.min(...ys) - bar[1] - stroke).toBeGreaterThanOrEqual(stroke);
   });
 
   it('IconClearFormat is a hairline T with a strike-out x', () => {
-    // clear-format (Tx): T letterform + small x, house 20/1.25 spec
     const doc = new DOMParser().parseFromString(IconClearFormat, 'image/svg+xml');
     const paths = Array.from(doc.querySelectorAll('path'));
 
@@ -203,9 +196,7 @@ describe('list icon family consistency', () => {
   });
 
   it('all three list icons share the same row geometry', () => {
-    // the checklist used to draw shorter rows starting at x=10 while bulleted and
-    // numbered start at x=8 — side by side in the toolbox the family looked ragged
-    const ROWS = 'M8 5h9M8 10h9M8 15h9';
+    const ROWS = 'M8.5 6.5H16.5M8.5 13.5H16.5';
 
     expect(IconListBulleted).toContain(ROWS);
     expect(IconListNumbered).toContain(ROWS);

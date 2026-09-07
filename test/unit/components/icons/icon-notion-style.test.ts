@@ -1,17 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  IconHeading,
-  IconH1,
-  IconH2,
-  IconH3,
-  IconH4,
-  IconH5,
-  IconH6,
-  IconToggleH1,
-  IconToggleH2,
-  IconToggleH3,
-  IconToggleList,
-  IconListNumbered,
+  IconHeading, IconH1, IconH2, IconH3, IconH4, IconH5, IconH6,
+  IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6,
+  IconToggleList, IconListNumbered,
 } from '../../../../src/components/icons';
 
 const parseSvg = (icon: string): SVGSVGElement => {
@@ -26,8 +17,9 @@ const parseSvg = (icon: string): SVGSVGElement => {
 };
 
 const paths = (icon: string): SVGPathElement[] => Array.from(parseSvg(icon).querySelectorAll('path'));
+const rows = 'M8.5 6.5H16.5M8.5 13.5H16.5';
 
-describe('notion-style heading / list / toggle icons', () => {
+describe('heading, list and toggle icon structure', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -36,136 +28,67 @@ describe('notion-style heading / list / toggle icons', () => {
     vi.restoreAllMocks();
   });
 
-  describe('heading family letterforms', () => {
-    const numbered: Record<string, string> = {
-      IconH1,
-      IconH2,
-      IconH3,
-      IconH4,
-      IconH5,
-      IconH6,
-    };
+  it.each(Object.entries({
+    IconH1, IconH2, IconH3, IconH4, IconH5, IconH6,
+    IconToggleH1, IconToggleH2, IconToggleH3, IconToggleH4, IconToggleH5, IconToggleH6,
+  }))('%s has one main glyph and one digit, both stroked', (_name, icon) => {
+    const all = paths(icon);
 
-    it.each(Object.entries(numbered))('%s should be two stroked line-art paths (H + digit), no fills', (_name, icon) => {
-      const all = paths(icon);
+    expect(all).toHaveLength(2);
 
-      expect(all.length).toBe(2);
-
-      for (const p of all) {
-        expect(p.getAttribute('stroke')).toBe('currentColor');
-        expect(p.getAttribute('fill')).toBeNull();
-        expect(p.getAttribute('stroke-linecap')).toBe('round');
-      }
-    });
-
-    it('IconHeading should be a single stroked H glyph', () => {
-      const all = paths(IconHeading);
-
-      expect(all.length).toBe(1);
-      expect(all[0].getAttribute('stroke')).toBe('currentColor');
-      expect(all[0].getAttribute('fill')).toBeNull();
-    });
+    for (const path of all) {
+      expect(path.getAttribute('stroke')).toBe('currentColor');
+      expect(path.getAttribute('fill')).toBeNull();
+      expect(path.getAttribute('stroke-linecap')).toBe('round');
+    }
   });
 
-  describe('toggle headings', () => {
-    const toggles: Record<string, string> = {
-      IconToggleH1,
-      IconToggleH2,
-      IconToggleH3,
-    };
+  it('IconHeading has a single stroked H glyph', () => {
+    const all = paths(IconHeading);
 
-    it.each(Object.entries(toggles))('%s should be a letterform-height chevron plus the heading digit', (_name, icon) => {
-      // mirrors the heading icon structure — [big glyph + subscript digit] —
-      // with a stroked disclosure chevron where the heading has its H
-      const all = paths(icon);
-
-      expect(all.length).toBe(2);
-
-      for (const p of all) {
-        expect(p.getAttribute('stroke')).toBe('currentColor');
-        expect(p.getAttribute('fill')).toBeNull();
-        expect(p.getAttribute('stroke-linecap')).toBe('round');
-      }
-    });
-
-    it.each(Object.entries(toggles))('%s should not keep the old trailing chevron', (_name, icon) => {
-      expect(icon).not.toContain('M16 7l2.5 3-2.5 3');
-    });
+    expect(all).toHaveLength(1);
+    expect(all[0]?.getAttribute('stroke')).toBe('currentColor');
+    expect(all[0]?.getAttribute('fill')).toBeNull();
   });
 
-  describe('IconToggleList', () => {
-    it('should mark with a solid triangle instead of a stroked chevron', () => {
-      expect(IconToggleList).not.toContain('m3.5 2.75 2.5 2.25-2.5 2.25');
+  it('toggle list keeps a small disclosure triangle beside each row', () => {
+    const triangle = paths(IconToggleList).find((path) => path.getAttribute('fill') === 'currentColor');
+    const d = triangle?.getAttribute('d') ?? '';
 
-      const triangle = paths(IconToggleList).find((p) => p.getAttribute('fill') === 'currentColor');
-
-      expect(triangle).toBeDefined();
-      expect(triangle?.getAttribute('stroke-linejoin')).toBe('round');
-    });
-
-    it('should keep the three list lines', () => {
-      expect(IconToggleList).toContain('M9 5h8M6 10h11M6 15h11');
-    });
+    expect(triangle).toBeDefined();
+    expect(triangle?.getAttribute('stroke-linejoin')).toBe('round');
+    expect(d.match(/[zZ]/g)).toHaveLength(2);
+    expect(paths(IconToggleList)[0]?.getAttribute('d')).toBe(rows);
   });
 
-  describe('IconListNumbered', () => {
-    it('should render digits as hairline stroked glyph paths, not <text> or solid fills', () => {
-      const svg = parseSvg(IconListNumbered);
+  it('numbered list renders two stroked digits without font dependencies or solid fills', () => {
+    const svg = parseSvg(IconListNumbered);
+    const digit = paths(IconListNumbered)[1];
 
-      expect(svg.querySelectorAll('text').length).toBe(0);
+    expect(svg.querySelectorAll('text')).toHaveLength(0);
+    expect(paths(IconListNumbered)).toHaveLength(2);
+    expect(digit?.getAttribute('stroke')).toBe('currentColor');
+    expect(digit?.getAttribute('fill')).not.toBe('currentColor');
+    expect(digit?.getAttribute('d')?.match(/M/g)).toHaveLength(2);
+    expect(paths(IconListNumbered)[0]?.getAttribute('d')).toBe(rows);
+  });
 
-      const digitPaths = paths(IconListNumbered).filter(
-        (p) => p.getAttribute('stroke') === 'currentColor' && p.getAttribute('d') !== 'M8 5h9M8 10h9M8 15h9',
-      );
+  it('leaves three units of vertical space between the numbered markers', () => {
+    const d = paths(IconListNumbered)[1]?.getAttribute('d') ?? '';
+    const digits = d.split('M').filter(Boolean);
 
-      expect(digitPaths.length).toBe(3);
+    expect(digits).toHaveLength(2);
 
-      // stroked, never a solid fill — that is what kept the old digits looking thick
-      for (const p of digitPaths) {
-        expect(p.getAttribute('fill')).not.toBe('currentColor');
-      }
-    });
+    // The first digit ends in a relative vertical stem.
+    const first = digits[0].match(/^[\d.]+ [\d.]+ [\d.]+ ([\d.]+)v([\d.]+)$/);
+    const second = digits[1].match(/^[\d.]+ [\d.]+C[\d.]+ [\d.]+ [\d.]+ ([\d.]+)/);
 
-    it('should keep the three list lines', () => {
-      expect(IconListNumbered).toContain('M8 5h9M8 10h9M8 15h9');
-    });
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
 
-    it('should leave breathing room between stacked digits', () => {
-      const digitPaths = paths(IconListNumbered).filter(
-        (p) => p.getAttribute('stroke') === 'currentColor' && p.getAttribute('d') !== 'M8 5h9M8 10h9M8 15h9',
-      );
+    const firstBottom = Number(first?.[1]) + Number(first?.[2]);
+    const secondTop = Number(second?.[1]);
 
-      // SVGPathPen emits absolute commands; collect Y values per command type
-      const yRange = (p: SVGPathElement): [number, number] => {
-        const d = p.getAttribute('d') ?? '';
-        const ys: number[] = [];
-
-        for (const match of d.matchAll(/([MLQCVH])((?:\s*-?\d+(?:\.\d+)?)+)/g)) {
-          const cmd = match[1];
-          const nums = match[2].match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-
-          if (cmd === 'H') {
-            continue;
-          }
-
-          if (cmd === 'V') {
-            ys.push(...nums);
-            continue;
-          }
-
-          ys.push(...nums.filter((_value, i) => i % 2 === 1));
-        }
-
-        return [Math.min(...ys), Math.max(...ys)];
-      };
-
-      const ranges = digitPaths.map(yRange).sort((a, b) => a[0] - b[0]);
-
-      for (let i = 1; i < ranges.length; i++) {
-        const gap = ranges[i][0] - ranges[i - 1][1];
-
-        expect(gap).toBeGreaterThanOrEqual(0.8);
-      }
-    });
+    expect(secondTop - firstBottom).toBeCloseTo(3, 10);
   });
 });

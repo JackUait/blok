@@ -2,10 +2,10 @@
  * Regression coverage for a Critical finding on Task 6: Escape closing the
  * emoji menu was also dropping the user into block navigation mode.
  *
- * The real dispatch path: KeyboardController registers a document CAPTURE-
- * phase keydown listener, so it runs before the block holder's bubble-phase
- * listener (BlockEvents.keydown). Before the fix, KeyboardController's
- * generic "close any open popover" branch closed the emoji menu (via
+ * In production this happens through a cross-module race: KeyboardController
+ * registers a document CAPTURE-phase keydown listener, so it runs before the
+ * block holder's bubble-phase listener (BlockEvents.keydown). Its generic
+ * "close any open popover" branch used to close the emoji menu (via
  * PopoverRegistry) WITHOUT calling stopPropagation. Closing the popover fires
  * PopoverEvent.Closed synchronously, which EmojiTrigger's own listener turns
  * into `opened = false` before the event ever reaches the bubble phase. So by
@@ -14,14 +14,26 @@
  * which has no notion of the emoji menu and unconditionally enabled
  * navigation mode.
  *
+ * This test mocks `PopoverRegistry.hasOpenPopovers()` to always return false
+ * (real registry mechanics are exercised by other tests and are irrelevant
+ * here), so without the fix the missing emoji check does not manifest via
+ * that branch at all — it manifests one step later, via handleEscape's own
+ * closing fallback ("nothing else claimed this Escape, so enter navigation
+ * mode"), which is exactly as unaware of the emoji menu as
+ * navigationMode.handleEscape is. Same observable defect — an Escape that
+ * should be fully claimed by the open menu instead reaches code that enters
+ * navigation mode — reached by whichever branch happens to run first when
+ * nothing intercepts it earlier. The fix (a dedicated branch checked before
+ * every other one) closes off both avenues at once.
+ *
  * This test does not call EmojiTrigger.handleKeydown or BlockEvents.keydown
  * directly — a test written that way cannot fail on this bug, because the
- * bug lives entirely in whether the SAME keydown event reaches the bubble
- * phase at all. It wires a real KeyboardController (via enable(), so its
- * genuine document capture-phase listener is attached) and a real
- * BlockEvents instance (via a genuine bubble-phase listener on the block
- * holder), opens a real EmojiTrigger, and dispatches one real Escape
- * KeyboardEvent from the block's contentEditable.
+ * bug is about which of several possible LATER branches gets to run, not
+ * about the composer's own method in isolation. It wires a real
+ * KeyboardController (via enable(), so its genuine document capture-phase
+ * listener is attached) and a real BlockEvents instance (via a genuine
+ * bubble-phase listener on the block holder), opens a real EmojiTrigger, and
+ * dispatches one real Escape KeyboardEvent from the block's contentEditable.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -194,13 +206,18 @@ describe('Escape with the emoji menu open does not enter navigation mode', () =>
     input.focus();
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 
-    // The bug: navigation mode gets entered because the event reaches the
-    // bubble-phase handler after the emoji menu's `opened` flag was already
-    // reset by the capture-phase close.
+    // The bug: without the fix, nothing in handleEscape claims this Escape
+    // (PopoverRegistry is mocked closed, no toolbar is open, no selection),
+    // so it falls all the way through to handleEscape's own closing
+    // fallback and enters navigation mode — exactly as unaware of the emoji
+    // menu as navigationMode.handleEscape is in the real production path.
     expect(enableNavigationMode).not.toHaveBeenCalled();
 
-    // Confirms the mechanism, not just the symptom: the fix stops the event
-    // in the capture phase, so the bubble-phase listener never runs at all.
+    // The bubble-phase listener never runs either way: the fixed path's own
+    // early return stops it, and the unfixed fallback branch also calls
+    // stopPropagation (for its own, unrelated reason) before entering
+    // navigation mode. This assertion is not fix-specific — it just confirms
+    // the event never reached BlockEvents.keydown for this key.
     expect(bubbleListener).not.toHaveBeenCalled();
 
     expect(blockEvents.emojiTrigger.opened).toBe(false);

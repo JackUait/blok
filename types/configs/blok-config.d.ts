@@ -1145,8 +1145,14 @@ export interface BlokMountOptions {
 
     /**
      * Display name for this user, shown in the "Last edited by" footer of
-     * every block they edited. Without it Blok falls back to `resolveUser`,
-     * and to the name this user publishes to a collaborative room.
+     * every block they edited. It wins over every other source; without it
+     * Blok falls back to the name this editor publishes to a collaborative
+     * room (`collaboration.user.name`), then to `resolveUser`.
+     *
+     * LOCAL ONLY: it is not published to a room, so peers name this editor
+     * from `collaboration.user.name`. Set both to be named everywhere.
+     *
+     * Truncated to 32 characters, like every other display name Blok prints.
      */
     name?: string;
   };
@@ -1155,9 +1161,20 @@ export interface BlokMountOptions {
    * Resolves a user ID to display information.
    * Called when Blok needs to show who edited a block (e.g., block settings footer).
    * Can return synchronously or asynchronously.
-   * Return null/undefined for unknown users — Blok will fall back to showing only the date.
+   *
+   * Asked at most once per id: an answer is kept for the editor's lifetime, and
+   * so is "I don't know this one". A callback that THROWS or REJECTS is not an
+   * answer — it is absorbed, and the id is asked about again later.
+   *
+   * Return null/undefined for an unknown user. Blok then falls back to the name
+   * that user published to the collaborative room, if any, and otherwise shows
+   * the date alone. Configuring this callback also means an unauthenticated
+   * name from the room is never shown while it is still being asked.
+   *
+   * The id arrives trimmed and stripped of NUL, and an id longer than 128
+   * characters is refused rather than passed on.
    */
-  resolveUser?: (id: string) => UserInfo | Promise<UserInfo | null> | null;
+  resolveUser?: (id: string) => UserInfo | Promise<UserInfo | null> | null | undefined;
 
   /**
    * Position of the notification (toast) container on screen.

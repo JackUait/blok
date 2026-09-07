@@ -63,12 +63,15 @@ describe("server wiring config keys", () => {
 
   // `collaboration.user` and `user: { id }` are two different people-shaped
   // options; the whole point of the row is that a reader picks the right one.
-  it("separates the display identity from the attribution option", () => {
+  it("says how the display identity and the attribution option meet", () => {
     const description = row("collaboration")?.description ?? "";
 
     expect(description).toMatch(/display/i);
-    expect(description).toMatch(/independent/i);
     expect(description).toMatch(/attribution|credit/i);
+    // The two used to be independent. The room name is now what names the
+    // attribution id to peers, and a host has to be told which one travels.
+    expect(description).toMatch(/published to the room/i);
+    expect(description).toMatch(/`user\.name` is not/i);
   });
 
   // `offline` is the one collaboration key a host turns on deliberately, and

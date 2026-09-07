@@ -1513,9 +1513,9 @@ describe('BlockSettings', () => {
       expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Ada Lovelace' });
     });
 
-    it('paints a known name without waiting for the host directory', async () => {
-      // The host never answers, so the label can only carry a name if the
-      // footer painted what the directory already knew before mounting.
+    it('does not show a peer-published name while the host directory is looking', async () => {
+      // The host never answers. A name that only a room member vouched for is
+      // not authenticated, so the footer must not print it in the meantime.
       const resolveUser = vi.fn(() => new Promise<{ name: string }>(() => undefined));
 
       blockSettings = new BlockSettings({
@@ -1524,6 +1524,27 @@ describe('BlockSettings', () => {
       });
 
       blokMock = createBlokMock({ resolveUser });
+      blokMock.UserDirectory.learn('user-123', 'Not Really Bob');
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const element = (items[items.length - 1] as { element: HTMLElement }).element;
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEdited');
+    });
+
+    it('uses a peer-published name when there is no host directory', async () => {
+      blokMock = createBlokMock();
       blokMock.UserDirectory.learn('user-123', 'Grace Hopper');
       blockSettings.state = blokMock as unknown as BlokModules;
 
@@ -1777,6 +1798,38 @@ describe('BlockSettings', () => {
       const footer = items.find((item) => 'name' in item && item.name === 'edit-metadata');
 
       expect(footer).toBeDefined();
+    });
+
+    it('in read-only mode, still names the editor', async () => {
+      const user = { id: 'user-123', name: 'Ada Lovelace' };
+
+      blockSettings = new BlockSettings({
+        config: { user },
+        eventsDispatcher: eventsDispatcher as unknown as typeof blockSettings['eventsDispatcher'],
+      });
+
+      blokMock = createBlokMock({ user });
+      blokMock.ReadOnly.isEnabled = true;
+      blockSettings.state = blokMock as unknown as BlokModules;
+
+      const block = createBlock();
+
+      block.lastEditedAt = 1712700720000;
+      block.lastEditedBy = 'user-123';
+
+      getConvertibleToolsForBlockMock.mockResolvedValueOnce([]);
+
+      // Read-only builds the menu on its own early-returning path, so the
+      // naming has to be asserted there too and not only on the writable one.
+      const items = await (blockSettings as unknown as {
+        getTunesItems: (b: Block, common: MenuConfigItem[]) => Promise<PopoverItemParams[]>;
+      }).getTunesItems(block, []);
+
+      const footer = items.find((item) => 'name' in item && item.name === 'edit-metadata');
+      const element = (footer as { element: HTMLElement }).element;
+
+      expect(element.querySelector('[data-edit-meta-label]')?.textContent).toBe('blockSettings.lastEditedBy');
+      expect(blokMock.I18n.t).toHaveBeenCalledWith('blockSettings.lastEditedBy', { name: 'Ada Lovelace' });
     });
 
     it('in non-read-only mode, preserves convert-to menu and all common tunes', async () => {

@@ -119,6 +119,14 @@ describe('UserDirectory', () => {
       expect(directory.known('u2')).toBeNull();
     });
 
+    it('ignores an id no person could have', () => {
+      const directory = createDirectory();
+
+      directory.learn('y'.repeat(5000), 'Grace');
+
+      expect(directory.known('y'.repeat(5000))).toBeNull();
+    });
+
     it('ignores a blank id', () => {
       const directory = createDirectory();
 
@@ -258,6 +266,30 @@ describe('UserDirectory', () => {
       await expect(directory.resolve('u1')).resolves.toEqual({ name: 'Ada' });
     });
 
+    it('retries a host that throws synchronously', async () => {
+      const resolveUser = vi.fn(() => {
+        throw new Error('directory is down');
+      });
+      const directory = createDirectory({ resolveUser });
+
+      await directory.resolve('u1');
+      await directory.resolve('u1');
+
+      // A throw before the first await used to strand the id as a settled
+      // request, so the host was never asked again.
+      expect(resolveUser).toHaveBeenCalledTimes(2);
+    });
+
+    it('never hands the host an id no person could have', async () => {
+      const resolveUser = vi.fn(() => ({ name: 'Ada' }));
+      const directory = createDirectory({ resolveUser });
+
+      // `lastEditedBy` comes off the wire in a shared document, and nothing
+      // between the peer and here caps its length.
+      await expect(directory.resolve('x'.repeat(5000))).resolves.toBeNull();
+      expect(resolveUser).not.toHaveBeenCalled();
+    });
+
     it('answers without a host directory at all', async () => {
       const directory = createDirectory();
 
@@ -273,6 +305,16 @@ describe('UserDirectory', () => {
       await directory.resolve('u1');
 
       expect(resolveUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides a peer-published name while the host directory is still looking', async () => {
+      const directory = createDirectory({ resolveUser: () => new Promise<null>(() => undefined) });
+
+      directory.learn('u2', 'Not Really Bob');
+
+      // Awareness is unauthenticated. A host with its own directory must not
+      // see a forged name for however long its lookup takes.
+      expect(directory.known('u2')).toBeNull();
     });
 
     it('still uses a name learned after the host drew a blank', async () => {

@@ -12,6 +12,20 @@ export const LEARNED_NAMES_LIMIT = 200;
 const MAX_NAME_LENGTH = 32;
 
 /**
+ * Longer than any account key, opaque token or address, and short enough that
+ * a peer cannot make this editor retain — or hand the host's callback — a
+ * megabyte of string by writing it into a block's `lastEditedBy`.
+ */
+const MAX_ID_LENGTH = 128;
+
+/**
+ * Characters a display name may not carry into the DOM: C0/C1 controls, and
+ * the bidirectional overrides, which can reorder the text printed AROUND the
+ * name. A peer chooses their own name, so both arrive off the wire.
+ */
+const UNPRINTABLE = /[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu;
+
+/**
  * The one form of a user id everything here compares against.
  *
  * The document stores ids NUL-stripped (see the serializer), so an id
@@ -28,7 +42,7 @@ export const normalizeUserId = (value: unknown): string | null => {
 
   const normalized = value.replace(/\0/gu, '').trim();
 
-  return normalized === '' ? null : normalized;
+  return normalized === '' || normalized.length > MAX_ID_LENGTH ? null : normalized;
 };
 
 /**
@@ -42,7 +56,7 @@ const usableName = (value: unknown): string | null => {
     return null;
   }
 
-  const trimmed = value.trim();
+  const trimmed = value.replace(UNPRINTABLE, '').trim();
 
   if (trimmed === '') {
     return null;
@@ -114,6 +128,17 @@ export class UserDirectory extends Module {
       return hostAnswer;
     }
 
+    /**
+     * A name a peer published is unauthenticated, so it fills in only where
+     * the host has no directory of its own, or where that directory has
+     * already been asked and had nothing. Showing it while the host is still
+     * looking would put a forged name on screen for as long as that lookup
+     * takes, and then swap it.
+     */
+    if (this.config.resolveUser !== undefined && !this.unknownToHost.has(key)) {
+      return null;
+    }
+
     const learnedName = this.learned.get(key);
 
     return learnedName !== undefined ? { name: learnedName } : null;
@@ -151,7 +176,11 @@ export class UserDirectory extends Module {
     // as a failure, and none may be cached as if the host had answered.
     const request = (async (): Promise<UserInfo | null> => {
       try {
-        const answer = await resolveUser(key);
+        // Called through an async wrapper so a callback that throws BEFORE any
+        // await rejects instead of running this body to completion — which put
+        // `finally` ahead of the `pending.set` below and stranded the id there
+        // forever, so a throwing host was never asked again.
+        const answer = await (async (): Promise<UserInfo | null | undefined> => resolveUser(key))();
         const name = usableName(answer?.name);
 
         // The editor can be torn down while the host is still looking; caching

@@ -138,10 +138,14 @@ for (const glyph of [...ANONYMOUS_GLYPHS, UNKNOWN_GLYPH]) {
     }, glyph);
 
     const minimumOpenings: Partial<Record<typeof glyph, number>> = {
+      astronaut: 3,
+      rocket: 3,
       satellite: 7,
+      planet: 2,
       star: 5,
       sun: 1,
-      saucer: 4,
+      telescope: 2,
+      saucer: 6,
       asteroid: 3,
     };
 

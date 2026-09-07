@@ -219,13 +219,13 @@ describe('anonymous presence micro-illustrations', () => {
     expect(inherited(disk, 'fill')).toBe('currentColor');
   });
 
-  it('keeps the saucer canopy, hull and beam in one tilted group', () => {
+  it('keeps the saucer canopy, highlight, hull and beam in one tilted group', () => {
     const paths = Array.from(glyphSvg('saucer').querySelectorAll('path'));
     const [canopy] = paths;
     const group = canopy?.parentElement;
     const rotation = group?.getAttribute('transform')?.match(/rotate\(\s*(-?\d*\.?\d+)[ ,]+10[ ,]+10\s*\)/);
 
-    expect(paths).toHaveLength(3);
+    expect(paths).toHaveLength(4);
     expect(group?.localName).toBe('g');
     expect(rotation).toBeTruthy();
     expect(Number(rotation?.[1])).not.toBe(0);

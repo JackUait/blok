@@ -425,6 +425,73 @@ test.describe('ui.block-tunes', () => {
       ).toBeVisible();
     });
 
+    test('keeps the submenu reachable across the padding band between the trigger row and the submenu', async ({ page }) => {
+      await createBlok(page, {
+        tools: {
+          header: {
+            className: 'Header',
+            config: {
+              levels: [ 1, 2, 3 ],
+              defaultLevel: 2,
+            },
+          },
+        },
+        data: {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: 'Some text',
+              },
+            },
+          ],
+        },
+      });
+
+      await openBlockTunesViaToolbar(page);
+
+      const convertToOption = page.locator(CONVERT_TO_OPTION_SELECTOR);
+      const nestedPopover = page.locator(NESTED_POPOVER_SELECTOR);
+
+      const triggerBox = await convertToOption.boundingBox();
+      const containerBox = await page.locator(POPOVER_CONTAINER_SELECTOR).boundingBox();
+
+      if (triggerBox === null || containerBox === null) {
+        throw new Error('Expected the trigger row and the popover container to be laid out');
+      }
+
+      await page.mouse.move(triggerBox.x + (triggerBox.width / 2), triggerBox.y + (triggerBox.height / 2));
+      await expect(nestedPopover).toBeVisible();
+
+      const nestedBox = await nestedPopover.boundingBox();
+
+      if (nestedBox === null) {
+        throw new Error('Expected the submenu to be laid out');
+      }
+
+      // The row's box stops short of the container's own padding, so a pointer
+      // travelling straight at the submenu samples that band on the way.
+      const bandLeft = triggerBox.x + triggerBox.width;
+      const bandRight = Math.min(containerBox.x + containerBox.width, nestedBox.x);
+
+      expect(bandRight).toBeGreaterThan(bandLeft);
+
+      await page.mouse.move(
+        (bandLeft + bandRight) / 2,
+        triggerBox.y + (triggerBox.height / 2)
+      );
+
+      // Still standing: the grace period is what makes the submenu catchable.
+      await expect(nestedPopover).toBeVisible();
+
+      await page.mouse.move(nestedBox.x + 20, nestedBox.y + (nestedBox.height / 2));
+
+      await expect(nestedPopover).toBeVisible();
+      await expect(
+        page.locator(`[data-blok-nested="true"] [data-blok-item-name="header-2"]`)
+      ).toBeVisible();
+    });
+
     test('keeps the six-dots settings toggler visible while the tunes menu is open', async ({ page }) => {
       await createBlok(page, {
         data: {

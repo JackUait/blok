@@ -627,7 +627,7 @@ describe('PopoverDesktop — synthesized hover suppression', () => {
     expect(nestedRootOf(popover)).not.toBeNull();
   });
 
-  it('closes the submenu when the pointer moves onto a different item', () => {
+  it('closes the submenu a grace period after the pointer moves onto a different item', () => {
     fireMouse(document, 'mousemove', 25, 25);
 
     const popover = openPopover({ items: nestingItems });
@@ -639,6 +639,12 @@ describe('PopoverDesktop — synthesized hover suppression', () => {
     expect(nestedRootOf(popover)).not.toBeNull();
 
     fireMouse(getItemElement(popover, 'Sibling'), 'mouseover', 400, 340);
+
+    // The grace period is what lets a pointer aimed at the submenu clip rows
+    // on the way there, so the teardown must not be synchronous.
+    expect(nestedRootOf(popover)).not.toBeNull();
+
+    vi.advanceTimersByTime(300);
 
     expect(nestedRootOf(popover)).toBeNull();
 
@@ -674,7 +680,7 @@ describe('PopoverDesktop — synthesized hover suppression', () => {
     expect(nestedRootOf(popover)).toBeNull();
   });
 
-  it('closes the submenu when the pointer leaves the popover entirely', () => {
+  it('closes the submenu a grace period after the pointer leaves the popover entirely', () => {
     fireMouse(document, 'mousemove', 25, 25);
 
     const popover = openPopover({ items: nestingItems });
@@ -691,6 +697,10 @@ describe('PopoverDesktop — synthesized hover suppression', () => {
       throw new Error('popover container missing');
     }
     container.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false, relatedTarget: document.body }));
+
+    expect(nestedRootOf(popover)).not.toBeNull();
+
+    vi.advanceTimersByTime(300);
 
     expect(nestedRootOf(popover)).toBeNull();
 

@@ -138,6 +138,14 @@ export class EmojiTrigger extends BlockEventComposer {
   private picker: EmojiPicker | null = null;
   /** Unique per instance — see EMOJI_MENU_ID_PREFIX. */
   private readonly menuId = nextMenuId();
+  /**
+   * Id applied to whichever emoji button currently carries the keyboard
+   * highlight (see setHighlightedIndex) — the combobox host's
+   * aria-activedescendant points at it, so a screen reader can tell which
+   * emoji Enter would commit. Only ever one button at a time, so a single
+   * fixed id (not a per-button one) is enough.
+   */
+  private readonly highlightedButtonId = `${this.menuId}-active`;
   private anchorRect: DOMRect | undefined;
   /** Plain-text offset of the ":" that opened the current menu (see renderMenu). */
   private activeSpanStart: number | undefined;
@@ -572,6 +580,14 @@ export class EmojiTrigger extends BlockEventComposer {
    * and applies it visually to the matching button in the picker's
    * rendered grid, if one exists there — the DOM write is best-effort so
    * this stays safe to call before the picker has rendered anything.
+   *
+   * Not `aria-selected`: the button carries no `option`/`tab` role (a
+   * plain `<button>`), so that attribute is invalid there — an axe scan on
+   * a built page flagged exactly this. The combobox host already
+   * advertises `role="combobox"` / `aria-haspopup="listbox"` /
+   * `aria-controls`; what it was missing is `aria-activedescendant`, which
+   * this sets/clears on the host to point at `highlightedButtonId` — see
+   * that field's doc.
    * @param index - target index into the rendered grid; out-of-range clamps
    */
   private setHighlightedIndex(index: number): void {
@@ -581,7 +597,9 @@ export class EmojiTrigger extends BlockEventComposer {
 
     if (buttons.length === 0) {
       this.highlightedIndex = -1;
+      this.highlightedButton?.removeAttribute('id');
       this.highlightedButton = null;
+      this.comboboxHost?.removeAttribute('aria-activedescendant');
 
       return;
     }
@@ -590,7 +608,7 @@ export class EmojiTrigger extends BlockEventComposer {
 
     if (this.highlightedButton !== null) {
       this.highlightedButton.classList.remove(...EMOJI_HIGHLIGHT_CLASSES);
-      this.highlightedButton.removeAttribute('aria-selected');
+      this.highlightedButton.removeAttribute('id');
     }
 
     this.highlightedIndex = clamped;
@@ -601,8 +619,11 @@ export class EmojiTrigger extends BlockEventComposer {
 
     if (current !== null) {
       current.classList.add(...EMOJI_HIGHLIGHT_CLASSES);
-      current.setAttribute('aria-selected', 'true');
+      current.id = this.highlightedButtonId;
       current.scrollIntoView?.({ block: 'nearest' });
+      this.comboboxHost?.setAttribute('aria-activedescendant', this.highlightedButtonId);
+    } else {
+      this.comboboxHost?.removeAttribute('aria-activedescendant');
     }
   }
 
@@ -652,6 +673,11 @@ export class EmojiTrigger extends BlockEventComposer {
     this.anchorRect = undefined;
     this.activeSpanStart = undefined;
     this.highlightedIndex = -1;
+    // Hygiene: removeComboboxRoles already dropped aria-activedescendant
+    // from the host, but the button itself may persist across a reopen if
+    // the picker reuses grid elements — leaving `highlightedButtonId` on it
+    // would be a stale, orphaned id.
+    this.highlightedButton?.removeAttribute('id');
     this.highlightedButton = null;
     this.pendingOpen = null;
     this.opened = false;
@@ -858,6 +884,7 @@ export class EmojiTrigger extends BlockEventComposer {
     host.removeAttribute('aria-expanded');
     host.removeAttribute('aria-autocomplete');
     host.removeAttribute('aria-haspopup');
+    host.removeAttribute('aria-activedescendant');
 
     if (this.previousAriaLabel === null) {
       host.removeAttribute('aria-label');

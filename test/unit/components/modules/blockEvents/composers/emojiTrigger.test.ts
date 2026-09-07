@@ -521,21 +521,26 @@ describe('EmojiTrigger — grid highlight navigation', () => {
     trigger.handleKeydown(new KeyboardEvent('keydown', { key }));
 
   it('highlights the top-ranked result by default, visibly', async () => {
-    const { trigger, buttons } = await openWithTwoResults();
+    const { trigger, buttons, block } = await openWithTwoResults();
 
     expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
-    expect(buttons[0]?.getAttribute('aria-selected')).toBe('true');
-    expect(buttons[1]?.getAttribute('aria-selected')).toBeNull();
+    // Not aria-selected: the button carries no option/tab role, so that
+    // attribute would be invalid there. The highlighted button gets an id,
+    // and the combobox host's aria-activedescendant points at it.
+    expect(buttons[0]?.id).not.toBe('');
+    expect(buttons[1]?.id).toBe('');
+    expect(block.currentInput?.getAttribute('aria-activedescendant')).toBe(buttons[0]?.id);
   });
 
   it('ArrowRight moves the highlight to the next result, visibly', async () => {
-    const { trigger, buttons } = await openWithTwoResults();
+    const { trigger, buttons, block } = await openWithTwoResults();
 
     press(trigger, 'ArrowRight');
 
     expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
-    expect(buttons[0]?.getAttribute('aria-selected')).toBeNull();
-    expect(buttons[1]?.getAttribute('aria-selected')).toBe('true');
+    expect(buttons[0]?.id).toBe('');
+    expect(buttons[1]?.id).not.toBe('');
+    expect(block.currentInput?.getAttribute('aria-activedescendant')).toBe(buttons[1]?.id);
   });
 
   it('ArrowRight past the last result clamps instead of wrapping', async () => {

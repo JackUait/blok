@@ -15,9 +15,9 @@
 // first) never diverged the same way, and mocking @emoji-mart/data behind
 // the real EmojiPicker's full dependency graph did not reliably intercept
 // in this file regardless. The assertion itself never hardcodes which
-// emoji lands where — only that the reported native matches the one
-// actually carrying aria-selected — so it stays correct even if the
-// dataset changes.
+// emoji lands where — only that the reported native matches the one the
+// combobox host's aria-activedescendant actually points at — so it stays
+// correct even if the dataset changes.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiTrigger } from '../../../../../../src/components/modules/blockEvents/composers/emojiTrigger';
@@ -38,7 +38,7 @@ describe('EmojiTrigger — highlighted emoji matches the rendered grid, not the 
     document.body.innerHTML = '';
   });
 
-  it('reports the emoji carrying aria-selected, after moving the highlight into a category-reordered position', async () => {
+  it('reports the emoji aria-activedescendant actually points at, after moving the highlight into a category-reordered position', async () => {
     const block = createBlock(':fi');
 
     document.body.appendChild(block.holder);
@@ -50,10 +50,16 @@ describe('EmojiTrigger — highlighted emoji matches the rendered grid, not the 
 
     trigger.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
 
-    const selectedButton = document.querySelector('[data-blok-testid="emoji-menu"] [aria-selected="true"]');
+    const activeId = block.currentInput?.getAttribute('aria-activedescendant');
+
+    if (activeId === null || activeId === undefined) {
+      throw new Error('combobox host has no aria-activedescendant after ArrowRight');
+    }
+
+    const selectedButton = document.getElementById(activeId);
 
     if (selectedButton === null) {
-      throw new Error('no button carries aria-selected after ArrowRight');
+      throw new Error(`no button found for aria-activedescendant="${activeId}"`);
     }
 
     const renderedNative = selectedButton.getAttribute('data-emoji-native');

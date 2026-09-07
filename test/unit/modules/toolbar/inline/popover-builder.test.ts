@@ -6,7 +6,10 @@ import type { BlokModules } from '../../../../../src/types-internal/blok-modules
 import type { I18n } from '../../../../../src/components/modules/i18n';
 import { PopoverItemType } from '../../../../../src/components/utils/popover';
 
-vi.mock('../../../../../src/components/utils', () => ({
+// Partial mock: the real module also exports keyCodes, which the keyboard
+// helpers this builder reaches read at import time.
+vi.mock('../../../../../src/components/utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../../src/components/utils')>()),
   beautifyShortcut: (shortcut: string) => `⌘${shortcut.slice(-1)}`,
   capitalize: (str: string) => str.charAt(0).toUpperCase() + str.slice(1),
   translateToolName: (i18n: I18n, _key: string, title: string) => title,

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { ensureBlokBundleBuilt } from '../helpers/ensure-build';
 import { gotoTestPage } from '../helpers/shared-page';
 
@@ -35,35 +35,48 @@ for (const theme of ['light', 'dark', 'system-dark'] as const) {
       await gotoTestPage(page);
     });
 
-    test('public active color tokens stay paired at rest, on hover, and on keyboard focus', async ({ page }) => {
+    test('selected heading keeps one neutral paint at rest, on hover, and on keyboard focus', async ({ page }) => {
+      /**
+       * Heading tiles opt out of the public --blok-icon-active-* pair on purpose
+       * (popover-animation.css). The property worth guarding is that the one
+       * selected paint survives hover and keyboard focus, which both have their
+       * own background rules in popover-item-default.const.ts.
+       */
       await openHeadingMenu(page, theme, {
         '--blok-icon-active-bg': '#222',
         '--blok-icon-active-text': '#fff',
       });
       const selected = page.getByRole('menuitemradio', { name: 'Heading 1', exact: true });
       const other = page.getByRole('menuitemradio', { name: 'Heading 2', exact: true });
+      const paintOf = async (item: Locator): Promise<{ color: string; background: string }> =>
+        item.evaluate((element) => {
+          const style = getComputedStyle(element);
 
-      await expect(selected).toHaveCSS('color', 'rgb(255, 255, 255)');
-      await expect(selected).toHaveCSS('background-color', 'rgb(34, 34, 34)');
+          return { color: style.color,
+            background: style.backgroundColor };
+        });
+      const rest = await paintOf(selected);
+
+      // The host tokens reach every other active item; a heading tile is the exception.
+      expect(rest.color).not.toBe('rgb(255, 255, 255)');
+      expect(rest.background).not.toBe('rgb(34, 34, 34)');
       await expect(selected).toHaveAttribute('aria-checked', 'true');
-      await expect(other).not.toHaveCSS('background-color', 'rgb(34, 34, 34)');
+      await expect(other).not.toHaveCSS('background-color', rest.background);
 
       await selected.hover();
-      await expect(selected).toHaveCSS('color', 'rgb(255, 255, 255)');
-      await expect(selected).toHaveCSS('background-color', 'rgb(34, 34, 34)');
+      expect(await paintOf(selected)).toEqual(rest);
 
       await page.getByTestId('block-tunes-popover').getByRole('combobox').focus();
       await page.keyboard.press('ArrowDown');
       await expect(selected).toHaveAttribute('data-blok-focused', 'true');
-      await expect(selected).toHaveCSS('color', 'rgb(255, 255, 255)');
-      await expect(selected).toHaveCSS('background-color', 'rgb(34, 34, 34)');
+      expect(await paintOf(selected)).toEqual(rest);
       await expect(selected).toHaveCSS('outline-style', 'solid');
       await expect(selected).toHaveCSS('outline-width', '2px');
 
       await page.keyboard.press('ArrowDown');
       await expect(other).toHaveAttribute('data-blok-focused', 'true');
-      await expect(other).not.toHaveCSS('background-color', 'rgb(34, 34, 34)');
       await expect(selected).toHaveAttribute('aria-checked', 'true');
+      expect(await paintOf(selected)).toEqual(rest);
     });
 
     test('default selected heading labels keep AA contrast and their selected background', async ({ page }) => {

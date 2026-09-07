@@ -11,15 +11,17 @@ interface Rendered {
   onCheckboxChange: ReturnType<typeof vi.fn>;
 }
 
-const render = ({
-  style = 'unordered' as ListItemData['style'],
-  checked = false,
-  readOnly = false,
-} = {}): Rendered => {
+interface RenderOptions {
+  style?: ListItemData['style'];
+  checked?: boolean;
+  readOnly?: boolean;
+}
+
+const render = ({ style = 'unordered', checked = false, readOnly = false }: RenderOptions = {}): Rendered => {
   const setupItemPlaceholder = vi.fn();
   const onCheckboxChange = vi.fn();
   const wrapper = renderListItem({
-    data: { text: 'item', style, checked, depth: 0 } as ListItemData,
+    data: { text: 'item', style, checked, depth: 0 },
     readOnly,
     placeholder: 'List item',
     itemColor: undefined,

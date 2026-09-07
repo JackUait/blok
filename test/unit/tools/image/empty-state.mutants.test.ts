@@ -17,7 +17,16 @@ interface Passed {
   labels: Record<string, unknown>;
 }
 
-const echoI18n = (): I18nInstance => ({ has: () => true, t: (key: string) => `i18n:${key}` });
+/**
+ * Answers only for keys it really holds and echoes the interpolation params —
+ * a stub that says yes to everything cannot tell a mutated key from the real
+ * one, and one that drops params cannot see the size go missing.
+ */
+const echoI18n = (): I18nInstance => ({
+  has: (key: string) => key.startsWith('tools.image.'),
+  t: (key: string, params?: Record<string, unknown>) =>
+    (params === undefined ? `i18n:${key}` : `i18n:${key}:${JSON.stringify(params)}`),
+});
 
 const passed = (): Passed => media.render.mock.calls[0][0] as Passed;
 
@@ -103,8 +112,8 @@ describe('image empty state mutants', () => {
       return build('2 MB');
     };
 
-    it('goes through i18n when the host has the key', () => {
-      expect(sizeLabel(echoI18n())).toBe('i18n:tools.image.emptyMaxSize');
+    it('goes through i18n when the host has the key, carrying the size', () => {
+      expect(sizeLabel(echoI18n())).toBe('i18n:tools.image.emptyMaxSize:{"size":"2 MB"}');
     });
 
     it('falls back to an English phrase carrying the size', () => {

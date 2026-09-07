@@ -34,6 +34,9 @@ import { Uploader as AudioUploader } from '../../../src/tools/audio/uploader';
 import { Uploader as VideoUploader } from '../../../src/tools/video/uploader';
 import { Uploader as FileUploader } from '../../../src/tools/file/uploader';
 
+/** The host-supplied deletion hook, as `BlokUploader` declares it. */
+type DeleteAsset = NonNullable<BlokUploader['delete']>;
+
 const STORED = 'https://cdn.example/uploads/a1?X-Amz-Signature=abc&X-Amz-Date=1';
 
 const EMPTY_DOCUMENT: OutputData = { time: 0,

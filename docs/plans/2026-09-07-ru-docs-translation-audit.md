@@ -794,3 +794,38 @@ console.log({ noteOnlyKeys: 190, noteBoth, noteEnOnly, noteRuOnly, noteNeither }
 The rendered-page scan that produced the 1,197 figure walks
 `dist/client/ru/**/index.html` with jsdom, applying the same strip selector, phrase
 splitting and `isEnglishProse` predicate as `ru-language-purity.test.tsx`.
+
+---
+
+## Outcome (same day)
+
+The 311 keys were translated and landed in `e29ada3f`, followed by the terminology
+sweep (`a6986582`), a NUL-byte fix in the law itself (`ced6e7ff`) and a test-fixture
+correction (`7a4cc506`).
+
+Rebuilt and rescanned all 75 Russian pages with the same heuristic:
+
+| Category | Before | After |
+| --- | ---: | ---: |
+| `/ru/changelog` (open decision) | 656 | 657 |
+| sr-only Markdown pointer (deliberate) | 74 | 73 |
+| `alt` / `aria-label` chrome | 74 | 0 |
+| Code identifiers in ToC and headers (correct as English) | 221 | 178 |
+| **English prose a Russian reader sees** | **~316** | **0** |
+
+The three phrases the classifier still lists as prose are identifiers it mis-sorted:
+`marks.find(spec, from?)` is a method `name` (`api-data.ts:1888`), and
+`deps / recreateKey` and `className, id, …` are table `option` names.
+
+`api-data.ts` method names, return types and `error.message` now carry
+`data-lang-exempt`, which is why the identifier count fell without any of them being
+translated. The remaining 178 come from the table-of-contents and sticky header, which
+render the same identifiers outside `<code>` in components this law does not cover.
+They are correct as they are.
+
+Terminology: 62 offending keys → 0, plus 4 `tunes` occurrences deliberately kept Latin
+because they are config-key identifiers the English also leaves unbackticked.
+
+Still open, unchanged: the changelog decision, `llms.txt` locale coverage, and
+`route-metadata.ru.ts:251,254` keeping "Dev override seam" in the Russian title and h1
+while the section title is now translated.

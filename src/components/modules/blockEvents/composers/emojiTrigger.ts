@@ -109,10 +109,17 @@ export class EmojiTrigger extends BlockEventComposer {
   private comboboxHost: HTMLElement | null = null;
   private previousAriaLabel: string | null = null;
   private hasPrefetched = false;
-  /** The last ranked results rendered, in the same order as the picker's grid. */
-  private currentResults: ProcessedEmoji[] = [];
-  /** Index into currentResults the keyboard highlight sits on, or -1 when there is nothing to highlight. */
+  /**
+   * The full loaded dataset — NOT the ranked results, which are capped
+   * (searchEmojisRanked's default limit) while the picker's own grid is
+   * not. Looking an emoji up here by native character (see
+   * getHighlightedEmoji) always finds it, regardless of its rank.
+   */
+  private allEmojis: ProcessedEmoji[] = [];
+  /** Index into the picker's rendered grid the keyboard highlight sits on, or -1 when there is nothing to highlight. */
   private highlightedIndex = -1;
+  /** The rendered button the highlight is currently applied to — the source of truth for getHighlightedEmoji. */
+  private highlightedButton: HTMLButtonElement | null = null;
   /**
    * Bumped once per renderMenu call. A call whose token no longer matches
    * this field after an await is stale — a later keystroke has already
@@ -175,6 +182,8 @@ export class EmojiTrigger extends BlockEventComposer {
       return this.opened;
     }
 
+    this.allEmojis = emojis;
+
     const results = searchEmojisRanked(emojis, span.query);
 
     if (results.length === 0) {
@@ -183,7 +192,6 @@ export class EmojiTrigger extends BlockEventComposer {
       return false;
     }
 
-    this.currentResults = results;
     await this.renderMenu(input, span, token);
 
     if (token !== this.renderToken) {
@@ -250,41 +258,59 @@ export class EmojiTrigger extends BlockEventComposer {
     return true;
   }
 
-  /** The emoji the keyboard highlight currently sits on, or null when the menu is closed or holds no results. */
+  /**
+   * The emoji the keyboard highlight currently sits on, or null when the
+   * menu is closed or holds no results. Reads the native character off the
+   * highlighted DOM node itself and looks it up in the full dataset — not
+   * by indexing into the ranked results, which are capped while the
+   * picker's own grid is not, and which the picker renders grouped by
+   * category (reordering them relative to the flat ranked order whenever
+   * categories interleave across rank tiers) — so neither array's index
+   * lines up with what is actually highlighted on screen.
+   */
   public getHighlightedEmoji(): ProcessedEmoji | null {
-    return this.currentResults[this.highlightedIndex] ?? null;
+    const native = this.highlightedButton?.getAttribute('data-emoji-native') ?? null;
+
+    if (native === null) {
+      return null;
+    }
+
+    return this.allEmojis.find(emoji => emoji.native === native) ?? null;
   }
 
   /**
-   * Moves the highlight to `index` (clamped to the current results) and
-   * applies it visually to the matching button in the picker's rendered
-   * grid, if one exists there — the DOM write is best-effort so this stays
-   * safe to call before the picker has rendered anything.
-   * @param index - target index into currentResults; out-of-range clamps
+   * Moves the highlight to `index` (clamped to the rendered button count)
+   * and applies it visually to the matching button in the picker's
+   * rendered grid, if one exists there — the DOM write is best-effort so
+   * this stays safe to call before the picker has rendered anything.
+   * @param index - target index into the rendered grid; out-of-range clamps
    */
   private setHighlightedIndex(index: number): void {
-    if (this.currentResults.length === 0) {
+    const buttons = this.picker !== null
+      ? Array.from(this.picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'))
+      : [];
+
+    if (buttons.length === 0) {
       this.highlightedIndex = -1;
+      this.highlightedButton = null;
 
       return;
     }
 
-    const clamped = Math.max(0, Math.min(this.currentResults.length - 1, index));
-    const buttons = this.picker !== null
-      ? Array.from(this.picker.getElement().querySelectorAll<HTMLButtonElement>('[data-emoji-native]'))
-      : [];
-    const previous = buttons[this.highlightedIndex];
+    const clamped = Math.max(0, Math.min(buttons.length - 1, index));
 
-    if (previous !== undefined) {
-      previous.classList.remove(...EMOJI_HIGHLIGHT_CLASSES);
-      previous.removeAttribute('aria-selected');
+    if (this.highlightedButton !== null) {
+      this.highlightedButton.classList.remove(...EMOJI_HIGHLIGHT_CLASSES);
+      this.highlightedButton.removeAttribute('aria-selected');
     }
 
     this.highlightedIndex = clamped;
 
-    const current = buttons[clamped];
+    const current = buttons[clamped] ?? null;
 
-    if (current !== undefined) {
+    this.highlightedButton = current;
+
+    if (current !== null) {
       current.classList.add(...EMOJI_HIGHLIGHT_CLASSES);
       current.setAttribute('aria-selected', 'true');
       current.scrollIntoView?.({ block: 'nearest' });
@@ -306,8 +332,8 @@ export class EmojiTrigger extends BlockEventComposer {
     this.removeComboboxRoles();
     this.anchorRect = undefined;
     this.activeSpanStart = undefined;
-    this.currentResults = [];
     this.highlightedIndex = -1;
+    this.highlightedButton = null;
     this.opened = false;
   }
 

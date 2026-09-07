@@ -663,4 +663,13 @@ export class BlockEvents extends Module {
     );
   }
 
+  /**
+   * Blok.destroy() calls this on every module that has it. The emoji
+   * trigger's picker element is otherwise never removed from the DOM (only
+   * hidden by close()) — without this, destroying the editor leaves it
+   * behind as a permanent orphan node.
+   */
+  public destroy(): void {
+    this._emojiTrigger?.destroy();
+  }
 }

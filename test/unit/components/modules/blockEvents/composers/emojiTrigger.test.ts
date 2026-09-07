@@ -280,7 +280,43 @@ describe('EmojiTrigger — rendering the real picker', () => {
     expect(mockPickerConstructor).toHaveBeenCalledTimes(1);
     expect(mockPickerConstructor.mock.calls[0]?.[0]?.inline).toBe(true);
     expect(mockPickerElement.getAttribute('data-blok-testid')).toBe('emoji-menu');
-    expect(mockPickerElement.id).toBe('blok-emoji-menu');
+    // Not a literal constant: a page can host multiple editors, and this id
+    // stays on a persistent, hidden DOM node after close() — a shared literal
+    // would collide (see the uniqueness test below).
+    expect(mockPickerElement.id).toMatch(/^blok-emoji-menu-\d+$/);
+  });
+
+  it('gives each EmojiTrigger instance a distinct menu id', async () => {
+    // The mocked picker's getElement() always returns the same shared node
+    // (mockPickerElement), so id uniqueness is asserted through a real,
+    // per-block DOM node instead: each block's own aria-controls value.
+    const blockA = createBlock(':fi');
+    const blockB = createBlock(':fi');
+
+    document.body.appendChild(blockA.holder);
+    document.body.appendChild(blockB.holder);
+
+    setCaret(blockA, 3);
+
+    const triggerA = new EmojiTrigger(createBlokModules(blockA));
+
+    await triggerA.handleInput(createInputEvent());
+
+    setCaret(blockB, 3);
+
+    const triggerB = new EmojiTrigger(createBlokModules(blockB));
+
+    await triggerB.handleInput(createInputEvent());
+
+    const idA = blockA.currentInput?.getAttribute('aria-controls');
+    const idB = blockB.currentInput?.getAttribute('aria-controls');
+
+    expect(idA).not.toBeNull();
+    expect(idB).not.toBeNull();
+    expect(idA).not.toBe(idB);
+
+    triggerA.close();
+    triggerB.close();
   });
 
   it('opens the picker anchored on the block input, passing the caret rect', async () => {
@@ -360,5 +396,219 @@ describe('EmojiTrigger — rendering the real picker', () => {
     trigger.close();
 
     expect(mockPickerClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close when the selection moves into the picker\'s own element (e.g. clicking its search field)', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    await trigger.handleInput(createInputEvent());
+    expect(trigger.opened).toBe(true);
+
+    // Clicking the picker's own search <input> moves the document
+    // Selection's anchor into the picker's subtree — not into the block's
+    // contentEditable, and not a case of the caret leaving the ":query" span.
+    const pickerInput = document.createElement('input');
+
+    mockPickerElement.appendChild(pickerInput);
+    pickerInput.focus();
+
+    const range = document.createRange();
+    const textNode = document.createTextNode('');
+
+    mockPickerElement.appendChild(textNode);
+    range.setStart(textNode, 0);
+    range.collapse(true);
+
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+
+    expect(trigger.opened).toBe(true);
+
+    mockPickerElement.removeChild(pickerInput);
+    mockPickerElement.removeChild(textNode);
+  });
+
+  it('destroy() removes the picker element from the DOM, not just hides it', async () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 3);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    await trigger.handleInput(createInputEvent());
+    expect(document.body.contains(mockPickerElement)).toBe(true);
+
+    trigger.destroy();
+
+    expect(document.body.contains(mockPickerElement)).toBe(false);
+    expect(mockPickerClose).toHaveBeenCalled();
+  });
+
+  it('destroy() is safe to call when the menu was never opened', () => {
+    const block = createBlock(':fi');
+
+    document.body.appendChild(block.holder);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    expect(() => trigger.destroy()).not.toThrow();
+  });
+});
+
+describe('EmojiTrigger — grid highlight navigation', () => {
+  let currentTrigger: EmojiTrigger | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPickerOpen.mockResolvedValue(undefined);
+    mockPickerElement.innerHTML = '';
+  });
+
+  afterEach(() => {
+    currentTrigger?.close();
+    currentTrigger = undefined;
+    mockPickerElement.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  /**
+   * ":i" ranks both fixture emoji (their names/ids both contain "i"), tied,
+   * so dataset order wins: fire then grinning. Mimics what the real
+   * EmojiPicker renders for that query, since open()/setQuery() are mocked
+   * out and render nothing for real.
+   */
+  function renderTwoResultButtons(): HTMLButtonElement[] {
+    return ['🔥', '😀'].map(native => {
+      const btn = document.createElement('button');
+
+      btn.setAttribute('data-emoji-native', native);
+      mockPickerElement.appendChild(btn);
+
+      return btn;
+    });
+  }
+
+  async function openWithTwoResults(): Promise<{ trigger: EmojiTrigger; buttons: HTMLButtonElement[] }> {
+    const block = createBlock(':i');
+
+    document.body.appendChild(block.holder);
+    setCaret(block, 2);
+
+    const trigger = new EmojiTrigger(createBlokModules(block));
+
+    currentTrigger = trigger;
+
+    const buttons = renderTwoResultButtons();
+
+    await trigger.handleInput(createInputEvent({ data: 'i' }));
+
+    return { trigger, buttons };
+  }
+
+  const press = (trigger: EmojiTrigger, key: string): boolean =>
+    trigger.handleKeydown(new KeyboardEvent('keydown', { key }));
+
+  it('highlights the top-ranked result by default, visibly', async () => {
+    const { trigger, buttons } = await openWithTwoResults();
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+    expect(buttons[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(buttons[1]?.getAttribute('aria-selected')).toBeNull();
+  });
+
+  it('ArrowRight moves the highlight to the next result, visibly', async () => {
+    const { trigger, buttons } = await openWithTwoResults();
+
+    press(trigger, 'ArrowRight');
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
+    expect(buttons[0]?.getAttribute('aria-selected')).toBeNull();
+    expect(buttons[1]?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('ArrowRight past the last result clamps instead of wrapping', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'ArrowRight');
+    press(trigger, 'ArrowRight');
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
+  });
+
+  it('ArrowLeft moves back toward the first result and clamps there', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'ArrowRight');
+    press(trigger, 'ArrowLeft');
+    press(trigger, 'ArrowLeft');
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+  });
+
+  it('ArrowDown steps by a full grid row (10) and clamps within the results', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'ArrowDown');
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
+  });
+
+  it('ArrowUp steps back by a full grid row and clamps at the first result', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'ArrowRight');
+    press(trigger, 'ArrowUp');
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+  });
+
+  it('Home and End jump straight to the first and last result', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'End');
+    expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
+
+    press(trigger, 'Home');
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+  });
+
+  it('resets the highlight to the top result on the next keystroke', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    press(trigger, 'ArrowRight');
+    expect(trigger.getHighlightedEmoji()?.native).toBe('😀');
+
+    renderTwoResultButtons();
+    await trigger.handleInput(createInputEvent({ data: 'i' }));
+
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+  });
+
+  it('still claims ArrowLeft and ArrowRight so they do not leak into block navigation', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    expect(press(trigger, 'ArrowLeft')).toBe(true);
+    expect(press(trigger, 'ArrowRight')).toBe(true);
+  });
+
+  it('Enter and Tab stay claimed (no-op grid-wise) — insertion is a later task', async () => {
+    const { trigger } = await openWithTwoResults();
+
+    expect(press(trigger, 'Enter')).toBe(true);
+    expect(press(trigger, 'Tab')).toBe(true);
+    // Neither key moved the highlight or closed the menu.
+    expect(trigger.getHighlightedEmoji()?.native).toBe('🔥');
+    expect(trigger.opened).toBe(true);
   });
 });

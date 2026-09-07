@@ -15,8 +15,6 @@ const ENGLISH_PATH = join(SRC_DIR, 'components/i18n/locales/en.json');
 const CATALOG_ONLY_KEYS = new Set([
   'blockSettings.convertWithChildrenWarning',
   'tools.columns.turnInto',
-  'emoji.search',
-  'emoji.nothingFound',
 ]);
 
 const sourceFiles = (directory: string): string[] => {
@@ -254,7 +252,7 @@ const getLifecycle = (): ReturnType<typeof deriveLifecycle> => {
 };
 
 describe('current English catalog lifecycle coverage', () => {
-  it('rebuilds a disjoint 427 + 122 + 25 + 4 closure for all 578 keys', () => {
+  it('rebuilds a disjoint 429 + 122 + 25 + 2 closure for all 578 keys', () => {
     const { lifecycle } = getLifecycle();
     const counts = Object.fromEntries(
       ([
@@ -281,13 +279,13 @@ describe('current English catalog lifecycle coverage', () => {
       // tools.header.toggleHeading moved registered-namespace-compatible ->
       // executable-literal when the convert menu started labelling its
       // toggle-heading group from that key at a literal call site.
-      // emoji.search / emoji.nothingFound ship ahead of their caller (the
-      // inline emoji menu lands in a later change) and are catalog-only until
-      // that caller exists.
-      'executable-literal': 427,
+      // emoji.search / emoji.nothingFound moved catalog-only -> executable-
+      // literal once the inline emoji trigger composer called
+      // I18n.t('emoji.search') / t('emoji.nothingFound') at a literal call site.
+      'executable-literal': 429,
       'finite-dynamic': 122,
       'registered-namespace-compatible': 25,
-      'catalog-only': 4,
+      'catalog-only': 2,
     });
     expect(
       [...lifecycle.entries()]

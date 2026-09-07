@@ -37,21 +37,22 @@ function isInsertOrDeleteText(inputType: string): boolean {
  */
 function resolveTextPosition(container: HTMLElement, targetOffset: number): { node: Text; offset: number } | null {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
-  let consumed = 0;
-  let node = walker.nextNode() as Text | null;
 
-  while (node !== null) {
-    const length = node.length;
+  const walk = (consumed: number): { node: Text; offset: number } | null => {
+    const node = walker.nextNode() as Text | null;
 
-    if (consumed + length >= targetOffset) {
+    if (node === null) {
+      return null;
+    }
+
+    if (consumed + node.length >= targetOffset) {
       return { node, offset: targetOffset - consumed };
     }
 
-    consumed += length;
-    node = walker.nextNode() as Text | null;
-  }
+    return walk(consumed + node.length);
+  };
 
-  return null;
+  return walk(0);
 }
 
 /** Bounding rect of the single character at `offset` in `container`'s plain text. */

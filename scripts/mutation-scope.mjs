@@ -51,10 +51,28 @@ const RESOLUTION_SUFFIXES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
 
 const BARREL_PATTERN = /(?:^|\/)index\.tsx?$/;
 
+// `import type X from '...'` and `export type * from '...'`, across lines. The
+// `[^;]` body cannot cross a statement boundary, so a `type` import with no
+// `from` clause cannot swallow the next statement's specifier.
+const TYPE_ONLY_STATEMENT = /(?:^|\n)[ \t]*(?:import|export)[ \t]+type\b[^;]*?from[ \t]*['"][^'"]*['"]/g;
+
+/**
+ * Drops the imports that never load anything.
+ *
+ * A type-only import is erased, so the module is not loaded and no mutant in it
+ * can die in that file. Four of the seven suites listed against
+ * `src/components/modules/i18n.ts` imported the type and mocked the module;
+ * counting them made 73 already-dead mutants read as a gap the run could close.
+ * `import { type Foo }` is deliberately left alone: TypeScript erases that
+ * statement only when EVERY binding is type-only, and keeping it costs at worst
+ * one suite that kills nothing.
+ */
+const withoutTypeOnlyImports = (text) => text.replace(TYPE_ONLY_STATEMENT, '');
+
 const relativeImportsOf = (file, sources, readFile) => {
   const deps = [];
 
-  for (const [, specifier] of readFile(file).matchAll(IMPORT_PATTERN)) {
+  for (const [, specifier] of withoutTypeOnlyImports(readFile(file)).matchAll(IMPORT_PATTERN)) {
     if (!specifier.startsWith('.')) {
       continue;
     }
@@ -95,7 +113,7 @@ export const buildImporterIndex = ({ testFiles, sourceFiles, readFile }) => {
   };
 
   for (const test of testFiles) {
-    for (const [, specifier] of readFile(test).matchAll(IMPORT_PATTERN)) {
+    for (const [, specifier] of withoutTypeOnlyImports(readFile(test)).matchAll(IMPORT_PATTERN)) {
       const aliased = IMPORT_ALIASES[specifier];
 
       if (aliased !== undefined) {

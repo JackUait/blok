@@ -204,6 +204,62 @@ describe('mutation-scope', () => {
       expect(index.has('src/components/modules/caret.ts')).toBe(false);
     });
 
+    // A type-only import is erased, so the module is never loaded and no mutant
+    // in it can die in that test. Four of the i18n module's seven listed
+    // importers were type-only and mocked it; counting them made 73 already-dead
+    // mutants look like a gap the run could close.
+    it('ignores a test that imports the source only as a type', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/sanitize.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/sanitize.test.ts': "import type { Rule } from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.has('src/view/sanitize.ts')).toBe(false);
+    });
+
+    it('ignores a type-only import spread over several lines', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/a.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/a.test.ts': "import type {\n  Rule,\n  Config,\n} from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.has('src/view/sanitize.ts')).toBe(false);
+    });
+
+    it('keeps a test that imports the same source for a value as well', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/a.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/a.test.ts':
+            "import type { Rule } from '../../../src/view/sanitize';\nimport { clean } from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.get('src/view/sanitize.ts')).toEqual(['test/unit/view/a.test.ts']);
+    });
+
+    // TypeScript erases `import { type Foo }` only when every binding is
+    // type-only, so treating it as a value import is the safe direction: at
+    // worst the run loads a suite that kills nothing.
+    it('keeps an inline type modifier as a value import', () => {
+      const index = buildImporterIndex({
+        testFiles: ['test/unit/view/a.test.ts'],
+        sourceFiles: ['src/view/sanitize.ts'],
+        readFile: read({
+          'test/unit/view/a.test.ts': "import { type Rule, clean } from '../../../src/view/sanitize';",
+        }),
+      });
+
+      expect(index.get('src/view/sanitize.ts')).toEqual(['test/unit/view/a.test.ts']);
+    });
+
     it('leaves a source no test imports out of the index', () => {
       const index = buildImporterIndex({
         testFiles: ['test/unit/a.test.ts'],

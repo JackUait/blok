@@ -4,6 +4,7 @@ import { loadEmojiData } from '../../../utils/emoji/emoji-data';
 import { isExactShortcodeMatch, searchEmojisRanked } from '../../../utils/emoji/emoji-search-ranked';
 import type { EmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
 import { resolveEmojiTriggerSpan } from '../../../utils/emoji/emoji-trigger-span';
+import { ScrollLocker } from '../../../utils/scroll-locker';
 import { isTextLikeBlock } from '../utils/text-like-block';
 
 import { EmojiPicker, prefetchEmojiPickerData } from '../../../../tools/callout/emoji-picker';
@@ -163,6 +164,15 @@ export class EmojiTrigger extends BlockEventComposer {
   private renderToken = 0;
   /** The in-flight picker.open() for the current span, shared by every renderMenu call still waiting on it — see renderMenu. */
   private pendingOpen: Promise<void> | null = null;
+  /**
+   * Locks the page for the menu's open lifetime: the picker is anchored to
+   * the caret's on-screen position, so a page scroll underneath it would
+   * drift the picker away from the text that opened it. Locked once, in
+   * renderMenu, on the same guard that flips `opened` true; unlocked once,
+   * in close(), which every close path (including insertNative's commits)
+   * routes through — see this file's own opened-write inventory.
+   */
+  private readonly scrollLocker = new ScrollLocker();
 
   /**
    * Handle an input event: resolve the ":query" span at the caret and open,
@@ -537,6 +547,7 @@ export class EmojiTrigger extends BlockEventComposer {
 
     document.removeEventListener('selectionchange', this.handleSelectionChange);
     this.removeComboboxRoles();
+    this.scrollLocker.unlock();
     this.anchorRect = undefined;
     this.activeSpanStart = undefined;
     this.highlightedIndex = -1;
@@ -674,6 +685,7 @@ export class EmojiTrigger extends BlockEventComposer {
     if (!this.opened) {
       this.applyComboboxRoles(input);
       document.addEventListener('selectionchange', this.handleSelectionChange);
+      this.scrollLocker.lock();
       this.opened = true;
     }
   }

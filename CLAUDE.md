@@ -80,6 +80,8 @@ Blok is a published library. A change that alters a public surface lands on real
 
 **Does not count:** internals under `src/` with no published surface, tests, docs wording.
 
+**Also does not count: a surface that never shipped.** If the thing you are changing was itself added after the last published release, no consumer can be on it, so changing or removing it is ordinary work — no `BREAKING` label, no notification. Check before labelling: `git tag --sort=-v:refname | head -1` for the last release, then `git log <tag>..HEAD -- <file>` to see whether the surface predates it.
+
 If the break is avoidable, say so and offer the compatible route before committing to it.
 
 ## Project Overview
